@@ -1,0 +1,2 @@
+[install]
+# linker = "isolated"  # having issues with Nuxt and NativeWind/Unistyles
