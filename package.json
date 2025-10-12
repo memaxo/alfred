@@ -21,7 +21,8 @@
   },
   "scripts": {
     "check": "biome check --write .",
-    "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
+    "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
+    "ruler:verify": "bunx @intellectronica/ruler@latest apply --no-gitignore --nested && git diff --exit-code",
     "dev": "turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",

@@ -1,0 +1,25 @@
+name: Ruler Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  ruler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.18"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Ruler outputs
+        run: bun run ruler:verify

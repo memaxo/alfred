@@ -1,36 +1,48 @@
-# Ruler Configuration File
-# See https://okigu.com/ruler for documentation.
+default_agents = ["agentsmd", "claude", "cursor", "copilot", "aider"]
 
-# Default agents to run when --agents is not specified
-default_agents = ["claude", "codex", "cursor"]
+[settings]
+nested = true
 
-# --- Global MCP Server Configuration ---
 [mcp]
-# Enable/disable MCP propagation globally (default: true)
 enabled = true
-# Global merge strategy: 'merge' or 'overwrite' (default: 'merge')
 merge_strategy = "merge"
 
-# --- MCP Server Definitions ---
-[mcp_servers.context7]
+[mcp_servers.filesystem]
 command = "npx"
-args = ["-y", "@upstash/context7-mcp"]
+args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
 
-
-
-[mcp_servers.shadcn]
+[mcp_servers.git]
 command = "npx"
-args = ["shadcn@latest", "mcp"]
+args = ["-y", "@modelcontextprotocol/server-git", "--repository", "."]
 
+[agents.agentsmd]
+enabled = true
+output_path = "AGENTS.md"
 
+[agents.claude]
+enabled = true
+output_path = "CLAUDE.md"
+[agents.claude.mcp]
+enabled = true
+merge_strategy = "merge"
 
+[agents.cursor]
+enabled = true
+output_path = ".cursor/rules/ruler_cursor_instructions.mdc"
+[agents.cursor.mcp]
+enabled = true
+merge_strategy = "merge"
 
+[agents.copilot]
+enabled = true
+output_path = "AGENTS.md"
 
-[mcp_servers.better-auth]
-url = "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
+[agents.aider]
+enabled = true
+output_path_instructions = "AGENTS.md"
+output_path_config = ".aider.conf.yml"
+[agents.aider.mcp]
+enabled = true
 
-
-# --- Global .gitignore Configuration ---
 [gitignore]
-# Enable/disable automatic .gitignore updates (default: true)
 enabled = true

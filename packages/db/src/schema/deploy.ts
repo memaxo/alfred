@@ -1,0 +1,46 @@
+/**
+ * ALFRED Deployments Schema
+ * Track app deployments (preview/production)
+ */
+
+import { pgTable, text, timestamp, uuid, jsonb, integer } from "drizzle-orm/pg-core";
+
+// TODO: [Phase 10] Add proper indexes for deployment queries
+
+/**
+ * Deployments (apps deployed by Alfred)
+ */
+export const deployments = pgTable("deployments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  app: text("app").notNull(), // App name/identifier
+  type: text("type").notNull().default("preview"), // "preview" | "production"
+  status: text("status").notNull().default("pending"), // "pending" | "building" | "running" | "failed" | "stopped"
+  url: text("url"), // Public URL (e.g., https://app-preview-123.alfred.local)
+  branch: text("branch"), // Git branch
+  commit: text("commit"), // Git commit SHA
+  containerId: text("container_id"), // Docker container ID
+  lxcId: text("lxc_id"), // Proxmox LXC ID (if using LXC)
+  port: integer("port"), // Internal port
+  healthUrl: text("health_url"), // Health check endpoint
+  lastHealthCheck: timestamp("last_health_check", { withTimezone: true }),
+  healthStatus: text("health_status"), // "healthy" | "unhealthy" | "unknown"
+  created: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  deployed: timestamp("deployed_at", { withTimezone: true }),
+  stopped: timestamp("stopped_at", { withTimezone: true }),
+  metadata: jsonb("metadata"), // Arbitrary deployment metadata
+});
+
+// TODO: [Phase 10] Add index on (userId, app, type) for app queries
+// TODO: [Phase 10] Add index on (status) for health monitoring
+// TODO: [Phase 10] Add index on (lastHealthCheck) for stale detection
+
+// TODO: [Phase 10] Add deploymentLogs table for build/runtime logs
+// export const deploymentLogs = pgTable("deployment_logs", {
+//   id: uuid("id").defaultRandom().primaryKey(),
+//   deploymentId: uuid("deployment_id").references(() => deployments.id, { onDelete: "cascade" }),
+//   level: text("level").notNull(), // "debug" | "info" | "warn" | "error"
+//   message: text("message").notNull(),
+//   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
+// });

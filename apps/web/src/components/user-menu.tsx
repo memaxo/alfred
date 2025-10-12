@@ -1,3 +1,5 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -7,13 +9,13 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
-import { useNavigate } from "@tanstack/react-router";
+import { getElevatedToolToken } from "@/lib/token";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
-import { Link } from "@tanstack/react-router";
 
 export default function UserMenu() {
 	const navigate = useNavigate();
+	const [isRequestingToken, setIsRequestingToken] = useState(false);
 	const { data: session, isPending } = authClient.useSession();
 
 	if (isPending) {
@@ -37,6 +39,30 @@ export default function UserMenu() {
 				<DropdownMenuLabel>My Account</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem>{session.user.email}</DropdownMenuItem>
+				{!import.meta.env.PROD && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							disabled={isRequestingToken}
+							onSelect={async (event) => {
+								event.preventDefault();
+								setIsRequestingToken(true);
+								try {
+									const token = await getElevatedToolToken(["droid.exec"]);
+									await navigator.clipboard.writeText(token);
+									window.alert("Elevated token copied to clipboard (scope: droid.exec)");
+								} catch (error) {
+									console.error("Failed to fetch elevated token", error);
+									window.alert("Failed to fetch elevated token. See console for details.");
+								} finally {
+									setIsRequestingToken(false);
+								}
+							}}
+						>
+							{isRequestingToken ? "Requesting elevated token..." : "Copy elevated token (dev)"}
+						</DropdownMenuItem>
+					</>
+				)}
 				<DropdownMenuItem asChild>
 					<Button
 						variant="destructive"

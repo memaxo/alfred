@@ -1,0 +1,22 @@
+{
+  "name": "@alfred/rag",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alfred/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "tsdown": "^0.2.16",
+    "typescript": "^5.7.2"
+  }
+}

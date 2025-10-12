@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@alfred/api/*": ["../api/src/*"],
+      "@alfred/auth/*": ["../auth/src/*"],
+      "@alfred/policy/*": ["../policy/src/*"],
+      "@alfred/db/*": ["../db/src/*"],
+      "@alfred/rag/*": ["../rag/src/*"],
+      "@alfred/ui/*": ["../ui/src/*"],
+      "@alfred/type/*": ["../type/src/*"]
+    }
+  }
+}

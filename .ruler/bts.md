@@ -1,79 +1,26 @@
-# Better-T-Stack Project Rules
+# ALFRED Monorepo Overview
 
-This is a alfred project created with Better-T-Stack CLI.
+This project is a Better-T-Stack monorepo orchestrated by Turborepo and Bun workspaces. It delivers the ALFRED assistant across web and native clients with a shared backend stack.
 
-## Project Structure
+## Key Workspaces
 
-This is a monorepo with the following structure:
+- `apps/web`: TanStack Start app with tRPC client and SSR. Never import server-only modules (`@alfred/db`, `pg`, etc.) into browser bundles.
+- `apps/native`: React Native (Expo + NativeWind) client that reuses Better Auth via the Expo plugin.
+- `packages/db`: Drizzle schema, migrations, and migration runner. Always run migrations through `scripts/migrate.ts`.
+- `packages/auth`: Better Auth configuration, biometric tickets, and Ed25519 tool tokens.
+- `packages/api`: tRPC routers, context, metrics, and scheduler entry points.
+- `packages/type`: Shared DTOs for cross-layer type safety.
 
-- **`apps/web/`** - Fullstack application
+## Development Commands
 
+- `bun run dev` — Run all apps via Turborepo.
+- `bun run db:start` — Launch Postgres (`pgvector`) locally.
+- `bun run db:migrate` — Apply migrations using the custom runner.
+- `bun run ruler:apply` — Regenerate AI assistant instructions after editing `.ruler` files.
 
-- **`packages/api/`** - Shared API logic and types
-- **`packages/auth/`** - Authentication logic and utilities
-- **`packages/db/`** - Database schema and utilities
+## Guardrails
 
-- **`apps/native/`** - React Native mobile app (with NativeWind)
-
-## Available Scripts
-
-- `bun run dev` - Start all apps in development mode
-- `bun run dev:native` - Start only the native app
-
-## Database Commands
-
-All database operations should be run from the web workspace:
-
-- `bun run db:push` - Push schema changes to database
-- `bun run db:studio` - Open database studio
-- `bun run db:generate` - Generate Drizzle files
-- `bun run db:migrate` - Run database migrations
-
-Database schema files are located in `apps/web/src/db/schema/`
-
-## API Structure
-
-- tRPC routers are in `packages/api/src/routers/`
-- Client-side tRPC utils are in `apps/web/src/utils/trpc.ts`
-
-## Authentication
-
-Authentication is enabled in this project:
-- Server auth logic is in `packages/auth/src/lib/auth.ts`
-- Web app auth client is in `apps/web/src/lib/auth-client.ts`
-- Native app auth client is in `apps/native/src/lib/auth-client.ts`
-
-## Adding More Features
-
-You can add additional addons or deployment options to your project using:
-
-```bash
-bunx create-better-t-stack
-add
-```
-
-Available addons you can add:
-- **Documentation**: Starlight, Fumadocs
-- **Linting**: Biome, Oxlint, Ultracite
-- **Other**: Ruler, Turborepo, PWA, Tauri, Husky
-
-You can also add web deployment configurations like Cloudflare Workers support.
-
-## Project Configuration
-
-This project includes a `bts.jsonc` configuration file that stores your Better-T-Stack settings:
-
-- Contains your selected stack configuration (database, ORM, backend, frontend, etc.)
-- Used by the CLI to understand your project structure
-- Safe to delete if not needed
-- Updated automatically when using the `add` command
-
-## Key Points
-
-- This is a Turborepo monorepo using bun workspaces
-- Each app has its own `package.json` and dependencies
-- Run commands from the root to execute across all workspaces
-- Run workspace-specific commands with `bun run command-name`
-- Turborepo handles build caching and parallel execution
-- Use `bunx
-create-better-t-stack add` to add more features later
+- Follow the one-word naming rule for files, directories, and exported symbols.
+- Gate background schedulers behind env flags (e.g. `SCHED_REMIND=1`).
+- Treat `@alfred/auth/token` as the only source for tool token signing/verification.
+- Update `docs/alfred-prd.md` and `.ruler` guidance when milestones ship.

@@ -1,0 +1,23 @@
+{
+  "name": "@alfred/policy",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "tsdown": "^0.2.16",
+    "typescript": "^5.7.2"
+  }
+}

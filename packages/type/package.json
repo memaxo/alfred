@@ -1,0 +1,24 @@
+{
+  "name": "@alfred/type",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plan": "./src/plan.ts",
+    "./msg": "./src/msg.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "tsdown": "^0.2.16",
+    "typescript": "^5.7.2"
+  }
+}

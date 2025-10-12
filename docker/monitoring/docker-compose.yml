@@ -1,0 +1,44 @@
+# ALFRED Monitoring Stack
+# TODO: [Phase 11] Implement full observability stack
+
+version: "3.9"
+
+services:
+  # TODO: [Phase 11] Add prometheus service with scrape configs
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   ...
+
+  # TODO: [Phase 11] Add grafana service with dashboards
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ...
+
+  # TODO: [Phase 11] Add loki for log aggregation
+  # loki:
+  #   image: grafana/loki:latest
+  #   ...
+
+  # TODO: [Phase 11] Add promtail for log shipping
+  # promtail:
+  #   image: grafana/promtail:latest
+  #   ...
+
+  # TODO: [Phase 11] Add alertmanager for alert routing
+  # alertmanager:
+  #   image: prom/alertmanager:latest
+  #   ...
+
+  # TODO: [Phase 11] Add cadvisor for container metrics
+  # cadvisor:
+  #   image: gcr.io/cadvisor/cadvisor:latest
+  #   ...
+
+  # TODO: [Phase 11] Add blackbox_exporter for endpoint probing
+  # blackbox:
+  #   image: prom/blackbox-exporter:latest
+  #   ...
+
+  placeholder:
+    image: busybox
+    command: echo "Monitoring stack placeholder - see Phase 11"

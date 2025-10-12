@@ -12,7 +12,8 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "bun test"
   },
   "devDependencies": {
     "tsdown": "catalog:"
@@ -28,6 +29,7 @@
     "@ai-sdk/google": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
+    "prom-client": "^15.1.3",
     "@alfred/auth": "workspace:*",
     "@alfred/db": "workspace:*"
   }

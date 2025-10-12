@@ -1,0 +1,26 @@
+# ALFRED Postgres + pgvector Container
+# TODO: [Phase 3] Configure production-ready settings (connection pooling, backups)
+
+version: "3.9"
+
+services:
+  pg:
+    image: pgvector/pgvector:pg16
+    container_name: alfred_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alfred
+      POSTGRES_PASSWORD: alfred
+      POSTGRES_DB: alfred
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alfred -d alfred"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+# TODO: [Phase 3] Add initialization scripts in ./init/ for extensions
+# TODO: [Phase 11] Add pg_exporter sidecar for Prometheus metrics

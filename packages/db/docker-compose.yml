@@ -2,7 +2,7 @@ name: alfred
 
 services:
   postgres:
-    image: postgres
+    image: pgvector/pgvector:pg16
     container_name: alfred-postgres
     environment:
       POSTGRES_DB: alfred
