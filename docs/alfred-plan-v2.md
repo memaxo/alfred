@@ -136,7 +136,7 @@ Integrations and project management
 
 Deployment, provisioning, and runtime
 - Proxmox (Beelink GTi Ultra): VM "alfred-core" runs the TanStack server + Mastra, Docker Postgres+pgvector, Redis, OTEL collector, and Laminar (LLM tracing UI). Plex runs in a separate LXC.
-- App provisioning: Alfred builds and runs apps it develops (e.g., Next.js portfolio) using Docker and reverse proxy (Caddy/Traefik) for preview subdomains and production routes. Optional LXC isolation via Proxmox tools. Deployments tracked in a DB table with health checks and rollback.
+- App provisioning: Alfred builds and runs apps it develops (e.g., Next.js portfolio) using Docker and reverse proxy (Caddy) for preview subdomains and production routes. Optional LXC isolation via Proxmox tools. Deployments tracked in a DB table with health checks and rollback.
 - Durability & ops: VM/LXC vzdump backups nightly; Postgres pg_dump daily; systemd supervision; Docker restart policies; secrets hygiene; Redis for token cache and jti defense.
 
 Observability and monitoring
@@ -1579,7 +1579,7 @@ Laminar covers AI/LLM tracing. For full-stack visibility (24/7 home-lab on Proxm
   - Containers: cAdvisor
   - Postgres: postgres_exporter
   - Redis: redis_exporter
-  - Reverse proxy: Caddy or Traefik Prometheus metrics
+  - Reverse proxy: Caddy Prometheus metrics
   - Blackbox: probe /healthz and app URLs
   - Proxmox: prometheus-pve-exporter from the PVE host
   - OTEL collector: pipeline health metrics
@@ -1713,7 +1713,7 @@ Monitoring stack deployment (on alfred-core VM)
 - Exporters to run:
   - node_exporter (inside alfred-core VM)
   - postgres_exporter, redis_exporter (as containers)
-  - Caddy/Traefik metrics enabled
+  - Caddy metrics enabled
   - prometheus-pve-exporter on the Proxmox host (scraped over LAN/VPN)
 
 Example alert policies (Alertmanager)
@@ -3224,7 +3224,7 @@ Single-user, 24/7 home-lab deployment on a Beelink GTi Ultra Mini PC (Intel i9-1
         - Redis (token cache, jti replay defense, ephemeral queues)
         - OTEL Collector (optional)
         - Laminar (observability dashboard) or point to remote instance
-      - Reverse proxy (Caddy or Traefik) terminating TLS, routing apps AlFRED deploys
+      - Reverse proxy (Caddy) terminating TLS, routing apps AlFRED deploys
       - Local Docker buildx for building/running apps Alfred provisions
   - LXC: plex
     - vCPU: 4; RAM: 6–8 GB; Disk: per media needs
@@ -3268,7 +3268,7 @@ Mermaid overview
 graph TD
   PVE[Proxmox VE Host (Beelink GTi Ultra)]
   subgraph VM100[VM 100: alfred-core]
-    RP[Reverse Proxy (Caddy/Traefik)]
+    RP[Reverse Proxy (Caddy)]
     TAN[TanStack Start + Mastra (tRPC, Node)]
     PG[(Postgres+pgvector via Docker)]
     RED[Redis]
@@ -3297,7 +3297,7 @@ Laminar will visualize AI/LLM traces. For everything else, deploy a lightweight,
     - Containers: cAdvisor
     - Postgres: postgres_exporter
     - Redis: redis_exporter
-    - Reverse proxy: Caddy or Traefik metrics endpoint
+    - Reverse proxy: Caddy metrics endpoint
     - Blackbox: probe /healthz and deployed app URLs (preview and production)
     - Proxmox: prometheus-pve-exporter on the PVE host (CPU, memory, disks, VM/LXC state)
     - OTEL Collector: pipeline metrics
@@ -3345,9 +3345,8 @@ Provisioning flows
   3) Register route to LXC-IP:port.
 
 Reverse proxy strategy
-- Caddy (Admin JSON API) or Traefik (Docker labels)
-  - Caddy: Alfred upserts routes dynamically via Admin API
-  - Traefik: Alfred labels Docker runs for auto-registration
+- Caddy (Admin JSON API)
+  - Alfred upserts routes dynamically via Admin API
 - TLS via Let’s Encrypt; HTTP/2 and optional HTTP/3
 
 ### Provisioning Tools (Mastra + JWT scopes)
@@ -3419,14 +3418,14 @@ export const toolDocker = {
 };
 ```
 
-Router tool (Caddy/Traefik)
+Router tool (Caddy)
 ```ts
 import { z } from "zod";
 import { requireToolScopes } from "@alfred/auth/token";
 
 export const toolRouter = {
   name: "router",
-  description: "Manage reverse proxy routes (Caddy/Traefik)",
+  description: "Manage reverse proxy routes (Caddy)",
   inputSchema: z.object({
     action: z.enum(["register","update","remove"]),
     host: z.string(),     // subdomain
@@ -3437,7 +3436,7 @@ export const toolRouter = {
   outputSchema: z.object({ ok: z.boolean() }),
   execute: async ({ input }) => {
     await requireToolScopes(input.authz, ["deploy.write"]);
-    // Call Caddy Admin API or manipulate Traefik labels
+    // Call Caddy Admin API to upsert/delete routes
     return { ok: true };
   },
 };

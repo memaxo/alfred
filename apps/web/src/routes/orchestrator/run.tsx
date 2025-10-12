@@ -24,6 +24,9 @@ function OrchestratorRunRoute() {
 	const [requirement, setRequirement] = useState("");
 	const [auto, setAuto] = useState<AutoLevel>("low");
 	const [cwd, setCwd] = useState("");
+	const [mode, setMode] = useState<"sequential" | "parallel">("sequential");
+	const [repoBase, setRepoBase] = useState("origin/main");
+	const [workspace, setWorkspace] = useState("");
 	const [isRunning, setIsRunning] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [status, setStatus] = useState<string | null>(null);
@@ -76,7 +79,10 @@ function OrchestratorRunRoute() {
 		stopCurrentSubscription();
 
 		try {
-			const token = await getToolToken(["droid.exec"], auto);
+			const token = await getToolToken(
+				["droid.exec", "repo.read", "repo.write", "deploy.write", "tickets.write"],
+				auto,
+			);
 			const authz = `Bearer ${token}`;
 
 			const unsubscribe = trpcClient.workflow.stream.subscribe(
@@ -85,6 +91,9 @@ function OrchestratorRunRoute() {
 					auto,
 					authz,
 					cw: cwd.trim() || undefined,
+					mode,
+					repoBase: repoBase.trim() || undefined,
+					workspace: workspace.trim() || undefined,
 				},
 				{
 					onData(chunk) {
@@ -144,7 +153,15 @@ function OrchestratorRunRoute() {
 				break;
 			}
 			case "notice": {
-				const message = typeof event?.message === "string" ? event.message : JSON.stringify(event);
+				const baseMessage =
+					typeof event?.message === "string" ? event.message : JSON.stringify(event);
+				const moduleId = typeof event?.module === "string" ? event.module : null;
+				const taskId = typeof event?.task === "string" ? event.task : null;
+				const error = typeof event?.error === "string" ? event.error : null;
+				const scoped = moduleId
+					? `module ${moduleId}${taskId ? ` task ${taskId}` : ""}: ${baseMessage}`
+					: baseMessage;
+				const message = error ? `${scoped} (${error})` : scoped;
 				appendLog("notice", message);
 				break;
 			}
@@ -231,6 +248,49 @@ function OrchestratorRunRoute() {
 							value={cwd}
 							onChange={(event) => setCwd(event.target.value)}
 							placeholder="/srv/alfred"
+						/>
+					</div>
+				</div>
+
+				<div className="grid gap-2 md:grid-cols-3">
+					<div className="grid gap-2">
+						<label className="text-sm font-medium" htmlFor="mode">
+							Execution Mode
+						</label>
+						<select
+							id="mode"
+							className="h-10 rounded border border-input bg-background px-3 text-sm"
+							value={mode}
+							onChange={(event) => setMode(event.target.value as "sequential" | "parallel")}
+						>
+							<option value="sequential">Sequential</option>
+							<option value="parallel">Parallel (experimental)</option>
+						</select>
+					</div>
+					<div className="grid gap-2">
+						<label className="text-sm font-medium" htmlFor="repoBase">
+							Base Ref
+						</label>
+						<input
+							id="repoBase"
+							type="text"
+							className="h-10 rounded border border-input bg-background px-3 text-sm"
+							value={repoBase}
+							onChange={(event) => setRepoBase(event.target.value)}
+							placeholder="origin/main"
+						/>
+					</div>
+					<div className="grid gap-2">
+						<label className="text-sm font-medium" htmlFor="workspace">
+							Linear Workspace (optional)
+						</label>
+						<input
+							id="workspace"
+							type="text"
+							className="h-10 rounded border border-input bg-background px-3 text-sm"
+							value={workspace}
+							onChange={(event) => setWorkspace(event.target.value)}
+							placeholder="org-id"
 						/>
 					</div>
 				</div>

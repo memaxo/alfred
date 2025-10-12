@@ -168,7 +168,7 @@ Notes
 
 - [x] Implement droid exec tool spawn with flags, stdout/stderr streaming, timeout, and abort handling (minimal Node-based runner; Mastra workflow pending)
 - [ ] Implement git tool for branch/worktree/commit/push with safe cwd scoping
-- [ ] Implement router tool for Caddy/Traefik API calls (register/update/remove)
+- [ ] Implement router tool for Caddy API calls (register/update/remove)
 - [ ] Implement ticket tool using Linear client with JWT scope checks
 - [ ] Implement orchestrator workflow plan→expand→schedule (parallel/sequential)→execute→review/merge→docs→finalize
 - [ ] Implement worktree cleanup on finalize or abort and safe rollback paths
@@ -217,7 +217,7 @@ Notes
 
 - [ ] Implement Proxmox LXC tool (create/start/stop/destroy/snapshot/rollback) with API token
 - [ ] Implement Docker tool (build/run/stop/rm) for app containers with safe spawn and timeouts
-- [ ] Implement Router tool for dynamic subdomain routing via Caddy/Traefik
+- [ ] Implement Router tool for dynamic subdomain routing via Caddy
 - [ ] Implement deploy router flows (create preview, promote, remove) and DB tracking
 - [ ] Implement health checks and rollback when promote fails
 

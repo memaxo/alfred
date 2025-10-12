@@ -11,6 +11,9 @@ const workflowInput = z.object({
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
   authz: z.string().optional(),
   cw: z.string().optional(),
+  mode: z.enum(["sequential", "parallel"]).default("sequential"),
+  workspace: z.string().optional(),
+  repoBase: z.string().optional(),
 });
 
 const mapWorkflowResource = (raw: unknown) => {
@@ -18,7 +21,7 @@ const mapWorkflowResource = (raw: unknown) => {
   return {
     kind: "workflow" as const,
     id: "plan",
-    attrs: { auto: input?.auto ?? "read" },
+    attrs: { auto: input?.auto ?? "read", mode: input?.mode ?? "sequential" },
   };
 };
 
@@ -93,11 +96,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const output = "result" in outcome ? (outcome as { result?: unknown }).result : undefined;
         const summary = (output as { summary?: string })?.summary ?? "";
         const results = (output as { results?: unknown[] })?.results ?? [];
+        const plan = (output as { plan?: unknown })?.plan ?? null;
+        const vcs = (output as { vcs?: unknown })?.vcs ?? null;
 
         return {
           runId: (run as { id?: string }).id ?? null,
           summary,
           results,
+          plan,
+          vcs,
         };
       } catch (error) {
         throw toTRPCError(error);

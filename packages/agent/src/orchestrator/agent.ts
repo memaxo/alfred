@@ -2,6 +2,9 @@ import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { PostgresStore } from "@mastra/pg";
 import { toolDroid } from "./tool/droid";
+import { toolGit } from "./tool/git";
+import { toolRouter } from "./tool/router";
+import { toolTicket } from "./tool/ticket";
 import { buildAgentScorers } from "../eval/scorer";
 
 function createMemory(store?: PostgresStore) {
@@ -50,12 +53,15 @@ export function buildOrchestratorAgent(store?: PostgresStore) {
       {
         role: "system",
         content:
-          "You coordinate secure software engineering tasks. Prefer read or low autonomy unless the caller is elevated. Stream concise updates for each task.",
+          "You coordinate secure software engineering tasks. Prefer read or low autonomy unless the caller is elevated. Stream concise updates for each stage, manage git branches/worktrees safely, update routers, and keep Linear tickets in sync.",
       },
     ],
     model: process.env.MASTRA_MODEL ?? "openai/gpt-4o-mini",
     tools: {
       droid: toolDroid,
+      git: toolGit,
+      router: toolRouter,
+      ticket: toolTicket,
     },
     memory: createMemory(store),
     ...(Object.keys(scorers).length > 0
