@@ -6,5 +6,11 @@
     "sourceMap": true,
     "outDir": "dist",
     "composite": true
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../db" },
+    { "path": "../policy" }
+  ]
 }

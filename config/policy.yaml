@@ -1,9 +1,7 @@
 # ALFRED Policy Configuration (RBAC + ABAC + Obligations)
-# TODO: [Phase 9] Finalize roles, scopes, and ABAC rules for all resources
 
-# Roles define sets of scopes
 roles:
-  user:
+  owner:
     scopes:
       - assistant.read
       - assistant.write
@@ -18,77 +16,157 @@ roles:
       - book.read
       - book.write
       - slack.read
+      - slack.write
       - home.read
+      - home.write
+      - focus.read
+      - focus.write
+      - orchestrator.read
+      - orchestrator.write
+      - workflow.plan
+      - droid.exec
+      - droid.read
+      - git.read
+      - git.write
+      - proxmox.read
+      - proxmox.write
+      - router.read
+      - router.write
+      - deploy.read
+      - deploy.write
+      - linear.read
+      - linear.write
       - profile.read
       - profile.write
       - preference.read
       - preference.write
       - privacy.read
       - privacy.write
+      - token.issue
+      - token.elevate
+      - eval.define
+      - eval.dataset
+      - eval.run
 
-  # TODO: [Phase 9] Define elevated role with orchestrator scopes
-  # elevated:
-  #   scopes:
-  #     - orchestrator.read
-  #     - orchestrator.write
-  #     - droid.read
-  #     - droid.low
-  #     - ...
+  user:
+    scopes:
+      - assistant.read
+      - assistant.write
+      - assistant.escalate
+      - web.read
+      - note.read
+      - note.write
+      - remind.read
+      - remind.write
+      - timer.read
+      - timer.write
+      - book.read
+      - book.write
 
-# TODO: [Phase 9] ABAC rules for context-aware decisions
-# rules:
-#   - id: require_biometric_for_sensitive_home
-#     resource: home.*
-#     action: write
-#     conditions:
-#       - entity_type: climate|lock|alarm
-#     obligations:
-#       - require_biometric
-#
-#   - id: require_biometric_for_medium_droid
-#     resource: droid.*
-#     action: execute
-#     conditions:
-#       - auto_level: medium|high
-#     obligations:
-#       - require_biometric
-#
-#   - id: limit_autonomy_during_learning
-#     resource: assistant.*
-#     action: write
-#     conditions:
-#       - is_learning: true
-#     obligations:
-#       - limit_autonomy: 0.5
+rules:
+  - id: token-issue-owner
+    actions: ["token.issue"]
+    roles: ["owner"]
+    effect: "allow"
 
-# TODO: [Phase 9] Obligation handlers configuration
-# obligations:
-#   require_biometric:
-#     type: suspend_resume
-#     endpoint: /api/auth/biometric/verify
-#
-#   limit_autonomy:
-#     type: runtime_constraint
-#     max_tool_calls: 3
-#     require_confirmation: true
-#
-#   require_manual_approval:
-#     type: approval_queue
-#     approvers: [user]
+  - id: allow-droid-exec-owner
+    actions: ["droid.exec"]
+    roles: ["owner"]
+    resource:
+      kind: "repo"
+    effect: "allow"
 
-# Scopes (comprehensive list for reference)
-# TODO: [Phase 9] Validate all scopes are enforced in PEP
+  - id: require-bio-droid-exec-autonomy
+    actions: ["droid.exec"]
+    roles: ["owner"]
+    resource:
+      kind: "repo"
+    effect: "allow"
+    conditions:
+      - source: context
+        field: auto
+        in: ["medium", "high"]
+    obligations:
+      - requireBio
+
+  - id: workflow-plan-owner
+    actions: ["workflow.plan"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: workflow-plan-elevated
+    actions: ["workflow.plan"]
+    roles: ["owner"]
+    effect: "allow"
+    conditions:
+      - source: context
+        field: auto
+        in: ["medium", "high"]
+    obligations:
+      - requireBio
+
+  - id: token-elevate-owner
+    actions: ["token.elevate"]
+    roles: ["owner"]
+    effect: "allow"
+    obligations:
+      - audit
+
+  - id: home-control-owner
+    actions: ["home.control"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: home-control-sensitive-requires-bio
+    actions: ["home.control"]
+    roles: ["owner"]
+    effect: "allow"
+    conditions:
+      - field: "entity"
+        in: ["lock", "garage", "alarm"]
+    obligations:
+      - requireBio
+
+  - id: deploy-promote-owner
+    actions: ["deploy.promote"]
+    roles: ["owner"]
+    effect: "allow"
+    obligations:
+      - requireBio
+      - requireManual
+
+  - id: proxmox-power-owner
+    actions: ["proxmox.power"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: proxmox-admin-requires-bio
+    actions: ["proxmox.admin"]
+    roles: ["owner"]
+    effect: "allow"
+    obligations:
+      - requireBio
+
+  - id: eval-define-owner
+    actions: ["eval.define"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: eval-dataset-owner
+    actions: ["eval.dataset"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: eval-run-owner
+    actions: ["eval.run"]
+    roles: ["owner"]
+    effect: "allow"
+
 scopes:
-  # Assistant
   - assistant.read
   - assistant.write
   - assistant.escalate
-
-  # Orchestrator
-  - orchestrator.read
-  - orchestrator.write
-
-  # Tools
+  - web.read
   - note.read
   - note.write
   - remind.read
@@ -103,15 +181,11 @@ scopes:
   - home.write
   - focus.read
   - focus.write
-  - web.read
-
-  # Droids
+  - orchestrator.read
+  - orchestrator.write
+  - workflow.plan
+  - droid.exec
   - droid.read
-  - droid.low
-  - droid.medium
-  - droid.high
-
-  # Infrastructure
   - git.read
   - git.write
   - proxmox.read
@@ -120,15 +194,16 @@ scopes:
   - router.write
   - deploy.read
   - deploy.write
-
-  # Integrations
   - linear.read
   - linear.write
-
-  # User data
   - profile.read
   - profile.write
   - preference.read
   - preference.write
   - privacy.read
   - privacy.write
+  - token.issue
+  - token.elevate
+  - eval.define
+  - eval.dataset
+  - eval.run

@@ -69,3 +69,19 @@ export type ImplementationPlan = z.infer<typeof implementationPlanSchema>;
 // export function mergePlans(plans: ImplementationPlan[]): ImplementationPlan {
 //   // Merge multiple plans into one
 // }
+
+export const droidArtifactSchema = z.object({
+  path: z.string(),
+  kind: z.string(),
+});
+
+export type DroidArtifact = z.infer<typeof droidArtifactSchema>;
+
+export type WorkflowEvent =
+  | { type: "progress"; pct?: number; message?: string }
+  | { type: "stdout"; text: string }
+  | { type: "stderr"; text: string }
+  | { type: "droid"; chunk: unknown }
+  | { type: "notice"; message: string }
+  | { type: "data-cache-handoff"; key: readonly unknown[]; value: unknown }
+  | { type: string; [key: string]: unknown };

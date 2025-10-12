@@ -2,9 +2,11 @@
  * ALFRED Key Management
  */
 
+import type { KeyLike } from "jose";
+
 export interface KeyPair {
-  privateKey: CryptoKey;
-  publicKey: CryptoKey;
+  privateKey: KeyLike;
+  publicKey: KeyLike;
 }
 
 export async function loadKeys(): Promise<KeyPair> {

@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsdown",
     "test": "bun test",
+    "typecheck": "tsc -b",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",

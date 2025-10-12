@@ -1,4 +1,15 @@
 import client from "prom-client";
+import {
+  registerDroidExecCounter,
+  registerDroidExecHistogram,
+  registerEvalRunsCounter,
+  registerEvalDurationHistogram,
+  registerEvalScoreCounter,
+  registerEvalFailureCounter,
+  registerLaminarDatapointCounter,
+  registerLaminarErrorCounter,
+} from "@alfred/agent";
+import { registerPolicyCacheObserver } from "@alfred/policy";
 
 export const metricsRegistry = new client.Registry();
 
@@ -24,6 +35,116 @@ export const trpcRequestDurationSeconds = new client.Histogram({
   labelNames: ["procedure", "type"] as const,
   buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
   registers: [metricsRegistry],
+});
+
+export const healthChecksTotal = new client.Counter({
+  name: "health_checks_total",
+  help: "Count of health check invocations by target and status.",
+  labelNames: ["target", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const policyDecisionsTotal = new client.Counter({
+  name: "policy_decisions_total",
+  help: "Count of policy decisions grouped by action and decision.",
+  labelNames: ["action", "decision"] as const,
+  registers: [metricsRegistry],
+});
+
+export const policyObligationsTotal = new client.Counter({
+  name: "policy_obligations_total",
+  help: "Count of policy obligations emitted by action.",
+  labelNames: ["action", "obligation"] as const,
+  registers: [metricsRegistry],
+});
+
+export const pdpCacheHitsTotal = new client.Counter({
+  name: "pdp_cache_hits_total",
+  help: "Count of policy cache hits and misses.",
+  labelNames: ["result"] as const,
+  registers: [metricsRegistry],
+});
+
+export const droidExecRunsTotal = new client.Counter({
+  name: "droid_exec_runs_total",
+  help: "Count of droid exec runs grouped by autonomy level and exit code.",
+  labelNames: ["auto", "exit_code"] as const,
+  registers: [metricsRegistry],
+});
+
+registerDroidExecCounter(droidExecRunsTotal);
+
+export const droidExecDurationSeconds = new client.Histogram({
+  name: "droid_exec_duration_seconds",
+  help: "Duration of droid exec runs in seconds.",
+  labelNames: ["auto"] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
+  registers: [metricsRegistry],
+});
+
+registerDroidExecHistogram(droidExecDurationSeconds);
+
+export const evalRunsTotal = new client.Counter({
+  name: "eval_runs_total",
+  help: "Count of evaluation runs grouped by agent and status.",
+  labelNames: ["agent", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+registerEvalRunsCounter(evalRunsTotal);
+
+export const evalDurationSeconds = new client.Histogram({
+  name: "eval_duration_seconds",
+  help: "Duration of evaluation runs in seconds.",
+  labelNames: ["agent"] as const,
+  buckets: [1, 5, 10, 30, 60, 120, 300, 600, 900, 1800],
+  registers: [metricsRegistry],
+});
+
+registerEvalDurationHistogram(evalDurationSeconds);
+
+export const evalScoresTotal = new client.Counter({
+  name: "eval_scores_total",
+  help: "Count of evaluation scores persisted per scorer.",
+  labelNames: ["scorer"] as const,
+  registers: [metricsRegistry],
+});
+
+registerEvalScoreCounter(evalScoresTotal);
+
+export const evalFailuresTotal = new client.Counter({
+  name: "eval_failures_total",
+  help: "Count of evaluation scoring failures grouped by scorer and reason.",
+  labelNames: ["scorer", "reason"] as const,
+  registers: [metricsRegistry],
+});
+
+registerEvalFailureCounter(evalFailuresTotal);
+
+export const laminarEvalDatapointsTotal = new client.Counter({
+  name: "laminar_eval_datapoints_total",
+  help: "Count of Laminar datapoint operations by status.",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+registerLaminarDatapointCounter(laminarEvalDatapointsTotal);
+
+export const laminarEvalErrorsTotal = new client.Counter({
+  name: "laminar_eval_errors_total",
+  help: "Count of Laminar export errors grouped by stage.",
+  labelNames: ["stage"] as const,
+  registers: [metricsRegistry],
+});
+
+registerLaminarErrorCounter(laminarEvalErrorsTotal);
+
+registerPolicyCacheObserver(result => {
+  try {
+    pdpCacheHitsTotal.inc({ result });
+  } catch {
+    // ignore metrics increment errors to avoid impacting policy evaluation
+  }
 });
 
 export const metricsContentType = metricsRegistry.contentType;

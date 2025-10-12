@@ -13,34 +13,36 @@ Notes
 - [x] Add tsconfig.base.json with path aliases for @alfred/* (api, assistant, orchestrator, auth, policy, db, rag, ui, type)
 - [ ] Add turbo.json with build/dev/test/migrate/publish pipeline tasks
 - [x] Add docker/postgres/docker-compose.yml for Postgres+pgvector container
-- [ ] Add docker/monitoring/docker-compose.yml placeholders (prometheus, grafana, loki, promtail, alertmanager, cadvisor, blackbox)
-- [ ] Scaffold apps/web TanStack Start project and base routes
-- [ ] Add apps/web/src/routes/api/trpc/$.ts tRPC fetchRequestHandler skeleton
-- [ ] Add apps/web/src/routes/api/auth/$.ts Better Auth handler skeleton
+- [x] Add docker/monitoring/docker-compose.yml placeholders (prometheus, grafana, loki, promtail, alertmanager, cadvisor, blackbox)
+- [x] Scaffold apps/web TanStack Start project and base routes
+- [x] Add apps/web/src/routes/api/trpc/$.ts tRPC fetchRequestHandler skeleton
+- [x] Add apps/web/src/routes/api/auth/$.ts Better Auth handler skeleton
 - [ ] Add apps/web/src/routes/api/linear/webhook.ts Linear webhook handler skeleton
 - [x] Add apps/web/src/routes/api/metrics.ts Prometheus metrics endpoint skeleton
-- [ ] Add apps/web/src/routes/healthz.ts liveness/health endpoint skeleton
-- [ ] Add packages/api/src/t.ts initTRPC factory skeleton
+- [x] Add apps/web/src/routes/api/jwks.ts JWKS endpoint skeleton
+- [x] Add apps/web/src/routes/healthz.ts liveness/health endpoint skeleton
+- [x] Add apps/web/src/routes/healthz/deps.ts dependency readiness endpoint skeleton
+- [x] Add packages/api/src/index.ts initTRPC factory skeleton
 - [x] Add packages/api/src/ctx.ts createContext (session + RuntimeContext) skeleton
 - [x] Add packages/api/src/root.ts appRouter registry skeleton
 - [ ] Add packages/api/src/gate.ts policy PEP middleware skeleton
-- [ ] Add packages/api/src/rpc/assistant.ts assistant router (generate/stream/escalate) skeleton
-- [ ] Add packages/api/src/rpc/orchestrator.ts orchestrator router (generate/stream) skeleton
-- [ ] Add packages/api/src/rpc/flow.ts workflow start/stream/resume router skeleton
-- [x] Add packages/api/src/rpc/note.ts notes router CRUD skeleton
-- [x] Add packages/api/src/rpc/remind.ts reminders router (create/list) skeleton
-- [x] Add packages/api/src/rpc/timer.ts timers router (start/cancel/list) skeleton
-- [x] Add packages/api/src/rpc/book.ts bookmarks router (add/list/remove) skeleton
-- [ ] Add packages/api/src/rpc/slack.ts Slack OAuth and inbox read router skeleton
-- [ ] Add packages/api/src/rpc/home.ts Home control router skeleton
-- [ ] Add packages/api/src/rpc/deploy.ts deploy router (preview/promote/remove) skeleton
-- [ ] Add packages/api/src/rpc/linear.ts Linear OAuth actor=app router skeleton
-- [ ] Add packages/api/src/rpc/voice.ts STT/TTS router skeleton
-- [ ] Add packages/api/src/rpc/profile.ts profile get/update router skeleton
-- [ ] Add packages/api/src/rpc/preference.ts preference set/list router skeleton
-- [ ] Add packages/api/src/rpc/privacy.ts purge/export router skeleton
-- [ ] Add packages/api/src/rpc/jwks.ts JWKS router skeleton
-- [ ] Add packages/api/src/rpc/token.ts token exchange router skeleton
+- [ ] Add packages/api/src/routers/assistant.ts assistant router (generate/stream/escalate) skeleton
+- [ ] Add packages/api/src/routers/orchestrator.ts orchestrator router (generate/stream) skeleton
+- [ ] Add packages/api/src/routers/flow.ts workflow start/stream/resume router skeleton
+- [x] Add packages/api/src/routers/note.ts notes router CRUD skeleton
+- [x] Add packages/api/src/routers/remind.ts reminders router (create/list) skeleton
+- [x] Add packages/api/src/routers/timer.ts timers router (start/cancel/list) skeleton
+- [x] Add packages/api/src/routers/book.ts bookmarks router (add/list/remove) skeleton
+- [ ] Add packages/api/src/routers/slack.ts Slack OAuth and inbox read router skeleton
+- [ ] Add packages/api/src/routers/home.ts Home control router skeleton
+- [ ] Add packages/api/src/routers/deploy.ts deploy router (preview/promote/remove) skeleton
+- [ ] Add packages/api/src/routers/linear.ts Linear OAuth actor=app router skeleton
+- [ ] Add packages/api/src/routers/voice.ts STT/TTS router skeleton
+- [ ] Add packages/api/src/routers/profile.ts profile get/update router skeleton
+- [ ] Add packages/api/src/routers/preference.ts preference set/list router skeleton
+- [ ] Add packages/api/src/routers/privacy.ts purge/export router skeleton
+- [x] Add packages/api/src/routers/jwks.ts JWKS router skeleton
+- [x] Add packages/api/src/routers/token.ts token exchange router skeleton
 - [x] Add packages/api/src/metrics.ts prom-client registry skeleton and metric declarations
 - [ ] Add packages/agent/index.ts compose Mastra instance from Assistant and Orchestrator (skeleton)
 - [ ] Add packages/agent/assistant/src/agent.ts class Assistant with system prompt, model, memory, and tool registry (no logic)
@@ -69,10 +71,10 @@ Notes
 - [ ] Add packages/auth/src/token.ts Ed25519 issuance/verification and claims skeleton
 - [ ] Add packages/auth/src/jwks.ts JWKS generator skeleton
 - [ ] Add packages/auth/src/key.ts key load skeleton and env contracts
-- [ ] Add packages/policy/src/pdp.ts PDP evaluate() signatures and types
-- [ ] Add packages/policy/src/rule.ts rule types and matcher signatures
-- [ ] Add packages/policy/src/load.ts YAML loader signatures
-- [ ] Add packages/policy/src/decide.ts evaluation composition skeleton
+- [x] Add packages/policy/src/pdp.ts PDP evaluate() signatures and types
+- [x] Add packages/policy/src/rule.ts rule types and matcher signatures
+- [x] Add packages/policy/src/load.ts YAML loader signatures
+- [x] Add packages/policy/src/decide.ts evaluation composition skeleton
 - [ ] Add packages/db/src/client.ts drizzle client bootstrap skeleton
 - [ ] Add packages/db/src/schema/user.ts user_profiles/preferences/facts/events/autonomy/feedback schema skeleton
 - [ ] Add packages/db/src/schema/rag.ts ragDocuments/ragChunks schema skeleton with vector types
@@ -80,7 +82,7 @@ Notes
 - [x] Add packages/db/src/schema/assistant.ts assistant tasks/notes/events/reminders/bookmarks/timers schema skeleton
 - [ ] Add packages/db/src/schema/linear.ts linearInstallations schema skeleton
 - [ ] Add packages/db/src/schema/deploy.ts deployments schema skeleton
-- [ ] Add packages/db/src/schema/policy.ts auditLogs/approvals schema skeleton
+- [x] Add packages/db/src/schema/policy.ts auditLogs/approvals schema skeleton
 - [ ] Add packages/db/src/migrations/0000_extensions.sql pgcrypto and vector extension SQL
 - [ ] Add packages/db/src/migrations/0001_init.sql rag and graph base SQL
 - [ ] Add packages/db/src/migrations/0002_linear.sql linear installations SQL
@@ -95,7 +97,7 @@ Notes
 - [x] Add packages/db/src/repo/assistant.ts assistant repo skeleton (notes/tasks/reminders/bookmarks/timers)
 - [ ] Add packages/db/src/repo/linear.ts linear repo skeleton (install upsert/get)
 - [ ] Add packages/db/src/repo/deploy.ts deploy repo skeleton (upsert/get)
-- [ ] Add packages/db/src/repo/policy.ts policy repo skeleton (audit/approvals)
+- [x] Add packages/db/src/repo/policy.ts policy repo skeleton (audit/approvals)
 - [x] Add packages/db/scripts/migrate.ts ordered migration runner skeleton
 - [ ] Add packages/rag/src/doc.ts RAG chunk/embed/store/retrieve signatures
 - [ ] Add packages/ui/src/chat/chat.tsx chat shell with agent switcher placeholders
@@ -148,21 +150,23 @@ Notes
 
 ## Phase 3 — Core platform logic (auth, db, policy, wiring)
 
-- [ ] Implement Better Auth with drizzle adapter, passkey plugin, and session retrieval in createContext
+- [x] Implement Better Auth with drizzle adapter, passkey plugin, and session retrieval in createContext
 - [ ] Implement tRPC createContext with session to RuntimeContext propagation and IP/time metadata
-- [ ] Implement agent-to-tool JWT sign/verify with Ed25519, claims (roles,mfa,elevated,maxAuto), and JWKS exposure
-- [ ] Implement Redis/in-memory token cache and jti replay defense helper
-- [ ] Implement PDP evaluate() for RBAC/ABAC with obligations (require_biometric, limit_autonomy, require_manual)
-- [ ] Implement audit logging for policy decisions with traceId and async writes
-- [ ] Apply PEP to deploy/proxmox/droid routes and enforce obligations in handlers
+- [x] Implement agent-to-tool JWT sign/verify with Ed25519, claims (roles,mfa,elevated,maxAuto), and JWKS exposure
+- [x] Implement Redis/in-memory token cache and jti replay defense helper
+- [x] Implement PDP evaluate() for RBAC/ABAC with obligations (require_biometric, limit_autonomy, require_manual)
+- [x] Implement audit logging for policy decisions with traceId and async writes
+- [x] Apply PEP to token/droid routes and enforce obligations in handlers
+- [ ] Extend PEP coverage to additional routers (deploy, home, proxmox) and add obligations metrics
 - [x] Implement ordered migrations runner and apply all core migrations to local DB
 - [x] Implement db repo logic for user/rag/graph/assistant/linear/deploy/policy with Drizzle (assistant done; others pending)
 - [x] Implement /metrics registry wiring and default Node metrics collection
-- [ ] Implement /healthz and optional /healthz/deps checks for DB/Redis connectivity
+- [x] Implement /healthz and optional /healthz/deps checks for DB/Redis connectivity
+- [x] Expose JWKS at /api/jwks returning Ed25519 public key (JSON JWKS)
 
 ## Phase 4 — Orchestrator + Droids (core SWE execution)
 
-- [ ] Implement droid exec tool spawn with flags, stdout/stderr streaming, timeout, and abort handling
+- [x] Implement droid exec tool spawn with flags, stdout/stderr streaming, timeout, and abort handling (minimal Node-based runner; Mastra workflow pending)
 - [ ] Implement git tool for branch/worktree/commit/push with safe cwd scoping
 - [ ] Implement router tool for Caddy/Traefik API calls (register/update/remove)
 - [ ] Implement ticket tool using Linear client with JWT scope checks
@@ -204,9 +208,9 @@ Notes
 
 ## Phase 9 — Policy hardening and elevation flow
 
-- [ ] Implement biometric elevation endpoint to issue short-lived elevated token after passkey verification
+- [x] Implement biometric elevation endpoint to issue short-lived elevated token after passkey verification
 - [ ] Implement workflow suspend/resume logic when PDP returns require_biometric obligation
-- [ ] Implement requireToolScopesAndPolicy helper in tools and enforce obligations strictly
+- [x] Implement requireToolScopesAndPolicy helper in tools and enforce obligations strictly
 - [ ] Finalize policy.yaml roles, scopes, and ABAC rules for deploy/proxmox/droid/home/slack
 
 ## Phase 10 — Proxmox + App provisioning
@@ -221,7 +225,7 @@ Notes
 
 - [ ] Wire OTEL to Laminar for AI tracing with SensitiveDataFilter and serviceName tags
 - [ ] Tag traces with experimentId/variant and agent/tool/auto/exit_code metadata
-- [ ] Implement Prometheus counters/histograms for tRPC, workflows, droids, webhooks, scheduler
+- [x] Implement Prometheus counters/histograms for tRPC, workflows, droids, webhooks, scheduler (includes health_checks_total, policy_decisions_total, droid_exec_runs_total)
 - [ ] Deploy monitoring stack (prometheus, grafana, loki, alertmanager, promtail, cadvisor, blackbox) on alfred-core VM
 - [ ] Add dashboards for Node, Postgres, Redis, Docker, Reverse Proxy, App, and PVE
 - [ ] Add alert rules for CPU/mem/disk, 5xx errors, droid failure rate, and backup recency
@@ -255,6 +259,7 @@ Notes
 - [ ] Add JWKS rotation process and KID rollover steps for agent-to-tool JWT
 - [ ] Add backup scripts for pg_dump and vzdump with Pushgateway last_success metrics
 - [ ] Add CI lint/name-checks and type checks for all packages
+- [ ] Isolate per-package type checking (fix bun run --filter issues by excluding unfinished packages)
 - [ ] Add production build pipeline scripts and PM2/systemd unit templates
 
 ## Phase 16 — E2E validation and launch

@@ -14,7 +14,7 @@ export function createAuth() {
   throw new Error("Not implemented");
 }
 
-export function getSession(request: Request) {
+export function getSession() {
   // TODO: [Phase 3] Extract session from request
   throw new Error("Not implemented");
 }

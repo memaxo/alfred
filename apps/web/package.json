@@ -5,7 +5,8 @@
   "scripts": {
     "build": "vite build",
     "serve": "vite preview",
-    "dev": "vite dev --port=3001"
+    "dev": "vite dev --port=3001",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "radix-ui": "^1.4.2",

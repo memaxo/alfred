@@ -197,11 +197,11 @@ export async function createTimer(userId: string, durationSec: number, label?: s
       userId,
       label: label ?? null,
       duration: durationSec,
-      start: sql`NOW()`,
-      end: sql`NOW() + (${durationSec}::int * interval '1 second')`,
+      start: sql<Date>`NOW()`,
+      end: sql<Date>`NOW() + (${durationSec}::int * interval '1 second')`,
       cancelled: false,
       completed: false,
-    } as Partial<TimerInsert>)
+    })
     .returning();
   return row;
 }

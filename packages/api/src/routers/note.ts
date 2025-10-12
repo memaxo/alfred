@@ -1,4 +1,4 @@
-import { assistantRepo } from "@alfred/db";
+import * as assistantRepo from "@alfred/db/repo/assistant";
 import z from "zod";
 import { authedProcedure, router } from "../index";
 
@@ -8,12 +8,10 @@ const noteMutationInput = z.object({
   tags: z.array(z.string().min(1)).max(32).optional(),
 });
 
-const noteListInput = z
-  .object({
-    limit: z.number().int().min(1).max(200).default(100),
-    offset: z.number().int().min(0).default(0),
-  })
-  .default({});
+const noteListInput = z.object({
+  limit: z.number().int().min(1).max(200).default(100),
+  offset: z.number().int().min(0).default(0),
+});
 
 const noteUpdateInput = z
   .object({
@@ -36,7 +34,7 @@ export const noteRouter = router({
   ),
 
   list: authedProcedure.input(noteListInput).query(({ ctx, input }) =>
-    assistantRepo.getNotes(ctx.session.user.id, input.limit ?? 100, input.offset ?? 0)
+    assistantRepo.getNotes(ctx.session.user.id, input.limit, input.offset)
   ),
 
   update: authedProcedure.input(noteUpdateInput).mutation(async ({ input }) => {

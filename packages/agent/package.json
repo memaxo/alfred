@@ -1,0 +1,35 @@
+{
+  "name": "@alfred/agent",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -b",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@alfred/auth": "workspace:*",
+    "@mastra/core": "^0.20.2",
+    "@mastra/memory": "^0.15.6",
+    "@mastra/pg": "^0.17.2",
+    "@mastra/evals": "^0.13.10",
+    "@ai-sdk/openai": "^2.0.49",
+    "@lmnr-ai/lmnr": "^0.7.4",
+    "zod": "catalog:"
+  }
+}

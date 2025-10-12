@@ -3,7 +3,7 @@
  * Audit logs and approval queue
  */
 
-import { pgTable, text, timestamp, uuid, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
 
 // TODO: [Phase 9] Add proper indexes for policy queries
 

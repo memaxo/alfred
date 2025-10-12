@@ -1,6 +1,11 @@
 {
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "strictNullChecks": true
-  }
+  "files": [],
+  "references": [
+    { "path": "packages/type" },
+    { "path": "packages/policy" },
+    { "path": "packages/auth" },
+    { "path": "packages/db" },
+    { "path": "packages/agent" },
+    { "path": "packages/api" }
+  ]
 }

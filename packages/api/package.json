@@ -13,7 +13,8 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc -b"
   },
   "devDependencies": {
     "tsdown": "catalog:"
@@ -31,6 +32,7 @@
     "zod": "catalog:",
     "prom-client": "^15.1.3",
     "@alfred/auth": "workspace:*",
-    "@alfred/db": "workspace:*"
+    "@alfred/db": "workspace:*",
+    "@alfred/agent": "workspace:*"
   }
 }

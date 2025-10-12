@@ -1,5 +1,8 @@
+import { evaluate } from "@alfred/policy";
+import type { Decision, PolicyResource } from "@alfred/policy";
 import { nanoid } from "nanoid";
 import { jwtVerify, SignJWT, importPKCS8, importSPKI, type JWTPayload } from "jose";
+import type { KeyLike } from "jose";
 import { getRedis } from "./redis";
 
 const ISSUER = process.env.AGENT_ISSUER || "alfred";
@@ -7,8 +10,8 @@ const DEFAULT_AUDIENCE = process.env.TOOL_AUDIENCE || "alfred:tools";
 const KID = process.env.AGENT_JWK_KID || "agent-ed25519";
 const DEFAULT_TTL = Number.parseInt(process.env.TOOL_TOKEN_TTL || "", 10) || 300;
 
-let privateKeyPromise: Promise<CryptoKey> | null = null;
-let publicKeyPromise: Promise<CryptoKey> | null = null;
+let privateKeyPromise: Promise<KeyLike> | null = null;
+let publicKeyPromise: Promise<KeyLike> | null = null;
 
 function getPrivateKey() {
   if (!privateKeyPromise) {
@@ -140,6 +143,54 @@ export async function verifyAccessToken(
     aud: payload.aud ?? audience,
     iss: payload.iss ?? ISSUER,
   };
+}
+
+export interface ToolPolicyInput {
+  action: string;
+  resource: PolicyResource;
+  context?: Record<string, unknown>;
+  audience?: string;
+}
+
+export interface ToolPolicyResult {
+  decision: Decision;
+  claims: TokenClaims;
+}
+
+export async function requireToolScopesAndPolicy(
+  authz: string | undefined,
+  requiredScopes: string[],
+  policyInput: ToolPolicyInput,
+): Promise<ToolPolicyResult> {
+  if (!authz?.startsWith("Bearer ")) {
+    throw new Error("unauthorized");
+  }
+
+  const token = authz.slice("Bearer ".length);
+  const audience = policyInput.audience ?? DEFAULT_AUDIENCE;
+  const claims = await verifyAccessToken(token, audience, requiredScopes);
+
+  const decision = await evaluate({
+    subject: {
+      id: claims.sub,
+      roles: claims.roles ?? [],
+      scopes: claims.scopes,
+    },
+    action: policyInput.action,
+    resource: policyInput.resource,
+    context: {
+      ...(policyInput.context ?? {}),
+      mfa: claims.mfa,
+      elevated: claims.elevated,
+      scopes: claims.scopes,
+    },
+  });
+
+  if (!decision.allow) {
+    throw new Error(decision.reason ?? "policy_denied");
+  }
+
+  return { decision, claims };
 }
 
 const memoryJti = new Map<string, number>();

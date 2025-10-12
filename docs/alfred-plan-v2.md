@@ -33,8 +33,8 @@ Table of Contents
     - [CI/CD: Automated Code Review with Droid Exec](#cicd-automated-code-review-with-droid-exec)
     - [Linear Integration (Agent Sessions, Webhooks, OAuth)](#linear-integration-agent-sessions-webhooks-oauth)
   - [Auth Model](#auth-model)
-    - [End-user Auth (auth + Biometrics)](#end-user-auth-auth--biometrics)
-    - [Agent-to-Tool Auth (JWT: Ed25519, JWKS, Scopes)](#agent-to-tool-auth-jwt-ed25519-jwks-scopes)
+    - [End-user Auth (Better Auth + Passkeys)](#end-user-auth-better-auth--passkeys)
+    - [Agent-to-Tool Auth (Ed25519 JWT, JWKS, Scopes)](#agent-to-tool-auth-ed25519-jwt-jwks-scopes)
   - [Policy \& Authorization (RBAC/ABAC + Obligations)](#policy--authorization-rbacabac--obligations)
     - [Policy model: RBAC + ABAC + obligations](#policy-model-rbac--abac--obligations)
     - [Policy configuration (YAML)](#policy-configuration-yaml)
@@ -56,6 +56,7 @@ Table of Contents
     - [Home Procedures (control whitelisted entities)](#home-procedures-control-whitelisted-entities)
     - [Voice Procedures (stt/tts)](#voice-procedures-stttts)
     - [Linear Procedures (oauth/install/webhooks)](#linear-procedures-oauthinstallwebhooks)
+    - [Token Procedures (issue/elevate)](#token-procedures-issueelevate)
   - [Web, Desktop, Mobile Integration](#web-desktop-mobile-integration)
     - [TanStack Query Cache Handoff on Client](#tanstack-query-cache-handoff-on-client)
     - [Generative UI (Floating Orb) and Voice](#generative-ui-floating-orb-and-voice)
@@ -402,6 +403,7 @@ tsconfig.base.json:
 ### Domain-driven names & layers
 
 - One-word names only (files, classes, params). Nouns only; no adjectives.
+- Framework-required filenames (e.g., `_layout.tsx`, `+not-found.tsx`) and UI ergonomics (`use-color-scheme.ts`) are the only allowed exceptions per `.ruler/01-naming-conventions.md`; keep everything else single word.
 - Agents are separate modules: assistant and orchestrator. Agent IDs: "assistant", "orchestrator".
 - Layers per domain:
   - domain (types, rules), use (flows), port (interfaces/tools), infra (adapters), ui (components).
@@ -452,8 +454,7 @@ services:
 
 packages/db/src/schema.ts:
 ```ts
-import { pgTable, text, timestamp, uuid, integer, boolean, jsonb, real } from "drizzle-orm/pg-core";
-import { vector } from "drizzle-orm-pgvector/pg";
+import { pgTable, text, timestamp, uuid, integer, boolean, jsonb, real, vector } from "drizzle-orm/pg-core"; // use pg-core vector helper to avoid SSR bundling issues
 
 export const VECTOR_DIM = 1536;
 
@@ -647,6 +648,40 @@ CREATE TABLE IF NOT EXISTS assistant_timers (
 CREATE INDEX IF NOT EXISTS assistant_timers_user_idx ON assistant_timers(user_id, status);
 ```
 
+packages/db/src/migrations/0008_indexes.sql:
+```sql
+CREATE INDEX IF NOT EXISTS assistant_tasks_user_status_idx ON assistant_tasks(user_id, status);
+CREATE INDEX IF NOT EXISTS assistant_tasks_user_due_idx ON assistant_tasks(user_id, due_at);
+CREATE INDEX IF NOT EXISTS assistant_reminders_user_due_fired_idx ON assistant_reminders(user_id, due_at, status);
+CREATE INDEX IF NOT EXISTS assistant_timers_user_end_completed_idx ON assistant_timers(user_id, status, duration_sec);
+```
+
+packages/db/src/migrations/0009_uniques.sql:
+```sql
+ALTER TABLE user_preferences ADD CONSTRAINT user_preferences_user_key_unique UNIQUE (user_id, key);
+ALTER TABLE user_autonomy ADD CONSTRAINT user_autonomy_user_action_unique UNIQUE (user_id, action);
+ALTER TABLE linear_installations ADD CONSTRAINT linear_installations_user_org_unique UNIQUE (user_id, organization_id);
+```
+
+packages/db/src/migrations/0010_vector_index.sql:
+```sql
+CREATE INDEX IF NOT EXISTS user_facts_embedding_hnsw ON user_facts USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS rag_chunks_embedding_hnsw ON rag_chunks USING hnsw (embedding vector_cosine_ops);
+```
+
+packages/db/src/migrations/0011_passkey.sql:
+```sql
+-- Better Auth tables for WebAuthn/Passkey support
+CREATE TABLE IF NOT EXISTS passkey (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  credential_id text NOT NULL UNIQUE,
+  public_key bytea NOT NULL,
+  counter bigint NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+```
+
 packages/db/src/repository.ts:
 ```ts
 import { db } from "./client";
@@ -814,8 +849,7 @@ CREATE TABLE IF NOT EXISTS user_feedback (
 
 packages/db/src/schema/user.ts (append to schema.ts in implementation):
 ```ts
-import { pgTable, text, timestamp, uuid, jsonb, integer, real } from "drizzle-orm/pg-core";
-import { vector } from "drizzle-orm-pgvector/pg";
+import { pgTable, text, timestamp, uuid, jsonb, integer, real, vector } from "drizzle-orm/pg-core";
 
 export const userProfiles = pgTable("user_profiles", {
   user: text("user_id").primaryKey(),
@@ -1352,7 +1386,7 @@ The Personal Assistant (PA) supports daily routines with safe, auditable tools t
 
 - Reminders and Alarms
   - Schedule reminders with due times and channels: in-app, Slack (optional), or voice prompt.
-  - In-process scheduler (single-node) scans due reminders periodically and triggers notifications.
+  - In-process scheduler (single-node) scans due reminders periodically and triggers notifications. Opt-in via `SCHED_REMIND=1`; runs server-side only, adds jitter to avoid aligned wake-ups, and cleans up timers during Vite HMR.
   - Misfire handling on server restart (catch-up window).
 
 - Timers (Pomodoro/focus timers)
@@ -1541,7 +1575,7 @@ function onChunk(chunk: any, qc: ReturnType<typeof useQueryClient>) {
 Beyond Laminar: System metrics, logs, and alerts
 Laminar covers AI/LLM tracing. For full-stack visibility (24/7 home-lab on Proxmox), add:
 - Metrics: Prometheus scrapes app and infra metrics
-  - App (TanStack Start server): /metrics (Prometheus format)
+  - App (TanStack Start server): /api/metrics (Prometheus format)
   - Containers: cAdvisor
   - Postgres: postgres_exporter
   - Redis: redis_exporter
@@ -1596,16 +1630,28 @@ register.registerMetric(workflowRunsTotal);
 register.registerMetric(droidExecRunsTotal);
 ```
 
-Expose /metrics in TanStack Start (server route)
-apps/web/src/routes/metrics.ts:
-```ts
-import { createServerFileRoute } from "@tanstack/react-start/server";
-import { register } from "@alfred/api/metrics";
+Expose metrics at `/api/metrics` in TanStack Start (server route)
+apps/web/src/routes/api/metrics.ts:
+Health and readiness endpoints:
 
-export const ServerRoute = createServerFileRoute("/metrics")({
-  loader: async () => new Response(await register.metrics(), {
-    headers: { "Content-Type": register.contentType },
-  }),
+- `/healthz`: returns `{ ok: true, ts }` and increments `health_checks_total{target="app",status}`.
+- `/healthz/deps`: runs `SELECT 1` against Postgres and `PING` against Redis (when configured); increments `health_checks_total{target="deps",status}` and emits 500 on failure with `{ ok: false, error }` payload.
+
+```ts
+import { metricsContentType, getMetricsSnapshot } from "@alfred/api/metrics";
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/api/metrics")({
+  server: {
+    handlers: {
+      GET: async () => {
+        const body = await getMetricsSnapshot();
+        return new Response(body, {
+          headers: { "content-type": metricsContentType },
+        });
+      },
+    },
+  },
 });
 ```
 
@@ -1641,6 +1687,13 @@ export const authedProcedure = t.procedure
   });
 ```
 
+Current Prometheus series include:
+- `trpc_requests_total`, `trpc_request_errors_total`, `trpc_request_duration_seconds`
+- `health_checks_total{target,status}` for `/healthz` and `/healthz/deps`
+- `policy_decisions_total{action,decision}` and `policy_obligations_total{action,obligation}` for PDP outcomes
+- `pdp_cache_hits_total{result}` to observe policy cache hit/miss ratios
+- `droid_exec_runs_total{auto,exit_code}` and `droid_exec_duration_seconds{auto}` for secure droid executions
+
 Droid exec instrumentation (count runs and exit codes)
 packages/agent/src/tools/droid.ts (snippet):
 ```ts
@@ -1671,7 +1724,7 @@ Example alert policies (Alertmanager)
 - Backups: last pg_dump > 26h; last vzdump > 26h
 
 Security and access
-- Bind /metrics to LAN or protect via reverse proxy auth
+- Bind /api/metrics to LAN or protect via reverse proxy auth
 - Grafana/Alertmanager require credentials; keep dashboards on LAN/VPN
 - Keep secrets out of logs; continue using Mastra SensitiveDataFilter for AI spans
 
@@ -1682,6 +1735,20 @@ Security and access
 ALFRED orchestrates high-level goals into actionable tasks and routes focused work to Droids (Factory’s headless CLI) and other agents/tools. This mirrors the original hierarchy: ALFRED (assistant) → ORCHESTRATOR (projects) → AGENTS LAYER (Droids primary).
 
 ### Droid Exec Tool (Headless CLI Runner)
+
+#### Sandbox environment controls
+
+Environment variables shape the local sandbox:
+
+- `ORCH_ALLOW_CWD_PREFIXES` — `path.delimiter` separated absolute paths that the orchestrator may use as working directories. Each candidate is realpathed and must live beneath one of the prefixes (symlinks cannot escape).
+- `DROID_BIN` — absolute path to the droid CLI. If unset, the runner resolves an executable from the host `PATH` at runtime and verifies `X_OK` permissions. User-provided `PATH` overrides from requests are ignored.
+- `FACTORY_API_KEY` — credential forwarded to the droid CLI for Factory backend access.
+
+Safety defaults:
+- Working directories are validated with `realpath` + ancestry checks (`path.relative`) before launch.
+- `input.env` overrides are restricted to keys prefixed with `DROID_`; `PATH` and other critical variables are locked down.
+- Outputs are capped (5 MiB combined stdout) and the process is killed on timeout or cancellation.
+- All invocations require a scoped tool token (`droid.exec`), and medium/high autonomy additionally require a fresh biometric elevation (`mfa=passkey`, `elevated=true`).
 
 packages/agent/src/tools/droid.ts:
 ```ts
@@ -2204,128 +2271,72 @@ export const toolTickets = {
 
 ## Auth Model
 
-### End-user Auth (auth + Biometrics)
+### End-user Auth (Better Auth + Passkeys)
 
-Better Auth provides the product’s user authentication (sessions, sign-in/out) in the web app and integrates cleanly with TanStack Start. We also enable biometric gating through the Passkey plugin (WebAuthn/FIDO2). High-risk operations in Alfred (e.g., escalate Droid auto, Proxmox power) will suspend workflows until a biometric-verified approval is received, then resume with the appropriate signed authorization.
+Better Auth manages ALFRED’s user sessions. The Passkey plugin is enabled and, after each successful passkey sign-in, the server stamps a **bio-ticket** (120 s TTL) tied to the Better Auth session id. `packages/auth/src/biometric.ts` persists tickets in Redis when `REDIS_URL` is defined or falls back to an in-process cache; elevated tool tokens are rejected once the ticket expires. Native clients reuse the same auth instance via the Expo plugin.
 
-1) Install Better Auth
-```bash
-bun add auth
-```
+Key integration points:
 
-2) Environment variables (apps/web .env)
-```txt
-BETTER_AUTH_SECRET= # Generate with: npx @auth/cli@latest secret
-BETTER_AUTH_URL=http://localhost:3000
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-```
+- `packages/auth/src/index.ts` wires the Drizzle adapter, passkey plugin, bio-ticket after-hook, Expo plugin, and `reactStartCookies()` for TanStack Start SSR.
+- `apps/web/src/routes/api/auth/$.ts` exposes the Better Auth handler at `/api/auth/*`.
+- `apps/web/src/lib/auth-client.ts` loads `passkeyClient()` so the browser flow can trigger WebAuthn challenges.
 
-3) Server auth instance (packages/auth/src/auth.ts)
-Use Drizzle adapter (Postgres) and TanStack Start cookie integration. Optionally enable Passkeys for biometric gating.
 ```ts
-import { betterAuth } from "auth";
-import { drizzleAdapter } from "auth/adapters/drizzle";
-import { reactStartCookies } from "auth/react-start";
-import { passkey } from "auth/plugins/passkey";
-import { db } from "@alfred/db/client";
+// packages/auth/src/index.ts (excerpt)
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
+import { passkey } from "better-auth/plugins/passkey";
+import { reactStartCookies } from "better-auth/react-start";
+import { expo } from "@better-auth/expo";
+import { db } from "@alfred/db";
+import { setBiometricTicket } from "./biometric";
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg",
-  }),
-  // Enable core methods
-  emailAndPassword: {
-    enabled: true,
-  },
-  socialProviders: {
-    github: {
-      client: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-    },
-  },
-  // Plugins must include reactStartCookies last for TanStack cookie handling
+  database: drizzleAdapter(db, { provider: "pg", schema }),
+  trustedOrigins,
+  emailAndPassword: { enabled: true },
   plugins: [
-    passkey({
-      rpID: "localhost",
-      rpName: "Alfred",
-      origin: process.env.BETTER_AUTH_URL!,
-    }),
+    passkey({ rpID, rpName: "ALFRED", origin }),
+    {
+      id: "bio-ticket",
+      hooks: {
+        after: [
+          {
+            matcher: ctx => ctx.path === "/sign-in/passkey",
+            handler: createAuthMiddleware(async ctx => {
+              const session = ctx.context.newSession?.session ?? ctx.context.session?.session;
+              const sessionId = session?.id ?? session?.token;
+              if (sessionId) await setBiometricTicket(sessionId, 120);
+            }),
+          },
+        ],
+      },
+    },
+    expo(),
     reactStartCookies(),
   ],
 });
 ```
 
-4) Mount the handler in TanStack Start (apps/web)
-Create a catch-all route to serve Better Auth endpoints at /api/auth/*.
+Environment variables:
 
-apps/web/src/routes/api/auth/$.ts:
-```ts
-import { auth } from "@alfred/auth/auth";
-import { createServerFileRoute } from "@tanstack/react-start/server";
-
-export const ServerRoute = createServerFileRoute("/api/auth/$").methods({
-  GET: async ({ request }) => auth.handler(request),
-  POST: async ({ request }) => auth.handler(request),
-});
+```
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:3000
+REDIS_URL=redis://127.0.0.1:6379 # optional shared bio-ticket cache
 ```
 
-5) Client instance for the web app
-Use the React client to interact with the auth server.
+Web client (passkey-aware):
 
-apps/web/src/lib/auth-client.ts:
 ```ts
-import { createAuthClient } from "auth/react";
+import { createAuthClient } from "better-auth/react";
+import { passkeyClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-  // Base URL optional when on same domain; include if using a custom origin in dev
-  baseURL: process.env.VITE_PUBLIC_APP_URL || "http://localhost:3000",
+  baseURL: import.meta.env.VITE_PUBLIC_APP_URL ?? "http://localhost:3000",
+  plugins: [passkeyClient()],
 });
-```
-
-Examples:
-- Email/password sign-in
-```ts
-const { data, error } = await authClient.signIn.email({
-  email: "user@example.com",
-  password: "password123",
-  callbackURL: "/dashboard",
-});
-```
-
-- Sign-up with auto sign-in (default)
-```ts
-const { data, error } = await authClient.signUp.email({
-  email: "user@example.com",
-  password: "password123",
-  name: "User",
-  callbackURL: "/welcome",
-});
-```
-
-- Session in UI (React)
-```tsx
-import { authClient } from "../lib/auth-client";
-export function UserWidget() {
-  const { data: session, isPending } = authClient.useSession();
-  if (isPending) return <div>Loading...</div>;
-  if (!session) return <button onClick={() => authClient.signIn.social({ provider: "github" })}>Continue with GitHub</button>;
-  return (
-    <div>
-      <span>{session.user.email}</span>
-      <button onClick={() => authClient.signOut()}>Sign out</button>
-    </div>
-  );
-}
-```
-
-6) Schema generation and migration
-- Generate Better Auth schema (Drizzle)
-```bash
-npx @auth/cli@latest generate
-# then generate and apply your Drizzle migrations
-npx drizzle-kit generate
-npx drizzle-kit migrate
 ```
 
 7) Server-side session retrieval
@@ -2351,80 +2362,62 @@ await authClient.signIn.passkey({ autoFill: true });
 ```
 - In Alfred, before performing a high-risk action, suspend the workflow and prompt users to authenticate with passkey. On success, resume and continue with elevated scopes (e.g., droid.exec medium/high or proxmox.power) by issuing the appropriate scoped tool token.
 
-### Agent-to-Tool Auth (JWT: Ed25519, JWKS, Scopes)
+### Agent-to-Tool Auth (Ed25519 JWT, JWKS, Scopes)
 
-packages/auth/src/token.ts:
+Tool-facing calls rely on short-lived Ed25519 JWTs. Tokens default to a five-minute TTL and carry scopes plus optional elevation metadata (`elevated`, `mfa`, `roles`). Elevated tokens are issued only when a fresh bio-ticket exists.
+
+Highlights:
+
+- `packages/auth/src/token.ts` signs/verifies tokens and defends against replay via `cacheJTI` (Redis-backed when available).
+- `packages/api/src/routers/token.ts` exposes two authed procedures:
+  - `token.issue(scopes[], aud, ttlSec?)` → scoped, non-elevated token.
+  - `token.elevate(...)` → calls `requireRecentBiometric`, sets `elevated=true`, `mfa="passkey"`.
+- `apps/web/src/lib/token.ts` provides `getElevatedToolToken(scopes)` which triggers a passkey assertion before invoking `token.elevate`.
+- `packages/auth/src/jwks.ts` exports the Ed25519 public key; `apps/web/src/routes/api/jwks.ts` serves it at `/api/jwks` for external verifiers.
+- Token middleware and audits: the tRPC router wraps `token.issue` / `token.elevate` with `requirePolicy`, logging each decision via `policyRepo.createAuditLog` and incrementing `policy_decisions_total{action,decision}`.
+- Tool boundary guard: downstream tools call `requireToolScopesAndPolicy(authz, requiredScopes, { action, resource, context })`, which verifies the Bearer scopes, runs the PDP, and enforces biometric elevation (`auto` ∈ {`medium`, `high`} requires `claims.elevated === true` and `claims.mfa === "passkey"`).
+
 ```ts
-import { SignJWT, importPKCS8, importSPKI, jwtVerify, JWK, generateKeyPair } from "jose";
-
-export async function ensureEd25519() {
-  if (!process.env.AGENT_ED25519_PRIVATE || !process.env.AGENT_ED25519_PUBLIC_PEM) {
-    const { publicKey, privateKey } = await generateKeyPair("Ed25519");
-    throw new Error("Provision AGENT_ED25519_PRIVATE (PKCS8 PEM), AGENT_ED25519_PUBLIC_PEM (SPKI PEM).");
-  }
-}
-
-export async function signClientAssertion(sub: string, aud: string, jti: string) {
-  const privateKey = await importPKCS8(process.env.AGENT_ED25519_PRIVATE!, "Ed25519");
-  const now = Math.floor(Date.now() / 1000);
-  const jwt = await new SignJWT({ type: "client-assertion" })
-    .setProtectedHeader({ alg: "EdDSA", kid: process.env.AGENT_JWK_KID || "agent-1" })
-    .setIssuer(sub).setSubject(sub).setAudience(aud).setJti(jti)
-    .setIssuedAt(now).setExpirationTime(now + 60)
-    .sign(privateKey);
-  return jwt;
-}
-
-export async function issueAccessToken(sub: string, scopes: string[], aud: string) {
-  const privateKey = await importPKCS8(process.env.AGENT_ED25519_PRIVATE!, "Ed25519");
-  const now = Math.floor(Date.now() / 1000);
-  return await new SignJWT({ scope: scopes.join(" "), typ: "access" })
-    .setProtectedHeader({ alg: "EdDSA", kid: process.env.AGENT_JWK_KID || "agent-1" })
-    .setIssuer(process.env.AGENT_ISSUER!)
-    .setSubject(sub).setAudience(aud).setIssuedAt(now).setExpirationTime(now + 300)
-    .sign(privateKey);
-}
-
-export function getJWKS(): { keys: JWK[] } {
-  return {
-    keys: [
-      {
-        kty: "OKP", crv: "Ed25519", x: process.env.AGENT_ED25519_PUBLIC!, kid: process.env.AGENT_JWK_KID || "agent-1",
-        alg: "EdDSA", use: "sig",
-      } as JWK,
-    ],
-  };
-}
-
-function spkiFromEnv(): string {
-  return process.env.AGENT_ED25519_PUBLIC_PEM!;
-}
-
-export async function verifyAccessToken(token: string, aud: string, requiredScopes: string[]) {
-  const key = await importSPKI(spkiFromEnv(), "Ed25519");
-  const { payload } = await jwtVerify(token, key, { audience: aud, issuer: process.env.AGENT_ISSUER });
-  const grants = new Set(String(payload.scope || "").split(" ").filter(Boolean));
-  for (const s of requiredScopes) if (!grants.has(s)) throw new Error(`missing_scope:${s}`);
-  return payload;
-}
-
-export async function requireToolScopes(authzHeader: string | undefined, required: string[]) {
-  if (!authzHeader?.startsWith("Bearer ")) throw new Error("unauthorized");
-  const token = authzHeader.slice("Bearer ".length);
-  await verifyAccessToken(token, process.env.TOOL_AUDIENCE!, required);
-}
+// packages/api/src/routers/token.ts (excerpt)
+export const tokenRouter = router({
+  issue: authedProcedure
+    .input(z.object({ scopes: scopesSchema, aud: z.string().optional(), ttlSec: ttlSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const token = await issueAccessToken(ctx.session.user.id, input.scopes, input.aud ?? defaultAudience, {
+        ttlSec: input.ttlSec,
+        elevated: false,
+        mfa: "none",
+      });
+      return { token };
+    }),
+  elevate: authedProcedure
+    .input(z.object({ scopes: scopesSchema, aud: z.string().optional(), ttlSec: ttlSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const sessionId = ctx.session.session?.id ?? ctx.session.session?.token;
+      if (!sessionId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      await requireRecentBiometric(sessionId);
+      const token = await issueAccessToken(ctx.session.user.id, input.scopes, input.aud ?? defaultAudience, {
+        ttlSec: input.ttlSec,
+        elevated: true,
+        mfa: "passkey",
+      });
+      return { token };
+    }),
+});
 ```
 
-Scopes:
-- assistant.read, assistant.write, assistant.escalate
-- web.read
-- droid.exec, droid.admin
-- proxmox.read, proxmox.power, proxmox.admin
-- tickets.read, tickets.write
+Environment variables:
 
-Token caching:
-- Cache per-scope key (`scopes.sort().join(" ")`) until exp-30s.
-- In-memory for local dev; Redis or similar if multi-instance.
+```
+TOOL_AUDIENCE=alfred:tools
+AGENT_ISSUER=alfred
+AGENT_JWK_KID=agent-ed25519
+AGENT_ED25519_PRIVATE=-----BEGIN PRIVATE KEY-----...
+AGENT_ED25519_PUBLIC_PEM=-----BEGIN PUBLIC KEY-----...
+REDIS_URL=redis://127.0.0.1:6379 # optional for bio-ticket/JTI cache
+```
+
+Tool entry points must validate required scopes and, for `auto` modes of `medium` or `high`, enforce `claims.elevated === true` and `claims.mfa === "passkey"` before performing risky operations. Background workers can verify tokens using the JWKS endpoint.
 
 ---
 
@@ -2465,82 +2458,67 @@ Repo file: config/policy.yaml
 roles:
   owner:
     scopes:
-      - tickets.write
-      - droid.exec
-      - repo.read
-      - repo.write
-      - repo.push
-      - deploy.write
-      - proxmox.power
-      - proxmox.admin
-      - web.read
       - assistant.read
       - assistant.write
       - assistant.escalate
-    constraints:
-      maxAuto: high
-
-  personal:
-    scopes: [assistant.read, assistant.write, assistant.escalate, web.read]
-    constraints: { maxAuto: low }
+      - web.read
+      - droid.exec
+      - token.issue
+      - token.elevate
+  user:
+    scopes:
+      - assistant.read
+      - assistant.write
+      - assistant.escalate
+      - web.read
 
 rules:
-  - id: "proxmox-admin-create"
-    effect: "allow"
-    actions: ["proxmox.create", "proxmox.destroy"]
+  - id: token-issue-owner
+    actions: ["token.issue"]
     roles: ["owner"]
-    resource: { kind: "lxc", node: { in: ["pve"] } }
-    conditions:
-      obligations: ["requireBio"]
-      maxAuto: "low"
 
-  - id: "droid-medium-high"
-    effect: "allow"
+  - id: token-elevate-owner
+    actions: ["token.elevate"]
+    roles: ["owner"]
+    conditions:
+      - field: "mfa"
+        equals: "passkey"
+      - field: "elevated"
+        equals: true
+
+  - id: droid-exec-owner
+    actions: ["droid.exec"]
+    roles: ["owner"]
+
+  - id: droid-exec-requires-biometric
     actions: ["droid.exec"]
     roles: ["owner"]
     conditions:
-      if: "request.auto in ['medium','high']"
-      obligations: ["requireBio"]
-      maxTTL: 300
-
-  - id: "deploy-preview"
-    effect: "allow"
-    actions: ["deploy.preview"]
-    roles: ["owner"]
-    conditions:
-      obligations: []
-      maxAuto: "low"
-
-  - id: "deploy-production"
-    effect: "allow"
-    actions: ["deploy.promote"]
-    roles: ["owner"]
-    resource: { domain: { matches: ".*\\.example\\.com$" } }
-    conditions:
-      obligations: ["requireBio","requireManual"]
-      maxAuto: "low"
+      - field: "auto"
+        in: ["medium", "high"]
+    obligations: ["requireBio"]
 ```
 
 Notes
-- RBAC: roles map to scopes and global constraints (e.g., maxAuto).
-- ABAC: resource attributes and request context (auto, drive_mode) drive conditional logic.
-- Obligations are returned with allow/deny and must be enforced by the caller (PEP).
+- RBAC: roles (e.g., owner vs user) map to scopes; elevated actions such as `droid.exec` and token issuance live on the owner role.
+- ABAC: resource attributes and request context (auto, drive_mode, mfa, elevated) drive conditional logic and obligations.
+- Obligations (e.g., `requireBio`) are surfaced to PEPs; callers must suspend/resume or otherwise enforce them before continuing.
 
 ### Policy Decision Point (PDP)
 
-Packages (in-process; no extra server):
-- packages/auth/src/policy/types.ts: types for Subject, Resource, Action, Decision, Obligation.
-- packages/auth/src/policy/schemas.ts: zod validation for policy files.
-- packages/auth/src/policy/loader.ts: load/validate YAML/JSON policy, optional hot-reload.
-- packages/auth/src/policy/evaluator.ts: evaluation logic (RBAC+ABAC); returns { allow, obligations, reason }.
-- packages/auth/src/policy/index.ts: exports getPDP(), evaluate(), loadPolicies().
+Implementation highlights:
 
-Decision I/O
-- Input: subject (id, roles), action (string), resource ({ kind, id?, attrs? }), context (auto, driveMode, time, ip, mfa, elevated, etc).
-- Output: allow (boolean), obligations (string[]), reason (string?).
+- **Loader** (`packages/policy/src/load.ts`): parses `config/policy.yaml` via YAML + Zod, memoises by file mtime, and normalises scopes/obligations.
+- **Matcher** (`packages/policy/src/rule.ts`): applies action wildcards, role filters, resource kind/id matches, and ABAC conditions against `context.*` values.
+- **Evaluator** (`packages/policy/src/pdp.ts`): merges role/subject scopes, applies deny/allow precedence, aggregates obligations, and caches decisions for ~30 s keyed by roles|action|resource|context.
+- **Decision combiner** (`packages/policy/src/decide.ts`): merges multiple decisions (deny wins, obligations union, reasons concatenated) for multi-step workflows.
+- **Observability**: each evaluation increments `policy_decisions_total{action,decision}` and writes an `audit_logs` record via `policyRepo.createAuditLog`.
 
-Caching
-- Cache decisions for static inputs (role set, action, resource.kind) with TTL (30–60s). Include context keys in cache key if relevant (e.g., drive_mode).
+Inputs include subject (id, roles, optional scopes), action string, resource `{ kind, id?, attrs? }`, and contextual metadata (auto level, drive_mode, mfa, elevated, ip, etc.). The PDP returns `{ allow, obligations[], reason?, ruleIds? }`.
+
+Follow-ups:
+- Extend PEP coverage to additional routers (deploy, home, proxmox) and surface obligation-specific metrics (e.g., `policy_obligations_total`).
+- Replace the minimal Node-based droid runner with Mastra workflows and richer tooling once orchestrator scaffolding lands.
 
 ### Agent-to-tool JWT (claims & elevation)
 
@@ -2704,7 +2682,9 @@ const decision = await requireToolScopesAndPolicy(
   ["droid.exec"],
   { action: "droid.exec", resource: { kind: "repo", id: input.cw ?? "unknown" }, context: { auto: input.auto } }
 );
-// enforce obligations: if requireBio → ensure token payload.mfa === 'passkey' && elevated === true
+// enforce obligations and auto gating:
+// - requireBio → payload.elevated === true && payload.mfa === "passkey"
+// - if input.auto in ["medium","high"] → also require elevated+mfa before proceeding
 ```
 
 ### Workflow obligations: suspend/resume
@@ -2731,9 +2711,10 @@ if (decision.obligations?.includes("requireBio")) {
 
 - Every policy decision is persisted to audit_logs with traceId for correlation.
 - Prometheus metrics:
-  - policy_decisions_total{action,decision}
-  - policy_obligations_total{obligation}
-  - approvals_pending_total
+  - `trpc_requests_total`, `trpc_request_errors_total`, `trpc_request_duration_seconds`
+  - `health_checks_total{target,status}`
+  - `policy_decisions_total{action,decision}`
+  - `droid_exec_runs_total{auto,exit_code}`
 - Laminar events for decision visibility:
 ```ts
 Laminar.event({
@@ -2898,56 +2879,10 @@ export const toolRouter = router({
 
 ### Droids Procedures (run/stream/list)
 
-packages/api/src/rpc/droids.ts:
-```ts
-import { router, authedProcedure } from "../trpc";
-import { z } from "zod";
-import { mastra } from "@alfred/agent";
-import { observable } from "@trpc/server/observable";
-import { requireToolScopes } from "@alfred/auth/token";
-
-export const droidsRouter = router({
-  list: authedProcedure
-    .input(z.object({}))
-    .query(async () => {
-      const tool = (mastra.getAgent("alfred").tools as any)?.listDroids;
-      const res = await tool?.execute({});
-      return res;
-    }),
-
-  run: authedProcedure
-    .input(z.object({
-      prompt: z.string(),
-      auto: z.enum(["read","low","medium","high"]).default("read"),
-      out: z.enum(["text","json","debug"]).default("text"),
-      authz: z.string().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      await requireToolScopes(input.authz, ["droid.exec"]);
-      const tool = mastra.getAgent("alfred").tools?.droidExec;
-      const res = await tool?.execute({ input, context: {} });
-      return res;
-    }),
-
-  stream: authedProcedure
-    .input(z.object({
-      prompt: z.string(),
-      auto: z.enum(["read","low","medium","high"]).default("read"),
-      out: z.enum(["text","json","debug"]).default("debug"),
-      authz: z.string().optional(),
-    }))
-    .subscription(({ input }) => {
-      return observable<any>(async (emit) => {
-        await requireToolScopes(input.authz, ["droid.exec"]);
-        const tool = mastra.getAgent("alfred").tools?.droidExec;
-        const res = await tool?.execute({ input, writer: { write: (c: any) => emit.next(c) } });
-        emit.next({ type: "finish", res });
-        emit.complete();
-        return () => {};
-      });
-    }),
-});
-```
+- `packages/api/src/routers/droids.ts` exposes `droid.run` / `droid.stream`. Both wrap `requirePolicy("droid.exec")`, then call `requireToolScopesAndPolicy(authz, ["droid.exec"], { action: "droid.exec", resource: { kind: "repo", id: cwd }, context: { auto } })`.
+- Medium/high autonomy demands elevated tool tokens (`claims.elevated === true` and `claims.mfa === "passkey"`), otherwise the router returns `FORBIDDEN` with `biometric_required`.
+- The minimal implementation spawns a sandboxed Node subprocess (default `node -e ...`), streams stdout/stderr to subscribers, and records `droid_exec_runs_total{auto,exit_code}`.
+- `list` remains TODO; replace with Mastra-backed enumerations once custom droids land.
 
 ### Assistant Procedures (generate/stream/escalate)
 
@@ -3182,11 +3117,53 @@ Recommended UI flow:
 - Callback route in web app extracts code/state → calls linear.oauthCallback.
 - Admins manage app team access in Linear; Alfred consumes webhooks at /api/linear/webhook.
 
+### Token Procedures (issue/elevate)
+
+packages/api/src/routers/token.ts:
+```ts
+import { router, authedProcedure } from "../index";
+import { requireRecentBiometric } from "@alfred/auth/biometric";
+import { issueAccessToken } from "@alfred/auth/token";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+export const tokenRouter = router({
+  issue: authedProcedure
+    .input(z.object({ scopes: scopesSchema, aud: z.string().optional(), ttlSec: ttlSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const token = await issueAccessToken(ctx.session.user.id, input.scopes, input.aud ?? defaultAudience, {
+        ttlSec: input.ttlSec,
+        elevated: false,
+        mfa: "none",
+      });
+      return { token };
+    }),
+  elevate: authedProcedure
+    .input(z.object({ scopes: scopesSchema, aud: z.string().optional(), ttlSec: ttlSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const sessionId = ctx.session.session?.id ?? ctx.session.session?.token;
+      if (!sessionId) throw new TRPCError({ code: "UNAUTHORIZED" });
+      await requireRecentBiometric(sessionId);
+      const token = await issueAccessToken(ctx.session.user.id, input.scopes, input.aud ?? defaultAudience, {
+        ttlSec: input.ttlSec,
+        elevated: true,
+        mfa: "passkey",
+      });
+      return { token };
+    }),
+});
+```
+
+Usage:
+- Web client calls `getElevatedToolToken(["droid.exec"])` (`apps/web/src/lib/token.ts`) to copy a passkey-elevated token for manual testing.
+- Droids/Proxmox tool handlers verify the `Bearer` token and enforce scopes plus elevation rules before acting.
+- JWKS lives at `/api/jwks` for external verifiers; rotate keys by updating env vars and restarting services.
+
 ---
 
 ## Web, Desktop, Mobile Integration
 
-- Web (TanStack Start): Primary UI with chat, streaming, and cache handoff.
+- Web (TanStack Start): Primary UI with chat, streaming, and cache handoff. SSR guardrails: externalize server-only deps such as `@alfred/db`, `pg`, and `drizzle-orm/pg-core` in `apps/web/vite.config.ts`, and provide a browser stub export in `@alfred/db` so accidental client imports fail fast.
 - Desktop (Tauri): Local device access and biometrics via platform APIs.
 - Mobile (React Native + NativeWind): Remote control, notifications, voice capture.
 
@@ -3316,7 +3293,7 @@ graph TD
 Laminar will visualize AI/LLM traces. For everything else, deploy a lightweight, self-hosted monitoring stack on the alfred-core VM:
 - Prometheus for metrics scraping
   - Scrape targets:
-    - App: TanStack Start /metrics (Prometheus format)
+    - App: TanStack Start /api/metrics (Prometheus format)
     - Containers: cAdvisor
     - Postgres: postgres_exporter
     - Redis: redis_exporter
@@ -3337,7 +3314,7 @@ Laminar will visualize AI/LLM traces. For everything else, deploy a lightweight,
     - DB/Cache: Postgres connection saturation > 80%; Redis evictions > 0
     - Backups: pg_dump/vzdump last success > 26h
 - Security
-  - Expose /metrics only on LAN or behind auth; Grafana/Alertmanager with credentials and LAN/VPN access
+  - Expose /api/metrics only on LAN or behind auth; Grafana/Alertmanager with credentials and LAN/VPN access
 - Files (suggested)
   - docker/monitoring/docker-compose.yml: prometheus, alertmanager, grafana, loki, promtail, cadvisor, blackbox-exporter
   - docker/monitoring/prometheus.yml: scrape_configs for the exporters listed above
@@ -3590,6 +3567,9 @@ Alfred improves over time by converting real usage (traces, feedback) into label
 - Labeling queues for human-in-the-loop corrections
 - Evaluations (Evals) with versioned datasets and scored results
 - Dashboards and A/B comparisons using SQL and tags
+- First-party eval metadata now lives in Postgres (`eval_defs`, `eval_datasets`, `eval_points`, `eval_runs`, `eval_scores`) with optional Laminar dual-write. Configure Laminar via `LMNR_PROJECT_API_KEY`, `LMNR_BASE_URL`, `LMNR_HTTP_PORT`, `LMNR_GRPC_PORT`, and toggle exports with `EVAL_LAMINAR_EXPORT`, `EVAL_LAMINAR_MODE`, `EVAL_LAMINAR_GROUP`.
+- Built-in Mastra scorers (answer relevancy, prompt alignment, toxicity) attach to the orchestrator agent with sampling controlled by `EVALS_SAMPLING_RATE` for live traces, while batch runs flow through `packages/agent/src/eval/runner.ts`.
+- The tRPC `eval` router provides owner-gated procedures (`eval.define`, `eval.dataset.create/add/list`, `eval.run.start/get/list/scores`) surfaced in Prometheus metrics (`eval_runs_total`, `eval_duration_seconds`, `eval_scores_total`, `eval_failures_total`, `laminar_eval_datapoints_total`, `laminar_eval_errors_total`).
 
 Guiding principles
 - Safety first: never auto-widen tool scopes or auto. Proposed changes are delivered as PRs or config diffs and require biometric-gated approval before rollout.
@@ -4180,16 +4160,32 @@ sequenceDiagram
 - packages/agent/src/index.ts — Mastra instance, storage, observability
 - packages/agent/src/agents.ts — ALFRED agent with Droids/Proxmox tools and guardrails
 - packages/agent/src/workflows.ts — plan planning and Droids execution
-- packages/agent/src/tools/droid.ts — Headless Droid Exec tool with streaming and scopes
-- packages/agent/src/tools/droid.ts — Custom Droids discovery
+- packages/agent/src/tools/droid.ts — Headless Droid Exec tool with streaming, scope, and policy enforcement
 - packages/db/src/schema.ts — Drizzle schema for RAG tables and graph memory
 - packages/db/src/migrations/0001_init.sql — pgvector + graph memory schema and indexes
+- packages/db/src/migrations/0008_indexes.sql — Assistant task/reminder/timer indexes
+- packages/db/src/migrations/0009_uniques.sql — Uniqueness constraints (preferences, autonomy, Linear installations)
+- packages/db/src/migrations/0010_vector_index.sql — HNSW cosine indexes for embeddings
+- packages/db/src/migrations/0011_passkey.sql — Better Auth passkey tables
 - packages/db/src/repository.ts — RAG and graph helper methods
-- packages/auth/src/token.ts — Ed25519 assertion, token issuance, JWKS, verify, scope enforcement
+- packages/auth/src/biometric.ts — Bio-ticket helpers with Redis fallback
+- packages/auth/src/token.ts — Ed25519 tool token issuance/verification with replay defense
+- packages/policy/src/types.ts — policy document/subject/resource types
+- packages/policy/src/load.ts — YAML loader + cache
+- packages/policy/src/rule.ts — rule matcher
+- packages/policy/src/pdp.ts — evaluator + caching
+- packages/policy/src/decide.ts — decision combiner
 - packages/api/src/rpc/agent.ts — agent.generate / agent.stream (tRPC)
 - packages/api/src/rpc/workflow.ts — orchestrator.start / orchestrator.stream (tRPC)
 - packages/api/src/rpc/tool.ts — proxmox power operations with scopes
-- packages/api/src/rpc/droids.ts — list/run/stream Droids operations
+- packages/api/src/routers/droids.ts — secure droid exec run/stream
+- packages/api/src/routers/token.ts — token.issue / token.elevate procedures
+- packages/api/src/gate.ts — policy middleware for tRPC
+- apps/web/src/routes/api/metrics.ts — Prometheus metrics endpoint
+- apps/web/src/routes/api/jwks.ts — JWKS (public) endpoint
+- apps/web/src/routes/healthz.ts — liveness endpoint
+- apps/web/src/routes/healthz/deps.ts — dependency readiness endpoint
+- apps/web/src/lib/auth-client.ts — Better Auth client with passkey plugin
 - apps/web — UI, TanStack Query cache handoff, voice, biometrics, floating orb
 
 ---

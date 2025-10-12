@@ -1,28 +1,103 @@
-/**
- * ALFRED Policy Decision Point (PDP)
- */
+import { loadPolicy } from "./load";
+import { ruleMatches } from "./rule";
+import type { Decision, EvaluateInput, PolicyRule } from "./types";
 
-export interface Decision {
-  allow: boolean;
-  obligations: string[];
-  reason?: string;
+const CACHE_TTL_MS = 30_000;
+
+interface CachedDecision {
+  expiresAt: number;
+  decision: Decision;
 }
 
-export interface PolicyContext {
-  userId: string;
-  roles: string[];
-  scopes: string[];
-  mfa: boolean;
-  action: string;
-  resource: string;
-  metadata?: Record<string, unknown>;
+const cache = new Map<string, CachedDecision>();
+
+type CacheObserver = (result: "hit" | "miss") => void;
+
+let cacheObserver: CacheObserver | null = null;
+
+export function registerPolicyCacheObserver(observer: CacheObserver | null) {
+  cacheObserver = observer;
 }
 
-export async function evaluate(ctx: PolicyContext): Promise<Decision> {
-  // TODO: [Phase 9] Implement RBAC + ABAC evaluation
-  // 1. Check role-based permissions
-  // 2. Check scope-based permissions
-  // 3. Evaluate ABAC rules
-  // 4. Collect obligations (require_biometric, limit_autonomy, etc.)
-  throw new Error("Not implemented");
+function computeCacheKey(input: EvaluateInput): string {
+  const resourceKey = `${input.resource.kind}:${input.resource.id ?? "*"}`;
+  const rolesKey = input.subject.roles.sort().join(",");
+  const contextKey = input.context ? JSON.stringify(input.context) : "";
+  return [rolesKey, input.action, resourceKey, contextKey].join("|");
+}
+
+function aggregateObligations(rules: PolicyRule[]): string[] {
+  const set = new Set<string>();
+  for (const rule of rules) {
+    if (rule.obligations) {
+      for (const obligation of rule.obligations) {
+        set.add(obligation);
+      }
+    }
+  }
+  return Array.from(set);
+}
+
+export async function evaluate(input: EvaluateInput): Promise<Decision> {
+  const key = computeCacheKey(input);
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    cacheObserver?.("hit");
+    return cached.decision;
+  }
+
+  cacheObserver?.("miss");
+
+  const policy = await loadPolicy();
+  const subjectRoles = input.subject.roles.length > 0 ? input.subject.roles : ["user"];
+
+  // Determine scopes granted by roles (plus explicit subject scopes)
+  const scopeSet = new Set<string>(input.subject.scopes ?? []);
+  for (const role of subjectRoles) {
+    const policyRole = policy.roles[role];
+    if (policyRole) {
+      for (const scope of policyRole.scopes) {
+        scopeSet.add(scope);
+      }
+    }
+  }
+
+  const hasScope = scopeSet.has(input.action) || policy.scopes.includes(input.action);
+
+  // Gather all matching rules
+  const matchingRules = (policy.rules ?? [])
+    .filter(rule => ruleMatches(rule, input, subjectRoles))
+    .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+
+  const hasAllowRule = matchingRules.some(rule => (rule.effect ?? "allow") === "allow");
+
+  if (!hasScope && !hasAllowRule) {
+    const decision: Decision = { allow: false, obligations: [], reason: "missing_scope" };
+    cache.set(key, { decision, expiresAt: Date.now() + CACHE_TTL_MS });
+    return decision;
+  }
+
+  const denyRule = matchingRules.find(rule => (rule.effect ?? "allow") === "deny");
+  if (denyRule) {
+    const decision: Decision = {
+      allow: false,
+      obligations: denyRule.obligations ?? [],
+      reason: denyRule.description ?? denyRule.id ?? "denied",
+      ruleIds: [denyRule.id],
+    };
+    cache.set(key, { decision, expiresAt: Date.now() + CACHE_TTL_MS });
+    return decision;
+  }
+
+  const allowRules = matchingRules.filter(rule => (rule.effect ?? "allow") === "allow");
+  const obligations = aggregateObligations(allowRules);
+  const decision: Decision = {
+    allow: true,
+    obligations,
+    reason: allowRules.length > 0 ? allowRules.map(rule => rule.description ?? rule.id).filter(Boolean).join(", ") || undefined : undefined,
+    ruleIds: allowRules.map(rule => rule.id),
+  };
+
+  cache.set(key, { decision, expiresAt: Date.now() + CACHE_TTL_MS });
+  return decision;
 }

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/utils/trpc";
 
@@ -44,6 +44,18 @@ function HomeComponent() {
 									: "Disconnected"}
 						</span>
 					</div>
+				</section>
+				<section className="rounded-lg border p-4">
+					<h2 className="mb-2 font-medium">Orchestrator Run Viewer</h2>
+					<p className="text-muted-foreground text-sm">
+						Kick off a secure plan run, watch live droid output, and test token elevation.
+					</p>
+					<Link
+						to="/orchestrator/run"
+						className="inline-flex h-9 items-center justify-center rounded bg-primary px-4 text-sm font-medium text-primary-foreground"
+					>
+						Open Run Viewer
+					</Link>
 				</section>
 			</div>
 		</div>

@@ -8,16 +8,17 @@ import { drizzle } from "drizzle-orm/node-postgres";
 // TODO: [Phase 3] Configure production-ready drizzle client with pooling
 export const db = drizzle(process.env.DATABASE_URL || "");
 
-// Export all schemas
-export * from "./schema/user";
-export * from "./schema/rag";
-export * from "./schema/graph";
-export * from "./schema/assistant";
-export * from "./schema/linear";
-export * from "./schema/deploy";
-export * from "./schema/policy";
+// Schemas are exposed under namespaces to avoid duplicate export collisions.
+export * as userSchema from "./schema/user";
+export * as ragSchema from "./schema/rag";
+export * as graphSchema from "./schema/graph";
+export * as assistantSchema from "./schema/assistant";
+export * as linearSchema from "./schema/linear";
+export * as deploySchema from "./schema/deploy";
+export * as policySchema from "./schema/policy";
+export * as evalSchema from "./schema/eval";
 
-// Export all repositories
+// Export repositories as namespaces
 export * as userRepo from "./repo/user";
 export * as ragRepo from "./repo/rag";
 export * as graphRepo from "./repo/graph";
@@ -25,3 +26,4 @@ export * as assistantRepo from "./repo/assistant";
 export * as linearRepo from "./repo/linear";
 export * as deployRepo from "./repo/deploy";
 export * as policyRepo from "./repo/policy";
+export * as evalRepo from "./repo/eval";

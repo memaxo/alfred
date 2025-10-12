@@ -1,4 +1,4 @@
-import { assistantRepo } from "@alfred/db";
+import * as assistantRepo from "@alfred/db/repo/assistant";
 import z from "zod";
 import { authedProcedure, router } from "../index";
 

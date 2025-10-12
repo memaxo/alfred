@@ -1,4 +1,4 @@
-import { assistantRepo } from "@alfred/db";
+import * as assistantRepo from "@alfred/db/repo/assistant";
 import z from "zod";
 import { authedProcedure, router } from "../index";
 
@@ -12,12 +12,10 @@ const reminderCreateInput = reminderBase.extend({
   due: z.string().datetime(),
 });
 
-const reminderListInput = z
-  .object({
-    limit: z.number().int().min(1).max(200).default(100),
-    offset: z.number().int().min(0).default(0),
-  })
-  .default({});
+const reminderListInput = z.object({
+  limit: z.number().int().min(1).max(200).default(100),
+  offset: z.number().int().min(0).default(0),
+});
 
 export const remindRouter = router({
   create: authedProcedure.input(reminderCreateInput).mutation(({ ctx, input }) =>
@@ -35,13 +33,7 @@ export const remindRouter = router({
   ),
 
   due: authedProcedure
-    .input(
-      z
-        .object({
-          before: z.string().datetime().optional(),
-        })
-        .default({})
-    )
+    .input(z.object({ before: z.string().datetime().optional() }))
     .query(({ ctx, input }) =>
       assistantRepo.getDueReminders(
         ctx.session.user.id,
