@@ -9,6 +9,7 @@ import { tokenRouter } from "./token";
 import { droidsRouter } from "./droids";
 import { workflowRouter } from "./workflow";
 import { evalRouter } from "./eval";
+import { deployRouter } from "./deploy";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),
@@ -26,5 +27,6 @@ export const appRouter: ReturnType<typeof router> = router({
   token: tokenRouter,
   workflow: workflowRouter,
   eval: evalRouter,
+  deploy: deployRouter,
 });
 export type AppRouter = typeof appRouter;

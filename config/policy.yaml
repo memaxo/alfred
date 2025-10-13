@@ -76,6 +76,52 @@ rules:
       kind: "repo"
     effect: "allow"
 
+  - id: git-read-owner
+    actions: ["git.status", "git.diff", "git.fetch"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: git-write-owner
+    actions:
+      [
+        "git.branch.create",
+        "git.branch.delete",
+        "git.branch.update",
+        "git.worktree.add",
+        "git.worktree.remove",
+        "git.commit",
+        "git.push",
+        "git.merge",
+        "git.reset.hard",
+      ]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: router-owner
+    actions: ["router.register", "router.update", "router.remove"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: docker-owner
+    actions:
+      [
+        "docker.build",
+        "docker.run",
+        "docker.stop",
+        "docker.rm",
+        "docker.inspect",
+        "docker.logs",
+        "docker.wait",
+        "docker.exec.probe",
+      ]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: ticket-owner
+    actions: ["ticket.*"]
+    roles: ["owner"]
+    effect: "allow"
+
   - id: require-bio-droid-exec-autonomy
     actions: ["droid.exec"]
     roles: ["owner"]
@@ -134,6 +180,21 @@ rules:
     obligations:
       - requireBio
       - requireManual
+
+  - id: deploy-preview-owner
+    actions: ["deploy.preview"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: deploy-remove-owner
+    actions: ["deploy.remove"]
+    roles: ["owner"]
+    effect: "allow"
+
+  - id: deploy-health-owner
+    actions: ["deploy.health"]
+    roles: ["owner"]
+    effect: "allow"
 
   - id: proxmox-power-owner
     actions: ["proxmox.power"]

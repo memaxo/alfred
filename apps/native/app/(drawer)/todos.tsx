@@ -9,46 +9,52 @@ import {
 	Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Container } from "@/components/container";
 import { trpc } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
 export default function TodosScreen() {
 	const [newTodoText, setNewTodoText] = useState("");
 
-	const todos = useQuery(trpc.todo.getAll.queryOptions());
-	const createMutation = useMutation(
-		trpc.todo.create.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-				setNewTodoText("");
-			},
-		}),
-	);
-	const toggleMutation = useMutation(
-		trpc.todo.toggle.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-			},
-		}),
-	);
-	const deleteMutation = useMutation(
-		trpc.todo.delete.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-			},
-		}),
-	);
+	const utils = trpc.useUtils();
+	const todosQuery = trpc.todo.getAll.useQuery();
+	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+	type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+	type TodoItem = RouterOutputs["todo"]["getAll"][number];
+	type CreateTodoInput = RouterInputs["todo"]["create"];
+	type ToggleTodoInput = RouterInputs["todo"]["toggle"];
+	type DeleteTodoInput = RouterInputs["todo"]["delete"];
+	const todos: TodoItem[] = todosQuery.data ?? [];
+
+	const createMutation = trpc.todo.create.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+			setNewTodoText("");
+		},
+	});
+	const toggleMutation = trpc.todo.toggle.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+		},
+	});
+	const deleteMutation = trpc.todo.delete.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+		},
+	});
 
 	const handleAddTodo = () => {
 		if (newTodoText.trim()) {
-			createMutation.mutate({ text: newTodoText });
+			const input: CreateTodoInput = { text: newTodoText };
+			createMutation.mutate(input);
 		}
 	};
 
 	const handleToggleTodo = (id: number, completed: boolean) => {
-		toggleMutation.mutate({ id, completed: !completed });
+		const input: ToggleTodoInput = { id, completed: !completed };
+		toggleMutation.mutate(input);
 	};
 
 	const handleDeleteTodo = (id: number) => {
@@ -57,7 +63,10 @@ export default function TodosScreen() {
 			{
 				text: "Delete",
 				style: "destructive",
-				onPress: () => deleteMutation.mutate({ id }),
+				onPress: () => {
+					const input: DeleteTodoInput = { id };
+					deleteMutation.mutate(input);
+				},
 			},
 		]);
 	};
@@ -104,17 +113,17 @@ export default function TodosScreen() {
 							</View>
 						</View>
 
-						{todos.isLoading ? (
+				{todosQuery.isLoading ? (
 							<View className="flex justify-center py-8">
 								<ActivityIndicator size="large" color="#3b82f6" />
 							</View>
-						) : todos.data?.length === 0 ? (
+				) : todos.length === 0 ? (
 							<Text className="py-8 text-center text-muted-foreground">
 								No todos yet. Add one above!
 							</Text>
 						) : (
 							<View className="space-y-2">
-								{todos.data?.map((todo) => (
+					{todos.map((todo) => (
 									<View
 										key={todo.id}
 										className="flex-row items-center justify-between rounded-md border border-border p-3 bg-background"

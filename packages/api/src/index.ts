@@ -52,3 +52,6 @@ export const publicProcedure = baseProcedure;
 export const protectedProcedure = baseProcedure.use(authMiddleware);
 
 export const authedProcedure = protectedProcedure;
+
+export { appRouter } from "./routers/index";
+export type { AppRouter } from "./routers/index";

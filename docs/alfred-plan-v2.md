@@ -3776,6 +3776,15 @@ async function seedGraph() {
 }
 ```
 
+Apply the latest SQL migrations (including `0015_deployments_enhancements.sql`) with:
+```bash
+bun run -C packages/db scripts/migrate.ts
+```
+
+Deployment API helpers:
+- `trpc.deploy.probe` — run docker HTTP probe for a preview/production deployment, records `health_status` + `last_health_check`.
+- `trpc.deploy.healthStream` — server-side interval health checks; subscribe with a `deploy.read` token for live status updates in the UI.
+
 ### Testing (Vitest), Linting, Turborepo Pipelines
 
 - Vitest tests for tools (droidExec, proxmox), orchestrator, and RAG repository.

@@ -8,10 +8,9 @@ import {
 	QueryClientProvider,
 } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { toast } from "sonner";
-import type { AppRouter } from "@alfred/api/routers/index";
-import { TRPCProvider } from "./utils/trpc";
+import type { AppRouter } from "@alfred/api";
+import { trpc } from "./utils/trpc";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
@@ -43,24 +42,19 @@ const trpcClient = createTRPCClient<AppRouter>({
 	],
 });
 
-const trpc = createTRPCOptionsProxy({
-	client: trpcClient,
-	queryClient: queryClient,
-});
-
 export const getRouter = () => {
 	const router = createTanStackRouter({
 		routeTree,
 		scrollRestoration: true,
 		defaultPreloadStaleTime: 0,
-		context: { trpc, queryClient },
+		context: { queryClient },
 		defaultPendingComponent: () => <Loader />,
 		defaultNotFoundComponent: () => <div>Not Found</div>,
 		Wrap: ({ children }) => (
 			<QueryClientProvider client={queryClient}>
-				<TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+				<trpc.Provider client={trpcClient} queryClient={queryClient}>
 					{children}
-				</TRPCProvider>
+				</trpc.Provider>
 			</QueryClientProvider>
 		),
 	});

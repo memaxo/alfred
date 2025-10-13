@@ -10,7 +10,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../global.css";
-import { queryClient } from "@/utils/trpc";
+import { queryClient, trpc, trpcClient } from "@/utils/trpc";
 import { NAV_THEME } from "@/lib/constants";
 import React, { useRef } from "react";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -53,18 +53,20 @@ export default function RootLayout() {
 	}
 	return (
 		<QueryClientProvider client={queryClient}>
-			<ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-				<StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-				<GestureHandlerRootView style={{ flex: 1 }}>
-					<Stack>
-						<Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-						<Stack.Screen
-							name="modal"
-							options={{ title: "Modal", presentation: "modal" }}
-						/>
-					</Stack>
-				</GestureHandlerRootView>
-			</ThemeProvider>
+			<trpc.Provider client={trpcClient} queryClient={queryClient}>
+				<ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+					<StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+					<GestureHandlerRootView style={{ flex: 1 }}>
+						<Stack>
+							<Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+							<Stack.Screen
+								name="modal"
+								options={{ title: "Modal", presentation: "modal" }}
+							/>
+						</Stack>
+					</GestureHandlerRootView>
+				</ThemeProvider>
+			</trpc.Provider>
 		</QueryClientProvider>
 	);
 }

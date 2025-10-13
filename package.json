@@ -9,8 +9,9 @@
     ],
     "catalog": {
       "zod": "^4.0.2",
-      "@trpc/server": "^11.5.0",
-      "@trpc/client": "^11.5.0",
+      "@trpc/server": "^11.6.0",
+      "@trpc/client": "^11.6.0",
+      "@trpc/react-query": "^11.6.0",
       "ai": "^5.0.49",
       "@ai-sdk/google": "^2.0.13",
       "@ai-sdk/openai": "^2.0.49",

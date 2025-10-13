@@ -14,12 +14,17 @@ import { Route as RemindRouteImport } from './routes/remind'
 import { Route as NoteRouteImport } from './routes/note'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DeploymentsRouteImport } from './routes/deployments'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAiSplatRouteImport } from './routes/api/ai/$'
+import { Route as OrchestratorRunRouteImport } from './routes/orchestrator/run'
+import { Route as HealthzRouteImport } from './routes/healthz'
+import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
+import { Route as ApiJwksRouteImport } from './routes/api/jwks'
 
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
@@ -44,6 +49,11 @@ const LoginRoute = LoginRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeploymentsRoute = DeploymentsRouteImport.update({
+  id: '/deployments',
+  path: '/deployments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiRoute = AiRouteImport.update({
@@ -76,16 +86,41 @@ const ApiAiSplatRoute = ApiAiSplatRouteImport.update({
   path: '/api/ai/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrchestratorRunRoute = OrchestratorRunRouteImport.update({
+  id: '/orchestrator/run',
+  path: '/orchestrator/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthzRoute = HealthzRouteImport.update({
+  id: '/healthz',
+  path: '/healthz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthzDepsRoute = HealthzDepsRouteImport.update({
+  id: '/healthz/deps',
+  path: '/healthz/deps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJwksRoute = ApiJwksRouteImport.update({
+  id: '/api/jwks',
+  path: '/api/jwks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
   '/note': typeof NoteRoute
   '/remind': typeof RemindRoute
   '/todos': typeof TodosRoute
+  '/orchestrator/run': typeof OrchestratorRunRoute
+  '/healthz': typeof HealthzRoute
+  '/healthz/deps': typeof HealthzDepsRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/jwks': typeof ApiJwksRoute
   '/api/ai/$': typeof ApiAiSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -94,11 +129,16 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
   '/note': typeof NoteRoute
   '/remind': typeof RemindRoute
   '/todos': typeof TodosRoute
+  '/orchestrator/run': typeof OrchestratorRunRoute
+  '/healthz': typeof HealthzRoute
+  '/healthz/deps': typeof HealthzDepsRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/jwks': typeof ApiJwksRoute
   '/api/ai/$': typeof ApiAiSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -108,11 +148,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
   '/note': typeof NoteRoute
   '/remind': typeof RemindRoute
   '/todos': typeof TodosRoute
+  '/orchestrator/run': typeof OrchestratorRunRoute
+  '/healthz': typeof HealthzRoute
+  '/healthz/deps': typeof HealthzDepsRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/jwks': typeof ApiJwksRoute
   '/api/ai/$': typeof ApiAiSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -123,11 +168,16 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/deployments'
     | '/login'
     | '/note'
     | '/remind'
     | '/todos'
+    | '/orchestrator/run'
+    | '/healthz'
+    | '/healthz/deps'
     | '/api/metrics'
+    | '/api/jwks'
     | '/api/ai/$'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -136,11 +186,16 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/deployments'
     | '/login'
     | '/note'
     | '/remind'
     | '/todos'
+    | '/orchestrator/run'
+    | '/healthz'
+    | '/healthz/deps'
     | '/api/metrics'
+    | '/api/jwks'
     | '/api/ai/$'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -149,11 +204,16 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/deployments'
     | '/login'
     | '/note'
     | '/remind'
     | '/todos'
+    | '/orchestrator/run'
+    | '/healthz'
+    | '/healthz/deps'
     | '/api/metrics'
+    | '/api/jwks'
     | '/api/ai/$'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -167,7 +227,11 @@ export interface RootRouteChildren {
   NoteRoute: typeof NoteRoute
   RemindRoute: typeof RemindRoute
   TodosRoute: typeof TodosRoute
+  OrchestratorRunRoute: typeof OrchestratorRunRoute
+  HealthzRoute: typeof HealthzRoute
+  HealthzDepsRoute: typeof HealthzDepsRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
+  ApiJwksRoute: typeof ApiJwksRoute
   ApiAiSplatRoute: typeof ApiAiSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -194,6 +258,27 @@ declare module '@tanstack/react-router' {
       path: '/note'
       fullPath: '/note'
       preLoaderRoute: typeof NoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orchestrator/run': {
+      id: '/orchestrator/run'
+      path: '/orchestrator/run'
+      fullPath: '/orchestrator/run'
+      preLoaderRoute: typeof OrchestratorRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/healthz': {
+      id: '/healthz'
+      path: '/healthz'
+      fullPath: '/healthz'
+      preLoaderRoute: typeof HealthzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/healthz/deps': {
+      id: '/healthz/deps'
+      path: '/healthz/deps'
+      fullPath: '/healthz/deps'
+      preLoaderRoute: typeof HealthzDepsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -231,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/jwks': {
+      id: '/api/jwks'
+      path: '/api/jwks'
+      fullPath: '/api/jwks'
+      preLoaderRoute: typeof ApiJwksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -263,7 +355,11 @@ const rootRouteChildren: RootRouteChildren = {
   NoteRoute: NoteRoute,
   RemindRoute: RemindRoute,
   TodosRoute: TodosRoute,
+  OrchestratorRunRoute: OrchestratorRunRoute,
+  HealthzRoute: HealthzRoute,
+  HealthzDepsRoute: HealthzDepsRoute,
   ApiMetricsRoute: ApiMetricsRoute,
+  ApiJwksRoute: ApiJwksRoute,
   ApiAiSplatRoute: ApiAiSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,

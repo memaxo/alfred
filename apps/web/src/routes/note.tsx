@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import type { TRPCAppRouter } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,51 +11,50 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useTRPC } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/note")({
   component: NoteRoute,
 });
 
 function NoteRoute() {
-  const trpc = useTRPC();
+  const utils = trpc.useUtils();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
 
-  const notes = useQuery(
-    trpc.note.list.queryOptions({
-      limit: 50,
-      offset: 0,
-    }),
-  );
+  const noteListQuery = trpc.note.list.useQuery(listInput);
+  type NoteListItem = inferRouterOutputs<TRPCAppRouter>["note"]["list"][number];
+  type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+  type CreateNoteInput = RouterInputs["note"]["create"];
+  type DeleteNoteInput = RouterInputs["note"]["delete"];
+  const notes: NoteListItem[] = noteListQuery.data ?? [];
+  const isLoading = noteListQuery.isLoading;
 
-  const createNote = useMutation(
-    trpc.note.create.mutationOptions({
-      onSuccess: () => {
-        notes.refetch();
-        setTitle("");
-        setContent("");
-      },
-    })
-  );
+  const createNote = trpc.note.create.useMutation({
+    onSuccess: async () => {
+      await utils.note.list.invalidate(listInput);
+      setTitle("");
+      setContent("");
+    },
+  });
 
-  const deleteNote = useMutation(
-    trpc.note.delete.mutationOptions({
-      onSuccess: () => {
-        notes.refetch();
-      },
-    })
-  );
+  const deleteNote = trpc.note.delete.useMutation({
+    onSuccess: async () => {
+      await utils.note.list.invalidate(listInput);
+    },
+  });
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!content.trim()) {
       return;
     }
-    createNote.mutate({
+    const input: CreateNoteInput = {
       title: title.trim() || undefined,
       content,
-    });
+    };
+    createNote.mutate(input);
   };
 
   return (
@@ -96,13 +96,13 @@ function NoteRoute() {
           <CardDescription>Newest notes appear first.</CardDescription>
         </CardHeader>
         <CardContent>
-          {notes.isLoading ? (
+          {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (notes.data?.length ?? 0) === 0 ? (
+          ) : notes.length === 0 ? (
             <p className="text-sm text-muted-foreground">No notes yet.</p>
           ) : (
             <ul className="space-y-4">
-              {notes.data?.map((note) => (
+              {notes.map((note) => (
                 <li
                   className="rounded-md border p-4 shadow-sm"
                   key={note.id}
@@ -118,7 +118,10 @@ function NoteRoute() {
                     </div>
                     <Button
                       disabled={deleteNote.isPending}
-                      onClick={() => deleteNote.mutate({ id: note.id })}
+                      onClick={() => {
+                        const input: DeleteNoteInput = { id: note.id };
+                        deleteNote.mutate(input);
+                      }}
                       size="sm"
                       variant="outline"
                     >

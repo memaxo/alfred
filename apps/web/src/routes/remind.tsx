@@ -1,24 +1,24 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useTRPC } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import type { TRPCAppRouter } from "@/utils/trpc";
 
 export const Route = createFileRoute("/remind")({
   component: RemindRoute,
 });
 
 function RemindRoute() {
-  const trpc = useTRPC();
-
+  const utils = trpc.useUtils();
   const defaultDue = useMemo(() => {
     const start = new Date(Date.now() + 5 * 60 * 1000);
     return start.toISOString().slice(0, 16);
@@ -27,45 +27,47 @@ function RemindRoute() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [due, setDue] = useState(defaultDue);
+  const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
+  const [dueBefore, setDueBefore] = useState(() => new Date().toISOString());
+  const dueInput = useMemo(() => ({ before: dueBefore }), [dueBefore]);
 
-  const reminderList = useQuery(
-    trpc.remind.list.queryOptions({
-      limit: 50,
-      offset: 0,
-    }),
-  );
+  type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+  type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+  type CreateReminderInput = RouterInputs["remind"]["create"];
+  type DeleteReminderInput = RouterInputs["remind"]["delete"];
+  type ReminderItem = RouterOutputs["remind"]["list"][number];
+  type DueReminderItem = RouterOutputs["remind"]["due"][number];
 
-  const dueReminders = useQuery(
-    trpc.remind.due.queryOptions(
-      {
-        before: new Date().toISOString(),
-      },
-      {
-        staleTime: 5_000,
-      },
-    ),
-  );
+  const reminderListQuery = trpc.remind.list.useQuery(listInput);
+  const dueRemindersQuery = trpc.remind.due.useQuery(dueInput, {
+    staleTime: 5_000,
+  });
 
-  const createReminder = useMutation(
-    trpc.remind.create.mutationOptions({
-      onSuccess: () => {
-        reminderList.refetch();
-        dueReminders.refetch();
-        setTitle("");
-        setDescription("");
-        setDue(defaultDue);
-      },
-    })
-  );
+  const reminders: ReminderItem[] = reminderListQuery.data ?? [];
+  const dueSoon: DueReminderItem[] = dueRemindersQuery.data ?? [];
+  const isReminderLoading = reminderListQuery.isLoading;
+  const isDueLoading = dueRemindersQuery.isLoading;
 
-  const deleteReminder = useMutation(
-    trpc.remind.delete.mutationOptions({
-      onSuccess: () => {
-        reminderList.refetch();
-        dueReminders.refetch();
-      },
-    })
-  );
+  const refreshDue = useCallback(async () => {
+    const next = new Date().toISOString();
+    setDueBefore(next);
+    await utils.remind.due.invalidate({ before: next });
+  }, [utils]);
+
+  const createReminder = trpc.remind.create.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.remind.list.invalidate(listInput), refreshDue()]);
+      setTitle("");
+      setDescription("");
+      setDue(defaultDue);
+    },
+  });
+
+  const deleteReminder = trpc.remind.delete.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.remind.list.invalidate(listInput), refreshDue()]);
+    },
+  });
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -73,11 +75,12 @@ function RemindRoute() {
       return;
     }
     const dueIso = new Date(due).toISOString();
-    createReminder.mutate({
+    const input: CreateReminderInput = {
       title: title.trim(),
       due: dueIso,
       description: description.trim() || undefined,
-    });
+    };
+    createReminder.mutate(input);
   };
 
   return (
@@ -126,13 +129,13 @@ function RemindRoute() {
           <CardDescription>Next 50 reminders sorted by due time.</CardDescription>
         </CardHeader>
         <CardContent>
-          {reminderList.isLoading ? (
+          {isReminderLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (reminderList.data?.length ?? 0) === 0 ? (
+          ) : reminders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No reminders scheduled.</p>
           ) : (
             <ul className="space-y-3">
-              {reminderList.data?.map((reminder) => (
+              {reminders.map((reminder) => (
                 <li
                   className="flex items-start justify-between gap-4 rounded-md border p-3 shadow-sm"
                   key={reminder.id}
@@ -150,7 +153,10 @@ function RemindRoute() {
                   </div>
                   <Button
                     disabled={deleteReminder.isPending}
-                    onClick={() => deleteReminder.mutate({ id: reminder.id })}
+                    onClick={() => {
+                      const input: DeleteReminderInput = { id: reminder.id };
+                      deleteReminder.mutate(input);
+                    }}
                     size="sm"
                     variant="outline"
                   >
@@ -169,13 +175,13 @@ function RemindRoute() {
           <CardDescription>Reminders that already reached their due time.</CardDescription>
         </CardHeader>
         <CardContent>
-          {dueReminders.isLoading ? (
+          {isDueLoading ? (
             <p className="text-sm text-muted-foreground">Checking…</p>
-          ) : (dueReminders.data?.length ?? 0) === 0 ? (
+          ) : dueSoon.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nothing due right now.</p>
           ) : (
             <ul className="space-y-3">
-              {dueReminders.data?.map((reminder) => (
+              {dueSoon.map((reminder) => (
                 <li
                   className="rounded-md border border-dashed p-3 shadow-sm"
                   key={reminder.id}

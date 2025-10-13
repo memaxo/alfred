@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { useTRPC } from "@/utils/trpc";
-import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard")({
@@ -21,14 +21,18 @@ export const Route = createFileRoute("/dashboard")({
 function RouteComponent() {
 	const { session } = Route.useRouteContext();
 
-	const trpc = useTRPC();
-	const privateData = useQuery(trpc.privateData.queryOptions());
+	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+	type PrivateData = RouterOutputs["privateData"];
+	const privateDataQuery = trpc.privateData.useQuery() as {
+		data: PrivateData | undefined;
+	};
+	const privateData = privateDataQuery.data;
 
 	return (
 		<div>
 			<h1>Dashboard</h1>
 			<p>Welcome {session.data?.user.name}</p>
-			<p>API: {privateData.data?.message}</p>
+			<p>API: {privateData?.message}</p>
 		</div>
 	);
 }

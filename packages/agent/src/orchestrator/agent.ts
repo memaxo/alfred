@@ -5,6 +5,7 @@ import { toolDroid } from "./tool/droid";
 import { toolGit } from "./tool/git";
 import { toolRouter } from "./tool/router";
 import { toolTicket } from "./tool/ticket";
+import { toolDocker } from "./tool/docker";
 import { buildAgentScorers } from "../eval/scorer";
 
 function createMemory(store?: PostgresStore) {
@@ -61,6 +62,7 @@ export function buildOrchestratorAgent(store?: PostgresStore) {
       droid: toolDroid,
       git: toolGit,
       router: toolRouter,
+      docker: toolDocker,
       ticket: toolTicket,
     },
     memory: createMemory(store),

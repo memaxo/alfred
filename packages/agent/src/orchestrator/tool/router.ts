@@ -30,7 +30,7 @@ function ensureUpstream(input: RouterInput) {
   return input.upstream;
 }
 
-function buildCaddyRoute(host: string, upstreamUrl: string, tls: boolean | undefined) {
+function buildCaddyRoute(host: string, upstreamUrl: string, _tls: boolean | undefined) {
   const upstream = new URL(upstreamUrl);
   const dial =
     upstream.port && upstream.port.length > 0
@@ -55,12 +55,6 @@ function buildCaddyRoute(host: string, upstreamUrl: string, tls: boolean | undef
       },
     ],
     terminal: true,
-    ...(tls === false
-      ? {
-          // Allow opting out of automatic TLS if explicitly disabled.
-          tls_connection_policies: [],
-        }
-      : {}),
   };
 }
 

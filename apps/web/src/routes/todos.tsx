@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import type { TRPCAppRouter } from "@/utils/trpc";
 
-import { useTRPC } from "@/utils/trpc";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/todos")({
 	component: TodosRoute,
@@ -22,45 +23,49 @@ export const Route = createFileRoute("/todos")({
 function TodosRoute() {
 	const [newTodoText, setNewTodoText] = useState("");
 
-	const trpc = useTRPC();
+	const utils = trpc.useUtils();
+	const todosQuery = trpc.todo.getAll.useQuery();
+	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+	type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+	type CreateTodoInput = RouterInputs["todo"]["create"];
+	type ToggleTodoInput = RouterInputs["todo"]["toggle"];
+	type DeleteTodoInput = RouterInputs["todo"]["delete"];
+	type TodoItem = RouterOutputs["todo"]["getAll"][number];
+	const todos: TodoItem[] = todosQuery.data ?? [];
 
-	const todos = useQuery(trpc.todo.getAll.queryOptions());
-	const createMutation = useMutation(
-		trpc.todo.create.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-				setNewTodoText("");
-			},
-		}),
-	);
-	const toggleMutation = useMutation(
-		trpc.todo.toggle.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-			},
-		}),
-	);
-	const deleteMutation = useMutation(
-		trpc.todo.delete.mutationOptions({
-			onSuccess: () => {
-				todos.refetch();
-			},
-		}),
-	);
+	const createMutation = trpc.todo.create.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+			setNewTodoText("");
+		},
+	});
+	const toggleMutation = trpc.todo.toggle.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+		},
+	});
+	const deleteMutation = trpc.todo.delete.useMutation({
+		onSuccess: async () => {
+			await utils.todo.getAll.invalidate();
+		},
+	});
 
 	const handleAddTodo = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (newTodoText.trim()) {
-			createMutation.mutate({ text: newTodoText });
+			const input: CreateTodoInput = { text: newTodoText };
+			createMutation.mutate(input);
 		}
 	};
 
 	const handleToggleTodo = (id: number, completed: boolean) => {
-		toggleMutation.mutate({ id, completed: !completed });
+		const input: ToggleTodoInput = { id, completed: !completed };
+		toggleMutation.mutate(input);
 	};
 
 	const handleDeleteTodo = (id: number) => {
-		deleteMutation.mutate({ id });
+		const input: DeleteTodoInput = { id };
+		deleteMutation.mutate(input);
 	};
 
 	return (
@@ -93,15 +98,15 @@ function TodosRoute() {
 						</Button>
 					</form>
 
-					{todos.isLoading ? (
+					{todosQuery.isLoading ? (
 						<div className="flex justify-center py-4">
 							<Loader2 className="h-6 w-6 animate-spin" />
 						</div>
-					) : todos.data?.length === 0 ? (
+					) : todos.length === 0 ? (
 						<p className="py-4 text-center">No todos yet. Add one above!</p>
 					) : (
 						<ul className="space-y-2">
-							{todos.data?.map((todo) => (
+							{todos.map((todo) => (
 								<li
 									key={todo.id}
 									className="flex items-center justify-between rounded-md border p-2"

@@ -15,10 +15,7 @@ import appCss from "../index.css?url";
 import type { QueryClient } from "@tanstack/react-query";
 import Loader from "@/components/loader";
 
-import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import type { AppRouter } from "@alfred/api/routers/index";
 export interface RouterAppContext {
-	trpc: TRPCOptionsProxy<AppRouter>;
 	queryClient: QueryClient;
 }
 

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useTRPC } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
 
 export const Route = createFileRoute("/")({
 	component: HomeComponent,
@@ -23,8 +24,13 @@ const TITLE_TEXT = `
  `;
 
 function HomeComponent() {
-	const trpc = useTRPC();
-	const healthCheck = useQuery(trpc.healthCheck.queryOptions());
+	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+	type HealthCheckOutput = RouterOutputs["healthCheck"];
+	const healthCheckQuery = trpc.healthCheck.useQuery() as {
+		data: HealthCheckOutput | undefined;
+		isLoading: boolean;
+	};
+	const { data: healthCheck, isLoading } = healthCheckQuery;
 
 	return (
 		<div className="container mx-auto max-w-3xl px-4 py-2">
@@ -34,12 +40,12 @@ function HomeComponent() {
 					<h2 className="mb-2 font-medium">API Status</h2>
 					<div className="flex items-center gap-2">
 						<div
-							className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
+							className={`h-2 w-2 rounded-full ${healthCheck ? "bg-green-500" : "bg-red-500"}`}
 						/>
 						<span className="text-muted-foreground text-sm">
-							{healthCheck.isLoading
+							{isLoading
 								? "Checking..."
-								: healthCheck.data
+								: healthCheck
 									? "Connected"
 									: "Disconnected"}
 						</span>

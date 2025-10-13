@@ -93,6 +93,7 @@ const gitInputSchema = z.object({
   action: z.enum([
     "branch.create",
     "branch.delete",
+    "branch.update",
     "worktree.add",
     "worktree.remove",
     "commit",
@@ -100,6 +101,8 @@ const gitInputSchema = z.object({
     "merge",
     "status",
     "diff",
+    "fetch",
+    "reset.hard",
   ]),
   cw: z.string().optional(),
   base: z.string().optional(),
@@ -117,7 +120,7 @@ type GitInput = z.infer<typeof gitInputSchema>;
 
 type ToolWriter = { write: (chunk: unknown) => Promise<void> | void } | undefined;
 
-const READ_ONLY_ACTIONS = new Set<GitInput["action"]>(["status", "diff"]);
+const READ_ONLY_ACTIONS = new Set<GitInput["action"]>(["status", "diff", "fetch"]);
 
 async function enforcePolicy(input: GitInput, cwd: string) {
   const scopes = READ_ONLY_ACTIONS.has(input.action) ? ["repo.read"] : ["repo.write"];
@@ -250,6 +253,19 @@ export const toolGit = {
         return { ok: true };
       }
 
+      case "branch.update": {
+        const name = ensure(input.name, "git_branch_name_required");
+        const base = ensure(input.base, "git_branch_base_required");
+        const { exitCode } = await runGit({
+          cwd,
+          args: ["branch", "-f", name, base],
+          writer,
+          timeoutSec,
+        });
+        if (exitCode !== 0) throw new Error("git_branch_update_failed");
+        return { ok: true };
+      }
+
       case "branch.delete": {
         const name = ensure(input.name, "git_branch_name_required");
         const { exitCode } = await runGit({
@@ -370,6 +386,30 @@ export const toolGit = {
         return { ok: true, details: { files: stdout.split(/\r?\n/).filter(Boolean) } };
       }
 
+      case "fetch": {
+        const remote = (input.remote && input.remote.trim().length > 0) ? input.remote : "origin";
+        const { exitCode } = await runGit({
+          cwd,
+          args: ["fetch", remote, "--prune", "--tags"],
+          writer,
+          timeoutSec,
+        });
+        if (exitCode !== 0) throw new Error("git_fetch_failed");
+        return { ok: true };
+      }
+
+      case "reset.hard": {
+        const ref = ensure(input.ref ?? input.base, "git_reset_ref_required");
+        const { exitCode } = await runGit({
+          cwd,
+          args: ["reset", "--hard", ref],
+          writer,
+          timeoutSec,
+        });
+        if (exitCode !== 0) throw new Error("git_reset_failed");
+        return { ok: true };
+      }
+
       default:
         throw new Error("git_action_not_supported");
     }
@@ -384,4 +424,3 @@ export const __internals = {
   resolveExecutable,
   runGit,
 };
-

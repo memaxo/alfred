@@ -5,19 +5,35 @@ import { z } from "zod";
 
 const ticketInputSchema = z.object({
   space: z.string().min(1),
-  action: z.enum(["create", "update", "comment", "set-delegate", "set-started"]),
+  action: z.enum([
+    "create",
+    "update",
+    "comment",
+    "set-delegate",
+    "set-started",
+    "activity.thought",
+    "activity.action",
+    "activity.response",
+    "activity.error",
+    "session.external-url",
+  ]),
   teamId: z.string().optional(),
   issueId: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
   delegateId: z.string().optional(),
+  sessionId: z.string().optional(),
+  url: z.string().optional(),
+  parameter: z.string().optional(),
+  result: z.string().optional(),
+  ephemeral: z.boolean().optional(),
   authz: z.string().optional(),
 });
 
 type TicketInput = z.infer<typeof ticketInputSchema>;
 
 async function enforcePolicy(input: TicketInput) {
-  await requireToolScopesAndPolicy(input.authz, ["tickets.write"], {
+  await requireToolScopesAndPolicy(input.authz, ["linear.write"], {
     action: `ticket.${input.action}`,
     resource: {
       kind: "linear",
@@ -148,6 +164,47 @@ async function runSetStarted(client: LinearClient, input: TicketInput) {
   return { ok: true, id: issueId, stateId: targetState.id };
 }
 
+function ensureSession(input: TicketInput) {
+  return ensure(input.sessionId, "ticket_session_required");
+}
+
+async function runAgentActivity(
+  client: LinearClient,
+  input: TicketInput,
+  content: Record<string, unknown>,
+) {
+  const sessionId = ensureSession(input);
+  const payload: Record<string, unknown> = {
+    agentSessionId: sessionId,
+    content,
+  };
+  if (typeof input.ephemeral === "boolean") {
+    payload.ephemeral = input.ephemeral;
+  }
+
+  const response = await client.createAgentActivity(payload as any);
+  const activity = await response.agentActivity;
+  if (!response.success || !activity?.id) {
+    throw new Error("ticket_activity_failed");
+  }
+
+  return { ok: true, id: activity.id };
+}
+
+async function runSessionExternalUrl(client: LinearClient, input: TicketInput) {
+  const sessionId = ensureSession(input);
+  const url = ensure(input.url, "ticket_external_url_required");
+  const response = await client.agentSessionUpdateExternalUrl(sessionId, {
+    externalLink: url,
+  });
+
+  if (!response.success) {
+    throw new Error("ticket_session_external_url_failed");
+  }
+
+  return { ok: true, id: sessionId, url };
+}
+
 export const toolTicket = {
   name: "ticket",
   description: "Create or update Linear issues with policy enforcement.",
@@ -166,23 +223,58 @@ export const toolTicket = {
       throw new Error("linear_installation_missing");
     }
 
-    const client = createClient(installation.token);
+  const client = createClient(installation.token);
 
-    switch (input.action) {
-      case "create":
-        return runCreate(client, input);
+  switch (input.action) {
+    case "create":
+      return runCreate(client, input);
       case "update":
         return runUpdate(client, input);
       case "comment":
         return runComment(client, input);
-      case "set-delegate":
-        return runDelegate(client, input, installation.appUser);
-      case "set-started":
-        return runSetStarted(client, input);
-      default:
-        throw new Error("ticket_action_not_supported");
+    case "set-delegate":
+      return runDelegate(client, input, installation.appUser);
+    case "set-started":
+      return runSetStarted(client, input);
+    case "activity.thought":
+      return runAgentActivity(client, input, {
+        type: "thought",
+        body: ensure(input.description, "ticket_activity_body_required"),
+      });
+    case "activity.action": {
+      const title = ensure(input.title, "ticket_activity_title_required");
+      const body = input.description ?? "";
+      const content: Record<string, unknown> = {
+        type: "action",
+        title,
+      };
+      if (body.trim().length > 0) {
+        content.body = body;
+      }
+      if (input.parameter) {
+        content.parameter = input.parameter;
+      }
+      if (input.result) {
+        content.result = input.result;
+      }
+      return runAgentActivity(client, input, content);
     }
-  },
+    case "activity.response":
+      return runAgentActivity(client, input, {
+        type: "response",
+        body: ensure(input.description, "ticket_activity_body_required"),
+      });
+    case "activity.error":
+      return runAgentActivity(client, input, {
+        type: "error",
+        body: ensure(input.description, "ticket_activity_body_required"),
+      });
+    case "session.external-url":
+      return runSessionExternalUrl(client, input);
+    default:
+      throw new Error("ticket_action_not_supported");
+  }
+},
 };
 
 export type ToolTicket = typeof toolTicket;

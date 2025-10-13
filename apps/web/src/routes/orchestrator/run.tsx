@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTRPCClient } from "@/utils/trpc";
+import type { inferRouterInputs } from "@trpc/server";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
 import { getToolToken } from "@/lib/token";
 
 const autoLevels = ["read", "low", "medium", "high"] as const;
@@ -14,13 +16,21 @@ type LogEntry = {
 	message: string;
 };
 
+type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+type StreamInput = RouterInputs["workflow"]["stream"];
+type WorkflowResumeInput = RouterInputs["workflow"]["resume"];
+type ScopeEvent = WorkflowResumeInput["event"];
+
+const VALID_SCOPE_EVENTS = new Set<ScopeEvent>(["deploy-authz", "linear-authz"]);
+
 export const Route = createFileRoute("/orchestrator/run")({
 	component: OrchestratorRunRoute,
 });
 
 function OrchestratorRunRoute() {
-	const trpcClient = useTRPCClient();
 	const queryClient = useQueryClient();
+	const [streamInput, setStreamInput] = useState<StreamInput | null>(null);
+	const [runId, setRunId] = useState<string | null>(null);
 	const [requirement, setRequirement] = useState("");
 	const [auto, setAuto] = useState<AutoLevel>("low");
 	const [cwd, setCwd] = useState("");
@@ -35,8 +45,43 @@ function OrchestratorRunRoute() {
 	const subscriptionRef = useRef<null | (() => void)>(null);
 	const logIdRef = useRef(0);
 	const logContainerRef = useRef<HTMLDivElement | null>(null);
+	const scopeInFlightRef = useRef<Set<ScopeEvent>>(new Set());
+	const resumeMutation = trpc.workflow.resume.useMutation();
 
 	const canStart = useMemo(() => requirement.trim().length > 0 && !isRunning, [requirement, isRunning]);
+
+	const currentStreamInput = streamInput ?? undefined;
+
+	trpc.workflow.stream.useSubscription(currentStreamInput, {
+		enabled: streamInput !== null,
+		onStarted(unsubscribe: () => void) {
+			subscriptionRef.current = unsubscribe;
+		},
+		onData: handleChunk,
+		onError: (err: unknown) => {
+			const message = err instanceof Error ? err.message : String(err);
+			setError(message);
+			appendLog("error", message);
+			setStatus("Error");
+			setIsRunning(false);
+			setStreamInput(null);
+			setRunId(null);
+			scopeInFlightRef.current.clear();
+			subscriptionRef.current?.();
+			subscriptionRef.current = null;
+		},
+		onComplete() {
+			appendLog("info", "Workflow completed");
+			setStatus("Completed");
+			setProgress((prev) => (prev < 100 ? 100 : prev));
+			setIsRunning(false);
+			setStreamInput(null);
+			setRunId(null);
+			scopeInFlightRef.current.clear();
+			subscriptionRef.current?.();
+			subscriptionRef.current = null;
+		},
+	});
 
 	function appendLog(type: string, message: string) {
 		if (!message) return;
@@ -64,6 +109,9 @@ function OrchestratorRunRoute() {
 	function stopCurrentSubscription() {
 		subscriptionRef.current?.();
 		subscriptionRef.current = null;
+		setStreamInput(null);
+		setRunId(null);
+		scopeInFlightRef.current.clear();
 	}
 
 	async function handleStart(event: FormEvent<HTMLFormElement>) {
@@ -75,45 +123,26 @@ function OrchestratorRunRoute() {
 		setProgress(0);
 		clearLogs();
 		setIsRunning(true);
+		setRunId(null);
+		scopeInFlightRef.current.clear();
 
 		stopCurrentSubscription();
 
 		try {
-			const token = await getToolToken(
-				["droid.exec", "repo.read", "repo.write", "deploy.write", "tickets.write"],
-				auto,
-			);
+			const token = await getToolToken(["droid.exec", "repo.read", "repo.write"], auto);
 			const authz = `Bearer ${token}`;
 
-			const unsubscribe = trpcClient.workflow.stream.subscribe(
-				{
-					requirement: requirement.trim(),
-					auto,
-					authz,
-					cw: cwd.trim() || undefined,
-					mode,
-					repoBase: repoBase.trim() || undefined,
-					workspace: workspace.trim() || undefined,
-				},
-				{
-					onData(chunk) {
-						handleChunk(chunk);
-					},
-					onError(err) {
-						setError(err.message);
-						appendLog("error", err.message);
-						setIsRunning(false);
-					},
-					onComplete() {
-						appendLog("info", "Workflow completed");
-						setStatus("Completed");
-						setProgress(prev => (prev < 100 ? 100 : prev));
-						setIsRunning(false);
-					},
-				},
-			);
+			const input: StreamInput = {
+				requirement: requirement.trim(),
+				auto,
+				authz,
+				cw: cwd.trim() || undefined,
+				mode,
+				repoBase: repoBase.trim() || undefined,
+				workspace: workspace.trim() || undefined,
+			};
 
-			subscriptionRef.current = unsubscribe;
+			setStreamInput(input);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to start workflow";
 			setError(message);
@@ -127,6 +156,15 @@ function OrchestratorRunRoute() {
 		const type = (event?.type as string | undefined) ?? "unknown";
 
 		switch (type) {
+			case "run": {
+				const id = typeof event?.id === "string" ? event.id : null;
+				if (id) {
+					setRunId(id);
+					appendLog("info", `run started (${id})`);
+					setStatus("Running");
+				}
+				break;
+			}
 			case "progress": {
 				const pct = typeof event?.pct === "number" ? event.pct : undefined;
 				if (typeof pct === "number") {
@@ -171,6 +209,54 @@ function OrchestratorRunRoute() {
 					queryClient.setQueryData(key, event?.value);
 					appendLog("cache", `Cache handoff for key: ${JSON.stringify(key)}`);
 				}
+				break;
+			}
+			case "require-scope": {
+				const scopes = Array.isArray(event?.scopes)
+					? (event?.scopes as unknown[]).map((scope) => String(scope))
+					: [];
+				const scopeEventRaw = typeof event?.event === "string" ? (event.event as string) : undefined;
+				if (!runId || !scopeEventRaw) {
+					appendLog("error", "Unable to satisfy scope request (missing run id or event)");
+					break;
+				}
+				if (!VALID_SCOPE_EVENTS.has(scopeEventRaw as ScopeEvent)) {
+					appendLog("error", `Unknown scope request event: ${scopeEventRaw}`);
+					break;
+				}
+				const scopeEvent = scopeEventRaw as ScopeEvent;
+				appendLog(
+					"notice",
+					`Scope request received for ${scopeEvent} (${scopes.join(", ") || "<none>"})`,
+				);
+				if (scopeInFlightRef.current.has(scopeEvent)) {
+					appendLog("info", `Scope request ${scopeEvent} already in progress`);
+					break;
+				}
+				scopeInFlightRef.current.add(scopeEvent);
+				(async () => {
+					try {
+						const token = await getToolToken(scopes, auto);
+						await resumeMutation.mutateAsync({
+							runId,
+							event: scopeEvent,
+							authz: `Bearer ${token}`,
+						});
+						appendLog("info", `Provided scopes for ${scopeEvent}`);
+					} catch (err) {
+						const message = err instanceof Error ? err.message : "Failed to provide scope";
+						appendLog("error", message);
+						setError(message);
+						setStatus("Error");
+						setIsRunning(false);
+						setStreamInput(null);
+						setRunId(null);
+						subscriptionRef.current?.();
+						subscriptionRef.current = null;
+					} finally {
+						scopeInFlightRef.current.delete(scopeEvent);
+					}
+				})();
 				break;
 			}
 			default: {

@@ -1,8 +1,9 @@
-import type { AppRouter } from "@alfred/api/routers/index";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import type { inferRouterInputs } from "@trpc/server";
 import { authClient } from "@/lib/auth-client";
 
-const trpc = createTRPCClient<AppRouter>({
+const trpc = createTRPCProxyClient<TRPCAppRouter>({
 	links: [
 		httpBatchLink({
 			url: "/api/trpc",
@@ -22,23 +23,51 @@ function assertScopes(scopes: string[]) {
 	}
 }
 
+type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+
+function getTokenClient() {
+	const tokenRouter = (trpc as unknown as Record<string, unknown>).token;
+	if (
+		!tokenRouter ||
+		typeof tokenRouter !== "object" ||
+		typeof (tokenRouter as any).issue?.mutate !== "function" ||
+		typeof (tokenRouter as any).elevate?.mutate !== "function"
+	) {
+		throw new Error("token_router_unavailable");
+	}
+	return tokenRouter as {
+		issue: { mutate: (input: RouterInputs["token"]["issue"]) => Promise<{ token: string }> };
+		elevate: {
+			mutate: (input: RouterInputs["token"]["elevate"]) => Promise<{ token: string }>;
+		};
+	};
+}
+
 export async function getToolToken(
 	scopes: string[],
 	auto: "read" | "low" | "medium" | "high",
 ) {
 	assertScopes(scopes);
 
+	const tokenClient = getTokenClient();
+
 	if (auto === "medium" || auto === "high") {
 		try {
-			await authClient.signIn.passkey({ autoFill: true });
+			const maybePasskey =
+				typeof authClient.signIn === "object" && authClient.signIn !== null
+					? (authClient.signIn as Record<string, unknown>).passkey
+					: undefined;
+			if (typeof maybePasskey === "function") {
+				await maybePasskey({ autoFill: true });
+			}
 		} catch (error) {
 			throw new Error(error instanceof Error ? error.message : "passkey_failed");
 		}
-		const { token } = await trpc.token.elevate.mutate({ scopes });
+		const { token } = await tokenClient.elevate.mutate({ scopes });
 		return token;
 	}
 
-	const { token } = await trpc.token.issue.mutate({ scopes });
+	const { token } = await tokenClient.issue.mutate({ scopes });
 	return token;
 }
 

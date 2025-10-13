@@ -1,15 +1,27 @@
 import { authClient } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { Container } from "@/components/container";
 import { SignIn } from "@/components/sign-in";
 import { SignUp } from "@/components/sign-up";
 import { queryClient, trpc } from "@/utils/trpc";
+import type { TRPCAppRouter } from "@/utils/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
 
 export default function Home() {
-	const healthCheck = useQuery(trpc.healthCheck.queryOptions());
-	const privateData = useQuery(trpc.privateData.queryOptions());
+	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+	type HealthCheckOutput = RouterOutputs["healthCheck"];
+	type PrivateDataOutput = RouterOutputs["privateData"];
+	const healthCheckQuery = trpc.healthCheck.useQuery() as {
+		data: HealthCheckOutput | undefined;
+		isLoading: boolean;
+	};
+	const privateDataQuery = trpc.privateData.useQuery() as {
+		data: PrivateDataOutput | undefined;
+		isLoading: boolean;
+	};
+	const { data: healthCheck, isLoading: isHealthLoading } = healthCheckQuery;
+	const { data: privateData, isLoading: isPrivateLoading } = privateDataQuery;
 	const { data: session } = authClient.useSession();
 
 	return (
@@ -44,32 +56,32 @@ export default function Home() {
 					) : null}
 					<View className="mb-6 rounded-lg border border-border p-4">
 						<Text className="mb-3 font-medium text-foreground">API Status</Text>
-						<View className="flex-row items-center gap-2">
-							<View
-								className={`h-3 w-3 rounded-full ${
-									healthCheck.data ? "bg-green-500" : "bg-red-500"
-								}`}
-							/>
-							<Text className="text-muted-foreground">
-								{healthCheck.isLoading
-									? "Checking..."
-									: healthCheck.data
-										? "Connected to API"
-										: "API Disconnected"}
-							</Text>
-						</View>
+				<View className="flex-row items-center gap-2">
+					<View
+						className={`h-3 w-3 rounded-full ${
+							healthCheck ? "bg-green-500" : "bg-red-500"
+						}`}
+					/>
+					<Text className="text-muted-foreground">
+						{isHealthLoading
+							? "Checking..."
+							: healthCheck
+								? "Connected to API"
+								: "API Disconnected"}
+					</Text>
+				</View>
 					</View>
 					<View className="mb-6 rounded-lg border border-border p-4">
 						<Text className="mb-3 font-medium text-foreground">
 							Private Data
 						</Text>
-						{privateData && (
-							<View>
-								<Text className="text-muted-foreground">
-									{privateData.data?.message}
-								</Text>
-							</View>
-						)}
+				{!isPrivateLoading && privateData && (
+					<View>
+						<Text className="text-muted-foreground">
+							{privateData.message}
+						</Text>
+					</View>
+				)}
 					</View>
 					{!session?.user && (
 						<>

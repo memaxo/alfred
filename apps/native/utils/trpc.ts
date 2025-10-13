@@ -1,12 +1,17 @@
 import { authClient } from "@/lib/auth-client";
 import { QueryClient } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import type { AppRouter } from "@alfred/api/routers/index";
+import { createTRPCReact } from "@trpc/react-query";
+import type { appRouter } from "@alfred/api/src/routers/index";
 
+type AppRouter = typeof appRouter;
+
+export type TRPCAppRouter = AppRouter;
+
+export const trpc: any = createTRPCReact<any>();
 export const queryClient = new QueryClient();
 
-const trpcClient = createTRPCClient<AppRouter>({
+export const trpcClient = createTRPCClient<AppRouter>({
 	links: [
 		httpBatchLink({
 			url: `${process.env.EXPO_PUBLIC_SERVER_URL}/api/trpc`,
@@ -20,9 +25,4 @@ const trpcClient = createTRPCClient<AppRouter>({
 			},
 		}),
 	],
-});
-
-export const trpc = createTRPCOptionsProxy<AppRouter>({
-	client: trpcClient,
-	queryClient,
 });
