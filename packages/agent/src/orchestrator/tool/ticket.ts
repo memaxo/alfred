@@ -1,7 +1,9 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { getLinearInstallationByWorkspace } from "@alfred/db/src/repo/linear";
+import { linearRepo } from "@alfred/db";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
+
+const { getLinearInstallationByWorkspace } = linearRepo;
 
 const ticketInputSchema = z.object({
   space: z.string().min(1),

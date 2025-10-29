@@ -1,8 +1,10 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
+import { RuntimeContext } from "@mastra/core/runtime-context";
+import { resetAgentMocks } from "./utils/agent-mock";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "../../db/.env") });
@@ -27,17 +29,43 @@ async function resetAssistantTables() {
 }
 
 function createCaller() {
+  const receivedAt = new Date();
+  const runtime = {
+    requestId: "test-request",
+    receivedAt,
+    method: "POST",
+    url: "http://localhost/test",
+    ip: null,
+    forwardedFor: [] as string[],
+    userAgent: null,
+    referer: null,
+  };
+  const runtimeContext = new RuntimeContext([
+    ["requestId", runtime.requestId],
+    ["receivedAt", receivedAt.toISOString()],
+    ["method", runtime.method],
+    ["url", runtime.url],
+    ["ip", runtime.ip],
+    ["forwardedFor", runtime.forwardedFor],
+    ["userId", TEST_USER],
+  ]);
   return appRouter.createCaller({
     session: {
       user: {
         id: TEST_USER,
       },
     },
+    runtime,
+    runtimeContext,
   } as any);
 }
 
 beforeEach(async () => {
   await resetAssistantTables();
+});
+
+afterEach(() => {
+  resetAgentMocks();
 });
 
 describe("assistant routers", () => {

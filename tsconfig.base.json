@@ -26,7 +26,8 @@
       "@alfred/db/*": ["packages/db/src/*"],
       "@alfred/rag/*": ["packages/rag/src/*"],
       "@alfred/ui/*": ["packages/ui/src/*"],
-      "@alfred/type/*": ["packages/type/src/*"]
+      "@alfred/type/*": ["packages/type/src/*"],
+      "@alfred/agent/assistant/*": ["packages/agent/assistant/src/*"]
     }
   }
 }

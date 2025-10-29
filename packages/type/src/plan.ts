@@ -77,6 +77,45 @@ export const droidArtifactSchema = z.object({
 
 export type DroidArtifact = z.infer<typeof droidArtifactSchema>;
 
+export type SearchReceiptItem = {
+  id: string;
+  kind: "code" | "web";
+  path?: string;
+  url?: string;
+  title?: string;
+  score: number;
+  reason?: string;
+  snippet?: string;
+  bytes?: number;
+  tokens?: number;
+  publishedDate?: string;
+  image?: string;
+  favicon?: string;
+};
+
+export type SearchReceipt = {
+  code: SearchReceiptItem[];
+  web?: SearchReceiptItem[];
+  created: Date;
+  summary?: string;
+};
+
+export type ContextFileSlice = {
+  path: string;
+  startLine: number;
+  endLine: number;
+  tokens: number;
+  content: string;
+};
+
+export type ContextBundle = {
+  maxTokens: number;
+  estimatedTokens: number;
+  files: ContextFileSlice[];
+  links?: Array<{ url: string; title?: string; score?: number }>;
+  note?: string;
+};
+
 export type WorkflowEvent =
   | { type: "progress"; pct?: number; message?: string }
   | { type: "stdout"; text: string }
@@ -84,4 +123,11 @@ export type WorkflowEvent =
   | { type: "droid"; chunk: unknown }
   | { type: "notice"; message: string }
   | { type: "data-cache-handoff"; key: readonly unknown[]; value: unknown }
+  | {
+      type: "context";
+      phase: "scan" | "web" | "bundle";
+      message?: string;
+      receipts?: SearchReceipt;
+      bundle?: ContextBundle;
+    }
   | { type: string; [key: string]: unknown };

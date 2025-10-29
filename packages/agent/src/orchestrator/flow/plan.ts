@@ -11,6 +11,7 @@ import { toolGit } from "../tool/git";
 import { toolRouter } from "../tool/router";
 import { toolTicket } from "../tool/ticket";
 import { toolDocker } from "../tool/docker";
+import { gatherCodeContext, gatherWebContext, buildContextBundle, indexCodeEmbeddings } from "./context";
 
 const workflowInputSchema = z.object({
   requirement: z.string().min(1),
@@ -50,6 +51,17 @@ const workflowInputSchema = z.object({
       space: z.string().min(1),
       teamId: z.string().optional(),
       sessionId: z.string().optional(),
+    })
+    .optional(),
+  context: z
+    .object({
+      enable: z.boolean().optional(),
+      web: z.boolean().optional(),
+      topK: z.number().int().min(1).max(100).optional(),
+      maxTokens: z.number().int().min(2000).max(200000).optional(),
+      exts: z.array(z.string()).optional(),
+      ignore: z.array(z.string()).optional(),
+      seeds: z.array(z.string().url()).optional(),
     })
     .optional(),
   userId: z.string().min(1).optional(),
@@ -139,6 +151,9 @@ const stepStateSchema = z.object({
   activityActionLogged: z.boolean().optional(),
   activitySummaryLogged: z.boolean().optional(),
   activityErrored: z.boolean().optional(),
+  contextReceipts: z.unknown().optional(),
+  contextBundle: z.unknown().optional(),
+  contextIndexed: z.boolean().optional(),
 });
 
 type OrchestratorStepState = z.infer<typeof stepStateSchema>;
@@ -215,6 +230,8 @@ function buildPlan(requirement: string, auto: "read" | "low" | "medium" | "high"
 }
 
 const PREVIEW_HOST = "127.0.0.1";
+
+const DEFAULT_CONTEXT_MAX_TOKENS = Number(process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000");
 
 function parsePortEnv(value: string | undefined, fallback: number) {
   if (!value) return fallback;
@@ -708,6 +725,111 @@ const orchestratorStep = createStep({
 
     const plan = buildPlan(inputData.requirement, inputData.auto, inputData.mode);
     await writer?.write({ type: "progress", pct: 5, message: "plan_generated" });
+    const contextConfig = inputData.context;
+    const contextEnabled = contextConfig?.enable !== false;
+    if (contextEnabled) {
+      await writer?.write({ type: "notice", message: "context_start" });
+      const codeReceipts = await gatherCodeContext({
+        requirement: inputData.requirement,
+        cw,
+        exts: contextConfig?.exts,
+        ignore: contextConfig?.ignore,
+        topK: contextConfig?.topK,
+        writer,
+        authz: inputData.authz,
+      });
+
+      const combinedReceipts: typeof codeReceipts = { ...codeReceipts };
+
+      if (contextConfig?.web !== false) {
+        const webReceipts = await gatherWebContext({
+          requirement: inputData.requirement,
+          topK: Math.min(contextConfig?.topK ?? 5, 10),
+          writer,
+          authz: inputData.authz,
+        });
+        combinedReceipts.web = webReceipts.web;
+        if (!combinedReceipts.summary && webReceipts.summary) {
+          combinedReceipts.summary = webReceipts.summary;
+        }
+      }
+
+      const bundle = await buildContextBundle({
+        cw,
+        receipts: combinedReceipts,
+        maxTokens: contextConfig?.maxTokens ?? DEFAULT_CONTEXT_MAX_TOKENS,
+        exts: contextConfig?.exts,
+        writer,
+      });
+
+      if (contextConfig?.seeds && contextConfig.seeds.length > 0) {
+        const existingLinks = bundle.links ?? [];
+        const seen = new Set(existingLinks.map(link => link.url));
+        for (const seed of contextConfig.seeds) {
+          if (!seen.has(seed)) {
+            existingLinks.push({ url: seed });
+            seen.add(seed);
+          }
+        }
+        bundle.links = existingLinks;
+      }
+
+      nextState.contextReceipts = combinedReceipts;
+      nextState.contextBundle = bundle;
+      setState(nextState);
+
+      await writer?.write({
+        type: "data-cache-handoff",
+        key: ["context", "bundle", plan.id] as const,
+        value: {
+          maxTokens: bundle.maxTokens,
+          estimatedTokens: bundle.estimatedTokens,
+          files: bundle.files.map(file => ({
+            path: file.path,
+            startLine: file.startLine,
+            endLine: file.endLine,
+            tokens: file.tokens,
+          })),
+          links: bundle.links,
+        },
+      });
+
+      try {
+        const ingestItems = bundle.files
+          .filter(file => file.content && file.content.length > 0)
+          .map(file => ({ path: file.path, content: file.content }));
+        if (ingestItems.length > 0) {
+          await indexCodeEmbeddings({
+            items: ingestItems,
+            sourceId: `repo:${plan.id}`,
+          });
+          nextState.contextIndexed = true;
+          setState(nextState);
+        }
+      } catch (error) {
+        await writer?.write({
+          type: "notice",
+          message: error instanceof Error ? `context_index_failed:${error.message}` : "context_index_failed",
+        });
+      }
+
+      const metadataContext = {
+        receiptsSummary: combinedReceipts.summary,
+        estimatedTokens: bundle.estimatedTokens,
+        files: bundle.files.map(file => ({
+          path: file.path,
+          startLine: file.startLine,
+          endLine: file.endLine,
+          tokens: file.tokens,
+        })),
+        links: bundle.links,
+      };
+
+      plan.metadata = {
+        ...(plan.metadata ?? {}),
+        context: metadataContext,
+      };
+    }
 
     const deploymentUserId = inputData.userId ?? "system";
     if (!nextState.deploymentApp) {

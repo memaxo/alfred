@@ -1,10 +1,12 @@
+import type { RuntimeContext } from "@mastra/core/runtime-context";
+
 export type ResumePayload = {
   event: "deploy-authz" | "linear-authz";
   authz: string;
 };
 
 export interface RunHandle {
-  resume(args: { resumeData: ResumePayload }): Promise<unknown>;
+  resume(args: { resumeData: ResumePayload; runtimeContext?: RuntimeContext }): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
 }

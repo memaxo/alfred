@@ -7,7 +7,7 @@
     "outDir": "dist",
     "composite": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "assistant/src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],
   "references": [
     { "path": "../auth" },

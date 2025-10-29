@@ -42,6 +42,7 @@ roles:
       - preference.write
       - privacy.read
       - privacy.write
+      - privacy.purge
       - token.issue
       - token.elevate
       - eval.define
@@ -62,11 +63,53 @@ roles:
       - timer.write
       - book.read
       - book.write
+      - profile.read
+      - profile.write
+      - preference.read
+      - preference.write
+      - privacy.read
+      - privacy.write
+      - privacy.purge
 
 rules:
   - id: token-issue-owner
     actions: ["token.issue"]
     roles: ["owner"]
+    effect: "allow"
+
+  - id: assistant-generate
+    actions: ["assistant.generate"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: assistant-stream
+    actions: ["assistant.stream"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: assistant-escalate
+    actions: ["assistant.escalate"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: linear-auth-owner
+    actions: ["linear.getAuthorizeUrl", "linear.oauthCallback"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: profile-write
+    actions: ["profile.write"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: preference-write
+    actions: ["preference.write"]
+    roles: ["owner", "user"]
+    effect: "allow"
+
+  - id: privacy-purge
+    actions: ["privacy.purge"]
+    roles: ["owner", "user"]
     effect: "allow"
 
   - id: allow-droid-exec-owner
@@ -227,6 +270,8 @@ scopes:
   - assistant.read
   - assistant.write
   - assistant.escalate
+  - assistant.generate
+  - assistant.stream
   - web.read
   - note.read
   - note.write
@@ -263,6 +308,7 @@ scopes:
   - preference.write
   - privacy.read
   - privacy.write
+  - privacy.purge
   - token.issue
   - token.elevate
   - eval.define

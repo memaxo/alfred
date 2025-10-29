@@ -27,7 +27,8 @@
       "@alfred/rag/*": ["../rag/src/*"],
       "@alfred/ui/*": ["../ui/src/*"],
       "@alfred/type/*": ["../type/src/*"],
-      "@alfred/agent/*": ["../agent/src/*"]
+      "@alfred/agent/*": ["../agent/src/*"],
+      "@alfred/agent/assistant/*": ["../agent/assistant/src/*"]
     }
   }
 }

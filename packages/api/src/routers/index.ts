@@ -10,6 +10,11 @@ import { droidsRouter } from "./droids";
 import { workflowRouter } from "./workflow";
 import { evalRouter } from "./eval";
 import { deployRouter } from "./deploy";
+import { linearRouter } from "./linear";
+import { assistantRouter } from "./assistant";
+import { profileRouter } from "./profile";
+import { preferenceRouter } from "./preference";
+import { privacyRouter } from "./privacy";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),
@@ -28,5 +33,10 @@ export const appRouter: ReturnType<typeof router> = router({
   workflow: workflowRouter,
   eval: evalRouter,
   deploy: deployRouter,
+  linear: linearRouter,
+  assistant: assistantRouter,
+  profile: profileRouter,
+  preference: preferenceRouter,
+  privacy: privacyRouter,
 });
 export type AppRouter = typeof appRouter;

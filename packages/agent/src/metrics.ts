@@ -22,6 +22,10 @@ type FailureCounter = {
   labels: (scorer: string, reason: string) => { inc: (value?: number) => void };
 };
 
+type DualLabelCounter = {
+  labels: (labelA: string, labelB: string) => { inc: (value?: number) => void };
+};
+
 let droidExecCounter: CounterLike | null = null;
 let droidExecDurationHistogram: HistogramLike | null = null;
 let evalRunsCounter: EvalRunCounter | null = null;
@@ -30,6 +34,10 @@ let evalScoreCounter: SingleLabelCounter | null = null;
 let evalFailureCounter: FailureCounter | null = null;
 let laminarDatapointCounter: SingleLabelCounter | null = null;
 let laminarErrorCounter: SingleLabelCounter | null = null;
+let assistantToolCounter: SingleLabelCounter | null = null;
+let assistantEscalationCounter: SingleLabelCounter | null = null;
+let memoryUpdatesCounter: DualLabelCounter | null = null;
+let memoryForgetsCounter: SingleLabelCounter | null = null;
 
 export function registerDroidExecCounter(counter: CounterLike) {
   droidExecCounter = counter;
@@ -93,4 +101,36 @@ export function recordLaminarDatapoint(status: string) {
 
 export function recordLaminarError(stage: string) {
   laminarErrorCounter?.labels(stage).inc();
+}
+
+export function registerAssistantToolCounter(counter: SingleLabelCounter) {
+  assistantToolCounter = counter;
+}
+
+export function recordAssistantToolCall(tool: string) {
+  assistantToolCounter?.labels(tool).inc();
+}
+
+export function registerAssistantEscalationCounter(counter: SingleLabelCounter) {
+  assistantEscalationCounter = counter;
+}
+
+export function recordAssistantEscalation(kind: string) {
+  assistantEscalationCounter?.labels(kind).inc();
+}
+
+export function registerMemoryUpdatesCounter(counter: DualLabelCounter) {
+  memoryUpdatesCounter = counter;
+}
+
+export function recordMemoryUpdate(kind: string, source: string) {
+  memoryUpdatesCounter?.labels(kind, source).inc();
+}
+
+export function registerMemoryForgetsCounter(counter: SingleLabelCounter) {
+  memoryForgetsCounter = counter;
+}
+
+export function recordMemoryForget(scope: string) {
+  memoryForgetsCounter?.labels(scope).inc();
 }

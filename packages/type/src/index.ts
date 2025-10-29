@@ -8,3 +8,6 @@ export * from "./plan";
 
 // Message types
 export * from "./msg";
+
+// Personalization schemas
+export * from "./personal";

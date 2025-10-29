@@ -6,6 +6,10 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./assistant/*": {
+      "types": "./assistant/src/*.ts",
+      "default": "./assistant/src/*.ts"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"

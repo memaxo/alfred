@@ -8,6 +8,10 @@ import {
   registerEvalFailureCounter,
   registerLaminarDatapointCounter,
   registerLaminarErrorCounter,
+  registerAssistantToolCounter,
+  registerAssistantEscalationCounter,
+  registerMemoryUpdatesCounter,
+  registerMemoryForgetsCounter,
 } from "@alfred/agent";
 import { registerPolicyCacheObserver } from "@alfred/policy";
 
@@ -138,6 +142,56 @@ export const laminarEvalErrorsTotal = new client.Counter({
 });
 
 registerLaminarErrorCounter(laminarEvalErrorsTotal);
+
+export const webhookEventsTotal = new client.Counter({
+  name: "webhook_events_total",
+  help: "Count of webhook events grouped by type.",
+  labelNames: ["type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const webhookErrorsTotal = new client.Counter({
+  name: "webhook_errors_total",
+  help: "Count of webhook handler errors grouped by stage.",
+  labelNames: ["stage"] as const,
+  registers: [metricsRegistry],
+});
+
+export const assistantToolCallsTotal = new client.Counter({
+  name: "assistant_tool_calls_total",
+  help: "Count of assistant tool invocations grouped by tool name.",
+  labelNames: ["tool"] as const,
+  registers: [metricsRegistry],
+});
+
+registerAssistantToolCounter(assistantToolCallsTotal);
+
+export const assistantEscalationsTotal = new client.Counter({
+  name: "assistant_escalations_total",
+  help: "Count of assistant escalations grouped by kind.",
+  labelNames: ["kind"] as const,
+  registers: [metricsRegistry],
+});
+
+registerAssistantEscalationCounter(assistantEscalationsTotal);
+
+export const memoryUpdatesTotal = new client.Counter({
+  name: "memory_updates_total",
+  help: "Count of memory updates grouped by kind and source.",
+  labelNames: ["kind", "source"] as const,
+  registers: [metricsRegistry],
+});
+
+registerMemoryUpdatesCounter(memoryUpdatesTotal);
+
+export const memoryForgetsTotal = new client.Counter({
+  name: "memory_forgets_total",
+  help: "Count of memory forget operations grouped by scope.",
+  labelNames: ["scope"] as const,
+  registers: [metricsRegistry],
+});
+
+registerMemoryForgetsCounter(memoryForgetsTotal);
 
 registerPolicyCacheObserver(result => {
   try {

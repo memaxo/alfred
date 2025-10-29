@@ -4080,7 +4080,7 @@ Custom Droids (subagents) loader can surface project- or personal-scoped droids 
 ### Web search and external docs
 
 - tool web.fetch (scope web.read) retrieves small pages (content-type text/* or application/json, size-capped) to enrich failing tasks.
-- For richer search, optionally integrate MCP web search (future extension); gate by policy.
+- tool web.search prefers Exa when `EXA_API_KEY` is configured, otherwise falling back to DuckDuckGo (or the explicit `ORCH_WEB_PROVIDER`). Requests use livecrawl + highlights to surface fresh snippets while keeping policy gates unchanged.
 
 ### tRPC endpoints for orchestration
 

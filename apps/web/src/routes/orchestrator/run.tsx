@@ -37,6 +37,9 @@ function OrchestratorRunRoute() {
 	const [mode, setMode] = useState<"sequential" | "parallel">("sequential");
 	const [repoBase, setRepoBase] = useState("origin/main");
 	const [workspace, setWorkspace] = useState("");
+	const [contextEnabled, setContextEnabled] = useState(true);
+	const [contextWeb, setContextWeb] = useState(true);
+	const [contextMaxTokens, setContextMaxTokens] = useState("24000");
 	const [isRunning, setIsRunning] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [status, setStatus] = useState<string | null>(null);
@@ -141,6 +144,19 @@ function OrchestratorRunRoute() {
 				repoBase: repoBase.trim() || undefined,
 				workspace: workspace.trim() || undefined,
 			};
+
+			const maxTokensValue = Number.parseInt(contextMaxTokens, 10);
+			const contextPayload: StreamInput["context"] | undefined = contextEnabled
+				? {
+						enable: true,
+						web: contextWeb,
+						maxTokens: Number.isFinite(maxTokensValue) ? maxTokensValue : undefined,
+				  }
+				: { enable: false };
+
+			if (contextPayload) {
+				input.context = contextPayload;
+			}
 
 			setStreamInput(input);
 		} catch (err) {
@@ -257,9 +273,31 @@ function OrchestratorRunRoute() {
 						scopeInFlightRef.current.delete(scopeEvent);
 					}
 				})();
-				break;
+			break;
+		}
+		case "context": {
+			const phase = typeof event?.phase === "string" ? (event.phase as string) : "unknown";
+			const summaryParts: string[] = [`phase=${phase}`];
+			if (typeof event?.message === "string" && event.message.trim().length > 0) {
+				summaryParts.push(event.message.trim());
 			}
-			default: {
+			const receipts = (event?.receipts ?? {}) as Record<string, unknown>;
+			const bundle = (event?.bundle ?? {}) as Record<string, unknown>;
+			const codeCount = Array.isArray(receipts.code as unknown[]) ? (receipts.code as unknown[]).length : undefined;
+			const webCount = Array.isArray(receipts.web as unknown[]) ? (receipts.web as unknown[]).length : undefined;
+			const bundleFiles = Array.isArray(bundle.files as unknown[]) ? (bundle.files as unknown[]).length : undefined;
+			const estimatedTokens = typeof bundle.estimatedTokens === "number" ? bundle.estimatedTokens : undefined;
+			if (typeof receipts.summary === "string" && receipts.summary.trim().length > 0) {
+				summaryParts.push(receipts.summary.trim());
+			}
+			if (typeof codeCount === "number") summaryParts.push(`code=${codeCount}`);
+			if (typeof webCount === "number") summaryParts.push(`web=${webCount}`);
+			if (typeof bundleFiles === "number") summaryParts.push(`bundle.files=${bundleFiles}`);
+			if (typeof estimatedTokens === "number") summaryParts.push(`bundle.tokens≈${estimatedTokens}`);
+			appendLog("context", summaryParts.join(" | "));
+			break;
+		}
+		default: {
 				appendLog(type, JSON.stringify(event));
 				break;
 			}
@@ -380,6 +418,43 @@ function OrchestratorRunRoute() {
 						/>
 					</div>
 				</div>
+
+			<div className="grid gap-2 md:grid-cols-3">
+				<label className="flex items-center gap-2 text-sm font-medium">
+					<input
+						type="checkbox"
+						className="h-4 w-4"
+						checked={contextEnabled}
+						onChange={(event) => setContextEnabled(event.target.checked)}
+					/>
+					<span>Enable context gather</span>
+				</label>
+				<label className="flex items-center gap-2 text-sm font-medium">
+					<input
+						type="checkbox"
+						className="h-4 w-4"
+						checked={contextWeb}
+						onChange={(event) => setContextWeb(event.target.checked)}
+						disabled={!contextEnabled}
+					/>
+					<span>Include web search</span>
+				</label>
+				<div className="grid gap-2">
+					<label className="text-sm font-medium" htmlFor="contextMaxTokens">
+						Context max tokens
+					</label>
+					<input
+						id="contextMaxTokens"
+						type="number"
+						min={2000}
+						max={200000}
+						className="h-10 rounded border border-input bg-background px-3 text-sm"
+						value={contextMaxTokens}
+						onChange={(event) => setContextMaxTokens(event.target.value)}
+						disabled={!contextEnabled}
+					/>
+				</div>
+			</div>
 
 				<div className="flex flex-wrap items-center gap-3">
 					<button

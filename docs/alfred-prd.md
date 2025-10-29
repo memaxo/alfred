@@ -167,23 +167,23 @@ Notes
 ## Phase 4 — Orchestrator + Droids (core SWE execution)
 
 - [x] Implement droid exec tool spawn with flags, stdout/stderr streaming, timeout, and abort handling (minimal Node-based runner; Mastra workflow pending)
-- [ ] Implement git tool for branch/worktree/commit/push with safe cwd scoping
-- [ ] Implement router tool for Caddy API calls (register/update/remove)
-- [ ] Implement ticket tool using Linear client with JWT scope checks
-- [ ] Implement orchestrator workflow plan→expand→schedule (parallel/sequential)→execute→review/merge→docs→finalize
-- [ ] Implement worktree cleanup on finalize or abort and safe rollback paths
-- [ ] Implement streaming events and cache handoff for run/module summaries
+- [x] Implement git tool for branch/worktree/commit/push with safe cwd scoping
+- [x] Implement router tool for Caddy API calls (register/update/remove)
+- [x] Implement ticket tool using Linear client with JWT scope checks
+- [x] Implement orchestrator workflow plan→expand→schedule (parallel/sequential)→execute→review/merge→docs→finalize
+- [x] Implement worktree cleanup on finalize or abort and safe rollback paths
+- [x] Implement streaming events and cache handoff for run/module summaries
 
 ## Phase 5 — Personal Assistant (daily workflows)
 
-- [ ] Implement note tool CRUD and optional RAG embed on save
-- [ ] Implement remind tool create/list with scheduler hooks
-- [ ] Implement timer tool start/cancel with alerts
-- [ ] Implement book tool add/list/remove with tags
+- [x] Implement note tool CRUD and optional RAG embed on save
+- [x] Implement remind tool create/list with scheduler hooks
+- [x] Implement timer tool start/cancel with alerts
+- [x] Implement book tool add/list/remove with tags
 - [ ] Implement slack tool for inbox read with OAuth install flow
 - [ ] Implement home tool read/control with entity allowlist and PDP obligations for sensitive entities
 - [ ] Implement focus tool to set drive/focus mode and memory hints
-- [ ] Implement handoff tool to escalate requirements to orchestrator with optional elevated token
+- [x] Implement handoff tool to escalate requirements to orchestrator with optional elevated token
 
 ## Phase 6 — Schedulers and notifications
 

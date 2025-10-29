@@ -7,6 +7,7 @@ import { z } from "zod";
 import { authedProcedure, router } from "../index";
 import { requirePolicy } from "../gate";
 import { MemoryRunRegistry } from "../run-registry";
+import { cloneRuntimeContext } from "../context";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -46,6 +47,17 @@ const workflowInput = z.object({
       space: z.string().min(1),
       teamId: z.string().optional(),
       sessionId: z.string().optional(),
+    })
+    .optional(),
+  context: z
+    .object({
+      enable: z.boolean().optional(),
+      web: z.boolean().optional(),
+      topK: z.number().int().min(1).max(100).optional(),
+      maxTokens: z.number().int().min(2000).max(200000).optional(),
+      exts: z.array(z.string()).optional(),
+      ignore: z.array(z.string()).optional(),
+      seeds: z.array(z.string().url()).optional(),
     })
     .optional(),
   userId: z.string().min(1).optional(),
@@ -161,6 +173,22 @@ function toTRPCError(error: unknown): TRPCError {
     return make("BAD_REQUEST", message);
   }
 
+  if (message === "web_fetch_url_required") {
+    return make("BAD_REQUEST", message);
+  }
+
+  if (
+    message === "web_fetch_unsupported_content_type" ||
+    message === "web_serpapi_missing_key" ||
+    message === "web_provider_tavily_unavailable"
+  ) {
+    return make("PRECONDITION_FAILED", message);
+  }
+
+  if (typeof message === "string" && message.startsWith("web_search_failed")) {
+    return make("PRECONDITION_FAILED", message);
+  }
+
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message: "workflow_failed",
@@ -193,9 +221,29 @@ export const workflowRouter: ReturnType<typeof router> = router({
           throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
         }
         const payload = { ...input, userId: session.user.id } as z.infer<typeof workflowInput>;
+        const runtimeExtras: Array<[string, unknown]> = [
+          ["workflowRequirement", input.requirement],
+          ["workflowAuto", input.auto],
+          ["workflowMode", input.mode],
+        ];
+        if (input.workspace) {
+          runtimeExtras.push(["workflowWorkspace", input.workspace]);
+        }
+        if (input.repoBase) {
+          runtimeExtras.push(["workflowRepoBase", input.repoBase]);
+        }
+        if (input.context?.enable !== undefined) {
+          runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
+        }
+        const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
         const run = await workflow.createRunAsync();
+        const runId = (run as { id?: string }).id ?? null;
+        if (runId) {
+          runtimeContext.set("workflowRunId", runId);
+        }
         const outcome = await run.start({
           inputData: payload,
+          runtimeContext,
         });
 
         const output = "result" in outcome ? (outcome as { result?: unknown }).result : undefined;
@@ -207,7 +255,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const ticketUrl = (output as { ticketUrl?: string })?.ticketUrl ?? null;
 
         return {
-          runId: (run as { id?: string }).id ?? null,
+          runId,
           summary,
           results,
           plan,
@@ -253,9 +301,26 @@ export const workflowRouter: ReturnType<typeof router> = router({
             return;
           }
           const payload = { ...input, userId: session.user.id } as z.infer<typeof workflowInput>;
+          const runtimeExtras: Array<[string, unknown]> = [
+            ["workflowRequirement", input.requirement],
+            ["workflowAuto", input.auto],
+            ["workflowMode", input.mode],
+            ["workflowStream", true],
+          ];
+          if (input.workspace) {
+            runtimeExtras.push(["workflowWorkspace", input.workspace]);
+          }
+          if (input.repoBase) {
+            runtimeExtras.push(["workflowRepoBase", input.repoBase]);
+          }
+          if (input.context?.enable !== undefined) {
+            runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
+          }
+          const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
 
           const workflowRun = await workflow.createRunAsync();
           const runId = (workflowRun as { id?: string }).id ?? randomUUID();
+          runtimeContext.set("workflowRunId", runId);
           runMeta = { run: workflowRun, runId };
           const resume = workflowRun.resume?.bind(workflowRun);
           const cancel = workflowRun.cancel?.bind(workflowRun);
@@ -266,7 +331,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
           }
           runRegistry.register(runId, {
-            resume,
+            resume: async args => {
+              await resume({
+                ...args,
+                runtimeContext,
+              });
+            },
             cancel,
             abortController: workflowRun.abortController,
           });
@@ -274,6 +344,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
           const stream = await workflowRun.streamVNext({
             inputData: payload,
+            runtimeContext,
           });
 
           try {

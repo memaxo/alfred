@@ -1,22 +1,147 @@
 import { auth } from "@alfred/auth";
+import { RuntimeContext } from "@mastra/core/runtime-context";
+import { randomUUID } from "node:crypto";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
+export interface RuntimeMetadata {
+  /** Unique identifier for the incoming request */
+  requestId: string;
+  /** Timestamp when the backend received the request */
+  receivedAt: Date;
+  /** HTTP method */
+  method: string;
+  /** Absolute URL of the request */
+  url: string;
+  /** Best-effort client IP */
+  ip: string | null;
+  /** Ordered list of forwarded-for entries */
+  forwardedFor: string[];
+  /** Reported user agent */
+  userAgent: string | null;
+  /** Referer/Referrer header */
+  referer: string | null;
+}
+
 export interface Context {
   session: AuthSession | null;
+  runtime: RuntimeMetadata;
+  runtimeContext: RuntimeContext;
   policy?: {
     obligations: string[];
   };
 }
 
+function parseForwardedFor(headers: Headers) {
+  const header = headers.get("x-forwarded-for");
+  if (!header) return [] as string[];
+  return header
+    .split(",")
+    .map(entry => entry.trim())
+    .filter(entry => entry.length > 0);
+}
+
+function resolveClientIp(headers: Headers, forwardedFor: string[]) {
+  if (forwardedFor.length > 0) {
+    return forwardedFor[0] ?? null;
+  }
+  const directHeaders = ["x-real-ip", "cf-connecting-ip", "true-client-ip", "fastly-client-ip"];
+  for (const key of directHeaders) {
+    const value = headers.get(key);
+    if (value && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function resolveRequestId(headers: Headers) {
+  const headerNames = ["x-request-id", "cf-ray", "fly-request-id", "traceparent"];
+  for (const name of headerNames) {
+    const value = headers.get(name);
+    if (value && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return randomUUID();
+}
+
+function resolveReferer(headers: Headers) {
+  return headers.get("referer") ?? headers.get("referrer");
+}
+
 export async function createContext({ req }: { req: Request }): Promise<Context> {
+  const headers = req.headers;
+  const forwardedFor = parseForwardedFor(headers);
+  const runtime: RuntimeMetadata = {
+    requestId: resolveRequestId(headers),
+    receivedAt: new Date(),
+    method: req.method,
+    url: req.url,
+    ip: resolveClientIp(headers, forwardedFor),
+    forwardedFor,
+    userAgent: headers.get("user-agent"),
+    referer: resolveReferer(headers),
+  };
+
   const session = await auth.api
     .getSession({
-      headers: req.headers,
+      headers,
     })
     .catch(() => null);
 
+  const runtimeContextEntries: Array<[string, unknown]> = [
+    ["requestId", runtime.requestId],
+    ["receivedAt", runtime.receivedAt.toISOString()],
+    ["method", runtime.method],
+    ["url", runtime.url],
+    ["ip", runtime.ip],
+    ["forwardedFor", runtime.forwardedFor],
+  ];
+
+  if (runtime.userAgent) {
+    runtimeContextEntries.push(["userAgent", runtime.userAgent]);
+  }
+
+  if (runtime.referer) {
+    runtimeContextEntries.push(["referer", runtime.referer]);
+  }
+
+  const user = session?.user as { id?: string; roles?: string[]; scopes?: string[] } | undefined;
+  if (user?.id) {
+    runtimeContextEntries.push(["userId", user.id]);
+  }
+  if (user?.roles && user.roles.length > 0) {
+    runtimeContextEntries.push(["userRoles", [...user.roles]]);
+  }
+  if (user?.scopes && user.scopes.length > 0) {
+    runtimeContextEntries.push(["userScopes", [...user.scopes]]);
+  }
+
+  const runtimeContext = new RuntimeContext<Record<string, unknown>>(
+    runtimeContextEntries as Array<[string, unknown]>,
+  );
+
   return {
     session,
+    runtime,
+    runtimeContext,
   };
+}
+
+export function cloneRuntimeContext(
+  base: RuntimeContext,
+  extras: Array<[string, unknown]> = [],
+): RuntimeContext {
+  const entries: Array<[string, unknown]> = [];
+  base.forEach((value, key) => {
+    entries.push([String(key), value]);
+  });
+  const clone = new RuntimeContext<Record<string, unknown>>(
+    entries as Array<[string, unknown]>,
+  );
+  for (const [key, value] of extras) {
+    clone.set(key as string, value as unknown);
+  }
+  return clone;
 }
