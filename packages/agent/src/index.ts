@@ -1,10 +1,16 @@
 import { mastra, orchestratorAgent, planWorkflow, assistantAgent } from "./mastra";
 import { toolDroid } from "./orchestrator/tool/droid";
+import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolRouter } from "./orchestrator/tool/router";
 import {
   registerDroidExecCounter,
   registerDroidExecHistogram,
+  registerCodexExecCounter,
+  registerCodexExecHistogram,
+  registerCodexErrorCounter,
+  recordCodexExecRun,
+  recordCodexError,
   registerEvalRunsCounter,
   registerEvalDurationHistogram,
   registerEvalScoreCounter,
@@ -29,6 +35,7 @@ export {
   assistantAgent,
   planWorkflow,
   toolDroid,
+  toolCodex,
   toolDocker,
   toolRouter,
   runEval,
@@ -36,6 +43,11 @@ export {
 export {
   registerDroidExecCounter,
   registerDroidExecHistogram,
+  registerCodexExecCounter,
+  registerCodexExecHistogram,
+  registerCodexErrorCounter,
+  recordCodexExecRun,
+  recordCodexError,
   registerEvalRunsCounter,
   registerEvalDurationHistogram,
   registerEvalScoreCounter,

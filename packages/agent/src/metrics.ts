@@ -28,6 +28,9 @@ type DualLabelCounter = {
 
 let droidExecCounter: CounterLike | null = null;
 let droidExecDurationHistogram: HistogramLike | null = null;
+let codexExecCounter: CounterLike | null = null;
+let codexExecDurationHistogram: HistogramLike | null = null;
+let codexErrorCounter: SingleLabelCounter | null = null;
 let evalRunsCounter: EvalRunCounter | null = null;
 let evalRunDurationHistogram: EvalRunHistogram | null = null;
 let evalScoreCounter: SingleLabelCounter | null = null;
@@ -53,6 +56,30 @@ export function recordDroidExecRun(auto: string, exitCode: number) {
 
 export function startDroidExecTimer(auto: string) {
   return droidExecDurationHistogram?.startTimer({ auto }) ?? (() => {});
+}
+
+export function registerCodexExecCounter(counter: CounterLike) {
+  codexExecCounter = counter;
+}
+
+export function registerCodexExecHistogram(histogram: HistogramLike) {
+  codexExecDurationHistogram = histogram;
+}
+
+export function recordCodexExecRun(auto: string, exitCode: number) {
+  codexExecCounter?.labels(auto, String(exitCode)).inc();
+}
+
+export function startCodexExecTimer(auto: string) {
+  return codexExecDurationHistogram?.startTimer({ auto }) ?? (() => {});
+}
+
+export function registerCodexErrorCounter(counter: SingleLabelCounter) {
+  codexErrorCounter = counter;
+}
+
+export function recordCodexError(stage: string) {
+  codexErrorCounter?.labels(stage).inc();
 }
 
 export function registerEvalRunsCounter(counter: EvalRunCounter) {

@@ -4,6 +4,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { createTokenEstimator } from "../util/token";
 import { toolDroid } from "../tool/droid";
+import { toolCodex } from "../tool/codex";
 import { toolWeb } from "../tool/web";
 
 type Writer = { write: (chunk: unknown) => Promise<void> | void } | undefined;
@@ -154,6 +155,20 @@ function summariseReceipt(items: SearchReceiptItem[]) {
     .join(", ")}`;
 }
 
+type ExecutorName = "codex" | "droid";
+
+function resolveExecutor(preferred?: ExecutorName): ExecutorName {
+  if (preferred === "codex" || preferred === "droid") {
+    return preferred;
+  }
+  const envExecutor = (process.env.ORCH_EXECUTOR ?? "").trim().toLowerCase();
+  return envExecutor === "codex" ? "codex" : "droid";
+}
+
+function fallbackEnabled() {
+  return process.env.ORCH_EXECUTOR_FALLBACK === "1";
+}
+
 export async function gatherCodeContext({
   requirement,
   cw,
@@ -162,6 +177,7 @@ export async function gatherCodeContext({
   topK,
   writer,
   authz,
+  executor,
 }: {
   requirement: string;
   cw: string;
@@ -170,28 +186,80 @@ export async function gatherCodeContext({
   topK?: number;
   writer?: Writer;
   authz: string | undefined;
+  executor?: ExecutorName;
 }): Promise<SearchReceipt> {
   const resolvedCw = path.resolve(cw);
   const extSet = normalizeExts(exts);
   const ignoreSet = normalizeIgnore(ignore);
   const limit = topK ?? DEFAULT_TOPK;
 
+  const preferredExecutor = resolveExecutor(executor);
+  const allowFallback = fallbackEnabled();
+  const prompt = buildDroidPrompt(requirement, limit);
+
   let items: SearchReceiptItem[] = [];
-  try {
-    const prompt = buildDroidPrompt(requirement, limit);
-    const result = await toolDroid.execute({
-      input: {
-        prompt,
-        out: "json",
-        auto: "read",
-        cw: resolvedCw,
-        authz,
-      },
-      writer,
-    });
-    items = parseDroidOutput(result.result);
-  } catch {
-    items = [];
+
+  if (preferredExecutor === "codex") {
+    try {
+      const result = await toolCodex.execute({
+        input: {
+          action: "exec",
+          prompt,
+          out: "json",
+          auto: "read",
+          cw: resolvedCw,
+          authz,
+        },
+        writer,
+      });
+      items = parseDroidOutput(result.result);
+    } catch (error) {
+      await writer?.write?.({
+        type: "notice",
+        message: "codex_context_error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (allowFallback) {
+        await writer?.write?.({
+          type: "notice",
+          message: "codex_fallback_droid",
+        });
+        try {
+          const fallbackResult = await toolDroid.execute({
+            input: {
+              prompt,
+              out: "json",
+              auto: "read",
+              cw: resolvedCw,
+              authz,
+            },
+            writer,
+          });
+          items = parseDroidOutput(fallbackResult.result);
+        } catch {
+          items = [];
+        }
+      }
+    }
+  }
+
+  if (items.length === 0 && preferredExecutor !== "codex") {
+    try {
+      const result = await toolDroid.execute({
+        input: {
+          prompt,
+          out: "json",
+          auto: "read",
+          cw: resolvedCw,
+          authz,
+        },
+        writer,
+      });
+      items = parseDroidOutput(result.result);
+    } catch {
+      items = [];
+    }
   }
 
   if (items.length === 0) {

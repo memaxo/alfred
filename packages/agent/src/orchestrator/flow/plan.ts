@@ -7,6 +7,7 @@ import { createServer } from "node:net";
 import path from "node:path";
 import { z } from "zod";
 import { toolDroid } from "../tool/droid";
+import { toolCodex } from "../tool/codex";
 import { toolGit } from "../tool/git";
 import { toolRouter } from "../tool/router";
 import { toolTicket } from "../tool/ticket";
@@ -16,6 +17,7 @@ import { gatherCodeContext, gatherWebContext, buildContextBundle, indexCodeEmbed
 const workflowInputSchema = z.object({
   requirement: z.string().min(1),
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
+  executor: z.enum(["codex", "droid"]).optional(),
   authz: z.string().optional(),
   cw: z.string().optional(),
   mode: z.enum(["sequential", "parallel"]).default("sequential"),
@@ -190,6 +192,20 @@ function sanitizeSlug(value: string) {
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
+}
+
+type ExecutorName = "codex" | "droid";
+
+function resolveExecutor(preferred?: ExecutorName): ExecutorName {
+  if (preferred === "codex" || preferred === "droid") {
+    return preferred;
+  }
+  const envExecutor = (process.env.ORCH_EXECUTOR ?? "").trim().toLowerCase();
+  return envExecutor === "codex" ? "codex" : "droid";
+}
+
+function executorFallbackEnabled() {
+  return process.env.ORCH_EXECUTOR_FALLBACK === "1";
 }
 
 function buildPlan(requirement: string, auto: "read" | "low" | "medium" | "high", mode: "sequential" | "parallel"): ImplementationPlan {
@@ -496,16 +512,92 @@ async function prepareVcs({
   };
 }
 
+async function runExecutorTool({
+  executor,
+  allowFallback,
+  prompt,
+  out,
+  auto,
+  authz,
+  cw,
+  writer,
+}: {
+  executor: ExecutorName;
+  allowFallback: boolean;
+  prompt: string;
+  out: "text" | "json" | "debug";
+  auto: "read" | "low" | "medium" | "high";
+  authz: string | undefined;
+  cw: string;
+  writer?: { write: (chunk: unknown) => Promise<void> | void };
+}) {
+  if (executor === "codex") {
+    try {
+      return await toolCodex.execute({
+        input: {
+          action: "exec",
+          prompt,
+          out,
+          auto,
+          authz,
+          cw,
+        },
+        writer,
+      });
+    } catch (error) {
+      await writer?.write?.({
+        type: "notice",
+        message: "codex_executor_error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (allowFallback) {
+        await writer?.write?.({
+          type: "notice",
+          message: "codex_fallback_droid",
+        });
+        return toolDroid.execute({
+          input: {
+            prompt,
+            out,
+            auto,
+            authz,
+            cw,
+          },
+          writer,
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  return toolDroid.execute({
+    input: {
+      prompt,
+      out,
+      auto,
+      authz,
+      cw,
+    },
+    writer,
+  });
+}
+
 async function executeModule({
   module,
   authz,
   auto,
   writer,
+  executor,
+  allowFallback,
 }: {
   module: ModulePlan;
   authz: string | undefined;
   auto: "read" | "low" | "medium" | "high";
   writer?: { write: (chunk: unknown) => Promise<void> | void };
+  executor: ExecutorName;
+  allowFallback: boolean;
 }) {
   if (!module.worktree) {
     throw new Error("module_worktree_missing");
@@ -530,14 +622,15 @@ async function executeModule({
     });
 
     try {
-      const response = await toolDroid.execute({
-        input: {
-          prompt: task.description,
-          auto: task.auto ?? auto,
-          out: "debug",
-          authz,
-          cw: module.worktree,
-        },
+      const taskAuto = task.auto ?? auto;
+      const response = await runExecutorTool({
+        executor,
+        allowFallback,
+        prompt: task.description,
+        out: "debug",
+        auto: taskAuto,
+        authz,
+        cw: module.worktree,
         writer,
       });
 
@@ -708,6 +801,8 @@ const orchestratorStep = createStep({
     suspend,
   }): Promise<WorkflowOutput> => {
     const cw = inputData.cw ?? process.cwd();
+    const executor = resolveExecutor(inputData.executor);
+    const allowExecutorFallback = executorFallbackEnabled();
     const currentState: OrchestratorStepState = state ?? {};
     const nextState: OrchestratorStepState = { ...currentState };
 
@@ -724,6 +819,15 @@ const orchestratorStep = createStep({
     }
 
     const plan = buildPlan(inputData.requirement, inputData.auto, inputData.mode);
+    plan.metadata = {
+      ...(plan.metadata ?? {}),
+      workflowExecutor: executor,
+    };
+    await writer?.write({
+      type: "notice",
+      message: "executor_selected",
+      executor,
+    });
     await writer?.write({ type: "progress", pct: 5, message: "plan_generated" });
     const contextConfig = inputData.context;
     const contextEnabled = contextConfig?.enable !== false;
@@ -737,6 +841,7 @@ const orchestratorStep = createStep({
         topK: contextConfig?.topK,
         writer,
         authz: inputData.authz,
+        executor,
       });
 
       const combinedReceipts: typeof codeReceipts = { ...codeReceipts };
@@ -1305,6 +1410,8 @@ const orchestratorStep = createStep({
             authz: inputData.authz,
             auto: inputData.auto,
             writer,
+            executor,
+            allowFallback: allowExecutorFallback,
           });
           results.push(...moduleResults);
 

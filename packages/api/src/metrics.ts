@@ -2,6 +2,9 @@ import client from "prom-client";
 import {
   registerDroidExecCounter,
   registerDroidExecHistogram,
+  registerCodexExecCounter,
+  registerCodexExecHistogram,
+  registerCodexErrorCounter,
   registerEvalRunsCounter,
   registerEvalDurationHistogram,
   registerEvalScoreCounter,
@@ -87,6 +90,34 @@ export const droidExecDurationSeconds = new client.Histogram({
 });
 
 registerDroidExecHistogram(droidExecDurationSeconds);
+
+export const codexExecRunsTotal = new client.Counter({
+  name: "codex_exec_runs_total",
+  help: "Count of Codex exec runs grouped by autonomy level and exit code.",
+  labelNames: ["auto", "exit_code"] as const,
+  registers: [metricsRegistry],
+});
+
+registerCodexExecCounter(codexExecRunsTotal);
+
+export const codexExecDurationSeconds = new client.Histogram({
+  name: "codex_exec_duration_seconds",
+  help: "Duration of Codex exec runs in seconds.",
+  labelNames: ["auto"] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
+  registers: [metricsRegistry],
+});
+
+registerCodexExecHistogram(codexExecDurationSeconds);
+
+export const codexErrorsTotal = new client.Counter({
+  name: "codex_errors_total",
+  help: "Count of Codex executor errors grouped by stage.",
+  labelNames: ["stage"] as const,
+  registers: [metricsRegistry],
+});
+
+registerCodexErrorCounter(codexErrorsTotal);
 
 export const evalRunsTotal = new client.Counter({
   name: "eval_runs_total",

@@ -19,6 +19,25 @@
     "better-auth": {
       "url": "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp",
       "type": "http"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "type": "stdio"
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "--repository",
+        "."
+      ],
+      "type": "stdio"
     }
   }
 }

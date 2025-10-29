@@ -95,6 +95,17 @@ Follow the Expo output to run on iOS/Android simulators or the Expo Go app.
 | `bun run db:migrate` | Apply SQL migrations |
 | `bun run db:studio` | Launch Drizzle Studio |
 
+## Using Codex Executor
+
+Codex can replace the default droid executor once the CLI is installed locally. Follow these steps:
+
+1. Install the Codex CLI (see `docs/codex-cli/install.md`) and ensure it is on your `PATH`.
+2. Provide credentials via `CODEX_API_KEY`. If you only have `OPENAI_API_KEY`, leave `ORCH_CODEX_ALLOW_OPENAI_KEY=1` so the orchestrator forwards it.
+3. Enable the executor by setting `ORCH_EXECUTOR=codex` in your environment. Optional helpers: `ORCH_EXECUTOR_FALLBACK=1` to auto-fallback to droid on spawn/runtime failures and `ORCH_EXECUTOR_SHADOW=1` to dual-run during testing.
+4. Tune the binary/profile with `CODEX_BIN` and `CODEX_PROFILE` when you need a non-default install or workspace profile.
+
+Codex metrics (`codex_exec_runs_total`, `codex_exec_duration_seconds`, and `codex_errors_total`) surface alongside the existing droid series on `/api/metrics` for dashboards.
+
 ## Testing & Quality Gates
 
 - **Type checking:** `bun run typecheck`
@@ -116,6 +127,7 @@ Prometheus metrics are served from `/api/metrics` (content type `text/plain; ver
 - `trpc_requests_total{procedure,type}`
 - `policy_decisions_total{action,decision}`
 - `droid_exec_runs_total{auto,exit_code}` & `droid_exec_duration_seconds{auto}`
+- `codex_exec_runs_total{auto,exit_code}`, `codex_exec_duration_seconds{auto}`, `codex_errors_total{stage}`
 - `eval_runs_total{agent,status}` & `eval_duration_seconds{agent}`
 - `eval_scores_total{scorer}`, `eval_failures_total{scorer,reason}`
 - `laminar_eval_datapoints_total{status}`, `laminar_eval_errors_total{stage}`
