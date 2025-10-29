@@ -25,7 +25,10 @@ const focusOutputSchema = z.object({
 });
 
 type FocusInput = z.infer<typeof focusInputSchema>;
-type FocusPreferenceRow = Awaited<ReturnType<typeof userRepo.getPreferences>>[number] | null;
+type FocusPreferenceRow = {
+  key: string;
+  value: unknown;
+} | null;
 
 function parseFocusState(entry: FocusPreferenceRow): FocusState | null {
   if (!entry) {
@@ -90,7 +93,7 @@ async function computeSuggestedTasks(userId: string) {
 }
 
 async function loadFocusPreference(userId: string) {
-  const preferences = await userRepo.getPreferences(userId);
+  const preferences = (await userRepo.getPreferences(userId)) as unknown as Array<{ key: string; value: unknown }>;
   const entry = preferences.find(pref => pref.key === "focus") ?? null;
   return parseFocusState(entry);
 }
@@ -116,12 +119,12 @@ export const toolFocus = {
     switch (input.action) {
       case "start": {
         updated = startFocus(current, {
-        durationMin: input.durationMin,
-        note: input.note,
-        since: now.toISOString(),
-      });
-      ok = updated._ === "active";
-      break;
+          durationMin: input.durationMin,
+          note: input.note,
+          since: now.toISOString(),
+        });
+        ok = updated._ === "active";
+        break;
       }
       case "stop": {
         updated = stopFocus(current);
@@ -133,11 +136,11 @@ export const toolFocus = {
           updated = startFocus(
             { _: "idle" },
             {
-            durationMin: input.durationMin,
-            note: input.note,
-            since: now.toISOString(),
-          },
-        );
+              durationMin: input.durationMin,
+              note: input.note,
+              since: now.toISOString(),
+            },
+          );
         } else {
           updated = updateFocus(current, {
             durationMin: input.durationMin,

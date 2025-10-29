@@ -19,6 +19,18 @@ type Encoder = {
 
 export function createTokenEstimator(opts?: { model?: string }): TokenEstimator {
   let encoder: Encoder | null = null;
+  const cache = new Map<string, number>();
+
+  const remember = (key: string, value: number) => {
+    if (cache.size >= 256) {
+      const first = cache.keys().next();
+      if (!first.done) {
+        cache.delete(first.value);
+      }
+    }
+    cache.set(key, value);
+    return value;
+  };
 
   try {
     const require = createRequire(import.meta.url);
@@ -37,12 +49,16 @@ export function createTokenEstimator(opts?: { model?: string }): TokenEstimator 
 
   const estimate = (text: string) => {
     if (!encoder) {
-      return heuristicCount(text);
+      return remember(text, heuristicCount(text));
+    }
+    const cached = cache.get(text);
+    if (cached !== undefined) {
+      return cached;
     }
     try {
-      return encoder.encode(text).length;
+      return remember(text, encoder.encode(text).length);
     } catch {
-      return heuristicCount(text);
+      return remember(text, heuristicCount(text));
     }
   };
 
@@ -52,18 +68,11 @@ export function createTokenEstimator(opts?: { model?: string }): TokenEstimator 
       if (!Array.isArray(lines) || lines.length === 0) {
         return 0;
       }
-      if (!encoder) {
-        return heuristicCount(lines.join("\n"));
+      let total = 0;
+      for (const line of lines) {
+        total += estimate(line);
       }
-      try {
-        let total = 0;
-        for (const line of lines) {
-          total += encoder.encode(line).length;
-        }
-        return total;
-      } catch {
-        return heuristicCount(lines.join("\n"));
-      }
+      return total;
     },
   };
 }

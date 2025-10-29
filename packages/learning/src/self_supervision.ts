@@ -1,4 +1,4 @@
-import type { Confidence, KnowledgeInsight, KnowledgeUpdate } from "@alfred/type/knowledge";
+import type { KnowledgeConfidence, KnowledgeInsight, KnowledgeUpdate } from "@alfred/type/knowledge";
 
 export interface SupervisionEvent {
   input: unknown;
@@ -10,7 +10,7 @@ export interface SupervisionEvent {
 }
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
-const confidence = (value: number) => clamp(value) as Confidence;
+const confidence = (value: number) => clamp(value) as KnowledgeConfidence;
 
 export function supervise(event: SupervisionEvent): KnowledgeUpdate[] | null {
   if (!Number.isFinite(event.error) || event.error <= 0) {

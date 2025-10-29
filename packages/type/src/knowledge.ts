@@ -2,12 +2,12 @@
  * Knowledge Domain Types
  */
 
-export type Confidence = number & { readonly _: unique symbol };
+export type KnowledgeConfidence = number & { readonly _: unique symbol };
 
 export interface KnowledgeFact {
   id: string;
   content: string;
-  confidence: Confidence;
+  confidence: KnowledgeConfidence;
   source?: string;
   timestamp?: string;
   tags?: string[];
@@ -26,7 +26,7 @@ export interface KnowledgeInsight {
   id: string;
   derived: string[];
   conclusion: string;
-  confidence: Confidence;
+  confidence: KnowledgeConfidence;
   rationale?: string;
 }
 

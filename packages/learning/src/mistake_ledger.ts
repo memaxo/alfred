@@ -1,4 +1,4 @@
-import type { Confidence, KnowledgeInsight } from "@alfred/type/knowledge";
+import type { KnowledgeConfidence, KnowledgeInsight } from "@alfred/type/knowledge";
 
 export type MistakeEntry = {
   id: string;
@@ -11,7 +11,7 @@ export type MistakeEntry = {
 
 const ledger: MistakeEntry[] = [];
 
-const confidence = (value: number) => Math.max(0, Math.min(1, value)) as Confidence;
+const confidence = (value: number) => Math.max(0, Math.min(1, value)) as KnowledgeConfidence;
 
 export function recordMistake(entry: MistakeEntry): void {
   ledger.push({ ...entry });

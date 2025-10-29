@@ -66,41 +66,6 @@ export interface ToolMessage extends Message {
   result: unknown;
 }
 
-/**
- * Stream event types
- */
-export type StreamEventType =
-  | "message_start"
-  | "message_delta"
-  | "message_end"
-  | "tool_start"
-  | "tool_delta"
-  | "tool_end"
-  | "error"
-  | "cache_handoff";
-
-/**
- * Stream event
- */
-export interface StreamEvent {
-  type: StreamEventType;
-  data: unknown;
-  timestamp: Date;
-}
-
-/**
- * Cache handoff event (Stream-to-Cache pattern)
- * Sent to TanStack Query to update cache without flicker
- */
-export interface CacheHandoffEvent extends StreamEvent {
-  type: "cache_handoff";
-  data: {
-    queryKey: string[];
-    value: unknown;
-    merge?: boolean; // If true, merge with existing cache
-  };
-}
-
 // TODO: [Phase 4] Add conversation/thread types
 // export interface Conversation {
 //   id: string;

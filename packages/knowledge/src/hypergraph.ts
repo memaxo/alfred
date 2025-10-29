@@ -4,11 +4,11 @@
  */
 
 // Types
-type NodeId = string & { readonly _: unique symbol }
+export type NodeId = string & { readonly _: unique symbol }
 type Confidence = number & { readonly _: unique symbol; readonly min: 0; readonly max: 1 }
 type Timestamp = number & { readonly _: unique symbol }
 
-type Knowledge = 
+export type Knowledge = 
   | { _: "fact"; content: string; confidence: Confidence; source: string; ts: Timestamp }
   | { _: "relation"; from: NodeId; to: NodeId; kind: string; weight: number }
   | { _: "insight"; derived: NodeId[]; conclusion: string; confidence: Confidence }

@@ -5,7 +5,7 @@
 import type { KnowledgeFact, KnowledgeInsight, KnowledgeRelation, KnowledgeUpdate } from "./knowledge";
 
 export type Timestamp = string & { readonly _: unique symbol };
-export type Confidence = number & { readonly _: unique symbol };
+export type CognitiveConfidence = number & { readonly _: unique symbol };
 export type Autonomy = number & { readonly _: unique symbol };
 
 export type FocusSessionRecord = {
@@ -38,7 +38,7 @@ export interface CaptureInput {
 
 export interface CaptureResult {
   facts: KnowledgeFact[];
-  confidence: Confidence;
+  confidence: CognitiveConfidence;
   ambiguities: string[];
 }
 

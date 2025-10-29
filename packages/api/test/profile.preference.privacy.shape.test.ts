@@ -1,10 +1,11 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { RuntimeContext } from "@mastra/core/runtime-context";
 import { resetAgentMocks } from "./utils/agent-mock";
+import { createTestDb, closeTestDb } from "./utils/db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "../../db/.env") });
@@ -17,7 +18,7 @@ mock.module("@alfred/db/repo/policy", () => ({
 
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
 let userRepo: typeof import("@alfred/db").userRepo;
-let db: typeof import("@alfred/db").db;
+let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {
   const [{ appRouter: router }, dbModule] = await Promise.all([
@@ -27,7 +28,7 @@ beforeAll(async () => {
 
   appRouter = router;
   userRepo = dbModule.userRepo;
-  db = dbModule.db;
+  testDbHarness = await createTestDb();
 });
 
 function makeVector(seed: number) {
@@ -35,7 +36,7 @@ function makeVector(seed: number) {
 }
 
 async function resetUserTables() {
-  await db.execute(
+  await testDbHarness.db.execute(
     sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`,
   );
 }
@@ -83,6 +84,10 @@ beforeEach(async () => {
 afterEach(() => {
   vi.clearAllMocks();
   resetAgentMocks();
+});
+
+afterAll(async () => {
+  await closeTestDb(testDbHarness);
 });
 
 describe("profileRouter", () => {

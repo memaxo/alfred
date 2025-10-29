@@ -13,6 +13,8 @@ type ProfileRow = typeof profiles.$inferSelect;
 type PreferenceRow = typeof preferences.$inferSelect;
 type FactRow = typeof facts.$inferSelect;
 type EventRow = typeof events.$inferSelect;
+type AutonomyRow = typeof autonomy.$inferSelect;
+type FeedbackRow = typeof feedback.$inferSelect;
 
 function sanitizeInsert<T extends Record<string, unknown>>(input: Partial<T>) {
   const copy: Record<string, unknown> = {};
@@ -240,23 +242,88 @@ export async function getEvents(userId: string, type?: string, limit = 100, offs
 }
 
 // Autonomy operations
-export async function getAutonomy(userId: string, action: string) {
-  // TODO: [Phase 9] SELECT * FROM user_autonomy WHERE user_id = ? AND action = ?
-  throw new Error("Not implemented");
+export async function getAutonomy(userId: string, action: string): Promise<AutonomyRow | null> {
+  const rows = await db
+    .select()
+    .from(autonomy)
+    .where(and(eq(autonomy.userId, userId), eq(autonomy.action, action)))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
-export async function setAutonomy(userId: string, action: string, level: string, requireBiometric = false, maxToolCalls = 10) {
-  // TODO: [Phase 9] INSERT INTO user_autonomy ... ON CONFLICT (user_id, action) DO UPDATE
-  throw new Error("Not implemented");
+export async function setAutonomy(
+  userId: string,
+  action: string,
+  level: string,
+  requireBiometric = false,
+  maxToolCalls = 10,
+): Promise<AutonomyRow> {
+  const [row] = await db
+    .insert(autonomy)
+    .values({
+      userId,
+      action,
+      level,
+      requireBiometric,
+      maxToolCalls,
+    })
+    .onConflictDoUpdate({
+      target: [autonomy.userId, autonomy.action],
+      set: {
+        level,
+        requireBiometric,
+        maxToolCalls,
+        updated: sql`NOW()` as unknown as Date,
+      },
+    })
+    .returning();
+
+  if (!row) {
+    throw new Error("Failed to set autonomy");
+  }
+
+  return row;
 }
 
 // Feedback operations
-export async function addFeedback(userId: string, conversationId: string, messageId: string, rating?: number, comment?: string, tags?: string[]) {
-  // TODO: [Phase 14] INSERT INTO user_feedback (user_id, conversation_id, message_id, rating, comment, tags)
-  throw new Error("Not implemented");
+export async function addFeedback(
+  userId: string,
+  conversationId: string,
+  messageId: string,
+  rating?: number,
+  comment?: string,
+  tags?: string[],
+): Promise<FeedbackRow> {
+  const [row] = await db
+    .insert(feedback)
+    .values({
+      userId,
+      conversationId: conversationId ?? null,
+      messageId: messageId ?? null,
+      rating: rating ?? null,
+      comment: comment ?? null,
+      tags: tags ?? null,
+    })
+    .returning();
+
+  if (!row) {
+    throw new Error("Failed to add feedback");
+  }
+
+  return row;
 }
 
-export async function getFeedback(userId: string, limit = 50, offset = 0) {
-  // TODO: [Phase 14] SELECT * FROM user_feedback WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?
-  throw new Error("Not implemented");
+export async function getFeedback(
+  userId: string,
+  limit = 50,
+  offset = 0,
+): Promise<FeedbackRow[]> {
+  return db
+    .select()
+    .from(feedback)
+    .where(eq(feedback.userId, userId))
+    .orderBy(desc(feedback.created))
+    .limit(limit)
+    .offset(offset);
 }

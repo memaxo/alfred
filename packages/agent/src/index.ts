@@ -3,27 +3,6 @@ import { toolDroid } from "./orchestrator/tool/droid";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolRouter } from "./orchestrator/tool/router";
-import {
-  registerDroidExecCounter,
-  registerDroidExecHistogram,
-  registerCodexExecCounter,
-  registerCodexExecHistogram,
-  registerCodexErrorCounter,
-  recordCodexExecRun,
-  recordCodexError,
-  registerEvalRunsCounter,
-  registerEvalDurationHistogram,
-  registerEvalScoreCounter,
-  registerEvalFailureCounter,
-  registerLaminarDatapointCounter,
-  registerLaminarErrorCounter,
-  registerAssistantToolCounter,
-  registerAssistantEscalationCounter,
-  registerMemoryUpdatesCounter,
-  registerMemoryForgetsCounter,
-  recordMemoryUpdate,
-  recordMemoryForget,
-} from "./metrics";
 import { initializeLaminar } from "./eval/laminar-bridge";
 import { runEval } from "./eval/runner";
 
@@ -40,24 +19,5 @@ export {
   toolRouter,
   runEval,
 };
-export {
-  registerDroidExecCounter,
-  registerDroidExecHistogram,
-  registerCodexExecCounter,
-  registerCodexExecHistogram,
-  registerCodexErrorCounter,
-  recordCodexExecRun,
-  recordCodexError,
-  registerEvalRunsCounter,
-  registerEvalDurationHistogram,
-  registerEvalScoreCounter,
-  registerEvalFailureCounter,
-  registerLaminarDatapointCounter,
-  registerLaminarErrorCounter,
-  registerAssistantToolCounter,
-  registerAssistantEscalationCounter,
-  registerMemoryUpdatesCounter,
-  registerMemoryForgetsCounter,
-  recordMemoryUpdate,
-  recordMemoryForget,
-};
+
+export * from "./metrics";

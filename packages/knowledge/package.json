@@ -24,12 +24,11 @@
   },
   "scripts": {
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest"
+    "test": "bun test"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/node": "*",
-    "vitest": "*",
     "typescript": "*"
   }
 }

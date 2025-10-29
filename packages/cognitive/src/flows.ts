@@ -5,13 +5,13 @@ import type {
   ExecutionResult,
   ReflectionResult,
   SynthesisResult,
-  Confidence as CognitiveConfidence,
+  CognitiveConfidence,
 } from "@alfred/type/cognitive";
 import type {
   KnowledgeFact,
   KnowledgeInsight,
   KnowledgeRelation,
-  Confidence as KnowledgeConfidence,
+  KnowledgeConfidence,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
 

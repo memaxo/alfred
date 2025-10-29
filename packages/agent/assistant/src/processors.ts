@@ -1,7 +1,7 @@
 import { Hypergraph } from "@alfred/knowledge";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import { MemoryProcessor, type MemoryProcessorOpts } from "@mastra/core/memory";
-import { recordMemoryUpdate } from "../../../src/metrics";
+import { recordMemoryUpdate } from "../../src/metrics";
 
 type Message = {
   id?: string;

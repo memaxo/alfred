@@ -1,8 +1,9 @@
 # Testing Standards
 
-1. **Vitest first.** Each repo, router, and scheduler module requires Vitest coverage proving the main execution paths succeed and error paths fail cleanly. Eval repos/runners should include happy-path scoring plus Laminar-export failure fallbacks.
+1. **Bun test runner.** All packages run specs with `bun test` (Bun’s built-in runner). Author suites with `bun:test` APIs and keep coverage on every repo, router, and scheduler path, including Laminar fallbacks for eval flows.
 2. **Integration smoke tests.** API routers should ship with request-level tests that exercise auth guards, scope requirements, and representative payloads.
 3. **No implicit globals.** Tests must stub environment variables explicitly within the test file. Restore originals in `afterEach`.
 4. **DB tests.** Use ephemeral schemas or transactions to keep tests isolated. Reset tables between cases.
 5. **UI tests.** Critical screens (notes, reminders) require component-level tests verifying optimistic updates and error handling. Use React Testing Library.
 6. **Automation.** Add new test commands to Turbo pipelines when you create packages so CI can run them consistently. Pair them with `tsc -b` checks (`bun run typecheck` or package-local `npm run typecheck`) so type errors surface alongside failing tests.
+7. **Shared DB harness.** When a suite touches Postgres, instantiate connections through `createTestDb`/`closeTestDb` (`packages/api/test/utils/db.ts`). Use that Drizzle client to truncate tables between tests so no connections or data leak across cases.

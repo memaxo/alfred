@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeAll, beforeEach, afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import crypto from "node:crypto";
 import { sql } from "drizzle-orm";
 import { RuntimeContext } from "@mastra/core/runtime-context";
 import { mastraMock, resetAgentMocks } from "./utils/agent-mock";
+import { createTestDb, closeTestDb } from "./utils/db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "../../db/.env") });
@@ -22,21 +23,21 @@ mock.module("@alfred/db/repo/policy", () => ({
 }));
 
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
-let db: typeof import("@alfred/db").db;
 let linearRepo: typeof import("@alfred/db").linearRepo;
 let originalFetch: typeof fetch;
 let publishCalls: Array<any[]> = [];
+let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {
   const dbModule = await import("@alfred/db");
-  db = dbModule.db;
   linearRepo = dbModule.linearRepo;
   const { appRouter: router } = await import("@alfred/api/routers/index");
   appRouter = router;
+  testDbHarness = await createTestDb();
 });
 
 async function resetLinearTables() {
-  await db.execute(sql`TRUNCATE linear_installations RESTART IDENTITY CASCADE`);
+  await testDbHarness.db.execute(sql`TRUNCATE linear_installations RESTART IDENTITY CASCADE`);
 }
 
 function createCaller() {
@@ -159,6 +160,10 @@ afterEach(async () => {
   publishCalls = [];
   await resetLinearTables();
   resetAgentMocks();
+});
+
+afterAll(async () => {
+  await closeTestDb(testDbHarness);
 });
 
 describe("linear OAuth router", () => {

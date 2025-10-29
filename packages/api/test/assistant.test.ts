@@ -1,29 +1,29 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { config } from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { RuntimeContext } from "@mastra/core/runtime-context";
 import { resetAgentMocks } from "./utils/agent-mock";
+import { createTestDb, closeTestDb } from "./utils/db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "../../db/.env") });
 
 const TEST_USER = "api-assistant-test-user";
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
-let db: typeof import("@alfred/db").db;
+let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {
-  const [{ appRouter: router }, dbModule] = await Promise.all([
+  const [{ appRouter: router }] = await Promise.all([
     import("@alfred/api/routers/index"),
-    import("@alfred/db"),
   ]);
   appRouter = router;
-  db = dbModule.db;
+  testDbHarness = await createTestDb();
 });
 
 async function resetAssistantTables() {
-  await db.execute(
+  await testDbHarness.db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`,
   );
 }
@@ -66,6 +66,10 @@ beforeEach(async () => {
 
 afterEach(() => {
   resetAgentMocks();
+});
+
+afterAll(async () => {
+  await closeTestDb(testDbHarness);
 });
 
 describe("assistant routers", () => {

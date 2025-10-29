@@ -14,6 +14,40 @@ const DEFAULT_IGNORE = ["node_modules", ".git", "dist", "build", ".turbo", ".tsb
 const DEFAULT_TOPK = 25;
 const DEFAULT_SLICE_MAX_LINES = 400;
 const DEFAULT_MAX_TOKENS = Number(process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000");
+const CONTEXT_CACHE_TTL_MS = 5 * 60_000;
+
+const contextCache = new Map<
+  string,
+  {
+    expires: number;
+    receipt: SearchReceipt;
+  }
+>();
+
+function buildCacheKey(
+  requirement: string,
+  cw: string,
+  exts: Set<string>,
+  ignore: Set<string>,
+  topK: number,
+) {
+  return JSON.stringify({
+    requirement,
+    cw,
+    exts: Array.from(exts).sort(),
+    ignore: Array.from(ignore).sort(),
+    topK,
+  });
+}
+
+function cloneReceipt(receipt: SearchReceipt): SearchReceipt {
+  return {
+    ...receipt,
+    created: receipt.created ? new Date(receipt.created.getTime()) : new Date(),
+    code: receipt.code.map(item => ({ ...item })),
+    web: receipt.web ? receipt.web.map(item => ({ ...item })) : undefined,
+  };
+}
 
 function normalizeExts(exts?: string[]) {
   const list = exts && exts.length > 0 ? exts : DEFAULT_EXTS;
@@ -192,6 +226,18 @@ export async function gatherCodeContext({
   const extSet = normalizeExts(exts);
   const ignoreSet = normalizeIgnore(ignore);
   const limit = topK ?? DEFAULT_TOPK;
+  const cacheKey = buildCacheKey(requirement, resolvedCw, extSet, ignoreSet, limit);
+
+  const cached = contextCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    const cachedReceipt = cloneReceipt(cached.receipt);
+    await writer?.write?.({
+      type: "context",
+      phase: "cache",
+      receipts: serializeReceipt(cachedReceipt),
+    });
+    return cachedReceipt;
+  }
 
   const preferredExecutor = resolveExecutor(executor);
   const allowFallback = fallbackEnabled();
@@ -271,6 +317,11 @@ export async function gatherCodeContext({
     created: new Date(),
     summary: summariseReceipt(items),
   };
+
+  contextCache.set(cacheKey, {
+    expires: Date.now() + CONTEXT_CACHE_TTL_MS,
+    receipt: cloneReceipt(receipt),
+  });
 
   await writer?.write({
     type: "context",

@@ -8,7 +8,6 @@
  * - Zero allocation in hot paths
  */
 
-import type { Message, ToolCall } from "./msg";
 
 /**
  * Base event type
@@ -209,4 +208,3 @@ export function createErrorEvent(
     data: { code, message, recoverable },
   };
 }
-
