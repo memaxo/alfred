@@ -1,7 +1,7 @@
 import type { RuntimeContext } from "@mastra/core/runtime-context";
 
 export type ResumePayload = {
-  event: "deploy-authz" | "linear-authz";
+  event: "deploy-authz" | "linear-authz" | "bio-authz";
   authz: string;
 };
 

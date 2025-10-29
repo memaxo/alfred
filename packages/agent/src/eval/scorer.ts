@@ -6,6 +6,7 @@ import {
   createToxicityScorer,
 } from "@mastra/evals/scorers/llm";
 import { createOpenAI, openai as defaultOpenAI } from "@ai-sdk/openai";
+import { supervise } from "@alfred/learning/self_supervision";
 import { postEvaluatorScore } from "./laminar-bridge";
 
 type ScorerKey = "relevancy" | "promptAlignment" | "toxicity";
@@ -166,6 +167,20 @@ function attachLiveScoreHook(scorer: MastraScorer, name: string, agent: string) 
       }),
     ).catch(() => {
       // swallow post errors to keep scorer execution safe
+    });
+
+    const error = typeof result.score === "number" ? Math.max(0, 1 - Math.min(1, Math.max(result.score, 0))) : 1;
+    supervise({
+      input,
+      output: result.score,
+      expected: (input as { expected?: unknown })?.expected ?? null,
+      error,
+      context: {
+        scorer: name,
+        agent,
+        reason: result.reason,
+      },
+      ts: new Date().toISOString(),
     });
     return result;
   }) as typeof scorer.run;

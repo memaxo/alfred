@@ -1,0 +1,31 @@
+{
+  "name": "@alfred/cognitive",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./state": {
+      "types": "./src/state.ts",
+      "import": "./src/state.ts"
+    },
+    "./flows": {
+      "types": "./src/flows.ts",
+      "import": "./src/flows.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "*",
+    "vitest": "*",
+    "typescript": "*"
+  }
+}

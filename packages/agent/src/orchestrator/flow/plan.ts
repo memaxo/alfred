@@ -67,6 +67,7 @@ const workflowInputSchema = z.object({
     })
     .optional(),
   userId: z.string().min(1).optional(),
+  policyObligations: z.array(z.string()).optional(),
 });
 
 const workflowOutputSchema = z.object({
@@ -148,7 +149,8 @@ const stepStateSchema = z.object({
   deploymentApp: z.string().optional(),
   cleaned: z.boolean().optional(),
   merged: z.boolean().optional(),
-  awaiting: z.enum(["deploy-authz", "linear-authz"]).optional(),
+  bioAuthz: z.string().optional(),
+  awaiting: z.enum(["deploy-authz", "linear-authz", "bio-authz"]).optional(),
   activityPlanStarted: z.boolean().optional(),
   activityActionLogged: z.boolean().optional(),
   activitySummaryLogged: z.boolean().optional(),
@@ -161,14 +163,14 @@ const stepStateSchema = z.object({
 type OrchestratorStepState = z.infer<typeof stepStateSchema>;
 
 const resumePayloadSchema = z.object({
-  event: z.enum(["deploy-authz", "linear-authz"]),
+  event: z.enum(["deploy-authz", "linear-authz", "bio-authz"]),
   authz: z.string().min(1),
 });
 
 type ResumePayload = z.infer<typeof resumePayloadSchema>;
 
 const suspendPayloadSchema = z.object({
-  event: z.enum(["deploy-authz", "linear-authz"]),
+  event: z.enum(["deploy-authz", "linear-authz", "bio-authz"]),
   scopes: z.array(z.string()),
   message: z.string().optional(),
 });
@@ -811,12 +813,39 @@ const orchestratorStep = createStep({
         nextState.deployAuthz = resumeData.authz;
       } else if (resumeData.event === "linear-authz") {
         nextState.linearAuthz = resumeData.authz;
+      } else if (resumeData.event === "bio-authz") {
+        nextState.bioAuthz = resumeData.authz;
       }
       if (nextState.awaiting === resumeData.event) {
         delete nextState.awaiting;
       }
       setState(nextState);
     }
+
+    const obligations = Array.isArray(inputData.policyObligations) ? inputData.policyObligations : [];
+    if (obligations.includes("require_biometric") && !nextState.bioAuthz) {
+      nextState.awaiting = "bio-authz";
+      setState(nextState);
+      await writer?.write?.({
+        type: "require-scope",
+        event: "bio-authz",
+        scopes: ["droid.exec"],
+      });
+      const payload = (await suspend({
+        event: "bio-authz",
+        scopes: ["droid.exec"],
+      })) as ResumePayload;
+      if (payload.event !== "bio-authz") {
+        throw new Error("workflow_resume_unexpected_event");
+      }
+      nextState.bioAuthz = payload.authz;
+      if (nextState.awaiting === "bio-authz") {
+        delete nextState.awaiting;
+      }
+      setState(nextState);
+    }
+
+    const toolAuthz = nextState.bioAuthz ?? inputData.authz;
 
     const plan = buildPlan(inputData.requirement, inputData.auto, inputData.mode);
     plan.metadata = {
@@ -840,7 +869,7 @@ const orchestratorStep = createStep({
         ignore: contextConfig?.ignore,
         topK: contextConfig?.topK,
         writer,
-        authz: inputData.authz,
+        authz: toolAuthz,
         executor,
       });
 
@@ -851,7 +880,7 @@ const orchestratorStep = createStep({
           requirement: inputData.requirement,
           topK: Math.min(contextConfig?.topK ?? 5, 10),
           writer,
-          authz: inputData.authz,
+          authz: toolAuthz,
         });
         combinedReceipts.web = webReceipts.web;
         if (!combinedReceipts.summary && webReceipts.summary) {
@@ -1342,7 +1371,7 @@ const orchestratorStep = createStep({
 
       vcs = await prepareVcs({
         plan,
-        authz: inputData.authz,
+        authz: toolAuthz,
         repoBase: inputData.repoBase,
         cw,
         writer,
@@ -1407,7 +1436,7 @@ const orchestratorStep = createStep({
         for (const module of moduleList) {
           const moduleResults = await executeModule({
             module,
-            authz: inputData.authz,
+            authz: toolAuthz,
             auto: inputData.auto,
             writer,
             executor,
@@ -1426,7 +1455,7 @@ const orchestratorStep = createStep({
               input: {
                 action: "worktree.remove",
                 path: module.worktree,
-                authz: inputData.authz,
+                authz: toolAuthz,
                 cw,
               },
               writer,
@@ -1750,7 +1779,7 @@ const orchestratorStep = createStep({
       }
 
       if (vcs && !nextState.merged) {
-        await mergeModules({ plan, vcs, authz: inputData.authz, writer });
+        await mergeModules({ plan, vcs, authz: toolAuthz, writer });
         nextState.merged = true;
         setState(nextState);
       }
@@ -1963,7 +1992,7 @@ const orchestratorStep = createStep({
           await writer?.write({ type: "progress", pct: 95, message: "cleanup_start" });
           await cleanupWorktrees({
             cw,
-            authz: inputData.authz,
+            authz: toolAuthz,
             worktrees: Array.from(createdWorktrees),
             writer,
           });
@@ -1992,7 +2021,7 @@ const orchestratorStep = createStep({
         await cleanupPreview({ allowPrompt: false });
         await cleanupWorktrees({
           cw,
-          authz: inputData.authz,
+          authz: toolAuthz,
           worktrees: Array.from(createdWorktrees),
           writer,
         });

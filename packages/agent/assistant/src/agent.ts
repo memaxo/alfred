@@ -8,6 +8,8 @@ import { toolRemind } from "./tool/remind";
 import { toolTimer } from "./tool/timer";
 import { toolBook } from "./tool/book";
 import { toolHandoff } from "./tool/handoff";
+import { toolFocus } from "./tool/focus";
+import { toolWebAssistant } from "./tool/web";
 
 const WORKING_MEMORY_TEMPLATE = `# User Profile
 - Name:
@@ -74,6 +76,8 @@ export function buildAssistantAgent(store?: PostgresStore) {
       timer: toolTimer,
       book: toolBook,
       handoff: toolHandoff,
+      web: toolWebAssistant,
+      focus: toolFocus,
     },
     memory: createAssistantMemory(store),
     ...(Object.keys(scorers).length > 0

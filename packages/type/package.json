@@ -5,7 +5,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./plan": "./src/plan.ts",
-    "./msg": "./src/msg.ts"
+    "./msg": "./src/msg.ts",
+    "./personal": "./src/personal.ts",
+    "./stream": "./src/stream.ts",
+    "./cognitive": "./src/cognitive.ts",
+    "./knowledge": "./src/knowledge.ts"
   },
   "scripts": {
     "build": "tsdown",

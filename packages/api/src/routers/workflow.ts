@@ -61,6 +61,7 @@ const workflowInput = z.object({
     })
     .optional(),
   userId: z.string().min(1).optional(),
+  policyObligations: z.array(z.string()).optional(),
 });
 
 const mapWorkflowResource = (raw: unknown) => {
@@ -220,7 +221,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
         if (!session) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
         }
-        const payload = { ...input, userId: session.user.id } as z.infer<typeof workflowInput>;
+        const obligations = Array.isArray(ctx.policy?.obligations) ? ctx.policy?.obligations : undefined;
+        const payload = {
+          ...input,
+          userId: session.user.id,
+          policyObligations: obligations,
+        } as z.infer<typeof workflowInput>;
         const runtimeExtras: Array<[string, unknown]> = [
           ["workflowRequirement", input.requirement],
           ["workflowAuto", input.auto],
@@ -234,6 +240,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
         }
         if (input.context?.enable !== undefined) {
           runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
+        }
+        if (obligations && obligations.length > 0) {
+          runtimeExtras.push(["workflowPolicyObligations", obligations]);
         }
         const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
         const run = await workflow.createRunAsync();
@@ -300,7 +309,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
             emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
             return;
           }
-          const payload = { ...input, userId: session.user.id } as z.infer<typeof workflowInput>;
+          const obligations = Array.isArray(ctx.policy?.obligations) ? ctx.policy?.obligations : undefined;
+          const payload = {
+            ...input,
+            userId: session.user.id,
+            policyObligations: obligations,
+          } as z.infer<typeof workflowInput>;
           const runtimeExtras: Array<[string, unknown]> = [
             ["workflowRequirement", input.requirement],
             ["workflowAuto", input.auto],
@@ -315,6 +329,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
           }
           if (input.context?.enable !== undefined) {
             runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
+          }
+          if (obligations && obligations.length > 0) {
+            runtimeExtras.push(["workflowPolicyObligations", obligations]);
           }
           const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
 
@@ -382,7 +399,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .input(
       z.object({
         runId: z.string().min(1),
-        event: z.enum(["deploy-authz", "linear-authz"]),
+        event: z.enum(["deploy-authz", "linear-authz", "bio-authz"]),
         authz: z.string().min(1),
       }),
     )

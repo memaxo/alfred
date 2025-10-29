@@ -1,0 +1,45 @@
+/**
+ * Voice Picker Component
+ * 
+ * Adapted from ui.elevenlabs.io/docs/components/voice-picker
+ * Select voice for TTS synthesis
+ */
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+interface Voice {
+  id: string;
+  name: string;
+  gender: "male" | "female";
+}
+
+interface VoiceProps {
+  voices: Voice[];
+  selected: string;
+  onSelect: (voiceId: string) => void;
+  className?: string;
+}
+
+export function Voice({
+  voices,
+  selected,
+  onSelect,
+  className,
+}: VoiceProps) {
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>
+      {voices.map((voice) => (
+        <Button
+          key={voice.id}
+          variant={selected === voice.id ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSelect(voice.id)}
+        >
+          {voice.name}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
