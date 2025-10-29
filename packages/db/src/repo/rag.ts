@@ -10,29 +10,6 @@ import { ragDocuments, ragChunks } from "../schema/rag";
 type DocumentInsert = typeof ragDocuments.$inferInsert;
 type ChunkInsert = typeof ragChunks.$inferInsert;
 
-function cosineSimilarity(a: number[], b: number[]) {
-  const len = Math.min(a.length, b.length);
-  if (len === 0) return 0;
-
-  let dot = 0;
-  let sumA = 0;
-  let sumB = 0;
-
-  for (let i = 0; i < len; i += 1) {
-    const ai = a[i] ?? 0;
-    const bi = b[i] ?? 0;
-    dot += ai * bi;
-    sumA += ai * ai;
-    sumB += bi * bi;
-  }
-
-  if (sumA === 0 || sumB === 0) {
-    return 0;
-  }
-
-  return dot / (Math.sqrt(sumA) * Math.sqrt(sumB));
-}
-
 // Document operations
 export async function createDocument(source: string, title?: string, author?: string, metadata?: unknown) {
   const [row] = await db
@@ -97,36 +74,45 @@ export async function getChunks(documentId: string) {
 
 export type ChunkSearchResult = (typeof ragChunks.$inferSelect) & { score: number };
 
-export async function searchChunks(embedding: number[], limit = 10, threshold = 0.7, documentId?: string) {
-  let where = sql`embedding IS NOT NULL` as any;
+export async function searchChunks(
+  embedding: number[],
+  limit = 10,
+  threshold = 0.7,
+  documentId?: string,
+): Promise<ChunkSearchResult[]> {
+  // Format embedding array as PostgreSQL array constructor for vector cast
+  const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
+  
+  // Build query using pgvector <=> operator
+  let baseQuery = sql`
+    SELECT 
+      id,
+      document_id as "documentId",
+      content,
+      "order",
+      metadata,
+      created_at as "created",
+      1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS score
+    FROM rag_chunks
+    WHERE embedding IS NOT NULL
+  `;
+
   if (documentId) {
-    where = and(where, eq(ragChunks.documentId, documentId));
+    baseQuery = sql`${baseQuery} AND document_id = ${documentId}`;
   }
 
-  const rows = await db
-    .select({
-      id: ragChunks.id,
-      documentId: ragChunks.documentId,
-      content: ragChunks.content,
-      order: ragChunks.order,
-      embedding: ragChunks.embedding,
-      metadata: ragChunks.metadata,
-      created: ragChunks.created,
-    })
-    .from(ragChunks)
-    .where(where);
+  // Order by similarity and fetch more than needed for threshold filtering
+  const finalQuery = sql`
+    ${baseQuery}
+    ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
+    LIMIT ${limit * 3}
+  `;
 
-  return rows
-    .map(row => {
-      const vector = Array.isArray(row.embedding) ? (row.embedding as number[]) : [];
-      const score = cosineSimilarity(vector, embedding);
-      return {
-        ...row,
-        score,
-      } as ChunkSearchResult;
-    })
-    .filter(row => Number.isFinite(row.score) && row.score >= threshold)
-    .sort((a, b) => b.score - a.score)
+  const result = await db.execute(finalQuery);
+
+  // Filter by threshold and limit (pgvector doesn't support WHERE on similarity)
+  return (result.rows as Array<ChunkSearchResult>)
+    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
     .slice(0, limit);
 }
 

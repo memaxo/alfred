@@ -24,29 +24,6 @@ function sanitizeInsert<T extends Record<string, unknown>>(input: Partial<T>) {
   return copy as Partial<T>;
 }
 
-function cosineSimilarity(a: number[], b: number[]) {
-  const len = Math.min(a.length, b.length);
-  if (len === 0) return 0;
-
-  let dot = 0;
-  let sumA = 0;
-  let sumB = 0;
-
-  for (let i = 0; i < len; i += 1) {
-    const ai = a[i] ?? 0;
-    const bi = b[i] ?? 0;
-    dot += ai * bi;
-    sumA += ai * ai;
-    sumB += bi * bi;
-  }
-
-  if (sumA === 0 || sumB === 0) {
-    return 0;
-  }
-
-  return dot / (Math.sqrt(sumA) * Math.sqrt(sumB));
-}
-
 // Profile operations
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
   const rows = await db
@@ -177,33 +154,38 @@ export async function addFact(
 
 export type FactSearchResult = (typeof facts.$inferSelect) & { score: number };
 
-export async function searchFacts(userId: string, embedding: number[], limit = 10, threshold = 0.7): Promise<FactSearchResult[]> {
-  const rows = await db
-    .select({
-      id: facts.id,
-      userId: facts.userId,
-      content: facts.content,
-      embedding: facts.embedding,
-      category: facts.category,
-      confidence: facts.confidence,
-      source: facts.source,
-      created: facts.created,
-      updated: facts.updated,
-    })
-    .from(facts)
-    .where(and(eq(facts.userId, userId), sql`embedding IS NOT NULL`));
+export async function searchFacts(
+  userId: string,
+  embedding: number[],
+  limit = 10,
+  threshold = 0.7,
+): Promise<FactSearchResult[]> {
+  // Format embedding array as PostgreSQL array constructor for vector cast
+  const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
+  
+  const query = sql`
+    SELECT 
+      id,
+      user_id as "userId",
+      content,
+      category,
+      confidence,
+      source,
+      created_at as "created",
+      updated_at as "updated",
+      1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS score
+    FROM user_facts
+    WHERE user_id = ${userId}
+      AND embedding IS NOT NULL
+    ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
+    LIMIT ${limit * 3}
+  `;
 
-  return rows
-    .map(row => {
-      const vector = Array.isArray(row.embedding) ? (row.embedding as number[]) : [];
-      const score = cosineSimilarity(vector, embedding);
-      return {
-        ...row,
-        score,
-      } as FactSearchResult;
-    })
-    .filter(row => Number.isFinite(row.score) && row.score >= threshold)
-    .sort((a, b) => b.score - a.score)
+  const result = await db.execute(query);
+
+  // Filter by threshold and limit
+  return (result.rows as Array<FactSearchResult>)
+    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
     .slice(0, limit);
 }
 
