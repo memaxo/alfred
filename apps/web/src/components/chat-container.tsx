@@ -14,8 +14,9 @@ import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { Connect } from "./connect";
 import { Load } from "./load";
+import { Actions } from "./actions";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 interface ChatContainerProps {
   agent: "assistant" | "orchestrator";
@@ -41,6 +42,23 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
     },
   });
 
+  const activeActions = useMemo(
+    () => actions.filter(action => action.status === "pending" || action.status === "running"),
+    [actions],
+  );
+
+  const handleSend = useCallback(
+    (input: string) => {
+      if (currentAgent !== "assistant") {
+        console.warn("Streaming for the orchestrator agent is not yet enabled.");
+        return;
+      }
+      send(input);
+    },
+    [currentAgent, send],
+  );
+
+  const showActionsPanel = actions.length > 0;
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-full">
@@ -53,22 +71,43 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
           />
           <div className="flex items-center justify-between">
             <Connect status={status} agent={currentAgent} />
-            {actions.length > 0 && (
-              <Load message={`${actions.length} active actions`} />
+            {activeActions.length > 0 && (
+              <Load
+                message={
+                  activeActions.length === 1
+                    ? "Running 1 action"
+                    : `Running ${activeActions.length} actions`
+                }
+              />
             )}
           </div>
         </div>
 
         {/* Chat */}
         <div className="flex-1 overflow-hidden">
-          <Chat
-            messages={messages}
-            onSend={send}
-            onVoice={() => {
-              // TODO: Wire to voice capture
-              console.log("Voice input not yet implemented");
-            }}
-          />
+          <div className="flex h-full flex-col lg:flex-row">
+            <div className="flex-1 overflow-hidden">
+              <Chat
+                messages={messages}
+                onSend={handleSend}
+                placeholder={
+                  currentAgent === "assistant"
+                    ? "Ask Alfred how to help…"
+                    : "Switch to the assistant agent to chat."
+                }
+                onVoice={() => {
+                  console.log("Voice input not yet implemented");
+                }}
+              />
+            </div>
+            {showActionsPanel && (
+              <div className="border-t lg:border-l lg:border-t-0 lg:w-80 xl:w-96">
+                <div className="h-full overflow-auto p-4">
+                  <Actions actions={actions} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Error display */}
@@ -83,4 +122,3 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
     </ErrorBoundary>
   );
 }
-

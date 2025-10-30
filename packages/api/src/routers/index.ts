@@ -15,6 +15,7 @@ import { assistantRouter } from "./assistant";
 import { profileRouter } from "./profile";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
+import { voiceRouter } from "./voice";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),
@@ -38,5 +39,6 @@ export const appRouter: ReturnType<typeof router> = router({
   profile: profileRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,
+  voice: voiceRouter,
 });
 export type AppRouter = typeof appRouter;

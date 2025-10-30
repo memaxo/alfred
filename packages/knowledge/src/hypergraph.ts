@@ -8,7 +8,7 @@ export type NodeId = string & { readonly _: unique symbol }
 type Confidence = number & { readonly _: unique symbol; readonly min: 0; readonly max: 1 }
 type Timestamp = number & { readonly _: unique symbol }
 
-export type Knowledge = 
+export type Knowledge =
   | { _: "fact"; content: string; confidence: Confidence; source: string; ts: Timestamp }
   | { _: "relation"; from: NodeId; to: NodeId; kind: string; weight: number }
   | { _: "insight"; derived: NodeId[]; conclusion: string; confidence: Confidence }
@@ -21,6 +21,36 @@ const confidence = (n: number): Confidence => {
   return n as Confidence
 }
 const timestamp = (n: number): Timestamp => n as Timestamp
+
+export const nodeFromHash = (hash: string): NodeId => nodeId(hash)
+
+export const knowledgeHash = (k: Knowledge): string => {
+  let s = `${k._}:`
+  switch (k._) {
+    case "fact":
+      s += k.content + k.source + k.confidence
+      break
+    case "relation":
+      s += k.from + k.to + k.kind + k.weight
+      break
+    case "insight":
+      s += k.derived.join(",") + k.conclusion
+      break
+    case "pattern":
+      s += k.examples.join(",") + k.rule
+      break
+  }
+  return hashString(s)
+}
+
+const hashString = (input: string): string => {
+  let h = 2166136261
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i)
+    h = (h * 16777619) >>> 0
+  }
+  return h.toString(36)
+}
 
 // HAMT (Hash Array Mapped Trie) for O(1) content addressing
 class HAMT<V> {
@@ -188,34 +218,7 @@ export class Hypergraph {
   }
   
   private contentAddress(k: Knowledge): string {
-    // Fast hash for content addressing
-    let s = k._ + ":"
-    switch (k._) {
-      case "fact":
-        s += k.content + k.source + k.confidence
-        break
-      case "relation":
-        s += k.from + k.to + k.kind + k.weight
-        break
-      case "insight":
-        s += k.derived.join(",") + k.conclusion
-        break
-      case "pattern":
-        s += k.examples.join(",") + k.rule
-        break
-    }
-    return this.hash(s)
-  }
-  
-  private hash(s: string): string {
-    // TODO: Consider xxHash or CityHash for better distribution
-    // FNV-1a is fast but may have collision issues at scale
-    let h = 2166136261
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i)
-      h = (h * 16777619) >>> 0
-    }
-    return h.toString(36)
+    return knowledgeHash(k)
   }
 }
 

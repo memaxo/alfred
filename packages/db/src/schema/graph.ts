@@ -14,6 +14,8 @@ export const memoryNodes = pgTable("memory_nodes", {
   id: uuid("id").defaultRandom().primaryKey(),
   kind: text("kind").notNull(), // "requirement" | "ticket" | "system" | "agent" | "vm" | "deployment"
   label: text("label").notNull(), // Human-readable label
+  resource: text("resource").notNull(), // Scope identifier (thread/resource)
+  hash: text("hash").notNull(), // Content-addressed identifier
   properties: jsonb("properties"), // Arbitrary node properties
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -36,6 +38,8 @@ export const memoryEdges = pgTable("memory_edges", {
   kind: text("kind").notNull(), // "relates_to" | "blocks" | "assigned_to" | "runs_on" | "implements"
   weight: real("weight").default(1.0), // Edge weight for importance/strength
   metadata: jsonb("metadata"), // Arbitrary edge properties
+  resource: text("resource").notNull(), // Scope identifier
+  hash: text("hash").notNull(), // Unique edge identifier
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

@@ -21,7 +21,7 @@ type StreamInput = RouterInputs["workflow"]["stream"];
 type WorkflowResumeInput = RouterInputs["workflow"]["resume"];
 type ScopeEvent = WorkflowResumeInput["event"];
 
-const VALID_SCOPE_EVENTS = new Set<ScopeEvent>(["deploy-authz", "linear-authz"]);
+const VALID_SCOPE_EVENTS = new Set<ScopeEvent>(["deploy-authz", "linear-authz", "bio-authz"]);
 
 export const Route = createFileRoute("/orchestrator/run")({
 	component: OrchestratorRunRoute,
@@ -181,6 +181,19 @@ function OrchestratorRunRoute() {
 				}
 				break;
 			}
+			case "status": {
+				const nextStatus =
+					typeof event?.state === "string"
+						? (event.state as string)
+						: typeof event?.message === "string"
+							? (event.message as string)
+							: null;
+				if (nextStatus) {
+					setStatus(nextStatus);
+					appendLog("status", nextStatus);
+				}
+				break;
+			}
 			case "progress": {
 				const pct = typeof event?.pct === "number" ? event.pct : undefined;
 				if (typeof pct === "number") {
@@ -219,6 +232,16 @@ function OrchestratorRunRoute() {
 				appendLog("notice", message);
 				break;
 			}
+			case "error": {
+				const message =
+					typeof event?.message === "string"
+						? (event.message as string)
+						: "workflow_error";
+				setError(message);
+				appendLog("error", message);
+				setStatus("Error");
+				break;
+			}
 			case "data-cache-handoff": {
 				const key = event?.key as readonly unknown[] | undefined;
 				if (key) {
@@ -252,7 +275,10 @@ function OrchestratorRunRoute() {
 				scopeInFlightRef.current.add(scopeEvent);
 				(async () => {
 					try {
-						const token = await getToolToken(scopes, auto);
+						const forceElevated = scopeEvent === "bio-authz";
+						const token = await getToolToken(scopes, auto, {
+							forceElevated,
+						});
 						await resumeMutation.mutateAsync({
 							runId,
 							event: scopeEvent,

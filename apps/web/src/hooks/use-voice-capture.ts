@@ -1,34 +1,33 @@
-/**
- * useVoiceCapture Hook
- * 
- * Composable hook for voice input/output
- * Handles STT/TTS streaming and audio playback
- * 
- * Carmack-Karpathy principles:
- * - Single responsibility: voice capture and playback
- * - Zero allocation in recording loop
- * - Fast failure on errors
- */
-
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { trpc } from "@/utils/trpc";
 
 interface UseVoiceCaptureOptions {
-  onTranscript?: (text: string) => void;
+  onTranscript?: (text: string) => Promise<void> | void;
   onError?: (error: Error) => void;
 }
 
 interface UseVoiceCaptureReturn {
-  // State
   isRecording: boolean;
   isProcessing: boolean;
   transcript: string;
   error: Error | null;
-  
-  // Actions
-  startRecording: () => void;
+  startRecording: () => Promise<void>;
   stopRecording: () => void;
-  playAudio: (audioData: string) => void;
+  playAudio: (audioBase64: string, mimeType: string) => void;
   clearTranscript: () => void;
+}
+
+const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    const slice = bytes.subarray(i, i + chunk);
+    binary += String.fromCharCode(...slice);
+  }
+  return btoa(binary);
 }
 
 export function useVoiceCapture({
@@ -36,82 +35,177 @@ export function useVoiceCapture({
   onError,
 }: UseVoiceCaptureOptions = {}): UseVoiceCaptureReturn {
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [manualProcessing, setManualProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<Error | null>(null);
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Start recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timeoutRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const sttMutation = trpc.voice.sttTranscribe.useMutation();
+
+  const isProcessing = useMemo(
+    () => manualProcessing || sttMutation.isPending,
+    [manualProcessing, sttMutation.isPending],
+  );
+
+  const cleanupStream = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        // ignore stop race
+      }
+    }
+    mediaRecorderRef.current = null;
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    audioChunksRef.current = [];
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  const handleError = useCallback(
+    (err: unknown) => {
+      const wrappedError = err instanceof Error ? err : new Error("voice_capture_failure");
+      setError(wrappedError);
+      onError?.(wrappedError);
+    },
+    [onError],
+  );
+
+  const processRecording = useCallback(async () => {
+    const chunks = audioChunksRef.current;
+    audioChunksRef.current = [];
+    if (chunks.length === 0) {
+      return;
+    }
+    const mimeType = chunks[0]?.type ?? "audio/webm";
+    const blob = new Blob(chunks, { type: mimeType });
+
+    setManualProcessing(true);
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const base64 = arrayBufferToBase64(arrayBuffer);
+      const result = await sttMutation.mutateAsync({
+        audioBase64: base64,
+        mimeType,
+      });
+      const text = (result?.text ?? "").trim();
+      if (text.length === 0) {
+        throw new Error("transcription_empty");
+      }
+      setTranscript(text);
+      setError(null);
+      await onTranscript?.(text);
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setManualProcessing(false);
+    }
+  }, [handleError, onTranscript, sttMutation]);
+
   const startRecording = useCallback(async () => {
+    if (typeof window === "undefined") {
+      handleError(new Error("voice_unavailable_on_server"));
+      return;
+    }
+    if (isRecording || isProcessing) {
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      handleError(new Error("media_devices_unavailable"));
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      const recorder = new MediaRecorder(stream);
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+      recorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        // TODO: Send to tRPC voice.sttTranscribe
-        setIsProcessing(true);
-        // Simulate transcription
-        setTimeout(() => {
-          setTranscript("Transcribed text...");
-          setIsProcessing(false);
-          onTranscript?.("Transcribed text...");
-        }, 1000);
+      recorder.onerror = event => {
+        cleanupStream();
+        handleError(event.error ?? new Error("media_recorder_error"));
       };
-
-      mediaRecorder.start();
-      setIsRecording(true);
+      recorder.onstop = async () => {
+        setIsRecording(false);
+        await processRecording();
+        cleanupStream();
+      };
+      recorder.start();
+      setTranscript("");
       setError(null);
+      setIsRecording(true);
+      timeoutRef.current = window.setTimeout(() => {
+        stopRecording();
+      }, MAX_RECORDING_MS);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error("Failed to start recording");
-      setError(error);
-      onError?.(error);
+      cleanupStream();
+      handleError(err);
     }
-  }, [onTranscript, onError]);
+  }, [cleanupStream, handleError, isProcessing, isRecording, processRecording]);
 
-  // Stop recording
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (!mediaRecorderRef.current) return;
+    if (mediaRecorderRef.current.state === "inactive") return;
+    try {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
-      setIsRecording(false);
+    } catch (err) {
+      handleError(err);
     }
-  }, [isRecording]);
+  }, [handleError]);
 
-  // Play audio (TTS)
-  const playAudio = useCallback((audioData: string) => {
-    const audio = new Audio(audioData);
-    audio.play().catch((err) => {
-      const error = err instanceof Error ? err : new Error("Failed to play audio");
-      setError(error);
-      onError?.(error);
-    });
-  }, [onError]);
+  const playAudio = useCallback(
+    (audioBase64: string, mimeType: string) => {
+      if (!audioBase64) return;
+      const source = `data:${mimeType};base64,${audioBase64}`;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+      const audio = new Audio(source);
+      audioRef.current = audio;
+      audio
+        .play()
+        .catch(err => {
+          handleError(err);
+        });
+    },
+    [handleError],
+  );
 
-  // Clear transcript
   const clearTranscript = useCallback(() => {
     setTranscript("");
+    setError(null);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+      cleanupStream();
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+        } catch {
+          // ignore pause failure
+        }
+        audioRef.current.src = "";
+        audioRef.current = null;
       }
     };
-  }, []);
+  }, [cleanupStream]);
 
   return {
     isRecording,
@@ -124,4 +218,3 @@ export function useVoiceCapture({
     clearTranscript,
   };
 }
-

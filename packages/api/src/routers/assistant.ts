@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { authedProcedure, router } from "../index";
+import { assistantStreamDurationSeconds, assistantStreamEventsTotal } from "../metrics";
 import { requirePolicy } from "../gate";
 import { cloneRuntimeContext } from "../context";
 
@@ -162,6 +163,16 @@ export const assistantRouter: ReturnType<typeof router> = router({
         }
 
         let active = true;
+        const stopStreamTimer = assistantStreamDurationSeconds.startTimer();
+        let timerClosed = false;
+        const closeTimer = (status: "ok" | "error" | "cancel") => {
+          if (timerClosed) return;
+          stopStreamTimer({ status });
+          timerClosed = true;
+        };
+        const recordEvent = (event: "run" | "final" | "chunk" | "complete" | "error" | "cancel") => {
+          assistantStreamEventsTotal.inc({ event });
+        };
 
         (async () => {
           try {
@@ -196,6 +207,7 @@ export const assistantRouter: ReturnType<typeof router> = router({
 
             const runId = (streamResult as { runId?: string }).runId ?? null;
             if (runId) {
+              recordEvent("run");
               emit.next({ type: "run", runId });
             }
 
@@ -203,7 +215,10 @@ export const assistantRouter: ReturnType<typeof router> = router({
 
             if (!baseStream) {
               const final = sanitizeGenerateResult(await (streamResult as any).getFullOutput?.());
+              recordEvent("final");
               emit.next({ type: "final", data: final });
+              recordEvent("complete");
+              closeTimer("ok");
               emit.complete();
               return;
             }
@@ -215,21 +230,30 @@ export const assistantRouter: ReturnType<typeof router> = router({
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (!active) break;
+                recordEvent("chunk");
                 emit.next(value as Record<string, unknown>);
               }
               if (active) {
+                recordEvent("complete");
+                closeTimer("ok");
                 emit.complete();
               }
             } finally {
               reader.releaseLock();
             }
           } catch (error) {
+            recordEvent("error");
+            closeTimer("error");
             emit.error(toTRPCError(error));
           }
         })().catch(error => emit.error(toTRPCError(error)));
 
         return () => {
           active = false;
+          if (!timerClosed) {
+            recordEvent("cancel");
+            closeTimer("cancel");
+          }
         };
       }),
     ),

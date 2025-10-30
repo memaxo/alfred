@@ -1,5 +1,26 @@
 import { deployRepo } from "@alfred/db";
-import { implementationPlanSchema, type ImplementationPlan, type ModulePlan, type Task } from "@alfred/type";
+import {
+  implementationPlanSchema,
+  codexReportSchema,
+  codexPlanSchema,
+  planReportSchema,
+  planReportContextSchema,
+  planReportRunSchema,
+  contextBundleSchema,
+  searchReceiptSchema,
+  type ImplementationPlan,
+  type ModulePlan,
+  type Task,
+  type CodexReport,
+  type CodexPlanArtifact,
+  type PlanReport,
+  type PlanReportRun,
+  type PlanReportContext,
+  type PlanReportFinding,
+  type PlanReportRisk,
+  type PlanReportChecklistItem,
+  type PlanReportModule,
+} from "@alfred/type";
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -23,6 +44,7 @@ const workflowInputSchema = z.object({
   mode: z.enum(["sequential", "parallel"]).default("sequential"),
   workspace: z.string().optional(),
   repoBase: z.string().optional(),
+  profile: z.string().min(1).optional(),
   authzDeploy: z.string().optional(),
   authzLinear: z.string().optional(),
   preview: z
@@ -75,12 +97,18 @@ const workflowOutputSchema = z.object({
   results: z.array(
     z.object({
       task: z.string(),
+      taskId: z.string().optional(),
       outcome: z.string(),
       module: z.string(),
       status: z.enum(["completed", "failed"]),
     }),
   ),
   plan: implementationPlanSchema,
+  report: codexReportSchema.optional(),
+  planArtifact: codexPlanSchema.optional(),
+  planReport: planReportSchema.optional(),
+  context: planReportContextSchema.optional(),
+  run: planReportRunSchema.optional(),
   vcs: z
     .object({
       base: z.object({
@@ -109,12 +137,14 @@ const stepStateSchema = z.object({
     .array(
       z.object({
         task: z.string(),
+        taskId: z.string().optional(),
         outcome: z.string(),
         module: z.string(),
         status: z.enum(["completed", "failed"]),
       }),
     )
     .optional(),
+  planReport: planReportSchema.optional(),
   deployAuthz: z.string().optional(),
   linearAuthz: z.string().optional(),
   ticketId: z.string().optional(),
@@ -155,9 +185,13 @@ const stepStateSchema = z.object({
   activityActionLogged: z.boolean().optional(),
   activitySummaryLogged: z.boolean().optional(),
   activityErrored: z.boolean().optional(),
-  contextReceipts: z.unknown().optional(),
-  contextBundle: z.unknown().optional(),
+  contextReceipts: searchReceiptSchema.optional(),
+  contextBundle: contextBundleSchema.optional(),
+  sessionUrlSet: z.boolean().optional(),
+  reportEmitted: z.boolean().optional(),
   contextIndexed: z.boolean().optional(),
+  report: codexReportSchema.optional(),
+  planArtifact: codexPlanSchema.optional(),
 });
 
 type OrchestratorStepState = z.infer<typeof stepStateSchema>;
@@ -196,7 +230,274 @@ function sanitizeSlug(value: string) {
     .replace(/-{2,}/g, "-");
 }
 
+function buildRunUrl(workflowId: string, runId: string) {
+  const base = process.env.ORCHESTRATOR_RUN_BASE_URL?.trim();
+  if (!base) return null;
+  const normalized = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${normalized}/workflows/${encodeURIComponent(workflowId)}/runs/${encodeURIComponent(runId)}`;
+}
+
 type ExecutorName = "codex" | "droid";
+
+function buildReport({
+  summary,
+  plan,
+  results,
+  context,
+  run,
+}: {
+  summary: string;
+  plan: ImplementationPlan;
+  results: WorkflowOutput["results"];
+  context?: PlanReportContext;
+  run?: PlanReportRun;
+}): PlanReport {
+  const createdAt = new Date().toISOString();
+  const findings: PlanReportFinding[] = results.map((entry, index) => ({
+    id: `${plan.id}:finding:${index}`,
+    title: entry.task,
+    detail: entry.outcome,
+    severity: entry.status === "failed" ? "high" : "info",
+    status: entry.status === "failed" ? "open" : "resolved",
+    module: entry.module,
+    taskId: entry.taskId,
+  }));
+  const risks: PlanReportRisk[] = results
+    .filter(entry => entry.status === "failed")
+    .map((entry, index): PlanReportRisk => ({
+      id: `${plan.id}:risk:${index}`,
+      detail: entry.outcome,
+      impact: "high" as const,
+      likelihood: "medium" as const,
+      mitigation: "Follow up required to address failed task.",
+      module: entry.module,
+      taskId: entry.taskId,
+    }));
+  const modules: PlanReportModule[] = plan.modules.map(module => ({
+    id: module.id,
+    path: module.path,
+    status: module.status,
+    summary: module.description,
+  }));
+  const checklist: PlanReportChecklistItem[] = plan.modules.flatMap(module =>
+    module.tasks.map(task => ({
+      id: `${module.id}:${task.id}`,
+      label: task.title ?? task.description,
+      status:
+        task.status === "completed"
+          ? ("done" as const)
+          : task.status === "failed"
+          ? ("skipped" as const)
+          : ("pending" as const),
+      module: module.id,
+      taskId: task.id,
+    })),
+  );
+  const completed = results.filter(entry => entry.status === "completed").length;
+  const failed = results.filter(entry => entry.status === "failed").length;
+  const total = results.length;
+
+  const report: PlanReport = {
+    id: `${plan.id}:report`,
+    planId: plan.id,
+    createdAt,
+    summary,
+    findings,
+    risks,
+    modules,
+    checklist,
+    outcome: {
+      completed,
+      failed,
+      total,
+    },
+    context: context
+      ? {
+          ...(context.receipts ? { receipts: context.receipts } : {}),
+          ...(context.bundle ? { bundle: context.bundle } : {}),
+        }
+      : undefined,
+    run,
+  };
+
+  return report;
+}
+
+type CodexArtifactDiagnostics = {
+  candidateFound: boolean;
+  errors: string[];
+};
+
+type CodexArtifactPayload = {
+  executorUsed: ExecutorName;
+  rawResult: string;
+  report?: CodexReport;
+  planArtifact?: CodexPlanArtifact;
+  diagnostics?: CodexArtifactDiagnostics;
+};
+
+type ExecutorToolResult = Awaited<ReturnType<typeof toolCodex.execute>> & {
+  report?: CodexReport;
+  planArtifact?: CodexPlanArtifact;
+  artifactDiagnostics?: CodexArtifactDiagnostics;
+  executorUsed: ExecutorName;
+};
+
+function extractJsonCandidates(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return [];
+  }
+  const candidates = new Set<string>([trimmed]);
+  const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
+  let fenceMatch: RegExpExecArray | null;
+  while ((fenceMatch = fencePattern.exec(trimmed)) !== null) {
+    const body = fenceMatch[1]?.trim();
+    if (body) {
+      candidates.add(body);
+    }
+  }
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.add(trimmed.slice(firstBrace, lastBrace + 1).trim());
+  }
+  return Array.from(candidates).filter(candidate => candidate.length > 0);
+}
+
+function tryParseJsonCandidate(candidate: string) {
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+}
+
+function formatZodIssues(
+  issues: Array<{ path: (string | number)[]; message: string }>,
+  prefix?: string,
+) {
+  return issues.map(issue => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+    const head = prefix ? `${prefix}.${path}` : path;
+    return `${head}: ${issue.message}`;
+  });
+}
+
+function interpretCodexArtifactCandidate(candidate: unknown) {
+  const issues: string[] = [];
+  let report: CodexReport | undefined;
+  let planArtifact: CodexPlanArtifact | undefined;
+
+  const reportDirect = codexReportSchema.safeParse(candidate);
+  if (reportDirect.success) {
+    report = reportDirect.data;
+  }
+
+  const planDirect = codexPlanSchema.safeParse(candidate);
+  if (planDirect.success) {
+    planArtifact = planDirect.data;
+  }
+
+  if (report || planArtifact) {
+    return { report, planArtifact, issues };
+  }
+
+  if (candidate && typeof candidate === "object") {
+    const objectCandidate = candidate as Record<string, unknown>;
+
+    if (!report && objectCandidate.report !== undefined) {
+      const reportParsed = codexReportSchema.safeParse(objectCandidate.report);
+      if (reportParsed.success) {
+        report = reportParsed.data;
+      } else {
+        issues.push(...formatZodIssues(reportParsed.error.issues, "report"));
+      }
+    }
+
+    const planCandidate =
+      objectCandidate.plan !== undefined
+        ? objectCandidate.plan
+        : objectCandidate.planArtifact !== undefined
+          ? objectCandidate.planArtifact
+          : objectCandidate.plan_json !== undefined
+            ? objectCandidate.plan_json
+            : objectCandidate.planJson !== undefined
+              ? objectCandidate.planJson
+              : undefined;
+
+    if (!planArtifact && planCandidate !== undefined) {
+      const planParsed = codexPlanSchema.safeParse(planCandidate);
+      if (planParsed.success) {
+        planArtifact = planParsed.data;
+      } else {
+        issues.push(...formatZodIssues(planParsed.error.issues, "plan"));
+      }
+    }
+
+    if (!report && (objectCandidate.findings !== undefined || objectCandidate.time !== undefined)) {
+      const inferredReport = codexReportSchema.safeParse(objectCandidate);
+      if (inferredReport.success) {
+        report = inferredReport.data;
+      } else {
+        issues.push(...formatZodIssues(inferredReport.error.issues, "report"));
+      }
+    }
+
+    if (
+      !planArtifact &&
+      (objectCandidate.tasks !== undefined ||
+        objectCandidate.acceptanceChecks !== undefined ||
+        objectCandidate.branchStrategy !== undefined)
+    ) {
+      const inferredPlan = codexPlanSchema.safeParse(objectCandidate);
+      if (inferredPlan.success) {
+        planArtifact = inferredPlan.data;
+      } else {
+        issues.push(...formatZodIssues(inferredPlan.error.issues, "plan"));
+      }
+    }
+  }
+
+  return { report, planArtifact, issues };
+}
+
+function parseCodexArtifactsFromResult(raw: string) {
+  const candidates = extractJsonCandidates(raw);
+  if (candidates.length === 0) {
+    return { report: undefined, planArtifact: undefined, candidateFound: false, errors: [] as string[] };
+  }
+
+  for (const candidate of candidates) {
+    const parsed = tryParseJsonCandidate(candidate);
+    if (parsed === null) {
+      continue;
+    }
+    const interpreted = interpretCodexArtifactCandidate(parsed);
+    if (interpreted.report || interpreted.planArtifact) {
+      return {
+        report: interpreted.report,
+        planArtifact: interpreted.planArtifact,
+        candidateFound: true,
+        errors: [],
+      };
+    }
+  }
+
+  const fallbackCandidate = candidates[0];
+  const fallbackParsed = fallbackCandidate ? tryParseJsonCandidate(fallbackCandidate) : null;
+  const inferredIssues =
+    fallbackParsed && typeof fallbackParsed === "object"
+      ? interpretCodexArtifactCandidate(fallbackParsed).issues
+      : [];
+
+  return {
+    report: undefined,
+    planArtifact: undefined,
+    candidateFound: true,
+    errors: inferredIssues.length > 0 ? inferredIssues : ["artifact_schema_unmatched"],
+  };
+}
 
 function resolveExecutor(preferred?: ExecutorName): ExecutorName {
   if (preferred === "codex" || preferred === "droid") {
@@ -247,7 +548,52 @@ function buildPlan(requirement: string, auto: "read" | "low" | "medium" | "high"
   };
 }
 
+function buildCodexPlanningPrompt({
+  requirement,
+  planId,
+  moduleId,
+  modulePath,
+}: {
+  requirement: string;
+  planId: string;
+  moduleId: string;
+  modulePath: string | undefined;
+}) {
+  const featureSuffix = sanitizeSlug(`${planId.slice(0, 8)}-${moduleId}`);
+  return [
+    "You are the ALFRED planning analyst. Produce a structured plan and risk report for the engineering requirement below.",
+    `Requirement: ${requirement}`,
+    `Module: ${moduleId} (${modulePath ?? "."})`,
+    "",
+    "Respond with exactly one JSON object using this structure:",
+    "{",
+    '  "report": {',
+    '    "findings": [ { "id": "F1", "summary": "<finding>", "detail": "<evidence>", "impact": "low|medium|high", "scope": "<area>" } ],',
+    '    "risks": [ { "id": "R1", "summary": "<risk>", "mitigation": "<mitigation>", "likelihood": "low|medium|high", "impact": "low|medium|high" } ],',
+    '    "hotspots": [ { "id": "H1", "path": "<relative/path-or-area>", "reason": "<why focus here>", "score": <0.0-1.0> } ],',
+    '    "time": { "estimateHours": <number>, "confidence": "low|medium|high", "breakdown": [ { "phase": "analysis|implementation|validation|followup", "hours": <number> } ] }',
+    "  },",
+    '  "plan": {',
+    '    "tasks": [ { "id": "T1", "title": "<task headline>", "summary": "<what to do>", "owner": "<role>", "estimateHours": <number>, "kind": "analysis|implementation|validation|followup", "dependencies": ["T2"], "deliverables": ["<artifact>"] } ],',
+    '    "deps": [ ["T1","T2"] ],',
+    '    "acceptanceChecks": [ { "id": "AC1", "description": "<measurable check>", "type": "test|review|analysis|deployment", "owner": "<role>" } ],',
+    `    "branchStrategy": { "base": "origin/main", "feature": "feature/${featureSuffix}", "review": "<review strategy>", "notes": "<rollout or risk notes>" }`,
+    "  }",
+    "}",
+    "",
+    "Rules:",
+    "- Replace every placeholder (inside <...>) with concrete content relevant to the requirement; do not keep angle brackets.",
+    "- Provide at least one finding, one risk, one hotspot, one task, and one acceptance check.",
+    "- IDs must be unique per section and follow prefixes F, R, H, T, AC with incremental numbers (e.g. F1, F2).",
+    "- Use relative repository paths for hotspot.path whenever possible; otherwise describe the subsystem.",
+    "- estimateHours values may be fractional (one decimal). Dependencies should reference existing task IDs or be an empty array.",
+    "- deliverables must be tangible outcomes (files, tests, dashboards) not generic text.",
+    "- Output valid JSON only. Do not wrap it in Markdown fences or include commentary before or after the JSON.",
+  ].join("\n");
+}
+
 const PREVIEW_HOST = "127.0.0.1";
+const BIO_AUTHZ_SCOPES = ["droid.exec", "repo.read", "repo.write"] as const;
 
 const DEFAULT_CONTEXT_MAX_TOKENS = Number(process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000");
 
@@ -522,6 +868,7 @@ async function runExecutorTool({
   auto,
   authz,
   cw,
+  profile,
   writer,
 }: {
   executor: ExecutorName;
@@ -531,11 +878,12 @@ async function runExecutorTool({
   auto: "read" | "low" | "medium" | "high";
   authz: string | undefined;
   cw: string;
+  profile?: string;
   writer?: { write: (chunk: unknown) => Promise<void> | void };
-}) {
+}): Promise<ExecutorToolResult> {
   if (executor === "codex") {
     try {
-      return await toolCodex.execute({
+      const response = await toolCodex.execute({
         input: {
           action: "exec",
           prompt,
@@ -543,9 +891,22 @@ async function runExecutorTool({
           auto,
           authz,
           cw,
+          profile,
         },
         writer,
       });
+      const parsed = parseCodexArtifactsFromResult(response.result);
+      const artifactDiagnostics: CodexArtifactDiagnostics | undefined =
+        parsed.errors.length > 0 || (parsed.candidateFound && !parsed.report && !parsed.planArtifact)
+          ? { candidateFound: parsed.candidateFound, errors: parsed.errors }
+          : undefined;
+      return {
+        ...response,
+        report: parsed.report,
+        planArtifact: parsed.planArtifact,
+        artifactDiagnostics,
+        executorUsed: "codex",
+      };
     } catch (error) {
       await writer?.write?.({
         type: "notice",
@@ -558,7 +919,7 @@ async function runExecutorTool({
           type: "notice",
           message: "codex_fallback_droid",
         });
-        return toolDroid.execute({
+        const fallback = await toolDroid.execute({
           input: {
             prompt,
             out,
@@ -568,13 +929,17 @@ async function runExecutorTool({
           },
           writer,
         });
+        return {
+          ...fallback,
+          executorUsed: "droid",
+        };
       }
 
       throw error;
     }
   }
 
-  return toolDroid.execute({
+  const result = await toolDroid.execute({
     input: {
       prompt,
       out,
@@ -584,6 +949,10 @@ async function runExecutorTool({
     },
     writer,
   });
+  return {
+    ...result,
+    executorUsed: "droid",
+  };
 }
 
 async function executeModule({
@@ -592,14 +961,20 @@ async function executeModule({
   auto,
   writer,
   executor,
+  profile,
+  planId,
   allowFallback,
+  onArtifacts,
 }: {
   module: ModulePlan;
   authz: string | undefined;
   auto: "read" | "low" | "medium" | "high";
   writer?: { write: (chunk: unknown) => Promise<void> | void };
   executor: ExecutorName;
+  profile?: string;
+  planId: string;
   allowFallback: boolean;
+  onArtifacts?: (payload: CodexArtifactPayload) => Promise<void> | void;
 }) {
   if (!module.worktree) {
     throw new Error("module_worktree_missing");
@@ -612,8 +987,13 @@ async function executeModule({
     module: module.id,
   });
 
-  const moduleResults: Array<{ task: string; outcome: string; module: string; status: "completed" | "failed" }> =
-    [];
+  const moduleResults: Array<{
+    task: string;
+    taskId: string;
+    outcome: string;
+    module: string;
+    status: "completed" | "failed";
+  }> = [];
 
   for (const task of module.tasks) {
     await writer?.write({
@@ -625,21 +1005,38 @@ async function executeModule({
 
     try {
       const taskAuto = task.auto ?? auto;
+      const prompt = buildCodexPlanningPrompt({
+        requirement: task.description,
+        planId,
+        moduleId: module.id,
+        modulePath: module.path,
+      });
       const response = await runExecutorTool({
         executor,
         allowFallback,
-        prompt: task.description,
+        prompt,
         out: "debug",
         auto: taskAuto,
         authz,
         cw: module.worktree,
+        profile,
         writer,
       });
+      if (onArtifacts) {
+        await onArtifacts({
+          executorUsed: response.executorUsed,
+          rawResult: response.result,
+          report: response.report,
+          planArtifact: response.planArtifact,
+          diagnostics: response.artifactDiagnostics,
+        });
+      }
 
       task.status = "completed";
       task.completed = new Date();
       moduleResults.push({
         task: task.description,
+        taskId: task.id,
         outcome: response.result,
         module: module.id,
         status: "completed",
@@ -650,6 +1047,7 @@ async function executeModule({
       module.status = "failed";
       moduleResults.push({
         task: task.description,
+        taskId: task.id,
         outcome: task.error ?? "task_failed",
         module: module.id,
         status: "failed",
@@ -801,12 +1199,26 @@ const orchestratorStep = createStep({
     setState,
     resumeData,
     suspend,
+    runId,
+    workflowId,
+    resourceId,
   }): Promise<WorkflowOutput> => {
     const cw = inputData.cw ?? process.cwd();
     const executor = resolveExecutor(inputData.executor);
     const allowExecutorFallback = executorFallbackEnabled();
     const currentState: OrchestratorStepState = state ?? {};
     const nextState: OrchestratorStepState = { ...currentState };
+    const runUrl = buildRunUrl(workflowId, runId);
+    const runMeta: PlanReportRun = {
+      id: runId,
+      workflowId,
+    };
+    if (resourceId) {
+      runMeta.resourceId = resourceId;
+    }
+    if (runUrl) {
+      runMeta.url = runUrl;
+    }
 
     if (resumeData) {
       if (resumeData.event === "deploy-authz") {
@@ -824,16 +1236,17 @@ const orchestratorStep = createStep({
 
     const obligations = Array.isArray(inputData.policyObligations) ? inputData.policyObligations : [];
     if (obligations.includes("require_biometric") && !nextState.bioAuthz) {
+      const bioScopes = BIO_AUTHZ_SCOPES.slice();
       nextState.awaiting = "bio-authz";
       setState(nextState);
       await writer?.write?.({
         type: "require-scope",
         event: "bio-authz",
-        scopes: ["droid.exec"],
+        scopes: bioScopes,
       });
       const payload = (await suspend({
         event: "bio-authz",
-        scopes: ["droid.exec"],
+        scopes: bioScopes,
       })) as ResumePayload;
       if (payload.event !== "bio-authz") {
         throw new Error("workflow_resume_unexpected_event");
@@ -851,6 +1264,7 @@ const orchestratorStep = createStep({
     plan.metadata = {
       ...(plan.metadata ?? {}),
       workflowExecutor: executor,
+      run: runMeta,
     };
     await writer?.write({
       type: "notice",
@@ -871,6 +1285,7 @@ const orchestratorStep = createStep({
         writer,
         authz: toolAuthz,
         executor,
+        profile: inputData.profile,
       });
 
       const combinedReceipts: typeof codeReceipts = { ...codeReceipts };
@@ -931,7 +1346,13 @@ const orchestratorStep = createStep({
       try {
         const ingestItems = bundle.files
           .filter(file => file.content && file.content.length > 0)
-          .map(file => ({ path: file.path, content: file.content }));
+          .map(file => ({
+            path: file.path,
+            content: file.content,
+            startLine: file.startLine,
+            endLine: file.endLine,
+            tokens: file.tokens,
+          }));
         if (ingestItems.length > 0) {
           await indexCodeEmbeddings({
             items: ingestItems,
@@ -1041,6 +1462,97 @@ const orchestratorStep = createStep({
       const failedCount = results.filter(entry => entry.status === "failed").length;
       return { completedCount, failedCount };
     };
+
+    const cloneArtifact = <T>(value: T | undefined): T | undefined => {
+      if (value === undefined) return undefined;
+      return JSON.parse(JSON.stringify(value)) as T;
+    };
+
+    const artifactsEqual = <T>(a: T | undefined, b: T | undefined) => {
+      if (a === undefined && b === undefined) return true;
+      if (a === undefined || b === undefined) return false;
+      return JSON.stringify(a) === JSON.stringify(b);
+    };
+
+    let reportArtifact = cloneArtifact(nextState.report);
+    let planArtifact = cloneArtifact(nextState.planArtifact);
+
+    const publishArtifacts = async (payload: CodexArtifactPayload) => {
+      const { executorUsed, report, planArtifact: planCandidate, diagnostics } = payload;
+
+      if (executorUsed !== "codex") {
+        if (!report && !planCandidate && diagnostics && diagnostics.errors.length > 0) {
+          await writer?.write({
+            type: "notice",
+            message: "codex_artifact_invalid",
+            errors: diagnostics.errors,
+          });
+        }
+        return;
+      }
+
+      let stateTouched = false;
+
+      if (report && !artifactsEqual(reportArtifact, report)) {
+        reportArtifact = cloneArtifact(report);
+        nextState.report = cloneArtifact(report);
+        stateTouched = true;
+        await writer?.write({
+          type: "notice",
+          message: "codex_report_ready",
+          report,
+        });
+        await writer?.write({
+          type: "data-cache-handoff",
+          key: ["codex", "report"],
+          value: report,
+        });
+      }
+
+      if (planCandidate && !artifactsEqual(planArtifact, planCandidate)) {
+        planArtifact = cloneArtifact(planCandidate);
+        nextState.planArtifact = cloneArtifact(planCandidate);
+        stateTouched = true;
+        await writer?.write({
+          type: "notice",
+          message: "codex_plan_ready",
+          plan: planCandidate,
+        });
+        await writer?.write({
+          type: "data-cache-handoff",
+          key: ["codex", "plan"],
+          value: planCandidate,
+        });
+      }
+
+      if (!report && !planCandidate && diagnostics && diagnostics.errors.length > 0) {
+        await writer?.write({
+          type: "notice",
+          message: "codex_artifact_invalid",
+          errors: diagnostics.errors,
+        });
+      }
+
+      if (stateTouched) {
+        setState(nextState);
+      }
+    };
+
+    if (reportArtifact) {
+      await writer?.write({
+        type: "data-cache-handoff",
+        key: ["codex", "report"],
+        value: reportArtifact,
+      });
+    }
+
+    if (planArtifact) {
+      await writer?.write({
+        type: "data-cache-handoff",
+        key: ["codex", "plan"],
+        value: planArtifact,
+      });
+    }
 
     const previewHost = inputData.preview?.host ?? null;
     const previewBaseUrl = previewHost ? `${inputData.preview?.tls ? "https" : "http"}://${previewHost}` : null;
@@ -1434,14 +1946,17 @@ const orchestratorStep = createStep({
         results.length = 0;
 
         for (const module of moduleList) {
-          const moduleResults = await executeModule({
-            module,
-            authz: toolAuthz,
-            auto: inputData.auto,
-            writer,
-            executor,
-            allowFallback: allowExecutorFallback,
-          });
+        const moduleResults = await executeModule({
+          module,
+          authz: toolAuthz,
+          auto: inputData.auto,
+          writer,
+          executor,
+          profile: inputData.profile,
+          planId: plan.id,
+          allowFallback: allowExecutorFallback,
+          onArtifacts: publishArtifacts,
+        });
           results.push(...moduleResults);
 
           await writer?.write({
@@ -1787,11 +2302,15 @@ const orchestratorStep = createStep({
       if (inputData.linear && nextState.ticketId && !nextState.ticketCommented && !hasLinearSession) {
         const authzLinear = await acquireLinearAuthz();
         const { completedCount, failedCount } = summaryFromResults();
-        const comment = [
+        const commentLines = [
           `Plan ${plan.id} completed.`,
           `Tasks completed: ${completedCount}`,
           `Tasks failed: ${failedCount}`,
-        ].join("\n");
+        ];
+        if (runUrl) {
+          commentLines.push(`Run dashboard: ${runUrl}`);
+        }
+        const comment = commentLines.join("\n");
         await toolTicket.execute({
           input: {
             action: "comment",
@@ -2038,13 +2557,99 @@ const orchestratorStep = createStep({
     await writer?.write({ type: "progress", pct: 100, message: "workflow_completed" });
 
     const summary = `Completed plan ${plan.id} with ${results.length} task(s).`;
+    let contextData: PlanReportContext | undefined;
+    if (nextState.contextBundle || nextState.contextReceipts) {
+      const contextPayload: PlanReportContext = {};
+      if (nextState.contextReceipts) {
+        contextPayload.receipts = nextState.contextReceipts as NonNullable<PlanReportContext["receipts"]>;
+      }
+      if (nextState.contextBundle) {
+        contextPayload.bundle = nextState.contextBundle as NonNullable<PlanReportContext["bundle"]>;
+      }
+      contextData = contextPayload;
+    }
+    let planReport: PlanReport;
+    if (!nextState.planReport) {
+      planReport = buildReport({
+        summary,
+        plan,
+        results,
+        context: contextData,
+        run: runMeta,
+      });
+      nextState.planReport = planReport;
+      setState(nextState);
+    } else {
+      const existingReport = nextState.planReport as PlanReport;
+      const needsContext = Boolean(contextData && !existingReport.context);
+      const needsRun = !existingReport.run;
+      if (needsContext || needsRun) {
+        const updatedReport: PlanReport = {
+          ...existingReport,
+          context: needsContext ? contextData : existingReport.context,
+          run: existingReport.run ?? runMeta,
+        };
+        nextState.planReport = updatedReport;
+        planReport = updatedReport;
+        setState(nextState);
+      } else {
+        planReport = existingReport;
+      }
+    }
+    plan.metadata = {
+      ...plan.metadata,
+      report: planReport,
+      run: runMeta,
+    };
+    if (!nextState.reportEmitted) {
+      await writer?.write({
+        type: "report",
+        summary,
+        report: planReport,
+        plan,
+        context: contextData,
+        run: runMeta,
+      });
+      nextState.reportEmitted = true;
+      setState(nextState);
+    }
+    if (hasLinearSession && runUrl && !nextState.sessionUrlSet && inputData.linear) {
+      const authzLinear = await acquireLinearAuthz();
+      await toolTicket.execute({
+        input: {
+          action: "session.external-url",
+          space: inputData.linear.space,
+          sessionId: inputData.linear.sessionId,
+          url: runUrl,
+          authz: authzLinear,
+        },
+      });
+      nextState.linearAuthz = authzLinear;
+      nextState.sessionUrlSet = true;
+      setState(nextState);
+    }
 
     if (hasLinearSession && !nextState.activitySummaryLogged) {
       const { completedCount, failedCount } = summaryFromResults();
+      const bodyLines = [
+        `Plan ${plan.id} completed.`,
+        `Tasks completed: ${completedCount}`,
+        `Tasks failed: ${failedCount}`,
+      ];
+      if (runUrl) {
+        bodyLines.push(`Run dashboard: ${runUrl}`);
+      }
+      const activityResult = {
+        planId: plan.id,
+        runId,
+        workflowId,
+        completed: completedCount,
+        failed: failedCount,
+        url: runUrl ?? undefined,
+      };
       await sendLinearActivity("response", {
-        body: [`Plan ${plan.id} completed.`, `Tasks completed: ${completedCount}`, `Tasks failed: ${failedCount}`].join(
-          "\n",
-        ),
+        body: bodyLines.join("\n"),
+        result: JSON.stringify(activityResult),
       });
       nextState.activitySummaryLogged = true;
       setState(nextState);
@@ -2055,6 +2660,11 @@ const orchestratorStep = createStep({
       results,
       plan,
       vcs,
+      report: reportArtifact ?? nextState.report,
+      planArtifact: planArtifact ?? nextState.planArtifact,
+      planReport,
+      context: contextData,
+      run: runMeta,
       ticketId: nextState.ticketId,
       ticketUrl: nextState.ticketUrl,
     };
@@ -2067,5 +2677,12 @@ export const planWorkflow = createWorkflow({
   inputSchema: workflowInputSchema,
   outputSchema: workflowOutputSchema,
 })
-  .then(orchestratorStep)
+  .then(orchestratorStep as any)
   .commit();
+
+export const __workflowInternals = {
+  parseCodexArtifactsFromResult,
+  buildCodexPlanningPrompt,
+  buildReport,
+  buildRunUrl,
+};

@@ -36,6 +36,23 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
   return Array.from(prefixes);
 })();
 
+const MCP_ENV_ALLOWLIST = new Set([
+  "CONTEXT7_API_KEY",
+  "CONTEXT7_BASE_URL",
+  "GITHUB_PAT",
+  "GITHUB_PERSONAL_ACCESS_TOKEN",
+  "GITHUB_TOKEN",
+  "GITHUB_HOST",
+  "GITHUB_TOOLSETS",
+  "GITHUB_DYNAMIC_TOOLSETS",
+  "GITHUB_READ_ONLY",
+  "PLAYWRIGHT_BROWSERS_PATH",
+  "PLAYWRIGHT_SERVICE_ACCESS_TOKEN",
+  "PLAYWRIGHT_WS_ENDPOINT",
+  "PLAYWRIGHT_HEADLESS",
+  "MCP_AUTH_TOKEN",
+]);
+
 function safeRealpath(candidate: string) {
   try {
     return realpathSync(candidate);
@@ -125,6 +142,13 @@ function pickEnvCodex(custom: Record<string, string> | undefined) {
     safeEnv.CODEX_API_KEY = process.env.CODEX_API_KEY;
   }
 
+  for (const name of MCP_ENV_ALLOWLIST) {
+    const value = process.env[name];
+    if (value) {
+      safeEnv[name] = value;
+    }
+  }
+
   if (!safeEnv.CODEX_API_KEY && allowOpenAI && process.env.OPENAI_API_KEY) {
     safeEnv.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
   }
@@ -137,6 +161,10 @@ function pickEnvCodex(custom: Record<string, string> | undefined) {
     if (!key || typeof value !== "string") continue;
     if (key === "PATH") continue;
     if (key.startsWith("CODEX_")) {
+      safeEnv[key] = value;
+      continue;
+    }
+    if (MCP_ENV_ALLOWLIST.has(key)) {
       safeEnv[key] = value;
       continue;
     }

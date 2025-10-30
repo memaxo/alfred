@@ -8,10 +8,17 @@ import { db } from "../index";
 import { ragDocuments, ragChunks } from "../schema/rag";
 
 type DocumentInsert = typeof ragDocuments.$inferInsert;
+type DocumentRow = typeof ragDocuments.$inferSelect;
 type ChunkInsert = typeof ragChunks.$inferInsert;
+type ChunkRow = typeof ragChunks.$inferSelect;
 
 // Document operations
-export async function createDocument(source: string, title?: string, author?: string, metadata?: unknown) {
+export async function createDocument(
+  source: string,
+  title?: string,
+  author?: string,
+  metadata?: unknown,
+): Promise<DocumentRow> {
   const [row] = await db
     .insert(ragDocuments)
     .values({
@@ -22,15 +29,15 @@ export async function createDocument(source: string, title?: string, author?: st
     })
     .returning();
 
-  return row;
+  return row as DocumentRow;
 }
 
-export async function getDocument(documentId: string) {
+export async function getDocument(documentId: string): Promise<DocumentRow | null> {
   const rows = await db.select().from(ragDocuments).where(eq(ragDocuments.id, documentId)).limit(1);
   return rows[0] ?? null;
 }
 
-export async function listDocuments(limit = 100, offset = 0) {
+export async function listDocuments(limit = 100, offset = 0): Promise<DocumentRow[]> {
   return db
     .select()
     .from(ragDocuments)
@@ -39,7 +46,7 @@ export async function listDocuments(limit = 100, offset = 0) {
     .offset(offset);
 }
 
-export async function deleteDocument(documentId: string) {
+export async function deleteDocument(documentId: string): Promise<number> {
   const rows = await db.delete(ragDocuments).where(eq(ragDocuments.id, documentId)).returning({ id: ragDocuments.id });
   return rows.length;
 }
@@ -48,9 +55,9 @@ export async function deleteDocument(documentId: string) {
 export async function addChunks(
   documentId: string,
   chunks: Array<{ content: string; order?: number; embedding?: number[]; metadata?: unknown }>,
-) {
+): Promise<ChunkRow[]> {
   if (chunks.length === 0) {
-    return [] as Array<typeof ragChunks.$inferSelect>;
+    return [] as ChunkRow[];
   }
 
   const values = chunks.map<ChunkInsert>((chunk, index) => ({
@@ -61,10 +68,10 @@ export async function addChunks(
     metadata: chunk.metadata ?? null,
   }));
 
-  return db.insert(ragChunks).values(values).returning();
+  return db.insert(ragChunks).values(values).returning() as Promise<ChunkRow[]>;
 }
 
-export async function getChunks(documentId: string) {
+export async function getChunks(documentId: string): Promise<ChunkRow[]> {
   return db
     .select()
     .from(ragChunks)
@@ -116,7 +123,7 @@ export async function searchChunks(
     .slice(0, limit);
 }
 
-export async function deleteChunk(chunkId: string) {
+export async function deleteChunk(chunkId: string): Promise<number> {
   const rows = await db.delete(ragChunks).where(eq(ragChunks.id, chunkId)).returning({ id: ragChunks.id });
   return rows.length;
 }

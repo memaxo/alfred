@@ -182,6 +182,78 @@ function decodeEntities(value: string) {
     .replace(/&#39;/g, "'");
 }
 
+function clamp(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
+function compressSnippet(value: string | undefined, limit = 220) {
+  if (!value) return undefined;
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length === 0) return undefined;
+  if (compact.length <= limit) return compact;
+  return `${compact.slice(0, limit - 3).trimEnd()}...`;
+}
+
+function extractQueryTokens(query: string) {
+  return Array.from(
+    new Set(
+      query
+        .toLowerCase()
+        .split(/[^a-z0-9]+/u)
+        .filter(token => token.length >= 3),
+    ),
+  );
+}
+
+function scoreExaResult(params: {
+  entry: {
+    score?: number;
+    highlightScores?: number[];
+    title?: string;
+    summary?: string;
+    highlights?: string[];
+    text?: string;
+  };
+  queryTokens: string[];
+  index: number;
+}) {
+  const { entry, queryTokens, index } = params;
+  const base = clamp(typeof entry.score === "number" ? entry.score : 0, 0, 1);
+  const highlight = clamp(
+    Array.isArray(entry.highlightScores) && entry.highlightScores.length > 0
+      ? Math.max(...entry.highlightScores.map(value => clamp(value, 0, 1.5)))
+      : 0,
+    0,
+    1,
+  );
+  const textBuffer = [
+    entry.title ?? "",
+    entry.summary ?? "",
+    ...(entry.highlights ?? []),
+    entry.text ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  let tokenScore = 0;
+  if (queryTokens.length > 0 && textBuffer.length > 0) {
+    let matches = 0;
+    for (const token of queryTokens) {
+      if (textBuffer.includes(token)) {
+        matches += 1;
+      }
+    }
+    tokenScore = matches / queryTokens.length;
+  }
+
+  const position = clamp(1 / (index + 1), 0, 1);
+  const weighted = base * 0.5 + highlight * 0.3 + tokenScore * 0.15 + position * 0.05;
+  return clamp(weighted, 0, 1);
+}
+
 async function performDuckDuckGoSearch(query: string, topK: number): Promise<WebOutput["results"]> {
   const url = new URL("https://lite.duckduckgo.com/lite/");
   url.searchParams.set("q", query);
@@ -272,10 +344,13 @@ async function performExaSearch(
 
   const { signal, cancel } = createTimeoutController(timeoutSec);
   try {
+    const fetchCount = Math.min(10, Math.max(topK + 2, topK));
+    const queryTokens = extractQueryTokens(query);
+
     const body: Record<string, unknown> = {
       query,
       type: exaOpts?.type ?? "auto",
-      numResults: topK,
+      numResults: fetchCount,
       contents: exaOpts?.text ?? false,
       liveCrawl: exaOpts?.livecrawl ?? "fallback",
     };
@@ -306,6 +381,7 @@ async function performExaSearch(
         url: string;
         title?: string;
         highlights?: string[];
+        highlightScores?: number[];
         summary?: string;
         text?: string;
         score?: number;
@@ -316,18 +392,43 @@ async function performExaSearch(
       cost?: CostInfo;
     };
 
-    const results = (payload.results ?? []).slice(0, topK).map((entry, index) => {
-      const snippet = entry.summary ?? entry.highlights?.[0] ?? undefined;
-      return {
-        url: entry.url,
-        title: entry.title ?? entry.url,
-        snippet,
-        score: typeof entry.score === "number" ? entry.score : 1 / (index + 1),
-        publishedDate: entry.publishedDate,
-        image: entry.imageUrl,
-        favicon: entry.faviconUrl,
-      };
-    });
+    const scoredResults = (payload.results ?? [])
+      .slice(0, fetchCount)
+      .map((entry, index) => {
+        const snippetSource =
+          entry.summary ??
+          (Array.isArray(entry.highlights) && entry.highlights.length > 0
+            ? entry.highlights[0]
+            : entry.text);
+        const relevance = scoreExaResult({
+          entry,
+          queryTokens,
+          index,
+        });
+        return {
+          entry,
+          snippet: compressSnippet(snippetSource ?? undefined),
+          relevance,
+          index,
+        };
+      })
+      .sort((a, b) => {
+        if (b.relevance !== a.relevance) {
+          return b.relevance - a.relevance;
+        }
+        return a.index - b.index;
+      })
+      .slice(0, topK);
+
+    const results = scoredResults.map(item => ({
+      url: item.entry.url,
+      title: item.entry.title ?? item.entry.url,
+      snippet: item.snippet,
+      score: item.relevance,
+      publishedDate: item.entry.publishedDate,
+      image: item.entry.imageUrl,
+      favicon: item.entry.faviconUrl,
+    }));
 
     if (exaOpts?.livecrawl !== "always") {
       exaCache.set(cacheKey, {
@@ -596,3 +697,9 @@ export const toolWeb = {
 };
 
 export type ToolWeb = typeof toolWeb;
+
+export const __internals = {
+  extractQueryTokens,
+  scoreExaResult,
+  compressSnippet,
+};

@@ -733,6 +733,8 @@ show_raw_agent_reasoning = true  # defaults to false
 A _profile_ is a collection of configuration values that can be set together. Multiple profiles can be defined in `config.toml` and you can specify the one you
 want to use at runtime via the `--profile` flag.
 
+Need concrete examples? The [profiles cookbook](./profiles.md) shows how to opt into optional MCP servers without touching your defaults.
+
 Here is an example of a `config.toml` that defines multiple profiles:
 
 ```toml

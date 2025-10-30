@@ -3,8 +3,8 @@
  * Pure functional extraction with no dependencies
  */
 
-import type { Hypergraph, Knowledge } from "./hypergraph.js";
-import { fact, insight, pattern, relation } from "./hypergraph.js";
+import type { Knowledge } from "./hypergraph.js";
+import { fact, insight, knowledgeHash, nodeFromHash, pattern, relation } from "./hypergraph.js";
 
 // Extraction types
 type ExtractedFact = {
@@ -178,24 +178,34 @@ export const extract = (text: string, source: string): ExtractionResult => {
 /**
  * Convert extraction result to knowledge graph nodes
  */
-export const toKnowledge = (
-  result: ExtractionResult,
-  graph: Hypergraph
-): Knowledge[] => {
-  const nodes: Knowledge[] = [];
+export type KnowledgeEntry = {
+  hash: string;
+  data: Knowledge;
+};
 
-  // Add facts
+export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
+  const list: KnowledgeEntry[] = [];
+  const seen = new Set<string>();
+
+  const insert = (item: Knowledge) => {
+    const hash = knowledgeHash(item);
+    if (!seen.has(hash)) {
+      seen.add(hash);
+      list.push({ hash, data: item });
+    }
+    return nodeFromHash(hash);
+  };
+
   for (const f of result.facts) {
-    nodes.push(fact(f.content, f.confidence, f.source));
+    insert(fact(f.content, f.confidence, f.source));
   }
 
-  // Add causal insights
   for (const c of result.causality) {
-    const causeId = graph.add(fact(c.cause, c.confidence, "inferred"));
-    const effectId = graph.add(fact(c.effect, c.confidence, "inferred"));
+    const causeId = insert(fact(c.cause, c.confidence, "inferred"));
+    const effectId = insert(fact(c.effect, c.confidence, "inferred"));
 
-    nodes.push(relation(causeId, effectId, "causes", c.confidence));
-    nodes.push(
+    insert(relation(causeId, effectId, "causes", c.confidence));
+    insert(
       insight(
         [causeId, effectId],
         `${c.cause} causes ${c.effect}`,
@@ -204,7 +214,7 @@ export const toKnowledge = (
     );
   }
 
-  return nodes;
+  return list;
 };
 
 /**

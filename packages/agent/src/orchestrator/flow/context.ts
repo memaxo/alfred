@@ -1,4 +1,4 @@
-import { ragRepo } from "@alfred/db";
+import { ingestCodeFiles } from "@alfred/rag";
 import type { ContextBundle, ContextFileSlice, SearchReceipt, SearchReceiptItem } from "@alfred/type";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -15,6 +15,7 @@ const DEFAULT_TOPK = 25;
 const DEFAULT_SLICE_MAX_LINES = 400;
 const DEFAULT_MAX_TOKENS = Number(process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000");
 const CONTEXT_CACHE_TTL_MS = 5 * 60_000;
+const WEB_SUMMARY_LIMIT = 180;
 
 const contextCache = new Map<
   string,
@@ -77,6 +78,14 @@ function serializeBundle(bundle: ContextBundle) {
   return {
     ...bundle,
   };
+}
+
+function compressSnippet(value: string | undefined, limit = WEB_SUMMARY_LIMIT) {
+  if (!value) return undefined;
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length === 0) return undefined;
+  if (compact.length <= limit) return compact;
+  return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
 
 function buildDroidPrompt(requirement: string, topK: number) {
@@ -212,6 +221,7 @@ export async function gatherCodeContext({
   writer,
   authz,
   executor,
+  profile,
 }: {
   requirement: string;
   cw: string;
@@ -221,6 +231,7 @@ export async function gatherCodeContext({
   writer?: Writer;
   authz: string | undefined;
   executor?: ExecutorName;
+  profile?: string;
 }): Promise<SearchReceipt> {
   const resolvedCw = path.resolve(cw);
   const extSet = normalizeExts(exts);
@@ -255,6 +266,7 @@ export async function gatherCodeContext({
           auto: "read",
           cw: resolvedCw,
           authz,
+          profile,
         },
         writer,
       });
@@ -343,15 +355,23 @@ export async function gatherWebContext({
   writer?: Writer;
   authz: string | undefined;
 }): Promise<SearchReceipt> {
-  const limit = topK ?? 5;
+  const limit = Math.max(1, Math.min(topK ?? 4, 5));
   let results: SearchReceiptItem[] = [];
-  try {
-    const provider = (process.env.ORCH_WEB_PROVIDER ?? (process.env.EXA_API_KEY ? "exa" : "ddg")) as
-      | "exa"
-      | "ddg"
-      | "serpapi"
-      | "tavily";
+  let providerUsed: "exa" | "ddg" | "serpapi" | "tavily" | undefined;
 
+  const envProvider = (process.env.ORCH_WEB_PROVIDER ?? "").trim().toLowerCase();
+  const hasExa = Boolean(process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0);
+  const provider: "exa" | "ddg" | "serpapi" | "tavily" = (() => {
+    if (envProvider === "serpapi" || envProvider === "tavily" || envProvider === "ddg") {
+      return envProvider;
+    }
+    if (envProvider === "exa") {
+      return hasExa ? "exa" : "ddg";
+    }
+    return hasExa ? "exa" : "ddg";
+  })();
+
+  try {
     const output = await toolWeb.execute({
       input: {
         action: "search",
@@ -362,28 +382,32 @@ export async function gatherWebContext({
         exa:
           provider === "exa"
             ? {
-                livecrawl: "always",
-                text: { maxCharacters: 1_000 },
+                livecrawl: "fallback",
+                text: false,
                 highlights: { numSentences: 1, highlightsPerUrl: 1, query: requirement.slice(0, 280) },
                 summary: { query: "Key findings" },
-                subpages: 1,
-                subpageTarget: "sources",
               }
             : undefined,
       },
     });
-    results = (output.results ?? []).map((entry, index) => ({
-      id: entry.url ?? `web:${index}`,
-      kind: "web",
-      url: entry.url,
-      title: entry.title,
-      score: entry.score ?? 1 / (index + 1),
-      reason: entry.snippet ?? entry.title ?? entry.url,
-      snippet: entry.snippet,
-      publishedDate: (entry as { publishedDate?: string }).publishedDate,
-      image: (entry as { image?: string }).image,
-      favicon: (entry as { favicon?: string }).favicon,
-    }));
+    providerUsed = output.provider ?? provider;
+    results = (output.results ?? []).map((entry, index) => {
+      const snippet = compressSnippet(entry.snippet);
+      const scoreRaw = typeof entry.score === "number" ? entry.score : 1 / (index + 1);
+      const score = Math.max(0, Math.min(1, scoreRaw));
+      return {
+        id: entry.url ?? `web:${index}`,
+        kind: "web",
+        url: entry.url,
+        title: entry.title,
+        score,
+        reason: snippet ?? entry.title ?? entry.url,
+        snippet,
+        publishedDate: (entry as { publishedDate?: string }).publishedDate,
+        image: (entry as { image?: string }).image,
+        favicon: (entry as { favicon?: string }).favicon,
+      };
+    });
   } catch (error) {
     await writer?.write({
       type: "context",
@@ -394,17 +418,28 @@ export async function gatherWebContext({
       code: [],
       web: [],
       created: new Date(),
+      summary: provider === "exa" ? "Web search failed — falling back from Exa to DuckDuckGo" : "Web search failed",
     };
   }
 
   const topResult = results[0];
+  const providerLabel =
+    providerUsed === "exa"
+      ? "Exa"
+      : providerUsed === "serpapi"
+        ? "SerpAPI"
+        : providerUsed === "tavily"
+          ? "Tavily"
+          : "DuckDuckGo";
   const receipt: SearchReceipt = {
     code: [],
     web: results,
     created: new Date(),
     summary: topResult
-      ? `Top web result: ${topResult.title ?? topResult.url}${topResult.snippet ? ` — ${topResult.snippet}` : ""}`
-      : "No web results",
+      ? `${providerLabel} → ${topResult.title ?? topResult.url}${
+          topResult.snippet ? ` — ${compressSnippet(topResult.snippet)}` : ""
+        }`
+      : `${providerLabel} → No web results`,
   };
 
   await writer?.write({
@@ -529,41 +564,32 @@ export async function indexCodeEmbeddings({
   items,
   sourceId,
 }: {
-  items: Array<{ path: string; content: string }>;
+  items: Array<{ path: string; content: string; startLine?: number; endLine?: number; tokens?: number }>;
   sourceId: string;
 }): Promise<{ documentId: string | null }> {
-  if (!items || items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { documentId: null };
+  }
+
+  const filtered = items.filter(item => typeof item.content === "string" && item.content.trim().length > 0);
+  if (filtered.length === 0) {
     return { documentId: null };
   }
 
   try {
-    const document = (await ragRepo.createDocument(sourceId, `Context bundle ${new Date().toISOString()}`)) as
-      | { id?: string }
-      | null
-      | undefined;
-    const documentId = document?.id;
-    if (!documentId) {
-      return { documentId: null };
-    }
-    let order = 0;
-    const chunks: Array<{ content: string; order: number; metadata?: Record<string, unknown> }> = [];
-    for (const item of items) {
-      if (!item.content) continue;
-      chunks.push({
-        content: `// ${item.path}\n${item.content}`,
-        order: order += 1,
-        metadata: {
-          path: item.path,
-          source: sourceId,
-        },
-      });
-    }
-    if (chunks.length === 0) {
-      return { documentId };
-    }
-    await ragRepo.addChunks(documentId, chunks);
-    return { documentId };
-  } catch {
-    return { documentId: null };
+    const documentId = await ingestCodeFiles(
+      sourceId,
+      filtered.map(item => ({
+        path: item.path,
+        content: item.content,
+        startLine: item.startLine,
+        endLine: item.endLine,
+        tokens: item.tokens,
+      })),
+    );
+    return { documentId: documentId ?? null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "rag_code_ingest_failed";
+    throw new Error(`context_code_index_failed:${message}`);
   }
 }

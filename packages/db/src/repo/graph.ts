@@ -10,6 +10,22 @@ import { memoryNodes, memoryEdges } from "../schema/graph";
 type NodeInsert = typeof memoryNodes.$inferInsert;
 type NodeRow = typeof memoryNodes.$inferSelect;
 type EdgeRow = typeof memoryEdges.$inferSelect;
+type NodeSeed = {
+  resource: string;
+  hash: string;
+  kind: string;
+  label: string;
+  properties?: unknown;
+};
+type EdgeSeed = {
+  resource: string;
+  hash: string;
+  fromId: string;
+  toId: string;
+  kind: string;
+  weight?: number;
+  metadata?: unknown;
+};
 
 function sanitize<T extends Record<string, unknown>>(input: Partial<T>): Partial<T> {
   const next: Record<string, unknown> = {};
@@ -29,8 +45,108 @@ function buildEdgeWhere(
   return kind ? and(eq(field, nodeId), eq(memoryEdges.kind, kind)) : eq(field, nodeId);
 }
 
+function uniqSeeds<T extends { resource: string; hash: string }>(seeds: T[]): T[] {
+  if (seeds.length === 0) {
+    return seeds;
+  }
+  const seen = new Set<string>();
+  const list: T[] = [];
+  for (const seed of seeds) {
+    const key = `${seed.resource}:${seed.hash}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push(seed);
+  }
+  return list;
+}
+
+export async function upsertNodes(seeds: NodeSeed[]): Promise<Map<string, NodeRow>> {
+  const deduped = uniqSeeds(seeds);
+  if (deduped.length === 0) {
+    return new Map();
+  }
+
+  const rows = await db
+    .insert(memoryNodes)
+    .values(
+      deduped.map(seed => ({
+        resource: seed.resource,
+        hash: seed.hash,
+        kind: seed.kind,
+        label: seed.label,
+        properties: seed.properties ?? null,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [memoryNodes.resource, memoryNodes.hash],
+      set: {
+        label: sql`excluded.label`,
+        properties: sql`excluded.properties`,
+        updated: sql`NOW()`,
+      },
+    })
+    .returning();
+
+  const map = new Map<string, NodeRow>();
+  for (const row of rows) {
+    map.set(`${row.resource}:${row.hash}`, row);
+  }
+
+  if (rows.length !== deduped.length) {
+    const filters = deduped.map(seed =>
+      and(eq(memoryNodes.resource, seed.resource), eq(memoryNodes.hash, seed.hash)),
+    );
+    const fetched = await db
+      .select()
+      .from(memoryNodes)
+      .where(filters.length === 1 ? filters[0] : or(...filters));
+    for (const row of fetched) {
+      const key = `${row.resource}:${row.hash}`;
+      if (!map.has(key)) {
+        map.set(key, row);
+      }
+    }
+  }
+
+  return map;
+}
+
+export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
+  const deduped = uniqSeeds(seeds);
+  if (deduped.length === 0) {
+    return [];
+  }
+
+  return db
+    .insert(memoryEdges)
+    .values(
+      deduped.map(seed => ({
+        resource: seed.resource,
+        hash: seed.hash,
+        fromId: seed.fromId,
+        toId: seed.toId,
+        kind: seed.kind,
+        weight: seed.weight ?? 1,
+        metadata: seed.metadata ?? null,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [memoryEdges.resource, memoryEdges.hash],
+      set: {
+        fromId: sql`excluded.from_id`,
+        toId: sql`excluded.to_id`,
+        kind: sql`excluded.kind`,
+        weight: sql`excluded.weight`,
+        metadata: sql`excluded.metadata`,
+      },
+    })
+    .returning();
+}
+
 // Node operations
 export async function createNode(
+  resource: string,
+  hash: string,
   kind: string,
   label: string,
   properties?: unknown,
@@ -38,6 +154,8 @@ export async function createNode(
   const [row] = await db
     .insert(memoryNodes)
     .values({
+      resource,
+      hash,
       kind,
       label,
       properties: properties ?? null,
@@ -106,6 +224,8 @@ export async function findNodesByKind(
 
 // Edge operations
 export async function createEdge(
+  resource: string,
+  hash: string,
   fromId: string,
   toId: string,
   kind: string,
@@ -115,6 +235,8 @@ export async function createEdge(
   const [row] = await db
     .insert(memoryEdges)
     .values({
+      resource,
+      hash,
       fromId,
       toId,
       kind,

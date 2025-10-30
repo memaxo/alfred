@@ -134,6 +134,10 @@ Prometheus metrics are served from `/api/metrics` (content type `text/plain; ver
 
 Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, etc.).
 
+## Known Limitations
+
+- Workflow run resumes require sticky routing today; review `docs/mastra/server/run-registry.md` for the Redis-backed registry roadmap before scaling the API horizontally.
+
 ## Health Checks
 
 - `/healthz` – basic liveness (see `apps/web/src/routes/healthz.ts`)

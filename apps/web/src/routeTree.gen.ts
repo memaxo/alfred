@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DeploymentsRouteImport } from './routes/deployments'
 import { Route as AiRouteImport } from './routes/ai'
+import { Route as DriveRouteImport } from './routes/drive'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
@@ -59,6 +60,11 @@ const DeploymentsRoute = DeploymentsRouteImport.update({
 const AiRoute = AiRouteImport.update({
   id: '/ai',
   path: '/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriveRoute = DriveRouteImport.update({
+  id: '/drive',
+  path: '/drive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -110,6 +116,7 @@ const ApiJwksRoute = ApiJwksRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
+  '/drive': typeof DriveRoute
   '/dashboard': typeof DashboardRoute
   '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
+  '/drive': typeof DriveRoute
   '/dashboard': typeof DashboardRoute
   '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
+  '/drive': typeof DriveRoute
   '/dashboard': typeof DashboardRoute
   '/deployments': typeof DeploymentsRoute
   '/login': typeof LoginRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ai'
+    | '/drive'
     | '/dashboard'
     | '/deployments'
     | '/login'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ai'
+    | '/drive'
     | '/dashboard'
     | '/deployments'
     | '/login'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ai'
+    | '/drive'
     | '/dashboard'
     | '/deployments'
     | '/login'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
+  DriveRoute: typeof DriveRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NoteRoute: typeof NoteRoute
@@ -350,6 +363,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
+  DriveRoute: DriveRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NoteRoute: NoteRoute,

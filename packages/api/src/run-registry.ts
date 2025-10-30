@@ -20,6 +20,8 @@ export interface RunRegistry {
 export class MemoryRunRegistry implements RunRegistry {
   private readonly runs = new Map<string, RunHandle>();
 
+  // TODO(run-registry): Promote to Redis-backed registry for multi-instance support.
+  // Refer to docs/mastra/server/run-registry.md for design notes.
   register(runId: string, handle: RunHandle) {
     this.runs.set(runId, handle);
   }

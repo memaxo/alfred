@@ -64,9 +64,23 @@ function ChatInner({ messages, onSend, onVoice, placeholder, className }: ChatPr
 
 // Memoize for performance: pure component with stable props
 export const Chat = memo(ChatInner, (prev, next) => {
-  return (
-    prev.messages.length === next.messages.length &&
-    prev.messages.every((msg, i) => msg.id === next.messages[i]?.id)
-  );
+  if (prev.messages.length !== next.messages.length) {
+    return false;
+  }
+  for (let index = 0; index < prev.messages.length; index += 1) {
+    const prevMsg = prev.messages[index];
+    const nextMsg = next.messages[index];
+    if (!nextMsg) {
+      return false;
+    }
+    if (
+      prevMsg.id !== nextMsg.id ||
+      prevMsg.content !== nextMsg.content ||
+      prevMsg.role !== nextMsg.role ||
+      prevMsg.timestamp.getTime() !== nextMsg.timestamp.getTime()
+    ) {
+      return false;
+    }
+  }
+  return true;
 });
-

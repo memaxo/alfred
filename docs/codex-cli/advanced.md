@@ -5,6 +5,7 @@ If you already lean on Codex every day and just need a little more control, this
 ## Config quickstart {#config-quickstart}
 
 Most day-to-day tuning lives in `config.toml`: set approval + sandbox presets, pin model defaults, and add MCP server launchers. The [Config guide](./config.md) walks through every option and provides copy-paste examples for common setups.
+For ready-made MCP-focused presets, see the [Profiles](./profiles.md) guide.
 
 ## Tracing / verbose logging {#tracing-verbose-logging}
 

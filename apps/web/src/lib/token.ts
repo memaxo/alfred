@@ -24,6 +24,12 @@ function assertScopes(scopes: string[]) {
 }
 
 type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+type AutoLevel = "read" | "low" | "medium" | "high";
+
+type ToolTokenOptions = {
+	forceElevated?: boolean;
+	ttlSec?: number;
+};
 
 function getTokenClient() {
 	const tokenRouter = (trpc as unknown as Record<string, unknown>).token;
@@ -43,15 +49,15 @@ function getTokenClient() {
 	};
 }
 
-export async function getToolToken(
-	scopes: string[],
-	auto: "read" | "low" | "medium" | "high",
-) {
+export async function getToolToken(scopes: string[], auto: AutoLevel, options?: ToolTokenOptions) {
 	assertScopes(scopes);
 
 	const tokenClient = getTokenClient();
+	const forceElevated = Boolean(options?.forceElevated);
+	const ttlSec = options?.ttlSec;
+	const requiresElevation = forceElevated || auto === "medium" || auto === "high";
 
-	if (auto === "medium" || auto === "high") {
+	if (requiresElevation) {
 		try {
 			const maybePasskey =
 				typeof authClient.signIn === "object" && authClient.signIn !== null
@@ -63,11 +69,13 @@ export async function getToolToken(
 		} catch (error) {
 			throw new Error(error instanceof Error ? error.message : "passkey_failed");
 		}
-		const { token } = await tokenClient.elevate.mutate({ scopes });
+		const payload: RouterInputs["token"]["elevate"] = ttlSec ? { scopes, ttlSec } : { scopes };
+		const { token } = await tokenClient.elevate.mutate(payload);
 		return token;
 	}
 
-	const { token } = await tokenClient.issue.mutate({ scopes });
+	const issuePayload: RouterInputs["token"]["issue"] = ttlSec ? { scopes, ttlSec } : { scopes };
+	const { token } = await tokenClient.issue.mutate(issuePayload);
 	return token;
 }
 
@@ -75,5 +83,5 @@ export async function getToolToken(
  * Backwards-compatible helper used in dev tools to mint elevated tokens.
  */
 export async function getElevatedToolToken(scopes: string[]) {
-	return getToolToken(scopes, "medium");
+	return getToolToken(scopes, "medium", { forceElevated: true });
 }

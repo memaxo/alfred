@@ -77,44 +77,220 @@ export const droidArtifactSchema = z.object({
 
 export type DroidArtifact = z.infer<typeof droidArtifactSchema>;
 
-export type SearchReceiptItem = {
-  id: string;
-  kind: "code" | "web";
-  path?: string;
-  url?: string;
-  title?: string;
-  score: number;
-  reason?: string;
-  snippet?: string;
-  bytes?: number;
-  tokens?: number;
-  publishedDate?: string;
-  image?: string;
-  favicon?: string;
-};
+export const searchReceiptItemSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["code", "web"]),
+  path: z.string().optional(),
+  url: z.string().optional(),
+  title: z.string().optional(),
+  score: z.number(),
+  reason: z.string().optional(),
+  snippet: z.string().optional(),
+  bytes: z.number().optional(),
+  tokens: z.number().optional(),
+  publishedDate: z.string().optional(),
+  image: z.string().optional(),
+  favicon: z.string().optional(),
+});
 
-export type SearchReceipt = {
-  code: SearchReceiptItem[];
-  web?: SearchReceiptItem[];
-  created: Date;
-  summary?: string;
-};
+export type SearchReceiptItem = z.infer<typeof searchReceiptItemSchema>;
 
-export type ContextFileSlice = {
-  path: string;
-  startLine: number;
-  endLine: number;
-  tokens: number;
-  content: string;
-};
+export const searchReceiptSchema = z.object({
+  code: z.array(searchReceiptItemSchema),
+  web: z.array(searchReceiptItemSchema).optional(),
+  created: z.date(),
+  summary: z.string().optional(),
+});
 
-export type ContextBundle = {
-  maxTokens: number;
-  estimatedTokens: number;
-  files: ContextFileSlice[];
-  links?: Array<{ url: string; title?: string; score?: number }>;
-  note?: string;
-};
+export type SearchReceipt = z.infer<typeof searchReceiptSchema>;
+
+export const contextFileSliceSchema = z.object({
+  path: z.string(),
+  startLine: z.number(),
+  endLine: z.number(),
+  tokens: z.number(),
+  content: z.string(),
+});
+
+export type ContextFileSlice = z.infer<typeof contextFileSliceSchema>;
+
+export const contextBundleSchema = z.object({
+  maxTokens: z.number(),
+  estimatedTokens: z.number(),
+  files: z.array(contextFileSliceSchema),
+  links: z
+    .array(
+      z.object({
+        url: z.string(),
+        title: z.string().optional(),
+        score: z.number().optional(),
+      }),
+    )
+    .optional(),
+  note: z.string().optional(),
+});
+
+export type ContextBundle = z.infer<typeof contextBundleSchema>;
+
+export const planReportFindingSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  detail: z.string().optional(),
+  severity: z.enum(["info", "low", "medium", "high", "critical"]),
+  status: z.enum(["open", "resolved", "deferred"]),
+  module: z.string().optional(),
+  taskId: z.string().optional(),
+});
+
+export type PlanReportFinding = z.infer<typeof planReportFindingSchema>;
+
+export const planReportRiskSchema = z.object({
+  id: z.string(),
+  detail: z.string(),
+  impact: z.enum(["low", "medium", "high"]),
+  likelihood: z.enum(["low", "medium", "high"]),
+  mitigation: z.string().optional(),
+  module: z.string().optional(),
+  taskId: z.string().optional(),
+});
+
+export type PlanReportRisk = z.infer<typeof planReportRiskSchema>;
+
+export const planReportChecklistItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  status: z.enum(["pending", "done", "skipped"]),
+  module: z.string().optional(),
+  taskId: z.string().optional(),
+});
+
+export type PlanReportChecklistItem = z.infer<typeof planReportChecklistItemSchema>;
+
+export const planReportModuleSchema = z.object({
+  id: z.string(),
+  path: z.string(),
+  status: z.enum(["pending", "in_progress", "completed", "failed"]),
+  summary: z.string().optional(),
+});
+
+export type PlanReportModule = z.infer<typeof planReportModuleSchema>;
+
+export const planReportRunSchema = z.object({
+  id: z.string(),
+  workflowId: z.string(),
+  resourceId: z.string().optional(),
+  url: z.string().url().optional(),
+});
+
+export type PlanReportRun = z.infer<typeof planReportRunSchema>;
+
+export const planReportContextSchema = z.object({
+  receipts: searchReceiptSchema.or(z.unknown()).optional(),
+  bundle: contextBundleSchema.optional(),
+});
+
+export type PlanReportContext = z.infer<typeof planReportContextSchema>;
+
+export const planReportSchema = z.object({
+  id: z.string(),
+  planId: z.string(),
+  createdAt: z.string(),
+  summary: z.string(),
+  findings: z.array(planReportFindingSchema),
+  risks: z.array(planReportRiskSchema),
+  modules: z.array(planReportModuleSchema),
+  checklist: z.array(planReportChecklistItemSchema),
+  outcome: z.object({
+    completed: z.number().min(0),
+    failed: z.number().min(0),
+    total: z.number().min(0),
+  }),
+  context: planReportContextSchema.optional(),
+  run: planReportRunSchema.optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type PlanReport = z.infer<typeof planReportSchema>;
+
+export const codexReportFindingSchema = z.object({
+  id: z.string().min(1),
+  summary: z.string().min(1),
+  detail: z.string().optional(),
+  impact: z.enum(["low", "medium", "high"]).optional(),
+  scope: z.string().optional(),
+});
+
+export const codexReportRiskSchema = z.object({
+  id: z.string().min(1),
+  summary: z.string().min(1),
+  mitigation: z.string().optional(),
+  likelihood: z.enum(["low", "medium", "high"]).optional(),
+  impact: z.enum(["low", "medium", "high"]).optional(),
+});
+
+export const codexReportHotspotSchema = z.object({
+  id: z.string().min(1),
+  path: z.string().min(1),
+  reason: z.string().min(1),
+  score: z.number().min(0).max(1).optional(),
+});
+
+export const codexReportTimeBreakdownSchema = z.object({
+  phase: z.string().min(1),
+  hours: z.number().min(0),
+});
+
+export const codexReportTimeSchema = z.object({
+  estimateHours: z.number().min(0),
+  confidence: z.enum(["low", "medium", "high"]).optional(),
+  breakdown: z.array(codexReportTimeBreakdownSchema).default([]),
+  updated: z.string().datetime().optional(),
+});
+
+export const codexReportSchema = z.object({
+  findings: z.array(codexReportFindingSchema).default([]),
+  risks: z.array(codexReportRiskSchema).default([]),
+  hotspots: z.array(codexReportHotspotSchema).default([]),
+  time: codexReportTimeSchema,
+});
+
+export type CodexReport = z.infer<typeof codexReportSchema>;
+
+export const codexPlanTaskSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  summary: z.string().min(1),
+  owner: z.string().optional(),
+  estimateHours: z.number().min(0).optional(),
+  kind: z.enum(["analysis", "implementation", "validation", "followup"]).optional(),
+  dependencies: z.array(z.string().min(1)).default([]),
+  deliverables: z.array(z.string().min(1)).default([]),
+});
+
+export const codexPlanAcceptanceSchema = z.object({
+  id: z.string().min(1),
+  description: z.string().min(1),
+  type: z.enum(["test", "review", "analysis", "deployment"]).optional(),
+  owner: z.string().optional(),
+});
+
+export const codexPlanBranchStrategySchema = z.object({
+  base: z.string().min(1),
+  feature: z.string().min(1),
+  review: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const codexPlanDepsSchema = z.array(z.tuple([z.string().min(1), z.string().min(1)])).default([]);
+
+export const codexPlanSchema = z.object({
+  tasks: z.array(codexPlanTaskSchema).default([]),
+  deps: codexPlanDepsSchema,
+  acceptanceChecks: z.array(codexPlanAcceptanceSchema).default([]),
+  branchStrategy: codexPlanBranchStrategySchema,
+});
+
+export type CodexPlanArtifact = z.infer<typeof codexPlanSchema>;
 
 export type WorkflowEvent =
   | { type: "progress"; pct?: number; message?: string }

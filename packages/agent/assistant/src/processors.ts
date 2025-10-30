@@ -1,7 +1,8 @@
 import { Hypergraph } from "@alfred/knowledge";
-import { extract, toKnowledge } from "@alfred/knowledge/extractor";
+import { extract, toKnowledge, type KnowledgeEntry } from "@alfred/knowledge/extractor";
 import { MemoryProcessor, type MemoryProcessorOpts } from "@mastra/core/memory";
 import { recordMemoryUpdate } from "../../src/metrics";
+import { persistKnowledge } from "./graphstore";
 
 type Message = {
   id?: string;
@@ -93,6 +94,7 @@ export class ToolDigestMemoryProcessor extends MemoryProcessor {
     const resourceId = resolveResource(opts);
     const graph = getGraph(resourceId);
     const seen = getProcessedSet(resourceId);
+    const pending = new Map<string, KnowledgeEntry>();
 
     for (const entry of messages as Message[]) {
       if (!entry || (entry.role !== "user" && entry.role !== "assistant")) continue;
@@ -104,11 +106,16 @@ export class ToolDigestMemoryProcessor extends MemoryProcessor {
       seen.add(key);
 
       const extraction = extract(text, entry.role);
-      const nodes = toKnowledge(extraction, graph);
+      const nodes = toKnowledge(extraction);
       for (const node of nodes) {
-        graph.add(node);
+        graph.add(node.data);
+        pending.set(node.hash, node);
         recordMemoryUpdate("knowledge", entry.role ?? "unknown");
       }
+    }
+
+    if (pending.size > 0) {
+      void persistKnowledge(resourceId, Array.from(pending.values()));
     }
 
     return messages;

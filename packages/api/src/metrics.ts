@@ -224,6 +224,104 @@ export const memoryForgetsTotal = new client.Counter({
 
 registerMemoryForgetsCounter(memoryForgetsTotal);
 
+export const voiceSttTotal = new client.Counter({
+  name: "voice_stt_total",
+  help: "Count of voice STT invocations grouped by provider and status.",
+  labelNames: ["provider", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceSttDurationSeconds = new client.Histogram({
+  name: "voice_stt_duration_seconds",
+  help: "Duration of voice STT inference in seconds grouped by provider.",
+  labelNames: ["provider"] as const,
+  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+  registers: [metricsRegistry],
+});
+
+export const voiceTtsTotal = new client.Counter({
+  name: "voice_tts_total",
+  help: "Count of voice TTS invocations grouped by provider and status.",
+  labelNames: ["provider", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceTtsDurationSeconds = new client.Histogram({
+  name: "voice_tts_duration_seconds",
+  help: "Duration of voice TTS synthesis in seconds grouped by provider.",
+  labelNames: ["provider"] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metricsRegistry],
+});
+
+export type VoiceMetricStatus = "ok" | "error" | "cancel";
+
+const coerceProvider = (provider?: string) => (provider && provider.length > 0 ? provider : "unknown");
+
+const observeDuration = (histogram: client.Histogram, provider: string, durationSeconds?: number) => {
+  if (typeof durationSeconds !== "number") return;
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) return;
+  histogram.observe({ provider }, durationSeconds);
+};
+
+export function recordVoiceStt({
+  provider,
+  status,
+  durationSeconds,
+}: {
+  provider?: string;
+  status: VoiceMetricStatus;
+  durationSeconds?: number;
+}) {
+  const normalizedProvider = coerceProvider(provider);
+  voiceSttTotal.inc({ provider: normalizedProvider, status });
+  observeDuration(voiceSttDurationSeconds, normalizedProvider, durationSeconds);
+}
+
+export function recordVoiceTts({
+  provider,
+  status,
+  durationSeconds,
+}: {
+  provider?: string;
+  status: VoiceMetricStatus;
+  durationSeconds?: number;
+}) {
+  const normalizedProvider = coerceProvider(provider);
+  voiceTtsTotal.inc({ provider: normalizedProvider, status });
+  observeDuration(voiceTtsDurationSeconds, normalizedProvider, durationSeconds);
+}
+
+export const assistantStreamEventsTotal = new client.Counter({
+  name: "assistant_stream_events_total",
+  help: "Count of assistant stream events grouped by event type.",
+  labelNames: ["event"] as const,
+  registers: [metricsRegistry],
+});
+
+export const assistantStreamDurationSeconds = new client.Histogram({
+  name: "assistant_stream_duration_seconds",
+  help: "Duration of assistant streams in seconds grouped by terminal status.",
+  labelNames: ["status"] as const,
+  buckets: [0.25, 0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [metricsRegistry],
+});
+
+export const workflowStreamEventsTotal = new client.Counter({
+  name: "workflow_stream_events_total",
+  help: "Count of workflow stream events grouped by event type.",
+  labelNames: ["event"] as const,
+  registers: [metricsRegistry],
+});
+
+export const workflowStreamDurationSeconds = new client.Histogram({
+  name: "workflow_stream_duration_seconds",
+  help: "Duration of workflow streams in seconds grouped by terminal status.",
+  labelNames: ["status"] as const,
+  buckets: [0.25, 0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [metricsRegistry],
+});
+
 registerPolicyCacheObserver(result => {
   try {
     pdpCacheHitsTotal.inc({ result });

@@ -8,6 +8,7 @@ import { authedProcedure, router } from "../index";
 import { requirePolicy } from "../gate";
 import { MemoryRunRegistry } from "../run-registry";
 import { cloneRuntimeContext } from "../context";
+import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -17,6 +18,7 @@ const workflowInput = z.object({
   mode: z.enum(["sequential", "parallel"]).default("sequential"),
   workspace: z.string().optional(),
   repoBase: z.string().optional(),
+  profile: z.string().min(1).optional(),
   authzDeploy: z.string().optional(),
   authzLinear: z.string().optional(),
   preview: z
@@ -197,9 +199,9 @@ function toTRPCError(error: unknown): TRPCError {
   });
 }
 
-// NOTE: This in-memory registry assumes a single API process. In multi-instance deployments
-// resume requests must be routed to the original instance or replaced with a shared store.
-const runRegistry = new MemoryRunRegistry(); // Swap with a shared registry (e.g., Redis) for multi-instance deployments.
+// NOTE: MemoryRunRegistry only works when resumes hit the same instance.
+// TODO(run-registry): Swap with Redis registry per docs/mastra/server/run-registry.md.
+const runRegistry = new MemoryRunRegistry(); // Multi-instance deployments require sticky routing today.
 
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
@@ -238,6 +240,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
         if (input.repoBase) {
           runtimeExtras.push(["workflowRepoBase", input.repoBase]);
         }
+        if (input.profile) {
+          runtimeExtras.push(["workflowCodexProfile", input.profile]);
+        }
         if (input.context?.enable !== undefined) {
           runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
         }
@@ -260,6 +265,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const results = (output as { results?: unknown[] })?.results ?? [];
         const plan = (output as { plan?: unknown })?.plan ?? null;
         const vcs = (output as { vcs?: unknown })?.vcs ?? null;
+        const report = (output as { report?: unknown })?.report ?? null;
+        const planArtifact = (output as { planArtifact?: unknown })?.planArtifact ?? null;
         const ticketId = (output as { ticketId?: string })?.ticketId ?? null;
         const ticketUrl = (output as { ticketUrl?: string })?.ticketUrl ?? null;
 
@@ -269,6 +276,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
           results,
           plan,
           vcs,
+          report,
+          planArtifact,
           ticketId,
           ticketUrl,
         };
@@ -291,10 +300,22 @@ export const workflowRouter: ReturnType<typeof router> = router({
               runId: string;
             }
           | null = null;
+        const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
+        let timerClosed = false;
+        const closeTimer = (status: "ok" | "error" | "cancel") => {
+          if (timerClosed) return;
+          stopStreamTimer({ status });
+          timerClosed = true;
+        };
+        const recordEvent = (event: "run" | "progress" | "chunk" | "complete" | "error" | "cancel") => {
+          workflowStreamEventsTotal.inc({ event });
+        };
 
         (async () => {
           const workflow = mastra.getWorkflow?.("plan") ?? null;
           if (!workflow) {
+            recordEvent("error");
+            closeTimer("error");
             emit.error(
               new TRPCError({
                 code: "NOT_FOUND",
@@ -306,6 +327,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
           const session = ctx.session;
           if (!session) {
+            recordEvent("error");
+            closeTimer("error");
             emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
             return;
           }
@@ -326,6 +349,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
           }
           if (input.repoBase) {
             runtimeExtras.push(["workflowRepoBase", input.repoBase]);
+          }
+          if (input.profile) {
+            runtimeExtras.push(["workflowCodexProfile", input.profile]);
           }
           if (input.context?.enable !== undefined) {
             runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
@@ -357,6 +383,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             cancel,
             abortController: workflowRun.abortController,
           });
+          recordEvent("run");
           emit.next({ type: "run", id: runId } as unknown as WorkflowEvent);
 
           const stream = await workflowRun.streamVNext({
@@ -367,13 +394,19 @@ export const workflowRouter: ReturnType<typeof router> = router({
           try {
             for await (const chunk of stream) {
               if (cancelled) break;
+              recordEvent("chunk");
               emit.next(chunk as unknown as WorkflowEvent);
             }
             if (!cancelled) {
+              recordEvent("progress");
               emit.next({ type: "progress", pct: 100, message: "workflow_completed" });
+              recordEvent("complete");
+              closeTimer("ok");
               emit.complete();
             }
           } catch (error) {
+            recordEvent("error");
+            closeTimer("error");
             emit.error(toTRPCError(error));
           } finally {
             if (runMeta) {
@@ -390,6 +423,10 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
             runMeta.run.abortController.abort();
             runRegistry.unregister(runMeta.runId);
+          }
+          if (!timerClosed) {
+            recordEvent("cancel");
+            closeTimer("cancel");
           }
         };
       }),

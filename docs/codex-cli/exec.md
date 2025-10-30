@@ -87,6 +87,33 @@ Combine `--output-schema` with `-o` to only print the final JSON output. You can
 
 Codex requires a Git repository to avoid destructive changes. To disable this check, use `codex exec --skip-git-repo-check`.
 
+### ALFRED planner contract
+
+When the ALFRED orchestrator uses `codex exec` to prepare a plan, it expects a strict JSON payload containing `report` and `plan` objects:
+
+```json
+{
+  "report": {
+    "findings": [],
+    "risks": [],
+    "hotspots": [],
+    "time": { "estimateHours": 0, "confidence": "low", "breakdown": [] }
+  },
+  "plan": {
+    "tasks": [],
+    "deps": [],
+    "acceptanceChecks": [],
+    "branchStrategy": { "base": "origin/main", "feature": "feature/plan-id", "review": "", "notes": "" }
+  }
+}
+```
+
+- Populate each array with concrete, domain-specific entries; leave it empty only when no information is available.
+- Use fractional hours for estimates when needed and keep identifiers short (for example, `F1`, `T1`, `AC1`).
+- The CLI enforces sandbox and approval flags (`--sandbox`, `--ask-for-approval`) based on the requested autonomy band, so profiles should avoid hardcoding these values.
+
+Codex profiles can provide reusable prompt templates for this contract, letting the orchestrator select the right behaviour via `--profile` or the `CODEX_PROFILE` environment variable.
+
 ### Resuming non-interactive sessions
 
 Resume a previous non-interactive session with `codex exec resume <SESSION_ID>` or `codex exec resume --last`. This preserves conversation context so you can ask follow-up questions or give new tasks to the agent.
