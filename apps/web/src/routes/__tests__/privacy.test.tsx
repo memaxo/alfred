@@ -1,6 +1,5 @@
 import "@/test/dom";
 import { beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { act } from "react";
 import type { PrivacyFactDeleteInput } from "@alfred/type";
 
 const toastSuccess = vi.fn();
@@ -16,12 +15,14 @@ mock.module("sonner", () => ({
 let render: typeof import("@testing-library/react").render;
 let fireEvent: typeof import("@testing-library/react")["fireEvent"];
 let screen: typeof import("@testing-library/react").screen;
+let waitFor: typeof import("@testing-library/react").waitFor;
 
 beforeAll(async () => {
   const rtl = await import("@testing-library/react");
   render = rtl.render;
   fireEvent = rtl.fireEvent;
   screen = rtl.screen;
+  waitFor = rtl.waitFor;
 });
 
 const factsSetData = vi.fn();
@@ -157,10 +158,8 @@ describe("Privacy route", () => {
 
     expect(screen.getByText("User prefers email updates.")).toBeDefined();
 
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
+    await waitFor(() => expect(factsSetData).toHaveBeenCalled());
 
     expect(deleteSpy).toHaveBeenCalledWith({ id: "fact-1" });
     expect(factsSetData).toHaveBeenCalled();

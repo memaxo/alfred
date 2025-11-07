@@ -1,6 +1,5 @@
 import "@/test/dom";
 import { beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { act } from "react";
 import type { PreferenceDeleteInput, PreferenceSetInput } from "@alfred/type";
 
 const toastSuccess = vi.fn();
@@ -16,12 +15,14 @@ mock.module("sonner", () => ({
 let render: typeof import("@testing-library/react").render;
 let fireEvent: typeof import("@testing-library/react")["fireEvent"];
 let screen: typeof import("@testing-library/react").screen;
+let waitFor: typeof import("@testing-library/react").waitFor;
 
 beforeAll(async () => {
   const rtl = await import("@testing-library/react");
   render = rtl.render;
   fireEvent = rtl.fireEvent;
   screen = rtl.screen;
+  waitFor = rtl.waitFor;
 });
 
 const listSetData = vi.fn();
@@ -140,10 +141,8 @@ describe("Preferences route", () => {
       target: { value: "0.85" },
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /save preference/i }));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    fireEvent.click(screen.getByRole("button", { name: /save preference/i }));
+    await waitFor(() => expect(listSetData).toHaveBeenCalled());
 
     expect(setMutate).toHaveBeenCalledWith({
       key: "notifications",
@@ -162,11 +161,8 @@ describe("Preferences route", () => {
 
     render(<Component />);
 
-    await act(async () => {
-      const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-      fireEvent.click(deleteButtons[0]);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
+    await waitFor(() => expect(listSetData).toHaveBeenCalled());
 
     expect(deleteMutate).toHaveBeenCalledWith({ key: "theme" });
     expect(listSetData).toHaveBeenCalled();

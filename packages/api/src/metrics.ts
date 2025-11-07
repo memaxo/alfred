@@ -65,6 +65,21 @@ export const policyObligationsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const runRegistryEventsTotal = new client.Counter({
+  name: "run_registry_events_total",
+  help: "Count of run registry events grouped by event, backend, and outcome.",
+  labelNames: ["event", "backend", "outcome"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runRegistryDispatchDurationSeconds = new client.Histogram({
+  name: "run_registry_dispatch_duration_seconds",
+  help: "Duration of run registry dispatch operations grouped by backend and outcome.",
+  labelNames: ["backend", "outcome"] as const,
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  registers: [metricsRegistry],
+});
+
 export const pdpCacheHitsTotal = new client.Counter({
   name: "pdp_cache_hits_total",
   help: "Count of policy cache hits and misses.",

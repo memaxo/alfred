@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
 import type { Response } from "undici";
 import { TRPCError } from "@trpc/server";
+import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { authedProcedure, router } from "../index";
 import { requirePolicy } from "../gate";
@@ -26,6 +27,12 @@ const ttsInput = z.object({
   format: z.enum(["mp3", "opus", "wav"]).default("mp3"),
   model: z.string().min(1).default(DEFAULT_TTS_MODEL),
 });
+
+const voiceStreamInput = z
+  .object({
+    mode: z.enum(["clip", "stream"]).default("stream"),
+  })
+  .partial();
 
 type SttInput = z.infer<typeof sttInput>;
 type TtsInput = z.infer<typeof ttsInput>;
@@ -262,4 +269,14 @@ export const voiceRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("voice.tts", toTtsResource))
     .input(ttsInput)
     .mutation(async ({ input }) => postSynthesis(input)),
+
+  stream: authedProcedure
+    .input(voiceStreamInput.optional())
+    .subscription(() =>
+      observable<{ type: "noop" }>((emit) => {
+        emit.next({ type: "noop" });
+        emit.complete();
+        return () => undefined;
+      }),
+    ),
 });

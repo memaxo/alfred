@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { authedProcedure, router } from "../index";
 import { requirePolicy } from "../gate";
-import { MemoryRunRegistry } from "../run-registry";
+import { runRegistry } from "../run-registry";
 import { cloneRuntimeContext } from "../context";
 import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
 
@@ -199,10 +199,6 @@ function toTRPCError(error: unknown): TRPCError {
   });
 }
 
-// NOTE: MemoryRunRegistry only works when resumes hit the same instance.
-// TODO(run-registry): Swap with Redis registry per docs/mastra/server/run-registry.md.
-const runRegistry = new MemoryRunRegistry(); // Multi-instance deployments require sticky routing today.
-
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
     .use(
@@ -373,7 +369,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
               message: "workflow_resume_unsupported",
             });
           }
-          runRegistry.register(runId, {
+          await runRegistry.register(runId, {
             resume: async args => {
               await resume({
                 ...args,
@@ -410,7 +406,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             emit.error(toTRPCError(error));
           } finally {
             if (runMeta) {
-              runRegistry.unregister(runMeta.runId);
+              await runRegistry.unregister(runMeta.runId);
             }
           }
         })().catch(error => emit.error(toTRPCError(error)));
@@ -422,7 +418,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
               // best-effort cleanup; ignore further errors during teardown
             });
             runMeta.run.abortController.abort();
-            runRegistry.unregister(runMeta.runId);
+            void runRegistry.unregister(runMeta.runId);
           }
           if (!timerClosed) {
             recordEvent("cancel");

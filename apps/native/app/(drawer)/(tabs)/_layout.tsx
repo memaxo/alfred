@@ -41,6 +41,13 @@ export default function TabLayout() {
 					),
 				}}
 			/>
+			<Tabs.Screen
+				name="drive"
+				options={{
+					title: "Drive",
+					tabBarIcon: ({ color }) => <TabBarIcon name="car" color={color} />,
+				}}
+			/>
 		</Tabs>
 	);
 }

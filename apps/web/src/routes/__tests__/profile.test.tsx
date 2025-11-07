@@ -15,12 +15,14 @@ mock.module("sonner", () => ({
 let render: typeof import("@testing-library/react").render;
 let fireEvent: typeof import("@testing-library/react")["fireEvent"];
 let screen: typeof import("@testing-library/react").screen;
+let waitFor: typeof import("@testing-library/react").waitFor;
 
 beforeAll(async () => {
   const rtl = await import("@testing-library/react");
   render = rtl.render;
   fireEvent = rtl.fireEvent;
   screen = rtl.screen;
+  waitFor = rtl.waitFor;
 });
 
 const setData = vi.fn();
@@ -131,7 +133,7 @@ describe("Profile route", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitFor(() => expect(setData).toHaveBeenCalled());
 
     expect(cancel).toHaveBeenCalled();
     expect(mutateSpy).toHaveBeenCalledWith({

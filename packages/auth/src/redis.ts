@@ -1,10 +1,9 @@
-import type { RedisClientType } from "redis";
-import { createClient } from "redis";
+import { redis as defaultRedis, RedisClient } from "bun";
 
-let client: RedisClientType | null = null;
+let client: RedisClient | null = null;
 let status: "init" | "ok" | "err" = "init";
 
-export function getRedis(): RedisClientType | null {
+export function getRedis(): RedisClient | null {
   const url = process.env.REDIS_URL;
   if (!url || url === "false") {
     return null;
@@ -19,11 +18,13 @@ export function getRedis(): RedisClientType | null {
   }
 
   try {
-    client = createClient({ url });
-    client.on("error", () => {
+    client = url ? new RedisClient(url) : defaultRedis;
+    client.onclose = () => {
       status = "err";
-    });
-    // fire-and-forget connect; consumers can still get the client immediately
+    };
+    client.onconnect = () => {
+      status = "ok";
+    };
     void client.connect().then(
       () => {
         status = "ok";

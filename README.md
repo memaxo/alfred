@@ -48,6 +48,7 @@ Important keys:
 - `OPENAI_API_KEY` – Required for Mastra LLM-backed scorers
 - `EVALS_SAMPLING_RATE` – Fraction of live agent runs sampled for scoring (default `0.1`)
 - `LMNR_PROJECT_API_KEY` (+ `EVAL_LAMINAR_EXPORT=1`) – Enables Laminar dual-write for evals
+- `RUN_REGISTRY_BACKEND` – Defaults to `memory`; set to `redis` (with `REDIS_URL`) to enable the multi-instance run registry per `docs/mastra/server/run-registry.md`
 
 Each package can also read a local `.env` inside its directory when executed stand-alone.
 
@@ -136,7 +137,7 @@ Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, e
 
 ## Known Limitations
 
-- Workflow run resumes require sticky routing today; review `docs/mastra/server/run-registry.md` for the Redis-backed registry roadmap before scaling the API horizontally.
+- Workflow run resumes require sticky routing unless `RUN_REGISTRY_BACKEND=redis` is configured alongside `REDIS_URL`; review `docs/mastra/server/run-registry.md` for deployment guidance before scaling the API horizontally.
 
 ## Health Checks
 

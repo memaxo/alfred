@@ -33,3 +33,9 @@ export function measure(startLabel: string, endLabel?: string): number {
   const diff = end - start;
   return Number(diff) / 1_000_000;
 }
+
+export type VoiceMetricLabel = "fast_capture_start" | "fast_stream_flush";
+
+export function markVoice(label: VoiceMetricLabel): void {
+  mark(label);
+}

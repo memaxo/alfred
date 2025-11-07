@@ -6,6 +6,8 @@
     { "path": "packages/auth" },
     { "path": "packages/db" },
     { "path": "packages/agent" },
-    { "path": "packages/api" }
+    { "path": "packages/api" },
+    { "path": "packages/voice" },
+    { "path": "packages/metrics" }
   ]
 }

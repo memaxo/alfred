@@ -1,0 +1,17 @@
+{
+  "name": "@alfred/voice",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./session": "./src/session.ts",
+    "./audio": "./src/audio/index.ts",
+    "./transport": "./src/transport/trpc.ts",
+    "./adapters/native": "./src/adapters/native.ts",
+    "./adapters/web": "./src/adapters/web.ts",
+    "./types": "./src/types.ts"
+  },
+  "peerDependencies": {
+    "@alfred/type": "workspace:*",
+    "@trpc/client": "^11.6.0"
+  }
+}

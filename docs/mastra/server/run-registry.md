@@ -65,6 +65,7 @@ When a run starts:
 2. Add process-level heartbeat management and graceful shutdown cleanup for active runs.
 3. Extend the resume/cancel mutations to publish and await acknowledgements for cross-instance deliveries.
 4. Update observability: expose metrics for `run_registry_active`, `run_registry_misses_total`, and `run_registry_redis_latency_seconds`.
-5. Document deployment requirements: Redis with keyspace notifications enabled for the subscribed channels, plus recommended TTL values.
+5. Use Bun’s native Redis client (`import { redis, RedisClient } from "bun"`) for low-latency pub/sub inside the API runtime.
+6. Document deployment requirements: Redis with keyspace notifications enabled for the subscribed channels, plus recommended TTL values.
 
 Until the Redis registry lands, operate the workflow API in a single-instance configuration (or ensure sticky routing) to avoid dropped resumes.

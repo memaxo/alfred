@@ -58,7 +58,7 @@ Apply `concurrency: { group: main-${{ github.ref }}, cancel-in-progress: true }`
 - Grant `docs` and `tests` lanes bypass permission by marking their checks as optional for the queue while keeping them required for the PR itself.
 
 ## Turbo Pipeline Updates
-- Add a `ci` task alias in `package.json`: `"ci": "turbo run typecheck test --filter=...[changed]"` for local parity.
+- Add a `ci` task alias in `package.json`: `"ci": "turbo run typecheck test"` for local parity.
 - Ensure `turbo.json` lists `typecheck` and `test` tasks with explicit `inputs` and `outputs` so caching stays effective during merge queues.
 
 ## Follow-Up Tasks
