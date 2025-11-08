@@ -1,7 +1,7 @@
 /**
  * Cohere rerank integration for RAG
  * Optional reranking step to improve retrieval quality
- * 
+ *
  * TODO: Migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support
  */
 
@@ -22,8 +22,8 @@ export type RerankResult = {
 /**
  * Reranks documents using Cohere API.
  * Gated by COHERE_API_KEY env var - returns original order if not configured.
- * 
- * Note: Currently uses manual API calls. Will migrate to AI SDK v6 rerank() 
+ *
+ * Note: Currently uses manual API calls. Will migrate to AI SDK v6 rerank()
  * when @ai-sdk/cohere adds rerankingModel() support.
  */
 export async function rerank({
@@ -44,7 +44,7 @@ export async function rerank({
   }
 
   const baseUrl = process.env.COHERE_BASE_URL ?? "https://api.cohere.ai";
-  
+
   try {
     const response = await fetch(`${baseUrl}/v1/rerank`, {
       method: "POST",
@@ -55,19 +55,25 @@ export async function rerank({
       body: JSON.stringify({
         model,
         query,
-        documents: documents.map(doc => doc.text),
+        documents: documents.map((doc) => doc.text),
         top_n: topN,
         return_documents: false,
       }),
     });
 
     if (!response.ok) {
-      const errorBody: unknown = await response.json().catch(() => ({} as unknown));
+      const errorBody: unknown = await response
+        .json()
+        .catch(() => ({}) as unknown);
       const errMsg =
-        typeof errorBody === "object" && errorBody !== null && "message" in errorBody
+        typeof errorBody === "object" &&
+        errorBody !== null &&
+        "message" in errorBody
           ? (errorBody as { message?: string }).message
           : undefined;
-      throw new Error(`cohere_rerank_failed:${response.status}:${errMsg ?? "unknown"}`);
+      throw new Error(
+        `cohere_rerank_failed:${response.status}:${errMsg ?? "unknown"}`
+      );
     }
 
     const body = (await response.json()) as {
@@ -80,7 +86,7 @@ export async function rerank({
     }
 
     const results = body.results ?? [];
-    return results.map(result => {
+    return results.map((result) => {
       const doc = documents[result.index];
       if (!doc) {
         throw new Error(`cohere_rerank_invalid_index:${result.index}`);
@@ -103,4 +109,3 @@ export async function rerank({
     }));
   }
 }
-

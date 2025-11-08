@@ -1,4 +1,8 @@
-import type { KnowledgeConfidence, KnowledgeInsight, KnowledgeUpdate } from "@alfred/type/knowledge";
+import type {
+  KnowledgeConfidence,
+  KnowledgeInsight,
+  KnowledgeUpdate,
+} from "@alfred/type/knowledge";
 
 export interface SupervisionEvent {
   input: unknown;

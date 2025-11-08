@@ -5,7 +5,14 @@
 
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../index";
-import { profiles, preferences, facts, events, autonomy, feedback } from "../schema/user";
+import {
+  autonomy,
+  events,
+  facts,
+  feedback,
+  preferences,
+  profiles,
+} from "../schema/user";
 
 type ProfileInsert = typeof profiles.$inferInsert;
 type PreferenceInsert = typeof preferences.$inferInsert;
@@ -37,7 +44,10 @@ export async function getProfile(userId: string): Promise<ProfileRow | null> {
   return rows[0] ?? null;
 }
 
-export async function upsertProfile(userId: string, data: Partial<ProfileInsert>): Promise<ProfileRow> {
+export async function upsertProfile(
+  userId: string,
+  data: Partial<ProfileInsert>
+): Promise<ProfileRow> {
   const insertPayload: ProfileInsert = {
     userId,
     name: data.name ?? null,
@@ -88,7 +98,7 @@ export async function setPreference(
   key: string,
   value: unknown,
   confidence = 1.0,
-  source = "user",
+  source = "user"
 ): Promise<PreferenceRow> {
   const [row] = await db
     .insert(preferences)
@@ -117,7 +127,10 @@ export async function setPreference(
   return row;
 }
 
-export async function deletePreference(userId: string, key: string): Promise<number> {
+export async function deletePreference(
+  userId: string,
+  key: string
+): Promise<number> {
   const rows = await db
     .delete(preferences)
     .where(and(eq(preferences.userId, userId), eq(preferences.key, key)))
@@ -133,7 +146,7 @@ export async function addFact(
   embedding?: number[],
   category?: string,
   confidence = 1.0,
-  source = "user",
+  source = "user"
 ): Promise<FactRow> {
   const [row] = await db
     .insert(facts)
@@ -154,17 +167,17 @@ export async function addFact(
   return row;
 }
 
-export type FactSearchResult = (typeof facts.$inferSelect) & { score: number };
+export type FactSearchResult = typeof facts.$inferSelect & { score: number };
 
 export async function searchFacts(
   userId: string,
   embedding: number[],
   limit = 10,
-  threshold = 0.7,
+  threshold = 0.7
 ): Promise<FactSearchResult[]> {
   // Format embedding array as PostgreSQL array constructor for vector cast
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
-  
+
   const query = sql`
     SELECT 
       id,
@@ -191,7 +204,11 @@ export async function searchFacts(
     .slice(0, limit);
 }
 
-export async function listFacts(userId: string, limit = 100, offset = 0): Promise<FactRow[]> {
+export async function listFacts(
+  userId: string,
+  limit = 100,
+  offset = 0
+): Promise<FactRow[]> {
   const rows = await db
     .select()
     .from(facts)
@@ -204,12 +221,20 @@ export async function listFacts(userId: string, limit = 100, offset = 0): Promis
 }
 
 export async function deleteFact(factId: string): Promise<number> {
-  const rows = await db.delete(facts).where(eq(facts.id, factId)).returning({ id: facts.id });
+  const rows = await db
+    .delete(facts)
+    .where(eq(facts.id, factId))
+    .returning({ id: facts.id });
   return rows.length;
 }
 
 // Event operations
-export async function addEvent(userId: string, type: string, data: unknown, metadata?: unknown): Promise<EventRow> {
+export async function addEvent(
+  userId: string,
+  type: string,
+  data: unknown,
+  metadata?: unknown
+): Promise<EventRow> {
   const [row] = await db
     .insert(events)
     .values({
@@ -227,8 +252,15 @@ export async function addEvent(userId: string, type: string, data: unknown, meta
   return row;
 }
 
-export async function getEvents(userId: string, type?: string, limit = 100, offset = 0): Promise<EventRow[]> {
-  const where = type ? and(eq(events.userId, userId), eq(events.type, type)) : eq(events.userId, userId);
+export async function getEvents(
+  userId: string,
+  type?: string,
+  limit = 100,
+  offset = 0
+): Promise<EventRow[]> {
+  const where = type
+    ? and(eq(events.userId, userId), eq(events.type, type))
+    : eq(events.userId, userId);
 
   const rows = await db
     .select()
@@ -242,7 +274,10 @@ export async function getEvents(userId: string, type?: string, limit = 100, offs
 }
 
 // Autonomy operations
-export async function getAutonomy(userId: string, action: string): Promise<AutonomyRow | null> {
+export async function getAutonomy(
+  userId: string,
+  action: string
+): Promise<AutonomyRow | null> {
   const rows = await db
     .select()
     .from(autonomy)
@@ -257,7 +292,7 @@ export async function setAutonomy(
   action: string,
   level: string,
   requireBiometric = false,
-  maxToolCalls = 10,
+  maxToolCalls = 10
 ): Promise<AutonomyRow> {
   const [row] = await db
     .insert(autonomy)
@@ -293,7 +328,7 @@ export async function addFeedback(
   messageId: string,
   rating?: number,
   comment?: string,
-  tags?: string[],
+  tags?: string[]
 ): Promise<FeedbackRow> {
   const [row] = await db
     .insert(feedback)
@@ -317,7 +352,7 @@ export async function addFeedback(
 export async function getFeedback(
   userId: string,
   limit = 50,
-  offset = 0,
+  offset = 0
 ): Promise<FeedbackRow[]> {
   return db
     .select()

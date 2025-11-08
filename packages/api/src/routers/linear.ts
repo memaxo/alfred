@@ -1,12 +1,14 @@
 import { cacheJTI } from "@alfred/auth/token";
 import { linearRepo } from "@alfred/db";
-const { upsertLinearInstallation } = linearRepo;
-import { TRPCError } from "@trpc/server";
+
+const { upsertLinear } = linearRepo;
+
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
+import { authedProcedure, router } from "../trpc";
 
 const LINEAR_AUTH_BASE = "https://linear.app/oauth/authorize";
 const LINEAR_TOKEN_URL = "https://api.linear.app/oauth/token";
@@ -63,31 +65,56 @@ function getStateSigningKey(): string {
 
 function signState(payload: SignedStatePayload): string {
   const raw = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto.createHmac("sha256", getStateSigningKey()).update(raw).digest("base64url");
+  const signature = crypto
+    .createHmac("sha256", getStateSigningKey())
+    .update(raw)
+    .digest("base64url");
   return `${raw}.${signature}`;
 }
 
 function verifyState(state: string): SignedStatePayload {
   const [raw, signature] = state.split(".");
-  if (!raw || !signature) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_state_invalid" });
+  if (!(raw && signature)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_state_invalid",
+    });
   }
 
-  const expected = crypto.createHmac("sha256", getStateSigningKey()).update(raw).digest("base64url");
+  const expected = crypto
+    .createHmac("sha256", getStateSigningKey())
+    .update(raw)
+    .digest("base64url");
   const provided = Buffer.from(signature, "base64url");
   const computed = Buffer.from(expected, "base64url");
-  if (provided.length !== computed.length || !crypto.timingSafeEqual(provided, computed)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_state_invalid" });
+  if (
+    provided.length !== computed.length ||
+    !crypto.timingSafeEqual(provided, computed)
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_state_invalid",
+    });
   }
 
   try {
-    const decoded = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<SignedStatePayload>;
-    if (!decoded || typeof decoded.user !== "string" || typeof decoded.nonce !== "string" || typeof decoded.ts !== "number") {
+    const decoded = JSON.parse(
+      Buffer.from(raw, "base64url").toString("utf8")
+    ) as Partial<SignedStatePayload>;
+    if (
+      !decoded ||
+      typeof decoded.user !== "string" ||
+      typeof decoded.nonce !== "string" ||
+      typeof decoded.ts !== "number"
+    ) {
       throw new Error("invalid_state_payload");
     }
     return decoded as SignedStatePayload;
   } catch {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_state_invalid" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_state_invalid",
+    });
   }
 }
 
@@ -109,7 +136,10 @@ async function exchangeAuthorizationCode(code: string, redirectUri: string) {
   });
 
   if (!response.ok) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_token_exchange_failed" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_token_exchange_failed",
+    });
   }
 
   const json = (await response.json()) as {
@@ -121,14 +151,20 @@ async function exchangeAuthorizationCode(code: string, redirectUri: string) {
   };
 
   if (!json.access_token) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: json.error ?? "linear_token_missing" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: json.error ?? "linear_token_missing",
+    });
   }
 
   return {
     accessToken: json.access_token,
     refreshToken: json.refresh_token ?? null,
     scope: json.scope ?? getScope(),
-    expiresIn: typeof json.expires_in === "number" && Number.isFinite(json.expires_in) ? json.expires_in : null,
+    expiresIn:
+      typeof json.expires_in === "number" && Number.isFinite(json.expires_in)
+        ? json.expires_in
+        : null,
   };
 }
 
@@ -145,7 +181,9 @@ interface LinearViewerPayload {
   };
 }
 
-async function fetchLinearViewer(accessToken: string): Promise<LinearViewerPayload["viewer"]> {
+async function fetchLinearViewer(
+  accessToken: string
+): Promise<LinearViewerPayload["viewer"]> {
   const response = await fetch(LINEAR_GRAPHQL_URL, {
     method: "POST",
     headers: {
@@ -169,12 +207,25 @@ async function fetchLinearViewer(accessToken: string): Promise<LinearViewerPaylo
   });
 
   if (!response.ok) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_viewer_fetch_failed" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_viewer_fetch_failed",
+    });
   }
 
-  const payload = (await response.json()) as { data?: LinearViewerPayload; errors?: unknown };
-  if (payload.errors && Array.isArray(payload.errors) && payload.errors.length > 0) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "linear_viewer_fetch_failed" });
+  const payload = (await response.json()) as {
+    data?: LinearViewerPayload;
+    errors?: unknown;
+  };
+  if (
+    payload.errors &&
+    Array.isArray(payload.errors) &&
+    payload.errors.length > 0
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "linear_viewer_fetch_failed",
+    });
   }
 
   return payload.data?.viewer;
@@ -188,12 +239,15 @@ export const linearRouter = router({
         .object({
           redirectUri: z.string().url().optional(),
         })
-        .optional(),
+        .optional()
     )
     .mutation(async ({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       const redirectUri = input?.redirectUri ?? getRedirectUri();
@@ -226,22 +280,31 @@ export const linearRouter = router({
         code: z.string().min(1),
         state: z.string().min(1),
         redirectUri: z.string().url().optional(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       const statePayload = verifyState(input.state);
       if (statePayload.user !== session.user.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "linear_state_mismatch" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "linear_state_mismatch",
+        });
       }
 
       const now = Date.now();
       if (now - statePayload.ts > STATE_TTL_SECONDS * 1000) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "linear_state_expired" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "linear_state_expired",
+        });
       }
 
       // Prevent reuse of the same nonce
@@ -253,13 +316,18 @@ export const linearRouter = router({
 
       const viewerId = viewer?.id;
       const organizationId = viewer?.organization?.id;
-      if (!viewerId || !organizationId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "linear_viewer_incomplete" });
+      if (!(viewerId && organizationId)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "linear_viewer_incomplete",
+        });
       }
 
-      const expiresAt = token.expiresIn ? new Date(Date.now() + token.expiresIn * 1000) : null;
+      const expiresAt = token.expiresIn
+        ? new Date(Date.now() + token.expiresIn * 1000)
+        : null;
 
-      await upsertLinearInstallation({
+      await upsertLinear({
         oauthClient: getClientId(),
         appUser: viewerId,
         space: organizationId,

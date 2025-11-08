@@ -6,7 +6,7 @@ const MAX_TOPK = 3;
 const MAX_TIMEOUT = 15;
 const DEFAULT_TOPK = 3;
 const DEFAULT_TIMEOUT = 10;
-const MAX_TEXT_PREVIEW = 2_000;
+const MAX_TEXT_PREVIEW = 2000;
 
 const assistantWebInputSchema = z.object({
   userId: z.string().min(1),
@@ -52,14 +52,14 @@ const assistantWebOutputSchema = z.union([
 type AssistantWebInput = z.infer<typeof assistantWebInputSchema>;
 
 function sanitizeTopK(input?: number) {
-  if (!input || !Number.isFinite(input)) {
+  if (!(input && Number.isFinite(input))) {
     return DEFAULT_TOPK;
   }
   return Math.min(Math.max(1, Math.floor(input)), MAX_TOPK);
 }
 
 function sanitizeTimeout(input?: number) {
-  if (!input || !Number.isFinite(input)) {
+  if (!(input && Number.isFinite(input))) {
     return DEFAULT_TIMEOUT;
   }
   return Math.min(Math.max(1, Math.floor(input)), MAX_TIMEOUT);
@@ -69,7 +69,7 @@ function tokenize(text: string) {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/u)
-    .filter(token => token.length > 1);
+    .filter((token) => token.length > 1);
 }
 
 function termScore(terms: string[], haystack: string) {
@@ -95,15 +95,17 @@ function rerankResults(
     title?: string;
     snippet?: string;
     score?: number;
-  }>,
+  }>
 ) {
   const terms = tokenize(query);
   const scored = original.map((result, index) => {
-    const haystack = `${result.title ?? ""} ${result.snippet ?? ""}`.toLowerCase();
+    const haystack =
+      `${result.title ?? ""} ${result.snippet ?? ""}`.toLowerCase();
     const { overlap, frequency } = termScore(terms, haystack);
     const baseScore = Number.isFinite(result.score) ? Number(result.score) : 0;
     const positionBoost = 1 / (index + 2); // diminish rapidly
-    const finalScore = baseScore * 0.6 + overlap * 0.3 + frequency * 0.05 + positionBoost * 0.05;
+    const finalScore =
+      baseScore * 0.6 + overlap * 0.3 + frequency * 0.05 + positionBoost * 0.05;
     return {
       ...result,
       _rawScore: finalScore,
@@ -121,13 +123,15 @@ function rerankResults(
     url: result.url,
     title: result.title,
     snippet: result.snippet,
-    score: Number.isFinite(result._rawScore) ? Number(result._rawScore.toFixed(3)) : undefined,
+    score: Number.isFinite(result._rawScore)
+      ? Number(result._rawScore.toFixed(3))
+      : undefined,
     rank: index + 1,
   }));
 }
 
 function truncateText(text?: string | null): string | undefined {
-  if (!text) return undefined;
+  if (!text) return;
   if (text.length <= MAX_TEXT_PREVIEW) {
     return text;
   }
@@ -136,7 +140,8 @@ function truncateText(text?: string | null): string | undefined {
 
 export const toolWebAssistant = {
   name: "web",
-  description: "Guarded web access for the assistant agent (search and fetch with conservative limits).",
+  description:
+    "Guarded web access for the assistant agent (search and fetch with conservative limits).",
   inputSchema: assistantWebInputSchema,
   outputSchema: assistantWebOutputSchema,
   execute: async ({ input }: { input: AssistantWebInput }) => {
@@ -199,7 +204,9 @@ export const toolWebAssistant = {
         status: details.status,
         contentType: details.contentType,
         text: truncateText(details.text),
-        truncated: details.truncated ?? (details.text ? details.text.length > MAX_TEXT_PREVIEW : undefined),
+        truncated:
+          details.truncated ??
+          (details.text ? details.text.length > MAX_TEXT_PREVIEW : undefined),
       },
     });
   },

@@ -1,24 +1,24 @@
 /**
  * Chat Container Component
- * 
+ *
  * Full integration example: Chat + Controls + Streaming
- * 
+ *
  * Carmack-Karpathy principles:
  * - Composition: multiple smaller components
  * - Error isolation: error boundary per tree
  * - Fast failure: clear error states
  */
 
-import { ErrorBoundary } from "./error-boundary";
-import { Chat } from "@alfred/ui";
-import { Controls } from "./controls";
-import { Connect } from "./connect";
-import { Load } from "./load";
-import { Actions } from "./actions";
-import { useAssistantStream } from "@/hooks/use-assistant-stream";
-import { useCallback, useMemo, useRef, useState } from "react";
 import type { UIMessage } from "@alfred/type/stream";
+import { Chat } from "@alfred/ui";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
+import { useAssistantStream } from "@/hooks/use-assistant-stream";
+import { Actions } from "./actions";
+import { Connect } from "./connect";
+import { Controls } from "./controls";
+import { ErrorBoundary } from "./error-boundary";
+import { Load } from "./load";
 
 interface ChatContainerProps {
   agent: "assistant" | "orchestrator";
@@ -27,37 +27,37 @@ interface ChatContainerProps {
 }
 
 export function ChatContainer({ agent }: ChatContainerProps) {
-  const [currentAgent, setCurrentAgent] = useState<"assistant" | "orchestrator">(agent);
+  const [currentAgent, setCurrentAgent] = useState<
+    "assistant" | "orchestrator"
+  >(agent);
   const contextsRef = useRef<Map<string, UIMessage[]>>(new Map());
-  
-  const {
-    messages,
-    actions,
-    status,
-    error,
-    send,
-    clear,
-    hydrate,
-  } = useAssistantStream({
-    onError: (err) => {
-      console.error("Chat error:", err);
-    },
-  });
+
+  const { messages, actions, status, error, send, clear, hydrate } =
+    useAssistantStream({
+      onError: (err) => {
+        console.error("Chat error:", err);
+      },
+    });
 
   const activeActions = useMemo(
-    () => actions.filter(action => action.status === "pending" || action.status === "running"),
-    [actions],
+    () =>
+      actions.filter(
+        (action) => action.status === "pending" || action.status === "running"
+      ),
+    [actions]
   );
 
   const handleSend = useCallback(
     (input: string) => {
       if (currentAgent !== "assistant") {
-        console.warn("Streaming for the orchestrator agent is not yet enabled.");
+        console.warn(
+          "Streaming for the orchestrator agent is not yet enabled."
+        );
         return;
       }
       send(input);
     },
-    [currentAgent, send],
+    [currentAgent, send]
   );
 
   const handleAgentChange = useCallback(
@@ -71,22 +71,22 @@ export function ChatContainer({ agent }: ChatContainerProps) {
         hydrate(snapshot);
       }
     },
-    [clear, currentAgent, hydrate, messages],
+    [clear, currentAgent, hydrate, messages]
   );
 
   const showActionsPanel = actions.length > 0;
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         {/* Controls */}
-        <div className="p-4 border-b space-y-2">
+        <div className="space-y-2 border-b p-4">
           <Controls
             agent={currentAgent}
             onAgentChange={handleAgentChange}
             onClear={clear}
           />
           <div className="flex items-center justify-between">
-            <Connect status={status} agent={currentAgent} />
+            <Connect agent={currentAgent} status={status} />
             {activeActions.length > 0 && (
               <Load
                 message={
@@ -104,24 +104,24 @@ export function ChatContainer({ agent }: ChatContainerProps) {
           <div className="flex h-full flex-col lg:flex-row">
             <div className="flex-1 overflow-hidden">
               <Chat
+                disabled={currentAgent !== "assistant"}
+                ListComponent={Virtuoso}
                 messages={messages}
                 onSend={handleSend}
+                onVoice={() => {
+                  console.log("Voice input not yet implemented");
+                }}
+                perf
                 placeholder={
                   currentAgent === "assistant"
                     ? "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
-                disabled={currentAgent !== "assistant"}
                 virtualized
-                perf
-                ListComponent={Virtuoso}
-                onVoice={() => {
-                  console.log("Voice input not yet implemented");
-                }}
               />
             </div>
             {showActionsPanel && (
-              <div className="border-t lg:border-l lg:border-t-0 lg:w-80 xl:w-96">
+              <div className="border-t lg:w-80 lg:border-t-0 lg:border-l xl:w-96">
                 <div className="h-full overflow-auto p-4">
                   <Actions actions={actions} />
                 </div>
@@ -132,10 +132,8 @@ export function ChatContainer({ agent }: ChatContainerProps) {
 
         {/* Error display */}
         {error && (
-          <div className="p-4 border-t bg-destructive/10">
-            <p className="text-sm text-destructive">
-              Error: {error.message}
-            </p>
+          <div className="border-t bg-destructive/10 p-4">
+            <p className="text-destructive text-sm">Error: {error.message}</p>
           </div>
         )}
       </div>

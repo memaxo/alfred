@@ -1,9 +1,16 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { spawn } from "node:child_process";
-import { accessSync, realpathSync, statSync } from "node:fs";
-import { constants as fsConstants } from "node:fs";
+import {
+  accessSync,
+  constants as fsConstants,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
-import { clearTimeout as clearNodeTimeout, setTimeout as setNodeTimeout } from "node:timers";
+import {
+  clearTimeout as clearNodeTimeout,
+  setTimeout as setNodeTimeout,
+} from "node:timers";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -18,7 +25,7 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
     raw && raw.trim().length > 0
       ? raw
           .split(path.delimiter)
-          .map(entry => entry.trim())
+          .map((entry) => entry.trim())
           .filter(Boolean)
       : [];
 
@@ -26,7 +33,9 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
 
   for (const entry of extras) {
     try {
-      const absolute = path.isAbsolute(entry) ? entry : path.resolve(base, entry);
+      const absolute = path.isAbsolute(entry)
+        ? entry
+        : path.resolve(base, entry);
       prefixes.add(realpathSync(absolute));
     } catch {
       // Ignore invalid entries so that a bad env var does not break execution.
@@ -47,9 +56,11 @@ function safeRealpath(p: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!baseReal || !targetReal) return false;
+  if (!(baseReal && targetReal)) return false;
   const relative = path.relative(baseReal, targetReal);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
+  );
 }
 
 function assertAllowedDirectory(candidate: string) {
@@ -75,7 +86,9 @@ function resolveExecutable(command: string) {
     return command;
   }
 
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const entry of pathEntries) {
     const candidate = path.join(entry, command);
     try {
@@ -113,17 +126,30 @@ const gitInputSchema = z.object({
   ref: z.string().optional(),
   noFF: z.boolean().optional(),
   authz: z.string().optional(),
-  timeoutSec: z.number().int().min(MIN_TIMEOUT_SEC).max(MAX_TIMEOUT_SEC).optional(),
+  timeoutSec: z
+    .number()
+    .int()
+    .min(MIN_TIMEOUT_SEC)
+    .max(MAX_TIMEOUT_SEC)
+    .optional(),
 });
 
 type GitInput = z.infer<typeof gitInputSchema>;
 
-type ToolWriter = { write: (chunk: unknown) => Promise<void> | void } | undefined;
+type ToolWriter =
+  | { write: (chunk: unknown) => Promise<void> | void }
+  | undefined;
 
-const READ_ONLY_ACTIONS = new Set<GitInput["action"]>(["status", "diff", "fetch"]);
+const READ_ONLY_ACTIONS = new Set<GitInput["action"]>([
+  "status",
+  "diff",
+  "fetch",
+]);
 
 async function enforcePolicy(input: GitInput, cwd: string) {
-  const scopes = READ_ONLY_ACTIONS.has(input.action) ? ["repo.read"] : ["repo.write"];
+  const scopes = READ_ONLY_ACTIONS.has(input.action)
+    ? ["repo.read"]
+    : ["repo.write"];
 
   const { claims } = await requireToolScopesAndPolicy(input.authz, scopes, {
     action: `git.${input.action}`,
@@ -174,10 +200,12 @@ async function runGit({
     } catch {
       // noop
     }
-    void Promise.resolve(writer?.write?.({ type: "notice", message: "git_timeout" })).catch(() => {});
+    void Promise.resolve(
+      writer?.write?.({ type: "notice", message: "git_timeout" })
+    ).catch(() => {});
   }, timeoutSec * 1000);
 
-  child.stdout?.on("data", chunk => {
+  child.stdout?.on("data", (chunk) => {
     const text = chunk.toString();
     accumulator.capturedBytes += Buffer.byteLength(text);
 
@@ -189,34 +217,42 @@ async function runGit({
       }
     }
 
-    void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(() => {});
+    void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+      () => {}
+    );
   });
 
-  child.stderr?.on("data", chunk => {
+  child.stderr?.on("data", (chunk) => {
     const text = chunk.toString();
     if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
       accumulator.stderr += text;
     }
-    void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(() => {});
+    void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(
+      () => {}
+    );
   });
 
   const exitCode = await new Promise<number>((resolve, reject) => {
-    child.on("error", err => {
+    child.on("error", (err) => {
       clearNodeTimeout(timer);
       reject(err);
     });
-    child.on("close", code => resolve(code ?? 0));
+    child.on("close", (code) => resolve(code ?? 0));
   }).finally(() => {
     clearNodeTimeout(timer);
   });
 
   if (accumulator.truncated) {
-    void Promise.resolve(writer?.write?.({ type: "notice", message: "git_output_truncated" })).catch(
-      () => {},
-    );
+    void Promise.resolve(
+      writer?.write?.({ type: "notice", message: "git_output_truncated" })
+    ).catch(() => {});
   }
 
-  return { exitCode, stdout: accumulator.stdout.trim(), stderr: accumulator.stderr.trim() };
+  return {
+    exitCode,
+    stdout: accumulator.stdout.trim(),
+    stderr: accumulator.stderr.trim(),
+  };
 }
 
 function ensure(value: string | undefined, error: string): string {
@@ -228,13 +264,20 @@ function ensure(value: string | undefined, error: string): string {
 
 export const toolGit = {
   name: "git",
-  description: "Safe git operations (branch, worktree, commit, push, merge) under cwd sandbox.",
+  description:
+    "Safe git operations (branch, worktree, commit, push, merge) under cwd sandbox.",
   inputSchema: gitInputSchema,
   outputSchema: z.object({
     ok: z.boolean(),
     details: z.unknown().optional(),
   }),
-  execute: async ({ input, writer }: { input: GitInput; writer?: ToolWriter }) => {
+  execute: async ({
+    input,
+    writer,
+  }: {
+    input: GitInput;
+    writer?: ToolWriter;
+  }) => {
     const cwd = input.cw ? assertAllowedDirectory(input.cw) : process.cwd();
     await enforcePolicy(input, cwd);
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
@@ -280,7 +323,10 @@ export const toolGit = {
 
       case "worktree.add": {
         const wtPath = ensure(input.path, "git_worktree_path_required");
-        const ref = ensure(input.ref ?? input.name, "git_worktree_ref_required");
+        const ref = ensure(
+          input.ref ?? input.name,
+          "git_worktree_ref_required"
+        );
         const args = ["worktree", "add", wtPath, ref];
         const { exitCode } = await runGit({ cwd, args, writer, timeoutSec });
         if (exitCode !== 0) throw new Error("git_worktree_add_failed");
@@ -381,13 +427,24 @@ export const toolGit = {
         if (input.ref) {
           args.push(`${input.ref}..HEAD`);
         }
-        const { exitCode, stdout } = await runGit({ cwd, args, writer, timeoutSec });
+        const { exitCode, stdout } = await runGit({
+          cwd,
+          args,
+          writer,
+          timeoutSec,
+        });
         if (exitCode !== 0) throw new Error("git_diff_failed");
-        return { ok: true, details: { files: stdout.split(/\r?\n/).filter(Boolean) } };
+        return {
+          ok: true,
+          details: { files: stdout.split(/\r?\n/).filter(Boolean) },
+        };
       }
 
       case "fetch": {
-        const remote = (input.remote && input.remote.trim().length > 0) ? input.remote : "origin";
+        const remote =
+          input.remote && input.remote.trim().length > 0
+            ? input.remote
+            : "origin";
         const { exitCode } = await runGit({
           cwd,
           args: ["fetch", remote, "--prune", "--tags"],

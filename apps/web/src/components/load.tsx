@@ -1,6 +1,6 @@
 /**
  * Loader Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/loader
  * Displays loading state during agent operations
  */
@@ -15,17 +15,16 @@ interface LoadProps {
 export function Load({ message = "Loading...", className }: LoadProps) {
   return (
     <div
+      aria-label="Loading"
+      aria-live="polite"
       className={cn("flex items-center gap-3", className)}
       role="status"
-      aria-live="polite"
-      aria-label="Loading"
     >
       <div
-        className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent"
         aria-hidden="true"
+        className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent"
       />
-      <span className="text-sm text-muted-foreground">{message}</span>
+      <span className="text-muted-foreground text-sm">{message}</span>
     </div>
   );
 }
-

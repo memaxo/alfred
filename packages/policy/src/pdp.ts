@@ -15,7 +15,7 @@ type CacheObserver = (result: "hit" | "miss") => void;
 
 let cacheObserver: CacheObserver | null = null;
 
-export function registerPolicyCacheObserver(observer: CacheObserver | null) {
+export function registerCacheObs(observer: CacheObserver | null) {
   cacheObserver = observer;
 }
 
@@ -49,7 +49,8 @@ export async function evaluate(input: EvaluateInput): Promise<Decision> {
   cacheObserver?.("miss");
 
   const policy = await loadPolicy();
-  const subjectRoles = input.subject.roles.length > 0 ? input.subject.roles : ["user"];
+  const subjectRoles =
+    input.subject.roles.length > 0 ? input.subject.roles : ["user"];
 
   // Determine scopes granted by roles (plus explicit subject scopes)
   const scopeSet = new Set<string>(input.subject.scopes ?? []);
@@ -62,22 +63,31 @@ export async function evaluate(input: EvaluateInput): Promise<Decision> {
     }
   }
 
-  const hasScope = scopeSet.has(input.action) || policy.scopes.includes(input.action);
+  const hasScope =
+    scopeSet.has(input.action) || policy.scopes.includes(input.action);
 
   // Gather all matching rules
   const matchingRules = (policy.rules ?? [])
-    .filter(rule => ruleMatches(rule, input, subjectRoles))
+    .filter((rule) => ruleMatches(rule, input, subjectRoles))
     .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
-  const hasAllowRule = matchingRules.some(rule => (rule.effect ?? "allow") === "allow");
+  const hasAllowRule = matchingRules.some(
+    (rule) => (rule.effect ?? "allow") === "allow"
+  );
 
-  if (!hasScope && !hasAllowRule) {
-    const decision: Decision = { allow: false, obligations: [], reason: "missing_scope" };
+  if (!(hasScope || hasAllowRule)) {
+    const decision: Decision = {
+      allow: false,
+      obligations: [],
+      reason: "missing_scope",
+    };
     cache.set(key, { decision, expiresAt: Date.now() + CACHE_TTL_MS });
     return decision;
   }
 
-  const denyRule = matchingRules.find(rule => (rule.effect ?? "allow") === "deny");
+  const denyRule = matchingRules.find(
+    (rule) => (rule.effect ?? "allow") === "deny"
+  );
   if (denyRule) {
     const decision: Decision = {
       allow: false,
@@ -89,13 +99,21 @@ export async function evaluate(input: EvaluateInput): Promise<Decision> {
     return decision;
   }
 
-  const allowRules = matchingRules.filter(rule => (rule.effect ?? "allow") === "allow");
+  const allowRules = matchingRules.filter(
+    (rule) => (rule.effect ?? "allow") === "allow"
+  );
   const obligations = aggregateObligations(allowRules);
   const decision: Decision = {
     allow: true,
     obligations,
-    reason: allowRules.length > 0 ? allowRules.map(rule => rule.description ?? rule.id).filter(Boolean).join(", ") || undefined : undefined,
-    ruleIds: allowRules.map(rule => rule.id),
+    reason:
+      allowRules.length > 0
+        ? allowRules
+            .map((rule) => rule.description ?? rule.id)
+            .filter(Boolean)
+            .join(", ") || undefined
+        : undefined,
+    ruleIds: allowRules.map((rule) => rule.id),
   };
 
   cache.set(key, { decision, expiresAt: Date.now() + CACHE_TTL_MS });

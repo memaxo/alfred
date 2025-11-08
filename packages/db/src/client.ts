@@ -1,5 +1,5 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Client, Pool, type ClientConfig, type PoolConfig } from "pg";
+import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
 
 type PgSource = Client | Pool;
 

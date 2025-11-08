@@ -12,7 +12,7 @@ async function main() {
   console.log(spki);
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });

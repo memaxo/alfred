@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DriveMode } from "@/components/drive-mode";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { trpc } from "@/utils/trpc";
+import type { UIMessage } from "@alfred/type/stream";
 
 export const Route = createFileRoute("/drive")({
   component: DriveModeRoute,
@@ -30,15 +31,22 @@ function DriveModeRoute() {
     playAudio,
     clearTranscript,
   } = useVoiceCapture({
-    onTranscript: async text => {
+    onTranscript: async (text) => {
       setErrorMessage(null);
       try {
-        const response = await assistantGenerate.mutateAsync({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: text },
-          ],
-        });
+        const messages: UIMessage[] = [
+          {
+            id: "system-1",
+            role: "system",
+            parts: [{ type: "text", text: SYSTEM_PROMPT }],
+          },
+          {
+            id: `user-${Date.now()}`,
+            role: "user",
+            parts: [{ type: "text", text }],
+          },
+        ];
+        const response = await assistantGenerate.mutateAsync({ messages });
         const assistantReply = response?.text?.trim();
         if (!assistantReply) {
           throw new Error("assistant_reply_empty");
@@ -53,12 +61,13 @@ function DriveModeRoute() {
           playAudio(audio.audioBase64, audio.mimeType);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "voice_pipeline_failed";
+        const message =
+          err instanceof Error ? err.message : "voice_pipeline_failed";
         setErrorMessage(message);
         toast.error(message);
       }
     },
-    onError: err => {
+    onError: (err) => {
       const message = err.message || "voice_capture_failed";
       setErrorMessage(message);
       toast.error(message);
@@ -66,8 +75,9 @@ function DriveModeRoute() {
   });
 
   const busy = useMemo(
-    () => isProcessing || assistantGenerate.isPending || voiceSynthesize.isPending,
-    [assistantGenerate.isPending, isProcessing, voiceSynthesize.isPending],
+    () =>
+      isProcessing || assistantGenerate.isPending || voiceSynthesize.isPending,
+    [assistantGenerate.isPending, isProcessing, voiceSynthesize.isPending]
   );
 
   const handleToggle = useCallback(() => {
@@ -81,12 +91,21 @@ function DriveModeRoute() {
     setReply("");
     setErrorMessage(null);
     clearTranscript();
-    startRecording().catch(err => {
-      const message = err instanceof Error ? err.message : "voice_capture_failed";
+    startRecording().catch((err) => {
+      const message =
+        err instanceof Error ? err.message : "voice_capture_failed";
       setErrorMessage(message);
       toast.error(message);
     });
-  }, [busy, clearTranscript, isRecording, setReply, setErrorMessage, startRecording, stopRecording]);
+  }, [
+    busy,
+    clearTranscript,
+    isRecording,
+    setReply,
+    setErrorMessage,
+    startRecording,
+    stopRecording,
+  ]);
 
   const handleExit = useCallback(() => {
     navigate({ to: "/" });
@@ -94,14 +113,13 @@ function DriveModeRoute() {
 
   return (
     <DriveMode
-      transcript={transcript}
-      reply={reply}
       error={errorMessage ?? error?.message ?? null}
-      isRecording={isRecording}
       isProcessing={busy}
-      onToggle={handleToggle}
+      isRecording={isRecording}
       onComplete={handleExit}
+      onToggle={handleToggle}
+      reply={reply}
+      transcript={transcript}
     />
   );
 }
-

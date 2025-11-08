@@ -2,7 +2,13 @@ import { assistantRepo } from "@alfred/db";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
 
-const { createReminder, deleteReminder, getDueReminders, getReminders, markReminderFired } = assistantRepo;
+const {
+  createReminder,
+  deleteReminder,
+  getDueReminders,
+  getReminders,
+  markReminderFired,
+} = assistantRepo;
 
 const reminderInputSchema = z.object({
   userId: z.string().min(1),
@@ -76,7 +82,7 @@ export const toolRemind = {
           firedAt: z.string().nullable(),
           recurring: z.string().nullable(),
           createdAt: z.string().nullable(),
-        }),
+        })
       )
       .optional(),
   }),
@@ -96,7 +102,7 @@ export const toolRemind = {
           title,
           due,
           input.description ?? undefined,
-          input.recurring ?? undefined,
+          input.recurring ?? undefined
         );
         return {
           ok: true,
@@ -108,7 +114,7 @@ export const toolRemind = {
         const offset = input.offset ?? 0;
         const rows = await getReminders(input.userId, limit, offset);
         return {
-          reminders: rows.map(row => mapReminder(row)!).filter(Boolean),
+          reminders: rows.map((row) => mapReminder(row)!).filter(Boolean),
         };
       }
       case "due": {
@@ -119,7 +125,7 @@ export const toolRemind = {
         }
         const rows = await getDueReminders(input.userId, before);
         return {
-          reminders: rows.map(row => mapReminder(row)!).filter(Boolean),
+          reminders: rows.map((row) => mapReminder(row)!).filter(Boolean),
         };
       }
       case "complete": {

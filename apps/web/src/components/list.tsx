@@ -1,6 +1,6 @@
 /**
  * Animated List Component
- * 
+ *
  * Adapted from magicui.design/docs/components/animated-list
  * List with entrance animations
  */
@@ -22,8 +22,8 @@ export function List({ items, className }: ListProps) {
     <div className={cn("space-y-2", className)}>
       {items.map((item, index) => (
         <div
+          className="fade-in slide-in-from-left animate-in"
           key={item.id}
-          className="animate-in fade-in slide-in-from-left"
           style={{ animationDelay: `${index * 50}ms` }}
         >
           {item.content}
@@ -32,4 +32,3 @@ export function List({ items, className }: ListProps) {
     </div>
   );
 }
-

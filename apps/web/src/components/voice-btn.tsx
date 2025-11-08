@@ -1,12 +1,12 @@
 /**
  * Voice Button Component
- * 
+ *
  * Adapted from ui.elevenlabs.io/docs/components/voice-button
  * Large touch-friendly voice control button for drive mode
  */
 
-import { Button } from "@/components/ui/button";
 import { Mic, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface VoiceBtnProps {
@@ -30,24 +30,19 @@ export function VoiceBtn({
 
   return (
     <Button
-      variant={isRecording ? "destructive" : "default"}
-      size="icon"
-      onClick={onToggle}
-      className={cn(
-        "rounded-full shadow-lg",
-        sizeConfig[size],
-        className,
-      )}
       aria-label={isRecording ? "Stop recording" : "Start recording"}
       aria-pressed={isRecording}
+      className={cn("rounded-full shadow-lg", sizeConfig[size], className)}
+      onClick={onToggle}
       role="switch"
+      size="icon"
+      variant={isRecording ? "destructive" : "default"}
     >
       {isRecording ? (
-        <Square className="size-8" aria-hidden="true" />
+        <Square aria-hidden="true" className="size-8" />
       ) : (
-        <Mic className="size-8" aria-hidden="true" />
+        <Mic aria-hidden="true" className="size-8" />
       )}
     </Button>
   );
 }
-

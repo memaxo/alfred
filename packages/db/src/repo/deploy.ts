@@ -28,7 +28,9 @@ type UpsertDeploymentInput = {
   metadata?: unknown;
 };
 
-function sanitize<T extends Record<string, unknown>>(value: Partial<T>): Record<string, unknown> {
+function sanitize<T extends Record<string, unknown>>(
+  value: Partial<T>
+): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (entry !== undefined) {
@@ -42,13 +44,21 @@ async function findLatestDeployment(userId: string, app: string, type: string) {
   const rows = await db
     .select()
     .from(deployments)
-    .where(and(eq(deployments.userId, userId), eq(deployments.app, app), eq(deployments.type, type)))
+    .where(
+      and(
+        eq(deployments.userId, userId),
+        eq(deployments.app, app),
+        eq(deployments.type, type)
+      )
+    )
     .orderBy(desc(deployments.created))
     .limit(1);
   return rows[0] ?? null;
 }
 
-export async function upsertDeployment(input: UpsertDeploymentInput): Promise<DeploymentRecord> {
+export async function upsertDeployment(
+  input: UpsertDeploymentInput
+): Promise<DeploymentRecord> {
   const type = input.type ?? "preview";
   const existing = await findLatestDeployment(input.userId, input.app, type);
   const payload: DeploymentInsert = {
@@ -111,11 +121,19 @@ export async function createDeployment(input: DeploymentInsert) {
 }
 
 export async function getDeploymentById(deploymentId: string) {
-  const rows = await db.select().from(deployments).where(eq(deployments.id, deploymentId)).limit(1);
+  const rows = await db
+    .select()
+    .from(deployments)
+    .where(eq(deployments.id, deploymentId))
+    .limit(1);
   return rows[0] ?? null;
 }
 
-export async function getDeploymentByApp(userId: string, app: string, type: string = "preview") {
+export async function getDeploymentByApp(
+  userId: string,
+  app: string,
+  type = "preview"
+) {
   return findLatestDeployment(userId, app, type);
 }
 
@@ -141,21 +159,29 @@ export async function listDeployments({
   }
 
   if (where) {
-    return db.select().from(deployments).where(where).orderBy(desc(deployments.created));
+    return db
+      .select()
+      .from(deployments)
+      .where(where)
+      .orderBy(desc(deployments.created));
   }
   return db.select().from(deployments).orderBy(desc(deployments.created));
 }
 
 export async function updateDeployment(
   deploymentId: string,
-  updates: Partial<DeploymentInsert>,
+  updates: Partial<DeploymentInsert>
 ): Promise<DeploymentRecord | null> {
   const patch = sanitize<DeploymentInsert>(updates);
   if (Object.keys(patch).length === 0) {
     return getDeploymentById(deploymentId);
   }
   patch.updated = sql`NOW()`;
-  const rows = (await db.update(deployments).set(patch).where(eq(deployments.id, deploymentId)).returning()) as DeploymentRecord[];
+  const rows = (await db
+    .update(deployments)
+    .set(patch)
+    .where(eq(deployments.id, deploymentId))
+    .returning()) as DeploymentRecord[];
   return rows[0] ?? null;
 }
 
@@ -182,7 +208,7 @@ export async function setDeploymentStatus(
     ports?: Array<{ host: number; container: number }> | null;
     healthUrl?: string | null;
     metadata?: unknown;
-  } = {},
+  } = {}
 ) {
   const patch = sanitize<DeploymentInsert>({
     status,
@@ -203,14 +229,18 @@ export async function setDeploymentStatus(
   if (status === "stopped" || status === "removed") {
     patch.stopped = sql`NOW()`;
   }
-  const rows = (await db.update(deployments).set(patch).where(eq(deployments.id, deploymentId)).returning()) as DeploymentRecord[];
+  const rows = (await db
+    .update(deployments)
+    .set(patch)
+    .where(eq(deployments.id, deploymentId))
+    .returning()) as DeploymentRecord[];
   return rows[0] ?? null;
 }
 
 export async function recordHealthCheck(
   deploymentId: string,
   healthStatus: string,
-  { healthUrl }: { healthUrl?: string | null } = {},
+  { healthUrl }: { healthUrl?: string | null } = {}
 ) {
   const patch = sanitize<DeploymentInsert>({
     healthStatus,
@@ -219,12 +249,19 @@ export async function recordHealthCheck(
   patch.lastHealthCheck = sql`NOW()`;
   patch.updated = sql`NOW()`;
 
-  const rows = await db.update(deployments).set(patch).where(eq(deployments.id, deploymentId)).returning();
+  const rows = await db
+    .update(deployments)
+    .set(patch)
+    .where(eq(deployments.id, deploymentId))
+    .returning();
   return rows[0] ?? null;
 }
 
 export async function deleteDeployment(deploymentId: string) {
-  const rows = (await db.delete(deployments).where(eq(deployments.id, deploymentId)).returning()) as DeploymentRecord[];
+  const rows = (await db
+    .delete(deployments)
+    .where(eq(deployments.id, deploymentId))
+    .returning()) as DeploymentRecord[];
   return rows[0] ?? null;
 }
 
@@ -235,8 +272,11 @@ export async function getStaleDeployments(threshold: Date) {
     .where(
       and(
         eq(deployments.status, "running"),
-        or(isNull(deployments.lastHealthCheck), lte(deployments.lastHealthCheck, threshold)),
-      ),
+        or(
+          isNull(deployments.lastHealthCheck),
+          lte(deployments.lastHealthCheck, threshold)
+        )
+      )
     )
     .orderBy(desc(deployments.created));
 }

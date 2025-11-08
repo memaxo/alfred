@@ -1,10 +1,10 @@
+export { type CodeFile, ingestCodeFiles } from "./code";
 export {
-  ingest,
-  retrieve,
+  type Chunk,
   chunk,
   embed,
   embedMany,
-  type Chunk,
+  ingest,
+  retrieve,
 } from "./doc";
-export { ingestCodeFiles, type CodeFile } from "./code";
-export { rerank, type RerankOptions, type RerankResult } from "./rerank";
+export { type RerankOptions, type RerankResult, rerank } from "./rerank";

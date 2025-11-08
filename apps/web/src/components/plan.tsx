@@ -1,6 +1,6 @@
 /**
  * Plan Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/plan
  * Displays orchestration plan and task breakdown
  */
@@ -31,15 +31,13 @@ export function Plan({ plan, className }: PlanProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="font-medium text-muted-foreground text-sm">
             Requirement
           </p>
           <p className="text-sm">{plan.requirement}</p>
         </div>
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            Tasks
-          </p>
+          <p className="font-medium text-muted-foreground text-sm">Tasks</p>
           <div className="mt-2 space-y-2">
             {plan.tasks.map((task) => (
               <TaskItem key={task.id} task={task} />
@@ -55,14 +53,14 @@ function TaskItem({ task }: { task: Task }) {
   return (
     <div className="rounded border p-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{task.title}</span>
+        <span className="font-medium text-sm">{task.title}</span>
         <span
           className={cn(
             "rounded px-2 py-1 text-xs",
             task.status === "completed" && "bg-green-100 text-green-800",
             task.status === "running" && "bg-blue-100 text-blue-800",
             task.status === "error" && "bg-red-100 text-red-800",
-            task.status === "pending" && "bg-gray-100 text-gray-800",
+            task.status === "pending" && "bg-gray-100 text-gray-800"
           )}
         >
           {task.status}
@@ -78,4 +76,3 @@ function TaskItem({ task }: { task: Task }) {
     </div>
   );
 }
-

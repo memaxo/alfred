@@ -17,13 +17,20 @@ declare module "bun" {
     onconnect: (() => void) | null;
     onclose: ((error?: Error) => void) | null;
     get(key: string): Promise<string | null>;
-    set(key: string, value: string, options?: RedisSetOptions): Promise<unknown>;
+    set(
+      key: string,
+      value: string,
+      options?: RedisSetOptions
+    ): Promise<unknown>;
     del(key: string): Promise<number>;
     expire(key: string, seconds: number): Promise<boolean>;
     ttl(key: string): Promise<number>;
     publish(channel: string, message: string): Promise<number>;
     subscribe(channel: string, listener: RedisPubSubListener): Promise<number>;
-    subscribe(channels: string[], listener: RedisPubSubListener): Promise<number>;
+    subscribe(
+      channels: string[],
+      listener: RedisPubSubListener
+    ): Promise<number>;
     psubscribe(pattern: string, listener: RedisPubSubListener): Promise<number>;
     unsubscribe(channel: string, listener: RedisPubSubListener): Promise<void>;
     unsubscribe(): Promise<void>;

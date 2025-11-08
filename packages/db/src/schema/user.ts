@@ -3,7 +3,17 @@
  * User profiles, preferences, facts, events, autonomy settings, and feedback
  */
 
-import { pgTable, text, timestamp, uuid, jsonb, real, integer, boolean, vector } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
 
 // TODO: [Phase 3] Add proper indexes for performance
 // TODO: [Phase 8] Add vector indexes for facts (HNSW)

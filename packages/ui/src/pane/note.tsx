@@ -39,13 +39,16 @@ export function NotePane({ items, onDelete, className }: NotePaneProps) {
       ) : (
         <ul className="note-pane__list">
           {renderItems.map(({ item, formattedTimestamp }) => (
-            <li key={item.id} className="note-pane__item">
+            <li className="note-pane__item" key={item.id}>
               <header className="note-pane__header">
                 <h3 className="note-pane__title">
                   {item.title ?? "Untitled note"}
                 </h3>
                 {formattedTimestamp ? (
-                  <time className="note-pane__timestamp" dateTime={item.createdAt ?? undefined}>
+                  <time
+                    className="note-pane__timestamp"
+                    dateTime={item.createdAt ?? undefined}
+                  >
                     {formattedTimestamp}
                   </time>
                 ) : null}
@@ -53,9 +56,9 @@ export function NotePane({ items, onDelete, className }: NotePaneProps) {
               <p className="note-pane__content">{item.content}</p>
               {onDelete ? (
                 <button
-                  type="button"
                   className="note-pane__delete"
                   onClick={() => onDelete(item.id)}
+                  type="button"
                 >
                   Delete
                 </button>

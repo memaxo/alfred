@@ -1,15 +1,17 @@
-import { type WorkflowEvent } from "@alfred/type";
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import type { WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-// import { randomUUID } from "node:crypto";
 import { z } from "zod";
-
 import { requirePolicy } from "../gate";
-import { router, authedProcedure } from "../trpc";
+import {
+  workflowStreamDurationSeconds,
+  workflowStreamEventsTotal,
+} from "../metrics";
 import { runRegistry } from "../run-registry";
-import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
+import { authedProcedure, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
 import { runPlanV6 } from "../workflow/runner";
-import * as workflowRepo from "@alfred/db/repo/workflow";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -34,7 +36,7 @@ const workflowInput = z.object({
       context: z.string().min(1),
       dockerfile: z.string().optional(),
       image: z.string().optional(),
-      port: z.number().int().min(1).max(65535).optional(),
+      port: z.number().int().min(1).max(65_535).optional(),
       env: z.record(z.string(), z.string()).optional(),
     })
     .optional(),
@@ -57,7 +59,7 @@ const workflowInput = z.object({
       enable: z.boolean().optional(),
       web: z.boolean().optional(),
       topK: z.number().int().min(1).max(100).optional(),
-      maxTokens: z.number().int().min(2000).max(200000).optional(),
+      maxTokens: z.number().int().min(2000).max(200_000).optional(),
       exts: z.array(z.string()).optional(),
       ignore: z.array(z.string()).optional(),
       seeds: z.array(z.string().url()).optional(),
@@ -79,28 +81,17 @@ const mapWorkflowResource = (raw: unknown) => {
   };
 };
 
-function toTRPCError(error: unknown): TRPCError {
-  if (error instanceof TRPCError) {
-    return error;
-  }
-  const message =
-    error instanceof Error ? error.message : typeof error === "string" ? error : "unknown_error";
-
-  return new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message,
-    cause: error instanceof Error ? error : undefined,
-  });
-}
-
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
-    .use(requirePolicy("workflow.plan", raw => mapWorkflowResource(raw)))
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .mutation(async ({ input, ctx }) => {
       const session = ctx.session;
       if (!session) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       try {
@@ -113,7 +104,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             mode: input.mode,
             context: input.context,
           },
-          { signal: new AbortController().signal },
+          { signal: new AbortController().signal }
         );
 
         // Create durable run row now so clients may hydrate history
@@ -142,13 +133,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
-    .use(requirePolicy("workflow.plan", raw => mapWorkflowResource(raw)))
+    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
-      observable<WorkflowEvent>(emit => {
+      observable<WorkflowEvent>((emit) => {
         const session = ctx.session;
         if (!session) {
-          emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+          emit.error(
+            new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+          );
           return () => {};
         }
 
@@ -163,7 +156,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
           timerClosed = true;
         };
 
-        const recordEvent = (event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel") => {
+        const recordEvent = (
+          event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel"
+        ) => {
           workflowStreamEventsTotal.inc({ event });
         };
 
@@ -185,7 +180,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 mode: input.mode,
                 context: input.context,
               },
-              { signal: abortController.signal },
+              { signal: abortController.signal }
             );
 
             await workflowRepo.createRun({
@@ -240,7 +235,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           } catch (error) {
             recordEvent("error");
             closeTimer("error");
-            emit.error(toTRPCError(error));
+            emit.error(toTRPCError(error, "workflow_error"));
           } finally {
             try {
               if (runId) {
@@ -252,7 +247,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           }
         })();
 
-        asyncTask.catch(error => emit.error(toTRPCError(error)));
+        asyncTask.catch((error) => emit.error(toTRPCError(error)));
 
         return () => {
           cancelled = true;
@@ -262,7 +257,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             closeTimer("cancel");
           }
         };
-      }),
+      })
     ),
 
   resume: authedProcedure
@@ -271,7 +266,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         runId: z.string().min(1),
         event: z.enum(["deploy-authz", "linear-authz", "bio-authz"]),
         authz: z.string().min(1),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       const delivered = await runRegistry.dispatchResume(input.runId, {

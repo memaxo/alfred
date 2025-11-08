@@ -1,9 +1,9 @@
 import "@/test/dom";
-import type { ReactNode } from "react";
-import type { UIMessage } from "@alfred/type/stream";
-import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "bun:test";
+import type { UIMessage } from "@alfred/type/stream";
 import { Chat } from "@alfred/ui";
+import { render } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { useEffect } from "react";
 
 const StubVirtualList: React.ComponentType<{
@@ -47,7 +47,7 @@ describe("Chat", () => {
 
   it("renders empty state", () => {
     const { getByText } = render(
-      <Chat messages={[]} onSend={() => {}} placeholder="Say hello" />,
+      <Chat messages={[]} onSend={() => {}} placeholder="Say hello" />
     );
     expect(getByText("No messages yet")).toBeTruthy();
   });
@@ -55,7 +55,7 @@ describe("Chat", () => {
   it("renders non-virtualized message list", () => {
     const messages = createMessages(4);
     const { getByText } = render(
-      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />,
+      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />
     );
 
     expect(getByText("Message #0")).toBeTruthy();
@@ -70,18 +70,20 @@ describe("Chat", () => {
 
     const { getAllByText, getByText } = render(
       <Chat
+        ListComponent={StubVirtualList}
         messages={messages}
         onSend={() => {}}
+        perf
         placeholder="Say hello"
         virtualized
-        perf
-        ListComponent={StubVirtualList}
-      />,
+      />
     );
 
     // Ensure the last message is visible and an early message is not rendered
     expect(getByText("Message #199")).toBeTruthy();
-    const early = document.querySelector('[data-testid="stub-virtual-list"]')?.textContent ?? "";
+    const early =
+      document.querySelector('[data-testid="stub-virtual-list"]')
+        ?.textContent ?? "";
     expect(early.includes("Message #10")).toBe(false);
     expect(window.__perf?.chat).toBeDefined();
   });
@@ -103,7 +105,7 @@ describe("Chat", () => {
     ];
 
     const { getByText } = render(
-      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />,
+      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />
     );
     expect(getByText(/sending/i)).toBeTruthy();
   });

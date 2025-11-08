@@ -1,11 +1,13 @@
 import "@/test/dom";
 import { describe, expect, it } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Actions } from "../actions";
 import type { AssistantAction } from "@/hooks/use-assistant-stream";
+import { Actions } from "../actions";
 
 describe("Actions", () => {
-  const createAction = (overrides?: Partial<AssistantAction>): AssistantAction => ({
+  const createAction = (
+    overrides?: Partial<AssistantAction>
+  ): AssistantAction => ({
     id: "tool-1",
     name: "search",
     args: { query: "alfred" },

@@ -5,7 +5,7 @@
 
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../index";
-import { memoryNodes, memoryEdges } from "../schema/graph";
+import { memoryEdges, memoryNodes } from "../schema/graph";
 
 type NodeInsert = typeof memoryNodes.$inferInsert;
 type NodeRow = typeof memoryNodes.$inferSelect;
@@ -27,7 +27,9 @@ type EdgeSeed = {
   metadata?: unknown;
 };
 
-function sanitize<T extends Record<string, unknown>>(input: Partial<T>): Partial<T> {
+function sanitize<T extends Record<string, unknown>>(
+  input: Partial<T>
+): Partial<T> {
   const next: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -40,12 +42,16 @@ function sanitize<T extends Record<string, unknown>>(input: Partial<T>): Partial
 function buildEdgeWhere(
   field: typeof memoryEdges.fromId | typeof memoryEdges.toId,
   nodeId: string,
-  kind?: string,
+  kind?: string
 ) {
-  return kind ? and(eq(field, nodeId), eq(memoryEdges.kind, kind)) : eq(field, nodeId);
+  return kind
+    ? and(eq(field, nodeId), eq(memoryEdges.kind, kind))
+    : eq(field, nodeId);
 }
 
-function uniqSeeds<T extends { resource: string; hash: string }>(seeds: T[]): T[] {
+function uniqSeeds<T extends { resource: string; hash: string }>(
+  seeds: T[]
+): T[] {
   if (seeds.length === 0) {
     return seeds;
   }
@@ -60,7 +66,9 @@ function uniqSeeds<T extends { resource: string; hash: string }>(seeds: T[]): T[
   return list;
 }
 
-export async function upsertNodes(seeds: NodeSeed[]): Promise<Map<string, NodeRow>> {
+export async function upsertNodes(
+  seeds: NodeSeed[]
+): Promise<Map<string, NodeRow>> {
   const deduped = uniqSeeds(seeds);
   if (deduped.length === 0) {
     return new Map();
@@ -69,13 +77,13 @@ export async function upsertNodes(seeds: NodeSeed[]): Promise<Map<string, NodeRo
   const rows = await db
     .insert(memoryNodes)
     .values(
-      deduped.map(seed => ({
+      deduped.map((seed) => ({
         resource: seed.resource,
         hash: seed.hash,
         kind: seed.kind,
         label: seed.label,
         properties: seed.properties ?? null,
-      })),
+      }))
     )
     .onConflictDoUpdate({
       target: [memoryNodes.resource, memoryNodes.hash],
@@ -93,8 +101,11 @@ export async function upsertNodes(seeds: NodeSeed[]): Promise<Map<string, NodeRo
   }
 
   if (rows.length !== deduped.length) {
-    const filters = deduped.map(seed =>
-      and(eq(memoryNodes.resource, seed.resource), eq(memoryNodes.hash, seed.hash)),
+    const filters = deduped.map((seed) =>
+      and(
+        eq(memoryNodes.resource, seed.resource),
+        eq(memoryNodes.hash, seed.hash)
+      )
     );
     const fetched = await db
       .select()
@@ -120,7 +131,7 @@ export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
   return db
     .insert(memoryEdges)
     .values(
-      deduped.map(seed => ({
+      deduped.map((seed) => ({
         resource: seed.resource,
         hash: seed.hash,
         fromId: seed.fromId,
@@ -128,7 +139,7 @@ export async function upsertEdges(seeds: EdgeSeed[]): Promise<EdgeRow[]> {
         kind: seed.kind,
         weight: seed.weight ?? 1,
         metadata: seed.metadata ?? null,
-      })),
+      }))
     )
     .onConflictDoUpdate({
       target: [memoryEdges.resource, memoryEdges.hash],
@@ -149,7 +160,7 @@ export async function createNode(
   hash: string,
   kind: string,
   label: string,
-  properties?: unknown,
+  properties?: unknown
 ): Promise<NodeRow> {
   const [row] = await db
     .insert(memoryNodes)
@@ -181,14 +192,15 @@ export async function getNode(nodeId: string): Promise<NodeRow | null> {
 
 export async function updateNode(
   nodeId: string,
-  updates: Partial<NodeInsert>,
+  updates: Partial<NodeInsert>
 ): Promise<NodeRow | null> {
   const payload = sanitize<NodeInsert>(updates);
   if (Object.keys(payload).length === 0) {
     return getNode(nodeId);
   }
 
-  (payload as Partial<NodeInsert> & { updated?: Date }).updated = sql`NOW()` as unknown as Date;
+  (payload as Partial<NodeInsert> & { updated?: Date }).updated =
+    sql`NOW()` as unknown as Date;
 
   const [row] = await db
     .update(memoryNodes)
@@ -211,7 +223,7 @@ export async function deleteNode(nodeId: string): Promise<number> {
 export async function findNodesByKind(
   kind: string,
   limit = 100,
-  offset = 0,
+  offset = 0
 ): Promise<NodeRow[]> {
   return db
     .select()
@@ -230,7 +242,7 @@ export async function createEdge(
   toId: string,
   kind: string,
   weight = 1.0,
-  metadata?: unknown,
+  metadata?: unknown
 ): Promise<EdgeRow> {
   const [row] = await db
     .insert(memoryEdges)
@@ -271,7 +283,10 @@ export async function deleteEdge(edgeId: string): Promise<number> {
   return rows.length;
 }
 
-export async function getOutboundEdges(nodeId: string, kind?: string): Promise<EdgeRow[]> {
+export async function getOutboundEdges(
+  nodeId: string,
+  kind?: string
+): Promise<EdgeRow[]> {
   return db
     .select()
     .from(memoryEdges)
@@ -279,7 +294,10 @@ export async function getOutboundEdges(nodeId: string, kind?: string): Promise<E
     .orderBy(desc(memoryEdges.created));
 }
 
-export async function getInboundEdges(nodeId: string, kind?: string): Promise<EdgeRow[]> {
+export async function getInboundEdges(
+  nodeId: string,
+  kind?: string
+): Promise<EdgeRow[]> {
   return db
     .select()
     .from(memoryEdges)
@@ -291,7 +309,7 @@ export async function getInboundEdges(nodeId: string, kind?: string): Promise<Ed
 export async function getNeighbors(
   nodeId: string,
   direction: "out" | "in" | "both" = "both",
-  kind?: string,
+  kind?: string
 ): Promise<NodeRow[]> {
   const ids = new Set<string>();
 
@@ -323,18 +341,16 @@ export async function getNeighbors(
 export async function findPath(
   fromId: string,
   toId: string,
-  maxDepth = 5,
+  maxDepth = 5
 ): Promise<{ nodeId: string; via: string[] }[]> {
   if (fromId === toId) {
     return [{ nodeId: fromId, via: [] }];
   }
 
-  const query = sql<
-    {
-      node_path: string[];
-      edge_path: string[];
-    }
-  >`
+  const query = sql<{
+    node_path: string[];
+    edge_path: string[];
+  }>`
     WITH RECURSIVE traversal (node_id, node_path, edge_path, depth) AS (
       SELECT
         id,
@@ -405,8 +421,8 @@ export async function getSubgraph(nodeIds: string[]): Promise<{
     .where(
       or(
         inArray(memoryEdges.fromId, uniqueIds),
-        inArray(memoryEdges.toId, uniqueIds),
-      ),
+        inArray(memoryEdges.toId, uniqueIds)
+      )
     )
     .orderBy(desc(memoryEdges.created));
 

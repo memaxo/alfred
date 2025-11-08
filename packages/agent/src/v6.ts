@@ -44,7 +44,9 @@ function firstEnv(...keys: string[]) {
 }
 
 export function getModelId(): string {
-  return firstEnv("AI_MODEL", "OPENAI_MODEL", "MASTRA_MODEL") ?? DEFAULT_MODEL_ID;
+  return (
+    firstEnv("AI_MODEL", "OPENAI_MODEL", "MASTRA_MODEL") ?? DEFAULT_MODEL_ID
+  );
 }
 
 export function getOpenAI() {
@@ -69,7 +71,9 @@ export function getOpenAI() {
   return cachedOpenAI;
 }
 
-export function wrapLegacyToolToAISDK<TLegacy extends LegacyTool>(legacy: TLegacy) {
+export function wrapLegacyToolToAISDK<TLegacy extends LegacyTool>(
+  legacy: TLegacy
+) {
   const outputSchema = legacy.outputSchema;
 
   const wrapped = tool({
@@ -122,6 +126,6 @@ export function buildAssistantTools(): ToolMap {
   return assistantTools;
 }
 
-export function buildOrchestratorTools(): ToolMap {
+export function buildTools(): ToolMap {
   return orchestratorTools;
 }

@@ -21,7 +21,7 @@ beforeAll(async () => {
 async function resetUserTables() {
   if (!SHOULD_RUN) return;
   await db.execute(
-    sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`
   );
 }
 
@@ -57,29 +57,62 @@ describeFn("userRepo", () => {
 
   it("sets, lists, and deletes preferences", async () => {
     await userRepo.setPreference(TEST_USER, "theme", { mode: "dark" });
-    await userRepo.setPreference(TEST_USER, "language", "en-US", 0.8, "inferred");
+    await userRepo.setPreference(
+      TEST_USER,
+      "language",
+      "en-US",
+      0.8,
+      "inferred"
+    );
 
     const preferences = await userRepo.getPreferences(TEST_USER);
     expect(preferences.length).toBe(2);
 
-    await userRepo.setPreference(TEST_USER, "theme", { mode: "light" }, 0.9, "user");
+    await userRepo.setPreference(
+      TEST_USER,
+      "theme",
+      { mode: "light" },
+      0.9,
+      "user"
+    );
     const afterUpdate = await userRepo.getPreferences(TEST_USER);
-    const theme = afterUpdate.find(pref => pref.key === "theme");
+    const theme = afterUpdate.find((pref) => pref.key === "theme");
     expect(theme?.value).toEqual({ mode: "light" });
 
     const removed = await userRepo.deletePreference(TEST_USER, "language");
     expect(removed).toBe(1);
 
     const finalPreferences = await userRepo.getPreferences(TEST_USER);
-    expect(finalPreferences.some(pref => pref.key === "language")).toBe(false);
+    expect(finalPreferences.some((pref) => pref.key === "language")).toBe(
+      false
+    );
   });
 
   it("adds facts and returns semantic matches above threshold", async () => {
     const referenceVector = makeVector(0.5);
-    await userRepo.addFact(TEST_USER, "User likes coffee", makeVector(0.5), "personal", 0.9, "user");
-    await userRepo.addFact(TEST_USER, "Unrelated fact", makeVector(-0.5), "other", 0.4, "inferred");
+    await userRepo.addFact(
+      TEST_USER,
+      "User likes coffee",
+      makeVector(0.5),
+      "personal",
+      0.9,
+      "user"
+    );
+    await userRepo.addFact(
+      TEST_USER,
+      "Unrelated fact",
+      makeVector(-0.5),
+      "other",
+      0.4,
+      "inferred"
+    );
 
-    const matches = await userRepo.searchFacts(TEST_USER, referenceVector, 5, 0.2);
+    const matches = await userRepo.searchFacts(
+      TEST_USER,
+      referenceVector,
+      5,
+      0.2
+    );
     expect(matches.length).toBe(1);
     expect(matches[0]?.content).toBe("User likes coffee");
 
@@ -89,7 +122,12 @@ describeFn("userRepo", () => {
 
   it("records and filters timeline events", async () => {
     await userRepo.addEvent(TEST_USER, "conversation", { summary: "Greeted" });
-    await userRepo.addEvent(TEST_USER, "tool_use", { tool: "note" }, { result: "created" });
+    await userRepo.addEvent(
+      TEST_USER,
+      "tool_use",
+      { tool: "note" },
+      { result: "created" }
+    );
 
     const allEvents = await userRepo.getEvents(TEST_USER);
     expect(allEvents.length).toBe(2);

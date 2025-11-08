@@ -18,7 +18,7 @@ export class MockEventSource {
     this.url = url;
     this.readyState = 0; // CONNECTING
     MockEventSource.instances.push(this);
-    
+
     // Simulate connection after a tick
     this.openTimer = setTimeout(() => {
       if (!this.closed) {
@@ -66,8 +66,8 @@ export class MockEventSource {
  */
 export function setupEventSourceMock(): void {
   if (typeof globalThis !== "undefined") {
-    (globalThis as typeof globalThis & { EventSource: typeof MockEventSource }).EventSource =
-      MockEventSource;
+    (
+      globalThis as typeof globalThis & { EventSource: typeof MockEventSource }
+    ).EventSource = MockEventSource;
   }
 }
-

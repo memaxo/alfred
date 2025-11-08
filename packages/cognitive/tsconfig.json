@@ -16,8 +16,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "../type" },
-    { "path": "../knowledge" }
-  ]
+  "references": [{ "path": "../type" }, { "path": "../knowledge" }]
 }

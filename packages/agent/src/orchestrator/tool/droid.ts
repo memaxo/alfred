@@ -1,10 +1,16 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { spawn } from "node:child_process";
-import { realpathSync, statSync } from "node:fs";
-import { constants as fsConstants } from "node:fs";
-import { accessSync } from "node:fs";
+import {
+  accessSync,
+  constants as fsConstants,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
-import { setTimeout as setNodeTimeout, clearTimeout as clearNodeTimeout } from "node:timers";
+import {
+  clearTimeout as clearNodeTimeout,
+  setTimeout as setNodeTimeout,
+} from "node:timers";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 import { recordDroidExecRun, startDroidExecTimer } from "../../metrics";
 
@@ -20,7 +26,7 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
     raw && raw.trim().length > 0
       ? raw
           .split(path.delimiter)
-          .map(entry => entry.trim())
+          .map((entry) => entry.trim())
           .filter(Boolean)
       : [];
 
@@ -28,7 +34,9 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
 
   for (const entry of extras) {
     try {
-      const absolute = path.isAbsolute(entry) ? entry : path.resolve(base, entry);
+      const absolute = path.isAbsolute(entry)
+        ? entry
+        : path.resolve(base, entry);
       prefixes.add(realpathSync(absolute));
     } catch {
       // Ignore invalid entries so that a bad env var does not break execution.
@@ -49,9 +57,11 @@ function safeRealpath(p: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!baseReal || !targetReal) return false;
+  if (!(baseReal && targetReal)) return false;
   const relative = path.relative(baseReal, targetReal);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
+  );
 }
 
 function assertAllowedDirectory(candidate: string) {
@@ -78,7 +88,12 @@ const droidInputSchema = z.object({
   cw: z.string().optional(),
   model: z.string().optional(),
   authz: z.string().optional(),
-  timeoutSec: z.number().int().min(MIN_TIMEOUT_SEC).max(MAX_TIMEOUT_SEC).optional(),
+  timeoutSec: z
+    .number()
+    .int()
+    .min(MIN_TIMEOUT_SEC)
+    .max(MAX_TIMEOUT_SEC)
+    .optional(),
   env: z.record(z.string(), z.string()).optional(),
 });
 
@@ -91,12 +106,14 @@ const toolOutputSchema = z.object({
       z.object({
         path: z.string(),
         kind: z.string(),
-      }),
+      })
     )
     .optional(),
 });
 
-type ToolWriter = { write: (chunk: unknown) => Promise<void> | void } | undefined;
+type ToolWriter =
+  | { write: (chunk: unknown) => Promise<void> | void }
+  | undefined;
 
 export interface DroidExecuteArgs {
   input: DroidToolInput;
@@ -146,7 +163,9 @@ function resolveExecutable(command: string) {
     return command;
   }
 
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const entry of pathEntries) {
     const candidate = path.join(entry, command);
     try {
@@ -161,16 +180,20 @@ function resolveExecutable(command: string) {
 }
 
 async function enforcePolicy(input: DroidToolInput) {
-  const { claims } = await requireToolScopesAndPolicy(input.authz, ["droid.exec"], {
-    action: "droid.exec",
-    resource: {
-      kind: "repo",
-      id: input.cw ? path.resolve(input.cw) : undefined,
-    },
-    context: {
-      auto: input.auto,
-    },
-  });
+  const { claims } = await requireToolScopesAndPolicy(
+    input.authz,
+    ["droid.exec"],
+    {
+      action: "droid.exec",
+      resource: {
+        kind: "repo",
+        id: input.cw ? path.resolve(input.cw) : undefined,
+      },
+      context: {
+        auto: input.auto,
+      },
+    }
+  );
 
   if (
     (input.auto === "medium" || input.auto === "high") &&
@@ -184,9 +207,9 @@ function streamStdout(
   child: ReturnType<typeof spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
-  accumulator: { stdout: string; capturedBytes: number; truncated: boolean },
+  accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
 ) {
-  child.stdout?.on("data", chunk => {
+  child.stdout?.on("data", (chunk) => {
     const text = chunk.toString();
     accumulator.capturedBytes += Buffer.byteLength(text);
 
@@ -203,26 +226,35 @@ function streamStdout(
       for (const line of lines) {
         try {
           const parsed = JSON.parse(line);
-          void Promise.resolve(writer?.write?.({ type: "droid", chunk: parsed })).catch(() => {});
+          void Promise.resolve(
+            writer?.write?.({ type: "droid", chunk: parsed })
+          ).catch(() => {});
         } catch {
-          void Promise.resolve(writer?.write?.({ type: "stdout", text: line })).catch(() => {});
+          void Promise.resolve(
+            writer?.write?.({ type: "stdout", text: line })
+          ).catch(() => {});
         }
       }
     } else {
-      void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(() => {});
+      void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+        () => {}
+      );
     }
   });
 }
 
 function streamStderr(child: ReturnType<typeof spawn>, writer: ToolWriter) {
-  child.stderr?.on("data", chunk => {
-    void Promise.resolve(writer?.write?.({ type: "stderr", text: chunk.toString() })).catch(() => {});
+  child.stderr?.on("data", (chunk) => {
+    void Promise.resolve(
+      writer?.write?.({ type: "stderr", text: chunk.toString() })
+    ).catch(() => {});
   });
 }
 
 export const toolDroid = {
   name: "droid",
-  description: "Run the ALFRED droid exec CLI in a sandboxed, non-interactive mode.",
+  description:
+    "Run the ALFRED droid exec CLI in a sandboxed, non-interactive mode.",
   inputSchema: droidInputSchema,
   outputSchema: toolOutputSchema,
   execute: async ({ input, writer }: DroidExecuteArgs) => {
@@ -252,7 +284,7 @@ export const toolDroid = {
         writer?.write?.({
           type: "notice",
           message: "droid_exec_timeout",
-        }),
+        })
       ).catch(() => {});
     }, timeoutSec * 1000);
 
@@ -266,11 +298,11 @@ export const toolDroid = {
     streamStderr(child, writer);
 
     const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on("error", err => {
+      child.on("error", (err) => {
         clearNodeTimeout(timer);
         reject(err);
       });
-      child.on("close", code => resolve(code ?? 0));
+      child.on("close", (code) => resolve(code ?? 0));
     }).finally(() => {
       clearNodeTimeout(timer);
       stopDurationTimer();
@@ -283,9 +315,9 @@ export const toolDroid = {
     }
 
     if (accumulator.truncated) {
-      void Promise.resolve(writer?.write?.({ type: "notice", message: "output_truncated" })).catch(
-        () => {},
-      );
+      void Promise.resolve(
+        writer?.write?.({ type: "notice", message: "output_truncated" })
+      ).catch(() => {});
     }
 
     return {

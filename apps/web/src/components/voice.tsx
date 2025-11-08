@@ -1,6 +1,6 @@
 /**
  * Voice Picker Component
- * 
+ *
  * Adapted from ui.elevenlabs.io/docs/components/voice-picker
  * Select voice for TTS synthesis
  */
@@ -21,20 +21,15 @@ interface VoiceProps {
   className?: string;
 }
 
-export function Voice({
-  voices,
-  selected,
-  onSelect,
-  className,
-}: VoiceProps) {
+export function Voice({ voices, selected, onSelect, className }: VoiceProps) {
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
       {voices.map((voice) => (
         <Button
           key={voice.id}
-          variant={selected === voice.id ? "default" : "outline"}
-          size="sm"
           onClick={() => onSelect(voice.id)}
+          size="sm"
+          variant={selected === voice.id ? "default" : "outline"}
         >
           {voice.name}
         </Button>
@@ -42,4 +37,3 @@ export function Voice({
     </div>
   );
 }
-

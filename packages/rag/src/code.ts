@@ -9,12 +9,17 @@ export interface CodeFile {
   tokens?: number;
 }
 
-export async function ingestCodeFiles(source: string, files: CodeFile[]): Promise<string | null> {
+export async function ingestCodeFiles(
+  source: string,
+  files: CodeFile[]
+): Promise<string | null> {
   if (!Array.isArray(files) || files.length === 0) {
     return null;
   }
 
-  const prepared = files.filter(file => typeof file.content === "string" && file.content.trim().length > 0);
+  const prepared = files.filter(
+    (file) => typeof file.content === "string" && file.content.trim().length > 0
+  );
   if (prepared.length === 0) {
     return null;
   }
@@ -25,7 +30,7 @@ export async function ingestCodeFiles(source: string, files: CodeFile[]): Promis
     undefined,
     {
       kind: "code",
-    },
+    }
   );
   const documentId = document?.id;
   if (!documentId) {

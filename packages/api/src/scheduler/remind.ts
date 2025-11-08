@@ -14,18 +14,25 @@ export interface ReminderSchedulerOptions {
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;
 
-async function tick(options: Required<Omit<ReminderSchedulerOptions, "onFire">> & {
-  onFire?: ReminderSchedulerOptions["onFire"];
-}) {
+async function tick(
+  options: Required<Omit<ReminderSchedulerOptions, "onFire">> & {
+    onFire?: ReminderSchedulerOptions["onFire"];
+  }
+) {
   if (running) {
-    options.logger.warn?.("Reminder scheduler tick skipped because previous run is still in progress.");
+    options.logger.warn?.(
+      "Reminder scheduler tick skipped because previous run is still in progress."
+    );
     return;
   }
 
   running = true;
   try {
     const now = options.now();
-    const reminders = await assistantRepo.getDueRemindersAll(now, options.batchSize);
+    const reminders = await assistantRepo.getDueRemindersAll(
+      now,
+      options.batchSize
+    );
 
     for (const reminder of reminders) {
       await assistantRepo.markReminderFired(reminder.id);
@@ -46,14 +53,16 @@ async function tick(options: Required<Omit<ReminderSchedulerOptions, "onFire">> 
 
 export function startReminderScheduler({
   intervalMs = 30_000,
-  jitterMs = 5_000,
+  jitterMs = 5000,
   batchSize = 100,
   logger = console,
   onFire,
   now = () => new Date(),
 }: ReminderSchedulerOptions = {}) {
   if (process.env.SCHED_REMIND !== "1") {
-    logger.info?.("[assistant-remind] Scheduler disabled (set SCHED_REMIND=1 to enable).");
+    logger.info?.(
+      "[assistant-remind] Scheduler disabled (set SCHED_REMIND=1 to enable)."
+    );
     return;
   }
 

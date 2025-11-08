@@ -16,10 +16,12 @@ export const tokenRouter = router({
         scopes: scopesSchema,
         aud: z.string().trim().min(1).optional(),
         ttlSec: ttlSchema,
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
-      const user = ctx.session?.user as (typeof ctx.session & { id?: string; scopes?: string[] } | undefined);
+      const user = ctx.session?.user as
+        | (typeof ctx.session & { id?: string; scopes?: string[] })
+        | undefined;
       const userId = user?.id;
       if (!userId) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -39,10 +41,12 @@ export const tokenRouter = router({
         scopes: scopesSchema,
         aud: z.string().trim().min(1).optional(),
         ttlSec: ttlSchema,
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
-      const elevatedUser = ctx.session?.user as (typeof ctx.session & { id?: string; scopes?: string[] } | undefined);
+      const elevatedUser = ctx.session?.user as
+        | (typeof ctx.session & { id?: string; scopes?: string[] })
+        | undefined;
       const userId = elevatedUser?.id;
       if (!userId) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -57,7 +61,8 @@ export const tokenRouter = router({
       } catch (error) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: error instanceof Error ? error.message : "biometric_required",
+          message:
+            error instanceof Error ? error.message : "biometric_required",
         });
       }
       const audience = input.aud ?? process.env.TOOL_AUDIENCE ?? "alfred:tools";

@@ -52,3 +52,10 @@ export const publicProcedure = baseProcedure;
 export const protectedProcedure = baseProcedure.use(authMiddleware);
 
 export const authedProcedure = protectedProcedure;
+
+export type AuthedContext = {
+  session: NonNullable<Context["session"]>;
+  runtime: Context["runtime"];
+  runtimeContext: Context["runtimeContext"];
+  policy?: Context["policy"];
+};

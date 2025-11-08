@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, type UIMessage, streamText } from "ai";
-import { z } from "zod";
-import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { buildOrchestratorTools, getModelId, getOpenAI } from "@alfred/agent";
+import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { createFileRoute } from "@tanstack/react-router";
+import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { z } from "zod";
 
 const orchestratorRequestSchema = z
   .object({
@@ -27,7 +27,7 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
     }
 
@@ -45,13 +45,10 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return new Response(
-        JSON.stringify({ error: "invalid_json" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "invalid_json" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
     console.error("Orchestrator stream error:", error);
     return new Response(

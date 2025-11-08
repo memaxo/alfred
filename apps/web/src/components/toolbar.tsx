@@ -1,6 +1,6 @@
 /**
  * Toolbar Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/toolbar
  * Quick action toolbar
  */
@@ -26,9 +26,9 @@ export function Toolbar({ actions, className }: ToolbarProps) {
       {actions.map((action) => (
         <Button
           key={action.id}
-          variant="outline"
-          size="sm"
           onClick={action.onClick}
+          size="sm"
+          variant="outline"
         >
           {action.icon}
           {action.label}
@@ -37,4 +37,3 @@ export function Toolbar({ actions, className }: ToolbarProps) {
     </div>
   );
 }
-

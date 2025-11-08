@@ -1,6 +1,6 @@
 /**
  * Queue Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/queue
  * Displays task queue status
  */
@@ -27,12 +27,12 @@ export function Queue({ items, className }: QueueProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No items in queue</p>
+          <p className="text-muted-foreground text-sm">No items in queue</p>
         ) : (
           items.map((item) => (
             <div
-              key={item.id}
               className="flex items-center justify-between rounded border p-2"
+              key={item.id}
             >
               <span className="text-sm">{item.title}</span>
               <span
@@ -40,7 +40,7 @@ export function Queue({ items, className }: QueueProps) {
                   "rounded px-2 py-1 text-xs",
                   item.priority === "high" && "bg-red-100 text-red-800",
                   item.priority === "medium" && "bg-yellow-100 text-yellow-800",
-                  item.priority === "low" && "bg-green-100 text-green-800",
+                  item.priority === "low" && "bg-green-100 text-green-800"
                 )}
               >
                 {item.priority}
@@ -52,4 +52,3 @@ export function Queue({ items, className }: QueueProps) {
     </Card>
   );
 }
-

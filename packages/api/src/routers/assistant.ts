@@ -1,23 +1,20 @@
 /* eslint-disable complexity */
 /* eslint-disable @typescript-eslint/complexity */
 import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
-import { stepCountIs, type ModelMessage } from "ai";
-import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
+import type { UIMessage } from "@alfred/type/stream";
+import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { convertToModelMessages, stepCountIs } from "ai";
 import { z } from "zod";
-import { callGenerateText, persistGenerateResult } from "../ai/generate";
+import { generateText, persistResult } from "../ai/generate";
 import { cloneRuntimeContext } from "../context";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
+import { sanitizeResult } from "../utils/generate";
 
 const ASSISTANT_MAX_STEPS = 12;
 
-const assistantMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system", "tool"]),
-  content: z.string().min(1),
-});
-
-const memoryOptionsSchema = z
+const memorySchema = z
   .object({
     workingMemory: z
       .object({
@@ -41,20 +38,16 @@ const memoryOptionsSchema = z
   })
   .partial();
 
-const assistantGenerateInput = z.object({
+const generateInput = z.object({
   thread: z.string().optional(),
   resource: z.string().optional(),
-  messages: z.array(assistantMessageSchema).min(1),
+  messages: z.array(z.unknown()).min(1),
   toolChoice: z.enum(["auto", "none", "required"]).optional(),
   maxSteps: z.number().int().min(1).max(ASSISTANT_MAX_STEPS).optional(),
-  memory: memoryOptionsSchema.optional(),
+  memory: memorySchema.optional(),
 });
 
-const assistantStreamInput = assistantGenerateInput.extend({
-  runId: z.string().optional(),
-});
-
-const assistantEscalateInput = z.object({
+const escalateInput = z.object({
   requirement: z.string().min(1),
   auto: z.enum(["read", "low"]).default("read"),
   authz: z.string().optional(),
@@ -63,7 +56,19 @@ const assistantEscalateInput = z.object({
   context: z.record(z.string(), z.unknown()).optional(),
 });
 
-type AssistantGenerateInput = z.infer<typeof assistantGenerateInput>;
+type AssistantGenerateInput = z.infer<typeof generateInput>;
+
+function validateMessages(messages: unknown[]): UIMessage[] {
+  const validated: UIMessage[] = [];
+  for (const msg of messages) {
+    const result = uiMessageSchema.safeParse(msg);
+    if (!result.success) {
+      throw new Error(`Invalid message: ${result.error.message}`);
+    }
+    validated.push(result.data as UIMessage);
+  }
+  return validated;
+}
 
 function mapResource(raw: unknown) {
   const payload = (raw ?? {}) as Partial<AssistantGenerateInput> & {
@@ -78,86 +83,21 @@ function mapResource(raw: unknown) {
   };
 }
 
-function toModelMessages(
-  messages: AssistantGenerateInput["messages"]
-): ModelMessage[] {
-  return messages.map(message => {
-    if (message.role === "system") {
-      return { role: "system", content: message.content } as ModelMessage;
-    }
-    if (message.role === "assistant" || message.role === "tool") {
-      return { role: "assistant", content: message.content } as ModelMessage;
-    }
-    return { role: "user", content: message.content } as ModelMessage;
-  });
-}
-
-function toTRPCError(error: unknown): TRPCError {
-  if (error instanceof TRPCError) {
-    return error;
-  }
-  const message =
-    error instanceof Error ? error.message : String(error ?? "assistant_error");
-  if (message === "biometric_required") {
-    return new TRPCError({ code: "PRECONDITION_FAILED", message });
-  }
-  return new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message,
-    cause: error instanceof Error ? error : undefined,
-  });
-}
-
-function sanitizeGenerateResult(result: unknown) {
-  if (!result || typeof result !== "object") {
-    return {
-      text: "",
-      toolCalls: [],
-      toolResults: [],
-      usage: null,
-      object: null,
-      steps: [],
-      warnings: [],
-      reasoning: null,
-      finishReason: null,
-    };
-  }
-
-  const output = result as Record<string, unknown>;
-  return {
-    text: typeof output.text === "string" ? output.text : "",
-    toolCalls: Array.isArray(output.toolCalls) ? output.toolCalls : [],
-    toolResults: Array.isArray(output.toolResults) ? output.toolResults : [],
-    usage: output.usage ?? null,
-    object: output.object ?? null,
-    steps: Array.isArray(output.steps) ? output.steps : [],
-    warnings: Array.isArray(output.warnings) ? output.warnings : [],
-    reasoning: output.reasoning ?? null,
-    finishReason:
-      typeof output.finishReason === "string" ? output.finishReason : null,
-  };
-}
-
 export const assistantRouter: ReturnType<typeof router> = router({
   generate: authedProcedure
     .use(requirePolicy("assistant.generate", (raw) => mapResource(raw)))
-    .input(assistantGenerateInput)
+    .input(generateInput)
     .mutation(async ({ input, ctx }) => {
-      const session = ctx.session;
-      if (!session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
-      }
-
       try {
         const model = getOpenAI().chat(getModelId());
-        const modelMessages = toModelMessages(input.messages);
+        const validatedMessages = validateMessages(input.messages);
+        const modelMessages = convertToModelMessages(validatedMessages);
         const stopWhen =
-          typeof input.maxSteps === "number" ? stepCountIs(input.maxSteps) : undefined;
+          typeof input.maxSteps === "number"
+            ? stepCountIs(input.maxSteps)
+            : undefined;
 
-        const result = await callGenerateText({
+        const result = await generateText({
           model,
           messages: modelMessages,
           tools: buildAssistantTools(),
@@ -165,58 +105,34 @@ export const assistantRouter: ReturnType<typeof router> = router({
           ...(stopWhen ? { stopWhen } : {}),
         });
 
-        const output = sanitizeGenerateResult(result);
-        // Optionally persist for replay
-        try {
-          const replayId = await persistGenerateResult({
-            userId: session.user.id,
-            kind: "assistant",
-            input,
-            result: output,
-          });
-          return { ...output, replayId: replayId ?? undefined } as typeof output & {
-            replayId?: string;
-          };
-        } catch {
-          return output;
+        const output = sanitizeResult(result);
+        // Persist for replay
+        if (!ctx.session) {
+          throw new Error("Session required");
         }
+        const replayId = await persistResult({
+          userId: ctx.session.user.id,
+          kind: "assistant",
+          input,
+          result: output,
+        });
+        return {
+          ...output,
+          replayId: replayId ?? undefined,
+        } as typeof output & {
+          replayId?: string;
+        };
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "assistant_error");
       }
     }),
-
-  // Deprecated: use the HTTP SSE endpoint at /api/assistant for streaming responses.
-  // TODO: remove this procedure once all clients migrate to the new transport.
-  stream: authedProcedure
-    .use(requirePolicy("assistant.stream", (raw) => mapResource(raw)))
-    .input(assistantStreamInput)
-    .subscription(() =>
-      observable<never>((emit) => {
-        emit.error(
-          new TRPCError({
-            code: "NOT_IMPLEMENTED",
-            message:
-              "assistant.stream has moved to the HTTP SSE endpoint at /api/assistant.",
-          })
-        );
-        return () => {
-          /* no-op */
-        };
-      })
-    ),
-
   escalate: authedProcedure
     .use(requirePolicy("assistant.escalate", (raw) => mapResource(raw)))
-    .input(assistantEscalateInput)
+    .input(escalateInput)
     .mutation(async ({ input, ctx }) => {
-      const session = ctx.session;
-      if (!session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "session_required",
-        });
+      if (!ctx.session) {
+        throw new Error("Session required");
       }
-
       try {
         const { toolHandoff } = await import(
           "@alfred/agent/assistant/tool/handoff"
@@ -238,13 +154,13 @@ export const assistantRouter: ReturnType<typeof router> = router({
         const result = await toolHandoff.execute({
           input: {
             ...input,
-            userId: session.user.id,
+            userId: ctx.session.user.id,
           },
           runtimeContext,
         });
         return result;
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "assistant_error");
       }
     }),
 });

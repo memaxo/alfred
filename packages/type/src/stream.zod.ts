@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 /**
+ * Zod schema for router message input (simplified format for tRPC).
+ */
+export const routerMessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system", "tool"]),
+  content: z.string().min(1),
+});
+
+/**
  * Zod schema for AI SDK v6 UIMessage.
  * Accepts the common part types surfaced to the UI layer while tolerating
  * additional data payloads via `.passthrough()`.
@@ -11,65 +19,68 @@ export const uiMessageSchema = z.object({
   metadata: z.unknown().optional(),
   parts: z
     .array(
-      z
-        .discriminatedUnion("type", [
-          z.object({
-            type: z.literal("text"),
-            text: z.string(),
-          }),
-          z.object({
-            type: z.literal("reasoning"),
-            reasoning: z.string(),
-          }),
-          z.object({
-            type: z.literal("tool-call"),
-            toolCallId: z.string(),
-            toolName: z.string(),
-            args: z.unknown(),
-          }),
-          z.object({
-            type: z.literal("tool-result"),
-            toolCallId: z.string(),
-            toolName: z.string(),
-            result: z.unknown(),
-          }),
-          z.object({
-            type: z.literal("file"),
-            mimeType: z.string(),
-            data: z.string(),
-          }),
-          z.object({
-            type: z.literal("data"),
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("text"),
+          text: z.string(),
+        }),
+        z.object({
+          type: z.literal("reasoning"),
+          text: z.string(),
+          state: z.enum(["streaming", "done"]).optional(),
+          providerMetadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+        z.object({
+          type: z.literal("tool-call"),
+          toolCallId: z.string(),
+          toolName: z.string(),
+          input: z.unknown(),
+        }),
+        z.object({
+          type: z.literal("tool-result"),
+          toolCallId: z.string(),
+          toolName: z.string(),
+          output: z.unknown(),
+        }),
+        z.object({
+          type: z.literal("file"),
+          mediaType: z.string(),
+          url: z.string(),
+          filename: z.string().optional(),
+        }),
+        z.object({
+          type: z.literal("source-url"),
+          sourceId: z.string(),
+          url: z.string(),
+          title: z.string().optional(),
+          providerMetadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+        z.object({
+          type: z.literal("source-document"),
+          sourceId: z.string(),
+          mediaType: z.string(),
+          title: z.string(),
+          filename: z.string().optional(),
+          providerMetadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+        z.object({
+          type: z.literal("step-start"),
+        }),
+        z
+          .object({
+            type: z.literal("data-status"),
             data: z.unknown(),
-          }),
-          z.object({
-            type: z.literal("source"),
-            url: z.string().optional(),
-            document: z.unknown().optional(),
-          }),
-          z.object({
-            type: z.literal("step-start"),
-            stepId: z.string(),
-          }),
-          z.object({
-            type: z.literal("error"),
-            errorText: z.string(),
-          }),
-          z
-            .object({
-              type: z.literal("data-status"),
-              data: z.unknown(),
-              transient: z.boolean().optional(),
-            })
-            .passthrough(),
-          z
-            .object({
-              type: z.literal("data-cache"),
-              data: z.unknown(),
-              transient: z.boolean().optional(),
-            })
-            .passthrough(),
-        ])
+            transient: z.boolean().optional(),
+          })
+          .passthrough(),
+        z
+          .object({
+            type: z.literal("data-cache"),
+            data: z.unknown(),
+            transient: z.boolean().optional(),
+          })
+          .passthrough(),
+      ])
     )
     .optional()
     .default([]),
@@ -93,8 +104,13 @@ export const modelMessageSchema = z.discriminatedUnion("role", [
   }),
   z.object({
     role: z.literal("tool"),
-    content: z.union([z.string(), z.array(z.unknown())]),
-    toolCallId: z.string(),
-    toolName: z.string(),
+    content: z.array(
+      z.object({
+        type: z.literal("tool-result"),
+        toolCallId: z.string(),
+        toolName: z.string(),
+        output: z.unknown(),
+      })
+    ),
   }),
 ]);

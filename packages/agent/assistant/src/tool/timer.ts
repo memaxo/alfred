@@ -2,13 +2,19 @@ import { assistantRepo } from "@alfred/db";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
 
-const { cancelTimer, createTimer, getActiveTimers, markTimerCompleted } = assistantRepo;
+const { cancelTimer, createTimer, getActiveTimers, markTimerCompleted } =
+  assistantRepo;
 
 const timerInputSchema = z.object({
   userId: z.string().min(1),
   action: z.enum(["start", "active", "done", "cancel"]),
   label: z.string().optional(),
-  durationSec: z.number().int().min(1).max(24 * 3600).optional(),
+  durationSec: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 3600)
+    .optional(),
   id: z.string().optional(),
 });
 
@@ -71,7 +77,7 @@ export const toolTimer = {
           cancelled: z.boolean(),
           completed: z.boolean(),
           createdAt: z.string().nullable(),
-        }),
+        })
       )
       .optional(),
   }),
@@ -81,7 +87,11 @@ export const toolTimer = {
     switch (input.action) {
       case "start": {
         const duration = ensure(input.durationSec, "timer_duration_required");
-        const created = await createTimer(input.userId, duration, input.label ?? undefined);
+        const created = await createTimer(
+          input.userId,
+          duration,
+          input.label ?? undefined
+        );
         return {
           ok: true,
           timer: mapTimer(created),
@@ -90,7 +100,7 @@ export const toolTimer = {
       case "active": {
         const rows = await getActiveTimers(input.userId);
         return {
-          timers: rows.map(row => mapTimer(row)!).filter(Boolean),
+          timers: rows.map((row) => mapTimer(row)!).filter(Boolean),
         };
       }
       case "done": {

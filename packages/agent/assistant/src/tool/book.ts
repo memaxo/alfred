@@ -73,7 +73,7 @@ export const toolBook = {
           description: z.string().nullable(),
           tags: z.array(z.string()),
           createdAt: z.string().nullable(),
-        }),
+        })
       )
       .optional(),
   }),
@@ -88,7 +88,7 @@ export const toolBook = {
           url,
           input.title ?? undefined,
           input.description ?? undefined,
-          input.tags ?? undefined,
+          input.tags ?? undefined
         );
         return {
           ok: true,
@@ -100,7 +100,7 @@ export const toolBook = {
         const offset = input.offset ?? 0;
         const rows = await getBookmarks(input.userId, limit, offset);
         return {
-          bookmarks: rows.map(row => mapBookmark(row)!).filter(Boolean),
+          bookmarks: rows.map((row) => mapBookmark(row)!).filter(Boolean),
         };
       }
       case "delete": {

@@ -54,7 +54,9 @@ function dedupe(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
-export async function loadPolicy(path: string = DEFAULT_POLICY_PATH): Promise<PolicyDocument> {
+export async function loadPolicy(
+  path: string = DEFAULT_POLICY_PATH
+): Promise<PolicyDocument> {
   const resolvedPath = resolve(process.cwd(), path);
   const stats = await stat(resolvedPath);
 
@@ -66,12 +68,15 @@ export async function loadPolicy(path: string = DEFAULT_POLICY_PATH): Promise<Po
   const parsed = policyDocumentSchema.parse(YAML.parse(raw) ?? {});
 
   const roles: PolicyDocument["roles"] = Object.fromEntries(
-    Object.entries(parsed.roles).map(([role, value]) => [role, { scopes: dedupe(value.scopes) }]),
+    Object.entries(parsed.roles).map(([role, value]) => [
+      role,
+      { scopes: dedupe(value.scopes) },
+    ])
   );
 
   const doc: PolicyDocument = {
     roles,
-    rules: parsed.rules.map(rule => ({
+    rules: parsed.rules.map((rule) => ({
       ...rule,
       obligations: rule.obligations ? dedupe(rule.obligations) : undefined,
     })),

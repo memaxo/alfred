@@ -1,14 +1,21 @@
-import { evaluate } from "@alfred/policy";
 import type { Decision, PolicyResource } from "@alfred/policy";
-import { nanoid } from "nanoid";
-import { jwtVerify, SignJWT, importPKCS8, importSPKI, type JWTPayload } from "jose";
+import { evaluate } from "@alfred/policy";
 import type { KeyLike } from "jose";
+import {
+  importPKCS8,
+  importSPKI,
+  type JWTPayload,
+  jwtVerify,
+  SignJWT,
+} from "jose";
+import { nanoid } from "nanoid";
 import { getRedis } from "./redis";
 
 const ISSUER = process.env.AGENT_ISSUER || "alfred";
 const DEFAULT_AUDIENCE = process.env.TOOL_AUDIENCE || "alfred:tools";
 const KID = process.env.AGENT_JWK_KID || "agent-ed25519";
-const DEFAULT_TTL = Number.parseInt(process.env.TOOL_TOKEN_TTL || "", 10) || 300;
+const DEFAULT_TTL =
+  Number.parseInt(process.env.TOOL_TOKEN_TTL || "", 10) || 300;
 
 let privateKeyPromise: Promise<KeyLike> | null = null;
 let publicKeyPromise: Promise<KeyLike> | null = null;
@@ -59,14 +66,15 @@ export async function issueAccessToken(
   sub: string,
   scopes: string[],
   audience = DEFAULT_AUDIENCE,
-  options: IssueOptions = {},
+  options: IssueOptions = {}
 ): Promise<string> {
   if (!Array.isArray(scopes) || scopes.length === 0) {
     throw new Error("Token scopes are required");
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const ttlSec = options.ttlSec && options.ttlSec > 0 ? options.ttlSec : DEFAULT_TTL;
+  const ttlSec =
+    options.ttlSec && options.ttlSec > 0 ? options.ttlSec : DEFAULT_TTL;
   const exp = now + ttlSec;
   const jti = nanoid();
 
@@ -97,7 +105,7 @@ export async function issueAccessToken(
 export async function verifyAccessToken(
   token: string,
   audience = DEFAULT_AUDIENCE,
-  requiredScopes: string[] = [],
+  requiredScopes: string[] = []
 ): Promise<TokenClaims> {
   const { payload } = await jwtVerify(token, await getPublicKey(), {
     issuer: ISSUER,
@@ -108,7 +116,7 @@ export async function verifyAccessToken(
     throw new Error("token_invalid_subject");
   }
 
-  if (!payload.exp || !payload.iat) {
+  if (!(payload.exp && payload.iat)) {
     throw new Error("token_missing_exp");
   }
 
@@ -118,7 +126,7 @@ export async function verifyAccessToken(
 
   const scopes = Array.isArray(payload.scopes) ? payload.scopes : [];
   if (requiredScopes.length > 0) {
-    const missing = requiredScopes.filter(scope => !scopes.includes(scope));
+    const missing = requiredScopes.filter((scope) => !scopes.includes(scope));
     if (missing.length > 0) {
       throw new Error("token_missing_scope");
     }
@@ -136,7 +144,10 @@ export async function verifyAccessToken(
     scopes,
     roles: Array.isArray(payload.roles) ? payload.roles : undefined,
     elevated: payload.elevated === true,
-    mfa: typeof payload.mfa === "string" ? (payload.mfa as "passkey" | "totp" | "none") : undefined,
+    mfa:
+      typeof payload.mfa === "string"
+        ? (payload.mfa as "passkey" | "totp" | "none")
+        : undefined,
     iat: payload.iat,
     exp: payload.exp,
     jti: payload.jti,
@@ -160,7 +171,7 @@ export interface ToolPolicyResult {
 export async function requireToolScopesAndPolicy(
   authz: string | undefined,
   requiredScopes: string[],
-  policyInput: ToolPolicyInput,
+  policyInput: ToolPolicyInput
 ): Promise<ToolPolicyResult> {
   if (!authz?.startsWith("Bearer ")) {
     throw new Error("unauthorized");

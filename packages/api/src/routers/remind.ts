@@ -18,19 +18,27 @@ const reminderListInput = z.object({
 });
 
 export const remindRouter = router({
-  create: authedProcedure.input(reminderCreateInput).mutation(({ ctx, input }) =>
-    assistantRepo.createReminder(
-      ctx.session.user.id,
-      input.title,
-      new Date(input.due),
-      input.description,
-      input.recurring
-    )
-  ),
+  create: authedProcedure
+    .input(reminderCreateInput)
+    .mutation(({ ctx, input }) =>
+      assistantRepo.createReminder(
+        ctx.session.user.id,
+        input.title,
+        new Date(input.due),
+        input.description,
+        input.recurring
+      )
+    ),
 
-  list: authedProcedure.input(reminderListInput).query(({ ctx, input }) =>
-    assistantRepo.getReminders(ctx.session.user.id, input.limit ?? 100, input.offset ?? 0)
-  ),
+  list: authedProcedure
+    .input(reminderListInput)
+    .query(({ ctx, input }) =>
+      assistantRepo.getReminders(
+        ctx.session.user.id,
+        input.limit ?? 100,
+        input.offset ?? 0
+      )
+    ),
 
   due: authedProcedure
     .input(z.object({ before: z.string().datetime().optional() }))

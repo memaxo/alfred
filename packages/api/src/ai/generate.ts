@@ -1,5 +1,5 @@
-import { generateText } from "ai";
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import { generateText } from "ai";
 
 type PersistArgs = {
   userId: string;
@@ -10,16 +10,12 @@ type PersistArgs = {
 
 export type GenerateTextInput = Parameters<typeof generateText>[0];
 
-export const callGenerateText = generateText;
+export { generateText };
 
 /**
- * Optionally persist non-stream generate results to the durable workflow store
- * for replay. Controlled via ENABLE_GENERATE_PERSIST=1.
+ * Persist non-stream generate results to the durable workflow store for replay.
  */
-export async function persistGenerateResult(args: PersistArgs): Promise<string | null> {
-  if (process.env.ENABLE_GENERATE_PERSIST !== "1") {
-    return null;
-  }
+export async function persistResult(args: PersistArgs): Promise<string | null> {
   const runId = crypto.randomUUID();
   try {
     await workflowRepo.createRun({
@@ -36,7 +32,11 @@ export async function persistGenerateResult(args: PersistArgs): Promise<string |
       eventData: args.result,
     });
     return runId;
-  } catch {
+  } catch (error) {
+    console.error(
+      `[persistResult] Failed to persist ${args.kind} generate result:`,
+      error
+    );
     return null;
   }
 }

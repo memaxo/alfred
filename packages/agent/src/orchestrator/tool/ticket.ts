@@ -3,7 +3,7 @@ import { linearRepo } from "@alfred/db";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
 
-const { getLinearInstallationByWorkspace } = linearRepo;
+const { getLinearByWorkspace } = linearRepo;
 
 const ticketInputSchema = z.object({
   space: z.string().min(1),
@@ -116,7 +116,11 @@ async function runComment(client: LinearClient, input: TicketInput) {
   return { ok: true, id: payload.commentId ?? comment?.id ?? undefined };
 }
 
-async function runDelegate(client: LinearClient, input: TicketInput, defaultDelegate: string) {
+async function runDelegate(
+  client: LinearClient,
+  input: TicketInput,
+  defaultDelegate: string
+) {
   const issueId = ensure(input.issueId, "ticket_issue_required");
   const delegate = input.delegateId ?? defaultDelegate;
 
@@ -147,8 +151,8 @@ async function runSetStarted(client: LinearClient, input: TicketInput) {
   const states = statesConnection.nodes ?? [];
 
   const targetState =
-    states.find(state => state.type === "started") ??
-    states.find(state => state.name.toLowerCase().includes("progress")) ??
+    states.find((state) => state.type === "started") ??
+    states.find((state) => state.name.toLowerCase().includes("progress")) ??
     null;
 
   if (!targetState) {
@@ -173,7 +177,7 @@ function ensureSession(input: TicketInput) {
 async function runAgentActivity(
   client: LinearClient,
   input: TicketInput,
-  content: Record<string, unknown>,
+  content: Record<string, unknown>
 ) {
   const sessionId = ensureSession(input);
   const payload: Record<string, unknown> = {
@@ -186,7 +190,7 @@ async function runAgentActivity(
 
   const response = await client.createAgentActivity(payload as any);
   const activity = await response.agentActivity;
-  if (!response.success || !activity?.id) {
+  if (!(response.success && activity?.id)) {
     throw new Error("ticket_activity_failed");
   }
 
@@ -220,63 +224,63 @@ export const toolTicket = {
   execute: async ({ input }: { input: TicketInput }) => {
     await enforcePolicy(input);
 
-    const installation = await getLinearInstallationByWorkspace(input.space);
+    const installation = await getLinearByWorkspace(input.space);
     if (!installation) {
       throw new Error("linear_installation_missing");
     }
 
-  const client = createClient(installation.token);
+    const client = createClient(installation.token);
 
-  switch (input.action) {
-    case "create":
-      return runCreate(client, input);
+    switch (input.action) {
+      case "create":
+        return runCreate(client, input);
       case "update":
         return runUpdate(client, input);
       case "comment":
         return runComment(client, input);
-    case "set-delegate":
-      return runDelegate(client, input, installation.appUser);
-    case "set-started":
-      return runSetStarted(client, input);
-    case "activity.thought":
-      return runAgentActivity(client, input, {
-        type: "thought",
-        body: ensure(input.description, "ticket_activity_body_required"),
-      });
-    case "activity.action": {
-      const title = ensure(input.title, "ticket_activity_title_required");
-      const body = input.description ?? "";
-      const content: Record<string, unknown> = {
-        type: "action",
-        title,
-      };
-      if (body.trim().length > 0) {
-        content.body = body;
+      case "set-delegate":
+        return runDelegate(client, input, installation.appUser);
+      case "set-started":
+        return runSetStarted(client, input);
+      case "activity.thought":
+        return runAgentActivity(client, input, {
+          type: "thought",
+          body: ensure(input.description, "ticket_activity_body_required"),
+        });
+      case "activity.action": {
+        const title = ensure(input.title, "ticket_activity_title_required");
+        const body = input.description ?? "";
+        const content: Record<string, unknown> = {
+          type: "action",
+          title,
+        };
+        if (body.trim().length > 0) {
+          content.body = body;
+        }
+        if (input.parameter) {
+          content.parameter = input.parameter;
+        }
+        if (input.result) {
+          content.result = input.result;
+        }
+        return runAgentActivity(client, input, content);
       }
-      if (input.parameter) {
-        content.parameter = input.parameter;
-      }
-      if (input.result) {
-        content.result = input.result;
-      }
-      return runAgentActivity(client, input, content);
+      case "activity.response":
+        return runAgentActivity(client, input, {
+          type: "response",
+          body: ensure(input.description, "ticket_activity_body_required"),
+        });
+      case "activity.error":
+        return runAgentActivity(client, input, {
+          type: "error",
+          body: ensure(input.description, "ticket_activity_body_required"),
+        });
+      case "session.external-url":
+        return runSessionExternalUrl(client, input);
+      default:
+        throw new Error("ticket_action_not_supported");
     }
-    case "activity.response":
-      return runAgentActivity(client, input, {
-        type: "response",
-        body: ensure(input.description, "ticket_activity_body_required"),
-      });
-    case "activity.error":
-      return runAgentActivity(client, input, {
-        type: "error",
-        body: ensure(input.description, "ticket_activity_body_required"),
-      });
-    case "session.external-url":
-      return runSessionExternalUrl(client, input);
-    default:
-      throw new Error("ticket_action_not_supported");
-  }
-},
+  },
 };
 
 export type ToolTicket = typeof toolTicket;

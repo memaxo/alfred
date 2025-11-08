@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "../client";
 import { workflowEvents, workflowRuns } from "../schema/workflow";
 
@@ -44,25 +44,25 @@ export async function updateRun(
     suspendedAt: Date | null;
     resumedAt: Date | null;
     completedAt: Date | null;
-  }>,
+  }>
 ) {
   const [row] = await db
     .update(workflowRuns)
     .set({
       ...(patch.status ? { status: patch.status } : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "stateData")
+      ...(Object.hasOwn(patch, "stateData")
         ? { stateData: patch.stateData as any }
         : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "errorMessage")
+      ...(Object.hasOwn(patch, "errorMessage")
         ? { errorMessage: (patch.errorMessage ?? null) as any }
         : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "suspendedAt")
+      ...(Object.hasOwn(patch, "suspendedAt")
         ? { suspendedAt: (patch.suspendedAt ?? null) as any }
         : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "resumedAt")
+      ...(Object.hasOwn(patch, "resumedAt")
         ? { resumedAt: (patch.resumedAt ?? null) as any }
         : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "completedAt")
+      ...(Object.hasOwn(patch, "completedAt")
         ? { completedAt: (patch.completedAt ?? null) as any }
         : {}),
     })
@@ -109,4 +109,3 @@ export async function getRun(runId: string) {
     .limit(1);
   return row ?? null;
 }
-

@@ -1,10 +1,22 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { spawn } from "node:child_process";
-import { accessSync, constants as fsConstants, realpathSync, statSync } from "node:fs";
+import {
+  accessSync,
+  constants as fsConstants,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
-import { clearTimeout as clearNodeTimeout, setTimeout as setNodeTimeout } from "node:timers";
+import {
+  clearTimeout as clearNodeTimeout,
+  setTimeout as setNodeTimeout,
+} from "node:timers";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import { recordCodexError, recordCodexExecRun, startCodexExecTimer } from "../../metrics";
+import {
+  recordCodexError,
+  recordCodexExecRun,
+  startCodexExecTimer,
+} from "../../metrics";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
@@ -18,7 +30,7 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
     raw && raw.trim().length > 0
       ? raw
           .split(path.delimiter)
-          .map(entry => entry.trim())
+          .map((entry) => entry.trim())
           .filter(Boolean)
       : [];
 
@@ -26,7 +38,9 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
 
   for (const entry of extras) {
     try {
-      const absolute = path.isAbsolute(entry) ? entry : path.resolve(base, entry);
+      const absolute = path.isAbsolute(entry)
+        ? entry
+        : path.resolve(base, entry);
       prefixes.add(realpathSync(absolute));
     } catch {
       // Ignore invalid entries so that a malformed env var does not break execution.
@@ -64,9 +78,11 @@ function safeRealpath(candidate: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!baseReal || !targetReal) return false;
+  if (!(baseReal && targetReal)) return false;
   const relative = path.relative(baseReal, targetReal);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
+  );
 }
 
 function assertAllowedDirectory(candidate: string) {
@@ -95,7 +111,12 @@ const codexInputSchema = z.object({
   model: z.string().optional(),
   profile: z.string().optional(),
   authz: z.string().optional(),
-  timeoutSec: z.number().int().min(MIN_TIMEOUT_SEC).max(MAX_TIMEOUT_SEC).optional(),
+  timeoutSec: z
+    .number()
+    .int()
+    .min(MIN_TIMEOUT_SEC)
+    .max(MAX_TIMEOUT_SEC)
+    .optional(),
   env: z.record(z.string(), z.string()).optional(),
 });
 
@@ -108,12 +129,14 @@ const toolOutputSchema = z.object({
       z.object({
         path: z.string(),
         kind: z.string(),
-      }),
+      })
     )
     .optional(),
 });
 
-type ToolWriter = { write: (chunk: unknown) => Promise<void> | void } | undefined;
+type ToolWriter =
+  | { write: (chunk: unknown) => Promise<void> | void }
+  | undefined;
 
 export interface CodexExecuteArgs {
   input: CodexToolInput;
@@ -125,8 +148,14 @@ type SandboxConfig = {
   approval: "on-request";
 };
 
-const DEFAULT_SANDBOX: SandboxConfig = { sandbox: "read-only", approval: "on-request" };
-const WRITE_SANDBOX: SandboxConfig = { sandbox: "workspace-write", approval: "on-request" };
+const DEFAULT_SANDBOX: SandboxConfig = {
+  sandbox: "read-only",
+  approval: "on-request",
+};
+const WRITE_SANDBOX: SandboxConfig = {
+  sandbox: "workspace-write",
+  approval: "on-request",
+};
 
 function mapAutoToCodex(auto: CodexToolInput["auto"]): SandboxConfig {
   return auto === "read" ? DEFAULT_SANDBOX : WRITE_SANDBOX;
@@ -182,7 +211,9 @@ function resolveExecutable(command: string) {
     return command;
   }
 
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const entry of pathEntries) {
     const candidate = path.join(entry, command);
     try {
@@ -197,18 +228,25 @@ function resolveExecutable(command: string) {
 }
 
 async function enforcePolicy(input: CodexToolInput) {
-  const { claims } = await requireToolScopesAndPolicy(input.authz, ["droid.exec"], {
-    action: "droid.exec",
-    resource: {
-      kind: "repo",
-      id: input.cw ? path.resolve(input.cw) : undefined,
-    },
-    context: {
-      auto: input.auto,
-    },
-  });
+  const { claims } = await requireToolScopesAndPolicy(
+    input.authz,
+    ["droid.exec"],
+    {
+      action: "droid.exec",
+      resource: {
+        kind: "repo",
+        id: input.cw ? path.resolve(input.cw) : undefined,
+      },
+      context: {
+        auto: input.auto,
+      },
+    }
+  );
 
-  if ((input.auto === "medium" || input.auto === "high") && (!claims.elevated || claims.mfa !== "passkey")) {
+  if (
+    (input.auto === "medium" || input.auto === "high") &&
+    (!claims.elevated || claims.mfa !== "passkey")
+  ) {
     throw new Error("biometric_required");
   }
 }
@@ -253,7 +291,9 @@ function appendFinal(acc: FinalAccumulator, chunk: string) {
   acc.truncated = true;
 }
 
-function normaliseEvent(payload: unknown): { type?: string; [key: string]: unknown } | null {
+function normaliseEvent(
+  payload: unknown
+): { type?: string; [key: string]: unknown } | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
@@ -278,7 +318,7 @@ function extractAgentMessage(item: unknown): string | null {
 
   if (Array.isArray(candidate.content)) {
     const parts = candidate.content
-      .flatMap(entry => {
+      .flatMap((entry) => {
         if (typeof entry === "string") return entry;
         if (!entry || typeof entry !== "object") return [];
         const text = (entry as { text?: unknown }).text;
@@ -322,7 +362,9 @@ export const toolCodex = {
   execute: async ({ input, writer }: CodexExecuteArgs) => {
     await enforcePolicy(input);
 
-    const resolvedCw = input.cw ? assertAllowedDirectory(input.cw) : process.cwd();
+    const resolvedCw = input.cw
+      ? assertAllowedDirectory(input.cw)
+      : process.cwd();
     const sandbox = mapAutoToCodex(input.auto);
 
     const command = process.env.CODEX_BIN?.trim() || "codex";
@@ -350,7 +392,11 @@ export const toolCodex = {
     }
 
     const profileFromEnv = process.env.CODEX_PROFILE?.trim();
-    const profile = input.profile ?? (profileFromEnv && profileFromEnv.length > 0 ? profileFromEnv : undefined);
+    const profile =
+      input.profile ??
+      (profileFromEnv && profileFromEnv.length > 0
+        ? profileFromEnv
+        : undefined);
     if (profile) {
       flags.push("--profile", profile);
     }
@@ -380,17 +426,21 @@ export const toolCodex = {
         writer?.write?.({
           type: "notice",
           message: "codex_exec_timeout",
-        }),
+        })
       ).catch(() => {});
     }, timeoutSec * 1000);
 
-    const finalAccumulator: FinalAccumulator = { chunks: [], storedBytes: 0, truncated: false };
+    const finalAccumulator: FinalAccumulator = {
+      chunks: [],
+      storedBytes: 0,
+      truncated: false,
+    };
     let parseFailure: Error | null = null;
     let runtimeFailure: Error | null = null;
 
     let stdoutBuffer = "";
 
-    child.stdout?.on("data", chunk => {
+    child.stdout?.on("data", (chunk) => {
       stdoutBuffer += chunk.toString();
 
       let newlineIndex = stdoutBuffer.indexOf("\n");
@@ -406,13 +456,17 @@ export const toolCodex = {
               parseFailure = new Error("codex_parse_failed");
               recordStage("parse");
             }
-            void Promise.resolve(writer?.write?.({ type: "stderr", text: line })).catch(() => {});
+            void Promise.resolve(
+              writer?.write?.({ type: "stderr", text: line })
+            ).catch(() => {});
             newlineIndex = stdoutBuffer.indexOf("\n");
             continue;
           }
 
           if (input.out === "debug") {
-            void Promise.resolve(writer?.write?.({ type: "codex", chunk: parsed })).catch(() => {});
+            void Promise.resolve(
+              writer?.write?.({ type: "codex", chunk: parsed })
+            ).catch(() => {});
           }
 
           const event = normaliseEvent(parsed);
@@ -429,7 +483,7 @@ export const toolCodex = {
                 writer?.write?.({
                   type: "notice",
                   message: "codex_turn_started",
-                }),
+                })
               ).catch(() => {});
               break;
             }
@@ -440,30 +494,44 @@ export const toolCodex = {
                   type: "notice",
                   message: "codex_turn_completed",
                   usage,
-                }),
+                })
               ).catch(() => {});
               break;
             }
             case "turn.failed": {
               if (!runtimeFailure) {
-                const errorPayload = (event as { error?: { message?: string; code?: string } }).error;
-                const detail = errorPayload?.message ?? errorPayload?.code ?? "codex_turn_failed";
+                const errorPayload = (
+                  event as { error?: { message?: string; code?: string } }
+                ).error;
+                const detail =
+                  errorPayload?.message ??
+                  errorPayload?.code ??
+                  "codex_turn_failed";
                 runtimeFailure = new Error(`codex_exec_failed:${detail}`);
                 recordStage("runtime");
               }
               const errorText =
-                (event as { error?: { message?: string } }).error?.message ?? "Codex turn failed.";
-              void Promise.resolve(writer?.write?.({ type: "stderr", text: errorText })).catch(() => {});
+                (event as { error?: { message?: string } }).error?.message ??
+                "Codex turn failed.";
+              void Promise.resolve(
+                writer?.write?.({ type: "stderr", text: errorText })
+              ).catch(() => {});
               break;
             }
             case "error": {
               if (!runtimeFailure) {
-                const message = (event as { message?: string }).message ?? "codex_stream_error";
+                const message =
+                  (event as { message?: string }).message ??
+                  "codex_stream_error";
                 runtimeFailure = new Error(message);
                 recordStage("runtime");
               }
-              const message = (event as { message?: string }).message ?? "Codex reported an error.";
-              void Promise.resolve(writer?.write?.({ type: "stderr", text: message })).catch(() => {});
+              const message =
+                (event as { message?: string }).message ??
+                "Codex reported an error.";
+              void Promise.resolve(
+                writer?.write?.({ type: "stderr", text: message })
+              ).catch(() => {});
               break;
             }
             case "item.completed": {
@@ -472,13 +540,17 @@ export const toolCodex = {
               if (itemType === "command_execution") {
                 const output = extractAggregatedOutput(item);
                 if (output) {
-                  void Promise.resolve(writer?.write?.({ type: "stdout", text: output })).catch(() => {});
+                  void Promise.resolve(
+                    writer?.write?.({ type: "stdout", text: output })
+                  ).catch(() => {});
                 }
               } else if (itemType === "agent_message") {
                 const text = extractAgentMessage(item);
                 if (text) {
                   appendFinal(finalAccumulator, text);
-                  void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(() => {});
+                  void Promise.resolve(
+                    writer?.write?.({ type: "stdout", text })
+                  ).catch(() => {});
                 }
               }
               break;
@@ -494,16 +566,18 @@ export const toolCodex = {
       }
     });
 
-    child.stderr?.on("data", chunk => {
-      void Promise.resolve(writer?.write?.({ type: "stderr", text: chunk.toString() })).catch(() => {});
+    child.stderr?.on("data", (chunk) => {
+      void Promise.resolve(
+        writer?.write?.({ type: "stderr", text: chunk.toString() })
+      ).catch(() => {});
     });
 
     const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on("error", err => {
+      child.on("error", (err) => {
         recordStage("spawn");
         reject(err);
       });
-      child.on("close", code => resolve(code ?? 0));
+      child.on("close", (code) => resolve(code ?? 0));
     }).finally(() => {
       clearNodeTimeout(timer);
       stopTimer();
@@ -529,7 +603,9 @@ export const toolCodex = {
     }
 
     if (finalAccumulator.truncated) {
-      void Promise.resolve(writer?.write?.({ type: "notice", message: "output_truncated" })).catch(() => {});
+      void Promise.resolve(
+        writer?.write?.({ type: "notice", message: "output_truncated" })
+      ).catch(() => {});
     }
 
     return {

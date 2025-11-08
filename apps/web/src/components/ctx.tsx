@@ -1,6 +1,6 @@
 /**
  * Context Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/context
  * Displays agent context and runtime state
  */
@@ -26,18 +26,14 @@ export function Ctx({ runtimeContext, memory, className }: CtxProps) {
       <CardContent className="space-y-4">
         {memory && (
           <div>
-            <p className="text-sm font-medium text-muted-foreground">
-              Memory
-            </p>
+            <p className="font-medium text-muted-foreground text-sm">Memory</p>
             <p className="text-sm">Resource: {memory.resource}</p>
             <p className="text-sm">Thread: {memory.thread}</p>
           </div>
         )}
         {runtimeContext && Object.keys(runtimeContext).length > 0 && (
           <div>
-            <p className="text-sm font-medium text-muted-foreground">
-              Runtime
-            </p>
+            <p className="font-medium text-muted-foreground text-sm">Runtime</p>
             <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-xs">
               {JSON.stringify(runtimeContext, null, 2)}
             </pre>
@@ -47,4 +43,3 @@ export function Ctx({ runtimeContext, memory, className }: CtxProps) {
     </Card>
   );
 }
-

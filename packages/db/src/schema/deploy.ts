@@ -3,7 +3,14 @@
  * Track app deployments (preview/production)
  */
 
-import { pgTable, text, timestamp, uuid, jsonb, integer } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // TODO: [Phase 10] Add proper indexes for deployment queries
 

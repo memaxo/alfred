@@ -53,7 +53,7 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
 function makeEdge(
   resource: string,
   entry: KnowledgeEntry,
-  nodes: Map<string, { id: string }>,
+  nodes: Map<string, { id: string }>
 ): EdgeSeed | null {
   if (entry.data._ !== "relation") {
     return null;
@@ -63,7 +63,7 @@ function makeEdge(
   const toHash = String(entry.data.to);
   const from = nodes.get(nodeKey(resource, fromHash));
   const to = nodes.get(nodeKey(resource, toHash));
-  if (!from || !to) {
+  if (!(from && to)) {
     return null;
   }
 
@@ -81,7 +81,10 @@ function makeEdge(
   };
 }
 
-export async function persistKnowledge(resource: string, entries: KnowledgeEntry[]): Promise<void> {
+export async function persistKnowledge(
+  resource: string,
+  entries: KnowledgeEntry[]
+): Promise<void> {
   if (entries.length === 0) {
     return;
   }

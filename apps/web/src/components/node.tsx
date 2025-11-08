@@ -1,6 +1,6 @@
 /**
  * Node Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/node
  * Displays workflow node in canvas
  */
@@ -24,29 +24,28 @@ export function Node({ id, label, type, status, className }: NodeProps) {
         status === "completed" && "border-green-500",
         status === "running" && "border-blue-500",
         status === "error" && "border-red-500",
-        className,
+        className
       )}
     >
       <CardContent className="pt-6">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="font-medium text-muted-foreground text-xs">
               {type}
             </span>
             <span
               className={cn(
                 "size-2 rounded-full",
                 status === "completed" && "bg-green-500",
-                status === "running" && "bg-blue-500 animate-pulse",
+                status === "running" && "animate-pulse bg-blue-500",
                 status === "error" && "bg-red-500",
-                status === "pending" && "bg-gray-500",
+                status === "pending" && "bg-gray-500"
               )}
             />
           </div>
-          <p className="text-sm font-medium">{label}</p>
+          <p className="font-medium text-sm">{label}</p>
         </div>
       </CardContent>
     </Card>
   );
 }
-

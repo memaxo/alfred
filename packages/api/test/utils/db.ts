@@ -1,6 +1,6 @@
-import { Client } from "pg";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Client } from "pg";
 
 type TestDb = {
   client: Client;
@@ -51,7 +51,7 @@ export async function truncateTables(db: NodePgDatabase): Promise<void> {
     "memory_nodes",
     "memory_edges",
   ];
-  
+
   await db.execute(sql.raw(`TRUNCATE TABLE ${tables.join(", ")} CASCADE`));
 }
 
@@ -85,7 +85,7 @@ export const dbFixtures = {
       RETURNING id
     `);
     const docId = docResult.rows[0]?.id as string;
-    
+
     if (!docId) {
       throw new Error("Failed to create test document");
     }
@@ -106,7 +106,11 @@ export const dbFixtures = {
   /**
    * Creates a test assistant thread
    */
-  async createThread(db: NodePgDatabase, userId = "test-user", agent = "assistant") {
+  async createThread(
+    db: NodePgDatabase,
+    userId = "test-user",
+    agent = "assistant"
+  ) {
     const threadResult = await db.execute(sql`
       INSERT INTO assistant_threads (user_id, agent)
       VALUES (${userId}, ${agent})

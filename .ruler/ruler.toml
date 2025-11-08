@@ -1,4 +1,4 @@
-default_agents = ["agentsmd", "claude", "cursor", "copilot", "aider"]
+default_agents = ["agentsmd"]
 
 [settings]
 nested = true
@@ -18,31 +18,6 @@ args = ["-y", "@modelcontextprotocol/server-git", "--repository", "."]
 [agents.agentsmd]
 enabled = true
 output_path = "AGENTS.md"
-
-[agents.claude]
-enabled = true
-output_path = "CLAUDE.md"
-[agents.claude.mcp]
-enabled = true
-merge_strategy = "merge"
-
-[agents.cursor]
-enabled = true
-output_path = ".cursor/rules/ruler_cursor_instructions.mdc"
-[agents.cursor.mcp]
-enabled = true
-merge_strategy = "merge"
-
-[agents.copilot]
-enabled = true
-output_path = "AGENTS.md"
-
-[agents.aider]
-enabled = true
-output_path_instructions = "AGENTS.md"
-output_path_config = ".aider.conf.yml"
-[agents.aider.mcp]
-enabled = true
 
 [gitignore]
 enabled = true

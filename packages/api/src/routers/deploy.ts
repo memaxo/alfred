@@ -17,8 +17,8 @@ function parsePortEnv(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-const PREVIEW_PORT_START = parsePortEnv(process.env.PREVIEW_PORT_START, 30080);
-const PREVIEW_PORT_END = parsePortEnv(process.env.PREVIEW_PORT_END, 30200);
+const PREVIEW_PORT_START = parsePortEnv(process.env.PREVIEW_PORT_START, 30_080);
+const PREVIEW_PORT_END = parsePortEnv(process.env.PREVIEW_PORT_END, 30_200);
 
 const listInput = z
   .object({
@@ -36,7 +36,7 @@ const previewBuildInput = z.object({
   context: z.string().min(1),
   dockerfile: z.string().optional(),
   image: z.string().optional(),
-  port: z.number().int().min(1).max(65535).default(3000),
+  port: z.number().int().min(1).max(65_535).default(3000),
   env: z.record(z.string(), z.string()).optional(),
 });
 
@@ -71,7 +71,7 @@ const probeInput = z.object({
 const healthStreamInput = z.object({
   apps: z.array(z.string().min(1)).optional(),
   preview: z.boolean().optional(),
-  intervalMs: z.number().int().min(1_000).max(60_000).default(5_000),
+  intervalMs: z.number().int().min(1000).max(60_000).default(5000),
   authz: z.string().min(1).optional(),
 });
 
@@ -96,13 +96,17 @@ function buildProdHost(app: string, domain: string) {
   return `${app}.${domain}`;
 }
 
-async function allocatePort(rangeStart: number, rangeEnd: number, host = PREVIEW_BIND_HOST): Promise<number> {
+async function allocatePort(
+  rangeStart: number,
+  rangeEnd: number,
+  host = PREVIEW_BIND_HOST
+): Promise<number> {
   const min = Math.min(rangeStart, rangeEnd);
   const max = Math.max(rangeStart, rangeEnd);
 
   for (let port = min; port <= max; port += 1) {
     // eslint-disable-next-line no-await-in-loop
-    const available = await new Promise<boolean>(resolve => {
+    const available = await new Promise<boolean>((resolve) => {
       const server = createServer();
       const finalize = (result: boolean) => {
         server.removeAllListeners();
@@ -123,7 +127,10 @@ async function allocatePort(rangeStart: number, rangeEnd: number, host = PREVIEW
   throw new Error("preview_port_unavailable");
 }
 
-async function safeRouterRemove(host: string | null | undefined, authz: string) {
+async function safeRouterRemove(
+  host: string | null | undefined,
+  authz: string
+) {
   if (!host) return;
   try {
     await toolRouter.execute({
@@ -138,7 +145,10 @@ async function safeRouterRemove(host: string | null | undefined, authz: string) 
   }
 }
 
-async function safeStopContainer(nameOrId: string | null | undefined, authz: string) {
+async function safeStopContainer(
+  nameOrId: string | null | undefined,
+  authz: string
+) {
   if (!nameOrId) return;
   try {
     await toolDocker.execute({
@@ -165,7 +175,10 @@ async function safeStopContainer(nameOrId: string | null | undefined, authz: str
 }
 
 function mapDeployResource(raw: unknown, env: "preview" | "prod" | "remove") {
-  const maybeApp = typeof (raw as { app?: unknown })?.app === "string" ? ((raw as { app?: string }).app as string) : "unknown";
+  const maybeApp =
+    typeof (raw as { app?: unknown })?.app === "string"
+      ? ((raw as { app?: string }).app as string)
+      : "unknown";
   return {
     kind: "deploy",
     id: maybeApp,
@@ -180,11 +193,21 @@ const mapPromoteResource = (raw: unknown) => mapDeployResource(raw, "prod");
 const mapRemoveResource = (raw: unknown) => mapDeployResource(raw, "remove");
 const mapHealthResource = (raw: unknown) => {
   const data = raw as { app?: string; apps?: string[]; preview?: boolean };
-  const firstApp = typeof data.app === "string" ? data.app : Array.isArray(data.apps) && data.apps.length > 0 ? data.apps[0]! : "all";
-  return mapDeployResource({ app: firstApp } as { app: string }, data.preview === false ? "prod" : "preview");
+  const firstApp =
+    typeof data.app === "string"
+      ? data.app
+      : Array.isArray(data.apps) && data.apps.length > 0
+        ? data.apps[0]!
+        : "all";
+  return mapDeployResource(
+    { app: firstApp } as { app: string },
+    data.preview === false ? "prod" : "preview"
+  );
 };
 
-type DeploymentRow = NonNullable<Awaited<ReturnType<typeof deployRepo.getDeploymentById>>>;
+type DeploymentRow = NonNullable<
+  Awaited<ReturnType<typeof deployRepo.getDeploymentById>>
+>;
 
 type ProbeResult = {
   status: "healthy" | "unhealthy" | "unknown";
@@ -215,7 +238,11 @@ async function probeDeployment({
   const timestamp = new Date().toISOString();
 
   if (!url) {
-    await deployRepo.recordHealthCheck(record.id, record.healthStatus ?? "unknown", {});
+    await deployRepo.recordHealthCheck(
+      record.id,
+      record.healthStatus ?? "unknown",
+      {}
+    );
     return {
       status: "unknown",
       url: null,
@@ -224,7 +251,8 @@ async function probeDeployment({
   }
 
   if (!authz) {
-    const fallbackStatus = (record.healthStatus ?? "unknown") as ProbeResult["status"];
+    const fallbackStatus = (record.healthStatus ??
+      "unknown") as ProbeResult["status"];
     return {
       status: fallbackStatus,
       url,
@@ -241,7 +269,9 @@ async function probeDeployment({
         authz,
       },
     });
-    await deployRepo.recordHealthCheck(record.id, "healthy", { healthUrl: url });
+    await deployRepo.recordHealthCheck(record.id, "healthy", {
+      healthUrl: url,
+    });
     return {
       status: "healthy",
       url,
@@ -251,7 +281,9 @@ async function probeDeployment({
     if (error instanceof TRPCError) {
       throw error;
     }
-    await deployRepo.recordHealthCheck(record.id, "unhealthy", { healthUrl: url });
+    await deployRepo.recordHealthCheck(record.id, "unhealthy", {
+      healthUrl: url,
+    });
     return {
       status: "unhealthy",
       url,
@@ -284,30 +316,38 @@ export const deployRouter: ReturnType<typeof router> = router({
     }
     const deployment = await deployRepo.getDeploymentById(input.id);
     if (!deployment || deployment.userId !== userId) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "deployment_not_found" });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "deployment_not_found",
+      });
     }
     return deployment;
   }),
 
-  removeRecord: authedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    const session = ctx.session;
-    const userId = session?.user?.id;
-    if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED" });
-    }
-    const deployment = await deployRepo.getDeploymentById(input.id);
-    if (!deployment || deployment.userId !== userId) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "deployment_not_found" });
-    }
-    await deployRepo.setDeploymentStatus(input.id, "removed", {
-      metadata: {
-        removedBy: userId,
-        removedAt: new Date().toISOString(),
-        mode: "record-only",
-      },
-    });
-    return { ok: true } as const;
-  }),
+  removeRecord: authedProcedure
+    .input(idInput)
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      const userId = session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+      const deployment = await deployRepo.getDeploymentById(input.id);
+      if (!deployment || deployment.userId !== userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "deployment_not_found",
+        });
+      }
+      await deployRepo.setDeploymentStatus(input.id, "removed", {
+        metadata: {
+          removedBy: userId,
+          removedAt: new Date().toISOString(),
+          mode: "record-only",
+        },
+      });
+      return { ok: true } as const;
+    }),
 
   createPreview: authedProcedure
     .use(requirePolicy("deploy.preview", mapPreviewResource))
@@ -328,7 +368,8 @@ export const deployRouter: ReturnType<typeof router> = router({
       let containerName: string | null = null;
       let containerId: string | null = null;
       let ports: Array<{ host: number; container: number }> | null = null;
-      const imageTag = input.build.image ?? `alfred/preview-${slug}-${Date.now()}`;
+      const imageTag =
+        input.build.image ?? `alfred/preview-${slug}-${Date.now()}`;
       let deploymentId: string | null = null;
       let routeRegistered = false;
 
@@ -383,15 +424,20 @@ export const deployRouter: ReturnType<typeof router> = router({
             };
           };
 
-          containerName = (runResult.details?.name ?? runName) ?? null;
+          containerName = runResult.details?.name ?? runName ?? null;
           containerId = runResult.details?.containerId ?? null;
           const resolvedHostPort =
-            typeof runResult.details?.hostPort === "number" ? runResult.details?.hostPort : hostPort ?? null;
+            typeof runResult.details?.hostPort === "number"
+              ? runResult.details?.hostPort
+              : (hostPort ?? null);
           if (resolvedHostPort !== null) {
             hostPort = resolvedHostPort;
           }
 
-          if (Array.isArray(runResult.details?.ports) && runResult.details?.ports.length > 0) {
+          if (
+            Array.isArray(runResult.details?.ports) &&
+            runResult.details?.ports.length > 0
+          ) {
             ports = runResult.details?.ports ?? null;
           } else if (hostPort !== null) {
             ports = [{ host: hostPort, container: input.build.port }];
@@ -419,19 +465,19 @@ export const deployRouter: ReturnType<typeof router> = router({
           userId,
           app: input.app,
           type: "preview",
-        status: "running",
-        domain: host,
-        url: `https://${host}`,
-        containerName: containerName ?? null,
-        containerId: containerId ?? null,
-        port: hostPort ?? null,
-        ports: ports ?? null,
-        healthUrl: upstream,
-        metadata: {
-          image: imageTag,
-          env: input.build.env ?? null,
-          createdBy: userId,
-          upstream,
+          status: "running",
+          domain: host,
+          url: `https://${host}`,
+          containerName: containerName ?? null,
+          containerId: containerId ?? null,
+          port: hostPort ?? null,
+          ports: ports ?? null,
+          healthUrl: upstream,
+          metadata: {
+            image: imageTag,
+            env: input.build.env ?? null,
+            createdBy: userId,
+            upstream,
           },
         });
         deploymentId = record.id;
@@ -482,7 +528,11 @@ export const deployRouter: ReturnType<typeof router> = router({
         },
       });
 
-      const preview = await deployRepo.getDeploymentByApp(userId, input.app, "preview");
+      const preview = await deployRepo.getDeploymentByApp(
+        userId,
+        input.app,
+        "preview"
+      );
       if (preview?.domain) {
         await safeRouterRemove(preview.domain, input.authz);
       }
@@ -530,11 +580,21 @@ export const deployRouter: ReturnType<typeof router> = router({
       if (!userId) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
-      const deployment = await deployRepo.getDeploymentByApp(userId, input.app, input.preview ? "preview" : "production");
+      const deployment = await deployRepo.getDeploymentByApp(
+        userId,
+        input.app,
+        input.preview ? "preview" : "production"
+      );
       if (!deployment) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "deployment_not_found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "deployment_not_found",
+        });
       }
-      const result = await probeDeployment({ record: deployment, authz: input.authz });
+      const result = await probeDeployment({
+        record: deployment,
+        authz: input.authz,
+      });
       return {
         app: deployment.app,
         type: deployment.type,
@@ -554,7 +614,7 @@ export const deployRouter: ReturnType<typeof router> = router({
         status: "healthy" | "unhealthy" | "unknown";
         url: string | null;
         ts: string;
-      }>(emit => {
+      }>((emit) => {
         const session = ctx.session;
         const userId = session?.user?.id;
         if (!userId) {
@@ -565,9 +625,15 @@ export const deployRouter: ReturnType<typeof router> = router({
         let closed = false;
         let running = false;
         const appsFilter = input.apps ? new Set(input.apps) : null;
-        const typeFilter = input.preview === undefined ? undefined : input.preview ? "preview" : "production";
+        const typeFilter =
+          input.preview === undefined
+            ? undefined
+            : input.preview
+              ? "preview"
+              : "production";
 
-        const shouldInclude = (app: string) => (appsFilter ? appsFilter.has(app) : true);
+        const shouldInclude = (app: string) =>
+          appsFilter ? appsFilter.has(app) : true;
 
         const fetchDeployments = async () => {
           if (appsFilter && appsFilter.size === 1) {
@@ -593,10 +659,15 @@ export const deployRouter: ReturnType<typeof router> = router({
             const deployments = await fetchDeployments();
             for (const record of deployments) {
               if (!shouldInclude(record.app)) continue;
-              const result = await probeDeployment({ record, authz: input.authz });
+              const result = await probeDeployment({
+                record,
+                authz: input.authz,
+              });
               emit.next({
                 app: record.app,
-                type: (record.type === "production" ? "production" : "preview") as "preview" | "production",
+                type: (record.type === "production"
+                  ? "production"
+                  : "preview") as "preview" | "production",
                 status: result.status as ProbeResult["status"],
                 url: result.url,
                 ts: result.ts,
@@ -632,7 +703,7 @@ export const deployRouter: ReturnType<typeof router> = router({
           closed = true;
           if (timer) clearInterval(timer);
         };
-      }),
+      })
     ),
 
   remove: authedProcedure
@@ -646,15 +717,25 @@ export const deployRouter: ReturnType<typeof router> = router({
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
       const type = input.preview ? "preview" : "production";
-      const record = await deployRepo.getDeploymentByApp(userId, input.app, type);
+      const record = await deployRepo.getDeploymentByApp(
+        userId,
+        input.app,
+        type
+      );
       if (!record) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "deployment_not_found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "deployment_not_found",
+        });
       }
 
       await safeRouterRemove(record.domain, input.authz);
 
       if (type === "preview") {
-        await safeStopContainer(record.containerName ?? record.containerId, input.authz);
+        await safeStopContainer(
+          record.containerName ?? record.containerId,
+          input.authz
+        );
       }
 
       await deployRepo.setDeploymentStatus(record.id, "removed", {

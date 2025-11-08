@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
 
 interface UseVoiceCaptureOptions {
@@ -22,7 +22,7 @@ const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
 function arrayBufferToBase64(buffer: ArrayBuffer) {
   let binary = "";
   const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
+  const chunk = 0x80_00;
   for (let i = 0; i < bytes.length; i += chunk) {
     const slice = bytes.subarray(i, i + chunk);
     binary += String.fromCharCode(...slice);
@@ -49,11 +49,14 @@ export function useVoiceCapture({
 
   const isProcessing = useMemo(
     () => manualProcessing || sttMutation.isPending,
-    [manualProcessing, sttMutation.isPending],
+    [manualProcessing, sttMutation.isPending]
   );
 
   const cleanupStream = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       try {
         mediaRecorderRef.current.stop();
       } catch {
@@ -62,7 +65,7 @@ export function useVoiceCapture({
     }
     mediaRecorderRef.current = null;
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
     audioChunksRef.current = [];
@@ -74,11 +77,12 @@ export function useVoiceCapture({
 
   const handleError = useCallback(
     (err: unknown) => {
-      const wrappedError = err instanceof Error ? err : new Error("voice_capture_failure");
+      const wrappedError =
+        err instanceof Error ? err : new Error("voice_capture_failure");
       setError(wrappedError);
       onError?.(wrappedError);
     },
-    [onError],
+    [onError]
   );
 
   const processRecording = useCallback(async () => {
@@ -130,12 +134,12 @@ export function useVoiceCapture({
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
-      recorder.ondataavailable = event => {
+      recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-      recorder.onerror = event => {
+      recorder.onerror = (event) => {
         cleanupStream();
         handleError(event.error ?? new Error("media_recorder_error"));
       };
@@ -178,13 +182,11 @@ export function useVoiceCapture({
       }
       const audio = new Audio(source);
       audioRef.current = audio;
-      audio
-        .play()
-        .catch(err => {
-          handleError(err);
-        });
+      audio.play().catch((err) => {
+        handleError(err);
+      });
     },
-    [handleError],
+    [handleError]
   );
 
   const clearTranscript = useCallback(() => {

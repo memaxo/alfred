@@ -1,4 +1,7 @@
-import { startReminderScheduler, stopReminderScheduler } from "@alfred/api/scheduler/remind";
+import {
+  startReminderScheduler,
+  stopReminderScheduler,
+} from "@alfred/api/scheduler/remind";
 
 let initialized = false;
 
@@ -11,7 +14,9 @@ export async function initServer() {
 
   if (process.env.SCHED_REMIND === "1") {
     startReminderScheduler({ logger: console });
-    console.log("[assistant-remind] Scheduler init requested (SCHED_REMIND=1).");
+    console.log(
+      "[assistant-remind] Scheduler init requested (SCHED_REMIND=1)."
+    );
   } else {
     console.log("[assistant-remind] Scheduler disabled (unset SCHED_REMIND).");
   }
@@ -21,7 +26,10 @@ export async function initServer() {
       try {
         stopReminderScheduler();
       } catch (error) {
-        console.error("[assistant-remind] Failed to stop scheduler before reload:", error);
+        console.error(
+          "[assistant-remind] Failed to stop scheduler before reload:",
+          error
+        );
       }
     });
 
@@ -29,7 +37,10 @@ export async function initServer() {
       try {
         stopReminderScheduler();
       } catch (error) {
-        console.error("[assistant-remind] Failed to stop scheduler on dispose:", error);
+        console.error(
+          "[assistant-remind] Failed to stop scheduler on dispose:",
+          error
+        );
       }
       initialized = false;
     });

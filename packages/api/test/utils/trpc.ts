@@ -25,7 +25,7 @@ export function createTestCaller(options: CreateCallerOptions = {}) {
   const roles = options.roles ?? ["owner"];
   const scopes = options.scopes ?? ["assistant.write", "assistant.stream"];
   const requestId = options.requestId ?? `test-${Date.now()}`;
-  
+
   const receivedAt = new Date();
   const runtime = {
     requestId,
@@ -37,7 +37,7 @@ export function createTestCaller(options: CreateCallerOptions = {}) {
     userAgent: null,
     referer: null,
   };
-  
+
   const runtimeContext = new RuntimeContext([
     ["requestId", runtime.requestId],
     ["receivedAt", receivedAt.toISOString()],

@@ -17,7 +17,9 @@ type Encoder = {
   free?: () => void;
 };
 
-export function createTokenEstimator(opts?: { model?: string }): TokenEstimator {
+export function createTokenEstimator(opts?: {
+  model?: string;
+}): TokenEstimator {
   let encoder: Encoder | null = null;
   const cache = new Map<string, number>();
 
@@ -37,7 +39,9 @@ export function createTokenEstimator(opts?: { model?: string }): TokenEstimator 
     // tiktoken is optional; fall back silently if unavailable.
     const tiktoken = require("tiktoken");
     if (tiktoken && typeof tiktoken.encoding_for_model === "function") {
-      const encoding = tiktoken.encoding_for_model(opts?.model ?? process.env.MASTRA_MODEL ?? "gpt-4o-mini");
+      const encoding = tiktoken.encoding_for_model(
+        opts?.model ?? process.env.MASTRA_MODEL ?? "gpt-4o-mini"
+      );
       encoder = {
         encode: (text: string) => encoding.encode(text),
         free: () => encoding.free(),

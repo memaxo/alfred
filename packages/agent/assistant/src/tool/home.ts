@@ -61,16 +61,20 @@ export const toolHome = {
   }) => {
     recordAssistantToolCall("home");
 
-    await requireToolScopesAndPolicy(input.authz, scopesForAction(input.action), {
-      action: policyAction(input.action),
-      resource: {
-        kind: "home",
-        id: input.entity ?? "all",
-      },
-      context: {
-        runtimeContextId: runtimeContext?.get?.("requestId"),
-      },
-    });
+    await requireToolScopesAndPolicy(
+      input.authz,
+      scopesForAction(input.action),
+      {
+        action: policyAction(input.action),
+        resource: {
+          kind: "home",
+          id: input.entity ?? "all",
+        },
+        context: {
+          runtimeContextId: runtimeContext?.get?.("requestId"),
+        },
+      }
+    );
 
     // TODO: Integrate with real provider once selected (HOME_PROVIDER, HOME_BASE_URL, HOME_TOKEN).
     throw new Error("home_tool_not_implemented");

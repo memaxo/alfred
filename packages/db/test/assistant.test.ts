@@ -20,7 +20,7 @@ beforeAll(async () => {
 async function resetAssistantTables() {
   if (SHOULD_SKIP) return;
   await db.execute(
-    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
   );
 }
 
@@ -32,7 +32,11 @@ const describeFn = SHOULD_SKIP ? describe.skip : describe;
 
 describeFn("assistantRepo", () => {
   it("creates and lists notes in descending update order", async () => {
-    const first = await assistantRepo.createNote(TEST_USER, "first note", "First");
+    const first = await assistantRepo.createNote(
+      TEST_USER,
+      "first note",
+      "First"
+    );
     await assistantRepo.createNote(TEST_USER, "second note", "Second");
 
     const notes = await assistantRepo.getNotes(TEST_USER, 10, 0);
@@ -50,7 +54,11 @@ describeFn("assistantRepo", () => {
     const past = new Date(now.getTime() - 60_000);
     const future = new Date(now.getTime() + 60_000);
 
-    const dueReminder = await assistantRepo.createReminder(TEST_USER, "Due", past);
+    const dueReminder = await assistantRepo.createReminder(
+      TEST_USER,
+      "Due",
+      past
+    );
     await assistantRepo.createReminder(TEST_USER, "Future", future);
 
     const due = await assistantRepo.getDueReminders(TEST_USER, now);
@@ -88,7 +96,7 @@ describeFn("assistantRepo", () => {
       "Medium priority due sooner",
       undefined,
       2,
-      new Date(Date.now() + 3_600_000),
+      new Date(Date.now() + 3_600_000)
     );
 
     const tasks = await assistantRepo.getTasks(TEST_USER);

@@ -9,8 +9,5 @@
     "emitDeclarationOnly": true
   },
   "include": ["src"],
-  "references": [
-    { "path": "../type" },
-    { "path": "../api" }
-  ]
+  "references": [{ "path": "../type" }, { "path": "../api" }]
 }

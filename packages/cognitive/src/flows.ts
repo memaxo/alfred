@@ -1,24 +1,26 @@
-import { Hypergraph } from "@alfred/knowledge";
+import type { Hypergraph } from "@alfred/knowledge";
 import type {
   CaptureResult,
+  CognitiveConfidence,
   ExecutionPlan,
   ExecutionResult,
   ReflectionResult,
   SynthesisResult,
-  CognitiveConfidence,
 } from "@alfred/type/cognitive";
 import type {
+  KnowledgeConfidence,
   KnowledgeFact,
   KnowledgeInsight,
   KnowledgeRelation,
-  KnowledgeConfidence,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-const cognitiveConfidence = (value: number) => clamp(value) as CognitiveConfidence;
-const knowledgeConfidence = (value: number) => clamp(value) as KnowledgeConfidence;
+const cognitiveConfidence = (value: number) =>
+  clamp(value) as CognitiveConfidence;
+const knowledgeConfidence = (value: number) =>
+  clamp(value) as KnowledgeConfidence;
 
 function makeFact(content: string, source?: string): KnowledgeFact {
   return {
@@ -30,7 +32,10 @@ function makeFact(content: string, source?: string): KnowledgeFact {
   };
 }
 
-export function capture(input: string, context: Record<string, unknown> = {}): CaptureResult {
+export function capture(
+  input: string,
+  context: Record<string, unknown> = {}
+): CaptureResult {
   const content = input.trim();
   if (!content) {
     return {
@@ -40,11 +45,15 @@ export function capture(input: string, context: Record<string, unknown> = {}): C
     };
   }
 
-  const source = typeof context.source === "string" ? context.source : "capture";
+  const source =
+    typeof context.source === "string" ? context.source : "capture";
   const facts = [makeFact(content, source)];
   const ambiguities =
-    typeof context.ambiguities === "object" && Array.isArray((context.ambiguities as unknown[]))
-      ? ((context.ambiguities as unknown[]).filter(item => typeof item === "string") as string[])
+    typeof context.ambiguities === "object" &&
+    Array.isArray(context.ambiguities as unknown[])
+      ? ((context.ambiguities as unknown[]).filter(
+          (item) => typeof item === "string"
+        ) as string[])
       : [];
 
   return {
@@ -54,7 +63,10 @@ export function capture(input: string, context: Record<string, unknown> = {}): C
   };
 }
 
-export function synthesize(facts: KnowledgeFact[], graph: Hypergraph): SynthesisResult {
+export function synthesize(
+  facts: KnowledgeFact[],
+  graph: Hypergraph
+): SynthesisResult {
   const insights: KnowledgeInsight[] = [];
   const relations: KnowledgeRelation[] = [];
 
@@ -78,7 +90,10 @@ export function synthesize(facts: KnowledgeFact[], graph: Hypergraph): Synthesis
   };
 }
 
-export function execute(plan: ExecutionPlan, world: Record<string, unknown>): ExecutionResult {
+export function execute(
+  plan: ExecutionPlan,
+  world: Record<string, unknown>
+): ExecutionResult {
   const actions = plan.steps.map((step, index) => ({
     id: `${plan.goal ?? "step"}-${index + 1}`,
     status: "completed" as const,
@@ -87,7 +102,7 @@ export function execute(plan: ExecutionPlan, world: Record<string, unknown>): Ex
 
   return {
     actions,
-    effects: actions.map(action => ({
+    effects: actions.map((action) => ({
       action: action.id,
       timestamp: new Date().toISOString(),
       world,

@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "@alfred/type/stream";
+import { DefaultChatTransport } from "ai";
+import { useCallback, useEffect, useMemo } from "react";
 
-export type AssistantActionStatus = "pending" | "running" | "completed" | "error";
+export type AssistantActionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "error";
 
 export type AssistantAction = {
   id: string;
@@ -42,15 +46,20 @@ export function deriveActions(messages: UIMessage[]): AssistantAction[] {
   for (const message of messages) {
     for (const part of message.parts) {
       if (part.type === "tool-call") {
-        const args = toArgs(part.args);
-        const existing = actionMap.get(part.toolCallId);
+        const toolCallPart = part as {
+          toolCallId: string;
+          toolName?: string;
+          input?: unknown;
+        };
+        const args = toArgs(toolCallPart.input);
+        const existing = actionMap.get(toolCallPart.toolCallId);
         const base: AssistantAction = existing ?? {
-          id: part.toolCallId,
-          name: part.toolName,
+          id: toolCallPart.toolCallId,
+          name: toolCallPart.toolName ?? "tool",
           args,
           status: "running",
         };
-        actionMap.set(part.toolCallId, {
+        actionMap.set(toolCallPart.toolCallId, {
           ...base,
           args,
           status: existing?.status === "completed" ? "completed" : "running",
@@ -58,26 +67,18 @@ export function deriveActions(messages: UIMessage[]): AssistantAction[] {
       }
 
       if (part.type === "tool-result") {
-        const existing = actionMap.get(part.toolCallId);
-        actionMap.set(part.toolCallId, {
-          id: part.toolCallId,
-          name: existing?.name ?? part.toolName ?? "tool",
+        const toolResultPart = part as {
+          toolCallId: string;
+          toolName?: string;
+          output?: unknown;
+        };
+        const existing = actionMap.get(toolResultPart.toolCallId);
+        actionMap.set(toolResultPart.toolCallId, {
+          id: toolResultPart.toolCallId,
+          name: existing?.name ?? toolResultPart.toolName ?? "tool",
           args: existing?.args ?? {},
           status: "completed",
-          result: part.result,
-        });
-      }
-
-      if (part.type === "error" && "toolCallId" in part) {
-        const toolCallId = String(part.toolCallId);
-        const existing = actionMap.get(toolCallId);
-        actionMap.set(toolCallId, {
-          id: toolCallId,
-          name: existing?.name ?? "tool",
-          args: existing?.args ?? {},
-          status: "error",
-          error: "errorText" in part ? String(part.errorText) : undefined,
-          result: existing?.result,
+          result: toolResultPart.output,
         });
       }
     }

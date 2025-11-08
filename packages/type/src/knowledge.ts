@@ -38,7 +38,11 @@ export interface KnowledgePattern {
   notes?: string;
 }
 
-export type KnowledgeNode = KnowledgeFact | KnowledgeRelation | KnowledgeInsight | KnowledgePattern;
+export type KnowledgeNode =
+  | KnowledgeFact
+  | KnowledgeRelation
+  | KnowledgeInsight
+  | KnowledgePattern;
 
 export interface KnowledgeUpdate {
   node: KnowledgeNode;

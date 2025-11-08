@@ -20,7 +20,10 @@ export type RunPlanInput = {
   };
 };
 
-export type ResumePayload = { event: "deploy-authz" | "linear-authz" | "bio-authz"; authz: string };
+export type ResumePayload = {
+  event: "deploy-authz" | "linear-authz" | "bio-authz";
+  authz: string;
+};
 
 export type RunPlanV6 = {
   runId: string;
@@ -37,7 +40,10 @@ export type RunPlanV6 = {
  * context preparation and accepts resume events for authz acknowledgments.
  * The router owns persistence and run-registry wiring.
  */
-export function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }): RunPlanV6 {
+export function runPlanV6(
+  input: RunPlanInput,
+  opts?: { signal?: AbortSignal }
+): RunPlanV6 {
   const runId = randomUUID();
   const summary = `Plan initialized for ${input.requirement}`;
 
@@ -55,7 +61,10 @@ export function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }):
   async function* generator(): AsyncGenerator<WorkflowEvent, void, void> {
     // Start
     yield { type: "run", id: runId } as unknown as WorkflowEvent;
-    yield { type: "notice", message: `Planning started for ${input.requirement}` };
+    yield {
+      type: "notice",
+      message: `Planning started for ${input.requirement}`,
+    };
     yield { type: "progress", pct: 5, message: "initializing" };
 
     // Simulate context preparation if enabled
@@ -84,7 +93,10 @@ export function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }):
       while (!cancelled && Date.now() < deadline) {
         if (resumeQueue.length > 0) {
           const resume = resumeQueue.shift()!;
-          yield { type: "notice", message: `Authorization '${resume.event}' acknowledged.` };
+          yield {
+            type: "notice",
+            message: `Authorization '${resume.event}' acknowledged.`,
+          };
           break;
         }
         await delay(100);
@@ -110,4 +122,3 @@ export function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }):
     },
   };
 }
-

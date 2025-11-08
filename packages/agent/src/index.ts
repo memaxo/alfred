@@ -1,6 +1,6 @@
 import {
   buildAssistantTools,
-  buildOrchestratorTools,
+  buildTools,
   getModelId,
   getOpenAI,
   wrapLegacyToolToAISDK,
@@ -8,7 +8,7 @@ import {
 
 export {
   buildAssistantTools,
-  buildOrchestratorTools,
+  buildTools,
   getModelId,
   getOpenAI,
   wrapLegacyToolToAISDK,

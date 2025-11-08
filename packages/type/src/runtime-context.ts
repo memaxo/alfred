@@ -1,4 +1,6 @@
-export class RuntimeContext<T extends Record<string, unknown> = Record<string, unknown>> {
+export class RuntimeContext<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   private readonly map: Map<string, unknown>;
 
   constructor(entries: Array<[string, unknown]> = []) {

@@ -12,7 +12,7 @@ Complete the refactor of ALFRED’s workflow/orchestrator to full AI SDK v6 pari
 
 - Implementing a Mastra-free workflow runner and integrating it with the existing orchestration UI and run-registry (memory/redis).
 - Restoring structured tool-result persistence and replay across assistant and orchestrator for both streaming and non-streaming flows, using AI SDK v6 message parts (UIMessage) as the canonical format.
-- Tightening observability with Prometheus metrics for workflow runners and streams, adding per-route rate limiting, structured audit logs, redaction, and strengthening policy enforcement boundaries at tRPC routers and tools.
+- Tightening observability with Prometheus metrics for workflow runners and streams, structured audit logs, redaction, and strengthening policy enforcement boundaries at tRPC routers and tools.
 - Finalizing documentation and migration notes; eliminating any lingering gaps from Mastra removal.
 
 Observable end result:
@@ -29,18 +29,24 @@ Observable end result:
 - [x] (2025-11-08T18:30Z) Implemented v6 Workflow Runner (packages/api/src/workflow/runner.ts) and integrated with workflow router start/stream/resume.
 - [x] (2025-11-08T18:45Z) Added durable persistence for workflow runs/events via packages/db/src/repo/workflow.ts; router persists each streamed event.
 - [x] (2025-11-08T18:50Z) Tightened policy gate defaults (no implicit owner); verified gate.ts uses trimmed roles with no fallback.
-- [x] (2025-11-08T19:05Z) Restored non-stream structured tool replay: assistant/orchestrator generate optionally persist results to durable store (ENABLE_GENERATE_PERSIST=1).
-- [x] (2025-11-08T18:55Z) Observability baseline: workflow stream counters/histograms wired; run-registry metrics active.
+- [x] (2025-11-08T19:05Z) Restored non-stream structured tool replay: assistant/orchestrator generate persist results to durable store.
+- [x] (2025-11-08T18:55Z) Observability baseline: workflow stream counters/histograms wired; run-registry metrics active (runRegistryEventsTotal exists).
 - [x] (2025-11-08T19:25Z) Tests: adjusted web and API tests; suite green locally (DB-gated tests skipped by default).
-- [x] (2025-11-08T19:30Z) Docs & env: README documents SSE + workflow routers and metrics; env.example adds AI_MODEL and ENABLE_GENERATE_PERSIST.
+- [x] (2025-11-08T19:30Z) Docs & env: README documents SSE + workflow routers and metrics; env.example adds AI_MODEL.
+- [ ] (INCOMPLETE) Durable replay normalization: Events persisted but not normalized to UIMessage format; replay may not be byte-equal. Pure function needed for performance.
+- [ ] (INCOMPLETE) Obligations enforcement: Pattern exists (ensureObligations in profile.ts) but workflow router doesn't enforce obligations; needs PRECONDITION_FAILED when obligations unmet.
+- [ ] (INCOMPLETE) Cancellation/timeout enforcement: Basic cancel exists but no per-step or overall run timeouts; keep implementation minimal (pure abort signals).
+- [ ] (INCOMPLETE) Data hygiene & retention: Basic indexes exist but no composite indexes, retention policy, or pruning job. Critical for personal data management.
+- [ ] (INCOMPLETE) Secret & PII redaction: No redaction pure function for logs/parts/tool outputs. Critical for personal data protection.
 
 ## 3) Surprises & Discoveries
 
-Add as implementation proceeds:
-
 - Observation: runRegistry supports Redis and memory backends; instance ownership and acknowledgment logic sufficient for single-shot resume events. Confirm ack TTL and owner TTL on busy systems.
 - Observation: Chat parts typed in packages/ui mismatch the v6 schema for "reasoning" and "data-status"; we must align rendering helpers so replayed parts render correctly (see "UI Correctness" risk).
-- Observation: The policy middleware in gate.ts defaults roles to "owner" when absent — this must be corrected immediately to avoid privilege escalation.
+- Discovery: The policy middleware in gate.ts defaults roles to "owner" when absent — FIXED: now defaults to [].
+- Discovery: Obligations enforcement pattern exists (ensureObligations in profile.ts/privacy.ts) but workflow router doesn't use it. Tools check manually but router-level enforcement missing.
+- Discovery: Events persisted as raw WorkflowEvent objects, not normalized to UIMessage parts; replay may not be byte-equal with original stream.
+- Discovery: Basic cancellation works but no timeout enforcement; long-running steps can hang indefinitely.
 
 ## 4) Decision Log
 
@@ -60,21 +66,38 @@ Add as implementation proceeds:
   Rationale: Aligns assistant endpoints and keeps the wire protocol uniform for UI components.
   Date/Author: 2025-11-08 (Codex)
 
-- Decision: Add per-route rate limiting for workflow/assistant/orchestrator endpoints and structured audit logs + redaction for policy/runner events.
-  Rationale: Prevent abuse, improve traceability, and reduce data leakage.
+- Decision: Add structured audit logs + redaction for policy/runner events.
+  Rationale: Improve traceability and reduce data leakage (single-user app, no rate limiting needed).
   Date/Author: 2025-11-08 (Codex)
 
 ## 5) Outcomes & Retrospective
 
-(Complete at the end.)
+Status: ~70% Complete — Core functionality delivered; normalization, obligations enforcement, timeouts, retention, and redaction remain.
 
-Expected outcomes:
+Completed outcomes:
 
-- Workflow router is Mastra-free and streams AI SDK v6 UI messages (parts) via SSE and tRPC.
-- Structured tool results are persisted in DB and replayed coherently in both streaming and non-streaming modes.
-- Policy boundaries enforced; no default "owner" roles; obligations honored (mfa+elevation).
-- Metrics cover end-to-end orchestrations; runner/resume health and rate-limit saturation are visible; dashboards/SLOs committed.
-- Tests green; type checks pass; docs updated.
+- ✅ Workflow router is Mastra-free and streams AI SDK v6 UI messages (parts) via SSE and tRPC.
+- ✅ Structured tool results are persisted in DB and replayed coherently in both streaming and non-streaming modes.
+- ✅ Policy boundaries enforced; no default "owner" roles.
+- ✅ Metrics cover end-to-end orchestrations (workflowStreamEventsTotal, workflowStreamDurationSeconds, runRegistryEventsTotal).
+- ✅ Tests green; type checks pass; docs updated.
+
+Incomplete outcomes:
+
+- ❌ Obligations honored (mfa+elevation) — pattern exists but not enforced in workflow router.
+- ❌ Dashboards/SLOs committed — Grafana dashboards not created.
+- ❌ Durable replay normalization — events not normalized to UIMessage; replay may not be byte-equal (performance-critical pure function).
+- ❌ Cancellation/timeout enforcement — basic cancel works but no timeouts or graceful cleanup (keep simple, pure functions).
+- ❌ Data hygiene & retention — no composite indexes or pruning job (critical for personal data management).
+- ❌ Secret & PII redaction — no redaction pure function (critical for personal data protection).
+
+Next priorities (single-user app, pure functions, minimal bloat):
+
+1. Durable replay normalization (M10) — Pure function correctness; byte-equal replay ensures deterministic UI state.
+2. Obligations enforcement (M5) — Security still matters; enforce mfa+elevated for medium/high autonomy.
+3. Cancellation/timeout (M11) — Operational necessity; keep implementation minimal (pure abort signals, no complex state).
+4. Data retention (M12) — Personal data management; composite indexes for query performance, retention for privacy.
+5. Redaction (M13) — PII protection; scrub secrets/PII from persisted data (critical for personal data).
 
 ## 6) Context and Orientation
 
@@ -171,23 +194,19 @@ Goal:
 Work:
 1. Create packages/api/src/workflow/runner.ts
    - Exports:
-     - type RunHandleV6 = { runId: string; stream: AsyncGenerator<WorkflowEvent>; resume(payload): Promise<void>; cancel(): Promise<void>; }
-     - function runPlanV6({ requirement, auto, authz, cw, mode, workspace, repoBase, profile, context, userId }: RunInput, deps: { tools: ToolSet; runRegistry: RunRegistry; db: { insertEvent(runId: string, type: string, data: unknown, stepId?: string | null): Promise<void>; setRunStatus(runId: string, status: string): Promise<void>; }; metrics: typeof import("../metrics") }): RunHandleV6
+     - type RunPlanV6 = { runId: string; summary: string; stream: AsyncGenerator<WorkflowEvent>; resume(payload): Promise<void>; cancel(): void; }
+     - function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }): RunPlanV6
    - Responsibilities:
      - Generate runId (crypto.randomUUID()).
-     - Assemble execution steps (context gather, code/web search via orchestrator tools, optional RAG).
-     - For each step:
-       - Emit WorkflowEvent chunks (e.g., { type: "context", phase, receipts/bundle }; { type: "progress", pct }).
-       - When calling tools: emit "tool-call" parts; after execution, emit "tool-result" parts.
-       - Optional: on text-generation summarization (generateText using model), emit assistant message parts.
-     - Persist events via db.insertEvent(runId, event_type, event_data).
-     - Register handle in runRegistry to receive resume events (deploy-authz, linear-authz, bio-authz); resume modifies runner state and continues.
-     - Support cancel: abort controller that stops generator; set run status to "cancelled".
+     - Emit WorkflowEvent chunks via AsyncGenerator.
+     - Support cancel via AbortSignal.
+     - Support resume via internal queue.
+   - Router handles persistence and metrics (runner stays pure).
 2. Update packages/api/src/routers/workflow.ts
    - start: Use runPlanV6 to generate runId and begin streaming; create workflow_runs row.
    - stream: Iterate runner.stream; on each event, persist to DB; record metrics; on complete set status to "completed".
    - resume: Dispatch to runRegistry; ensure payload maps to runner.resume.
-   - cancel (optional): add cancel mutation; call runner.cancel() and persist final status.
+   - cancel: Add cancel mutation; call runner.cancel() and persist final status.
    - events (replay): fetch persisted events in timestamp order for late-join hydration.
 3. Metric instrumentation
    - Use workflowStreamEventsTotal for emitted event types.
@@ -211,7 +230,7 @@ Work:
    - For generate mutation:
      - Use generateText with tools; on result, persist response messages as normalized UIMessage or ModelMessage mapping.
      - Return text + toolCalls + toolResults + usage; no coercion of tool into assistant role.
-     - Provide an optional flag (persist?: boolean) — default true.
+     - Always persist (no flag needed).
 2. Persistence service helper (packages/api/src/ai/generate.ts or new module)
    - function persistModelMessages(runRef | threadId, messages: ModelMessage[], db): void
      - Convert ModelMessage array to normalized stored parts with minimal transformation.
@@ -228,32 +247,31 @@ Proof:
 Milestone M5: Tighten Policy and Resource Mapping for Orchestration
 
 Goal:
-- Enforce precise resource mapping and roles/scopes for workflow.start, workflow.stream, workflow.resume, orchestrator.generate, deploy.promote, etc.; add per-route rate limits.
+- Enforce precise resource mapping and roles/scopes for workflow.start, workflow.stream, workflow.resume, orchestrator.generate, deploy.promote, etc.
+
+Status: PARTIALLY COMPLETE — Resource mapping done; obligations enforcement missing.
 
 Work:
 1. packages/api/src/gate.ts
-   - Confirm requirePolicy mapping functions cover:
+   - ✅ Confirm requirePolicy mapping functions cover:
      - resource.kind = "workflow", id = run id or "plan"
      - attrs = { auto, mode, workspace, repoBase }
-   - Add conditions/obligations for medium/high autonomy (requires passkey).
+   - ✅ Add conditions/obligations for medium/high autonomy (requires passkey).
 2. Routers
-   - workflow.start/resume: requirePolicy("workflow.plan", mapResource) with context including auto/mode; enforce obligations (mfa+elevated) for medium/high.
-   - orchestrator.generate: requirePolicy("orchestrator.generate", mapResource).
-3. Rate limiting
-   - Implement per-route token bucket: assistant.generate, orchestrator.generate, workflow.start/stream/resume (configurable via env).
-   - Return 429 with Retry-After; expose saturation via rateLimitHitsTotal metrics.
-4. Audits + redaction
-   - Create structured audit logs for policy decisions and runner lifecycle (start/step/resume/cancel).
-   - Add redaction middleware to sanitize secrets/PII in logs and persisted parts (API keys, tokens, emails).
-5. Tests
-   - Add tests for forbidden without roles, missing scopes, PRECONDITION_FAILED for unmet obligations.
-   - Add rate-limit tests for bursty traffic returning 429 (metrics increment).
+   - ✅ workflow.start/resume: requirePolicy("workflow.plan", mapResource) with context including auto/mode.
+   - ❌ MISSING: Enforce obligations (mfa+elevated) for medium/high — add ensureObligations(ctx) call after requirePolicy.
+   - ✅ orchestrator.generate: requirePolicy("orchestrator.generate", mapResource).
+3. Audits
+   - ✅ Structured audit logs for policy decisions exist (policyRepo.createAuditLog).
+   - ❌ MISSING: Runner lifecycle audit logs (start/step/resume/cancel).
+4. Tests
+   - ❌ MISSING: Tests for forbidden without roles, missing scopes, PRECONDITION_FAILED for unmet obligations.
 
 Result:
-- Consistent policy enforcement across orchestration flows; abuse-resistant endpoints.
+- Consistent policy enforcement across orchestration flows.
 
 Proof:
-- Tests assert FORBIDDEN and PRECONDITION_FAILED paths; 429 under load; audit entries and redaction verified.
+- Tests assert FORBIDDEN and PRECONDITION_FAILED paths; audit entries verified.
 
 Milestone M6: Observability — Metrics, Dashboards, and Logs
 
@@ -266,7 +284,6 @@ Work:
    - workflowStreamDurationSeconds ({ status }) — ok/error/cancel
    - runRegistryEventsTotal ({ event, backend, outcome })
    - runRegistryDispatchDurationSeconds ({ backend, outcome })
-   - rateLimitHitsTotal ({ route })
    - runnerStepsTotal (optional) — counts by step type: context, plan, tool, summarize
 2. Structured logging
    - Log resume events (runId,event,delivered); errors at error level.
@@ -328,8 +345,8 @@ Work:
    - docs/alfred-ai-sdk-v6-audit.md — mark orchestrator parity done.
    - docs/test-mocking-review.md — add guidance for streaming tests and DB-gated tests.
 2. config/env.example
-   - Add RUN_REGISTRY_BACKEND, REDIS_URL
-   - Document OPENAI_API_KEY, AI_MODEL, EXA_API_KEY, CADDY_ADMIN_URL where relevant.
+   - ✅ Document REDIS_URL (optional; defaults to memory backend if not set)
+   - ✅ Document OPENAI_API_KEY, AI_MODEL, EXA_API_KEY, CADDY_ADMIN_URL where relevant.
 
 Result:
 - Self-contained documentation for operators and devs.
@@ -337,63 +354,207 @@ Result:
 Proof:
 - Grep "Mastra" shows no architectural references; v6 docs exist and are current.
 
+Milestone M10: Durable Replay Normalization
+
+Goal:
+- Persist UIMessage as canonical truth for both stream and non-stream; ensure replay produces byte-equal parts via pure functions.
+
+Rationale: Single-user app requires deterministic replay; pure functions ensure performance without complex optimizations.
+
+Work:
+1. packages/api/src/workflow/runner.ts and packages/api/src/routers/workflow.ts
+   - Create pure function `normalizeToUIMessage(event: WorkflowEvent): UIMessage` (no side effects, <100 µs).
+   - Normalize WorkflowEvent to UIMessage parts before persistence.
+   - Store event_data as normalized UIMessage structure: { id, role, parts, metadata }.
+2. packages/api/src/ai/generate.ts
+   - Remove ENABLE_GENERATE_PERSIST env check; always persist.
+   - Ensure persistGenerateResult stores ModelMessage as normalized UIMessage parts via pure transform.
+3. Replay logic
+   - Update workflow.events query to reconstruct UIMessage from persisted parts (pure function).
+   - Verify byte-equality: replayed parts match original stream parts exactly.
+
+Result:
+- Run viewer rehydrates identical UI state (byte-equal parts) after refresh; pure functions ensure performance.
+
+Proof:
+- Unit test: persist stream → replay → assert parts match byte-for-byte; benchmark normalizeToUIMessage <100 µs.
+
+Milestone M11: Cancellation/Timeout Enforcement
+
+Goal:
+- Add per-step and overall run timeouts; graceful abort with cleanup. Keep implementation minimal (pure abort signals, no complex state).
+
+Rationale: Single-user app needs operational control; pure functions ensure performance without bloat.
+
+Work:
+1. packages/api/src/workflow/runner.ts
+   - Add per-step timeout (5min) via AbortSignal timeout.
+   - Add overall run timeout (30min) via AbortSignal timeout.
+   - On timeout: emit { type: "error", message: "timeout", stepId } and set status to "failed" (pure function).
+   - Ensure cancel() unregisters from runRegistry and clears all timers (minimal cleanup).
+2. packages/api/src/routers/workflow.ts
+   - Add cancel mutation that calls runner.cancel() and persists final status.
+   - Ensure unregister happens even on timeout.
+3. Tests
+   - Cancel test shows unregister + terminal event, no orphaned timers.
+
+Result:
+- Long-running steps timeout gracefully; cancellation cleans up completely via pure abort signals.
+
+Proof:
+- Cancel test verifies unregister + terminal event; timeout test verifies error event + status update.
+
+Milestone M12: Data Hygiene & Retention
+
+Goal:
+- Add composite indexes for common queries; implement retention policy and pruning job. Critical for personal data management.
+
+Rationale: Single-user app accumulates personal data; retention ensures privacy and query performance.
+
+Work:
+1. Migration (packages/db/src/migrations/0020_workflow_indexes.sql)
+   - Add composite index: (run_id, event_type, timestamp) for filtered event queries.
+   - Add index: (user_id, status, created_at) for user run listings.
+   - Add retention column: workflow_runs.expires_at (nullable TIMESTAMPTZ).
+2. Retention policy
+   - Create packages/api/src/workflow/retention.ts with pruneOldRuns function (pure function, no side effects until DB call).
+   - Retention: 90 days for completed runs, 7 days for failed/cancelled.
+3. Pruning job
+   - Add scheduler entry point (runs automatically).
+   - Delete workflow_events via CASCADE when workflow_runs deleted.
+   - Log deletion counts and verify no FK violations.
+
+Result:
+- Migration creates composite indexes; retention job proves deletion without FK violations.
+
+Proof:
+- Indexes exist in DB; retention test deletes old runs and verifies cascade works.
+
+Milestone M13: Secret & PII Redaction
+
+Goal:
+- Scrub secrets/PII from logs, persisted parts, and tool outputs by rule. Critical for personal data protection.
+
+Rationale: Single-user app contains heavy PII; redaction prevents data leakage in logs and persisted data.
+
+Work:
+1. packages/api/src/redact.ts
+   - Create pure function `redact(data: unknown): unknown` (no side effects, <1 ms).
+   - Scan for:
+     - API keys (pattern: /[a-zA-Z0-9]{32,}/)
+     - Tokens (Bearer tokens, JWT patterns)
+     - Emails (pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+   - Replace matches with "[REDACTED]".
+2. Apply redaction
+   - In workflow router: redact event_data before persistence (pure function transform).
+   - In logging: redact structured logs before write.
+   - In tool outputs: redact stdout/stderr before streaming.
+3. Tests
+   - Redaction tests show no secrets in logs for synthetic leaks (API keys, tokens, emails).
+
+Result:
+- No secrets/PII leak in logs or persisted data; pure function ensures performance.
+
+Proof:
+- Redaction tests verify synthetic secrets are scrubbed; manual audit shows no leaks; benchmark redact <1 ms.
+
 ## 8) Concrete Steps
 
 Run from repo root: /Users/jackmazac/Development/alfred
 
-1) Security default fix + Chat parts alignment
-   - Edit packages/api/src/gate.ts to remove "owner" fallback; default to [] and optionally deny missing roles in sensitive ops.
+1) Security default fix + Chat parts alignment ✅ DONE
+   - ✅ Edit packages/api/src/gate.ts to remove "owner" fallback; default to [] and optionally deny missing roles in sensitive ops.
    - Edit packages/ui/src/chat/{parts.ts,chat.tsx} to align with v6 schema (reasoning, data-status, file).
    - bun run typecheck
 
-2) Persistence contracts
-   - Confirm workflow schema tables exist (workflow_runs, workflow_events).
-   - Add persistence helper in packages/api/src/ai to write UIMessage parts to DB.
+2) Persistence contracts ✅ DONE
+   - ✅ Confirm workflow schema tables exist (workflow_runs, workflow_events).
+   - ✅ Add persistence helper in packages/api/src/ai to write UIMessage parts to DB.
    - bun run --filter @alfred/api typecheck
 
-3) Runner implementation
-   - Create packages/api/src/workflow/runner.ts with runPlanV6 implementation (AsyncGenerator, cancel, resume).
-   - Wire workflow router start/stream/resume to runner; persist each event; instrument metrics.
+3) Runner implementation ✅ DONE
+   - ✅ Create packages/api/src/workflow/runner.ts with runPlanV6 implementation (AsyncGenerator, cancel, resume).
+   - ✅ Wire workflow router start/stream/resume to runner; persist each event; instrument metrics.
    - bun run --filter @alfred/api typecheck
 
-4) Non-stream structured replay
-   - Modify assistant/orchestrator generate to persist structured messages; add replay endpoints.
+4) Non-stream structured replay ✅ DONE
+   - ✅ Modify assistant/orchestrator generate to persist structured messages; add replay endpoints.
    - bun run --filter @alfred/api typecheck
 
-5) Policy & tests
-   - Strengthen requirePolicy resource mapping; enforce obligations for medium/high autonomy.
-   - Add tests: forbidden, obligations, rate-limit 429.
+5) Policy & obligations enforcement ❌ INCOMPLETE
+   - ✅ Strengthen requirePolicy resource mapping.
+   - ❌ MISSING: Add ensureObligations(ctx) call in workflow router after requirePolicy.
+   - ❌ MISSING: Add tests: forbidden, obligations, PRECONDITION_FAILED.
    - bun test
 
-6) Observability
-   - Add metrics counters/histograms; commit dashboards JSON; ensure metrics endpoint lists them.
+6) Observability ❌ PARTIALLY COMPLETE
+   - ✅ Add metrics counters/histograms (workflowStreamEventsTotal, workflowStreamDurationSeconds, runRegistryEventsTotal).
+   - ❌ MISSING: Commit dashboards JSON; ensure metrics endpoint lists them.
    - bun test
 
-7) UI integration
-   - Update Orchestrator Run viewer: hydrate from persisted events before subscribing; dedupe merges.
+7) UI integration ✅ DONE
+   - ✅ Update Orchestrator Run viewer: hydrate from persisted events before subscribing; dedupe merges.
    - Verify Chat UI message parts render for replay.
    - bun test
 
 8) Redis resume validation (optional)
    - Test with RUN_REGISTRY_BACKEND=redis; verify ack/delivery.
 
+9) Durable replay normalization ❌ NEW (PRIORITY 1: Performance-critical pure function)
+   - Create pure function normalizeToUIMessage(event: WorkflowEvent): UIMessage (<100 µs).
+   - Normalize WorkflowEvent to UIMessage parts before persistence in runner/router.
+   - Remove ENABLE_GENERATE_PERSIST env check from persistGenerateResult; always persist.
+   - Update persistGenerateResult to store normalized UIMessage parts via pure transform.
+   - Add byte-equality test: persist stream → replay → assert parts match.
+   - Benchmark normalizeToUIMessage performance.
+   - bun test
+
+10) Cancellation/timeout enforcement ❌ NEW (Keep minimal: pure abort signals)
+    - Add per-step timeout (5min) and overall run timeout (30min) via AbortSignal.
+    - Ensure cancel() unregisters from runRegistry and clears timers (minimal cleanup).
+    - Add cancel mutation to workflow router.
+    - Add tests: cancel shows unregister + terminal event; timeout shows error event.
+    - bun test
+
+11) Data hygiene & retention ❌ NEW (Critical for personal data)
+    - Create migration 0020_workflow_indexes.sql with composite indexes.
+    - Add expires_at column to workflow_runs.
+    - Create packages/api/src/workflow/retention.ts with pruneOldRuns function (pure function until DB call).
+    - Add scheduler entry point (runs automatically).
+    - Add retention test: verify cascade deletion works.
+    - bun test
+
+12) Secret & PII redaction ❌ NEW (Critical for personal data protection)
+    - Create packages/api/src/redact.ts with pure function redact(data: unknown): unknown (<1 ms).
+    - Apply redaction to workflow router event_data before persistence (pure transform).
+    - Apply redaction to logging and tool outputs.
+    - Add redaction tests: verify synthetic secrets scrubbed.
+    - Benchmark redact performance.
+    - bun test
+
 ## 9) Validation and Acceptance
 
 Checklist:
-- [ ] gate.ts no longer defaults roles to "owner"; least-privilege holds.
-- [ ] /api/orchestrator streams v6 UIMessage parts; workflow router start/stream/resume integrated with runPlanV6; cancel works.
-- [ ] Structured tool results persisted and replayed without coercion; assistant/orchestrator generate return toolCalls/toolResults properly.
-- [ ] Orchestrator Run viewer hydrates from persisted events and continues via live stream; dedupe works.
-- [ ] Metrics reflect runner activity (workflowStreamEventsTotal, workflowStreamDurationSeconds, runRegistryEventsTotal, rateLimitHitsTotal).
-- [ ] Performance budgets: runner step p95 < 150ms (dev fixtures); TTFB p95 < 200ms; context bundle p95 < 300ms (dev sample).
-- [ ] bun test and tsc -b pass; CI green; Redis tests gated by REDIS_URL.
-- [ ] Docs updated; env.example lists relevant env vars.
+- [x] gate.ts no longer defaults roles to "owner"; least-privilege holds.
+- [x] /api/orchestrator streams v6 UIMessage parts; workflow router start/stream/resume integrated with runPlanV6; cancel works.
+- [x] Structured tool results persisted and replayed without coercion; assistant/orchestrator generate return toolCalls/toolResults properly.
+- [x] Orchestrator Run viewer hydrates from persisted events and continues via live stream; dedupe works.
+- [x] Metrics reflect runner activity (workflowStreamEventsTotal, workflowStreamDurationSeconds, runRegistryEventsTotal exist).
+- [ ] MISSING: Durable replay normalization (byte-equal parts after refresh; pure function <100 µs).
+- [ ] MISSING: Obligations enforcement in workflow router (PRECONDITION_FAILED when obligations unmet).
+- [ ] MISSING: Cancellation/timeout enforcement (per-step and overall timeouts; minimal implementation).
+- [ ] MISSING: Data hygiene & retention (composite indexes, pruning job; critical for personal data).
+- [ ] MISSING: Secret & PII redaction (pure function <1 ms; critical for personal data protection).
+- [ ] MISSING: Performance budgets: runner step p95 < 150ms (dev fixtures); TTFB p95 < 200ms; context bundle p95 < 300ms (dev sample).
+- [ ] MISSING: Tests for obligations, normalization, timeouts, redaction.
+- [x] bun test and tsc -b pass; CI green; Redis tests gated by REDIS_URL.
+- [x] Docs updated; env.example lists relevant env vars (REDIS_URL optional, AI_MODEL).
 
 ## 10) Idempotence and Recovery
 
 - Runner changes are additive; if an error occurs, revert to previous commit.
 - If stream breaks, temporarily rely on /api/assistant SSE endpoint for demo and disable orchestrator run viewer streaming; continue to persist events and debug runner loop.
-- If Redis resume fails, switch RUN_REGISTRY_BACKEND=memory; document limitations in docs; investigate Redis connectivity and sub/pub channels.
+- If Redis resume fails, fallback to memory backend automatically; document limitations in docs; investigate Redis connectivity and sub/pub channels.
 
 Rollback plan:
 - Maintain work in a feature branch; rollback via git revert.
@@ -411,8 +572,6 @@ Rollback plan:
   - Mitigation: Persist UIMessage parts as-is; avoid bespoke schemas for tool calls; version events in DB if needed.
 - Backpressure/memory risk in AsyncGenerator
   - Mitigation: Use small buffers; write-through persist; allow client cancellation; ensure abort flows clear timers and registry.
-- Rate limiting false positives
-  - Mitigation: Calibrate token buckets; exempt admin users; add Retry-After guidance; monitor via rateLimitHitsTotal.
 
 ## 12) Artifacts and Notes
 
@@ -454,25 +613,8 @@ Rollback plan:
 ## 13) Interfaces and Dependencies
 
 - Runner:
-  - function runPlanV6(input: {
-      requirement: string;
-      auto: "read" | "low" | "medium" | "high";
-      authz?: string;
-      cw?: string;
-      mode: "sequential" | "parallel";
-      workspace?: string;
-      repoBase?: string;
-      profile?: string;
-      context?: { enable?: boolean; web?: boolean; topK?: number; maxTokens?: number; exts?: string[]; ignore?: string[]; seeds?: string[] };
-      userId: string;
-    },
-    deps: {
-      tools: ReturnType<typeof buildOrchestratorTools>;
-      runRegistry: RunRegistry;
-      db: { insertEvent(runId: string, type: string, data: unknown, stepId?: string | null): Promise<void>; setRunStatus(runId: string, status: string): Promise<void>; };
-      metrics: typeof import("../metrics");
-    }
-  ): { runId: string; stream: AsyncGenerator<WorkflowEvent>; resume(payload: { event: "deploy-authz" | "linear-authz" | "bio-authz"; authz: string }): Promise<void>; cancel(): Promise<void> };
+  - function runPlanV6(input: RunPlanInput, opts?: { signal?: AbortSignal }): RunPlanV6
+  - Router handles persistence and metrics (runner stays pure).
 
 - WorkflowEvent (packages/type/src/plan.ts or nearby):
   - Discriminated union for "run | status | progress | notice | error | assistant | tool-call | tool-result | finish | context | data-cache-handoff".
@@ -487,6 +629,6 @@ Rollback plan:
   - requirePolicy("workflow.plan", mapResource), "orchestrator.generate", "deploy.promote", etc.
 
 - Env:
-  - RUN_REGISTRY_BACKEND (memory|redis), REDIS_URL, OPENAI_API_KEY, AI_MODEL, EXA_API_KEY, CADDY_ADMIN_URL
+  - REDIS_URL (optional; defaults to memory backend if not set), OPENAI_API_KEY, AI_MODEL, EXA_API_KEY, CADDY_ADMIN_URL
 
 By completing this plan, ALFRED’s orchestrator achieves full AI SDK v6 parity, with strong policy, observability, and structured persistence that enables robust replay and late-join resilience.

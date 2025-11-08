@@ -1,5 +1,13 @@
 import "@/test/dom";
-import { beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { PreferenceDeleteInput, PreferenceSetInput } from "@alfred/type";
 
 const toastSuccess = vi.fn();
@@ -42,7 +50,7 @@ const optimisticPreference = {
 };
 
 let preferenceQueryResult: {
-  data: typeof optimisticPreference[];
+  data: (typeof optimisticPreference)[];
   isLoading: boolean;
   isFetching: boolean;
 };
@@ -50,24 +58,35 @@ let preferenceQueryResult: {
 const setMutate = vi.fn();
 const deleteMutate = vi.fn();
 
-function createMutationStub<Input, Output>(spy: (input: Input) => void, result: Output) {
+function createMutationStub<Input, Output>(
+  spy: (input: Input) => void,
+  result: Output
+) {
   return (config?: {
     onMutate?: (input: Input) => unknown | Promise<unknown>;
-    onSuccess?: (data: Output, input: Input, context: unknown) => void | Promise<void>;
+    onSuccess?: (
+      data: Output,
+      input: Input,
+      context: unknown
+    ) => void | Promise<void>;
     onSettled?: (
       data: Output | undefined,
       error: Error | null,
       input: Input,
-      context: unknown,
+      context: unknown
     ) => void | Promise<void>;
   }) => ({
     isPending: false,
     mutate: async (
       input: Input,
-      options?: { onSuccess?: (data: Output, context: unknown) => void | Promise<void> },
+      options?: {
+        onSuccess?: (data: Output, context: unknown) => void | Promise<void>;
+      }
     ) => {
       spy(input);
-      const context = config?.onMutate ? await config.onMutate(input) : undefined;
+      const context = config?.onMutate
+        ? await config.onMutate(input)
+        : undefined;
       await config?.onSuccess?.(result, input, context);
       await options?.onSuccess?.(result, context);
       await config?.onSettled?.(result, null, input, context);
@@ -92,16 +111,16 @@ const trpcMock = {
       useQuery: () => preferenceQueryResult,
     },
     set: {
-      useMutation: createMutationStub<PreferenceSetInput, typeof optimisticPreference>(
-        setMutate,
-        optimisticPreference,
-      ),
+      useMutation: createMutationStub<
+        PreferenceSetInput,
+        typeof optimisticPreference
+      >(setMutate, optimisticPreference),
     },
     delete: {
-      useMutation: createMutationStub<PreferenceDeleteInput, { removed: number }>(
-        deleteMutate,
-        { removed: 1 },
-      ),
+      useMutation: createMutationStub<
+        PreferenceDeleteInput,
+        { removed: number }
+      >(deleteMutate, { removed: 1 }),
     },
   },
 };
@@ -134,9 +153,12 @@ describe("Preferences route", () => {
     fireEvent.change(screen.getByPlaceholderText("Preference key"), {
       target: { value: "notifications" },
     });
-    fireEvent.change(screen.getByPlaceholderText('JSON value, e.g. {"mode":"dark"}'), {
-      target: { value: '{"enabled":true}' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('JSON value, e.g. {"mode":"dark"}'),
+      {
+        target: { value: '{"enabled":true}' },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Confidence (0-1)"), {
       target: { value: "0.85" },
     });
@@ -152,7 +174,9 @@ describe("Preferences route", () => {
     expect(listSetData).toHaveBeenCalled();
     expect(listInvalidate).toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledWith("Preference saved");
-    expect((screen.getByPlaceholderText("Preference key") as HTMLInputElement).value).toBe("");
+    expect(
+      (screen.getByPlaceholderText("Preference key") as HTMLInputElement).value
+    ).toBe("");
   });
 
   it("deletes a preference entry", async () => {

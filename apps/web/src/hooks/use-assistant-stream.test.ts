@@ -21,13 +21,13 @@ describe("deriveActions", () => {
           type: "tool-call",
           toolCallId: "call-1",
           toolName: "planner",
-          args: { query: "status" },
+          input: { query: "status" },
         },
         {
           type: "tool-result",
           toolCallId: "call-1",
           toolName: "planner",
-          result: { ok: true },
+          output: { ok: true },
         },
       ]),
     ];
@@ -50,7 +50,7 @@ describe("deriveActions", () => {
           type: "tool-call",
           toolCallId: "call-1",
           toolName: "search",
-          args: { q: "alfred" },
+          input: { q: "alfred" },
         },
       ]),
     ];
@@ -72,7 +72,7 @@ describe("deriveActions", () => {
           type: "tool-call",
           toolCallId: "call-1",
           toolName: "search",
-          args: { q: "alfred" },
+          input: { q: "alfred" },
         },
       ]),
       createMessage([
@@ -80,7 +80,7 @@ describe("deriveActions", () => {
           type: "tool-result",
           toolCallId: "call-1",
           toolName: "search",
-          result: { matches: 3 },
+          output: { matches: 3 },
         },
       ]),
     ];

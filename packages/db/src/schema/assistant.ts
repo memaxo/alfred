@@ -3,7 +3,15 @@
  * Tasks, notes, events, reminders, bookmarks, and timers
  */
 
-import { pgTable, text, timestamp, uuid, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // TODO: [Phase 5] Add proper indexes for performance
 

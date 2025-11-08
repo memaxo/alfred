@@ -1,7 +1,7 @@
 import "@/test/dom";
 import { describe, expect, it } from "bun:test";
-import { renderHook, act } from "@testing-library/react";
 import type { UIMessage } from "@alfred/type/stream";
+import { act, renderHook } from "@testing-library/react";
 import { useAssistantStream } from "../use-assistant-stream";
 
 const baseMessage: UIMessage = {
@@ -37,13 +37,13 @@ describe("useAssistantStream integration (without network)", () => {
           type: "tool-call",
           toolCallId: "call-123",
           toolName: "search",
-          args: { query: "alfred" },
+          input: { query: "alfred" },
         },
         {
           type: "tool-result",
           toolCallId: "call-123",
           toolName: "search",
-          result: { url: "https://example.com" },
+          output: { url: "https://example.com" },
         },
       ],
     };

@@ -1,96 +1,96 @@
-import { authClient } from "@/lib/auth-client";
+import type { inferRouterOutputs } from "@trpc/server";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { Container } from "@/components/container";
 import { SignIn } from "@/components/sign-in";
 import { SignUp } from "@/components/sign-up";
-import { queryClient, trpc } from "@/utils/trpc";
+import { authClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
-import type { inferRouterOutputs } from "@trpc/server";
+import { queryClient, trpc } from "@/utils/trpc";
 
 export default function Home() {
-	type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
-	type HealthCheckOutput = RouterOutputs["healthCheck"];
-	type PrivateDataOutput = RouterOutputs["privateData"];
-	const healthCheckQuery = trpc.healthCheck.useQuery() as {
-		data: HealthCheckOutput | undefined;
-		isLoading: boolean;
-	};
-	const privateDataQuery = trpc.privateData.useQuery() as {
-		data: PrivateDataOutput | undefined;
-		isLoading: boolean;
-	};
-	const { data: healthCheck, isLoading: isHealthLoading } = healthCheckQuery;
-	const { data: privateData, isLoading: isPrivateLoading } = privateDataQuery;
-	const { data: session } = authClient.useSession();
+  type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+  type HealthCheckOutput = RouterOutputs["healthCheck"];
+  type PrivateDataOutput = RouterOutputs["privateData"];
+  const healthCheckQuery = trpc.healthCheck.useQuery() as {
+    data: HealthCheckOutput | undefined;
+    isLoading: boolean;
+  };
+  const privateDataQuery = trpc.privateData.useQuery() as {
+    data: PrivateDataOutput | undefined;
+    isLoading: boolean;
+  };
+  const { data: healthCheck, isLoading: isHealthLoading } = healthCheckQuery;
+  const { data: privateData, isLoading: isPrivateLoading } = privateDataQuery;
+  const { data: session } = authClient.useSession();
 
-	return (
-		<Container>
-			<ScrollView className="flex-1">
-				<View className="px-4">
-					<Text className="font-mono text-foreground text-3xl font-bold mb-4">
-						BETTER T STACK
-					</Text>
-					{session?.user ? (
-						<View className="mb-6 p-4 bg-card rounded-lg border border-border">
-							<View className="flex-row justify-between items-center mb-2">
-								<Text className="text-foreground text-base">
-									Welcome,{" "}
-									<Text className="font-medium">{session.user.name}</Text>
-								</Text>
-							</View>
-							<Text className="text-muted-foreground text-sm mb-4">
-								{session.user.email}
-							</Text>
+  return (
+    <Container>
+      <ScrollView className="flex-1">
+        <View className="px-4">
+          <Text className="mb-4 font-bold font-mono text-3xl text-foreground">
+            BETTER T STACK
+          </Text>
+          {session?.user ? (
+            <View className="mb-6 rounded-lg border border-border bg-card p-4">
+              <View className="mb-2 flex-row items-center justify-between">
+                <Text className="text-base text-foreground">
+                  Welcome,{" "}
+                  <Text className="font-medium">{session.user.name}</Text>
+                </Text>
+              </View>
+              <Text className="mb-4 text-muted-foreground text-sm">
+                {session.user.email}
+              </Text>
 
-							<TouchableOpacity
-								className="bg-destructive py-2 px-4 rounded-md self-start"
-								onPress={() => {
-									authClient.signOut();
-									queryClient.invalidateQueries();
-								}}
-							>
-								<Text className="text-white font-medium">Sign Out</Text>
-							</TouchableOpacity>
-						</View>
-					) : null}
-					<View className="mb-6 rounded-lg border border-border p-4">
-						<Text className="mb-3 font-medium text-foreground">API Status</Text>
-				<View className="flex-row items-center gap-2">
-					<View
-						className={`h-3 w-3 rounded-full ${
-							healthCheck ? "bg-green-500" : "bg-red-500"
-						}`}
-					/>
-					<Text className="text-muted-foreground">
-						{isHealthLoading
-							? "Checking..."
-							: healthCheck
-								? "Connected to API"
-								: "API Disconnected"}
-					</Text>
-				</View>
-					</View>
-					<View className="mb-6 rounded-lg border border-border p-4">
-						<Text className="mb-3 font-medium text-foreground">
-							Private Data
-						</Text>
-				{!isPrivateLoading && privateData && (
-					<View>
-						<Text className="text-muted-foreground">
-							{privateData.message}
-						</Text>
-					</View>
-				)}
-					</View>
-					{!session?.user && (
-						<>
-							<SignIn />
-							<SignUp />
-						</>
-					)}
-				</View>
-			</ScrollView>
-		</Container>
-	);
+              <TouchableOpacity
+                className="self-start rounded-md bg-destructive px-4 py-2"
+                onPress={() => {
+                  authClient.signOut();
+                  queryClient.invalidateQueries();
+                }}
+              >
+                <Text className="font-medium text-white">Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          <View className="mb-6 rounded-lg border border-border p-4">
+            <Text className="mb-3 font-medium text-foreground">API Status</Text>
+            <View className="flex-row items-center gap-2">
+              <View
+                className={`h-3 w-3 rounded-full ${
+                  healthCheck ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              <Text className="text-muted-foreground">
+                {isHealthLoading
+                  ? "Checking..."
+                  : healthCheck
+                    ? "Connected to API"
+                    : "API Disconnected"}
+              </Text>
+            </View>
+          </View>
+          <View className="mb-6 rounded-lg border border-border p-4">
+            <Text className="mb-3 font-medium text-foreground">
+              Private Data
+            </Text>
+            {!isPrivateLoading && privateData && (
+              <View>
+                <Text className="text-muted-foreground">
+                  {privateData.message}
+                </Text>
+              </View>
+            )}
+          </View>
+          {!session?.user && (
+            <>
+              <SignIn />
+              <SignUp />
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </Container>
+  );
 }

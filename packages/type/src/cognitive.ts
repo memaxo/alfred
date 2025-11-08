@@ -2,7 +2,12 @@
  * Cognitive Domain Types
  */
 
-import type { KnowledgeFact, KnowledgeInsight, KnowledgeRelation, KnowledgeUpdate } from "./knowledge";
+import type {
+  KnowledgeFact,
+  KnowledgeInsight,
+  KnowledgeRelation,
+  KnowledgeUpdate,
+} from "./knowledge";
 
 export type Timestamp = string & { readonly _: unique symbol };
 export type CognitiveConfidence = number & { readonly _: unique symbol };

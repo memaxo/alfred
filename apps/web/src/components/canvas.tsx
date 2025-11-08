@@ -1,6 +1,6 @@
 /**
  * Canvas Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/canvas
  * Workflow visualization canvas
  */
@@ -17,11 +17,10 @@ export function Canvas({ children, className }: CanvasProps) {
     <div
       className={cn(
         "relative min-h-[400px] w-full overflow-auto rounded-lg border bg-muted/20 p-4",
-        className,
+        className
       )}
     >
       {children}
     </div>
   );
 }
-

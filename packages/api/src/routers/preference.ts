@@ -1,13 +1,21 @@
-import { userRepo, userSchema } from "@alfred/db";
+import { userRepo, type userSchema } from "@alfred/db";
+
 type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 
 import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent";
-import { preferenceDeleteSchema, preferenceListSchema, preferenceSetSchema } from "@alfred/type";
+import {
+  preferenceDeleteSchema,
+  preferenceListSchema,
+  preferenceSetSchema,
+} from "@alfred/type";
 import { TRPCError } from "@trpc/server";
-import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
+import { authedProcedure, router } from "../trpc";
 
-function mapPreferenceResource(_input: unknown, ctx: { session: { user?: { id?: string } } | null }) {
+function mapPreferenceResource(
+  _input: unknown,
+  ctx: { session: { user?: { id?: string } } | null }
+) {
   const userId = ctx.session?.user?.id ?? "anonymous";
   return {
     kind: "preference" as const,
@@ -31,22 +39,34 @@ export const preferenceRouter = router({
     .query(async ({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       const params = preferenceListSchema.parse(input ?? {});
       const preferences = await userRepo.getPreferences(session.user.id);
-      const list = Array.isArray(preferences) ? (preferences as PreferenceRow[]) : [];
+      const list = Array.isArray(preferences)
+        ? (preferences as PreferenceRow[])
+        : [];
       return list.slice(params.offset, params.offset + params.limit);
     }),
 
   set: authedProcedure
-    .use(requirePolicy("preference.write", (input, ctx) => mapPreferenceResource(input, ctx)))
+    .use(
+      requirePolicy("preference.write", (input, ctx) =>
+        mapPreferenceResource(input, ctx)
+      )
+    )
     .input(preferenceSetSchema)
     .mutation(async ({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       ensureObligations(ctx);
@@ -56,7 +76,7 @@ export const preferenceRouter = router({
         input.key,
         input.value,
         input.confidence ?? 1.0,
-        input.source ?? "user",
+        input.source ?? "user"
       );
 
       recordMemoryUpdate("preference", input.source ?? "user");
@@ -64,17 +84,26 @@ export const preferenceRouter = router({
     }),
 
   delete: authedProcedure
-    .use(requirePolicy("preference.write", (input, ctx) => mapPreferenceResource(input, ctx)))
+    .use(
+      requirePolicy("preference.write", (input, ctx) =>
+        mapPreferenceResource(input, ctx)
+      )
+    )
     .input(preferenceDeleteSchema)
     .mutation(async ({ ctx, input }) => {
       const session = ctx.session;
       if (!session?.user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       ensureObligations(ctx);
 
-      const removed = Number(await userRepo.deletePreference(session.user.id, input.key)) || 0;
+      const removed =
+        Number(await userRepo.deletePreference(session.user.id, input.key)) ||
+        0;
       if (removed > 0) {
         recordMemoryForget("preference");
       }

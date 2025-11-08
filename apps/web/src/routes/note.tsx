@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
-import type { TRPCAppRouter } from "@/utils/trpc";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/note")({
@@ -21,7 +21,7 @@ function NoteRoute() {
   const utils = trpc.useUtils();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
+  const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
 
   const noteListQuery = trpc.note.list.useQuery(listInput);
   type NoteListItem = inferRouterOutputs<TRPCAppRouter>["note"]["list"][number];
@@ -62,7 +62,9 @@ const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>
-          <CardDescription>Add a quick note and keep track of it.</CardDescription>
+          <CardDescription>
+            Add a quick note and keep track of it.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -97,22 +99,19 @@ const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-muted-foreground text-sm">Loading…</p>
           ) : notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No notes yet.</p>
+            <p className="text-muted-foreground text-sm">No notes yet.</p>
           ) : (
             <ul className="space-y-4">
               {notes.map((note) => (
-                <li
-                  className="rounded-md border p-4 shadow-sm"
-                  key={note.id}
-                >
+                <li className="rounded-md border p-4 shadow-sm" key={note.id}>
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       {note.title ? (
-                        <h3 className="text-lg font-semibold">{note.title}</h3>
+                        <h3 className="font-semibold text-lg">{note.title}</h3>
                       ) : null}
-                      <p className="whitespace-pre-line text-sm text-muted-foreground">
+                      <p className="whitespace-pre-line text-muted-foreground text-sm">
                         {note.content}
                       </p>
                     </div>

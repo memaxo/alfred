@@ -36,7 +36,7 @@ export function RemindPane({ items, onDelete, className }: RemindPaneProps) {
       ) : (
         <ul className="remind-pane__list">
           {renderItems.map(({ item, formattedDueAt }) => (
-            <li key={item.id} className="remind-pane__item">
+            <li className="remind-pane__item" key={item.id}>
               <header className="remind-pane__header">
                 <h3 className="remind-pane__title">{item.title}</h3>
                 <time className="remind-pane__due" dateTime={item.dueAt}>
@@ -48,9 +48,9 @@ export function RemindPane({ items, onDelete, className }: RemindPaneProps) {
               ) : null}
               {onDelete ? (
                 <button
-                  type="button"
                   className="remind-pane__delete"
                   onClick={() => onDelete(item.id)}
+                  type="button"
                 >
                   Dismiss
                 </button>

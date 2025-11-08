@@ -1,22 +1,22 @@
-import client from "prom-client";
 import {
-  registerDroidExecCounter,
-  registerDroidExecHistogram,
+  registerAssistantEscalationCounter,
+  registerAssistantToolCounter,
+  registerCodexErrorCounter,
   registerCodexExecCounter,
   registerCodexExecHistogram,
-  registerCodexErrorCounter,
-  registerEvalRunsCounter,
+  registerDroidExecCounter,
+  registerDroidExecHistogram,
   registerEvalDurationHistogram,
-  registerEvalScoreCounter,
   registerEvalFailureCounter,
+  registerEvalRunsCounter,
+  registerEvalScoreCounter,
   registerLaminarDatapointCounter,
   registerLaminarErrorCounter,
-  registerAssistantToolCounter,
-  registerAssistantEscalationCounter,
-  registerMemoryUpdatesCounter,
   registerMemoryForgetsCounter,
+  registerMemoryUpdatesCounter,
 } from "@alfred/agent";
-import { registerPolicyCacheObserver } from "@alfred/policy";
+import { registerCacheObs } from "@alfred/policy";
+import client from "prom-client";
 
 export const metricsRegistry = new client.Registry();
 
@@ -271,9 +271,14 @@ export const voiceTtsDurationSeconds = new client.Histogram({
 
 export type VoiceMetricStatus = "ok" | "error" | "cancel";
 
-const coerceProvider = (provider?: string) => (provider && provider.length > 0 ? provider : "unknown");
+const coerceProvider = (provider?: string) =>
+  provider && provider.length > 0 ? provider : "unknown";
 
-const observeDuration = (histogram: client.Histogram, provider: string, durationSeconds?: number) => {
+const observeDuration = (
+  histogram: client.Histogram,
+  provider: string,
+  durationSeconds?: number
+) => {
   if (typeof durationSeconds !== "number") return;
   if (!Number.isFinite(durationSeconds) || durationSeconds < 0) return;
   histogram.observe({ provider }, durationSeconds);
@@ -331,7 +336,7 @@ function normalizeEventLabel(event: string): string {
   return event.trim().toLowerCase() || "unknown";
 }
 
-export function recordAssistantStreamEvent(event: string): void {
+export function recordStreamEvent(event: string): void {
   try {
     assistantStreamEventsTotal.inc({ event: normalizeEventLabel(event) });
   } catch {
@@ -339,7 +344,7 @@ export function recordAssistantStreamEvent(event: string): void {
   }
 }
 
-export function startAssistantStreamTimer():
+export function startStreamTimer():
   | ((status: AssistantStreamStatus) => void)
   | undefined {
   try {
@@ -352,7 +357,7 @@ export function startAssistantStreamTimer():
       }
     };
   } catch {
-    return undefined;
+    return;
   }
 }
 
@@ -371,7 +376,7 @@ export const workflowStreamDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
-registerPolicyCacheObserver(result => {
+registerCacheObs((result) => {
   try {
     pdpCacheHitsTotal.inc({ result });
   } catch {

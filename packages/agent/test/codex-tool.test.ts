@@ -1,17 +1,23 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
   chmodSync,
+  mkdirSync,
+  mkdtempSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
-import { join, delimiter as pathDelimiter, resolve, isAbsolute } from "node:path";
 import os from "node:os";
+import {
+  isAbsolute,
+  join,
+  delimiter as pathDelimiter,
+  resolve,
+} from "node:path";
 import { __internals } from "../src/orchestrator/tool/codex";
 
-const { isWithinBase, pickEnvCodex, resolveExecutable, mapAutoToCodex } = __internals;
+const { isWithinBase, pickEnvCodex, resolveExecutable, mapAutoToCodex } =
+  __internals;
 
 describe("codex tool sandbox helpers", () => {
   describe("isWithinBase", () => {
@@ -61,13 +67,17 @@ describe("codex tool sandbox helpers", () => {
 
     afterEach(() => {
       process.env.PATH = original.PATH ?? "";
-      if (original.CODEX_API_KEY === undefined) delete process.env.CODEX_API_KEY;
+      if (original.CODEX_API_KEY === undefined)
+        delete process.env.CODEX_API_KEY;
       else process.env.CODEX_API_KEY = original.CODEX_API_KEY;
-      if (original.OPENAI_API_KEY === undefined) delete process.env.OPENAI_API_KEY;
+      if (original.OPENAI_API_KEY === undefined)
+        delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = original.OPENAI_API_KEY;
       if (original.ORCH_CODEX_ALLOW_OPENAI_KEY === undefined)
         delete process.env.ORCH_CODEX_ALLOW_OPENAI_KEY;
-      else process.env.ORCH_CODEX_ALLOW_OPENAI_KEY = original.ORCH_CODEX_ALLOW_OPENAI_KEY;
+      else
+        process.env.ORCH_CODEX_ALLOW_OPENAI_KEY =
+          original.ORCH_CODEX_ALLOW_OPENAI_KEY;
     });
 
     it("retains PATH and forwards only CODEX_* overrides (plus optional OPENAI)", () => {
@@ -115,7 +125,9 @@ describe("codex tool sandbox helpers", () => {
       writeFileSync(executable, "#!/usr/bin/env bash\necho ok\n");
       chmodSync(executable, 0o755);
 
-      process.env.PATH = [binDir, originalPath ?? ""].filter(Boolean).join(pathDelimiter);
+      process.env.PATH = [binDir, originalPath ?? ""]
+        .filter(Boolean)
+        .join(pathDelimiter);
 
       const resolved = resolveExecutable("codex");
       expect(resolved).toBe(executable);
@@ -124,19 +136,33 @@ describe("codex tool sandbox helpers", () => {
 
     it("throws when the binary is missing", () => {
       process.env.PATH = tempDir;
-      expect(() => resolveExecutable("missing-codex")).toThrowError("codex_binary_not_found");
+      expect(() => resolveExecutable("missing-codex")).toThrowError(
+        "codex_binary_not_found"
+      );
     });
   });
 
   describe("mapAutoToCodex", () => {
     it("uses read-only sandbox for read autonomy", () => {
-      expect(mapAutoToCodex("read")).toEqual({ sandbox: "read-only", approval: "on-request" });
+      expect(mapAutoToCodex("read")).toEqual({
+        sandbox: "read-only",
+        approval: "on-request",
+      });
     });
 
     it("upgrades to workspace-write for non-read autonomy", () => {
-      expect(mapAutoToCodex("low")).toEqual({ sandbox: "workspace-write", approval: "on-request" });
-      expect(mapAutoToCodex("medium")).toEqual({ sandbox: "workspace-write", approval: "on-request" });
-      expect(mapAutoToCodex("high")).toEqual({ sandbox: "workspace-write", approval: "on-request" });
+      expect(mapAutoToCodex("low")).toEqual({
+        sandbox: "workspace-write",
+        approval: "on-request",
+      });
+      expect(mapAutoToCodex("medium")).toEqual({
+        sandbox: "workspace-write",
+        approval: "on-request",
+      });
+      expect(mapAutoToCodex("high")).toEqual({
+        sandbox: "workspace-write",
+        approval: "on-request",
+      });
     });
   });
 });

@@ -1,19 +1,34 @@
-import { ingestCodeFiles } from "@alfred/rag";
-import type { ContextBundle, ContextFileSlice, SearchReceipt, SearchReceiptItem } from "@alfred/type";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { createTokenEstimator } from "../util/token";
-import { toolDroid } from "../tool/droid";
+import { ingestCodeFiles } from "@alfred/rag";
+import type {
+  ContextBundle,
+  ContextFileSlice,
+  SearchReceipt,
+  SearchReceiptItem,
+} from "@alfred/type";
 import { toolCodex } from "../tool/codex";
+import { toolDroid } from "../tool/droid";
 import { toolWeb } from "../tool/web";
+import { createTokenEstimator } from "../util/token";
 
 type Writer = { write: (chunk: unknown) => Promise<void> | void } | undefined;
 
 const DEFAULT_EXTS = [".ts", ".tsx", ".js", ".jsx", ".json", ".md"];
-const DEFAULT_IGNORE = ["node_modules", ".git", "dist", "build", ".turbo", ".tsbuild", ".factory"];
+const DEFAULT_IGNORE = [
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".turbo",
+  ".tsbuild",
+  ".factory",
+];
 const DEFAULT_TOPK = 25;
 const DEFAULT_SLICE_MAX_LINES = 400;
-const DEFAULT_MAX_TOKENS = Number(process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000");
+const DEFAULT_MAX_TOKENS = Number(
+  process.env.ORCH_CONTEXT_MAX_TOKENS ?? "24000"
+);
 const CONTEXT_CACHE_TTL_MS = 5 * 60_000;
 const WEB_SUMMARY_LIMIT = 180;
 
@@ -30,7 +45,7 @@ function buildCacheKey(
   cw: string,
   exts: Set<string>,
   ignore: Set<string>,
-  topK: number,
+  topK: number
 ) {
   return JSON.stringify({
     requirement,
@@ -45,14 +60,14 @@ function cloneReceipt(receipt: SearchReceipt): SearchReceipt {
   return {
     ...receipt,
     created: receipt.created ? new Date(receipt.created.getTime()) : new Date(),
-    code: receipt.code.map(item => ({ ...item })),
-    web: receipt.web ? receipt.web.map(item => ({ ...item })) : undefined,
+    code: receipt.code.map((item) => ({ ...item })),
+    web: receipt.web ? receipt.web.map((item) => ({ ...item })) : undefined,
   };
 }
 
 function normalizeExts(exts?: string[]) {
   const list = exts && exts.length > 0 ? exts : DEFAULT_EXTS;
-  return new Set(list.map(ext => (ext.startsWith(".") ? ext : `.${ext}`)));
+  return new Set(list.map((ext) => (ext.startsWith(".") ? ext : `.${ext}`)));
 }
 
 function normalizeIgnore(ignore?: string[]) {
@@ -64,7 +79,9 @@ function normalizeIgnore(ignore?: string[]) {
 
 function within(base: string, target: string) {
   const relative = path.relative(base, target);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
+  );
 }
 
 function serializeReceipt(receipt: SearchReceipt) {
@@ -81,9 +98,9 @@ function serializeBundle(bundle: ContextBundle) {
 }
 
 function compressSnippet(value: string | undefined, limit = WEB_SUMMARY_LIMIT) {
-  if (!value) return undefined;
+  if (!value) return;
   const compact = value.replace(/\s+/g, " ").trim();
-  if (compact.length === 0) return undefined;
+  if (compact.length === 0) return;
   if (compact.length <= limit) return compact;
   return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
@@ -122,14 +139,20 @@ function parseDroidOutput(raw: string): SearchReceiptItem[] {
   }
 }
 
-async function fallbackScan(requirement: string, cw: string, exts: Set<string>, ignore: Set<string>, topK: number): Promise<SearchReceiptItem[]> {
+async function fallbackScan(
+  requirement: string,
+  cw: string,
+  exts: Set<string>,
+  ignore: Set<string>,
+  topK: number
+): Promise<SearchReceiptItem[]> {
   const keywords = Array.from(
     new Set(
       requirement
         .toLowerCase()
         .split(/[^a-z0-9]+/u)
-        .filter(token => token.length >= 3),
-    ),
+        .filter((token) => token.length >= 3)
+    )
   );
 
   const queue: string[] = [cw];
@@ -145,11 +168,12 @@ async function fallbackScan(requirement: string, cw: string, exts: Set<string>, 
       continue;
     }
     for (const entry of entries) {
-      if (entry.name.startsWith(".")) {
-        if (!exts.has(`.${entry.name}`)) {
-          if (ignore.has(entry.name)) continue;
-        }
-      }
+      if (
+        entry.name.startsWith(".") &&
+        !exts.has(`.${entry.name}`) &&
+        ignore.has(entry.name)
+      )
+        continue;
       if (ignore.has(entry.name)) continue;
       const resolved = path.join(current, entry.name);
       if (!within(cw, resolved)) continue;
@@ -174,7 +198,10 @@ async function fallbackScan(requirement: string, cw: string, exts: Set<string>, 
         }
       }
       score = keywords.length > 0 ? Math.min(1, score / keywords.length) : 0.1;
-      const reason = score > 0 ? `Matches keywords: ${keywords.filter(k => lowerPath.includes(k)).join(", ")}` : "Potentially relevant source file.";
+      const reason =
+        score > 0
+          ? `Matches keywords: ${keywords.filter((k) => lowerPath.includes(k)).join(", ")}`
+          : "Potentially relevant source file.";
       collected.push({
         id: `code:${relPath}`,
         kind: "code",
@@ -186,7 +213,9 @@ async function fallbackScan(requirement: string, cw: string, exts: Set<string>, 
     }
   }
 
-  collected.sort((a, b) => (b.score - a.score) || (a.path ?? "").localeCompare(b.path ?? ""));
+  collected.sort(
+    (a, b) => b.score - a.score || (a.path ?? "").localeCompare(b.path ?? "")
+  );
   return collected.slice(0, topK);
 }
 
@@ -194,7 +223,7 @@ function summariseReceipt(items: SearchReceiptItem[]) {
   if (items.length === 0) return "No files identified.";
   return `Top ${Math.min(5, items.length)} files: ${items
     .slice(0, 5)
-    .map(item => item.path ?? item.id)
+    .map((item) => item.path ?? item.id)
     .join(", ")}`;
 }
 
@@ -237,7 +266,13 @@ export async function gatherCodeContext({
   const extSet = normalizeExts(exts);
   const ignoreSet = normalizeIgnore(ignore);
   const limit = topK ?? DEFAULT_TOPK;
-  const cacheKey = buildCacheKey(requirement, resolvedCw, extSet, ignoreSet, limit);
+  const cacheKey = buildCacheKey(
+    requirement,
+    resolvedCw,
+    extSet,
+    ignoreSet,
+    limit
+  );
 
   const cached = contextCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
@@ -322,7 +357,13 @@ export async function gatherCodeContext({
   }
 
   if (items.length === 0) {
-    items = await fallbackScan(requirement, resolvedCw, extSet, ignoreSet, limit);
+    items = await fallbackScan(
+      requirement,
+      resolvedCw,
+      extSet,
+      ignoreSet,
+      limit
+    );
   }
 
   const receipt: SearchReceipt = {
@@ -361,10 +402,18 @@ export async function gatherWebContext({
   let results: SearchReceiptItem[] = [];
   let providerUsed: "exa" | "ddg" | "serpapi" | "tavily" | undefined;
 
-  const envProvider = (process.env.ORCH_WEB_PROVIDER ?? "").trim().toLowerCase();
-  const hasExa = Boolean(process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0);
+  const envProvider = (process.env.ORCH_WEB_PROVIDER ?? "")
+    .trim()
+    .toLowerCase();
+  const hasExa = Boolean(
+    process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0
+  );
   const provider: "exa" | "ddg" | "serpapi" | "tavily" = (() => {
-    if (envProvider === "serpapi" || envProvider === "tavily" || envProvider === "ddg") {
+    if (
+      envProvider === "serpapi" ||
+      envProvider === "tavily" ||
+      envProvider === "ddg"
+    ) {
       return envProvider;
     }
     if (envProvider === "exa") {
@@ -386,7 +435,11 @@ export async function gatherWebContext({
             ? {
                 livecrawl: "fallback",
                 text: false,
-                highlights: { numSentences: 1, highlightsPerUrl: 1, query: requirement.slice(0, 280) },
+                highlights: {
+                  numSentences: 1,
+                  highlightsPerUrl: 1,
+                  query: requirement.slice(0, 280),
+                },
                 summary: { query: "Key findings" },
               }
             : undefined,
@@ -395,7 +448,8 @@ export async function gatherWebContext({
     providerUsed = output.provider ?? provider;
     results = (output.results ?? []).map((entry, index) => {
       const snippet = compressSnippet(entry.snippet);
-      const scoreRaw = typeof entry.score === "number" ? entry.score : 1 / (index + 1);
+      const scoreRaw =
+        typeof entry.score === "number" ? entry.score : 1 / (index + 1);
       const score = Math.max(0, Math.min(1, scoreRaw));
       return {
         id: entry.url ?? `web:${index}`,
@@ -420,7 +474,10 @@ export async function gatherWebContext({
       code: [],
       web: [],
       created: new Date(),
-      summary: provider === "exa" ? "Web search failed — falling back from Exa to DuckDuckGo" : "Web search failed",
+      summary:
+        provider === "exa"
+          ? "Web search failed — falling back from Exa to DuckDuckGo"
+          : "Web search failed",
     };
   }
 
@@ -464,9 +521,9 @@ async function readFileSlice(fullPath: string) {
 
 function buildBundleLinks(receipt: SearchReceipt) {
   if (!receipt.web || receipt.web.length === 0) {
-    return undefined;
+    return;
   }
-  return receipt.web.slice(0, 5).map(link => ({
+  return receipt.web.slice(0, 5).map((link) => ({
     url: link.url ?? link.id,
     title: link.title,
     score: link.score,
@@ -489,7 +546,10 @@ export async function buildContextBundle({
   writer?: Writer;
 }): Promise<ContextBundle> {
   const resolvedCw = path.resolve(cw);
-  const limit = Number.isFinite(maxTokens) && maxTokens > 0 ? maxTokens : DEFAULT_MAX_TOKENS;
+  const limit =
+    Number.isFinite(maxTokens) && maxTokens > 0
+      ? maxTokens
+      : DEFAULT_MAX_TOKENS;
   const maxLines = sliceMaxLines ?? DEFAULT_SLICE_MAX_LINES;
   const extSet = normalizeExts(exts);
   const estimator = createTokenEstimator();
@@ -511,7 +571,7 @@ export async function buildContextBundle({
     if (content === null || content.length === 0) continue;
 
     let tokens = estimator.estimate(content);
-    let startLine = 1;
+    const startLine = 1;
     let endLine: number;
     let sliceContent = content;
 
@@ -566,14 +626,22 @@ export async function indexCodeEmbeddings({
   items,
   sourceId,
 }: {
-  items: Array<{ path: string; content: string; startLine?: number; endLine?: number; tokens?: number }>;
+  items: Array<{
+    path: string;
+    content: string;
+    startLine?: number;
+    endLine?: number;
+    tokens?: number;
+  }>;
   sourceId: string;
 }): Promise<{ documentId: string | null }> {
   if (!Array.isArray(items) || items.length === 0) {
     return { documentId: null };
   }
 
-  const filtered = items.filter(item => typeof item.content === "string" && item.content.trim().length > 0);
+  const filtered = items.filter(
+    (item) => typeof item.content === "string" && item.content.trim().length > 0
+  );
   if (filtered.length === 0) {
     return { documentId: null };
   }
@@ -581,17 +649,18 @@ export async function indexCodeEmbeddings({
   try {
     const documentId = await ingestCodeFiles(
       sourceId,
-      filtered.map(item => ({
+      filtered.map((item) => ({
         path: item.path,
         content: item.content,
         startLine: item.startLine,
         endLine: item.endLine,
         tokens: item.tokens,
-      })),
+      }))
     );
     return { documentId: documentId ?? null };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "rag_code_ingest_failed";
+    const message =
+      error instanceof Error ? error.message : "rag_code_ingest_failed";
     throw new Error(`context_code_index_failed:${message}`);
   }
 }

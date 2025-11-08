@@ -1,6 +1,6 @@
 import { ragRepo } from "@alfred/db";
-import { embed as embedText, embedMany as embedManyTexts } from "ai";
-import { getEmbeddingProvider, checkEmbeddingProviderHealth } from "./providers";
+import { embedMany as embedManyTexts, embed as embedText } from "ai";
+import { checkEmbedHealth, getEmbeddingProvider } from "./providers";
 
 /**
  * ALFRED RAG Document Processing
@@ -19,8 +19,8 @@ export interface Chunk {
 function splitSentences(paragraph: string) {
   const sentences = paragraph
     .split(/(?<=[.!?])\s+/u)
-    .map(sentence => sentence.trim())
-    .filter(sentence => sentence.length > 0);
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
   if (sentences.length === 0) {
     return [paragraph];
   }
@@ -37,13 +37,16 @@ function pushBuffer(buffers: string[], buffer: string) {
 export async function ingest(
   source: string,
   content: string,
-  onProgress?: (processed: number, total: number) => void,
+  onProgress?: (processed: number, total: number) => void
 ): Promise<string> {
   if (!content || content.trim().length === 0) {
     throw new Error("rag_empty_content");
   }
 
-  const document = await ragRepo.createDocument(source, `Doc @ ${new Date().toISOString()}`);
+  const document = await ragRepo.createDocument(
+    source,
+    `Doc @ ${new Date().toISOString()}`
+  );
   const pieces = await chunk(content);
 
   if (pieces.length === 0) {
@@ -74,17 +77,24 @@ export async function ingest(
     pieces.map((piece, index) => ({
       content: piece,
       order: index,
-      embedding: allEmbeddings[index]?.length === EMBEDDING_DIM ? allEmbeddings[index] : undefined,
+      embedding:
+        allEmbeddings[index]?.length === EMBEDDING_DIM
+          ? allEmbeddings[index]
+          : undefined,
       metadata: {
         source,
       },
-    })),
+    }))
   );
 
   return document.id;
 }
 
-export async function retrieve(query: string, k = 10, threshold = 0.7): Promise<Chunk[]> {
+export async function retrieve(
+  query: string,
+  k = 10,
+  threshold = 0.7
+): Promise<Chunk[]> {
   if (!query || query.trim().length === 0) {
     return [];
   }
@@ -93,7 +103,7 @@ export async function retrieve(query: string, k = 10, threshold = 0.7): Promise<
   const fetchLimit = Math.max(k, Math.min(k * 3, 60));
   const rows = await ragRepo.searchChunks(vector, fetchLimit, threshold);
 
-  return rows.slice(0, k).map(row => {
+  return rows.slice(0, k).map((row) => {
     const rawMetadata = row.metadata;
     const metadata =
       rawMetadata && typeof rawMetadata === "object"
@@ -114,19 +124,25 @@ export async function retrieve(query: string, k = 10, threshold = 0.7): Promise<
   });
 }
 
-export async function chunk(content: string, maxChunkSize = 512): Promise<string[]> {
-  const limit = Number.isFinite(maxChunkSize) && maxChunkSize > 0 ? Math.floor(maxChunkSize) : 512;
-  
+export async function chunk(
+  content: string,
+  maxChunkSize = 512
+): Promise<string[]> {
+  const limit =
+    Number.isFinite(maxChunkSize) && maxChunkSize > 0
+      ? Math.floor(maxChunkSize)
+      : 512;
+
   // Hierarchical separators: try to preserve structure
   // 1. Double newlines (paragraphs)
   // 2. Single newlines (sections)
   // 3. Sentence boundaries
   // 4. Hard character limit
-  
+
   const paragraphs = content
     .split(/\n{2,}/u)
-    .map(entry => entry.trim())
-    .filter(entry => entry.length > 0);
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 
   if (paragraphs.length === 0) {
     const condensed = content.trim();
@@ -138,7 +154,8 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
 
   for (const paragraph of paragraphs) {
     if (paragraph.length <= limit) {
-      const candidate = buffer.length > 0 ? `${buffer}\n\n${paragraph}` : paragraph;
+      const candidate =
+        buffer.length > 0 ? `${buffer}\n\n${paragraph}` : paragraph;
       if (candidate.length <= limit) {
         buffer = candidate;
         continue;
@@ -151,13 +168,17 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
     // Paragraph too large; try splitting by single newlines first (sections)
     pushBuffer(chunks, buffer);
     buffer = "";
-    
-    const sections = paragraph.split(/\n+/u).map(s => s.trim()).filter(s => s.length > 0);
+
+    const sections = paragraph
+      .split(/\n+/u)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     let sectionBuffer = "";
-    
+
     for (const section of sections) {
       if (section.length <= limit) {
-        const candidate = sectionBuffer.length > 0 ? `${sectionBuffer}\n${section}` : section;
+        const candidate =
+          sectionBuffer.length > 0 ? `${sectionBuffer}\n${section}` : section;
         if (candidate.length <= limit) {
           sectionBuffer = candidate;
           continue;
@@ -166,26 +187,31 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
         sectionBuffer = section;
         continue;
       }
-      
+
       // Section still too large; split by sentences
       if (sectionBuffer.length > 0) {
         pushBuffer(chunks, sectionBuffer);
         sectionBuffer = "";
       }
-      
+
       const sentences = splitSentences(section);
       let sentenceBuffer = "";
       for (const sentence of sentences) {
         if (sentence.length > limit) {
           // Sentence still too large, fallback to hard split
-          const parts = sentence.match(new RegExp(`.{1,${limit}}`, "gu")) ?? [sentence];
+          const parts = sentence.match(new RegExp(`.{1,${limit}}`, "gu")) ?? [
+            sentence,
+          ];
           for (const part of parts) {
             pushBuffer(chunks, part);
           }
           sentenceBuffer = "";
           continue;
         }
-        const candidate = sentenceBuffer.length > 0 ? `${sentenceBuffer} ${sentence}` : sentence;
+        const candidate =
+          sentenceBuffer.length > 0
+            ? `${sentenceBuffer} ${sentence}`
+            : sentence;
         if (candidate.length <= limit) {
           sentenceBuffer = candidate;
           continue;
@@ -204,9 +230,9 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
 
 export async function embed(text: string): Promise<number[]> {
   const provider = getEmbeddingProvider();
-  
+
   // Health check with fallback
-  const isHealthy = await checkEmbeddingProviderHealth(provider);
+  const isHealthy = await checkEmbedHealth(provider);
   if (!isHealthy) {
     throw new Error("rag_provider_unhealthy");
   }
@@ -233,9 +259,9 @@ export async function embedMany(texts: string[]): Promise<number[][]> {
   }
 
   const provider = getEmbeddingProvider();
-  
+
   // Health check with fallback
-  const isHealthy = await checkEmbeddingProviderHealth(provider);
+  const isHealthy = await checkEmbedHealth(provider);
   if (!isHealthy) {
     throw new Error("rag_provider_unhealthy");
   }

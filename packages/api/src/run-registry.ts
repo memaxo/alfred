@@ -1,11 +1,14 @@
-import os from "node:os";
 import { randomUUID } from "node:crypto";
+import os from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
 
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { redis as defaultRedis, RedisClient } from "bun";
 
-import { runRegistryDispatchDurationSeconds, runRegistryEventsTotal } from "./metrics";
+import {
+  runRegistryDispatchDurationSeconds,
+  runRegistryEventsTotal,
+} from "./metrics";
 
 export type ResumePayload = {
   event: "deploy-authz" | "linear-authz" | "bio-authz";
@@ -13,7 +16,10 @@ export type ResumePayload = {
 };
 
 export interface RunHandle {
-  resume(args: { resumeData: ResumePayload; runtimeContext?: RuntimeContext }): Promise<unknown>;
+  resume(args: {
+    resumeData: ResumePayload;
+    runtimeContext?: RuntimeContext;
+  }): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
 }
@@ -30,9 +36,18 @@ type DispatchOutcome = "local" | "delivered" | "miss" | "error";
 
 type AckStatus = "ok" | "not_found" | "error";
 
-const DEFAULT_ACK_TIMEOUT_MS = toPositiveInteger(process.env.RUN_REGISTRY_ACK_TIMEOUT_MS, 2_000);
-const DEFAULT_OWNER_TTL_SEC = toPositiveInteger(process.env.RUN_REGISTRY_OWNER_TTL_SEC, 120);
-const DEFAULT_HEARTBEAT_MS = toPositiveInteger(process.env.RUN_REGISTRY_HEARTBEAT_MS, 30_000);
+const DEFAULT_ACK_TIMEOUT_MS = toPositiveInteger(
+  process.env.RUN_REGISTRY_ACK_TIMEOUT_MS,
+  2000
+);
+const DEFAULT_OWNER_TTL_SEC = toPositiveInteger(
+  process.env.RUN_REGISTRY_OWNER_TTL_SEC,
+  120
+);
+const DEFAULT_HEARTBEAT_MS = toPositiveInteger(
+  process.env.RUN_REGISTRY_HEARTBEAT_MS,
+  30_000
+);
 const ACK_TTL_SEC = 60;
 
 const KEY_OWNER = (runId: string) => `rr:run:${runId}`;
@@ -43,7 +58,10 @@ const BACKEND_MEMORY = "memory";
 const BACKEND_REDIS = "redis";
 const BACKEND_MEMORY_FALLBACK = "memory_fallback";
 
-function toPositiveInteger(value: string | undefined, fallback: number): number {
+function toPositiveInteger(
+  value: string | undefined,
+  fallback: number
+): number {
   const parsed = Number.parseInt(value ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
@@ -56,7 +74,11 @@ function getInstanceId(): string {
   return `${os.hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
 }
 
-function recordEvent(event: RegistryEvent, backend: string, outcome: RegistryOutcome) {
+function recordEvent(
+  event: RegistryEvent,
+  backend: string,
+  outcome: RegistryOutcome
+) {
   try {
     runRegistryEventsTotal.inc({ event, backend, outcome });
   } catch {
@@ -95,7 +117,10 @@ export class MemoryRunRegistry implements RunRegistry {
     recordEvent("unregister", this.backend, existed ? "ok" : "miss");
   }
 
-  async dispatchResume(runId: string, payload: ResumePayload): Promise<boolean> {
+  async dispatchResume(
+    runId: string,
+    payload: ResumePayload
+  ): Promise<boolean> {
     const endTimer = createDispatchTimer(this.backend);
     const handle = this.runs.get(runId);
     if (!handle) {
@@ -150,7 +175,9 @@ export class RedisRunRegistry implements RunRegistry {
     this.runs.set(runId, handle);
     try {
       await this.ensureReady();
-      await this.cmd.set(KEY_OWNER(runId), this.instanceId, { EX: this.ownerTtlSec });
+      await this.cmd.set(KEY_OWNER(runId), this.instanceId, {
+        EX: this.ownerTtlSec,
+      });
       this.ensureHeartbeat();
       recordEvent("register", this.backend, "ok");
     } catch (error) {
@@ -178,7 +205,10 @@ export class RedisRunRegistry implements RunRegistry {
     }
   }
 
-  async dispatchResume(runId: string, payload: ResumePayload): Promise<boolean> {
+  async dispatchResume(
+    runId: string,
+    payload: ResumePayload
+  ): Promise<boolean> {
     await this.ensureReady();
     const endTimer = createDispatchTimer(this.backend);
     const localHandle = this.runs.get(runId);
@@ -256,7 +286,7 @@ export class RedisRunRegistry implements RunRegistry {
     if (this.heartbeatTimer) {
       return;
     }
-    const interval = Math.max(1_000, this.heartbeatMs);
+    const interval = Math.max(1000, this.heartbeatMs);
     this.heartbeatTimer = setInterval(() => {
       void this.pulseOwners();
     }, interval);
@@ -282,12 +312,10 @@ export class RedisRunRegistry implements RunRegistry {
     } catch {
       return;
     }
-    const expirations = Array.from(this.runs.keys()).map(runId =>
-      this.cmd
-        .expire(KEY_OWNER(runId), this.ownerTtlSec)
-        .catch(() => {
-          // ignore expiration failures; heartbeat will retry on next tick
-        }),
+    const expirations = Array.from(this.runs.keys()).map((runId) =>
+      this.cmd.expire(KEY_OWNER(runId), this.ownerTtlSec).catch(() => {
+        // ignore expiration failures; heartbeat will retry on next tick
+      })
     );
     await Promise.all(expirations);
   }
@@ -310,7 +338,11 @@ export class RedisRunRegistry implements RunRegistry {
   }
 
   private async handleMessage(raw: string) {
-    let parsed: { runId?: string; payload?: ResumePayload; corrId?: string } | null = null;
+    let parsed: {
+      runId?: string;
+      payload?: ResumePayload;
+      corrId?: string;
+    } | null = null;
     try {
       parsed = JSON.parse(raw);
     } catch {
@@ -319,7 +351,7 @@ export class RedisRunRegistry implements RunRegistry {
     const runId = typeof parsed?.runId === "string" ? parsed.runId : null;
     const payload = parsed?.payload ?? null;
     const corrId = typeof parsed?.corrId === "string" ? parsed.corrId : null;
-    if (!runId || !payload || !corrId) {
+    if (!(runId && payload && corrId)) {
       return;
     }
 
@@ -358,7 +390,9 @@ export function createRunRegistry(): RunRegistry {
 
   const url = process.env.REDIS_URL;
   if (!url) {
-    console.warn("[run-registry] RUN_REGISTRY_BACKEND=redis but REDIS_URL missing; falling back to memory.");
+    console.warn(
+      "[run-registry] RUN_REGISTRY_BACKEND=redis but REDIS_URL missing; falling back to memory."
+    );
     recordEvent("register", BACKEND_MEMORY_FALLBACK, "error");
     return new MemoryRunRegistry();
   }
@@ -371,7 +405,10 @@ export function createRunRegistry(): RunRegistry {
       heartbeatMs: DEFAULT_HEARTBEAT_MS,
     });
   } catch (error) {
-    console.error("[run-registry] Failed to initialize Redis registry, falling back to memory.", error);
+    console.error(
+      "[run-registry] Failed to initialize Redis registry, falling back to memory.",
+      error
+    );
     recordEvent("register", BACKEND_MEMORY_FALLBACK, "error");
     return new MemoryRunRegistry();
   }

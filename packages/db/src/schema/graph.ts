@@ -3,7 +3,14 @@
  * Orchestrator knowledge graph for tracking relationships
  */
 
-import { pgTable, text, timestamp, uuid, jsonb, real } from "drizzle-orm/pg-core";
+import {
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // TODO: [Phase 4] Add proper indexes for graph traversal performance
 

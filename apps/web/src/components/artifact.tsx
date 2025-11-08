@@ -1,12 +1,12 @@
 /**
  * Artifact Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/artifact
  * Displays droid exec output artifacts
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface ArtifactProps {
@@ -17,13 +17,7 @@ interface ArtifactProps {
   className?: string;
 }
 
-export function Artifact({
-  name,
-  path,
-  kind,
-  size,
-  className,
-}: ArtifactProps) {
+export function Artifact({ name, path, kind, size, className }: ArtifactProps) {
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader>
@@ -34,16 +28,16 @@ export function Artifact({
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Path:</span>
+          <span className="text-muted-foreground text-xs">Path:</span>
           <code className="rounded bg-muted px-2 py-1 text-xs">{path}</code>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Type:</span>
+          <span className="text-muted-foreground text-xs">Type:</span>
           <span className="text-xs">{kind}</span>
         </div>
         {size !== undefined && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Size:</span>
+            <span className="text-muted-foreground text-xs">Size:</span>
             <span className="text-xs">{size} bytes</span>
           </div>
         )}
@@ -51,4 +45,3 @@ export function Artifact({
     </Card>
   );
 }
-

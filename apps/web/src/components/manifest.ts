@@ -1,13 +1,13 @@
 /**
  * Component Manifest
- * 
+ *
  * Maps registry components to Alfred's single-word naming convention.
  * Follows .ruler/01-naming-conventions.md guidelines.
  */
 
 export const componentRegistry = {
   // Phase 1: AI Chat UI
-  
+
   // Core Conversation Components (AI SDK Elements)
   connect: "ai-sdk.dev/elements/components/connection",
   ctx: "ai-sdk.dev/elements/components/context",
@@ -24,7 +24,7 @@ export const componentRegistry = {
   thought: "ai-sdk.dev/elements/components/chain-of-thought",
   code: "ai-sdk.dev/elements/components/code-block",
   controls: "ai-sdk.dev/elements/components/controls",
-  
+
   // Voice & Audio Components (ElevenLabs UI)
   audio: "ui.elevenlabs.io/docs/components/audio-player",
   viz: "ui.elevenlabs.io/docs/components/bar-visualizer",
@@ -37,7 +37,7 @@ export const componentRegistry = {
   mic: "ui.elevenlabs.io/docs/components/mic-selector",
   msg: "ui.elevenlabs.io/docs/components/message",
   voiceBtn: "ui.elevenlabs.io/docs/components/voice-button",
-  
+
   // Canvas & Preview Components (AI SDK Elements)
   preview: "ai-sdk.dev/elements/components/web-preview",
   node: "ai-sdk.dev/elements/components/node",
@@ -46,25 +46,25 @@ export const componentRegistry = {
   toolbar: "ai-sdk.dev/elements/components/toolbar",
   canvas: "ai-sdk.dev/elements/components/canvas",
   edge: "ai-sdk.dev/elements/components/edge",
-  
+
   // Loading & Animation
   loading: "kokonutui.com/docs/components/ai-loading",
   list: "magicui.design/docs/components/animated-list",
-  
+
   // Phase 2: Data Visualization
-  
+
   // Progress & Metrics
   number: "motion-primitives.com/docs/sliding-number",
   chart: "ui.spectrumhq.in/docs/animatedchart",
   matrix: "ui.elevenlabs.io/docs/components/matrix",
-  
+
   // Layout Components
   grid: "magicui.design/docs/components/bento-grid",
   dock: "magicui.design/docs/components/dock",
   term: "magicui.design/docs/components/terminal",
-  
+
   // Phase 3: Forms & Input
-  
+
   // Form Fields (Wandry UI)
   text: "ui.wandry.com.ua/docs/components/text-field",
   select: "ui.wandry.com.ua/docs/components/select-field",
@@ -74,7 +74,7 @@ export const componentRegistry = {
   choice: "ui.wandry.com.ua/docs/components/choisebox-field",
   autocomplete: "ui.wandry.com.ua/docs/components/async-autocomplete-field",
   dropdown: "coss.com/ui/docs/components/select",
-  
+
   // Profile & User
   profile: "kokonutui.com/docs/components/profile-dropdown",
 } as const;
@@ -84,7 +84,10 @@ export type ComponentName = keyof typeof componentRegistry;
 /**
  * Status tracking for component installation
  */
-export const componentStatus: Record<ComponentName, "pending" | "installed" | "integrated"> = {
+export const componentStatus: Record<
+  ComponentName,
+  "pending" | "installed" | "integrated"
+> = {
   // Phase 1
   connect: "pending",
   ctx: "pending",
@@ -121,7 +124,7 @@ export const componentStatus: Record<ComponentName, "pending" | "installed" | "i
   edge: "pending",
   loading: "pending",
   list: "pending",
-  
+
   // Phase 2
   number: "pending",
   chart: "pending",
@@ -129,7 +132,7 @@ export const componentStatus: Record<ComponentName, "pending" | "installed" | "i
   grid: "pending",
   dock: "pending",
   term: "pending",
-  
+
   // Phase 3
   text: "pending",
   select: "pending",
@@ -141,4 +144,3 @@ export const componentStatus: Record<ComponentName, "pending" | "installed" | "i
   dropdown: "pending",
   profile: "pending",
 };
-

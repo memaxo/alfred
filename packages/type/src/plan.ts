@@ -51,7 +51,14 @@ export const implementationPlanSchema = z.object({
   ticket: z.string().optional(), // Linear ticket ID
   modules: z.array(modulePlanSchema),
   strategy: z.enum(["sequential", "parallel"]).default("sequential"),
-  status: z.enum(["planning", "scheduled", "executing", "reviewing", "completed", "failed"]),
+  status: z.enum([
+    "planning",
+    "scheduled",
+    "executing",
+    "reviewing",
+    "completed",
+    "failed",
+  ]),
   created: z.date().default(() => new Date()),
   started: z.date().optional(),
   completed: z.date().optional(),
@@ -124,7 +131,7 @@ export const contextBundleSchema = z.object({
         url: z.string(),
         title: z.string().optional(),
         score: z.number().optional(),
-      }),
+      })
     )
     .optional(),
   note: z.string().optional(),
@@ -164,7 +171,9 @@ export const planReportChecklistItemSchema = z.object({
   taskId: z.string().optional(),
 });
 
-export type PlanReportChecklistItem = z.infer<typeof planReportChecklistItemSchema>;
+export type PlanReportChecklistItem = z.infer<
+  typeof planReportChecklistItemSchema
+>;
 
 export const planReportModuleSchema = z.object({
   id: z.string(),
@@ -262,7 +271,9 @@ export const codexPlanTaskSchema = z.object({
   summary: z.string().min(1),
   owner: z.string().optional(),
   estimateHours: z.number().min(0).optional(),
-  kind: z.enum(["analysis", "implementation", "validation", "followup"]).optional(),
+  kind: z
+    .enum(["analysis", "implementation", "validation", "followup"])
+    .optional(),
   dependencies: z.array(z.string().min(1)).default([]),
   deliverables: z.array(z.string().min(1)).default([]),
 });
@@ -281,7 +292,9 @@ export const codexPlanBranchStrategySchema = z.object({
   notes: z.string().optional(),
 });
 
-export const codexPlanDepsSchema = z.array(z.tuple([z.string().min(1), z.string().min(1)])).default([]);
+export const codexPlanDepsSchema = z
+  .array(z.tuple([z.string().min(1), z.string().min(1)]))
+  .default([]);
 
 export const codexPlanSchema = z.object({
   tasks: z.array(codexPlanTaskSchema).default([]),

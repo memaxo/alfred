@@ -1,16 +1,27 @@
 import "@/test/dom";
-import type { ReactNode } from "react";
-import type { UIMessage } from "@alfred/type/stream";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "bun:test";
-import { useCallback as reactUseCallback, useState as reactUseState } from "react";
+import type { UIMessage } from "@alfred/type/stream";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+  useCallback as reactUseCallback,
+  useState as reactUseState,
+} from "react";
 import { ChatContainer } from "../chat-container";
 
 vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({ data, itemContent }: { data: UIMessage[]; itemContent: (index: number, message: UIMessage) => ReactNode }) => (
+  Virtuoso: ({
+    data,
+    itemContent,
+  }: {
+    data: UIMessage[];
+    itemContent: (index: number, message: UIMessage) => ReactNode;
+  }) => (
     <div data-testid="stub-virtuoso">
       {data.map((message, index) => (
-        <div key={message.id ?? `message-${index}`}>{itemContent(index, message)}</div>
+        <div key={message.id ?? `message-${index}`}>
+          {itemContent(index, message)}
+        </div>
       ))}
     </div>
   ),
@@ -53,9 +64,7 @@ vi.mock("@/hooks/use-assistant-stream", () => {
 describe("ChatContainer", () => {
   describe("agent switching", () => {
     it("saves current state to contextsRef on switch", async () => {
-      const { container } = render(
-        <ChatContainer agent="assistant" />
-      );
+      const { container } = render(<ChatContainer agent="assistant" />);
 
       const input = screen.getByPlaceholderText(/Ask Alfred/i);
       fireEvent.change(input, { target: { value: "Test message" } });
@@ -74,9 +83,7 @@ describe("ChatContainer", () => {
     });
 
     it("hydrates previous state correctly on switch", async () => {
-      const { container } = render(
-        <ChatContainer agent="assistant" />
-      );
+      const { container } = render(<ChatContainer agent="assistant" />);
 
       const input = screen.getByPlaceholderText(/Ask Alfred/i);
       fireEvent.change(input, { target: { value: "First message" } });
@@ -93,7 +100,9 @@ describe("ChatContainer", () => {
         expect(screen.queryByText("First message")).not.toBeInTheDocument();
       });
 
-      const assistantSwitch = screen.getByRole("button", { name: /assistant/i });
+      const assistantSwitch = screen.getByRole("button", {
+        name: /assistant/i,
+      });
       fireEvent.click(assistantSwitch);
 
       await waitFor(() => {
@@ -102,9 +111,7 @@ describe("ChatContainer", () => {
     });
 
     it("clears current state before switching", async () => {
-      const { container } = render(
-        <ChatContainer agent="assistant" />
-      );
+      const { container } = render(<ChatContainer agent="assistant" />);
 
       const input = screen.getByPlaceholderText(/Ask Alfred/i);
       fireEvent.change(input, { target: { value: "Test" } });
@@ -123,9 +130,7 @@ describe("ChatContainer", () => {
     });
 
     it("preserves independent state for multiple agents", async () => {
-      const { container } = render(
-        <ChatContainer agent="assistant" />
-      );
+      const { container } = render(<ChatContainer agent="assistant" />);
 
       const input = screen.getByPlaceholderText(/Ask Alfred/i);
       fireEvent.change(input, { target: { value: "Assistant message" } });
@@ -135,14 +140,18 @@ describe("ChatContainer", () => {
         expect(screen.getByText("Assistant message")).toBeInTheDocument();
       });
 
-      const orchestratorSwitch = screen.getByRole("button", { name: /orchestrator/i });
+      const orchestratorSwitch = screen.getByRole("button", {
+        name: /orchestrator/i,
+      });
       fireEvent.click(orchestratorSwitch);
 
       await waitFor(() => {
         expect(screen.queryByText("Assistant message")).not.toBeInTheDocument();
       });
 
-      const assistantSwitch = screen.getByRole("button", { name: /assistant/i });
+      const assistantSwitch = screen.getByRole("button", {
+        name: /assistant/i,
+      });
       fireEvent.click(assistantSwitch);
 
       await waitFor(() => {
@@ -151,9 +160,7 @@ describe("ChatContainer", () => {
     });
 
     it("clear button resets current agent state", async () => {
-      const { container } = render(
-        <ChatContainer agent="assistant" />
-      );
+      const { container } = render(<ChatContainer agent="assistant" />);
 
       const input = screen.getByPlaceholderText(/Ask Alfred/i);
       fireEvent.change(input, { target: { value: "Test message" } });

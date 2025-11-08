@@ -1,22 +1,21 @@
-import { buildOrchestratorTools, getModelId, getOpenAI } from "@alfred/agent";
-import { stepCountIs, type ModelMessage } from "ai";
+import { buildTools, getModelId, getOpenAI } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
+import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { TRPCError } from "@trpc/server";
+import { convertToModelMessages, stepCountIs } from "ai";
 import { z } from "zod";
-import { callGenerateText, persistGenerateResult } from "../ai/generate";
+import { generateText, persistResult } from "../ai/generate";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
+import { sanitizeResult } from "../utils/generate";
 
 const ORCHESTRATOR_MAX_STEPS = 12;
-
-const messageSchema = z.object({
-  role: z.enum(["user", "assistant", "system", "tool"]),
-  content: z.string().min(1),
-});
 
 const generateInput = z.object({
   thread: z.string().optional(),
   resource: z.string().optional(),
-  messages: z.array(messageSchema).min(1),
+  messages: z.array(z.unknown()).min(1),
   toolChoice: z.enum(["auto", "none", "required"]).optional(),
   maxSteps: z.number().int().min(1).max(ORCHESTRATOR_MAX_STEPS).optional(),
   memory: z.unknown().optional(),
@@ -35,58 +34,16 @@ function mapResource(raw: unknown) {
   };
 }
 
-function toModelMessages(
-  messages: z.infer<typeof generateInput>["messages"]
-): ModelMessage[] {
-  return messages.map(message => {
-    if (message.role === "system") {
-      return { role: "system", content: message.content } as ModelMessage;
+function validateMessages(messages: unknown[]): UIMessage[] {
+  const validated: UIMessage[] = [];
+  for (const msg of messages) {
+    const result = uiMessageSchema.safeParse(msg);
+    if (!result.success) {
+      throw new Error(`Invalid message: ${result.error.message}`);
     }
-    if (message.role === "assistant" || message.role === "tool") {
-      return { role: "assistant", content: message.content } as ModelMessage;
-    }
-    return { role: "user", content: message.content } as ModelMessage;
-  });
-}
-
-function sanitizeResult(result: unknown) {
-  if (!result || typeof result !== "object") {
-    return {
-      text: "",
-      toolCalls: [],
-      toolResults: [],
-      usage: null,
-      warnings: [],
-      finishReason: null,
-    };
+    validated.push(result.data as UIMessage);
   }
-
-  const output = result as Record<string, unknown>;
-  return {
-    text: typeof output.text === "string" ? output.text : "",
-    toolCalls: Array.isArray(output.toolCalls) ? output.toolCalls : [],
-    toolResults: Array.isArray(output.toolResults) ? output.toolResults : [],
-    usage: output.usage ?? null,
-    warnings: Array.isArray(output.warnings) ? output.warnings : [],
-    finishReason:
-      typeof output.finishReason === "string" ? output.finishReason : null,
-  };
-}
-
-function toTrpcError(error: unknown): TRPCError {
-  if (error instanceof TRPCError) {
-    return error;
-  }
-  const message =
-    error instanceof Error ? error.message : String(error ?? "orchestrator");
-  if (message === "biometric_required") {
-    return new TRPCError({ code: "PRECONDITION_FAILED", message });
-  }
-  return new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message,
-    cause: error instanceof Error ? error : undefined,
-  });
+  return validated;
 }
 
 export const orchestratorRouter: ReturnType<typeof router> = router({
@@ -94,42 +51,40 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("orchestrator.generate", (raw) => mapResource(raw)))
     .input(generateInput)
     .mutation(async ({ ctx, input }) => {
-      const session = ctx.session;
-      if (!session) {
-        throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!ctx.session) {
+        throw new Error("Session required");
       }
-
       try {
         const model = getOpenAI().chat(getModelId());
-        const modelMessages = toModelMessages(input.messages);
+        const validatedMessages = validateMessages(input.messages);
+        const modelMessages = convertToModelMessages(validatedMessages);
         const stopWhen =
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
             : undefined;
 
-        const result = await callGenerateText({
+        const result = await generateText({
           model,
           messages: modelMessages,
-          tools: buildOrchestratorTools(),
+          tools: buildTools(),
           toolChoice: input.toolChoice,
           ...(stopWhen ? { stopWhen } : {}),
         });
         const output = sanitizeResult(result);
-        try {
-          const replayId = await persistGenerateResult({
-            userId: session.user.id,
-            kind: "orchestrator",
-            input,
-            result: output,
-          });
-          return { ...output, replayId: replayId ?? undefined } as typeof output & {
-            replayId?: string;
-          };
-        } catch {
-          return output;
-        }
+        const replayId = await persistResult({
+          userId: ctx.session.user.id,
+          kind: "orchestrator",
+          input,
+          result: output,
+        });
+        return {
+          ...output,
+          replayId: replayId ?? undefined,
+        } as typeof output & {
+          replayId?: string;
+        };
       } catch (error) {
-        throw toTrpcError(error);
+        throw toTRPCError(error, "orchestrator_error");
       }
     }),
   stream: authedProcedure

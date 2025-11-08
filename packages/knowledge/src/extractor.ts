@@ -4,7 +4,14 @@
  */
 
 import type { Knowledge } from "./hypergraph.js";
-import { fact, insight, knowledgeHash, nodeFromHash, pattern, relation } from "./hypergraph.js";
+import {
+  fact,
+  insight,
+  knowledgeHash,
+  nodeFromHash,
+  pattern,
+  relation,
+} from "./hypergraph.js";
 
 // Extraction types
 type ExtractedFact = {

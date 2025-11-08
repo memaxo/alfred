@@ -1,6 +1,6 @@
 /**
  * Controls Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/controls
  * Provides agent controls and switcher
  */
@@ -23,38 +23,38 @@ export function Controls({
 }: ControlsProps) {
   return (
     <div
+      aria-label="Agent controls"
       className={cn("flex items-center gap-2", className)}
       role="group"
-      aria-label="Agent controls"
     >
       <div className="flex rounded-lg border bg-muted p-1" role="tablist">
         <Button
-          variant={agent === "assistant" ? "default" : "ghost"}
-          size="sm"
+          aria-controls="assistant-panel"
+          aria-selected={agent === "assistant"}
           onClick={() => onAgentChange("assistant")}
           role="tab"
-          aria-selected={agent === "assistant"}
-          aria-controls="assistant-panel"
+          size="sm"
+          variant={agent === "assistant" ? "default" : "ghost"}
         >
           Assistant
         </Button>
         <Button
-          variant={agent === "orchestrator" ? "default" : "ghost"}
-          size="sm"
+          aria-controls="orchestrator-panel"
+          aria-selected={agent === "orchestrator"}
           onClick={() => onAgentChange("orchestrator")}
           role="tab"
-          aria-selected={agent === "orchestrator"}
-          aria-controls="orchestrator-panel"
+          size="sm"
+          variant={agent === "orchestrator" ? "default" : "ghost"}
         >
           Orchestrator
         </Button>
       </div>
       {onClear && (
         <Button
-          variant="outline"
-          size="sm"
-          onClick={onClear}
           aria-label="Clear conversation"
+          onClick={onClear}
+          size="sm"
+          variant="outline"
         >
           Clear
         </Button>
@@ -62,4 +62,3 @@ export function Controls({
     </div>
   );
 }
-

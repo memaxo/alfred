@@ -28,8 +28,12 @@ function mapNote(row: Awaited<ReturnType<typeof createNote>>) {
     title: (row as { title?: string | null }).title ?? null,
     content: (row as { content: string }).content,
     tags,
-    createdAt: ((row as { created?: Date | null }).created ?? null)?.toISOString?.() ?? null,
-    updatedAt: ((row as { updated?: Date | null }).updated ?? null)?.toISOString?.() ?? null,
+    createdAt:
+      ((row as { created?: Date | null }).created ?? null)?.toISOString?.() ??
+      null,
+    updatedAt:
+      ((row as { updated?: Date | null }).updated ?? null)?.toISOString?.() ??
+      null,
   };
 }
 
@@ -68,7 +72,7 @@ export const toolNote = {
           tags: z.array(z.string()),
           createdAt: z.string().nullable(),
           updatedAt: z.string().nullable(),
-        }),
+        })
       )
       .optional(),
   }),
@@ -78,7 +82,12 @@ export const toolNote = {
     switch (input.action) {
       case "create": {
         const content = ensure(input.content, "note_content_required");
-        const created = await createNote(input.userId, content, input.title ?? undefined, input.tags);
+        const created = await createNote(
+          input.userId,
+          content,
+          input.title ?? undefined,
+          input.tags
+        );
         return {
           ok: true,
           note: mapNote(created),
@@ -89,7 +98,7 @@ export const toolNote = {
         const offset = input.offset ?? 0;
         const rows = await getNotes(input.userId, limit, offset);
         return {
-          notes: rows.map(row => mapNote(row)!).filter(Boolean),
+          notes: rows.map((row) => mapNote(row)!).filter(Boolean),
         };
       }
       case "update": {

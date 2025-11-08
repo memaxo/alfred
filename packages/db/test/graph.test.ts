@@ -20,7 +20,9 @@ beforeAll(async () => {
 
 async function resetGraph() {
   if (!SHOULD_RUN) return;
-  await db.execute(sql`TRUNCATE memory_edges, memory_nodes RESTART IDENTITY CASCADE`);
+  await db.execute(
+    sql`TRUNCATE memory_edges, memory_nodes RESTART IDENTITY CASCADE`
+  );
 }
 
 beforeEach(async () => {
@@ -68,7 +70,7 @@ describeFn("graphRepo", () => {
       { resource: TEST_RESOURCE, hash: "n1", kind: "fact", label: "N1" },
       { resource: TEST_RESOURCE, hash: "n2", kind: "insight", label: "N2" },
     ]);
-    const nodeIds = Array.from(nodes.values()).map(node => node.id);
+    const nodeIds = Array.from(nodes.values()).map((node) => node.id);
 
     await graphRepo.upsertEdges([
       {

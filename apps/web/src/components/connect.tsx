@@ -1,6 +1,6 @@
 /**
  * Connection Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/connection
  * Wire to tRPC agent/orchestrator streaming subscriptions
  */
@@ -47,22 +47,20 @@ export function Connect({ status, agent, className }: ConnectProps) {
 
   return (
     <div
+      aria-label={`Connection status: ${config.ariaLabel}`}
+      aria-live="polite"
       className={cn("flex items-center gap-2", className)}
       role="status"
-      aria-live="polite"
-      aria-label={`Connection status: ${config.ariaLabel}`}
     >
       <div
-        className={cn("size-2 rounded-full", config.dot)}
         aria-hidden="true"
+        className={cn("size-2 rounded-full", config.dot)}
       />
-      <span className={cn("text-sm font-medium", config.color)}>
+      <span className={cn("font-medium text-sm", config.color)}>
         {config.label}
       </span>
       {agent && (
-        <span className="text-xs text-muted-foreground">
-          ({agent})
-        </span>
+        <span className="text-muted-foreground text-xs">({agent})</span>
       )}
     </div>
   );

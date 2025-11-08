@@ -1,6 +1,6 @@
 /**
  * Edge Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/edge
  * Connects nodes in workflow canvas
  */
@@ -17,15 +17,15 @@ interface EdgeProps {
 export function Edge({ from, to, label, className }: EdgeProps) {
   return (
     <div className={cn("relative", className)}>
-      <svg className="absolute inset-0 h-full w-full pointer-events-none">
+      <svg className="pointer-events-none absolute inset-0 h-full w-full">
         <line
-          x1="0"
-          y1="50%"
-          x2="100%"
-          y2="50%"
           stroke="currentColor"
-          strokeWidth="2"
           strokeDasharray="5,5"
+          strokeWidth="2"
+          x1="0"
+          x2="100%"
+          y1="50%"
+          y2="50%"
         />
       </svg>
       {label && (
@@ -38,4 +38,3 @@ export function Edge({ from, to, label, className }: EdgeProps) {
     </div>
   );
 }
-

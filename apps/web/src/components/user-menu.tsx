@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { getElevatedToolToken } from "@/lib/token";
@@ -14,75 +14,81 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
 export default function UserMenu() {
-	const navigate = useNavigate();
-	const [isRequestingToken, setIsRequestingToken] = useState(false);
-	const { data: session, isPending } = authClient.useSession();
+  const navigate = useNavigate();
+  const [isRequestingToken, setIsRequestingToken] = useState(false);
+  const { data: session, isPending } = authClient.useSession();
 
-	if (isPending) {
-		return <Skeleton className="h-9 w-24" />;
-	}
+  if (isPending) {
+    return <Skeleton className="h-9 w-24" />;
+  }
 
-	if (!session) {
-		return (
-			<Button variant="outline" asChild>
-				<Link to="/login">Sign In</Link>
-			</Button>
-		);
-	}
+  if (!session) {
+    return (
+      <Button asChild variant="outline">
+        <Link to="/login">Sign In</Link>
+      </Button>
+    );
+  }
 
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button variant="outline">{session.user.name}</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent className="bg-card">
-				<DropdownMenuLabel>My Account</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-				{!import.meta.env.PROD && (
-					<>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							disabled={isRequestingToken}
-							onSelect={async (event) => {
-								event.preventDefault();
-								setIsRequestingToken(true);
-								try {
-									const token = await getElevatedToolToken(["droid.exec"]);
-									await navigator.clipboard.writeText(token);
-									window.alert("Elevated token copied to clipboard (scope: droid.exec)");
-								} catch (error) {
-									console.error("Failed to fetch elevated token", error);
-									window.alert("Failed to fetch elevated token. See console for details.");
-								} finally {
-									setIsRequestingToken(false);
-								}
-							}}
-						>
-							{isRequestingToken ? "Requesting elevated token..." : "Copy elevated token (dev)"}
-						</DropdownMenuItem>
-					</>
-				)}
-				<DropdownMenuItem asChild>
-					<Button
-						variant="destructive"
-						className="w-full"
-						onClick={() => {
-							authClient.signOut({
-								fetchOptions: {
-									onSuccess: () => {
-										navigate({
-											to: "/",
-										});
-									},
-								},
-							});
-						}}
-					>
-						Sign Out
-					</Button>
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline">{session.user.name}</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="bg-card">
+        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
+        {!import.meta.env.PROD && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={isRequestingToken}
+              onSelect={async (event) => {
+                event.preventDefault();
+                setIsRequestingToken(true);
+                try {
+                  const token = await getElevatedToolToken(["droid.exec"]);
+                  await navigator.clipboard.writeText(token);
+                  window.alert(
+                    "Elevated token copied to clipboard (scope: droid.exec)"
+                  );
+                } catch (error) {
+                  console.error("Failed to fetch elevated token", error);
+                  window.alert(
+                    "Failed to fetch elevated token. See console for details."
+                  );
+                } finally {
+                  setIsRequestingToken(false);
+                }
+              }}
+            >
+              {isRequestingToken
+                ? "Requesting elevated token..."
+                : "Copy elevated token (dev)"}
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuItem asChild>
+          <Button
+            className="w-full"
+            onClick={() => {
+              authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    navigate({
+                      to: "/",
+                    });
+                  },
+                },
+              });
+            }}
+            variant="destructive"
+          >
+            Sign Out
+          </Button>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

@@ -15,19 +15,23 @@ const bookmarkListInput = z.object({
 });
 
 export const bookRouter = router({
-  create: authedProcedure.input(bookmarkInput).mutation(({ ctx, input }) =>
-    assistantRepo.createBookmark(
-      ctx.session.user.id,
-      input.url,
-      input.title,
-      input.description,
-      input.tags
-    )
-  ),
+  create: authedProcedure
+    .input(bookmarkInput)
+    .mutation(({ ctx, input }) =>
+      assistantRepo.createBookmark(
+        ctx.session.user.id,
+        input.url,
+        input.title,
+        input.description,
+        input.tags
+      )
+    ),
 
-  list: authedProcedure.input(bookmarkListInput).query(({ ctx, input }) =>
-    assistantRepo.getBookmarks(ctx.session.user.id, input.limit, input.offset)
-  ),
+  list: authedProcedure
+    .input(bookmarkListInput)
+    .query(({ ctx, input }) =>
+      assistantRepo.getBookmarks(ctx.session.user.id, input.limit, input.offset)
+    ),
 
   delete: authedProcedure
     .input(z.object({ id: z.string().uuid() }))

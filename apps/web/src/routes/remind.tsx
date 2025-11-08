@@ -1,17 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/utils/trpc";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { TRPCAppRouter } from "@/utils/trpc";
+import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/remind")({
   component: RemindRoute,
@@ -40,7 +40,7 @@ function RemindRoute() {
 
   const reminderListQuery = trpc.remind.list.useQuery(listInput);
   const dueRemindersQuery = trpc.remind.due.useQuery(dueInput, {
-    staleTime: 5_000,
+    staleTime: 5000,
   });
 
   const reminders: ReminderItem[] = reminderListQuery.data ?? [];
@@ -56,7 +56,10 @@ function RemindRoute() {
 
   const createReminder = trpc.remind.create.useMutation({
     onSuccess: async () => {
-      await Promise.all([utils.remind.list.invalidate(listInput), refreshDue()]);
+      await Promise.all([
+        utils.remind.list.invalidate(listInput),
+        refreshDue(),
+      ]);
       setTitle("");
       setDescription("");
       setDue(defaultDue);
@@ -65,13 +68,16 @@ function RemindRoute() {
 
   const deleteReminder = trpc.remind.delete.useMutation({
     onSuccess: async () => {
-      await Promise.all([utils.remind.list.invalidate(listInput), refreshDue()]);
+      await Promise.all([
+        utils.remind.list.invalidate(listInput),
+        refreshDue(),
+      ]);
     },
   });
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || !due) {
+    if (!(title.trim() && due)) {
       return;
     }
     const dueIso = new Date(due).toISOString();
@@ -88,7 +94,9 @@ function RemindRoute() {
       <Card>
         <CardHeader>
           <CardTitle>Reminders</CardTitle>
-          <CardDescription>Schedule reminders and track what&apos;s due.</CardDescription>
+          <CardDescription>
+            Schedule reminders and track what&apos;s due.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -126,13 +134,17 @@ function RemindRoute() {
       <Card>
         <CardHeader>
           <CardTitle>Upcoming reminders</CardTitle>
-          <CardDescription>Next 50 reminders sorted by due time.</CardDescription>
+          <CardDescription>
+            Next 50 reminders sorted by due time.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isReminderLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-muted-foreground text-sm">Loading…</p>
           ) : reminders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No reminders scheduled.</p>
+            <p className="text-muted-foreground text-sm">
+              No reminders scheduled.
+            </p>
           ) : (
             <ul className="space-y-3">
               {reminders.map((reminder) => (
@@ -141,12 +153,14 @@ function RemindRoute() {
                   key={reminder.id}
                 >
                   <div>
-                    <h3 className="text-base font-semibold">{reminder.title}</h3>
-                    <p className="text-xs text-muted-foreground">
+                    <h3 className="font-semibold text-base">
+                      {reminder.title}
+                    </h3>
+                    <p className="text-muted-foreground text-xs">
                       Due {new Date(reminder.due).toLocaleString()}
                     </p>
                     {reminder.description ? (
-                      <p className="pt-1 text-sm text-muted-foreground">
+                      <p className="pt-1 text-muted-foreground text-sm">
                         {reminder.description}
                       </p>
                     ) : null}
@@ -172,13 +186,17 @@ function RemindRoute() {
       <Card>
         <CardHeader>
           <CardTitle>Due now</CardTitle>
-          <CardDescription>Reminders that already reached their due time.</CardDescription>
+          <CardDescription>
+            Reminders that already reached their due time.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isDueLoading ? (
-            <p className="text-sm text-muted-foreground">Checking…</p>
+            <p className="text-muted-foreground text-sm">Checking…</p>
           ) : dueSoon.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing due right now.</p>
+            <p className="text-muted-foreground text-sm">
+              Nothing due right now.
+            </p>
           ) : (
             <ul className="space-y-3">
               {dueSoon.map((reminder) => (
@@ -189,11 +207,11 @@ function RemindRoute() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h4 className="font-semibold">{reminder.title}</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Due {new Date(reminder.due).toLocaleString()}
                       </p>
                     </div>
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700 text-xs">
                       Needs attention
                     </span>
                   </div>

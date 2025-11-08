@@ -1,5 +1,5 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
@@ -10,8 +10,11 @@ type CostInfo = {
   contents?: number;
 };
 
-const HAS_EXA = Boolean(process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0);
-const DEFAULT_SEARCH_PROVIDER = (process.env.ORCH_WEB_PROVIDER ?? (HAS_EXA ? "exa" : "ddg")) as WebProvider;
+const HAS_EXA = Boolean(
+  process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0
+);
+const DEFAULT_SEARCH_PROVIDER = (process.env.ORCH_WEB_PROVIDER ??
+  (HAS_EXA ? "exa" : "ddg")) as WebProvider;
 const DEFAULT_TOPK = 5;
 const DEFAULT_TIMEOUT_SEC = 20;
 const MAX_FETCH_BYTES = Number(process.env.WEB_FETCH_MAX_BYTES ?? 200_000);
@@ -106,7 +109,7 @@ const webOutputSchema = z.object({
         publishedDate: z.string().optional(),
         image: z.string().optional(),
         favicon: z.string().optional(),
-      }),
+      })
     )
     .optional(),
   details: z
@@ -155,7 +158,10 @@ function getExaHeaders() {
 
 function createTimeoutController(timeoutSec?: number) {
   const controller = new AbortController();
-  const ms = Math.min((timeoutSec ?? DEFAULT_TIMEOUT_SEC) * 1000, EXA_TIMEOUT_MS);
+  const ms = Math.min(
+    (timeoutSec ?? DEFAULT_TIMEOUT_SEC) * 1000,
+    EXA_TIMEOUT_MS
+  );
   const timer = scheduleTimeout(() => controller.abort(), ms);
   return {
     signal: controller.signal,
@@ -190,9 +196,9 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function compressSnippet(value: string | undefined, limit = 220) {
-  if (!value) return undefined;
+  if (!value) return;
   const compact = value.replace(/\s+/g, " ").trim();
-  if (compact.length === 0) return undefined;
+  if (compact.length === 0) return;
   if (compact.length <= limit) return compact;
   return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
@@ -203,8 +209,8 @@ function extractQueryTokens(query: string) {
       query
         .toLowerCase()
         .split(/[^a-z0-9]+/u)
-        .filter(token => token.length >= 3),
-    ),
+        .filter((token) => token.length >= 3)
+    )
   );
 }
 
@@ -224,10 +230,10 @@ function scoreExaResult(params: {
   const base = clamp(typeof entry.score === "number" ? entry.score : 0, 0, 1);
   const highlight = clamp(
     Array.isArray(entry.highlightScores) && entry.highlightScores.length > 0
-      ? Math.max(...entry.highlightScores.map(value => clamp(value, 0, 1.5)))
+      ? Math.max(...entry.highlightScores.map((value) => clamp(value, 0, 1.5)))
       : 0,
     0,
-    1,
+    1
   );
   const textBuffer = [
     entry.title ?? "",
@@ -250,11 +256,15 @@ function scoreExaResult(params: {
   }
 
   const position = clamp(1 / (index + 1), 0, 1);
-  const weighted = base * 0.5 + highlight * 0.3 + tokenScore * 0.15 + position * 0.05;
+  const weighted =
+    base * 0.5 + highlight * 0.3 + tokenScore * 0.15 + position * 0.05;
   return clamp(weighted, 0, 1);
 }
 
-async function performDuckDuckGoSearch(query: string, topK: number): Promise<WebOutput["results"]> {
+async function performDuckDuckGoSearch(
+  query: string,
+  topK: number
+): Promise<WebOutput["results"]> {
   const url = new URL("https://lite.duckduckgo.com/lite/");
   url.searchParams.set("q", query);
 
@@ -270,7 +280,8 @@ async function performDuckDuckGoSearch(query: string, topK: number): Promise<Web
 
   const html = await response.text();
   const results: NonNullable<WebOutput["results"]> = [];
-  const linkRegex = /<a[^>]*class="result-link"[^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/gi;
+  const linkRegex =
+    /<a[^>]*class="result-link"[^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/gi;
   let match: RegExpExecArray | null;
   while ((match = linkRegex.exec(html)) && results.length < topK) {
     const href = match[1];
@@ -284,7 +295,10 @@ async function performDuckDuckGoSearch(query: string, topK: number): Promise<Web
   return results;
 }
 
-async function performSerpApiSearch(query: string, topK: number): Promise<WebOutput["results"]> {
+async function performSerpApiSearch(
+  query: string,
+  topK: number
+): Promise<WebOutput["results"]> {
   const key = process.env.SERP_API_KEY;
   if (!key) {
     throw new Error("web_serpapi_missing_key");
@@ -304,14 +318,20 @@ async function performSerpApiSearch(query: string, topK: number): Promise<WebOut
     throw new Error(`web_search_failed:${response.status}`);
   }
   const payload = (await response.json()) as {
-    organic_results?: Array<{ link: string; title?: string; snippet?: string; position?: number }>;
+    organic_results?: Array<{
+      link: string;
+      title?: string;
+      snippet?: string;
+      position?: number;
+    }>;
   };
   const organic = payload.organic_results ?? [];
-  return organic.slice(0, topK).map(entry => ({
+  return organic.slice(0, topK).map((entry) => ({
     url: entry.link,
     title: entry.title,
     snippet: entry.snippet,
-    score: typeof entry.position === "number" ? 1 / (entry.position + 1) : undefined,
+    score:
+      typeof entry.position === "number" ? 1 / (entry.position + 1) : undefined,
   }));
 }
 
@@ -327,7 +347,7 @@ async function performExaSearch(
   query: string,
   topK: number,
   exaOpts: ExaConfig | undefined,
-  timeoutSec?: number,
+  timeoutSec?: number
 ): Promise<{ results: WebOutput["results"]; cost?: CostInfo }> {
   if (!HAS_EXA) {
     throw new Error("web_exa_missing_api_key");
@@ -420,7 +440,7 @@ async function performExaSearch(
       })
       .slice(0, topK);
 
-    const results = scoredResults.map(item => ({
+    const results = scoredResults.map((item) => ({
       url: item.entry.url,
       title: item.entry.title ?? item.entry.url,
       snippet: item.snippet,
@@ -447,7 +467,7 @@ async function performExaSearch(
 async function performExaContents(
   url: string,
   exaOpts: ExaConfig | undefined,
-  timeoutSec?: number,
+  timeoutSec?: number
 ): Promise<{ details: WebOutput["details"]; cost?: CostInfo }> {
   if (!HAS_EXA) {
     throw new Error("web_exa_missing_api_key");
@@ -455,18 +475,25 @@ async function performExaContents(
   const { signal, cancel } = createTimeoutController(timeoutSec);
   try {
     const maxCharacters = (() => {
-      if (typeof exaOpts?.text === "object" && typeof exaOpts.text.maxCharacters === "number") {
+      if (
+        typeof exaOpts?.text === "object" &&
+        typeof exaOpts.text.maxCharacters === "number"
+      ) {
         return Math.min(exaOpts.text.maxCharacters, MAX_FETCH_BYTES);
       }
-      if (typeof exaOpts?.context === "object" && typeof exaOpts.context.maxCharacters === "number") {
+      if (
+        typeof exaOpts?.context === "object" &&
+        typeof exaOpts.context.maxCharacters === "number"
+      ) {
         return Math.min(exaOpts.context.maxCharacters, MAX_FETCH_BYTES);
       }
-      return Math.min(5_000, MAX_FETCH_BYTES);
+      return Math.min(5000, MAX_FETCH_BYTES);
     })();
 
     const body: Record<string, unknown> = {
       urls: [url],
-      text: typeof exaOpts?.text === "undefined" ? { maxCharacters } : exaOpts.text,
+      text:
+        typeof exaOpts?.text === "undefined" ? { maxCharacters } : exaOpts.text,
       summary: exaOpts?.summary,
       liveCrawl: exaOpts?.livecrawl ?? "fallback",
     };
@@ -518,18 +545,28 @@ async function performSearch(
   topK: number,
   provider: WebProvider,
   exaOpts: ExaConfig | undefined,
-  timeoutSec?: number,
-): Promise<{ results: WebOutput["results"]; cost?: CostInfo; provider: WebProvider }> {
+  timeoutSec?: number
+): Promise<{
+  results: WebOutput["results"];
+  cost?: CostInfo;
+  provider: WebProvider;
+}> {
   switch (provider) {
     case "exa":
-      return { ...await performExaSearch(query, topK, exaOpts, timeoutSec), provider };
+      return {
+        ...(await performExaSearch(query, topK, exaOpts, timeoutSec)),
+        provider,
+      };
     case "serpapi":
       return { results: await performSerpApiSearch(query, topK), provider };
     case "tavily":
       throw new Error("web_provider_tavily_unavailable");
     case "ddg":
     default:
-      return { results: await performDuckDuckGoSearch(query, topK), provider: "ddg" };
+      return {
+        results: await performDuckDuckGoSearch(query, topK),
+        provider: "ddg",
+      };
   }
 }
 
@@ -544,10 +581,17 @@ async function performFetch(
   url: string,
   timeoutSec: number,
   provider: WebProvider,
-  exaOpts: ExaConfig | undefined,
-): Promise<{ details: WebOutput["details"]; cost?: CostInfo; provider: WebProvider }> {
+  exaOpts: ExaConfig | undefined
+): Promise<{
+  details: WebOutput["details"];
+  cost?: CostInfo;
+  provider: WebProvider;
+}> {
   if (provider === "exa") {
-    return { ...await performExaContents(url, exaOpts, timeoutSec), provider };
+    return {
+      ...(await performExaContents(url, exaOpts, timeoutSec)),
+      provider,
+    };
   }
 
   const controller = new AbortController();
@@ -562,7 +606,12 @@ async function performFetch(
     });
 
     const contentType = response.headers.get("content-type") ?? "";
-    if (!/^text\//i.test(contentType) && !contentType.toLowerCase().startsWith("application/json")) {
+    if (
+      !(
+        /^text\//i.test(contentType) ||
+        contentType.toLowerCase().startsWith("application/json")
+      )
+    ) {
       throw new Error("web_fetch_unsupported_content_type");
     }
 
@@ -596,7 +645,10 @@ async function performFetch(
     }
 
     let json: unknown;
-    if (contentType.toLowerCase().startsWith("application/json") && !truncated) {
+    if (
+      contentType.toLowerCase().startsWith("application/json") &&
+      !truncated
+    ) {
       try {
         json = JSON.parse(text);
       } catch {
@@ -622,13 +674,16 @@ async function performFetch(
 
 export const toolWeb = {
   name: "web",
-  description: "Perform read-only web searches and content fetches for context gathering.",
+  description:
+    "Perform read-only web searches and content fetches for context gathering.",
   inputSchema: webInputSchema,
   outputSchema: webOutputSchema,
   execute: async ({ input }: { input: WebInput }): Promise<WebOutput> => {
     await enforcePolicy(input);
 
-    const resolvedProvider = resolveProvider(input.provider as WebProvider | undefined);
+    const resolvedProvider = resolveProvider(
+      input.provider as WebProvider | undefined
+    );
 
     if (input.action === "search") {
       const query = input.q;
@@ -641,7 +696,7 @@ export const toolWeb = {
           input.topK ?? DEFAULT_TOPK,
           resolvedProvider,
           input.exa,
-          input.timeoutSec,
+          input.timeoutSec
         );
         return {
           ok: true,
@@ -657,7 +712,7 @@ export const toolWeb = {
             input.topK ?? DEFAULT_TOPK,
             "ddg",
             undefined,
-            input.timeoutSec,
+            input.timeoutSec
           );
           return {
             ok: true,
@@ -673,7 +728,12 @@ export const toolWeb = {
     const url = ensureFetchUrl(input.url);
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
     try {
-      const { details, cost, provider } = await performFetch(url, timeoutSec, resolvedProvider, input.exa);
+      const { details, cost, provider } = await performFetch(
+        url,
+        timeoutSec,
+        resolvedProvider,
+        input.exa
+      );
       return {
         ok: true,
         action: "fetch",

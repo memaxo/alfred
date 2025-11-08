@@ -1,6 +1,6 @@
 /**
  * Error Boundary Component
- * 
+ *
  * Carmack-Karpathy principles:
  * - Fast failure: catch errors immediately
  * - Clear recovery: provide actionable errors
@@ -8,8 +8,14 @@
  */
 
 import { Component, type ReactNode } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Props {
   children: ReactNode;
@@ -64,4 +70,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-

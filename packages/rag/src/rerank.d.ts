@@ -5,19 +5,19 @@
  * TODO: Migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support
  */
 export type RerankOptions = {
-    query: string;
-    documents: Array<{
-        id: string;
-        text: string;
-    }>;
-    topN?: number;
-    model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
-};
-export type RerankResult = {
+  query: string;
+  documents: Array<{
     id: string;
     text: string;
-    score: number;
-    index: number;
+  }>;
+  topN?: number;
+  model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
+};
+export type RerankResult = {
+  id: string;
+  text: string;
+  score: number;
+  index: number;
 };
 /**
  * Reranks documents using Cohere API.
@@ -26,5 +26,10 @@ export type RerankResult = {
  * Note: Currently uses manual API calls. Will migrate to AI SDK v6 rerank()
  * when @ai-sdk/cohere adds rerankingModel() support.
  */
-export declare function rerank({ query, documents, topN, model, }: RerankOptions): Promise<RerankResult[]>;
+export declare function rerank({
+  query,
+  documents,
+  topN,
+  model,
+}: RerankOptions): Promise<RerankResult[]>;
 //# sourceMappingURL=rerank.d.ts.map

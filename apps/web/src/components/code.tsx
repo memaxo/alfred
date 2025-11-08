@@ -1,6 +1,6 @@
 /**
  * Code Block Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/code-block
  * Displays code snippets with syntax highlighting
  */
@@ -21,10 +21,12 @@ export function Code({
   className,
 }: CodeProps) {
   return (
-    <div className={cn("relative overflow-hidden rounded-lg border", className)}>
+    <div
+      className={cn("relative overflow-hidden rounded-lg border", className)}
+    >
       {language && (
         <div className="border-b bg-muted px-4 py-2">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="font-medium text-muted-foreground text-xs">
             {language}
           </span>
         </div>
@@ -37,4 +39,3 @@ export function Code({
     </div>
   );
 }
-

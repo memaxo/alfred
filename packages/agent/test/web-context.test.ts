@@ -33,8 +33,10 @@ describe("web context scoring helpers", () => {
   it("compresses snippets to configured limit", () => {
     const snippet = __internals.compressSnippet(
       "   Example snippet with repeated words. Example snippet provides context about integration.   ",
-      60,
+      60
     );
-    expect(snippet).toBe("Example snippet with repeated words. Example snippet prov...");
+    expect(snippet).toBe(
+      "Example snippet with repeated words. Example snippet prov..."
+    );
   });
 });

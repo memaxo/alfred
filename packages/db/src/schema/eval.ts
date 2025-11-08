@@ -4,12 +4,12 @@
  */
 
 import {
+  doublePrecision,
   jsonb,
   pgTable,
   text,
   timestamp,
   uuid,
-  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 export const evalDefs = pgTable("eval_defs", {

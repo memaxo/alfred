@@ -3,10 +3,10 @@
  * Document and chunk operations with vector embeddings
  */
 
-import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { db } from "../index";
-import { ragDocuments, ragChunks } from "../schema/rag";
 import { rerank } from "@alfred/rag";
+import { asc, desc, eq, sql } from "drizzle-orm";
+import { db } from "../index";
+import { ragChunks, ragDocuments } from "../schema/rag";
 
 type DocumentInsert = typeof ragDocuments.$inferInsert;
 type DocumentRow = typeof ragDocuments.$inferSelect;
@@ -18,7 +18,7 @@ export async function createDocument(
   source: string,
   title?: string,
   author?: string,
-  metadata?: unknown,
+  metadata?: unknown
 ): Promise<DocumentRow> {
   const [row] = await db
     .insert(ragDocuments)
@@ -33,12 +33,21 @@ export async function createDocument(
   return row as DocumentRow;
 }
 
-export async function getDocument(documentId: string): Promise<DocumentRow | null> {
-  const rows = await db.select().from(ragDocuments).where(eq(ragDocuments.id, documentId)).limit(1);
+export async function getDocument(
+  documentId: string
+): Promise<DocumentRow | null> {
+  const rows = await db
+    .select()
+    .from(ragDocuments)
+    .where(eq(ragDocuments.id, documentId))
+    .limit(1);
   return rows[0] ?? null;
 }
 
-export async function listDocuments(limit = 100, offset = 0): Promise<DocumentRow[]> {
+export async function listDocuments(
+  limit = 100,
+  offset = 0
+): Promise<DocumentRow[]> {
   return db
     .select()
     .from(ragDocuments)
@@ -48,14 +57,22 @@ export async function listDocuments(limit = 100, offset = 0): Promise<DocumentRo
 }
 
 export async function deleteDocument(documentId: string): Promise<number> {
-  const rows = await db.delete(ragDocuments).where(eq(ragDocuments.id, documentId)).returning({ id: ragDocuments.id });
+  const rows = await db
+    .delete(ragDocuments)
+    .where(eq(ragDocuments.id, documentId))
+    .returning({ id: ragDocuments.id });
   return rows.length;
 }
 
 // Chunk operations
 export async function addChunks(
   documentId: string,
-  chunks: Array<{ content: string; order?: number; embedding?: number[]; metadata?: unknown }>,
+  chunks: Array<{
+    content: string;
+    order?: number;
+    embedding?: number[];
+    metadata?: unknown;
+  }>
 ): Promise<ChunkRow[]> {
   if (chunks.length === 0) {
     return [] as ChunkRow[];
@@ -80,19 +97,21 @@ export async function getChunks(documentId: string): Promise<ChunkRow[]> {
     .orderBy(asc(ragChunks.order));
 }
 
-export type ChunkSearchResult = (typeof ragChunks.$inferSelect) & { score: number };
+export type ChunkSearchResult = typeof ragChunks.$inferSelect & {
+  score: number;
+};
 
 export async function searchChunks(
   embedding: number[],
   limit = 10,
   threshold = 0.7,
   documentId?: string,
-  efSearch?: number,
+  efSearch?: number
 ): Promise<ChunkSearchResult[]> {
   // Set LOCAL ef_search for query-time recall tuning (default: 40 for <1ms latency)
   const ef = efSearch ?? 40;
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
-  
+
   // Build query using pgvector <=> operator with LOCAL ef_search
   let baseQuery = sql`
     SELECT 
@@ -137,7 +156,10 @@ export type HybridSearchOptions = {
   sparseWeight?: number;
   efSearch?: number;
   useReranking?: boolean;
-  rerankModel?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
+  rerankModel?:
+    | "rerank-v3.5"
+    | "rerank-english-v3.0"
+    | "rerank-multilingual-v3.0";
 };
 
 export async function searchChunksHybrid({
@@ -154,7 +176,7 @@ export async function searchChunksHybrid({
 }: HybridSearchOptions): Promise<ChunkSearchResult[]> {
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
   const ef = efSearch;
-  
+
   // Dense vector similarity search
   let denseQuery = sql`
     SELECT 
@@ -264,6 +286,9 @@ export async function searchChunksHybrid({
 }
 
 export async function deleteChunk(chunkId: string): Promise<number> {
-  const rows = await db.delete(ragChunks).where(eq(ragChunks.id, chunkId)).returning({ id: ragChunks.id });
+  const rows = await db
+    .delete(ragChunks)
+    .where(eq(ragChunks.id, chunkId))
+    .returning({ id: ragChunks.id });
   return rows.length;
 }

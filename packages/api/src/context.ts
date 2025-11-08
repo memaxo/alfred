@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { auth } from "@alfred/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { randomUUID } from "node:crypto";
+import { getSessionUser } from "./utils/session";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
@@ -37,15 +38,20 @@ function parseForwardedFor(headers: Headers) {
   if (!header) return [] as string[];
   return header
     .split(",")
-    .map(entry => entry.trim())
-    .filter(entry => entry.length > 0);
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 }
 
 function resolveClientIp(headers: Headers, forwardedFor: string[]) {
   if (forwardedFor.length > 0) {
     return forwardedFor[0] ?? null;
   }
-  const directHeaders = ["x-real-ip", "cf-connecting-ip", "true-client-ip", "fastly-client-ip"];
+  const directHeaders = [
+    "x-real-ip",
+    "cf-connecting-ip",
+    "true-client-ip",
+    "fastly-client-ip",
+  ];
   for (const key of directHeaders) {
     const value = headers.get(key);
     if (value && value.trim().length > 0) {
@@ -56,7 +62,12 @@ function resolveClientIp(headers: Headers, forwardedFor: string[]) {
 }
 
 function resolveRequestId(headers: Headers) {
-  const headerNames = ["x-request-id", "cf-ray", "fly-request-id", "traceparent"];
+  const headerNames = [
+    "x-request-id",
+    "cf-ray",
+    "fly-request-id",
+    "traceparent",
+  ];
   for (const name of headerNames) {
     const value = headers.get(name);
     if (value && value.trim().length > 0) {
@@ -70,7 +81,11 @@ function resolveReferer(headers: Headers) {
   return headers.get("referer") ?? headers.get("referrer");
 }
 
-export async function createContext({ req }: { req: Request }): Promise<Context> {
+export async function createContext({
+  req,
+}: {
+  req: Request;
+}): Promise<Context> {
   const headers = req.headers;
   const forwardedFor = parseForwardedFor(headers);
   const runtime: RuntimeMetadata = {
@@ -107,7 +122,7 @@ export async function createContext({ req }: { req: Request }): Promise<Context>
     runtimeContextEntries.push(["referer", runtime.referer]);
   }
 
-  const user = session?.user as { id?: string; roles?: string[]; scopes?: string[] } | undefined;
+  const user = getSessionUser(session);
   if (user?.id) {
     runtimeContextEntries.push(["userId", user.id]);
   }
@@ -119,7 +134,7 @@ export async function createContext({ req }: { req: Request }): Promise<Context>
   }
 
   const runtimeContext = new RuntimeContext<Record<string, unknown>>(
-    runtimeContextEntries as Array<[string, unknown]>,
+    runtimeContextEntries as Array<[string, unknown]>
   );
 
   return {
@@ -131,14 +146,14 @@ export async function createContext({ req }: { req: Request }): Promise<Context>
 
 export function cloneRuntimeContext(
   base: RuntimeContext,
-  extras: Array<[string, unknown]> = [],
+  extras: Array<[string, unknown]> = []
 ): RuntimeContext {
   const entries: Array<[string, unknown]> = [];
   base.forEach((value, key) => {
     entries.push([String(key), value]);
   });
   const clone = new RuntimeContext<Record<string, unknown>>(
-    entries as Array<[string, unknown]>,
+    entries as Array<[string, unknown]>
   );
   for (const [key, value] of extras) {
     clone.set(key as string, value as unknown);

@@ -18,7 +18,9 @@ beforeAll(async () => {
 
 async function resetRagTables() {
   if (!SHOULD_RUN) return;
-  await db.execute(sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`);
+  await db.execute(
+    sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`
+  );
 }
 
 function makeVector(seed: number) {
@@ -32,7 +34,9 @@ beforeEach(async () => {
 describeFn("searchChunks with efSearch", () => {
   it("sets LOCAL ef_search correctly", async () => {
     await ragRepo.createDocument("source", "Doc");
-    await ragRepo.addChunks("1", [{ content: "Chunk", embedding: makeVector(0.5) }]);
+    await ragRepo.addChunks("1", [
+      { content: "Chunk", embedding: makeVector(0.5) },
+    ]);
 
     await expect(
       ragRepo.searchChunks(makeVector(0.5), 5, 0.1, { efSearch: 120 })

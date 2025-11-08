@@ -1,5 +1,13 @@
 import "@/test/dom";
-import { beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { ProfileUpdateInput } from "@alfred/type";
 
 const toastSuccess = vi.fn();
@@ -70,19 +78,21 @@ const trpcMock = {
         onSuccess?: (
           data: typeof updatedProfile,
           input: ProfileUpdateInput,
-          context: unknown,
+          context: unknown
         ) => void | Promise<void>;
         onSettled?: (
           data: typeof updatedProfile | undefined,
           error: Error | null,
           input: ProfileUpdateInput,
-          context: unknown,
+          context: unknown
         ) => void | Promise<void>;
       }) => ({
         isPending: false,
         mutate: async (input: ProfileUpdateInput) => {
           mutateSpy(input);
-          const context = config?.onMutate ? await config.onMutate(input) : undefined;
+          const context = config?.onMutate
+            ? await config.onMutate(input)
+            : undefined;
           await config?.onSuccess?.(updatedProfile, input, context);
           await config?.onSettled?.(updatedProfile, null, input, context);
         },
@@ -128,9 +138,12 @@ describe("Profile route", () => {
     fireEvent.change(screen.getByPlaceholderText("Avatar URL"), {
       target: { value: "https://example.com/avatar.png" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Timezone (e.g. America/New_York)"), {
-      target: { value: "America/New_York" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Timezone (e.g. America/New_York)"),
+      {
+        target: { value: "America/New_York" },
+      }
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     await waitFor(() => expect(setData).toHaveBeenCalled());

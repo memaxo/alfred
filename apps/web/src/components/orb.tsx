@@ -1,6 +1,6 @@
 /**
  * Orb Component
- * 
+ *
  * Adapted from ui.elevenlabs.io/docs/components/orb
  * Floating orb for visual feedback during agent operations
  */
@@ -25,10 +25,9 @@ export function Orb({ status, className }: OrbProps) {
       <div
         className={cn(
           "size-16 rounded-full shadow-lg transition-all",
-          statusConfig[status],
+          statusConfig[status]
         )}
       />
     </div>
   );
 }
-

@@ -19,7 +19,11 @@ function formatState(state: unknown): string {
   if (state === null || state === undefined) {
     return "—";
   }
-  if (typeof state === "string" || typeof state === "number" || typeof state === "boolean") {
+  if (
+    typeof state === "string" ||
+    typeof state === "number" ||
+    typeof state === "boolean"
+  ) {
     return String(state);
   }
   try {
@@ -46,7 +50,7 @@ export function HomePane({ entities, onToggle, className }: HomePaneProps) {
       ) : (
         <ul className="home-pane__list">
           {renderEntities.map(({ entity, formattedState }) => (
-            <li key={entity.id} className="home-pane__item">
+            <li className="home-pane__item" key={entity.id}>
               <header className="home-pane__header">
                 <span className="home-pane__label">{entity.type}</span>
                 <span className="home-pane__id">{entity.id}</span>
@@ -54,9 +58,9 @@ export function HomePane({ entities, onToggle, className }: HomePaneProps) {
               <pre className="home-pane__state">{formattedState}</pre>
               {onToggle ? (
                 <button
-                  type="button"
                   className="home-pane__toggle"
                   onClick={() => onToggle(entity.id, entity.state ?? null)}
+                  type="button"
                 >
                   Toggle
                 </button>

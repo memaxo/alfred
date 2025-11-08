@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { isModelMessage, isModelMessageArray, isUIMessage, isUIMessageArray } from "../src/guards";
+import {
+  isModelMessage,
+  isModelMessageArray,
+  isUIMessage,
+  isUIMessageArray,
+} from "../src/guards";
 
 describe("stream guards", () => {
   it("identifies valid UI messages", () => {
@@ -21,7 +26,7 @@ describe("stream guards", () => {
         id: "msg",
         role: "assistant",
         parts: "not-an-array",
-      }),
+      })
     ).toBe(false);
   });
 
@@ -42,7 +47,7 @@ describe("stream guards", () => {
       isModelMessage({
         role: "assistant",
         content: 42,
-      }),
+      })
     ).toBe(false);
   });
 });

@@ -5,7 +5,7 @@
 
 import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "../index";
-import { auditLogs, approvals } from "../schema/policy";
+import { approvals, auditLogs } from "../schema/policy";
 
 type AuditLogInsert = typeof auditLogs.$inferInsert;
 type ApprovalInsert = typeof approvals.$inferInsert;
@@ -44,8 +44,15 @@ export async function createAuditLog({
   return row;
 }
 
-export async function getAuditLogs(userId: string, action?: string, limit = 100, offset = 0) {
-  const where = action ? and(eq(auditLogs.userId, userId), eq(auditLogs.action, action)) : eq(auditLogs.userId, userId);
+export async function getAuditLogs(
+  userId: string,
+  action?: string,
+  limit = 100,
+  offset = 0
+) {
+  const where = action
+    ? and(eq(auditLogs.userId, userId), eq(auditLogs.action, action))
+    : eq(auditLogs.userId, userId);
   return db
     .select()
     .from(auditLogs)
@@ -88,7 +95,11 @@ export async function createApproval(params: {
 }
 
 export async function getApproval(approvalId: string) {
-  const [row] = await db.select().from(approvals).where(eq(approvals.id, approvalId)).limit(1);
+  const [row] = await db
+    .select()
+    .from(approvals)
+    .where(eq(approvals.id, approvalId))
+    .limit(1);
   return row ?? null;
 }
 
@@ -122,6 +133,8 @@ export async function expireApprovals() {
   return db
     .update(approvals)
     .set({ status: "denied", approvedBy: "system", approvedAt: new Date() })
-    .where(and(eq(approvals.status, "pending"), lt(approvals.expiresAt, new Date())))
+    .where(
+      and(eq(approvals.status, "pending"), lt(approvals.expiresAt, new Date()))
+    )
     .returning();
 }

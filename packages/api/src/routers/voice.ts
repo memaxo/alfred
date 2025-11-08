@@ -1,12 +1,12 @@
 import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
-import type { Response } from "undici";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import type { Response } from "undici";
 import { z } from "zod";
-import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 import { recordVoiceStt, recordVoiceTts } from "../metrics";
+import { authedProcedure, router } from "../trpc";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap for initial MVP clips
 const DEFAULT_STT_MODEL = "whisper-1";
@@ -45,7 +45,9 @@ function requireOpenAIConfig() {
       message: "openai_api_key_missing",
     });
   }
-  const baseUrl = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com").replace(/\/+$/, "");
+  const baseUrl = (
+    process.env.OPENAI_BASE_URL ?? "https://api.openai.com"
+  ).replace(/\/+$/, "");
   return { apiKey, baseUrl };
 }
 
@@ -87,15 +89,24 @@ async function postTranscription(input: SttInput) {
   const cleaned = sanitizeBase64(input.audioBase64);
   const audioBuffer = Buffer.from(cleaned, "base64");
   if (audioBuffer.byteLength === 0) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "audio_payload_empty" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "audio_payload_empty",
+    });
   }
   if (audioBuffer.byteLength > MAX_AUDIO_BYTES) {
-    throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "audio_payload_too_large" });
+    throw new TRPCError({
+      code: "PAYLOAD_TOO_LARGE",
+      message: "audio_payload_too_large",
+    });
   }
 
   const fileName = `speech.${inferExtension(input.mimeType)}`;
   const form = new FormData();
-  form.append("file", new File([audioBuffer], fileName, { type: input.mimeType }));
+  form.append(
+    "file",
+    new File([audioBuffer], fileName, { type: input.mimeType })
+  );
   form.append("model", input.model);
   form.append("response_format", "verbose_json");
   if (input.language) {
@@ -129,7 +140,11 @@ async function postTranscription(input: SttInput) {
   const providerLabel = "openai";
 
   if (!response.ok) {
-    recordVoiceStt({ provider: providerLabel, status: "error", durationSeconds });
+    recordVoiceStt({
+      provider: providerLabel,
+      status: "error",
+      durationSeconds,
+    });
     const errorPayload = await safeReadError(response);
     throw new TRPCError({
       code: response.status === 401 ? "UNAUTHORIZED" : "INTERNAL_SERVER_ERROR",
@@ -140,12 +155,20 @@ async function postTranscription(input: SttInput) {
 
   const payload = (await response
     .json()
-    .catch(() => ({ text: "", language: null }))) as { text?: unknown; language?: unknown };
+    .catch(() => ({ text: "", language: null }))) as {
+    text?: unknown;
+    language?: unknown;
+  };
   const text = typeof payload.text === "string" ? payload.text : "";
-  const language = typeof payload.language === "string" ? payload.language : null;
+  const language =
+    typeof payload.language === "string" ? payload.language : null;
 
   if (!text) {
-    recordVoiceStt({ provider: providerLabel, status: "error", durationSeconds });
+    recordVoiceStt({
+      provider: providerLabel,
+      status: "error",
+      durationSeconds,
+    });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "openai_transcription_empty",
@@ -198,7 +221,11 @@ async function postSynthesis(input: TtsInput) {
   const providerLabel = "openai";
 
   if (!response.ok) {
-    recordVoiceTts({ provider: providerLabel, status: "error", durationSeconds });
+    recordVoiceTts({
+      provider: providerLabel,
+      status: "error",
+      durationSeconds,
+    });
     const errorPayload = await safeReadError(response);
     throw new TRPCError({
       code: response.status === 401 ? "UNAUTHORIZED" : "INTERNAL_SERVER_ERROR",
@@ -209,7 +236,11 @@ async function postSynthesis(input: TtsInput) {
 
   const audioBuffer = await response.arrayBuffer();
   if (!audioBuffer || audioBuffer.byteLength === 0) {
-    recordVoiceTts({ provider: providerLabel, status: "error", durationSeconds });
+    recordVoiceTts({
+      provider: providerLabel,
+      status: "error",
+      durationSeconds,
+    });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "openai_synthesis_empty",
@@ -247,7 +278,10 @@ const toSttResource = (raw: unknown) => {
   const input = (raw ?? {}) as Partial<SttInput>;
   return {
     kind: "voice.model" as const,
-    id: typeof input.model === "string" && input.model.length > 0 ? input.model : DEFAULT_STT_MODEL,
+    id:
+      typeof input.model === "string" && input.model.length > 0
+        ? input.model
+        : DEFAULT_STT_MODEL,
   };
 };
 
@@ -255,7 +289,10 @@ const toTtsResource = (raw: unknown) => {
   const input = (raw ?? {}) as Partial<TtsInput>;
   return {
     kind: "voice.model" as const,
-    id: typeof input.model === "string" && input.model.length > 0 ? input.model : DEFAULT_TTS_MODEL,
+    id:
+      typeof input.model === "string" && input.model.length > 0
+        ? input.model
+        : DEFAULT_TTS_MODEL,
   };
 };
 
@@ -270,13 +307,11 @@ export const voiceRouter: ReturnType<typeof router> = router({
     .input(ttsInput)
     .mutation(async ({ input }) => postSynthesis(input)),
 
-  stream: authedProcedure
-    .input(voiceStreamInput.optional())
-    .subscription(() =>
-      observable<{ type: "noop" }>((emit) => {
-        emit.next({ type: "noop" });
-        emit.complete();
-        return () => undefined;
-      }),
-    ),
+  stream: authedProcedure.input(voiceStreamInput.optional()).subscription(() =>
+    observable<{ type: "noop" }>((emit) => {
+      emit.next({ type: "noop" });
+      emit.complete();
+      return () => {};
+    })
+  ),
 });

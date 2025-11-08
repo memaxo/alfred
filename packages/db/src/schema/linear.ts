@@ -3,7 +3,7 @@
  * Linear OAuth installations and workspace tracking
  */
 
-import { pgTable, text, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Linear installations (OAuth actor=app)

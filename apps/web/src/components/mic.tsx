@@ -1,12 +1,11 @@
 /**
  * Mic Selector Component
- * 
+ *
  * Adapted from ui.elevenlabs.io/docs/components/mic-selector
  * Microphone input selection for voice recording
  */
 
 import { Button } from "@/components/ui/button";
-import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MicDevice {
@@ -37,24 +36,23 @@ export function Mic({
         {devices.map((device) => (
           <Button
             key={device.id}
-            variant={selected === device.id ? "default" : "outline"}
-            size="sm"
             onClick={() => onSelect(device.id)}
+            size="sm"
+            variant={selected === device.id ? "default" : "outline"}
           >
             {device.label}
           </Button>
         ))}
       </div>
       <Button
-        variant={isRecording ? "destructive" : "default"}
-        size="lg"
-        onClick={onToggleRecord}
         className="w-full"
+        onClick={onToggleRecord}
+        size="lg"
+        variant={isRecording ? "destructive" : "default"}
       >
-        <Mic className="size-4 mr-2" />
+        <Mic className="mr-2 size-4" />
         {isRecording ? "Stop Recording" : "Start Recording"}
       </Button>
     </div>
   );
 }
-

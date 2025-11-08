@@ -1,6 +1,6 @@
 /**
  * Panel Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/panel
  * Side panel for additional content
  */
@@ -24,4 +24,3 @@ export function Panel({ title, children, className }: PanelProps) {
     </Card>
   );
 }
-

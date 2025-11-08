@@ -1,7 +1,7 @@
-import { appRouter } from "@alfred/api";
-import { webhookEventsTotal, webhookErrorsTotal } from "@alfred/api/metrics";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 import crypto from "node:crypto";
+import { appRouter } from "@alfred/api";
+import { webhookErrorsTotal, webhookEventsTotal } from "@alfred/api/metrics";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { createFileRoute } from "@tanstack/react-router";
 
 const MAX_AGE_SECONDS = 5 * 60; // tolerate up to 5 minutes of clock drift
@@ -19,7 +19,9 @@ interface ParsedSignatureHeader {
   signature: string;
 }
 
-function parseSignatureHeader(raw: string | null): ParsedSignatureHeader | null {
+function parseSignatureHeader(
+  raw: string | null
+): ParsedSignatureHeader | null {
   if (!raw) return null;
   const parts = raw.split(",");
   let timestamp: number | null = null;
@@ -27,7 +29,7 @@ function parseSignatureHeader(raw: string | null): ParsedSignatureHeader | null 
 
   for (const part of parts) {
     const [key, value] = part.split("=");
-    if (!key || !value) continue;
+    if (!(key && value)) continue;
     const trimmedKey = key.trim().toLowerCase();
     const trimmedValue = value.trim();
     if (trimmedKey === "t") {
@@ -40,16 +42,24 @@ function parseSignatureHeader(raw: string | null): ParsedSignatureHeader | null 
     }
   }
 
-  if (!timestamp || !signature) {
+  if (!(timestamp && signature)) {
     return null;
   }
 
   return { timestamp, signature };
 }
 
-function verifySignature(secret: string, timestamp: number, payload: string, expected: string): boolean {
+function verifySignature(
+  secret: string,
+  timestamp: number,
+  payload: string,
+  expected: string
+): boolean {
   const body = `${timestamp}:${payload}`;
-  const computed = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  const computed = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex");
 
   const providedBuffer = Buffer.from(expected, "hex");
   const computedBuffer = Buffer.from(computed, "hex");
@@ -160,7 +170,9 @@ export const Route = createFileRoute("/api/linear/webhook")({
         }
 
         const rawBody = await request.text();
-        const header = parseSignatureHeader(request.headers.get("linear-signature"));
+        const header = parseSignatureHeader(
+          request.headers.get("linear-signature")
+        );
         if (!header) {
           webhookErrorsTotal.labels("signature").inc();
           return new Response("invalid_signature", { status: 401 });
@@ -172,7 +184,12 @@ export const Route = createFileRoute("/api/linear/webhook")({
           return new Response("stale_signature", { status: 401 });
         }
 
-        const validSignature = verifySignature(secret, header.timestamp, rawBody, header.signature);
+        const validSignature = verifySignature(
+          secret,
+          header.timestamp,
+          rawBody,
+          header.signature
+        );
         if (!validSignature) {
           webhookErrorsTotal.labels("signature").inc();
           return new Response("invalid_signature", { status: 401 });
@@ -189,8 +206,9 @@ export const Route = createFileRoute("/api/linear/webhook")({
         const eventType = extractEventType(payload);
         webhookEventsTotal.labels(eventType).inc();
 
-        const runIdCandidate =
-          (payload as { data?: { agentSessionId?: unknown } })?.data?.agentSessionId;
+        const runIdCandidate = (
+          payload as { data?: { agentSessionId?: unknown } }
+        )?.data?.agentSessionId;
         const runId =
           typeof runIdCandidate === "string" && runIdCandidate.length > 0
             ? runIdCandidate
@@ -213,12 +231,15 @@ export const Route = createFileRoute("/api/linear/webhook")({
           }
         }
 
-        return new Response(JSON.stringify({ ok: true, runId, resumed: Boolean(authz) }), {
-          status: 202,
-          headers: {
-            "content-type": "application/json",
-          },
-        });
+        return new Response(
+          JSON.stringify({ ok: true, runId, resumed: Boolean(authz) }),
+          {
+            status: 202,
+            headers: {
+              "content-type": "application/json",
+            },
+          }
+        );
       },
     },
   },

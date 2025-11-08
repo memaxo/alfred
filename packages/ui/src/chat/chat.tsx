@@ -1,6 +1,6 @@
+import type { UIMessage } from "@alfred/type/stream";
 import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { UIMessage } from "@alfred/type/stream";
 
 import {
   getAgentLabel,
@@ -68,30 +68,34 @@ function buildRenderBlock(message: UIMessage, index: number): RenderBlock {
       ? ((message as { metadata?: Record<string, unknown> }).metadata ?? {})
       : {};
   const status =
-    metadata && typeof metadata === "object" ? (metadata as Record<string, string>).status : undefined;
+    metadata && typeof metadata === "object"
+      ? (metadata as Record<string, string>).status
+      : undefined;
 
   const text =
-    message.parts.filter(isTextPart).map(part => part.text).join("") || null;
+    message.parts
+      .filter(isTextPart)
+      .map((part) => part.text)
+      .join("") || null;
 
   const reasoningParts = message.parts.filter(isReasoningPart);
   const reasoning =
-    reasoningParts.map(part => part.reasoning).join("").trim() || null;
+    reasoningParts
+      .map((part) => part.text)
+      .join("")
+      .trim() || null;
 
-  const toolCalls = message.parts
-    .filter(isToolCallPart)
-    .map(part => ({
-      id: part.toolCallId ?? null,
-      name: part.toolName ?? null,
-      args: (part.args ?? part.input) ?? null,
-    }));
+  const toolCalls = message.parts.filter(isToolCallPart).map((part) => ({
+    id: part.toolCallId ?? null,
+    name: part.toolName ?? null,
+    args: part.input ?? null,
+  }));
 
-  const toolResults = message.parts
-    .filter(isToolResultPart)
-    .map(part => ({
-      id: part.toolCallId ?? null,
-      name: part.toolName ?? null,
-      result: part.result ?? null,
-    }));
+  const toolResults = message.parts.filter(isToolResultPart).map((part) => ({
+    id: part.toolCallId ?? null,
+    name: part.toolName ?? null,
+    result: part.output ?? null,
+  }));
 
   return {
     key: message.id ?? `message-${index}`,
@@ -130,7 +134,10 @@ function renderToolCalls(block: RenderBlock) {
   return (
     <div className="chat-message__tool-calls">
       {block.toolCalls.map((call, index) => (
-        <div key={call.id ?? `tool-call-${index}`} className="chat-message__tool">
+        <div
+          className="chat-message__tool"
+          key={call.id ?? `tool-call-${index}`}
+        >
           <strong>{call.name ?? "Tool call"}</strong>
           <pre>{JSON.stringify(call.args, null, 2)}</pre>
         </div>
@@ -147,7 +154,10 @@ function renderToolResults(block: RenderBlock) {
   return (
     <div className="chat-message__tool-results">
       {block.toolResults.map((result, index) => (
-        <div key={result.id ?? `tool-result-${index}`} className="chat-message__tool-result">
+        <div
+          className="chat-message__tool-result"
+          key={result.id ?? `tool-result-${index}`}
+        >
           <strong>{result.name ?? "Tool result"}</strong>
           <pre>{JSON.stringify(result.result, null, 2)}</pre>
         </div>
@@ -204,7 +214,7 @@ export function Chat({
       if (!perf) return;
       setRange(next);
     },
-    [perf],
+    [perf]
   );
 
   useEffect(() => {
@@ -236,7 +246,7 @@ export function Chat({
         recordPerfSnapshot(messages);
       }
     },
-    [disabled, onSend, perf, messages],
+    [disabled, onSend, perf, messages]
   );
 
   const getContent = useCallback(
@@ -247,7 +257,7 @@ export function Chat({
       const block = buildRenderBlock(message, index);
       return renderDefaultMessage(block);
     },
-    [itemContent],
+    [itemContent]
   );
 
   const logContent = useMemo(() => {
@@ -256,7 +266,9 @@ export function Chat({
       return (
         <VirtualList
           data={messages}
-          itemContent={(index: number, message: UIMessage) => getContent(index, message)}
+          itemContent={(index: number, message: UIMessage) =>
+            getContent(index, message)
+          }
           rangeChanged={handleRangeChanged}
         />
       );
@@ -273,7 +285,10 @@ export function Chat({
     return (
       <div className="chat-log">
         {messages.map((message, index) => (
-          <div key={message.id ?? `message-${index}`} className="chat-log__item">
+          <div
+            className="chat-log__item"
+            key={message.id ?? `message-${index}`}
+          >
             {getContent(index, message)}
           </div>
         ))}
@@ -286,23 +301,27 @@ export function Chat({
       <div className="chat-body">{logContent}</div>
       <form className="chat-input" onSubmit={handleSubmit}>
         <textarea
+          disabled={disabled}
           name="message"
           placeholder={placeholder}
-          disabled={disabled}
           rows={3}
         />
         <div className="chat-input__controls">
           {onVoice ? (
             <button
-              type="button"
-              onClick={onVoice}
-              disabled={voiceDisabled || disabled}
               className="chat-input__voice"
+              disabled={voiceDisabled || disabled}
+              onClick={onVoice}
+              type="button"
             >
               {voiceLabel}
             </button>
           ) : null}
-          <button type="submit" disabled={disabled} className="chat-input__send">
+          <button
+            className="chat-input__send"
+            disabled={disabled}
+            type="submit"
+          >
             Send
           </button>
         </div>

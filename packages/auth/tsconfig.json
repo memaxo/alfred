@@ -9,8 +9,5 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],
-  "references": [
-    { "path": "../db" },
-    { "path": "../policy" }
-  ]
+  "references": [{ "path": "../db" }, { "path": "../policy" }]
 }

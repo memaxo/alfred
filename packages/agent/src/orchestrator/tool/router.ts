@@ -30,7 +30,11 @@ function ensureUpstream(input: RouterInput) {
   return input.upstream;
 }
 
-function buildCaddyRoute(host: string, upstreamUrl: string, _tls: boolean | undefined) {
+function buildCaddyRoute(
+  host: string,
+  upstreamUrl: string,
+  _tls: boolean | undefined
+) {
   const upstream = new URL(upstreamUrl);
   const dial =
     upstream.port && upstream.port.length > 0
@@ -58,7 +62,11 @@ function buildCaddyRoute(host: string, upstreamUrl: string, _tls: boolean | unde
   };
 }
 
-async function caddyRequest(path: string, init: RequestInit, options?: { ignore404?: boolean }) {
+async function caddyRequest(
+  path: string,
+  init: RequestInit,
+  options?: { ignore404?: boolean }
+) {
   const url = new URL(path, CADDY_ADMIN_URL);
   const response = await fetch(url, init);
   if (!response.ok) {
@@ -78,7 +86,9 @@ async function executeCaddy(input: RouterInput) {
     case "register":
     case "update": {
       const upstream = ensureUpstream(input);
-      const body = JSON.stringify(buildCaddyRoute(input.host, upstream, input.tls));
+      const body = JSON.stringify(
+        buildCaddyRoute(input.host, upstream, input.tls)
+      );
       await caddyRequest(`/config/apps/http/servers/srv0/routes/${routeId}`, {
         method: "PUT",
         body,
@@ -94,7 +104,7 @@ async function executeCaddy(input: RouterInput) {
         {
           method: "DELETE",
         },
-        { ignore404: true },
+        { ignore404: true }
       );
       return { ok: true };
     }

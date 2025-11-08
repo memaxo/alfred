@@ -1,22 +1,22 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc";
-import { bookRouter } from "./book";
-import { jwksRouter } from "./jwks";
-import { noteRouter } from "./note";
-import { remindRouter } from "./remind";
-import { todoRouter } from "./todo";
-import { timerRouter } from "./timer";
-import { tokenRouter } from "./token";
-import { droidsRouter } from "./droids";
-import { workflowRouter } from "./workflow";
-import { evalRouter } from "./eval";
-import { deployRouter } from "./deploy";
-import { linearRouter } from "./linear";
 import { assistantRouter } from "./assistant";
+import { bookRouter } from "./book";
+import { deployRouter } from "./deploy";
+import { droidsRouter } from "./droids";
+import { evalRouter } from "./eval";
+import { jwksRouter } from "./jwks";
+import { linearRouter } from "./linear";
+import { noteRouter } from "./note";
 import { orchestratorRouter } from "./orchestrator";
-import { profileRouter } from "./profile";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
+import { profileRouter } from "./profile";
+import { remindRouter } from "./remind";
+import { timerRouter } from "./timer";
+import { todoRouter } from "./todo";
+import { tokenRouter } from "./token";
 import { voiceRouter } from "./voice";
+import { workflowRouter } from "./workflow";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),

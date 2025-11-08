@@ -1,6 +1,6 @@
 /**
  * Confirmation Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/confirmation
  * Handles user confirmations for sensitive actions
  */
@@ -44,11 +44,9 @@ export function Confirm({
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent>
-        {/* Additional content can go here */}
-      </CardContent>
+      <CardContent>{/* Additional content can go here */}</CardContent>
       <CardFooter className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button onClick={onCancel} variant="outline">
           Cancel
         </Button>
         <Button onClick={onConfirm}>
@@ -58,4 +56,3 @@ export function Confirm({
     </Card>
   );
 }
-

@@ -20,22 +20,28 @@ const noteUpdateInput = z
     content: z.string().min(1).optional(),
     tags: z.array(z.string().min(1)).max(32).optional(),
   })
-  .refine(
-    value => Boolean(value.title ?? value.content ?? value.tags),
-    {
-      message: "Provide at least one field to update.",
-      path: ["title"],
-    }
-  );
+  .refine((value) => Boolean(value.title ?? value.content ?? value.tags), {
+    message: "Provide at least one field to update.",
+    path: ["title"],
+  });
 
 export const noteRouter = router({
-  create: authedProcedure.input(noteMutationInput).mutation(({ ctx, input }) =>
-    assistantRepo.createNote(ctx.session.user.id, input.content, input.title, input.tags)
-  ),
+  create: authedProcedure
+    .input(noteMutationInput)
+    .mutation(({ ctx, input }) =>
+      assistantRepo.createNote(
+        ctx.session.user.id,
+        input.content,
+        input.title,
+        input.tags
+      )
+    ),
 
-  list: authedProcedure.input(noteListInput).query(({ ctx, input }) =>
-    assistantRepo.getNotes(ctx.session.user.id, input.limit, input.offset)
-  ),
+  list: authedProcedure
+    .input(noteListInput)
+    .query(({ ctx, input }) =>
+      assistantRepo.getNotes(ctx.session.user.id, input.limit, input.offset)
+    ),
 
   update: authedProcedure.input(noteUpdateInput).mutation(async ({ input }) => {
     const updated = await assistantRepo.updateNote(input.id, {

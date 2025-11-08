@@ -2,7 +2,11 @@ import { userRepo } from "@alfred/db";
 
 export async function loadFactSummary(userId: string, limit = 10) {
   const repo = userRepo as unknown as {
-    listFacts?: (userId: string, limit?: number, offset?: number) => Promise<unknown>;
+    listFacts?: (
+      userId: string,
+      limit?: number,
+      offset?: number
+    ) => Promise<unknown>;
   };
   const result = repo.listFacts ? await repo.listFacts(userId, limit, 0) : [];
   return Array.isArray(result) ? result : [];

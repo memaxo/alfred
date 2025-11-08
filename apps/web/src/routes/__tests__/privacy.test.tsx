@@ -1,5 +1,13 @@
 import "@/test/dom";
-import { beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { PrivacyFactDeleteInput } from "@alfred/type";
 
 const toastSuccess = vi.fn();
@@ -64,19 +72,21 @@ function createDeleteMutation() {
     onSuccess?: (
       data: { removed: number },
       input: PrivacyFactDeleteInput,
-      context: unknown,
+      context: unknown
     ) => void | Promise<void>;
     onSettled?: (
       data: { removed: number } | undefined,
       error: Error | null,
       input: PrivacyFactDeleteInput,
-      context: unknown,
+      context: unknown
     ) => void | Promise<void>;
   }) => ({
     isPending: false,
     mutate: async (input: PrivacyFactDeleteInput) => {
       deleteSpy(input);
-      const context = config?.onMutate ? await config.onMutate(input) : undefined;
+      const context = config?.onMutate
+        ? await config.onMutate(input)
+        : undefined;
       const result = { removed: 1 };
       await config?.onSuccess?.(result, input, context);
       await config?.onSettled?.(result, null, input, context);

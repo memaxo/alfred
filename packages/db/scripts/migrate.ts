@@ -6,10 +6,10 @@
  */
 
 import { readdir, readFile } from "node:fs/promises";
-import { Client } from "pg";
-import dotenv from "dotenv";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
+import { Client } from "pg";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, "../src/migrations");
@@ -27,8 +27,8 @@ interface Migration {
 async function loadMigrations(): Promise<Migration[]> {
   const entries = await readdir(MIGRATIONS_DIR);
   return entries
-    .filter(file => file.endsWith(".sql"))
-    .map(file => {
+    .filter((file) => file.endsWith(".sql"))
+    .map((file) => {
       const match = file.match(/^(\d+)_(.+)\.sql$/);
       if (!match) {
         throw new Error(`Invalid migration filename: ${file}`);
@@ -54,8 +54,10 @@ async function ensureMigrationsTable(client: Client) {
 }
 
 async function fetchAppliedMigrations(client: Client): Promise<Set<number>> {
-  const result = await client.query<{ number: number }>("SELECT number FROM _migrations ORDER BY number ASC");
-  return new Set(result.rows.map(row => Number(row.number)));
+  const result = await client.query<{ number: number }>(
+    "SELECT number FROM _migrations ORDER BY number ASC"
+  );
+  return new Set(result.rows.map((row) => Number(row.number)));
 }
 
 async function applyMigration(client: Client, migration: Migration) {
@@ -69,7 +71,10 @@ async function applyMigration(client: Client, migration: Migration) {
   await client.query("BEGIN");
   try {
     await client.query(sql);
-    await client.query("INSERT INTO _migrations (number, name) VALUES ($1, $2)", [migration.number, migration.name]);
+    await client.query(
+      "INSERT INTO _migrations (number, name) VALUES ($1, $2)",
+      [migration.number, migration.name]
+    );
     await client.query("COMMIT");
     console.log(`✓ Applied ${migration.file}`);
   } catch (error) {
@@ -82,7 +87,9 @@ async function applyMigration(client: Client, migration: Migration) {
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set. Configure it in packages/db/.env or the environment.");
+    throw new Error(
+      "DATABASE_URL is not set. Configure it in packages/db/.env or the environment."
+    );
   }
 
   const migrations = await loadMigrations();
@@ -113,7 +120,7 @@ async function main() {
 }
 
 if (import.meta.main) {
-  main().catch(err => {
+  main().catch((err) => {
     console.error("Migration failed:", err);
     process.exit(1);
   });

@@ -1,4 +1,4 @@
-import { metricsContentType, getMetricsSnapshot } from "@alfred/api/metrics";
+import { getMetricsSnapshot, metricsContentType } from "@alfred/api/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/api/metrics")({

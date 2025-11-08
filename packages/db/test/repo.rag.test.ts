@@ -18,7 +18,9 @@ beforeAll(async () => {
 
 async function resetRagTables() {
   if (!SHOULD_RUN) return;
-  await db.execute(sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`);
+  await db.execute(
+    sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`
+  );
 }
 
 beforeEach(async () => {
@@ -32,7 +34,11 @@ function makeVector(seed: number) {
 describeFn("ragRepo", () => {
   it("stores documents and returns them in descending order", async () => {
     await ragRepo.createDocument("source-a", "Doc A", "Author A");
-    const second = await ragRepo.createDocument("source-b", "Doc B", "Author B");
+    const second = await ragRepo.createDocument(
+      "source-b",
+      "Doc B",
+      "Author B"
+    );
 
     const documents = await ragRepo.listDocuments(10, 0);
     expect(documents.length).toBe(2);
@@ -51,7 +57,10 @@ describeFn("ragRepo", () => {
     expect(chunkB.content).toBe("Second chunk");
 
     const ordered = await ragRepo.getChunks(document.id);
-    expect(ordered.map(chunk => chunk.content)).toEqual(["First chunk", "Second chunk"]);
+    expect(ordered.map((chunk) => chunk.content)).toEqual([
+      "First chunk",
+      "Second chunk",
+    ]);
 
     const results = await ragRepo.searchChunks(makeVector(0.4), 5, 0.1);
     expect(results.length).toBe(1);
@@ -60,7 +69,9 @@ describeFn("ragRepo", () => {
 
   it("deletes documents and cascades to chunks", async () => {
     const doc = await ragRepo.createDocument("source-d", "Doc D");
-    await ragRepo.addChunks(doc.id, [{ content: "Chunk", embedding: makeVector(0.2) }]);
+    await ragRepo.addChunks(doc.id, [
+      { content: "Chunk", embedding: makeVector(0.2) },
+    ]);
 
     const removed = await ragRepo.deleteDocument(doc.id);
     expect(removed).toBe(1);

@@ -3,9 +3,9 @@
  * Supports multiple providers with fallback logic
  */
 
-import { embed as embedText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { EmbeddingModel } from "ai";
+import { embed as embedText } from "ai";
 
 export type EmbeddingProvider = "openai" | "bedrock" | "together";
 
@@ -27,7 +27,8 @@ const FALLBACK_PROVIDERS: EmbeddingProvider[] = ["openai"];
  * Gets the configured embedding provider
  */
 export function getEmbeddingProvider(): EmbeddingProviderConfig {
-  const provider = (process.env.EMBEDDING_PROVIDER ?? "openai") as EmbeddingProvider;
+  const provider = (process.env.EMBEDDING_PROVIDER ??
+    "openai") as EmbeddingProvider;
 
   switch (provider) {
     case "openai":
@@ -47,7 +48,8 @@ export function getEmbeddingProvider(): EmbeddingProviderConfig {
  * Gets the configured reranking provider
  */
 export function getRerankingProvider(): RerankingProviderConfig {
-  const provider = (process.env.RERANKING_PROVIDER ?? "cohere") as RerankingProvider;
+  const provider = (process.env.RERANKING_PROVIDER ??
+    "cohere") as RerankingProvider;
 
   switch (provider) {
     case "cohere":
@@ -64,7 +66,7 @@ export function getRerankingProvider(): RerankingProviderConfig {
 /**
  * Health check for embedding provider
  */
-export async function checkEmbeddingProviderHealth(
+export async function checkEmbedHealth(
   config: EmbeddingProviderConfig
 ): Promise<boolean> {
   try {
@@ -81,13 +83,16 @@ export async function checkEmbeddingProviderHealth(
 /**
  * Health check for reranking provider
  */
-export async function checkRerankingProviderHealth(
+export async function checkRerankHealth(
   config: RerankingProviderConfig
 ): Promise<boolean> {
   // For now, just check if API key is present
   // Will be enhanced when Cohere provider supports reranking models
   if (config.name === "cohere") {
-    return typeof process.env.COHERE_API_KEY === "string" && process.env.COHERE_API_KEY.length > 0;
+    return (
+      typeof process.env.COHERE_API_KEY === "string" &&
+      process.env.COHERE_API_KEY.length > 0
+    );
   }
   return false;
 }
@@ -95,10 +100,10 @@ export async function checkRerankingProviderHealth(
 /**
  * Gets embedding provider with fallback logic
  */
-export async function getEmbeddingProviderWithFallback(): Promise<EmbeddingProviderConfig> {
+export async function getEmbedWithFallback(): Promise<EmbeddingProviderConfig> {
   const primary = getEmbeddingProvider();
-  const isHealthy = await checkEmbeddingProviderHealth(primary);
-  
+  const isHealthy = await checkEmbedHealth(primary);
+
   if (isHealthy) {
     return primary;
   }
@@ -112,7 +117,7 @@ export async function getEmbeddingProviderWithFallback(): Promise<EmbeddingProvi
       name: fallbackName,
       model: openai.textEmbeddingModel("text-embedding-3-small"),
     };
-    const fallbackHealthy = await checkEmbeddingProviderHealth(fallback);
+    const fallbackHealthy = await checkEmbedHealth(fallback);
     if (fallbackHealthy) {
       return fallback;
     }

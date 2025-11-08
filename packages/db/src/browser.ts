@@ -3,7 +3,9 @@
  */
 
 export function notSupported(): never {
-  throw new Error("@alfred/db is server-only and cannot be imported in the browser.");
+  throw new Error(
+    "@alfred/db is server-only and cannot be imported in the browser."
+  );
 }
 
 export default notSupported;

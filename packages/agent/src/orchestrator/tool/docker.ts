@@ -1,9 +1,16 @@
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { spawn } from "node:child_process";
-import { accessSync, realpathSync, statSync } from "node:fs";
-import { constants as fsConstants } from "node:fs";
+import {
+  accessSync,
+  constants as fsConstants,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
-import { clearTimeout as clearNodeTimeout, setTimeout as setNodeTimeout } from "node:timers";
+import {
+  clearTimeout as clearNodeTimeout,
+  setTimeout as setNodeTimeout,
+} from "node:timers";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -19,7 +26,7 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
     raw && raw.trim().length > 0
       ? raw
           .split(path.delimiter)
-          .map(entry => entry.trim())
+          .map((entry) => entry.trim())
           .filter(Boolean)
       : [];
 
@@ -27,7 +34,9 @@ const DEFAULT_ALLOW_PREFIXES = (() => {
 
   for (const entry of extras) {
     try {
-      const absolute = path.isAbsolute(entry) ? entry : path.resolve(base, entry);
+      const absolute = path.isAbsolute(entry)
+        ? entry
+        : path.resolve(base, entry);
       prefixes.add(realpathSync(absolute));
     } catch {
       // Ignore invalid entries so one bad entry does not break execution.
@@ -48,9 +57,11 @@ function safeRealpath(candidate: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!baseReal || !targetReal) return false;
+  if (!(baseReal && targetReal)) return false;
   const relative = path.relative(baseReal, targetReal);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
+  );
 }
 
 function assertAllowedDirectory(candidate: string) {
@@ -78,7 +89,9 @@ function resolveExecutable(command: string) {
     return command;
   }
 
-  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
   for (const entry of pathEntries) {
     const candidate = path.join(entry, command);
     try {
@@ -93,29 +106,46 @@ function resolveExecutable(command: string) {
 }
 
 const dockerInputSchema = z.object({
-  action: z.enum(["build", "run", "stop", "rm", "inspect", "logs", "wait", "exec.probe"]),
+  action: z.enum([
+    "build",
+    "run",
+    "stop",
+    "rm",
+    "inspect",
+    "logs",
+    "wait",
+    "exec.probe",
+  ]),
   cw: z.string().optional(),
   context: z.string().optional(),
   dockerfile: z.string().optional(),
   tag: z.string().optional(),
   name: z.string().optional(),
-  containerPort: z.number().int().min(1).max(65535).optional(),
-  hostPort: z.number().int().min(1).max(65535).optional(),
+  containerPort: z.number().int().min(1).max(65_535).optional(),
+  hostPort: z.number().int().min(1).max(65_535).optional(),
   env: z.record(z.string(), z.string()).optional(),
   network: z.string().optional(),
   authz: z.string().optional(),
   follow: z.boolean().optional(),
   tail: z.number().int().min(0).max(5000).optional(),
   url: z.string().url().optional(),
-  timeoutSec: z.number().int().min(MIN_TIMEOUT_SEC).max(MAX_TIMEOUT_SEC).optional(),
+  timeoutSec: z
+    .number()
+    .int()
+    .min(MIN_TIMEOUT_SEC)
+    .max(MAX_TIMEOUT_SEC)
+    .optional(),
 });
 
 type DockerInput = z.infer<typeof dockerInputSchema>;
 
-type ToolWriter = { write: (chunk: unknown) => Promise<void> | void } | undefined;
+type ToolWriter =
+  | { write: (chunk: unknown) => Promise<void> | void }
+  | undefined;
 
 async function enforcePolicy(input: DockerInput) {
-  const scopes = input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
+  const scopes =
+    input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
   await requireToolScopesAndPolicy(input.authz, scopes, {
     action: `docker.${input.action}`,
     resource: {
@@ -143,7 +173,9 @@ function resolveDirectory(base: string, target: string) {
 }
 
 function resolveSubpath(base: string, target: string) {
-  const absolute = path.normalize(path.isAbsolute(target) ? target : path.join(base, target));
+  const absolute = path.normalize(
+    path.isAbsolute(target) ? target : path.join(base, target)
+  );
   const parent = path.dirname(absolute);
   assertAllowedDirectory(parent);
   return absolute;
@@ -182,10 +214,12 @@ async function runDocker({
     } catch {
       // noop
     }
-    void Promise.resolve(writer?.write?.({ type: "notice", message: "docker_timeout" })).catch(() => {});
+    void Promise.resolve(
+      writer?.write?.({ type: "notice", message: "docker_timeout" })
+    ).catch(() => {});
   }, timeoutSec * 1000);
 
-  child.stdout?.on("data", chunk => {
+  child.stdout?.on("data", (chunk) => {
     const text = chunk.toString();
     accumulator.capturedBytes += Buffer.byteLength(text);
 
@@ -197,19 +231,23 @@ async function runDocker({
       }
     }
 
-    void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(() => {});
+    void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+      () => {}
+    );
   });
 
-  child.stderr?.on("data", chunk => {
+  child.stderr?.on("data", (chunk) => {
     const text = chunk.toString();
     if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
       accumulator.stderr += text;
     }
-    void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(() => {});
+    void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(
+      () => {}
+    );
   });
 
-  const exitCode: number = await new Promise(resolve => {
-    child.once("close", code => resolve(code ?? 1));
+  const exitCode: number = await new Promise((resolve) => {
+    child.once("close", (code) => resolve(code ?? 1));
     child.once("error", () => resolve(1));
   });
 
@@ -244,7 +282,10 @@ function parseInspectPorts(raw: unknown, containerPort?: number) {
     if (Array.isArray(value)) {
       for (const binding of value) {
         if (!binding) continue;
-        const hostPort = Number.parseInt((binding as Record<string, string>).HostPort ?? "", 10);
+        const hostPort = Number.parseInt(
+          (binding as Record<string, string>).HostPort ?? "",
+          10
+        );
         if (!Number.isNaN(hostPort)) {
           results.push({ container: containerInt, host: hostPort });
         }
@@ -257,7 +298,10 @@ function parseInspectPorts(raw: unknown, containerPort?: number) {
 
 async function executeBuild(input: DockerInput, writer: ToolWriter) {
   const cwd = resolveCwd(input.cw);
-  const contextPath = resolveDirectory(cwd, ensure(input.context, "docker_context_required"));
+  const contextPath = resolveDirectory(
+    cwd,
+    ensure(input.context, "docker_context_required")
+  );
   const args = ["build", "-t", ensure(input.tag, "docker_tag_required")];
 
   if (input.dockerfile) {
@@ -322,12 +366,12 @@ async function executeRun(input: DockerInput, writer: ToolWriter) {
 
   const inspect = await executeInspect(
     { ...input, action: "inspect", name, containerPort },
-    writer,
+    writer
   );
 
   const mapped = inspect.details?.ports ?? [];
   const selected = input.hostPort
-    ? mapped.find(entry => entry.host === input.hostPort) ?? mapped[0]
+    ? (mapped.find((entry) => entry.host === input.hostPort) ?? mapped[0])
     : mapped[0];
 
   return {
@@ -429,7 +473,12 @@ async function executeLogs(input: DockerInput, writer: ToolWriter) {
 
   if (result.truncated) {
     await Promise.resolve(
-      writer?.write?.({ type: "notice", message: "docker_logs_truncated", name, tail: input.tail }),
+      writer?.write?.({
+        type: "notice",
+        message: "docker_logs_truncated",
+        name,
+        tail: input.tail,
+      })
     ).catch(() => {});
   }
 
@@ -474,7 +523,10 @@ async function executeWait(input: DockerInput, writer: ToolWriter) {
 
 async function executeProbe(input: DockerInput, writer: ToolWriter) {
   const url = ensure(input.url, "docker_probe_url_required");
-  const seconds = Math.min(Math.max(input.timeoutSec ?? 30, 1), MAX_TIMEOUT_SEC);
+  const seconds = Math.min(
+    Math.max(input.timeoutSec ?? 30, 1),
+    MAX_TIMEOUT_SEC
+  );
   const timeoutMs = seconds * 1000;
   const controller = new AbortController();
   const timer = setNodeTimeout(() => {
@@ -495,12 +547,13 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
         message: "docker_probe_result",
         status: response.status,
         ok: response.ok,
-      }),
+      })
     ).catch(() => {});
 
     if (!response.ok) {
       const error = new Error("docker_probe_failed");
-      (error as Error & { status?: number; body?: string }).status = response.status;
+      (error as Error & { status?: number; body?: string }).status =
+        response.status;
       (error as Error & { status?: number; body?: string }).body = body;
       throw error;
     }
@@ -535,7 +588,9 @@ export const toolDocker = {
         containerId: z.string().optional(),
         containerPort: z.number().optional(),
         hostPort: z.number().nullable().optional(),
-        ports: z.array(z.object({ host: z.number(), container: z.number() })).optional(),
+        ports: z
+          .array(z.object({ host: z.number(), container: z.number() }))
+          .optional(),
         exitCode: z.number().optional(),
         text: z.string().optional(),
         error: z.string().optional(),

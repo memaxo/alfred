@@ -138,7 +138,9 @@ export function recordAssistantToolCall(tool: string) {
   assistantToolCounter?.labels(tool).inc();
 }
 
-export function registerAssistantEscalationCounter(counter: SingleLabelCounter) {
+export function registerAssistantEscalationCounter(
+  counter: SingleLabelCounter
+) {
   assistantEscalationCounter = counter;
 }
 

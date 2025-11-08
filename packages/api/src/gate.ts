@@ -1,15 +1,28 @@
 import * as policyRepo from "@alfred/db/repo/policy";
-import { evaluate } from "@alfred/policy";
 import type { EvaluateInput, PolicyResource } from "@alfred/policy";
+import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "./context";
-import { t } from "./trpc";
 import { policyDecisionsTotal, policyObligationsTotal } from "./metrics";
+import { t } from "./trpc";
+import {
+  getSessionUser,
+  getSessionUserId,
+  getSessionUserRoles,
+  getSessionUserScopes,
+} from "./utils/session";
 
-type MapResourceFn = (input: unknown, ctx: Context, path?: string) => PolicyResource;
+type MapResourceFn = (
+  input: unknown,
+  ctx: Context,
+  path?: string
+) => PolicyResource;
 type BuildContextFn = (input: unknown, ctx: Context) => Record<string, unknown>;
 
-function defaultResource(path: string | undefined, action: string): PolicyResource {
+function defaultResource(
+  path: string | undefined,
+  action: string
+): PolicyResource {
   return {
     kind: "route",
     id: path ?? action,
@@ -19,26 +32,22 @@ function defaultResource(path: string | undefined, action: string): PolicyResour
 export function requirePolicy(
   action: string,
   mapResource?: MapResourceFn,
-  buildContext?: BuildContextFn,
+  buildContext?: BuildContextFn
 ) {
   return t.middleware(async ({ ctx, input, path, next }) => {
-    const sessionUser = ctx.session?.user as (Context["session"] extends { user: infer U } ? U : any) | undefined;
-    const subjectId = sessionUser?.id ?? "anonymous";
-    const rawRoles: unknown[] = Array.isArray((sessionUser as any)?.roles)
-      ? (sessionUser as any).roles
-      : [];
-    const subjectRoles = rawRoles
-      .filter((role): role is string => typeof role === "string")
-      .map(role => role.trim())
-      .filter(role => role.length > 0);
-    const resource = mapResource ? mapResource(input, ctx, path) : defaultResource(path, action);
+    const sessionUser = getSessionUser(ctx.session);
+    const subjectId = getSessionUserId(sessionUser);
+    const subjectRoles = getSessionUserRoles(sessionUser);
+    const resource = mapResource
+      ? mapResource(input, ctx, path)
+      : defaultResource(path, action);
     const policyContext = buildContext ? buildContext(input, ctx) : {};
 
     const evaluation: EvaluateInput = {
       subject: {
         id: subjectId,
         roles: subjectRoles,
-        scopes: Array.isArray((sessionUser as any)?.scopes) ? (sessionUser as any).scopes : undefined,
+        scopes: getSessionUserScopes(sessionUser) ?? undefined,
       },
       action,
       resource,

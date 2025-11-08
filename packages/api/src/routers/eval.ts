@@ -1,15 +1,18 @@
-import * as evalRepo from "@alfred/db/repo/eval";
 import type { EvalRunWithRelations } from "@alfred/db/repo/eval";
+import * as evalRepo from "@alfred/db/repo/eval";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
+import { authedProcedure, router } from "../trpc";
 
 const slugSchema = z
   .string()
   .min(1)
   .max(128)
-  .regex(/^[a-z0-9\-:_]+$/i, "Slug may contain letters, numbers, dashes, colons, or underscores.");
+  .regex(
+    /^[a-z0-9\-:_]+$/i,
+    "Slug may contain letters, numbers, dashes, colons, or underscores."
+  );
 
 const defineInput = z.object({
   slug: slugSchema,
@@ -34,7 +37,7 @@ const datasetAddInput = z.object({
         input: z.unknown(),
         target: z.unknown().optional(),
         metadata: z.unknown().optional(),
-      }),
+      })
     )
     .min(1)
     .max(1000),
@@ -76,7 +79,11 @@ const runScoresInput = z.object({
 });
 
 const mapEvalResource = (raw: unknown) => {
-  const data = raw as Partial<{ defSlug?: string; datasetId?: string; runId?: string }>;
+  const data = raw as Partial<{
+    defSlug?: string;
+    datasetId?: string;
+    runId?: string;
+  }>;
   return {
     kind: "eval" as const,
     id: data.defSlug ?? data.datasetId ?? data.runId ?? "eval",
@@ -110,7 +117,7 @@ export const evalRouter = router({
       z.object({
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
-      }),
+      })
     )
     .query(({ input }) => evalRepo.listEvalDefs(input.limit, input.offset)),
 
@@ -235,8 +242,12 @@ export const evalRouter = router({
       .use(requirePolicy("eval.run", mapEvalResource))
       .input(runScoresInput)
       .query(async ({ input }) => {
-        const rows = await evalRepo.listRunScores(input.runId, input.limit, input.offset);
-        return rows.map(row => ({
+        const rows = await evalRepo.listRunScores(
+          input.runId,
+          input.limit,
+          input.offset
+        );
+        return rows.map((row) => ({
           pointId: row.point.id,
           scorer: row.score.scorer,
           score: row.score.score,

@@ -31,7 +31,7 @@ export function getRedis(): RedisClient | null {
       },
       () => {
         status = "err";
-      },
+      }
     );
     return client;
   } catch {

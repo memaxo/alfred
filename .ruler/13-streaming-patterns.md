@@ -2,14 +2,23 @@
 
 ## Core Rules
 
-1. **Typed events only.** Stream payloads must use the canonical `StreamEvent` discriminated unions from `@alfred/type/stream`; do not invent ad-hoc shapes.
-2. **Pure handlers.** Transform events in pure functions. Keep side effects (logging, navigation, metrics) in dedicated callbacks and never inside render bodies.
-3. **Stable consumers.** Wrap streaming hooks in `useCallback`/`useMemo` so handler identities stay stable across renders; avoid inline lambdas in JSX.
-4. **Cache handoff first.** Handle `cache_handoff` events before other mutations and update TanStack Query via `setQueryData` without intermediate state.
-5. **Error isolation.** Emit an explicit error state for `error` events and surface retry affordances. Never swallow errors silently.
-6. **Progressive UI.** Update connection state on `status` events (`connecting` → `connected` → `disconnected`) and gate UI affordances accordingly.
-7. **Zero-allocation hot paths.** Reuse buffers for message deltas, avoid spreading arrays on every chunk, and normalise payloads once per event.
-8. **Resource scoping.** Streams require `thread`, `agent`, and `resource` identifiers. Ensure hooks memoise subscription args to prevent resubscribes.
+1. **AI SDK v6 native streaming.** Use AI SDK v6 streaming utilities (`streamText`, `toUIMessageStreamResponse`, `useChat`) instead of custom streaming implementations. See `.ruler/15-ai-sdk-v6.md` for details.
+
+2. **Typed events only.** Stream payloads must use the canonical `StreamEvent` discriminated unions from `@alfred/type/stream`; do not invent ad-hoc shapes.
+
+3. **Pure handlers.** Transform events in pure functions. Keep side effects (logging, navigation, metrics) in dedicated callbacks and never inside render bodies.
+
+4. **Stable consumers.** Wrap streaming hooks in `useCallback`/`useMemo` so handler identities stay stable across renders; avoid inline lambdas in JSX.
+
+5. **Cache handoff first.** Handle `cache_handoff` events before other mutations and update TanStack Query via `setQueryData` without intermediate state.
+
+6. **Error isolation.** Emit an explicit error state for `error` events and surface retry affordances. Never swallow errors silently.
+
+7. **Progressive UI.** Update connection state on `status` events (`connecting` → `connected` → `disconnected`) and gate UI affordances accordingly.
+
+8. **Zero-allocation hot paths.** Reuse buffers for message deltas, avoid spreading arrays on every chunk, and normalise payloads once per event.
+
+9. **Resource scoping.** Streams require `thread`, `agent`, and `resource` identifiers. Ensure hooks memoise subscription args to prevent resubscribes.
 
 ## Hook Checklist
 

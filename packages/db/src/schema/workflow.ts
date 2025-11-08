@@ -3,7 +3,7 @@
  * Durable execution tracking for workflows
  */
 
-import { pgTable, text, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const workflowRuns = pgTable("workflow_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -32,4 +32,3 @@ export const workflowEvents = pgTable("workflow_events", {
   stepId: text("step_id"),
   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
 });
-

@@ -18,9 +18,12 @@ const rpID = (() => {
   }
 })();
 
-const trustedOrigins = [process.env.CORS_ORIGIN, "mybettertapp://", "exp://", origin].filter(
-  Boolean,
-) as string[];
+const trustedOrigins = [
+  process.env.CORS_ORIGIN,
+  "mybettertapp://",
+  "exp://",
+  origin,
+].filter(Boolean) as string[];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -47,10 +50,12 @@ export const auth = betterAuth({
       hooks: {
         after: [
           {
-            matcher: ctx => ctx.path === "/sign-in/passkey",
-            handler: createAuthMiddleware(async ctx => {
+            matcher: (ctx) => ctx.path === "/sign-in/passkey",
+            handler: createAuthMiddleware(async (ctx) => {
               const session =
-                ctx.context.newSession?.session ?? ctx.context.session?.session ?? null;
+                ctx.context.newSession?.session ??
+                ctx.context.session?.session ??
+                null;
               const sessionId = session?.id || session?.token;
               if (!sessionId) {
                 return;

@@ -11,7 +11,7 @@ export function isUIMessage(value: unknown): value is UIMessage {
   const hasValidRole =
     typeof msg.role === "string" &&
     ["system", "user", "assistant"].includes(msg.role);
-  const parts = msg.parts as unknown;
+  const parts = msg.parts;
   const hasValidParts =
     parts === undefined ||
     Array.isArray(parts) ||

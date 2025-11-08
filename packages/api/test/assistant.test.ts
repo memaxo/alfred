@@ -1,8 +1,16 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { sql } from "drizzle-orm";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import { sql } from "drizzle-orm";
 import { resetAgentMocks } from "./utils/agent-mock";
-import { createTestDb, closeTestDb } from "./utils/db";
+import { closeTestDb, createTestDb } from "./utils/db";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describe : describe.skip;
@@ -25,7 +33,7 @@ beforeAll(async () => {
 async function resetAssistantTables() {
   if (!SHOULD_RUN) return;
   await testDbHarness.db.execute(
-    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
   );
 }
 

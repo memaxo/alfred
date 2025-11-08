@@ -6,7 +6,7 @@ import type { Decision } from "./types";
 
 export function combineDecisions(decisions: Decision[]): Decision {
   const obligations = new Set<string>();
-  const denyDecision = decisions.find(decision => !decision.allow);
+  const denyDecision = decisions.find((decision) => !decision.allow);
   if (denyDecision) {
     for (const obligation of denyDecision.obligations) {
       obligations.add(obligation);
@@ -26,11 +26,11 @@ export function combineDecisions(decisions: Decision[]): Decision {
   }
 
   const combinedReason = decisions
-    .map(decision => decision.reason)
+    .map((decision) => decision.reason)
     .filter((reason): reason is string => Boolean(reason))
     .join(", ");
 
-  const ruleIds = decisions.flatMap(decision => decision.ruleIds ?? []);
+  const ruleIds = decisions.flatMap((decision) => decision.ruleIds ?? []);
 
   return {
     allow: true,

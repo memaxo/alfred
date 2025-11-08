@@ -1,4 +1,9 @@
-import type { EvaluateInput, PolicyCondition, PolicyResourceMatch, PolicyRule } from "./types";
+import type {
+  EvaluateInput,
+  PolicyCondition,
+  PolicyResourceMatch,
+  PolicyRule,
+} from "./types";
 
 function patternMatch(value: string | undefined, pattern?: string): boolean {
   if (!pattern) return true;
@@ -12,10 +17,13 @@ function patternMatch(value: string | undefined, pattern?: string): boolean {
 }
 
 function patternMatchAny(value: string, candidates: string[]): boolean {
-  return candidates.some(candidate => patternMatch(value, candidate));
+  return candidates.some((candidate) => patternMatch(value, candidate));
 }
 
-function matchesResource(resource: EvaluateInput["resource"], match?: PolicyResourceMatch): boolean {
+function matchesResource(
+  resource: EvaluateInput["resource"],
+  match?: PolicyResourceMatch
+): boolean {
   if (!match) return true;
   if (!patternMatch(resource.kind, match.kind)) {
     return false;
@@ -29,21 +37,27 @@ function matchesResource(resource: EvaluateInput["resource"], match?: PolicyReso
   return true;
 }
 
-function getValue(source: Record<string, unknown> | undefined, path: string): unknown {
-  if (!source) return undefined;
+function getValue(
+  source: Record<string, unknown> | undefined,
+  path: string
+): unknown {
+  if (!source) return;
   const segments = path.split(".");
   let current: unknown = source;
   for (const segment of segments) {
     if (current && typeof current === "object" && segment in current) {
       current = (current as Record<string, unknown>)[segment];
     } else {
-      return undefined;
+      return;
     }
   }
   return current;
 }
 
-function evaluateCondition(condition: PolicyCondition, ctx: EvaluateInput): boolean {
+function evaluateCondition(
+  condition: PolicyCondition,
+  ctx: EvaluateInput
+): boolean {
   const source = condition.source ?? "context";
   if (source !== "context") {
     return true;
@@ -74,14 +88,14 @@ function evaluateCondition(condition: PolicyCondition, ctx: EvaluateInput): bool
 export function ruleMatches(
   rule: PolicyRule,
   input: EvaluateInput,
-  subjectRoles: string[],
+  subjectRoles: string[]
 ): boolean {
   if (!patternMatchAny(input.action, rule.actions)) {
     return false;
   }
 
   if (rule.roles && rule.roles.length > 0) {
-    const hasRole = rule.roles.some(role => subjectRoles.includes(role));
+    const hasRole = rule.roles.some((role) => subjectRoles.includes(role));
     if (!hasRole) {
       return false;
     }

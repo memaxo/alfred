@@ -1,14 +1,19 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
   chmodSync,
+  mkdirSync,
+  mkdtempSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
-import { join, delimiter as pathDelimiter, resolve, isAbsolute } from "node:path";
 import os from "node:os";
+import {
+  isAbsolute,
+  join,
+  delimiter as pathDelimiter,
+  resolve,
+} from "node:path";
 import { __internals } from "../src/orchestrator/tool/droid";
 
 const { isWithinBase, pickEnv, resolveExecutable } = __internals;
@@ -62,7 +67,9 @@ describe("droid tool sandbox helpers", () => {
     it("returns base env when no overrides provided", () => {
       const result = pickEnv(undefined);
       expect(result.PATH).toBeDefined();
-      expect(Object.keys(result)).toEqual(expect.arrayContaining(["PATH", "FACTORY_API_KEY"]));
+      expect(Object.keys(result)).toEqual(
+        expect.arrayContaining(["PATH", "FACTORY_API_KEY"])
+      );
     });
   });
 
@@ -87,7 +94,9 @@ describe("droid tool sandbox helpers", () => {
       writeFileSync(executable, "#!/usr/bin/env bash\necho ok\n");
       chmodSync(executable, 0o755);
 
-      process.env.PATH = [binDir, originalPath ?? ""].filter(Boolean).join(pathDelimiter);
+      process.env.PATH = [binDir, originalPath ?? ""]
+        .filter(Boolean)
+        .join(pathDelimiter);
 
       const resolved = resolveExecutable("droid");
       expect(resolved).toBe(executable);
@@ -96,7 +105,9 @@ describe("droid tool sandbox helpers", () => {
 
     it("throws for missing binaries", () => {
       process.env.PATH = tempDir;
-      expect(() => resolveExecutable("missing-droid")).toThrowError("droid_binary_not_found");
+      expect(() => resolveExecutable("missing-droid")).toThrowError(
+        "droid_binary_not_found"
+      );
     });
   });
 });

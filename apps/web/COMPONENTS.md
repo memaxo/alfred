@@ -88,9 +88,7 @@ Each component tree has its own error boundary:
 ## Hooks
 
 ### Streaming Hooks
-- **useAgentStream**: Generic agent streaming
 - **useAssistantStream**: Assistant-specific streaming
-- **useTRPCStream**: tRPC streaming adapter
 - **useVoiceCapture**: Voice input/output handling
 
 ### Usage Example

@@ -1,6 +1,6 @@
 /**
  * Task Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/task
  * Displays task execution progress
  */
@@ -19,14 +19,14 @@ export function Task({ id, title, status, progress, className }: TaskProps) {
   return (
     <div className={cn("rounded border p-3", className)}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{title}</span>
+        <span className="font-medium text-sm">{title}</span>
         <span
           className={cn(
             "rounded px-2 py-1 text-xs",
             status === "completed" && "bg-green-100 text-green-800",
             status === "running" && "bg-blue-100 text-blue-800",
             status === "error" && "bg-red-100 text-red-800",
-            status === "pending" && "bg-gray-100 text-gray-800",
+            status === "pending" && "bg-gray-100 text-gray-800"
           )}
         >
           {status}
@@ -40,7 +40,7 @@ export function Task({ id, title, status, progress, className }: TaskProps) {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-muted-foreground text-xs">
             {progress}% complete
           </p>
         </div>
@@ -48,4 +48,3 @@ export function Task({ id, title, status, progress, className }: TaskProps) {
     </div>
   );
 }
-

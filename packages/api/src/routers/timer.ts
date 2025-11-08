@@ -11,10 +11,16 @@ export const timerRouter = router({
       })
     )
     .mutation(({ ctx, input }) =>
-      assistantRepo.createTimer(ctx.session.user.id, input.duration, input.label)
+      assistantRepo.createTimer(
+        ctx.session.user.id,
+        input.duration,
+        input.label
+      )
     ),
 
-  active: authedProcedure.query(({ ctx }) => assistantRepo.getActiveTimers(ctx.session.user.id)),
+  active: authedProcedure.query(({ ctx }) =>
+    assistantRepo.getActiveTimers(ctx.session.user.id)
+  ),
 
   done: authedProcedure
     .input(z.object({ id: z.string().uuid() }))

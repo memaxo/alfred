@@ -9,7 +9,7 @@ import { linearInstallations } from "../schema/linear";
 
 export type LinearInstallation = typeof linearInstallations.$inferSelect;
 
-export async function upsertLinearInstallation(input: {
+export async function upsertLinear(input: {
   oauthClient: string;
   appUser: string;
   space: string;
@@ -19,7 +19,16 @@ export async function upsertLinearInstallation(input: {
   expires?: Date | null;
   metadata?: unknown;
 }) {
-  const { oauthClient, appUser, space, token, refresh, scope, expires, metadata } = input;
+  const {
+    oauthClient,
+    appUser,
+    space,
+    token,
+    refresh,
+    scope,
+    expires,
+    metadata,
+  } = input;
   const now = new Date();
 
   await db
@@ -51,7 +60,7 @@ export async function upsertLinearInstallation(input: {
     });
 }
 
-export async function getLinearInstallationByWorkspace(space: string) {
+export async function getLinearByWorkspace(space: string) {
   const rows = await db
     .select()
     .from(linearInstallations)
@@ -61,7 +70,7 @@ export async function getLinearInstallationByWorkspace(space: string) {
   return rows[0] ?? null;
 }
 
-export async function getLinearInstallationByOAuthClient(oauthClient: string) {
+export async function getLinearByOAuth(oauthClient: string) {
   const rows = await db
     .select()
     .from(linearInstallations)

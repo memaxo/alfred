@@ -1,11 +1,10 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { TRPCError } from "@trpc/server";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 
 const generateTextMock = vi.fn();
 
 mock.module("@alfred/api/ai/generate", () => ({
-  callGenerateText: generateTextMock,
+  generateText: generateTextMock,
   persistGenerateResult: vi.fn().mockResolvedValue(null),
 }));
 
@@ -104,32 +103,6 @@ describe("assistant router", () => {
       usage: { inputTokens: 10, outputTokens: 15 },
       finishReason: "stop",
     });
-  });
-
-  it("stream procedure is not implemented and informs callers", async () => {
-    const caller = createCaller();
-    const observable = (await caller.stream({
-      messages: [{ role: "user", content: "set reminder" }],
-    })) as { subscribe: (handlers: { next(): void; error(error: unknown): void; complete(): void }) => { unsubscribe(): void } };
-
-    await expect(
-      new Promise((_, reject) => {
-        let subscription: { unsubscribe(): void } | null = null;
-        subscription = observable.subscribe({
-          next() {
-            /* noop */
-          },
-          error(error) {
-            subscription?.unsubscribe();
-            reject(error);
-          },
-          complete() {
-            subscription?.unsubscribe();
-            reject(new Error("stream should not complete"));
-          },
-        });
-      }),
-    ).rejects.toThrow(TRPCError);
   });
 
   it("escalates via handoff tool placeholder", async () => {

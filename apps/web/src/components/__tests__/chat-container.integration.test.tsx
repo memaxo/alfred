@@ -1,15 +1,23 @@
 import "@/test/dom";
-import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi, mock } from "bun:test";
+import { fireEvent, render, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { ChatContainer } from "../chat-container";
 
 mock.module("react-virtuoso", () => ({
-  Virtuoso: ({ data, itemContent }: { data: UIMessage[]; itemContent: (index: number, message: UIMessage) => ReactNode }) => (
+  Virtuoso: ({
+    data,
+    itemContent,
+  }: {
+    data: UIMessage[];
+    itemContent: (index: number, message: UIMessage) => ReactNode;
+  }) => (
     <div data-testid="stub-virtuoso">
       {data.map((message, index) => (
-        <div key={message.id ?? `message-${index}`}>{itemContent(index, message)}</div>
+        <div key={message.id ?? `message-${index}`}>
+          {itemContent(index, message)}
+        </div>
       ))}
     </div>
   ),
@@ -66,7 +74,9 @@ describe("ChatContainer integration", () => {
   });
 
   it("sends messages through the assistant stream hook", async () => {
-    const { getByPlaceholderText, getByText } = render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText } = render(
+      <ChatContainer agent="assistant" />
+    );
 
     const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "Hello world" } });
@@ -79,7 +89,9 @@ describe("ChatContainer integration", () => {
   });
 
   it("clears messages when the clear button is pressed", async () => {
-    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(
+      <ChatContainer agent="assistant" />
+    );
 
     const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "To clear" } });
@@ -99,7 +111,9 @@ describe("ChatContainer integration", () => {
   });
 
   it("hydrates messages when switching agents", async () => {
-    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(
+      <ChatContainer agent="assistant" />
+    );
 
     const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "Agent state" } });

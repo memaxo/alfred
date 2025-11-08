@@ -76,12 +76,20 @@ export async function listEvalDefs(limit = 50, offset = 0) {
 }
 
 export async function getEvalDefBySlug(slug: string) {
-  const rows = await db.select().from(evalDefs).where(eq(evalDefs.slug, slug)).limit(1);
+  const rows = await db
+    .select()
+    .from(evalDefs)
+    .where(eq(evalDefs.slug, slug))
+    .limit(1);
   return rows[0] ?? null;
 }
 
 export async function getEvalDefById(id: string) {
-  const rows = await db.select().from(evalDefs).where(eq(evalDefs.id, id)).limit(1);
+  const rows = await db
+    .select()
+    .from(evalDefs)
+    .where(eq(evalDefs.id, id))
+    .limit(1);
   return rows[0] ?? null;
 }
 
@@ -114,16 +122,20 @@ export async function listDatasets(defId: string, limit = 50, offset = 0) {
 }
 
 export async function getDatasetById(id: string) {
-  const rows = await db.select().from(evalDatasets).where(eq(evalDatasets.id, id)).limit(1);
+  const rows = await db
+    .select()
+    .from(evalDatasets)
+    .where(eq(evalDatasets.id, id))
+    .limit(1);
   return rows[0] ?? null;
 }
 
 export async function addPoints(
   datasetId: string,
-  points: Array<{ input: unknown; target?: unknown; metadata?: unknown }>,
+  points: Array<{ input: unknown; target?: unknown; metadata?: unknown }>
 ) {
   if (points.length === 0) return 0;
-  const rows = points.map(point => ({
+  const rows = points.map((point) => ({
     datasetId,
     input: point.input,
     target: point.target ?? null,
@@ -132,7 +144,10 @@ export async function addPoints(
 
   let inserted = 0;
   for (const chunk of chunkArray(rows)) {
-    const result = await db.insert(evalPoints).values(chunk).returning({ id: evalPoints.id });
+    const result = await db
+      .insert(evalPoints)
+      .values(chunk)
+      .returning({ id: evalPoints.id });
     inserted += result.length;
   }
   return inserted;
@@ -170,14 +185,15 @@ export async function updateRun(
     finishedAt: Date | null;
     stats: unknown;
     laminarEvalId: string | null;
-  }>,
+  }>
 ) {
   const updates: Partial<typeof evalRuns.$inferInsert> = {};
   if (patch.status !== undefined) updates.status = patch.status;
   if (patch.startedAt !== undefined) updates.startedAt = patch.startedAt;
   if (patch.finishedAt !== undefined) updates.finishedAt = patch.finishedAt;
   if (patch.stats !== undefined) updates.stats = patch.stats ?? null;
-  if (patch.laminarEvalId !== undefined) updates.laminarEvalId = patch.laminarEvalId ?? null;
+  if (patch.laminarEvalId !== undefined)
+    updates.laminarEvalId = patch.laminarEvalId ?? null;
 
   if (Object.keys(updates).length === 0) return 0;
 
@@ -198,10 +214,10 @@ export async function insertScores(
     score: number;
     reason?: unknown;
     metadata?: unknown;
-  }>,
+  }>
 ) {
   if (scores.length === 0) return 0;
-  const rows = scores.map(score => ({
+  const rows = scores.map((score) => ({
     runId,
     pointId: score.pointId,
     scorer: score.scorer,
@@ -212,13 +228,18 @@ export async function insertScores(
 
   let inserted = 0;
   for (const chunk of chunkArray(rows)) {
-    const result = await db.insert(evalScores).values(chunk).returning({ id: evalScores.id });
+    const result = await db
+      .insert(evalScores)
+      .values(chunk)
+      .returning({ id: evalScores.id });
     inserted += result.length;
   }
   return inserted;
 }
 
-export async function getRun(runId: string): Promise<EvalRunWithRelations | null> {
+export async function getRun(
+  runId: string
+): Promise<EvalRunWithRelations | null> {
   const rows = await db
     .select({
       run: evalRuns,
@@ -234,7 +255,9 @@ export async function getRun(runId: string): Promise<EvalRunWithRelations | null
   return rows[0] ?? null;
 }
 
-export async function listRuns(input: { defSlug?: string; limit?: number; offset?: number } = {}) {
+export async function listRuns(
+  input: { defSlug?: string; limit?: number; offset?: number } = {}
+) {
   const limit = input.limit ?? 50;
   const offset = input.offset ?? 0;
 
@@ -248,9 +271,14 @@ export async function listRuns(input: { defSlug?: string; limit?: number; offset
     .innerJoin(evalDefs, eq(evalRuns.defId, evalDefs.id))
     .innerJoin(evalDatasets, eq(evalRuns.datasetId, evalDatasets.id));
 
-  const filteredQuery = input.defSlug ? baseQuery.where(eq(evalDefs.slug, input.defSlug)) : baseQuery;
+  const filteredQuery = input.defSlug
+    ? baseQuery.where(eq(evalDefs.slug, input.defSlug))
+    : baseQuery;
 
-  return filteredQuery.orderBy(desc(evalRuns.createdAt)).limit(limit).offset(offset);
+  return filteredQuery
+    .orderBy(desc(evalRuns.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function listRunScores(runId: string, limit = 100, offset = 0) {
@@ -281,7 +309,7 @@ export async function getRunScoreStats(runId: string) {
     .groupBy(evalScores.scorer);
 }
 
-export async function verifyRunBelongsToDataset(runId: string, datasetId: string) {
+export async function verifyRunDataset(runId: string, datasetId: string) {
   const rows = await db
     .select({ id: evalRuns.id })
     .from(evalRuns)

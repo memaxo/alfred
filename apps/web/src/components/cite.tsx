@@ -1,6 +1,6 @@
 /**
  * Inline Citation Component
- * 
+ *
  * Adapted from ai-sdk.dev/elements/components/inline-citation
  * Displays inline citations from agent responses
  */
@@ -18,14 +18,13 @@ export function Cite({ source, text, className }: CiteProps) {
     <span className={cn("inline-flex items-center gap-1", className)}>
       <span>{text}</span>
       <a
+        className="text-primary text-xs underline"
         href={source}
-        target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-primary underline"
+        target="_blank"
       >
         [cite]
       </a>
     </span>
   );
 }
-

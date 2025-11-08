@@ -97,4 +97,3 @@ describe("mergeCacheValue", () => {
     expect(result).toEqual({ string: "b", number: 2, boolean: true });
   });
 });
-

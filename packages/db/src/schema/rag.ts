@@ -3,7 +3,15 @@
  * Documents and chunks with pgvector embeddings
  */
 
-import { pgTable, text, timestamp, uuid, integer, jsonb, vector } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
 
 // TODO: [Phase 8] Add proper indexes for performance
 // TODO: [Phase 8] Add HNSW vector indexes for semantic search

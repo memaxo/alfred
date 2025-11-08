@@ -1,4 +1,7 @@
-import type { KnowledgeConfidence, KnowledgeInsight } from "@alfred/type/knowledge";
+import type {
+  KnowledgeConfidence,
+  KnowledgeInsight,
+} from "@alfred/type/knowledge";
 
 export type MistakeEntry = {
   id: string;
@@ -11,13 +14,16 @@ export type MistakeEntry = {
 
 const ledger: MistakeEntry[] = [];
 
-const confidence = (value: number) => Math.max(0, Math.min(1, value)) as KnowledgeConfidence;
+const confidence = (value: number) =>
+  Math.max(0, Math.min(1, value)) as KnowledgeConfidence;
 
 export function recordMistake(entry: MistakeEntry): void {
   ledger.push({ ...entry });
 }
 
-export function analyzeMistakes(entries: MistakeEntry[] = ledger): KnowledgeInsight[] {
+export function analyzeMistakes(
+  entries: MistakeEntry[] = ledger
+): KnowledgeInsight[] {
   if (entries.length === 0) {
     return [];
   }
@@ -35,9 +41,11 @@ export function analyzeMistakes(entries: MistakeEntry[] = ledger): KnowledgeInsi
   for (const [category, items] of grouped.entries()) {
     insights.push({
       id: `mistake-${category}-${items.length}`,
-      derived: items.map(item => item.id),
+      derived: items.map((item) => item.id),
       conclusion: `Observed ${items.length} issue(s) in ${category}.`,
-      confidence: confidence(Math.min(1, items.length / Math.max(entries.length, 1))),
+      confidence: confidence(
+        Math.min(1, items.length / Math.max(entries.length, 1))
+      ),
       rationale: `Recent mistakes indicate focus area: ${category}.`,
     });
   }

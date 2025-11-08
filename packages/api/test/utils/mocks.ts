@@ -7,24 +7,22 @@
  * Mock fetch with recorded response
  */
 export function mockFetch(response: unknown, status = 200) {
-  return async () => {
-    return new Response(JSON.stringify(response), {
+  return async () =>
+    new Response(JSON.stringify(response), {
       status,
       headers: { "content-type": "application/json" },
     });
-  };
 }
 
 /**
  * Mock fetch with error
  */
 export function mockFetchError(message: string, status = 500) {
-  return async () => {
-    return new Response(JSON.stringify({ error: { message } }), {
+  return async () =>
+    new Response(JSON.stringify({ error: { message } }), {
       status,
       headers: { "content-type": "application/json" },
     });
-  };
 }
 
 /**
@@ -66,7 +64,7 @@ export function createMockSubscription(
   mockFn: (input: unknown, options: unknown) => unknown
 ): MockSubscriptionCallbacks {
   let callbacks: MockSubscriptionCallbacks = {};
-  
+
   mockFn = ((input: unknown, options: unknown) => {
     const opts = options as {
       onStarted?: (unsubscribe: () => void) => void;
@@ -88,7 +86,7 @@ export function createMockSubscription(
         });
       }, 0);
     }
-    return undefined;
+    return;
   }) as typeof mockFn;
 
   return callbacks;
@@ -118,4 +116,3 @@ export async function waitFor(
   }
   throw new Error(`Condition not met within ${timeout}ms`);
 }
-

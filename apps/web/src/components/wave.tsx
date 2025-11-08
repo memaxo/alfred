@@ -1,12 +1,12 @@
 /**
  * Live Waveform Component
- * 
+ *
  * Adapted from ui.elevenlabs.io/docs/components/live-waveform
  * Real-time audio waveform visualization
  */
 
-import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface WaveProps {
   isActive: boolean;
@@ -38,12 +38,11 @@ export function Wave({ isActive, data, className }: WaveProps) {
     <div className={cn("flex h-12 items-end justify-center gap-1", className)}>
       {displayData.map((value, index) => (
         <div
-          key={index}
           className="w-1 bg-primary transition-all"
+          key={index}
           style={{ height: `${value * 100}%` }}
         />
       ))}
     </div>
   );
 }
-
