@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { appRouter } from "@alfred/api";
 import { webhookErrorsTotal, webhookEventsTotal } from "@alfred/api/metrics";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -116,12 +117,12 @@ function extractAuthz(payload: unknown): string | null {
     }
     if (current && typeof current === "object") {
       const token = (current as { token?: unknown }).token;
-      if (typeof token === "string" && token.length > 0) {
-        return token;
+      if (typeof token === "string" && token.trim().length > 0) {
+        return token.trim();
       }
       const value = (current as { value?: unknown }).value;
-      if (typeof value === "string" && value.length > 0) {
-        return value;
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value.trim();
       }
     }
   }
@@ -217,6 +218,26 @@ export const Route = createFileRoute("/api/linear/webhook")({
         const authz = extractAuthz(payload);
 
         if (authz && authz.length > 0) {
+          try {
+            await requireToolScopesAndPolicy(
+              authz.startsWith("Bearer ") ? authz : `Bearer ${authz}`,
+              ["linear.write"],
+              {
+                action: "workflow.resume",
+                resource: {
+                  kind: "workflow",
+                  id: runId,
+                },
+                context: {
+                  event: "linear-authz",
+                },
+              }
+            );
+          } catch {
+            webhookErrorsTotal.labels("authz").inc();
+            return new Response("invalid_authz", { status: 401 });
+          }
+
           const caller = createWorkflowCaller(`linear-webhook-${runId}`);
           try {
             await caller.workflow.resume({
