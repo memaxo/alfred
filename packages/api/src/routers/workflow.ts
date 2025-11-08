@@ -12,6 +12,7 @@ import { runRegistry } from "../run-registry";
 import { authedProcedure, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { logger } from "../utils/logger";
+import { redactEventData } from "../utils/redaction";
 import { runPlanV6 } from "../workflow/runner";
 
 const workflowInput = z.object({
@@ -82,6 +83,19 @@ const mapWorkflowResource = (raw: unknown) => {
   };
 };
 
+function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
+  if (ctx.policy?.obligations?.length) {
+    const obligations = ctx.policy.obligations;
+    if (obligations.includes("requireBio")) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "biometric_required",
+        cause: obligations,
+      });
+    }
+  }
+}
+
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
@@ -95,6 +109,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
         });
       }
 
+      // Enforce obligations for medium/high autonomy workflows
+      if (input.auto === "medium" || input.auto === "high") {
+        ensureObligations(ctx);
+      }
+
       try {
         const abortController = new AbortController();
         const runner = runPlanV6(
@@ -106,7 +125,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
             mode: input.mode,
             context: input.context,
           },
-          { signal: abortController.signal }
+          {
+            signal: abortController.signal,
+            stepTimeoutMs: 5 * 60 * 1000, // 5 minutes per step
+            workflowTimeoutMs: 30 * 60 * 1000, // 30 minutes overall
+          }
         );
 
         // Create durable run row now so clients may hydrate history
@@ -158,6 +181,16 @@ export const workflowRouter: ReturnType<typeof router> = router({
           return () => {};
         }
 
+        // Enforce obligations for medium/high autonomy workflows
+        if (input.auto === "medium" || input.auto === "high") {
+          try {
+            ensureObligations(ctx);
+          } catch (error) {
+            emit.error(error);
+            return () => {};
+          }
+        }
+
         const abortController = new AbortController();
         let cancelled = false;
         let timerClosed = false;
@@ -193,7 +226,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 mode: input.mode,
                 context: input.context,
               },
-              { signal: abortController.signal }
+              {
+                signal: abortController.signal,
+                stepTimeoutMs: 5 * 60 * 1000, // 5 minutes per step
+                workflowTimeoutMs: 30 * 60 * 1000, // 30 minutes overall
+              }
             );
 
             await workflowRepo.createRun({
@@ -218,18 +255,37 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
 
             recordEvent("run");
+            const VALID_EVENT_TYPES = [
+              "run",
+              "progress",
+              "context",
+              "require-scope",
+              "notice",
+              "error",
+              "stdout",
+              "stderr",
+              "droid",
+              "data-cache-handoff",
+            ] as const;
+            const getEventType = (event: WorkflowEvent): string => {
+              const type = event.type;
+              return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
+            };
+
             // Consume the generator, persisting each event then pushing to client
             for await (const event of runner.stream) {
               try {
+                // Redact PII/secrets before persistence
+                const redactedEventData = redactEventData(event);
                 await workflowRepo.appendEvent({
                   runId,
-                  eventType: event.type ?? "event",
-                  eventData: event,
+                  eventType: getEventType(event),
+                  eventData: redactedEventData,
                 });
               } catch (error) {
                 logger.warn("workflow_event_persistence_failed", {
                   runId,
-                  eventType: event.type ?? "event",
+                  eventType: getEventType(event),
                   error: error instanceof Error ? error.message : String(error),
                 });
                 // Continue streaming without throwing

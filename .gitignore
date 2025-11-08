@@ -50,6 +50,9 @@ coverage
 tmp
 temp
 
+# Workflow DevKit docs (kept locally but not tracked)
+docs/use-workflow/
+
 # START Ruler Generated Files
 /AGENTS.md
 /AGENTS.md.bak
