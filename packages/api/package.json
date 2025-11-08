@@ -28,7 +28,6 @@
     "drizzle-orm": "catalog:",
     "ai": "catalog:",
     "@ai-sdk/google": "catalog:",
-    "dotenv": "catalog:",
     "zod": "catalog:",
     "prom-client": "^15.1.3",
     "@alfred/auth": "workspace:*",

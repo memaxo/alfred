@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+/// <reference types="bun" />
 import path from "node:path";
 import { ingestCodeFiles } from "@alfred/rag";
 import type {
@@ -161,35 +161,35 @@ async function fallbackScan(
   while (queue.length > 0 && collected.length < topK * 4) {
     const current = queue.pop();
     if (!current) continue;
-    let entries;
+    let entries: string[];
     try {
-      entries = await readdir(current, { withFileTypes: true });
+      entries = await Array.fromAsync(Bun.readdir(current));
     } catch {
       continue;
     }
-    for (const entry of entries) {
+    for (const entryName of entries) {
       if (
-        entry.name.startsWith(".") &&
-        !exts.has(`.${entry.name}`) &&
-        ignore.has(entry.name)
+        entryName.startsWith(".") &&
+        !exts.has(`.${entryName}`) &&
+        ignore.has(entryName)
       )
         continue;
-      if (ignore.has(entry.name)) continue;
-      const resolved = path.join(current, entry.name);
+      if (ignore.has(entryName)) continue;
+      const resolved = path.join(current, entryName);
       if (!within(cw, resolved)) continue;
-      if (entry.isDirectory()) {
-        queue.push(resolved);
-        continue;
-      }
-      const ext = path.extname(entry.name).toLowerCase();
-      if (exts.size > 0 && !exts.has(ext)) continue;
-      let stats;
+      let entryStats;
       try {
-        stats = await stat(resolved);
+        entryStats = await Bun.stat(resolved);
       } catch {
         continue;
       }
-      const relPath = path.relative(cw, resolved) || entry.name;
+      if (entryStats.isDirectory()) {
+        queue.push(resolved);
+        continue;
+      }
+      const ext = path.extname(entryName).toLowerCase();
+      if (exts.size > 0 && !exts.has(ext)) continue;
+      const relPath = path.relative(cw, resolved) || entryName;
       const lowerPath = relPath.toLowerCase();
       let score = 0;
       for (const keyword of keywords) {
@@ -208,7 +208,7 @@ async function fallbackScan(
         path: relPath,
         score,
         reason,
-        bytes: stats.size,
+        bytes: entryStats.size,
       });
     }
   }
@@ -512,7 +512,7 @@ export async function gatherWebContext({
 
 async function readFileSlice(fullPath: string) {
   try {
-    const content = await readFile(fullPath, "utf8");
+    const content = await Bun.file(fullPath).text();
     return content;
   } catch {
     return null;

@@ -1,21 +1,18 @@
 #!/usr/bin/env bun
 
+/// <reference types="bun" />
+
 /**
  * ALFRED Database Migration Runner
  * Applies SQL migrations in order and records them in _migrations.
  */
 
-import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
 import { Client } from "pg";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, "../src/migrations");
-
-dotenv.config({ path: join(__dirname, "../.env") });
-dotenv.config();
 
 interface Migration {
   file: string;
@@ -25,7 +22,7 @@ interface Migration {
 }
 
 async function loadMigrations(): Promise<Migration[]> {
-  const entries = await readdir(MIGRATIONS_DIR);
+  const entries = await Array.fromAsync(Bun.readdir(MIGRATIONS_DIR));
   return entries
     .filter((file) => file.endsWith(".sql"))
     .map((file) => {
@@ -61,7 +58,7 @@ async function fetchAppliedMigrations(client: Client): Promise<Set<number>> {
 }
 
 async function applyMigration(client: Client, migration: Migration) {
-  const sql = await readFile(migration.path, "utf8");
+  const sql = await Bun.file(migration.path).text();
   if (!sql.trim()) {
     console.log(`⊘ Skipping empty migration ${migration.file}`);
     return;

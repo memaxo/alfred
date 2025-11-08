@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+/// <reference types="bun" />
 import { resolve } from "node:path";
 import YAML from "yaml";
 import { z } from "zod";
@@ -58,13 +58,13 @@ export async function loadPolicy(
   path: string = DEFAULT_POLICY_PATH
 ): Promise<PolicyDocument> {
   const resolvedPath = resolve(process.cwd(), path);
-  const stats = await stat(resolvedPath);
+  const stats = await Bun.stat(resolvedPath);
 
   if (cache && cache.path === resolvedPath && cache.mtimeMs === stats.mtimeMs) {
     return cache.doc;
   }
 
-  const raw = await readFile(resolvedPath, "utf8");
+  const raw = await Bun.file(resolvedPath).text();
   const parsed = policyDocumentSchema.parse(YAML.parse(raw) ?? {});
 
   const roles: PolicyDocument["roles"] = Object.fromEntries(
