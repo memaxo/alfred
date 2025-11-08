@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, lt, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workflowEvents, workflowRuns } from "../schema/workflow";
 
@@ -108,4 +108,57 @@ export async function getRun(runId: string) {
     .where(eq(workflowRuns.id, runId))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Prunes old workflow data based on retention policy.
+ * Should be called by a scheduler gated behind env flag per .ruler/02-architecture.md
+ */
+export async function pruneOldRuns(
+  retentionDays = 90
+): Promise<{ deletedRuns: number; deletedEvents: number }> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+  // Delete old events first (cascade will handle run cleanup if needed)
+  const eventsResult = await db.execute(
+    sql`DELETE FROM workflow_events WHERE timestamp < ${cutoffDate}`
+  );
+
+  // Delete completed/failed/cancelled runs older than retention period
+  const runsResult = await db
+    .delete(workflowRuns)
+    .where(
+      and(
+        eq(workflowRuns.status, "completed"),
+        lt(workflowRuns.created, cutoffDate)
+      )
+    )
+    .returning();
+
+  // Also delete failed and cancelled runs
+  const failedResult = await db
+    .delete(workflowRuns)
+    .where(
+      and(
+        eq(workflowRuns.status, "failed"),
+        lt(workflowRuns.created, cutoffDate)
+      )
+    )
+    .returning();
+
+  const cancelledResult = await db
+    .delete(workflowRuns)
+    .where(
+      and(
+        eq(workflowRuns.status, "cancelled"),
+        lt(workflowRuns.created, cutoffDate)
+      )
+    )
+    .returning();
+
+  return {
+    deletedRuns: runsResult.length + failedResult.length + cancelledResult.length,
+    deletedEvents: eventsResult.rowCount ?? 0,
+  };
 }
