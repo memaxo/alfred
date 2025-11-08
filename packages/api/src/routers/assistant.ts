@@ -5,7 +5,7 @@ import { stepCountIs, type ModelMessage } from "ai";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { callGenerateText } from "../ai/generate";
+import { callGenerateText, persistGenerateResult } from "../ai/generate";
 import { cloneRuntimeContext } from "../context";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
@@ -165,7 +165,21 @@ export const assistantRouter: ReturnType<typeof router> = router({
           ...(stopWhen ? { stopWhen } : {}),
         });
 
-        return sanitizeGenerateResult(result);
+        const output = sanitizeGenerateResult(result);
+        // Optionally persist for replay
+        try {
+          const replayId = await persistGenerateResult({
+            userId: session.user.id,
+            kind: "assistant",
+            input,
+            result: output,
+          });
+          return { ...output, replayId: replayId ?? undefined } as typeof output & {
+            replayId?: string;
+          };
+        } catch {
+          return output;
+        }
       } catch (error) {
         throw toTRPCError(error);
       }

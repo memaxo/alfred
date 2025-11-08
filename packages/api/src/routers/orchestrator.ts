@@ -2,7 +2,7 @@ import { buildOrchestratorTools, getModelId, getOpenAI } from "@alfred/agent";
 import { stepCountIs, type ModelMessage } from "ai";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { callGenerateText } from "../ai/generate";
+import { callGenerateText, persistGenerateResult } from "../ai/generate";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
@@ -114,7 +114,20 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
           toolChoice: input.toolChoice,
           ...(stopWhen ? { stopWhen } : {}),
         });
-        return sanitizeResult(result);
+        const output = sanitizeResult(result);
+        try {
+          const replayId = await persistGenerateResult({
+            userId: session.user.id,
+            kind: "orchestrator",
+            input,
+            result: output,
+          });
+          return { ...output, replayId: replayId ?? undefined } as typeof output & {
+            replayId?: string;
+          };
+        } catch {
+          return output;
+        }
       } catch (error) {
         throw toTrpcError(error);
       }

@@ -1,7 +1,7 @@
 import { type WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import { randomUUID } from "node:crypto";
+// import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { requirePolicy } from "../gate";
@@ -9,7 +9,7 @@ import { router, authedProcedure } from "../trpc";
 import { runRegistry } from "../run-registry";
 import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
 import { runPlanV6 } from "../workflow/runner";
-import { workflowRepo } from "@alfred/db";
+import * as workflowRepo from "@alfred/db/repo/workflow";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -174,6 +174,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         };
 
         const asyncTask = (async () => {
+          let runId: string | null = null;
           try {
             const runner = runPlanV6(
               {
@@ -195,7 +196,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
               inputData: input,
             });
 
-            const runId = runner.runId;
+            runId = runner.runId;
             await runRegistry.register(runId, {
               resume: async ({ resumeData }) => {
                 if (cancelled) return;
@@ -242,7 +243,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
             emit.error(toTRPCError(error));
           } finally {
             try {
-              await runRegistry.unregister(runId);
+              if (runId) {
+                await runRegistry.unregister(runId);
+              }
             } catch {
               // ignore unregister errors
             }

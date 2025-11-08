@@ -29,7 +29,7 @@ Observable end result:
 - [x] (2025-11-08T18:30Z) Implemented v6 Workflow Runner (packages/api/src/workflow/runner.ts) and integrated with workflow router start/stream/resume.
 - [x] (2025-11-08T18:45Z) Added durable persistence for workflow runs/events via packages/db/src/repo/workflow.ts; router persists each streamed event.
 - [x] (2025-11-08T18:50Z) Tightened policy gate defaults (no implicit owner); verified gate.ts uses trimmed roles with no fallback.
-- [ ] (TODO) Restore non-stream structured tool replay (assistant/orchestrator generate) and DB persistence.
+- [x] (2025-11-08T19:05Z) Restored non-stream structured tool replay: assistant/orchestrator generate optionally persist results to durable store (ENABLE_GENERATE_PERSIST=1).
 - [x] (2025-11-08T18:55Z) Observability baseline: workflow stream counters/histograms wired; run-registry metrics active.
 - [ ] (TODO) Tests: SSE, resume, persistence, policy gates; update CI to run green.
 - [ ] (TODO) Docs & migration notes; update env.example for runner and redis.
