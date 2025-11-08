@@ -1,20 +1,15 @@
-import {
-  implementationPlanSchema,
-  type ImplementationPlan,
-  type ModulePlan,
-  type Task,
-  type WorkflowEvent,
-} from "@alfred/type";
+import { type WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 
 import { requirePolicy } from "../gate";
 import { router, authedProcedure } from "../trpc";
 import { runRegistry } from "../run-registry";
 import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
+import { runPlanV6 } from "../workflow/runner";
+import { workflowRepo } from "@alfred/db";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -98,74 +93,6 @@ function toTRPCError(error: unknown): TRPCError {
   });
 }
 
-function buildPlaceholderPlan(input: z.infer<typeof workflowInput>): ImplementationPlan {
-  const now = new Date();
-  const planId = `plan-${randomUUID().slice(0, 8)}`;
-  const taskId = `task-${randomUUID().slice(0, 8)}`;
-  const moduleId = `module-${randomUUID().slice(0, 8)}`;
-
-  const task: Task = {
-    id: taskId,
-    title: input.requirement,
-    description: `Assess and execute requirement: ${input.requirement}`,
-    status: "pending",
-    auto: input.auto,
-    dependencies: [],
-    created: now,
-  };
-
-  const module: ModulePlan = {
-    id: moduleId,
-    path: input.repoBase ?? "./",
-    description: `Initial module for ${input.requirement}`,
-    tasks: [task],
-    status: "pending",
-  };
-
-  const plan: ImplementationPlan = implementationPlanSchema.parse({
-    id: planId,
-    title: `Plan for ${input.requirement}`,
-    description: `Auto-generated placeholder plan for ${input.requirement}.`,
-    ticket: input.linear?.sessionId,
-    modules: [module],
-    strategy: input.mode,
-    status: "planning",
-    created: now,
-    metadata: {
-      requirement: input.requirement,
-      auto: input.auto,
-      workspace: input.workspace,
-      repoBase: input.repoBase,
-    },
-  });
-
-  return plan;
-}
-
-function buildResultsFromPlan(plan: ImplementationPlan) {
-  const results: Array<{
-    task: string;
-    taskId?: string;
-    outcome: string;
-    module: string;
-    status: "completed" | "failed";
-  }> = [];
-
-  for (const module of plan.modules) {
-    for (const task of module.tasks) {
-      results.push({
-        task: task.title,
-        taskId: task.id,
-        outcome: "pending",
-        module: module.description,
-        status: "completed",
-      });
-    }
-  }
-
-  return results;
-}
-
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
     .use(requirePolicy("workflow.plan", raw => mapWorkflowResource(raw)))
@@ -177,16 +104,32 @@ export const workflowRouter: ReturnType<typeof router> = router({
       }
 
       try {
-        const runId = randomUUID();
-        const summary = `Plan initialized for ${input.requirement}`;
-        const plan = buildPlaceholderPlan(input);
-        const results = buildResultsFromPlan(plan);
+        const runner = runPlanV6(
+          {
+            requirement: input.requirement,
+            auto: input.auto,
+            workspace: input.workspace,
+            repoBase: input.repoBase,
+            mode: input.mode,
+            context: input.context,
+          },
+          { signal: new AbortController().signal },
+        );
+
+        // Create durable run row now so clients may hydrate history
+        await workflowRepo.createRun({
+          id: runner.runId,
+          userId: session.user.id,
+          workflowId: "plan",
+          status: "running",
+          inputData: input,
+        });
 
         return {
-          runId,
-          summary,
-          results,
-          plan,
+          runId: runner.runId,
+          summary: runner.summary,
+          results: [],
+          plan: null,
           vcs: null,
           report: null,
           planArtifact: null,
@@ -209,7 +152,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
           return () => {};
         }
 
-        const runId = randomUUID();
         const abortController = new AbortController();
         let cancelled = false;
         let timerClosed = false;
@@ -233,13 +175,31 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         const asyncTask = (async () => {
           try {
+            const runner = runPlanV6(
+              {
+                requirement: input.requirement,
+                auto: input.auto,
+                workspace: input.workspace,
+                repoBase: input.repoBase,
+                mode: input.mode,
+                context: input.context,
+              },
+              { signal: abortController.signal },
+            );
+
+            await workflowRepo.createRun({
+              id: runner.runId,
+              userId: session.user.id,
+              workflowId: "plan",
+              status: "running",
+              inputData: input,
+            });
+
+            const runId = runner.runId;
             await runRegistry.register(runId, {
               resume: async ({ resumeData }) => {
                 if (cancelled) return;
-                push({
-                  type: "notice",
-                  message: `Authorization '${resumeData.event}' acknowledged.`,
-                });
+                await runner.resume(resumeData);
               },
               cancel: async () => {
                 cancelled = true;
@@ -249,30 +209,30 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
 
             recordEvent("run");
-            push({ type: "notice", message: `Planning started for ${input.requirement}` });
-            emit.next({ type: "run", id: runId } as unknown as WorkflowEvent);
-            push({ type: "progress", pct: 10, message: "Analyzing requirement" });
-            await delay(150);
+            // Consume the generator, persisting each event then pushing to client
+            for await (const event of runner.stream) {
+              try {
+                await workflowRepo.appendEvent({
+                  runId,
+                  eventType: event.type ?? "event",
+                  eventData: event,
+                });
+              } catch {
+                // persistence should not break streaming to client
+              }
+              push(event);
+            }
 
-            if (cancelled) return;
-            push({
-              type: "notice",
-              message: "Gathering context and preparing orchestrator tools (placeholder).",
-            });
-            push({ type: "progress", pct: 45, message: "Context preparation complete" });
-            await delay(150);
+            // Mark completion
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "completed",
+                completedAt: new Date(),
+              });
+            } catch {
+              // ignore persistence errors on completion
+            }
 
-            if (cancelled) return;
-            const plan = buildPlaceholderPlan(input);
-            push({
-              type: "notice",
-              message: `Draft plan ready: ${plan.title}`,
-            });
-            push({ type: "progress", pct: 80, message: "Plan validation" });
-            await delay(150);
-
-            if (cancelled) return;
-            push({ type: "progress", pct: 100, message: "workflow_completed" });
             recordEvent("complete");
             closeTimer("ok");
             emit.complete();
@@ -281,7 +241,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
             closeTimer("error");
             emit.error(toTRPCError(error));
           } finally {
-            await runRegistry.unregister(runId);
+            try {
+              await runRegistry.unregister(runId);
+            } catch {
+              // ignore unregister errors
+            }
           }
         })();
 
@@ -290,7 +254,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
         return () => {
           cancelled = true;
           abortController.abort();
-          void runRegistry.unregister(runId);
           if (!timerClosed) {
             recordEvent("cancel");
             closeTimer("cancel");
@@ -318,5 +281,24 @@ export const workflowRouter: ReturnType<typeof router> = router({
       }
 
       return { ok: true };
+    }),
+
+  // Return durable run metadata
+  get: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+      }
+      return run;
+    }),
+
+  // Return durable events for a run (newest first)
+  events: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const events = await workflowRepo.listEvents(input.runId);
+      return events;
     }),
 });

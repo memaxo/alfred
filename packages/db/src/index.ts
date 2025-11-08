@@ -25,3 +25,4 @@ export * as linearRepo from "./repo/linear";
 export * as deployRepo from "./repo/deploy";
 export * as policyRepo from "./repo/policy";
 export * as evalRepo from "./repo/eval";
+export * as workflowRepo from "./repo/workflow";
