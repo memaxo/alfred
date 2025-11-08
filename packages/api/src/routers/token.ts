@@ -3,7 +3,7 @@ import { issueAccessToken } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { requirePolicy } from "../gate";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 
 const scopesSchema = z.array(z.string().trim().min(1)).min(1);
 const ttlSchema = z.number().int().min(60).max(900).optional();

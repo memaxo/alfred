@@ -3,10 +3,7 @@
  * Drizzle client, schemas, and repositories
  */
 
-import { drizzle } from "drizzle-orm/node-postgres";
-
-// TODO: [Phase 3] Configure production-ready drizzle client with pooling
-export const db = drizzle(process.env.DATABASE_URL || "");
+export { db, createDrizzleClient, createPgClient, createPgPool } from "./client";
 
 // Schemas are exposed under namespaces to avoid duplicate export collisions.
 export * as userSchema from "./schema/user";
@@ -17,6 +14,7 @@ export * as linearSchema from "./schema/linear";
 export * as deploySchema from "./schema/deploy";
 export * as policySchema from "./schema/policy";
 export * as evalSchema from "./schema/eval";
+export * as workflowSchema from "./schema/workflow";
 
 // Export repositories as namespaces
 export * as userRepo from "./repo/user";

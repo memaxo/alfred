@@ -3,22 +3,31 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./self_supervision": "./src/self_supervision.ts",
-    "./mistake_ledger": "./src/mistake_ledger.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./self_supervision": {
+      "types": "./dist/self_supervision.d.ts",
+      "default": "./src/self_supervision.ts"
+    },
+    "./mistake_ledger": {
+      "types": "./dist/mistake_ledger.d.ts",
+      "default": "./src/mistake_ledger.ts"
+    }
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@alfred/type": "workspace:*"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",
-    "tsdown": "^0.2.16",
     "typescript": "^5.7.2"
   }
 }

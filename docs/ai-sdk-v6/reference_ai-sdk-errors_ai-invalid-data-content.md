@@ -1,0 +1,37 @@
+AI SDK ErrorsAI_InvalidDataContent
+
+Copy markdown
+
+# AI_InvalidDataContent
+
+This error occurs when invalid data content is provided.
+
+## Properties
+
+  * `content`: The invalid content value
+  * `message`: The error message
+  * `cause`: The cause of the error
+
+## Checking for this Error
+
+You can check if an error is an instance of `AI_InvalidDataContent` using:
+    
+    
+    import { InvalidDataContent } from 'ai';
+    
+    
+    
+    
+    if (InvalidDataContent.isInstance(error)) {
+    
+      // Handle the error
+    
+    }
+
+Previous
+
+AI_InvalidDataContentError
+
+Next
+
+AI_InvalidMessageRoleError

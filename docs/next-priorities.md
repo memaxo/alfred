@@ -54,7 +54,7 @@ Based on analysis of current codebase state, here are the actual next priority d
   - Generate query embedding
   - Vector similarity search in pgvector
   - Filter by threshold
-  - Optional re-ranking with Mastra scorers
+  - Optional re-ranking with AI SDK scorers
   
 - **`embed()` function** - Embedding generation
   - Call OpenAI `text-embedding-3-small` API
@@ -207,4 +207,3 @@ Based on analysis of current codebase state, here are the actual next priority d
 6. **Voice** enables hands-free interaction for mobile/drive scenarios
 
 All of these work together to create a cohesive, production-ready MVP system.
-

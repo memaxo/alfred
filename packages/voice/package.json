@@ -3,12 +3,39 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./session": "./src/session.ts",
-    "./audio": "./src/audio/index.ts",
-    "./transport": "./src/transport/trpc.ts",
-    "./adapters/native": "./src/adapters/native.ts",
-    "./adapters/web": "./src/adapters/web.ts",
-    "./types": "./src/types.ts"
+    ".": {
+      "types": "./dist/types.d.ts",
+      "default": "./src/types.ts"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./src/types.ts"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "default": "./src/session.ts"
+    },
+    "./audio": {
+      "types": "./dist/audio/index.d.ts",
+      "default": "./src/audio/index.ts"
+    },
+    "./transport": {
+      "types": "./dist/transport/trpc.d.ts",
+      "default": "./src/transport/trpc.ts"
+    },
+    "./adapters/native": {
+      "types": "./dist/adapters/native.d.ts",
+      "default": "./src/adapters/native.ts"
+    },
+    "./adapters/web": {
+      "types": "./dist/adapters/web.d.ts",
+      "default": "./src/adapters/web.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b"
   },
   "peerDependencies": {
     "@alfred/type": "workspace:*",

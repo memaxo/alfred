@@ -107,8 +107,6 @@ After authentication, you can use the access token to interact with the Notion A
 
 [Previous Page\\
 \\
-Slack](https://www.better-auth.com/docs/authentication/slack) [Next Page\\
-\\
 Naver](https://www.better-auth.com/docs/authentication/naver)
 
 ### On this page

@@ -1,5 +1,6 @@
-import { mastra } from "@alfred/agent";
+import { appRouter } from "@alfred/api";
 import { webhookEventsTotal, webhookErrorsTotal } from "@alfred/api/metrics";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import crypto from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -75,6 +76,77 @@ function extractEventType(body: unknown): string {
   return "unknown";
 }
 
+const AUTHZ_PATHS: Array<string[]> = [
+  ["data", "authorization"],
+  ["data", "authz"],
+  ["data", "agentSession", "authorization"],
+  ["data", "agentSession", "authorization", "token"],
+  ["data", "agentSession", "authz"],
+  ["data", "authorization", "value"],
+  ["data", "authorization", "token"],
+  ["data", "metadata", "authz"],
+];
+
+function extractAuthz(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  for (const path of AUTHZ_PATHS) {
+    let current: unknown = payload;
+    for (const segment of path) {
+      if (!current || typeof current !== "object") {
+        current = undefined;
+        break;
+      }
+      current = (current as Record<string, unknown>)[segment];
+    }
+    if (typeof current === "string" && current.trim().length > 0) {
+      return current.trim();
+    }
+    if (current && typeof current === "object") {
+      const token = (current as { token?: unknown }).token;
+      if (typeof token === "string" && token.length > 0) {
+        return token;
+      }
+      const value = (current as { value?: unknown }).value;
+      if (typeof value === "string" && value.length > 0) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
+function createWorkflowCaller(requestId: string) {
+  return appRouter.createCaller({
+    session: {
+      user: {
+        id: "system",
+        roles: ["system"],
+        scopes: ["workflow.plan", "linear.write"],
+        email: "system@alfred.local",
+        name: "Linear Webhook",
+      },
+    } as any,
+    runtime: {
+      requestId,
+      receivedAt: new Date(),
+      method: "POST",
+      url: "linear:webhook",
+      ip: null,
+      forwardedFor: [],
+      userAgent: "linear-webhook",
+      referer: null,
+    },
+    runtimeContext: new RuntimeContext([["requestId", requestId]]),
+    policy: {
+      obligations: [],
+    },
+  });
+}
+
 export const Route = createFileRoute("/api/linear/webhook")({
   server: {
     handlers: {
@@ -119,20 +191,29 @@ export const Route = createFileRoute("/api/linear/webhook")({
 
         const runIdCandidate =
           (payload as { data?: { agentSessionId?: unknown } })?.data?.agentSessionId;
-        const runId = typeof runIdCandidate === "string" && runIdCandidate.length > 0 ? runIdCandidate : mastra.generateId();
+        const runId =
+          typeof runIdCandidate === "string" && runIdCandidate.length > 0
+            ? runIdCandidate
+            : crypto.randomUUID();
 
-        try {
-          await mastra.pubsub.publish("linear.agent_activity", {
-            type: eventType,
-            data: payload,
-            runId,
-          });
-        } catch {
-          webhookErrorsTotal.labels("publish").inc();
-          return new Response("publish_failed", { status: 500 });
+        const authz = extractAuthz(payload);
+
+        if (authz && authz.length > 0) {
+          const caller = createWorkflowCaller(`linear-webhook-${runId}`);
+          try {
+            await caller.workflow.resume({
+              runId,
+              event: "linear-authz",
+              authz,
+            });
+          } catch (error) {
+            console.error("[linear-webhook] Failed to resume workflow:", error);
+            webhookErrorsTotal.labels("resume").inc();
+            return new Response("resume_failed", { status: 500 });
+          }
         }
 
-        return new Response(JSON.stringify({ ok: true }), {
+        return new Response(JSON.stringify({ ok: true, runId, resumed: Boolean(authz) }), {
           status: 202,
           headers: {
             "content-type": "application/json",

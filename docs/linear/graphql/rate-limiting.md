@@ -1,6 +1,6 @@
 # Rate limiting
 
-Calls to our GraphQL API are rate limited to provide equitable access to the API for everyone and to prevent abuse. We are going to be evolving these limits as we gather more information, and encourage your feedback. Any changes to limits will be announced in our Slack community [API announcements channel](https://linearcustomers.slack.com/archives/CN61HRZ9T).
+Calls to our GraphQL API are rate limited to provide equitable access to the API for everyone and to prevent abuse. We are going to be evolving these limits as we gather more information, and encourage your feedback. Any changes to limits will be announced through our standard product update channels.
 
 We use the [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket) algorithm for our rate limiters, which means that your tokens are refilled with a constant rate of `LIMIT_AMOUNT / LIMIT_PERIOD`.
 

@@ -10,13 +10,15 @@
  */
 
 import { ErrorBoundary } from "./error-boundary";
-import { Chat } from "./chat";
+import { Chat } from "@alfred/ui";
 import { Controls } from "./controls";
 import { Connect } from "./connect";
 import { Load } from "./load";
 import { Actions } from "./actions";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import type { UIMessage } from "@alfred/type/stream";
+import { Virtuoso } from "react-virtuoso";
 
 interface ChatContainerProps {
   agent: "assistant" | "orchestrator";
@@ -24,8 +26,9 @@ interface ChatContainerProps {
   resource?: string;
 }
 
-export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
+export function ChatContainer({ agent }: ChatContainerProps) {
   const [currentAgent, setCurrentAgent] = useState<"assistant" | "orchestrator">(agent);
+  const contextsRef = useRef<Map<string, UIMessage[]>>(new Map());
   
   const {
     messages,
@@ -34,9 +37,8 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
     error,
     send,
     clear,
+    hydrate,
   } = useAssistantStream({
-    thread,
-    resource,
     onError: (err) => {
       console.error("Chat error:", err);
     },
@@ -58,6 +60,20 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
     [currentAgent, send],
   );
 
+  const handleAgentChange = useCallback(
+    (nextAgent: "assistant" | "orchestrator") => {
+      if (nextAgent === currentAgent) return;
+      contextsRef.current.set(currentAgent, messages);
+      clear();
+      setCurrentAgent(nextAgent);
+      const snapshot = contextsRef.current.get(nextAgent);
+      if (snapshot) {
+        hydrate(snapshot);
+      }
+    },
+    [clear, currentAgent, hydrate, messages],
+  );
+
   const showActionsPanel = actions.length > 0;
   return (
     <ErrorBoundary>
@@ -66,7 +82,7 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
         <div className="p-4 border-b space-y-2">
           <Controls
             agent={currentAgent}
-            onAgentChange={setCurrentAgent}
+            onAgentChange={handleAgentChange}
             onClear={clear}
           />
           <div className="flex items-center justify-between">
@@ -95,6 +111,10 @@ export function ChatContainer({ agent, thread, resource }: ChatContainerProps) {
                     ? "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
+                disabled={currentAgent !== "assistant"}
+                virtualized
+                perf
+                ListComponent={Virtuoso}
                 onVoice={() => {
                   console.log("Voice input not yet implemented");
                 }}

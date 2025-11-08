@@ -310,17 +310,27 @@ This is reasonable to use if Codex is running in an environment that provides it
 
 Though using this option may also be necessary if you try to use Codex in environments where its native sandboxing mechanisms are unsupported, such as older Linux kernels or on Windows.
 
+### features
+
+Opt into feature flags via the `[features]` table. Flags default to `false` (disabled) unless you enable them explicitly:
+
+```toml
+[features]
+web_search_request = true   # allow Codex to issue first-party web searches without prompting you
+```
+
+`web_search_request` replaces the deprecated `tools.web_search` key. You can also set it from the CLI with `--enable web_search_request`.
+
 ### tools.\*
 
-Use the optional `[tools]` table to toggle built-in tools that the agent may call. Both keys default to `false` (tools stay disabled) unless you opt in:
+Use the optional `[tools]` table to toggle remaining built-in tools that the agent may call. Keys default to `false` unless you opt in:
 
 ```toml
 [tools]
-web_search = true   # allow Codex to issue first-party web searches without prompting you
 view_image = true   # let Codex attach local images (paths in your workspace) to the model request
 ```
 
-`web_search` is also recognized under the legacy name `web_search_request`. The `view_image` toggle is useful when you want to include screenshots or diagrams from your repo without pasting them manually. Codex still respects sandboxing: it can only attach files inside the workspace roots you allow.
+The `view_image` toggle is useful when you want to include screenshots or diagrams from your repo without pasting them manually. Codex still respects sandboxing: it can only attach files inside the workspace roots you allow.
 
 ### approval_presets
 
@@ -927,7 +937,7 @@ Valid values:
 | `experimental_instructions_file`                 | string (path)                                                     | Replace built‑in instructions (experimental).                                                                              |
 | `experimental_use_exec_command_tool`             | boolean                                                           | Use experimental exec command tool.                                                                                        |
 | `projects.<path>.trust_level`                    | string                                                            | Mark project/worktree as trusted (only `"trusted"` is recognized).                                                         |
-| `tools.web_search`                               | boolean                                                           | Enable web search tool (alias: `web_search_request`) (default: false).                                                     |
+| `features.web_search_request`                    | boolean                                                           | Enable first-party web search (replaces deprecated `tools.web_search`) (default: false).                                   |
 | `forced_login_method`                            | `chatgpt` \| `api`                                                | Only allow Codex to be used with ChatGPT or API keys.                                                                      |
 | `forced_chatgpt_workspace_id`                    | string (uuid)                                                     | Only allow Codex to be used with the specified ChatGPT workspace.                                                          |
 | `cli_auth_credentials_store`                     | `file` \| `keyring` \| `auto`                                     | Where to store CLI login credentials (default: `file`).                                                                    |

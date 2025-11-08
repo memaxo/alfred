@@ -29,7 +29,6 @@
       "@alfred/ui/*": ["../ui/src/*"],
       "@alfred/type/*": ["../type/src/*"],
       "@alfred/agent/*": ["../agent/src/*"],
-      "@alfred/agent/assistant/*": ["../agent/assistant/src/*"],
       "@alfred/cognitive/*": ["../cognitive/src/*"],
       "@alfred/knowledge/*": ["../knowledge/src/*"],
       "@alfred/learning/*": ["../learning/src/*"],

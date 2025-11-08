@@ -9,8 +9,11 @@ export * from "./plan";
 // Message types
 export * from "./msg";
 
-// Streaming types
+// Streaming and UI message types
 export * from "./stream";
+export * from "./stream.zod";
+export * from "./guards";
+export { RuntimeContext } from "./runtime-context";
 
 // Personalization schemas
 export * from "./personal";

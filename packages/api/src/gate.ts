@@ -3,7 +3,7 @@ import { evaluate } from "@alfred/policy";
 import type { EvaluateInput, PolicyResource } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "./context";
-import { t } from "./index";
+import { t } from "./trpc";
 import { policyDecisionsTotal, policyObligationsTotal } from "./metrics";
 
 type MapResourceFn = (input: unknown, ctx: Context, path?: string) => PolicyResource;
@@ -24,8 +24,13 @@ export function requirePolicy(
   return t.middleware(async ({ ctx, input, path, next }) => {
     const sessionUser = ctx.session?.user as (Context["session"] extends { user: infer U } ? U : any) | undefined;
     const subjectId = sessionUser?.id ?? "anonymous";
-    const rawRoles = Array.isArray((sessionUser as any)?.roles) ? (sessionUser as any).roles : undefined;
-    const subjectRoles = rawRoles && rawRoles.length > 0 ? rawRoles : ["owner"];
+    const rawRoles: unknown[] = Array.isArray((sessionUser as any)?.roles)
+      ? (sessionUser as any).roles
+      : [];
+    const subjectRoles = rawRoles
+      .filter((role): role is string => typeof role === "string")
+      .map(role => role.trim())
+      .filter(role => role.length > 0);
     const resource = mapResource ? mapResource(input, ctx, path) : defaultResource(path, action);
     const policyContext = buildContext ? buildContext(input, ctx) : {};
 

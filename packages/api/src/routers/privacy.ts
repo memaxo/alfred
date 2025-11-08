@@ -6,7 +6,7 @@ import {
   privacyFactQuerySchema,
 } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 
 function mapPrivacyResource(_input: unknown, ctx: { session: { user?: { id?: string } } | null }) {

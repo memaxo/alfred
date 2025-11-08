@@ -1,7 +1,12 @@
-import { afterEach, beforeAll, describe, expect, it, vi, mock } from "bun:test";
-import { ReadableStream } from "node:stream/web";
-import { RuntimeContext } from "@mastra/core/runtime-context";
-import { assistantAgentMock, resetAgentMocks } from "./utils/agent-mock";
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { TRPCError } from "@trpc/server";
+import { RuntimeContext } from "@alfred/type/runtime-context";
+
+const generateTextMock = vi.fn();
+
+mock.module("@alfred/api/ai/generate", () => ({
+  callGenerateText: generateTextMock,
+}));
 
 const handoffExecuteMock = vi.fn();
 
@@ -15,18 +20,20 @@ mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-let appRouter: typeof import("@alfred/api/routers/index").appRouter;
+process.env.DATABASE_URL ??= "postgres://localhost:5432/test";
 
-beforeAll(() => {
-  return import("@alfred/api/routers/index").then(mod => {
-    appRouter = mod.appRouter;
-  });
+let assistantRouter: typeof import("@alfred/api/routers/assistant").assistantRouter;
+
+beforeAll(async () => {
+  const mod = await import("@alfred/api/routers/assistant");
+  assistantRouter = mod.assistantRouter;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  generateTextMock.mockReset();
   handoffExecuteMock.mockReset();
-  resetAgentMocks();
+  mock.restore();
 });
 
 function createCaller() {
@@ -52,7 +59,8 @@ function createCaller() {
     ["userRoles", ["owner"]],
     ["userScopes", ["assistant.write", "assistant.escalate"]],
   ]);
-  return appRouter.createCaller({
+
+  return assistantRouter.createCaller({
     session: {
       user: {
         id: "user-123",
@@ -66,102 +74,72 @@ function createCaller() {
 }
 
 describe("assistant router", () => {
-  it("generates assistant completions", async () => {
-    assistantAgentMock.generate.mockResolvedValue({
+  it("generates assistant completions via generateText", async () => {
+    generateTextMock.mockResolvedValue({
       text: "note created",
-      toolCalls: [
-        {
-          payload: {
-            toolName: "note",
-          },
-        },
-      ],
-      usage: {
-        inputTokens: 10,
-        outputTokens: 15,
-      },
+      toolCalls: [],
+      toolResults: [],
+      usage: { inputTokens: 10, outputTokens: 15 },
       warnings: [],
-    } as any);
+      finishReason: "stop",
+    });
 
     const caller = createCaller();
-    const result = await caller.assistant.generate({
+    const result = await caller.generate({
       messages: [{ role: "user", content: "add a note" }],
+      maxSteps: 3,
     });
 
-    expect(assistantAgentMock.generate).toHaveBeenCalledTimes(1);
-    expect(assistantAgentMock.generate.mock.calls[0]?.[0]).toEqual([{ role: "user", content: "add a note" }]);
-    const generateOptions = assistantAgentMock.generate.mock.calls[0]?.[1];
-    expect(generateOptions?.runtimeContext).toBeInstanceOf(RuntimeContext);
-    expect(generateOptions?.runtimeContext?.get("assistantThread")).toBe("user-123");
-    expect(generateOptions?.runtimeContext?.get("assistantMessageCount")).toBe(1);
-    expect(result.text).toBe("note created");
-    expect(result.toolCalls).toHaveLength(1);
-    expect(result.usage).toMatchObject({ inputTokens: 10, outputTokens: 15 });
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+    const callArgs = generateTextMock.mock.calls[0]?.[0];
+    expect(callArgs?.messages).toEqual([
+      { role: "user", content: "add a note" },
+    ]);
+    expect(callArgs?.toolChoice).toBeUndefined();
+    expect(callArgs?.stopWhen).toBeDefined();
+    expect(typeof callArgs?.stopWhen).toBe("function");
+    expect(result).toMatchObject({
+      text: "note created",
+      usage: { inputTokens: 10, outputTokens: 15 },
+      finishReason: "stop",
+    });
   });
 
-  it("streams assistant chunks", async () => {
-    const streamChunks = [
-      { type: "text-delta", payload: { text: "reminder" } },
-      { type: "finish", payload: { reason: "stop" } },
-    ];
+  it("stream procedure is not implemented and informs callers", async () => {
+    const caller = createCaller();
+    const observable = (await caller.stream({
+      messages: [{ role: "user", content: "set reminder" }],
+    })) as { subscribe: (handlers: { next(): void; error(error: unknown): void; complete(): void }) => { unsubscribe(): void } };
 
-    assistantAgentMock.stream.mockResolvedValue({
-      runId: "run-42",
-      _getBaseStream: () =>
-        new ReadableStream({
-          start(controller) {
-            for (const chunk of streamChunks) {
-              controller.enqueue(chunk);
-            }
-            controller.close();
+    await expect(
+      new Promise((_, reject) => {
+        let subscription: { unsubscribe(): void } | null = null;
+        subscription = observable.subscribe({
+          next() {
+            /* noop */
           },
-        }),
-    } as any);
-
-    const caller = createCaller();
-    const events: Array<Record<string, unknown>> = [];
-
-    const stream = await caller.assistant.stream({
-      messages: [{ role: "user", content: "set a reminder" }],
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      let subscription: { unsubscribe?: () => void } | null = null;
-      subscription = (stream as { subscribe: Function }).subscribe({
-        next: (event: Record<string, unknown>) => {
-          events.push(event);
-        },
-        error: (error: unknown) => {
-          try {
-            subscription?.unsubscribe?.();
-          } catch {
-            // ignore
-          }
-          reject(error);
-        },
-        complete: () => {
-          try {
-            subscription?.unsubscribe?.();
-          } catch {
-            // ignore
-          }
-          resolve();
-        },
-      }) as { unsubscribe?: () => void };
-    });
-
-    expect(events[0]).toMatchObject({ type: "run", runId: "run-42" });
-    expect(events.slice(1)).toEqual(streamChunks);
-    const streamOptions = assistantAgentMock.stream.mock.calls[0]?.[1];
-    expect(streamOptions?.runtimeContext).toBeInstanceOf(RuntimeContext);
-    expect(streamOptions?.runtimeContext?.get("assistantStream")).toBe(true);
+          error(error) {
+            subscription?.unsubscribe();
+            reject(error);
+          },
+          complete() {
+            subscription?.unsubscribe();
+            reject(new Error("stream should not complete"));
+          },
+        });
+      }),
+    ).rejects.toThrow(TRPCError);
   });
 
-  it("escalates via handoff tool", async () => {
-    handoffExecuteMock.mockResolvedValue({ ok: true, runId: "run-7" });
+  it("escalates via handoff tool placeholder", async () => {
+    handoffExecuteMock.mockResolvedValue({
+      ok: true,
+      runId: null,
+      next: { kind: "navigate", href: "/orchestrator/run" },
+    });
 
     const caller = createCaller();
-    const result = await caller.assistant.escalate({
+    const result = await caller.escalate({
       requirement: "implement feature",
       authz: "token",
     });
@@ -174,7 +152,10 @@ describe("assistant router", () => {
       authz: "token",
     });
     expect(handoffArgs?.runtimeContext).toBeInstanceOf(RuntimeContext);
-    expect(handoffArgs?.runtimeContext?.get("assistantEscalateRequirement")).toBe("implement feature");
-    expect(result).toEqual({ ok: true, runId: "run-7" });
+    expect(result).toEqual({
+      ok: true,
+      runId: null,
+      next: { kind: "navigate", href: "/orchestrator/run" },
+    });
   });
 });

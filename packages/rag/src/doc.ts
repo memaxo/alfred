@@ -1,25 +1,19 @@
 import { ragRepo } from "@alfred/db";
+import { embed as embedText, embedMany as embedManyTexts } from "ai";
+import { getEmbeddingProvider, checkEmbeddingProviderHealth } from "./providers";
 
 /**
  * ALFRED RAG Document Processing
  */
 
-const EMBEDDING_MODEL = "text-embedding-3-small";
 const EMBEDDING_DIM = 1536;
+const MAX_BATCH_SIZE = 1000;
 
 export interface Chunk {
   content: string;
   embedding?: number[];
   order: number;
   metadata?: Record<string, unknown>;
-}
-
-function normalizeBaseUrl(raw?: string | null) {
-  const base = raw?.trim();
-  if (!base) {
-    return "https://api.openai.com";
-  }
-  return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
 function splitSentences(paragraph: string) {
@@ -40,7 +34,11 @@ function pushBuffer(buffers: string[], buffer: string) {
   }
 }
 
-export async function ingest(source: string, content: string): Promise<string> {
+export async function ingest(
+  source: string,
+  content: string,
+  onProgress?: (processed: number, total: number) => void,
+): Promise<string> {
   if (!content || content.trim().length === 0) {
     throw new Error("rag_empty_content");
   }
@@ -52,13 +50,31 @@ export async function ingest(source: string, content: string): Promise<string> {
     return document.id;
   }
 
-  const embeddings = await Promise.all(pieces.map(piece => embed(piece)));
+  // Process in batches if document is large
+  const allEmbeddings: number[][] = [];
+  let processed = 0;
+
+  for (let i = 0; i < pieces.length; i += MAX_BATCH_SIZE) {
+    const batch = pieces.slice(i, i + MAX_BATCH_SIZE);
+    try {
+      const batchEmbeddings = await embedMany(batch);
+      allEmbeddings.push(...batchEmbeddings);
+      processed += batch.length;
+      onProgress?.(processed, pieces.length);
+    } catch (error) {
+      // Log error but continue with remaining batches
+      console.error(`Failed to embed batch ${i}-${i + batch.length}:`, error);
+      // Fill with empty embeddings for failed batch to maintain array length
+      allEmbeddings.push(...batch.map(() => []));
+    }
+  }
+
   await ragRepo.addChunks(
     document.id,
     pieces.map((piece, index) => ({
       content: piece,
       order: index,
-      embedding: embeddings[index],
+      embedding: allEmbeddings[index]?.length === EMBEDDING_DIM ? allEmbeddings[index] : undefined,
       metadata: {
         source,
       },
@@ -100,6 +116,13 @@ export async function retrieve(query: string, k = 10, threshold = 0.7): Promise<
 
 export async function chunk(content: string, maxChunkSize = 512): Promise<string[]> {
   const limit = Number.isFinite(maxChunkSize) && maxChunkSize > 0 ? Math.floor(maxChunkSize) : 512;
+  
+  // Hierarchical separators: try to preserve structure
+  // 1. Double newlines (paragraphs)
+  // 2. Single newlines (sections)
+  // 3. Sentence boundaries
+  // 4. Hard character limit
+  
   const paragraphs = content
     .split(/\n{2,}/u)
     .map(entry => entry.trim())
@@ -125,30 +148,54 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
       continue;
     }
 
-    // Paragraph is too large; flush existing buffer and split paragraph by sentences.
+    // Paragraph too large; try splitting by single newlines first (sections)
     pushBuffer(chunks, buffer);
     buffer = "";
-    const sentences = splitSentences(paragraph);
-    let sentenceBuffer = "";
-    for (const sentence of sentences) {
-      if (sentence.length > limit) {
-        // Sentence still too large, fallback to hard split.
-        const parts = sentence.match(new RegExp(`.{1,${limit}}`, "gu")) ?? [sentence];
-        for (const part of parts) {
-          pushBuffer(chunks, part);
+    
+    const sections = paragraph.split(/\n+/u).map(s => s.trim()).filter(s => s.length > 0);
+    let sectionBuffer = "";
+    
+    for (const section of sections) {
+      if (section.length <= limit) {
+        const candidate = sectionBuffer.length > 0 ? `${sectionBuffer}\n${section}` : section;
+        if (candidate.length <= limit) {
+          sectionBuffer = candidate;
+          continue;
         }
-        sentenceBuffer = "";
+        pushBuffer(chunks, sectionBuffer);
+        sectionBuffer = section;
         continue;
       }
-      const candidate = sentenceBuffer.length > 0 ? `${sentenceBuffer} ${sentence}` : sentence;
-      if (candidate.length <= limit) {
-        sentenceBuffer = candidate;
-        continue;
+      
+      // Section still too large; split by sentences
+      if (sectionBuffer.length > 0) {
+        pushBuffer(chunks, sectionBuffer);
+        sectionBuffer = "";
+      }
+      
+      const sentences = splitSentences(section);
+      let sentenceBuffer = "";
+      for (const sentence of sentences) {
+        if (sentence.length > limit) {
+          // Sentence still too large, fallback to hard split
+          const parts = sentence.match(new RegExp(`.{1,${limit}}`, "gu")) ?? [sentence];
+          for (const part of parts) {
+            pushBuffer(chunks, part);
+          }
+          sentenceBuffer = "";
+          continue;
+        }
+        const candidate = sentenceBuffer.length > 0 ? `${sentenceBuffer} ${sentence}` : sentence;
+        if (candidate.length <= limit) {
+          sentenceBuffer = candidate;
+          continue;
+        }
+        pushBuffer(chunks, sentenceBuffer);
+        sentenceBuffer = sentence;
       }
       pushBuffer(chunks, sentenceBuffer);
-      sentenceBuffer = sentence;
     }
-    pushBuffer(chunks, sentenceBuffer);
+    pushBuffer(chunks, sectionBuffer);
   }
 
   pushBuffer(chunks, buffer);
@@ -156,41 +203,51 @@ export async function chunk(content: string, maxChunkSize = 512): Promise<string
 }
 
 export async function embed(text: string): Promise<number[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("rag_missing_openai_key");
+  const provider = getEmbeddingProvider();
+  
+  // Health check with fallback
+  const isHealthy = await checkEmbeddingProviderHealth(provider);
+  if (!isHealthy) {
+    throw new Error("rag_provider_unhealthy");
   }
-  const baseUrl = normalizeBaseUrl(process.env.OPENAI_BASE_URL);
-  const payload = {
-    model: EMBEDDING_MODEL,
-    input: text,
-  };
 
-  const response = await fetch(`${baseUrl}/v1/embeddings`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
+  const { embedding } = await embedText({
+    model: provider.model,
+    value: text,
   });
 
-  if (!response.ok) {
-    throw new Error(`rag_embed_failed:${response.status}`);
-  }
-
-  const body = (await response.json()) as {
-    data?: Array<{ embedding?: number[] }>;
-    error?: { message?: string };
-  };
-
-  const vector = body?.data?.[0]?.embedding;
-  if (!Array.isArray(vector) || vector.length !== EMBEDDING_DIM) {
+  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIM) {
     throw new Error("rag_embed_invalid_vector");
   }
 
-  return vector.map(value => {
-    const num = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(num) ? num : 0;
+  return embedding;
+}
+
+/**
+ * Batch embedding function using AI SDK v6 embedMany() for optimized performance.
+ * Processes multiple texts in a single API call when possible.
+ */
+export async function embedMany(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  const provider = getEmbeddingProvider();
+  
+  // Health check with fallback
+  const isHealthy = await checkEmbeddingProviderHealth(provider);
+  if (!isHealthy) {
+    throw new Error("rag_provider_unhealthy");
+  }
+
+  const { embeddings } = await embedManyTexts({
+    model: provider.model,
+    values: texts,
   });
+
+  if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
+    throw new Error("rag_embed_mismatch");
+  }
+
+  return embeddings;
 }

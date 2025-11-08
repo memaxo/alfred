@@ -1,210 +1,45 @@
 /**
- * ALFRED Streaming Types
- * Pure event model for agent/orchestrator streaming
- * 
- * Carmack-Karpathy principles:
- * - Pure functions: no side effects
- * - Explicit transformations: every event is typed
- * - Zero allocation in hot paths
+ * Alfred streaming domain types unified on AI SDK v6 primitives.
  */
 
+import type {
+  ModelMessage as AISDKModelMessage,
+  UIMessage as AISDKUIMessage,
+} from "ai";
 
 /**
- * Base event type
- * All streaming events extend this
+ * AI SDK v6 UI message type used across UI and persistence layers.
  */
-export interface BaseEvent {
-  type: string;
-  ts: number; // Unix timestamp for zero-allocation lookups
-}
+export type UIMessage = AISDKUIMessage;
 
 /**
- * Message events
+ * AI SDK v6 model message type for language model invocations.
  */
-export interface MessageEvent extends BaseEvent {
-  type: "message";
-  data: {
-    delta: string;
-    cumulative: string;
-    role: "user" | "assistant" | "orchestrator";
-  };
-}
+export type ModelMessage = AISDKModelMessage;
 
 /**
- * Action events (tool invocations)
+ * Client-side metadata for UI messages that should not be persisted upstream.
  */
-export interface ActionEvent extends BaseEvent {
-  type: "action";
-  data: {
-    id: string;
-    tool: string;
-    args: Record<string, unknown>;
-    status: "pending" | "running" | "completed" | "error";
-    result?: unknown;
-    error?: string;
-  };
-}
+export type UIMessageClientMeta = {
+  status?: "sending" | "sent" | "error";
+  createdAt?: string;
+  completeAt?: string;
+  agent?: "assistant" | "orchestrator";
+  [key: string]: unknown;
+};
 
-/**
- * Status events (connection, loading, etc.)
- */
-export interface StatusEvent extends BaseEvent {
-  type: "status";
-  data: {
-    state: "connecting" | "connected" | "disconnected" | "error";
-    message?: string;
-  };
-}
+export type UIMessageActionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "error";
 
-/**
- * Progress events (task completion)
- */
-export interface ProgressEvent extends BaseEvent {
-  type: "progress";
-  data: {
-    taskId: string;
-    percent: number;
-    message: string;
-  };
-}
-
-/**
- * Cache handoff events
- * TanStack Query cache updates without flicker
- */
-export interface CacheHandoffEvent extends BaseEvent {
-  type: "cache_handoff";
-  data: {
-    key: string[];
-    value: unknown;
-    merge?: boolean;
-  };
-}
-
-/**
- * Error events
- */
-export interface ErrorEvent extends BaseEvent {
-  type: "error";
-  data: {
-    code: string;
-    message: string;
-    recoverable: boolean;
-  };
-}
-
-/**
- * Union of all event types
- */
-export type StreamEvent =
-  | MessageEvent
-  | ActionEvent
-  | StatusEvent
-  | ProgressEvent
-  | CacheHandoffEvent
-  | ErrorEvent;
-
-/**
- * Type guard helpers
- */
-export function isMessageEvent(event: StreamEvent): event is MessageEvent {
-  return event.type === "message";
-}
-
-export function isActionEvent(event: StreamEvent): event is ActionEvent {
-  return event.type === "action";
-}
-
-export function isStatusEvent(event: StreamEvent): event is StatusEvent {
-  return event.type === "status";
-}
-
-export function isProgressEvent(event: StreamEvent): event is ProgressEvent {
-  return event.type === "progress";
-}
-
-export function isCacheHandoffEvent(event: StreamEvent): event is CacheHandoffEvent {
-  return event.type === "cache_handoff";
-}
-
-export function isErrorEvent(event: StreamEvent): event is ErrorEvent {
-  return event.type === "error";
-}
-
-/**
- * Event factory helpers
- * Zero-allocation event creation
- */
-export function createMessageEvent(
-  delta: string,
-  cumulative: string,
-  role: "user" | "assistant" | "orchestrator",
-): MessageEvent {
-  return {
-    type: "message",
-    ts: Date.now(),
-    data: { delta, cumulative, role },
-  };
-}
-
-export function createActionEvent(
-  id: string,
-  tool: string,
-  args: Record<string, unknown>,
-  status: "pending" | "running" | "completed" | "error",
-  result?: unknown,
-  error?: string,
-): ActionEvent {
-  return {
-    type: "action",
-    ts: Date.now(),
-    data: { id, tool, args, status, result, error },
-  };
-}
-
-export function createStatusEvent(
-  state: "connecting" | "connected" | "disconnected" | "error",
-  message?: string,
-): StatusEvent {
-  return {
-    type: "status",
-    ts: Date.now(),
-    data: { state, message },
-  };
-}
-
-export function createProgressEvent(
-  taskId: string,
-  percent: number,
-  message: string,
-): ProgressEvent {
-  return {
-    type: "progress",
-    ts: Date.now(),
-    data: { taskId, percent, message },
-  };
-}
-
-export function createCacheHandoffEvent(
-  key: string[],
-  value: unknown,
-  merge = false,
-): CacheHandoffEvent {
-  return {
-    type: "cache_handoff",
-    ts: Date.now(),
-    data: { key, value, merge },
-  };
-}
-
-export function createErrorEvent(
-  code: string,
-  message: string,
-  recoverable = false,
-): ErrorEvent {
-  return {
-    type: "error",
-    ts: Date.now(),
-    data: { code, message, recoverable },
-  };
-}
+export type UIMessageAction = {
+  id: string;
+  name: string;
+  args?: Record<string, unknown>;
+  status: UIMessageActionStatus;
+  result?: unknown;
+  error?: string;
+  updatedAt?: string;
+};

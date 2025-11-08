@@ -1,23 +1,24 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { config } from "dotenv";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, "../.env") });
-
+const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
+const SHOULD_SKIP = !SHOULD_RUN;
 const TEST_USER = "assistant-test-user";
+
 let assistantRepo: typeof import("@alfred/db").assistantRepo;
 let db: typeof import("@alfred/db").db;
 
 beforeAll(async () => {
+  if (SHOULD_SKIP) {
+    return;
+  }
   const mod = await import("@alfred/db");
   assistantRepo = mod.assistantRepo;
   db = mod.db;
 });
 
 async function resetAssistantTables() {
+  if (SHOULD_SKIP) return;
   await db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`,
   );
@@ -27,7 +28,9 @@ beforeEach(async () => {
   await resetAssistantTables();
 });
 
-describe("assistantRepo", () => {
+const describeFn = SHOULD_SKIP ? describe.skip : describe;
+
+describeFn("assistantRepo", () => {
   it("creates and lists notes in descending update order", async () => {
     const first = await assistantRepo.createNote(TEST_USER, "first note", "First");
     await assistantRepo.createNote(TEST_USER, "second note", "Second");

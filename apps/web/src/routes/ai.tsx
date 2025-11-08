@@ -9,14 +9,23 @@ import { Response } from "@/components/response";
 
 export const Route = createFileRoute("/ai")({
 	component: RouteComponent,
+	loader: async () => {
+		// Selective SSR: Load initial state server-side
+		// Streaming handled client-side
+		return {
+			initialMessages: [],
+		};
+	},
 });
 
 function RouteComponent() {
+	const loaderData = Route.useLoaderData();
 	const [input, setInput] = useState("");
 	const { messages, sendMessage } = useChat({
 		transport: new DefaultChatTransport({
 			api: "/api/ai",
 		}),
+		initialMessages: loaderData.initialMessages,
 	});
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);

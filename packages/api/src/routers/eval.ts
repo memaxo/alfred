@@ -1,9 +1,8 @@
-import { runEval } from "@alfred/agent";
 import * as evalRepo from "@alfred/db/repo/eval";
 import type { EvalRunWithRelations } from "@alfred/db/repo/eval";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 
 const slugSchema = z
@@ -200,22 +199,10 @@ export const evalRouter = router({
           });
         }
 
-        try {
-          const result = await runEval({
-            def: { slug: definition.slug },
-            datasetId: dataset.id,
-            variant: input.variant,
-            laminar: input.laminar,
-          });
-
-          return {
-            runId: result.runId,
-            counts: result.counts,
-            stats: result.stats,
-          };
-        } catch (error) {
-          throw toTRPCError(error);
-        }
+        throw new TRPCError({
+          code: "NOT_IMPLEMENTED",
+          message: "eval_run_disabled",
+        });
       }),
 
     get: authedProcedure
@@ -260,20 +247,6 @@ export const evalRouter = router({
       }),
   }),
 });
-
-function toTRPCError(error: unknown) {
-  if (error instanceof TRPCError) {
-    return error;
-  }
-
-  const message =
-    error instanceof Error ? error.message : typeof error === "string" ? error : "eval_run_failed";
-
-  return new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message,
-  });
-}
 
 function formatRun(row: EvalRunWithRelations) {
   return {

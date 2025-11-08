@@ -242,6 +242,7 @@ export async function gatherCodeContext({
   const cached = contextCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     const cachedReceipt = cloneReceipt(cached.receipt);
+    // TODO: Emit a matching data-cache-handoff event so UI caches can reconcile with the planning stream.
     await writer?.write?.({
       type: "context",
       phase: "cache",
@@ -335,6 +336,7 @@ export async function gatherCodeContext({
     receipt: cloneReceipt(receipt),
   });
 
+  // TODO: Pair this context event with data-cache-handoff containing the same receipt for streaming clients.
   await writer?.write({
     type: "context",
     phase: "scan",

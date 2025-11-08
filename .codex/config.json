@@ -25,5 +25,8 @@
       ],
       "type": "remote"
     }
+  },
+  "features": {
+    "web_search_request": true
   }
 }

@@ -4,7 +4,7 @@ import type { Response } from "undici";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 import { recordVoiceStt, recordVoiceTts } from "../metrics";
 

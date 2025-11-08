@@ -7,31 +7,33 @@
 
 import { cn } from "@/lib/utils";
 
+type ChatStatus = "ready" | "submitted" | "streaming" | "error";
+
 interface ConnectProps {
-  status: "connecting" | "connected" | "disconnected" | "error";
+  status: ChatStatus;
   agent?: "assistant" | "orchestrator";
   className?: string;
 }
 
 export function Connect({ status, agent, className }: ConnectProps) {
   const statusConfig = {
-    connecting: {
-      label: "Connecting...",
+    ready: {
+      label: "Ready",
+      color: "text-muted-foreground",
+      dot: "bg-muted-foreground",
+      ariaLabel: "ready",
+    },
+    submitted: {
+      label: "Submitting…",
       color: "text-yellow-500",
       dot: "bg-yellow-500",
-      ariaLabel: "connecting",
+      ariaLabel: "submitting",
     },
-    connected: {
-      label: "Connected",
+    streaming: {
+      label: "Streaming",
       color: "text-green-500",
       dot: "bg-green-500",
-      ariaLabel: "connected",
-    },
-    disconnected: {
-      label: "Disconnected",
-      color: "text-gray-500",
-      dot: "bg-gray-500",
-      ariaLabel: "disconnected",
+      ariaLabel: "streaming",
     },
     error: {
       label: "Error",
@@ -41,7 +43,7 @@ export function Connect({ status, agent, className }: ConnectProps) {
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] ?? statusConfig.ready;
 
   return (
     <div
@@ -65,4 +67,3 @@ export function Connect({ status, agent, className }: ConnectProps) {
     </div>
   );
 }
-

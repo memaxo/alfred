@@ -4,7 +4,7 @@ type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent";
 import { preferenceDeleteSchema, preferenceListSchema, preferenceSetSchema } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 
 function mapPreferenceResource(_input: unknown, ctx: { session: { user?: { id?: string } } | null }) {

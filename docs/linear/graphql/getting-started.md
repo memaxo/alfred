@@ -232,7 +232,6 @@ Lets say you're displaying a big number of issues in your application and want t
 
 - Poll updates for each issue in the application. There should never be a reason to do this and your application might get rate limited. See above tactics to implement this better
 
-If you have any questions, visit the **#api** channel on our [customer Slack](https://linear.app/join-slack).
 
 ### Other Examples
 
@@ -299,4 +298,4 @@ Archived resources are hidden by default from the paginated responses. They can 
 
 ## Support
 
-If you run into problems or have questions or suggestions, you can join our customer Slack or send us a note ([hello@linear.app](mailto:hello@linear.app)). Both options are available through the user menu in the Linear application.
+If you run into problems or have questions or suggestions, send us a note ([hello@linear.app](mailto:hello@linear.app)). This option is available through the user menu in the Linear application.

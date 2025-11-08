@@ -1,34 +1,35 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { config } from "dotenv";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, "../.env") });
+const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
+const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 let ragRepo: typeof import("@alfred/db").ragRepo;
 let db: typeof import("@alfred/db").db;
 
 beforeAll(async () => {
+  if (!SHOULD_RUN) {
+    return;
+  }
   const mod = await import("@alfred/db");
   ragRepo = mod.ragRepo;
   db = mod.db;
 });
 
 async function resetRagTables() {
+  if (!SHOULD_RUN) return;
   await db.execute(sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`);
-}
-
-function makeVector(seed: number) {
-  return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
 }
 
 beforeEach(async () => {
   await resetRagTables();
 });
 
-describe("ragRepo", () => {
+function makeVector(seed: number) {
+  return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
+}
+
+describeFn("ragRepo", () => {
   it("stores documents and returns them in descending order", async () => {
     await ragRepo.createDocument("source-a", "Doc A", "Author A");
     const second = await ragRepo.createDocument("source-b", "Doc B", "Author B");

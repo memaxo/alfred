@@ -2,7 +2,7 @@ import { userRepo } from "@alfred/db";
 import { recordMemoryUpdate } from "@alfred/agent";
 import { profileUpdateSchema } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 
 function mapProfileResource(_input: unknown, ctx: { session: { user?: { id?: string } } | null }) {

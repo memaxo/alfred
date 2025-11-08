@@ -3,22 +3,31 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./performance": "./src/performance.ts",
-    "./cognitive": "./src/cognitive.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./performance": {
+      "types": "./dist/performance.d.ts",
+      "default": "./src/performance.ts"
+    },
+    "./cognitive": {
+      "types": "./dist/cognitive.d.ts",
+      "default": "./src/cognitive.ts"
+    }
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@alfred/type": "workspace:*"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",
-    "tsdown": "^0.2.16",
     "typescript": "^5.7.2"
   }
 }

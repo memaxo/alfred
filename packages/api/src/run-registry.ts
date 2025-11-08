@@ -2,7 +2,7 @@ import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-import type { RuntimeContext } from "@mastra/core/runtime-context";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { redis as defaultRedis, RedisClient } from "bun";
 
 import { runRegistryDispatchDurationSeconds, runRegistryEventsTotal } from "./metrics";

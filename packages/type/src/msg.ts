@@ -3,7 +3,7 @@
  * Type definitions for agent/orchestrator messages and events
  */
 
-// TODO: [Phase 4] Align with Mastra message format and streaming events
+// TODO: [Phase 4] Align with AI SDK UI message format for additional metadata
 
 /**
  * Message roles
@@ -30,8 +30,9 @@ export interface UserMessage extends Message {
 
 /**
  * Assistant message (from agent)
+ * @deprecated Use UIMessage from @alfred/type/stream for streaming contexts
  */
-export interface AssistantMessage extends Message {
+export interface AgentMessage extends Message {
   role: "assistant";
   agent?: "assistant" | "orchestrator";
   toolCalls?: ToolCall[];
@@ -75,7 +76,7 @@ export interface ToolMessage extends Message {
 //   updated: Date;
 // }
 
-// TODO: [Phase 4] Add streaming types for Mastra integration
+// TODO: [Phase 4] Add streaming types for richer AI SDK event modeling
 // export interface StreamChunk {
 //   delta: string;
 //   cumulative: string;

@@ -1,10 +1,10 @@
 # Alfred
 
-Alfred is a secure, Mastra-powered automation assistant that ships with a full-stack web app, an API layer, background schedulers, and evaluation tooling. The project is bootstrapped with Better‑T‑Stack and uses Bun + Turborepo to manage the monorepo.
+Alfred is a secure, AI SDK v6-powered automation assistant that ships with a full-stack web app, an API layer, background schedulers, and evaluation tooling. The project is bootstrapped with Better‑T‑Stack and uses Bun + Turborepo to manage the monorepo.
 
 ## Key Capabilities
 
-- **Workflow Orchestration:** Mastra agent with secure droid tooling and autonomy gating.
+- **Workflow Orchestration:** AI SDK v6 workflow runner with secure droid tooling and autonomy gating.
 - **Evaluations:** First-party eval metadata in Postgres with optional Laminar dual-write for tracing and score dashboards.
 - **API Surface:** tRPC routers backed by Drizzle repositories and Better Auth session context.
 - **Multi-app Monorepo:** Web (TanStack Start) and Native (Expo) apps consuming the shared API & auth packages.
@@ -25,7 +25,7 @@ apps/
   web/         # TanStack Start web app (SSR)
   native/      # React Native + Expo app
 packages/
-  agent/       # Mastra agents, eval runner, Laminar bridge
+  agent/       # AI SDK v6 tool registries and shared metrics
   api/         # tRPC routers, metrics, schedulers
   auth/        # Better Auth configuration & token helpers
   db/          # Drizzle schema, repositories, migrations
@@ -45,10 +45,10 @@ Important keys:
 
 - `DATABASE_URL` – Postgres connection string (required)
 - `BETTER_AUTH_*` – Auth origin/secret settings
-- `OPENAI_API_KEY` – Required for Mastra LLM-backed scorers
+- `OPENAI_API_KEY` – Required for AI SDK v6 model access
 - `EVALS_SAMPLING_RATE` – Fraction of live agent runs sampled for scoring (default `0.1`)
 - `LMNR_PROJECT_API_KEY` (+ `EVAL_LAMINAR_EXPORT=1`) – Enables Laminar dual-write for evals
-- `RUN_REGISTRY_BACKEND` – Defaults to `memory`; set to `redis` (with `REDIS_URL`) to enable the multi-instance run registry per `docs/mastra/server/run-registry.md`
+- `RUN_REGISTRY_BACKEND` – Defaults to `memory`; set to `redis` (with `REDIS_URL`) to enable the multi-instance run registry.
 
 Each package can also read a local `.env` inside its directory when executed stand-alone.
 
@@ -137,7 +137,7 @@ Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, e
 
 ## Known Limitations
 
-- Workflow run resumes require sticky routing unless `RUN_REGISTRY_BACKEND=redis` is configured alongside `REDIS_URL`; review `docs/mastra/server/run-registry.md` for deployment guidance before scaling the API horizontally.
+- Workflow run resumes require sticky routing unless `RUN_REGISTRY_BACKEND=redis` is configured alongside `REDIS_URL`; ensure consistent routing when scaling the API horizontally.
 
 ## Health Checks
 

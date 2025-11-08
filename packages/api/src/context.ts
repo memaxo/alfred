@@ -1,5 +1,5 @@
 import { auth } from "@alfred/auth";
-import { RuntimeContext } from "@mastra/core/runtime-context";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { randomUUID } from "node:crypto";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;

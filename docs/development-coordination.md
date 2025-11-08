@@ -93,3 +93,10 @@ Once Codex executor work is complete:
 - Focus should shift to Phase 2 (tests) and Phase 3+ (integration and features)
 - The PRD checklist may need updating to reflect actual completion status
 
+****## Cross-Package Imports (Monorepo best practice)
+
+- Do not deep-import sources across packages (e.g., `@alfred/rag/rerank`). Import from the package root API (e.g., `@alfred/rag`) and re-export public symbols via `src/index.ts`.
+- Each package should be a composite TS project that emits declarations (`"composite": true`, `"declaration": true`). Consumers rely on `.d.ts` via package `exports.types`.
+- Keep root `tsconfig.json` references updated to include new packages so build order is respected (e.g., `packages/rag` before `packages/db` when `db` imports `rag`).
+- Avoid path aliases for cross-package internals; prefer package names. This prevents “file not under rootDir” and ensures Bun resolves runtime modules via `exports`.
+

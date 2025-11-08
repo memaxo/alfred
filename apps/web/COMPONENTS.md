@@ -49,9 +49,7 @@ Each component tree has its own error boundary:
 ## Core Components
 
 ### Conversation
-- **Chat**: Main conversation interface (composed of Msg + Chatbar)
-- **Msg**: Individual message bubble
-- **Chatbar**: Input bar with voice support
+- **ChatContainer**: Integrates streaming hooks with the shared `@alfred/ui` Chat component (virtualized + perf metrics)
 - **Controls**: Agent switcher (Assistant/Orchestrator)
 - **Connect**: Connection status indicator
 
@@ -194,4 +192,3 @@ describe("Chat", () => {
 3. **Voice Integration**: Complete STT/TTS wiring
 4. **Layout Components**: Grid, dock, terminal
 5. **Profile Components**: Profile dropdown, settings panels
-

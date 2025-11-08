@@ -1,0 +1,36 @@
+AI SDK ErrorsAI_InvalidMessageRoleError
+
+Copy markdown
+
+# AI_InvalidMessageRoleError
+
+This error occurs when an invalid message role is provided.
+
+## Properties
+
+  * `role`: The invalid role value
+  * `message`: The error message
+
+## Checking for this Error
+
+You can check if an error is an instance of `AI_InvalidMessageRoleError` using:
+    
+    
+    import { InvalidMessageRoleError } from 'ai';
+    
+    
+    
+    
+    if (InvalidMessageRoleError.isInstance(error)) {
+    
+      // Handle the error
+    
+    }
+
+Previous
+
+AI_InvalidDataContent
+
+Next
+
+AI_InvalidPromptError

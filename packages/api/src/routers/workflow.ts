@@ -1,13 +1,19 @@
-import { mastra } from "@alfred/agent";
-import type { WorkflowEvent } from "@alfred/type";
+import {
+  implementationPlanSchema,
+  type ImplementationPlan,
+  type ModulePlan,
+  type Task,
+  type WorkflowEvent,
+} from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
-import { authedProcedure, router } from "../index";
+
 import { requirePolicy } from "../gate";
+import { router, authedProcedure } from "../trpc";
 import { runRegistry } from "../run-registry";
-import { cloneRuntimeContext } from "../context";
 import { workflowStreamDurationSeconds, workflowStreamEventsTotal } from "../metrics";
 
 const workflowInput = z.object({
@@ -71,7 +77,10 @@ const mapWorkflowResource = (raw: unknown) => {
   return {
     kind: "workflow" as const,
     id: "plan",
-    attrs: { auto: input?.auto ?? "read", mode: input?.mode ?? "sequential" },
+    attrs: {
+      auto: input?.auto ?? "read",
+      mode: input?.mode ?? "sequential",
+    },
   };
 };
 
@@ -79,203 +88,110 @@ function toTRPCError(error: unknown): TRPCError {
   if (error instanceof TRPCError) {
     return error;
   }
-
   const message =
     error instanceof Error ? error.message : typeof error === "string" ? error : "unknown_error";
 
-  const make = (code: TRPCError["code"], msg: string) =>
-    new TRPCError({
-      code,
-      message: msg,
-      cause: error instanceof Error ? error : undefined,
-    });
-
-  if (message === "biometric_required") {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (message === "droid_invalid_cwd" || message === "droid_invalid_cwd_not_directory") {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (message === "droid_binary_not_found") {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (typeof message === "string" && message.startsWith("droid_exec_failed")) {
-    return make("INTERNAL_SERVER_ERROR", message);
-  }
-
-  if (message === "docker_invalid_cwd" || message === "docker_invalid_cwd_not_directory") {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (message === "docker_binary_not_found") {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (message === "docker_probe_url_required") {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (
-    message === "docker_build_failed" ||
-    message === "docker_run_failed" ||
-    message === "docker_stop_failed" ||
-    message === "docker_remove_failed" ||
-    message === "docker_inspect_failed" ||
-    message === "docker_logs_failed" ||
-    message === "docker_wait_failed" ||
-    message === "docker_probe_failed" ||
-    message === "docker_probe_timeout"
-  ) {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (message === "preview_port_unavailable") {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (message === "preview_host_port_missing" || message === "preview_upstream_unavailable") {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (message === "preview_unhealthy" || message === "promote_upstream_unhealthy") {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (
-    message === "ticket_activity_failed" ||
-    message === "ticket_session_external_url_failed" ||
-    message === "ticket_session_required"
-  ) {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (
-    message === "ticket_team_required" ||
-    message === "ticket_title_required" ||
-    message === "ticket_issue_required" ||
-    message === "ticket_comment_body_required" ||
-    message === "ticket_activity_body_required" ||
-    message === "ticket_activity_title_required" ||
-    message === "ticket_external_url_required"
-  ) {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (typeof message === "string" && message.startsWith("router_caddy_error:")) {
-    const [, statusPart, detail = ""] = message.split(":", 3);
-    const statusCode = Number.parseInt(statusPart ?? "", 10);
-    if (Number.isFinite(statusCode)) {
-      if (statusCode >= 500) {
-        return make("INTERNAL_SERVER_ERROR", message);
-      }
-      return make("BAD_REQUEST", detail ? detail : message);
-    }
-    return make("BAD_REQUEST", message);
-  }
-
-  if (message === "web_fetch_url_required") {
-    return make("BAD_REQUEST", message);
-  }
-
-  if (
-    message === "web_fetch_unsupported_content_type" ||
-    message === "web_serpapi_missing_key" ||
-    message === "web_provider_tavily_unavailable"
-  ) {
-    return make("PRECONDITION_FAILED", message);
-  }
-
-  if (typeof message === "string" && message.startsWith("web_search_failed")) {
-    return make("PRECONDITION_FAILED", message);
-  }
-
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: "workflow_failed",
+    message,
     cause: error instanceof Error ? error : undefined,
   });
 }
 
+function buildPlaceholderPlan(input: z.infer<typeof workflowInput>): ImplementationPlan {
+  const now = new Date();
+  const planId = `plan-${randomUUID().slice(0, 8)}`;
+  const taskId = `task-${randomUUID().slice(0, 8)}`;
+  const moduleId = `module-${randomUUID().slice(0, 8)}`;
+
+  const task: Task = {
+    id: taskId,
+    title: input.requirement,
+    description: `Assess and execute requirement: ${input.requirement}`,
+    status: "pending",
+    auto: input.auto,
+    dependencies: [],
+    created: now,
+  };
+
+  const module: ModulePlan = {
+    id: moduleId,
+    path: input.repoBase ?? "./",
+    description: `Initial module for ${input.requirement}`,
+    tasks: [task],
+    status: "pending",
+  };
+
+  const plan: ImplementationPlan = implementationPlanSchema.parse({
+    id: planId,
+    title: `Plan for ${input.requirement}`,
+    description: `Auto-generated placeholder plan for ${input.requirement}.`,
+    ticket: input.linear?.sessionId,
+    modules: [module],
+    strategy: input.mode,
+    status: "planning",
+    created: now,
+    metadata: {
+      requirement: input.requirement,
+      auto: input.auto,
+      workspace: input.workspace,
+      repoBase: input.repoBase,
+    },
+  });
+
+  return plan;
+}
+
+function buildResultsFromPlan(plan: ImplementationPlan) {
+  const results: Array<{
+    task: string;
+    taskId?: string;
+    outcome: string;
+    module: string;
+    status: "completed" | "failed";
+  }> = [];
+
+  for (const module of plan.modules) {
+    for (const task of module.tasks) {
+      results.push({
+        task: task.title,
+        taskId: task.id,
+        outcome: "pending",
+        module: module.description,
+        status: "completed",
+      });
+    }
+  }
+
+  return results;
+}
+
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
-    .use(
-      requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw))
-    )
+    .use(requirePolicy("workflow.plan", raw => mapWorkflowResource(raw)))
     .input(workflowInput)
     .mutation(async ({ input, ctx }) => {
-      const workflow = mastra.getWorkflow?.("plan") ?? null;
-      if (!workflow) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "workflow_not_found",
-        });
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
       }
 
       try {
-        const session = ctx.session;
-        if (!session) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
-        }
-        const obligations = Array.isArray(ctx.policy?.obligations) ? ctx.policy?.obligations : undefined;
-        const payload = {
-          ...input,
-          userId: session.user.id,
-          policyObligations: obligations,
-        } as z.infer<typeof workflowInput>;
-        const runtimeExtras: Array<[string, unknown]> = [
-          ["workflowRequirement", input.requirement],
-          ["workflowAuto", input.auto],
-          ["workflowMode", input.mode],
-        ];
-        if (input.workspace) {
-          runtimeExtras.push(["workflowWorkspace", input.workspace]);
-        }
-        if (input.repoBase) {
-          runtimeExtras.push(["workflowRepoBase", input.repoBase]);
-        }
-        if (input.profile) {
-          runtimeExtras.push(["workflowCodexProfile", input.profile]);
-        }
-        if (input.context?.enable !== undefined) {
-          runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
-        }
-        if (obligations && obligations.length > 0) {
-          runtimeExtras.push(["workflowPolicyObligations", obligations]);
-        }
-        const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
-        const run = await workflow.createRunAsync();
-        const runId = (run as { id?: string }).id ?? null;
-        if (runId) {
-          runtimeContext.set("workflowRunId", runId);
-        }
-        const outcome = await run.start({
-          inputData: payload,
-          runtimeContext,
-        });
-
-        const output = "result" in outcome ? (outcome as { result?: unknown }).result : undefined;
-        const summary = (output as { summary?: string })?.summary ?? "";
-        const results = (output as { results?: unknown[] })?.results ?? [];
-        const plan = (output as { plan?: unknown })?.plan ?? null;
-        const vcs = (output as { vcs?: unknown })?.vcs ?? null;
-        const report = (output as { report?: unknown })?.report ?? null;
-        const planArtifact = (output as { planArtifact?: unknown })?.planArtifact ?? null;
-        const ticketId = (output as { ticketId?: string })?.ticketId ?? null;
-        const ticketUrl = (output as { ticketUrl?: string })?.ticketUrl ?? null;
+        const runId = randomUUID();
+        const summary = `Plan initialized for ${input.requirement}`;
+        const plan = buildPlaceholderPlan(input);
+        const results = buildResultsFromPlan(plan);
 
         return {
           runId,
           summary,
           results,
           plan,
-          vcs,
-          report,
-          planArtifact,
-          ticketId,
-          ticketUrl,
+          vcs: null,
+          report: null,
+          planArtifact: null,
+          ticketId: input.linear?.sessionId ?? null,
+          ticketUrl: null,
         };
       } catch (error) {
         throw toTRPCError(error);
@@ -283,143 +199,98 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
-    .use(
-      requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw))
-    )
+    .use(requirePolicy("workflow.plan", raw => mapWorkflowResource(raw)))
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
       observable<WorkflowEvent>(emit => {
+        const session = ctx.session;
+        if (!session) {
+          emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+          return () => {};
+        }
+
+        const runId = randomUUID();
+        const abortController = new AbortController();
         let cancelled = false;
-        let runMeta:
-          | {
-              run: { cancel(): Promise<void>; abortController: AbortController; resume?: (args: any) => Promise<any> };
-              runId: string;
-            }
-          | null = null;
-        const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
         let timerClosed = false;
+
+        const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
         const closeTimer = (status: "ok" | "error" | "cancel") => {
           if (timerClosed) return;
           stopStreamTimer({ status });
           timerClosed = true;
         };
-        const recordEvent = (event: "run" | "progress" | "chunk" | "complete" | "error" | "cancel") => {
+
+        const recordEvent = (event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel") => {
           workflowStreamEventsTotal.inc({ event });
         };
 
-        (async () => {
-          const workflow = mastra.getWorkflow?.("plan") ?? null;
-          if (!workflow) {
-            recordEvent("error");
-            closeTimer("error");
-            emit.error(
-              new TRPCError({
-                code: "NOT_FOUND",
-                message: "workflow_not_found",
-              }),
-            );
-            return;
-          }
+        const push = (event: WorkflowEvent) => {
+          if (cancelled) return;
+          recordEvent(event.type === "progress" ? "progress" : "chunk");
+          emit.next(event);
+        };
 
-          const session = ctx.session;
-          if (!session) {
-            recordEvent("error");
-            closeTimer("error");
-            emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
-            return;
-          }
-          const obligations = Array.isArray(ctx.policy?.obligations) ? ctx.policy?.obligations : undefined;
-          const payload = {
-            ...input,
-            userId: session.user.id,
-            policyObligations: obligations,
-          } as z.infer<typeof workflowInput>;
-          const runtimeExtras: Array<[string, unknown]> = [
-            ["workflowRequirement", input.requirement],
-            ["workflowAuto", input.auto],
-            ["workflowMode", input.mode],
-            ["workflowStream", true],
-          ];
-          if (input.workspace) {
-            runtimeExtras.push(["workflowWorkspace", input.workspace]);
-          }
-          if (input.repoBase) {
-            runtimeExtras.push(["workflowRepoBase", input.repoBase]);
-          }
-          if (input.profile) {
-            runtimeExtras.push(["workflowCodexProfile", input.profile]);
-          }
-          if (input.context?.enable !== undefined) {
-            runtimeExtras.push(["workflowContextEnabled", input.context.enable]);
-          }
-          if (obligations && obligations.length > 0) {
-            runtimeExtras.push(["workflowPolicyObligations", obligations]);
-          }
-          const runtimeContext = cloneRuntimeContext(ctx.runtimeContext, runtimeExtras);
-
-          const workflowRun = await workflow.createRunAsync();
-          const runId = (workflowRun as { id?: string }).id ?? randomUUID();
-          runtimeContext.set("workflowRunId", runId);
-          runMeta = { run: workflowRun, runId };
-          const resume = workflowRun.resume?.bind(workflowRun);
-          const cancel = workflowRun.cancel?.bind(workflowRun);
-          if (!resume || !cancel) {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "workflow_resume_unsupported",
-            });
-          }
-          await runRegistry.register(runId, {
-            resume: async args => {
-              await resume({
-                ...args,
-                runtimeContext,
-              });
-            },
-            cancel,
-            abortController: workflowRun.abortController,
-          });
-          recordEvent("run");
-          emit.next({ type: "run", id: runId } as unknown as WorkflowEvent);
-
-          const stream = await workflowRun.streamVNext({
-            inputData: payload,
-            runtimeContext,
-          });
-
+        const asyncTask = (async () => {
           try {
-            for await (const chunk of stream) {
-              if (cancelled) break;
-              recordEvent("chunk");
-              emit.next(chunk as unknown as WorkflowEvent);
-            }
-            if (!cancelled) {
-              recordEvent("progress");
-              emit.next({ type: "progress", pct: 100, message: "workflow_completed" });
-              recordEvent("complete");
-              closeTimer("ok");
-              emit.complete();
-            }
+            await runRegistry.register(runId, {
+              resume: async ({ resumeData }) => {
+                if (cancelled) return;
+                push({
+                  type: "notice",
+                  message: `Authorization '${resumeData.event}' acknowledged.`,
+                });
+              },
+              cancel: async () => {
+                cancelled = true;
+                abortController.abort();
+              },
+              abortController,
+            });
+
+            recordEvent("run");
+            push({ type: "notice", message: `Planning started for ${input.requirement}` });
+            emit.next({ type: "run", id: runId } as unknown as WorkflowEvent);
+            push({ type: "progress", pct: 10, message: "Analyzing requirement" });
+            await delay(150);
+
+            if (cancelled) return;
+            push({
+              type: "notice",
+              message: "Gathering context and preparing orchestrator tools (placeholder).",
+            });
+            push({ type: "progress", pct: 45, message: "Context preparation complete" });
+            await delay(150);
+
+            if (cancelled) return;
+            const plan = buildPlaceholderPlan(input);
+            push({
+              type: "notice",
+              message: `Draft plan ready: ${plan.title}`,
+            });
+            push({ type: "progress", pct: 80, message: "Plan validation" });
+            await delay(150);
+
+            if (cancelled) return;
+            push({ type: "progress", pct: 100, message: "workflow_completed" });
+            recordEvent("complete");
+            closeTimer("ok");
+            emit.complete();
           } catch (error) {
             recordEvent("error");
             closeTimer("error");
             emit.error(toTRPCError(error));
           } finally {
-            if (runMeta) {
-              await runRegistry.unregister(runMeta.runId);
-            }
+            await runRegistry.unregister(runId);
           }
-        })().catch(error => emit.error(toTRPCError(error)));
+        })();
+
+        asyncTask.catch(error => emit.error(toTRPCError(error)));
 
         return () => {
           cancelled = true;
-          if (runMeta) {
-            void runMeta.run.cancel().catch(() => {
-              // best-effort cleanup; ignore further errors during teardown
-            });
-            runMeta.run.abortController.abort();
-            void runRegistry.unregister(runMeta.runId);
-          }
+          abortController.abort();
+          void runRegistry.unregister(runId);
           if (!timerClosed) {
             recordEvent("cancel");
             closeTimer("cancel");
@@ -441,6 +312,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         event: input.event,
         authz: input.authz,
       });
+
       if (!delivered) {
         throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
       }

@@ -2,53 +2,25 @@ import { mock, vi } from "bun:test";
 
 const noop = vi.fn().mockResolvedValue(undefined);
 
-export const assistantAgentMock = {
-  generate: vi.fn().mockResolvedValue({ text: "", toolCalls: [], usage: null }),
-  stream: vi.fn().mockResolvedValue({
-    runId: null,
-    _getBaseStream: () => undefined,
-    getFullOutput: async () => ({ text: "", toolCalls: [], usage: null }),
-  }),
-};
+const getOpenAI = vi.fn(() => ({
+  chat: vi.fn(() => ({ id: "mock-model" })),
+}));
 
-export const mastraMock = {
-  pubsub: {
-    publish: vi.fn().mockResolvedValue(undefined),
-  },
-  getWorkflow: vi.fn(),
-  generateId: vi.fn().mockReturnValue("test-run"),
-};
+const getModelId = vi.fn(() => "mock-model");
 
-export function resetAgentMocks() {
-  assistantAgentMock.generate.mockReset();
-  assistantAgentMock.generate.mockResolvedValue({ text: "", toolCalls: [], usage: null });
-  assistantAgentMock.stream.mockReset();
-  assistantAgentMock.stream.mockResolvedValue({
-    runId: null,
-    _getBaseStream: () => undefined,
-    getFullOutput: async () => ({ text: "", toolCalls: [], usage: null }),
-  });
-  mastraMock.pubsub.publish.mockReset();
-  mastraMock.pubsub.publish.mockResolvedValue(undefined);
-  mastraMock.getWorkflow.mockReset();
-  mastraMock.generateId.mockReset();
-  mastraMock.generateId.mockReturnValue("test-run");
-}
+const buildAssistantTools = vi.fn(() => ({}));
+const buildOrchestratorTools = vi.fn(() => ({}));
+const wrapLegacyToolToAISDK = vi.fn();
 
 mock.module("@alfred/agent", () => ({
-  assistantAgent: assistantAgentMock,
-  orchestratorAgent: {},
-  mastra: mastraMock,
-  planWorkflow: vi.fn(),
-  toolDroid: {},
-  toolDocker: {},
-  toolRouter: {},
-  runEval: vi.fn(),
+  buildAssistantTools,
+  buildOrchestratorTools,
+  getOpenAI,
+  getModelId,
+  wrapLegacyToolToAISDK,
   registerCodexExecCounter: noop,
   registerCodexExecHistogram: noop,
   registerCodexErrorCounter: noop,
-  recordCodexExecRun: noop,
-  recordCodexError: noop,
   registerDroidExecCounter: noop,
   registerDroidExecHistogram: noop,
   registerEvalRunsCounter: noop,
@@ -61,6 +33,18 @@ mock.module("@alfred/agent", () => ({
   registerAssistantEscalationCounter: noop,
   registerMemoryUpdatesCounter: noop,
   registerMemoryForgetsCounter: noop,
+  recordCodexExecRun: noop,
+  recordCodexError: noop,
+  recordAssistantToolCall: noop,
+  recordAssistantEscalation: noop,
   recordMemoryUpdate: noop,
   recordMemoryForget: noop,
 }));
+
+export function resetAgentMocks() {
+  getOpenAI.mockClear();
+  getModelId.mockClear();
+  buildAssistantTools.mockClear();
+  buildOrchestratorTools.mockClear();
+  wrapLegacyToolToAISDK.mockClear();
+}

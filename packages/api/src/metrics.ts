@@ -322,6 +322,40 @@ export const assistantStreamDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
+type AssistantStreamStatus = "ok" | "error" | "cancel";
+
+function normalizeEventLabel(event: string): string {
+  if (!event) {
+    return "unknown";
+  }
+  return event.trim().toLowerCase() || "unknown";
+}
+
+export function recordAssistantStreamEvent(event: string): void {
+  try {
+    assistantStreamEventsTotal.inc({ event: normalizeEventLabel(event) });
+  } catch {
+    // ignore metrics failures
+  }
+}
+
+export function startAssistantStreamTimer():
+  | ((status: AssistantStreamStatus) => void)
+  | undefined {
+  try {
+    const stopTimer = assistantStreamDurationSeconds.startTimer();
+    return (status: AssistantStreamStatus) => {
+      try {
+        stopTimer({ status });
+      } catch {
+        // ignore metrics failures
+      }
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export const workflowStreamEventsTotal = new client.Counter({
   name: "workflow_stream_events_total",
   help: "Count of workflow stream events grouped by event type.",

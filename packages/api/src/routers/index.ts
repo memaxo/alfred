@@ -1,4 +1,4 @@
-import { protectedProcedure, publicProcedure, router } from "../index";
+import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { bookRouter } from "./book";
 import { jwksRouter } from "./jwks";
 import { noteRouter } from "./note";
@@ -12,6 +12,7 @@ import { evalRouter } from "./eval";
 import { deployRouter } from "./deploy";
 import { linearRouter } from "./linear";
 import { assistantRouter } from "./assistant";
+import { orchestratorRouter } from "./orchestrator";
 import { profileRouter } from "./profile";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
@@ -36,6 +37,7 @@ export const appRouter: ReturnType<typeof router> = router({
   deploy: deployRouter,
   linear: linearRouter,
   assistant: assistantRouter,
+  orchestrator: orchestratorRouter,
   profile: profileRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,

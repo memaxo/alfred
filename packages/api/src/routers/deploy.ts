@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
-import { toolDocker, toolRouter } from "@alfred/agent";
+import { toolDocker } from "@alfred/agent/orchestrator/tool/docker";
+import { toolRouter } from "@alfred/agent/orchestrator/tool/router";
 import { deployRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
 import { requirePolicy } from "../gate";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 
 const PREVIEW_BIND_HOST = "127.0.0.1";
 
@@ -452,6 +453,7 @@ export const deployRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("deploy.promote", mapPromoteResource))
     .input(promoteInput)
     .mutation(async ({ ctx, input }) => {
+      // TODO: Handle policy obligations (e.g., biometric elevation) by pausing the request and resuming once satisfied.
       const domain = getAppDomain();
       const slug = slugifyApp(input.app);
       const host = input.host ?? buildProdHost(slug, domain);
@@ -637,6 +639,7 @@ export const deployRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("deploy.remove", mapRemoveResource))
     .input(removeInput)
     .mutation(async ({ ctx, input }) => {
+      // TODO: Surface PDP obligations and expose resumable workflow hooks before destructive teardown.
       const session = ctx.session;
       const userId = session?.user?.id;
       if (!userId) {

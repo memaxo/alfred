@@ -3,16 +3,23 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
     "lint": "biome check .",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@alfred/db": "workspace:*"
+    "@alfred/db": "workspace:*",
+    "ai": "^6.0.0-beta.94",
+    "@ai-sdk/openai": "^2.0.49",
+    "@ai-sdk/cohere": "^2.0.0"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",

@@ -2,7 +2,7 @@ import { db } from "@alfred/db";
 import { todo } from "@alfred/db/schema/todo";
 import { eq } from "drizzle-orm";
 import z from "zod";
-import { publicProcedure, router } from "../index";
+import { publicProcedure, router } from "../trpc";
 
 export const todoRouter = router({
   getAll: publicProcedure.query(async () => await db.select().from(todo)),

@@ -1,6 +1,6 @@
 import * as assistantRepo from "@alfred/db/repo/assistant";
 import z from "zod";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 
 const noteMutationInput = z.object({
   title: z.string().min(1).max(256).optional(),

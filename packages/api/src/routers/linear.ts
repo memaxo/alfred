@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
 import { z } from "zod";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 
 const LINEAR_AUTH_BASE = "https://linear.app/oauth/authorize";

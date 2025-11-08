@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { spawn } from "node:child_process";
 import z from "zod";
-import { authedProcedure, router } from "../index";
+import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 import { droidExecRunsTotal } from "../metrics";
 
@@ -62,6 +62,7 @@ const droidProcedures = {
 		)
 		.input(droidRunInputSchema)
 		.mutation(async ({ input }) => {
+			// TODO: Propagate PDP obligations (biometric, approvals) back to the client and support resumable execution.
 			const { claims } = await requireToolScopesAndPolicy(input.authz, ["droid.exec"], {
 				action: "droid.exec",
 				resource: {
@@ -128,6 +129,7 @@ stream: authedProcedure
 			let child: ReturnType<typeof spawnDroidProcess> | null = null;
 
 			void (async () => {
+				// TODO: Surface obligations to clients so they can request elevation before opening the stream.
 				const { claims } = await requireToolScopesAndPolicy(input.authz, ["droid.exec"], {
 					action: "droid.exec",
 					resource: {

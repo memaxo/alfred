@@ -1,5 +1,5 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import type { RuntimeContext } from "@mastra/core/runtime-context";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { z } from "zod";
 import {
   recordAssistantEscalation,
@@ -18,7 +18,7 @@ const handoffInputSchema = z.object({
 
 type HandoffInput = z.infer<typeof handoffInputSchema>;
 
-async function enforcePolicy(input: HandoffInput) {
+async function enforcePolicy(input: HandoffInput, requestId: string | null) {
   await requireToolScopesAndPolicy(input.authz, ["droid.exec", "repo.read"], {
     action: "assistant.escalate",
     resource: {
@@ -27,6 +27,7 @@ async function enforcePolicy(input: HandoffInput) {
     },
     context: {
       auto: input.auto,
+      requestId: requestId ?? undefined,
     },
   });
 }
@@ -43,6 +44,13 @@ export const toolHandoff = {
     ticketUrl: z.string().nullable(),
     plan: z.unknown().nullable(),
     results: z.array(z.unknown()).nullable(),
+    next: z
+      .object({
+        kind: z.enum(["navigate", "start-workflow"]),
+        href: z.string().optional(),
+        reason: z.string().optional(),
+      })
+      .nullable(),
   }),
   execute: async ({
     input,
@@ -53,48 +61,30 @@ export const toolHandoff = {
   }) => {
     recordAssistantToolCall("handoff");
 
-    await enforcePolicy(input);
+    const requestId =
+      (runtimeContext?.get?.("requestId") as string | undefined) ?? null;
 
-    const { mastra } = await import("@alfred/agent");
-    const workflow = mastra.getWorkflow?.("plan");
-    if (!workflow) {
-      throw new Error("workflow_not_found");
-    }
+    await enforcePolicy(input, requestId);
 
-    const payload = {
-      requirement: input.requirement,
-      auto: input.auto,
-      userId: input.userId,
-      workspace: input.workspace,
-      repoBase: input.repoBase,
-      ...(input.context ?? {}),
+    const summary = `Escalation requested: ${input.requirement}`;
+    const next = {
+      kind: "navigate" as const,
+      href: "/orchestrator/run",
+      reason:
+        "Open the Orchestrator Run viewer to start and monitor the plan workflow.",
     };
-
-    const run = await workflow.createRunAsync();
-    const outcome = await run.start({
-      inputData: payload,
-      runtimeContext,
-    });
-
-    const output = (outcome as { result?: unknown }).result ?? undefined;
-    const summary = (output as { summary?: string })?.summary ?? null;
-    const results = (output as { results?: unknown[] })?.results ?? null;
-    const plan = (output as { plan?: unknown })?.plan ?? null;
-    const ticketId = (output as { ticketId?: string })?.ticketId ?? null;
-    const ticketUrl = (output as { ticketUrl?: string })?.ticketUrl ?? null;
-
-    const runId = (run as { id?: string }).id ?? null;
 
     recordAssistantEscalation("workflow.plan");
 
     return {
       ok: true as const,
-      runId,
+      runId: null,
       summary,
-      results,
-      plan,
-      ticketId,
-      ticketUrl,
+      results: null,
+      plan: null,
+      ticketId: null,
+      ticketUrl: null,
+      next,
     };
   },
 };

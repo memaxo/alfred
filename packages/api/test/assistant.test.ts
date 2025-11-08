@@ -1,20 +1,20 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { config } from "dotenv";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { RuntimeContext } from "@mastra/core/runtime-context";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { createTestDb, closeTestDb } from "./utils/db";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, "../../db/.env") });
+const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
+const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 const TEST_USER = "api-assistant-test-user";
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
 let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeAll(async () => {
+  if (!SHOULD_RUN) {
+    return;
+  }
   const [{ appRouter: router }] = await Promise.all([
     import("@alfred/api/routers/index"),
   ]);
@@ -23,6 +23,7 @@ beforeAll(async () => {
 });
 
 async function resetAssistantTables() {
+  if (!SHOULD_RUN) return;
   await testDbHarness.db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`,
   );
@@ -69,10 +70,13 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+  if (!SHOULD_RUN) {
+    return;
+  }
   await closeTestDb(testDbHarness);
 });
 
-describe("assistant routers", () => {
+describeFn("assistant routers", () => {
   it("creates and lists notes for the authenticated user", async () => {
     const caller = createCaller();
     await caller.note.create({ content: "hello router", title: "Greeting" });

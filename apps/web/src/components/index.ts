@@ -5,10 +5,6 @@
  * Single word naming convention followed
  */
 
-// Core conversation
-export { Chat } from "./chat";
-export { Chatbar } from "./chatbar";
-export { Msg } from "./msg";
 export { Connect } from "./connect";
 export { Controls } from "./controls";
 
@@ -59,4 +55,3 @@ export { ChatContainer } from "./chat-container";
 // Re-export existing components
 export { Loader } from "./loader";
 export { Response } from "./response";
-
