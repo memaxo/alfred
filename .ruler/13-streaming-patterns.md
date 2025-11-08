@@ -20,6 +20,56 @@
 
 9. **Resource scoping.** Streams require `thread`, `agent`, and `resource` identifiers. Ensure hooks memoise subscription args to prevent resubscribes.
 
+10. **AbortSignal propagation.** Always propagate abort signals through async chains:
+    ```typescript
+    const abortController = new AbortController();
+    const runner = runPlanV6(input, { signal: abortController.signal });
+    
+    return () => {
+      abortController.abort();
+      // Cleanup resources
+    };
+    ```
+
+11. **AI SDK v6 abort handling.** Use `onAbort` callback for cleanup when streams are aborted:
+    ```typescript
+    const result = streamText({
+      model,
+      messages,
+      abortSignal: req.signal,
+      onAbort: async ({ steps }) => {
+        // Persist partial results
+        await savePartialResults(steps);
+        await logAbortEvent(steps.length);
+      },
+    });
+    ```
+
+12. **UI message stream abort.** Always use `consumeStream` with `toUIMessageStreamResponse` to ensure `onFinish` is called on abort:
+    ```typescript
+    import { consumeStream } from 'ai';
+    
+    return result.toUIMessageStreamResponse({
+      onFinish: async ({ isAborted }) => {
+        if (isAborted) {
+          // Handle abort cleanup
+        } else {
+          // Handle normal completion
+        }
+      },
+      consumeSseStream: consumeStream, // Required for abort handling
+    });
+    ```
+
+13. **Resource cleanup.** Always clean up in finally blocks:
+    ```typescript
+    try {
+      await execute();
+    } finally {
+      await cleanup();
+    }
+    ```
+
 ## Hook Checklist
 
 - Subscribe via `trpc.<agent>.stream.useSubscription` (or the equivalent).  

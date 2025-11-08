@@ -7,3 +7,33 @@
 5. **Migration runner.** Use `packages/db/scripts/migrate.ts` everywhere (CI, local dev). It records applied migrations in `_migrations`.
 6. **Testing.** Write Vitest suites under `packages/db/test` that spin up an isolated database schema and assert repo behaviour (notes, reminders, timers, eval runs/scores, etc.).
 7. **Laminar correlation.** Columns like `laminar_eval_id` belong in the primary run table to enable dual-write correlation. Always backfill with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations so replays remain idempotent.
+8. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic:
+   ```typescript
+   await db.transaction(async (tx) => {
+     await tx.insert(users).values({...});
+     await tx.insert(profiles).values({...});
+   });
+   ```
+   Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
+9. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API):
+   ```typescript
+   await db.batch([
+     db.select().from(users).where(...),
+     db.select().from(profiles).where(...),
+     db.insert(notes).values({...}),
+   ]);
+   ```
+   Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
+10. **Savepoints.** Use savepoints for partial rollbacks within transactions:
+    ```typescript
+    await db.transaction(async (tx) => {
+      await tx.insert(users).values({...});
+      await tx.savepoint(async (sp) => {
+        await sp.update(profiles).set({...});
+        if (condition) throw new Error("Rollback savepoint");
+      });
+      // Transaction continues even if savepoint rolled back
+    });
+    ```
+11. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
+12. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.

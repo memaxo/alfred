@@ -11,6 +11,7 @@ import {
 import { runRegistry } from "../run-registry";
 import { authedProcedure, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
+import { logger } from "../utils/logger";
 import { runPlanV6 } from "../workflow/runner";
 
 const workflowInput = z.object({
@@ -213,8 +214,13 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: event.type ?? "event",
                   eventData: event,
                 });
-              } catch {
-                // persistence should not break streaming to client
+              } catch (error) {
+                logger.warn("workflow_event_persistence_failed", {
+                  runId,
+                  eventType: event.type ?? "event",
+                  error: error instanceof Error ? error.message : String(error),
+                });
+                // Continue streaming without throwing
               }
               push(event);
             }
@@ -225,8 +231,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 status: "completed",
                 completedAt: new Date(),
               });
-            } catch {
-              // ignore persistence errors on completion
+            } catch (error) {
+              logger.warn("workflow_completion_update_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              // Continue without throwing
             }
 
             recordEvent("complete");
@@ -241,8 +251,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
               if (runId) {
                 await runRegistry.unregister(runId);
               }
-            } catch {
-              // ignore unregister errors
+            } catch (error) {
+              logger.warn("workflow_unregister_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              // Continue without throwing
             }
           }
         })();

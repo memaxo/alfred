@@ -19,6 +19,54 @@
 7. **Streaming alignment.** Components consuming assistant/workflow streams must rely on hooks such as `useAssistantStream`, handle incremental payloads, and surface error/progress states.
 8. **Shared primitives.** Use the canonical primitives under `apps/web/src/components/ui/` for layout and inputs; introduce new foundations only when existing tokens or utilities fail the requirement.
 
+9. **Error boundaries.** Use route-level error boundaries for error handling:
+    ```typescript
+    // Default error component in router.tsx
+    import { createRouter, ErrorComponent } from '@tanstack/react-router';
+    
+    export function getRouter() {
+      const router = createRouter({
+        routeTree,
+        defaultErrorComponent: ({ error, reset }) => (
+          <div>
+            <p>Error: {error.message}</p>
+            <button onClick={reset}>Retry</button>
+          </div>
+        ),
+      });
+      return router;
+    }
+    
+    // Per-route error component
+    import { createFileRoute, ErrorComponent } from '@tanstack/react-router';
+    import type { ErrorComponentProps } from '@tanstack/react-router';
+    
+    function RouteError({ error, reset }: ErrorComponentProps) {
+      return (
+        <div>
+          <p>Route error: {error.message}</p>
+          <button onClick={reset}>Retry</button>
+        </div>
+      );
+    }
+    
+    export const Route = createFileRoute('/path')({
+      component: Component,
+      errorComponent: RouteError,
+    });
+    ```
+
+10. **Loader error handling.** Loaders can throw errors that are caught by error boundaries:
+    ```typescript
+    loader: async () => {
+      const data = await fetchData();
+      if (!data) {
+        throw new Error('Data not found');
+      }
+      return data;
+    },
+    ```
+
 ## Testing Expectations
 
 - Exercise render, interaction, empty, and error states with React Testing Library.

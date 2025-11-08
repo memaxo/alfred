@@ -1,5 +1,6 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { generateText } from "ai";
+import { logger } from "../utils/logger";
 
 type PersistArgs = {
   userId: string;
@@ -33,10 +34,11 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
     });
     return runId;
   } catch (error) {
-    console.error(
-      `[persistResult] Failed to persist ${args.kind} generate result:`,
-      error
-    );
+    logger.error("persist_result_failed", {
+      kind: args.kind,
+      userId: args.userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

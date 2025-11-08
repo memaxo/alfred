@@ -35,6 +35,17 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
    - Validate schemas before type assertions
    - Prefer helper functions over inline suppressions
 
+10. **Code quality thresholds.**
+    - Function length: max 50 lines (hot paths: 30 lines)
+    - File size: max 500 lines
+    - Test coverage: min 80% for repos, 60% for routers
+    - Type coverage: 100% (no `any` except JSONB `as any`)
+
+11. **Performance budget enforcement.** Budget breaches are defects. CI should fail on:
+    - Functions exceeding declared budgets
+    - Test coverage below thresholds
+    - Type suppressions (except documented exceptions)
+
 ## Examples
 
 ```typescript

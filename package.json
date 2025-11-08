@@ -32,6 +32,7 @@
     "build": "turbo build",
     "typecheck": "tsc -b --pretty false",
     "typecheck:workspace": "turbo typecheck",
+    "check:budgets": "bun scripts/check-budgets.ts",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "db:push": "turbo -F @alfred/db db:push",

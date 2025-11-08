@@ -9,6 +9,7 @@ import {
   runRegistryDispatchDurationSeconds,
   runRegistryEventsTotal,
 } from "./metrics";
+import { logger } from "./utils/logger";
 
 export type ResumePayload = {
   event: "deploy-authz" | "linear-authz" | "bio-authz";
@@ -390,9 +391,10 @@ export function createRunRegistry(): RunRegistry {
 
   const url = process.env.REDIS_URL;
   if (!url) {
-    console.warn(
-      "[run-registry] RUN_REGISTRY_BACKEND=redis but REDIS_URL missing; falling back to memory."
-    );
+    logger.warn("run_registry_redis_missing", {
+      backend: "redis",
+      fallback: "memory",
+    });
     recordEvent("register", BACKEND_MEMORY_FALLBACK, "error");
     return new MemoryRunRegistry();
   }
@@ -405,10 +407,10 @@ export function createRunRegistry(): RunRegistry {
       heartbeatMs: DEFAULT_HEARTBEAT_MS,
     });
   } catch (error) {
-    console.error(
-      "[run-registry] Failed to initialize Redis registry, falling back to memory.",
-      error
-    );
+    logger.error("run_registry_redis_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      fallback: "memory",
+    });
     recordEvent("register", BACKEND_MEMORY_FALLBACK, "error");
     return new MemoryRunRegistry();
   }
