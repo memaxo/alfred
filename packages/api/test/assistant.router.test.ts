@@ -6,6 +6,7 @@ const generateTextMock = vi.fn();
 
 mock.module("@alfred/api/ai/generate", () => ({
   callGenerateText: generateTextMock,
+  persistGenerateResult: vi.fn().mockResolvedValue(null),
 }));
 
 const handoffExecuteMock = vi.fn();

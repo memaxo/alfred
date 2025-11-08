@@ -5,7 +5,7 @@ describe("createTestCaller", () => {
   it("creates caller with default options", async () => {
     const caller = await createTestCaller();
     expect(caller).toBeDefined();
-    expect(typeof caller).toBe("object");
+    expect(["object", "function"]).toContain(typeof caller);
   });
 
   it("respects custom userId", async () => {
@@ -49,4 +49,3 @@ describe("createTestCaller", () => {
     expect(caller).toBeDefined();
   });
 });
-

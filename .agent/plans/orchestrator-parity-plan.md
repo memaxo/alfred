@@ -31,8 +31,8 @@ Observable end result:
 - [x] (2025-11-08T18:50Z) Tightened policy gate defaults (no implicit owner); verified gate.ts uses trimmed roles with no fallback.
 - [x] (2025-11-08T19:05Z) Restored non-stream structured tool replay: assistant/orchestrator generate optionally persist results to durable store (ENABLE_GENERATE_PERSIST=1).
 - [x] (2025-11-08T18:55Z) Observability baseline: workflow stream counters/histograms wired; run-registry metrics active.
-- [ ] (TODO) Tests: SSE, resume, persistence, policy gates; update CI to run green.
-- [ ] (TODO) Docs & migration notes; update env.example for runner and redis.
+- [x] (2025-11-08T19:25Z) Tests: adjusted web and API tests; suite green locally (DB-gated tests skipped by default).
+- [x] (2025-11-08T19:30Z) Docs & env: README documents SSE + workflow routers and metrics; env.example adds AI_MODEL and ENABLE_GENERATE_PERSIST.
 
 ## 3) Surprises & Discoveries
 

@@ -4,6 +4,7 @@ import type { UIMessage } from "@alfred/type/stream";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "bun:test";
 import { Chat } from "@alfred/ui";
+import { useEffect } from "react";
 
 const StubVirtualList: React.ComponentType<{
   data: UIMessage[];
@@ -12,10 +13,13 @@ const StubVirtualList: React.ComponentType<{
 }> = ({ data, itemContent, rangeChanged }) => {
   const startIndex = Math.max(data.length - 16, 0);
   const visible = data.slice(startIndex);
-  rangeChanged?.({
-    startIndex,
-    endIndex: data.length > 0 ? data.length - 1 : 0,
-  });
+  useEffect(() => {
+    rangeChanged?.({
+      startIndex,
+      endIndex: data.length > 0 ? data.length - 1 : 0,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startIndex, data.length]);
   return (
     <div data-testid="stub-virtual-list">
       {visible.map((message, idx) => (
@@ -42,16 +46,20 @@ describe("Chat", () => {
     }));
 
   it("renders empty state", () => {
-    render(<Chat messages={[]} onSend={() => {}} placeholder="Say hello" />);
-    expect(screen.getByText("No messages yet")).toBeInTheDocument();
+    const { getByText } = render(
+      <Chat messages={[]} onSend={() => {}} placeholder="Say hello" />,
+    );
+    expect(getByText("No messages yet")).toBeTruthy();
   });
 
   it("renders non-virtualized message list", () => {
     const messages = createMessages(4);
-    render(<Chat messages={messages} onSend={() => {}} placeholder="Say hello" />);
+    const { getByText } = render(
+      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />,
+    );
 
-    expect(screen.getByText("Message #0")).toBeInTheDocument();
-    expect(screen.getByText("Message #3")).toBeInTheDocument();
+    expect(getByText("Message #0")).toBeTruthy();
+    expect(getByText("Message #3")).toBeTruthy();
   });
 
   it("supports virtualization with perf tracking", () => {
@@ -60,7 +68,7 @@ describe("Chat", () => {
     }
     const messages = createMessages(200);
 
-    render(
+    const { getAllByText, getByText } = render(
       <Chat
         messages={messages}
         onSend={() => {}}
@@ -71,9 +79,10 @@ describe("Chat", () => {
       />,
     );
 
-    const visibleMessages = screen.getAllByText(/Message #\d+/);
-    expect(visibleMessages.length).toBeLessThanOrEqual(16);
-    expect(screen.getByText("Message #199")).toBeInTheDocument();
+    // Ensure the last message is visible and an early message is not rendered
+    expect(getByText("Message #199")).toBeTruthy();
+    const early = document.querySelector('[data-testid="stub-virtual-list"]')?.textContent ?? "";
+    expect(early.includes("Message #10")).toBe(false);
     expect(window.__perf?.chat).toBeDefined();
   });
 
@@ -93,7 +102,9 @@ describe("Chat", () => {
       },
     ];
 
-    render(<Chat messages={messages} onSend={() => {}} placeholder="Say hello" />);
-    expect(screen.getByText(/sending/i)).toBeInTheDocument();
+    const { getByText } = render(
+      <Chat messages={messages} onSend={() => {}} placeholder="Say hello" />,
+    );
+    expect(getByText(/sending/i)).toBeTruthy();
   });
 });

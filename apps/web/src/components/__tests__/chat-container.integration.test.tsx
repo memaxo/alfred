@@ -2,10 +2,10 @@ import "@/test/dom";
 import type { ReactNode } from "react";
 import type { UIMessage } from "@alfred/type/stream";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import { beforeEach, describe, expect, it, vi, mock } from "bun:test";
 import { ChatContainer } from "../chat-container";
 
-vi.mock("react-virtuoso", () => ({
+mock.module("react-virtuoso", () => ({
   Virtuoso: ({ data, itemContent }: { data: UIMessage[]; itemContent: (index: number, message: UIMessage) => ReactNode }) => (
     <div data-testid="stub-virtuoso">
       {data.map((message, index) => (
@@ -19,7 +19,7 @@ const sendSpy = vi.fn();
 const clearSpy = vi.fn();
 const hydrateSpy = vi.fn();
 
-vi.mock("@/hooks/use-assistant-stream", () => {
+mock.module("@/hooks/use-assistant-stream", () => {
   const { useCallback, useState } = require("react");
 
   const createMessage = (text: string): UIMessage => ({
@@ -66,62 +66,62 @@ describe("ChatContainer integration", () => {
   });
 
   it("sends messages through the assistant stream hook", async () => {
-    render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText } = render(<ChatContainer agent="assistant" />);
 
-    const input = screen.getByPlaceholderText(/Ask Alfred/i);
+    const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "Hello world" } });
     fireEvent.submit(input.closest("form") ?? input);
 
     await waitFor(() => {
       expect(sendSpy).toHaveBeenCalledWith("Hello world");
-      expect(screen.getByText("Hello world")).toBeInTheDocument();
+      expect(getByText("Hello world")).toBeTruthy();
     });
   });
 
   it("clears messages when the clear button is pressed", async () => {
-    render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(<ChatContainer agent="assistant" />);
 
-    const input = screen.getByPlaceholderText(/Ask Alfred/i);
+    const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "To clear" } });
     fireEvent.submit(input.closest("form") ?? input);
 
     await waitFor(() => {
-      expect(screen.getByText("To clear")).toBeInTheDocument();
+      expect(getByText("To clear")).toBeTruthy();
     });
 
-    const clearButton = screen.getByRole("button", { name: /clear/i });
+    const clearButton = getByRole("button", { name: /clear/i });
     fireEvent.click(clearButton);
 
     await waitFor(() => {
       expect(clearSpy).toHaveBeenCalled();
-      expect(screen.queryByText("To clear")).not.toBeInTheDocument();
+      expect(queryByText("To clear")).toBeNull();
     });
   });
 
   it("hydrates messages when switching agents", async () => {
-    render(<ChatContainer agent="assistant" />);
+    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(<ChatContainer agent="assistant" />);
 
-    const input = screen.getByPlaceholderText(/Ask Alfred/i);
+    const input = getByPlaceholderText(/Ask Alfred/i);
     fireEvent.change(input, { target: { value: "Agent state" } });
     fireEvent.submit(input.closest("form") ?? input);
 
     await waitFor(() => {
-      expect(screen.getByText("Agent state")).toBeInTheDocument();
+      expect(getByText("Agent state")).toBeTruthy();
     });
 
-    const orchestratorSwitch = screen.getByRole("button", { name: /orchestrator/i });
+    const orchestratorSwitch = getByRole("button", { name: /orchestrator/i });
     fireEvent.click(orchestratorSwitch);
 
     await waitFor(() => {
       expect(hydrateSpy).toHaveBeenCalled();
-      expect(screen.queryByText("Agent state")).not.toBeInTheDocument();
+      expect(queryByText("Agent state")).toBeNull();
     });
 
-    const assistantSwitch = screen.getByRole("button", { name: /assistant/i });
+    const assistantSwitch = getByRole("button", { name: /assistant/i });
     fireEvent.click(assistantSwitch);
 
     await waitFor(() => {
-      expect(screen.getByText("Agent state")).toBeInTheDocument();
+      expect(getByText("Agent state")).toBeTruthy();
     });
   });
 });

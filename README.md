@@ -75,6 +75,18 @@ bun run dev
 
 This starts the Turborepo pipeline (API + web app). Visit `http://localhost:3000` for the SSR app. The API listens at `http://localhost:3000/api`.
 
+Streaming endpoints (AI SDK v6 SSE):
+
+- `POST /api/assistant` – streams `UIMessage` parts using `streamText` and assistant tools.
+- `POST /api/orchestrator` – streams `UIMessage` parts using `streamText` and orchestrator tools.
+
+Workflow router (tRPC):
+
+- `workflow.start` – initializes a durable workflow run and returns `{ runId, summary }`.
+- `workflow.stream` – emits `WorkflowEvent` chunks and persists each to Postgres.
+- `workflow.resume` – delivers authorization events to the active run via the run registry.
+- `workflow.get` / `workflow.events` – hydrate run metadata and persisted events for replay.
+
 ### Native (Expo)
 
 ```bash
@@ -132,6 +144,8 @@ Prometheus metrics are served from `/api/metrics` (content type `text/plain; ver
 - `eval_runs_total{agent,status}` & `eval_duration_seconds{agent}`
 - `eval_scores_total{scorer}`, `eval_failures_total{scorer,reason}`
 - `laminar_eval_datapoints_total{status}`, `laminar_eval_errors_total{stage}`
+- `workflow_stream_events_total{event}`, `workflow_stream_duration_seconds{status}`
+- `run_registry_events_total{event,backend,outcome}`, `run_registry_dispatch_duration_seconds{backend,outcome}`
 
 Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, etc.).
 
