@@ -4,7 +4,7 @@
  */
 
 import { rerank } from "@alfred/rag";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../index";
 import { ragChunks, ragDocuments } from "../schema/rag";
 
@@ -112,38 +112,37 @@ export async function searchChunks(
   const ef = efSearch ?? 40;
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
 
-  // Build query using pgvector <=> operator with LOCAL ef_search
-  let baseQuery = sql`
-    SELECT 
-      id,
-      document_id as "documentId",
-      content,
-      "order",
-      metadata,
-      created_at as "created",
-      1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS score
-    FROM rag_chunks
-    WHERE embedding IS NOT NULL
-  `;
+  // Use transaction for SET LOCAL
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SET LOCAL hnsw.ef_search = ${ef}`);
 
-  if (documentId) {
-    baseQuery = sql`${baseQuery} AND document_id = ${documentId}`;
-  }
+    const rows = await tx
+      .select({
+        id: ragChunks.id,
+        documentId: ragChunks.documentId,
+        content: ragChunks.content,
+        order: ragChunks.order,
+        metadata: ragChunks.metadata,
+        created: ragChunks.created,
+        score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
+      })
+      .from(ragChunks)
+      .where(
+        documentId
+          ? and(
+              isNotNull(ragChunks.embedding),
+              eq(ragChunks.documentId, documentId)
+            )
+          : isNotNull(ragChunks.embedding)
+      )
+      .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
+      .limit(limit * 3);
 
-  // Use LOCAL ef_search for HNSW index tuning (higher = better recall, slower)
-  const finalQuery = sql`
-    SET LOCAL hnsw.ef_search = ${ef};
-    ${baseQuery}
-    ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
-    LIMIT ${limit * 3}
-  `;
-
-  const result = await db.execute(finalQuery);
-
-  // Filter by threshold and limit (pgvector doesn't support WHERE on similarity)
-  return (result.rows as Array<ChunkSearchResult>)
-    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
-    .slice(0, limit);
+    // Filter by threshold and limit (pgvector doesn't support WHERE on similarity)
+    return rows
+      .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
+      .slice(0, limit);
+  });
 }
 
 export type HybridSearchOptions = {
@@ -177,112 +176,117 @@ export async function searchChunksHybrid({
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
   const ef = efSearch;
 
-  // Dense vector similarity search
-  let denseQuery = sql`
-    SELECT 
-      id,
-      document_id as "documentId",
-      content,
-      "order",
-      metadata,
-      created_at as "created",
-      1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS dense_score
-    FROM rag_chunks
-    WHERE embedding IS NOT NULL
-  `;
+  // Use transaction for SET LOCAL
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SET LOCAL hnsw.ef_search = ${ef}`);
 
-  if (documentId) {
-    denseQuery = sql`${denseQuery} AND document_id = ${documentId}`;
-  }
+    // Dense vector similarity search
+    let denseQuery = sql`
+      SELECT 
+        id,
+        document_id as "documentId",
+        content,
+        "order",
+        metadata,
+        created_at as "created",
+        1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS dense_score
+      FROM rag_chunks
+      WHERE embedding IS NOT NULL
+    `;
 
-  // Sparse full-text search using tsvector
-  let sparseQuery = sql`
-    SELECT 
-      id,
-      document_id as "documentId",
-      content,
-      "order",
-      metadata,
-      created_at as "created",
-      ts_rank(content_tsvector, plainto_tsquery('english', ${query})) AS sparse_score
-    FROM rag_chunks
-    WHERE content_tsvector @@ plainto_tsquery('english', ${query})
-  `;
-
-  if (documentId) {
-    sparseQuery = sql`${sparseQuery} AND document_id = ${documentId}`;
-  }
-
-  // Combine dense and sparse scores with weighted fusion
-  const hybridQuery = sql`
-    SET LOCAL hnsw.ef_search = ${ef};
-    WITH dense_results AS (
-      ${denseQuery}
-      ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
-      LIMIT ${limit * 3}
-    ),
-    sparse_results AS (
-      ${sparseQuery}
-      ORDER BY sparse_score DESC
-      LIMIT ${limit * 3}
-    )
-    SELECT DISTINCT
-      COALESCE(d.id, s.id) as id,
-      COALESCE(d."documentId", s."documentId") as "documentId",
-      COALESCE(d.content, s.content) as content,
-      COALESCE(d."order", s."order") as "order",
-      COALESCE(d.metadata, s.metadata) as metadata,
-      COALESCE(d."created", s."created") as "created",
-      (COALESCE(d.dense_score, 0) * ${denseWeight} + COALESCE(s.sparse_score, 0) * ${sparseWeight}) AS score
-    FROM dense_results d
-    FULL OUTER JOIN sparse_results s ON d.id = s.id
-    WHERE COALESCE(d.dense_score, 0) * ${denseWeight} + COALESCE(s.sparse_score, 0) * ${sparseWeight} >= ${threshold}
-    ORDER BY score DESC
-    LIMIT ${limit}
-  `;
-
-  const result = await db.execute(hybridQuery);
-  let hybridResults = (result.rows as Array<ChunkSearchResult>)
-    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
-    .slice(0, limit);
-
-  // Apply reranking if enabled
-  if (useReranking && hybridResults.length > 0) {
-    try {
-      const rerankResults = await rerank({
-        query,
-        documents: hybridResults.map((row) => ({
-          id: row.id,
-          text: row.content,
-        })),
-        topN: limit,
-        model: rerankModel,
-      });
-
-      // Create a map of rerank scores by chunk ID
-      const rerankScoreMap = new Map(
-        rerankResults.map((item) => [item.id, item.score])
-      );
-
-      // Apply weighted fusion: finalScore = hybridScore * 0.7 + rerankScore * 0.3
-      hybridResults = hybridResults.map((row) => {
-        const rerankScore = rerankScoreMap.get(row.id) ?? 0;
-        const finalScore = row.score * 0.7 + rerankScore * 0.3;
-        return {
-          ...row,
-          score: finalScore,
-        };
-      });
-
-      // Re-sort by final score
-      hybridResults.sort((a, b) => b.score - a.score);
-    } catch (error) {
-      // Log error but continue with hybrid results
-      console.error("Reranking failed in hybrid search:", error);
+    if (documentId) {
+      denseQuery = sql`${denseQuery} AND document_id = ${documentId}`;
     }
-  }
 
-  return hybridResults.slice(0, limit);
+    // Sparse full-text search using tsvector
+    let sparseQuery = sql`
+      SELECT 
+        id,
+        document_id as "documentId",
+        content,
+        "order",
+        metadata,
+        created_at as "created",
+        ts_rank(content_tsvector, plainto_tsquery('english', ${query})) AS sparse_score
+      FROM rag_chunks
+      WHERE content_tsvector @@ plainto_tsquery('english', ${query})
+    `;
+
+    if (documentId) {
+      sparseQuery = sql`${sparseQuery} AND document_id = ${documentId}`;
+    }
+
+    // Combine dense and sparse scores with weighted fusion
+    const hybridQuery = sql`
+      WITH dense_results AS (
+        ${denseQuery}
+        ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
+        LIMIT ${limit * 3}
+      ),
+      sparse_results AS (
+        ${sparseQuery}
+        ORDER BY sparse_score DESC
+        LIMIT ${limit * 3}
+      )
+      SELECT DISTINCT
+        COALESCE(d.id, s.id) as id,
+        COALESCE(d."documentId", s."documentId") as "documentId",
+        COALESCE(d.content, s.content) as content,
+        COALESCE(d."order", s."order") as "order",
+        COALESCE(d.metadata, s.metadata) as metadata,
+        COALESCE(d."created", s."created") as "created",
+        (COALESCE(d.dense_score, 0) * ${denseWeight} + COALESCE(s.sparse_score, 0) * ${sparseWeight}) AS score
+      FROM dense_results d
+      FULL OUTER JOIN sparse_results s ON d.id = s.id
+      WHERE COALESCE(d.dense_score, 0) * ${denseWeight} + COALESCE(s.sparse_score, 0) * ${sparseWeight} >= ${threshold}
+      ORDER BY score DESC
+      LIMIT ${limit}
+    `;
+
+    const result = await tx.execute(hybridQuery);
+    let hybridResults = (result.rows as Array<ChunkSearchResult>)
+      .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
+      .slice(0, limit);
+
+    // Apply reranking if enabled
+    if (useReranking && hybridResults.length > 0) {
+      try {
+        const rerankResults = await rerank({
+          query,
+          documents: hybridResults.map((row) => ({
+            id: row.id,
+            text: row.content,
+          })),
+          topN: limit,
+          model: rerankModel,
+        });
+
+        // Create a map of rerank scores by chunk ID
+        const rerankScoreMap = new Map(
+          rerankResults.map((item) => [item.id, item.score])
+        );
+
+        // Apply weighted fusion: finalScore = hybridScore * 0.7 + rerankScore * 0.3
+        hybridResults = hybridResults.map((row) => {
+          const rerankScore = rerankScoreMap.get(row.id) ?? 0;
+          const finalScore = row.score * 0.7 + rerankScore * 0.3;
+          return {
+            ...row,
+            score: finalScore,
+          };
+        });
+
+        // Re-sort by final score
+        hybridResults.sort((a, b) => b.score - a.score);
+      } catch (error) {
+        // Log error but continue with hybrid results
+        // Note: Logger will be added in Phase 2 (console replacement)
+        // For now, silently continue to avoid breaking hybrid search
+      }
+    }
+
+    return hybridResults.slice(0, limit);
+  });
 }
 
 export async function deleteChunk(chunkId: string): Promise<number> {

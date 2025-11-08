@@ -3,6 +3,7 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +35,7 @@ const DEFAULT_FORM: PreferenceFormState = {
 
 export const Route = createFileRoute("/preferences")({
   component: PreferencesRoute,
+  errorComponent: RouteError,
 });
 
 function PreferencesRoute() {

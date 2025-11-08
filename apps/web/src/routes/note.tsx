@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useMemo, useState } from "react";
+import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +16,7 @@ import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/note")({
   component: NoteRoute,
+  errorComponent: RouteError,
 });
 
 function NoteRoute() {

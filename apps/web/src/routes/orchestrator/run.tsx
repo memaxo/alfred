@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs } from "@trpc/server";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { RouteError } from "@/components/route-error";
 import { getToolToken } from "@/lib/token";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
@@ -29,6 +30,7 @@ const VALID_SCOPE_EVENTS = new Set<ScopeEvent>([
 
 export const Route = createFileRoute("/orchestrator/run")({
   component: OrchestratorRunRoute,
+  errorComponent: RouteError,
 });
 
 function OrchestratorRunRoute() {

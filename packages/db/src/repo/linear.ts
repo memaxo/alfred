@@ -31,7 +31,7 @@ export async function upsertLinear(input: {
   } = input;
   const now = new Date();
 
-  await db
+  const [row] = await db
     .insert(linearInstallations)
     .values({
       oauthClient,
@@ -57,7 +57,9 @@ export async function upsertLinear(input: {
         updated: now,
         metadata: metadata ?? null,
       },
-    });
+    })
+    .returning();
+  return row;
 }
 
 export async function getLinearByWorkspace(space: string) {

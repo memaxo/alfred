@@ -39,7 +39,11 @@ function validateMessages(messages: unknown[]): UIMessage[] {
   for (const msg of messages) {
     const result = uiMessageSchema.safeParse(msg);
     if (!result.success) {
-      throw new Error(`Invalid message: ${result.error.message}`);
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "invalid_message",
+        cause: result.error,
+      });
     }
     validated.push(result.data as UIMessage);
   }
@@ -52,7 +56,10 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
     .input(generateInput)
     .mutation(async ({ ctx, input }) => {
       if (!ctx.session) {
-        throw new Error("Session required");
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       try {
         const model = getOpenAI().chat(getModelId());

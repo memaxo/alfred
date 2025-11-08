@@ -9,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
+import { logger } from "../utils/logger";
 
 const LINEAR_AUTH_BASE = "https://linear.app/oauth/authorize";
 const LINEAR_TOKEN_URL = "https://api.linear.app/oauth/token";
@@ -107,10 +108,17 @@ function verifyState(state: string): SignedStatePayload {
       typeof decoded.nonce !== "string" ||
       typeof decoded.ts !== "number"
     ) {
-      throw new Error("invalid_state_payload");
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "invalid_state_payload",
+      });
     }
     return decoded as SignedStatePayload;
-  } catch {
+  } catch (error) {
+    // State parsing failed - log and throw TRPCError
+    logger.warn("linear_state_parse_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "linear_state_invalid",

@@ -3,6 +3,7 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +35,7 @@ const EMPTY_STATE: ProfileFormState = {
 
 export const Route = createFileRoute("/profile")({
   component: ProfileRoute,
+  errorComponent: RouteError,
 });
 
 function ProfileRoute() {

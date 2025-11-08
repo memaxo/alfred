@@ -8,6 +8,7 @@ import { observable } from "@trpc/server/observable";
 import z from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
+import { logger } from "../utils/logger";
 
 const PREVIEW_BIND_HOST = "127.0.0.1";
 
@@ -124,7 +125,10 @@ async function allocatePort(
     }
   }
 
-  throw new Error("preview_port_unavailable");
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "preview_port_unavailable",
+  });
 }
 
 async function safeRouterRemove(
@@ -140,8 +144,12 @@ async function safeRouterRemove(
         authz,
       },
     });
-  } catch {
-    // best-effort cleanup
+  } catch (error) {
+    // Best-effort cleanup - failures are expected if route doesn't exist
+    logger.warn("router_remove_failed", {
+      host,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -158,8 +166,12 @@ async function safeStopContainer(
         authz,
       },
     });
-  } catch {
-    // ignore
+  } catch (error) {
+    // Container stop failures are expected if container doesn't exist
+    logger.warn("container_stop_failed", {
+      nameOrId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
   try {
     await toolDocker.execute({
@@ -169,8 +181,12 @@ async function safeStopContainer(
         authz,
       },
     });
-  } catch {
-    // ignore
+  } catch (error) {
+    // Container remove failures are expected if container doesn't exist
+    logger.warn("container_remove_failed", {
+      nameOrId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -447,7 +463,10 @@ export const deployRouter: ReturnType<typeof router> = router({
         }
 
         if (!upstream) {
-          throw new Error("preview_upstream_unavailable");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "preview_upstream_unavailable",
+          });
         }
 
         await toolRouter.execute({

@@ -3,7 +3,7 @@
  * Profile, preferences, facts, events, autonomy, and feedback operations
  */
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../index";
 import {
   autonomy,
@@ -178,28 +178,31 @@ export async function searchFacts(
   // Format embedding array as PostgreSQL array constructor for vector cast
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
 
-  const query = sql`
-    SELECT 
-      id,
-      user_id as "userId",
-      content,
-      category,
-      confidence,
-      source,
-      created_at as "created",
-      updated_at as "updated",
-      1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector) AS score
-    FROM user_facts
-    WHERE user_id = ${userId}
-      AND embedding IS NOT NULL
-    ORDER BY embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC
-    LIMIT ${limit * 3}
-  `;
-
-  const result = await db.execute(query);
+  // Use Drizzle with raw SQL only for vector operations
+  const rows = await db
+    .select({
+      id: facts.id,
+      userId: facts.userId,
+      content: facts.content,
+      category: facts.category,
+      confidence: facts.confidence,
+      source: facts.source,
+      created: facts.created,
+      updated: facts.updated,
+      score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
+    })
+    .from(facts)
+    .where(
+      and(
+        eq(facts.userId, userId),
+        isNotNull(facts.embedding)
+      )
+    )
+    .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
+    .limit(limit * 3);
 
   // Filter by threshold and limit
-  return (result.rows as Array<FactSearchResult>)
+  return rows
     .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
     .slice(0, limit);
 }

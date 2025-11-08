@@ -1,8 +1,7 @@
-/* eslint-disable complexity */
-/* eslint-disable @typescript-eslint/complexity */
 import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { TRPCError } from "@trpc/server";
 import { convertToModelMessages, stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
@@ -63,7 +62,11 @@ function validateMessages(messages: unknown[]): UIMessage[] {
   for (const msg of messages) {
     const result = uiMessageSchema.safeParse(msg);
     if (!result.success) {
-      throw new Error(`Invalid message: ${result.error.message}`);
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "invalid_message",
+        cause: result.error,
+      });
     }
     validated.push(result.data as UIMessage);
   }
@@ -108,7 +111,10 @@ export const assistantRouter: ReturnType<typeof router> = router({
         const output = sanitizeResult(result);
         // Persist for replay
         if (!ctx.session) {
-          throw new Error("Session required");
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "session_required",
+          });
         }
         const replayId = await persistResult({
           userId: ctx.session.user.id,
@@ -131,7 +137,10 @@ export const assistantRouter: ReturnType<typeof router> = router({
     .input(escalateInput)
     .mutation(async ({ input, ctx }) => {
       if (!ctx.session) {
-        throw new Error("Session required");
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       try {
         const { toolHandoff } = await import(

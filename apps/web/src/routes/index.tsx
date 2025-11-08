@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { inferRouterOutputs } from "@trpc/server";
+import { RouteError } from "@/components/route-error";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
+  errorComponent: RouteError,
 });
 
 const TITLE_TEXT = `

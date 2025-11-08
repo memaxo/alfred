@@ -96,6 +96,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
       }
 
       try {
+        const abortController = new AbortController();
         const runner = runPlanV6(
           {
             requirement: input.requirement,
@@ -105,7 +106,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             mode: input.mode,
             context: input.context,
           },
-          { signal: new AbortController().signal }
+          { signal: abortController.signal }
         );
 
         // Create durable run row now so clients may hydrate history
@@ -115,6 +116,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
           workflowId: "plan",
           status: "running",
           inputData: input,
+        });
+
+        // Register for cancellation
+        await runRegistry.register(runner.runId, {
+          resume: async ({ resumeData }) => {
+            await runner.resume(resumeData);
+          },
+          cancel: async () => {
+            abortController.abort();
+          },
+          abortController,
         });
 
         return {
@@ -129,7 +141,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           ticketUrl: null,
         };
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "workflow_start_failed");
       }
     }),
 
@@ -245,6 +257,19 @@ export const workflowRouter: ReturnType<typeof router> = router({
           } catch (error) {
             recordEvent("error");
             closeTimer("error");
+            if (runId) {
+              try {
+                await workflowRepo.updateRun(runId, {
+                  status: "failed",
+                  errorMessage: error instanceof Error ? error.message : String(error),
+                });
+              } catch (updateError) {
+                logger.warn("workflow_error_status_update_failed", {
+                  runId,
+                  error: updateError instanceof Error ? updateError.message : String(updateError),
+                });
+              }
+            }
             emit.error(toTRPCError(error, "workflow_error"));
           } finally {
             try {

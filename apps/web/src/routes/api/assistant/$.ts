@@ -1,8 +1,9 @@
 import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
 import { z } from "zod";
+import { logger } from "@alfred/api/utils/logger";
 
 const assistantRequestSchema = z
   .object({
@@ -38,10 +39,22 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
       model,
       messages: convertToModelMessages(messages),
       tools: buildAssistantTools(),
+      abortSignal: request.signal,
+      onAbort: async ({ steps }) => {
+        logger.warn("assistant_stream_aborted", {
+          steps: steps.length,
+        });
+      },
     });
 
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
+      consumeSseStream: consumeStream,
+      onFinish: async ({ isAborted }) => {
+        if (isAborted) {
+          logger.warn("assistant_stream_aborted_on_finish");
+        }
+      },
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -50,7 +63,9 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
         headers: { "Content-Type": "application/json" },
       });
     }
-    console.error("Assistant stream error:", error);
+    logger.error("assistant_stream_error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return new Response(JSON.stringify({ error: "assistant_stream_failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

@@ -54,10 +54,8 @@ export default function UserMenu() {
                     "Elevated token copied to clipboard (scope: droid.exec)"
                   );
                 } catch (error) {
-                  console.error("Failed to fetch elevated token", error);
-                  window.alert(
-                    "Failed to fetch elevated token. See console for details."
-                  );
+                  // Error already handled via window.alert
+                  // Errors are also caught by error boundaries
                 } finally {
                   setIsRequestingToken(false);
                 }

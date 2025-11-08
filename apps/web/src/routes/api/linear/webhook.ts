@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { appRouter } from "@alfred/api";
 import { webhookErrorsTotal, webhookEventsTotal } from "@alfred/api/metrics";
+import { logger } from "@alfred/api/utils/logger";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { createFileRoute } from "@tanstack/react-router";
@@ -246,7 +247,10 @@ export const Route = createFileRoute("/api/linear/webhook")({
               authz,
             });
           } catch (error) {
-            console.error("[linear-webhook] Failed to resume workflow:", error);
+            logger.error("linear_webhook_resume_failed", {
+              runId,
+              error: error instanceof Error ? error.message : String(error),
+            });
             webhookErrorsTotal.labels("resume").inc();
             return new Response("resume_failed", { status: 500 });
           }

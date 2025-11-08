@@ -1,8 +1,9 @@
 import { buildOrchestratorTools, getModelId, getOpenAI } from "@alfred/agent";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
 import { z } from "zod";
+import { logger } from "@alfred/api/utils/logger";
 
 const orchestratorRequestSchema = z
   .object({
@@ -38,10 +39,22 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
       model,
       messages: convertToModelMessages(messages),
       tools: buildOrchestratorTools(),
+      abortSignal: request.signal,
+      onAbort: async ({ steps }) => {
+        logger.warn("orchestrator_stream_aborted", {
+          steps: steps.length,
+        });
+      },
     });
 
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
+      consumeSseStream: consumeStream,
+      onFinish: async ({ isAborted }) => {
+        if (isAborted) {
+          logger.warn("orchestrator_stream_aborted_on_finish");
+        }
+      },
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -50,7 +63,9 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
         headers: { "Content-Type": "application/json" },
       });
     }
-    console.error("Orchestrator stream error:", error);
+    logger.error("orchestrator_stream_error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return new Response(
       JSON.stringify({ error: "orchestrator_stream_failed" }),
       {

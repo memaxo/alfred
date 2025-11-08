@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
+import { logger } from "@alfred/api/utils/logger";
 
 export const Route = createFileRoute("/api/ai/$")({
   loader: async () => {
@@ -21,11 +22,26 @@ export const Route = createFileRoute("/api/ai/$")({
       const result = streamText({
         model: google("gemini-2.5-flash"),
         messages: convertToModelMessages(messages),
+        abortSignal: request.signal,
+        onAbort: async ({ steps }) => {
+          logger.warn("ai_stream_aborted", {
+            steps: steps.length,
+          });
+        },
       });
 
-      return result.toUIMessageStreamResponse();
+      return result.toUIMessageStreamResponse({
+        consumeSseStream: consumeStream,
+        onFinish: async ({ isAborted }) => {
+          if (isAborted) {
+            logger.warn("ai_stream_aborted_on_finish");
+          }
+        },
+      });
     } catch (error) {
-      console.error("AI API error:", error);
+      logger.error("ai_api_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return new Response(
         JSON.stringify({ error: "Failed to process AI request" }),
         {
@@ -45,11 +61,26 @@ export const Route = createFileRoute("/api/ai/$")({
           const result = streamText({
             model: google("gemini-2.5-flash"),
             messages: convertToModelMessages(messages),
+            abortSignal: request.signal,
+            onAbort: async ({ steps }) => {
+              logger.warn("ai_stream_aborted", {
+                steps: steps.length,
+              });
+            },
           });
 
-          return result.toUIMessageStreamResponse();
+          return result.toUIMessageStreamResponse({
+            consumeSseStream: consumeStream,
+            onFinish: async ({ isAborted }) => {
+              if (isAborted) {
+                logger.warn("ai_stream_aborted_on_finish");
+              }
+            },
+          });
         } catch (error) {
-          console.error("AI API error:", error);
+          logger.error("ai_api_error", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return new Response(
             JSON.stringify({ error: "Failed to process AI request" }),
             {

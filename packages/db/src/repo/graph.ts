@@ -347,6 +347,7 @@ export async function findPath(
     return [{ nodeId: fromId, via: [] }];
   }
 
+  // Recursive CTE for path finding - using raw SQL as Drizzle doesn't support recursive CTEs well
   const query = sql<{
     node_path: string[];
     edge_path: string[];

@@ -82,8 +82,15 @@ function recordEvent(
 ) {
   try {
     runRegistryEventsTotal.inc({ event, backend, outcome });
-  } catch {
-    // ignore metrics errors to keep registry critical path fast
+  } catch (error) {
+    // Metrics failures should not break critical paths (registry)
+    // Logged at warn level to maintain observability without impacting performance
+    logger.warn("metrics_increment_failed", {
+      event,
+      backend,
+      outcome,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -93,11 +100,23 @@ function createDispatchTimer(backend: string) {
     return (outcome: DispatchOutcome) => {
       try {
         stop({ outcome });
-      } catch {
-        // ignore histogram errors
+      } catch (error) {
+        // Metrics failures should not break critical paths (registry)
+        // Logged at warn level to maintain observability without impacting performance
+        logger.warn("metrics_timer_stop_failed", {
+          backend,
+          outcome,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     };
-  } catch {
+  } catch (error) {
+    // Metrics failures should not break critical paths (registry)
+    // Logged at warn level to maintain observability without impacting performance
+    logger.warn("metrics_timer_create_failed", {
+      backend,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return (_outcome: DispatchOutcome) => {
       // noop
     };
@@ -310,12 +329,22 @@ export class RedisRunRegistry implements RunRegistry {
     }
     try {
       await this.ensureReady();
-    } catch {
+    } catch (error) {
+      // Connection failures are expected during Redis reconnection
+      // Logged at warn level to maintain observability without impacting heartbeat
+      logger.warn("redis_heartbeat_ready_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return;
     }
     const expirations = Array.from(this.runs.keys()).map((runId) =>
-      this.cmd.expire(KEY_OWNER(runId), this.ownerTtlSec).catch(() => {
-        // ignore expiration failures; heartbeat will retry on next tick
+      this.cmd.expire(KEY_OWNER(runId), this.ownerTtlSec).catch((error) => {
+        // Ignore expiration failures; heartbeat will retry on next tick
+        // Logged at warn level to maintain observability without impacting heartbeat
+        logger.warn("redis_expire_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       })
     );
     await Promise.all(expirations);
@@ -346,7 +375,11 @@ export class RedisRunRegistry implements RunRegistry {
     } | null = null;
     try {
       parsed = JSON.parse(raw);
-    } catch {
+    } catch (error) {
+      // Invalid JSON in message - log but don't break message handling
+      logger.warn("redis_message_parse_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return;
     }
     const runId = typeof parsed?.runId === "string" ? parsed.runId : null;
@@ -367,12 +400,22 @@ export class RedisRunRegistry implements RunRegistry {
     try {
       const resumePromise = handle.resume({ resumeData: payload });
       recordEvent("deliver", this.backend, "ok");
-      resumePromise.catch(() => {
+      resumePromise.catch((error) => {
         recordEvent("deliver", this.backend, "error");
+        // Log async resume failures
+        logger.warn("redis_resume_async_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
-    } catch {
+    } catch (error) {
       ackValue = "error";
       recordEvent("deliver", this.backend, "error");
+      // Log sync resume failures
+      logger.warn("redis_resume_sync_failed", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     await this.cmd.set(KEY_ACK(corrId), ackValue, { EX: ACK_TTL_SEC });

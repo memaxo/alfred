@@ -1,5 +1,6 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
+import { logger } from "./utils/logger";
 
 type PgSource = Client | Pool;
 
@@ -25,7 +26,9 @@ export function createPgClient(
 
   // TODO: production bootstrap should perform a retry/backoff strategy.
   client.connect().catch((error) => {
-    console.error("[db] client connection failed", error);
+    logger.error("db_client_connection_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   });
 
   return client;

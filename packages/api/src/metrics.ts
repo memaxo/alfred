@@ -17,6 +17,7 @@ import {
 } from "@alfred/agent";
 import { registerCacheObs } from "@alfred/policy";
 import client from "prom-client";
+import { logger } from "./utils/logger";
 
 export const metricsRegistry = new client.Registry();
 
@@ -339,8 +340,13 @@ function normalizeEventLabel(event: string): string {
 export function recordStreamEvent(event: string): void {
   try {
     assistantStreamEventsTotal.inc({ event: normalizeEventLabel(event) });
-  } catch {
-    // ignore metrics failures
+  } catch (error) {
+    // Metrics failures should not break critical paths (streaming)
+    // Logged at warn level to maintain observability without impacting performance
+    logger.warn("metrics_stream_event_failed", {
+      event,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -352,11 +358,21 @@ export function startStreamTimer():
     return (status: AssistantStreamStatus) => {
       try {
         stopTimer({ status });
-      } catch {
-        // ignore metrics failures
+      } catch (error) {
+        // Metrics failures should not break critical paths (streaming)
+        // Logged at warn level to maintain observability without impacting performance
+        logger.warn("metrics_timer_stop_failed", {
+          status,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     };
-  } catch {
+  } catch (error) {
+    // Metrics failures should not break critical paths (streaming)
+    // Logged at warn level to maintain observability without impacting performance
+    logger.warn("metrics_timer_create_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return;
   }
 }
@@ -379,8 +395,13 @@ export const workflowStreamDurationSeconds = new client.Histogram({
 registerCacheObs((result) => {
   try {
     pdpCacheHitsTotal.inc({ result });
-  } catch {
-    // ignore metrics increment errors to avoid impacting policy evaluation
+  } catch (error) {
+    // Metrics failures should not break critical paths (policy evaluation)
+    // Logged at warn level to maintain observability without impacting performance
+    logger.warn("metrics_cache_hit_failed", {
+      result,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 

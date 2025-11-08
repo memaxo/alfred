@@ -1,11 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { inferRouterOutputs } from "@trpc/server";
+import { RouteError } from "@/components/route-error";
 import { authClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,
+  errorComponent: RouteError,
   beforeLoad: async () => {
     const session = await authClient.getSession();
     if (!session.data) {

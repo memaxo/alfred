@@ -35,7 +35,8 @@ export function ChatContainer({ agent }: ChatContainerProps) {
   const { messages, actions, status, error, send, clear, hydrate } =
     useAssistantStream({
       onError: (err) => {
-        console.error("Chat error:", err);
+        // Error is already displayed in the error state
+        // Additional logging handled by error boundaries
       },
     });
 
@@ -50,9 +51,7 @@ export function ChatContainer({ agent }: ChatContainerProps) {
   const handleSend = useCallback(
     (input: string) => {
       if (currentAgent !== "assistant") {
-        console.warn(
-          "Streaming for the orchestrator agent is not yet enabled."
-        );
+        // Orchestrator streaming not yet enabled - silently return
         return;
       }
       send(input);
@@ -109,7 +108,7 @@ export function ChatContainer({ agent }: ChatContainerProps) {
                 messages={messages}
                 onSend={handleSend}
                 onVoice={() => {
-                  console.log("Voice input not yet implemented");
+                  // Voice input not yet implemented
                 }}
                 perf
                 placeholder={

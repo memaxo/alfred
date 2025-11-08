@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { recordVoiceStt, recordVoiceTts } from "../metrics";
 import { authedProcedure, router } from "../trpc";
+import { logger } from "../utils/logger";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap for initial MVP clips
 const DEFAULT_STT_MODEL = "whisper-1";
@@ -264,12 +265,20 @@ async function safeReadError(response: Response) {
     if (payload && typeof payload === "object") {
       return payload;
     }
-  } catch {
-    // ignore parsing errors
+  } catch (error) {
+    // JSON parsing failed, try text instead
+    // Logged at debug level as this is expected fallback behavior
+    logger.debug("error_response_json_parse_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
   try {
     return await response.text();
-  } catch {
+  } catch (error) {
+    // Text parsing also failed - log and return null
+    logger.warn("error_response_text_parse_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

@@ -2,6 +2,7 @@ import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
+import { logger } from "@alfred/api/utils/logger";
 
 let initialized = false;
 
@@ -13,12 +14,14 @@ export async function initServer() {
   initialized = true;
 
   if (process.env.SCHED_REMIND === "1") {
-    startReminderScheduler({ logger: console });
-    console.log(
-      "[assistant-remind] Scheduler init requested (SCHED_REMIND=1)."
-    );
+    startReminderScheduler({ logger });
+    logger.info("assistant_remind_scheduler_init", {
+      message: "Scheduler init requested (SCHED_REMIND=1)",
+    });
   } else {
-    console.log("[assistant-remind] Scheduler disabled (unset SCHED_REMIND).");
+    logger.info("assistant_remind_scheduler_disabled", {
+      message: "Scheduler disabled (unset SCHED_REMIND)",
+    });
   }
 
   if (import.meta.hot) {
@@ -26,10 +29,10 @@ export async function initServer() {
       try {
         stopReminderScheduler();
       } catch (error) {
-        console.error(
-          "[assistant-remind] Failed to stop scheduler before reload:",
-          error
-        );
+        logger.error("assistant_remind_scheduler_stop_failed", {
+          context: "before_reload",
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     });
 
@@ -37,10 +40,10 @@ export async function initServer() {
       try {
         stopReminderScheduler();
       } catch (error) {
-        console.error(
-          "[assistant-remind] Failed to stop scheduler on dispose:",
-          error
-        );
+        logger.error("assistant_remind_scheduler_stop_failed", {
+          context: "on_dispose",
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
       initialized = false;
     });

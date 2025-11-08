@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,7 @@ type DeleteFactInput =
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyRoute,
+  errorComponent: RouteError,
 });
 
 function PrivacyRoute() {

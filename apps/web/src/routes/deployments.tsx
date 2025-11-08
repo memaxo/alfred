@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { RouteError } from "@/components/route-error";
 import PromoteDialog from "@/components/deploy/promote-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ function suggestProdHost(app: string) {
 
 export const Route = createFileRoute("/deployments")({
   component: DeploymentsRoute,
+  errorComponent: RouteError,
 });
 
 function DeploymentsRoute() {
