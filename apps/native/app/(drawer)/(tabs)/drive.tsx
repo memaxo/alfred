@@ -1,3 +1,4 @@
+import type { UIMessage } from "@alfred/type/stream";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { setupCarPlay } from "@/lib/carplay";
@@ -5,7 +6,6 @@ import { useColorScheme } from "@/lib/use-color-scheme";
 import { drain, registerVoiceTasks, useVoiceSessionNative } from "@/lib/voice";
 import { ensureForegroundService } from "@/lib/voice/service";
 import { trpcClient } from "@/utils/trpc";
-import type { UIMessage } from "@alfred/type/stream";
 
 const THREAD_ID = "drive-mode";
 

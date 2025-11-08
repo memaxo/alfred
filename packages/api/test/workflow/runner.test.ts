@@ -1,6 +1,6 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
-import { runPlanV6, type RunPlanInput } from "../../src/workflow/runner";
+import { type RunPlanInput, runPlanV6 } from "../../src/workflow/runner";
 
 describe("workflow runner", () => {
   describe("runPlanV6", () => {
@@ -233,4 +233,3 @@ describe("workflow runner", () => {
     });
   });
 });
-

@@ -95,4 +95,3 @@ export function redactObject(obj: unknown): unknown {
 export function redactEventData(eventData: unknown): unknown {
   return redactObject(eventData);
 }
-

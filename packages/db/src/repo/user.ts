@@ -189,15 +189,11 @@ export async function searchFacts(
       source: facts.source,
       created: facts.created,
       updated: facts.updated,
+      embedding: facts.embedding,
       score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
     })
     .from(facts)
-    .where(
-      and(
-        eq(facts.userId, userId),
-        isNotNull(facts.embedding)
-      )
-    )
+    .where(and(eq(facts.userId, userId), isNotNull(facts.embedding)))
     .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
     .limit(limit * 3);
 

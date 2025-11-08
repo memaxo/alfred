@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import {
   MemoryRunRegistry,
   type ResumePayload,
@@ -156,4 +164,3 @@ describe("MemoryRunRegistry", () => {
     });
   });
 });
-

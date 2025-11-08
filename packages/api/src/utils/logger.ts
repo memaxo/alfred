@@ -38,4 +38,3 @@ export const logger = {
   error: (message: string, context?: LogContext) =>
     log("error", message, context),
 };
-

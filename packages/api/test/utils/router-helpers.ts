@@ -127,4 +127,3 @@ export function setupTestEnv() {
   process.env.DATABASE_URL ??= "postgres://localhost:5432/test";
   process.env.RUN_DB_TESTS ??= "0";
 }
-

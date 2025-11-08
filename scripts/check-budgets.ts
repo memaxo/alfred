@@ -27,7 +27,7 @@ function parseBudget(budgetStr: string): number {
   const match = budgetStr.match(/([\d.]+)\s*(µs|ms|s)/i);
   if (!match) return 0;
 
-  const value = parseFloat(match[1]);
+  const value = Number.parseFloat(match[1]);
   const unit = match[2].toLowerCase();
 
   switch (unit) {
@@ -114,4 +114,3 @@ function main() {
 if (import.meta.main) {
   main();
 }
-

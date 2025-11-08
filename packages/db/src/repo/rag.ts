@@ -124,6 +124,7 @@ export async function searchChunks(
         order: ragChunks.order,
         metadata: ragChunks.metadata,
         created: ragChunks.created,
+        embedding: ragChunks.embedding,
         score: sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
       })
       .from(ragChunks)

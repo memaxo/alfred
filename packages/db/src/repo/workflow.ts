@@ -1,4 +1,4 @@
-import { desc, eq, and, lt, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workflowEvents, workflowRuns } from "../schema/workflow";
 
@@ -158,7 +158,8 @@ export async function pruneOldRuns(
     .returning();
 
   return {
-    deletedRuns: runsResult.length + failedResult.length + cancelledResult.length,
+    deletedRuns:
+      runsResult.length + failedResult.length + cancelledResult.length,
     deletedEvents: eventsResult.rowCount ?? 0,
   };
 }

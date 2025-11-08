@@ -68,7 +68,10 @@ export async function ingest(
       // Log error but continue with remaining batches
       // Note: Using console.error here as this is a pure RAG package without logger dependency
       // In production, this should be handled by the caller's logging infrastructure
-      if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
+      if (
+        typeof process !== "undefined" &&
+        process.env.NODE_ENV !== "production"
+      ) {
         console.error(`Failed to embed batch ${i}-${i + batch.length}:`, error);
       }
       // Fill with empty embeddings for failed batch to maintain array length

@@ -1,7 +1,12 @@
 import { google } from "@ai-sdk/google";
-import { createFileRoute } from "@tanstack/react-router";
-import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
 import { logger } from "@alfred/api/utils/logger";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  consumeStream,
+  convertToModelMessages,
+  streamText,
+  type UIMessage,
+} from "ai";
 
 export const Route = createFileRoute("/api/ai/$")({
   loader: async () => {

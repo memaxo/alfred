@@ -317,12 +317,16 @@ export const workflowRouter: ReturnType<typeof router> = router({
               try {
                 await workflowRepo.updateRun(runId, {
                   status: "failed",
-                  errorMessage: error instanceof Error ? error.message : String(error),
+                  errorMessage:
+                    error instanceof Error ? error.message : String(error),
                 });
               } catch (updateError) {
                 logger.warn("workflow_error_status_update_failed", {
                   runId,
-                  error: updateError instanceof Error ? updateError.message : String(updateError),
+                  error:
+                    updateError instanceof Error
+                      ? updateError.message
+                      : String(updateError),
                 });
               }
             }

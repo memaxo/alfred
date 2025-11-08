@@ -1,9 +1,14 @@
 import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
+import { logger } from "@alfred/api/utils/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { createFileRoute } from "@tanstack/react-router";
-import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
+import {
+  consumeStream,
+  convertToModelMessages,
+  streamText,
+  type UIMessage,
+} from "ai";
 import { z } from "zod";
-import { logger } from "@alfred/api/utils/logger";
 
 const assistantRequestSchema = z
   .object({

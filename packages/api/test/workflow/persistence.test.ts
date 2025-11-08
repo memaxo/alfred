@@ -7,9 +7,9 @@ import {
   expect,
   it,
 } from "bun:test";
-import { sql } from "drizzle-orm";
-import type { WorkflowEvent } from "@alfred/type";
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import type { WorkflowEvent } from "@alfred/type";
+import { sql } from "drizzle-orm";
 import { closeTestDb, createTestDb, truncateTables } from "./utils/db";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
@@ -246,4 +246,3 @@ describeFn("workflow persistence", () => {
     });
   });
 });
-

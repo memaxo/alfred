@@ -1,8 +1,12 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { embed, embedMany } from "ai";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { openai } from "@ai-sdk/openai";
-import { chunk, embed as embedText, embedMany as embedManyTexts, ingest, retrieve } from "../src/doc";
-import { checkEmbedHealth, getEmbeddingProvider } from "../src/providers";
+import {
+  chunk,
+  embedMany as embedManyTexts,
+  embed as embedText,
+  ingest,
+  retrieve,
+} from "../src/doc";
 
 const createDocumentMock = vi.fn();
 const addChunksMock = vi.fn();
@@ -113,7 +117,9 @@ describe("RAG doc functions", () => {
         embedding: invalidEmbedding,
       });
 
-      await expect(embedText("test")).rejects.toThrow("rag_embed_invalid_vector");
+      await expect(embedText("test")).rejects.toThrow(
+        "rag_embed_invalid_vector"
+      );
     });
   });
 
@@ -361,4 +367,3 @@ describe("RAG doc functions", () => {
     });
   });
 });
-

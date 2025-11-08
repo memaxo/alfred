@@ -57,7 +57,10 @@ function createContextEvent(phase: string, message: string): WorkflowEvent {
   return { type: "context", phase, message } as WorkflowEvent;
 }
 
-function createRequireScopeEvent(scopes: string[], event: string): WorkflowEvent {
+function createRequireScopeEvent(
+  scopes: string[],
+  event: string
+): WorkflowEvent {
   return { type: "require-scope", scopes, event } as WorkflowEvent;
 }
 
@@ -70,7 +73,11 @@ function createRequireScopeEvent(scopes: string[], event: string): WorkflowEvent
  */
 export function runPlanV6(
   input: RunPlanInput,
-  opts?: { signal?: AbortSignal; stepTimeoutMs?: number; workflowTimeoutMs?: number }
+  opts?: {
+    signal?: AbortSignal;
+    stepTimeoutMs?: number;
+    workflowTimeoutMs?: number;
+  }
 ): RunPlanV6 {
   const runId = randomUUID();
   const summary = `Plan initialized for ${input.requirement}`;
@@ -80,7 +87,8 @@ export function runPlanV6(
   const resumeQueue: ResumePayload[] = [];
 
   const stepTimeoutMs = opts?.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
-  const workflowTimeoutMs = opts?.workflowTimeoutMs ?? DEFAULT_WORKFLOW_TIMEOUT_MS;
+  const workflowTimeoutMs =
+    opts?.workflowTimeoutMs ?? DEFAULT_WORKFLOW_TIMEOUT_MS;
   const workflowStartTime = Date.now();
 
   const signal = opts?.signal;
@@ -116,7 +124,10 @@ export function runPlanV6(
         yield createErrorEvent("workflow_timeout");
         return;
       }
-      yield createContextEvent("scan", "Scanning repository and web context (placeholder)");
+      yield createContextEvent(
+        "scan",
+        "Scanning repository and web context (placeholder)"
+      );
       yield createProgressEvent(45, "context prepared");
     }
 
@@ -139,7 +150,9 @@ export function runPlanV6(
       // Check if resume was already called (before we reached this point)
       if (resumeQueue.length > 0) {
         const resume = resumeQueue.shift()!;
-        yield createNoticeEvent(`Authorization '${resume.event}' acknowledged.`);
+        yield createNoticeEvent(
+          `Authorization '${resume.event}' acknowledged.`
+        );
       } else if (timeoutMs > 0) {
         // Wait for resume with Promise-based mechanism
         const resumePromise = new Promise<ResumePayload | null>((resolve) => {
@@ -155,7 +168,9 @@ export function runPlanV6(
 
         if (cancelled) return;
         if (resume) {
-          yield createNoticeEvent(`Authorization '${resume.event}' acknowledged.`);
+          yield createNoticeEvent(
+            `Authorization '${resume.event}' acknowledged.`
+          );
         }
       }
     }

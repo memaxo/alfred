@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { createTestCaller } from "./utils/trpc";
 import {
   mockGenerateText,
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -130,10 +130,9 @@ describe("orchestrator router", () => {
 
   describe("stream", () => {
     it("throws NOT_IMPLEMENTED", async () => {
-      await expect(
-        caller.orchestrator.stream({} as any)
-      ).rejects.toThrow("orchestrator.stream has moved to the HTTP SSE endpoint");
+      await expect(caller.orchestrator.stream({} as any)).rejects.toThrow(
+        "orchestrator.stream has moved to the HTTP SSE endpoint"
+      );
     });
   });
 });
-

@@ -1,11 +1,11 @@
+import type { UIMessage } from "@alfred/type/stream";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { RouteError } from "@/components/route-error";
 import { DriveMode } from "@/components/drive-mode";
+import { RouteError } from "@/components/route-error";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { trpc } from "@/utils/trpc";
-import type { UIMessage } from "@alfred/type/stream";
 
 export const Route = createFileRoute("/drive")({
   component: DriveModeRoute,

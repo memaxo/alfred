@@ -1,6 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
-import { createTestCaller } from "./utils/trpc";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -9,6 +8,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -51,7 +51,11 @@ describe("workflow router", () => {
       const mockSummary = "Plan initialized for test requirement";
       const mockStream = async function* () {
         yield { type: "run", id: mockRunId } as WorkflowEvent;
-        yield { type: "progress", pct: 100, message: "completed" } as WorkflowEvent;
+        yield {
+          type: "progress",
+          pct: 100,
+          message: "completed",
+        } as WorkflowEvent;
       };
 
       workflowRunnerMocks.runPlanV6.mockReturnValue({
@@ -179,7 +183,9 @@ describe("workflow router", () => {
       });
 
       expect(receivedEvents).toHaveLength(events.length);
-      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(events.length);
+      expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(
+        events.length
+      );
       expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith(mockRunId, {
         status: "completed",
         completedAt: expect.any(Date),
@@ -229,10 +235,13 @@ describe("workflow router", () => {
         authz: "token-123",
       });
 
-      expect(runRegistryMocks.dispatchResume).toHaveBeenCalledWith("test-run-id", {
-        event: "bio-authz",
-        authz: "token-123",
-      });
+      expect(runRegistryMocks.dispatchResume).toHaveBeenCalledWith(
+        "test-run-id",
+        {
+          event: "bio-authz",
+          authz: "token-123",
+        }
+      );
       expect(result).toEqual({ ok: true });
     });
 
@@ -309,4 +318,3 @@ describe("workflow router", () => {
     });
   });
 });
-
