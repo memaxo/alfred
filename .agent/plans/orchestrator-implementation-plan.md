@@ -54,7 +54,7 @@ This section tracks granular implementation progress. Every stopping point must 
 - [2025-11-09 00:06Z] Add test for reasoning event normalization
 - [2025-11-09 00:06Z] Add test for data-status event normalization
 - [2025-11-09 00:06Z] Add test for file event normalization
-- [ ] (YYYY-MM-DD HH:MMZ) Add persistence round-trip test (byte-equality)
+- [2025-11-09 00:56Z] Add persistence round-trip test (byte-equality)
 - [ ] (YYYY-MM-DD HH:MMZ) Verify replayed messages render identically to live stream
 
 ### Task 5: Metrics & Dashboards
@@ -85,8 +85,8 @@ This section tracks granular implementation progress. Every stopping point must 
 - [2025-11-09 00:08Z] Update eventsQuery to use order parameter
 - [2025-11-09 00:08Z] Implement dedupe logic by eventId
 - [ ] (YYYY-MM-DD HH:MMZ) Track oldestEventId and newestEventId boundaries
-- [ ] (YYYY-MM-DD HH:MMZ) Add order toggle button UI
-- [ ] (YYYY-MM-DD HH:MMZ) Add "Load newer" button UI (when hasNewer=true)
+- [2025-11-09 00:55Z] Add order toggle button UI
+- [2025-11-09 00:55Z] Add "Load newer" button UI (when hasNewer=true)
 - [2025-11-09 00:09Z] Add "Load older" button UI (when hasMore=true)
 - [ ] (YYYY-MM-DD HH:MMZ) Reset page to 0 on order change
 - [ ] (YYYY-MM-DD HH:MMZ) Verify page navigation is stable under refresh
