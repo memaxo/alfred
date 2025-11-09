@@ -76,7 +76,7 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.stream subscription
 - [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.resume mutation
 - [ ] (YYYY-MM-DD HH:MMZ) Ensure redactEventData used for PII protection
-- [ ] (YYYY-MM-DD HH:MMZ) Write tests for rate limiting behavior (429 responses)
+- [2025-11-09 01:42Z] Write tests for rate limiting behavior (429 responses) — scaffold implemented; pending harness stabilization to un-skip
 - [ ] (YYYY-MM-DD HH:MMZ) Write tests for audit log entries
 - [ ] (YYYY-MM-DD HH:MMZ) Verify audit logs created for all workflow events
 
