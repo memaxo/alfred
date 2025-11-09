@@ -2,10 +2,28 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
 import type { WorkflowEvent } from "@alfred/type";
-import {
-  runnerErrorsTotal,
-  runnerStepsTotal,
-} from "../metrics";
+// Lazy metrics loader to avoid heavy deps during unit tests
+type RunnerCounters = {
+  runnerStepsTotal: { inc: (labels: { phase: string; outcome: string }) => void };
+  runnerErrorsTotal: { inc: (labels: { phase: string; reason: string }) => void };
+};
+let metricsRef: RunnerCounters | null = null;
+async function metrics(): Promise<RunnerCounters> {
+  if (metricsRef) return metricsRef;
+  try {
+    const m = await import("@alfred/api/metrics");
+    metricsRef = {
+      runnerStepsTotal: m.runnerStepsTotal,
+      runnerErrorsTotal: m.runnerErrorsTotal,
+    };
+  } catch {
+    metricsRef = {
+      runnerStepsTotal: { inc: () => {} },
+      runnerErrorsTotal: { inc: () => {} },
+    };
+  }
+  return metricsRef;
+}
 
 export type RunPlanInput = {
   requirement: string;
@@ -21,6 +39,11 @@ export type RunPlanInput = {
     exts?: string[];
     ignore?: string[];
     seeds?: string[];
+  };
+  linear?: {
+    sessionId: string;
+    space: string;
+    authz: string;
   };
 };
 
@@ -81,24 +104,24 @@ async function* executePhaseWithTimeout(
   generator: () => AsyncGenerator<WorkflowEvent, void, void>
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const start = Date.now();
-  runnerStepsTotal.inc({ phase, outcome: "start" });
+  (await metrics()).runnerStepsTotal.inc({ phase, outcome: "start" });
   yield { type: "step-start", phase } as any;
 
   try {
     for await (const evt of generator()) {
       if (Date.now() - start > timeoutMs) {
-        runnerStepsTotal.inc({ phase, outcome: "timeout" });
-        runnerErrorsTotal.inc({ phase, reason: "timeout" });
+        (await metrics()).runnerStepsTotal.inc({ phase, outcome: "timeout" });
+        (await metrics()).runnerErrorsTotal.inc({ phase, reason: "timeout" });
         yield createErrorEvent("step_timeout");
         return;
       }
       yield evt;
     }
-    runnerStepsTotal.inc({ phase, outcome: "complete" });
+    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "complete" });
     yield { type: "step-complete", phase } as any;
   } catch (error) {
-    runnerStepsTotal.inc({ phase, outcome: "error" });
-    runnerErrorsTotal.inc({ phase, reason: error instanceof Error ? error.name : "error" });
+    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
+    (await metrics()).runnerErrorsTotal.inc({ phase, reason: error instanceof Error ? error.name : "error" });
     yield createErrorEvent(
       error instanceof Error ? error.message : String(error)
     );
@@ -142,6 +165,34 @@ export function runPlanV6(
 
   async function* generator(): AsyncGenerator<WorkflowEvent, void, void> {
     yield createRunEvent(runId);
+
+    // Emit Linear thought activity (acknowledgment < 10s)
+    if (input.linear) {
+      const thoughtActivityPromise = emitLinearActivity("thought", {
+        sessionId: input.linear.sessionId,
+        space: input.linear.space,
+        authz: input.linear.authz,
+        body: `Starting workflow: ${input.requirement}`,
+      }).catch((error) => {
+        logger.warn("linear_thought_activity_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { ok: false };
+      });
+
+      // Ensure acknowledgment within 10 seconds (fire-and-forget after timeout)
+      Promise.race([
+        thoughtActivityPromise,
+        delay(9000).then(() => {
+          logger.warn("linear_thought_activity_timeout", { runId });
+          return { ok: false };
+        }),
+      ]).catch(() => {
+        // Ignore errors, already logged
+      });
+    }
+
     yield createNoticeEvent(`Planning started for ${input.requirement}`);
     yield createProgressEvent(5, "initializing");
 
@@ -155,7 +206,7 @@ export function runPlanV6(
         if (cancelled) return;
         yield createContextEvent("scan", "Scanning repository and web context (placeholder)");
         yield createProgressEvent(30, "scan_complete");
-      });
+      }, input.linear);
     } else {
       yield { type: "step-skip", phase: scanPhase.name } as any;
     }
@@ -163,6 +214,19 @@ export function runPlanV6(
     // If medium/high autonomy, request elevated scopes
     if (input.auto === "medium" || input.auto === "high") {
       if (Date.now() - workflowStartTime > workflowTimeoutMs) {
+        if (input.linear) {
+          emitLinearActivity("error", {
+            sessionId: input.linear.sessionId,
+            space: input.linear.space,
+            authz: input.linear.authz,
+            body: "Workflow timed out",
+          }).catch((error) => {
+            logger.warn("linear_error_activity_failed", {
+              runId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
         yield createErrorEvent("workflow_timeout");
         return;
       }
@@ -215,7 +279,7 @@ export function runPlanV6(
       // Emit an assistant message with a draft plan (for UI replay normalization)
       yield { type: "assistant", text: `Draft plan for: ${input.requirement}` } as any;
       yield createProgressEvent(60, "plan_drafted");
-    });
+    }, input.linear);
 
     if (cancelled) return;
     // Phase: act
@@ -224,10 +288,27 @@ export function runPlanV6(
       // Simulate one tool call and result; IDs allow UI correlation
       const tcId = randomUUID();
       yield { type: "tool-call", id: tcId, toolName: "echo", args: { text: "hello" } } as any;
+      
+      // TODO: When tool execution integrated, emit action activities here
+      // Example:
+      // if (input.linear) {
+      //   await emitLinearActivity("action", {
+      //     sessionId: input.linear.sessionId,
+      //     space: input.linear.space,
+      //     authz: input.linear.authz,
+      //     title: `Execute ${toolCall.name}`,
+      //     parameter: JSON.stringify(toolCall.input),
+      //     result: JSON.stringify(toolCall.output),
+      //     ephemeral: true, // Use ephemeral for intermediate tool calls
+      //   }).catch((error) => {
+      //     logger.warn("linear_action_activity_failed", { runId, error });
+      //   });
+      // }
+      
       await delay(20);
       yield { type: "tool-result", id: tcId, toolName: "echo", result: { text: "hello" } } as any;
       yield createProgressEvent(85, "act_complete");
-    });
+    }, input.linear);
 
     if (cancelled) return;
     // Phase: report
@@ -235,13 +316,44 @@ export function runPlanV6(
     yield* executePhaseWithTimeout(reportPhase.name, reportPhase.timeoutMs, async function* () {
       yield { type: "assistant", text: "Report complete." } as any;
       yield createProgressEvent(95, "report_complete");
-    });
+    }, input.linear);
 
     if (cancelled) return;
     if (Date.now() - workflowStartTime > workflowTimeoutMs) {
+      if (input.linear) {
+        emitLinearActivity("error", {
+          sessionId: input.linear.sessionId,
+          space: input.linear.space,
+          authz: input.linear.authz,
+          body: "Workflow timed out",
+        }).catch((error) => {
+          logger.warn("linear_error_activity_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }
       yield createErrorEvent("workflow_timeout");
       return;
     }
+
+    // Emit Linear response activity on completion
+    if (input.linear) {
+      try {
+        await emitLinearActivity("response", {
+          sessionId: input.linear.sessionId,
+          space: input.linear.space,
+          authz: input.linear.authz,
+          body: "Workflow completed successfully",
+        });
+      } catch (error) {
+        logger.warn("linear_response_activity_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     yield createProgressEvent(100, "workflow_completed");
   }
 

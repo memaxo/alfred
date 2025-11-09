@@ -1,10 +1,19 @@
 import crypto from "node:crypto";
 import { appRouter } from "@alfred/api";
-import { webhookErrorsTotal, webhookEventsTotal } from "@alfred/api/metrics";
+import {
+  webhookErrorsTotal,
+  webhookEventsTotal,
+  linearWebhookEventsTotal,
+  linearWebhookWorkflowStartsTotal,
+  linearWebhookWorkflowCancelsTotal,
+} from "@alfred/api/metrics";
 import { logger } from "@alfred/api/utils/logger";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { createFileRoute } from "@tanstack/react-router";
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import { linearRepo } from "@alfred/db";
+import { runRegistry } from "@alfred/api/run-registry";
 
 const MAX_AGE_SECONDS = 5 * 60; // tolerate up to 5 minutes of clock drift
 
@@ -71,6 +80,35 @@ function verifySignature(
   }
 
   return crypto.timingSafeEqual(providedBuffer, computedBuffer);
+}
+
+function extractIssueId(payload: unknown): string | null {
+  const data = (payload as { data?: { id?: string } })?.data;
+  return data?.id ?? null;
+}
+
+function extractWorkspace(payload: unknown): string | null {
+  const data = (payload as { data?: { workspace?: { id?: string } } })?.data;
+  return data?.workspace?.id ?? null;
+}
+
+function isAssignedToAlfred(
+  payload: unknown,
+  appUserId: string
+): boolean {
+  const issue = (payload as { data?: { assignee?: { id?: string } } })?.data;
+  return issue?.assignee?.id === appUserId;
+}
+
+function extractIssueIdFromComment(payload: unknown): string | null {
+  const comment = (payload as { data?: { issue?: { id?: string } } })?.data;
+  return comment?.issue?.id ?? null;
+}
+
+function isIssueStateCompletedOrCanceled(payload: unknown): boolean {
+  const issue = (payload as { data?: { state?: { type?: string } } })?.data;
+  const stateType = issue?.state?.type;
+  return stateType === "completed" || stateType === "canceled";
 }
 
 function extractEventType(body: unknown): string {
@@ -206,7 +244,98 @@ export const Route = createFileRoute("/api/linear/webhook")({
         }
 
         const eventType = extractEventType(payload);
+        const action = (payload as { action?: string })?.action ?? "unknown";
         webhookEventsTotal.labels(eventType).inc();
+        linearWebhookEventsTotal.inc({ event_type: eventType, action });
+
+        const authz = extractAuthz(payload);
+
+        // Handle Issue assignment events
+        if (eventType === "Issue" && (action === "create" || action === "update")) {
+          const workspace = extractWorkspace(payload);
+          if (workspace) {
+            const installation = await linearRepo.getLinearByWorkspace(workspace);
+            if (installation && isAssignedToAlfred(payload, installation.appUser)) {
+              const issueId = extractIssueId(payload);
+              if (issueId) {
+                // Check if workflow already running
+                const existingRun = await workflowRepo.findRunByLinearSession(issueId);
+                if (!existingRun || existingRun.status !== "running") {
+                  // Extract requirement from issue description or title
+                  const issue = (payload as { data?: { title?: string; description?: string } })?.data;
+                  const requirement = issue?.description ?? issue?.title ?? "Work on Linear issue";
+                  
+                  // Start workflow via tRPC caller
+                  const caller = createWorkflowCaller(`linear-webhook-${issueId}`);
+                  try {
+                    await caller.workflow.start({
+                      requirement,
+                      auto: "low",
+                      linear: {
+                        space: workspace,
+                        sessionId: issueId,
+                      },
+                      authzLinear: authz ?? undefined,
+                    });
+                    linearWebhookWorkflowStartsTotal.inc();
+                    logger.info("linear_webhook_workflow_started", {
+                      issueId,
+                      workspace,
+                    });
+                  } catch (error) {
+                    logger.warn("linear_webhook_workflow_start_failed", {
+                      issueId,
+                      error: error instanceof Error ? error.message : String(error),
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Handle Comment events
+        if (eventType === "Comment" && action === "create") {
+          const issueId = extractIssueIdFromComment(payload);
+          if (issueId) {
+            const workflow = await workflowRepo.findRunByLinearSession(issueId);
+            if (workflow && workflow.status === "running") {
+              logger.info("linear_comment_received", {
+                runId: workflow.id,
+                issueId,
+              });
+              // TODO: Add comment as context to workflow (future enhancement)
+            }
+          }
+        }
+
+        // Handle Issue state change events
+        if (eventType === "Issue" && action === "update" && isIssueStateCompletedOrCanceled(payload)) {
+          const issueId = extractIssueId(payload);
+          if (issueId) {
+            const workflow = await workflowRepo.findRunByLinearSession(issueId);
+            if (workflow && workflow.status === "running") {
+              // Cancel workflow
+              try {
+                await runRegistry.dispatchCancel(workflow.id);
+                await workflowRepo.updateRun(workflow.id, {
+                  status: "cancelled",
+                });
+                linearWebhookWorkflowCancelsTotal.inc();
+                logger.info("linear_webhook_workflow_cancelled", {
+                  runId: workflow.id,
+                  issueId,
+                });
+              } catch (error) {
+                logger.warn("linear_webhook_workflow_cancel_failed", {
+                  runId: workflow.id,
+                  issueId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
+          }
+        }
 
         const runIdCandidate = (
           payload as { data?: { agentSessionId?: unknown } }
@@ -216,8 +345,7 @@ export const Route = createFileRoute("/api/linear/webhook")({
             ? runIdCandidate
             : crypto.randomUUID();
 
-        const authz = extractAuthz(payload);
-
+        // Handle resume for linear-authz events (existing functionality)
         if (authz && authz.length > 0) {
           try {
             await requireToolScopesAndPolicy(

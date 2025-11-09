@@ -14,6 +14,8 @@ export const workflowRuns = pgTable("workflow_runs", {
   stateData: jsonb("state_data"), // Current workflow state
   webhookUrl: text("webhook_url"), // Webhook URL for resume
   webhookSecret: text("webhook_secret"), // Secret for webhook verification
+  linearSessionId: text("linear_session_id"),
+  linearSpace: text("linear_space"),
   suspendedAt: timestamp("suspended_at", { withTimezone: true }),
   resumedAt: timestamp("resumed_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),

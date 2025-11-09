@@ -19,6 +19,13 @@ import {
   replayQueriesTotal,
   replayQueryDurationSeconds,
 } from "../metrics";
+import {
+  setLinearDelegate,
+  setLinearStarted,
+  extractIssueIdFromSession,
+  emitLinearActivity,
+  setLinearSessionExternalUrl,
+} from "@alfred/agent/orchestrator/linear";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -130,6 +137,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
             repoBase: input.repoBase,
             mode: input.mode,
             context: input.context,
+            ...(input.linear?.sessionId && input.authzLinear
+              ? {
+                  linear: {
+                    sessionId: input.linear.sessionId,
+                    space: input.linear.space,
+                    authz: input.authzLinear,
+                  },
+                }
+              : {}),
           },
           {
             signal: abortController.signal,
@@ -145,7 +161,54 @@ export const workflowRouter: ReturnType<typeof router> = router({
           workflowId: "plan",
           status: "running",
           inputData: input,
+          linearSessionId: input.linear?.sessionId,
+          linearSpace: input.linear?.space,
         });
+
+        // Initialize Linear session (delegate, state) - fire-and-forget
+        if (input.linear?.sessionId && input.authzLinear) {
+          const issueId = extractIssueIdFromSession(input.linear.sessionId);
+          if (issueId) {
+            setLinearDelegate({
+              space: input.linear.space,
+              issueId,
+              authz: input.authzLinear,
+            }).catch((error) => {
+              logger.warn("linear_delegate_setup_failed", {
+                runId: runner.runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+
+            setLinearStarted({
+              space: input.linear.space,
+              issueId,
+              authz: input.authzLinear,
+            }).catch((error) => {
+              logger.warn("linear_started_setup_failed", {
+                runId: runner.runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+
+            // Set external URL pointing to workflow run viewer
+            const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
+            if (appUrl) {
+              const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
+              setLinearSessionExternalUrl(
+                input.linear.sessionId,
+                input.linear.space,
+                input.authzLinear,
+                runUrl
+              ).catch((error) => {
+                logger.warn("linear_session_external_url_failed", {
+                  runId: runner.runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              });
+            }
+          }
+        }
 
         // Register for cancellation
         await runRegistry.register(runner.runId, {
@@ -232,6 +295,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 repoBase: input.repoBase,
                 mode: input.mode,
                 context: input.context,
+                ...(input.linear?.sessionId && input.authzLinear
+                  ? {
+                      linear: {
+                        sessionId: input.linear.sessionId,
+                        space: input.linear.space,
+                        authz: input.authzLinear,
+                      },
+                    }
+                  : {}),
               },
               {
                 signal: abortController.signal,
@@ -246,7 +318,54 @@ export const workflowRouter: ReturnType<typeof router> = router({
               workflowId: "plan",
               status: "running",
               inputData: input,
+              linearSessionId: input.linear?.sessionId,
+              linearSpace: input.linear?.space,
             });
+
+            // Initialize Linear session (delegate, state) - fire-and-forget
+            if (input.linear?.sessionId && input.authzLinear) {
+              const issueId = extractIssueIdFromSession(input.linear.sessionId);
+              if (issueId) {
+                setLinearDelegate({
+                  space: input.linear.space,
+                  issueId,
+                  authz: input.authzLinear,
+                }).catch((error) => {
+                  logger.warn("linear_delegate_setup_failed", {
+                    runId: runner.runId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                });
+
+                setLinearStarted({
+                  space: input.linear.space,
+                  issueId,
+                  authz: input.authzLinear,
+                }).catch((error) => {
+                  logger.warn("linear_started_setup_failed", {
+                    runId: runner.runId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                });
+
+                // Set external URL pointing to workflow run viewer
+                const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
+                if (appUrl) {
+                  const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
+                  setLinearSessionExternalUrl(
+                    input.linear.sessionId,
+                    input.linear.space,
+                    input.authzLinear,
+                    runUrl
+                  ).catch((error) => {
+                    logger.warn("linear_session_external_url_failed", {
+                      runId: runner.runId,
+                      error: error instanceof Error ? error.message : String(error),
+                    });
+                  });
+                }
+              }
+            }
 
             runId = runner.runId;
             await runRegistry.register(runId, {
@@ -310,6 +429,23 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 }
                 // Push event including its identity for client-side dedupe
                 push({ ...event, eventId } as WorkflowEvent);
+
+                // Emit Linear activities for significant events (backup if runner doesn't emit)
+                if (input.linear?.sessionId && input.authzLinear) {
+                  if (event.type === "error") {
+                    emitLinearActivity("error", {
+                      sessionId: input.linear.sessionId,
+                      space: input.linear.space,
+                      authz: input.authzLinear,
+                      body: (event as any).message ?? "Workflow error occurred",
+                    }).catch((error) => {
+                      logger.warn("linear_activity_emission_failed", {
+                        runId,
+                        error: error instanceof Error ? error.message : String(error),
+                      });
+                    });
+                  }
+                }
               } catch (error) {
                 logger.warn("workflow_event_persistence_failed", {
                   runId,

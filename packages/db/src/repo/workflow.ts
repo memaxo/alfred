@@ -18,6 +18,8 @@ export async function createRun(args: {
   stateData?: unknown;
   webhookUrl?: string | null;
   webhookSecret?: string | null;
+  linearSessionId?: string;
+  linearSpace?: string;
 }) {
   const [row] = await db
     .insert(workflowRuns)
@@ -30,6 +32,8 @@ export async function createRun(args: {
       stateData: args.stateData as any,
       webhookUrl: args.webhookUrl ?? null,
       webhookSecret: args.webhookSecret ?? null,
+      linearSessionId: args.linearSessionId ?? null,
+      linearSpace: args.linearSpace ?? null,
     })
     .returning();
   return row;
@@ -44,6 +48,8 @@ export async function updateRun(
     suspendedAt: Date | null;
     resumedAt: Date | null;
     completedAt: Date | null;
+    linearSessionId: string | null;
+    linearSpace: string | null;
   }>
 ) {
   const [row] = await db
@@ -64,6 +70,12 @@ export async function updateRun(
         : {}),
       ...(Object.hasOwn(patch, "completedAt")
         ? { completedAt: (patch.completedAt ?? null) as any }
+        : {}),
+      ...(Object.hasOwn(patch, "linearSessionId")
+        ? { linearSessionId: (patch.linearSessionId ?? null) as any }
+        : {}),
+      ...(Object.hasOwn(patch, "linearSpace")
+        ? { linearSpace: (patch.linearSpace ?? null) as any }
         : {}),
     })
     .where(eq(workflowRuns.id, runId))
@@ -147,6 +159,15 @@ export async function getRun(runId: string) {
     .select()
     .from(workflowRuns)
     .where(eq(workflowRuns.id, runId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function findRunByLinearSession(sessionId: string) {
+  const [row] = await db
+    .select()
+    .from(workflowRuns)
+    .where(eq(workflowRuns.linearSessionId, sessionId))
     .limit(1);
   return row ?? null;
 }

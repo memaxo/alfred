@@ -34,6 +34,7 @@
     "@alfred/cognitive": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
+    "p-retry": "^6.2.0",
     "zod": "catalog:"
   }
 }

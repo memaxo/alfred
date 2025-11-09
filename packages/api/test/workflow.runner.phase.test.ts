@@ -1,5 +1,10 @@
-import { describe, expect, it } from "bun:test";
-import { runPlanV6 } from "@alfred/api/src/workflow/runner";
+import { describe, expect, it, mock, vi } from "bun:test";
+// Mock metrics to avoid transitive DB/policy imports
+mock.module("@alfred/api/metrics", () => ({
+  runnerStepsTotal: { inc: vi.fn() },
+  runnerErrorsTotal: { inc: vi.fn() },
+}));
+import { runPlanV6 } from "@alfred/api/workflow/runner";
 
 async function collectEvents<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   const results: T[] = [];
@@ -43,4 +48,3 @@ describe("workflow runner phases", () => {
     expect(hasError || hasTerminal).toBeTruthy();
   });
 });
-
