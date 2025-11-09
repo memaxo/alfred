@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { RouteError } from "@/components/route-error";
+import { AutonomySlider, type AutonomyLevel } from "@/components/autonomy-slider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,6 +44,15 @@ function PreferencesRoute() {
   const listInput = useMemo(() => ({ limit: 100, offset: 0 }), []);
   const preferenceQuery = trpc.preference.list.useQuery(listInput);
   const [form, setForm] = useState<PreferenceFormState>(DEFAULT_FORM);
+
+  // Find autonomy preference
+  const autonomyPreference = useMemo(() => {
+    const prefs = preferenceQuery.data ?? [];
+    return prefs.find((p) => p.key === "autonomy");
+  }, [preferenceQuery.data]);
+
+  const currentAutonomy: AutonomyLevel =
+    (autonomyPreference?.value as AutonomyLevel) ?? "low";
 
   const preferences = preferenceQuery.data ?? [];
   const isLoading = preferenceQuery.isLoading;
@@ -227,8 +237,36 @@ function PreferencesRoute() {
     [deletePreference, isDeleting]
   );
 
+  const handleAutonomyChange = useCallback(
+    (value: AutonomyLevel) => {
+      const input: PreferenceSetInput = {
+        key: "autonomy",
+        value,
+        confidence: 1,
+      };
+      setPreference.mutate(input);
+    },
+    [setPreference]
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Autonomy Settings</CardTitle>
+          <CardDescription>
+            Control how much autonomy Alfred has when executing tasks.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AutonomySlider
+            disabled={isSaving}
+            onChange={handleAutonomyChange}
+            value={currentAutonomy}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Preferences</CardTitle>

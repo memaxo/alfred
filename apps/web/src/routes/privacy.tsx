@@ -3,6 +3,7 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { RouteError } from "@/components/route-error";
+import { PrivacyControls } from "@/components/privacy-controls";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -73,8 +74,41 @@ function PrivacyRoute() {
   const isFactsLoading = factQuery.isLoading;
   const isEventsLoading = eventQuery.isLoading;
 
+  const handleExport = useCallback(() => {
+    const data = {
+      facts,
+      events,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `alfred-export-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [facts, events]);
+
+  const handleForget = useCallback(() => {
+    // Delete all facts
+    facts.forEach((fact) => {
+      const input: DeleteFactInput = { id: fact.id };
+      deleteFact.mutate(input);
+    });
+  }, [facts, deleteFact]);
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 py-10">
+      <PrivacyControls
+        exportDisabled={isFactsLoading || isEventsLoading}
+        forgetDisabled={deleteFact.isPending || facts.length === 0}
+        onExport={handleExport}
+        onForget={handleForget}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Stored facts</CardTitle>

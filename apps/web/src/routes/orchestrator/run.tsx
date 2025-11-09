@@ -2,8 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs } from "@trpc/server";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { UIMessage } from "@alfred/type/stream";
+import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
 import { RouteError } from "@/components/route-error";
+import { Code } from "@/components/code";
+import { Plan } from "@/components/plan";
+import { Task } from "@/components/task";
+import { Tool } from "@/components/tool";
 import { getToolToken } from "@/lib/token";
+import { parseStructuredMessage } from "@/utils/message-parser";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
@@ -51,7 +58,7 @@ function OrchestratorRunRoute() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [messages, setMessages] = useState<Array<{ id: string; json: string }>>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
   const subscriptionRef = useRef<null | (() => void)>(null);
   const logIdRef = useRef(0);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -74,10 +81,16 @@ function OrchestratorRunRoute() {
           if (evtId && !seenEventIds.has(evtId)) {
             newSeen.add(evtId);
             const evt = row?.eventData as unknown;
-            setMessages((prev) => [
-              ...prev,
-              { id: evtId, json: safeStringify(evt) },
-            ]);
+            const uiMessages = eventToUiMessages(evt as any);
+            if (uiMessages && uiMessages.length > 0) {
+              setMessages((prev) => {
+                const existingIds = new Set(prev.map((m) => m.id));
+                const newMessages = uiMessages.filter(
+                  (m) => m.id && !existingIds.has(m.id)
+                );
+                return [...prev, ...newMessages];
+              });
+            }
           }
         }
         if (newSeen.size > 0) {
@@ -230,11 +243,15 @@ function OrchestratorRunRoute() {
     }
     const type = (event?.type as string | undefined) ?? "unknown";
     if (type === "ui-message") {
-      const json = safeStringify(event);
-      if (evtId) {
-        setMessages((prev) => (prev.find((m) => m.id === evtId) ? prev : [...prev, { id: evtId, json }]));
-      } else {
-        setMessages((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, json }]);
+      const uiMessages = eventToUiMessages(event as any);
+      if (uiMessages && uiMessages.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMessages = uiMessages.filter(
+            (m) => m.id && !existingIds.has(m.id)
+          );
+          return [...prev, ...newMessages];
+        });
       }
     }
 
@@ -659,15 +676,49 @@ function OrchestratorRunRoute() {
             </button>
           ) : null}
         </header>
-        <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-xs">
+        <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 space-y-4">
           {messages.length === 0 ? (
             <p className="text-muted-foreground">No messages persisted.</p>
           ) : (
-            <ul className="space-y-1">
-              {messages.map((m) => (
-                <li key={m.id} className="break-words whitespace-pre-wrap">{m.json}</li>
-              ))}
-            </ul>
+            <div className="space-y-4">
+              {messages.map((message) => {
+                const parsed = parseStructuredMessage(message);
+                return (
+                  <div key={message.id ?? parsed.id} className="space-y-2">
+                    {parsed.plans.map((plan, idx) => (
+                      <Plan key={`plan-${idx}`} plan={plan} />
+                    ))}
+                    {parsed.tasks.map((task) => (
+                      <Task key={task.id} {...task} />
+                    ))}
+                    {parsed.tools.map((tool, idx) => (
+                      <Tool
+                        key={`tool-${idx}`}
+                        name={tool.name}
+                        args={tool.args}
+                        result={tool.result}
+                        status={tool.status}
+                      />
+                    ))}
+                    {parsed.codes.map((code, idx) => (
+                      <Code
+                        key={`code-${idx}`}
+                        code={code.code}
+                        language={code.language}
+                      />
+                    ))}
+                    {parsed.plans.length === 0 &&
+                    parsed.tasks.length === 0 &&
+                    parsed.tools.length === 0 &&
+                    parsed.codes.length === 0 ? (
+                      <pre className="text-muted-foreground text-xs">
+                        {JSON.stringify(message, null, 2)}
+                      </pre>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </section>

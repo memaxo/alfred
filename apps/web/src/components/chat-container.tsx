@@ -14,6 +14,8 @@ import { Chat } from "@alfred/ui";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
+import { useVoiceCapture } from "@/hooks/use-voice-capture";
+import { renderPart } from "./chat-render";
 import { Actions } from "./actions";
 import { Connect } from "./connect";
 import { Controls } from "./controls";
@@ -37,6 +39,18 @@ export function ChatContainer({ agent }: ChatContainerProps) {
       onError: (err) => {
         // Error is already displayed in the error state
         // Additional logging handled by error boundaries
+      },
+    });
+
+  const { isRecording, startRecording, stopRecording, transcript, error: voiceError } =
+    useVoiceCapture({
+      onTranscript: (text) => {
+        if (currentAgent === "assistant" && text.trim().length > 0) {
+          send(text);
+        }
+      },
+      onError: (err) => {
+        // Voice errors are handled by the hook
       },
     });
 
@@ -109,7 +123,11 @@ export function ChatContainer({ agent }: ChatContainerProps) {
                 messages={messages}
                 onSend={handleSend}
                 onVoice={() => {
-                  // Voice input not yet implemented
+                  if (isRecording) {
+                    stopRecording();
+                  } else {
+                    startRecording();
+                  }
                 }}
                 perf
                 placeholder={
@@ -117,6 +135,9 @@ export function ChatContainer({ agent }: ChatContainerProps) {
                     ? "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
+                renderPart={renderPart}
+                voiceDisabled={currentAgent !== "assistant"}
+                voiceLabel={isRecording ? "Stop Recording" : "Voice"}
                 virtualized
               />
             </div>
@@ -134,6 +155,11 @@ export function ChatContainer({ agent }: ChatContainerProps) {
         {error && (
           <div className="border-t bg-destructive/10 p-4">
             <p className="text-destructive text-sm">Error: {error.message}</p>
+          </div>
+        )}
+        {voiceError && (
+          <div className="border-t bg-destructive/10 p-4">
+            <p className="text-destructive text-sm">Voice Error: {voiceError.message}</p>
           </div>
         )}
       </div>
