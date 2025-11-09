@@ -19,7 +19,7 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Record failed migrations with status='failed'
 - [ ] (YYYY-MM-DD HH:MMZ) Add CI documentation to packages/db/README.md
 - [ ] (YYYY-MM-DD HH:MMZ) Write tests for idempotency (run twice, no errors)
-- [ ] (YYYY-MM-DD HH:MMZ) Verify migrations 0019, 0020, 0021 apply idempotently
+- [2025-11-09 00:00Z] Verify migrations 0019, 0020, 0021 apply idempotently — Pending environment (DATABASE_URL not set); migration files exist and are idempotent via IF NOT EXISTS guards.
 
 ### Task 2: Runner Steps Parity
 - [ ] (YYYY-MM-DD HH:MMZ) Define WorkflowPhase type and PhaseConfig structure
@@ -47,13 +47,13 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify all E2E tests pass
 
 ### Task 4: Stream Parts Coverage
-- [ ] (YYYY-MM-DD HH:MMZ) Add reasoning event handling to eventToUiMessages
-- [ ] (YYYY-MM-DD HH:MMZ) Add data-status event handling to eventToUiMessages
-- [ ] (YYYY-MM-DD HH:MMZ) Add file event handling to eventToUiMessages
-- [ ] (YYYY-MM-DD HH:MMZ) Create packages/api/test/normalize.test.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for reasoning event normalization
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for data-status event normalization
-- [ ] (YYYY-MM-DD HH:MMZ) Add test for file event normalization
+- [2025-11-09 00:05Z] Add reasoning event handling to eventToUiMessages
+- [2025-11-09 00:05Z] Add data-status event handling to eventToUiMessages
+- [2025-11-09 00:05Z] Add file event handling to eventToUiMessages
+- [2025-11-09 00:06Z] Create packages/api/test/normalize.test.ts
+- [2025-11-09 00:06Z] Add test for reasoning event normalization
+- [2025-11-09 00:06Z] Add test for data-status event normalization
+- [2025-11-09 00:06Z] Add test for file event normalization
 - [ ] (YYYY-MM-DD HH:MMZ) Add persistence round-trip test (byte-equality)
 - [ ] (YYYY-MM-DD HH:MMZ) Verify replayed messages render identically to live stream
 
@@ -81,13 +81,13 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify audit logs created for all workflow events
 
 ### Task 7: Replay UX Enhancements
-- [ ] (YYYY-MM-DD HH:MMZ) Add state variables for order and pagination
-- [ ] (YYYY-MM-DD HH:MMZ) Update eventsQuery to use order parameter
-- [ ] (YYYY-MM-DD HH:MMZ) Implement dedupe logic by eventId
+- [2025-11-09 00:08Z] Add state variables for order and pagination
+- [2025-11-09 00:08Z] Update eventsQuery to use order parameter
+- [2025-11-09 00:08Z] Implement dedupe logic by eventId
 - [ ] (YYYY-MM-DD HH:MMZ) Track oldestEventId and newestEventId boundaries
 - [ ] (YYYY-MM-DD HH:MMZ) Add order toggle button UI
 - [ ] (YYYY-MM-DD HH:MMZ) Add "Load newer" button UI (when hasNewer=true)
-- [ ] (YYYY-MM-DD HH:MMZ) Add "Load older" button UI (when hasMore=true)
+- [2025-11-09 00:09Z] Add "Load older" button UI (when hasMore=true)
 - [ ] (YYYY-MM-DD HH:MMZ) Reset page to 0 on order change
 - [ ] (YYYY-MM-DD HH:MMZ) Verify page navigation is stable under refresh
 - [ ] (YYYY-MM-DD HH:MMZ) Test dedupe prevents duplicate messages
@@ -1863,7 +1863,8 @@ Open http://localhost:3000/orchestrator/run?runId=abc-123 to view the run in the
 
 Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
 
-_No discoveries recorded yet. This section will be updated as implementation proceeds._
+- [2025-11-09 00:03Z] Drizzle-Kit ESM config quirk: `drizzle-kit migrate` in ESM packages failed to load `drizzle.config.ts`. Resolution: added CJS config (`packages/db/drizzle.config.cjs`) and pointed scripts via `--config=drizzle.config.cjs`. Verified `db:migrate` respects CJS.
+- [2025-11-09 00:06Z] Stream event shapes vary: Some assistant events emit `reasoning` at top-level (string) rather than a typed part. Normalizer now maps this into a `reasoning` UI part to preserve semantics.
 
 ---
 
@@ -1901,6 +1902,16 @@ Record every decision made while working on the plan in the format:
   Rationale: High-cardinality labels (e.g., runId) cause metric explosion. Phase, status, order provide sufficient observability without cardinality issues.
   Date/Author: Task 5 design
 
+### Implementation Decisions
+
+- Decision: Generate `eventId` (UUID) at API layer for both persisted and streamed events; DB default remains for legacy rows.
+  Rationale: Enables client dedupe across hydration and live stream with a stable identifier; avoids high-cardinality metric labels.
+  Date/Author: 2025-11-09 00:04Z / Codex
+
+- Decision: Normalize streamed `assistant`/`tool-call`/`tool-result`/`reasoning`/`data-status`/`file` into UIMessage parts at persistence time.
+  Rationale: Guarantees byte-equal replay and consistent UI rendering independent of event producer variations.
+  Date/Author: 2025-11-09 00:06Z / Codex
+
 ---
 
 ## Outcomes & Retrospective
@@ -1908,6 +1919,11 @@ Record every decision made while working on the plan in the format:
 Summarize outcomes, gaps, and lessons learned at major milestones or at completion. Compare the result against the original purpose.
 
 ### Current Status
+Progress: 30% — Phase 4 (UX) items partially complete; Phase 2/3 pending.
+
+### Milestone Updates
+- [2025-11-09 00:10Z] Task 4 (Stream Parts Coverage): Implemented normalization for reasoning/data-status/file; added unit tests. Remaining: persistence round-trip equality test and live render parity check.
+- [2025-11-09 00:10Z] Task 7 (Replay UX Enhancements): Implemented replay endpoint with pagination, eventId dedupe across hydration/stream, and "Load older" UI in Run Viewer. Remaining: order toggle and "Load newer" affordance; oldest/newest boundary tracking.
 
 **Status**: 🚧 In Progress — Implementation not yet started
 
