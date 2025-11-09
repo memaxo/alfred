@@ -219,10 +219,12 @@ describe("RAG doc functions", () => {
         model: openai.textEmbeddingModel("text-embedding-3-small"),
       });
       checkEmbedHealthMock.mockResolvedValue(true);
-      embedManyMock.mockResolvedValue({
-        embeddings: Array.from({ length: 1000 }, () =>
-          Array.from({ length: 1536 }, () => 0.1)
-        ),
+      embedManyMock.mockImplementation(({ values }: { values: string[] }) => {
+        return Promise.resolve({
+          embeddings: Array.from({ length: values.length }, () =>
+            Array.from({ length: 1536 }, () => 0.1)
+          ),
+        });
       });
 
       const progressCalls: number[] = [];
@@ -244,9 +246,13 @@ describe("RAG doc functions", () => {
       });
       checkEmbedHealthMock.mockResolvedValue(true);
       embedManyMock
-        .mockRejectedValueOnce(new Error("batch failed"))
-        .mockResolvedValueOnce({
-          embeddings: [Array.from({ length: 1536 }, () => 0.1)],
+        .mockImplementationOnce(() => Promise.reject(new Error("batch failed")))
+        .mockImplementation(({ values }: { values: string[] }) => {
+          return Promise.resolve({
+            embeddings: Array.from({ length: values.length }, () =>
+              Array.from({ length: 1536 }, () => 0.1)
+            ),
+          });
         });
 
       const content = "chunk ".repeat(1500);
