@@ -273,6 +273,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
               return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
             };
 
+            // Helper to normalize certain events to UIMessage parts for byte-equal replay
+            const maybeUiMessages = (event: WorkflowEvent): unknown[] | null => {
+              // When the event already carries UIMessage(s)
+              if ((event as any)?.type === 'ui-message' && Array.isArray((event as any)?.messages)) {
+                return (event as any).messages as unknown[];
+              }
+              // Future: detect assistant/tool-call/tool-result event shapes and convert
+              // by reusing non-stream normalizer when shapes match
+              return null;
+            };
+
             // Consume the generator, persisting each event then pushing to client
             for await (const event of runner.stream) {
               try {
@@ -285,6 +296,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: getEventType(event),
                   eventData: redactedEventData,
                 });
+
+                // If the event can be represented as UIMessage(s), persist a normalized copy
+                const uiMessages = maybeUiMessages(event);
+                if (uiMessages && uiMessages.length > 0) {
+                  await workflowRepo.appendEvent({
+                    runId,
+                    eventId: crypto.randomUUID(),
+                    eventType: 'ui-message',
+                    eventData: uiMessages,
+                  });
+                }
                 // Push event including its identity for client-side dedupe
                 push({ ...event, eventId } as WorkflowEvent);
               } catch (error) {
@@ -413,19 +435,35 @@ export const workflowRouter: ReturnType<typeof router> = router({
       z.object({
         runId: z.string().min(1),
         eventType: z.string().optional().default("ui-message"),
+        page: z.number().int().min(0).optional(),
+        pageSize: z.number().int().min(1).max(2000).optional(),
+        includeTotal: z.boolean().optional(),
       })
     )
     .query(async ({ input }) => {
-      const events = await workflowRepo.listEventsByType(
-        input.runId,
-        input.eventType
-      );
-      return events.map((e) => ({
+      const items = await workflowRepo.listEventsByTypePaged({
+        runId: input.runId,
+        eventType: input.eventType,
+        page: input.page ?? 0,
+        pageSize: input.pageSize ?? 500,
+      });
+      const transformed = items.map((e) => ({
         eventId: (e as any).eventId,
         runId: e.runId,
         eventType: e.eventType,
         eventData: e.eventData,
         timestamp: (e as any).timestamp,
       }));
+      let total: number | undefined = undefined;
+      if (input.includeTotal) {
+        total = await workflowRepo.countEventsByType(
+          input.runId,
+          input.eventType
+        );
+      }
+      const page = input.page ?? 0;
+      const pageSize = input.pageSize ?? 500;
+      const hasMore = transformed.length === pageSize && (total === undefined || (page + 1) * pageSize < total);
+      return { items: transformed, page, pageSize, total, hasMore };
     }),
 });

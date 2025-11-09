@@ -340,26 +340,31 @@ describe("workflow router", () => {
         },
       ];
 
-      workflowRepoMocks.listEventsByType.mockResolvedValue(mockEvents as any);
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
 
       const result = await caller.workflow.replay({ runId: mockRunId });
 
-      expect(workflowRepoMocks.listEventsByType).toHaveBeenCalledWith(
-        mockRunId,
-        "ui-message"
-      );
-      expect(result).toHaveLength(2);
-      expect(result[0].eventId).toBe("evt-1");
-      expect(result[0].eventType).toBe("ui-message");
+      expect(workflowRepoMocks.listEventsByTypePaged).toHaveBeenCalledWith({
+        runId: mockRunId,
+        eventType: "ui-message",
+        page: 0,
+        pageSize: 500,
+      });
+      expect(Array.isArray(result.items)).toBe(true);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].eventId).toBe("evt-1");
+      expect(result.items[0].eventType).toBe("ui-message");
     });
 
     it("supports custom event type filtering", async () => {
-      workflowRepoMocks.listEventsByType.mockResolvedValue([]);
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue([]);
       await caller.workflow.replay({ runId: "test-run-id", eventType: "progress" });
-      expect(workflowRepoMocks.listEventsByType).toHaveBeenCalledWith(
-        "test-run-id",
-        "progress"
-      );
+      expect(workflowRepoMocks.listEventsByTypePaged).toHaveBeenCalledWith({
+        runId: "test-run-id",
+        eventType: "progress",
+        page: 0,
+        pageSize: 500,
+      });
     });
 
     it("returns events in chronological order", async () => {
@@ -368,14 +373,14 @@ describe("workflow router", () => {
         { eventId: "evt-2", timestamp: new Date("2024-01-02") },
       ];
 
-      workflowRepoMocks.listEventsByType.mockResolvedValue(mockEvents as any);
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
 
       const result = await caller.workflow.replay({
         runId: "test-run-id",
       });
 
-      expect(result[0].eventId).toBe("evt-1");
-      expect(result[1].eventId).toBe("evt-2");
+      expect(result.items[0].eventId).toBe("evt-1");
+      expect(result.items[1].eventId).toBe("evt-2");
     });
   });
 });

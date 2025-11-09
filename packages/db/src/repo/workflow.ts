@@ -113,6 +113,32 @@ export async function listEventsByType(runId: string, eventType: string) {
   return rows;
 }
 
+export async function listEventsByTypePaged(args: {
+  runId: string;
+  eventType: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const page = Math.max(0, args.page ?? 0);
+  const pageSize = Math.min(Math.max(1, args.pageSize ?? 500), 2000);
+  const rows = await db
+    .select()
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, args.runId), eq(workflowEvents.eventType, args.eventType)))
+    .orderBy(workflowEvents.timestamp)
+    .limit(pageSize)
+    .offset(page * pageSize);
+  return rows;
+}
+
+export async function countEventsByType(runId: string, eventType: string) {
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)));
+  return Number(rows?.[0]?.count ?? 0);
+}
+
 export async function getRun(runId: string) {
   const [row] = await db
     .select()

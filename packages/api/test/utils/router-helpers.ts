@@ -25,6 +25,8 @@ export function mockWorkflowRepo() {
   const getRunMock = vi.fn();
   const listEventsMock = vi.fn();
   const listEventsByTypeMock = vi.fn();
+  const listEventsByTypePagedMock = vi.fn();
+  const countEventsByTypeMock = vi.fn();
 
   mock.module("@alfred/db/repo/workflow", () => ({
     createRun: createRunMock,
@@ -33,6 +35,8 @@ export function mockWorkflowRepo() {
     getRun: getRunMock,
     listEvents: listEventsMock,
     listEventsByType: listEventsByTypeMock,
+    listEventsByTypePaged: listEventsByTypePagedMock,
+    countEventsByType: countEventsByTypeMock,
   }));
 
   return {
@@ -42,6 +46,8 @@ export function mockWorkflowRepo() {
     getRun: getRunMock,
     listEvents: listEventsMock,
     listEventsByType: listEventsByTypeMock,
+    listEventsByTypePaged: listEventsByTypePagedMock,
+    countEventsByType: countEventsByTypeMock,
   };
 }
 

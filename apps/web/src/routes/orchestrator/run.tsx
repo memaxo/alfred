@@ -51,6 +51,7 @@ function OrchestratorRunRoute() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [messages, setMessages] = useState<Array<{ id: string; json: string }>>([]);
   const subscriptionRef = useRef<null | (() => void)>(null);
   const logIdRef = useRef(0);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -58,20 +59,23 @@ function OrchestratorRunRoute() {
   const resumeMutation = trpc.workflow.resume.useMutation();
   const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
   const eventsQuery = trpc.workflow.replay.useQuery(
-    { runId: runId ?? "", eventType: "ui-message" },
+    { runId: runId ?? "", eventType: "ui-message", page: 0, pageSize: 500, includeTotal: false },
     {
       enabled: !!runId,
       // hydrate logs from persisted UI-message events (chronological)
       onSuccess(data) {
-        if (!Array.isArray(data)) return;
+        if (!data || !Array.isArray((data as any).items)) return;
+        const items = (data as any).items as Array<any>;
         const newSeen = new Set<string>();
-        for (const row of data) {
-          const evtId = typeof (row as any)?.eventId === "string" ? (row as any).eventId : null;
+        for (const row of items) {
+          const evtId = typeof row?.eventId === "string" ? row.eventId : null;
           if (evtId && !seenEventIds.has(evtId)) {
             newSeen.add(evtId);
-            const evt = (row as any)?.eventData as Record<string, unknown> | null;
-            const type = (evt?.type as string | undefined) ?? "ui-message";
-            appendLog(type, JSON.stringify(evt));
+            const evt = row?.eventData as unknown;
+            setMessages((prev) => [
+              ...prev,
+              { id: evtId, json: safeStringify(evt) },
+            ]);
           }
         }
         if (newSeen.size > 0) {
@@ -221,6 +225,14 @@ function OrchestratorRunRoute() {
       });
     }
     const type = (event?.type as string | undefined) ?? "unknown";
+    if (type === "ui-message") {
+      const json = safeStringify(event);
+      if (evtId) {
+        setMessages((prev) => (prev.find((m) => m.id === evtId) ? prev : [...prev, { id: evtId, json }]));
+      } else {
+        setMessages((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, json }]);
+      }
+    }
 
     switch (type) {
       case "run": {
@@ -427,7 +439,7 @@ function OrchestratorRunRoute() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
       <header className="space-y-2">
         <h1 className="font-semibold text-2xl">Orchestrator Run Viewer</h1>
         <p className="text-muted-foreground text-sm">
@@ -627,6 +639,33 @@ function OrchestratorRunRoute() {
           )}
         </div>
       </section>
+
+      <section className="space-y-2">
+        <header className="flex items-center justify-between">
+          <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+            UI Messages (replay + live)
+          </h2>
+        </header>
+        <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-xs">
+          {messages.length === 0 ? (
+            <p className="text-muted-foreground">No messages persisted.</p>
+          ) : (
+            <ul className="space-y-1">
+              {messages.map((m) => (
+                <li key={m.id} className="break-words whitespace-pre-wrap">{m.json}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </div>
   );
+}
+
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
 }
