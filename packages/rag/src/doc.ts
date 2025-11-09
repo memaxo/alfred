@@ -110,25 +110,30 @@ export async function retrieve(
   const fetchLimit = Math.max(k, Math.min(k * 3, 60));
   const rows = await ragRepo.searchChunks(vector, fetchLimit, threshold);
 
-  return rows.slice(0, k).map((row) => {
-    const rawMetadata = row.metadata;
-    const metadata =
-      rawMetadata && typeof rawMetadata === "object"
-        ? (rawMetadata as Record<string, unknown>)
-        : rawMetadata !== undefined
-          ? { value: rawMetadata }
-          : undefined;
+  // Apply an extra defensive threshold filter client-side to ensure
+  // correctness even when the underlying repo does not enforce it.
+  return rows
+    .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
+    .slice(0, k)
+    .map((row) => {
+      const rawMetadata = row.metadata;
+      const metadata =
+        rawMetadata && typeof rawMetadata === "object"
+          ? (rawMetadata as Record<string, unknown>)
+          : rawMetadata !== undefined
+            ? { value: rawMetadata }
+            : undefined;
 
-    return {
-      content: row.content,
-      order: row.order ?? 0,
-      metadata: {
-        ...(metadata ?? {}),
-        score: row.score,
-        documentId: row.documentId,
-      },
-    };
-  });
+      return {
+        content: row.content,
+        order: row.order ?? 0,
+        metadata: {
+          ...(metadata ?? {}),
+          score: row.score,
+          documentId: row.documentId,
+        },
+      };
+    });
 }
 
 export async function chunk(
