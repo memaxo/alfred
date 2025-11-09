@@ -175,6 +175,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
