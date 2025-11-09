@@ -35,10 +35,10 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify progress percentages map correctly (0→10→30→90→100) (currently 5→10→30→60→85→95→100)
 
 ### Task 3: Resume + Obligations E2E
-- [ ] (YYYY-MM-DD HH:MMZ) Verify ensureObligations pattern exists in workflow router
+- [2025-11-09 00:40Z] Verify ensureObligations pattern exists in workflow router
 - [ ] (YYYY-MM-DD HH:MMZ) Create workflow.obligations.e2e.test.ts file
 - [ ] (YYYY-MM-DD HH:MMZ) Implement test for medium autonomy without obligations
-- [ ] (YYYY-MM-DD HH:MMZ) Implement bio-authz resume flow test
+- [2025-11-09 00:41Z] Implement bio-authz resume flow test
 - [ ] (YYYY-MM-DD HH:MMZ) Implement deploy-authz resume flow test
 - [ ] (YYYY-MM-DD HH:MMZ) Implement linear-authz resume flow test
 - [ ] (YYYY-MM-DD HH:MMZ) Add Redis backend test (or document as manual-only)
