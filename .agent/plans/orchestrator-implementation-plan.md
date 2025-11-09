@@ -93,9 +93,9 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Test dedupe prevents duplicate messages
 
 ### Task 8: Deterministic Event Identity
-- [ ] (YYYY-MM-DD HH:MMZ) Add DETERMINISTIC_EVENT_IDS to config/env.example
-- [ ] (YYYY-MM-DD HH:MMZ) Implement generateEventId function with hash-based logic
-- [ ] (YYYY-MM-DD HH:MMZ) Update appendEvent to use generateEventId
+- [2025-11-09 01:28Z] Add DETERMINISTIC_EVENT_IDS to config/env.example (to be committed with docs batch)
+- [2025-11-09 01:28Z] Implement generateEventId function with hash-based logic (`packages/api/src/utils/event-id.ts`)
+- [2025-11-09 01:28Z] Update persistence to use generateEventId for events and ui-message replays
 - [ ] (YYYY-MM-DD HH:MMZ) Create packages/db/test/workflow.deterministic.test.ts
 - [ ] (YYYY-MM-DD HH:MMZ) Add test for identical events producing same ID
 - [ ] (YYYY-MM-DD HH:MMZ) Add test for different events producing different IDs

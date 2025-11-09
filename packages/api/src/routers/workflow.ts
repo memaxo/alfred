@@ -14,6 +14,7 @@ import { toTRPCError } from "../utils/error";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
 import { eventToUiMessages } from "../ai/normalize";
+import { makeEventId } from "../utils/event-id";
 import { runPlanV6 } from "../workflow/runner";
 import {
   replayQueriesTotal,
@@ -409,11 +410,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
               try {
                 // Redact PII/secrets before persistence
                 const redactedEventData = redactEventData(event);
-                const eventId = crypto.randomUUID();
+                const eventType = getEventType(event);
+                const eventId = makeEventId({ runId, type: eventType, data: redactedEventData });
                 await workflowRepo.appendEvent({
                   runId,
                   eventId,
-                  eventType: getEventType(event),
+                  eventType,
                   eventData: redactedEventData,
                 });
 
@@ -422,7 +424,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 if (uiMessages && uiMessages.length > 0) {
                   await workflowRepo.appendEvent({
                     runId,
-                    eventId: crypto.randomUUID(),
+                    eventId: makeEventId({ runId, type: 'ui-message', data: uiMessages }),
                     eventType: 'ui-message',
                     eventData: uiMessages,
                   });
