@@ -62,11 +62,18 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 
 ## Surprises & Discoveries
 
-_No discoveries yet. This section will be updated as implementation proceeds._
+- **Reasoning item structure verification**: Codex CLI docs (exec.md line 49) confirm reasoning items have direct `text` field: `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Searching for README files**"}}`. The plan's `extractReasoning` function correctly handles this, though the `content` array fallback may be unnecessary based on documented structure.
+- **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
 
 ## Decision Log
 
-_No decisions logged yet. This section will be updated as implementation proceeds._
+- **Decision**: Include fallback to `content` array in `extractReasoning` function even though Codex docs show only `text` field
+  **Rationale**: Defensive programming for potential future format changes or edge cases. The primary path matches documented structure.
+  **Date/Author**: 2025-01-XX (plan author)
+
+- **Decision**: Make reasoning field optional in return type and schema
+  **Rationale**: Reasoning is only available for certain models and can be disabled via config. Optional field maintains backward compatibility.
+  **Date/Author**: 2025-01-XX (plan author)
 
 ## Outcomes & Retrospective
 
