@@ -1,4 +1,3 @@
-import { upsertEdges, upsertNodes } from "@alfred/db/src/repo/graph";
 import {
   enrichReasoningContext,
   extractReasoning,
@@ -7,8 +6,22 @@ import {
 } from "@alfred/knowledge/extractor";
 import { fact, knowledgeHash } from "@alfred/knowledge/hypergraph";
 
-type NodeSeed = Parameters<typeof upsertNodes>[0][number];
-type EdgeSeed = Parameters<typeof upsertEdges>[0][number];
+type NodeSeed = {
+  resource: string;
+  hash: string;
+  kind: string;
+  label: string;
+  properties?: Record<string, unknown>;
+};
+type EdgeSeed = {
+  resource: string;
+  hash: string;
+  fromId: string;
+  toId: string;
+  kind: string;
+  weight: number;
+  metadata?: Record<string, unknown>;
+};
 
 function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
@@ -113,7 +126,8 @@ export async function persistKnowledge(
   }
 
   try {
-    const nodeMap = await upsertNodes(nodeSeeds);
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
+    const nodeMap = await upsertNodes(nodeSeeds as any);
     if (edgeSeeds.length === 0) {
       return;
     }
@@ -135,7 +149,7 @@ export async function persistKnowledge(
       return;
     }
 
-    await upsertEdges(edges);
+    await upsertEdges(edges as any);
   } catch (err) {
     console.error("Failed to persist knowledge graph", err);
   }
@@ -204,7 +218,8 @@ export async function persistReasoning(
         },
       }));
 
-      const nodeMap = await upsertNodes(nodeSeeds);
+      const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
+      const nodeMap = await upsertNodes(nodeSeeds as any);
       const nodeList = Array.from(nodeMap.values());
 
       if (nodeList.length > 1) {
@@ -229,7 +244,7 @@ export async function persistReasoning(
         }
 
         if (edgeSeeds.length > 0) {
-          await upsertEdges(edgeSeeds);
+          await upsertEdges(edgeSeeds as any);
         }
       }
     }

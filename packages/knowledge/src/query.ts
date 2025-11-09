@@ -399,3 +399,127 @@ export const builder = {
     ],
   }),
 };
+
+export const reasoningQueries = {
+  byThread: (threadId: string): Query => ({
+    find: [variable("?trace"), variable("?text")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: "~",
+        value: threadId,
+      },
+    ],
+  }),
+
+  byTimeRange: (startMs: number, endMs: number): Query => ({
+    find: [variable("?trace")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: ">",
+        value: startMs.toString(),
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: "<",
+        value: endMs.toString(),
+      },
+    ],
+  }),
+
+  byQuality: (minConfidence: number): Query => ({
+    find: [variable("?trace")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: ">",
+        value: minConfidence.toString(),
+      },
+    ],
+  }),
+
+  byTopic: (keywords: string[]): Query => {
+    const clauses: Clause[] = [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+    ];
+
+    for (const keyword of keywords) {
+      clauses.push({
+        _: "filter",
+        variable: variable("?trace"),
+        op: "~",
+        value: keyword,
+      });
+    }
+
+    return {
+      find: [variable("?trace")],
+      where: clauses,
+    };
+  },
+};
+
+export function reconstructReasoningChain(
+  graph: Hypergraph,
+  executionId: string
+): Array<{ step: Knowledge; relations: Knowledge[]; index: number }> {
+  const query = reasoningQueries.byThread(executionId);
+  const results = execute(query, graph);
+  const chain: Array<{
+    step: Knowledge;
+    relations: Knowledge[];
+    index: number;
+  }> = [];
+
+  for (const result of results) {
+    const traceVar = variable("?trace");
+    const nodeKey = result.get(traceVar);
+    if (!nodeKey) continue;
+
+    const nodeId = nodeKey as unknown as NodeId;
+    const node = graph.get(nodeId);
+    if (!node) continue;
+
+    const relations: Knowledge[] = [];
+    const neighbors = graph.neighbors(nodeId);
+    for (const neighborId of neighbors) {
+      const neighbor = graph.get(neighborId);
+      if (neighbor && neighbor._ === "relation") {
+        relations.push(neighbor);
+      }
+    }
+
+    chain.push({
+      step: node,
+      relations,
+      index: 0,
+    });
+  }
+
+  chain.sort((a, b) => a.index - b.index);
+  return chain;
+}

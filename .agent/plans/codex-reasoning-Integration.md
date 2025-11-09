@@ -38,16 +38,16 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 - [x] Phase 5: Orchestrator Integration (2025-11-09 20:30Z)
   - [x] Add persistence call before return in `packages/agent/src/orchestrator/tool/codex.ts` (2025-11-09 20:30Z)
   - [x] Add required imports for `persistReasoning` (2025-11-09 20:30Z)
-- [ ] Phase 6: Background Compression Service
-  - [ ] Create `packages/agent/src/orchestrator/compression-worker.ts`
-  - [ ] Implement compression worker start/stop functions
-  - [ ] Implement compression cycle execution
-  - [ ] Add integration point in application startup
-- [ ] Phase 7: Query Enhancements
-  - [ ] Add `reasoningQueries` object to `packages/knowledge/src/query.ts`
-  - [ ] Add `reconstructReasoningChain` function to `packages/knowledge/src/query.ts`
-- [ ] Database Migration
-  - [ ] Create migration for archived and confidence indexes
+- [x] Phase 6: Background Compression Service (2025-11-09 20:58Z)
+  - [x] Create `packages/agent/src/orchestrator/compression-worker.ts` (2025-11-09 20:58Z)
+  - [x] Implement compression worker start/stop functions (2025-11-09 20:58Z)
+  - [x] Implement compression cycle execution (2025-11-09 20:58Z)
+  - [x] Add integration point in application startup (2025-11-09 20:58Z)
+- [x] Phase 7: Query Enhancements (2025-11-09 21:10Z)
+  - [x] Add `reasoningQueries` object to `packages/knowledge/src/query.ts` (2025-11-09 21:10Z)
+  - [x] Add `reconstructReasoningChain` function to `packages/knowledge/src/query.ts` (2025-11-09 21:10Z)
+- [x] Database Migration (2025-11-09 21:18Z)
+  - [x] Create migration for archived and confidence indexes (2025-11-09 21:18Z)
 - [ ] Testing
   - [ ] Unit tests for extraction functions
   - [ ] Unit tests for compression functions
@@ -66,6 +66,7 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 - **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
 - **Knowledge package tests absent**: Running `bun test` in `packages/knowledge` returns no matching test files and exits with failure (`bun test v1.2.18 ... Filters did not match any test files`). Manual verification required until tests exist.
 - **Cognitive package tests absent**: `bun test` under `packages/cognitive` also finds no test suites; executed `bun run typecheck` to confirm the new exports compile without issues.
+- **Reasoning chain metadata pending**: Hypergraph nodes do not yet surface sequential indices or relation references for reasoning traces, so `reconstructReasoningChain()` currently emits empty relation sets and default indices until graph instrumentation lands.
 
 ## Decision Log
 
@@ -76,6 +77,10 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 - **Decision**: Make reasoning field optional in return type and schema
   **Rationale**: Reasoning is only available for certain models and can be disabled via config. Optional field maintains backward compatibility.
   **Date/Author**: 2025-01-XX (plan author)
+
+- **Decision**: Derive pruning candidates directly from node properties instead of using `identifyPrunableNodes`
+  **Rationale**: Repository queries return raw row data without full `Knowledge` objects, so using DB-level confidence values avoids brittle object reconstruction while preserving pruning semantics.
+  **Date/Author**: 2025-11-09 (assistant)
 
 ## Outcomes & Retrospective
 

@@ -3,8 +3,28 @@ import type { WorkflowEvent } from "@alfred/type";
 import "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
+// Mock graph dependency pulled transitively during router import
+mock.module("@alfred/db/src/repo/graph", () => ({
+  getGraphClient: vi.fn().mockReturnValue({}),
+  upsertNodes: vi.fn().mockResolvedValue(new Map()),
+  upsertEdges: vi.fn().mockResolvedValue(undefined),
+}));
+// Mock policy evaluate to allow with no obligations
+const evaluateMock = vi.fn();
+mock.module("@alfred/policy", () => ({
+  evaluate: evaluateMock,
+  registerCacheObs: () => {},
+}));
 // Mock metrics consumed by routers to avoid importing full metrics registry
 mock.module("@alfred/api/metrics", () => ({
+  trpcRequestsTotal: { inc: vi.fn() },
+  trpcRequestErrorsTotal: { inc: vi.fn() },
+  trpcRequestDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
+  workflowStreamDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
+  workflowStreamEventsTotal: { inc: vi.fn() },
+}));
+// Also mock relative path variant used by some modules
+mock.module("@alfred/api/src/metrics", () => ({
   trpcRequestsTotal: { inc: vi.fn() },
   trpcRequestErrorsTotal: { inc: vi.fn() },
   trpcRequestDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
@@ -59,6 +79,7 @@ async function subscribeToStream(input: Parameters<(typeof caller)["workflow"]["
 
 describe.skip("workflow router resume flow (integration)", () => {
   it("acknowledges deploy-authz via resume and completes", async () => {
+    evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const input = { requirement: "test", auto: "medium" as const };
 
     // Start a stream and collect events in the background
@@ -99,10 +120,11 @@ describe.skip("workflow router resume flow (integration)", () => {
   });
 
   it("acknowledges linear-authz via resume and completes", async () => {
+    evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const input = { requirement: "test", auto: "high" as const };
 
     const events: WorkflowEvent[] = [];
-    const sub: any = caller.workflow.stream(input as any);
+    const sub: any = toObservable(caller.workflow.stream(input as any));
     const runIdRef: { id: string | null } = { id: null };
 
     const done = new Promise<void>((resolve, reject) => {
