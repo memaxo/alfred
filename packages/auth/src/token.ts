@@ -209,7 +209,13 @@ const memoryJti = new Map<string, number>();
 export async function cacheJTI(jti: string, ttlSec: number) {
   const redis = getRedis();
   if (redis) {
-    const saved = await redis.set(`jti:${jti}`, "1", {
+    const saved = await (
+      redis.set as unknown as (
+        key: string,
+        value: string,
+        options: { EX: number; NX: boolean }
+      ) => Promise<string>
+    )(`jti:${jti}`, "1", {
       EX: ttlSec,
       NX: true,
     });

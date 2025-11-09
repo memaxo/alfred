@@ -83,7 +83,7 @@ export function runPlanV6(
   const summary = `Plan initialized for ${input.requirement}`;
 
   let cancelled = false;
-  let resumeResolver: ((payload: ResumePayload) => void) | null = null;
+  let resumeResolver: ((payload: ResumePayload | null) => void) | null = null;
   const resumeQueue: ResumePayload[] = [];
 
   const stepTimeoutMs = opts?.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;

@@ -195,7 +195,13 @@ export class RedisRunRegistry implements RunRegistry {
     this.runs.set(runId, handle);
     try {
       await this.ensureReady();
-      await this.cmd.set(KEY_OWNER(runId), this.instanceId, {
+      await (
+        this.cmd.set as unknown as (
+          key: string,
+          value: string,
+          options: { EX: number }
+        ) => Promise<string>
+      )(KEY_OWNER(runId), this.instanceId, {
         EX: this.ownerTtlSec,
       });
       this.ensureHeartbeat();
@@ -392,7 +398,13 @@ export class RedisRunRegistry implements RunRegistry {
     const handle = this.runs.get(runId);
     if (!handle) {
       recordEvent("deliver", this.backend, "miss");
-      await this.cmd.set(KEY_ACK(corrId), "not_found", { EX: ACK_TTL_SEC });
+      await (
+        this.cmd.set as unknown as (
+          key: string,
+          value: string,
+          options: { EX: number }
+        ) => Promise<string>
+      )(KEY_ACK(corrId), "not_found", { EX: ACK_TTL_SEC });
       return;
     }
 
@@ -418,7 +430,13 @@ export class RedisRunRegistry implements RunRegistry {
       });
     }
 
-    await this.cmd.set(KEY_ACK(corrId), ackValue, { EX: ACK_TTL_SEC });
+    await (
+      this.cmd.set as unknown as (
+        key: string,
+        value: string,
+        options: { EX: number }
+      ) => Promise<string>
+    )(KEY_ACK(corrId), ackValue, { EX: ACK_TTL_SEC });
   }
 }
 

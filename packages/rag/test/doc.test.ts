@@ -1,17 +1,11 @@
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { openai } from "@ai-sdk/openai";
-import {
-  chunk,
-  embedMany as embedManyTexts,
-  embed as embedText,
-  ingest,
-  retrieve,
-} from "../src/doc";
 
 const createDocumentMock = vi.fn();
 const addChunksMock = vi.fn();
 const searchChunksMock = vi.fn();
 
+// Mock DB repo before importing the module under test to avoid real DB init
 mock.module("@alfred/db", () => ({
   ragRepo: {
     createDocument: createDocumentMock,
@@ -36,6 +30,13 @@ mock.module("../src/providers", () => ({
   getEmbeddingProvider: getEmbeddingProviderMock,
 }));
 
+let doc: typeof import("../src/doc");
+
+beforeAll(async () => {
+  // Import after mocks are in place so doc.ts resolves mocked dependencies
+  doc = await import("../src/doc");
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   mock.restore();
@@ -45,27 +46,27 @@ describe("RAG doc functions", () => {
   describe("chunk", () => {
     it("chunks content by paragraphs", async () => {
       const content = "Paragraph 1.\n\nParagraph 2.\n\nParagraph 3.";
-      const result = await chunk(content, 100);
+      const result = await doc.chunk(content, 100);
 
       expect(result.length).toBeGreaterThan(0);
       expect(result.every((c) => c.length <= 100)).toBe(true);
     });
 
     it("handles empty content", async () => {
-      const result = await chunk("");
+      const result = await doc.chunk("");
       expect(result).toEqual([]);
     });
 
     it("respects maxChunkSize", async () => {
       const content = "a".repeat(1000);
-      const result = await chunk(content, 100);
+      const result = await doc.chunk(content, 100);
 
       expect(result.every((c) => c.length <= 100)).toBe(true);
     });
 
     it("preserves sentence boundaries when possible", async () => {
       const content = "First sentence. Second sentence. Third sentence.";
-      const result = await chunk(content, 50);
+      const result = await doc.chunk(content, 50);
 
       expect(result.length).toBeGreaterThan(0);
     });
@@ -85,7 +86,7 @@ describe("RAG doc functions", () => {
         embedding: mockEmbedding,
       });
 
-      const result = await embedText("test text");
+      const result = await doc.embed("test text");
 
       expect(embedMock).toHaveBeenCalledWith({
         model: mockModel,
@@ -102,7 +103,7 @@ describe("RAG doc functions", () => {
       });
       checkEmbedHealthMock.mockResolvedValue(false);
 
-      await expect(embedText("test")).rejects.toThrow("rag_provider_unhealthy");
+      await expect(doc.embed("test")).rejects.toThrow("rag_provider_unhealthy");
     });
 
     it("validates embedding dimensions", async () => {
@@ -117,7 +118,7 @@ describe("RAG doc functions", () => {
         embedding: invalidEmbedding,
       });
 
-      await expect(embedText("test")).rejects.toThrow(
+      await expect(doc.embed("test")).rejects.toThrow(
         "rag_embed_invalid_vector"
       );
     });
@@ -140,7 +141,7 @@ describe("RAG doc functions", () => {
         embeddings: mockEmbeddings,
       });
 
-      const result = await embedManyTexts(texts);
+      const result = await doc.embedMany(texts);
 
       expect(embedManyMock).toHaveBeenCalledWith({
         model: mockModel,
@@ -151,7 +152,7 @@ describe("RAG doc functions", () => {
     });
 
     it("returns empty array for empty input", async () => {
-      const result = await embedManyTexts([]);
+      const result = await doc.embedMany([]);
       expect(result).toEqual([]);
     });
 
@@ -168,7 +169,7 @@ describe("RAG doc functions", () => {
         embeddings: mockEmbeddings,
       });
 
-      await expect(embedManyTexts(texts)).rejects.toThrow("rag_embed_mismatch");
+      await expect(doc.embedMany(texts)).rejects.toThrow("rag_embed_mismatch");
     });
   });
 
@@ -195,7 +196,7 @@ describe("RAG doc functions", () => {
         ],
       });
 
-      const result = await ingest("test-source", "test content here");
+      const result = await doc.ingest("test-source", "test content here");
 
       expect(createDocumentMock).toHaveBeenCalled();
       expect(addChunksMock).toHaveBeenCalled();
@@ -203,7 +204,7 @@ describe("RAG doc functions", () => {
     });
 
     it("throws error for empty content", async () => {
-      await expect(ingest("source", "")).rejects.toThrow("rag_empty_content");
+      await expect(doc.ingest("source", "")).rejects.toThrow("rag_empty_content");
     });
 
     it("handles batch processing for large documents", async () => {
@@ -225,7 +226,7 @@ describe("RAG doc functions", () => {
       });
 
       const progressCalls: number[] = [];
-      await ingest("source", largeContent, (processed, total) => {
+      await doc.ingest("source", largeContent, (processed, total) => {
         progressCalls.push(processed);
       });
 
@@ -249,7 +250,7 @@ describe("RAG doc functions", () => {
         });
 
       const content = "chunk ".repeat(1500);
-      const result = await ingest("source", content);
+      const result = await doc.ingest("source", content);
 
       expect(result).toBe("doc-id");
       expect(addChunksMock).toHaveBeenCalled();
@@ -287,7 +288,7 @@ describe("RAG doc functions", () => {
       });
       searchChunksMock.mockResolvedValue(mockResults);
 
-      const result = await retrieve("test query", 10, 0.7);
+      const result = await doc.retrieve("test query", 10, 0.7);
 
       expect(embedMock).toHaveBeenCalled();
       expect(searchChunksMock).toHaveBeenCalled();
@@ -302,7 +303,7 @@ describe("RAG doc functions", () => {
     });
 
     it("returns empty array for empty query", async () => {
-      const result = await retrieve("");
+      const result = await doc.retrieve("");
       expect(result).toEqual([]);
     });
 
@@ -326,7 +327,7 @@ describe("RAG doc functions", () => {
       });
       searchChunksMock.mockResolvedValue(mockResults);
 
-      const result = await retrieve("query", 5, 0.7);
+      const result = await doc.retrieve("query", 5, 0.7);
 
       expect(result).toHaveLength(5);
     });
@@ -361,7 +362,7 @@ describe("RAG doc functions", () => {
       });
       searchChunksMock.mockResolvedValue(mockResults);
 
-      const result = await retrieve("query", 10, 0.7);
+      const result = await doc.retrieve("query", 10, 0.7);
 
       expect(result.every((r) => r.metadata?.score >= 0.7)).toBe(true);
     });

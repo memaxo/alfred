@@ -16,7 +16,13 @@ function memorySet(sessionId: string, ttlSec: number) {
 export async function setBiometricTicket(sessionId: string, ttlSec: number) {
   const redis = getRedis();
   if (redis) {
-    await redis.set(`bio:${sessionId}`, String(ttlSec), {
+    await (
+      redis.set as unknown as (
+        key: string,
+        value: string,
+        options: { EX: number }
+      ) => Promise<string>
+    )(`bio:${sessionId}`, String(ttlSec), {
       EX: ttlSec,
     });
   } else {

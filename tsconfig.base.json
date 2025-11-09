@@ -17,7 +17,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node"],
     "baseUrl": ".",
     "paths": {
       "@alfred/api/*": ["packages/api/src/*"],

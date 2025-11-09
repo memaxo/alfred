@@ -1,3 +1,4 @@
+import { arrayBufferToBase64 } from "@alfred/voice/audio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
 
@@ -18,17 +19,6 @@ interface UseVoiceCaptureReturn {
 }
 
 const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
-
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x80_00;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    const slice = bytes.subarray(i, i + chunk);
-    binary += String.fromCharCode(...slice);
-  }
-  return btoa(binary);
-}
 
 export function useVoiceCapture({
   onTranscript,

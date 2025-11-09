@@ -1,4 +1,5 @@
-/// <reference types="bun" />
+import "bun";
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { ingestCodeFiles } from "@alfred/rag";
 import type {
@@ -163,7 +164,7 @@ async function fallbackScan(
     if (!current) continue;
     let entries: string[];
     try {
-      entries = await Array.fromAsync(Bun.readdir(current));
+      entries = await readdir(current);
     } catch {
       continue;
     }
@@ -179,7 +180,7 @@ async function fallbackScan(
       if (!within(cw, resolved)) continue;
       let entryStats;
       try {
-        entryStats = await Bun.stat(resolved);
+        entryStats = await stat(resolved);
       } catch {
         continue;
       }

@@ -1,4 +1,5 @@
-/// <reference types="bun" />
+import "bun";
+import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import YAML from "yaml";
 import { z } from "zod";
@@ -58,7 +59,7 @@ export async function loadPolicy(
   path: string = DEFAULT_POLICY_PATH
 ): Promise<PolicyDocument> {
   const resolvedPath = resolve(process.cwd(), path);
-  const stats = await Bun.stat(resolvedPath);
+  const stats = await stat(resolvedPath);
 
   if (cache && cache.path === resolvedPath && cache.mtimeMs === stats.mtimeMs) {
     return cache.doc;
