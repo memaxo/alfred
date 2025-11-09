@@ -67,8 +67,10 @@ function OrchestratorRunRoute() {
   const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const hasNewer = page > 0 && order === "desc"; // when newest-first, pages > 0 have newer pages
   const eventsQuery = trpc.workflow.replay.useQuery(
-    { runId: runId ?? "", eventType: "ui-message", order: "desc" as const, page, pageSize: 200, includeTotal: false },
+    { runId: runId ?? "", eventType: "ui-message", order, page, pageSize: 200, includeTotal: false },
     {
       enabled: !!runId,
       // hydrate logs from persisted UI-message events (chronological)
@@ -664,18 +666,40 @@ function OrchestratorRunRoute() {
 
         <section className="space-y-2">
           <header className="flex items-center justify-between">
-            <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
-              UI Messages (replay + live)
-            </h2>
-            {hasMore ? (
-              <button
-                className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
-                onClick={() => setPage((p) => p + 1)}
-                type="button"
-              >
-                Load older
-              </button>
-            ) : null}
+          <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+            UI Messages (replay + live)
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs disabled:opacity-50"
+              disabled={!hasNewer}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              type="button"
+              title="Load newer"
+            >
+              Load newer
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs disabled:opacity-50"
+              disabled={!hasMore}
+              onClick={() => setPage((p) => p + 1)}
+              type="button"
+              title="Load older"
+            >
+              Load older
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+              onClick={() => {
+                setPage(0);
+                setOrder((o) => (o === "desc" ? "asc" : "desc"));
+              }}
+              type="button"
+              title="Toggle order"
+            >
+              Order: {order === "desc" ? "Newest first" : "Oldest first"}
+            </button>
+          </div>
           </header>
           <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 space-y-4">
             {messages.length === 0 ? (

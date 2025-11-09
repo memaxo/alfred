@@ -40,11 +40,6 @@ export type RunPlanInput = {
     ignore?: string[];
     seeds?: string[];
   };
-  linear?: {
-    sessionId: string;
-    space: string;
-    authz: string;
-  };
 };
 
 export type ResumePayload = {
@@ -166,33 +161,6 @@ export function runPlanV6(
   async function* generator(): AsyncGenerator<WorkflowEvent, void, void> {
     yield createRunEvent(runId);
 
-    // Emit Linear thought activity (acknowledgment < 10s)
-    if (input.linear) {
-      const thoughtActivityPromise = emitLinearActivity("thought", {
-        sessionId: input.linear.sessionId,
-        space: input.linear.space,
-        authz: input.linear.authz,
-        body: `Starting workflow: ${input.requirement}`,
-      }).catch((error) => {
-        logger.warn("linear_thought_activity_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return { ok: false };
-      });
-
-      // Ensure acknowledgment within 10 seconds (fire-and-forget after timeout)
-      Promise.race([
-        thoughtActivityPromise,
-        delay(9000).then(() => {
-          logger.warn("linear_thought_activity_timeout", { runId });
-          return { ok: false };
-        }),
-      ]).catch(() => {
-        // Ignore errors, already logged
-      });
-    }
-
     yield createNoticeEvent(`Planning started for ${input.requirement}`);
     yield createProgressEvent(5, "initializing");
 
@@ -206,7 +174,7 @@ export function runPlanV6(
         if (cancelled) return;
         yield createContextEvent("scan", "Scanning repository and web context (placeholder)");
         yield createProgressEvent(30, "scan_complete");
-      }, input.linear);
+      });
     } else {
       yield { type: "step-skip", phase: scanPhase.name } as any;
     }
@@ -214,19 +182,6 @@ export function runPlanV6(
     // If medium/high autonomy, request elevated scopes
     if (input.auto === "medium" || input.auto === "high") {
       if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-        if (input.linear) {
-          emitLinearActivity("error", {
-            sessionId: input.linear.sessionId,
-            space: input.linear.space,
-            authz: input.linear.authz,
-            body: "Workflow timed out",
-          }).catch((error) => {
-            logger.warn("linear_error_activity_failed", {
-              runId,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          });
-        }
         yield createErrorEvent("workflow_timeout");
         return;
       }
@@ -279,7 +234,7 @@ export function runPlanV6(
       // Emit an assistant message with a draft plan (for UI replay normalization)
       yield { type: "assistant", text: `Draft plan for: ${input.requirement}` } as any;
       yield createProgressEvent(60, "plan_drafted");
-    }, input.linear);
+    });
 
     if (cancelled) return;
     // Phase: act
@@ -308,7 +263,7 @@ export function runPlanV6(
       await delay(20);
       yield { type: "tool-result", id: tcId, toolName: "echo", result: { text: "hello" } } as any;
       yield createProgressEvent(85, "act_complete");
-    }, input.linear);
+    });
 
     if (cancelled) return;
     // Phase: report
@@ -316,42 +271,12 @@ export function runPlanV6(
     yield* executePhaseWithTimeout(reportPhase.name, reportPhase.timeoutMs, async function* () {
       yield { type: "assistant", text: "Report complete." } as any;
       yield createProgressEvent(95, "report_complete");
-    }, input.linear);
+    });
 
     if (cancelled) return;
     if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-      if (input.linear) {
-        emitLinearActivity("error", {
-          sessionId: input.linear.sessionId,
-          space: input.linear.space,
-          authz: input.linear.authz,
-          body: "Workflow timed out",
-        }).catch((error) => {
-          logger.warn("linear_error_activity_failed", {
-            runId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-      }
       yield createErrorEvent("workflow_timeout");
       return;
-    }
-
-    // Emit Linear response activity on completion
-    if (input.linear) {
-      try {
-        await emitLinearActivity("response", {
-          sessionId: input.linear.sessionId,
-          space: input.linear.space,
-          authz: input.linear.authz,
-          body: "Workflow completed successfully",
-        });
-      } catch (error) {
-        logger.warn("linear_response_activity_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
     }
 
     yield createProgressEvent(100, "workflow_completed");
