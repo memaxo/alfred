@@ -399,6 +399,35 @@ export const workflowStreamDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
+export const runnerStepsTotal = new client.Counter({
+  name: "workflow_runner_steps_total",
+  help: "Count of workflow runner steps grouped by phase and outcome.",
+  labelNames: ["phase", "outcome"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runnerErrorsTotal = new client.Counter({
+  name: "workflow_runner_errors_total",
+  help: "Count of workflow runner errors grouped by phase and reason.",
+  labelNames: ["phase", "reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const replayQueriesTotal = new client.Counter({
+  name: "workflow_replay_queries_total",
+  help: "Count of workflow replay queries grouped by event type.",
+  labelNames: ["event_type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const replayQueryDurationSeconds = new client.Histogram({
+  name: "workflow_replay_query_duration_seconds",
+  help: "Duration of workflow replay queries in seconds grouped by event type.",
+  labelNames: ["event_type"] as const,
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  registers: [metricsRegistry],
+});
+
 registerCacheObs((result) => {
   try {
     pdpCacheHitsTotal.inc({ result });

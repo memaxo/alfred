@@ -15,6 +15,10 @@ import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
 import { eventToUiMessages } from "../ai/normalize";
 import { runPlanV6 } from "../workflow/runner";
+import {
+  replayQueriesTotal,
+  replayQueryDurationSeconds,
+} from "../metrics";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -438,6 +442,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
       })
     )
     .query(async ({ input }) => {
+      const stop = replayQueryDurationSeconds.startTimer({
+        event_type: input.eventType,
+      } as any);
       const items = await workflowRepo.listEventsByTypePaged({
         runId: input.runId,
         eventType: input.eventType,
@@ -462,6 +469,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
       const page = input.page ?? 0;
       const pageSize = input.pageSize ?? 500;
       const hasMore = transformed.length === pageSize && (total === undefined || (page + 1) * pageSize < total);
+      try {
+        replayQueriesTotal.inc({ event_type: input.eventType } as any);
+      } finally {
+        stop();
+      }
       return { items: transformed, page, pageSize, total, hasMore };
     }),
 });
