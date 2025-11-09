@@ -9,7 +9,7 @@ import {
   workflowStreamEventsTotal,
 } from "../metrics";
 import { runRegistry } from "../run-registry";
-import { authedProcedure, router } from "../trpc";
+import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
@@ -98,6 +98,7 @@ function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
 
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .mutation(async ({ input, ctx }) => {
@@ -360,6 +361,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     ),
 
   resume: authedProcedure
+    .use(rateLimit)
     .input(
       z.object({
         runId: z.string().min(1),

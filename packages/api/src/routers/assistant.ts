@@ -7,7 +7,7 @@ import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { cloneRuntimeContext } from "../context";
 import { requirePolicy } from "../gate";
-import { authedProcedure, router } from "../trpc";
+import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
 
@@ -88,6 +88,7 @@ function mapResource(raw: unknown) {
 
 export const assistantRouter: ReturnType<typeof router> = router({
   generate: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("assistant.generate", (raw) => mapResource(raw)))
     .input(generateInput)
     .mutation(async ({ input, ctx }) => {
