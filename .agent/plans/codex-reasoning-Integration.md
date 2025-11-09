@@ -2,9 +2,75 @@
 
 <chatName="Codex Reasoning Memory Integration"/>
 
+This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
+
+This document must be maintained in accordance with `.agent/PLANS.md`.
+
 ## Overview
 
 This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory system, enabling capture, persistence, evolution, and pruning of reasoning traces through the knowledge graph.
+
+## Progress
+
+- [ ] Phase 1: Reasoning Extraction from Codex CLI
+  - [ ] Add `extractReasoning` function to `packages/agent/src/orchestrator/tool/codex.ts`
+  - [ ] Add `ReasoningAccumulator` type and initialization
+  - [ ] Add reasoning extraction logic in `item.completed` case handler
+  - [ ] Update return type and value to include reasoning field
+  - [ ] Update `toolOutputSchema` to include optional reasoning array
+- [ ] Phase 2: Knowledge Extraction Pipeline
+  - [ ] Add `extractReasoning` function to `packages/knowledge/src/extractor.ts`
+  - [ ] Add `enrichReasoningContext` function to `packages/knowledge/src/extractor.ts`
+  - [ ] Add `persistReasoning` function to `packages/agent/assistant/src/graphstore.ts`
+  - [ ] Add required imports to graphstore.ts
+- [ ] Phase 3: Cognitive State Integration
+  - [ ] Extend `ThinkingState` type in `packages/cognitive/src/state.ts`
+  - [ ] Update `thinking` factory function signature and implementation
+  - [ ] Add `evaluateReasoningQuality` function to `packages/cognitive/src/state.ts`
+  - [ ] Add `captureReasoning` function to `packages/cognitive/src/flows.ts`
+  - [ ] Enhance `reflect` function with reasoning analysis in `packages/cognitive/src/flows.ts`
+- [ ] Phase 4: Compression & Pruning System
+  - [ ] Create `packages/knowledge/src/compression.ts` with compression functions
+  - [ ] Add archival operations to `packages/db/src/repo/graph.ts`
+  - [ ] Add pruning operations to `packages/db/src/repo/graph.ts`
+  - [ ] Add confidence update operations to `packages/db/src/repo/graph.ts`
+  - [ ] Add query helpers for compression analysis
+- [ ] Phase 5: Orchestrator Integration
+  - [ ] Add persistence call before return in `packages/agent/src/orchestrator/tool/codex.ts`
+  - [ ] Add required imports for `persistReasoning`
+- [ ] Phase 6: Background Compression Service
+  - [ ] Create `packages/agent/src/orchestrator/compression-worker.ts`
+  - [ ] Implement compression worker start/stop functions
+  - [ ] Implement compression cycle execution
+  - [ ] Add integration point in application startup
+- [ ] Phase 7: Query Enhancements
+  - [ ] Add `reasoningQueries` object to `packages/knowledge/src/query.ts`
+  - [ ] Add `reconstructReasoningChain` function to `packages/knowledge/src/query.ts`
+- [ ] Database Migration
+  - [ ] Create migration for archived and confidence indexes
+- [ ] Testing
+  - [ ] Unit tests for extraction functions
+  - [ ] Unit tests for compression functions
+  - [ ] Integration tests for end-to-end flow
+  - [ ] Performance tests for batch operations
+- [ ] Configuration
+  - [ ] Add environment variables to `.env.example`
+  - [ ] Add runtime configuration module
+- [ ] Documentation
+  - [ ] Update PRD with reasoning integration status
+  - [ ] Document reasoning query patterns
+
+## Surprises & Discoveries
+
+_No discoveries yet. This section will be updated as implementation proceeds._
+
+## Decision Log
+
+_No decisions logged yet. This section will be updated as implementation proceeds._
+
+## Outcomes & Retrospective
+
+_No outcomes yet. This section will be updated at major milestones and completion._
 
 ---
 

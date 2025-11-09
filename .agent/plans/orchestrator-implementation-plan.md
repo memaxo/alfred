@@ -1924,6 +1924,7 @@ Progress: 30% — Phase 4 (UX) items partially complete; Phase 2/3 pending.
 ### Milestone Updates
 - [2025-11-09 00:10Z] Task 4 (Stream Parts Coverage): Implemented normalization for reasoning/data-status/file; added unit tests. Remaining: persistence round-trip equality test and live render parity check.
 - [2025-11-09 00:10Z] Task 7 (Replay UX Enhancements): Implemented replay endpoint with pagination, eventId dedupe across hydration/stream, and "Load older" UI in Run Viewer. Remaining: order toggle and "Load newer" affordance; oldest/newest boundary tracking.
+- [2025-11-09 01:30Z] Task 8 (Deterministic Event Identity): Implemented makeEventId with opt-in DETERMINISTIC_EVENT_IDS; router and generate persistence now use stable ids when enabled. Env example updated. Remaining: document rollout guidance and hashing tradeoffs.
 
 **Status**: 🚧 In Progress — Implementation not yet started
 
