@@ -39,6 +39,7 @@ Observable end result:
 - [x] (2025-11-09T16:40Z) Applied rate limiter to assistant.generate, orchestrator.generate, workflow.start/resume; added rate-limit test.
 - [x] (2025-11-09T16:45Z) Enforced obligations in workflow.start/stream via ensureObligations; added PRECONDITION_FAILED policy test.
 - [ ] (INCOMPLETE) Durable replay normalization: Events persisted but not normalized to UIMessage format; replay may not be byte-equal. Pure function needed for performance.
+- [x] (2025-11-09T17:05Z) Durable replay normalization: Added normalizeToUiMessages and updated persistResult to store canonical UIMessage parts for non-stream generate.
 - [ ] (INCOMPLETE) Obligations enforcement: Pattern exists (ensureObligations in profile.ts) but workflow router doesn't enforce obligations; needs PRECONDITION_FAILED when obligations unmet.
 - [ ] (INCOMPLETE) Cancellation/timeout enforcement: Basic cancel exists but no per-step or overall run timeouts; keep implementation minimal (pure abort signals).
 - [ ] (INCOMPLETE) Data hygiene & retention: Basic indexes exist but no composite indexes, retention policy, or pruning job. Critical for personal data management.
