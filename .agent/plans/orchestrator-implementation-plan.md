@@ -70,8 +70,8 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify dashboard renders with sample data
 
 ### Task 6: Rate Limits + Audits Hardening
-- [ ] (YYYY-MM-DD HH:MMZ) Create SSE rate limiter (30 req/min)
-- [ ] (YYYY-MM-DD HH:MMZ) Add rate limiting to SSE endpoint handler
+- [2025-11-09 01:05Z] Create SSE rate limiter (30 req/min)
+- [2025-11-09 01:05Z] Add rate limiting to SSE endpoint handler
 - [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.start mutation
 - [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.stream subscription
 - [ ] (YYYY-MM-DD HH:MMZ) Add audit logging to workflow.resume mutation
@@ -2050,3 +2050,4 @@ function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
 - UI replay navigation: order toggle, load newer/older
 - SSE streaming: watch events in browser DevTools
 - Metrics endpoint: verify series appear at /api/metrics
+- [2025-11-09 01:08Z] TRPC createCaller subscription shape is environment-dependent in tests; in some runs, `.stream()` returns a generator-like object without `.subscribe`. Kept a skipped scaffold test for SSE rate limit; will stabilize by adapting the harness or using tRPC observable directly in follow-up.
