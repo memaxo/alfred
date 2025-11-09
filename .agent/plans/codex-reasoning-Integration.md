@@ -12,17 +12,17 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 
 ## Progress
 
-- [ ] Phase 1: Reasoning Extraction from Codex CLI
-  - [ ] Add `extractReasoning` function to `packages/agent/src/orchestrator/tool/codex.ts`
-  - [ ] Add `ReasoningAccumulator` type and initialization
-  - [ ] Add reasoning extraction logic in `item.completed` case handler
-  - [ ] Update return type and value to include reasoning field
-  - [ ] Update `toolOutputSchema` to include optional reasoning array
-- [ ] Phase 2: Knowledge Extraction Pipeline
-  - [ ] Add `extractReasoning` function to `packages/knowledge/src/extractor.ts`
-  - [ ] Add `enrichReasoningContext` function to `packages/knowledge/src/extractor.ts`
-  - [ ] Add `persistReasoning` function to `packages/agent/assistant/src/graphstore.ts`
-  - [ ] Add required imports to graphstore.ts
+- [x] Phase 1: Reasoning Extraction from Codex CLI (2025-11-09 18:45Z)
+  - [x] Add `extractReasoning` function to `packages/agent/src/orchestrator/tool/codex.ts` (2025-11-09 18:45Z)
+  - [x] Add `ReasoningAccumulator` type and initialization (2025-11-09 18:45Z)
+  - [x] Add reasoning extraction logic in `item.completed` case handler (2025-11-09 18:45Z)
+  - [x] Update return type and value to include reasoning field (2025-11-09 18:45Z)
+  - [x] Update `toolOutputSchema` to include optional reasoning array (2025-11-09 18:45Z)
+- [x] Phase 2: Knowledge Extraction Pipeline (2025-11-09 19:15Z)
+  - [x] Add `extractReasoning` function to `packages/knowledge/src/extractor.ts` (2025-11-09 19:15Z)
+  - [x] Add `enrichReasoningContext` function to `packages/knowledge/src/extractor.ts` (2025-11-09 19:15Z)
+  - [x] Add `persistReasoning` function to `packages/agent/assistant/src/graphstore.ts` (2025-11-09 19:15Z)
+  - [x] Add required imports to graphstore.ts (2025-11-09 19:15Z)
 - [ ] Phase 3: Cognitive State Integration
   - [ ] Extend `ThinkingState` type in `packages/cognitive/src/state.ts`
   - [ ] Update `thinking` factory function signature and implementation
@@ -64,6 +64,7 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 
 - **Reasoning item structure verification**: Codex CLI docs (exec.md line 49) confirm reasoning items have direct `text` field: `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Searching for README files**"}}`. The plan's `extractReasoning` function correctly handles this, though the `content` array fallback may be unnecessary based on documented structure.
 - **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
+- **Knowledge package tests absent**: Running `bun test` in `packages/knowledge` returns no matching test files and exits with failure (`bun test v1.2.18 ... Filters did not match any test files`). Manual verification required until tests exist.
 
 ## Decision Log
 

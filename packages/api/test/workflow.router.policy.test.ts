@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
+import "./utils/mock-metrics";
+import { toObservable } from "./utils/stream";
 
 setupTestEnv();
 
@@ -76,7 +78,7 @@ describe.skip("workflow router policy obligations", () => {
       cancel: () => {},
     });
 
-    const sub: any = caller.workflow.stream({ requirement: "do X", auto: "medium" });
+    const sub: any = toObservable(caller.workflow.stream({ requirement: "do X", auto: "medium" }));
     await new Promise<void>((resolve) => {
       sub.subscribe({
         next: () => resolve(),

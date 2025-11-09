@@ -706,6 +706,17 @@ function OrchestratorRunRoute() {
             <button
               className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
               onClick={() => {
+                setOrder("desc");
+                setPage(0);
+              }}
+              type="button"
+              title="Jump to newest"
+            >
+              Jump to newest
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+              onClick={() => {
                 setPage(0);
                 setOrder((o) => (o === "desc" ? "asc" : "desc"));
               }}

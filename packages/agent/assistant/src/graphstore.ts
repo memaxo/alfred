@@ -1,5 +1,11 @@
 import { upsertEdges, upsertNodes } from "@alfred/db/src/repo/graph";
-import type { KnowledgeEntry } from "@alfred/knowledge/extractor";
+import {
+  enrichReasoningContext,
+  extractReasoning,
+  toKnowledge,
+  type KnowledgeEntry,
+} from "@alfred/knowledge/extractor";
+import { fact, knowledgeHash } from "@alfred/knowledge/hypergraph";
 
 type NodeSeed = Parameters<typeof upsertNodes>[0][number];
 type EdgeSeed = Parameters<typeof upsertEdges>[0][number];
@@ -132,5 +138,102 @@ export async function persistKnowledge(
     await upsertEdges(edges);
   } catch (err) {
     console.error("Failed to persist knowledge graph", err);
+  }
+}
+
+/**
+ * Persist reasoning traces to knowledge graph
+ * Creates temporal chain of reasoning nodes with metadata
+ */
+export async function persistReasoning(
+  resource: string,
+  traces: Array<{ text: string; timestamp: number }>,
+  context?: {
+    threadId?: string;
+    executionId?: string;
+    auto?: string;
+  }
+): Promise<void> {
+  if (traces.length === 0) {
+    return;
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  const allEntries: KnowledgeEntry[] = [];
+
+  for (const trace of traces) {
+    const extraction = extractReasoning(trace.text, {
+      threadId: context?.threadId,
+      source: `reasoning:${context?.executionId ?? "unknown"}`,
+    });
+
+    const entries = toKnowledge(extraction);
+    const enriched = enrichReasoningContext(entries, {
+      threadId: context?.threadId,
+      sessionId: context?.executionId,
+      timestamp: trace.timestamp,
+    });
+
+    allEntries.push(...enriched);
+  }
+
+  if (allEntries.length === 0) {
+    return;
+  }
+
+  try {
+    await persistKnowledge(resource, allEntries);
+
+    if (traces.length > 1) {
+      const nodeSeeds: NodeSeed[] = traces.map((trace, index) => ({
+        resource,
+        hash: knowledgeHash(
+          fact(trace.text, 0.8, "reasoning-trace")
+        ),
+        kind: "reasoning",
+        label: trace.text.substring(0, 100),
+        properties: {
+          timestamp: trace.timestamp,
+          index,
+          threadId: context?.threadId,
+          executionId: context?.executionId,
+          auto: context?.auto,
+        },
+      }));
+
+      const nodeMap = await upsertNodes(nodeSeeds);
+      const nodeList = Array.from(nodeMap.values());
+
+      if (nodeList.length > 1) {
+        const edgeSeeds: EdgeSeed[] = [];
+        for (let i = 0; i < nodeList.length - 1; i++) {
+          const current = nodeList[i];
+          const next = nodeList[i + 1];
+          if (!current || !next) continue;
+          const t0 = traces[i]?.timestamp ?? 0;
+          const t1 = traces[i + 1]?.timestamp ?? t0;
+          edgeSeeds.push({
+            resource,
+            hash: `reasoning-seq-${current.hash}-${next.hash}`,
+            fromId: current.id,
+            toId: next.id,
+            kind: "precedes",
+            weight: 1,
+            metadata: {
+              timeDelta: Number(t1) - Number(t0),
+            },
+          });
+        }
+
+        if (edgeSeeds.length > 0) {
+          await upsertEdges(edgeSeeds);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to persist reasoning traces", err);
   }
 }

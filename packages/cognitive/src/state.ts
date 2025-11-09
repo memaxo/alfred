@@ -107,6 +107,7 @@ export type CognitiveState =
       about: string;
       depth: number;
       paths: Path[];
+      reasoningTraces?: string[];
       started: Timestamp;
     }
   | {
@@ -166,11 +167,16 @@ export const capturing = (input: string, conf: number): CognitiveState => ({
   started: timestamp(Date.now()),
 });
 
-export const thinking = (about: string, depth = 1): CognitiveState => ({
+export const thinking = (
+  about: string,
+  depth = 1,
+  traces?: string[]
+): CognitiveState => ({
   _: "thinking",
   about,
-  depth,
+  depth: traces ? Math.max(depth, traces.length) : depth,
   paths: [],
+  reasoningTraces: traces,
   started: timestamp(Date.now()),
 });
 
@@ -309,6 +315,41 @@ const bayesianUpdate = (
   const newConfidence = priorConfidence + confidenceBoost;
 
   return [newLevel, newConfidence];
+};
+
+/**
+ * Evaluate reasoning quality based on trace characteristics
+ */
+export const evaluateReasoningQuality = (
+  traces: string[],
+  outcome: Outcome
+): Evidence => {
+  if (traces.length === 0) {
+    return { _: "feedback", positive: false, strength: 0.3 };
+  }
+
+  const avgLength =
+    traces.reduce((sum, text) => sum + text.length, 0) / traces.length;
+  const hasDecisionPoints = traces.some((text) =>
+    /considering|choosing|selecting|decided/i.test(text)
+  );
+  const hasAlternatives = traces.some((text) =>
+    /however|alternatively|instead|but|though/i.test(text)
+  );
+  const hasCausalReasoning = traces.some((text) =>
+    /because|therefore|thus|leads to|causes/i.test(text)
+  );
+
+  let score = 0.5;
+  if (avgLength > 50) score += 0.1;
+  if (hasDecisionPoints) score += 0.15;
+  if (hasAlternatives) score += 0.15;
+  if (hasCausalReasoning) score += 0.1;
+
+  const positive = outcome._ === "success";
+  const strength = Math.min(1, score);
+
+  return { _: "feedback", positive, strength };
 };
 
 // Constraint checking

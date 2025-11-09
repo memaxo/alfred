@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 import { createTestCaller } from "./utils/trpc";
+import "./utils/mock-metrics";
+import { toObservable } from "./utils/stream";
 // Mock metrics consumed by routers to avoid importing full metrics registry
 mock.module("@alfred/api/metrics", () => ({
   trpcRequestsTotal: { inc: vi.fn() },
@@ -42,7 +44,7 @@ afterEach(() => {
 
 async function subscribeToStream(input: Parameters<(typeof caller)["workflow"]["stream"]>[0]) {
   const events: WorkflowEvent[] = [];
-  const sub: any = caller.workflow.stream(input as any);
+  const sub: any = toObservable(caller.workflow.stream(input as any));
   await new Promise<void>((resolve, reject) => {
     sub.subscribe({
       next: (e: WorkflowEvent) => {
@@ -61,7 +63,7 @@ describe.skip("workflow router resume flow (integration)", () => {
 
     // Start a stream and collect events in the background
     const events: WorkflowEvent[] = [];
-    const sub: any = caller.workflow.stream(input as any);
+  const sub: any = toObservable(caller.workflow.stream(input as any));
 
     const runIdRef: { id: string | null } = { id: null };
 

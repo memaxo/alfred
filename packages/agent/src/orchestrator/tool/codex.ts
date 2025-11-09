@@ -132,6 +132,14 @@ const toolOutputSchema = z.object({
       })
     )
     .optional(),
+  reasoning: z
+    .array(
+      z.object({
+        text: z.string(),
+        timestamp: z.number(),
+      })
+    )
+    .optional(),
 });
 
 type ToolWriter =
@@ -269,6 +277,12 @@ type FinalAccumulator = {
   truncated: boolean;
 };
 
+type ReasoningAccumulator = {
+  traces: Array<{ text: string; timestamp: number }>;
+  storedBytes: number;
+  truncated: boolean;
+};
+
 function appendFinal(acc: FinalAccumulator, chunk: string) {
   if (!chunk) return;
   const buffer = Buffer.from(chunk);
@@ -354,6 +368,31 @@ function extractAggregatedOutput(item: unknown): string | null {
   return null;
 }
 
+function extractReasoning(item: unknown): string | null {
+  if (!item || typeof item !== "object") return null;
+  const candidate = item as { text?: unknown; content?: unknown };
+
+  if (typeof candidate.text === "string") {
+    return candidate.text.trim();
+  }
+
+  if (Array.isArray(candidate.content)) {
+    const parts = candidate.content
+      .flatMap((entry) => {
+        if (typeof entry === "string") return entry;
+        if (!entry || typeof entry !== "object") return [];
+        const text = (entry as { text?: unknown }).text;
+        return typeof text === "string" ? text : [];
+      })
+      .filter((part): part is string => typeof part === "string");
+    if (parts.length > 0) {
+      return parts.join("\n").trim();
+    }
+  }
+
+  return null;
+}
+
 export const toolCodex = {
   name: "codex",
   description: "Run the OpenAI Codex CLI in sandboxed, non-interactive mode.",
@@ -432,6 +471,11 @@ export const toolCodex = {
 
     const finalAccumulator: FinalAccumulator = {
       chunks: [],
+      storedBytes: 0,
+      truncated: false,
+    };
+    const reasoningAccumulator: ReasoningAccumulator = {
+      traces: [],
       storedBytes: 0,
       truncated: false,
     };
@@ -537,7 +581,43 @@ export const toolCodex = {
             case "item.completed": {
               const item = (event as { item?: unknown }).item;
               const itemType = (item as { type?: string } | undefined)?.type;
-              if (itemType === "command_execution") {
+              if (itemType === "reasoning") {
+                const reasoningText = extractReasoning(item);
+                if (reasoningText) {
+                  const byteLength = Buffer.from(reasoningText).byteLength;
+
+                  if (!reasoningAccumulator.truncated) {
+                    const remaining =
+                      OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
+                    if (remaining > 0) {
+                      reasoningAccumulator.traces.push({
+                        text:
+                          byteLength <= remaining
+                            ? reasoningText
+                            : reasoningText.substring(0, remaining),
+                        timestamp: Date.now(),
+                      });
+                      reasoningAccumulator.storedBytes += Math.min(
+                        byteLength,
+                        remaining
+                      );
+                      if (byteLength > remaining) {
+                        reasoningAccumulator.truncated = true;
+                      }
+                    } else {
+                      reasoningAccumulator.truncated = true;
+                    }
+                  } else {
+                    reasoningAccumulator.storedBytes += byteLength;
+                  }
+
+                  if (input.out === "debug") {
+                    void Promise.resolve(
+                      writer?.write?.({ type: "reasoning", text: reasoningText })
+                    ).catch(() => {});
+                  }
+                }
+              } else if (itemType === "command_execution") {
                 const output = extractAggregatedOutput(item);
                 if (output) {
                   void Promise.resolve(
@@ -611,6 +691,10 @@ export const toolCodex = {
     return {
       result: finalAccumulator.chunks.join("\n").trim(),
       artifacts: [],
+      reasoning:
+        reasoningAccumulator.traces.length > 0
+          ? reasoningAccumulator.traces
+          : undefined,
     };
   },
 };

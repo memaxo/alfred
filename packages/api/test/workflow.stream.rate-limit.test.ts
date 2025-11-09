@@ -1,10 +1,21 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { mockWorkflowRepo, mockRunRegistry, mockPolicyAudit, resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
+import "./utils/mock-metrics";
+import { toObservable } from "./utils/stream";
 import type { WorkflowEvent } from "@alfred/type";
 
 setupTestEnv();
 mockPolicyAudit();
+
+// Stub policy + metrics to avoid import-time errors
+const evaluateMock = vi.fn();
+mock.module("@alfred/policy", () => ({
+  evaluate: evaluateMock,
+  registerCacheObs: () => {},
+}));
+
+// Use real metrics; only policy is mocked to avoid registerCacheObs import errors
 
 // Lower the per-minute limit for this test case
 process.env.ROUTE_RATE_LIMIT_PER_MINUTE = "2";
@@ -31,6 +42,7 @@ afterEach(() => {
 
 describe.skip("workflow.stream rate limit", () => {
   it("enforces per-minute limit for subscription", async () => {
+    evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const mockRunId = "rate-run";
     const mkStream = async function* () {
       yield { type: "run", id: mockRunId } as WorkflowEvent;
@@ -46,44 +58,35 @@ describe.skip("workflow.stream rate limit", () => {
     });
 
     // 1st invocation (allowed)
-    const s1: any = caller.workflow.stream({ requirement: "A" });
-    if (s1 && typeof s1.subscribe === "function") {
-      await new Promise<void>((resolve, reject) => {
-        s1.subscribe({ next: () => {}, error: reject, complete: resolve });
-      });
-    }
+    await new Promise<void>((resolve, reject) => {
+      toObservable(caller.workflow.stream({ requirement: "A" })).subscribe({ next: () => {}, error: reject, complete: resolve });
+    });
 
     // 2nd invocation (allowed)
-    const s2: any = caller.workflow.stream({ requirement: "B" });
-    if (s2 && typeof s2.subscribe === "function") {
-      await new Promise<void>((resolve, reject) => {
-        s2.subscribe({ next: () => {}, error: reject, complete: resolve });
-      });
-    }
+    await new Promise<void>((resolve, reject) => {
+      toObservable(caller.workflow.stream({ requirement: "B" })).subscribe({ next: () => {}, error: reject, complete: resolve });
+    });
 
     // 3rd invocation should hit rate limit (429)
-    let threw = false;
+    // 3rd invocation should hit rate limit (429). Some environments throw synchronously; others error via observable.
+    let matched = false;
     try {
-      const s3: any = caller.workflow.stream({ requirement: "C" });
-      if (s3 && typeof s3.subscribe === "function") {
-        await new Promise<void>((resolve) => {
-          s3.subscribe({
-            next: () => {},
-            error: (err: unknown) => {
-              threw = true;
-              const msg = err instanceof Error ? err.message : String(err);
-              expect(msg).toMatch(/rate_limited/i);
-              resolve();
-            },
-            complete: () => resolve(),
-          });
+      // Some environments may throw synchronously
+      await new Promise<void>((resolve) => {
+        toObservable(caller.workflow.stream({ requirement: "C" })).subscribe({
+          next: () => resolve(),
+          error: (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (/rate_limited/i.test(msg)) matched = true;
+            resolve();
+          },
+          complete: () => resolve(),
         });
-      }
+      });
     } catch (err) {
-      threw = true;
       const msg = err instanceof Error ? err.message : String(err);
-      expect(msg).toMatch(/rate_limited/i);
+      if (/rate_limited/i.test(msg)) matched = true;
     }
-    expect(threw).toBe(true);
+    expect(matched).toBe(true);
   });
 });
