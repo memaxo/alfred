@@ -83,6 +83,10 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
     if (typeof e.text === "string" && e.text.length > 0) {
       parts.push({ type: "text", text: e.text });
     }
+    // Reasoning payloads sometimes arrive as a top-level string
+    if (typeof e.reasoning === "string" && e.reasoning.length > 0) {
+      parts.push({ type: "reasoning", text: e.reasoning } as any);
+    }
     if (Array.isArray(e.parts)) {
       // Trust already well-formed UI parts
       for (const p of e.parts) {
@@ -146,6 +150,66 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
         parts: [{ type: "tool-result", toolName, toolCallId, output } as any],
       } as UIMessage,
     ];
+  }
+
+  // Reasoning-only event
+  if ((event as any)?.type === "reasoning") {
+    const text = typeof (event as any)?.text === "string"
+      ? (event as any).text
+      : typeof (event as any)?.reasoning === "string"
+        ? (event as any).reasoning
+        : "";
+    if (text) {
+      return [
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          parts: [{ type: "reasoning", text } as any],
+        },
+      ];
+    }
+  }
+
+  // Data status event -> UIMessage data-status part
+  if ((event as any)?.type === "data-status") {
+    const e = event as any;
+    return [
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        parts: [
+          {
+            type: "data-status",
+            data: e?.data,
+            transient: Boolean(e?.transient),
+          } as any,
+        ],
+      },
+    ];
+  }
+
+  // File event -> UIMessage file part
+  if ((event as any)?.type === "file") {
+    const e = event as any;
+    const mediaType = e?.mediaType || e?.mimeType || "application/octet-stream";
+    const url = e?.url || (typeof e?.data === "string" ? e.data : undefined);
+    const filename = e?.filename || e?.name || undefined;
+    if (typeof url === "string") {
+      return [
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          parts: [
+            {
+              type: "file",
+              mediaType,
+              url,
+              ...(filename ? { filename } : {}),
+            } as any,
+          ],
+        },
+      ];
+    }
   }
 
   return null;
