@@ -1,20 +1,18 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
 import "./utils/mock-metrics";
+import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
 
 setupTestEnv();
 
-// Metrics stubs to avoid pulling full registry + policy integration
-mock.module("@alfred/api/metrics", () => ({
-  trpcRequestsTotal: { inc: vi.fn() },
-  trpcRequestErrorsTotal: { inc: vi.fn() },
-  trpcRequestDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
-  workflowStreamDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
-  workflowStreamEventsTotal: { inc: vi.fn() },
-  rateLimitHitsTotal: { inc: vi.fn() },
+// Mock graph dependency pulled transitively during router import
+mock.module("@alfred/db/src/repo/graph", () => ({
+  getGraphClient: vi.fn().mockReturnValue({}),
+  upsertNodes: vi.fn().mockResolvedValue(new Map()),
+  upsertEdges: vi.fn().mockResolvedValue(undefined),
 }));
+
 
 // Mock policy evaluate to attach an obligation
 const evaluateMock = vi.fn();
@@ -52,7 +50,7 @@ afterEach(() => {
   resetAllMocks();
 });
 
-describe.skip("workflow router policy obligations", () => {
+describe("workflow router policy obligations", () => {
   it("rejects medium autonomy when biometric obligation present", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: ["requireBio"] });
     runPlanV6Mock.mockReturnValue({

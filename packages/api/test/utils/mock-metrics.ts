@@ -19,6 +19,10 @@ mock.module("@alfred/api/metrics", () => ({
   // Stream
   workflowStreamEventsTotal: counter(),
   workflowStreamDurationSeconds: histogram(),
+  replayQueriesTotal: counter(),
+  replayQueryDurationSeconds: histogram(),
+  runnerStepsTotal: counter(),
+  runnerErrorsTotal: counter(),
 
   // Misc (provide stubs to satisfy imports)
   runRegistryEventsTotal: counter(),
@@ -42,5 +46,6 @@ mock.module("@alfred/api/metrics", () => ({
   memoryForgetsTotal: counter(),
   voiceSttTotal: counter(),
   voiceSttDurationSeconds: histogram(),
+  recordVoiceStt: (_: any) => void 0,
+  recordVoiceTts: (_: any) => void 0,
 }));
-

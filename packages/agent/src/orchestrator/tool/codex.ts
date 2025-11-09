@@ -17,6 +17,7 @@ import {
   recordCodexExecRun,
   startCodexExecTimer,
 } from "../../metrics";
+import { persistReasoning } from "../../../assistant/src/graphstore";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
@@ -686,6 +687,15 @@ export const toolCodex = {
       void Promise.resolve(
         writer?.write?.({ type: "notice", message: "output_truncated" })
       ).catch(() => {});
+    }
+
+    if (reasoningAccumulator.traces.length > 0) {
+      const resource = resolvedCw;
+      persistReasoning(resource, reasoningAccumulator.traces, {
+        auto: input.auto,
+      }).catch((err) => {
+        console.error("Failed to persist reasoning", err);
+      });
     }
 
     return {

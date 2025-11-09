@@ -11,6 +11,10 @@
       "types": "./dist/hypergraph.d.ts",
       "default": "./src/hypergraph.ts"
     },
+    "./compression": {
+      "types": "./dist/compression.d.ts",
+      "default": "./src/compression.ts"
+    },
     "./extractor": {
       "types": "./dist/extractor.d.ts",
       "default": "./src/extractor.ts"

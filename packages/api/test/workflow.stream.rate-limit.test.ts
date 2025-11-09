@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { mockWorkflowRepo, mockRunRegistry, mockPolicyAudit, resetAllMocks, setupTestEnv } from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
 import "./utils/mock-metrics";
+import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
 import type { WorkflowEvent } from "@alfred/type";
 

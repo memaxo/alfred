@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
-import { createTestCaller } from "./utils/trpc";
 import "./utils/mock-metrics";
+import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
 // Mock metrics consumed by routers to avoid importing full metrics registry
 mock.module("@alfred/api/metrics", () => ({

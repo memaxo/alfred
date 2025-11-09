@@ -7,3 +7,4 @@
 export * from "./extractor.js";
 export * from "./hypergraph.js";
 export * from "./query.js";
+export * from "./compression.js";

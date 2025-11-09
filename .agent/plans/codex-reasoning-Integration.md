@@ -23,21 +23,21 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
   - [x] Add `enrichReasoningContext` function to `packages/knowledge/src/extractor.ts` (2025-11-09 19:15Z)
   - [x] Add `persistReasoning` function to `packages/agent/assistant/src/graphstore.ts` (2025-11-09 19:15Z)
   - [x] Add required imports to graphstore.ts (2025-11-09 19:15Z)
-- [ ] Phase 3: Cognitive State Integration
-  - [ ] Extend `ThinkingState` type in `packages/cognitive/src/state.ts`
-  - [ ] Update `thinking` factory function signature and implementation
-  - [ ] Add `evaluateReasoningQuality` function to `packages/cognitive/src/state.ts`
-  - [ ] Add `captureReasoning` function to `packages/cognitive/src/flows.ts`
-  - [ ] Enhance `reflect` function with reasoning analysis in `packages/cognitive/src/flows.ts`
-- [ ] Phase 4: Compression & Pruning System
-  - [ ] Create `packages/knowledge/src/compression.ts` with compression functions
-  - [ ] Add archival operations to `packages/db/src/repo/graph.ts`
-  - [ ] Add pruning operations to `packages/db/src/repo/graph.ts`
-  - [ ] Add confidence update operations to `packages/db/src/repo/graph.ts`
-  - [ ] Add query helpers for compression analysis
-- [ ] Phase 5: Orchestrator Integration
-  - [ ] Add persistence call before return in `packages/agent/src/orchestrator/tool/codex.ts`
-  - [ ] Add required imports for `persistReasoning`
+- [x] Phase 3: Cognitive State Integration (2025-11-09 19:42Z)
+  - [x] Extend `ThinkingState` type in `packages/cognitive/src/state.ts` (2025-11-09 19:42Z)
+  - [x] Update `thinking` factory function signature and implementation (2025-11-09 19:42Z)
+  - [x] Add `evaluateReasoningQuality` function to `packages/cognitive/src/state.ts` (2025-11-09 19:42Z)
+  - [x] Add `captureReasoning` function to `packages/cognitive/src/flows.ts` (2025-11-09 19:42Z)
+  - [x] Enhance `reflect` function with reasoning analysis in `packages/cognitive/src/flows.ts` (2025-11-09 19:42Z)
+- [x] Phase 4: Compression & Pruning System (2025-11-09 20:18Z)
+  - [x] Create `packages/knowledge/src/compression.ts` with compression functions (2025-11-09 20:18Z)
+  - [x] Add archival operations to `packages/db/src/repo/graph.ts` (2025-11-09 20:18Z)
+  - [x] Add pruning operations to `packages/db/src/repo/graph.ts` (2025-11-09 20:18Z)
+  - [x] Add confidence update operations to `packages/db/src/repo/graph.ts` (2025-11-09 20:18Z)
+  - [x] Add query helpers for compression analysis (2025-11-09 20:18Z)
+- [x] Phase 5: Orchestrator Integration (2025-11-09 20:30Z)
+  - [x] Add persistence call before return in `packages/agent/src/orchestrator/tool/codex.ts` (2025-11-09 20:30Z)
+  - [x] Add required imports for `persistReasoning` (2025-11-09 20:30Z)
 - [ ] Phase 6: Background Compression Service
   - [ ] Create `packages/agent/src/orchestrator/compression-worker.ts`
   - [ ] Implement compression worker start/stop functions
@@ -65,6 +65,7 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 - **Reasoning item structure verification**: Codex CLI docs (exec.md line 49) confirm reasoning items have direct `text` field: `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Searching for README files**"}}`. The plan's `extractReasoning` function correctly handles this, though the `content` array fallback may be unnecessary based on documented structure.
 - **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
 - **Knowledge package tests absent**: Running `bun test` in `packages/knowledge` returns no matching test files and exits with failure (`bun test v1.2.18 ... Filters did not match any test files`). Manual verification required until tests exist.
+- **Cognitive package tests absent**: `bun test` under `packages/cognitive` also finds no test suites; executed `bun run typecheck` to confirm the new exports compile without issues.
 
 ## Decision Log
 
