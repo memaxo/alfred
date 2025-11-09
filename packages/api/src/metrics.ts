@@ -204,6 +204,13 @@ export const webhookErrorsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const rateLimitHitsTotal = new client.Counter({
+  name: "rate_limit_hits_total",
+  help: "Count of rate limit hits grouped by procedure.",
+  labelNames: ["procedure"] as const,
+  registers: [metricsRegistry],
+});
+
 export const assistantToolCallsTotal = new client.Counter({
   name: "assistant_tool_calls_total",
   help: "Count of assistant tool invocations grouped by tool name.",

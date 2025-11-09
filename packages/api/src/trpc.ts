@@ -5,6 +5,7 @@ import {
   trpcRequestErrorsTotal,
   trpcRequestsTotal,
 } from "./metrics";
+import { rateLimitHitsTotal } from "./metrics";
 
 export const t = initTRPC.context<Context>().create();
 
@@ -59,3 +60,32 @@ export type AuthedContext = {
   runtimeContext: Context["runtimeContext"];
   policy?: Context["policy"];
 };
+
+// Simple in-memory rate limiter keyed by user + procedure per minute
+type Bucket = { count: number; resetAt: number };
+const buckets = new Map<string, Bucket>();
+const windowMs = 60_000;
+const limitPerMinute = Math.max(
+  1,
+  Number.parseInt(process.env.ROUTE_RATE_LIMIT_PER_MINUTE || "60", 10) || 60,
+);
+
+function rateKey(userId: string | null, procedure?: string, type?: string) {
+  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(":");
+}
+
+export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
+  const userId = (ctx.session as any)?.user?.id ?? null;
+  const key = rateKey(userId, path, type);
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+  } else if (bucket.count + 1 > limitPerMinute) {
+    rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS" as any, message: "rate_limited" });
+  } else {
+    bucket.count++;
+  }
+  return next();
+});
