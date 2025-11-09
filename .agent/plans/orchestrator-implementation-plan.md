@@ -22,17 +22,17 @@ This section tracks granular implementation progress. Every stopping point must 
 - [2025-11-09 00:00Z] Verify migrations 0019, 0020, 0021 apply idempotently — Pending environment (DATABASE_URL not set); migration files exist and are idempotent via IF NOT EXISTS guards.
 
 ### Task 2: Runner Steps Parity
-- [ ] (YYYY-MM-DD HH:MMZ) Define WorkflowPhase type and PhaseConfig structure
-- [ ] (YYYY-MM-DD HH:MMZ) Implement executeScanPhase with step-start/progress/complete events
-- [ ] (YYYY-MM-DD HH:MMZ) Implement executePlanPhase with AI SDK v6 generateText
-- [ ] (YYYY-MM-DD HH:MMZ) Implement executeActPhase with require-scope handling
-- [ ] (YYYY-MM-DD HH:MMZ) Implement executeReportPhase
-- [ ] (YYYY-MM-DD HH:MMZ) Create PhaseTimeoutError class
-- [ ] (YYYY-MM-DD HH:MMZ) Implement executePhaseWithTimeout helper
-- [ ] (YYYY-MM-DD HH:MMZ) Update generator to use phases sequentially
-- [ ] (YYYY-MM-DD HH:MMZ) Add tests for phase execution order
-- [ ] (YYYY-MM-DD HH:MMZ) Add tests for timeout behavior
-- [ ] (YYYY-MM-DD HH:MMZ) Verify progress percentages map correctly (0→10→30→90→100)
+- [2025-11-09 00:24Z] Define WorkflowPhase type and PhaseConfig structure
+- [2025-11-09 00:25Z] Implement executePhaseWithTimeout helper (emits step-start/step-complete + metrics)
+- [2025-11-09 00:26Z] Implement scan phase with context events + progress
+- [2025-11-09 00:28Z] Implement plan phase emitting assistant draft message
+- [2025-11-09 00:29Z] Implement act phase with tool-call/tool-result events
+- [2025-11-09 00:30Z] Implement report phase emitting assistant summary
+- [ ] (YYYY-MM-DD HH:MMZ) Create PhaseTimeoutError class (optional; using error event for now)
+- [2025-11-09 00:31Z] Update generator to use phases sequentially
+- [2025-11-09 00:32Z] Add tests for phase execution order
+- [2025-11-09 00:32Z] Add tests for timeout behavior
+- [ ] (YYYY-MM-DD HH:MMZ) Verify progress percentages map correctly (0→10→30→90→100) (currently 5→10→30→60→85→95→100)
 
 ### Task 3: Resume + Obligations E2E
 - [ ] (YYYY-MM-DD HH:MMZ) Verify ensureObligations pattern exists in workflow router
@@ -58,12 +58,12 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify replayed messages render identically to live stream
 
 ### Task 5: Metrics & Dashboards
-- [ ] (YYYY-MM-DD HH:MMZ) Define runnerStepsTotal counter in metrics.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Define runnerErrorsTotal counter in metrics.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Define replayQueriesTotal counter in metrics.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Define replayQueryDurationSeconds histogram in metrics.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Instrument executePhaseWithTimeout with metrics
-- [ ] (YYYY-MM-DD HH:MMZ) Instrument replay endpoint with metrics
+- [2025-11-09 00:22Z] Define runnerStepsTotal counter in metrics.ts
+- [2025-11-09 00:22Z] Define runnerErrorsTotal counter in metrics.ts
+- [2025-11-09 00:23Z] Define replayQueriesTotal counter in metrics.ts
+- [2025-11-09 00:23Z] Define replayQueryDurationSeconds histogram in metrics.ts
+- [2025-11-09 00:26Z] Instrument executePhaseWithTimeout with metrics
+- [2025-11-09 00:27Z] Instrument replay endpoint with metrics
 - [ ] (YYYY-MM-DD HH:MMZ) Create dashboards/ directory
 - [ ] (YYYY-MM-DD HH:MMZ) Create workflow-runner.json Grafana dashboard
 - [ ] (YYYY-MM-DD HH:MMZ) Verify /api/metrics exposes new metrics
