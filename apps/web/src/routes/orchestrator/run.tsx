@@ -634,94 +634,96 @@ function OrchestratorRunRoute() {
         </div>
       ) : null}
 
-      <section className="space-y-2">
-        <header className="flex items-center justify-between">
-          <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
-            Stream Output
-          </h2>
-        </header>
-        <div
-          className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-sm"
-          ref={logContainerRef}
-        >
-          {logs.length === 0 ? (
-            <p className="text-muted-foreground">
-              No output yet. Start a run to view logs.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {logs.map((entry) => (
-                <li key={entry.id}>
-                  <span className="text-muted-foreground">[{entry.type}]</span>{" "}
-                  {entry.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+      <div className="grid gap-6 md:grid-cols-2">
+        <section className="space-y-2">
+          <header className="flex items-center justify-between">
+            <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+              Stream Output
+            </h2>
+          </header>
+          <div
+            className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-sm"
+            ref={logContainerRef}
+          >
+            {logs.length === 0 ? (
+              <p className="text-muted-foreground">
+                No output yet. Start a run to view logs.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {logs.map((entry) => (
+                  <li key={entry.id}>
+                    <span className="text-muted-foreground">[{entry.type}]</span>{" "}
+                    {entry.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
 
-      <section className="space-y-2">
-        <header className="flex items-center justify-between">
-          <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
-            UI Messages (replay + live)
-          </h2>
-          {hasMore ? (
-            <button
-              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
-              onClick={() => setPage((p) => p + 1)}
-              type="button"
-            >
-              Load older
-            </button>
-          ) : null}
-        </header>
-        <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 space-y-4">
-          {messages.length === 0 ? (
-            <p className="text-muted-foreground">No messages persisted.</p>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => {
-                const parsed = parseStructuredMessage(message);
-                return (
-                  <div key={message.id ?? parsed.id} className="space-y-2">
-                    {parsed.plans.map((plan, idx) => (
-                      <Plan key={`plan-${idx}`} plan={plan} />
-                    ))}
-                    {parsed.tasks.map((task) => (
-                      <Task key={task.id} {...task} />
-                    ))}
-                    {parsed.tools.map((tool, idx) => (
-                      <Tool
-                        key={`tool-${idx}`}
-                        name={tool.name}
-                        args={tool.args}
-                        result={tool.result}
-                        status={tool.status}
-                      />
-                    ))}
-                    {parsed.codes.map((code, idx) => (
-                      <Code
-                        key={`code-${idx}`}
-                        code={code.code}
-                        language={code.language}
-                      />
-                    ))}
-                    {parsed.plans.length === 0 &&
-                    parsed.tasks.length === 0 &&
-                    parsed.tools.length === 0 &&
-                    parsed.codes.length === 0 ? (
-                      <pre className="text-muted-foreground text-xs">
-                        {JSON.stringify(message, null, 2)}
-                      </pre>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+        <section className="space-y-2">
+          <header className="flex items-center justify-between">
+            <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+              UI Messages (replay + live)
+            </h2>
+            {hasMore ? (
+              <button
+                className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+                onClick={() => setPage((p) => p + 1)}
+                type="button"
+              >
+                Load older
+              </button>
+            ) : null}
+          </header>
+          <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 space-y-4">
+            {messages.length === 0 ? (
+              <p className="text-muted-foreground">No messages persisted.</p>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => {
+                  const parsed = parseStructuredMessage(message);
+                  return (
+                    <div key={message.id ?? parsed.id} className="space-y-2">
+                      {parsed.plans.map((plan, idx) => (
+                        <Plan key={`plan-${idx}`} plan={plan} />
+                      ))}
+                      {parsed.tasks.map((task) => (
+                        <Task key={task.id} {...task} />
+                      ))}
+                      {parsed.tools.map((tool, idx) => (
+                        <Tool
+                          key={`tool-${idx}`}
+                          name={tool.name}
+                          args={tool.args}
+                          result={tool.result}
+                          status={tool.status}
+                        />
+                      ))}
+                      {parsed.codes.map((code, idx) => (
+                        <Code
+                          key={`code-${idx}`}
+                          code={code.code}
+                          language={code.language}
+                        />
+                      ))}
+                      {parsed.plans.length === 0 &&
+                      parsed.tasks.length === 0 &&
+                      parsed.tools.length === 0 &&
+                      parsed.codes.length === 0 ? (
+                        <pre className="text-muted-foreground text-xs">
+                          {JSON.stringify(message, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
