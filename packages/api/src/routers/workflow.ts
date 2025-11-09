@@ -13,6 +13,7 @@ import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
+import { eventToUiMessages } from "../ai/normalize";
 import { runPlanV6 } from "../workflow/runner";
 
 const workflowInput = z.object({
@@ -275,13 +276,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
             // Helper to normalize certain events to UIMessage parts for byte-equal replay
             const maybeUiMessages = (event: WorkflowEvent): unknown[] | null => {
-              // When the event already carries UIMessage(s)
-              if ((event as any)?.type === 'ui-message' && Array.isArray((event as any)?.messages)) {
-                return (event as any).messages as unknown[];
-              }
-              // Future: detect assistant/tool-call/tool-result event shapes and convert
-              // by reusing non-stream normalizer when shapes match
-              return null;
+              const msgs = eventToUiMessages(event);
+              return Array.isArray(msgs) && msgs.length > 0 ? (msgs as unknown[]) : null;
             };
 
             // Consume the generator, persisting each event then pushing to client
@@ -435,6 +431,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
       z.object({
         runId: z.string().min(1),
         eventType: z.string().optional().default("ui-message"),
+        order: z.enum(["asc", "desc"]).optional(),
         page: z.number().int().min(0).optional(),
         pageSize: z.number().int().min(1).max(2000).optional(),
         includeTotal: z.boolean().optional(),
@@ -446,6 +443,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         eventType: input.eventType,
         page: input.page ?? 0,
         pageSize: input.pageSize ?? 500,
+        order: input.order,
       });
       const transformed = items.map((e) => ({
         eventId: (e as any).eventId,

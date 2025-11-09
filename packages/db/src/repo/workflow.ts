@@ -118,16 +118,19 @@ export async function listEventsByTypePaged(args: {
   eventType: string;
   page?: number;
   pageSize?: number;
+  order?: "asc" | "desc";
 }) {
   const page = Math.max(0, args.page ?? 0);
   const pageSize = Math.min(Math.max(1, args.pageSize ?? 500), 2000);
-  const rows = await db
+  const base = db
     .select()
     .from(workflowEvents)
     .where(and(eq(workflowEvents.runId, args.runId), eq(workflowEvents.eventType, args.eventType)))
-    .orderBy(workflowEvents.timestamp)
     .limit(pageSize)
     .offset(page * pageSize);
+  const rows = await (args.order === "desc"
+    ? base.orderBy(desc(workflowEvents.timestamp))
+    : base.orderBy(workflowEvents.timestamp));
   return rows;
 }
 

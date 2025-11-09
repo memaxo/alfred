@@ -58,8 +58,10 @@ function OrchestratorRunRoute() {
   const scopeInFlightRef = useRef<Set<ScopeEvent>>(new Set());
   const resumeMutation = trpc.workflow.resume.useMutation();
   const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const eventsQuery = trpc.workflow.replay.useQuery(
-    { runId: runId ?? "", eventType: "ui-message", page: 0, pageSize: 500, includeTotal: false },
+    { runId: runId ?? "", eventType: "ui-message", order: "desc" as const, page, pageSize: 200, includeTotal: false },
     {
       enabled: !!runId,
       // hydrate logs from persisted UI-message events (chronological)
@@ -81,7 +83,9 @@ function OrchestratorRunRoute() {
         if (newSeen.size > 0) {
           setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
         }
+        setHasMore(Boolean((data as any).hasMore));
       },
+      keepPreviousData: true,
     }
   );
 
@@ -645,6 +649,15 @@ function OrchestratorRunRoute() {
           <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
             UI Messages (replay + live)
           </h2>
+          {hasMore ? (
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+              onClick={() => setPage((p) => p + 1)}
+              type="button"
+            >
+              Load older
+            </button>
+          ) : null}
         </header>
         <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-xs">
           {messages.length === 0 ? (
