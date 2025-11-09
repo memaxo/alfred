@@ -69,11 +69,13 @@ function OrchestratorRunRoute() {
   const [hasMore, setHasMore] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const hasNewer = page > 0 && order === "desc"; // when newest-first, pages > 0 have newer pages
+  const [oldestEventId, setOldestEventId] = useState<string | null>(null);
+  const [newestEventId, setNewestEventId] = useState<string | null>(null);
   const eventsQuery = trpc.workflow.replay.useQuery(
     { runId: runId ?? "", eventType: "ui-message", order, page, pageSize: 200, includeTotal: false },
     {
       enabled: !!runId,
-      // hydrate logs from persisted UI-message events (chronological)
+      // hydrate messages from persisted UI-message events
       onSuccess(data) {
         if (!data || !Array.isArray((data as any).items)) return;
         const items = (data as any).items as Array<any>;
@@ -82,15 +84,19 @@ function OrchestratorRunRoute() {
           const evtId = typeof row?.eventId === "string" ? row.eventId : null;
           if (evtId && !seenEventIds.has(evtId)) {
             newSeen.add(evtId);
-            const evt = row?.eventData as unknown;
-            const uiMessages = eventToUiMessages(evt as any);
+            const eventType = typeof row?.eventType === "string" ? (row.eventType as string) : "";
+            const eventData = row?.eventData as unknown;
+            let uiMessages: UIMessage[] | null = null;
+            if (eventType === "ui-message" && Array.isArray(eventData)) {
+              uiMessages = eventData as UIMessage[];
+            } else {
+              uiMessages = eventToUiMessages({ type: eventType, ...(eventData as any) } as any) ?? null;
+            }
             if (uiMessages && uiMessages.length > 0) {
               setMessages((prev) => {
                 const existingIds = new Set(prev.map((m) => m.id));
-                const newMessages = uiMessages.filter(
-                  (m) => m.id && !existingIds.has(m.id)
-                );
-                return [...prev, ...newMessages];
+                const newMessages = uiMessages.filter((m) => m.id && !existingIds.has(m.id));
+                return order === "desc" ? [...newMessages, ...prev] : [...prev, ...newMessages];
               });
             }
           }
@@ -99,6 +105,18 @@ function OrchestratorRunRoute() {
           setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
         }
         setHasMore(Boolean((data as any).hasMore));
+        // Track boundaries for future UX improvements
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (first?.eventId && last?.eventId) {
+          if (order === "desc") {
+            setNewestEventId(first.eventId);
+            setOldestEventId(last.eventId);
+          } else {
+            setOldestEventId(first.eventId);
+            setNewestEventId(last.eventId);
+          }
+        }
       },
       keepPreviousData: true,
     }
@@ -244,17 +262,14 @@ function OrchestratorRunRoute() {
       });
     }
     const type = (event?.type as string | undefined) ?? "unknown";
-    if (type === "ui-message") {
-      const uiMessages = eventToUiMessages(event as any);
-      if (uiMessages && uiMessages.length > 0) {
-        setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const newMessages = uiMessages.filter(
-            (m) => m.id && !existingIds.has(m.id)
-          );
-          return [...prev, ...newMessages];
-        });
-      }
+    // For both normalized UI-message events and raw assistant/tool events, try to render UI messages
+    const maybeUiMessages = eventToUiMessages(event as any);
+    if (maybeUiMessages && maybeUiMessages.length > 0) {
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMessages = maybeUiMessages.filter((m) => m.id && !existingIds.has(m.id));
+        return [...prev, ...newMessages];
+      });
     }
 
     switch (type) {
