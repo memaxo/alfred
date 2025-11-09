@@ -15,6 +15,7 @@ import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
 import { eventToUiMessages } from "../ai/normalize";
 import { makeEventId } from "../utils/event-id";
+import { recordAudit } from "../utils/audit";
 import { runPlanV6 } from "../workflow/runner";
 import {
   replayQueriesTotal,
@@ -164,6 +165,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
           inputData: input,
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
+        });
+
+        // Best-effort audit of start
+        await recordAudit({
+          userId: session.user.id,
+          action: "workflow.start",
+          resource: { kind: "workflow", id: runner.runId },
+          decision: "allow",
+          context: { auto: input.auto, mode: input.mode },
         });
 
         // Initialize Linear session (delegate, state) - fire-and-forget
@@ -380,6 +390,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
               },
               abortController,
             });
+            // Audit stream start (best-effort)
+            await recordAudit({
+              userId: session.user.id,
+              action: "workflow.stream",
+              resource: { kind: "workflow", id: runId ?? runner.runId },
+              decision: "allow",
+              context: { auto: input.auto, mode: input.mode },
+            });
 
             recordEvent("run");
             const VALID_EVENT_TYPES = [
@@ -464,6 +482,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 status: "completed",
                 completedAt: new Date(),
               });
+              await recordAudit({
+                userId: session.user.id,
+                action: "workflow.stream.complete",
+                resource: { kind: "workflow", id: runId },
+                decision: "allow",
+              });
             } catch (error) {
               logger.warn("workflow_completion_update_failed", {
                 runId,
@@ -542,7 +566,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
       if (!delivered) {
         throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
       }
-
+      // Best-effort audit
+      await recordAudit({
+        userId: null,
+        action: "workflow.resume",
+        resource: { kind: "workflow", id: input.runId },
+        decision: "allow",
+        context: { event: input.event },
+      });
       return { ok: true };
     }),
 

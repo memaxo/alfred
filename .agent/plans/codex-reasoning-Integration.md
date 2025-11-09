@@ -48,24 +48,24 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
   - [x] Add `reconstructReasoningChain` function to `packages/knowledge/src/query.ts` (2025-11-09 21:10Z)
 - [x] Database Migration (2025-11-09 21:18Z)
   - [x] Create migration for archived and confidence indexes (2025-11-09 21:18Z)
-- [ ] Testing
-  - [ ] Unit tests for extraction functions
-  - [ ] Unit tests for compression functions
-  - [ ] Integration tests for end-to-end flow
-  - [ ] Performance tests for batch operations
-- [ ] Configuration
-  - [ ] Add environment variables to `.env.example`
-  - [ ] Add runtime configuration module
-- [ ] Documentation
-  - [ ] Update PRD with reasoning integration status
-  - [ ] Document reasoning query patterns
+- [x] Testing (2025-11-09 21:24Z)
+  - [x] Unit tests for extraction functions (2025-11-09 21:24Z)
+  - [x] Unit tests for compression functions (2025-11-09 21:24Z)
+  - [x] Integration tests for end-to-end flow (2025-11-09 21:24Z)
+  - [x] Performance tests for batch operations (2025-11-09 21:24Z)
+- [x] Configuration (2025-11-09 21:33Z)
+  - [x] Add environment variables to `.env.example` (2025-11-09 21:33Z)
+  - [x] Add runtime configuration module (2025-11-09 21:33Z)
+- [x] Documentation (2025-11-09 21:39Z)
+  - [x] Update PRD with reasoning integration status (2025-11-09 21:39Z)
+  - [x] Document reasoning query patterns (2025-11-09 21:39Z)
 
 ## Surprises & Discoveries
 
 - **Reasoning item structure verification**: Codex CLI docs (exec.md line 49) confirm reasoning items have direct `text` field: `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Searching for README files**"}}`. The plan's `extractReasoning` function correctly handles this, though the `content` array fallback may be unnecessary based on documented structure.
 - **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
-- **Knowledge package tests absent**: Running `bun test` in `packages/knowledge` returns no matching test files and exits with failure (`bun test v1.2.18 ... Filters did not match any test files`). Manual verification required until tests exist.
-- **Cognitive package tests absent**: `bun test` under `packages/cognitive` also finds no test suites; executed `bun run typecheck` to confirm the new exports compile without issues.
+- **Knowledge package tests restored**: Added `test/reasoning.test.ts` and `test/compression.test.ts` so `bun test` now exercises extraction, compression, and batch scenarios.
+- **Cognitive package tests restored**: Added `test/reasoning-flow.test.ts` validating capture + evaluation loop; `bun test` previously failed due to missing suites.
 - **Reasoning chain metadata pending**: Hypergraph nodes do not yet surface sequential indices or relation references for reasoning traces, so `reconstructReasoningChain()` currently emits empty relation sets and default indices until graph instrumentation lands.
 
 ## Decision Log
@@ -84,7 +84,11 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 
 ## Outcomes & Retrospective
 
-_No outcomes yet. This section will be updated at major milestones and completion._
+- Codex tool executions now emit optional reasoning payloads that are captured, persisted, and exposed through the cognitive state machine and knowledge queries.
+- Compression worker runs behind `COMPRESSION_ENABLED`, applying confidence decay and archival policies without blocking the orchestrator.
+- Added extraction/compression/cognitive tests so reasoning flows are covered by `bun test` across knowledge and cognitive packages.
+- Delivered configuration + documentation updates so operators can tune reasoning retention and compression behaviour.
+- Remaining follow-up: enrich reasoning nodes with sequential indices inside the hypergraph to unlock full chain reconstruction.
 
 ---
 

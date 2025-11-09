@@ -65,10 +65,11 @@ export type AuthedContext = {
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 const windowMs = 60_000;
-const limitPerMinute = Math.max(
-  1,
-  Number.parseInt(process.env.ROUTE_RATE_LIMIT_PER_MINUTE || "60", 10) || 60,
-);
+function getLimitPerMinute() {
+  const raw = process.env.ROUTE_RATE_LIMIT_PER_MINUTE;
+  const n = Number.parseInt(raw ?? "60", 10);
+  return Math.max(1, Number.isFinite(n) ? n : 60);
+}
 
 function rateKey(userId: string | null, procedure?: string, type?: string) {
   return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(":");
@@ -81,7 +82,7 @@ export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
-  } else if (bucket.count + 1 > limitPerMinute) {
+  } else if (bucket.count + 1 > getLimitPerMinute()) {
     rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
     throw new TRPCError({ code: "TOO_MANY_REQUESTS" as any, message: "rate_limited" });
   } else {

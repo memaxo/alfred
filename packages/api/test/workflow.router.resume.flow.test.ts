@@ -15,6 +15,12 @@ mock.module("@alfred/policy", () => ({
   evaluate: evaluateMock,
   registerCacheObs: () => {},
 }));
+
+// Mock runner to control stream + resume behavior
+const runPlanV6Mock = vi.fn();
+mock.module("@alfred/api/workflow/runner", () => ({
+  runPlanV6: runPlanV6Mock,
+}));
 // Mock metrics consumed by routers to avoid importing full metrics registry
 mock.module("@alfred/api/metrics", () => ({
   trpcRequestsTotal: { inc: vi.fn() },
@@ -80,6 +86,24 @@ async function subscribeToStream(input: Parameters<(typeof caller)["workflow"]["
 describe.skip("workflow router resume flow (integration)", () => {
   it("acknowledges deploy-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+    // Prepare runner
+    let resumed = false;
+    runPlanV6Mock.mockReturnValue({
+      runId: "resume-run-1",
+      summary: "ok",
+      resume: async () => { resumed = true; },
+      cancel: () => {},
+      stream: (async function* () {
+        yield { type: "run", id: "resume-run-1" } as any;
+        yield { type: "require-scope", scopes: ["repo.write"], event: "deploy-authz" } as any;
+        // Wait a tick for resume
+        await new Promise((r) => setTimeout(r, 0));
+        if (resumed) {
+          yield { type: "notice", message: "Authorization 'deploy-authz' acknowledged." } as any;
+          yield { type: "progress", pct: 100, message: "done" } as any;
+        }
+      })(),
+    });
     const input = { requirement: "test", auto: "medium" as const };
 
     // Start a stream and collect events in the background
@@ -122,6 +146,22 @@ describe.skip("workflow router resume flow (integration)", () => {
   it("acknowledges linear-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const input = { requirement: "test", auto: "high" as const };
+    let resumed = false;
+    runPlanV6Mock.mockReturnValue({
+      runId: "resume-run-2",
+      summary: "ok",
+      resume: async () => { resumed = true; },
+      cancel: () => {},
+      stream: (async function* () {
+        yield { type: "run", id: "resume-run-2" } as any;
+        yield { type: "require-scope", scopes: ["repo.write"], event: "linear-authz" } as any;
+        await new Promise((r) => setTimeout(r, 0));
+        if (resumed) {
+          yield { type: "notice", message: "Authorization 'linear-authz' acknowledged." } as any;
+          yield { type: "progress", pct: 100, message: "done" } as any;
+        }
+      })(),
+    });
 
     const events: WorkflowEvent[] = [];
     const sub: any = toObservable(caller.workflow.stream(input as any));

@@ -40,7 +40,7 @@ afterEach(() => {
   resetAllMocks();
 });
 
-describe.skip("workflow.stream rate limit", () => {
+describe("workflow.stream rate limit", () => {
   it("enforces per-minute limit for subscription", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const mockRunId = "rate-run";
@@ -71,18 +71,22 @@ describe.skip("workflow.stream rate limit", () => {
     // 3rd invocation should hit rate limit (429). Some environments throw synchronously; others error via observable.
     let matched = false;
     try {
-      // Some environments may throw synchronously
-      await new Promise<void>((resolve) => {
-        toObservable(caller.workflow.stream({ requirement: "C" })).subscribe({
-          next: () => resolve(),
-          error: (err: unknown) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            if (/rate_limited/i.test(msg)) matched = true;
-            resolve();
-          },
-          complete: () => resolve(),
+      // Prefer direct call to capture synchronous throws from middleware
+      // If it does not throw synchronously, subscribe to capture observable error.
+      const candidate: any = caller.workflow.stream({ requirement: "C" });
+      if (candidate && typeof candidate.subscribe === "function") {
+        await new Promise<void>((resolve) => {
+          candidate.subscribe({
+            next: () => resolve(),
+            error: (err: unknown) => {
+              const msg = err instanceof Error ? err.message : String(err);
+              if (/rate_limited/i.test(msg)) matched = true;
+              resolve();
+            },
+            complete: () => resolve(),
+          });
         });
-      });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/rate_limited/i.test(msg)) matched = true;

@@ -116,13 +116,8 @@ This section tracks granular implementation progress. Every stopping point must 
 - [ ] (YYYY-MM-DD HH:MMZ) Verify no live network calls in tests
 
 ### Task 10: Docs & Plans Closure
-- [ ] (YYYY-MM-DD HH:MMZ) Update config/env.example with all new workflow variables
+- [2025-11-09 01:56Z] Create docs/quickstart-orchestrator.md with curl examples (start/stream/replay/resume)
 - [ ] (YYYY-MM-DD HH:MMZ) Update orchestrator-parity-plan.md with completion status
-- [ ] (YYYY-MM-DD HH:MMZ) Create docs/quickstart-orchestrator.md
-- [ ] (YYYY-MM-DD HH:MMZ) Add curl examples for workflow.start
-- [ ] (YYYY-MM-DD HH:MMZ) Add curl examples for SSE streaming
-- [ ] (YYYY-MM-DD HH:MMZ) Add curl examples for replay endpoint
-- [ ] (YYYY-MM-DD HH:MMZ) Add curl examples for resume with authorization
 - [ ] (YYYY-MM-DD HH:MMZ) Verify quickstart is reproducible against local dev server
 
 ---

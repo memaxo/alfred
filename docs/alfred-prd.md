@@ -76,6 +76,7 @@ Notes
 - [ ] Implement voice/STT/TTS integration
 - [ ] Implement preference/profile/privacy flows end-to-end
 - [ ] Implement home automation tool wiring
+- [x] Integrate Codex reasoning traces into knowledge graph and cognitive state
 - [ ] Harden policy enforcement + audit logging
 - [ ] Harden auth flows (passkey + token issuance)
 - [ ] Implement reminder/timer/bookmark CRUD logic

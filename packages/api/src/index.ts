@@ -1,15 +1,9 @@
+import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
 import { startCompressionWorker } from "@alfred/agent/orchestrator/compression-worker";
 
-const compressionEnv =
-  process.env.COMPRESSION_ENABLED === undefined
-    ? "auto"
-    : process.env.COMPRESSION_ENABLED;
-
-if (compressionEnv !== "false") {
-  startCompressionWorker({
-    enabled:
-      compressionEnv === "true" || process.env.NODE_ENV === "production",
-  });
+const compressionConfig = compressionWorkerOverrides();
+if (compressionConfig.enabled) {
+  startCompressionWorker(compressionConfig);
 }
 
 export type { AppRouter } from "./routers/index";
