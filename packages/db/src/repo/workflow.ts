@@ -77,11 +77,13 @@ export async function appendEvent(args: {
   eventData?: unknown;
   stepId?: string | null;
   timestamp?: Date;
+  eventId?: string; // Optional explicit event identity; DB default fills if omitted
 }) {
   const [row] = await db
     .insert(workflowEvents)
     .values({
       runId: args.runId,
+      eventId: args.eventId,
       eventType: args.eventType,
       eventData: (args.eventData ?? null) as any,
       stepId: args.stepId ?? null,
@@ -98,6 +100,16 @@ export async function listEvents(runId: string) {
     .where(eq(workflowEvents.runId, runId))
     .orderBy(desc(workflowEvents.timestamp));
   // Return newest-first list (UI can reverse if needed)
+  return rows;
+}
+
+export async function listEventsByType(runId: string, eventType: string) {
+  const rows = await db
+    .select()
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)))
+    .orderBy(workflowEvents.timestamp);
+  // Return oldest-first for replay consumers
   return rows;
 }
 

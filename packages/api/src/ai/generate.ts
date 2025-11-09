@@ -29,8 +29,10 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       stateData: null,
     });
     const uiMessages = normalizeToUiMessages((args.result ?? {}) as any);
+    const eventId = crypto.randomUUID();
     await workflowRepo.appendEvent({
       runId,
+      eventId,
       eventType: "ui-message",
       eventData: uiMessages,
     });

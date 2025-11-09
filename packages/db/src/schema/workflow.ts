@@ -27,6 +27,7 @@ export const workflowEvents = pgTable("workflow_events", {
   runId: uuid("run_id")
     .notNull()
     .references(() => workflowRuns.id, { onDelete: "cascade" }),
+  eventId: uuid("event_id").defaultRandom().notNull().unique(),
   eventType: text("event_type").notNull(), // 'step_start' | 'step_complete' | 'suspend' | 'resume' | 'error'
   eventData: jsonb("event_data"),
   stepId: text("step_id"),

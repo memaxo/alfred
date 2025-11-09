@@ -278,11 +278,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
               try {
                 // Redact PII/secrets before persistence
                 const redactedEventData = redactEventData(event);
+                const eventId = crypto.randomUUID();
                 await workflowRepo.appendEvent({
                   runId,
+                  eventId,
                   eventType: getEventType(event),
                   eventData: redactedEventData,
                 });
+                // Push event including its identity for client-side dedupe
+                push({ ...event, eventId } as WorkflowEvent);
               } catch (error) {
                 logger.warn("workflow_event_persistence_failed", {
                   runId,
@@ -291,7 +295,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 });
                 // Continue streaming without throwing
               }
-              push(event);
             }
 
             // Mark completion
@@ -399,5 +402,30 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .query(async ({ input }) => {
       const events = await workflowRepo.listEvents(input.runId);
       return events;
+    }),
+
+  /**
+   * Replay query: persisted events filtered by type in chronological order.
+   * Default type is "ui-message" for assistant/orchestrator replays.
+   */
+  replay: authedProcedure
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        eventType: z.string().optional().default("ui-message"),
+      })
+    )
+    .query(async ({ input }) => {
+      const events = await workflowRepo.listEventsByType(
+        input.runId,
+        input.eventType
+      );
+      return events.map((e) => ({
+        eventId: (e as any).eventId,
+        runId: e.runId,
+        eventType: e.eventType,
+        eventData: e.eventData,
+        timestamp: (e as any).timestamp,
+      }));
     }),
 });

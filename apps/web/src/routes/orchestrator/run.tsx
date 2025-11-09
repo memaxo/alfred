@@ -56,46 +56,26 @@ function OrchestratorRunRoute() {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const scopeInFlightRef = useRef<Set<ScopeEvent>>(new Set());
   const resumeMutation = trpc.workflow.resume.useMutation();
-  const eventsQuery = trpc.workflow.events.useQuery(
-    { runId: runId ?? "" },
+  const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
+  const eventsQuery = trpc.workflow.replay.useQuery(
+    { runId: runId ?? "", eventType: "ui-message" },
     {
       enabled: !!runId,
-      // hydrate logs from persisted events (newest first)
+      // hydrate logs from persisted UI-message events (chronological)
       onSuccess(data) {
         if (!Array.isArray(data)) return;
-        // Prepend older events first so they appear in order
-        for (let i = data.length - 1; i >= 0; i--) {
-          const row = data[i] as any;
-          const evt = (row?.eventData ?? row) as Record<string, unknown> | null;
-          const type = (evt?.type as string | undefined) ?? "notice";
-          switch (type) {
-            case "progress": {
-              const msg =
-                typeof evt?.message === "string"
-                  ? (evt!.message as string)
-                  : "progress";
-              appendLog("progress", msg);
-              break;
-            }
-            case "notice": {
-              const msg =
-                typeof evt?.message === "string"
-                  ? (evt!.message as string)
-                  : "notice";
-              appendLog("notice", msg);
-              break;
-            }
-            case "stdout":
-            case "stderr": {
-              const text = getTextPayload(evt);
-              if (text) appendLog(type, text);
-              break;
-            }
-            default: {
-              appendLog(type, JSON.stringify(evt));
-              break;
-            }
+        const newSeen = new Set<string>();
+        for (const row of data) {
+          const evtId = typeof (row as any)?.eventId === "string" ? (row as any).eventId : null;
+          if (evtId && !seenEventIds.has(evtId)) {
+            newSeen.add(evtId);
+            const evt = (row as any)?.eventData as Record<string, unknown> | null;
+            const type = (evt?.type as string | undefined) ?? "ui-message";
+            appendLog(type, JSON.stringify(evt));
           }
+        }
+        if (newSeen.size > 0) {
+          setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
         }
       },
     }
@@ -229,6 +209,17 @@ function OrchestratorRunRoute() {
 
   function handleChunk(chunk: unknown) {
     const event = chunk as Record<string, unknown> | null;
+    const evtId = typeof event?.eventId === "string" ? (event.eventId as string) : null;
+    if (evtId && seenEventIds.has(evtId)) {
+      return; // dedupe
+    }
+    if (evtId) {
+      setSeenEventIds((prev) => {
+        const copy = new Set(prev);
+        copy.add(evtId);
+        return copy;
+      });
+    }
     const type = (event?.type as string | undefined) ?? "unknown";
 
     switch (type) {

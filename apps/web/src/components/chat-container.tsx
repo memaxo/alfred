@@ -51,7 +51,8 @@ export function ChatContainer({ agent }: ChatContainerProps) {
   const handleSend = useCallback(
     (input: string) => {
       if (currentAgent !== "assistant") {
-        // Orchestrator streaming not yet enabled - silently return
+        // Orchestrator streaming disabled: Use /orchestrator/run route for workflow execution.
+        // This chat interface is for assistant conversations only.
         return;
       }
       send(input);

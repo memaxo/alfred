@@ -317,4 +317,65 @@ describe("workflow router", () => {
       expect(result).toEqual(mockEvents);
     });
   });
+
+  describe("replay", () => {
+    it("retrieves only ui-message events for a run", async () => {
+      const mockRunId = "test-run-id";
+      const mockEvents = [
+        {
+          id: "event-1",
+          runId: mockRunId,
+          eventId: "evt-1",
+          eventType: "ui-message",
+          eventData: { messages: [{ role: "assistant", content: "Hi" }] },
+          timestamp: new Date("2024-01-01"),
+        },
+        {
+          id: "event-2",
+          runId: mockRunId,
+          eventId: "evt-2",
+          eventType: "ui-message",
+          eventData: { messages: [{ role: "assistant", content: "Hello" }] },
+          timestamp: new Date("2024-01-02"),
+        },
+      ];
+
+      workflowRepoMocks.listEventsByType.mockResolvedValue(mockEvents as any);
+
+      const result = await caller.workflow.replay({ runId: mockRunId });
+
+      expect(workflowRepoMocks.listEventsByType).toHaveBeenCalledWith(
+        mockRunId,
+        "ui-message"
+      );
+      expect(result).toHaveLength(2);
+      expect(result[0].eventId).toBe("evt-1");
+      expect(result[0].eventType).toBe("ui-message");
+    });
+
+    it("supports custom event type filtering", async () => {
+      workflowRepoMocks.listEventsByType.mockResolvedValue([]);
+      await caller.workflow.replay({ runId: "test-run-id", eventType: "progress" });
+      expect(workflowRepoMocks.listEventsByType).toHaveBeenCalledWith(
+        "test-run-id",
+        "progress"
+      );
+    });
+
+    it("returns events in chronological order", async () => {
+      const mockEvents = [
+        { eventId: "evt-1", timestamp: new Date("2024-01-01") },
+        { eventId: "evt-2", timestamp: new Date("2024-01-02") },
+      ];
+
+      workflowRepoMocks.listEventsByType.mockResolvedValue(mockEvents as any);
+
+      const result = await caller.workflow.replay({
+        runId: "test-run-id",
+      });
+
+      expect(result[0].eventId).toBe("evt-1");
+      expect(result[1].eventId).toBe("evt-2");
+    });
+  });
 });
