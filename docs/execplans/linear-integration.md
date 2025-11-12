@@ -14,18 +14,18 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 ## Progress
 
 - [ ] (YYYY-MM-DD HH:MMZ) Read Linear SDK documentation and understand agent session lifecycle
-- [ ] (YYYY-MM-DD HH:MMZ) Install p-retry dependency for exponential backoff
-- [ ] (YYYY-MM-DD HH:MMZ) Implement emitLinearActivity() with error handling and retry logic
-- [ ] (YYYY-MM-DD HH:MMZ) Implement setLinearDelegate() helper function
-- [ ] (YYYY-MM-DD HH:MMZ) Implement setLinearStarted() helper function
-- [ ] (YYYY-MM-DD HH:MMZ) Implement setLinearSessionExternalUrl() helper function
-- [ ] (YYYY-MM-DD HH:MMZ) Add extractIssueIdFromSession() implementation
-- [ ] (YYYY-MM-DD HH:MMZ) Add Linear metrics to packages/api/src/metrics.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Add findRunByLinearSession() to workflow repository
-- [ ] (YYYY-MM-DD HH:MMZ) Integrate 10-second acknowledgment into workflow runner
-- [ ] (YYYY-MM-DD HH:MMZ) Add session initialization (delegate + state + external URL) to workflow runner
-- [ ] (YYYY-MM-DD HH:MMZ) Add action activity emission for tool calls
-- [ ] (YYYY-MM-DD HH:MMZ) Add response/error activity emission on completion
+- [x] (2025-11-12 07:34Z) Install p-retry dependency for exponential backoff
+- [x] (2025-11-12 07:37Z) Implement emitLinearActivity() with error handling and retry logic
+- [x] (2025-11-12 07:37Z) Implement setLinearDelegate() helper function
+- [x] (2025-11-12 07:37Z) Implement setLinearStarted() helper function
+- [x] (2025-11-12 07:37Z) Implement setLinearSessionExternalUrl() helper function
+- [x] (2025-11-12 07:37Z) Add extractIssueIdFromSession() implementation
+- [x] (2025-11-12 07:39Z) Add Linear metrics to packages/api/src/metrics.ts
+- [x] (2025-11-12 07:41Z) Add findRunByLinearSession() to workflow repository
+- [x] (2025-11-12 07:51Z) Integrate 10-second acknowledgment into workflow runner
+- [x] (2025-11-12 07:51Z) Add session initialization (delegate + state + external URL) to workflow runner
+- [x] (2025-11-12 07:51Z) Add action activity emission for tool calls
+- [x] (2025-11-12 07:51Z) Add response/error activity emission on completion
 - [ ] (YYYY-MM-DD HH:MMZ) Create webhook handler at apps/web/src/routes/api/linear/webhook.ts
 - [ ] (YYYY-MM-DD HH:MMZ) Implement webhook signature verification
 - [ ] (YYYY-MM-DD HH:MMZ) Handle issue assignment events
@@ -44,7 +44,9 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 
 ## Decision Log
 
-(To be filled as decisions are made. Record each significant choice with rationale and timestamp.)
+- (2025-11-12 07:34Z) Selected p-retry@6.2.0 to align with plan guidance and ensure compatibility with documented retry expectations.
+- (2025-11-12 07:51Z) Kept legacy VITE_APP_URL/APP_URL fallbacks when PUBLIC_URL is missing so existing workflow viewer links remain valid.
+- (2025-11-12 07:53Z) Added configureLinearMetrics adapter to inject API counters at runtime, resolving TypeScript rootDir conflicts caused by direct cross-package imports.
 
 
 ## Outcomes & Retrospective
@@ -1420,4 +1422,3 @@ The work is organized into phases: helper functions, metrics, repository queries
 A developer following this plan should be able to implement the complete integration and demonstrate it working with a real Linear workspace. The implementation follows ALFRED's architectural principles: non-blocking operations, pure functions where possible, strong typing, and comprehensive error handling.
 
 Key success metrics: sub-10-second acknowledgment, complete activity timeline in Linear UI, graceful degradation on Linear API failures, and comprehensive observability through Prometheus metrics.
-
