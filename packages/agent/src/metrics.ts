@@ -26,6 +26,10 @@ type DualLabelCounter = {
   labels: (labelA: string, labelB: string) => { inc: (value?: number) => void };
 };
 
+type CompressionHistogram = {
+  startTimer: () => (labels: { outcome: string }) => void;
+};
+
 let droidExecCounter: CounterLike | null = null;
 let droidExecDurationHistogram: HistogramLike | null = null;
 let codexExecCounter: CounterLike | null = null;
@@ -41,6 +45,9 @@ let assistantToolCounter: SingleLabelCounter | null = null;
 let assistantEscalationCounter: SingleLabelCounter | null = null;
 let memoryUpdatesCounter: DualLabelCounter | null = null;
 let memoryForgetsCounter: SingleLabelCounter | null = null;
+let compressionCycleHistogram: CompressionHistogram | null = null;
+let compressionCycleCounter: SingleLabelCounter | null = null;
+let compressionNodeCounter: SingleLabelCounter | null = null;
 
 export function registerDroidExecCounter(counter: CounterLike) {
   droidExecCounter = counter;
@@ -162,4 +169,30 @@ export function registerMemoryForgetsCounter(counter: SingleLabelCounter) {
 
 export function recordMemoryForget(scope: string) {
   memoryForgetsCounter?.labels(scope).inc();
+}
+
+export function registerCompressionCycleHistogram(
+  histogram: CompressionHistogram
+) {
+  compressionCycleHistogram = histogram;
+}
+
+export function startCompressionCycleTimer() {
+  return compressionCycleHistogram?.startTimer() ?? (() => {});
+}
+
+export function registerCompressionCycleCounter(counter: SingleLabelCounter) {
+  compressionCycleCounter = counter;
+}
+
+export function recordCompressionCycle(outcome: string) {
+  compressionCycleCounter?.labels(outcome).inc();
+}
+
+export function registerCompressionNodeCounter(counter: SingleLabelCounter) {
+  compressionNodeCounter = counter;
+}
+
+export function recordCompressionNodeUpdate(kind: string, count: number) {
+  compressionNodeCounter?.labels(kind).inc(count);
 }

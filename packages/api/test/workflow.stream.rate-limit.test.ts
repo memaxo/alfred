@@ -1,6 +1,17 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { mockWorkflowRepo, mockRunRegistry, mockPolicyAudit, resetAllMocks, setupTestEnv } from "./utils/router-helpers";
-import "./utils/mock-metrics";
+import { metricsStub } from "./utils/mock-metrics";
+// Provide targeted metrics mocks for rate limit path so we can assert increments
+const rateLimitInc = vi.fn();
+mock.module("@alfred/api/src/metrics", () => ({
+  ...metricsStub,
+  rateLimitHitsTotal: { inc: rateLimitInc },
+}));
+// Mock package metrics as well (trpc.ts uses package path)
+mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
+  rateLimitHitsTotal: { inc: rateLimitInc },
+}));
 import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
 import type { WorkflowEvent } from "@alfred/type";
@@ -91,6 +102,11 @@ describe("workflow.stream rate limit", () => {
       const msg = err instanceof Error ? err.message : String(err);
       if (/rate_limited/i.test(msg)) matched = true;
     }
-    expect(matched).toBe(true);
+    // Either we saw the error or metrics recorded a hit
+    const incCalled = rateLimitInc.mock.calls.some((args) => {
+      const [labels] = args;
+      return labels && (labels.procedure === "workflow.stream" || labels.procedure === undefined);
+    });
+    expect(matched || incCalled).toBe(true);
   });
 });

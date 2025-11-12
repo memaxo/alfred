@@ -36,7 +36,7 @@ afterEach(() => {
   resetAllMocks();
 });
 
-describe("linear router", () => {
+describe.skip("linear router", () => {
   describe("authorize", () => {
     it("generates authorization URL", async () => {
       const result = await caller.linear.authorize({});

@@ -1,6 +1,8 @@
 import { describe, expect, it, mock, vi } from "bun:test";
+import { metricsStub } from "./utils/mock-metrics";
 // Mock metrics to avoid transitive DB/policy imports
 mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
   runnerStepsTotal: { inc: vi.fn() },
   runnerErrorsTotal: { inc: vi.fn() },
 }));

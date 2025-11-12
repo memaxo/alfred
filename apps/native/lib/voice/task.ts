@@ -1,8 +1,9 @@
 import * as BackgroundFetch from "expo-background-fetch";
 import * as TaskManager from "expo-task-manager";
+import { drain } from "./queue";
 
 export const TASK_VOICE_FLUSH = "VOICE_STREAM_FLUSH";
-const MIN_INTERVAL_SECONDS = 15 * 60;
+const MIN_INTERVAL_SECONDS = 2 * 60; // 2 minutes (reduced from 15)
 
 let defined = false;
 
@@ -13,6 +14,7 @@ export function registerVoiceTasks(flush: () => Promise<void>): void {
         await flush();
         return BackgroundFetch.BackgroundFetchResult.NewData;
       } catch (error) {
+        console.error("[voice] Background flush failed:", error);
         return BackgroundFetch.BackgroundFetchResult.Failed;
       }
     });
@@ -22,5 +24,11 @@ export function registerVoiceTasks(flush: () => Promise<void>): void {
     minimumInterval: MIN_INTERVAL_SECONDS,
     stopOnTerminate: false,
     startOnBoot: true,
-  }).catch(() => {});
+  }).catch((error) => {
+    console.error("[voice] Failed to register background task:", error);
+  });
+}
+
+export function registerQueueDrain(drainFn: () => Promise<void>): void {
+  registerVoiceTasks(drainFn);
 }

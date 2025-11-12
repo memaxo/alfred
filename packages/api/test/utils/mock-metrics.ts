@@ -3,7 +3,7 @@ import { mock, vi } from "bun:test";
 const counter = () => ({ inc: vi.fn(), labels: (..._args: any[]) => ({ inc: vi.fn() }) });
 const histogram = () => ({ startTimer: vi.fn().mockReturnValue(() => {}), labels: (..._args: any[]) => ({ observe: vi.fn() }) });
 
-mock.module("@alfred/api/metrics", () => ({
+export const metricsStub = {
   // tRPC
   trpcRequestsTotal: counter(),
   trpcRequestErrorsTotal: counter(),
@@ -48,4 +48,23 @@ mock.module("@alfred/api/metrics", () => ({
   voiceSttDurationSeconds: histogram(),
   recordVoiceStt: (_: any) => void 0,
   recordVoiceTts: (_: any) => void 0,
+  compressionCyclesTotal: counter(),
+  compressionCycleDurationSeconds: histogram(),
+  compressionNodesUpdatedTotal: counter(),
+  voiceStreamEventsTotal: counter(),
+  voiceStreamLatencySeconds: histogram(),
+} as const;
+
+mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
+}));
+
+// Some modules import via source path; mock that too.
+mock.module("@alfred/api/src/metrics", () => ({
+  ...metricsStub,
+}));
+
+// Policy hooks used by metrics: provide a no-op to avoid import-time side effects
+mock.module("@alfred/policy", () => ({
+  registerCacheObs: (_cb: (result: string) => void) => void 0,
 }));

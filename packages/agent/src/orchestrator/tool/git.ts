@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import {
   accessSync,
   constants as fsConstants,
@@ -179,12 +178,14 @@ async function runGit({
   timeoutSec: number;
 }) {
   const command = resolveExecutable("git");
-  const child = spawn(command, args, {
+  const proc = Bun.spawn([command, ...args], {
     cwd,
     env: {
       PATH: process.env.PATH ?? "",
     },
-    stdio: ["ignore", "pipe", "pipe"],
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "ignore",
   });
 
   const accumulator = {
@@ -196,7 +197,7 @@ async function runGit({
 
   const timer = setNodeTimeout(() => {
     try {
-      child.kill("SIGKILL");
+      proc.kill("SIGKILL");
     } catch {
       // noop
     }
@@ -205,42 +206,72 @@ async function runGit({
     ).catch(() => {});
   }, timeoutSec * 1000);
 
-  child.stdout?.on("data", (chunk) => {
-    const text = chunk.toString();
-    accumulator.capturedBytes += Buffer.byteLength(text);
+  // Handle stdout stream
+  if (proc.stdout && typeof proc.stdout !== "number") {
+    const reader = proc.stdout.getReader();
+    const decoder = new TextDecoder();
 
-    if (!accumulator.truncated) {
-      if (accumulator.capturedBytes <= OUTPUT_CAP_BYTES) {
-        accumulator.stdout += text;
-      } else {
-        accumulator.truncated = true;
+    (async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const text = decoder.decode(value);
+          accumulator.capturedBytes += Buffer.byteLength(text);
+
+          if (!accumulator.truncated) {
+            if (accumulator.capturedBytes <= OUTPUT_CAP_BYTES) {
+              accumulator.stdout += text;
+            } else {
+              accumulator.truncated = true;
+            }
+          }
+
+          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+            () => {}
+          );
+        }
+      } catch {
+        // Ignore stream read errors
       }
-    }
+    })();
+  }
 
-    void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
-      () => {}
-    );
-  });
+  // Handle stderr stream
+  if (proc.stderr && typeof proc.stderr !== "number") {
+    const reader = proc.stderr.getReader();
+    const decoder = new TextDecoder();
 
-  child.stderr?.on("data", (chunk) => {
-    const text = chunk.toString();
-    if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
-      accumulator.stderr += text;
-    }
-    void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(
-      () => {}
-    );
-  });
+    (async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-  const exitCode = await new Promise<number>((resolve, reject) => {
-    child.on("error", (err) => {
-      clearNodeTimeout(timer);
-      reject(err);
-    });
-    child.on("close", (code) => resolve(code ?? 0));
-  }).finally(() => {
+          const text = decoder.decode(value);
+          if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
+            accumulator.stderr += text;
+          }
+          void Promise.resolve(writer?.write?.({ type: "stderr", text })).catch(
+            () => {}
+          );
+        }
+      } catch {
+        // Ignore stderr read errors
+      }
+    })();
+  }
+
+  let exitCode = 0;
+  try {
+    exitCode = await proc.exited;
+  } catch (error) {
     clearNodeTimeout(timer);
-  });
+    throw error;
+  } finally {
+    clearNodeTimeout(timer);
+  }
 
   if (accumulator.truncated) {
     void Promise.resolve(

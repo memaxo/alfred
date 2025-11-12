@@ -3,6 +3,9 @@
  * Reusable helper for creating authenticated tRPC callers in tests
  */
 
+import "./mock-metrics";
+import "./mock-db-client";
+import "./mock-voice";
 import type { TRPCAppRouter } from "@alfred/api/routers/index";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { inferRouterInputs } from "@trpc/server";
@@ -61,6 +64,7 @@ export function createTestCaller(options: CreateCallerOptions = {}) {
           email: `${userId}@test.local`,
           name: "Test User",
         },
+        session: { id: `sess-${requestId}` },
       },
       runtime,
       runtimeContext,

@@ -586,3 +586,61 @@ export async function findStaleNodes(
     .orderBy(desc(memoryNodes.created))
     .limit(limit);
 }
+
+export async function getReasoningChain(args: {
+  resource: string;
+  executionId?: string | null;
+  since?: number;
+  limit?: number;
+}): Promise<{
+  nodes: NodeRow[];
+  edges: EdgeRow[];
+}> {
+  const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000);
+
+  const conditions = [
+    eq(memoryNodes.resource, args.resource),
+    eq(memoryNodes.kind, "reasoning"),
+  ];
+
+  if (args.executionId) {
+    conditions.push(
+      sql`COALESCE(properties->>'executionId', '') = ${args.executionId}`
+    );
+  }
+
+  if (typeof args.since === "number" && Number.isFinite(args.since)) {
+    conditions.push(
+      sql`COALESCE((properties->>'timestamp')::numeric, 0) >= ${args.since}`
+    );
+  }
+
+  const nodes = await db
+    .select()
+    .from(memoryNodes)
+    .where(and(...conditions))
+    .orderBy(
+      sql`COALESCE((properties->>'sequenceIndex')::int, (properties->>'index')::int, 0),
+          COALESCE((properties->>'timestamp')::numeric, 0)`
+    )
+    .limit(limit);
+
+  const nodeIds = nodes.map((node) => node.id);
+
+  if (nodeIds.length === 0) {
+    return { nodes, edges: [] };
+  }
+
+  const edges = await db
+    .select()
+    .from(memoryEdges)
+    .where(
+      and(
+        inArray(memoryEdges.fromId, nodeIds),
+        eq(memoryEdges.kind, "precedes")
+      )
+    )
+    .orderBy(sql`COALESCE((metadata->>'fromIndex')::int, 0)`);
+
+  return { nodes, edges };
+}

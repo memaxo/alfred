@@ -1,4 +1,8 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import type {
+  ReasoningEdgeRecord,
+  ReasoningNodeRecord,
+} from "@alfred/knowledge/query";
 import type { WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -7,7 +11,7 @@ import { requirePolicy } from "../gate";
 import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
-} from "../metrics";
+} from "@alfred/api/metrics";
 import { runRegistry } from "../run-registry";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
@@ -20,7 +24,7 @@ import { runPlanV6 } from "../workflow/runner";
 import {
   replayQueriesTotal,
   replayQueryDurationSeconds,
-} from "../metrics";
+} from "@alfred/api/metrics";
 import {
   setLinearDelegate,
   setLinearStarted,
@@ -97,6 +101,15 @@ const mapWorkflowResource = (raw: unknown) => {
   };
 };
 
+const mapWorkflowRunResource = (raw: unknown) => {
+  const input = raw as { runId?: string };
+  return {
+    kind: "workflow" as const,
+    id: input?.runId ?? "run",
+    attrs: {},
+  };
+};
+
 function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
   if (ctx.policy?.obligations?.length) {
     const obligations = ctx.policy.obligations;
@@ -157,12 +170,18 @@ export const workflowRouter: ReturnType<typeof router> = router({
         );
 
         // Create durable run row now so clients may hydrate history
+        const storedInput = {
+          ...input,
+          executionId: runner.runId,
+          reasoningSince: Date.now(),
+        };
+
         await workflowRepo.createRun({
           id: runner.runId,
           userId: session.user.id,
           workflowId: "plan",
           status: "running",
-          inputData: input,
+          inputData: storedInput,
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
         });
@@ -323,12 +342,18 @@ export const workflowRouter: ReturnType<typeof router> = router({
               }
             );
 
+            const storedInput = {
+              ...input,
+              executionId: runner.runId,
+              reasoningSince: Date.now(),
+            };
+
             await workflowRepo.createRun({
               id: runner.runId,
               userId: session.user.id,
               workflowId: "plan",
               status: "running",
-              inputData: input,
+              inputData: storedInput,
               linearSessionId: input.linear?.sessionId,
               linearSpace: input.linear?.space,
             });
@@ -594,6 +619,96 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .query(async ({ input }) => {
       const events = await workflowRepo.listEvents(input.runId);
       return events;
+    }),
+
+  reasoning: authedProcedure
+    .use(requirePolicy("workflow.read", (raw) => mapWorkflowRunResource(raw)))
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        limit: z.number().int().min(1).max(2000).optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+      }
+
+      if (run.userId !== session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
+      }
+
+      const inputData = (run.inputData ?? {}) as Record<string, unknown>;
+      const resource =
+        typeof inputData.cw === "string" && inputData.cw.length > 0
+          ? inputData.cw
+          : typeof inputData.workspace === "string" && inputData.workspace.length > 0
+          ? inputData.workspace
+          : process.cwd();
+
+      const executionId =
+        typeof inputData.executionId === "string" && inputData.executionId.length > 0
+          ? inputData.executionId
+          : run.id;
+
+      const since =
+        typeof inputData.reasoningSince === "number"
+          ? inputData.reasoningSince
+          : run.created instanceof Date
+          ? run.created.getTime()
+          : undefined;
+
+      const { getReasoningChain } = await import("@alfred/db/repo/graph");
+      const { reconstructReasoningChain } = await import("@alfred/knowledge/query");
+
+      const limit = input.limit;
+      const initialArgs = {
+        resource,
+        executionId,
+        since,
+        limit,
+      } as const;
+
+      let { nodes, edges } = await getReasoningChain(initialArgs);
+
+      if (nodes.length === 0 && executionId) {
+        ({ nodes, edges } = await getReasoningChain({
+          resource,
+          since,
+          limit,
+        }));
+      }
+
+      const nodeRecords: ReasoningNodeRecord[] = nodes.map((node) => ({
+        id: node.id,
+        hash: node.hash,
+        label: node.label,
+        properties:
+          (node.properties as Record<string, unknown> | null) ?? null,
+      }));
+
+      const edgeRecords: ReasoningEdgeRecord[] = edges.map((edge) => ({
+        fromId: edge.fromId,
+        toId: edge.toId,
+        kind: edge.kind,
+        metadata:
+          (edge.metadata as Record<string, unknown> | null) ?? null,
+      }));
+
+      const chain = reconstructReasoningChain(nodeRecords, edgeRecords);
+
+      return {
+        runId: run.id,
+        resource,
+        executionId,
+        chain,
+      };
     }),
 
   /**

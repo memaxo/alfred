@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "test": "bun test",
+    "test": "bun test --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "typecheck": "tsc -b"
   },
   "devDependencies": {

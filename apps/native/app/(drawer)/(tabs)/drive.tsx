@@ -1,11 +1,12 @@
 import type { UIMessage } from "@alfred/type/stream";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { AppState, Platform, Pressable, Text, View } from "react-native";
 import { setupCarPlay } from "@/lib/carplay";
 import { useColorScheme } from "@/lib/use-color-scheme";
-import { drain, registerVoiceTasks, useVoiceSessionNative } from "@/lib/voice";
+import { drain, enqueue, registerQueueDrain, useVoiceSessionNative } from "@/lib/voice";
 import { ensureForegroundService } from "@/lib/voice/service";
 import { trpcClient } from "@/utils/trpc";
+import type { PendingItem } from "@/lib/voice/queue";
 
 const THREAD_ID = "drive-mode";
 
@@ -36,10 +37,78 @@ export default function DriveScreen() {
   }, []);
 
   useEffect(() => {
-    registerVoiceTasks(async () => {
-      await drain(async (_item) => {});
+    // Register background task to drain queue
+    registerQueueDrain(async () => {
+      await drain(async (item: PendingItem) => {
+        try {
+          if (item.kind === "stt") {
+            const result = await (trpcClient as any).voice.sttTranscribe.mutate({
+              audioBase64: item.payload.audioBase64,
+              mimeType: item.payload.mimeType,
+              language: item.payload.language,
+              prompt: item.payload.prompt,
+            });
+            // Process transcript result if needed
+          } else if (item.kind === "tts") {
+            const result = await (trpcClient as any).voice.ttsSynthesize.mutate({
+              text: item.payload.text,
+              voice: item.payload.voice,
+            });
+            // Play audio result if needed
+            if (result?.audioBase64) {
+              await voice.speak({
+                text: item.payload.text,
+                format: "mp3",
+                voice: item.payload.voice ?? "alloy",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("[voice] Queue drain error:", error);
+          throw error; // Will trigger retry
+        }
+      });
     });
-  }, []);
+  }, [voice]);
+
+  // Drain queue on app resume
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        void drain(async (item: PendingItem) => {
+          try {
+            if (item.kind === "stt") {
+              await (trpcClient as any).voice.sttTranscribe.mutate({
+                audioBase64: item.payload.audioBase64,
+                mimeType: item.payload.mimeType,
+                language: item.payload.language,
+                prompt: item.payload.prompt,
+              });
+            } else if (item.kind === "tts") {
+              const result = await (trpcClient as any).voice.ttsSynthesize.mutate({
+                text: item.payload.text,
+                voice: item.payload.voice,
+              });
+              if (result?.audioBase64) {
+                await voice.speak({
+                  text: item.payload.text,
+                  format: "mp3",
+                  voice: item.payload.voice ?? "alloy",
+                });
+              }
+            }
+          } catch (error) {
+            console.error("[voice] Queue drain error:", error);
+            throw error;
+          }
+        });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [voice]);
 
   useEffect(() => {
     setupCarPlay(voice, (text) => {

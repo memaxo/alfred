@@ -8,6 +8,11 @@ import {
   DEFAULT_COMPRESSION_CONFIG,
   type CompressionConfig,
 } from "@alfred/knowledge/compression";
+import {
+  recordCompressionCycle,
+  recordCompressionNodeUpdate,
+  startCompressionCycleTimer,
+} from "../metrics";
 
 let compressionInterval: NodeJS.Timeout | null = null;
 
@@ -67,19 +72,26 @@ async function runCompression(
   config: CompressionWorkerConfig
 ): Promise<void> {
   const start = Date.now();
+  const stopTimer = startCompressionCycleTimer();
   console.log("Compression cycle started");
 
   try {
     const decayResult = await applyConfidenceDecay(config);
+    recordCompressionNodeUpdate("decay", decayResult.updated);
     console.log(`Decayed confidences for ${decayResult.updated} nodes`);
 
     const archiveResult = await archiveStaleNodes(config);
+    recordCompressionNodeUpdate("archive", archiveResult.archived);
     console.log(`Archived ${archiveResult.archived} stale nodes`);
 
     const duration = Date.now() - start;
     console.log(`Compression cycle completed in ${duration}ms`);
+    stopTimer({ outcome: "success" });
+    recordCompressionCycle("success");
   } catch (error) {
     console.error("Compression cycle failed", error);
+    stopTimer({ outcome: "error" });
+    recordCompressionCycle("error");
     throw error;
   }
 }

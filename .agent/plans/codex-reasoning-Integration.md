@@ -64,9 +64,9 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 
 - **Reasoning item structure verification**: Codex CLI docs (exec.md line 49) confirm reasoning items have direct `text` field: `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Searching for README files**"}}`. The plan's `extractReasoning` function correctly handles this, though the `content` array fallback may be unnecessary based on documented structure.
 - **Reasoning availability**: Reasoning is only emitted for models that support it (o3, o4-mini, codex-*, gpt-5, gpt-5-codex) and can be disabled via `model_reasoning_summary = "none"` in config. The plan correctly handles optional reasoning (undefined when not present).
-- **Knowledge package tests restored**: Added `test/reasoning.test.ts` and `test/compression.test.ts` so `bun test` now exercises extraction, compression, and batch scenarios.
-- **Cognitive package tests restored**: Added `test/reasoning-flow.test.ts` validating capture + evaluation loop; `bun test` previously failed due to missing suites.
-- **Reasoning chain metadata pending**: Hypergraph nodes do not yet surface sequential indices or relation references for reasoning traces, so `reconstructReasoningChain()` currently emits empty relation sets and default indices until graph instrumentation lands.
+- **Knowledge package tests restored**: Added `test/reasoning.test.ts` and `test/compression.test.ts` so `bun test` now exercises extraction, compression, and large-batch behaviour.
+- **Cognitive package tests restored**: Added `test/reasoning-flow.test.ts` validating capture + evaluation loop; `bun test` previously produced empty suites.
+- **Reasoning chain metadata pending**: Hypergraph nodes do not yet surface sequential indices or relation references for reasoning traces, so `reconstructReasoningChain()` currently emits empty relation sets and placeholder indices until graph instrumentation lands.
 
 ## Decision Log
 
@@ -74,12 +74,16 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
   **Rationale**: Defensive programming for potential future format changes or edge cases. The primary path matches documented structure.
   **Date/Author**: 2025-01-XX (plan author)
 
-- **Decision**: Make reasoning field optional in return type and schema
-  **Rationale**: Reasoning is only available for certain models and can be disabled via config. Optional field maintains backward compatibility.
+- **Decision**: Make reasoning field optional in return type and schema  
+  **Rationale**: Reasoning is only available for certain models and can be disabled via config. Optional field maintains backward compatibility.  
   **Date/Author**: 2025-01-XX (plan author)
 
-- **Decision**: Derive pruning candidates directly from node properties instead of using `identifyPrunableNodes`
-  **Rationale**: Repository queries return raw row data without full `Knowledge` objects, so using DB-level confidence values avoids brittle object reconstruction while preserving pruning semantics.
+- **Decision**: Derive pruning candidates directly from node properties instead of using `identifyPrunableNodes`  
+  **Rationale**: Repository queries return raw row data without full `Knowledge` objects, so using DB-level confidence values avoids brittle object reconstruction while preserving pruning semantics.  
+  **Date/Author**: 2025-11-09 (assistant)
+
+- **Decision**: Centralise reasoning/compression configuration in `@alfred/agent/orchestrator/config`  
+  **Rationale**: Sharing env parsing between the API bootstrap and worker keeps behaviour consistent and simplifies future overrides.  
   **Date/Author**: 2025-11-09 (assistant)
 
 ## Outcomes & Retrospective
@@ -89,6 +93,14 @@ This plan integrates Codex CLI's reasoning output into ALFRED's cognitive memory
 - Added extraction/compression/cognitive tests so reasoning flows are covered by `bun test` across knowledge and cognitive packages.
 - Delivered configuration + documentation updates so operators can tune reasoning retention and compression behaviour.
 - Remaining follow-up: enrich reasoning nodes with sequential indices inside the hypergraph to unlock full chain reconstruction.
+
+## Follow-up Recommendations
+
+1. **Operator access**: Ship a tRPC/API endpoint and lightweight UI hook that surfaces reasoning chains (leveraging `getReasoningChain()` + `reconstructReasoningChain()`), enabling real-time audits.
+2. **Learning feedback**: Feed `evaluateReasoningQuality()` results into autonomy gradients and mistake ledgers, capturing correlations between reasoning quality and task outcomes.
+3. **Retention tuning**: Pilot adaptive compression intervals and staged retention tiers (high- vs low-confidence traces) before scaling to production workloads.
+4. **Advanced monitoring**: Layer Prometheus alerts on compression metrics (cycle latency, archival volume) and add dashboards for reasoning trace volume and confidence trends.
+5. **Historical backfill**: Replay prior Codex exec logs through `persistReasoning()` so legacy runs populate the reasoning graph, improving longitudinal analytics.
 
 ---
 

@@ -17,7 +17,7 @@ Use the new helpers in `@alfred/knowledge/query` to retrieve reasoning data:
 - `reasoningQueries.byQuality(minConfidence)` filters by confidence.
 - `reasoningQueries.byTopic(keywords)` performs keyword matching across traces.
 
-`reconstructReasoningChain(graph, executionId)` executes the thread query and returns an ordered list of reasoning steps with any adjacent relations. This enables downstream tooling (e.g., retrospectives) to replay how a decision was reached.
+`reconstructReasoningChain(nodes, edges)` accepts the reasoning nodes returned from the graph repo (ordered via their `sequenceIndex`) plus optional `precedes` edges and produces an ordered list of reasoning steps with relation metadata. This enables downstream tooling (e.g., retrospectives) to replay how a decision was reached.
 
 ## Compression Worker
 

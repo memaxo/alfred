@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import {
   accessSync,
   constants as fsConstants,
@@ -12,12 +11,12 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import { persistReasoning } from "../../../assistant/src/graphstore";
 import {
   recordCodexError,
   recordCodexExecRun,
   startCodexExecTimer,
 } from "../../metrics";
-import { persistReasoning } from "../../../assistant/src/graphstore";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
@@ -443,10 +442,12 @@ export const toolCodex = {
 
     flags.push(input.prompt);
 
-    const child = spawn(executable, flags, {
+    const proc = Bun.spawn([executable, ...flags], {
       cwd: resolvedCw,
       env: pickEnvCodex(input.env),
-      stdio: ["ignore", "pipe", "pipe"],
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: "ignore",
     });
 
     const stopTimer = startCodexExecTimer(input.auto);
@@ -458,7 +459,7 @@ export const toolCodex = {
       didTimeout = true;
       recordStage("timeout");
       try {
-        child.kill("SIGKILL");
+        proc.kill("SIGKILL");
       } catch {
         // ignore errors when killing the process
       }
@@ -485,184 +486,225 @@ export const toolCodex = {
 
     let stdoutBuffer = "";
 
-    child.stdout?.on("data", (chunk) => {
-      stdoutBuffer += chunk.toString();
+    // Handle stdout stream (Bun uses ReadableStream)
+    if (proc.stdout && typeof proc.stdout !== "number") {
+      const reader = proc.stdout.getReader();
+      const decoder = new TextDecoder();
 
-      let newlineIndex = stdoutBuffer.indexOf("\n");
-      while (newlineIndex !== -1) {
-        const line = stdoutBuffer.slice(0, newlineIndex).trim();
-        stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
-        if (line.length > 0) {
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(line);
-          } catch {
-            if (!parseFailure) {
-              parseFailure = new Error("codex_parse_failed");
-              recordStage("parse");
-            }
-            void Promise.resolve(
-              writer?.write?.({ type: "stderr", text: line })
-            ).catch(() => {});
-            newlineIndex = stdoutBuffer.indexOf("\n");
-            continue;
-          }
+      (async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          if (input.out === "debug") {
-            void Promise.resolve(
-              writer?.write?.({ type: "codex", chunk: parsed })
-            ).catch(() => {});
-          }
+            stdoutBuffer += decoder.decode(value, { stream: true });
 
-          const event = normaliseEvent(parsed);
-          const eventType = event?.type;
-
-          if (!eventType) {
-            newlineIndex = stdoutBuffer.indexOf("\n");
-            continue;
-          }
-
-          switch (eventType) {
-            case "turn.started": {
-              void Promise.resolve(
-                writer?.write?.({
-                  type: "notice",
-                  message: "codex_turn_started",
-                })
-              ).catch(() => {});
-              break;
-            }
-            case "turn.completed": {
-              const usage = (event as { usage?: unknown }).usage;
-              void Promise.resolve(
-                writer?.write?.({
-                  type: "notice",
-                  message: "codex_turn_completed",
-                  usage,
-                })
-              ).catch(() => {});
-              break;
-            }
-            case "turn.failed": {
-              if (!runtimeFailure) {
-                const errorPayload = (
-                  event as { error?: { message?: string; code?: string } }
-                ).error;
-                const detail =
-                  errorPayload?.message ??
-                  errorPayload?.code ??
-                  "codex_turn_failed";
-                runtimeFailure = new Error(`codex_exec_failed:${detail}`);
-                recordStage("runtime");
-              }
-              const errorText =
-                (event as { error?: { message?: string } }).error?.message ??
-                "Codex turn failed.";
-              void Promise.resolve(
-                writer?.write?.({ type: "stderr", text: errorText })
-              ).catch(() => {});
-              break;
-            }
-            case "error": {
-              if (!runtimeFailure) {
-                const message =
-                  (event as { message?: string }).message ??
-                  "codex_stream_error";
-                runtimeFailure = new Error(message);
-                recordStage("runtime");
-              }
-              const message =
-                (event as { message?: string }).message ??
-                "Codex reported an error.";
-              void Promise.resolve(
-                writer?.write?.({ type: "stderr", text: message })
-              ).catch(() => {});
-              break;
-            }
-            case "item.completed": {
-              const item = (event as { item?: unknown }).item;
-              const itemType = (item as { type?: string } | undefined)?.type;
-              if (itemType === "reasoning") {
-                const reasoningText = extractReasoning(item);
-                if (reasoningText) {
-                  const byteLength = Buffer.from(reasoningText).byteLength;
-
-                  if (!reasoningAccumulator.truncated) {
-                    const remaining =
-                      OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
-                    if (remaining > 0) {
-                      reasoningAccumulator.traces.push({
-                        text:
-                          byteLength <= remaining
-                            ? reasoningText
-                            : reasoningText.substring(0, remaining),
-                        timestamp: Date.now(),
-                      });
-                      reasoningAccumulator.storedBytes += Math.min(
-                        byteLength,
-                        remaining
-                      );
-                      if (byteLength > remaining) {
-                        reasoningAccumulator.truncated = true;
-                      }
-                    } else {
-                      reasoningAccumulator.truncated = true;
-                    }
-                  } else {
-                    reasoningAccumulator.storedBytes += byteLength;
+            let newlineIndex = stdoutBuffer.indexOf("\n");
+            while (newlineIndex !== -1) {
+              const line = stdoutBuffer.slice(0, newlineIndex).trim();
+              stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
+              if (line.length > 0) {
+                let parsed: unknown;
+                try {
+                  parsed = JSON.parse(line);
+                } catch {
+                  if (!parseFailure) {
+                    parseFailure = new Error("codex_parse_failed");
+                    recordStage("parse");
                   }
+                  void Promise.resolve(
+                    writer?.write?.({ type: "stderr", text: line })
+                  ).catch(() => {});
+                  newlineIndex = stdoutBuffer.indexOf("\n");
+                  continue;
+                }
 
-                  if (input.out === "debug") {
+                if (input.out === "debug") {
+                  void Promise.resolve(
+                    writer?.write?.({ type: "codex", chunk: parsed })
+                  ).catch(() => {});
+                }
+
+                const event = normaliseEvent(parsed);
+                const eventType = event?.type;
+
+                if (!eventType) {
+                  newlineIndex = stdoutBuffer.indexOf("\n");
+                  continue;
+                }
+
+                switch (eventType) {
+                  case "turn.started": {
                     void Promise.resolve(
-                      writer?.write?.({ type: "reasoning", text: reasoningText })
+                      writer?.write?.({
+                        type: "notice",
+                        message: "codex_turn_started",
+                      })
                     ).catch(() => {});
+                    break;
+                  }
+                  case "turn.completed": {
+                    const usage = (event as { usage?: unknown }).usage;
+                    void Promise.resolve(
+                      writer?.write?.({
+                        type: "notice",
+                        message: "codex_turn_completed",
+                        usage,
+                      })
+                    ).catch(() => {});
+                    break;
+                  }
+                  case "turn.failed": {
+                    if (!runtimeFailure) {
+                      const errorPayload = (
+                        event as { error?: { message?: string; code?: string } }
+                      ).error;
+                      const detail =
+                        errorPayload?.message ??
+                        errorPayload?.code ??
+                        "codex_turn_failed";
+                      runtimeFailure = new Error(`codex_exec_failed:${detail}`);
+                      recordStage("runtime");
+                    }
+                    const errorText =
+                      (event as { error?: { message?: string } }).error
+                        ?.message ?? "Codex turn failed.";
+                    void Promise.resolve(
+                      writer?.write?.({ type: "stderr", text: errorText })
+                    ).catch(() => {});
+                    break;
+                  }
+                  case "error": {
+                    if (!runtimeFailure) {
+                      const message =
+                        (event as { message?: string }).message ??
+                        "codex_stream_error";
+                      runtimeFailure = new Error(message);
+                      recordStage("runtime");
+                    }
+                    const message =
+                      (event as { message?: string }).message ??
+                      "Codex reported an error.";
+                    void Promise.resolve(
+                      writer?.write?.({ type: "stderr", text: message })
+                    ).catch(() => {});
+                    break;
+                  }
+                  case "item.completed": {
+                    const item = (event as { item?: unknown }).item;
+                    const itemType = (item as { type?: string } | undefined)
+                      ?.type;
+                    if (itemType === "reasoning") {
+                      const reasoningText = extractReasoning(item);
+                      if (reasoningText) {
+                        const byteLength =
+                          Buffer.from(reasoningText).byteLength;
+
+                        if (reasoningAccumulator.truncated) {
+                          reasoningAccumulator.storedBytes += byteLength;
+                        } else {
+                          const remaining =
+                            OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
+                          if (remaining > 0) {
+                            reasoningAccumulator.traces.push({
+                              text:
+                                byteLength <= remaining
+                                  ? reasoningText
+                                  : reasoningText.substring(0, remaining),
+                              timestamp: Date.now(),
+                            });
+                            reasoningAccumulator.storedBytes += Math.min(
+                              byteLength,
+                              remaining
+                            );
+                            if (byteLength > remaining) {
+                              reasoningAccumulator.truncated = true;
+                            }
+                          } else {
+                            reasoningAccumulator.truncated = true;
+                          }
+                        }
+
+                        if (input.out === "debug") {
+                          void Promise.resolve(
+                            writer?.write?.({
+                              type: "reasoning",
+                              text: reasoningText,
+                            })
+                          ).catch(() => {});
+                        }
+                      }
+                    } else if (itemType === "command_execution") {
+                      const output = extractAggregatedOutput(item);
+                      if (output) {
+                        void Promise.resolve(
+                          writer?.write?.({ type: "stdout", text: output })
+                        ).catch(() => {});
+                      }
+                    } else if (itemType === "agent_message") {
+                      const text = extractAgentMessage(item);
+                      if (text) {
+                        appendFinal(finalAccumulator, text);
+                        void Promise.resolve(
+                          writer?.write?.({ type: "stdout", text })
+                        ).catch(() => {});
+                      }
+                    }
+                    break;
+                  }
+                  default: {
+                    // ignore other event types unless debug mode requested (already emitted above)
+                    break;
                   }
                 }
-              } else if (itemType === "command_execution") {
-                const output = extractAggregatedOutput(item);
-                if (output) {
-                  void Promise.resolve(
-                    writer?.write?.({ type: "stdout", text: output })
-                  ).catch(() => {});
-                }
-              } else if (itemType === "agent_message") {
-                const text = extractAgentMessage(item);
-                if (text) {
-                  appendFinal(finalAccumulator, text);
-                  void Promise.resolve(
-                    writer?.write?.({ type: "stdout", text })
-                  ).catch(() => {});
-                }
               }
-              break;
+
+              newlineIndex = stdoutBuffer.indexOf("\n");
             }
-            default: {
-              // ignore other event types unless debug mode requested (already emitted above)
-              break;
-            }
+          }
+        } catch (error) {
+          if (!parseFailure) {
+            parseFailure = new Error("codex_stream_read_failed");
+            recordStage("parse");
           }
         }
+      })();
+    }
 
-        newlineIndex = stdoutBuffer.indexOf("\n");
-      }
-    });
+    // Handle stderr stream
+    if (proc.stderr && typeof proc.stderr !== "number") {
+      const reader = proc.stderr.getReader();
+      const decoder = new TextDecoder();
 
-    child.stderr?.on("data", (chunk) => {
-      void Promise.resolve(
-        writer?.write?.({ type: "stderr", text: chunk.toString() })
-      ).catch(() => {});
-    });
+      (async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on("error", (err) => {
-        recordStage("spawn");
-        reject(err);
-      });
-      child.on("close", (code) => resolve(code ?? 0));
-    }).finally(() => {
+            void Promise.resolve(
+              writer?.write?.({ type: "stderr", text: decoder.decode(value) })
+            ).catch(() => {});
+          }
+        } catch {
+          // Ignore stderr read errors
+        }
+      })();
+    }
+
+    // Handle exit and errors
+    let exitCode = 0;
+    try {
+      exitCode = await proc.exited;
+    } catch (error) {
+      recordStage("spawn");
       clearNodeTimeout(timer);
       stopTimer();
-    });
+      throw error;
+    } finally {
+      clearNodeTimeout(timer);
+      stopTimer();
+    }
 
     recordCodexExecRun(input.auto, exitCode);
 

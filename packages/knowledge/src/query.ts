@@ -483,43 +483,111 @@ export const reasoningQueries = {
   },
 };
 
+export type ReasoningNodeRecord = {
+  id: string;
+  hash: string;
+  label: string | null;
+  properties: Record<string, unknown> | null;
+};
+
+export type ReasoningEdgeRecord = {
+  fromId: string;
+  toId: string;
+  kind: string;
+  metadata: Record<string, unknown> | null;
+};
+
+export type ReasoningChainStep = {
+  id: string;
+  hash: string;
+  text: string;
+  index: number;
+  timestamp: number | null;
+  previousHash: string | null;
+  nextHash: string | null;
+  relations: Array<{ toId: string; timeDelta: number | null }>;
+};
+
+const toNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const toStringOrNull = (value: unknown): string | null => {
+  if (typeof value === "string" && value.length > 0) return value;
+  return null;
+};
+
 export function reconstructReasoningChain(
-  graph: Hypergraph,
-  executionId: string
-): Array<{ step: Knowledge; relations: Knowledge[]; index: number }> {
-  const query = reasoningQueries.byThread(executionId);
-  const results = execute(query, graph);
-  const chain: Array<{
-    step: Knowledge;
-    relations: Knowledge[];
-    index: number;
-  }> = [];
+  nodes: ReasoningNodeRecord[],
+  edges: ReasoningEdgeRecord[] = []
+): ReasoningChainStep[] {
+  const normalised = nodes.map((node, position) => {
+    const props = (node.properties ?? {}) as Record<string, unknown>;
+    const index = toNumber(
+      props.sequenceIndex ?? props.index,
+      position
+    );
+    const timestampCandidate =
+      props.timestamp ?? props.ts ?? null;
+    const timestamp = timestampCandidate
+      ? toNumber(timestampCandidate, NaN)
+      : NaN;
 
-  for (const result of results) {
-    const traceVar = variable("?trace");
-    const nodeKey = result.get(traceVar);
-    if (!nodeKey) continue;
+    return {
+      id: node.id,
+      hash: node.hash,
+      text: node.label ?? "",
+      index,
+      timestamp: Number.isFinite(timestamp) ? timestamp : null,
+      previousHash: toStringOrNull(
+        props.previousHash ?? props.prevHash ?? props.previous
+      ),
+      nextHash: toStringOrNull(props.nextHash ?? props.next),
+      order: position,
+    };
+  });
 
-    const nodeId = nodeKey as unknown as NodeId;
-    const node = graph.get(nodeId);
-    if (!node) continue;
-
-    const relations: Knowledge[] = [];
-    const neighbors = graph.neighbors(nodeId);
-    for (const neighborId of neighbors) {
-      const neighbor = graph.get(neighborId);
-      if (neighbor && neighbor._ === "relation") {
-        relations.push(neighbor);
-      }
+  normalised.sort((a, b) => {
+    if (a.index !== b.index) {
+      return a.index - b.index;
     }
+    if ((a.timestamp ?? 0) !== (b.timestamp ?? 0)) {
+      return (a.timestamp ?? 0) - (b.timestamp ?? 0);
+    }
+    return a.order - b.order;
+  });
 
-    chain.push({
-      step: node,
-      relations,
-      index: 0,
+  const edgeMap = new Map<
+    string,
+    Array<{ toId: string; timeDelta: number | null }>
+  >();
+
+  for (const edge of edges) {
+    if (edge.kind !== "precedes") continue;
+    const items =
+      edgeMap.get(edge.fromId) ?? [];
+    const metadata = edge.metadata ?? {};
+    const timeDelta = toNumber(metadata.timeDelta, NaN);
+    items.push({
+      toId: edge.toId,
+      timeDelta: Number.isFinite(timeDelta) ? timeDelta : null,
     });
+    edgeMap.set(edge.fromId, items);
   }
 
-  chain.sort((a, b) => a.index - b.index);
-  return chain;
+  return normalised.map((entry) => ({
+    id: entry.id,
+    hash: entry.hash,
+    text: entry.text,
+    index: entry.index,
+    timestamp: entry.timestamp,
+    previousHash: entry.previousHash,
+    nextHash: entry.nextHash,
+    relations: edgeMap.get(entry.id) ?? [],
+  }));
 }

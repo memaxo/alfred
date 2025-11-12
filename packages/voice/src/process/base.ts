@@ -1,0 +1,445 @@
+import { accessSync, constants as fsConstants } from "node:fs";
+import { join } from "node:path";
+import { type Subprocess, spawn } from "bun";
+import { IPCBridge, type IPCRequest, type IPCResponse } from "./ipc";
+
+export interface ProcessConfig {
+  scriptPath: string;
+  modelPath: string;
+  device?: string;
+  computeType?: string;
+  voice?: string;
+  env?: Record<string, string>;
+}
+
+export interface ProcessHealth {
+  isHealthy: boolean;
+  lastPing: number | null;
+  requestCount: number;
+  errorCount: number;
+  uptime: number;
+}
+
+export class ModelProcess {
+  private process: Subprocess | null = null;
+  private ipc: IPCBridge;
+  private config: ProcessConfig;
+  private startTime = 0;
+  private requestCount = 0;
+  private errorCount = 0;
+  private lastPing: number | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private isShuttingDown = false;
+
+  constructor(config: ProcessConfig) {
+    this.config = config;
+    this.ipc = new IPCBridge({ requestTimeout: 10_000 });
+  }
+
+  async start(): Promise<void> {
+    if (this.process) {
+      return;
+    }
+
+    // Resolve Python executable with UV/virtual environment support
+    const { cmd, cwd } = await this.resolvePythonExecutable();
+
+    // Verify dependencies before starting
+    await this.verifyDependencies(cmd);
+
+    const env: Record<string, string> = {
+      ...process.env,
+      WHISPER_MODEL_PATH: this.config.modelPath,
+      WHISPER_DEVICE:
+        this.config.device ?? (process.platform === "darwin" ? "mps" : "rocm"),
+      WHISPER_COMPUTE_TYPE: this.config.computeType ?? "int8",
+      PIPER_MODEL_PATH: this.config.modelPath,
+      PIPER_VOICE: this.config.voice ?? "en_US-lessac-medium",
+      ...this.config.env,
+    };
+
+    this.process = spawn({
+      cmd,
+      cwd,
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      env,
+    });
+
+    this.startTime = Date.now();
+    this.setupEventHandlers();
+    this.startHealthCheck();
+
+    // Wait for ready signal
+    await this.waitForReady();
+  }
+
+  /**
+   * Resolve Python executable with multi-tier fallback:
+   * 1. UV run (if available and enabled)
+   * 2. Virtual environment Python (if .venv exists)
+   * 3. System Python (fallback)
+   */
+  protected async resolvePythonExecutable(): Promise<{
+    cmd: string[];
+    cwd: string;
+  }> {
+    const voiceDir = join(process.cwd(), "packages/voice");
+    const scriptPath = this.config.scriptPath;
+
+    // Get relative path from voiceDir for uv run
+    const scriptRelPath = scriptPath.startsWith(voiceDir)
+      ? scriptPath.slice(voiceDir.length + 1)
+      : scriptPath;
+
+    // Check if UV should be used
+    const useUv = process.env.VOICE_USE_UV !== "false";
+    const uvPath = useUv ? await this.findUvPath() : null;
+
+    if (useUv && uvPath) {
+      // Use uv run - automatically manages virtual environment
+      // uv run uses the project directory (where pyproject.toml is)
+      return {
+        cmd: [uvPath, "run", "python", scriptRelPath],
+        cwd: voiceDir,
+      };
+    }
+
+    // Check for virtual environment
+    const venvPython = this.findVenvPython(voiceDir);
+    if (venvPython) {
+      return {
+        cmd: [venvPython, scriptPath],
+        cwd: process.cwd(),
+      };
+    }
+
+    // Fallback to system Python
+    const pythonPath = process.env.PYTHON_PATH ?? "python3";
+    return {
+      cmd: [pythonPath, scriptPath],
+      cwd: process.cwd(),
+    };
+  }
+
+  /**
+   * Find UV executable in PATH
+   */
+  protected async findUvPath(): Promise<string | null> {
+    try {
+      // Use platform-appropriate command to find executable
+      const findCmd =
+        process.platform === "win32" ? ["where", "uv"] : ["which", "uv"];
+      const proc = Bun.spawn(findCmd, {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const exitCode = await proc.exited;
+      if (exitCode === 0) {
+        const stdout = await new Response(proc.stdout).text();
+        const path = stdout.trim().split("\n")[0]; // Take first result
+        if (path) {
+          // Verify the path exists
+          try {
+            accessSync(path, fsConstants.F_OK);
+            return path;
+          } catch {
+            return null;
+          }
+        }
+      }
+    } catch {
+      // UV not found or find command failed
+    }
+    return null;
+  }
+
+  /**
+   * Find Python executable in virtual environment
+   */
+  protected findVenvPython(voiceDir: string): string | null {
+    const venvPython =
+      process.platform === "win32"
+        ? join(voiceDir, ".venv", "Scripts", "python.exe")
+        : join(voiceDir, ".venv", "bin", "python");
+
+    try {
+      accessSync(venvPython, fsConstants.F_OK);
+      return venvPython;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Verify Python dependencies are installed
+   * Skip verification if using uv run (uv handles dependency checking)
+   */
+  protected async verifyDependencies(cmd: string[]): Promise<void> {
+    // Skip verification if using uv run (uv handles dependency checking)
+    if (cmd[0]?.endsWith("uv") && cmd[1] === "run") {
+      return;
+    }
+
+    try {
+      const proc = Bun.spawn(
+        [
+          ...cmd,
+          "-c",
+          `
+import sys
+try:
+    import faster_whisper
+    import piper
+    import silero_vad
+    import numpy
+    sys.exit(0)
+except ImportError as e:
+    print(f"Missing dependency: {e}", file=sys.stderr)
+    sys.exit(1)
+      `,
+        ],
+        {
+          stdout: "pipe",
+          stderr: "pipe",
+        }
+      );
+
+      const exitCode = await proc.exited;
+      if (exitCode !== 0) {
+        const stderr = await new Response(proc.stderr).text();
+        throw new Error(
+          "Python dependencies not installed.\n" +
+            "Install with: cd packages/voice && ./scripts/install-deps.sh\n" +
+            "Or use: cd packages/voice && uv sync\n" +
+            `Error: ${stderr.trim()}`
+        );
+      }
+    } catch (error) {
+      // If verification fails due to command execution error, log but don't fail
+      // (dependencies might still be available, just verification failed)
+      if (
+        error instanceof Error &&
+        error.message.includes("Python dependencies not installed")
+      ) {
+        throw error;
+      }
+      console.warn(
+        "[voice] Dependency verification failed:",
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  private setupEventHandlers(): void {
+    if (!this.process) return;
+
+    let buffer = "";
+
+    // Bun's Subprocess.stdout is a ReadableStream, not EventEmitter
+    if (this.process.stdout && typeof this.process.stdout !== "number") {
+      const reader = this.process.stdout.getReader();
+      const decoder = new TextDecoder();
+
+      // Read stream asynchronously
+      (async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const response = JSON.parse(line) as IPCResponse;
+                this.ipc.handleResponse(response);
+              } catch (error) {
+                console.warn(
+                  "[voice] Invalid JSON from process:",
+                  error instanceof Error ? error.message : String(error)
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(
+            "[voice] Stream read error:",
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+      })();
+    }
+
+    // Handle stderr
+    if (this.process.stderr && typeof this.process.stderr !== "number") {
+      const reader = this.process.stderr.getReader();
+      const decoder = new TextDecoder();
+
+      (async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const message = decoder.decode(value);
+            console.error("[voice] Process stderr:", message);
+          }
+        } catch {
+          // Ignore stderr read errors
+        }
+      })();
+    }
+
+    // Handle exit via exited promise
+    this.process.exited.then((code) => {
+      console.warn(`[voice] Process exited with code ${code}`);
+      this.process = null;
+      this.ipc.cancelAll();
+      if (!this.isShuttingDown) {
+        // Auto-restart on unexpected exit
+        setTimeout(() => {
+          this.start().catch((error) => {
+            console.error(
+              "[voice] Process restart failed:",
+              error instanceof Error ? error.message : String(error)
+            );
+          });
+        }, 1000);
+      }
+    });
+  }
+
+  private async waitForReady(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Process failed to become ready"));
+      }, 30_000);
+
+      const checkReady = (response: IPCResponse) => {
+        if (
+          response.type === "status" &&
+          (response.payload as { message?: string })?.message === "STT server ready"
+        ) {
+          clearTimeout(timeout);
+          resolve();
+        } else if (
+          response.type === "status" &&
+          (response.payload as { message?: string })?.message === "TTS server ready"
+        ) {
+          clearTimeout(timeout);
+          resolve();
+        } else if (response.type === "error") {
+          clearTimeout(timeout);
+          reject(
+            new Error(
+              ((response.payload as { message?: string })?.message) ??
+                "Process initialization failed"
+            )
+          );
+        }
+      };
+
+      // Listen for ready signal
+      const originalHandle = this.ipc.handleResponse.bind(this.ipc);
+      this.ipc.handleResponse = (response: IPCResponse) => {
+        checkReady(response);
+        originalHandle(response);
+      };
+    });
+  }
+
+  private startHealthCheck(): void {
+    this.healthCheckInterval = setInterval(async () => {
+      try {
+        await this.ping();
+        this.lastPing = Date.now();
+      } catch (error) {
+        console.warn(
+          "[voice] Health check failed:",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }, 30_000); // Every 30 seconds
+  }
+
+  async ping(): Promise<void> {
+    const request = this.ipc.createRequest("ping");
+    if (!this.process) {
+      throw new Error("Process not started");
+    }
+    await this.ipc.sendRequest(this.process, request, 2000);
+  }
+
+  async sendRequest(
+    request: IPCRequest,
+    timeoutMs?: number
+  ): Promise<IPCResponse> {
+    if (!this.process) {
+      throw new Error("Process not started");
+    }
+
+    this.requestCount++;
+    try {
+      return await this.ipc.sendRequest(this.process, request, timeoutMs);
+    } catch (error) {
+      this.errorCount++;
+      throw error;
+    }
+  }
+
+  getHealth(): ProcessHealth {
+    return {
+      isHealthy:
+        this.process !== null &&
+        this.lastPing !== null &&
+        Date.now() - this.lastPing < 60_000,
+      lastPing: this.lastPing,
+      requestCount: this.requestCount,
+      errorCount: this.errorCount,
+      uptime: this.startTime > 0 ? Date.now() - this.startTime : 0,
+    };
+  }
+
+  async shutdown(): Promise<void> {
+    this.isShuttingDown = true;
+
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+
+    if (this.process) {
+      try {
+        const request = this.ipc.createRequest("shutdown");
+        await this.ipc.sendRequest(this.process, request, 2000);
+      } catch {
+        // Ignore shutdown errors
+      }
+
+      this.process.kill();
+      this.process = null;
+    }
+
+    this.ipc.cancelAll();
+  }
+}
+
+/**
+ * Internal methods exposed for testing.
+ * Allows testing resolution logic without spawning actual processes.
+ */
+export const __internals = {
+  resolvePythonExecutable: (instance: ModelProcess) =>
+    (instance as unknown as { resolvePythonExecutable: () => Promise<{ cmd: string[]; cwd: string }> }).resolvePythonExecutable.bind(instance),
+  findUvPath: (instance: ModelProcess) =>
+    (instance as unknown as { findUvPath: () => Promise<string | null> }).findUvPath.bind(instance),
+  findVenvPython: (instance: ModelProcess) =>
+    (instance as unknown as { findVenvPython: (voiceDir: string) => string | null }).findVenvPython.bind(instance),
+  verifyDependencies: (instance: ModelProcess) =>
+    (instance as unknown as { verifyDependencies: (cmd: string[]) => Promise<void> }).verifyDependencies.bind(instance),
+};

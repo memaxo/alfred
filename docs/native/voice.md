@@ -9,8 +9,17 @@
 - Ship documentation, API tickets, and UX specs that unblock phased implementation across Expo (iOS/Android) and CarPlay.
 
 ## Current State
-- `apps/native` ships no audio capture, playback, or streaming primitives; authentication and tRPC wiring exist via `auth-client.ts` and `utils/trpc.ts`. 
-- Web already prototypes `use-voice-capture.ts` and large-button controls under `apps/web/src/hooks` and `apps/web/src/components/drive-mode.tsx`, giving us interaction patterns and zero-allocation goals to mirror natively.
+
+- ✅ `apps/native` implements audio capture (`ExpoCapture`), playback (`playBase64`), and streaming primitives via `@alfred/voice` shared core
+- ✅ Authentication and tRPC wiring exist via `auth-client.ts` and `utils/trpc.ts`
+- ✅ Voice session management via `useVoiceSessionNative` hook wrapping `@alfred/voice/session`
+- ✅ Background queue system with AsyncStorage persistence and retry logic
+- ✅ Background task registration for queue draining (2-minute interval)
+- ✅ Foreground service support for Android (`ensureForegroundService`)
+- ✅ Drive mode screen with "Hold to Talk" interface
+- ✅ Local voice models support (Faster-Whisper + Piper TTS) via `VOICE_PROVIDER=local`
+- ⏳ CarPlay integration (plugin exists but disabled)
+- ⏳ Full bidirectional streaming (current implementation supports session management, audio chunk processing requires additional work)
 
 ## Shared Core Strategy
 - Introduce `packages/voice` to hold platform-neutral hooks (`useVoiceSession`), stream event mappers, and audio buffer transformers; depend only on `@alfred/type` and `@alfred/api` client facades to respect import direction.
@@ -39,12 +48,39 @@
 - Default to voice prompts instead of on-screen text whenever CarPlay is connected; Siri-driven confirmations keep interactions hands-free. citeturn7search2
 - Add an always-visible status banner (`thinking`, `responding`, `muted`) that maps to the cognitive state machine, satisfying the single-active-state rule and helping drivers anticipate system behavior.
 
-## Phased Rollout
-1. **Foundation (Week 1–2):** Ship `packages/voice` scaffolding, Expo audio session helper, permission flows, and local file persistence; land tRPC contract stubs with mocked audio payloads.
-2. **Foreground Streaming (Week 3–4):** Integrate real STT/TTS streaming via `voice.stream`, wire background audio modes, and enforce telemetry budgets; add regression tests under `apps/native/__tests__/voice`.
-3. **Background Resilience (Week 5–6):** Add foreground service notification, TaskManager tasks for resume, and retry logic; document fallback when OS terminates the process.
-4. **CarPlay Beta (Week 7–9):** Integrate `react-native-carplay`, map templates, implement Siri intents, and capture UX feedback from supervised drives.
-5. **Stabilization (Week 10+):** Harden error handling, expand metrics dashboards, and prepare App Store CarPlay entitlement submission.
+## Implementation Status
+
+### Completed (Phase 1-2)
+- ✅ `packages/voice` shared core with platform adapters
+- ✅ Expo audio session helper (`configureAudioSession`)
+- ✅ Permission flows (microphone, speech recognition)
+- ✅ Local file persistence (AsyncStorage queue)
+- ✅ tRPC voice procedures (`voice.sttTranscribe`, `voice.ttsSynthesize`, `voice.stream`)
+- ✅ Background audio modes configured in `app.json`
+- ✅ Foreground service for Android
+- ✅ Queue system with retry logic
+- ✅ Local models support (Faster-Whisper + Piper TTS)
+
+### In Progress (Phase 3)
+- ⏳ Full bidirectional streaming (session management complete, audio chunk processing pending)
+- ⏳ Enhanced error recovery and reconnection
+- ⏳ Metrics dashboard expansion
+
+### Pending (Phase 4-5)
+- ⏳ CarPlay integration (`react-native-carplay` plugin exists but disabled)
+- ⏳ Siri intents and CarPlay templates
+- ⏳ App Store CarPlay entitlement submission
+
+## Local Models
+
+The voice system supports local models (Faster-Whisper for STT, Piper TTS for TTS) when `VOICE_PROVIDER=local`. See `docs/voice/local-models.md` for setup instructions.
+
+Key features:
+- Zero API costs
+- Complete privacy (no data leaves server)
+- Lower latency (no network round-trip)
+- Offline operation
+- Process pools with health checks and auto-restart
 
 ## Validation & Follow-up
 - Review this plan with product, safety, and legal stakeholders; log resulting work in Linear (one ticket per phase plus CarPlay entitlement tracking).

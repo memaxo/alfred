@@ -4,7 +4,7 @@ import {
   toKnowledge,
   type KnowledgeEntry,
 } from "@alfred/knowledge/extractor";
-import { fact, knowledgeHash } from "@alfred/knowledge/hypergraph";
+import { createHash } from "node:crypto";
 
 type NodeSeed = {
   resource: string;
@@ -25,6 +25,26 @@ type EdgeSeed = {
 
 function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
+}
+
+function reasoningNodeHash(
+  resource: string,
+  executionId: string | undefined,
+  index: number,
+  timestamp: number,
+  text: string
+): string {
+  const hash = createHash("sha256");
+  hash.update(resource);
+  hash.update("|");
+  hash.update(executionId ?? "unknown");
+  hash.update("|");
+  hash.update(index.toString());
+  hash.update("|");
+  hash.update(timestamp.toString());
+  hash.update("|");
+  hash.update(text);
+  return hash.digest("hex");
 }
 
 function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
@@ -177,17 +197,18 @@ export async function persistReasoning(
   }
 
   const allEntries: KnowledgeEntry[] = [];
+  const executionKey = context?.executionId ?? context?.threadId ?? resource;
 
   for (const trace of traces) {
     const extraction = extractReasoning(trace.text, {
       threadId: context?.threadId,
-      source: `reasoning:${context?.executionId ?? "unknown"}`,
+      source: `reasoning:${executionKey}`,
     });
 
     const entries = toKnowledge(extraction);
     const enriched = enrichReasoningContext(entries, {
       threadId: context?.threadId,
-      sessionId: context?.executionId,
+      sessionId: executionKey,
       timestamp: trace.timestamp,
     });
 
@@ -201,51 +222,94 @@ export async function persistReasoning(
   try {
     await persistKnowledge(resource, allEntries);
 
-    if (traces.length > 1) {
-      const nodeSeeds: NodeSeed[] = traces.map((trace, index) => ({
+    if (traces.length === 0) {
+      return;
+    }
+
+    const nodeSeeds: NodeSeed[] = traces.map((trace, index) => {
+      const hash = reasoningNodeHash(
         resource,
-        hash: knowledgeHash(
-          fact(trace.text, 0.8, "reasoning-trace")
-        ),
+        context?.executionId,
+        index,
+        trace.timestamp,
+        trace.text
+      );
+
+      return {
+        resource,
+        hash,
         kind: "reasoning",
         label: trace.text.substring(0, 100),
         properties: {
           timestamp: trace.timestamp,
           index,
+          sequenceIndex: index,
           threadId: context?.threadId,
-          executionId: context?.executionId,
+          executionId: executionKey,
           auto: context?.auto,
         },
-      }));
+      };
+    });
 
-      const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
-      const nodeMap = await upsertNodes(nodeSeeds as any);
-      const nodeList = Array.from(nodeMap.values());
+    for (let i = 0; i < nodeSeeds.length; i++) {
+      const current = nodeSeeds[i];
+      if (!current) continue;
+      const properties = (current.properties ??= {});
+      const previous = nodeSeeds[i - 1];
+      const next = nodeSeeds[i + 1];
+      if (previous) {
+        (properties as Record<string, unknown>).previousHash = previous.hash;
+      }
+      if (next) {
+        (properties as Record<string, unknown>).nextHash = next.hash;
+      }
+    }
 
-      if (nodeList.length > 1) {
-        const edgeSeeds: EdgeSeed[] = [];
-        for (let i = 0; i < nodeList.length - 1; i++) {
-          const current = nodeList[i];
-          const next = nodeList[i + 1];
-          if (!current || !next) continue;
-          const t0 = traces[i]?.timestamp ?? 0;
-          const t1 = traces[i + 1]?.timestamp ?? t0;
-          edgeSeeds.push({
-            resource,
-            hash: `reasoning-seq-${current.hash}-${next.hash}`,
-            fromId: current.id,
-            toId: next.id,
-            kind: "precedes",
-            weight: 1,
-            metadata: {
-              timeDelta: Number(t1) - Number(t0),
-            },
-          });
-        }
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
+    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const hashToRow = new Map<string, { id: string; hash: string }>();
+    for (const row of nodeMap.values()) {
+      hashToRow.set(row.hash, { id: row.id, hash: row.hash });
+    }
 
-        if (edgeSeeds.length > 0) {
-          await upsertEdges(edgeSeeds as any);
-        }
+    if (nodeSeeds.length > 1) {
+      const edgeSeeds: EdgeSeed[] = [];
+      for (let i = 0; i < nodeSeeds.length - 1; i++) {
+        const currentSeed = nodeSeeds[i];
+        const nextSeed = nodeSeeds[i + 1];
+        if (!currentSeed || !nextSeed) continue;
+        const currentRow = hashToRow.get(currentSeed.hash);
+        const nextRow = hashToRow.get(nextSeed.hash);
+        if (!currentRow || !nextRow) continue;
+
+        const delta =
+          (traces[i + 1]?.timestamp ?? traces[i]?.timestamp ?? 0) -
+          (traces[i]?.timestamp ?? 0);
+          const edgeHash = createHash("sha256")
+          .update(resource)
+          .update("|")
+          .update(currentSeed.hash)
+          .update("|")
+          .update(nextSeed.hash)
+          .digest("hex");
+
+        edgeSeeds.push({
+          resource,
+          hash: edgeHash,
+          fromId: currentRow.id,
+          toId: nextRow.id,
+          kind: "precedes",
+          weight: 1,
+          metadata: {
+            timeDelta: delta,
+            fromIndex: currentSeed.properties?.sequenceIndex ?? i,
+            toIndex: nextSeed.properties?.sequenceIndex ?? i + 1,
+          },
+        });
+      }
+
+      if (edgeSeeds.length > 0) {
+        await upsertEdges(edgeSeeds as any);
       }
     }
   } catch (err) {

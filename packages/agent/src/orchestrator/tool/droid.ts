@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import {
   accessSync,
   constants as fsConstants,
@@ -204,51 +203,79 @@ async function enforcePolicy(input: DroidToolInput) {
 }
 
 function streamStdout(
-  child: ReturnType<typeof spawn>,
+  proc: ReturnType<typeof Bun.spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
   accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
 ) {
-  child.stdout?.on("data", (chunk) => {
-    const text = chunk.toString();
-    accumulator.capturedBytes += Buffer.byteLength(text);
+  if (!proc.stdout || typeof proc.stdout === "number") return;
 
-    if (!accumulator.truncated) {
-      if (accumulator.capturedBytes <= OUTPUT_CAP_BYTES) {
-        accumulator.stdout += text;
-      } else {
-        accumulator.truncated = true;
-      }
-    }
+  const reader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
 
-    if (input.out === "debug") {
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      for (const line of lines) {
-        try {
-          const parsed = JSON.parse(line);
-          void Promise.resolve(
-            writer?.write?.({ type: "droid", chunk: parsed })
-          ).catch(() => {});
-        } catch {
-          void Promise.resolve(
-            writer?.write?.({ type: "stdout", text: line })
-          ).catch(() => {});
+  (async () => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value);
+        accumulator.capturedBytes += Buffer.byteLength(text);
+
+        if (!accumulator.truncated) {
+          if (accumulator.capturedBytes <= OUTPUT_CAP_BYTES) {
+            accumulator.stdout += text;
+          } else {
+            accumulator.truncated = true;
+          }
+        }
+
+        if (input.out === "debug") {
+          const lines = text.split(/\r?\n/).filter(Boolean);
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line);
+              void Promise.resolve(
+                writer?.write?.({ type: "droid", chunk: parsed })
+              ).catch(() => {});
+            } catch {
+              void Promise.resolve(
+                writer?.write?.({ type: "stdout", text: line })
+              ).catch(() => {});
+            }
+          }
+        } else {
+          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+            () => {}
+          );
         }
       }
-    } else {
-      void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
-        () => {}
-      );
+    } catch {
+      // Ignore stream read errors
     }
-  });
+  })();
 }
 
-function streamStderr(child: ReturnType<typeof spawn>, writer: ToolWriter) {
-  child.stderr?.on("data", (chunk) => {
-    void Promise.resolve(
-      writer?.write?.({ type: "stderr", text: chunk.toString() })
-    ).catch(() => {});
-  });
+function streamStderr(proc: ReturnType<typeof Bun.spawn>, writer: ToolWriter) {
+  if (!proc.stderr || typeof proc.stderr === "number") return;
+
+  const reader = proc.stderr.getReader();
+  const decoder = new TextDecoder();
+
+  (async () => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        void Promise.resolve(
+          writer?.write?.({ type: "stderr", text: decoder.decode(value) })
+        ).catch(() => {});
+      }
+    } catch {
+      // Ignore stderr read errors
+    }
+  })();
 }
 
 export const toolDroid = {
@@ -265,10 +292,12 @@ export const toolDroid = {
     const command = process.env.DROID_BIN?.trim() || "droid";
     const executable = resolveExecutable(command);
 
-    const child = spawn(executable, flags, {
+    const proc = Bun.spawn([executable, ...flags], {
       cwd,
       env: pickEnv(input.env),
-      stdio: ["ignore", "pipe", "pipe"],
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: "ignore",
     });
 
     const stopDurationTimer = startDroidExecTimer(input.auto);
@@ -276,7 +305,7 @@ export const toolDroid = {
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
     const timer = setNodeTimeout(() => {
       try {
-        child.kill("SIGKILL");
+        proc.kill("SIGKILL");
       } catch {
         // noop
       }
@@ -294,19 +323,20 @@ export const toolDroid = {
       truncated: false,
     };
 
-    streamStdout(child, input, writer, accumulator);
-    streamStderr(child, writer);
+    streamStdout(proc, input, writer, accumulator);
+    streamStderr(proc, writer);
 
-    const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on("error", (err) => {
-        clearNodeTimeout(timer);
-        reject(err);
-      });
-      child.on("close", (code) => resolve(code ?? 0));
-    }).finally(() => {
+    let exitCode = 0;
+    try {
+      exitCode = await proc.exited;
+    } catch (error) {
       clearNodeTimeout(timer);
       stopDurationTimer();
-    });
+      throw error;
+    } finally {
+      clearNodeTimeout(timer);
+      stopDurationTimer();
+    }
 
     recordDroidExecRun(input.auto, exitCode);
 

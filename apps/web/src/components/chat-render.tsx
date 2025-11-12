@@ -30,6 +30,7 @@ function isPlanData(data: unknown): data is {
 } {
   if (!data || typeof data !== "object") return false;
   const obj = data as Record<string, unknown>;
+  const validStatuses = ["pending", "running", "completed", "error"];
   return (
     typeof obj.requirement === "string" &&
     Array.isArray(obj.tasks) &&
@@ -38,7 +39,9 @@ function isPlanData(data: unknown): data is {
         task &&
         typeof task === "object" &&
         typeof (task as Record<string, unknown>).id === "string" &&
-        typeof (task as Record<string, unknown>).title === "string"
+        typeof (task as Record<string, unknown>).title === "string" &&
+        typeof (task as Record<string, unknown>).status === "string" &&
+        validStatuses.includes((task as Record<string, unknown>).status as string)
     )
   );
 }
@@ -51,10 +54,12 @@ function isTaskData(data: unknown): data is {
 } {
   if (!data || typeof data !== "object") return false;
   const obj = data as Record<string, unknown>;
+  const validStatuses = ["pending", "running", "completed", "error"];
   return (
     typeof obj.id === "string" &&
     typeof obj.title === "string" &&
-    typeof obj.status === "string"
+    typeof obj.status === "string" &&
+    validStatuses.includes(obj.status)
   );
 }
 
@@ -86,10 +91,13 @@ function isToolData(data: unknown): data is {
 } {
   if (!data || typeof data !== "object") return false;
   const obj = data as Record<string, unknown>;
+  const validStatuses = ["pending", "running", "completed", "error"];
   return (
     typeof obj.name === "string" &&
     typeof obj.args === "object" &&
-    obj.args !== null
+    obj.args !== null &&
+    typeof obj.status === "string" &&
+    validStatuses.includes(obj.status)
   );
 }
 
@@ -172,16 +180,17 @@ export function renderPart(
         typeof obj.args === "object" &&
         obj.args !== null
       ) {
-        const status =
-          typeof obj.status === "string"
-            ? (obj.status as "pending" | "running" | "completed" | "error")
-            : "completed";
+        // Validate status to prevent masking errors
+        const validStatuses = ["pending", "running", "completed", "error"];
+        if (typeof obj.status !== "string" || !validStatuses.includes(obj.status)) {
+          return null; // Don't render tool with invalid/missing status
+        }
         return (
           <Tool
             name={obj.name}
             args={obj.args as Record<string, unknown>}
             result={obj.result}
-            status={status}
+            status={obj.status as "pending" | "running" | "completed" | "error"}
           />
         );
       }

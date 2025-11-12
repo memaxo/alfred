@@ -8,7 +8,7 @@ import { redis as defaultRedis, RedisClient } from "bun";
 import {
   runRegistryDispatchDurationSeconds,
   runRegistryEventsTotal,
-} from "./metrics";
+} from "@alfred/api/metrics";
 import { logger } from "./utils/logger";
 
 export type ResumePayload = {

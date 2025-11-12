@@ -8,6 +8,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -26,6 +27,7 @@ const workflowStreamEventsTotalMock = {
 };
 
 mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
   workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
 }));
@@ -83,16 +85,20 @@ describe("workflow router", () => {
       });
 
       expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
-      expect(workflowRepoMocks.createRun).toHaveBeenCalledWith({
-        id: mockRunId,
-        userId: "test-user",
-        workflowId: "plan",
-        status: "running",
-        inputData: {
-          requirement: "test requirement",
-          auto: "low",
-        },
-      });
+      expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockRunId,
+          userId: "test-user",
+          workflowId: "plan",
+          status: "running",
+          inputData: expect.objectContaining({
+            requirement: "test requirement",
+            auto: "low",
+            executionId: mockRunId,
+            reasoningSince: expect.any(Number),
+          }),
+        })
+      );
       expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
       expect(result).toMatchObject({
         runId: mockRunId,
