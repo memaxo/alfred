@@ -2,6 +2,28 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
 import type { WorkflowEvent } from "@alfred/type";
+// Lazy metrics loader to avoid heavy deps during unit tests
+type RunnerCounters = {
+  runnerStepsTotal: { inc: (labels: { phase: string; outcome: string }) => void };
+  runnerErrorsTotal: { inc: (labels: { phase: string; reason: string }) => void };
+};
+let metricsRef: RunnerCounters | null = null;
+async function metrics(): Promise<RunnerCounters> {
+  if (metricsRef) return metricsRef;
+  try {
+    const m = await import("@alfred/api/metrics");
+    metricsRef = {
+      runnerStepsTotal: m.runnerStepsTotal,
+      runnerErrorsTotal: m.runnerErrorsTotal,
+    };
+  } catch {
+    metricsRef = {
+      runnerStepsTotal: { inc: () => {} },
+      runnerErrorsTotal: { inc: () => {} },
+    };
+  }
+  return metricsRef;
+}
 
 export type RunPlanInput = {
   requirement: string;
@@ -64,6 +86,43 @@ function createRequireScopeEvent(
   return { type: "require-scope", scopes, event } as WorkflowEvent;
 }
 
+type WorkflowPhase = "scan" | "plan" | "act" | "report";
+
+type PhaseConfig = {
+  name: WorkflowPhase;
+  timeoutMs: number;
+};
+
+async function* executePhaseWithTimeout(
+  phase: WorkflowPhase,
+  timeoutMs: number,
+  generator: () => AsyncGenerator<WorkflowEvent, void, void>
+): AsyncGenerator<WorkflowEvent, void, void> {
+  const start = Date.now();
+  (await metrics()).runnerStepsTotal.inc({ phase, outcome: "start" });
+  yield { type: "step-start", phase } as any;
+
+  try {
+    for await (const evt of generator()) {
+      if (Date.now() - start > timeoutMs) {
+        (await metrics()).runnerStepsTotal.inc({ phase, outcome: "timeout" });
+        (await metrics()).runnerErrorsTotal.inc({ phase, reason: "timeout" });
+        yield createErrorEvent("step_timeout");
+        return;
+      }
+      yield evt;
+    }
+    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "complete" });
+    yield { type: "step-complete", phase } as any;
+  } catch (error) {
+    (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
+    (await metrics()).runnerErrorsTotal.inc({ phase, reason: error instanceof Error ? error.name : "error" });
+    yield createErrorEvent(
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+}
+
 /**
  * Minimal, Mastra-free runner that emits WorkflowEvent chunks.
  *
@@ -101,34 +160,23 @@ export function runPlanV6(
 
   async function* generator(): AsyncGenerator<WorkflowEvent, void, void> {
     yield createRunEvent(runId);
+
     yield createNoticeEvent(`Planning started for ${input.requirement}`);
     yield createProgressEvent(5, "initializing");
 
-    // Simulate context preparation if enabled
+    // Phase: scan
+    const scanPhase: PhaseConfig = { name: "scan", timeoutMs: stepTimeoutMs };
     if (input.context?.enable !== false) {
-      if (cancelled) return;
-      if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-        yield createErrorEvent("workflow_timeout");
-        return;
-      }
-
-      const stepStart = Date.now();
-      yield createProgressEvent(10, "analyzing requirement");
-      await delay(50);
-      if (cancelled) return;
-      if (Date.now() - stepStart > stepTimeoutMs) {
-        yield createErrorEvent("step_timeout");
-        return;
-      }
-      if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-        yield createErrorEvent("workflow_timeout");
-        return;
-      }
-      yield createContextEvent(
-        "scan",
-        "Scanning repository and web context (placeholder)"
-      );
-      yield createProgressEvent(45, "context prepared");
+      yield* executePhaseWithTimeout(scanPhase.name, scanPhase.timeoutMs, async function* () {
+        if (cancelled) return;
+        yield createProgressEvent(10, "analyzing requirement");
+        await delay(50);
+        if (cancelled) return;
+        yield createContextEvent("scan", "Scanning repository and web context (placeholder)");
+        yield createProgressEvent(30, "scan_complete");
+      });
+    } else {
+      yield { type: "step-skip", phase: scanPhase.name } as any;
     }
 
     // If medium/high autonomy, request elevated scopes
@@ -180,13 +228,57 @@ export function runPlanV6(
       yield createErrorEvent("workflow_timeout");
       return;
     }
-    yield createProgressEvent(80, "validating plan");
-    await delay(50);
+    // Phase: plan
+    const planPhase: PhaseConfig = { name: "plan", timeoutMs: stepTimeoutMs };
+    yield* executePhaseWithTimeout(planPhase.name, planPhase.timeoutMs, async function* () {
+      // Emit an assistant message with a draft plan (for UI replay normalization)
+      yield { type: "assistant", text: `Draft plan for: ${input.requirement}` } as any;
+      yield createProgressEvent(60, "plan_drafted");
+    });
+
+    if (cancelled) return;
+    // Phase: act
+    const actPhase: PhaseConfig = { name: "act", timeoutMs: stepTimeoutMs };
+    yield* executePhaseWithTimeout(actPhase.name, actPhase.timeoutMs, async function* () {
+      // Simulate one tool call and result; IDs allow UI correlation
+      const tcId = randomUUID();
+      yield { type: "tool-call", id: tcId, toolName: "echo", args: { text: "hello" } } as any;
+      
+      // TODO: When tool execution integrated, emit action activities here
+      // Example:
+      // if (input.linear) {
+      //   await emitLinearActivity("action", {
+      //     sessionId: input.linear.sessionId,
+      //     space: input.linear.space,
+      //     authz: input.linear.authz,
+      //     title: `Execute ${toolCall.name}`,
+      //     parameter: JSON.stringify(toolCall.input),
+      //     result: JSON.stringify(toolCall.output),
+      //     ephemeral: true, // Use ephemeral for intermediate tool calls
+      //   }).catch((error) => {
+      //     logger.warn("linear_action_activity_failed", { runId, error });
+      //   });
+      // }
+      
+      await delay(20);
+      yield { type: "tool-result", id: tcId, toolName: "echo", result: { text: "hello" } } as any;
+      yield createProgressEvent(85, "act_complete");
+    });
+
+    if (cancelled) return;
+    // Phase: report
+    const reportPhase: PhaseConfig = { name: "report", timeoutMs: stepTimeoutMs };
+    yield* executePhaseWithTimeout(reportPhase.name, reportPhase.timeoutMs, async function* () {
+      yield { type: "assistant", text: "Report complete." } as any;
+      yield createProgressEvent(95, "report_complete");
+    });
+
     if (cancelled) return;
     if (Date.now() - workflowStartTime > workflowTimeoutMs) {
       yield createErrorEvent("workflow_timeout");
       return;
     }
+
     yield createProgressEvent(100, "workflow_completed");
   }
 

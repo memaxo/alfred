@@ -2,8 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs } from "@trpc/server";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { UIMessage } from "@alfred/type/stream";
+import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
 import { RouteError } from "@/components/route-error";
+import { Code } from "@/components/code";
+import { Plan } from "@/components/plan";
+import { Task } from "@/components/task";
+import { Tool } from "@/components/tool";
 import { getToolToken } from "@/lib/token";
+import { parseStructuredMessage } from "@/utils/message-parser";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
@@ -51,53 +58,67 @@ function OrchestratorRunRoute() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
   const subscriptionRef = useRef<null | (() => void)>(null);
   const logIdRef = useRef(0);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const scopeInFlightRef = useRef<Set<ScopeEvent>>(new Set());
   const resumeMutation = trpc.workflow.resume.useMutation();
-  const eventsQuery = trpc.workflow.events.useQuery(
-    { runId: runId ?? "" },
+  const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const hasNewer = page > 0 && order === "desc"; // when newest-first, pages > 0 have newer pages
+  const [oldestEventId, setOldestEventId] = useState<string | null>(null);
+  const [newestEventId, setNewestEventId] = useState<string | null>(null);
+  const eventsQuery = trpc.workflow.replay.useQuery(
+    { runId: runId ?? "", eventType: "ui-message", order, page, pageSize: 200, includeTotal: false },
     {
       enabled: !!runId,
-      // hydrate logs from persisted events (newest first)
+      // hydrate messages from persisted UI-message events
       onSuccess(data) {
-        if (!Array.isArray(data)) return;
-        // Prepend older events first so they appear in order
-        for (let i = data.length - 1; i >= 0; i--) {
-          const row = data[i] as any;
-          const evt = (row?.eventData ?? row) as Record<string, unknown> | null;
-          const type = (evt?.type as string | undefined) ?? "notice";
-          switch (type) {
-            case "progress": {
-              const msg =
-                typeof evt?.message === "string"
-                  ? (evt!.message as string)
-                  : "progress";
-              appendLog("progress", msg);
-              break;
+        if (!data || !Array.isArray((data as any).items)) return;
+        const items = (data as any).items as Array<any>;
+        const newSeen = new Set<string>();
+        for (const row of items) {
+          const evtId = typeof row?.eventId === "string" ? row.eventId : null;
+          if (evtId && !seenEventIds.has(evtId)) {
+            newSeen.add(evtId);
+            const eventType = typeof row?.eventType === "string" ? (row.eventType as string) : "";
+            const eventData = row?.eventData as unknown;
+            let uiMessages: UIMessage[] | null = null;
+            if (eventType === "ui-message" && Array.isArray(eventData)) {
+              uiMessages = eventData as UIMessage[];
+            } else {
+              uiMessages = eventToUiMessages({ type: eventType, ...(eventData as any) } as any) ?? null;
             }
-            case "notice": {
-              const msg =
-                typeof evt?.message === "string"
-                  ? (evt!.message as string)
-                  : "notice";
-              appendLog("notice", msg);
-              break;
-            }
-            case "stdout":
-            case "stderr": {
-              const text = getTextPayload(evt);
-              if (text) appendLog(type, text);
-              break;
-            }
-            default: {
-              appendLog(type, JSON.stringify(evt));
-              break;
+            if (uiMessages && uiMessages.length > 0) {
+              setMessages((prev) => {
+                const existingIds = new Set(prev.map((m) => m.id));
+                const newMessages = uiMessages.filter((m) => m.id && !existingIds.has(m.id));
+                return order === "desc" ? [...newMessages, ...prev] : [...prev, ...newMessages];
+              });
             }
           }
         }
+        if (newSeen.size > 0) {
+          setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
+        }
+        setHasMore(Boolean((data as any).hasMore));
+        // Track boundaries for future UX improvements
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (first?.eventId && last?.eventId) {
+          if (order === "desc") {
+            setNewestEventId(first.eventId);
+            setOldestEventId(last.eventId);
+          } else {
+            setOldestEventId(first.eventId);
+            setNewestEventId(last.eventId);
+          }
+        }
       },
+      keepPreviousData: true,
     }
   );
 
@@ -229,7 +250,27 @@ function OrchestratorRunRoute() {
 
   function handleChunk(chunk: unknown) {
     const event = chunk as Record<string, unknown> | null;
+    const evtId = typeof event?.eventId === "string" ? (event.eventId as string) : null;
+    if (evtId && seenEventIds.has(evtId)) {
+      return; // dedupe
+    }
+    if (evtId) {
+      setSeenEventIds((prev) => {
+        const copy = new Set(prev);
+        copy.add(evtId);
+        return copy;
+      });
+    }
     const type = (event?.type as string | undefined) ?? "unknown";
+    // For both normalized UI-message events and raw assistant/tool events, try to render UI messages
+    const maybeUiMessages = eventToUiMessages(event as any);
+    if (maybeUiMessages && maybeUiMessages.length > 0) {
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMessages = maybeUiMessages.filter((m) => m.id && !existingIds.has(m.id));
+        return [...prev, ...newMessages];
+      });
+    }
 
     switch (type) {
       case "run": {
@@ -436,7 +477,7 @@ function OrchestratorRunRoute() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
+    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
       <header className="space-y-2">
         <h1 className="font-semibold text-2xl">Orchestrator Run Viewer</h1>
         <p className="text-muted-foreground text-sm">
@@ -610,32 +651,137 @@ function OrchestratorRunRoute() {
         </div>
       ) : null}
 
-      <section className="space-y-2">
-        <header className="flex items-center justify-between">
+      <div className="grid gap-6 md:grid-cols-2">
+        <section className="space-y-2">
+          <header className="flex items-center justify-between">
+            <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+              Stream Output
+            </h2>
+          </header>
+          <div
+            className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-sm"
+            ref={logContainerRef}
+          >
+            {logs.length === 0 ? (
+              <p className="text-muted-foreground">
+                No output yet. Start a run to view logs.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {logs.map((entry) => (
+                  <li key={entry.id}>
+                    <span className="text-muted-foreground">[{entry.type}]</span>{" "}
+                    {entry.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <header className="flex items-center justify-between">
           <h2 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
-            Stream Output
+            UI Messages (replay + live)
           </h2>
-        </header>
-        <div
-          className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 font-mono text-sm"
-          ref={logContainerRef}
-        >
-          {logs.length === 0 ? (
-            <p className="text-muted-foreground">
-              No output yet. Start a run to view logs.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {logs.map((entry) => (
-                <li key={entry.id}>
-                  <span className="text-muted-foreground">[{entry.type}]</span>{" "}
-                  {entry.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs disabled:opacity-50"
+              disabled={!hasNewer}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              type="button"
+              title="Load newer"
+            >
+              Load newer
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs disabled:opacity-50"
+              disabled={!hasMore}
+              onClick={() => setPage((p) => p + 1)}
+              type="button"
+              title="Load older"
+            >
+              Load older
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+              onClick={() => {
+                setOrder("desc");
+                setPage(0);
+              }}
+              type="button"
+              title="Jump to newest"
+            >
+              Jump to newest
+            </button>
+            <button
+              className="inline-flex h-8 items-center justify-center rounded border border-input px-3 text-xs"
+              onClick={() => {
+                setPage(0);
+                setOrder((o) => (o === "desc" ? "asc" : "desc"));
+              }}
+              type="button"
+              title="Toggle order"
+            >
+              Order: {order === "desc" ? "Newest first" : "Oldest first"}
+            </button>
+          </div>
+          </header>
+          <div className="h-80 w-full overflow-y-auto rounded border border-input bg-background p-3 space-y-4">
+            {messages.length === 0 ? (
+              <p className="text-muted-foreground">No messages persisted.</p>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => {
+                  const parsed = parseStructuredMessage(message);
+                  return (
+                    <div key={message.id ?? parsed.id} className="space-y-2">
+                      {parsed.plans.map((plan, idx) => (
+                        <Plan key={`plan-${idx}`} plan={plan} />
+                      ))}
+                      {parsed.tasks.map((task) => (
+                        <Task key={task.id} {...task} />
+                      ))}
+                      {parsed.tools.map((tool, idx) => (
+                        <Tool
+                          key={`tool-${idx}`}
+                          name={tool.name}
+                          args={tool.args}
+                          result={tool.result}
+                          status={tool.status}
+                        />
+                      ))}
+                      {parsed.codes.map((code, idx) => (
+                        <Code
+                          key={`code-${idx}`}
+                          code={code.code}
+                          language={code.language}
+                        />
+                      ))}
+                      {parsed.plans.length === 0 &&
+                      parsed.tasks.length === 0 &&
+                      parsed.tools.length === 0 &&
+                      parsed.codes.length === 0 ? (
+                        <pre className="text-muted-foreground text-xs">
+                          {JSON.stringify(message, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
+}
+
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
 }

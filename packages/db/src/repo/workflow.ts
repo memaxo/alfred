@@ -18,6 +18,8 @@ export async function createRun(args: {
   stateData?: unknown;
   webhookUrl?: string | null;
   webhookSecret?: string | null;
+  linearSessionId?: string;
+  linearSpace?: string;
 }) {
   const [row] = await db
     .insert(workflowRuns)
@@ -30,6 +32,8 @@ export async function createRun(args: {
       stateData: args.stateData as any,
       webhookUrl: args.webhookUrl ?? null,
       webhookSecret: args.webhookSecret ?? null,
+      linearSessionId: args.linearSessionId ?? null,
+      linearSpace: args.linearSpace ?? null,
     })
     .returning();
   return row;
@@ -44,6 +48,8 @@ export async function updateRun(
     suspendedAt: Date | null;
     resumedAt: Date | null;
     completedAt: Date | null;
+    linearSessionId: string | null;
+    linearSpace: string | null;
   }>
 ) {
   const [row] = await db
@@ -65,6 +71,12 @@ export async function updateRun(
       ...(Object.hasOwn(patch, "completedAt")
         ? { completedAt: (patch.completedAt ?? null) as any }
         : {}),
+      ...(Object.hasOwn(patch, "linearSessionId")
+        ? { linearSessionId: (patch.linearSessionId ?? null) as any }
+        : {}),
+      ...(Object.hasOwn(patch, "linearSpace")
+        ? { linearSpace: (patch.linearSpace ?? null) as any }
+        : {}),
     })
     .where(eq(workflowRuns.id, runId))
     .returning();
@@ -77,11 +89,13 @@ export async function appendEvent(args: {
   eventData?: unknown;
   stepId?: string | null;
   timestamp?: Date;
+  eventId?: string; // Optional explicit event identity; DB default fills if omitted
 }) {
   const [row] = await db
     .insert(workflowEvents)
     .values({
       runId: args.runId,
+      eventId: args.eventId,
       eventType: args.eventType,
       eventData: (args.eventData ?? null) as any,
       stepId: args.stepId ?? null,
@@ -101,11 +115,59 @@ export async function listEvents(runId: string) {
   return rows;
 }
 
+export async function listEventsByType(runId: string, eventType: string) {
+  const rows = await db
+    .select()
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)))
+    .orderBy(workflowEvents.timestamp);
+  // Return oldest-first for replay consumers
+  return rows;
+}
+
+export async function listEventsByTypePaged(args: {
+  runId: string;
+  eventType: string;
+  page?: number;
+  pageSize?: number;
+  order?: "asc" | "desc";
+}) {
+  const page = Math.max(0, args.page ?? 0);
+  const pageSize = Math.min(Math.max(1, args.pageSize ?? 500), 2000);
+  const base = db
+    .select()
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, args.runId), eq(workflowEvents.eventType, args.eventType)))
+    .limit(pageSize)
+    .offset(page * pageSize);
+  const rows = await (args.order === "desc"
+    ? base.orderBy(desc(workflowEvents.timestamp))
+    : base.orderBy(workflowEvents.timestamp));
+  return rows;
+}
+
+export async function countEventsByType(runId: string, eventType: string) {
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(workflowEvents)
+    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)));
+  return Number(rows?.[0]?.count ?? 0);
+}
+
 export async function getRun(runId: string) {
   const [row] = await db
     .select()
     .from(workflowRuns)
     .where(eq(workflowRuns.id, runId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function findRunByLinearSession(sessionId: string) {
+  const [row] = await db
+    .select()
+    .from(workflowRuns)
+    .where(eq(workflowRuns.linearSessionId, sessionId))
     .limit(1);
   return row ?? null;
 }

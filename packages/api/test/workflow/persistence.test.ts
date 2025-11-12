@@ -245,4 +245,92 @@ describeFn("workflow persistence", () => {
       expect(replayed.length).toBe(events.length);
     });
   });
+
+  describe("listEventsByType", () => {
+    it("filters events by type", async () => {
+      const run = await workflowRepo.createRun({
+        userId: TEST_USER,
+        workflowId: "plan",
+      });
+
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "ui-message",
+        eventData: { content: "message 1" },
+      });
+
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "progress",
+        eventData: { pct: 50 },
+      });
+
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "ui-message",
+        eventData: { content: "message 2" },
+      });
+
+      const uiMessages = await (workflowRepo as any).listEventsByType(
+        run.id,
+        "ui-message"
+      );
+
+      expect(uiMessages).toHaveLength(2);
+      expect(uiMessages[0].eventType).toBe("ui-message");
+      expect(uiMessages[1].eventType).toBe("ui-message");
+    });
+
+    it("returns events in chronological order", async () => {
+      const run = await workflowRepo.createRun({
+        userId: TEST_USER,
+        workflowId: "plan",
+      });
+
+      const t1 = new Date("2024-01-01");
+      const t2 = new Date("2024-01-02");
+
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "ui-message",
+        timestamp: t2,
+      });
+
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "ui-message",
+        timestamp: t1,
+      });
+
+      const events = await (workflowRepo as any).listEventsByType(
+        run.id,
+        "ui-message"
+      );
+
+      expect(events[0].timestamp).toEqual(t1);
+      expect(events[1].timestamp).toEqual(t2);
+    });
+
+    it("accepts explicit eventId when appending", async () => {
+      const run = await workflowRepo.createRun({
+        userId: TEST_USER,
+        workflowId: "plan",
+      });
+
+      const customEventId = crypto.randomUUID();
+      await workflowRepo.appendEvent({
+        runId: run.id,
+        eventType: "ui-message",
+        eventId: customEventId,
+        eventData: { content: "test" },
+      });
+
+      const events = await (workflowRepo as any).listEventsByType(
+        run.id,
+        "ui-message"
+      );
+
+      expect(events[0].eventId).toBe(customEventId);
+    });
+  });
 });

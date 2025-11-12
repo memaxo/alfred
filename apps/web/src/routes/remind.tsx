@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useCallback, useMemo, useState } from "react";
+import { RemindPane, type RemindPaneItem } from "@alfred/ui";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaneLayout } from "@/components/pane-layout";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
@@ -91,16 +93,23 @@ function RemindRoute() {
     createReminder.mutate(input);
   };
 
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reminders</CardTitle>
-          <CardDescription>
-            Schedule reminders and track what&apos;s due.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+  const handleDelete = (id: string) => {
+    const input: DeleteReminderInput = { id };
+    deleteReminder.mutate(input);
+  };
+
+  const paneItems: RemindPaneItem[] = useMemo(
+    () =>
+      reminders.map((reminder) => ({
+        id: reminder.id,
+        title: reminder.title,
+        dueAt: reminder.due,
+        description: reminder.description ?? null,
+      })),
+    [reminders]
+  );
+
+  const createForm = (
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               disabled={createReminder.isPending}
@@ -130,61 +139,22 @@ function RemindRoute() {
               {createReminder.isPending ? "Saving…" : "Save reminder"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+  );
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming reminders</CardTitle>
-          <CardDescription>
-            Next 50 reminders sorted by due time.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isReminderLoading ? (
+  const paneComponent = isReminderLoading ? (
             <p className="text-muted-foreground text-sm">Loading…</p>
-          ) : reminders.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No reminders scheduled.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {reminders.map((reminder) => (
-                <li
-                  className="flex items-start justify-between gap-4 rounded-md border p-3 shadow-sm"
-                  key={reminder.id}
-                >
-                  <div>
-                    <h3 className="font-semibold text-base">
-                      {reminder.title}
-                    </h3>
-                    <p className="text-muted-foreground text-xs">
-                      Due {new Date(reminder.due).toLocaleString()}
-                    </p>
-                    {reminder.description ? (
-                      <p className="pt-1 text-muted-foreground text-sm">
-                        {reminder.description}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Button
-                    disabled={deleteReminder.isPending}
-                    onClick={() => {
-                      const input: DeleteReminderInput = { id: reminder.id };
-                      deleteReminder.mutate(input);
-                    }}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Delete
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+  ) : (
+    <RemindPane items={paneItems} onDelete={handleDelete} />
+  );
 
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
+      <PaneLayout
+        createForm={createForm}
+        description="Schedule reminders and track what's due."
+        paneComponent={paneComponent}
+        title="Reminders"
+      />
       <Card>
         <CardHeader>
           <CardTitle>Due now</CardTitle>

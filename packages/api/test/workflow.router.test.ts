@@ -8,6 +8,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -26,6 +27,7 @@ const workflowStreamEventsTotalMock = {
 };
 
 mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
   workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
 }));
@@ -83,16 +85,20 @@ describe("workflow router", () => {
       });
 
       expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
-      expect(workflowRepoMocks.createRun).toHaveBeenCalledWith({
-        id: mockRunId,
-        userId: "test-user",
-        workflowId: "plan",
-        status: "running",
-        inputData: {
-          requirement: "test requirement",
-          auto: "low",
-        },
-      });
+      expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockRunId,
+          userId: "test-user",
+          workflowId: "plan",
+          status: "running",
+          inputData: expect.objectContaining({
+            requirement: "test requirement",
+            auto: "low",
+            executionId: mockRunId,
+            reasoningSince: expect.any(Number),
+          }),
+        })
+      );
       expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
       expect(result).toMatchObject({
         runId: mockRunId,
@@ -315,6 +321,72 @@ describe("workflow router", () => {
 
       expect(workflowRepoMocks.listEvents).toHaveBeenCalledWith("test-run-id");
       expect(result).toEqual(mockEvents);
+    });
+  });
+
+  describe("replay", () => {
+    it("retrieves only ui-message events for a run", async () => {
+      const mockRunId = "test-run-id";
+      const mockEvents = [
+        {
+          id: "event-1",
+          runId: mockRunId,
+          eventId: "evt-1",
+          eventType: "ui-message",
+          eventData: { messages: [{ role: "assistant", content: "Hi" }] },
+          timestamp: new Date("2024-01-01"),
+        },
+        {
+          id: "event-2",
+          runId: mockRunId,
+          eventId: "evt-2",
+          eventType: "ui-message",
+          eventData: { messages: [{ role: "assistant", content: "Hello" }] },
+          timestamp: new Date("2024-01-02"),
+        },
+      ];
+
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
+
+      const result = await caller.workflow.replay({ runId: mockRunId });
+
+      expect(workflowRepoMocks.listEventsByTypePaged).toHaveBeenCalledWith({
+        runId: mockRunId,
+        eventType: "ui-message",
+        page: 0,
+        pageSize: 500,
+      });
+      expect(Array.isArray(result.items)).toBe(true);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].eventId).toBe("evt-1");
+      expect(result.items[0].eventType).toBe("ui-message");
+    });
+
+    it("supports custom event type filtering", async () => {
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue([]);
+      await caller.workflow.replay({ runId: "test-run-id", eventType: "progress" });
+      expect(workflowRepoMocks.listEventsByTypePaged).toHaveBeenCalledWith({
+        runId: "test-run-id",
+        eventType: "progress",
+        page: 0,
+        pageSize: 500,
+      });
+    });
+
+    it("returns events in chronological order", async () => {
+      const mockEvents = [
+        { eventId: "evt-1", timestamp: new Date("2024-01-01") },
+        { eventId: "evt-2", timestamp: new Date("2024-01-02") },
+      ];
+
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
+
+      const result = await caller.workflow.replay({
+        runId: "test-run-id",
+      });
+
+      expect(result.items[0].eventId).toBe("evt-1");
+      expect(result.items[1].eventId).toBe("evt-2");
     });
   });
 });

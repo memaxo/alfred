@@ -77,6 +77,30 @@ export function isDataStatusPart(
   return part.type === "data-status";
 }
 
+export function isDataPartNamed(
+  part: UIMessage["parts"][number],
+  name: string
+): part is Extract<UIMessage["parts"][number], { type: `data-${string}` }> & {
+  type: `data-${string}`;
+  data?: unknown;
+  id?: string;
+} {
+  return part.type === `data-${name}`;
+}
+
+export function extractStructuredData(
+  part: UIMessage["parts"][number]
+): unknown {
+  if (isDataPart(part)) {
+    const dataPart = part as { data?: unknown };
+    return dataPart.data;
+  }
+  if (isToolResultPart(part)) {
+    return part.output;
+  }
+  return null;
+}
+
 function extractMetadata(message: UIMessage): Record<string, unknown> {
   if (!message.metadata || typeof message.metadata !== "object") {
     return {};

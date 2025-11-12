@@ -13,6 +13,7 @@
     { "path": "../auth" },
     { "path": "../db" },
     { "path": "../policy" },
-    { "path": "../agent" }
+    { "path": "../agent" },
+    { "path": "../metrics" }
   ]
 }

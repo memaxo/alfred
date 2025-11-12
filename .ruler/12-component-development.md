@@ -67,6 +67,8 @@
     },
     ```
 
+11. **Component integration priority.** Prefer production-ready components over ad-hoc route implementations. If a component exists (e.g., `ChatContainer`), use it in routes rather than implementing similar functionality directly. Production components include error boundaries, action tracking, and other features that ad-hoc implementations may lack.
+
 ## Testing Expectations
 
 - Exercise render, interaction, empty, and error states with React Testing Library.

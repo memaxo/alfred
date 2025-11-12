@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import { ExpoCapture } from "./capture";
 import { configureAudioSession } from "./config";
 import { playBase64 } from "./play";
+import { enqueue, type PendingItem } from "./queue";
 
 interface MutationAdapter {
   mutation<TInput, TOutput>(path: string, input: TInput): Promise<TOutput>;
@@ -65,10 +66,22 @@ function createSession(client: VoiceClient): VoiceSession {
 }
 
 export function useVoiceSessionNative(trpc: unknown) {
+  const captureRef = useMemo(() => ({ current: new ExpoCapture() }), []);
+  
   return useMemo(() => {
     const mutationAdapter = toMutationAdapter(trpc);
     const client = createVoiceClient({ trpc: mutationAdapter });
-    const session = createSession(client);
+    
+    // Create adapter with capture reference
+    const adapter: PlatformAdapter = {
+      configureSession: ({ background }) =>
+        configureAudioSession(Audio, { background }),
+      startCapture: () => captureRef.current.start(),
+      stopCapture: () => captureRef.current.stop(),
+      play: (base64, mimeType) => playBase64(base64, mimeType),
+    };
+    
+    const session = createVoiceSession(adapter, client);
 
     const start = async () => {
       markVoice("fast_capture_start");
@@ -76,17 +89,50 @@ export function useVoiceSessionNative(trpc: unknown) {
     };
 
     const stopAndTranscribe = async (opts?: Partial<SttRequest>) => {
-      const result = await session.stopAndTranscribe(opts);
-      markVoice("fast_stream_flush");
-      return result;
+      try {
+        const result = await session.stopAndTranscribe(opts);
+        markVoice("fast_stream_flush");
+        return result;
+      } catch (error) {
+        // On error, enqueue for retry
+        const audio = await captureRef.current.stop();
+        if (audio) {
+          await enqueue({
+            kind: "stt",
+            payload: {
+              audioBase64: audio.audioBase64,
+              mimeType: audio.mimeType,
+              language: opts?.language,
+              prompt: opts?.prompt,
+            },
+          });
+        }
+        throw error;
+      }
+    };
+
+    const speak = async (opts: Parameters<VoiceSession["speak"]>[0]) => {
+      try {
+        await session.speak(opts);
+      } catch (error) {
+        // On error, enqueue for retry
+        await enqueue({
+          kind: "tts",
+          payload: {
+            text: opts.text,
+            voice: opts.voice,
+          },
+        });
+        throw error;
+      }
     };
 
     return {
       state: session.state,
       start,
       stopAndTranscribe,
-      speak: session.speak,
+      speak,
       clear: session.clear,
     };
-  }, [trpc]);
+  }, [trpc, captureRef]);
 }

@@ -1,16 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useMemo, useState } from "react";
+import { NotePane, type NotePaneItem } from "@alfred/ui";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaneLayout } from "@/components/pane-layout";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
@@ -59,16 +54,23 @@ function NoteRoute() {
     createNote.mutate(input);
   };
 
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-          <CardDescription>
-            Add a quick note and keep track of it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+  const handleDelete = (id: string) => {
+    const input: DeleteNoteInput = { id };
+    deleteNote.mutate(input);
+  };
+
+  const paneItems: NotePaneItem[] = useMemo(
+    () =>
+      notes.map((note) => ({
+        id: note.id,
+        title: note.title ?? null,
+        content: note.content,
+        createdAt: note.createdAt?.toISOString() ?? null,
+      })),
+    [notes]
+  );
+
+  const createForm = (
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               disabled={createNote.isPending}
@@ -91,50 +93,21 @@ function NoteRoute() {
               {createNote.isPending ? "Saving…" : "Save note"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+  );
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent notes</CardTitle>
-          <CardDescription>Newest notes appear first.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
+  const paneComponent =
+    isLoading ? (
             <p className="text-muted-foreground text-sm">Loading…</p>
-          ) : notes.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No notes yet.</p>
-          ) : (
-            <ul className="space-y-4">
-              {notes.map((note) => (
-                <li className="rounded-md border p-4 shadow-sm" key={note.id}>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      {note.title ? (
-                        <h3 className="font-semibold text-lg">{note.title}</h3>
-                      ) : null}
-                      <p className="whitespace-pre-line text-muted-foreground text-sm">
-                        {note.content}
-                      </p>
-                    </div>
-                    <Button
-                      disabled={deleteNote.isPending}
-                      onClick={() => {
-                        const input: DeleteNoteInput = { id: note.id };
-                        deleteNote.mutate(input);
-                      }}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    ) : (
+      <NotePane items={paneItems} onDelete={handleDelete} />
+    );
+
+  return (
+    <PaneLayout
+      createForm={createForm}
+      description="Add a quick note and keep track of it."
+      paneComponent={paneComponent}
+      title="Notes"
+    />
   );
 }

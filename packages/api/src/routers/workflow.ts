@@ -1,4 +1,8 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import type {
+  ReasoningEdgeRecord,
+  ReasoningNodeRecord,
+} from "@alfred/knowledge/query";
 import type { WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -7,13 +11,27 @@ import { requirePolicy } from "../gate";
 import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
-} from "../metrics";
+} from "@alfred/api/metrics";
 import { runRegistry } from "../run-registry";
-import { authedProcedure, router } from "../trpc";
+import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
+import { eventToUiMessages } from "../ai/normalize";
+import { makeEventId } from "../utils/event-id";
+import { recordAudit } from "../utils/audit";
 import { runPlanV6 } from "../workflow/runner";
+import {
+  replayQueriesTotal,
+  replayQueryDurationSeconds,
+} from "@alfred/api/metrics";
+import {
+  setLinearDelegate,
+  setLinearStarted,
+  extractIssueIdFromSession,
+  emitLinearActivity,
+  setLinearSessionExternalUrl,
+} from "@alfred/agent/orchestrator/linear";
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -83,6 +101,15 @@ const mapWorkflowResource = (raw: unknown) => {
   };
 };
 
+const mapWorkflowRunResource = (raw: unknown) => {
+  const input = raw as { runId?: string };
+  return {
+    kind: "workflow" as const,
+    id: input?.runId ?? "run",
+    attrs: {},
+  };
+};
+
 function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
   if (ctx.policy?.obligations?.length) {
     const obligations = ctx.policy.obligations;
@@ -98,6 +125,7 @@ function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
 
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .mutation(async ({ input, ctx }) => {
@@ -124,6 +152,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
             repoBase: input.repoBase,
             mode: input.mode,
             context: input.context,
+            ...(input.linear?.sessionId && input.authzLinear
+              ? {
+                  linear: {
+                    sessionId: input.linear.sessionId,
+                    space: input.linear.space,
+                    authz: input.authzLinear,
+                  },
+                }
+              : {}),
           },
           {
             signal: abortController.signal,
@@ -133,13 +170,75 @@ export const workflowRouter: ReturnType<typeof router> = router({
         );
 
         // Create durable run row now so clients may hydrate history
+        const storedInput = {
+          ...input,
+          executionId: runner.runId,
+          reasoningSince: Date.now(),
+        };
+
         await workflowRepo.createRun({
           id: runner.runId,
           userId: session.user.id,
           workflowId: "plan",
           status: "running",
-          inputData: input,
+          inputData: storedInput,
+          linearSessionId: input.linear?.sessionId,
+          linearSpace: input.linear?.space,
         });
+
+        // Best-effort audit of start
+        await recordAudit({
+          userId: session.user.id,
+          action: "workflow.start",
+          resource: { kind: "workflow", id: runner.runId },
+          decision: "allow",
+          context: { auto: input.auto, mode: input.mode },
+        });
+
+        // Initialize Linear session (delegate, state) - fire-and-forget
+        if (input.linear?.sessionId && input.authzLinear) {
+          const issueId = extractIssueIdFromSession(input.linear.sessionId);
+          if (issueId) {
+            setLinearDelegate({
+              space: input.linear.space,
+              issueId,
+              authz: input.authzLinear,
+            }).catch((error) => {
+              logger.warn("linear_delegate_setup_failed", {
+                runId: runner.runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+
+            setLinearStarted({
+              space: input.linear.space,
+              issueId,
+              authz: input.authzLinear,
+            }).catch((error) => {
+              logger.warn("linear_started_setup_failed", {
+                runId: runner.runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+
+            // Set external URL pointing to workflow run viewer
+            const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
+            if (appUrl) {
+              const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
+              setLinearSessionExternalUrl(
+                input.linear.sessionId,
+                input.linear.space,
+                input.authzLinear,
+                runUrl
+              ).catch((error) => {
+                logger.warn("linear_session_external_url_failed", {
+                  runId: runner.runId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              });
+            }
+          }
+        }
 
         // Register for cancellation
         await runRegistry.register(runner.runId, {
@@ -169,6 +268,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
@@ -225,6 +325,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 repoBase: input.repoBase,
                 mode: input.mode,
                 context: input.context,
+                ...(input.linear?.sessionId && input.authzLinear
+                  ? {
+                      linear: {
+                        sessionId: input.linear.sessionId,
+                        space: input.linear.space,
+                        authz: input.authzLinear,
+                      },
+                    }
+                  : {}),
               },
               {
                 signal: abortController.signal,
@@ -233,13 +342,66 @@ export const workflowRouter: ReturnType<typeof router> = router({
               }
             );
 
+            const storedInput = {
+              ...input,
+              executionId: runner.runId,
+              reasoningSince: Date.now(),
+            };
+
             await workflowRepo.createRun({
               id: runner.runId,
               userId: session.user.id,
               workflowId: "plan",
               status: "running",
-              inputData: input,
+              inputData: storedInput,
+              linearSessionId: input.linear?.sessionId,
+              linearSpace: input.linear?.space,
             });
+
+            // Initialize Linear session (delegate, state) - fire-and-forget
+            if (input.linear?.sessionId && input.authzLinear) {
+              const issueId = extractIssueIdFromSession(input.linear.sessionId);
+              if (issueId) {
+                setLinearDelegate({
+                  space: input.linear.space,
+                  issueId,
+                  authz: input.authzLinear,
+                }).catch((error) => {
+                  logger.warn("linear_delegate_setup_failed", {
+                    runId: runner.runId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                });
+
+                setLinearStarted({
+                  space: input.linear.space,
+                  issueId,
+                  authz: input.authzLinear,
+                }).catch((error) => {
+                  logger.warn("linear_started_setup_failed", {
+                    runId: runner.runId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                });
+
+                // Set external URL pointing to workflow run viewer
+                const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
+                if (appUrl) {
+                  const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
+                  setLinearSessionExternalUrl(
+                    input.linear.sessionId,
+                    input.linear.space,
+                    input.authzLinear,
+                    runUrl
+                  ).catch((error) => {
+                    logger.warn("linear_session_external_url_failed", {
+                      runId: runner.runId,
+                      error: error instanceof Error ? error.message : String(error),
+                    });
+                  });
+                }
+              }
+            }
 
             runId = runner.runId;
             await runRegistry.register(runId, {
@@ -252,6 +414,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 abortController.abort();
               },
               abortController,
+            });
+            // Audit stream start (best-effort)
+            await recordAudit({
+              userId: session.user.id,
+              action: "workflow.stream",
+              resource: { kind: "workflow", id: runId ?? runner.runId },
+              decision: "allow",
+              context: { auto: input.auto, mode: input.mode },
             });
 
             recordEvent("run");
@@ -272,16 +442,55 @@ export const workflowRouter: ReturnType<typeof router> = router({
               return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
             };
 
+            // Helper to normalize certain events to UIMessage parts for byte-equal replay
+            const maybeUiMessages = (event: WorkflowEvent): unknown[] | null => {
+              const msgs = eventToUiMessages(event);
+              return Array.isArray(msgs) && msgs.length > 0 ? (msgs as unknown[]) : null;
+            };
+
             // Consume the generator, persisting each event then pushing to client
             for await (const event of runner.stream) {
               try {
                 // Redact PII/secrets before persistence
                 const redactedEventData = redactEventData(event);
+                const eventType = getEventType(event);
+                const eventId = makeEventId({ runId, type: eventType, data: redactedEventData });
                 await workflowRepo.appendEvent({
                   runId,
-                  eventType: getEventType(event),
+                  eventId,
+                  eventType,
                   eventData: redactedEventData,
                 });
+
+                // If the event can be represented as UIMessage(s), persist a normalized copy
+                const uiMessages = maybeUiMessages(event);
+                if (uiMessages && uiMessages.length > 0) {
+                  await workflowRepo.appendEvent({
+                    runId,
+                    eventId: makeEventId({ runId, type: 'ui-message', data: uiMessages }),
+                    eventType: 'ui-message',
+                    eventData: uiMessages,
+                  });
+                }
+                // Push event including its identity for client-side dedupe
+                push({ ...event, eventId } as WorkflowEvent);
+
+                // Emit Linear activities for significant events (backup if runner doesn't emit)
+                if (input.linear?.sessionId && input.authzLinear) {
+                  if (event.type === "error") {
+                    emitLinearActivity("error", {
+                      sessionId: input.linear.sessionId,
+                      space: input.linear.space,
+                      authz: input.authzLinear,
+                      body: (event as any).message ?? "Workflow error occurred",
+                    }).catch((error) => {
+                      logger.warn("linear_activity_emission_failed", {
+                        runId,
+                        error: error instanceof Error ? error.message : String(error),
+                      });
+                    });
+                  }
+                }
               } catch (error) {
                 logger.warn("workflow_event_persistence_failed", {
                   runId,
@@ -290,7 +499,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 });
                 // Continue streaming without throwing
               }
-              push(event);
             }
 
             // Mark completion
@@ -298,6 +506,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
               await workflowRepo.updateRun(runId, {
                 status: "completed",
                 completedAt: new Date(),
+              });
+              await recordAudit({
+                userId: session.user.id,
+                action: "workflow.stream.complete",
+                resource: { kind: "workflow", id: runId },
+                decision: "allow",
               });
             } catch (error) {
               logger.warn("workflow_completion_update_failed", {
@@ -360,6 +574,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     ),
 
   resume: authedProcedure
+    .use(rateLimit)
     .input(
       z.object({
         runId: z.string().min(1),
@@ -376,7 +591,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
       if (!delivered) {
         throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
       }
-
+      // Best-effort audit
+      await recordAudit({
+        userId: null,
+        action: "workflow.resume",
+        resource: { kind: "workflow", id: input.runId },
+        decision: "allow",
+        context: { event: input.event },
+      });
       return { ok: true };
     }),
 
@@ -397,5 +619,146 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .query(async ({ input }) => {
       const events = await workflowRepo.listEvents(input.runId);
       return events;
+    }),
+
+  reasoning: authedProcedure
+    .use(requirePolicy("workflow.read", (raw) => mapWorkflowRunResource(raw)))
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        limit: z.number().int().min(1).max(2000).optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+      }
+
+      if (run.userId !== session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
+      }
+
+      const inputData = (run.inputData ?? {}) as Record<string, unknown>;
+      const resource =
+        typeof inputData.cw === "string" && inputData.cw.length > 0
+          ? inputData.cw
+          : typeof inputData.workspace === "string" && inputData.workspace.length > 0
+          ? inputData.workspace
+          : process.cwd();
+
+      const executionId =
+        typeof inputData.executionId === "string" && inputData.executionId.length > 0
+          ? inputData.executionId
+          : run.id;
+
+      const since =
+        typeof inputData.reasoningSince === "number"
+          ? inputData.reasoningSince
+          : run.created instanceof Date
+          ? run.created.getTime()
+          : undefined;
+
+      const { getReasoningChain } = await import("@alfred/db/repo/graph");
+      const { reconstructReasoningChain } = await import("@alfred/knowledge/query");
+
+      const limit = input.limit;
+      const initialArgs = {
+        resource,
+        executionId,
+        since,
+        limit,
+      } as const;
+
+      let { nodes, edges } = await getReasoningChain(initialArgs);
+
+      if (nodes.length === 0 && executionId) {
+        ({ nodes, edges } = await getReasoningChain({
+          resource,
+          since,
+          limit,
+        }));
+      }
+
+      const nodeRecords: ReasoningNodeRecord[] = nodes.map((node) => ({
+        id: node.id,
+        hash: node.hash,
+        label: node.label,
+        properties:
+          (node.properties as Record<string, unknown> | null) ?? null,
+      }));
+
+      const edgeRecords: ReasoningEdgeRecord[] = edges.map((edge) => ({
+        fromId: edge.fromId,
+        toId: edge.toId,
+        kind: edge.kind,
+        metadata:
+          (edge.metadata as Record<string, unknown> | null) ?? null,
+      }));
+
+      const chain = reconstructReasoningChain(nodeRecords, edgeRecords);
+
+      return {
+        runId: run.id,
+        resource,
+        executionId,
+        chain,
+      };
+    }),
+
+  /**
+   * Replay query: persisted events filtered by type in chronological order.
+   * Default type is "ui-message" for assistant/orchestrator replays.
+   */
+  replay: authedProcedure
+    .input(
+      z.object({
+        runId: z.string().min(1),
+        eventType: z.string().optional().default("ui-message"),
+        order: z.enum(["asc", "desc"]).optional(),
+        page: z.number().int().min(0).optional(),
+        pageSize: z.number().int().min(1).max(2000).optional(),
+        includeTotal: z.boolean().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const stop = replayQueryDurationSeconds.startTimer({
+        event_type: input.eventType,
+      } as any);
+      const items = await workflowRepo.listEventsByTypePaged({
+        runId: input.runId,
+        eventType: input.eventType,
+        page: input.page ?? 0,
+        pageSize: input.pageSize ?? 500,
+        order: input.order,
+      });
+      const transformed = items.map((e) => ({
+        eventId: (e as any).eventId,
+        runId: e.runId,
+        eventType: e.eventType,
+        eventData: e.eventData,
+        timestamp: (e as any).timestamp,
+      }));
+      let total: number | undefined = undefined;
+      if (input.includeTotal) {
+        total = await workflowRepo.countEventsByType(
+          input.runId,
+          input.eventType
+        );
+      }
+      const page = input.page ?? 0;
+      const pageSize = input.pageSize ?? 500;
+      const hasMore = transformed.length === pageSize && (total === undefined || (page + 1) * pageSize < total);
+      try {
+        replayQueriesTotal.inc({ event_type: input.eventType } as any);
+      } finally {
+        stop();
+      }
+      return { items: transformed, page, pageSize, total, hasMore };
     }),
 });

@@ -22,6 +22,12 @@ mock.module("@alfred/auth/biometric", () => ({
   setBiometricTicket: vi.fn(),
 }));
 
+// Allow policy by default for token routes
+mock.module("@alfred/policy", () => ({
+  evaluate: vi.fn().mockResolvedValue({ allow: true, obligations: [] }),
+  registerCacheObs: () => {},
+}));
+
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {

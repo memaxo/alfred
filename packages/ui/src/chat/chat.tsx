@@ -9,6 +9,7 @@ import {
   isTextPart,
   isToolCallPart,
   isToolResultPart,
+  isDataPart,
 } from "./parts";
 
 type VirtualRange = { startIndex: number; endIndex: number };
@@ -34,6 +35,7 @@ export type ChatProps = {
   onVoice?: () => void;
   voiceLabel?: string;
   voiceDisabled?: boolean;
+  renderPart?: (part: UIMessage["parts"][number], message: UIMessage) => ReactNode | null;
 };
 
 type ToolCallBlock = {
@@ -166,7 +168,27 @@ function renderToolResults(block: RenderBlock) {
   );
 }
 
-function renderDefaultMessage(block: RenderBlock) {
+function renderDefaultMessage(
+  block: RenderBlock,
+  message: UIMessage,
+  renderPart?: (part: UIMessage["parts"][number], message: UIMessage) => ReactNode | null
+) {
+  const structuredParts: ReactNode[] = [];
+  if (renderPart) {
+    for (const part of message.parts) {
+      if (isDataPart(part) || isToolResultPart(part)) {
+        const rendered = renderPart(part, message);
+        if (rendered) {
+          structuredParts.push(
+            <div key={part.type === "tool-result" ? part.toolCallId ?? structuredParts.length : (part as { id?: string }).id ?? structuredParts.length}>
+              {rendered}
+            </div>
+          );
+        }
+      }
+    }
+  }
+
   return (
     <article
       className={`chat-message chat-message--${block.role}`}
@@ -187,8 +209,11 @@ function renderDefaultMessage(block: RenderBlock) {
           <p>{block.reasoning}</p>
         </div>
       ) : null}
-      {renderToolCalls(block)}
-      {renderToolResults(block)}
+      {structuredParts.length > 0 ? (
+        <div className="chat-message__structured">{structuredParts}</div>
+      ) : null}
+      {renderPart ? null : renderToolCalls(block)}
+      {renderPart ? null : renderToolResults(block)}
     </article>
   );
 }
@@ -206,6 +231,7 @@ export function Chat({
   onVoice,
   voiceLabel = "Voice",
   voiceDisabled = false,
+  renderPart,
 }: ChatProps) {
   const [range, setRange] = useState<VirtualRange | undefined>(undefined);
 
@@ -255,9 +281,9 @@ export function Chat({
         return itemContent(index, message);
       }
       const block = buildRenderBlock(message, index);
-      return renderDefaultMessage(block);
+      return renderDefaultMessage(block, message, renderPart);
     },
-    [itemContent]
+    [itemContent, renderPart]
   );
 
   const logContent = useMemo(() => {

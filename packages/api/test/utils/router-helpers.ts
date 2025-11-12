@@ -24,6 +24,9 @@ export function mockWorkflowRepo() {
   const appendEventMock = vi.fn();
   const getRunMock = vi.fn();
   const listEventsMock = vi.fn();
+  const listEventsByTypeMock = vi.fn();
+  const listEventsByTypePagedMock = vi.fn();
+  const countEventsByTypeMock = vi.fn();
 
   mock.module("@alfred/db/repo/workflow", () => ({
     createRun: createRunMock,
@@ -31,6 +34,9 @@ export function mockWorkflowRepo() {
     appendEvent: appendEventMock,
     getRun: getRunMock,
     listEvents: listEventsMock,
+    listEventsByType: listEventsByTypeMock,
+    listEventsByTypePaged: listEventsByTypePagedMock,
+    countEventsByType: countEventsByTypeMock,
   }));
 
   return {
@@ -39,6 +45,9 @@ export function mockWorkflowRepo() {
     appendEvent: appendEventMock,
     getRun: getRunMock,
     listEvents: listEventsMock,
+    listEventsByType: listEventsByTypeMock,
+    listEventsByTypePaged: listEventsByTypePagedMock,
+    countEventsByType: countEventsByTypeMock,
   };
 }
 
@@ -126,4 +135,5 @@ export function resetAllMocks() {
 export function setupTestEnv() {
   process.env.DATABASE_URL ??= "postgres://localhost:5432/test";
   process.env.RUN_DB_TESTS ??= "0";
+  process.env.DISABLE_METRICS_HOOKS = "1";
 }

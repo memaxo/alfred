@@ -1,10 +1,9 @@
-import { spawn } from "node:child_process";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
 import { requirePolicy } from "../gate";
-import { droidExecRunsTotal } from "../metrics";
+import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { authedProcedure, router } from "../trpc";
 
 const droidRunInputSchema = z.object({
@@ -31,9 +30,12 @@ function spawnDroidProcess(input: DroidRunInput) {
   const command = input.command ?? process.execPath;
   const args = input.args ?? ["-e", createScript(input.prompt, input.out)];
 
-  return spawn(command, args, {
+  return Bun.spawn([command, ...args], {
     cwd: input.cw ?? process.cwd(),
     env: process.env,
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "ignore",
   });
 }
 
@@ -83,18 +85,53 @@ const droidProcedures = {
         });
       }
 
-      const child = spawnDroidProcess(input);
+      const proc = spawnDroidProcess(input);
 
       const stdoutChunks: string[] = [];
       const stderrChunks: string[] = [];
 
-      child.stdout?.on("data", (chunk) => stdoutChunks.push(chunk.toString()));
-      child.stderr?.on("data", (chunk) => stderrChunks.push(chunk.toString()));
+      // Handle stdout stream
+      if (proc.stdout && typeof proc.stdout !== "number") {
+        const reader = proc.stdout.getReader();
+        const decoder = new TextDecoder();
 
-      const exitCode: number = await new Promise((resolve, reject) => {
-        child.on("error", reject);
-        child.on("close", (code) => resolve(code ?? 0));
-      });
+        (async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              stdoutChunks.push(decoder.decode(value));
+            }
+          } catch {
+            // Ignore stream read errors
+          }
+        })();
+      }
+
+      // Handle stderr stream
+      if (proc.stderr && typeof proc.stderr !== "number") {
+        const reader = proc.stderr.getReader();
+        const decoder = new TextDecoder();
+
+        (async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              stderrChunks.push(decoder.decode(value));
+            }
+          } catch {
+            // Ignore stderr read errors
+          }
+        })();
+      }
+
+      let exitCode = 0;
+      try {
+        exitCode = await proc.exited;
+      } catch (error) {
+        throw error;
+      }
 
       droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
 
@@ -125,7 +162,7 @@ const droidProcedures = {
     .input(droidRunInputSchema)
     .subscription(({ input }) =>
       observable<{ type: string; data?: string; code?: number }>((emit) => {
-        let child: ReturnType<typeof spawnDroidProcess> | null = null;
+        let proc: ReturnType<typeof spawnDroidProcess> | null = null;
 
         void (async () => {
           // TODO: Surface obligations to clients so they can request elevation before opening the stream.
@@ -154,32 +191,61 @@ const droidProcedures = {
             });
           }
 
-          child = spawnDroidProcess(input);
+          proc = spawnDroidProcess(input);
 
-          child.stdout?.on("data", (chunk) => {
-            emit.next({ type: "stdout", data: chunk.toString() });
-          });
+          // Handle stdout stream
+          if (proc.stdout && typeof proc.stdout !== "number") {
+            const reader = proc.stdout.getReader();
+            const decoder = new TextDecoder();
 
-          child.stderr?.on("data", (chunk) => {
-            emit.next({ type: "stderr", data: chunk.toString() });
-          });
+            (async () => {
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  emit.next({ type: "stdout", data: decoder.decode(value) });
+                }
+              } catch (error) {
+                emit.error(error);
+              }
+            })();
+          }
 
-          child.on("close", (code) => {
-            droidExecRunsTotal.labels(input.auto, String(code ?? 0)).inc();
-            emit.next({ type: "exit", code: code ?? 0 });
-            emit.complete();
-          });
+          // Handle stderr stream
+          if (proc.stderr && typeof proc.stderr !== "number") {
+            const reader = proc.stderr.getReader();
+            const decoder = new TextDecoder();
 
-          child.on("error", (error) => {
-            emit.error(error);
-          });
+            (async () => {
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  emit.next({ type: "stderr", data: decoder.decode(value) });
+                }
+              } catch (error) {
+                emit.error(error);
+              }
+            })();
+          }
+
+          // Handle exit
+          proc.exited
+            .then((code) => {
+              droidExecRunsTotal.labels(input.auto, String(code ?? 0)).inc();
+              emit.next({ type: "exit", code: code ?? 0 });
+              emit.complete();
+            })
+            .catch((error) => {
+              emit.error(error);
+            });
         })().catch((error) => {
           emit.error(error);
         });
 
         return () => {
-          if (child && !child.killed) {
-            child.kill("SIGTERM");
+          if (proc && !proc.killed) {
+            proc.kill("SIGTERM");
           }
         };
       })

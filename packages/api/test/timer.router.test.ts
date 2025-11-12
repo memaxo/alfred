@@ -87,10 +87,12 @@ describe("timer router", () => {
       markTimerCompletedMock.mockResolvedValue(mockUpdated);
 
       const result = await caller.timer.done({
-        id: "timer-id",
+        id: "123e4567-e89b-12d3-a456-426614174000",
       });
 
-      expect(markTimerCompletedMock).toHaveBeenCalledWith("timer-id");
+      expect(markTimerCompletedMock).toHaveBeenCalledWith(
+        "123e4567-e89b-12d3-a456-426614174000"
+      );
       expect(result).toEqual({ updated: mockUpdated });
     });
   });
@@ -101,10 +103,12 @@ describe("timer router", () => {
       cancelTimerMock.mockResolvedValue(mockUpdated);
 
       const result = await caller.timer.cancel({
-        id: "timer-id",
+        id: "123e4567-e89b-12d3-a456-426614174000",
       });
 
-      expect(cancelTimerMock).toHaveBeenCalledWith("timer-id");
+      expect(cancelTimerMock).toHaveBeenCalledWith(
+        "123e4567-e89b-12d3-a456-426614174000"
+      );
       expect(result).toEqual({ updated: mockUpdated });
     });
   });

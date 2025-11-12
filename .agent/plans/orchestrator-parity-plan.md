@@ -33,7 +33,13 @@ Observable end result:
 - [x] (2025-11-08T18:55Z) Observability baseline: workflow stream counters/histograms wired; run-registry metrics active (runRegistryEventsTotal exists).
 - [x] (2025-11-08T19:25Z) Tests: adjusted web and API tests; suite green locally (DB-gated tests skipped by default).
 - [x] (2025-11-08T19:30Z) Docs & env: README documents SSE + workflow routers and metrics; env.example adds AI_MODEL.
+- [x] (2025-11-09T16:05Z) Fixed failing tests: RAG doc tests now mock modules before import; biometric mock exports added to avoid auth index import errors.
+- [x] (2025-11-09T16:15Z) Added client-side threshold filter in RAG retrieve() for correctness with mocked repos.
+- [x] (2025-11-09T16:25Z) Introduced in-memory rate limiter middleware with metric (rate_limit_hits_total) and wired into tRPC base.
+- [x] (2025-11-09T16:40Z) Applied rate limiter to assistant.generate, orchestrator.generate, workflow.start/resume; added rate-limit test.
+- [x] (2025-11-09T16:45Z) Enforced obligations in workflow.start/stream via ensureObligations; added PRECONDITION_FAILED policy test.
 - [ ] (INCOMPLETE) Durable replay normalization: Events persisted but not normalized to UIMessage format; replay may not be byte-equal. Pure function needed for performance.
+- [x] (2025-11-09T17:05Z) Durable replay normalization: Added normalizeToUiMessages and updated persistResult to store canonical UIMessage parts for non-stream generate.
 - [ ] (INCOMPLETE) Obligations enforcement: Pattern exists (ensureObligations in profile.ts) but workflow router doesn't enforce obligations; needs PRECONDITION_FAILED when obligations unmet.
 - [ ] (INCOMPLETE) Cancellation/timeout enforcement: Basic cancel exists but no per-step or overall run timeouts; keep implementation minimal (pure abort signals).
 - [ ] (INCOMPLETE) Data hygiene & retention: Basic indexes exist but no composite indexes, retention policy, or pruning job. Critical for personal data management.

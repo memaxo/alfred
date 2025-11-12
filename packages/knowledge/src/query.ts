@@ -399,3 +399,195 @@ export const builder = {
     ],
   }),
 };
+
+export const reasoningQueries = {
+  byThread: (threadId: string): Query => ({
+    find: [variable("?trace"), variable("?text")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: "~",
+        value: threadId,
+      },
+    ],
+  }),
+
+  byTimeRange: (startMs: number, endMs: number): Query => ({
+    find: [variable("?trace")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: ">",
+        value: startMs.toString(),
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: "<",
+        value: endMs.toString(),
+      },
+    ],
+  }),
+
+  byQuality: (minConfidence: number): Query => ({
+    find: [variable("?trace")],
+    where: [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+      {
+        _: "filter",
+        variable: variable("?trace"),
+        op: ">",
+        value: minConfidence.toString(),
+      },
+    ],
+  }),
+
+  byTopic: (keywords: string[]): Query => {
+    const clauses: Clause[] = [
+      {
+        _: "fact",
+        predicate: "reasoning",
+        terms: [{ _: "var", name: variable("?trace") }],
+      },
+    ];
+
+    for (const keyword of keywords) {
+      clauses.push({
+        _: "filter",
+        variable: variable("?trace"),
+        op: "~",
+        value: keyword,
+      });
+    }
+
+    return {
+      find: [variable("?trace")],
+      where: clauses,
+    };
+  },
+};
+
+export type ReasoningNodeRecord = {
+  id: string;
+  hash: string;
+  label: string | null;
+  properties: Record<string, unknown> | null;
+};
+
+export type ReasoningEdgeRecord = {
+  fromId: string;
+  toId: string;
+  kind: string;
+  metadata: Record<string, unknown> | null;
+};
+
+export type ReasoningChainStep = {
+  id: string;
+  hash: string;
+  text: string;
+  index: number;
+  timestamp: number | null;
+  previousHash: string | null;
+  nextHash: string | null;
+  relations: Array<{ toId: string; timeDelta: number | null }>;
+};
+
+const toNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const toStringOrNull = (value: unknown): string | null => {
+  if (typeof value === "string" && value.length > 0) return value;
+  return null;
+};
+
+export function reconstructReasoningChain(
+  nodes: ReasoningNodeRecord[],
+  edges: ReasoningEdgeRecord[] = []
+): ReasoningChainStep[] {
+  const normalised = nodes.map((node, position) => {
+    const props = (node.properties ?? {}) as Record<string, unknown>;
+    const index = toNumber(
+      props.sequenceIndex ?? props.index,
+      position
+    );
+    const timestampCandidate =
+      props.timestamp ?? props.ts ?? null;
+    const timestamp = timestampCandidate
+      ? toNumber(timestampCandidate, NaN)
+      : NaN;
+
+    return {
+      id: node.id,
+      hash: node.hash,
+      text: node.label ?? "",
+      index,
+      timestamp: Number.isFinite(timestamp) ? timestamp : null,
+      previousHash: toStringOrNull(
+        props.previousHash ?? props.prevHash ?? props.previous
+      ),
+      nextHash: toStringOrNull(props.nextHash ?? props.next),
+      order: position,
+    };
+  });
+
+  normalised.sort((a, b) => {
+    if (a.index !== b.index) {
+      return a.index - b.index;
+    }
+    if ((a.timestamp ?? 0) !== (b.timestamp ?? 0)) {
+      return (a.timestamp ?? 0) - (b.timestamp ?? 0);
+    }
+    return a.order - b.order;
+  });
+
+  const edgeMap = new Map<
+    string,
+    Array<{ toId: string; timeDelta: number | null }>
+  >();
+
+  for (const edge of edges) {
+    if (edge.kind !== "precedes") continue;
+    const items =
+      edgeMap.get(edge.fromId) ?? [];
+    const metadata = edge.metadata ?? {};
+    const timeDelta = toNumber(metadata.timeDelta, NaN);
+    items.push({
+      toId: edge.toId,
+      timeDelta: Number.isFinite(timeDelta) ? timeDelta : null,
+    });
+    edgeMap.set(edge.fromId, items);
+  }
+
+  return normalised.map((entry) => ({
+    id: entry.id,
+    hash: entry.hash,
+    text: entry.text,
+    index: entry.index,
+    timestamp: entry.timestamp,
+    previousHash: entry.previousHash,
+    nextHash: entry.nextHash,
+    relations: edgeMap.get(entry.id) ?? [],
+  }));
+}

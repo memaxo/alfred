@@ -6,7 +6,7 @@ import { convertToModelMessages, stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { requirePolicy } from "../gate";
-import { authedProcedure, router } from "../trpc";
+import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
 
@@ -52,6 +52,7 @@ function validateMessages(messages: unknown[]): UIMessage[] {
 
 export const orchestratorRouter: ReturnType<typeof router> = router({
   generate: authedProcedure
+    .use(rateLimit)
     .use(requirePolicy("orchestrator.generate", (raw) => mapResource(raw)))
     .input(generateInput)
     .mutation(async ({ ctx, input }) => {

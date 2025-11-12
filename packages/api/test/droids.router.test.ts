@@ -4,6 +4,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -21,6 +22,7 @@ mock.module("@alfred/auth/token", () => ({
 }));
 
 mock.module("@alfred/api/metrics", () => ({
+  ...metricsStub,
   droidExecRunsTotal: droidExecRunsTotalMock,
 }));
 

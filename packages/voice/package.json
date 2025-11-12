@@ -30,12 +30,40 @@
     "./adapters/web": {
       "types": "./dist/adapters/web.d.ts",
       "default": "./src/adapters/web.ts"
+    },
+    "./process/stt_pool": {
+      "types": "./dist/process/stt_pool.d.ts",
+      "default": "./src/process/stt_pool.ts"
+    },
+    "./process/tts_pool": {
+      "types": "./dist/process/tts_pool.d.ts",
+      "default": "./src/process/tts_pool.ts"
+    },
+    "./process/base": {
+      "types": "./dist/process/base.d.ts",
+      "default": "./src/process/base.ts"
+    },
+    "./process/ipc": {
+      "types": "./dist/process/ipc.d.ts",
+      "default": "./src/process/ipc.ts"
+    },
+    "./audio/converter": {
+      "types": "./dist/audio/converter.d.ts",
+      "default": "./src/audio/converter.ts"
+    },
+    "./test/utils/python-helpers": {
+      "types": "./test/utils/python-helpers.d.ts",
+      "default": "./test/utils/python-helpers.ts"
     }
   },
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b -w",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test": "bun test",
+    "install-deps": "bash scripts/install-deps.sh",
+    "download-models": "python3 scripts/download_models.py",
+    "verify": "python3 scripts/download_models.py --verify-only"
   },
   "peerDependencies": {
     "@alfred/type": "workspace:*",

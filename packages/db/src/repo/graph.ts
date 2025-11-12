@@ -429,3 +429,218 @@ export async function getSubgraph(nodeIds: string[]): Promise<{
 
   return { nodes, edges };
 }
+
+export async function archiveNodes(
+  nodeIds: string[],
+  reason?: string
+): Promise<number> {
+  if (nodeIds.length === 0) {
+    return 0;
+  }
+
+  const result = await db
+    .update(memoryNodes)
+    .set({
+      properties: sql`
+        CASE 
+          WHEN properties IS NULL THEN jsonb_build_object('archived', NOW()::text, 'archiveReason', ${
+            reason ?? "pruned"
+          })
+          ELSE properties || jsonb_build_object('archived', NOW()::text, 'archiveReason', ${
+            reason ?? "pruned"
+          })
+        END
+      `,
+      updated: sql`NOW()`,
+    })
+    .where(inArray(memoryNodes.id, nodeIds))
+    .returning({ id: memoryNodes.id });
+
+  return result.length;
+}
+
+export async function deleteArchivedNodes(
+  olderThanMs: number
+): Promise<number> {
+  const threshold = new Date(Date.now() - olderThanMs);
+
+  const result = await db
+    .delete(memoryNodes)
+    .where(
+      sql`
+        properties->>'archived' IS NOT NULL 
+        AND (properties->>'archived')::timestamp < ${threshold.toISOString()}::timestamp
+      `
+    )
+    .returning({ id: memoryNodes.id });
+
+  return result.length;
+}
+
+export async function updateNodeConfidence(
+  nodeId: string,
+  newConfidence: number
+): Promise<NodeRow | null> {
+  const clamped = Math.max(0, Math.min(1, newConfidence));
+
+  const [row] = await db
+    .update(memoryNodes)
+    .set({
+      properties: sql`
+        CASE
+          WHEN properties IS NULL THEN jsonb_build_object('confidence', ${clamped})
+          ELSE jsonb_set(properties, '{confidence}', ${clamped}::text::jsonb)
+        END
+      `,
+      updated: sql`NOW()`,
+    })
+    .where(eq(memoryNodes.id, nodeId))
+    .returning();
+
+  return row ?? null;
+}
+
+export async function updateNodeConfidenceBatch(
+  updates: Array<{ id: string; confidence: number }>
+): Promise<number> {
+  if (updates.length === 0) {
+    return 0;
+  }
+
+  let count = 0;
+  for (let i = 0; i < updates.length; i += 100) {
+    const batch = updates.slice(i, i + 100);
+    for (const update of batch) {
+      const result = await updateNodeConfidence(update.id, update.confidence);
+      if (result) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+export async function deleteNodesBatch(nodeIds: string[]): Promise<number> {
+  if (nodeIds.length === 0) {
+    return 0;
+  }
+
+  let totalDeleted = 0;
+  for (let i = 0; i < nodeIds.length; i += 500) {
+    const chunk = nodeIds.slice(i, i + 500);
+    const result = await db
+      .delete(memoryNodes)
+      .where(inArray(memoryNodes.id, chunk))
+      .returning({ id: memoryNodes.id });
+    totalDeleted += result.length;
+  }
+
+  return totalDeleted;
+}
+
+export async function findNodesByConfidence(
+  minConfidence: number,
+  maxConfidence: number,
+  kind?: string,
+  limit = 1000
+): Promise<NodeRow[]> {
+  const query = db
+    .select()
+    .from(memoryNodes)
+    .where(
+      and(
+        sql`
+          CASE
+            WHEN properties ? 'confidence' 
+            THEN (properties->>'confidence')::numeric BETWEEN ${minConfidence} AND ${maxConfidence}
+            ELSE true
+          END
+        `,
+        kind ? eq(memoryNodes.kind, kind) : sql`true`
+      )
+    )
+    .orderBy(desc(memoryNodes.created))
+    .limit(limit);
+
+  return query;
+}
+
+export async function findStaleNodes(
+  olderThanMs: number,
+  kind?: string,
+  limit = 1000
+): Promise<NodeRow[]> {
+  const threshold = new Date(Date.now() - olderThanMs);
+
+  return db
+    .select()
+    .from(memoryNodes)
+    .where(
+      and(
+        sql`created < ${threshold.toISOString()}::timestamp`,
+        kind ? eq(memoryNodes.kind, kind) : sql`true`,
+        sql`properties->>'archived' IS NULL`
+      )
+    )
+    .orderBy(desc(memoryNodes.created))
+    .limit(limit);
+}
+
+export async function getReasoningChain(args: {
+  resource: string;
+  executionId?: string | null;
+  since?: number;
+  limit?: number;
+}): Promise<{
+  nodes: NodeRow[];
+  edges: EdgeRow[];
+}> {
+  const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000);
+
+  const conditions = [
+    eq(memoryNodes.resource, args.resource),
+    eq(memoryNodes.kind, "reasoning"),
+  ];
+
+  if (args.executionId) {
+    conditions.push(
+      sql`COALESCE(properties->>'executionId', '') = ${args.executionId}`
+    );
+  }
+
+  if (typeof args.since === "number" && Number.isFinite(args.since)) {
+    conditions.push(
+      sql`COALESCE((properties->>'timestamp')::numeric, 0) >= ${args.since}`
+    );
+  }
+
+  const nodes = await db
+    .select()
+    .from(memoryNodes)
+    .where(and(...conditions))
+    .orderBy(
+      sql`COALESCE((properties->>'sequenceIndex')::int, (properties->>'index')::int, 0),
+          COALESCE((properties->>'timestamp')::numeric, 0)`
+    )
+    .limit(limit);
+
+  const nodeIds = nodes.map((node) => node.id);
+
+  if (nodeIds.length === 0) {
+    return { nodes, edges: [] };
+  }
+
+  const edges = await db
+    .select()
+    .from(memoryEdges)
+    .where(
+      and(
+        inArray(memoryEdges.fromId, nodeIds),
+        eq(memoryEdges.kind, "precedes")
+      )
+    )
+    .orderBy(sql`COALESCE((metadata->>'fromIndex')::int, 0)`);
+
+  return { nodes, edges };
+}

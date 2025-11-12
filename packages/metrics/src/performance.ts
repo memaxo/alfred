@@ -43,7 +43,19 @@ export function measure(startLabel: string, endLabel?: string): number {
   return Number(diff) / 1_000_000;
 }
 
-export type VoiceMetricLabel = "fast_capture_start" | "fast_stream_flush";
+export type VoiceMetricLabel =
+  | "fast_capture_start"
+  | "fast_stream_flush"
+  | "stt_local_start"
+  | "stt_local_complete"
+  | "stt_local_error"
+  | "tts_local_start"
+  | "tts_local_complete"
+  | "tts_local_error"
+  | "voice_stream_start"
+  | "voice_stream_connected"
+  | "voice_stream_end"
+  | "voice_stream_error";
 
 export function markVoice(label: VoiceMetricLabel): void {
   mark(label);

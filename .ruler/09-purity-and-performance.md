@@ -46,6 +46,8 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
     - Test coverage below thresholds
     - Type suppressions (except documented exceptions)
 
+12. **Code duplication threshold.** When two or more functions or files share >80% identical code, extract shared logic into a reusable function or utility. Duplication above this threshold indicates missing abstraction and increases maintenance burden. Measure duplication by comparing line counts and structure similarity.
+
 ## Examples
 
 ```typescript

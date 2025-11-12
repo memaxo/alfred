@@ -305,18 +305,28 @@ export const codexPlanSchema = z.object({
 
 export type CodexPlanArtifact = z.infer<typeof codexPlanSchema>;
 
+type WorkflowEventBase = {
+  /** Optional stable identity for deduplication during replay */
+  eventId?: string;
+};
+
 export type WorkflowEvent =
-  | { type: "progress"; pct?: number; message?: string }
-  | { type: "stdout"; text: string }
-  | { type: "stderr"; text: string }
-  | { type: "droid"; chunk: unknown }
-  | { type: "notice"; message: string }
-  | { type: "data-cache-handoff"; key: readonly unknown[]; value: unknown }
-  | {
-      type: "context";
-      phase: "scan" | "web" | "bundle";
-      message?: string;
-      receipts?: SearchReceipt;
-      bundle?: ContextBundle;
-    }
-  | { type: string; [key: string]: unknown };
+  | (WorkflowEventBase & { type: "progress"; pct?: number; message?: string })
+  | (WorkflowEventBase & { type: "stdout"; text: string })
+  | (WorkflowEventBase & { type: "stderr"; text: string })
+  | (WorkflowEventBase & { type: "droid"; chunk: unknown })
+  | (WorkflowEventBase & { type: "notice"; message: string })
+  | (WorkflowEventBase & {
+      type: "data-cache-handoff";
+      key: readonly unknown[];
+      value: unknown;
+    })
+  |
+      (WorkflowEventBase & {
+        type: "context";
+        phase: "scan" | "web" | "bundle";
+        message?: string;
+        receipts?: SearchReceipt;
+        bundle?: ContextBundle;
+      })
+  | (WorkflowEventBase & { type: string; [key: string]: unknown });

@@ -11,7 +11,7 @@ import {
   MemoryRunRegistry,
   type ResumePayload,
   type RunHandle,
-} from "../../src/run-registry";
+} from "@alfred/api/run-registry";
 
 const runRegistryEventsTotalMock = {
   inc: vi.fn(),
@@ -21,7 +21,7 @@ const runRegistryDispatchDurationSecondsMock = {
   startTimer: vi.fn().mockReturnValue(() => {}),
 };
 
-mock.module("../../src/metrics", () => ({
+mock.module("@alfred/api/metrics", () => ({
   runRegistryEventsTotal: runRegistryEventsTotalMock,
   runRegistryDispatchDurationSeconds: runRegistryDispatchDurationSecondsMock,
 }));

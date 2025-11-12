@@ -3,7 +3,7 @@ import type { EvaluateInput, PolicyResource } from "@alfred/policy";
 import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "./context";
-import { policyDecisionsTotal, policyObligationsTotal } from "./metrics";
+import { policyDecisionsTotal, policyObligationsTotal } from "@alfred/api/metrics";
 import { t } from "./trpc";
 import {
   getSessionUser,
