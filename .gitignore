@@ -65,3 +65,4 @@ docs/use-workflow/
 /packages/db/AGENTS.md
 /packages/db/AGENTS.md.bak
 # END Ruler Generated Files
+.env

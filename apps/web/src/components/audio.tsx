@@ -6,25 +6,45 @@
  */
 
 import { Pause, Play, Volume2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface AudioProps {
+type AudioProps = {
   src: string;
   autoPlay?: boolean;
   className?: string;
-}
+};
 
 export function Audio({ src, autoPlay = false, className }: AudioProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audio] = useState(() => {
-    const a = new Audio(src);
-    a.onended = () => setIsPlaying(false);
-    return a;
-  });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(src);
+    audio.onended = () => setIsPlaying(false);
+    audioRef.current = audio;
+
+    if (autoPlay) {
+      audio.play().catch(() => {
+        // Auto-play blocked by browser, ignore
+      });
+      setIsPlaying(true);
+    }
+
+    return () => {
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
+    };
+  }, [src, autoPlay]);
 
   const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
     if (isPlaying) {
       audio.pause();
     } else {

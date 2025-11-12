@@ -7,12 +7,12 @@
 
 import { cn } from "@/lib/utils";
 
-interface CodeProps {
+type CodeProps = {
   code: string;
   language?: string;
   showLineNumbers?: boolean;
   className?: string;
-}
+};
 
 export function Code({
   code,
@@ -20,6 +20,8 @@ export function Code({
   showLineNumbers = false,
   className,
 }: CodeProps) {
+  const lines = code.split("\n");
+
   return (
     <div
       className={cn("relative overflow-hidden rounded-lg border", className)}
@@ -33,7 +35,22 @@ export function Code({
       )}
       <pre className="overflow-x-auto p-4">
         <code className={cn("text-sm", language && `language-${language}`)}>
-          {code}
+          {showLineNumbers ? (
+            <table className="w-full border-collapse">
+              <tbody>
+                {lines.map((line, i) => (
+                  <tr key={`line-${i}-${line.slice(0, 10)}`}>
+                    <td className="select-none pr-4 text-right text-muted-foreground">
+                      {i + 1}
+                    </td>
+                    <td>{line}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            code
+          )}
         </code>
       </pre>
     </div>

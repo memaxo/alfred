@@ -1,11 +1,18 @@
 import { Audio } from "expo-av";
-import * as FileSystem from "expo-file-system";
+import {
+  cacheDirectory,
+  deleteAsync,
+  documentDirectory,
+  EncodingType,
+  writeAsStringAsync,
+} from "expo-file-system";
 import { configureAudioSession } from "./config";
+
+const TEMP_COUNTER_MAX = 100_000;
 
 let tempCounter = 0;
 
-const fallbackDir = () =>
-  FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? "";
+const fallbackDir = () => cacheDirectory ?? documentDirectory ?? "";
 
 const extensionForMime = (mimeType: string) => {
   switch (mimeType) {
@@ -29,19 +36,29 @@ export async function playBase64(
   await configureAudioSession(Audio, { background: true });
   const dir = fallbackDir();
   const suffix = extensionForMime(mimeType);
-  tempCounter = (tempCounter + 1) % 100_000;
+  tempCounter = (tempCounter + 1) % TEMP_COUNTER_MAX;
   const uri = `${dir}voice-${Date.now()}-${tempCounter}.${suffix}`;
-  await FileSystem.writeAsStringAsync(uri, audioBase64, {
-    encoding: FileSystem.EncodingType.Base64,
+  await writeAsStringAsync(uri, audioBase64, {
+    encoding: EncodingType.Base64,
   });
   try {
     const { sound } = await Audio.Sound.createAsync({ uri });
     try {
       await sound.playAsync();
+      // Wait for playback to finish
+      await new Promise<void>((resolve) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            resolve();
+          }
+        });
+      });
     } finally {
       await sound.unloadAsync();
     }
   } finally {
-    await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+    await deleteAsync(uri, { idempotent: true }).catch(() => {
+      // File deletion errors are non-fatal, silently ignore
+    });
   }
 }
