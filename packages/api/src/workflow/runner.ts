@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
+import {
+  emitLinearActivity,
+  extractIssueIdFromSession,
+  setLinearDelegate,
+  setLinearSessionExternalUrl,
+  setLinearStarted,
+} from "@alfred/agent/orchestrator/linear";
 import type { WorkflowEvent } from "@alfred/type";
+import { logger } from "@alfred/metrics";
 // Lazy metrics loader to avoid heavy deps during unit tests
 type RunnerCounters = {
   runnerStepsTotal: { inc: (labels: { phase: string; outcome: string }) => void };
@@ -31,6 +39,11 @@ export type RunPlanInput = {
   workspace?: string;
   repoBase?: string;
   mode?: "sequential" | "parallel";
+  linear?: {
+    sessionId: string;
+    space: string;
+    authz: string;
+  };
   context?: {
     enable?: boolean;
     web?: boolean;
@@ -40,6 +53,16 @@ export type RunPlanInput = {
     ignore?: string[];
     seeds?: string[];
   };
+};
+
+const lastActivityTime = new Map<string, number>();
+
+const stringify = (value: unknown): string | undefined => {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return undefined;
+  }
 };
 
 export type ResumePayload = {
@@ -140,10 +163,20 @@ export function runPlanV6(
 ): RunPlanV6 {
   const runId = randomUUID();
   const summary = `Plan initialized for ${input.requirement}`;
+  const linear = input.linear ?? null;
+  const issueId = linear ? extractIssueIdFromSession(linear.sessionId) : null;
+  const externalUrlBase =
+    process.env.PUBLIC_URL ??
+    process.env.VITE_APP_URL ??
+    process.env.APP_URL ??
+    null;
 
   let cancelled = false;
   let resumeResolver: ((payload: ResumePayload | null) => void) | null = null;
   const resumeQueue: ResumePayload[] = [];
+  let finalStatus: "completed" | "failed" | "cancelled" | null = null;
+  let finalMessage: string | null = null;
+  let reportSummary: string | null = null;
 
   const stepTimeoutMs = opts?.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
   const workflowTimeoutMs =
@@ -159,127 +192,346 @@ export function runPlanV6(
   }
 
   async function* generator(): AsyncGenerator<WorkflowEvent, void, void> {
-    yield createRunEvent(runId);
+    const markCancelled = () => {
+      finalStatus = "cancelled";
+      finalMessage = null;
+    };
 
-    yield createNoticeEvent(`Planning started for ${input.requirement}`);
-    yield createProgressEvent(5, "initializing");
-
-    // Phase: scan
-    const scanPhase: PhaseConfig = { name: "scan", timeoutMs: stepTimeoutMs };
-    if (input.context?.enable !== false) {
-      yield* executePhaseWithTimeout(scanPhase.name, scanPhase.timeoutMs, async function* () {
-        if (cancelled) return;
-        yield createProgressEvent(10, "analyzing requirement");
-        await delay(50);
-        if (cancelled) return;
-        yield createContextEvent("scan", "Scanning repository and web context (placeholder)");
-        yield createProgressEvent(30, "scan_complete");
-      });
-    } else {
-      yield { type: "step-skip", phase: scanPhase.name } as any;
-    }
-
-    // If medium/high autonomy, request elevated scopes
-    if (input.auto === "medium" || input.auto === "high") {
-      if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-        yield createErrorEvent("workflow_timeout");
-        return;
+    const checkCancelled = () => {
+      if (cancelled) {
+        markCancelled();
+        return true;
       }
-      yield createRequireScopeEvent(["repo.write", "droid.exec"], "bio-authz");
+      return false;
+    };
 
-      // Wait for resume with independent timeout (10s) but respect workflow timeout
-      const resumeDeadline = Date.now() + RESUME_TIMEOUT_MS;
-      const workflowDeadline = workflowStartTime + workflowTimeoutMs;
-      const deadline = Math.min(resumeDeadline, workflowDeadline);
-      const timeoutMs = Math.max(0, deadline - Date.now());
+    try {
+      finalStatus = null;
+      finalMessage = null;
+      reportSummary = null;
 
-      if (cancelled) return;
+      yield createRunEvent(runId);
 
-      // Check if resume was already called (before we reached this point)
-      if (resumeQueue.length > 0) {
-        const resume = resumeQueue.shift()!;
-        yield createNoticeEvent(
-          `Authorization '${resume.event}' acknowledged.`
-        );
-      } else if (timeoutMs > 0) {
-        // Wait for resume with Promise-based mechanism
-        const resumePromise = new Promise<ResumePayload | null>((resolve) => {
-          resumeResolver = resolve;
+      if (linear) {
+        const thoughtActivityPromise = emitLinearActivity("thought", {
+          sessionId: linear.sessionId,
+          space: linear.space,
+          authz: linear.authz,
+          body: `Starting workflow: ${input.requirement}`,
+        }).catch((error) => {
+          logger.warn("linear_thought_activity_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return { ok: false };
         });
 
-        const resume = await Promise.race([
-          resumePromise,
-          delay(timeoutMs).then(() => null),
+        await Promise.race([
+          thoughtActivityPromise,
+          delay(9000).then(() => {
+            logger.warn("linear_thought_activity_timeout", { runId });
+            return { ok: false };
+          }),
         ]);
+      }
 
-        resumeResolver = null;
+      if (linear && issueId) {
+        setLinearDelegate({
+          space: linear.space,
+          issueId,
+          authz: linear.authz,
+        }).catch((error) => {
+          logger.warn("linear_delegate_setup_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
 
-        if (cancelled) return;
-        if (resume) {
+        setLinearStarted({
+          space: linear.space,
+          issueId,
+          authz: linear.authz,
+        }).catch((error) => {
+          logger.warn("linear_started_setup_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
+        if (externalUrlBase) {
+          const normalizedBase = externalUrlBase.endsWith("/")
+            ? externalUrlBase.slice(0, -1)
+            : externalUrlBase;
+          const workflowUrl = `${normalizedBase}/workflow/${runId}`;
+          setLinearSessionExternalUrl(
+            linear.sessionId,
+            linear.space,
+            linear.authz,
+            workflowUrl
+          ).catch((error) => {
+            logger.warn("linear_external_url_setup_failed", {
+              runId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        } else {
+          logger.warn("linear_external_url_setup_missing_base", { runId });
+        }
+      }
+
+      if (checkCancelled()) {
+        return;
+      }
+
+      yield createNoticeEvent(`Planning started for ${input.requirement}`);
+      yield createProgressEvent(5, "initializing");
+
+      const scanPhase: PhaseConfig = { name: "scan", timeoutMs: stepTimeoutMs };
+      if (input.context?.enable !== false) {
+        yield* executePhaseWithTimeout(
+          scanPhase.name,
+          scanPhase.timeoutMs,
+          async function* () {
+            if (cancelled) {
+              markCancelled();
+              return;
+            }
+            yield createProgressEvent(10, "analyzing requirement");
+            await delay(50);
+            if (cancelled) {
+              markCancelled();
+              return;
+            }
+            yield createContextEvent(
+              "scan",
+              "Scanning repository and web context (placeholder)"
+            );
+            yield createProgressEvent(30, "scan_complete");
+          }
+        );
+      } else {
+        yield { type: "step-skip", phase: scanPhase.name } as any;
+      }
+
+      if (input.auto === "medium" || input.auto === "high") {
+        if (Date.now() - workflowStartTime > workflowTimeoutMs) {
+          finalStatus = "failed";
+          finalMessage = "workflow_timeout";
+          yield createErrorEvent("workflow_timeout");
+          return;
+        }
+        yield createRequireScopeEvent(
+          ["repo.write", "droid.exec"],
+          "bio-authz"
+        );
+
+        const resumeDeadline = Date.now() + RESUME_TIMEOUT_MS;
+        const workflowDeadline = workflowStartTime + workflowTimeoutMs;
+        const deadline = Math.min(resumeDeadline, workflowDeadline);
+        const timeoutMs = Math.max(0, deadline - Date.now());
+
+        if (checkCancelled()) {
+          return;
+        }
+
+        if (resumeQueue.length > 0) {
+          const resume = resumeQueue.shift()!;
           yield createNoticeEvent(
             `Authorization '${resume.event}' acknowledged.`
           );
+        } else if (timeoutMs > 0) {
+          const resumePromise = new Promise<ResumePayload | null>((resolve) => {
+            resumeResolver = resolve;
+          });
+
+          const resume = await Promise.race([
+            resumePromise,
+            delay(timeoutMs).then(() => null),
+          ]);
+
+          resumeResolver = null;
+
+          if (checkCancelled()) {
+            return;
+          }
+          if (resume) {
+            yield createNoticeEvent(
+              `Authorization '${resume.event}' acknowledged.`
+            );
+          }
         }
       }
+
+      if (checkCancelled()) {
+        return;
+      }
+      if (Date.now() - workflowStartTime > workflowTimeoutMs) {
+        finalStatus = "failed";
+        finalMessage = "workflow_timeout";
+        yield createErrorEvent("workflow_timeout");
+        return;
+      }
+
+      const planPhase: PhaseConfig = {
+        name: "plan",
+        timeoutMs: stepTimeoutMs,
+      };
+      yield* executePhaseWithTimeout(
+        planPhase.name,
+        planPhase.timeoutMs,
+        async function* () {
+          yield {
+            type: "assistant",
+            text: `Draft plan for: ${input.requirement}`,
+          } as any;
+          yield createProgressEvent(60, "plan_drafted");
+        }
+      );
+
+      if (checkCancelled()) {
+        return;
+      }
+
+      const actPhase: PhaseConfig = { name: "act", timeoutMs: stepTimeoutMs };
+      yield* executePhaseWithTimeout(
+        actPhase.name,
+        actPhase.timeoutMs,
+        async function* () {
+          const tcId = randomUUID();
+          const toolName = "echo";
+          const args = { text: "hello" };
+          yield {
+            type: "tool-call",
+            id: tcId,
+            toolName,
+            args,
+          } as any;
+
+          await delay(20);
+          const result = { text: "hello" };
+          yield {
+            type: "tool-result",
+            id: tcId,
+            toolName,
+            result,
+          } as any;
+
+          if (linear) {
+            const now = Date.now();
+            const last = lastActivityTime.get(runId) ?? 0;
+            if (now - last > 30_000) {
+              lastActivityTime.set(runId, now);
+              emitLinearActivity("action", {
+                sessionId: linear.sessionId,
+                space: linear.space,
+                authz: linear.authz,
+                title: `Executed tool: ${toolName}`,
+                body: "Tool execution completed",
+                parameter: stringify(args),
+                result: stringify(result),
+                ephemeral: true,
+              }).catch((error) => {
+                logger.warn("linear_action_activity_failed", {
+                  runId,
+                  toolName,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              });
+            }
+          }
+
+          yield createProgressEvent(85, "act_complete");
+        }
+      );
+
+      if (checkCancelled()) {
+        return;
+      }
+
+      const reportPhase: PhaseConfig = {
+        name: "report",
+        timeoutMs: stepTimeoutMs,
+      };
+      yield* executePhaseWithTimeout(
+        reportPhase.name,
+        reportPhase.timeoutMs,
+        async function* () {
+          const reportText = "Report complete.";
+          yield { type: "assistant", text: reportText } as any;
+          reportSummary = reportText;
+          yield createProgressEvent(95, "report_complete");
+        }
+      );
+
+      if (checkCancelled()) {
+        return;
+      }
+      if (Date.now() - workflowStartTime > workflowTimeoutMs) {
+        finalStatus = "failed";
+        finalMessage = "workflow_timeout";
+        yield createErrorEvent("workflow_timeout");
+        return;
+      }
+
+      finalStatus = "completed";
+      let completionMessage: string | null = null;
+      if (typeof reportSummary === "string") {
+        const summaryText: string = reportSummary;
+        const trimmed = summaryText.trim();
+        if (trimmed.length > 0) {
+          completionMessage = trimmed;
+        }
+      }
+      finalMessage =
+        completionMessage ?? "Workflow completed successfully.";
+      yield createProgressEvent(100, "workflow_completed");
+    } catch (error) {
+      finalStatus = "failed";
+      finalMessage =
+        error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      if (linear) {
+        if (finalStatus === "completed") {
+          const completionResult =
+            typeof finalMessage === "string" ? finalMessage : "";
+          const body =
+            completionResult.trim().length > 0
+              ? `Workflow completed successfully. Results: ${completionResult}`
+              : "Workflow completed successfully.";
+          emitLinearActivity("response", {
+            sessionId: linear.sessionId,
+            space: linear.space,
+            authz: linear.authz,
+            body,
+          }).catch((error) => {
+            logger.warn("linear_response_activity_failed", {
+              runId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        } else if (finalStatus === "failed") {
+          const failureMessage =
+            typeof finalMessage === "string" ? finalMessage : "";
+          const body =
+            failureMessage.trim().length > 0
+              ? `Workflow failed: ${failureMessage}`
+              : "Workflow failed.";
+          emitLinearActivity("error", {
+            sessionId: linear.sessionId,
+            space: linear.space,
+            authz: linear.authz,
+            body,
+          }).catch((error) => {
+            logger.warn("linear_error_activity_failed", {
+              runId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
+        lastActivityTime.delete(runId);
+      }
     }
-
-    if (cancelled) return;
-    if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-      yield createErrorEvent("workflow_timeout");
-      return;
-    }
-    // Phase: plan
-    const planPhase: PhaseConfig = { name: "plan", timeoutMs: stepTimeoutMs };
-    yield* executePhaseWithTimeout(planPhase.name, planPhase.timeoutMs, async function* () {
-      // Emit an assistant message with a draft plan (for UI replay normalization)
-      yield { type: "assistant", text: `Draft plan for: ${input.requirement}` } as any;
-      yield createProgressEvent(60, "plan_drafted");
-    });
-
-    if (cancelled) return;
-    // Phase: act
-    const actPhase: PhaseConfig = { name: "act", timeoutMs: stepTimeoutMs };
-    yield* executePhaseWithTimeout(actPhase.name, actPhase.timeoutMs, async function* () {
-      // Simulate one tool call and result; IDs allow UI correlation
-      const tcId = randomUUID();
-      yield { type: "tool-call", id: tcId, toolName: "echo", args: { text: "hello" } } as any;
-      
-      // TODO: When tool execution integrated, emit action activities here
-      // Example:
-      // if (input.linear) {
-      //   await emitLinearActivity("action", {
-      //     sessionId: input.linear.sessionId,
-      //     space: input.linear.space,
-      //     authz: input.linear.authz,
-      //     title: `Execute ${toolCall.name}`,
-      //     parameter: JSON.stringify(toolCall.input),
-      //     result: JSON.stringify(toolCall.output),
-      //     ephemeral: true, // Use ephemeral for intermediate tool calls
-      //   }).catch((error) => {
-      //     logger.warn("linear_action_activity_failed", { runId, error });
-      //   });
-      // }
-      
-      await delay(20);
-      yield { type: "tool-result", id: tcId, toolName: "echo", result: { text: "hello" } } as any;
-      yield createProgressEvent(85, "act_complete");
-    });
-
-    if (cancelled) return;
-    // Phase: report
-    const reportPhase: PhaseConfig = { name: "report", timeoutMs: stepTimeoutMs };
-    yield* executePhaseWithTimeout(reportPhase.name, reportPhase.timeoutMs, async function* () {
-      yield { type: "assistant", text: "Report complete." } as any;
-      yield createProgressEvent(95, "report_complete");
-    });
-
-    if (cancelled) return;
-    if (Date.now() - workflowStartTime > workflowTimeoutMs) {
-      yield createErrorEvent("workflow_timeout");
-      return;
-    }
-
-    yield createProgressEvent(100, "workflow_completed");
   }
 
   return {
@@ -295,6 +547,10 @@ export function runPlanV6(
     },
     cancel() {
       cancelled = true;
+      if (finalStatus === null) {
+        finalStatus = "cancelled";
+        finalMessage = null;
+      }
       if (resumeResolver) {
         resumeResolver(null);
       }

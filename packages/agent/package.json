@@ -34,7 +34,7 @@
     "@alfred/learning": "workspace:*",
     "@linear/sdk": "^53.0.0",
     "@lmnr-ai/lmnr": "^0.7.4",
-    "p-retry": "^7.1.0",
+    "p-retry": "6.2.0",
     "zod": "catalog:"
   }
 }

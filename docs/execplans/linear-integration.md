@@ -13,7 +13,7 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 
 ## Progress
 
-- [ ] (YYYY-MM-DD HH:MMZ) Read Linear SDK documentation and understand agent session lifecycle
+- [x] (2025-11-12 08:12Z) Read Linear SDK documentation and understand agent session lifecycle
 - [x] (2025-11-12 07:34Z) Install p-retry dependency for exponential backoff
 - [x] (2025-11-12 07:37Z) Implement emitLinearActivity() with error handling and retry logic
 - [x] (2025-11-12 07:37Z) Implement setLinearDelegate() helper function
@@ -26,20 +26,20 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 - [x] (2025-11-12 07:51Z) Add session initialization (delegate + state + external URL) to workflow runner
 - [x] (2025-11-12 07:51Z) Add action activity emission for tool calls
 - [x] (2025-11-12 07:51Z) Add response/error activity emission on completion
-- [ ] (YYYY-MM-DD HH:MMZ) Create webhook handler at apps/web/src/routes/api/linear/webhook.ts
-- [ ] (YYYY-MM-DD HH:MMZ) Implement webhook signature verification
-- [ ] (YYYY-MM-DD HH:MMZ) Handle issue assignment events
-- [ ] (YYYY-MM-DD HH:MMZ) Handle issue state change events
-- [ ] (YYYY-MM-DD HH:MMZ) Handle comment creation events
-- [ ] (YYYY-MM-DD HH:MMZ) Write unit tests for Linear helper functions
-- [ ] (YYYY-MM-DD HH:MMZ) Write integration tests for workflow runner
+- [x] (2025-11-12 08:12Z) Create webhook handler at apps/web/src/routes/api/linear/webhook.ts
+- [x] (2025-11-12 08:12Z) Implement webhook signature verification
+- [x] (2025-11-12 08:12Z) Handle issue assignment events
+- [x] (2025-11-12 08:12Z) Handle issue state change events
+- [x] (2025-11-12 08:12Z) Handle comment creation events
+- [x] (2025-11-12 08:12Z) Write unit tests for Linear helper functions
+- [x] (2025-11-12 08:12Z) Write integration tests for workflow runner
 - [ ] (YYYY-MM-DD HH:MMZ) Manual end-to-end testing with real Linear workspace
-- [ ] (YYYY-MM-DD HH:MMZ) Update documentation with setup instructions
+- [x] (2025-11-12 08:12Z) Update documentation with setup instructions
 
 
 ## Surprises & Discoveries
 
-(To be filled as implementation proceeds. Document unexpected behaviors, performance characteristics, or design insights discovered during development.)
+- The agent package cannot import `@alfred/api/metrics` directly because of `tsc` composite rootDir limits. Introduced `configureLinearMetrics` to inject counters at runtime without cross-package build failures.
 
 
 ## Decision Log

@@ -1,4 +1,9 @@
 import crypto from "node:crypto";
+import {
+  LinearWebhooks,
+  LINEAR_WEBHOOK_SIGNATURE_HEADER,
+  LINEAR_WEBHOOK_TS_FIELD,
+} from "@linear/sdk/webhooks";
 import { appRouter } from "@alfred/api";
 import {
   webhookErrorsTotal,
@@ -23,63 +28,6 @@ function getWebhookSecret(): string {
     throw new Error("linear_webhook_secret_missing");
   }
   return secret;
-}
-
-interface ParsedSignatureHeader {
-  timestamp: number;
-  signature: string;
-}
-
-function parseSignatureHeader(
-  raw: string | null
-): ParsedSignatureHeader | null {
-  if (!raw) return null;
-  const parts = raw.split(",");
-  let timestamp: number | null = null;
-  let signature: string | null = null;
-
-  for (const part of parts) {
-    const [key, value] = part.split("=");
-    if (!(key && value)) continue;
-    const trimmedKey = key.trim().toLowerCase();
-    const trimmedValue = value.trim();
-    if (trimmedKey === "t") {
-      const parsed = Number.parseInt(trimmedValue, 10);
-      if (Number.isFinite(parsed)) {
-        timestamp = parsed;
-      }
-    } else if (trimmedKey === "v1") {
-      signature = trimmedValue;
-    }
-  }
-
-  if (!(timestamp && signature)) {
-    return null;
-  }
-
-  return { timestamp, signature };
-}
-
-function verifySignature(
-  secret: string,
-  timestamp: number,
-  payload: string,
-  expected: string
-): boolean {
-  const body = `${timestamp}:${payload}`;
-  const computed = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex");
-
-  const providedBuffer = Buffer.from(expected, "hex");
-  const computedBuffer = Buffer.from(computed, "hex");
-
-  if (providedBuffer.length !== computedBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(providedBuffer, computedBuffer);
 }
 
 function extractIssueId(payload: unknown): string | null {
@@ -169,6 +117,102 @@ function extractAuthz(payload: unknown): string | null {
   return null;
 }
 
+async function handleLinearWebhookEvent(args: {
+  payload: unknown;
+  eventType: string;
+  action: string;
+  authz: string | null;
+}): Promise<void> {
+  const { payload, eventType, action, authz } = args;
+
+  if (eventType === "Issue" && (action === "create" || action === "update")) {
+    const workspace = extractWorkspace(payload);
+    if (workspace) {
+      const installation = await linearRepo.getLinearByWorkspace(workspace);
+      if (installation && isAssignedToAlfred(payload, installation.appUser)) {
+        const issueId = extractIssueId(payload);
+        if (issueId) {
+          const existingRun = await workflowRepo.findRunByLinearSession(issueId);
+          if (!existingRun || existingRun.status !== "running") {
+            const issue = (payload as {
+              data?: { title?: string; description?: string };
+            })?.data;
+            const requirement =
+              issue?.description ?? issue?.title ?? "Work on Linear issue";
+
+            const caller = createWorkflowCaller(`linear-webhook-${issueId}`);
+            try {
+              await caller.workflow.start({
+                requirement,
+                auto: "low",
+                linear: {
+                  space: workspace,
+                  sessionId: issueId,
+                },
+                authzLinear: authz ?? undefined,
+              });
+              linearWebhookWorkflowStartsTotal.inc();
+              logger.info("linear_webhook_workflow_started", {
+                issueId,
+                workspace,
+              });
+            } catch (error) {
+              logger.warn("linear_webhook_workflow_start_failed", {
+                issueId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (eventType === "Comment" && action === "create") {
+    const issueId = extractIssueIdFromComment(payload);
+    if (issueId) {
+      const workflow = await workflowRepo.findRunByLinearSession(issueId);
+      if (workflow && workflow.status === "running") {
+        logger.info("linear_comment_received", {
+          runId: workflow.id,
+          issueId,
+        });
+        // TODO: Persist comment for contextual enrichment in future iterations
+      }
+    }
+  }
+
+  if (
+    eventType === "Issue" &&
+    action === "update" &&
+    isIssueStateCompletedOrCanceled(payload)
+  ) {
+    const issueId = extractIssueId(payload);
+    if (issueId) {
+      const workflow = await workflowRepo.findRunByLinearSession(issueId);
+      if (workflow && workflow.status === "running") {
+        try {
+          await runRegistry.dispatchCancel(workflow.id);
+          await workflowRepo.updateRun(workflow.id, {
+            status: "cancelled",
+          });
+          linearWebhookWorkflowCancelsTotal.inc();
+          logger.info("linear_webhook_workflow_cancelled", {
+            runId: workflow.id,
+            issueId,
+          });
+        } catch (error) {
+          logger.warn("linear_webhook_workflow_cancel_failed", {
+            runId: workflow.id,
+            issueId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+  }
+}
+
 function createWorkflowCaller(requestId: string) {
   return appRouter.createCaller({
     session: {
@@ -209,30 +253,12 @@ export const Route = createFileRoute("/api/linear/webhook")({
           return new Response("missing_secret", { status: 500 });
         }
 
+        const webhookVerifier = new LinearWebhooks(secret);
         const rawBody = await request.text();
-        const header = parseSignatureHeader(
-          request.headers.get("linear-signature")
-        );
-        if (!header) {
+        const signature = request.headers.get(LINEAR_WEBHOOK_SIGNATURE_HEADER);
+        if (!signature) {
           webhookErrorsTotal.labels("signature").inc();
-          return new Response("invalid_signature", { status: 401 });
-        }
-
-        const now = Math.floor(Date.now() / 1000);
-        if (Math.abs(now - header.timestamp) > MAX_AGE_SECONDS) {
-          webhookErrorsTotal.labels("timestamp").inc();
-          return new Response("stale_signature", { status: 401 });
-        }
-
-        const validSignature = verifySignature(
-          secret,
-          header.timestamp,
-          rawBody,
-          header.signature
-        );
-        if (!validSignature) {
-          webhookErrorsTotal.labels("signature").inc();
-          return new Response("invalid_signature", { status: 401 });
+          return new Response("missing_signature", { status: 401 });
         }
 
         let payload: unknown;
@@ -243,6 +269,44 @@ export const Route = createFileRoute("/api/linear/webhook")({
           return new Response("invalid_payload", { status: 400 });
         }
 
+        const timestampValue =
+          (payload as Record<string, unknown> | null)?.[
+            LINEAR_WEBHOOK_TS_FIELD
+          ];
+        let timestamp: number | undefined;
+        if (typeof timestampValue === "number") {
+          timestamp = timestampValue;
+        } else if (typeof timestampValue === "string") {
+          const parsed = Number.parseInt(timestampValue, 10);
+          if (Number.isFinite(parsed)) {
+            timestamp = parsed;
+          }
+        }
+        if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) {
+          webhookErrorsTotal.labels("timestamp").inc();
+          return new Response("invalid_timestamp", { status: 400 });
+        }
+
+        const timestampSeconds =
+          timestamp > 1_000_000_000_000
+            ? Math.floor(timestamp / 1000)
+            : Math.floor(timestamp);
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        if (Math.abs(nowSeconds - timestampSeconds) > MAX_AGE_SECONDS) {
+          webhookErrorsTotal.labels("timestamp").inc();
+          return new Response("stale_signature", { status: 401 });
+        }
+
+        const verified = webhookVerifier.verify(
+          Buffer.from(rawBody),
+          signature,
+          timestamp
+        );
+        if (!verified) {
+          webhookErrorsTotal.labels("signature").inc();
+          return new Response("invalid_signature", { status: 401 });
+        }
+
         const eventType = extractEventType(payload);
         const action = (payload as { action?: string })?.action ?? "unknown";
         webhookEventsTotal.labels(eventType).inc();
@@ -250,92 +314,16 @@ export const Route = createFileRoute("/api/linear/webhook")({
 
         const authz = extractAuthz(payload);
 
-        // Handle Issue assignment events
-        if (eventType === "Issue" && (action === "create" || action === "update")) {
-          const workspace = extractWorkspace(payload);
-          if (workspace) {
-            const installation = await linearRepo.getLinearByWorkspace(workspace);
-            if (installation && isAssignedToAlfred(payload, installation.appUser)) {
-              const issueId = extractIssueId(payload);
-              if (issueId) {
-                // Check if workflow already running
-                const existingRun = await workflowRepo.findRunByLinearSession(issueId);
-                if (!existingRun || existingRun.status !== "running") {
-                  // Extract requirement from issue description or title
-                  const issue = (payload as { data?: { title?: string; description?: string } })?.data;
-                  const requirement = issue?.description ?? issue?.title ?? "Work on Linear issue";
-                  
-                  // Start workflow via tRPC caller
-                  const caller = createWorkflowCaller(`linear-webhook-${issueId}`);
-                  try {
-                    await caller.workflow.start({
-                      requirement,
-                      auto: "low",
-                      linear: {
-                        space: workspace,
-                        sessionId: issueId,
-                      },
-                      authzLinear: authz ?? undefined,
-                    });
-                    linearWebhookWorkflowStartsTotal.inc();
-                    logger.info("linear_webhook_workflow_started", {
-                      issueId,
-                      workspace,
-                    });
-                  } catch (error) {
-                    logger.warn("linear_webhook_workflow_start_failed", {
-                      issueId,
-                      error: error instanceof Error ? error.message : String(error),
-                    });
-                  }
-                }
-              }
-            }
+        handleLinearWebhookEvent({ payload, eventType, action, authz }).catch(
+          (error) => {
+            webhookErrorsTotal.labels("processing").inc();
+            logger.error("linear_webhook_processing_failed", {
+              eventType,
+              action,
+              error: error instanceof Error ? error.message : String(error),
+            });
           }
-        }
-
-        // Handle Comment events
-        if (eventType === "Comment" && action === "create") {
-          const issueId = extractIssueIdFromComment(payload);
-          if (issueId) {
-            const workflow = await workflowRepo.findRunByLinearSession(issueId);
-            if (workflow && workflow.status === "running") {
-              logger.info("linear_comment_received", {
-                runId: workflow.id,
-                issueId,
-              });
-              // TODO: Add comment as context to workflow (future enhancement)
-            }
-          }
-        }
-
-        // Handle Issue state change events
-        if (eventType === "Issue" && action === "update" && isIssueStateCompletedOrCanceled(payload)) {
-          const issueId = extractIssueId(payload);
-          if (issueId) {
-            const workflow = await workflowRepo.findRunByLinearSession(issueId);
-            if (workflow && workflow.status === "running") {
-              // Cancel workflow
-              try {
-                await runRegistry.dispatchCancel(workflow.id);
-                await workflowRepo.updateRun(workflow.id, {
-                  status: "cancelled",
-                });
-                linearWebhookWorkflowCancelsTotal.inc();
-                logger.info("linear_webhook_workflow_cancelled", {
-                  runId: workflow.id,
-                  issueId,
-                });
-              } catch (error) {
-                logger.warn("linear_webhook_workflow_cancel_failed", {
-                  runId: workflow.id,
-                  issueId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            }
-          }
-        }
+        );
 
         const runIdCandidate = (
           payload as { data?: { agentSessionId?: unknown } }

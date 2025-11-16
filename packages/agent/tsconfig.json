@@ -15,6 +15,7 @@
     { "path": "../type" },
     { "path": "../cognitive" },
     { "path": "../knowledge" },
-    { "path": "../learning" }
+    { "path": "../learning" },
+    { "path": "../metrics" }
   ]
 }

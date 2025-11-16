@@ -479,23 +479,23 @@ export const replayQueryDurationSeconds = new client.Histogram({
 
 export const linearActivityEmissionsTotal = new client.Counter({
   name: "linear_activity_emissions_total",
-  help: "Total Linear activity emissions",
+  help: "Total Linear agent activity emissions",
   labelNames: ["type", "status"] as const,
   registers: [metricsRegistry],
 });
 
 export const linearActivityDurationSeconds = new client.Histogram({
   name: "linear_activity_duration_seconds",
-  help: "Linear activity emission duration",
+  help: "Duration of Linear activity emissions",
   labelNames: ["type"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+  buckets: [0.01, 0.05, 0.1, 0.5, 1, 5],
   registers: [metricsRegistry],
 });
 
 export const linearSessionOperationsTotal = new client.Counter({
   name: "linear_session_operations_total",
-  help: "Linear session operations (delegate, state)",
-  labelNames: ["operation", "status"] as const,
+  help: "Total Linear session operations (delegate, state, URL)",
+  labelNames: ["operation"] as const,
   registers: [metricsRegistry],
 });
 
@@ -508,13 +508,13 @@ export const linearWebhookEventsTotal = new client.Counter({
 
 export const linearWebhookWorkflowStartsTotal = new client.Counter({
   name: "linear_webhook_workflow_starts_total",
-  help: "Total workflows started from Linear webhook events",
+  help: "Total workflows started from Linear webhooks",
   registers: [metricsRegistry],
 });
 
 export const linearWebhookWorkflowCancelsTotal = new client.Counter({
   name: "linear_webhook_workflow_cancels_total",
-  help: "Total workflows cancelled from Linear webhook events",
+  help: "Total workflows canceled from Linear webhooks",
   registers: [metricsRegistry],
 });
 

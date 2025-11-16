@@ -1,5 +1,4 @@
-import { registerAssistantEscalationCounter, registerAssistantToolCounter, registerCodexErrorCounter, registerCodexExecCounter, registerCodexExecHistogram, registerDroidExecCounter, registerDroidExecHistogram, registerEvalDurationHistogram, registerEvalFailureCounter, registerEvalRunsCounter, registerEvalScoreCounter, registerLaminarDatapointCounter, registerLaminarErrorCounter, registerMemoryForgetsCounter, registerMemoryUpdatesCounter, } from "@alfred/agent";
-import { registerCacheObs } from "@alfred/policy";
+// External metric hooks (agent/policy) are wired lazily below to keep tests light
 import client from "prom-client";
 import { logger } from "./utils/logger";
 export const metricsRegistry = new client.Registry();
@@ -66,7 +65,7 @@ export const droidExecRunsTotal = new client.Counter({
     labelNames: ["auto", "exit_code"],
     registers: [metricsRegistry],
 });
-registerDroidExecCounter(droidExecRunsTotal);
+// wired via lazy hooks
 export const droidExecDurationSeconds = new client.Histogram({
     name: "droid_exec_duration_seconds",
     help: "Duration of droid exec runs in seconds.",
@@ -74,14 +73,14 @@ export const droidExecDurationSeconds = new client.Histogram({
     buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
     registers: [metricsRegistry],
 });
-registerDroidExecHistogram(droidExecDurationSeconds);
+// wired via lazy hooks
 export const codexExecRunsTotal = new client.Counter({
     name: "codex_exec_runs_total",
     help: "Count of Codex exec runs grouped by autonomy level and exit code.",
     labelNames: ["auto", "exit_code"],
     registers: [metricsRegistry],
 });
-registerCodexExecCounter(codexExecRunsTotal);
+// wired via lazy hooks
 export const codexExecDurationSeconds = new client.Histogram({
     name: "codex_exec_duration_seconds",
     help: "Duration of Codex exec runs in seconds.",
@@ -89,21 +88,21 @@ export const codexExecDurationSeconds = new client.Histogram({
     buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
     registers: [metricsRegistry],
 });
-registerCodexExecHistogram(codexExecDurationSeconds);
+// wired via lazy hooks
 export const codexErrorsTotal = new client.Counter({
     name: "codex_errors_total",
     help: "Count of Codex executor errors grouped by stage.",
     labelNames: ["stage"],
     registers: [metricsRegistry],
 });
-registerCodexErrorCounter(codexErrorsTotal);
+// wired via lazy hooks
 export const evalRunsTotal = new client.Counter({
     name: "eval_runs_total",
     help: "Count of evaluation runs grouped by agent and status.",
     labelNames: ["agent", "status"],
     registers: [metricsRegistry],
 });
-registerEvalRunsCounter(evalRunsTotal);
+// wired via lazy hooks
 export const evalDurationSeconds = new client.Histogram({
     name: "eval_duration_seconds",
     help: "Duration of evaluation runs in seconds.",
@@ -111,35 +110,57 @@ export const evalDurationSeconds = new client.Histogram({
     buckets: [1, 5, 10, 30, 60, 120, 300, 600, 900, 1800],
     registers: [metricsRegistry],
 });
-registerEvalDurationHistogram(evalDurationSeconds);
+// wired via lazy hooks
 export const evalScoresTotal = new client.Counter({
     name: "eval_scores_total",
     help: "Count of evaluation scores persisted per scorer.",
     labelNames: ["scorer"],
     registers: [metricsRegistry],
 });
-registerEvalScoreCounter(evalScoresTotal);
+// wired via lazy hooks
 export const evalFailuresTotal = new client.Counter({
     name: "eval_failures_total",
     help: "Count of evaluation scoring failures grouped by scorer and reason.",
     labelNames: ["scorer", "reason"],
     registers: [metricsRegistry],
 });
-registerEvalFailureCounter(evalFailuresTotal);
+// wired via lazy hooks
 export const laminarEvalDatapointsTotal = new client.Counter({
     name: "laminar_eval_datapoints_total",
     help: "Count of Laminar datapoint operations by status.",
     labelNames: ["status"],
     registers: [metricsRegistry],
 });
-registerLaminarDatapointCounter(laminarEvalDatapointsTotal);
+// wired via lazy hooks
 export const laminarEvalErrorsTotal = new client.Counter({
     name: "laminar_eval_errors_total",
     help: "Count of Laminar export errors grouped by stage.",
     labelNames: ["stage"],
     registers: [metricsRegistry],
 });
-registerLaminarErrorCounter(laminarEvalErrorsTotal);
+// wired via lazy hooks
+export const compressionCyclesTotal = new client.Counter({
+    name: "compression_cycles_total",
+    help: "Count of compression worker cycles grouped by outcome.",
+    labelNames: ["outcome"],
+    registers: [metricsRegistry],
+});
+// wired via lazy hooks
+export const compressionCycleDurationSeconds = new client.Histogram({
+    name: "compression_cycle_duration_seconds",
+    help: "Duration of compression worker cycles in seconds grouped by outcome.",
+    labelNames: ["outcome"],
+    buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+    registers: [metricsRegistry],
+});
+// wired via lazy hooks
+export const compressionNodesUpdatedTotal = new client.Counter({
+    name: "compression_nodes_updated_total",
+    help: "Count of nodes updated by the compression worker grouped by operation.",
+    labelNames: ["operation"],
+    registers: [metricsRegistry],
+});
+// wired via lazy hooks
 export const webhookEventsTotal = new client.Counter({
     name: "webhook_events_total",
     help: "Count of webhook events grouped by type.",
@@ -164,28 +185,28 @@ export const assistantToolCallsTotal = new client.Counter({
     labelNames: ["tool"],
     registers: [metricsRegistry],
 });
-registerAssistantToolCounter(assistantToolCallsTotal);
+// wired via lazy hooks
 export const assistantEscalationsTotal = new client.Counter({
     name: "assistant_escalations_total",
     help: "Count of assistant escalations grouped by kind.",
     labelNames: ["kind"],
     registers: [metricsRegistry],
 });
-registerAssistantEscalationCounter(assistantEscalationsTotal);
+// wired via lazy hooks
 export const memoryUpdatesTotal = new client.Counter({
     name: "memory_updates_total",
     help: "Count of memory updates grouped by kind and source.",
     labelNames: ["kind", "source"],
     registers: [metricsRegistry],
 });
-registerMemoryUpdatesCounter(memoryUpdatesTotal);
+// wired via lazy hooks
 export const memoryForgetsTotal = new client.Counter({
     name: "memory_forgets_total",
     help: "Count of memory forget operations grouped by scope.",
     labelNames: ["scope"],
     registers: [metricsRegistry],
 });
-registerMemoryForgetsCounter(memoryForgetsTotal);
+// wired via lazy hooks
 export const voiceSttTotal = new client.Counter({
     name: "voice_stt_total",
     help: "Count of voice STT invocations grouped by provider and status.",
@@ -212,6 +233,8 @@ export const voiceTtsDurationSeconds = new client.Histogram({
     buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
     registers: [metricsRegistry],
 });
+// Voice streaming metrics (lightweight stubs to satisfy imports)
+// Voice stream metrics are defined below alongside other stream metrics
 const coerceProvider = (provider) => provider && provider.length > 0 ? provider : "unknown";
 const observeDuration = (histogram, provider, durationSeconds) => {
     if (typeof durationSeconds !== "number")
@@ -288,6 +311,36 @@ export function startStreamTimer() {
         return;
     }
 }
+export const voiceStreamEventsTotal = new client.Counter({
+    name: "voice_stream_events_total",
+    help: "Count of voice stream events grouped by event type and status.",
+    labelNames: ["event", "status"],
+    registers: [metricsRegistry],
+});
+export const voiceStreamLatencySeconds = new client.Histogram({
+    name: "voice_stream_latency_seconds",
+    help: "Latency of voice stream operations in seconds grouped by stage.",
+    labelNames: ["stage"],
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+    registers: [metricsRegistry],
+});
+export const voiceQueueDepthCurrent = new client.Gauge({
+    name: "voice_queue_depth_current",
+    help: "Current depth of voice queue.",
+    registers: [metricsRegistry],
+});
+export const voiceQueueDrainDurationSeconds = new client.Histogram({
+    name: "voice_queue_drain_duration_seconds",
+    help: "Duration of voice queue drain operations in seconds.",
+    registers: [metricsRegistry],
+    buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+});
+export const voiceProcessHealth = new client.Gauge({
+    name: "voice_process_health",
+    help: "Health status of voice processes (1 = healthy, 0 = unhealthy) grouped by type.",
+    labelNames: ["type"],
+    registers: [metricsRegistry],
+});
 export const workflowStreamEventsTotal = new client.Counter({
     name: "workflow_stream_events_total",
     help: "Count of workflow stream events grouped by event type.",
@@ -328,21 +381,21 @@ export const replayQueryDurationSeconds = new client.Histogram({
 });
 export const linearActivityEmissionsTotal = new client.Counter({
     name: "linear_activity_emissions_total",
-    help: "Total Linear activity emissions",
+    help: "Total Linear agent activity emissions",
     labelNames: ["type", "status"],
     registers: [metricsRegistry],
 });
 export const linearActivityDurationSeconds = new client.Histogram({
     name: "linear_activity_duration_seconds",
-    help: "Linear activity emission duration",
+    help: "Duration of Linear activity emissions",
     labelNames: ["type"],
-    buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    buckets: [0.01, 0.05, 0.1, 0.5, 1, 5],
     registers: [metricsRegistry],
 });
 export const linearSessionOperationsTotal = new client.Counter({
     name: "linear_session_operations_total",
-    help: "Linear session operations (delegate, state)",
-    labelNames: ["operation", "status"],
+    help: "Total Linear session operations (delegate, state, URL)",
+    labelNames: ["operation"],
     registers: [metricsRegistry],
 });
 export const linearWebhookEventsTotal = new client.Counter({
@@ -353,27 +406,66 @@ export const linearWebhookEventsTotal = new client.Counter({
 });
 export const linearWebhookWorkflowStartsTotal = new client.Counter({
     name: "linear_webhook_workflow_starts_total",
-    help: "Total workflows started from Linear webhook events",
+    help: "Total workflows started from Linear webhooks",
     registers: [metricsRegistry],
 });
 export const linearWebhookWorkflowCancelsTotal = new client.Counter({
     name: "linear_webhook_workflow_cancels_total",
-    help: "Total workflows cancelled from Linear webhook events",
+    help: "Total workflows canceled from Linear webhooks",
     registers: [metricsRegistry],
 });
-registerCacheObs((result) => {
-    try {
-        pdpCacheHitsTotal.inc({ result });
-    }
-    catch (error) {
-        // Metrics failures should not break critical paths (policy evaluation)
-        // Logged at warn level to maintain observability without impacting performance
-        logger.warn("metrics_cache_hit_failed", {
-            result,
-            error: error instanceof Error ? error.message : String(error),
-        });
-    }
-});
+// Lazily wire external metric hooks (agent/policy) to avoid heavy imports in tests
+if (process.env.DISABLE_METRICS_HOOKS !== "1") {
+    (async () => {
+        try {
+            const agent = await import("@alfred/agent");
+            agent.registerDroidExecCounter?.(droidExecRunsTotal);
+            agent.registerDroidExecHistogram?.(droidExecDurationSeconds);
+            agent.registerCodexExecCounter?.(codexExecRunsTotal);
+            agent.registerCodexExecHistogram?.(codexExecDurationSeconds);
+            agent.registerCodexErrorCounter?.(codexErrorsTotal);
+            agent.registerEvalRunsCounter?.(evalRunsTotal);
+            agent.registerEvalDurationHistogram?.(evalDurationSeconds);
+            agent.registerEvalScoreCounter?.(evalScoresTotal);
+            agent.registerEvalFailureCounter?.(evalFailuresTotal);
+            agent.registerLaminarDatapointCounter?.(laminarEvalDatapointsTotal);
+            agent.registerLaminarErrorCounter?.(laminarEvalErrorsTotal);
+            agent.registerCompressionCycleCounter?.(compressionCyclesTotal);
+            agent.registerCompressionCycleHistogram?.({
+                startTimer: () => compressionCycleDurationSeconds.startTimer(),
+            });
+            agent.registerCompressionNodeCounter?.(compressionNodesUpdatedTotal);
+            agent.registerAssistantToolCounter?.(assistantToolCallsTotal);
+            agent.registerAssistantEscalationCounter?.(assistantEscalationsTotal);
+            agent.registerMemoryUpdatesCounter?.(memoryUpdatesTotal);
+            agent.registerMemoryForgetsCounter?.(memoryForgetsTotal);
+        }
+        catch (error) {
+            logger.warn("metrics_agent_hooks_disabled", {
+                reason: error instanceof Error ? error.message : String(error),
+            });
+        }
+        try {
+            const policy = await import("@alfred/policy");
+            policy.registerCacheObs?.((result) => {
+                try {
+                    pdpCacheHitsTotal.inc({ result });
+                }
+                catch (error) {
+                    logger.warn("metrics_cache_hit_failed", {
+                        result,
+                        error: error instanceof Error ? error.message : String(error),
+                    });
+                }
+            });
+        }
+        catch (error) {
+            logger.warn("metrics_policy_hooks_disabled", {
+                reason: error instanceof Error ? error.message : String(error),
+            });
+        }
+    })();
+}
 export const metricsContentType = metricsRegistry.contentType;
 export async function getMetricsSnapshot() {
     return metricsRegistry.metrics();

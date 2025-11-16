@@ -9,6 +9,8 @@ export type WorkflowStatus =
   | "failed"
   | "cancelled";
 
+export type WorkflowRun = typeof workflowRuns.$inferSelect;
+
 export async function createRun(args: {
   id?: string;
   userId: string;
@@ -163,7 +165,9 @@ export async function getRun(runId: string) {
   return row ?? null;
 }
 
-export async function findRunByLinearSession(sessionId: string) {
+export async function findRunByLinearSession(
+  sessionId: string
+): Promise<WorkflowRun | null> {
   const [row] = await db
     .select()
     .from(workflowRuns)

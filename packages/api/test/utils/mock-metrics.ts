@@ -23,6 +23,12 @@ export const metricsStub = {
   replayQueryDurationSeconds: histogram(),
   runnerStepsTotal: counter(),
   runnerErrorsTotal: counter(),
+  linearActivityEmissionsTotal: counter(),
+  linearActivityDurationSeconds: histogram(),
+  linearSessionOperationsTotal: counter(),
+  linearWebhookEventsTotal: counter(),
+  linearWebhookWorkflowStartsTotal: counter(),
+  linearWebhookWorkflowCancelsTotal: counter(),
 
   // Misc (provide stubs to satisfy imports)
   runRegistryEventsTotal: counter(),

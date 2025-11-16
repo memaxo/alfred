@@ -18,6 +18,7 @@
 
 - **[Development Coordination](guides/development-coordination.md)** - Multi-agent development workflow
 - **[Orchestrator Quickstart](guides/quickstart-orchestrator.md)** - Getting started with workflow orchestration
+- **[Linear Agent Setup](guides/linear-agent-setup.md)** - Configure Alfred for Linear agent activities
 
 ## Investigations
 
@@ -72,4 +73,3 @@ Outdated analysis and audit documents (kept for historical reference):
 ### For Operations
 1. See deployment guides (coming in Phase 9)
 2. Monitor [investigations](investigations/) for production readiness
-

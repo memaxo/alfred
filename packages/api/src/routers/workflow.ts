@@ -9,6 +9,11 @@ import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import {
+  linearActivityDurationSeconds,
+  linearActivityEmissionsTotal,
+  linearSessionOperationsTotal,
+  replayQueriesTotal,
+  replayQueryDurationSeconds,
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/api/metrics";
@@ -21,17 +26,14 @@ import { eventToUiMessages } from "../ai/normalize";
 import { makeEventId } from "../utils/event-id";
 import { recordAudit } from "../utils/audit";
 import { runPlanV6 } from "../workflow/runner";
-import {
-  replayQueriesTotal,
-  replayQueryDurationSeconds,
-} from "@alfred/api/metrics";
-import {
-  setLinearDelegate,
-  setLinearStarted,
-  extractIssueIdFromSession,
-  emitLinearActivity,
-  setLinearSessionExternalUrl,
-} from "@alfred/agent/orchestrator/linear";
+import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
+import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
+
+configureLinearMetrics({
+  linearActivityEmissionsTotal,
+  linearActivityDurationSeconds,
+  linearSessionOperationsTotal,
+});
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -71,7 +73,7 @@ const workflowInput = z.object({
     .object({
       space: z.string().min(1),
       teamId: z.string().optional(),
-      sessionId: z.string().optional(),
+      sessionId: z.string().min(1),
     })
     .optional(),
   context: z
@@ -195,51 +197,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
           context: { auto: input.auto, mode: input.mode },
         });
 
-        // Initialize Linear session (delegate, state) - fire-and-forget
-        if (input.linear?.sessionId && input.authzLinear) {
-          const issueId = extractIssueIdFromSession(input.linear.sessionId);
-          if (issueId) {
-            setLinearDelegate({
-              space: input.linear.space,
-              issueId,
-              authz: input.authzLinear,
-            }).catch((error) => {
-              logger.warn("linear_delegate_setup_failed", {
-                runId: runner.runId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            });
-
-            setLinearStarted({
-              space: input.linear.space,
-              issueId,
-              authz: input.authzLinear,
-            }).catch((error) => {
-              logger.warn("linear_started_setup_failed", {
-                runId: runner.runId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            });
-
-            // Set external URL pointing to workflow run viewer
-            const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
-            if (appUrl) {
-              const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
-              setLinearSessionExternalUrl(
-                input.linear.sessionId,
-                input.linear.space,
-                input.authzLinear,
-                runUrl
-              ).catch((error) => {
-                logger.warn("linear_session_external_url_failed", {
-                  runId: runner.runId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              });
-            }
-          }
-        }
-
         // Register for cancellation
         await runRegistry.register(runner.runId, {
           resume: async ({ resumeData }) => {
@@ -357,51 +314,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
               linearSessionId: input.linear?.sessionId,
               linearSpace: input.linear?.space,
             });
-
-            // Initialize Linear session (delegate, state) - fire-and-forget
-            if (input.linear?.sessionId && input.authzLinear) {
-              const issueId = extractIssueIdFromSession(input.linear.sessionId);
-              if (issueId) {
-                setLinearDelegate({
-                  space: input.linear.space,
-                  issueId,
-                  authz: input.authzLinear,
-                }).catch((error) => {
-                  logger.warn("linear_delegate_setup_failed", {
-                    runId: runner.runId,
-                    error: error instanceof Error ? error.message : String(error),
-                  });
-                });
-
-                setLinearStarted({
-                  space: input.linear.space,
-                  issueId,
-                  authz: input.authzLinear,
-                }).catch((error) => {
-                  logger.warn("linear_started_setup_failed", {
-                    runId: runner.runId,
-                    error: error instanceof Error ? error.message : String(error),
-                  });
-                });
-
-                // Set external URL pointing to workflow run viewer
-                const appUrl = process.env.VITE_APP_URL ?? process.env.APP_URL;
-                if (appUrl) {
-                  const runUrl = `${appUrl}/orchestrator/run/${runner.runId}`;
-                  setLinearSessionExternalUrl(
-                    input.linear.sessionId,
-                    input.linear.space,
-                    input.authzLinear,
-                    runUrl
-                  ).catch((error) => {
-                    logger.warn("linear_session_external_url_failed", {
-                      runId: runner.runId,
-                      error: error instanceof Error ? error.message : String(error),
-                    });
-                  });
-                }
-              }
-            }
 
             runId = runner.runId;
             await runRegistry.register(runId, {
