@@ -27,7 +27,8 @@
       "@alfred/ui/*": ["packages/ui/src/*"],
       "@alfred/type/*": ["packages/type/src/*"],
       "@alfred/metrics/*": ["packages/metrics/src/*"],
-      "@alfred/voice/*": ["packages/voice/src/*"]
+      "@alfred/voice/*": ["packages/voice/src/*"],
+      "@alfred/runtime/*": ["packages/runtime/src/*"]
     }
   }
 }

@@ -267,6 +267,25 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/runtime": {
+      "name": "@alfred/runtime",
+      "version": "0.1.0",
+      "dependencies": {
+        "@alfred/agent": "workspace:*",
+        "@alfred/cognitive": "workspace:*",
+        "@alfred/db": "workspace:*",
+        "@alfred/knowledge": "workspace:*",
+        "@alfred/learning": "workspace:*",
+        "@alfred/policy": "workspace:*",
+        "@alfred/type": "workspace:*",
+        "ai": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*",
+      },
+    },
     "packages/tsconfig": {
       "name": "@alfred/tsconfig",
       "version": "1.0.0",
@@ -357,6 +376,8 @@
     "@alfred/policy": ["@alfred/policy@workspace:packages/policy"],
 
     "@alfred/rag": ["@alfred/rag@workspace:packages/rag"],
+
+    "@alfred/runtime": ["@alfred/runtime@workspace:packages/runtime"],
 
     "@alfred/tsconfig": ["@alfred/tsconfig@workspace:packages/tsconfig"],
 

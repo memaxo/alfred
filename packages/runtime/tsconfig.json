@@ -1,0 +1,29 @@
+{
+  "extends": "@alfred/tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "composite": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../type" },
+    { "path": "../cognitive" },
+    { "path": "../knowledge" },
+    { "path": "../learning" },
+    { "path": "../policy" },
+    { "path": "../agent" },
+    { "path": "../db" }
+  ]
+}
+

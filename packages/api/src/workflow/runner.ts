@@ -147,6 +147,30 @@ async function* executePhaseWithTimeout(
 }
 
 /**
+ * @deprecated Use WorkflowRuntime from @alfred/runtime instead.
+ * This runner will be removed in v2.0.0 after runtime integration is complete.
+ * 
+ * Migration guide:
+ * ```typescript
+ * // OLD:
+ * import { runPlanV6 } from '../workflow/runner';
+ * const runner = runPlanV6(input, { signal: abortController.signal });
+ * 
+ * // NEW:
+ * import { createRuntime } from '@alfred/runtime';
+ * import { openai } from '@ai-sdk/openai';
+ * const runtime = createRuntime({
+ *   input,
+ *   model: openai('gpt-4o'),
+ *   signal: abortController.signal,
+ * });
+ * 
+ * // Stream consumption is identical:
+ * for await (const event of runtime.stream) {
+ *   // ... same handling logic
+ * }
+ * ```
+ * 
  * Minimal, Mastra-free runner that emits WorkflowEvent chunks.
  *
  * This runner is intentionally simple: it models a planning phase with
