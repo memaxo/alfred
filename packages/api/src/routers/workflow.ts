@@ -1,13 +1,6 @@
-import * as workflowRepo from "@alfred/db/repo/workflow";
-import type {
-  ReasoningEdgeRecord,
-  ReasoningNodeRecord,
-} from "@alfred/knowledge/query";
-import type { WorkflowEvent } from "@alfred/type";
-import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
-import { z } from "zod";
-import { requirePolicy } from "../gate";
+import { openai } from "@ai-sdk/openai";
+import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
+import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
 import {
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,
@@ -17,23 +10,99 @@ import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/api/metrics";
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import type {
+  ReasoningEdgeRecord,
+  ReasoningNodeRecord,
+} from "@alfred/knowledge/query";
+import { createRuntime } from "@alfred/runtime";
+import type { WorkflowEvent } from "@alfred/type";
+import { TRPCError } from "@trpc/server";
+import { observable } from "@trpc/server/observable";
+import { z } from "zod";
+import { eventToUiMessages } from "../ai/normalize";
+import { requirePolicy } from "../gate";
 import { runRegistry } from "../run-registry";
 import { authedProcedure, rateLimit, router } from "../trpc";
+import { recordAudit } from "../utils/audit";
 import { toTRPCError } from "../utils/error";
+import { makeEventId } from "../utils/event-id";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
-import { eventToUiMessages } from "../ai/normalize";
-import { makeEventId } from "../utils/event-id";
-import { recordAudit } from "../utils/audit";
 import { runPlanV6 } from "../workflow/runner";
-import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
-import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
+
+// Feature flag for runtime migration (Phase 3.3)
+const USE_WORKFLOW_RUNTIME = process.env.USE_WORKFLOW_RUNTIME === "true";
 
 configureLinearMetrics({
   linearActivityEmissionsTotal,
   linearActivityDurationSeconds,
   linearSessionOperationsTotal,
 });
+
+/**
+ * Create workflow executor (runtime or runner based on feature flag)
+ *
+ * Returns unified interface matching RunPlanV6 for backward compatibility.
+ * Phase 3.3: Conditional creation based on USE_WORKFLOW_RUNTIME flag.
+ */
+function createWorkflowExecutor(
+  input: z.infer<typeof workflowInput>,
+  abortController: AbortController
+) {
+  if (USE_WORKFLOW_RUNTIME) {
+    // NEW: Use @alfred/runtime
+    const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
+
+    return createRuntime({
+      input: {
+        requirement: input.requirement,
+        auto: input.auto,
+        workspace: input.workspace,
+        repoBase: input.repoBase,
+        mode: input.mode,
+        context: input.context,
+        linear:
+          input.linear?.sessionId && input.authzLinear
+            ? {
+                sessionId: input.linear.sessionId,
+                space: input.linear.space,
+                authz: input.authzLinear,
+              }
+            : undefined,
+      },
+      model,
+      signal: abortController.signal,
+      stepTimeoutMs: 5 * 60 * 1000,
+      workflowTimeoutMs: 30 * 60 * 1000,
+    });
+  }
+  // EXISTING: Use deprecated runPlanV6
+  return runPlanV6(
+    {
+      requirement: input.requirement,
+      auto: input.auto,
+      workspace: input.workspace,
+      repoBase: input.repoBase,
+      mode: input.mode,
+      context: input.context,
+      ...(input.linear?.sessionId && input.authzLinear
+        ? {
+            linear: {
+              sessionId: input.linear.sessionId,
+              space: input.linear.space,
+              authz: input.authzLinear,
+            },
+          }
+        : {}),
+    },
+    {
+      signal: abortController.signal,
+      stepTimeoutMs: 5 * 60 * 1000,
+      workflowTimeoutMs: 30 * 60 * 1000,
+    }
+  );
+}
 
 const workflowInput = z.object({
   requirement: z.string().min(1),
@@ -146,40 +215,19 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
       try {
         const abortController = new AbortController();
-        const runner = runPlanV6(
-          {
-            requirement: input.requirement,
-            auto: input.auto,
-            workspace: input.workspace,
-            repoBase: input.repoBase,
-            mode: input.mode,
-            context: input.context,
-            ...(input.linear?.sessionId && input.authzLinear
-              ? {
-                  linear: {
-                    sessionId: input.linear.sessionId,
-                    space: input.linear.space,
-                    authz: input.authzLinear,
-                  },
-                }
-              : {}),
-          },
-          {
-            signal: abortController.signal,
-            stepTimeoutMs: 5 * 60 * 1000, // 5 minutes per step
-            workflowTimeoutMs: 30 * 60 * 1000, // 30 minutes overall
-          }
-        );
+
+        // Create executor (runtime or runner based on feature flag)
+        const executor = createWorkflowExecutor(input, abortController);
 
         // Create durable run row now so clients may hydrate history
         const storedInput = {
           ...input,
-          executionId: runner.runId,
+          executionId: executor.runId,
           reasoningSince: Date.now(),
         };
 
         await workflowRepo.createRun({
-          id: runner.runId,
+          id: executor.runId,
           userId: session.user.id,
           workflowId: "plan",
           status: "running",
@@ -192,25 +240,25 @@ export const workflowRouter: ReturnType<typeof router> = router({
         await recordAudit({
           userId: session.user.id,
           action: "workflow.start",
-          resource: { kind: "workflow", id: runner.runId },
+          resource: { kind: "workflow", id: executor.runId },
           decision: "allow",
           context: { auto: input.auto, mode: input.mode },
         });
 
-        // Register for cancellation
-        await runRegistry.register(runner.runId, {
+        // Register for cancellation (interface identical for both)
+        await runRegistry.register(executor.runId, {
           resume: async ({ resumeData }) => {
-            await runner.resume(resumeData);
+            await executor.resume(resumeData);
           },
           cancel: async () => {
-            abortController.abort();
+            executor.cancel();
           },
           abortController,
         });
 
         return {
-          runId: runner.runId,
-          summary: runner.summary,
+          runId: executor.runId,
+          summary: executor.summary,
           results: [],
           plan: null,
           vcs: null,
@@ -274,39 +322,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const asyncTask = (async () => {
           let runId: string | null = null;
           try {
-            const runner = runPlanV6(
-              {
-                requirement: input.requirement,
-                auto: input.auto,
-                workspace: input.workspace,
-                repoBase: input.repoBase,
-                mode: input.mode,
-                context: input.context,
-                ...(input.linear?.sessionId && input.authzLinear
-                  ? {
-                      linear: {
-                        sessionId: input.linear.sessionId,
-                        space: input.linear.space,
-                        authz: input.authzLinear,
-                      },
-                    }
-                  : {}),
-              },
-              {
-                signal: abortController.signal,
-                stepTimeoutMs: 5 * 60 * 1000, // 5 minutes per step
-                workflowTimeoutMs: 30 * 60 * 1000, // 30 minutes overall
-              }
-            );
+            // Create executor (runtime or runner based on feature flag)
+            const executor = createWorkflowExecutor(input, abortController);
 
             const storedInput = {
               ...input,
-              executionId: runner.runId,
+              executionId: executor.runId,
               reasoningSince: Date.now(),
             };
 
             await workflowRepo.createRun({
-              id: runner.runId,
+              id: executor.runId,
               userId: session.user.id,
               workflowId: "plan",
               status: "running",
@@ -315,15 +341,15 @@ export const workflowRouter: ReturnType<typeof router> = router({
               linearSpace: input.linear?.space,
             });
 
-            runId = runner.runId;
+            runId = executor.runId;
             await runRegistry.register(runId, {
               resume: async ({ resumeData }) => {
                 if (cancelled) return;
-                await runner.resume(resumeData);
+                await executor.resume(resumeData);
               },
               cancel: async () => {
                 cancelled = true;
-                abortController.abort();
+                executor.cancel();
               },
               abortController,
             });
@@ -331,7 +357,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             await recordAudit({
               userId: session.user.id,
               action: "workflow.stream",
-              resource: { kind: "workflow", id: runId ?? runner.runId },
+              resource: { kind: "workflow", id: runId ?? executor.runId },
               decision: "allow",
               context: { auto: input.auto, mode: input.mode },
             });
@@ -355,18 +381,26 @@ export const workflowRouter: ReturnType<typeof router> = router({
             };
 
             // Helper to normalize certain events to UIMessage parts for byte-equal replay
-            const maybeUiMessages = (event: WorkflowEvent): unknown[] | null => {
+            const maybeUiMessages = (
+              event: WorkflowEvent
+            ): unknown[] | null => {
               const msgs = eventToUiMessages(event);
-              return Array.isArray(msgs) && msgs.length > 0 ? (msgs as unknown[]) : null;
+              return Array.isArray(msgs) && msgs.length > 0
+                ? (msgs as unknown[])
+                : null;
             };
 
             // Consume the generator, persisting each event then pushing to client
-            for await (const event of runner.stream) {
+            for await (const event of executor.stream) {
               try {
                 // Redact PII/secrets before persistence
                 const redactedEventData = redactEventData(event);
                 const eventType = getEventType(event);
-                const eventId = makeEventId({ runId, type: eventType, data: redactedEventData });
+                const eventId = makeEventId({
+                  runId,
+                  type: eventType,
+                  data: redactedEventData,
+                });
                 await workflowRepo.appendEvent({
                   runId,
                   eventId,
@@ -379,8 +413,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 if (uiMessages && uiMessages.length > 0) {
                   await workflowRepo.appendEvent({
                     runId,
-                    eventId: makeEventId({ runId, type: 'ui-message', data: uiMessages }),
-                    eventType: 'ui-message',
+                    eventId: makeEventId({
+                      runId,
+                      type: "ui-message",
+                      data: uiMessages,
+                    }),
+                    eventType: "ui-message",
                     eventData: uiMessages,
                   });
                 }
@@ -388,20 +426,23 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 push({ ...event, eventId } as WorkflowEvent);
 
                 // Emit Linear activities for significant events (backup if runner doesn't emit)
-                if (input.linear?.sessionId && input.authzLinear) {
-                  if (event.type === "error") {
-                    emitLinearActivity("error", {
-                      sessionId: input.linear.sessionId,
-                      space: input.linear.space,
-                      authz: input.authzLinear,
-                      body: (event as any).message ?? "Workflow error occurred",
-                    }).catch((error) => {
-                      logger.warn("linear_activity_emission_failed", {
-                        runId,
-                        error: error instanceof Error ? error.message : String(error),
-                      });
+                if (
+                  input.linear?.sessionId &&
+                  input.authzLinear &&
+                  event.type === "error"
+                ) {
+                  emitLinearActivity("error", {
+                    sessionId: input.linear.sessionId,
+                    space: input.linear.space,
+                    authz: input.authzLinear,
+                    body: (event as any).message ?? "Workflow error occurred",
+                  }).catch((error) => {
+                    logger.warn("linear_activity_emission_failed", {
+                      runId,
+                      error:
+                        error instanceof Error ? error.message : String(error),
                     });
-                  }
+                  });
                 }
               } catch (error) {
                 logger.warn("workflow_event_persistence_failed", {
@@ -544,7 +585,10 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .query(async ({ input, ctx }) => {
       const session = ctx.session;
       if (!session) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       const run = await workflowRepo.getRun(input.runId);
@@ -560,12 +604,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
       const resource =
         typeof inputData.cw === "string" && inputData.cw.length > 0
           ? inputData.cw
-          : typeof inputData.workspace === "string" && inputData.workspace.length > 0
-          ? inputData.workspace
-          : process.cwd();
+          : typeof inputData.workspace === "string" &&
+              inputData.workspace.length > 0
+            ? inputData.workspace
+            : process.cwd();
 
       const executionId =
-        typeof inputData.executionId === "string" && inputData.executionId.length > 0
+        typeof inputData.executionId === "string" &&
+        inputData.executionId.length > 0
           ? inputData.executionId
           : run.id;
 
@@ -573,11 +619,13 @@ export const workflowRouter: ReturnType<typeof router> = router({
         typeof inputData.reasoningSince === "number"
           ? inputData.reasoningSince
           : run.created instanceof Date
-          ? run.created.getTime()
-          : undefined;
+            ? run.created.getTime()
+            : undefined;
 
       const { getReasoningChain } = await import("@alfred/db/repo/graph");
-      const { reconstructReasoningChain } = await import("@alfred/knowledge/query");
+      const { reconstructReasoningChain } = await import(
+        "@alfred/knowledge/query"
+      );
 
       const limit = input.limit;
       const initialArgs = {
@@ -601,16 +649,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
         id: node.id,
         hash: node.hash,
         label: node.label,
-        properties:
-          (node.properties as Record<string, unknown> | null) ?? null,
+        properties: (node.properties as Record<string, unknown> | null) ?? null,
       }));
 
       const edgeRecords: ReasoningEdgeRecord[] = edges.map((edge) => ({
         fromId: edge.fromId,
         toId: edge.toId,
         kind: edge.kind,
-        metadata:
-          (edge.metadata as Record<string, unknown> | null) ?? null,
+        metadata: (edge.metadata as Record<string, unknown> | null) ?? null,
       }));
 
       const chain = reconstructReasoningChain(nodeRecords, edgeRecords);
@@ -656,7 +702,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         eventData: e.eventData,
         timestamp: (e as any).timestamp,
       }));
-      let total: number | undefined = undefined;
+      let total: number | undefined;
       if (input.includeTotal) {
         total = await workflowRepo.countEventsByType(
           input.runId,
@@ -665,7 +711,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
       }
       const page = input.page ?? 0;
       const pageSize = input.pageSize ?? 500;
-      const hasMore = transformed.length === pageSize && (total === undefined || (page + 1) * pageSize < total);
+      const hasMore =
+        transformed.length === pageSize &&
+        (total === undefined || (page + 1) * pageSize < total);
       try {
         replayQueriesTotal.inc({ event_type: input.eventType } as any);
       } finally {

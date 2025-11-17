@@ -8,6 +8,12 @@
 import { streamText } from "ai";
 import type { LanguageModel } from "ai";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { logger } from "@alfred/api/utils/logger";
+import {
+  runtimeAiSdkCallsTotal,
+  runtimeAiSdkDurationSeconds,
+  runtimeAiEventsTotal,
+} from "../metrics";
 
 export type StreamOptions = {
   model: LanguageModel;
@@ -29,26 +35,85 @@ export type StreamOptions = {
  * - tool-result: { toolCallId, toolName, input, output } (NOT result)
  */
 export class AISDKAdapter {
+  private runId?: string;
+
+  constructor(runId?: string) {
+    this.runId = runId;
+  }
+
   /**
    * Stream AI generation and map events to WorkflowEvent
    */
   async *stream(options: StreamOptions): AsyncGenerator<WorkflowEvent, void, void> {
-    const result = streamText({
-      model: options.model,
-      messages: options.messages,
-      tools: options.tools,
-      abortSignal: options.abortSignal,
-      system: options.system,
-      temperature: options.temperature,
-      // maxTokens and maxSteps will be used when integrating AI SDK properly
+    const modelId = this.getModelId(options.model);
+    const startTime = Date.now();
+    const stopAi = runtimeAiSdkDurationSeconds.startTimer({ model: modelId });
+
+    runtimeAiSdkCallsTotal.inc({ model: modelId, status: "started" });
+
+    logger.info("runtime_ai_sdk_call_start", {
+      runId: this.runId,
+      model: modelId,
     });
 
-    for await (const event of result.fullStream) {
-      const mapped = this.mapEvent(event);
-      if (mapped) {
-        yield mapped;
+    try {
+      const result = streamText({
+        model: options.model,
+        messages: options.messages,
+        tools: options.tools,
+        abortSignal: options.abortSignal,
+        system: options.system,
+        temperature: options.temperature,
+        // maxTokens and maxSteps will be used when integrating AI SDK properly
+      });
+
+      for await (const event of result.fullStream) {
+        // Track event types
+        if (event.type) {
+          runtimeAiEventsTotal.inc({ event_type: event.type });
+        }
+
+        const mapped = this.mapEvent(event);
+        if (mapped) {
+          yield mapped;
+        }
       }
+
+      const durationMs = Date.now() - startTime;
+      runtimeAiSdkCallsTotal.inc({ model: modelId, status: "completed" });
+      stopAi();
+
+      logger.info("runtime_ai_sdk_call_complete", {
+        runId: this.runId,
+        model: modelId,
+        durationMs,
+      });
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      runtimeAiSdkCallsTotal.inc({ model: modelId, status: "failed" });
+      stopAi();
+
+      logger.error("runtime_ai_sdk_error", {
+        runId: this.runId,
+        model: modelId,
+        error: error instanceof Error ? error.message : String(error),
+        durationMs,
+      });
+
+      throw error;
     }
+  }
+
+  /**
+   * Extract model ID from LanguageModel object
+   */
+  private getModelId(model: LanguageModel): string {
+    // Try to extract modelId from the model object
+    if ("modelId" in model && typeof model.modelId === "string") {
+      return model.modelId;
+    }
+    // Fallback to generic name
+    return "unknown";
   }
 
   /**

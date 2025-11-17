@@ -261,13 +261,14 @@ export function Chat({
       if (disabled) {
         return;
       }
-      const formData = new FormData(event.currentTarget);
+      const form = event.currentTarget;
+      const formData = new FormData(form);
       const value = String(formData.get("message") ?? "").trim();
       if (value.length === 0) {
         return;
       }
       onSend(value);
-      event.currentTarget.reset();
+      form.reset();
       if (perf) {
         recordPerfSnapshot(messages);
       }

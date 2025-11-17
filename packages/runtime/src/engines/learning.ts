@@ -6,6 +6,11 @@
  */
 
 import { supervise } from "@alfred/learning/self_supervision";
+import { logger } from "@alfred/api/utils/logger";
+import {
+  runtimeKnowledgeUpdatesTotal,
+  runtimeKnowledgeBatchDurationSeconds,
+} from "../metrics";
 
 /**
  * Supervision event for learning from outcomes
@@ -100,6 +105,82 @@ export class LearningEngine {
    */
   getMaxCapacity(): number {
     return MAX_OUTCOMES;
+  }
+
+  /**
+   * Persist updates in batches with metrics and logging
+   * 
+   * Processes updates in chunks of 100 for efficiency.
+   * Non-blocking: Logs failures but doesn't throw.
+   * 
+   * @param updates Knowledge updates to persist
+   * @param runId Workflow run ID for logging
+   */
+  async persistUpdatesBatch(
+    updates: KnowledgeUpdate[],
+    runId: string
+  ): Promise<void> {
+    if (updates.length === 0) return;
+
+    const startTime = Date.now();
+    const stopTimer = runtimeKnowledgeBatchDurationSeconds.startTimer({
+      operation: "persist",
+    });
+
+    logger.info("runtime_knowledge_batch_start", {
+      runId,
+      updateCount: updates.length,
+    });
+
+    try {
+      // Batch write in chunks of 100
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        const batch = updates.slice(i, i + BATCH_SIZE);
+        
+        // TODO: Integrate with actual knowledge persistence (Phase 3.6)
+        // For now, just simulate batch write
+        await this.writeBatch(batch);
+        
+        runtimeKnowledgeUpdatesTotal.inc(
+          { type: "batch", status: "success" },
+          batch.length
+        );
+      }
+
+      const durationMs = Date.now() - startTime;
+      stopTimer();
+
+      logger.info("runtime_knowledge_batch_complete", {
+        runId,
+        updateCount: updates.length,
+        durationMs,
+      });
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      runtimeKnowledgeUpdatesTotal.inc({ type: "batch", status: "failed" });
+      stopTimer();
+
+      logger.warn("runtime_knowledge_persistence_failed", {
+        runId,
+        updateCount: updates.length,
+        error: error instanceof Error ? error.message : String(error),
+        durationMs,
+      });
+
+      // Don't throw - persistence failures shouldn't break workflow
+    }
+  }
+
+  /**
+   * Write a single batch of updates
+   * 
+   * TODO: Integrate with actual knowledge graph persistence
+   */
+  private async writeBatch(batch: KnowledgeUpdate[]): Promise<void> {
+    // Placeholder for actual persistence logic
+    // Will be replaced with real knowledge graph writes in Phase 3.6
+    await new Promise((resolve) => setTimeout(resolve, 1));
   }
 }
 

@@ -7,6 +7,12 @@
 
 import { createHash } from "node:crypto";
 import type { SearchReceipt, ContextBundle } from "@alfred/type/plan";
+import { logger } from "@alfred/api/utils/logger";
+import {
+  runtimeContextBuildDurationSeconds,
+  runtimeContextCacheHitsTotal,
+  runtimeContextTokensTotal,
+} from "./metrics";
 
 /**
  * Context build input
@@ -64,16 +70,34 @@ export class ContextBuilder {
    * Implements LRU eviction and periodic cleanup.
    */
   async build(input: ContextBuildInput): Promise<ExecutionContext> {
+    const startTime = Date.now();
     const cacheKey = this.computeKey(input);
     const cached = this.cache.get(cacheKey);
 
     if (cached && cached.expires > Date.now()) {
+      // Cache hit
+      runtimeContextCacheHitsTotal.inc({ result: "hit" });
+      
+      const durationMs = Date.now() - startTime;
+      runtimeContextBuildDurationSeconds
+        .labels({ cached: "true" })
+        .observe(durationMs / 1000);
+      
+      logger.debug("runtime_context_cache_hit", {
+        requirement: input.requirement.slice(0, 100),
+        cached: true,
+        durationMs,
+      });
+      
       // LRU: Move to end (most recently used)
       this.cache.delete(cacheKey);
       this.cache.set(cacheKey, cached);
       return cached.context;
     }
 
+    // Cache miss
+    runtimeContextCacheHitsTotal.inc({ result: "miss" });
+    
     // Evict expired entries before building
     this.evictExpired();
 
@@ -82,30 +106,61 @@ export class ContextBuilder {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) {
         this.cache.delete(firstKey);
+        logger.debug("runtime_context_cache_eviction", {
+          reason: "capacity",
+          maxEntries: MAX_CACHE_ENTRIES,
+        });
       }
     }
 
-    // Build fresh context
-    // TODO: Integrate with gatherCodeContext and gatherWebContext from @alfred/agent
-    // For now, return minimal context
-    const context: ExecutionContext = {
-      requirement: input.requirement,
-      receipts: {
-        code: [],
-        web: input.web ? [] : undefined,
-        created: new Date(),
-      },
-      bundle: null,
-      totalTokens: 0,
-    };
+    try {
+      // Build fresh context
+      // TODO: Integrate with gatherCodeContext and gatherWebContext from @alfred/agent
+      // For now, return minimal context
+      const context: ExecutionContext = {
+        requirement: input.requirement,
+        receipts: {
+          code: [],
+          web: input.web ? [] : undefined,
+          created: new Date(),
+        },
+        bundle: null,
+        totalTokens: 0,
+      };
 
-    // Cache the context
-    this.cache.set(cacheKey, {
-      context,
-      expires: Date.now() + CACHE_TTL_MS,
-    });
+      // Cache the context
+      this.cache.set(cacheKey, {
+        context,
+        expires: Date.now() + CACHE_TTL_MS,
+      });
+      
+      // Track token counts
+      runtimeContextTokensTotal.inc({ type: "total" }, context.totalTokens);
+      runtimeContextTokensTotal.inc({ type: "requirement" }, 0); // TODO: Actual token count
+      
+      const durationMs = Date.now() - startTime;
+      runtimeContextBuildDurationSeconds
+        .labels({ cached: "false" })
+        .observe(durationMs / 1000);
+      
+      logger.info("runtime_context_build", {
+        requirement: input.requirement.slice(0, 100),
+        cached: false,
+        totalTokens: context.totalTokens,
+        receiptsCount: context.receipts.code.length,
+        durationMs,
+      });
 
-    return context;
+      return context;
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      logger.error("runtime_context_build_failed", {
+        requirement: input.requirement.slice(0, 100),
+        error: error instanceof Error ? error.message : String(error),
+        durationMs,
+      });
+      throw error;
+    }
   }
 
   /**

@@ -6,7 +6,8 @@
     "sourceMap": true,
     "outDir": "dist",
     "composite": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "**/*.test.ts", "**/*.test.tsx"],

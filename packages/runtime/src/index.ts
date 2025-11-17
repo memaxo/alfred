@@ -16,3 +16,23 @@ export type {
   WorkflowRuntime as IWorkflowRuntime,
 } from "./types";
 
+// Export metrics for observability
+export {
+  runtimeExecutionsTotal,
+  runtimeExecutionDurationSeconds,
+  runtimePhasesTotal,
+  runtimePhaseDurationSeconds,
+  runtimeContextBuildDurationSeconds,
+  runtimeContextCacheHitsTotal,
+  runtimeContextTokensTotal,
+  runtimeAiSdkCallsTotal,
+  runtimeAiSdkDurationSeconds,
+  runtimeAiEventsTotal,
+  runtimeKnowledgeUpdatesTotal,
+  runtimeKnowledgeBatchDurationSeconds,
+} from "./metrics";
+
+// Export tracing support
+export { RuntimeTracer } from "./tracing";
+export type { TraceSpan } from "./tracing";
+

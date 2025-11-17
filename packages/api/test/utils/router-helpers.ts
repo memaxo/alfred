@@ -108,6 +108,21 @@ export function mockWorkflowRunner() {
 }
 
 /**
+ * Common mock setup for @alfred/runtime
+ */
+export function mockWorkflowRuntime() {
+  const createRuntimeMock = vi.fn();
+
+  mock.module("@alfred/runtime", () => ({
+    createRuntime: createRuntimeMock,
+  }));
+
+  return {
+    createRuntime: createRuntimeMock,
+  };
+}
+
+/**
  * Helper to create a mock TRPC error
  */
 export function createTRPCError(

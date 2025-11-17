@@ -5,6 +5,7 @@ import {
   mockRunRegistry,
   mockWorkflowRepo,
   mockWorkflowRunner,
+  mockWorkflowRuntime,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
@@ -17,6 +18,7 @@ mockPolicyAudit();
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
 const workflowRunnerMocks = mockWorkflowRunner();
+const workflowRuntimeMocks = mockWorkflowRuntime();
 
 const workflowStreamDurationSecondsMock = {
   startTimer: vi.fn().mockReturnValue(() => {}),
@@ -44,7 +46,35 @@ afterEach(() => {
   resetAllMocks();
   workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
   workflowStreamEventsTotalMock.inc.mockReset();
+  // Reset env flag
+  delete process.env.USE_WORKFLOW_RUNTIME;
 });
+
+/**
+ * Helper to configure which executor path to test
+ */
+function setupExecutorPath(useRuntime: boolean) {
+  process.env.USE_WORKFLOW_RUNTIME = useRuntime ? "true" : "false";
+}
+
+/**
+ * Helper to create a mock executor (runtime or runner) with identical interface
+ */
+function createMockExecutor(mockRunId: string, mockSummary: string, events: WorkflowEvent[]) {
+  const mockStream = async function* () {
+    for (const event of events) {
+      yield event;
+    }
+  };
+
+  return {
+    runId: mockRunId,
+    summary: mockSummary,
+    stream: mockStream(),
+    resume: vi.fn().mockResolvedValue(undefined),
+    cancel: vi.fn(),
+  };
+}
 
 describe("workflow router", () => {
   describe("start", () => {
@@ -387,6 +417,284 @@ describe("workflow router", () => {
 
       expect(result.items[0].eventId).toBe("evt-1");
       expect(result.items[1].eventId).toBe("evt-2");
+    });
+  });
+
+  // Dual-path executor tests (Phase 3.3)
+  describe("executor compatibility", () => {
+    describe("with legacy runner (USE_WORKFLOW_RUNTIME=false)", () => {
+      it("creates workflow with runPlanV6", async () => {
+        setupExecutorPath(false);
+        
+        const mockRunId = "test-run-id";
+        const mockSummary = "Test summary";
+        const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
+          { type: "run", id: mockRunId } as WorkflowEvent,
+        ]);
+
+        workflowRunnerMocks.runPlanV6.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({
+          id: mockRunId,
+          userId: "test-user",
+          workflowId: "plan",
+          status: "running",
+        } as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+
+        const result = await caller.workflow.start({
+          requirement: "test requirement",
+          auto: "low",
+        });
+
+        expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
+        expect(workflowRuntimeMocks.createRuntime).not.toHaveBeenCalled();
+        expect(result.runId).toBe(mockRunId);
+      });
+
+      it("streams events with runPlanV6", async () => {
+        setupExecutorPath(false);
+
+        const mockRunId = "test-run-id";
+        const events: WorkflowEvent[] = [
+          { type: "run", id: mockRunId } as WorkflowEvent,
+          { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+        ];
+
+        const mockExecutor = createMockExecutor(mockRunId, "test", events);
+        workflowRunnerMocks.runPlanV6.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+        workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+        workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+        runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+        const subscription = caller.workflow.stream({ requirement: "test" });
+        const receivedEvents: WorkflowEvent[] = [];
+
+        await new Promise<void>((resolve, reject) => {
+          subscription.subscribe({
+            next: (event) => receivedEvents.push(event),
+            error: reject,
+            complete: resolve,
+          });
+        });
+
+        expect(workflowRunnerMocks.runPlanV6).toHaveBeenCalledTimes(1);
+        expect(workflowRuntimeMocks.createRuntime).not.toHaveBeenCalled();
+        expect(receivedEvents).toHaveLength(events.length);
+      });
+    });
+
+    describe("with new runtime (USE_WORKFLOW_RUNTIME=true)", () => {
+      it("creates workflow with createRuntime", async () => {
+        setupExecutorPath(true);
+
+        const mockRunId = "test-run-id";
+        const mockSummary = "Test summary";
+        const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
+          { type: "run", id: mockRunId } as WorkflowEvent,
+        ]);
+
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({
+          id: mockRunId,
+          userId: "test-user",
+          workflowId: "plan",
+          status: "running",
+        } as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+
+        const result = await caller.workflow.start({
+          requirement: "test requirement",
+          auto: "low",
+        });
+
+        expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
+        expect(workflowRunnerMocks.runPlanV6).not.toHaveBeenCalled();
+        expect(result.runId).toBe(mockRunId);
+        
+        // Verify runtime was called with correct model
+        const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
+        expect(call).toHaveProperty("model");
+        expect(call).toHaveProperty("signal");
+        expect(call.stepTimeoutMs).toBe(5 * 60 * 1000);
+        expect(call.workflowTimeoutMs).toBe(30 * 60 * 1000);
+      });
+
+      it("streams events with createRuntime", async () => {
+        setupExecutorPath(true);
+
+        const mockRunId = "test-run-id";
+        const events: WorkflowEvent[] = [
+          { type: "run", id: mockRunId } as WorkflowEvent,
+          { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+        ];
+
+        const mockExecutor = createMockExecutor(mockRunId, "test", events);
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+        workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+        workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+        runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+        const subscription = caller.workflow.stream({ requirement: "test" });
+        const receivedEvents: WorkflowEvent[] = [];
+
+        await new Promise<void>((resolve, reject) => {
+          subscription.subscribe({
+            next: (event) => receivedEvents.push(event),
+            error: reject,
+            complete: resolve,
+          });
+        });
+
+        expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
+        expect(workflowRunnerMocks.runPlanV6).not.toHaveBeenCalled();
+        expect(receivedEvents).toHaveLength(events.length);
+      });
+
+      it("passes Linear context correctly", async () => {
+        setupExecutorPath(true);
+
+        const mockRunId = "test-run-id";
+        const mockExecutor = createMockExecutor(mockRunId, "test", []);
+
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+
+        await caller.workflow.start({
+          requirement: "test",
+          auto: "low",
+          linear: {
+            sessionId: "linear-session-123",
+            space: "team-space",
+          },
+          authzLinear: "linear-token-xyz",
+        });
+
+        expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
+        const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
+        expect(call.input.linear).toEqual({
+          sessionId: "linear-session-123",
+          space: "team-space",
+          authz: "linear-token-xyz",
+        });
+      });
+
+      it("handles cancel correctly", async () => {
+        setupExecutorPath(true);
+
+        const mockRunId = "test-run-id";
+        const cancelMock = vi.fn();
+        const mockExecutor = createMockExecutor(mockRunId, "test", []);
+        mockExecutor.cancel = cancelMock;
+
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+
+        await caller.workflow.start({
+          requirement: "test",
+          auto: "low",
+        });
+
+        expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
+        const registerCall = runRegistryMocks.register.mock.calls[0][1];
+        
+        // Call cancel handler
+        await registerCall.cancel();
+        
+        expect(cancelMock).toHaveBeenCalledTimes(1);
+      });
+
+      it("handles resume correctly", async () => {
+        setupExecutorPath(true);
+
+        const mockRunId = "test-run-id";
+        const resumeMock = vi.fn().mockResolvedValue(undefined);
+        const mockExecutor = createMockExecutor(mockRunId, "test", []);
+        mockExecutor.resume = resumeMock;
+
+        workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+        workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+        runRegistryMocks.register.mockResolvedValue(undefined);
+
+        await caller.workflow.start({
+          requirement: "test",
+          auto: "low",
+        });
+
+        expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
+        const registerCall = runRegistryMocks.register.mock.calls[0][1];
+        
+        // Call resume handler
+        const resumeData = { event: "bio-authz" as const, authz: "token-123" };
+        await registerCall.resume({ resumeData });
+        
+        expect(resumeMock).toHaveBeenCalledWith({ resumeData });
+      });
+    });
+
+    it("produces identical event streams", async () => {
+      const events: WorkflowEvent[] = [
+        { type: "run", id: "test-run-id" } as WorkflowEvent,
+        { type: "progress", pct: 50, message: "halfway" } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
+      ];
+
+      // Test with runner
+      setupExecutorPath(false);
+      const runnerExecutor = createMockExecutor("test-run-id", "test", events);
+      workflowRunnerMocks.runPlanV6.mockReturnValue(runnerExecutor);
+      workflowRepoMocks.createRun.mockResolvedValue({ id: "test-run-id" } as any);
+      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const runnerSubscription = caller.workflow.stream({ requirement: "test" });
+      const runnerEvents: WorkflowEvent[] = [];
+
+      await new Promise<void>((resolve, reject) => {
+        runnerSubscription.subscribe({
+          next: (event) => runnerEvents.push(event),
+          error: reject,
+          complete: resolve,
+        });
+      });
+
+      // Test with runtime
+      setupExecutorPath(true);
+      const runtimeExecutor = createMockExecutor("test-run-id", "test", events);
+      workflowRuntimeMocks.createRuntime.mockReturnValue(runtimeExecutor);
+      workflowRepoMocks.createRun.mockResolvedValue({ id: "test-run-id" } as any);
+      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const runtimeSubscription = caller.workflow.stream({ requirement: "test" });
+      const runtimeEvents: WorkflowEvent[] = [];
+
+      await new Promise<void>((resolve, reject) => {
+        runtimeSubscription.subscribe({
+          next: (event) => runtimeEvents.push(event),
+          error: reject,
+          complete: resolve,
+        });
+      });
+
+      // Compare event streams (excluding eventId which is added by router)
+      expect(runnerEvents.length).toBe(runtimeEvents.length);
+      for (let i = 0; i < runnerEvents.length; i++) {
+        const runnerEvent = { ...runnerEvents[i] };
+        const runtimeEvent = { ...runtimeEvents[i] };
+        delete (runnerEvent as any).eventId;
+        delete (runtimeEvent as any).eventId;
+        expect(runnerEvent).toEqual(runtimeEvent);
+      }
     });
   });
 });

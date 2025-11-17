@@ -9,6 +9,13 @@ import { randomUUID } from "node:crypto";
 
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
+import { logger } from "@alfred/api/utils/logger";
+import {
+  runtimeExecutionsTotal,
+  runtimeExecutionDurationSeconds,
+  runtimePhasesTotal,
+  runtimePhaseDurationSeconds,
+} from "./metrics";
 import {
   validateRuntimeOptions,
   type RuntimeInput,
@@ -98,6 +105,21 @@ export class WorkflowRuntime implements IWorkflowRuntime {
    * Implements all phases: scan, plan, act, report.
    */
   private async *execute(): AsyncGenerator<WorkflowEvent, void, void> {
+    const stopWorkflow = runtimeExecutionDurationSeconds.startTimer({ 
+      auto: this._input.auto ?? "low",
+    });
+    
+    runtimeExecutionsTotal.inc({ 
+      auto: this._input.auto ?? "low",
+      status: "started",
+    });
+    
+    logger.info("runtime_execution_start", {
+      runId: this.runId,
+      requirement: this._input.requirement.slice(0, 100),
+      auto: this._input.auto ?? "low",
+    });
+    
     try {
       // Emit run start event
       yield { type: "run", id: this.runId } as WorkflowEvent;
@@ -107,6 +129,18 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       if (this.state.cancelled) {
         yield { type: "notice", message: "workflow_cancelled_before_start" } as WorkflowEvent;
         this.state.finalStatus = "cancelled";
+        
+        runtimeExecutionsTotal.inc({ 
+          auto: this._input.auto ?? "low",
+          status: "cancelled",
+        });
+        stopWorkflow({ status: "cancelled" });
+        
+        logger.info("runtime_execution_cancelled", {
+          runId: this.runId,
+          phase: "initialization",
+        });
+        
         return;
       }
 
@@ -124,6 +158,18 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         if (this.state.cancelled) {
           this.state.finalStatus = "cancelled";
           yield { type: "notice", message: `workflow_cancelled_during_${phase}` } as WorkflowEvent;
+          
+          runtimeExecutionsTotal.inc({ 
+            auto: this._input.auto ?? "low",
+            status: "cancelled",
+          });
+          stopWorkflow({ status: "cancelled" });
+          
+          logger.info("runtime_execution_cancelled", {
+            runId: this.runId,
+            phase,
+          });
+          
           return;
         }
 
@@ -136,6 +182,17 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       // Workflow completed successfully
       this.state.finalStatus = "completed";
       yield { type: "progress", pct: 100, message: "completed" } as WorkflowEvent;
+      
+      runtimeExecutionsTotal.inc({ 
+        auto: this._input.auto ?? "low",
+        status: "completed",
+      });
+      stopWorkflow({ status: "completed" });
+      
+      logger.info("runtime_execution_complete", {
+        runId: this.runId,
+        durationMs: Date.now() - this.workflowStartTime,
+      });
 
     } catch (error) {
       this.state.finalStatus = "failed";
@@ -145,6 +202,18 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         type: "error",
         message: this.state.finalMessage,
       } as WorkflowEvent;
+      
+      runtimeExecutionsTotal.inc({ 
+        auto: this._input.auto ?? "low",
+        status: "failed",
+      });
+      stopWorkflow({ status: "failed" });
+      
+      logger.error("runtime_execution_failed", {
+        runId: this.runId,
+        error: this.state.finalMessage,
+        durationMs: Date.now() - this.workflowStartTime,
+      });
       
       throw error;
     }
@@ -157,9 +226,17 @@ export class WorkflowRuntime implements IWorkflowRuntime {
    * not just after completion.
    */
   private async *executePhase(phase: WorkflowPhase): AsyncGenerator<WorkflowEvent, void, void> {
-    // Reserved for Phase 3.4 performance metrics
-    const _startTime = Date.now();
+    const startTime = Date.now();
+    const stopPhase = runtimePhaseDurationSeconds.startTimer({ phase });
     const phaseAbort = new AbortController();
+    
+    runtimePhasesTotal.inc({ phase, status: "started" });
+    
+    logger.info("runtime_phase_start", {
+      runId: this.runId,
+      phase,
+      requirement: this._input.requirement.slice(0, 100),
+    });
     
     // Set timeout to abort phase if it runs too long
     const timeout = setTimeout(() => {
@@ -188,12 +265,39 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
       yield { type: "step-complete", phase } as any;
       yield { type: "progress", pct: this.getProgressForPhase(phase, true), message: `${phase}_completed` } as WorkflowEvent;
+      
+      const durationMs = Date.now() - startTime;
+      runtimePhasesTotal.inc({ phase, status: "completed" });
+      stopPhase();
+      
+      logger.info("runtime_phase_complete", {
+        runId: this.runId,
+        phase,
+        durationMs,
+        status: "success",
+      });
 
     } catch (error) {
+      const durationMs = Date.now() - startTime;
+      runtimePhasesTotal.inc({ phase, status: "failed" });
+      stopPhase();
+      
       // Check if error is due to phase timeout
       if (error instanceof DOMException && error.name === "AbortError") {
+        logger.error("runtime_phase_timeout", {
+          runId: this.runId,
+          phase,
+          durationMs,
+          timeoutMs: this.stepTimeoutMs,
+        });
         yield { type: "error", message: "phase_timeout" } as WorkflowEvent;
       } else {
+        logger.error("runtime_phase_failed", {
+          runId: this.runId,
+          phase,
+          error: error instanceof Error ? error.message : String(error),
+          durationMs,
+        });
         yield {
           type: "error",
           message: error instanceof Error ? error.message : String(error),
@@ -297,10 +401,13 @@ export class WorkflowRuntime implements IWorkflowRuntime {
    * Wait for resume payload with timeout
    * 
    * Used during workflow execution when elevated authorization is required.
-   * Will be integrated in Phase 3.3 when adding policy-based authorization.
+   * Will be integrated in Phase 3.4+ when adding policy-based authorization.
    * 
    * Timer is stored for cleanup on early resume to prevent resource leaks.
+   * 
+   * @private Reserved for future use - currently unused
    */
+  // @ts-expect-error - Reserved for Phase 3.4+, currently unused
   private async waitForResume(
     requiredEvent: ResumePayload["event"]
   ): Promise<ResumePayload | null> {
