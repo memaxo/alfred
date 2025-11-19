@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { inferRouterInputs } from "@trpc/server";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
 import { RouteError } from "@/components/route-error";
@@ -28,6 +29,9 @@ type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 type StreamInput = RouterInputs["workflow"]["stream"];
 type WorkflowResumeInput = RouterInputs["workflow"]["resume"];
 type ScopeEvent = WorkflowResumeInput["event"];
+type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+type WorkflowReplayOutput = RouterOutputs["workflow"]["replay"];
+type WorkflowReplayItem = WorkflowReplayOutput["items"][number];
 
 const VALID_SCOPE_EVENTS = new Set<ScopeEvent>([
   "deploy-authz",
@@ -72,39 +76,50 @@ function OrchestratorRunRoute() {
   const [oldestEventId, setOldestEventId] = useState<string | null>(null);
   const [newestEventId, setNewestEventId] = useState<string | null>(null);
   const eventsQuery = trpc.workflow.replay.useQuery(
-    { runId: runId ?? "", eventType: "ui-message", order, page, pageSize: 200, includeTotal: false },
     {
-      enabled: !!runId,
+      runId: runId ?? "",
+      eventType: "ui-message",
+      order,
+      page,
+      pageSize: 200,
+      includeTotal: false,
+    },
+    {
+      enabled: Boolean(runId),
       // hydrate messages from persisted UI-message events
       onSuccess(data) {
-        if (!data || !Array.isArray((data as any).items)) return;
-        const items = (data as any).items as Array<any>;
+        if (!data) {
+          return;
+        }
+        const items = data.items ?? [];
+        if (items.length === 0) {
+          setHasMore(Boolean(data.hasMore));
+          return;
+        }
         const newSeen = new Set<string>();
         for (const row of items) {
-          const evtId = typeof row?.eventId === "string" ? row.eventId : null;
-          if (evtId && !seenEventIds.has(evtId)) {
-            newSeen.add(evtId);
-            const eventType = typeof row?.eventType === "string" ? (row.eventType as string) : "";
-            const eventData = row?.eventData as unknown;
-            let uiMessages: UIMessage[] | null = null;
-            if (eventType === "ui-message" && Array.isArray(eventData)) {
-              uiMessages = eventData as UIMessage[];
-            } else {
-              uiMessages = eventToUiMessages({ type: eventType, ...(eventData as any) } as any) ?? null;
-            }
-            if (uiMessages && uiMessages.length > 0) {
-              setMessages((prev) => {
-                const existingIds = new Set(prev.map((m) => m.id));
-                const newMessages = uiMessages.filter((m) => m.id && !existingIds.has(m.id));
-                return order === "desc" ? [...newMessages, ...prev] : [...prev, ...newMessages];
-              });
-            }
+          const evtId = typeof row.eventId === "string" ? row.eventId : null;
+          if (!evtId || seenEventIds.has(evtId)) {
+            continue;
+          }
+          newSeen.add(evtId);
+          const uiMessages = getUiMessagesFromReplayItem(row);
+          if (uiMessages && uiMessages.length > 0) {
+            setMessages((prev) => {
+              const existingIds = new Set(prev.map((m) => m.id));
+              const newMessages = uiMessages.filter(
+                (message) => message.id && !existingIds.has(message.id)
+              );
+              return order === "desc"
+                ? [...newMessages, ...prev]
+                : [...prev, ...newMessages];
+            });
           }
         }
         if (newSeen.size > 0) {
           setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
         }
-        setHasMore(Boolean((data as any).hasMore));
+        setHasMore(Boolean(data.hasMore));
         // Track boundaries for future UX improvements
         const first = items[0];
         const last = items[items.length - 1];
