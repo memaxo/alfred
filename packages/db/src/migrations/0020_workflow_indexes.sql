@@ -15,9 +15,9 @@ CREATE INDEX IF NOT EXISTS workflow_runs_created_status_idx
   WHERE status IN ('completed', 'failed', 'cancelled');
 
 -- Index for retention policy queries (old events)
+-- Note: Removed WHERE clause because NOW() is not IMMUTABLE and cannot be used in index predicates
 CREATE INDEX IF NOT EXISTS workflow_events_timestamp_idx
-  ON workflow_events (timestamp)
-  WHERE timestamp < NOW() - INTERVAL '90 days';
+  ON workflow_events (timestamp);
 
 -- Add retention policy function (to be called by scheduler)
 CREATE OR REPLACE FUNCTION prune_old_workflow_data(retention_days INTEGER DEFAULT 90)

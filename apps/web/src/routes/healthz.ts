@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/healthz")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => {
         const body = JSON.stringify({
           ok: true,
           ts: Date.now(),

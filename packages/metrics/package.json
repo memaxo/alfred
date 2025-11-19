@@ -14,6 +14,10 @@
     "./cognitive": {
       "types": "./dist/cognitive.d.ts",
       "default": "./src/cognitive.ts"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "default": "./src/registry.ts"
     }
   },
   "scripts": {
@@ -24,7 +28,8 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@alfred/type": "workspace:*"
+    "@alfred/type": "workspace:*",
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",

@@ -53,6 +53,13 @@ temp
 # Workflow DevKit docs (kept locally but not tracked)
 docs/use-workflow/
 
+# Embedding models (large files)
+packages/embed/models/
+packages/embed/.venv/
+
+# Voice models (large files)
+packages/voice/.venv/
+
 # START Ruler Generated Files
 /AGENTS.md
 /AGENTS.md.bak

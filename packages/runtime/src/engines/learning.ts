@@ -6,7 +6,7 @@
  */
 
 import { supervise } from "@alfred/learning/self_supervision";
-import { logger } from "@alfred/api/utils/logger";
+import { logger } from "../utils/logger";
 import {
   runtimeKnowledgeUpdatesTotal,
   runtimeKnowledgeBatchDurationSeconds,
@@ -178,9 +178,12 @@ export class LearningEngine {
    * TODO: Integrate with actual knowledge graph persistence
    */
   private async writeBatch(batch: KnowledgeUpdate[]): Promise<void> {
+    if (batch.length === 0) {
+      return;
+    }
+
     // Placeholder for actual persistence logic
     // Will be replaced with real knowledge graph writes in Phase 3.6
     await new Promise((resolve) => setTimeout(resolve, 1));
   }
 }
-

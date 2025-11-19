@@ -1,10 +1,9 @@
 // External metric hooks (agent/policy) are wired lazily below to keep tests light
+import { metricsRegistry } from "@alfred/metrics/registry";
 import client from "prom-client";
 import { logger } from "./utils/logger";
 
-export const metricsRegistry = new client.Registry();
-
-client.collectDefaultMetrics({ register: metricsRegistry });
+export { metricsRegistry };
 
 export const trpcRequestsTotal = new client.Counter({
   name: "trpc_requests_total",
@@ -570,6 +569,6 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
 
 export const metricsContentType = metricsRegistry.contentType;
 
-export async function getMetricsSnapshot() {
+export function getMetricsSnapshot() {
   return metricsRegistry.metrics();
 }

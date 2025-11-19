@@ -154,6 +154,7 @@
         "@alfred/agent": "workspace:*",
         "@alfred/auth": "workspace:*",
         "@alfred/db": "workspace:*",
+        "@alfred/runtime": "workspace:*",
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
         "ai": "catalog:",
@@ -210,6 +211,10 @@
         "typescript": "^5",
       },
     },
+    "packages/embed": {
+      "name": "@alfred/embed",
+      "version": "0.0.1",
+    },
     "packages/knowledge": {
       "name": "@alfred/knowledge",
       "version": "0.1.0",
@@ -257,9 +262,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/cohere": "^2.0.0",
-        "@ai-sdk/openai": "^2.0.49",
         "@alfred/db": "workspace:*",
-        "ai": "^6.0.0-beta.94",
+        "@alfred/embed": "workspace:*",
       },
       "devDependencies": {
         "@alfred/tsconfig": "workspace:*",
@@ -366,6 +370,8 @@
     "@alfred/cognitive": ["@alfred/cognitive@workspace:packages/cognitive"],
 
     "@alfred/db": ["@alfred/db@workspace:packages/db"],
+
+    "@alfred/embed": ["@alfred/embed@workspace:packages/embed"],
 
     "@alfred/knowledge": ["@alfred/knowledge@workspace:packages/knowledge"],
 

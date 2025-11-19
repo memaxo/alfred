@@ -57,7 +57,7 @@ export class proxmox {
     };
   }
 
-  async lxcCreate(
+  lxcCreate(
     node: string,
     spec: z.infer<typeof lxcCreateSchema>
   ): Promise<UpidResponse> {
@@ -65,25 +65,25 @@ export class proxmox {
     return this.request<UpidResponse>("POST", `/nodes/${node}/lxc`, validated);
   }
 
-  async lxcStart(node: string, vmid: number): Promise<UpidResponse> {
+  lxcStart(node: string, vmid: number): Promise<UpidResponse> {
     return this.request<UpidResponse>(
       "POST",
       `/nodes/${node}/lxc/${vmid}/status/start`
     );
   }
 
-  async lxcStop(node: string, vmid: number): Promise<UpidResponse> {
+  lxcStop(node: string, vmid: number): Promise<UpidResponse> {
     return this.request<UpidResponse>(
       "POST",
       `/nodes/${node}/lxc/${vmid}/status/stop`
     );
   }
 
-  async lxcDestroy(node: string, vmid: number): Promise<UpidResponse> {
+  lxcDestroy(node: string, vmid: number): Promise<UpidResponse> {
     return this.request<UpidResponse>("DELETE", `/nodes/${node}/lxc/${vmid}`);
   }
 
-  async lxcSnapshot(
+  lxcSnapshot(
     node: string,
     vmid: number,
     name: string
@@ -97,7 +97,7 @@ export class proxmox {
     );
   }
 
-  async lxcRollback(
+  lxcRollback(
     node: string,
     vmid: number,
     name: string
@@ -117,7 +117,7 @@ export class proxmox {
     return resp;
   }
 
-  async vmPower(
+  vmPower(
     node: string,
     vmid: number,
     action: z.infer<typeof vmPowerSchema>

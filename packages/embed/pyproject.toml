@@ -1,0 +1,28 @@
+[project]
+name = "alfred-embed"
+version = "0.1.0"
+description = "Local embedding models for ALFRED (KaLM-Embedding-Gemma3-12B-2511)"
+requires-python = ">=3.10"
+dependencies = [
+    "sentence-transformers>=3.0.0",
+    "huggingface-hub>=0.20.0",
+    "numpy>=1.24.0",
+    "torch>=2.5.0",
+    "pytorch-triton-rocm>=3.3.0 ; sys_platform == 'linux'",
+]
+
+# PyTorch sources: ROCm on Linux, PyPI (CPU/MPS) on macOS
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-rocm", marker = "sys_platform == 'linux'" },
+]
+pytorch-triton-rocm = [
+    { index = "pytorch-rocm", marker = "sys_platform == 'linux'" },
+]
+
+# PyTorch ROCm index (Linux AMD GPUs)
+[[tool.uv.index]]
+name = "pytorch-rocm"
+url = "https://download.pytorch.org/whl/rocm6.3"
+explicit = true
+

@@ -2,11 +2,12 @@ import type { UIMessage } from "@alfred/type/stream";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState, Platform, Pressable, Text, View } from "react-native";
 import { setupCarPlay } from "@/lib/carplay";
+import { logError } from "@/lib/devlog";
 import { useColorScheme } from "@/lib/use-color-scheme";
-import { drain, enqueue, registerQueueDrain, useVoiceSessionNative } from "@/lib/voice";
+import { drain, registerQueueDrain, useVoiceSessionNative } from "@/lib/voice";
+import type { PendingItem } from "@/lib/voice/queue";
 import { ensureForegroundService } from "@/lib/voice/service";
 import { trpcClient } from "@/utils/trpc";
-import type { PendingItem } from "@/lib/voice/queue";
 
 const THREAD_ID = "drive-mode";
 
@@ -32,75 +33,59 @@ export default function DriveScreen() {
 
   useEffect(() => {
     if (Platform.OS === "android") {
-      void ensureForegroundService();
+      ensureForegroundService().catch((error) => {
+        logError("voice ForegroundService", error);
+      });
     }
   }, []);
+
+  const processPendingItem = useCallback(
+    async (item: PendingItem) => {
+      try {
+        if (item.kind === "stt") {
+          const result = await trpcClient.voice.sttTranscribe.mutate({
+            audioBase64: item.payload.audioBase64,
+            mimeType: item.payload.mimeType,
+            language: item.payload.language,
+            prompt: item.payload.prompt,
+          });
+          return result;
+        }
+
+        const result = await trpcClient.voice.ttsSynthesize.mutate({
+          text: item.payload.text,
+          voice: item.payload.voice,
+        });
+
+        if (result?.audioBase64) {
+          await voice.speak({
+            text: item.payload.text,
+            format: "mp3",
+            voice: item.payload.voice ?? "alloy",
+          });
+        }
+        return result;
+      } catch (error) {
+        logError("voice QueueDrain process", error);
+        throw error;
+      }
+    },
+    [voice]
+  );
 
   useEffect(() => {
     // Register background task to drain queue
     registerQueueDrain(async () => {
-      await drain(async (item: PendingItem) => {
-        try {
-          if (item.kind === "stt") {
-            const result = await (trpcClient as any).voice.sttTranscribe.mutate({
-              audioBase64: item.payload.audioBase64,
-              mimeType: item.payload.mimeType,
-              language: item.payload.language,
-              prompt: item.payload.prompt,
-            });
-            // Process transcript result if needed
-          } else if (item.kind === "tts") {
-            const result = await (trpcClient as any).voice.ttsSynthesize.mutate({
-              text: item.payload.text,
-              voice: item.payload.voice,
-            });
-            // Play audio result if needed
-            if (result?.audioBase64) {
-              await voice.speak({
-                text: item.payload.text,
-                format: "mp3",
-                voice: item.payload.voice ?? "alloy",
-              });
-            }
-          }
-        } catch (error) {
-          console.error("[voice] Queue drain error:", error);
-          throw error; // Will trigger retry
-        }
-      });
+      await drain(processPendingItem);
     });
-  }, [voice]);
+  }, [processPendingItem]);
 
   // Drain queue on app resume
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        void drain(async (item: PendingItem) => {
-          try {
-            if (item.kind === "stt") {
-              await (trpcClient as any).voice.sttTranscribe.mutate({
-                audioBase64: item.payload.audioBase64,
-                mimeType: item.payload.mimeType,
-                language: item.payload.language,
-                prompt: item.payload.prompt,
-              });
-            } else if (item.kind === "tts") {
-              const result = await (trpcClient as any).voice.ttsSynthesize.mutate({
-                text: item.payload.text,
-                voice: item.payload.voice,
-              });
-              if (result?.audioBase64) {
-                await voice.speak({
-                  text: item.payload.text,
-                  format: "mp3",
-                  voice: item.payload.voice ?? "alloy",
-                });
-              }
-            }
-          } catch (error) {
-            console.error("[voice] Queue drain error:", error);
-            throw error;
-          }
+        drain(processPendingItem).catch((error) => {
+          logError("voice QueueDrain resume", error);
         });
       }
     });
@@ -108,7 +93,7 @@ export default function DriveScreen() {
     return () => {
       subscription.remove();
     };
-  }, [voice]);
+  }, [processPendingItem]);
 
   useEffect(() => {
     setupCarPlay(voice, (text) => {
@@ -140,7 +125,7 @@ export default function DriveScreen() {
           parts: [{ type: "text", text: result.text }],
         },
       ];
-      const response = await (trpcClient as any).assistant.generate.mutate({
+      const response = await trpcClient.assistant.generate.mutate({
         thread: THREAD_ID,
         resource: THREAD_ID,
         messages,
@@ -155,6 +140,7 @@ export default function DriveScreen() {
       });
       finalStatus = "idle";
     } catch (error) {
+      logError("voice DriveInteraction", error);
       setStatus("error");
       finalStatus = "error";
     } finally {
@@ -177,12 +163,15 @@ export default function DriveScreen() {
     }
   }, [status]);
 
-  const buttonStyle =
-    status === "error"
-      ? palette.buttonError
-      : status === "holding"
-        ? palette.buttonActive
-        : palette.buttonIdle;
+  const buttonStyle = (() => {
+    if (status === "error") {
+      return palette.buttonError;
+    }
+    if (status === "holding") {
+      return palette.buttonActive;
+    }
+    return palette.buttonIdle;
+  })();
 
   return (
     <View

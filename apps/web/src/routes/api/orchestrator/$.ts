@@ -2,7 +2,7 @@ import { buildTools } from "@alfred/agent";
 import { createFileRoute } from "@tanstack/react-router";
 import { handleStreamRequest } from "./stream-handler";
 
-async function handleOrchestratorRequest(request: Request): Promise<Response> {
+function handleOrchestratorRequest(request: Request): Promise<Response> {
   return handleStreamRequest(request, buildTools, "orchestrator");
 }
 

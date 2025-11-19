@@ -9,6 +9,7 @@
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readdir } from "node:fs/promises";
 import { Client } from "pg";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -22,7 +23,7 @@ interface Migration {
 }
 
 async function loadMigrations(): Promise<Migration[]> {
-  const entries = await Array.fromAsync(Bun.readdir(MIGRATIONS_DIR));
+  const entries = await readdir(MIGRATIONS_DIR);
   return entries
     .filter((file) => file.endsWith(".sql"))
     .map((file) => {

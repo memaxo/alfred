@@ -113,8 +113,9 @@ export async function searchChunks(
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
 
   // Use transaction for SET LOCAL
+  // Note: SET commands don't support parameterized values, must use sql.raw()
   return await db.transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL hnsw.ef_search = ${ef}`);
+    await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${ef}`));
 
     const rows = await tx
       .select({
@@ -178,8 +179,9 @@ export async function searchChunksHybrid({
   const ef = efSearch;
 
   // Use transaction for SET LOCAL
+  // Note: SET commands don't support parameterized values, must use sql.raw()
   return await db.transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL hnsw.ef_search = ${ef}`);
+    await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${ef}`));
 
     // Dense vector similarity search
     let denseQuery = sql`

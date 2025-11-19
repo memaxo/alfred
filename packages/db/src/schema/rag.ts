@@ -13,10 +13,11 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
-// TODO: [Phase 8] Add proper indexes for performance
-// TODO: [Phase 8] Add HNSW vector indexes for semantic search
+// Import embedding dimension from embed package (single source of truth)
+// KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions
+import { EMBEDDING_DIM } from "@alfred/embed";
 
-export const VECTOR_DIM = 1536;
+export const VECTOR_DIM = EMBEDDING_DIM;
 
 /**
  * RAG documents (source documents)
@@ -47,8 +48,3 @@ export const ragChunks = pgTable("rag_chunks", {
   metadata: jsonb("metadata"), // Chunk-level metadata (section, page, etc.)
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
-
-// TODO: [Phase 8] Add HNSW vector index for ragChunks.embedding
-// CREATE INDEX ON rag_chunks USING hnsw (embedding vector_cosine_ops);
-
-// TODO: [Phase 8] Add index on (documentId, order) for ordered retrieval

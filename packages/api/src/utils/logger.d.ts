@@ -12,4 +12,3 @@ export declare const logger: {
     error: (message: string, context?: LogContext) => void;
 };
 export {};
-//# sourceMappingURL=logger.d.ts.map

@@ -83,7 +83,7 @@ export function wrapLegacyToolToAISDK<TLegacy extends LegacyTool>(
     async execute(input) {
       type ExecuteArgs = Parameters<TLegacy["execute"]>[0];
       const args = { input } as ExecuteArgs;
-      return legacy.execute(args);
+      return await legacy.execute(args);
     },
   });
 

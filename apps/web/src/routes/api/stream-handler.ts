@@ -1,4 +1,4 @@
-import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
+import { type buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
 import { logger } from "@alfred/api/utils/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import {
@@ -50,7 +50,7 @@ export async function handleStreamRequest(
       messages: convertToModelMessages(messages),
       tools: buildTools(),
       abortSignal: request.signal,
-      onAbort: async ({ steps }) => {
+      onAbort: ({ steps }) => {
         logger.warn(`${errorPrefix}_stream_aborted`, {
           steps: steps.length,
         });
@@ -60,7 +60,7 @@ export async function handleStreamRequest(
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       consumeSseStream: consumeStream,
-      onFinish: async ({ isAborted }) => {
+      onFinish: ({ isAborted }) => {
         if (isAborted) {
           logger.warn(`${errorPrefix}_stream_aborted_on_finish`);
         }
@@ -85,4 +85,3 @@ export async function handleStreamRequest(
     );
   }
 }
-

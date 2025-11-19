@@ -31,28 +31,48 @@ type ToolTokenOptions = {
   ttlSec?: number;
 };
 
+type TokenRouter = {
+  issue: {
+    mutate: (
+      input: RouterInputs["token"]["issue"]
+    ) => Promise<{ token: string }>;
+  };
+  elevate: {
+    mutate: (
+      input: RouterInputs["token"]["elevate"]
+    ) => Promise<{ token: string }>;
+  };
+};
+
+function isTokenRouter(value: unknown): value is TokenRouter {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  const issue = record.issue;
+  const elevate = record.elevate;
+
+  const issueMutate =
+    typeof issue === "object" && issue !== null
+      ? (issue as Record<string, unknown>).mutate
+      : undefined;
+  const elevateMutate =
+    typeof elevate === "object" && elevate !== null
+      ? (elevate as Record<string, unknown>).mutate
+      : undefined;
+
+  return (
+    typeof issueMutate === "function" && typeof elevateMutate === "function"
+  );
+}
+
 function getTokenClient() {
   const tokenRouter = (trpc as unknown as Record<string, unknown>).token;
-  if (
-    !tokenRouter ||
-    typeof tokenRouter !== "object" ||
-    typeof (tokenRouter as any).issue?.mutate !== "function" ||
-    typeof (tokenRouter as any).elevate?.mutate !== "function"
-  ) {
+  if (!isTokenRouter(tokenRouter)) {
     throw new Error("token_router_unavailable");
   }
-  return tokenRouter as {
-    issue: {
-      mutate: (
-        input: RouterInputs["token"]["issue"]
-      ) => Promise<{ token: string }>;
-    };
-    elevate: {
-      mutate: (
-        input: RouterInputs["token"]["elevate"]
-      ) => Promise<{ token: string }>;
-    };
-  };
+  return tokenRouter;
 }
 
 export async function getToolToken(
@@ -85,20 +105,20 @@ export async function getToolToken(
     const payload: RouterInputs["token"]["elevate"] = ttlSec
       ? { scopes, ttlSec }
       : { scopes };
-    const { token } = await tokenClient.elevate.mutate(payload);
-    return token;
+    const { token: elevatedToken } = await tokenClient.elevate.mutate(payload);
+    return elevatedToken;
   }
 
   const issuePayload: RouterInputs["token"]["issue"] = ttlSec
     ? { scopes, ttlSec }
     : { scopes };
-  const { token } = await tokenClient.issue.mutate(issuePayload);
-  return token;
+  const { token: issuedToken } = await tokenClient.issue.mutate(issuePayload);
+  return issuedToken;
 }
 
 /**
  * Backwards-compatible helper used in dev tools to mint elevated tokens.
  */
-export async function getElevatedToolToken(scopes: string[]) {
+export function getElevatedToolToken(scopes: string[]) {
   return getToolToken(scopes, "medium", { forceElevated: true });
 }

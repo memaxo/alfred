@@ -6,7 +6,7 @@ import { logger } from "@alfred/api/utils/logger";
 
 let initialized = false;
 
-export async function initServer() {
+export function initServer() {
   if (initialized) {
     return;
   }

@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
-import { logger } from "@alfred/api/utils/logger";
+import { logger } from "./utils/logger";
 import {
   runtimeExecutionsTotal,
   runtimeExecutionDurationSeconds,
@@ -493,4 +493,3 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 export function createRuntime(options: RuntimeOptions): IWorkflowRuntime {
   return new WorkflowRuntime(options);
 }
-

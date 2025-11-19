@@ -10,5 +10,9 @@
     "noUnusedParameters": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["dist", "**/*.test.ts"]
+  "exclude": ["dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../db" },
+    { "path": "../embed" }
+  ]
 }

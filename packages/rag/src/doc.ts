@@ -1,12 +1,14 @@
 import { ragRepo } from "@alfred/db";
-import { embedMany as embedManyTexts, embed as embedText } from "ai";
-import { checkEmbedHealth, getEmbeddingProvider } from "./providers";
+import {
+  embed as embedLocal,
+  embedMany as embedManyLocal,
+  EMBEDDING_DIM,
+} from "@alfred/embed";
 
 /**
  * ALFRED RAG Document Processing
  */
 
-const EMBEDDING_DIM = 1536;
 const MAX_BATCH_SIZE = 1000;
 
 export interface Chunk {
@@ -241,18 +243,7 @@ export async function chunk(
 }
 
 export async function embed(text: string): Promise<number[]> {
-  const provider = getEmbeddingProvider();
-
-  // Health check with fallback
-  const isHealthy = await checkEmbedHealth(provider);
-  if (!isHealthy) {
-    throw new Error("rag_provider_unhealthy");
-  }
-
-  const { embedding } = await embedText({
-    model: provider.model,
-    value: text,
-  });
+  const embedding = await embedLocal(text);
 
   if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIM) {
     throw new Error("rag_embed_invalid_vector");
@@ -262,26 +253,15 @@ export async function embed(text: string): Promise<number[]> {
 }
 
 /**
- * Batch embedding function using AI SDK v6 embedMany() for optimized performance.
- * Processes multiple texts in a single API call when possible.
+ * Batch embedding function using local KaLM model for optimized performance.
+ * Processes multiple texts via embedding pool.
  */
 export async function embedMany(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) {
     return [];
   }
 
-  const provider = getEmbeddingProvider();
-
-  // Health check with fallback
-  const isHealthy = await checkEmbedHealth(provider);
-  if (!isHealthy) {
-    throw new Error("rag_provider_unhealthy");
-  }
-
-  const { embeddings } = await embedManyTexts({
-    model: provider.model,
-    values: texts,
-  });
+  const embeddings = await embedManyLocal(texts);
 
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
     throw new Error("rag_embed_mismatch");

@@ -26,4 +26,3 @@ export const logger = {
     warn: (message, context) => log("warn", message, context),
     error: (message, context) => log("error", message, context),
 };
-//# sourceMappingURL=logger.js.map

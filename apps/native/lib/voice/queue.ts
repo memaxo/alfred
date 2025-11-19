@@ -1,45 +1,28 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { PendingItem } from "./voice.types";
 
-export interface PendingSttItem {
-  ts: number;
-  kind: "stt";
-  payload: {
-    audioBase64: string;
-    mimeType: string;
-    language?: string;
-    prompt?: string;
-  };
-  retryCount: number;
-  lastError?: string;
-}
-
-export interface PendingTtsItem {
-  ts: number;
-  kind: "tts";
-  payload: {
-    text: string;
-    voice?: string;
-  };
-  retryCount: number;
-  lastError?: string;
-}
-
-export type PendingItem = PendingSttItem | PendingTtsItem;
+export type {
+  PendingItem,
+  PendingSttItem,
+  PendingTtsItem,
+} from "./voice.types";
 
 const KEY = "voice:queue:v1";
 const LIMIT = 50;
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
-const MAX_BACKOFF_MS = 30000;
+const MAX_BACKOFF_MS = 30_000;
 
 function calculateBackoff(retryCount: number): number {
-  const backoff = INITIAL_BACKOFF_MS * Math.pow(2, retryCount);
+  const backoff = INITIAL_BACKOFF_MS * 2 ** retryCount;
   return Math.min(backoff, MAX_BACKOFF_MS);
 }
 
 async function readQueue(): Promise<PendingItem[]> {
   const raw = await AsyncStorage.getItem(KEY);
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
   try {
     const value = JSON.parse(raw);
     if (Array.isArray(value)) {
@@ -55,7 +38,9 @@ async function writeQueue(items: PendingItem[]): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(items));
 }
 
-export async function enqueue(item: Omit<PendingItem, "ts" | "retryCount">): Promise<void> {
+export async function enqueue(
+  item: Omit<PendingItem, "ts" | "retryCount">
+): Promise<void> {
   const items = await readQueue();
   const newItem: PendingItem = {
     ...item,
@@ -73,8 +58,10 @@ export async function drain(
   processor: (item: PendingItem) => Promise<void>
 ): Promise<void> {
   const items = await readQueue();
-  if (items.length === 0) return;
-  
+  if (items.length === 0) {
+    return;
+  }
+
   const now = Date.now();
   const processed: PendingItem[] = [];
   const failed: PendingItem[] = [];
@@ -83,7 +70,7 @@ export async function drain(
     // Check if item should be retried based on backoff
     const backoff = calculateBackoff(item.retryCount);
     const nextRetryTime = item.ts + backoff;
-    
+
     if (now < nextRetryTime) {
       // Not ready for retry yet
       failed.push(item);

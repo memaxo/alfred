@@ -3,8 +3,8 @@
  * Registers with the shared API metrics registry
  */
 
+import { metricsRegistry } from "@alfred/metrics/registry";
 import client from "prom-client";
-import { metricsRegistry } from "@alfred/api/metrics";
 
 // Workflow execution metrics
 
@@ -59,8 +59,22 @@ export const runtimeContextCacheHitsTotal = new client.Counter({
 
 export const runtimeContextTokensTotal = new client.Counter({
   name: "runtime_context_tokens_total",
-  help: "Token counts by type (requirement, tools, overhead, context)",
+  help: "Token counts by type (requirement, tools, overhead, context, rag)",
   labelNames: ["type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeRagRetrievalTotal = new client.Counter({
+  name: "runtime_rag_retrieval_total",
+  help: "Count of RAG retrieval operations by status",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeRagRetrievalDurationSeconds = new client.Histogram({
+  name: "runtime_rag_retrieval_duration_seconds",
+  help: "Duration of RAG retrieval operations in seconds",
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
   registers: [metricsRegistry],
 });
 
@@ -104,4 +118,3 @@ export const runtimeKnowledgeBatchDurationSeconds = new client.Histogram({
   buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
   registers: [metricsRegistry],
 });
-

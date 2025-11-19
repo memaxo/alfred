@@ -1,8 +1,8 @@
-# Observability Dashboard Standards
+# Observability Dashboard Configuration
 
-## Core Principle
+**Status**: Phase 8 Complete ✅ (November 2025)
 
-Dashboards must provide actionable insights with minimal cognitive load. Organize metrics by domain, set clear alert thresholds, and surface anomalies immediately.
+This document contains detailed dashboard configuration archived from `.ruler/20-observability-dashboards.md` after Phase 8 completion.
 
 ## Dashboard Structure
 
@@ -72,17 +72,37 @@ Dashboards must provide actionable insights with minimal cognitive load. Organiz
 3. **Third row:** Domain-specific (workflows, AI, policy)
 4. **Bottom row:** Resource usage (CPU, memory, connections)
 
-## Examples
+## PromQL Queries
 
+### Error rate by procedure
 ```promql
-# Error rate by procedure
 rate(trpc_request_errors_total[5m]) / rate(trpc_requests_total[5m]) > 0.05
+```
 
-# p99 response time
+### p99 response time
+```promql
 histogram_quantile(0.99, rate(trpc_request_duration_seconds_bucket[5m])) > 1
+```
 
-# Workflow failure rate
+### Workflow failure rate
+```promql
 rate(workflow_stream_events_total{event="error"}[15m]) / 
   rate(workflow_stream_events_total{event="run"}[15m]) > 0.10
 ```
+
+### Database connection pool utilization
+```promql
+pg_pool_active_connections / pg_pool_max_connections > 0.8
+```
+
+### Memory usage percentage
+```promql
+process_resident_memory_bytes / node_memory_MemTotal_bytes > 0.9
+```
+
+## Implementation References
+
+- Metrics registry: `packages/api/src/metrics.ts`
+- Runtime metrics: `packages/runtime/src/metrics.ts`
+- Grafana dashboard: See `docs/observability/runtime-dashboard.md`
 

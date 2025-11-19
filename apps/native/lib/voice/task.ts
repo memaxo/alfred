@@ -1,6 +1,8 @@
+// biome-ignore lint/performance/noNamespaceImport: Expo background fetch API is namespace-based.
 import * as BackgroundFetch from "expo-background-fetch";
+// biome-ignore lint/performance/noNamespaceImport: Expo task manager API is namespace-based.
 import * as TaskManager from "expo-task-manager";
-import { drain } from "./queue";
+import { logError } from "@/lib/devlog";
 
 export const TASK_VOICE_FLUSH = "VOICE_STREAM_FLUSH";
 const MIN_INTERVAL_SECONDS = 2 * 60; // 2 minutes (reduced from 15)
@@ -14,18 +16,18 @@ export function registerVoiceTasks(flush: () => Promise<void>): void {
         await flush();
         return BackgroundFetch.BackgroundFetchResult.NewData;
       } catch (error) {
-        console.error("[voice] Background flush failed:", error);
+        logError("voice FlushTask", error);
         return BackgroundFetch.BackgroundFetchResult.Failed;
       }
     });
     defined = true;
   }
-  void BackgroundFetch.registerTaskAsync(TASK_VOICE_FLUSH, {
+  BackgroundFetch.registerTaskAsync(TASK_VOICE_FLUSH, {
     minimumInterval: MIN_INTERVAL_SECONDS,
     stopOnTerminate: false,
     startOnBoot: true,
   }).catch((error) => {
-    console.error("[voice] Failed to register background task:", error);
+    logError("voice RegisterTask", error);
   });
 }
 

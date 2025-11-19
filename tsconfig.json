@@ -10,6 +10,7 @@
     { "path": "packages/runtime" },
     { "path": "packages/api" },
     { "path": "packages/voice" },
+    { "path": "packages/embed" },
     { "path": "packages/metrics" }
   ]
 }

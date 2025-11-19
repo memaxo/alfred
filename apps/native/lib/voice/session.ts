@@ -1,7 +1,6 @@
 import { markVoice } from "@alfred/metrics/performance";
 import type { PlatformAdapter, VoiceSession } from "@alfred/voice/session";
 import { createVoiceSession } from "@alfred/voice/session";
-import type { VoiceClient } from "@alfred/voice/transport";
 import { createVoiceClient } from "@alfred/voice/transport";
 import type { SttRequest } from "@alfred/voice/types";
 import { Audio } from "expo-av";
@@ -9,10 +8,36 @@ import { useMemo } from "react";
 import { ExpoCapture } from "./capture";
 import { configureAudioSession } from "./config";
 import { playBase64 } from "./play";
-import { enqueue, type PendingItem } from "./queue";
+import { enqueue } from "./queue";
 
-interface MutationAdapter {
+type MutationAdapter = {
   mutation<TInput, TOutput>(path: string, input: TInput): Promise<TOutput>;
+};
+
+type MutationInvoker = (path: string, input: unknown) => Promise<unknown>;
+
+function hasMutationInvoker(
+  value: unknown
+): value is { mutation: MutationInvoker } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { mutation?: unknown }).mutation === "function"
+  );
+}
+
+function hasMutate(
+  value: unknown
+): value is { mutate: (input: unknown) => Promise<unknown> } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { mutate?: unknown }).mutate === "function"
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function resolveMutation(
@@ -20,25 +45,26 @@ function resolveMutation(
   path: string,
   input: unknown
 ): Promise<unknown> {
-  const anyClient = rawClient as Record<string, unknown> & {
-    mutation?: (nextPath: string, nextInput: unknown) => Promise<unknown>;
-  };
-  if (typeof anyClient?.mutation === "function") {
-    return anyClient.mutation(path, input);
+  if (hasMutationInvoker(rawClient)) {
+    return rawClient.mutation(path, input);
   }
+
   const segments = path.split(".");
-  let cursor: any = rawClient;
+  let cursor: unknown = rawClient;
+
   for (const segment of segments) {
-    if (cursor && typeof cursor === "object" && segment in cursor) {
+    if (isRecord(cursor) && segment in cursor) {
       cursor = cursor[segment];
     } else {
       cursor = null;
       break;
     }
   }
-  if (cursor && typeof cursor.mutate === "function") {
+
+  if (hasMutate(cursor)) {
     return cursor.mutate(input);
   }
+
   throw new Error(`tRPC client missing mutation handler for ${path}`);
 }
 
@@ -49,29 +75,13 @@ function toMutationAdapter(trpc: unknown): MutationAdapter {
   };
 }
 
-function createNativePlatformAdapter(): PlatformAdapter {
-  const capture = new ExpoCapture();
-  return {
-    configureSession: ({ background }) =>
-      configureAudioSession(Audio, { background }),
-    startCapture: () => capture.start(),
-    stopCapture: () => capture.stop(),
-    play: (base64, mimeType) => playBase64(base64, mimeType),
-  };
-}
-
-function createSession(client: VoiceClient): VoiceSession {
-  const adapter = createNativePlatformAdapter();
-  return createVoiceSession(adapter, client);
-}
-
 export function useVoiceSessionNative(trpc: unknown) {
   const captureRef = useMemo(() => ({ current: new ExpoCapture() }), []);
-  
+
   return useMemo(() => {
     const mutationAdapter = toMutationAdapter(trpc);
     const client = createVoiceClient({ trpc: mutationAdapter });
-    
+
     // Create adapter with capture reference
     const adapter: PlatformAdapter = {
       configureSession: ({ background }) =>
@@ -80,7 +90,7 @@ export function useVoiceSessionNative(trpc: unknown) {
       stopCapture: () => captureRef.current.stop(),
       play: (base64, mimeType) => playBase64(base64, mimeType),
     };
-    
+
     const session = createVoiceSession(adapter, client);
 
     const start = async () => {

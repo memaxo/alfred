@@ -1,0 +1,32 @@
+{
+  "name": "@alfred/embed",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./src/types.ts"
+    },
+    "./pool": {
+      "types": "./dist/pool.d.ts",
+      "default": "./src/pool.ts"
+    },
+    "./process": {
+      "types": "./dist/process.d.ts",
+      "default": "./src/process.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b",
+    "test": "bun test",
+    "install-deps": "bash scripts/install-deps.sh",
+    "download-model": "uv run python scripts/download_model.py"
+  }
+}
+

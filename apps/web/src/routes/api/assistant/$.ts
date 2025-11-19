@@ -2,7 +2,7 @@ import { buildAssistantTools } from "@alfred/agent";
 import { createFileRoute } from "@tanstack/react-router";
 import { handleStreamRequest } from "./stream-handler";
 
-async function handleAssistantRequest(request: Request): Promise<Response> {
+function handleAssistantRequest(request: Request): Promise<Response> {
   return handleStreamRequest(request, buildAssistantTools, "assistant");
 }
 

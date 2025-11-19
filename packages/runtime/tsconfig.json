@@ -23,7 +23,7 @@
     { "path": "../learning" },
     { "path": "../policy" },
     { "path": "../agent" },
-    { "path": "../db" }
+    { "path": "../db" },
+    { "path": "../metrics" }
   ]
 }
-

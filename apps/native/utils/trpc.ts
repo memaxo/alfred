@@ -8,7 +8,7 @@ type AppRouter = typeof appRouter;
 
 export type TRPCAppRouter = AppRouter;
 
-export const trpc: any = createTRPCReact<any>();
+export const trpc = createTRPCReact<AppRouter>();
 export const queryClient = new QueryClient();
 
 export const trpcClient = createTRPCClient<AppRouter>({

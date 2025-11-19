@@ -117,7 +117,7 @@ export class RuntimeTracer {
     const first = spans[0];
     const last = spans[spans.length - 1];
 
-    if (!first.startNs || !last.endNs) {
+    if (!first || !last || last.endNs === undefined) {
       return null;
     }
 
@@ -158,4 +158,3 @@ export class RuntimeTracer {
     });
   }
 }
-

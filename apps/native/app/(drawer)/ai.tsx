@@ -4,6 +4,7 @@ import { DefaultChatTransport } from "ai";
 import { fetch as expoFetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -28,19 +29,28 @@ const generateAPIUrl = (relativePath: string) => {
 
 export default function AIScreen() {
   const [input, setInput] = useState("");
-  const { messages, error, sendMessage } = useChat({
+  const {
+    messages,
+    error: chatError,
+    sendMessage,
+  } = useChat({
     transport: new DefaultChatTransport({
       fetch: expoFetch as unknown as typeof globalThis.fetch,
       api: generateAPIUrl("/ai"),
     }),
-    onError: (error) => console.error(error, "AI Chat Error"),
+    onError: (caughtError) => {
+      Alert.alert("AI Chat Error", caughtError.message);
+    },
   });
 
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    if (messages.length === 0) {
+      return;
+    }
     scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [messages.length]);
 
   const onSubmit = () => {
     const value = input.trim();
@@ -50,12 +60,12 @@ export default function AIScreen() {
     }
   };
 
-  if (error) {
+  if (chatError) {
     return (
       <Container>
         <View className="flex-1 items-center justify-center px-4">
           <Text className="mb-4 text-center text-destructive text-lg">
-            Error: {error.message}
+            Error: {chatError.message}
           </Text>
           <Text className="text-center text-muted-foreground">
             Please check your connection and try again.

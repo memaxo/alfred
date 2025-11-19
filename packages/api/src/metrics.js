@@ -470,4 +470,3 @@ export const metricsContentType = metricsRegistry.contentType;
 export async function getMetricsSnapshot() {
     return metricsRegistry.metrics();
 }
-//# sourceMappingURL=metrics.js.map

@@ -1,17 +1,26 @@
 /**
  * Context Builder
- * 
+ *
  * Wraps context gathering functions with caching and token budget validation.
  * Reuses existing functions from @alfred/agent/orchestrator/flow/context
  */
 
 import { createHash } from "node:crypto";
-import type { SearchReceipt, ContextBundle } from "@alfred/type/plan";
-import { logger } from "@alfred/api/utils/logger";
+import {
+  buildContextBundle,
+  gatherCodeContext,
+  gatherWebContext,
+} from "@alfred/agent/orchestrator/flow/context";
+import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
+import type { ContextBundle, SearchReceipt } from "@alfred/type/plan";
+import { logger } from "./utils/logger";
+import { KnowledgeEngine } from "./engines/knowledge";
 import {
   runtimeContextBuildDurationSeconds,
   runtimeContextCacheHitsTotal,
   runtimeContextTokensTotal,
+  runtimeRagRetrievalDurationSeconds,
+  runtimeRagRetrievalTotal,
 } from "./metrics";
 
 /**
@@ -38,6 +47,7 @@ export type ExecutionContext = {
   receipts: SearchReceipt;
   bundle: ContextBundle | null;
   totalTokens: number;
+  ragChunks?: import("@alfred/rag").Chunk[];
 };
 
 /**
@@ -50,13 +60,19 @@ type CachedContext = {
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_ENTRIES = 100; // LRU eviction threshold
+const DEFAULT_MAX_TOKENS = 24_000; // Default token budget for context
+const DEFAULT_TOP_K = 25; // Default number of code files to retrieve
+const RAG_TOP_K = 5; // Number of RAG chunks to retrieve
+const RAG_THRESHOLD = 0.7; // Minimum similarity score for RAG chunks
+const REQUIREMENT_SLICE_LENGTH = 100; // Length to slice requirement for logging
+const MS_TO_SECONDS = 1000; // Conversion factor from milliseconds to seconds
 
 /**
  * ContextBuilder manages context gathering with caching
- * 
+ *
  * Delegates to existing gatherCodeContext/gatherWebContext functions.
  * Provides token budget validation.
- * 
+ *
  * Memory-bounded: Uses LRU eviction when cache exceeds MAX_CACHE_ENTRIES.
  * Periodically evicts expired entries to prevent unbounded growth.
  */
@@ -65,7 +81,7 @@ export class ContextBuilder {
 
   /**
    * Build execution context with caching
-   * 
+   *
    * Returns cached context if valid, otherwise gathers fresh context.
    * Implements LRU eviction and periodic cleanup.
    */
@@ -77,18 +93,18 @@ export class ContextBuilder {
     if (cached && cached.expires > Date.now()) {
       // Cache hit
       runtimeContextCacheHitsTotal.inc({ result: "hit" });
-      
+
       const durationMs = Date.now() - startTime;
       runtimeContextBuildDurationSeconds
         .labels({ cached: "true" })
-        .observe(durationMs / 1000);
-      
+        .observe(durationMs / MS_TO_SECONDS);
+
       logger.debug("runtime_context_cache_hit", {
-        requirement: input.requirement.slice(0, 100),
+        requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
         cached: true,
         durationMs,
       });
-      
+
       // LRU: Move to end (most recently used)
       this.cache.delete(cacheKey);
       this.cache.set(cacheKey, cached);
@@ -97,7 +113,7 @@ export class ContextBuilder {
 
     // Cache miss
     runtimeContextCacheHitsTotal.inc({ result: "miss" });
-    
+
     // Evict expired entries before building
     this.evictExpired();
 
@@ -115,17 +131,96 @@ export class ContextBuilder {
 
     try {
       // Build fresh context
-      // TODO: Integrate with gatherCodeContext and gatherWebContext from @alfred/agent
-      // For now, return minimal context
+      const resolvedWorkspace = input.workspace ?? process.cwd();
+
+      // Gather code context
+      const codeReceipt = await gatherCodeContext({
+        requirement: input.requirement,
+        cw: resolvedWorkspace,
+        exts: input.exts,
+        ignore: input.ignore,
+        topK: input.topK ?? DEFAULT_TOP_K,
+        authz: input.authz,
+      });
+
+      // Gather web context if requested
+      const webReceipt = input.web
+        ? await gatherWebContext({
+            requirement: input.requirement,
+            authz: input.authz,
+          })
+        : null;
+
+      // Combine receipts
+      const receipts: SearchReceipt = {
+        code: codeReceipt.code,
+        web: webReceipt?.web,
+        created: new Date(),
+      };
+
+      // Build context bundle
+      const bundle = await buildContextBundle({
+        cw: resolvedWorkspace,
+        receipts,
+        maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
+      });
+
+      // Retrieve RAG chunks for semantic context
+      let ragChunks: import("@alfred/rag").Chunk[] | undefined;
+      let ragTokens = 0;
+
+      const ragStartTime = Date.now();
+      try {
+        const knowledgeEngine = new KnowledgeEngine();
+        ragChunks = await knowledgeEngine.retrieveContext(input.requirement, {
+          useHybrid: true,
+          topK: RAG_TOP_K,
+          threshold: RAG_THRESHOLD,
+          useReranking: false,
+        });
+
+        // Estimate RAG chunk tokens
+        if (ragChunks.length > 0) {
+          const estimator = createTokenEstimator();
+          ragTokens = ragChunks.reduce(
+            (sum, chunk) => sum + estimator.estimate(chunk.content),
+            0
+          );
+        }
+
+        const ragDurationMs = Date.now() - ragStartTime;
+        runtimeRagRetrievalDurationSeconds.observe(
+          ragDurationMs / MS_TO_SECONDS
+        );
+        runtimeRagRetrievalTotal.inc({ status: "ok" });
+
+        logger.debug("runtime_rag_retrieval", {
+          requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
+          chunksCount: ragChunks.length,
+          tokens: ragTokens,
+          durationMs: ragDurationMs,
+        });
+      } catch (error) {
+        // RAG retrieval is non-fatal - continue without chunks
+        const ragDurationMs = Date.now() - ragStartTime;
+        runtimeRagRetrievalTotal.inc({ status: "error" });
+        logger.warn("runtime_rag_retrieval_failed", {
+          requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
+          error: error instanceof Error ? error.message : String(error),
+          durationMs: ragDurationMs,
+        });
+        ragChunks = undefined;
+      }
+
+      // Calculate total tokens
+      const totalTokens = (bundle?.estimatedTokens ?? 0) + ragTokens;
+
       const context: ExecutionContext = {
         requirement: input.requirement,
-        receipts: {
-          code: [],
-          web: input.web ? [] : undefined,
-          created: new Date(),
-        },
-        bundle: null,
-        totalTokens: 0,
+        receipts,
+        bundle,
+        totalTokens,
+        ragChunks,
       };
 
       // Cache the context
@@ -133,21 +228,27 @@ export class ContextBuilder {
         context,
         expires: Date.now() + CACHE_TTL_MS,
       });
-      
+
       // Track token counts
-      runtimeContextTokensTotal.inc({ type: "total" }, context.totalTokens);
-      runtimeContextTokensTotal.inc({ type: "requirement" }, 0); // TODO: Actual token count
-      
+      runtimeContextTokensTotal.inc({ type: "total" }, totalTokens);
+      runtimeContextTokensTotal.inc(
+        { type: "context" },
+        bundle?.estimatedTokens ?? 0
+      );
+      runtimeContextTokensTotal.inc({ type: "rag" }, ragTokens);
+
       const durationMs = Date.now() - startTime;
       runtimeContextBuildDurationSeconds
         .labels({ cached: "false" })
-        .observe(durationMs / 1000);
-      
+        .observe(durationMs / MS_TO_SECONDS);
+
       logger.info("runtime_context_build", {
-        requirement: input.requirement.slice(0, 100),
+        requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
         cached: false,
-        totalTokens: context.totalTokens,
-        receiptsCount: context.receipts.code.length,
+        totalTokens,
+        receiptsCount: receipts.code.length,
+        bundleFiles: bundle?.files.length ?? 0,
+        ragChunks: ragChunks?.length ?? 0,
         durationMs,
       });
 
@@ -155,7 +256,7 @@ export class ContextBuilder {
     } catch (error) {
       const durationMs = Date.now() - startTime;
       logger.error("runtime_context_build_failed", {
-        requirement: input.requirement.slice(0, 100),
+        requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
         error: error instanceof Error ? error.message : String(error),
         durationMs,
       });
@@ -165,7 +266,7 @@ export class ContextBuilder {
 
   /**
    * Compute cache key from input parameters
-   * 
+   *
    * Hash of all parameters that affect context gathering
    */
   private computeKey(input: ContextBuildInput): string {
@@ -174,8 +275,8 @@ export class ContextBuilder {
       .update(input.workspace ?? "")
       .update((input.exts ?? []).join(","))
       .update((input.ignore ?? []).join(","))
-      .update(String(input.topK ?? 25))
-      .update(String(input.maxTokens ?? 100000))
+      .update(String(input.topK ?? DEFAULT_TOP_K))
+      .update(String(input.maxTokens ?? DEFAULT_MAX_TOKENS))
       .update(String(input.web ?? false))
       .digest("hex");
   }
@@ -193,10 +294,10 @@ export class ContextBuilder {
   getCacheSize(): number {
     return this.cache.size;
   }
-  
+
   /**
    * Evict expired cache entries
-   * 
+   *
    * Called before each build to prevent unbounded growth
    */
   private evictExpired(): void {
@@ -207,7 +308,7 @@ export class ContextBuilder {
       }
     }
   }
-  
+
   /**
    * Get maximum cache capacity
    */
@@ -215,4 +316,3 @@ export class ContextBuilder {
     return MAX_CACHE_ENTRIES;
   }
 }
-

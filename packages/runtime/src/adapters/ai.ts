@@ -8,7 +8,7 @@
 import { streamText } from "ai";
 import type { LanguageModel } from "ai";
 import type { WorkflowEvent } from "@alfred/type/plan";
-import { logger } from "@alfred/api/utils/logger";
+import { logger } from "../utils/logger";
 import {
   runtimeAiSdkCallsTotal,
   runtimeAiSdkDurationSeconds,
@@ -108,11 +108,17 @@ export class AISDKAdapter {
    * Extract model ID from LanguageModel object
    */
   private getModelId(model: LanguageModel): string {
-    // Try to extract modelId from the model object
-    if ("modelId" in model && typeof model.modelId === "string") {
-      return model.modelId;
+    if (typeof model === "string") {
+      return model;
     }
-    // Fallback to generic name
+
+    if (typeof model === "object" && model !== null) {
+      const maybeId = (model as { modelId?: unknown }).modelId;
+      if (typeof maybeId === "string") {
+        return maybeId;
+      }
+    }
+
     return "unknown";
   }
 
@@ -182,4 +188,3 @@ export class AISDKAdapter {
     }
   }
 }
-

@@ -6,6 +6,6 @@ export async function loadPreferenceMemory(userId: string, limit = 25) {
   return list.slice(0, limit);
 }
 
-export async function loadProfileMemory(userId: string) {
+export function loadProfileMemory(userId: string) {
   return userRepo.getProfile(userId);
 }
