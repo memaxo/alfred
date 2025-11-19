@@ -16,6 +16,7 @@ import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
 const autoLevels = ["read", "low", "medium", "high"] as const;
+const COMPLETE_PERCENT = 100;
 
 type AutoLevel = (typeof autoLevels)[number];
 
@@ -75,6 +76,52 @@ function OrchestratorRunRoute() {
   const hasNewer = page > 0 && order === "desc"; // when newest-first, pages > 0 have newer pages
   const [oldestEventId, setOldestEventId] = useState<string | null>(null);
   const [newestEventId, setNewestEventId] = useState<string | null>(null);
+  const processReplayResponse = (data?: WorkflowReplayOutput) => {
+    if (!data) {
+      return;
+    }
+    const items = data.items ?? [];
+    if (items.length === 0) {
+      setHasMore(Boolean(data.hasMore));
+      return;
+    }
+    const newSeen = new Set<string>();
+    for (const row of items) {
+      const evtId = typeof row.eventId === "string" ? row.eventId : null;
+      if (!evtId || seenEventIds.has(evtId)) {
+        continue;
+      }
+      newSeen.add(evtId);
+      const uiMessages = getUiMessagesFromReplayItem(row);
+      if (uiMessages && uiMessages.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMessages = uiMessages.filter(
+            (message) => message.id && !existingIds.has(message.id)
+          );
+          return order === "desc"
+            ? [...newMessages, ...prev]
+            : [...prev, ...newMessages];
+        });
+      }
+    }
+    if (newSeen.size > 0) {
+      setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
+    }
+    setHasMore(Boolean(data.hasMore));
+    const first = items[0];
+    const last = items.at(-1);
+    if (first?.eventId && last?.eventId) {
+      if (order === "desc") {
+        setNewestEventId(first.eventId);
+        setOldestEventId(last.eventId);
+      } else {
+        setOldestEventId(first.eventId);
+        setNewestEventId(last.eventId);
+      }
+    }
+  };
+
   const eventsQuery = trpc.workflow.replay.useQuery(
     {
       runId: runId ?? "",
@@ -87,52 +134,7 @@ function OrchestratorRunRoute() {
     {
       enabled: Boolean(runId),
       // hydrate messages from persisted UI-message events
-      onSuccess(data) {
-        if (!data) {
-          return;
-        }
-        const items = data.items ?? [];
-        if (items.length === 0) {
-          setHasMore(Boolean(data.hasMore));
-          return;
-        }
-        const newSeen = new Set<string>();
-        for (const row of items) {
-          const evtId = typeof row.eventId === "string" ? row.eventId : null;
-          if (!evtId || seenEventIds.has(evtId)) {
-            continue;
-          }
-          newSeen.add(evtId);
-          const uiMessages = getUiMessagesFromReplayItem(row);
-          if (uiMessages && uiMessages.length > 0) {
-            setMessages((prev) => {
-              const existingIds = new Set(prev.map((m) => m.id));
-              const newMessages = uiMessages.filter(
-                (message) => message.id && !existingIds.has(message.id)
-              );
-              return order === "desc"
-                ? [...newMessages, ...prev]
-                : [...prev, ...newMessages];
-            });
-          }
-        }
-        if (newSeen.size > 0) {
-          setSeenEventIds((prev) => new Set([...prev, ...newSeen]));
-        }
-        setHasMore(Boolean(data.hasMore));
-        // Track boundaries for future UX improvements
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (first?.eventId && last?.eventId) {
-          if (order === "desc") {
-            setNewestEventId(first.eventId);
-            setOldestEventId(last.eventId);
-          } else {
-            setOldestEventId(first.eventId);
-            setNewestEventId(last.eventId);
-          }
-        }
-      },
+      onSuccess: processReplayResponse,
       keepPreviousData: true,
     }
   );
@@ -165,7 +167,7 @@ function OrchestratorRunRoute() {
     onComplete() {
       appendLog("info", "Workflow completed");
       setStatus("Completed");
-      setProgress((prev) => (prev < 100 ? 100 : prev));
+      setProgress((prev) => (prev < COMPLETE_PERCENT ? COMPLETE_PERCENT : prev));
       setIsRunning(false);
       setStreamInput(null);
       setRunId(null);
@@ -264,8 +266,11 @@ function OrchestratorRunRoute() {
   }
 
   function handleChunk(chunk: unknown) {
-    const event = chunk as Record<string, unknown> | null;
-    const evtId = typeof event?.eventId === "string" ? (event.eventId as string) : null;
+    if (!isStreamEventPayload(chunk)) {
+      return;
+    }
+    const event = chunk;
+    const evtId = typeof event.eventId === "string" ? event.eventId : null;
     if (evtId && seenEventIds.has(evtId)) {
       return; // dedupe
     }
@@ -276,9 +281,9 @@ function OrchestratorRunRoute() {
         return copy;
       });
     }
-    const type = (event?.type as string | undefined) ?? "unknown";
+    const type = typeof event.type === "string" ? event.type : "unknown";
     // For both normalized UI-message events and raw assistant/tool events, try to render UI messages
-    const maybeUiMessages = eventToUiMessages(event as any);
+    const maybeUiMessages = getUiMessagesFromStreamEvent(event);
     if (maybeUiMessages && maybeUiMessages.length > 0) {
       setMessages((prev) => {
         const existingIds = new Set(prev.map((m) => m.id));
@@ -289,7 +294,7 @@ function OrchestratorRunRoute() {
 
     switch (type) {
       case "run": {
-        const id = typeof event?.id === "string" ? event.id : null;
+        const id = typeof event.id === "string" ? event.id : null;
         if (id) {
           setRunId(id);
           appendLog("info", `run started (${id})`);
@@ -299,10 +304,10 @@ function OrchestratorRunRoute() {
       }
       case "status": {
         const nextStatus =
-          typeof event?.state === "string"
-            ? (event.state as string)
-            : typeof event?.message === "string"
-              ? (event.message as string)
+          typeof event.state === "string"
+            ? event.state
+            : typeof event.message === "string"
+              ? event.message
               : null;
         if (nextStatus) {
           setStatus(nextStatus);
@@ -311,11 +316,11 @@ function OrchestratorRunRoute() {
         break;
       }
       case "progress": {
-        const pct = typeof event?.pct === "number" ? event.pct : undefined;
+        const pct = typeof event.pct === "number" ? event.pct : undefined;
         if (typeof pct === "number") {
           setProgress((prev) => (pct > prev ? pct : prev));
         }
-        if (typeof event?.message === "string") {
+        if (typeof event.message === "string") {
           appendLog("progress", event.message);
         }
         break;
@@ -331,19 +336,19 @@ function OrchestratorRunRoute() {
         break;
       }
       case "droid": {
-        const payload = event?.chunk ?? event?.data ?? event;
+        const payload = event.chunk ?? event.data ?? event;
         appendLog("droid", JSON.stringify(payload));
         break;
       }
       case "notice": {
         const baseMessage =
-          typeof event?.message === "string"
+          typeof event.message === "string"
             ? event.message
             : JSON.stringify(event);
         const moduleId =
-          typeof event?.module === "string" ? event.module : null;
-        const taskId = typeof event?.task === "string" ? event.task : null;
-        const error = typeof event?.error === "string" ? event.error : null;
+          typeof event.module === "string" ? event.module : null;
+        const taskId = typeof event.task === "string" ? event.task : null;
+        const error = typeof event.error === "string" ? event.error : null;
         const scoped = moduleId
           ? `module ${moduleId}${taskId ? ` task ${taskId}` : ""}: ${baseMessage}`
           : baseMessage;
@@ -353,8 +358,8 @@ function OrchestratorRunRoute() {
       }
       case "error": {
         const message =
-          typeof event?.message === "string"
-            ? (event.message as string)
+          typeof event.message === "string"
+            ? event.message
             : "workflow_error";
         setError(message);
         appendLog("error", message);
@@ -362,20 +367,20 @@ function OrchestratorRunRoute() {
         break;
       }
       case "data-cache-handoff": {
-        const key = event?.key as readonly unknown[] | undefined;
+        const key = Array.isArray(event.key) ? event.key : undefined;
         if (key) {
-          queryClient.setQueryData(key, event?.value);
+          queryClient.setQueryData(key, event.value);
           appendLog("cache", `Cache handoff for key: ${JSON.stringify(key)}`);
         }
         break;
       }
       case "require-scope": {
-        const scopes = Array.isArray(event?.scopes)
-          ? (event?.scopes as unknown[]).map((scope) => String(scope))
+        const scopes = Array.isArray(event.scopes)
+          ? event.scopes.map((scope) => String(scope))
           : [];
         const scopeEventRaw =
-          typeof event?.event === "string"
-            ? (event.event as string)
+          typeof event.event === "string"
+            ? event.event
             : undefined;
         if (!(runId && scopeEventRaw)) {
           appendLog(
@@ -429,26 +434,28 @@ function OrchestratorRunRoute() {
       }
       case "context": {
         const phase =
-          typeof event?.phase === "string"
-            ? (event.phase as string)
+          typeof event.phase === "string"
+            ? event.phase
             : "unknown";
         const summaryParts: string[] = [`phase=${phase}`];
         if (
-          typeof event?.message === "string" &&
+          typeof event.message === "string" &&
           event.message.trim().length > 0
         ) {
           summaryParts.push(event.message.trim());
         }
-        const receipts = (event?.receipts ?? {}) as Record<string, unknown>;
-        const bundle = (event?.bundle ?? {}) as Record<string, unknown>;
-        const codeCount = Array.isArray(receipts.code as unknown[])
-          ? (receipts.code as unknown[]).length
+        const receipts = isPlainObject(event.receipts)
+          ? event.receipts
+          : {};
+        const bundle = isPlainObject(event.bundle) ? event.bundle : {};
+        const codeCount = Array.isArray(receipts.code)
+          ? receipts.code.length
           : undefined;
-        const webCount = Array.isArray(receipts.web as unknown[])
-          ? (receipts.web as unknown[]).length
+        const webCount = Array.isArray(receipts.web)
+          ? receipts.web.length
           : undefined;
-        const bundleFiles = Array.isArray(bundle.files as unknown[])
-          ? (bundle.files as unknown[]).length
+        const bundleFiles = Array.isArray(bundle.files)
+          ? bundle.files.length
           : undefined;
         const estimatedTokens =
           typeof bundle.estimatedTokens === "number"
@@ -477,7 +484,7 @@ function OrchestratorRunRoute() {
     }
   }
 
-  function getTextPayload(event: Record<string, unknown> | null | undefined) {
+  function getTextPayload(event: StreamEventPayload | null | undefined) {
     if (!event) return "";
     if (typeof event.text === "string") return event.text;
     if (typeof event.data === "string") return event.data;
@@ -791,6 +798,72 @@ function OrchestratorRunRoute() {
       </div>
     </div>
   );
+}
+
+type StreamEventPayload = Record<string, unknown> & {
+  eventId?: string;
+  type?: string;
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isUiMessage(value: unknown): value is UIMessage {
+  return (
+    isPlainObject(value) &&
+    typeof value.id === "string" &&
+    typeof value.role === "string" &&
+    Array.isArray(value.parts)
+  );
+}
+
+function isUiMessageArray(value: unknown): value is UIMessage[] {
+  return Array.isArray(value) && value.every(isUiMessage);
+}
+
+function toWorkflowEvent(
+  eventType: string,
+  eventData: unknown
+): WorkflowEvent | null {
+  if (!isPlainObject(eventData)) {
+    return null;
+  }
+  const type =
+    typeof (eventData as { type?: unknown }).type === "string"
+      ? (eventData as { type: string }).type
+      : eventType;
+  return { ...(eventData as Record<string, unknown>), type } as WorkflowEvent;
+}
+
+function getUiMessagesFromReplayItem(
+  row: WorkflowReplayItem
+): UIMessage[] | null {
+  if (row.eventType === "ui-message" && isUiMessageArray(row.eventData)) {
+    return row.eventData;
+  }
+  const workflowEvent = toWorkflowEvent(row.eventType, row.eventData);
+  return workflowEvent ? eventToUiMessages(workflowEvent) ?? null : null;
+}
+
+function isStreamEventPayload(value: unknown): value is StreamEventPayload {
+  return isPlainObject(value);
+}
+
+function isWorkflowEventPayload(value: unknown): value is WorkflowEvent {
+  return (
+    isPlainObject(value) &&
+    typeof (value as { type?: unknown }).type === "string"
+  );
+}
+
+function getUiMessagesFromStreamEvent(
+  event: StreamEventPayload
+): UIMessage[] | null {
+  if (!isWorkflowEventPayload(event)) {
+    return null;
+  }
+  return eventToUiMessages(event as WorkflowEvent) ?? null;
 }
 
 function safeStringify(v: unknown): string {
