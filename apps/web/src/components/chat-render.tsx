@@ -5,6 +5,7 @@
  * Follows AI SDK v6 patterns: data parts, tool-result extraction, part rendering.
  */
 
+import type { AssistantUIMessage } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   extractStructuredData,
@@ -108,7 +109,9 @@ function isThinkData(data: unknown): data is Array<{
   );
 }
 
-type PartRenderer = (part: UIMessage["parts"][number]) => ReactNode | null;
+type AssistantPart = AssistantUIMessage["parts"][number];
+
+type PartRenderer = (part: AssistantPart) => ReactNode | null;
 
 const dataPartRenderers: PartRenderer[] = [
   (part) =>
@@ -137,9 +140,9 @@ const dataPartRenderers: PartRenderer[] = [
 
 const partRenderers: PartRenderer[] = [...dataPartRenderers, renderToolResult];
 
-export function renderPart(
-  part: UIMessage["parts"][number],
-  _message: UIMessage
+export function renderAssistantPart(
+  part: AssistantPart,
+  _message: AssistantUIMessage
 ): ReactNode {
   for (const renderer of partRenderers) {
     const rendered = renderer(part);
@@ -151,7 +154,7 @@ export function renderPart(
 }
 
 function renderStructuredPart(
-  part: UIMessage["parts"][number],
+  part: AssistantPart,
   name: string,
   render: (data: unknown) => ReactNode | null
 ): ReactNode | null {
@@ -162,7 +165,7 @@ function renderStructuredPart(
   return render(data);
 }
 
-function renderToolResult(part: UIMessage["parts"][number]): ReactNode | null {
+function renderToolResult(part: AssistantPart): ReactNode | null {
   if (!isToolResultPart(part)) {
     return null;
   }
@@ -201,3 +204,12 @@ function renderToolResult(part: UIMessage["parts"][number]): ReactNode | null {
     />
   );
 }
+
+export const renderPart = (
+  part: UIMessage["parts"][number],
+  message: UIMessage
+): ReactNode =>
+  renderAssistantPart(
+    part as AssistantPart,
+    message as AssistantUIMessage
+  );

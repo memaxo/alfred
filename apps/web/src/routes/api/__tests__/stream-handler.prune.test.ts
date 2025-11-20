@@ -1,9 +1,12 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
+import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
-import {
-  HISTORY_MAX_MESSAGES,
-  pruneMessagesForStream,
-} from "../stream-handler";
+
+mock.module("@alfred/agent", () => ({
+  getModelId: () => "mock-model",
+}));
+
+const { pruneMessagesForStream } = await import("../stream-handler");
 
 function createTextMessage(id: number): UIMessage {
   return {
@@ -42,34 +45,29 @@ describe("pruneMessagesForStream", () => {
   });
 
   it("drops the oldest messages when above the limit", () => {
-    const overLimit = HISTORY_MAX_MESSAGES + 15;
+    const overLimit = MAX_HISTORY_MESSAGES + 15;
     const messages = Array.from({ length: overLimit }, (_, index) =>
       createTextMessage(index)
     );
     const { uiMessages, modelMessages, dropped } =
       pruneMessagesForStream(messages);
-    expect(uiMessages).toHaveLength(HISTORY_MAX_MESSAGES);
+    expect(uiMessages).toHaveLength(MAX_HISTORY_MESSAGES);
     expect(modelMessages.length).toBeGreaterThan(0);
-    expect(modelMessages.length).toBeLessThanOrEqual(HISTORY_MAX_MESSAGES);
+    expect(modelMessages.length).toBeLessThanOrEqual(MAX_HISTORY_MESSAGES);
     expect(uiMessages[0]?.id).toBe(
-      `msg-${overLimit - HISTORY_MAX_MESSAGES}`
+      `msg-${overLimit - MAX_HISTORY_MESSAGES}`
     );
-    expect(dropped).toBe(overLimit - HISTORY_MAX_MESSAGES);
+    expect(dropped).toBe(overLimit - MAX_HISTORY_MESSAGES);
   });
 
   it("retains the latest tool-call and tool-result parts", () => {
-    const base = Array.from({ length: HISTORY_MAX_MESSAGES + 5 }, (_, index) =>
+    const base = Array.from({ length: MAX_HISTORY_MESSAGES + 5 }, (_, index) =>
       createTextMessage(index)
     );
     const messages: UIMessage[] = [...base, createToolMessage("tool-call"), createToolMessage("tool-result")];
 
-    const { modelMessages } = pruneMessagesForStream(messages);
-    const last = modelMessages.at(-1);
-    expect(last).toBeTruthy();
-    if (!last) return;
-    const content = Array.isArray((last as { content?: unknown }).content)
-      ? ((last as { content: Array<{ type?: string }> }).content)
-      : [];
-    expect(content.some((part) => part.type === "tool-result")).toBe(true);
+    const { uiMessages } = pruneMessagesForStream(messages);
+    const latest = uiMessages.at(-1);
+    expect(latest?.parts[0]?.type).toBe("tool-result");
   });
 });

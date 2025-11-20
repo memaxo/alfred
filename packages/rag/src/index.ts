@@ -7,4 +7,9 @@ export {
   ingest,
   retrieve,
 } from "./doc";
-export { type RerankOptions, type RerankResult, rerank } from "./rerank";
+export {
+  type RerankOptions,
+  type RerankResult,
+  type RerankTelemetry,
+  rerank,
+} from "./rerank";

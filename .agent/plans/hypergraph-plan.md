@@ -10,7 +10,7 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
 
 - [x] (2025-11-20 18:45Z) Reframed the legacy plan into the ExecPlan template with mandatory tracking sections so future contributors can update status without rereading ancillary docs.
 - [x] (2025-11-20 19:10Z) Baseline repository orientation: confirmed knowledge hypergraph/query stubs still lack indices/persistence, RAG rerank has no telemetry, API graph router still scans entire table, and db graph repo already exposes getNeighbors/getSubgraph/findPath requiring refinement not creation.
-- [ ] (2025-11-20 19:25Z) Weeks 1–2 deliverables (persistence bridge, interval tree, AC-3 query engine, DB indexes, rerank logging) implemented and validated. (Completed: interval tree RB-tree + hypergraph indices/dirty tracking + knowledge tests run; Remaining: persistence bridge/hooks, AC-3 executor, DB migration/indexes, rerank telemetry.)
+- [x] (2025-11-20 20:20Z) Weeks 1–2 deliverables (persistence bridge, interval tree, AC-3 query engine, DB indexes, rerank logging) implemented and validated. (Graph indexes + rag source uniqueness migration + RAG telemetry/logging now checked in; all milestone requirements satisfied.)
 - [ ] (2025-11-20 18:45Z) Weeks 2–3 deliverables (LRU cache, graph repo traversal APIs, API router optimization) implemented and validated.
 - [ ] (2025-11-20 18:45Z) Weeks 3–4 optional deliverables (semantic fallback KNN, advanced indices, instrumentation) evaluated and either completed or explicitly deferred.
 
@@ -18,6 +18,8 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
 
 - Discovery: `packages/db/src/repo/graph.ts` already defines `getNeighbors`, `getSubgraph`, and `findPath`, but implementations return only nodes (neighbors) and rely on broad selects without resource scoping; adjust plan work to tighten semantics instead of introducing brand-new functions.
   Evidence: inspected repository at 2025-11-20 19:05Z and observed existing exports with limited filtering and TODO comments.
+- Discovery: Full `bun test packages/rag` spins up the local embed pool (heavy GPU download) despite doc tests mocking DB—running the narrower rerank suite avoids this dependency during CI-less validation.
+  Evidence: attempted `bun test packages/rag` at 2025-11-20 20:12Z and saw embed pool initialization logs plus timeouts; reran targeted `bun test packages/rag/test/rerank.test.ts` instead.
 
 ## Decision Log
 
@@ -26,6 +28,15 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
   Date/Author: 2025-11-20 / Codex.
 - Decision: Implemented the temporal index as an augmented red-black IntervalTree in `packages/knowledge/src/indices/interval-tree.ts`, integrating it with dirty-tracked hypergraph indices so later persistence and query layers can rely on O(log n) temporal lookups and cache invalidation via `version()`.
   Rationale: Aligns with ExecPlan mandate for efficient between() queries and enables caching keyed by graph version without scanning all nodes.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added `packages/knowledge/src/persist.ts` plus `packages/agent/assistant/src/hypergraph-bridge.ts` so hypergraph snapshots can serialize to `KnowledgeEntry[]`, flush via `persistKnowledge()`, and hydrate from `memory_nodes`/`memory_edges` without coupling the knowledge package to Drizzle.
+  Rationale: Satisfies persistence requirement while honoring layering rules (knowledge stays pure, agent layer bridges to DB) and enables dirty-set sync for incremental writes.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Implemented AC-3 + MRV query execution with LRU caching in `packages/knowledge/src/query.ts`, exposing `compile`, cache-aware `execute`, semantic fallback, and `reconstructReasoningChain` for the workflow router.
+  Rationale: Delivers functional graph queries with deterministic pruning, unlocks cache reuse keyed by hypergraph `version()`, and keeps API parity for existing consumers.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added migration `packages/db/src/migrations/0034_graph_rag_indexes.sql`, schema annotations, and RAG telemetry hooks (packages/rag/src/rerank.ts + packages/db/src/repo/rag.ts) so DB indexes/unique constraints + rerank logging requirements are satisfied.
+  Rationale: Hardens graph lookups (GIN label search + resource edge indexes) and ensures rerank success/error telemetry is always surfaced (JSON logs optional via `RAG_RERANK_LOG_JSON`).
   Date/Author: 2025-11-20 / Codex.
 
 ## Outcomes & Retrospective
@@ -76,6 +87,24 @@ Keep concise evidence inside this plan—for example, interval-tree insertion lo
         $ bun test packages/knowledge
         ...
         7 pass
+        0 fail
+- 2025-11-20 19:41Z: After adding persist helpers + bridge + tests, `bun test packages/knowledge` now runs 11 suites covering extract/persist/load helpers in addition to prior coverage.
+
+        $ bun test packages/knowledge
+        ...
+        11 pass
+        0 fail
+- 2025-11-20 19:56Z: AC-3/MRV query executor + semantic fallback + reasoning-chain helper landed; `bun test packages/knowledge` covers 15 specs including new query suite.
+
+        $ bun test packages/knowledge
+        ...
+        15 pass
+        0 fail
+- 2025-11-20 20:18Z: Verified telemetry instrumentation via targeted RAG rerank tests (full rag suite skipped to avoid heavy embed pool spin-up).
+
+        $ bun test packages/rag/test/rerank.test.ts
+        ...
+        3 pass
         0 fail
 
 ## Interfaces and Dependencies

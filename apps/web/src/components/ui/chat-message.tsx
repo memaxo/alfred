@@ -1,15 +1,18 @@
-import type { UIMessage, UIMessagePart } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessagePart } from "@alfred/type/stream";
 import { Message as BaseMessage, MessageAvatar, MessageContent } from "@/components/ui/message";
 import type { ReactNode } from "react";
+
+type AssistantPart = AssistantUIMessage["parts"][number];
 
 export function ChatMessage({
   role,
   content,
   renderPart,
 }: {
-  role: string;
-  content: string | UIMessagePart[];
-  renderPart?: (part: UIMessagePart, message: UIMessage) => ReactNode;
+  role: AssistantUIMessage["role"] | "user";
+  content: string | AssistantPart[];
+  renderPart?: (part: AssistantPart, message: AssistantUIMessage) => ReactNode;
 }) {
   if (role === "data" || role === "system") return null;
 
@@ -20,7 +23,13 @@ export function ChatMessage({
         {Array.isArray(content) 
           ? content.map((part, i) => (
               <div key={i}>
-                {renderPart ? renderPart(part, { id: "temp", role, parts: content } as UIMessage) : JSON.stringify(part)}
+                {renderPart
+                  ? renderPart(part, {
+                      id: "temp",
+                      role: role as AssistantUIMessage["role"],
+                      parts: content,
+                    })
+                  : JSON.stringify(part)}
               </div>
             ))
           : content}
@@ -29,4 +38,3 @@ export function ChatMessage({
     </BaseMessage>
   );
 }
-

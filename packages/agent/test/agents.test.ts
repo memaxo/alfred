@@ -18,22 +18,26 @@ afterAll(() => {
 });
 
 describe("agent defaults", () => {
-  it("memoizes assistant defaults", () => {
+  it("returns fresh assistant defaults while sharing static references", () => {
     const { getAssistantAgentDefaults } = agentsModule;
     const first = getAssistantAgentDefaults();
     const second = getAssistantAgentDefaults();
-    expect(first).toBe(second);
-    expect(typeof first.stopWhen).toBe("function");
-    expect(first.tools).toBeTruthy();
+    expect(first).not.toBe(second);
+    expect(first.stopWhen).toBe(second.stopWhen);
+    expect(first.tools).toBe(second.tools);
+    expect(typeof first.prepareStep).toBe("function");
+    expect(typeof first.instructions).toBe("string");
   });
 
-  it("memoizes orchestrator defaults", () => {
+  it("returns fresh orchestrator defaults while sharing static references", () => {
     const { getOrchestratorAgentDefaults } = agentsModule;
     const first = getOrchestratorAgentDefaults();
     const second = getOrchestratorAgentDefaults();
-    expect(first).toBe(second);
-    expect(typeof first.stopWhen).toBe("function");
-    expect(first.tools).toBeTruthy();
+    expect(first).not.toBe(second);
+    expect(first.stopWhen).toBe(second.stopWhen);
+    expect(first.tools).toBe(second.tools);
+    expect(typeof first.prepareStep).toBe("function");
+    expect(typeof first.instructions).toBe("string");
   });
 
   it("instantiates ToolLoopAgents with shared defaults", () => {
@@ -43,7 +47,14 @@ describe("agent defaults", () => {
       getAssistantAgentDefaults,
       getOrchestratorAgentDefaults,
     } = agentsModule;
-    expect(assistantAgent.tools).toEqual(getAssistantAgentDefaults().tools);
-    expect(orchestratorAgent.tools).toEqual(getOrchestratorAgentDefaults().tools);
+    const assistantDefaults = getAssistantAgentDefaults();
+    const orchestratorDefaults = getOrchestratorAgentDefaults();
+
+    expect(assistantAgent.tools).toBe(assistantDefaults.tools);
+    expect(orchestratorAgent.tools).toBe(orchestratorDefaults.tools);
+    expect(assistantDefaults.prepareStep).toBeDefined();
+    expect(orchestratorDefaults.prepareStep).toBeDefined();
+    expect(typeof assistantDefaults.instructions).toBe("string");
+    expect(typeof orchestratorDefaults.instructions).toBe("string");
   });
 });

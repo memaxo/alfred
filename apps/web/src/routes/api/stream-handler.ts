@@ -3,6 +3,7 @@ import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
 import { logger } from "@alfred/api/utils/logger";
+import { clampUiMessages } from "@alfred/type/history";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import {
   consumeStream,
@@ -23,24 +24,18 @@ const requestSchema = z
   .passthrough();
 
 type StreamArgs = Parameters<typeof streamText>[0];
-type AgentDefaults = Pick<StreamArgs, "model" | "tools" | "stopWhen">;
+type AgentDefaults = Pick<
+  StreamArgs,
+  "model" | "tools" | "stopWhen" | "prepareStep"
+>;
 type GetDefaultsFn = () => AgentDefaults;
-
-export const HISTORY_MAX_MESSAGES = 60;
-
-export function limitUiMessages(messages: UIMessage[]): UIMessage[] {
-  if (!Array.isArray(messages) || messages.length <= HISTORY_MAX_MESSAGES) {
-    return messages;
-  }
-  return messages.slice(-HISTORY_MAX_MESSAGES);
-}
 
 export function pruneMessagesForStream(messages: UIMessage[]): {
   uiMessages: UIMessage[];
   modelMessages: ModelMessage[];
   dropped: number;
 } {
-  const trimmed = limitUiMessages(messages);
+  const trimmed = clampUiMessages(messages);
   const modelMessages = convertToModelMessages(trimmed);
   const pruned = pruneMessages({
     messages: modelMessages,

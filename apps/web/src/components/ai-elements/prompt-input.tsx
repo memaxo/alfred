@@ -1,5 +1,40 @@
 "use client";
 
+import type { ChatStatus, FileUIPart } from "ai";
+import {
+  CornerDownLeftIcon,
+  ImageIcon,
+  Loader2Icon,
+  MicIcon,
+  PaperclipIcon,
+  PlusIcon,
+  SquareIcon,
+  XIcon,
+} from "lucide-react";
+import { nanoid } from "nanoid";
+import {
+  type ChangeEvent,
+  type ChangeEventHandler,
+  Children,
+  type ClipboardEventHandler,
+  type ComponentProps,
+  createContext,
+  type FormEvent,
+  type FormEventHandler,
+  Fragment,
+  type HTMLAttributes,
+  type KeyboardEventHandler,
+  type PropsWithChildren,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -35,40 +70,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { ChatStatus, FileUIPart } from "ai";
-import {
-  CornerDownLeftIcon,
-  ImageIcon,
-  Loader2Icon,
-  MicIcon,
-  PaperclipIcon,
-  PlusIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react";
-import { nanoid } from "nanoid";
-import {
-  type ChangeEvent,
-  type ChangeEventHandler,
-  Children,
-  type ClipboardEventHandler,
-  type ComponentProps,
-  createContext,
-  type FormEvent,
-  type FormEventHandler,
-  Fragment,
-  type HTMLAttributes,
-  type KeyboardEventHandler,
-  type PropsWithChildren,
-  type ReactNode,
-  type RefObject,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
 
 // ============================================================================
 // Provider Context & Types
@@ -706,33 +707,44 @@ export const PromptInput = ({
         }
         return item;
       })
-    ).then((convertedFiles: FileUIPart[]) => {
-      try {
-        const result = onSubmit({ text, files: convertedFiles }, event);
+    )
+      .then((convertedFiles: FileUIPart[]) => {
+        try {
+          const result = onSubmit({ text, files: convertedFiles }, event);
 
-        // Handle both sync and async onSubmit
-        if (result instanceof Promise) {
-          result
-            .then(() => {
-              clear();
-              if (usingProvider) {
-                controller.textInput.clear();
-              }
-            })
-            .catch(() => {
-              // Don't clear on error - user may want to retry
-            });
-        } else {
-          // Sync function completed without throwing, clear attachments
-          clear();
-          if (usingProvider) {
-            controller.textInput.clear();
+          // Handle both sync and async onSubmit
+          if (result instanceof Promise) {
+            result
+              .then(() => {
+                clear();
+                if (usingProvider) {
+                  controller.textInput.clear();
+                }
+              })
+              .catch(() => {
+                // Don't clear on error - user may want to retry
+              });
+          } else {
+            // Sync function completed without throwing, clear attachments
+            clear();
+            if (usingProvider) {
+              controller.textInput.clear();
+            }
           }
+        } catch (error) {
+          // Don't clear on error - user may want to retry
         }
-      } catch (error) {
-        // Don't clear on error - user may want to retry
-      }
-    });
+      })
+      .catch((error) => {
+        // Handle blob conversion failures
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to process attachments. Please try again.";
+        toast.error(errorMessage);
+        // Don't clear form on error - user may want to retry
+        // Form was already reset at line 695, but attachments remain
+      });
   };
 
   // Render with or without local provider

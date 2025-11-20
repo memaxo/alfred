@@ -20,12 +20,14 @@ const assistantDefaults = {
   model: { id: "assistant-model" },
   tools: assistantTools,
   stopWhen: vi.fn(),
+  prepareStep: vi.fn(),
 };
 
 const orchestratorDefaults = {
   model: { id: "orchestrator-model" },
   tools: orchestratorTools,
   stopWhen: vi.fn(),
+  prepareStep: vi.fn(),
 };
 
 const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
@@ -75,7 +77,9 @@ export function resetAgentMocks() {
   getAssistantAgentDefaults.mockClear();
   getOrchestratorAgentDefaults.mockClear();
   assistantDefaults.stopWhen.mockClear();
+  assistantDefaults.prepareStep.mockClear();
   orchestratorDefaults.stopWhen.mockClear();
+  orchestratorDefaults.prepareStep.mockClear();
   recordMemoryUpdate.mockClear();
   recordMemoryForget.mockClear();
 }

@@ -14,6 +14,7 @@ import type {
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
+import { clampUiMessages } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
 import { validateUIMessages } from "ai";
 
@@ -230,11 +231,16 @@ async function loadConversationHistory(
     if (!validated || validated.length === 0) {
       continue;
     }
+    const limited = clampUiMessages(validated);
+    if (limited.length === 0) {
+      continue;
+    }
+
     histories.push({
       id: history.conversation.id,
       userId: history.conversation.userId,
       title: history.conversation.title ?? undefined,
-      messages: validated,
+      messages: limited,
       createdAt: history.conversation.created ?? new Date(),
       updatedAt: history.conversation.updated ?? new Date(),
     });

@@ -3,7 +3,7 @@
  * Document and chunk operations with vector embeddings
  */
 
-import { rerank } from "@alfred/rag";
+import { rerank, type RerankTelemetry } from "@alfred/rag";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../index";
 import { ragChunks, ragDocuments } from "../schema/rag";
@@ -262,6 +262,7 @@ export async function searchChunksHybrid({
           })),
           topN: limit,
           model: rerankModel,
+          telemetry: buildRerankTelemetry(query, rerankModel),
         });
 
         // Create a map of rerank scores by chunk ID
@@ -282,14 +283,51 @@ export async function searchChunksHybrid({
         // Re-sort by final score
         hybridResults.sort((a, b) => b.score - a.score);
       } catch (error) {
-        // Log error but continue with hybrid results
-        // Note: Logger will be added in Phase 2 (console replacement)
-        // For now, silently continue to avoid breaking hybrid search
+        // Telemetry already captures the failure, so continue with hybrid results
+        void error;
       }
     }
 
     return hybridResults.slice(0, limit);
   });
+}
+
+function buildRerankTelemetry(query: string, model: string): RerankTelemetry {
+  const queryPreview = query.length > 120 ? `${query.slice(0, 117)}...` : query;
+  const logJson = process.env.RAG_RERANK_LOG_JSON === "1";
+
+  const log = (level: "info" | "error", payload: Record<string, unknown>) => {
+    if (logJson) {
+      const line = JSON.stringify({ level, event: "rag.rerank", ...payload });
+      if (level === "info") {
+        console.log(line);
+      } else {
+        console.error(line);
+      }
+      return;
+    }
+
+    if (level === "info") {
+      console.log("[rag.rerank.ok]", payload);
+    } else {
+      console.error("[rag.rerank.error]", payload);
+    }
+  };
+
+  return {
+    onSuccess: ({ docCount, durationMs }) =>
+      log("info", { model, docCount, durationMs, queryPreview }),
+    onError: ({ docCount, error }) =>
+      log("error", {
+        model,
+        docCount,
+        queryPreview,
+        error:
+          error instanceof Error
+            ? { message: error.message, name: error.name }
+            : { message: String(error) },
+      }),
+  };
 }
 
 export async function deleteChunk(chunkId: string): Promise<number> {

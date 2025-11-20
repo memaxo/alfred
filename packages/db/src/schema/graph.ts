@@ -9,6 +9,7 @@ import {
   real,
   text,
   timestamp,
+  tsvector,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -26,10 +27,11 @@ export const memoryNodes = pgTable("memory_nodes", {
   properties: jsonb("properties"), // Arbitrary node properties
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  labelTsvector: tsvector("label_tsvector"),
 });
 
-// TODO: [Phase 4] Add index on kind for filtering by node type
-// TODO: [Phase 4] Add index on label for search
+// Index coverage:
+// - label_tsvector is generated + GIN indexed (0034)
 
 /**
  * Memory edges (relationships between nodes)

@@ -15,7 +15,7 @@ bun run db:start
 bun run db:migrate
 ```
 
-These commands rely on `DATABASE_URL` from `config/env.example`. The default bootstrap uses a simple pool; production will wire PgBouncer in a later phase.
+These commands rely on `DATABASE_URL` from `config/env.example` (default `postgresql://alfred:alfred@localhost:5432/alfred`). The default bootstrap uses a simple pool; production will wire PgBouncer in a later phase. During `bun test`, if `DATABASE_URL` is unset or explicitly set to `sqlite::memory:`, `src/client.ts` automatically spins up the in-memory SQLite mock recommended by Drizzle so unit tests can run without Postgres.
 
 ## Next Steps
 

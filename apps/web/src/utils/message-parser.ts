@@ -5,12 +5,17 @@
  * Pure functions following AI SDK v6 part patterns.
  */
 
-import type { UIMessage } from "@alfred/type/stream";
+import type {
+  AssistantUIMessage,
+  OrchestratorUIMessage,
+} from "@alfred/agent";
 import {
   extractStructuredData,
   isDataPartNamed,
   isToolResultPart,
 } from "@alfred/ui/chat/parts";
+
+type AgentMessage = AssistantUIMessage | OrchestratorUIMessage;
 
 export type ParsedPlan = {
   requirement: string;
@@ -54,7 +59,7 @@ export type ParsedThink = Array<{
 
 export type ParsedMessage = {
   id: string;
-  role: UIMessage["role"];
+  role: AgentMessage["role"];
   plans: ParsedPlan[];
   tasks: ParsedTask[];
   tools: ParsedTool[];
@@ -126,7 +131,7 @@ function isThinkData(data: unknown): data is ParsedThink {
   );
 }
 
-export function parseStructuredMessage(message: UIMessage): ParsedMessage {
+export function parseStructuredMessage(message: AgentMessage): ParsedMessage {
   const result: ParsedMessage = {
     id: message.id ?? "",
     role: message.role,
@@ -195,4 +200,3 @@ export function parseStructuredMessage(message: UIMessage): ParsedMessage {
 
   return result;
 }
-

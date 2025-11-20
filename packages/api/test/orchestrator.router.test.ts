@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
   mockGenerateText,
   mockPolicyAudit,
@@ -13,6 +13,15 @@ import {
 
 setupTestEnv();
 mockPolicyAudit();
+
+mock.module("node-pty", () => ({
+  spawn: vi.fn(() => ({
+    on: vi.fn(),
+    kill: vi.fn(),
+    resize: vi.fn(),
+    write: vi.fn(),
+  })),
+}));
 
 const generateMocks = mockGenerateText();
 
@@ -36,6 +45,7 @@ describe("orchestrator router", () => {
         model: { name: "orchestrator-model" },
         tools: { orchestrate: { description: "run" } },
         stopWhen: vi.fn(),
+        prepareStep: vi.fn(),
       };
       getOrchestratorAgentDefaultsMock.mockReturnValue(mockDefaults);
 
@@ -66,6 +76,7 @@ describe("orchestrator router", () => {
       expect(callArgs?.model).toBe(mockDefaults.model);
       expect(callArgs?.tools).toBe(mockDefaults.tools);
       expect(callArgs?.stopWhen).toBeDefined();
+      expect(callArgs?.prepareStep).toBe(mockDefaults.prepareStep);
       expect(result).toMatchObject({
         text: "orchestrator response",
         usage: { inputTokens: 20, outputTokens: 30 },

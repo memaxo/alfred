@@ -5,11 +5,27 @@
  * TODO: Migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support
  */
 
+export type RerankTelemetry = {
+  onError?: (ctx: {
+    query: string;
+    model: string;
+    docCount: number;
+    error: unknown;
+  }) => void;
+  onSuccess?: (ctx: {
+    query: string;
+    model: string;
+    docCount: number;
+    durationMs: number;
+  }) => void;
+};
+
 export type RerankOptions = {
   query: string;
   documents: Array<{ id: string; text: string }>;
   topN?: number;
   model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
+  telemetry?: RerankTelemetry;
 };
 
 export type RerankResult = {
@@ -31,19 +47,30 @@ export async function rerank({
   documents,
   topN = 10,
   model = "rerank-v3.5",
+  telemetry,
 }: RerankOptions): Promise<RerankResult[]> {
   const apiKey = process.env.COHERE_API_KEY;
-  if (!apiKey) {
-    // Return original order if Cohere not configured
-    return documents.slice(0, topN).map((doc, index) => ({
+  const docCount = documents.length;
+  const fallback = () =>
+    documents.slice(0, topN).map((doc, index) => ({
       id: doc.id,
       text: doc.text,
       score: 1.0 - index * 0.01,
       index,
     }));
+
+  if (!apiKey) {
+    telemetry?.onSuccess?.({
+      query,
+      model,
+      docCount,
+      durationMs: 0,
+    });
+    return fallback();
   }
 
   const baseUrl = process.env.COHERE_BASE_URL ?? "https://api.cohere.ai";
+  const started = Date.now();
 
   try {
     const response = await fetch(`${baseUrl}/v1/rerank`, {
@@ -86,7 +113,7 @@ export async function rerank({
     }
 
     const results = body.results ?? [];
-    return results.map((result) => {
+    const mapped = results.map((result) => {
       const doc = documents[result.index];
       if (!doc) {
         throw new Error(`cohere_rerank_invalid_index:${result.index}`);
@@ -98,14 +125,22 @@ export async function rerank({
         index: result.index,
       };
     });
+
+    telemetry?.onSuccess?.({
+      query,
+      model,
+      docCount,
+      durationMs: Date.now() - started,
+    });
+
+    return mapped;
   } catch (error) {
-    // Fallback on error - return original order
-    console.error("Reranking failed:", error);
-    return documents.slice(0, topN).map((doc, index) => ({
-      id: doc.id,
-      text: doc.text,
-      score: 1.0 - index * 0.01,
-      index,
-    }));
+    telemetry?.onError?.({
+      query,
+      model,
+      docCount,
+      error,
+    });
+    return fallback();
   }
 }

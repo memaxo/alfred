@@ -46,8 +46,10 @@ mock.module("@ai-sdk/react", () => {
   const { useEffect, useState } = require("react") as typeof import("react");
 
   return {
-    useChat: () => {
-      const [messages, setMessages] = useState<AssistantUIMessage[]>([]);
+    useChat: (init?: { messages?: AssistantUIMessage[] }) => {
+      const [messages, setMessages] = useState<AssistantUIMessage[]>(
+        () => init?.messages ?? []
+      );
       const [error, setError] = useState<Error | null>(null);
       const [status, setStatus] = useState<string>("ready");
 

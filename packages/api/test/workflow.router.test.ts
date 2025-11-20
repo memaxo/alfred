@@ -21,9 +21,20 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { metricsStub } from "./utils/mock-metrics";
-import { createTestCaller } from "./utils/trpc";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { resetAgentMocks } from "./utils/agent-mock";
+
+const triggerPreferenceRefreshMock = vi.fn();
+
+mock.module("../src/preference/refresh", () => ({
+  triggerPreferenceRefresh: triggerPreferenceRefreshMock,
+  __flushPreferenceRefreshQueueForTests: vi.fn(),
+  __resetPreferenceRefreshQueueForTests: vi.fn(),
+}));
+
+mock.module("node-pty", () => ({
+  spawn: vi.fn(),
+}));
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
   emitLinearActivity: vi.fn().mockResolvedValue(undefined),
@@ -69,6 +80,8 @@ mock.module("@alfred/api/metrics", () => ({
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
 }));
 
+const { createTestCaller } = await import("./utils/trpc");
+
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
@@ -100,6 +113,7 @@ afterEach(() => {
   getConversationByWorkflowMock.mockReset();
   createMessageMock.mockReset();
   resetAgentMocks();
+  triggerPreferenceRefreshMock.mockReset();
 });
 
 /**
@@ -198,6 +212,10 @@ describe("workflow router", () => {
         runId: mockRunId,
         summary: mockSummary,
       });
+      expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
+        "test-user",
+        expect.objectContaining({ reason: "workflow_requirement" })
+      );
       expect(getConversationByWorkflowMock).toHaveBeenCalledWith(
         "test-user",
         mockRunId
@@ -367,6 +385,11 @@ describe("workflow router", () => {
             (message as UIMessage).role === "assistant"
         )
       ).toBe(true);
+      expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
+        "test-user",
+        expect.objectContaining({ reason: "workflow_stream_complete" })
+      );
+      expect(triggerPreferenceRefreshMock).toHaveBeenCalledTimes(2);
     });
 
     it("persists tool-call and tool-result metadata", async () => {
@@ -532,6 +555,10 @@ describe("workflow router", () => {
         status: "cancelled",
         completedAt: expect.any(Date),
       });
+      expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
+        "test-user",
+        expect.objectContaining({ reason: "workflow_stream_cancelled" })
+      );
     });
   });
 

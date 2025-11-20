@@ -141,13 +141,18 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Added `workflowEventType`/`workflowEventId` metadata enrichment when persisting workflow UI messages, ensuring tool calls/results keep their event lineage
   - Updated `packages/api/test/workflow.router.test.ts` to assert the new metadata on requirement + assistant messages
   - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
-- [ ] Prune workflow histories before invoking `streamText` to keep context windows within limits while preserving the newest tool outputs; cover via targeted tests
+- [x] (2025-11-20 21:34Z) Prune workflow histories before invoking `streamText` to keep context windows within limits while preserving the newest tool outputs
+  - Added `limitUiMessages()` + `pruneMessagesForStream()` in `apps/web/src/routes/api/stream-handler.ts` so assistant/orchestrator requests trim the oldest entries, preserve the newest tool outputs, and log how many events were dropped before calling `streamText`
+  - Created `apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts` to assert deterministic eviction plus tool-call retention and wired the pruned arrays through `toUIMessageStreamResponse`
+  - Quality gates: `bun test apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts`, `bun test apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx`, `bun test apps/web/src/components/__tests__/chat-container.integration.test.tsx`; `bun run typecheck` currently fails in `packages/knowledge/src/indices/interval-tree.ts` and `packages/agent/src/agents.ts` (pre-existing issues), `bun run lint` still reports `Script not found "lint"`
 - [x] (2025-11-20 20:30Z) Wire `onAbort` handling into workflow streaming so partial transcripts persist and telemetry distinguishes abort vs. completion
   - Added explicit cancellation tracking in `packages/api/src/routers/workflow.ts`: aborting the TRPC subscription (or runtime registry cancel) now marks runs as `cancelled`, records audits, closes timers with `cancel`, and emits completion without surfacing spurious errors
   - Updated run registry cancel handler to call `abortController.abort()` so the executor stream halts immediately and persisted messages still include the final events processed
   - Extended `packages/api/test/workflow.router.test.ts` with a long-running executor case that invokes the registered `cancel` callback and asserts the run status transitions to `cancelled`
   - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
-- [ ] Expand router/repo tests to assert UUID persistence, abort flows, tool outputs, and metadata propagation; run `bun test packages/api/test/workflow.router.test.ts`
+- [x] (2025-11-20 21:36Z) Expand router/repo tests to assert UUID persistence, abort flows, tool outputs, and metadata propagation
+  - Added a dedicated tool-call/tool-result streaming case in `packages/api/test/workflow.router.test.ts`, mocked `node-pty`, and verified persisted messages include `workflowEventType` + `workflowEventId` metadata for tool chains
+  - Quality gate: `bun test packages/api/test/workflow.router.test.ts`
 - [x] (2025-11-20 20:35Z) Share canonical tool definitions with validation/persistence layers so stored tool-call messages remain schema-safe
   - Cached orchestrator tool definitions via `buildTools()` inside `packages/api/src/scheduler/preference-inference.ts` and threaded them through `validateConversationMessages()` so preference inference only ingests AI SDK–valid histories (covered by `packages/api/test/preference.inference.messages.test.ts`)
   - Runtime AI adapter now hands the live `tools` map to `validateUIMessages` before calling `streamText`, with expectations added to `packages/runtime/test/adapter-preferences.test.ts`
@@ -156,18 +161,23 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Reviewed `docs/reference/ai-sdk-v6` materials (notably `reference_ai-sdk-ui_prune-messages.md`, `reference_ai-sdk-ui_convert-to-model-messages.md`, `ai-sdk-ui_chatbot-message-persistence.md`, and `reference_ai-sdk-ui_create-ui-message-stream-response.md`)
   - Catalogued required primitives for next steps: `streamText`, `validateUIMessages`, `safeValidateUIMessages`, `convertToModelMessages`, `pruneMessages`, `toUIMessageStreamResponse`, `createUIMessageStreamResponse`, `consumeStream`, `DefaultChatTransport`, `useChat`, `UIMessage`, `ModelMessage`, and `Tool` definitions from `ai`
   - Noted dependency to keep TanStack Start loaders server-only while reading from `conversationRepo` so persisted chats hydrate without bundling DB code client-side
-- [ ] Feed persisted conversations into client `useChat` flows by providing `initialMessages` from conversation repo; add an integration test proving resume behavior
+- [x] (2025-11-20 21:39Z) Feed persisted conversations into client `useChat` flows and prove resume behavior
+  - Added the `loadAssistantConversation` server function + loader in `apps/web/src/routes/_authed/ai.tsx` to fetch/validate the latest conversation via `conversationRepo`
+  - Updated `ChatContainer`, `useChatLogic`, and `useAssistantStream` to accept `initialMessages`/`initialConversationId`, hydrate `useChat` immediately, and reuse the conversation ID via the transport’s custom fetch hook
+  - Added coverage in `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` and `apps/web/src/components/__tests__/chat-container.integration.test.tsx` to ensure preloaded transcripts render on mount
+- [x] (2025-11-20 21:45Z) Centralize history clamps for streaming + inference
+  - Added `packages/type/src/history.ts` plus `@alfred/type/history` export so both the TanStack SSE handler and schedulers share one `MAX_HISTORY_MESSAGES` definition + helper
+  - Updated `apps/web/src/routes/api/stream-handler.ts` + tests to consume the shared helper (dropping local constants) and continue pruning reasoning/tool-call parts via AI SDK `pruneMessages()`
+  - Tests: `bun test apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts`
+- [x] (2025-11-20 21:47Z) Enforce history limits before preference inference and document via tests
+  - `packages/api/src/scheduler/preference-inference.ts` now clamps validated histories via `clampUiMessages()` so inference never processes more than `MAX_HISTORY_MESSAGES`
+  - Expanded `packages/api/test/preference.inference.messages.test.ts` to mock the inference pipeline, assert clamped histories reach `inferResponsePreferences()`, and verify cache invalidation + preference writes fire once per run
+  - Tests: `bun test packages/api/test/preference.inference.messages.test.ts`
 - [ ] Trigger preference cache invalidation + inference reruns whenever workflow persistence completes so Phase 4.2 learning stays up to date
 
-**Upcoming Priority Tasks (updated 2025-11-20 21:18Z)**
-- [ ] (Persistence & Validation) Implement deterministic `pruneWorkflowMessages()` that trims oldest conversation entries while keeping the most recent tool-call/tool-result pairs intact before AI reuse.
-- [ ] (Persistence & Validation) Extend repo + scheduler tests to assert pruning enforces `MAX_HISTORY_MESSAGES`/token caps and documents the eviction order.
-- [ ] (Streaming & Response Lifecycle) Thread pruned histories through `AISDKAdapter.stream()` inputs (runtime + legacy runner) so `streamText` never receives unbounded transcripts; add regression coverage.
-- [ ] (Streaming & Response Lifecycle) Expand workflow router tests for UUID linkage, abort flows, and persisted tool outputs to guarantee metadata survives replay.
+**Upcoming Priority Tasks (updated 2025-11-20 21:47Z)**
 - [ ] (Tooling & Multi-Modal Support) Add regressions with interleaved `tool-call`/`tool-result` parts to confirm pruning retains the latest multi-modal chain.
 - [ ] (Tooling & Multi-Modal Support) Reuse `validateUIMessages` + `pruneMessages` when orchestrator resumes workflows so cached tool definitions stay schema-safe.
-- [ ] (Client Integration) Build a TanStack Start loader for `/_authed/ai` that fetches the latest assistant conversation via `conversationRepo` and returns `initialMessages`.
-- [ ] (Client Integration) Update `useAssistantStream` + integration tests so the hook hydrates on mount when `initialMessages` exist, proving resumed chats render prior history.
 - [ ] (Operational Hooks) Fire preference cache invalidation + queue inference reruns after workflow persistence completes to keep learning in lockstep with new histories.
 - [ ] (Operational Hooks) Add metrics/logging (e.g., `preference_history_pruned_total`, `preference_cache_invalidations_total`) for the new pruning + invalidation pipeline.
 

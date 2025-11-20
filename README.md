@@ -54,7 +54,8 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
 2. **Set up environment:**
    ```bash
    cp config/env.example .env
-   # Edit .env and add DATABASE_URL, BETTER_AUTH_*, OPENAI_API_KEY
+   # Edit .env and confirm DATABASE_URL=postgresql://alfred:alfred@localhost:5432/alfred
+   # (tests may override with sqlite::memory:; see README section below)
    ```
 
 3. **Start database and run migrations:**
@@ -141,7 +142,7 @@ cp config/env.example .env
 
 Important keys:
 
-- `DATABASE_URL` – Postgres connection string (required)
+- `DATABASE_URL` – Postgres connection string (default `postgresql://alfred:alfred@localhost:5432/alfred` from `config/env.example`). During `bun test`, you may omit it or set `DATABASE_URL=sqlite::memory:` to activate the in-memory SQLite mock recommended by Drizzle.
 - `BETTER_AUTH_*` – Auth origin/secret settings
 - `OPENAI_API_KEY` – Required for AI SDK v6 model access
 - `EVALS_SAMPLING_RATE` – Fraction of live agent runs sampled for scoring (default `0.1`)

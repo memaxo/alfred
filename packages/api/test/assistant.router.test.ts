@@ -88,6 +88,9 @@ describe("assistant router", () => {
     expect(callArgs?.model).toBe(
       getAssistantAgentDefaultsMock.mock.results[0]?.value.model
     );
+    expect(callArgs?.prepareStep).toBe(
+      getAssistantAgentDefaultsMock.mock.results[0]?.value.prepareStep
+    );
     expect(result).toMatchObject({
       text: "note created",
       usage: { inputTokens: 10, outputTokens: 15 },

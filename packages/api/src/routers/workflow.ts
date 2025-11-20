@@ -24,6 +24,7 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { eventToUiMessages } from "../ai/normalize";
+import { triggerPreferenceRefresh } from "../preference/refresh";
 import { requirePolicy } from "../gate";
 import { runRegistry } from "../run-registry";
 import { authedProcedure, rateLimit, router } from "../trpc";
@@ -422,6 +423,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: "workflow.requirement",
                   eventId: executor.runId,
                 });
+                triggerPreferenceRefresh(session.user.id, {
+                  reason: "workflow_requirement",
+                });
               }
             } catch (error) {
           logger.warn("workflow_conversation_init_failed", {
@@ -520,11 +524,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
           let runId: string | null = null;
           const persistedMessageKeys = new Set<string>();
           let workflowConversationId: string | null = null;
-          const markCancelled = async () => {
-            if (!runId) return;
-            try {
-              await workflowRepo.updateRun(runId, {
-                status: "cancelled",
+        const refreshPreferences = (reason: string) =>
+          triggerPreferenceRefresh(session.user.id, { reason });
+
+        const markCancelled = async () => {
+          if (!runId) return;
+          try {
+            await workflowRepo.updateRun(runId, {
+              status: "cancelled",
                 completedAt: new Date(),
               });
               await recordAudit({
@@ -533,6 +540,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 resource: { kind: "workflow", id: runId },
                 decision: "allow",
               });
+              refreshPreferences("workflow_stream_cancelled");
             } catch (error) {
               logger.warn("workflow_cancellation_update_failed", {
                 runId,
@@ -548,17 +556,18 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
           const markCompleted = async () => {
             if (!runId) return;
-            try {
-              await workflowRepo.updateRun(runId, {
-                status: "completed",
-                completedAt: new Date(),
-              });
+          try {
+            await workflowRepo.updateRun(runId, {
+              status: "completed",
+              completedAt: new Date(),
+            });
               await recordAudit({
                 userId: session.user.id,
                 action: "workflow.stream.complete",
                 resource: { kind: "workflow", id: runId },
                 decision: "allow",
               });
+              refreshPreferences("workflow_stream_complete");
             } catch (error) {
               logger.warn("workflow_completion_update_failed", {
                 runId,
@@ -610,6 +619,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: "workflow.requirement",
                   eventId: runId,
                 });
+                refreshPreferences("workflow_requirement");
               }
             } catch (error) {
               logger.warn("workflow_conversation_init_failed", {

@@ -27,6 +27,10 @@
       "types": "./dist/stream.zod.d.ts",
       "default": "./src/stream.zod.ts"
     },
+    "./history": {
+      "types": "./dist/history.d.ts",
+      "default": "./src/history.ts"
+    },
     "./guards": {
       "types": "./dist/guards.d.ts",
       "default": "./src/guards.ts"

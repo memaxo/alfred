@@ -1,9 +1,6 @@
 -- Migration 0001: Initial Tables (RAG + Graph)
 -- Create RAG and graph memory base tables
 
--- TODO: [Phase 3] Add indexes after table creation
--- TODO: [Phase 8] Add HNSW vector indexes for semantic search
-
 -- RAG Documents
 CREATE TABLE IF NOT EXISTS rag_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,6 +12,9 @@ CREATE TABLE IF NOT EXISTS rag_documents (
   metadata JSONB
 );
 
+CREATE INDEX IF NOT EXISTS rag_documents_source_idx 
+  ON rag_documents(source);
+
 -- RAG Chunks with embeddings
 CREATE TABLE IF NOT EXISTS rag_chunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,13 +25,6 @@ CREATE TABLE IF NOT EXISTS rag_chunks (
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- TODO: [Phase 8] Add HNSW index for vector similarity search
--- CREATE INDEX rag_chunks_embedding_idx ON rag_chunks
--- USING hnsw (embedding vector_cosine_ops);
-
--- TODO: [Phase 3] Add index on document_id for chunk retrieval
--- CREATE INDEX rag_chunks_document_id_idx ON rag_chunks(document_id);
 
 -- Memory Nodes (Knowledge graph entities)
 CREATE TABLE IF NOT EXISTS memory_nodes (
@@ -54,7 +47,12 @@ CREATE TABLE IF NOT EXISTS memory_edges (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TODO: [Phase 4] Add indexes for graph traversal
--- CREATE INDEX memory_nodes_kind_idx ON memory_nodes(kind);
--- CREATE INDEX memory_edges_from_id_kind_idx ON memory_edges(from_id, kind);
--- CREATE INDEX memory_edges_to_id_kind_idx ON memory_edges(to_id, kind);
+-- Graph traversal indexes
+CREATE INDEX IF NOT EXISTS memory_nodes_kind_created_idx
+  ON memory_nodes (kind, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS memory_edges_from_kind_created_idx
+  ON memory_edges (from_id, kind, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS memory_edges_to_kind_created_idx
+  ON memory_edges (to_id, kind, created_at DESC);

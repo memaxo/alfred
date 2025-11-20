@@ -1,18 +1,81 @@
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Database } from "bun:sqlite";
+import { drizzle as drizzleSqlite, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import { drizzle as drizzlePostgres, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
 import { logger } from "./utils/logger";
 
 type PgSource = Client | Pool;
+type DrizzleDatabase = NodePgDatabase | BunSQLiteDatabase;
 
-function resolveConnectionString(explicit?: string): string {
+const SQLITE_MEMORY_URL = "sqlite::memory:";
+
+function resolveConnectionString(
+  explicit?: string,
+  { allowMockSqlite = false }: { allowMockSqlite?: boolean } = {}
+): string {
   const value = explicit ?? process.env.DATABASE_URL;
-  if (!value) {
-    throw new Error(
-      "DATABASE_URL is required to initialize the Postgres client."
-    );
+  if (value) {
+    return value;
+  }
+
+  if (allowMockSqlite && process.env.BUN_TEST === "1") {
+    logger.debug("db_sqlite_fallback_enabled", {
+      reason: "DATABASE_URL missing during bun test run",
+    });
+    return SQLITE_MEMORY_URL;
+  }
+
+  throw new Error(
+    "DATABASE_URL is required to initialize the Postgres client."
+  );
+}
+
+function isSqliteConnectionString(value: string): boolean {
+  return (
+    value === ":memory:" ||
+    value === SQLITE_MEMORY_URL ||
+    value.startsWith("sqlite:") ||
+    value.startsWith("file:")
+  );
+}
+
+function normalizeSqliteFilename(value: string): string {
+  if (value === ":memory:" || value === SQLITE_MEMORY_URL) {
+    return ":memory:";
+  }
+
+  if (value.startsWith("sqlite://")) {
+    const normalized = value.slice("sqlite://".length);
+    return normalized.length === 0 ? ":memory:" : normalized;
+  }
+
+  if (value.startsWith("sqlite:")) {
+    const normalized = value.slice("sqlite:".length);
+    return normalized.length === 0 ? ":memory:" : normalized;
+  }
+
+  if (value.startsWith("file://")) {
+    try {
+      return fileURLToPath(value);
+    } catch {
+      return value.slice("file://".length);
+    }
+  }
+
+  if (value.startsWith("file:")) {
+    const relativePath = value.slice("file:".length);
+    return relativePath.length === 0 ? ":memory:" : path.resolve(relativePath);
   }
 
   return value;
+}
+
+function createSqliteDrizzle(connectionString: string): BunSQLiteDatabase {
+  const filename = normalizeSqliteFilename(connectionString);
+  const sqlite = new Database(filename, { create: true });
+  return drizzleSqlite(sqlite);
 }
 
 export function createPgClient(
@@ -47,9 +110,17 @@ export function createPgPool(
   });
 }
 
-export function createDrizzleClient(source?: PgSource): NodePgDatabase {
-  const pg = source ?? createPgPool();
-  return drizzle(pg);
+export function createDrizzleClient(source?: PgSource): DrizzleDatabase {
+  const connectionString = resolveConnectionString(undefined, {
+    allowMockSqlite: true,
+  });
+
+  if (isSqliteConnectionString(connectionString)) {
+    return createSqliteDrizzle(connectionString);
+  }
+
+  const pg = source ?? createPgPool({ connectionString });
+  return drizzlePostgres(pg);
 }
 
-export const db = createDrizzleClient();
+export const db: DrizzleDatabase = createDrizzleClient();

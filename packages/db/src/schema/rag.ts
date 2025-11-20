@@ -32,7 +32,7 @@ export const ragDocuments = pgTable("rag_documents", {
   metadata: jsonb("metadata"), // Arbitrary metadata (tags, categories, etc.)
 });
 
-// TODO: [Phase 8] Add index on source for deduplication
+// Unique index on source (0034) deduplicates single-user document ingest
 
 /**
  * RAG chunks (chunked text with embeddings)

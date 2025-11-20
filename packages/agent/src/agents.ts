@@ -14,6 +14,18 @@ const ORCHESTRATOR_MAX_STEPS = 12;
 type AssistantTools = ReturnType<typeof buildAssistantTools>;
 type OrchestratorTools = ReturnType<typeof buildTools>;
 
+const assistantInstructions = [
+  "You are Alfred, a single-user cognitive co-pilot.",
+  "Offer direct, actionable responses and prefer concrete steps over small talk.",
+  "Only explain tool calls when the user needs the reasoning.",
+].join(" ");
+
+const orchestratorInstructions = [
+  "You orchestrate complex workflows for the same single user.",
+  "Plan out the next best action, then execute it through tools with concise status updates.",
+  "Surface blockers immediately so the user can intervene.",
+].join(" ");
+
 const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
   messages,
 }) => {
@@ -27,60 +39,66 @@ const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
 
 const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
   messages,
-  stepNumber,
-  steps,
 }) => {
   if (messages.length > 60) {
     return {
       messages: [messages[0], ...messages.slice(-30)],
     };
   }
-  const hasToolCall =
-    steps.flatMap((step) => step.toolCalls ?? []).length > 0 &&
-    stepNumber <= 3;
-  if (hasToolCall) {
-    return {
-      toolChoice: { type: "tool", toolName: "summarize" },
-    };
-  }
   return {};
 };
 
+const assistantTools = buildAssistantTools();
+const orchestratorTools = buildTools();
+
+const assistantStopWhen = stepCountIs(ASSISTANT_MAX_STEPS);
+const orchestratorStopWhen = stepCountIs(ORCHESTRATOR_MAX_STEPS);
+
 const assistantConfig: ToolLoopAgentSettings<never, AssistantTools> = {
   model: getOpenAI().chat(getModelId()),
-  tools: buildAssistantTools(),
-  stopWhen: stepCountIs(ASSISTANT_MAX_STEPS),
+  tools: assistantTools,
+  instructions: assistantInstructions,
+  stopWhen: assistantStopWhen,
   prepareStep: assistantPrepareStep,
 };
 
 const orchestratorConfig: ToolLoopAgentSettings<never, OrchestratorTools> = {
   model: getOpenAI().chat(getModelId()),
-  tools: buildTools(),
-  stopWhen: stepCountIs(ORCHESTRATOR_MAX_STEPS),
+  tools: orchestratorTools,
+  instructions: orchestratorInstructions,
+  stopWhen: orchestratorStopWhen,
   prepareStep: orchestratorPrepareStep,
 };
 
-const assistantDefaults = {
-  model: assistantConfig.model,
-  tools: assistantConfig.tools,
-  stopWhen: assistantConfig.stopWhen,
-} as const;
+function createAssistantDefaults() {
+  return {
+    model: getOpenAI().chat(getModelId()),
+    tools: assistantTools,
+    instructions: assistantInstructions,
+    stopWhen: assistantStopWhen,
+    prepareStep: assistantPrepareStep,
+  } as const;
+}
 
-const orchestratorDefaults = {
-  model: orchestratorConfig.model,
-  tools: orchestratorConfig.tools,
-  stopWhen: orchestratorConfig.stopWhen,
-} as const;
+function createOrchestratorDefaults() {
+  return {
+    model: getOpenAI().chat(getModelId()),
+    tools: orchestratorTools,
+    instructions: orchestratorInstructions,
+    stopWhen: orchestratorStopWhen,
+    prepareStep: orchestratorPrepareStep,
+  } as const;
+}
 
 export const assistantAgent = new ToolLoopAgent(assistantConfig);
 export const orchestratorAgent = new ToolLoopAgent(orchestratorConfig);
 
 export function getAssistantAgentDefaults() {
-  return assistantDefaults;
+  return createAssistantDefaults();
 }
 
 export function getOrchestratorAgentDefaults() {
-  return orchestratorDefaults;
+  return createOrchestratorDefaults();
 }
 
 export type AssistantUIMessage = InferAgentUIMessage<typeof assistantAgent>;

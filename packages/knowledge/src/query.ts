@@ -1,12 +1,13 @@
 /**
  * Datalog-style Query Engine with Semantic Fallback
- * Pure functional query evaluation
+ * Pure functional query evaluation (AC-3 + MRV backtracking)
  */
 
 import type { Hypergraph, Knowledge, NodeId } from "./hypergraph.js";
+import { LRUCache } from "./util/lru.js";
 
 // Query AST types
-type Variable = string & { readonly _: unique symbol };
+export type Variable = string & { readonly _: unique symbol };
 type Atom = string & { readonly _: unique symbol };
 
 type Term =
@@ -16,35 +17,67 @@ type Term =
 
 type Operator = ">" | "<" | "=" | "!=" | "~";
 
-type Clause =
+export type Clause =
   | { _: "fact"; predicate: string; terms: Term[] }
   | { _: "relation"; subject: Term; predicate: string; object: Term }
   | { _: "filter"; variable: Variable; op: Operator; value: string };
 
-type Query = {
+export type Query = {
   find: Variable[];
   where: Clause[];
   limit?: number;
 };
 
-type Binding = Map<Variable, string>;
-type Result = Map<Variable, string>;
+export type Binding = Map<Variable, string>;
+export type Result = Map<Variable, string>;
 
-// Query parser (S-expression style for simplicity)
+export type ReasoningNodeRecord = {
+  id: string;
+  hash: string;
+  label: string;
+  properties?: Record<string, unknown> | null;
+};
+
+export type ReasoningEdgeRecord = {
+  fromId: string;
+  toId: string;
+  kind: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type ReasoningStep = {
+  id: string;
+  hash: string;
+  text: string;
+  index: number;
+  timestamp: number | null;
+  previousHash: string | null;
+  nextHash: string | null;
+  relations: Array<{ toId: string; kind: string; timeDelta: number | null }>;
+};
+
+type Domains = Map<Variable, Set<string>>;
+type RelationClause = Extract<Clause, { _: "relation" }>;
+
+type Arc = {
+  from: Variable;
+  to: Variable;
+  clause: RelationClause;
+  direction: "forward" | "backward";
+};
+
+type SerializedResult = Array<[Variable, string]>;
+
+const CACHE = new LRUCache<string, SerializedResult[]>(512);
+
+// Query parser helpers
 const variable = (name: string): Variable => name as Variable;
 
 /**
  * Parse Datalog-style query from string
- * Example: "find ?x where fact(?x, 'completed'), confidence(?x, > 0.8)"
+ * Example: "find ?x where fact(?x) and relates(?x, ?y)"
  */
 export const parse = (queryString: string): Query => {
-  // TODO: Implement proper Datalog parser with full syntax support
-  // Current regex approach doesn't handle:
-  // - Nested expressions
-  // - Aggregations (count, sum, avg)
-  // - Negation (not exists)
-  // - Recursive rules
-  // Consider using PEG parser or ANTLR
   const findMatch = queryString.match(/find\s+([?]\w+(?:\s*,\s*[?]\w+)*)/i);
   const whereMatch = queryString.match(/where\s+(.+)/i);
 
@@ -53,38 +86,46 @@ export const parse = (queryString: string): Query => {
   }
 
   const find = findMatch[1].split(",").map((v) => variable(v.trim()));
-
   const where = parseWhereClauses(whereMatch[1]);
 
   return { find, where };
 };
 
+export const compile = (queryString: string): Query => {
+  const parsed = parse(queryString);
+  if (parsed.find.length === 0) {
+    throw new Error("Query must declare at least one variable in find clause");
+  }
+  return parsed;
+};
+
 /**
- * Execute query against hypergraph
+ * Execute query against hypergraph with caching
  */
 export const execute = (query: Query, graph: Hypergraph): Result[] => {
-  const results: Result[] = [];
-  const bindings = new Map<Variable, Set<string>>();
-
-  // Initialize variable domains
-  for (const clause of query.where) {
-    initializeVariableDomains(clause, graph, bindings);
+  const key = canonicalKey(query) + `#v=${graph.version()}`;
+  const cached = CACHE.get(key);
+  if (cached) {
+    return cached.map((entries) => new Map(entries));
   }
 
-  // Generate candidate solutions
-  const candidates = generateCandidates(query.find, bindings);
-
-  // Filter candidates that satisfy all clauses
-  for (const candidate of candidates) {
-    if (satisfiesAllClauses(candidate, query.where, graph)) {
-      results.push(candidate);
-      if (query.limit && results.length >= query.limit) {
-        break;
-      }
-    }
+  const domains = initializeVariableDomains(query, graph);
+  if (domains === null) {
+    return [];
   }
 
-  return results;
+  const candidates = generateCandidates(query, domains, graph);
+  const limited =
+    typeof query.limit === "number" && query.limit > 0
+      ? candidates.slice(0, query.limit)
+      : candidates;
+
+  CACHE.set(
+    key,
+    limited.map((binding) => Array.from(binding.entries()))
+  );
+
+  return limited;
 };
 
 /**
@@ -95,44 +136,29 @@ export const semanticQuery = (
   graph: Hypergraph,
   limit = 10
 ): NodeId[] => {
-  // Extract key terms (simple approach)
   const terms = naturalLanguage
     .toLowerCase()
     .split(/\s+/)
     .filter((t) => t.length > 2 && !STOP_WORDS.has(t));
 
-  // Score each node by term relevance
+  if (terms.length === 0) {
+    return [];
+  }
+
   const scores = new Map<NodeId, number>();
-
-  // TODO: Implement node iteration on Hypergraph
-  // Need to add iterator/generator method to traverse all nodes
-  // Current implementation can't access graph nodes
-  // Should also use inverted index for term lookup
-  const nodes: Array<[NodeId, Knowledge]> = [];
-
-  // TODO: Implement proper semantic scoring
-  // Current approach just counts term matches
-  // Should:
-  // - Use TF-IDF or BM25 scoring
-  // - Consider term proximity
-  // - Apply stemming/lemmatization
-  // - Use embedding similarity from RTree
-  for (const [id, node] of nodes) {
-    let score = 0;
+  for (const [id, node] of graph.entries()) {
     const content = getNodeContent(node).toLowerCase();
-
+    let score = 0;
     for (const term of terms) {
       if (content.includes(term)) {
         score += 1;
       }
     }
-
     if (score > 0) {
       scores.set(id, score);
     }
   }
 
-  // Return top-k results
   return Array.from(scores.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
@@ -140,31 +166,18 @@ export const semanticQuery = (
 };
 
 /**
- * Pattern matching for complex queries
+ * Pattern matching placeholder
  */
 export const match = (
   pattern: string,
   graph: Hypergraph
 ): Array<{ node: NodeId; bindings: Map<string, string> }> => {
-  // TODO: Implement S-expression pattern matching
-  // Should parse and evaluate patterns like:
-  // - (and expr1 expr2) - logical AND
-  // - (or expr1 expr2) - logical OR
-  // - (not expr) - negation
-  // - (exists var expr) - existential quantification
-  // - (forall var expr) - universal quantification
-  const matches: Array<{ node: NodeId; bindings: Map<string, string> }> = [];
-
-  return matches;
+  void pattern;
+  void graph;
+  return [];
 };
 
-// Helper functions
-
 const parseWhereClauses = (whereString: string): Clause[] => {
-  // TODO: Handle nested parentheses and complex expressions
-  // Current regex fails on nested predicates like:
-  // - member(?x, list(?y, ?z))
-  // - distance(point(?x1, ?y1), point(?x2, ?y2), ?d)
   const clauses: Clause[] = [];
   const clauseRegex = /(\w+)\(([^)]+)\)/g;
 
@@ -174,14 +187,12 @@ const parseWhereClauses = (whereString: string): Clause[] => {
     const args = match[2].split(",").map((a) => a.trim());
 
     if (args.length === 1) {
-      // Unary predicate
       clauses.push({
         _: "fact",
         predicate,
         terms: [parseTerm(args[0])],
       });
     } else if (args.length === 2) {
-      // Binary predicate (relation)
       clauses.push({
         _: "relation",
         subject: parseTerm(args[0]),
@@ -192,12 +203,11 @@ const parseWhereClauses = (whereString: string): Clause[] => {
       args.length === 3 &&
       ["<", ">", "=", "!=", "~"].includes(args[1])
     ) {
-      // Filter clause
       clauses.push({
         _: "filter",
         variable: variable(args[0]),
         op: args[1] as Operator,
-        value: args[2].replace(/['"]/g, ""),
+        value: args[2].replace(/["']/g, ""),
       });
     }
   }
@@ -212,110 +222,328 @@ const parseTerm = (termString: string): Term => {
   if (termString.startsWith("?")) {
     return { _: "var", name: variable(termString) };
   }
-  return { _: "const", value: termString.replace(/['"]/g, "") };
+  return { _: "const", value: termString.replace(/["']/g, "") };
 };
 
-const initializeVariableDomains = (
-  clause: Clause,
-  graph: Hypergraph,
-  bindings: Map<Variable, Set<string>>
-): void => {
-  // TODO: Implement proper domain initialization
-  // Should query graph indices to get actual possible values
-  // Current implementation just creates empty sets
-  // Need to:
-  // - Query predicate index for matching facts
-  // - Apply early filtering based on constants
-  // - Use statistics for query optimization
+function initializeVariableDomains(
+  query: Query,
+  graph: Hypergraph
+): Domains | null {
+  const domains: Domains = new Map();
+  const allNodes = getAllNodeIds(graph);
+  const factNodes = getFactNodeIds(graph);
 
-  switch (clause._) {
-    case "fact":
-      for (const term of clause.terms) {
-        if (term._ === "var" && !bindings.has(term.name)) {
-          // TODO: Query graph.getFactsByPredicate(clause.predicate)
-          bindings.set(term.name, new Set());
+  const ensureDomain = (name: Variable): Set<string> => {
+    let domain = domains.get(name);
+    if (!domain) {
+      domain = new Set(allNodes);
+      domains.set(name, domain);
+    }
+    return domain;
+  };
+
+  const restrict = (name: Variable, allowed: Iterable<string>) => {
+    const domain = ensureDomain(name);
+    intersectDomain(domain, allowed);
+  };
+
+  for (const clause of query.where) {
+    switch (clause._) {
+      case "fact": {
+        for (const term of clause.terms) {
+          if (term._ === "var") {
+            restrict(term.name, factNodes);
+          }
+        }
+        break;
+      }
+      case "relation": {
+        if (clause.subject._ === "var" && clause.object._ === "const") {
+          const preds = graph
+            .predecessorsByKind(asNodeId(clause.object.value), clause.predicate)
+            .map(String);
+          restrict(clause.subject.name, preds);
+        }
+        if (clause.object._ === "var" && clause.subject._ === "const") {
+          const neighbors = graph
+            .neighborsByKind(asNodeId(clause.subject.value), clause.predicate)
+            .map(String);
+          restrict(clause.object.name, neighbors);
+        }
+        if (clause.subject._ === "var" && !domains.has(clause.subject.name)) {
+          ensureDomain(clause.subject.name);
+        }
+        if (clause.object._ === "var" && !domains.has(clause.object.name)) {
+          ensureDomain(clause.object.name);
+        }
+        break;
+      }
+      case "filter": {
+        ensureDomain(clause.variable);
+        break;
+      }
+    }
+  }
+
+  for (const [, domain] of domains) {
+    if (domain.size === 0) {
+      return null;
+    }
+  }
+
+  return domains;
+}
+
+function generateCandidates(
+  query: Query,
+  domains: Domains,
+  graph: Hypergraph
+): Result[] {
+  applyAC3(domains, query.where, graph);
+
+  const orderedVariables = Array.from(domains.entries())
+    .sort((a, b) => a[1].size - b[1].size)
+    .map(([name]) => name);
+
+  const results: Result[] = [];
+  const assignment: Result = new Map();
+
+  const backtrack = (index: number) => {
+    if (index === orderedVariables.length) {
+      if (query.where.every((clause) => clauseSatisfied(assignment, clause, graph, false))) {
+        results.push(new Map(assignment));
+      }
+      return;
+    }
+
+    const variable = orderedVariables[index];
+    const domain = domains.get(variable);
+    if (!domain || domain.size === 0) {
+      return;
+    }
+
+    for (const value of domain) {
+      assignment.set(variable, value);
+      const consistent = query.where.every((clause) =>
+        clauseSatisfied(assignment, clause, graph, true)
+      );
+      if (consistent) {
+        backtrack(index + 1);
+      }
+      assignment.delete(variable);
+    }
+  };
+
+  backtrack(0);
+  return results;
+}
+
+function applyAC3(domains: Domains, clauses: Clause[], graph: Hypergraph): void {
+  const arcs: Arc[] = [];
+  const arcMap = new Map<Variable, Arc[]>();
+
+  const enqueue = (arc: Arc) => {
+    arcs.push(arc);
+    if (!arcMap.has(arc.from)) {
+      arcMap.set(arc.from, []);
+    }
+    arcMap.get(arc.from)!.push(arc);
+  };
+
+  for (const clause of clauses) {
+    if (clause._ !== "relation") continue;
+    if (clause.subject._ === "var" && clause.object._ === "var") {
+      enqueue({ from: clause.subject.name, to: clause.object.name, clause, direction: "forward" });
+      enqueue({ from: clause.object.name, to: clause.subject.name, clause, direction: "backward" });
+    }
+  }
+
+  while (arcs.length > 0) {
+    const arc = arcs.shift();
+    if (!arc) break;
+    if (reviseArc(arc, domains, graph)) {
+      const neighbors = arcMap.get(arc.from) ?? [];
+      for (const neighbor of neighbors) {
+        if (neighbor.to !== arc.to) {
+          arcs.push(neighbor);
         }
       }
-      break;
-
-    case "relation":
-      if (clause.subject._ === "var" && !bindings.has(clause.subject.name)) {
-        bindings.set(clause.subject.name, new Set());
-      }
-      if (clause.object._ === "var" && !bindings.has(clause.object.name)) {
-        bindings.set(clause.object.name, new Set());
-      }
-      break;
-  }
-};
-
-const generateCandidates = (
-  variables: Variable[],
-  bindings: Map<Variable, Set<string>>
-): Result[] => {
-  // TODO: Implement constraint propagation algorithm
-  // Current implementation returns empty array
-  // Should:
-  // - Generate cartesian product for small domains
-  // - Use AC-3 algorithm for constraint propagation
-  // - Apply forward checking to prune invalid combinations
-  // - Order variables by domain size (MRV heuristic)
-  const results: Result[] = [];
-
-  return results;
-};
-
-const satisfiesAllClauses = (
-  candidate: Result,
-  clauses: Clause[],
-  graph: Hypergraph
-): boolean => {
-  for (const clause of clauses) {
-    if (!satisfiesClause(candidate, clause, graph)) {
-      return false;
     }
   }
-  return true;
-};
+}
 
-const satisfiesClause = (
-  binding: Result,
-  clause: Clause,
+function reviseArc(arc: Arc, domains: Domains, graph: Hypergraph): boolean {
+  const source = domains.get(arc.from);
+  const target = domains.get(arc.to);
+  if (!(source && target && target.size > 0)) {
+    return false;
+  }
+
+  let revised = false;
+  for (const value of Array.from(source)) {
+    const hasSupport = Array.from(target).some((candidate) =>
+      relationSatisfiedForValues(value, candidate, arc, graph)
+    );
+    if (!hasSupport) {
+      source.delete(value);
+      revised = true;
+    }
+  }
+
+  return revised;
+}
+
+function relationSatisfiedForValues(
+  sourceVal: string,
+  targetVal: string,
+  arc: Arc,
   graph: Hypergraph
-): boolean => {
+): boolean {
+  if (arc.direction === "forward") {
+    return relationSatisfied(
+      asNodeId(sourceVal),
+      asNodeId(targetVal),
+      arc.clause,
+      graph
+    );
+  }
+  return relationSatisfied(
+    asNodeId(targetVal),
+    asNodeId(sourceVal),
+    arc.clause,
+    graph
+  );
+}
+
+function relationSatisfied(
+  subject: NodeId,
+  object: NodeId,
+  clause: RelationClause,
+  graph: Hypergraph
+): boolean {
+  const neighbors = graph.neighborsByKind(subject, clause.predicate);
+  return neighbors.some((neighbor) => String(neighbor) === String(object));
+}
+
+function clauseSatisfied(
+  binding: Binding,
+  clause: Clause,
+  graph: Hypergraph,
+  allowPartial: boolean
+): boolean {
   switch (clause._) {
-    case "fact":
-      // TODO: Actually check if fact exists in graph
-      // Should query graph.get() with bound values
-      // Current implementation always returns true
-      return true;
-
-    case "relation":
-      // TODO: Check if relation exists in graph
-      // Should use graph.neighbors() or edge index
-      // Current implementation always returns true
-      return true;
-
+    case "fact": {
+      const term = clause.terms[0];
+      const value = resolveTerm(term, binding);
+      if (!value) {
+        return allowPartial;
+      }
+      const node = graph.get(asNodeId(value));
+      return node?._ === "fact";
+    }
+    case "relation": {
+      const subjectVal = resolveTerm(clause.subject, binding);
+      const objectVal = resolveTerm(clause.object, binding);
+      if (!(subjectVal && objectVal)) {
+        return allowPartial;
+      }
+      return relationSatisfied(
+        asNodeId(subjectVal),
+        asNodeId(objectVal),
+        clause,
+        graph
+      );
+    }
     case "filter": {
       const value = binding.get(clause.variable);
-      if (!value) return false;
-
-      switch (clause.op) {
-        case ">":
-          return Number.parseFloat(value) > Number.parseFloat(clause.value);
-        case "<":
-          return Number.parseFloat(value) < Number.parseFloat(clause.value);
-        case "=":
-          return value === clause.value;
-        case "!=":
-          return value !== clause.value;
-        case "~":
-          return value.includes(clause.value);
-        default:
-          return false;
+      if (!value) {
+        return allowPartial;
       }
+      return filterPasses(asNodeId(value), clause, graph);
     }
   }
+}
+
+function filterPasses(
+  nodeId: NodeId,
+  clause: Extract<Clause, { _: "filter" }>,
+  graph: Hypergraph
+): boolean {
+  const node = graph.get(nodeId);
+  if (!node) return false;
+
+  const numericValue = clause.op === "~" ? NaN : Number.parseFloat(clause.value);
+  switch (clause.op) {
+    case ">":
+      return getConfidence(node) > numericValue;
+    case "<":
+      return getConfidence(node) < numericValue;
+    case "=":
+      return getNodeContent(node) === clause.value;
+    case "!=":
+      return getNodeContent(node) !== clause.value;
+    case "~":
+      return getNodeContent(node).includes(clause.value);
+    default:
+      return false;
+  }
+}
+
+const getConfidence = (node: Knowledge): number => {
+  if (node._ === "fact" || node._ === "insight") {
+    return Number(node.confidence);
+  }
+  if (node._ === "pattern") {
+    return node.accuracy;
+  }
+  if (node._ === "relation") {
+    return node.weight;
+  }
+  return 0;
+};
+
+const resolveTerm = (term: Term, binding: Binding): string | null => {
+  if (term._ === "const") return term.value;
+  if (term._ === "var") return binding.get(term.name) ?? null;
+  return null;
+};
+
+const intersectDomain = (domain: Set<string>, allowed: Iterable<string>): void => {
+  const allowedSet = new Set(allowed);
+  for (const value of Array.from(domain)) {
+    if (!allowedSet.has(value)) {
+      domain.delete(value);
+    }
+  }
+};
+
+const getAllNodeIds = (graph: Hypergraph): string[] => {
+  const ids: string[] = [];
+  for (const id of graph.ids()) {
+    ids.push(String(id));
+  }
+  return ids;
+};
+
+const getFactNodeIds = (graph: Hypergraph): string[] => {
+  const ids: string[] = [];
+  for (const [id, node] of graph.entries()) {
+    if (node._ === "fact") {
+      ids.push(String(id));
+    }
+  }
+  return ids;
+};
+
+const asNodeId = (value: string): NodeId => value as NodeId;
+
+const canonicalKey = (query: Query): string => {
+  const find = query.find.slice().sort().join(",");
+  const where = query.where
+    .map((clause) => JSON.stringify(clause))
+    .sort()
+    .join("|");
+  return `${find}::${where}`;
 };
 
 const getNodeContent = (node: Knowledge): string => {
@@ -331,7 +559,76 @@ const getNodeContent = (node: Knowledge): string => {
   }
 };
 
-// Stop words for semantic search
+export function reconstructReasoningChain(
+  nodes: ReasoningNodeRecord[],
+  edges: ReasoningEdgeRecord[]
+): ReasoningStep[] {
+  const sorted = [...nodes].sort((a, b) => {
+    const aIndex = readNumberProp(a.properties, "sequenceIndex", Number.MAX_SAFE_INTEGER);
+    const bIndex = readNumberProp(b.properties, "sequenceIndex", Number.MAX_SAFE_INTEGER);
+    if (aIndex !== bIndex) {
+      return aIndex - bIndex;
+    }
+    const aTs = readNumberProp(a.properties, "timestamp", Number.MAX_SAFE_INTEGER);
+    const bTs = readNumberProp(b.properties, "timestamp", Number.MAX_SAFE_INTEGER);
+    return aTs - bTs;
+  });
+
+  const relations = new Map<string, Array<{ toId: string; kind: string; timeDelta: number | null }>>();
+  for (const edge of edges) {
+    const bucket = relations.get(edge.fromId) ?? [];
+    bucket.push({
+      toId: edge.toId,
+      kind: edge.kind,
+      timeDelta: readNumberProp(edge.metadata, "timeDelta", null),
+    });
+    relations.set(edge.fromId, bucket);
+  }
+
+  return sorted.map((node, index) => {
+    const props = node.properties ?? {};
+    return {
+      id: node.id,
+      hash: node.hash,
+      text: node.label,
+      index,
+      timestamp: readNumberProp(props, "timestamp", null),
+      previousHash: readStringProp(props, "previousHash", null),
+      nextHash: readStringProp(props, "nextHash", null),
+      relations: relations.get(node.id) ?? [],
+    };
+  });
+}
+
+function readNumberProp(
+  props: Record<string, unknown> | null | undefined,
+  key: string,
+  fallback: number | null
+): number | null {
+  if (!props) return fallback;
+  const value = props[key];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function readStringProp(
+  props: Record<string, unknown> | null | undefined,
+  key: string,
+  fallback: string | null
+): string | null {
+  if (!props) return fallback;
+  const value = props[key];
+  return typeof value === "string" ? value : fallback;
+}
+
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -359,14 +656,15 @@ const STOP_WORDS = new Set([
   "with",
 ]);
 
-/**
- * Query builder helper for common patterns
- */
 export const builder = {
   facts: (predicate: string): Query => ({
     find: [variable("?x")],
     where: [
-      { _: "fact", predicate, terms: [{ _: "var", name: variable("?x") }] },
+      {
+        _: "fact",
+        predicate,
+        terms: [{ _: "var", name: variable("?x") }],
+      },
     ],
   }),
 
@@ -399,195 +697,3 @@ export const builder = {
     ],
   }),
 };
-
-export const reasoningQueries = {
-  byThread: (threadId: string): Query => ({
-    find: [variable("?trace"), variable("?text")],
-    where: [
-      {
-        _: "fact",
-        predicate: "reasoning",
-        terms: [{ _: "var", name: variable("?trace") }],
-      },
-      {
-        _: "filter",
-        variable: variable("?trace"),
-        op: "~",
-        value: threadId,
-      },
-    ],
-  }),
-
-  byTimeRange: (startMs: number, endMs: number): Query => ({
-    find: [variable("?trace")],
-    where: [
-      {
-        _: "fact",
-        predicate: "reasoning",
-        terms: [{ _: "var", name: variable("?trace") }],
-      },
-      {
-        _: "filter",
-        variable: variable("?trace"),
-        op: ">",
-        value: startMs.toString(),
-      },
-      {
-        _: "filter",
-        variable: variable("?trace"),
-        op: "<",
-        value: endMs.toString(),
-      },
-    ],
-  }),
-
-  byQuality: (minConfidence: number): Query => ({
-    find: [variable("?trace")],
-    where: [
-      {
-        _: "fact",
-        predicate: "reasoning",
-        terms: [{ _: "var", name: variable("?trace") }],
-      },
-      {
-        _: "filter",
-        variable: variable("?trace"),
-        op: ">",
-        value: minConfidence.toString(),
-      },
-    ],
-  }),
-
-  byTopic: (keywords: string[]): Query => {
-    const clauses: Clause[] = [
-      {
-        _: "fact",
-        predicate: "reasoning",
-        terms: [{ _: "var", name: variable("?trace") }],
-      },
-    ];
-
-    for (const keyword of keywords) {
-      clauses.push({
-        _: "filter",
-        variable: variable("?trace"),
-        op: "~",
-        value: keyword,
-      });
-    }
-
-    return {
-      find: [variable("?trace")],
-      where: clauses,
-    };
-  },
-};
-
-export type ReasoningNodeRecord = {
-  id: string;
-  hash: string;
-  label: string | null;
-  properties: Record<string, unknown> | null;
-};
-
-export type ReasoningEdgeRecord = {
-  fromId: string;
-  toId: string;
-  kind: string;
-  metadata: Record<string, unknown> | null;
-};
-
-export type ReasoningChainStep = {
-  id: string;
-  hash: string;
-  text: string;
-  index: number;
-  timestamp: number | null;
-  previousHash: string | null;
-  nextHash: string | null;
-  relations: Array<{ toId: string; timeDelta: number | null }>;
-};
-
-const toNumber = (value: unknown, fallback: number): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-};
-
-const toStringOrNull = (value: unknown): string | null => {
-  if (typeof value === "string" && value.length > 0) return value;
-  return null;
-};
-
-export function reconstructReasoningChain(
-  nodes: ReasoningNodeRecord[],
-  edges: ReasoningEdgeRecord[] = []
-): ReasoningChainStep[] {
-  const normalised = nodes.map((node, position) => {
-    const props = (node.properties ?? {}) as Record<string, unknown>;
-    const index = toNumber(
-      props.sequenceIndex ?? props.index,
-      position
-    );
-    const timestampCandidate =
-      props.timestamp ?? props.ts ?? null;
-    const timestamp = timestampCandidate
-      ? toNumber(timestampCandidate, NaN)
-      : NaN;
-
-    return {
-      id: node.id,
-      hash: node.hash,
-      text: node.label ?? "",
-      index,
-      timestamp: Number.isFinite(timestamp) ? timestamp : null,
-      previousHash: toStringOrNull(
-        props.previousHash ?? props.prevHash ?? props.previous
-      ),
-      nextHash: toStringOrNull(props.nextHash ?? props.next),
-      order: position,
-    };
-  });
-
-  normalised.sort((a, b) => {
-    if (a.index !== b.index) {
-      return a.index - b.index;
-    }
-    if ((a.timestamp ?? 0) !== (b.timestamp ?? 0)) {
-      return (a.timestamp ?? 0) - (b.timestamp ?? 0);
-    }
-    return a.order - b.order;
-  });
-
-  const edgeMap = new Map<
-    string,
-    Array<{ toId: string; timeDelta: number | null }>
-  >();
-
-  for (const edge of edges) {
-    if (edge.kind !== "precedes") continue;
-    const items =
-      edgeMap.get(edge.fromId) ?? [];
-    const metadata = edge.metadata ?? {};
-    const timeDelta = toNumber(metadata.timeDelta, NaN);
-    items.push({
-      toId: edge.toId,
-      timeDelta: Number.isFinite(timeDelta) ? timeDelta : null,
-    });
-    edgeMap.set(edge.fromId, items);
-  }
-
-  return normalised.map((entry) => ({
-    id: entry.id,
-    hash: entry.hash,
-    text: entry.text,
-    index: entry.index,
-    timestamp: entry.timestamp,
-    previousHash: entry.previousHash,
-    nextHash: entry.nextHash,
-    relations: edgeMap.get(entry.id) ?? [],
-  }));
-}

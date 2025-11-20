@@ -1,9 +1,6 @@
 -- Migration 0005: Personalization
 -- Create user profiles, preferences, facts, events, autonomy, and feedback tables
 
--- TODO: [Phase 8] Add indexes after table creation
--- TODO: [Phase 8] Add HNSW vector index for facts
-
 -- User Profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,8 +25,8 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TODO: [Phase 8] Add unique index on (user_id, key)
--- ALTER TABLE user_preferences ADD CONSTRAINT user_preferences_user_key_unique UNIQUE (user_id, key);
+ALTER TABLE user_preferences
+  ADD CONSTRAINT user_preferences_user_key_unique UNIQUE (user_id, key);
 
 -- User Facts (with vector embeddings)
 CREATE TABLE IF NOT EXISTS user_facts (
@@ -44,10 +41,6 @@ CREATE TABLE IF NOT EXISTS user_facts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TODO: [Phase 8] Add HNSW vector index for semantic search
--- CREATE INDEX user_facts_embedding_idx ON user_facts
--- USING hnsw (embedding vector_cosine_ops);
-
 -- User Events
 CREATE TABLE IF NOT EXISTS user_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,9 +51,11 @@ CREATE TABLE IF NOT EXISTS user_events (
   metadata JSONB
 );
 
--- TODO: [Phase 8] Add indexes
--- CREATE INDEX user_events_user_id_timestamp_idx ON user_events(user_id, timestamp);
--- CREATE INDEX user_events_user_id_type_idx ON user_events(user_id, type);
+CREATE INDEX IF NOT EXISTS user_events_user_id_timestamp_idx 
+  ON user_events(user_id, timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS user_events_user_id_type_idx 
+  ON user_events(user_id, type);
 
 -- User Autonomy Settings
 CREATE TABLE IF NOT EXISTS user_autonomy (
@@ -74,8 +69,8 @@ CREATE TABLE IF NOT EXISTS user_autonomy (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TODO: [Phase 9] Add unique index on (user_id, action)
--- ALTER TABLE user_autonomy ADD CONSTRAINT user_autonomy_user_action_unique UNIQUE (user_id, action);
+ALTER TABLE user_autonomy
+  ADD CONSTRAINT user_autonomy_user_action_unique UNIQUE (user_id, action);
 
 -- User Feedback
 CREATE TABLE IF NOT EXISTS user_feedback (
@@ -88,5 +83,3 @@ CREATE TABLE IF NOT EXISTS user_feedback (
   tags JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- TODO: [Phase 14] Add feedback analysis queries
