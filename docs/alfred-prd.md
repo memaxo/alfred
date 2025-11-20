@@ -308,6 +308,19 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 
 ### Phase 9 — Deployment & Operations (Week 19-20)
 
+#### 9.1 Server Entry Point & Executable Build ✅ (COMPLETE - 2025-11-20)
+
+- [x] Create dedicated server entry point (`apps/web/src/server.ts`)
+- [x] Implement graceful shutdown handling for all services
+- [x] Separate initialization logic from application router
+- [x] Create Bun executable build script (`scripts/build-executable.sh`)
+- [x] Fix double-initialization issues in voice pools and API services
+- [x] Verify compatibility with TanStack Start and Proxmox deployment
+
+**Deliverable**: Standalone executable ready for Proxmox VM deployment.
+
+#### 9.2 Infrastructure & CI/CD
+
 - [ ] Provision Proxmox VMs and containers for web/API/db/redis
 - [ ] Configure CI/CD (GitHub Actions) for lint/test/build/deploy
 - [ ] Configure secret management (1Password / Vault)
@@ -409,7 +422,12 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - Phase 6.2-6.4 partially complete - basic panes and settings exist
 - Phase 7.1 partially complete - STT/TTS infrastructure exists
 - **Phase 8 substantially complete** - metrics, logging, tracing, and performance budgets all implemented
-- Phase 9 not started - deployment infrastructure needed
+- **Phase 9.1 (Server Entry Point) complete (100%) - 2025-11-20**
+  - Dedicated server entry point created for Bun executable compilation
+  - Graceful shutdown and service initialization architecture established
+  - Critical resource leak (double init) fixed in voice pools
+  - Ready for Proxmox deployment
+- Phase 9.2 not started - deployment infrastructure needed
 - **Next Priority: Phase 3.6** - Enable runtime locally, validate, and remove deprecated code
 - Single-user context allows aggressive personalization and learning
 - Documentation: See `docs/guides/runtime-migration-phase-3-6.md` for deployment plan
