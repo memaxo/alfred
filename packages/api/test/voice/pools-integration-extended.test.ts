@@ -1,6 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { initializeVoicePools, getVoicePools, shutdownVoicePools } from "../../src/voice/pools";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { hasPythonDependencies } from "@alfred/voice/test/utils/python-helpers";
+import {
+  getVoicePools,
+  initializeVoicePools,
+  shutdownVoicePools,
+} from "../../src/voice/pools";
 
 /**
  * Check if Python dependencies are available for real integration tests
@@ -14,9 +18,9 @@ async function checkPythonDependencies(): Promise<boolean> {
   }
 }
 
-describe("Voice Pools Integration (Extended)", () => {
-  const hasPythonDeps = await checkPythonDependencies();
+const hasPythonDeps = await checkPythonDependencies();
 
+describe("Voice Pools Integration (Extended)", () => {
   beforeEach(async () => {
     // Clean up any existing pools
     try {
@@ -70,22 +74,24 @@ describe("Voice Pools Integration (Extended)", () => {
     process.env.VOICE_USE_UV = originalUseUv;
   });
 
-  it.skipIf(!hasPythonDeps)("should verify dependencies before initialization", async () => {
-    const originalProvider = process.env.VOICE_PROVIDER;
-    const originalUseUv = process.env.VOICE_USE_UV;
+  it.skipIf(!hasPythonDeps)(
+    "should verify dependencies before initialization",
+    async () => {
+      const originalProvider = process.env.VOICE_PROVIDER;
+      const originalUseUv = process.env.VOICE_USE_UV;
 
-    process.env.VOICE_PROVIDER = "local";
-    process.env.VOICE_USE_UV = "false";
-    process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
-    process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";
-    process.env.PYTHON_PATH = "/nonexistent/python"; // Invalid Python path
+      process.env.VOICE_PROVIDER = "local";
+      process.env.VOICE_USE_UV = "false";
+      process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
+      process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";
+      process.env.PYTHON_PATH = "/nonexistent/python"; // Invalid Python path
 
-    // Should fail with helpful error
-    await expect(initializeVoicePools()).rejects.toThrow();
+      // Should fail with helpful error
+      await expect(initializeVoicePools()).rejects.toThrow();
 
-    process.env.VOICE_PROVIDER = originalProvider;
-    process.env.VOICE_USE_UV = originalUseUv;
-    delete process.env.PYTHON_PATH;
-  });
+      process.env.VOICE_PROVIDER = originalProvider;
+      process.env.VOICE_USE_UV = originalUseUv;
+      process.env.PYTHON_PATH = undefined;
+    }
+  );
 });
-

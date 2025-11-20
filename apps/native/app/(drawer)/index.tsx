@@ -23,6 +23,16 @@ export default function Home() {
   const { data: healthCheck, isLoading: isHealthLoading } = healthCheckQuery;
   const { data: privateData, isLoading: isPrivateLoading } = privateDataQuery;
   const { data: session } = authClient.useSession();
+  const apiStatusIndicator = healthCheck ? "bg-green-500" : "bg-red-500";
+  const apiStatusText = (() => {
+    if (isHealthLoading) {
+      return "Checking...";
+    }
+    if (healthCheck) {
+      return "Connected to API";
+    }
+    return "API Disconnected";
+  })();
 
   return (
     <Container>
@@ -57,18 +67,8 @@ export default function Home() {
           <View className="mb-6 rounded-lg border border-border p-4">
             <Text className="mb-3 font-medium text-foreground">API Status</Text>
             <View className="flex-row items-center gap-2">
-              <View
-                className={`h-3 w-3 rounded-full ${
-                  healthCheck ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-              <Text className="text-muted-foreground">
-                {isHealthLoading
-                  ? "Checking..."
-                  : healthCheck
-                    ? "Connected to API"
-                    : "API Disconnected"}
-              </Text>
+              <View className={`h-3 w-3 rounded-full ${apiStatusIndicator}`} />
+              <Text className="text-muted-foreground">{apiStatusText}</Text>
             </View>
           </View>
           <View className="mb-6 rounded-lg border border-border p-4">

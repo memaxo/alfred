@@ -1,5 +1,5 @@
 import { Audio } from "expo-av";
-import * as FileSystem from "expo-file-system";
+import { deleteAsync, EncodingType, readAsStringAsync } from "expo-file-system";
 import { configureAudioSession } from "./config";
 
 const MIME_TYPE = "audio/m4a";
@@ -34,12 +34,16 @@ export class ExpoCapture {
       return null;
     }
     try {
-      const audioBase64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+      const audioBase64 = await readAsStringAsync(uri, {
+        encoding: EncodingType.Base64,
       });
       return { mimeType: MIME_TYPE, audioBase64 };
     } finally {
-      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      try {
+        await deleteAsync(uri, { idempotent: true });
+      } catch {
+        // Best-effort cleanup; ignore failures
+      }
     }
   }
 }

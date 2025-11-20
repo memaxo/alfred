@@ -122,14 +122,21 @@ Track progress per milestone with timestamps (UTC). Example entries shown; repla
 - [x] (2025-11-19 20:26Z) Add `apps/native/lib/voice/voice.types.ts`
 - [x] (2025-11-19 20:28Z) Remove `any` from `apps/native/lib/voice/queue.ts` and align helpers with new types
 - [x] (2025-11-19 20:33Z) Provide typed CarPlay module declaration to replace `any`
+- [x] (2025-11-19 20:45Z) Remove `any` usage from `packages/runtime/src/adapters/ai.ts`
+- [x] (2025-11-19 20:22Z) Remove casts/`any` from `packages/api/src/ai/normalize.ts` and align tool parts with AI SDK types
 - [ ] (YYYY-MM-DD HH:MMZ) Remove `any` from drive tab components
 - [ ] (YYYY-MM-DD HH:MMZ) Update or add relevant tests
 
 ### Milestone 3 – Structural Readability
-- [ ] (YYYY-MM-DD HH:MMZ) Refactor `apps/native/components/header-button.tsx`
-- [ ] (YYYY-MM-DD HH:MMZ) Replace ternaries in `apps/native/app/(drawer)/index.tsx` and `todos.tsx`
-- [ ] (YYYY-MM-DD HH:MMZ) Address `useBlockStatements` in `apps/native/lib/voice/*`
+- [x] (2025-11-19 20:29Z) Refactor `apps/native/components/header-button.tsx`
+- [x] (2025-11-19 20:25Z) Replace ternaries in `apps/native/app/(drawer)/index.tsx`
+- [x] (2025-11-19 20:27Z) Replace nested ternaries in `apps/native/app/(drawer)/todos.tsx`
+- [x] (2025-11-19 20:30Z) Address native voice lint (capture/index barrel, no-block statements)
+- [x] (2025-11-19 20:31Z) Clean `apps/web/src/components/chat-container.tsx` imports/hooks/props ordering
+- [x] (2025-11-19 20:34Z) Format + organize `apps/web/src/components/autonomy-slider.tsx`
+- [x] (2025-11-19 20:36Z) Refactor `apps/web/src/components/chat-render.tsx` (complexity, imports)
 - [ ] (YYYY-MM-DD HH:MMZ) Verify component tests (or document absence)
+- [x] (2025-11-19 21:05Z) Reduce complexity and lint noise in `apps/web/src/routes/orchestrator/run.tsx`
 
 ### Milestone 4 – Autofix & Final Checks
 - [ ] (YYYY-MM-DD HH:MMZ) Run `bunx biome check --write` and review diffs

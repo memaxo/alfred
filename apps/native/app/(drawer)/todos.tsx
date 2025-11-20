@@ -70,6 +70,63 @@ export default function TodosScreen() {
     ]);
   };
 
+  const renderTodosContent = () => {
+    if (todosQuery.isLoading) {
+      return (
+        <View className="flex justify-center py-8">
+          <ActivityIndicator color="#3b82f6" size="large" />
+        </View>
+      );
+    }
+
+    if (todos.length === 0) {
+      return (
+        <Text className="py-8 text-center text-muted-foreground">
+          No todos yet. Add one above!
+        </Text>
+      );
+    }
+
+    return (
+      <View className="space-y-2">
+        {todos.map((todo) => (
+          <View
+            className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
+            key={todo.id}
+          >
+            <View className="flex-1 flex-row items-center">
+              <TouchableOpacity
+                className="mr-3"
+                onPress={() => handleToggleTodo(todo.id, todo.completed)}
+              >
+                <Ionicons
+                  color={todo.completed ? "#22c55e" : "#6b7280"}
+                  name={todo.completed ? "checkbox" : "square-outline"}
+                  size={24}
+                />
+              </TouchableOpacity>
+              <Text
+                className={`flex-1 ${
+                  todo.completed
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground"
+                }`}
+              >
+                {todo.text}
+              </Text>
+            </View>
+            <TouchableOpacity
+              className="ml-2 p-1"
+              onPress={() => handleDeleteTodo(todo.id)}
+            >
+              <Ionicons color="#ef4444" name="trash-outline" size={20} />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <Container>
       <ScrollView className="flex-1">
@@ -112,58 +169,7 @@ export default function TodosScreen() {
               </View>
             </View>
 
-            {todosQuery.isLoading ? (
-              <View className="flex justify-center py-8">
-                <ActivityIndicator color="#3b82f6" size="large" />
-              </View>
-            ) : todos.length === 0 ? (
-              <Text className="py-8 text-center text-muted-foreground">
-                No todos yet. Add one above!
-              </Text>
-            ) : (
-              <View className="space-y-2">
-                {todos.map((todo) => (
-                  <View
-                    className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
-                    key={todo.id}
-                  >
-                    <View className="flex-1 flex-row items-center">
-                      <TouchableOpacity
-                        className="mr-3"
-                        onPress={() =>
-                          handleToggleTodo(todo.id, todo.completed)
-                        }
-                      >
-                        <Ionicons
-                          color={todo.completed ? "#22c55e" : "#6b7280"}
-                          name={todo.completed ? "checkbox" : "square-outline"}
-                          size={24}
-                        />
-                      </TouchableOpacity>
-                      <Text
-                        className={`flex-1 ${
-                          todo.completed
-                            ? "text-muted-foreground line-through"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {todo.text}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      className="ml-2 p-1"
-                      onPress={() => handleDeleteTodo(todo.id)}
-                    >
-                      <Ionicons
-                        color="#ef4444"
-                        name="trash-outline"
-                        size={20}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
+            {renderTodosContent()}
           </View>
         </View>
       </ScrollView>

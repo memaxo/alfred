@@ -15,18 +15,18 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
-import { renderPart } from "./chat-render";
 import { Actions } from "./actions";
+import { renderPart } from "./chat-render";
 import { Connect } from "./connect";
 import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
 
-interface ChatContainerProps {
+type ChatContainerProps = {
   agent: "assistant" | "orchestrator";
   thread?: string;
   resource?: string;
-}
+};
 
 export function ChatContainer({ agent }: ChatContainerProps) {
   const [currentAgent, setCurrentAgent] = useState<
@@ -36,23 +36,27 @@ export function ChatContainer({ agent }: ChatContainerProps) {
 
   const { messages, actions, status, error, send, clear, hydrate } =
     useAssistantStream({
-      onError: (err) => {
+      onError: (_err) => {
         // Error is already displayed in the error state
         // Additional logging handled by error boundaries
       },
     });
 
-  const { isRecording, startRecording, stopRecording, transcript, error: voiceError } =
-    useVoiceCapture({
-      onTranscript: (text) => {
-        if (currentAgent === "assistant" && text.trim().length > 0) {
-          send(text);
-        }
-      },
-      onError: (err) => {
-        // Voice errors are handled by the hook
-      },
-    });
+  const {
+    isRecording,
+    startRecording,
+    stopRecording,
+    error: voiceError,
+  } = useVoiceCapture({
+    onTranscript: (text) => {
+      if (currentAgent === "assistant" && text.trim().length > 0) {
+        send(text);
+      }
+    },
+    onError: (_err) => {
+      // Voice errors are handled by the hook
+    },
+  });
 
   const activeActions = useMemo(
     () =>
@@ -76,7 +80,9 @@ export function ChatContainer({ agent }: ChatContainerProps) {
 
   const handleAgentChange = useCallback(
     (nextAgent: "assistant" | "orchestrator") => {
-      if (nextAgent === currentAgent) return;
+      if (nextAgent === currentAgent) {
+        return;
+      }
       contextsRef.current.set(currentAgent, messages);
       clear();
       setCurrentAgent(nextAgent);
@@ -136,9 +142,9 @@ export function ChatContainer({ agent }: ChatContainerProps) {
                     : "Switch to the assistant agent to chat."
                 }
                 renderPart={renderPart}
+                virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
-                virtualized
               />
             </div>
             {showActionsPanel && (
@@ -159,7 +165,9 @@ export function ChatContainer({ agent }: ChatContainerProps) {
         )}
         {voiceError && (
           <div className="border-t bg-destructive/10 p-4">
-            <p className="text-destructive text-sm">Voice Error: {voiceError.message}</p>
+            <p className="text-destructive text-sm">
+              Voice Error: {voiceError.message}
+            </p>
           </div>
         )}
       </div>

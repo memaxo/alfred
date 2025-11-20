@@ -1,6 +1,106 @@
 import { randomUUID } from "node:crypto";
-import type { UIMessage } from "@alfred/type/stream";
 import type { WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
+
+type MessagePart = UIMessage["parts"][number];
+
+type ToolCallShape = {
+  id?: string;
+  toolCallId?: string;
+  toolName?: string;
+  name?: string;
+  args?: unknown;
+  input?: unknown;
+};
+
+type ToolResultShape = ToolCallShape & {
+  result?: unknown;
+  output?: unknown;
+};
+
+type AssistantEventPayload = WorkflowEvent & {
+  type: "assistant";
+  text?: string;
+  reasoning?: string;
+  parts?: MessagePart[];
+  toolCalls?: ToolCallShape[];
+  toolResults?: ToolResultShape[];
+};
+
+type ToolCallEventPayload = WorkflowEvent &
+  ToolCallShape & { type: "tool-call" };
+type ToolResultEventPayload = WorkflowEvent &
+  ToolResultShape & { type: "tool-result" };
+type ReasoningEventPayload = WorkflowEvent & {
+  type: "reasoning";
+  text?: string;
+  reasoning?: string;
+};
+type DataStatusEventPayload = WorkflowEvent & {
+  type: "data-status";
+  data?: unknown;
+  transient?: boolean;
+};
+type FileEventPayload = WorkflowEvent & {
+  type: "file";
+  mediaType?: string;
+  mimeType?: string;
+  url?: string;
+  data?: unknown;
+  filename?: string;
+  name?: string;
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isMessagePart(part: unknown): part is MessagePart {
+  return (
+    isPlainObject(part) && typeof (part as { type?: unknown }).type === "string"
+  );
+}
+
+function isUiMessageEvent(
+  event: WorkflowEvent
+): event is WorkflowEvent & { type: "ui-message"; messages: UIMessage[] } {
+  return (
+    event.type === "ui-message" &&
+    Array.isArray((event as { messages?: unknown }).messages)
+  );
+}
+
+function isAssistantEvent(
+  event: WorkflowEvent
+): event is AssistantEventPayload {
+  return event.type === "assistant";
+}
+
+function isToolCallEvent(event: WorkflowEvent): event is ToolCallEventPayload {
+  return event.type === "tool-call";
+}
+
+function isToolResultEvent(
+  event: WorkflowEvent
+): event is ToolResultEventPayload {
+  return event.type === "tool-result";
+}
+
+function isReasoningEvent(
+  event: WorkflowEvent
+): event is ReasoningEventPayload {
+  return event.type === "reasoning";
+}
+
+function isDataStatusEvent(
+  event: WorkflowEvent
+): event is DataStatusEventPayload {
+  return event.type === "data-status";
+}
+
+function isFileEvent(event: WorkflowEvent): event is FileEventPayload {
+  return event.type === "file";
+}
 
 export type NormalizableGenerate = {
   text?: string | null;
@@ -22,8 +122,10 @@ export type NormalizableGenerate = {
  * Convert a non-stream generateText result into canonical AI SDK v6 UIMessage parts.
  * Produces a single assistant message with text/tool-call/tool-result parts.
  */
-export function normalizeToUiMessages(result: NormalizableGenerate): UIMessage[] {
-  const parts: UIMessage["parts"] = [] as any;
+export function normalizeToUiMessages(
+  result: NormalizableGenerate
+): UIMessage[] {
+  const parts: MessagePart[] = [];
 
   if (typeof result.text === "string" && result.text.length > 0) {
     parts.push({ type: "text", text: result.text });
@@ -31,29 +133,14 @@ export function normalizeToUiMessages(result: NormalizableGenerate): UIMessage[]
 
   const calls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
   for (const call of calls) {
-    const toolName = call.toolName || call.name || "tool";
-    const toolCallId = call.id || randomUUID();
-    parts.push({
-      type: "tool-call",
-      toolName,
-      toolCallId,
-      input: call.args ?? {},
-    } as any);
+    parts.push(createToolCallPart(call));
   }
 
-  const results = Array.isArray(result.toolResults) ? result.toolResults : [];
-  for (const item of results) {
-    const toolCallId = item.id || randomUUID();
-    const toolName = item.toolName || "tool";
-    const payload = Object.prototype.hasOwnProperty.call(item, "result")
-      ? (item as any).result
-      : (item as any).output;
-    parts.push({
-      type: "tool-result",
-      toolCallId,
-      toolName,
-      output: payload,
-    } as any);
+  const toolResults = Array.isArray(result.toolResults)
+    ? result.toolResults
+    : [];
+  for (const item of toolResults) {
+    parts.push(createToolResultPart(item));
   }
 
   const assistantMessage: UIMessage = {
@@ -70,147 +157,195 @@ export function normalizeToUiMessages(result: NormalizableGenerate): UIMessage[]
  * Recognizes 'ui-message' passthrough, 'assistant', 'tool-call', and 'tool-result' shapes.
  */
 export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
-  // Passthrough of pre-normalized messages
-  if ((event as any)?.type === "ui-message" && Array.isArray((event as any)?.messages)) {
-    return (event as any).messages as UIMessage[];
+  if (isUiMessageEvent(event)) {
+    return event.messages;
   }
 
-  const parts: UIMessage["parts"] = [] as any;
-
-  // Assistant text/parts
-  if ((event as any)?.type === "assistant") {
-    const e = event as any;
-    if (typeof e.text === "string" && e.text.length > 0) {
-      parts.push({ type: "text", text: e.text });
-    }
-    // Reasoning payloads sometimes arrive as a top-level string
-    if (typeof e.reasoning === "string" && e.reasoning.length > 0) {
-      parts.push({ type: "reasoning", text: e.reasoning } as any);
-    }
-    if (Array.isArray(e.parts)) {
-      // Trust already well-formed UI parts
-      for (const p of e.parts) {
-        if (p && typeof p === "object" && typeof (p as any).type === "string") {
-          parts.push(p);
-        }
-      }
-    }
-    // Tool calls/results attached to assistant event
-    if (Array.isArray(e.toolCalls)) {
-      for (const c of e.toolCalls) {
-        const toolName = c?.toolName || c?.name || "tool";
-        const toolCallId = c?.id;
-        parts.push({ type: "tool-call", toolName, toolCallId, input: c?.args ?? {} } as any);
-      }
-    }
-    if (Array.isArray(e.toolResults)) {
-      for (const r of e.toolResults) {
-        const toolName = r?.toolName || "tool";
-        const toolCallId = r?.id;
-        const output = Object.prototype.hasOwnProperty.call(r ?? {}, "result") ? r?.result : r?.output;
-        parts.push({ type: "tool-result", toolName, toolCallId, output } as any);
-      }
-    }
-    if (parts.length > 0) {
-      return [
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          parts,
-        } as UIMessage,
-      ];
-    }
+  if (isAssistantEvent(event)) {
+    return normalizeAssistantEvent(event);
   }
 
-  // Standalone tool-call
-  if ((event as any)?.type === "tool-call") {
-    const e = event as any;
-    const toolName = e?.toolName || e?.name || "tool";
-    const toolCallId = e?.toolCallId || e?.id;
-    const input = e?.input ?? e?.args ?? {};
-    return [
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        parts: [{ type: "tool-call", toolName, toolCallId, input } as any],
-      } as UIMessage,
-    ];
+  if (isToolCallEvent(event)) {
+    return [createAssistantMessage([createToolCallPart(event)])];
   }
 
-  // Standalone tool-result
-  if ((event as any)?.type === "tool-result") {
-    const e = event as any;
-    const toolName = e?.toolName || "tool";
-    const toolCallId = e?.toolCallId || e?.id;
-    const output = Object.prototype.hasOwnProperty.call(e ?? {}, "result") ? e?.result : e?.output;
-    return [
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        parts: [{ type: "tool-result", toolName, toolCallId, output } as any],
-      } as UIMessage,
-    ];
+  if (isToolResultEvent(event)) {
+    return [createAssistantMessage([createToolResultPart(event)])];
   }
 
-  // Reasoning-only event
-  if ((event as any)?.type === "reasoning") {
-    const text = typeof (event as any)?.text === "string"
-      ? (event as any).text
-      : typeof (event as any)?.reasoning === "string"
-        ? (event as any).reasoning
-        : "";
-    if (text) {
-      return [
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          parts: [{ type: "reasoning", text } as any],
-        },
-      ];
-    }
+  if (isReasoningEvent(event)) {
+    return normalizeReasoningEvent(event);
   }
 
-  // Data status event -> UIMessage data-status part
-  if ((event as any)?.type === "data-status") {
-    const e = event as any;
-    return [
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        parts: [
-          {
-            type: "data-status",
-            data: e?.data,
-            transient: Boolean(e?.transient),
-          } as any,
-        ],
-      },
-    ];
+  if (isDataStatusEvent(event)) {
+    return normalizeDataStatusEvent(event);
   }
 
-  // File event -> UIMessage file part
-  if ((event as any)?.type === "file") {
-    const e = event as any;
-    const mediaType = e?.mediaType || e?.mimeType || "application/octet-stream";
-    const url = e?.url || (typeof e?.data === "string" ? e.data : undefined);
-    const filename = e?.filename || e?.name || undefined;
-    if (typeof url === "string") {
-      return [
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          parts: [
-            {
-              type: "file",
-              mediaType,
-              url,
-              ...(filename ? { filename } : {}),
-            } as any,
-          ],
-        },
-      ];
-    }
+  if (isFileEvent(event)) {
+    return normalizeFileEvent(event);
   }
 
   return null;
+}
+
+function normalizeAssistantEvent(
+  event: AssistantEventPayload
+): UIMessage[] | null {
+  const parts = collectAssistantParts(event);
+  if (parts.length === 0) {
+    return null;
+  }
+  return [createAssistantMessage(parts)];
+}
+
+function normalizeReasoningEvent(
+  event: ReasoningEventPayload
+): UIMessage[] | null {
+  const text =
+    coerceNonEmptyString(event.text) ?? coerceNonEmptyString(event.reasoning);
+  if (!text) {
+    return null;
+  }
+  return [createAssistantMessage([{ type: "reasoning", text }])];
+}
+
+function normalizeDataStatusEvent(event: DataStatusEventPayload): UIMessage[] {
+  const part: MessagePart = {
+    type: "data-status",
+    data: {
+      payload: event.data,
+      transient: Boolean(event.transient),
+    },
+  };
+  return [createAssistantMessage([part])];
+}
+
+function normalizeFileEvent(event: FileEventPayload): UIMessage[] | null {
+  let url: string | undefined;
+  if (typeof event.url === "string") {
+    url = event.url;
+  } else if (typeof event.data === "string") {
+    url = event.data;
+  }
+
+  if (!url) {
+    return null;
+  }
+
+  const filename = event.filename || event.name;
+  const part: MessagePart = {
+    type: "file",
+    mediaType: event.mediaType || event.mimeType || "application/octet-stream",
+    url,
+    ...(filename ? { filename } : {}),
+  };
+
+  return [createAssistantMessage([part])];
+}
+
+function collectAssistantParts(event: AssistantEventPayload): MessagePart[] {
+  const parts: MessagePart[] = [];
+
+  const assistantText = coerceNonEmptyString(event.text);
+  if (assistantText) {
+    parts.push({ type: "text", text: assistantText });
+  }
+
+  const reasoning = coerceNonEmptyString(event.reasoning);
+  if (reasoning) {
+    parts.push({ type: "reasoning", text: reasoning });
+  }
+
+  if (Array.isArray(event.parts)) {
+    for (const part of event.parts) {
+      if (isMessagePart(part)) {
+        parts.push(part);
+      }
+    }
+  }
+
+  if (Array.isArray(event.toolCalls)) {
+    for (const call of event.toolCalls) {
+      parts.push(createToolCallPart(call));
+    }
+  }
+
+  if (Array.isArray(event.toolResults)) {
+    for (const result of event.toolResults) {
+      parts.push(createToolResultPart(result));
+    }
+  }
+
+  return parts;
+}
+
+function createAssistantMessage(parts: MessagePart[]): UIMessage {
+  return {
+    id: randomUUID(),
+    role: "assistant",
+    parts,
+  };
+}
+
+function createToolCallPart(call: ToolCallShape): MessagePart {
+  return {
+    type: "dynamic-tool",
+    toolName: inferToolName(call),
+    toolCallId: inferToolCallId(call),
+    state: "input-available",
+    input: getToolInput(call) ?? {},
+  };
+}
+
+function createToolResultPart(result: ToolResultShape): MessagePart {
+  return {
+    type: "dynamic-tool",
+    toolName: inferToolName(result),
+    toolCallId: inferToolCallId(result),
+    state: "output-available",
+    input: getToolInput(result),
+    output: getToolOutput(result),
+  };
+}
+
+function inferToolCallId(data: { toolCallId?: string; id?: string }): string {
+  if (typeof data.toolCallId === "string" && data.toolCallId.length > 0) {
+    return data.toolCallId;
+  }
+  if (typeof data.id === "string" && data.id.length > 0) {
+    return data.id;
+  }
+  return randomUUID();
+}
+
+function inferToolName(data: { toolName?: string; name?: string }): string {
+  if (typeof data.toolName === "string" && data.toolName.length > 0) {
+    return data.toolName;
+  }
+  if (typeof data.name === "string" && data.name.length > 0) {
+    return data.name;
+  }
+  return "tool";
+}
+
+function getToolInput(shape: ToolCallShape | ToolResultShape): unknown {
+  if (shape.input !== undefined) {
+    return shape.input;
+  }
+  if (shape.args !== undefined) {
+    return shape.args;
+  }
+}
+
+function getToolOutput(shape: ToolResultShape): unknown {
+  if (shape.result !== undefined) {
+    return shape.result;
+  }
+  if (shape.output !== undefined) {
+    return shape.output;
+  }
+}
+
+function coerceNonEmptyString(value?: string | null): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }

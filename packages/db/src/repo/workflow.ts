@@ -11,6 +11,9 @@ export type WorkflowStatus =
 
 export type WorkflowRun = typeof workflowRuns.$inferSelect;
 
+type WorkflowRunInsert = typeof workflowRuns.$inferInsert;
+type WorkflowEventInsert = typeof workflowEvents.$inferInsert;
+
 export async function createRun(args: {
   id?: string;
   userId: string;
@@ -30,8 +33,8 @@ export async function createRun(args: {
       userId: args.userId,
       workflowId: args.workflowId,
       status: args.status ?? "running",
-      inputData: args.inputData as any,
-      stateData: args.stateData as any,
+      inputData: args.inputData as WorkflowRunInsert["inputData"],
+      stateData: args.stateData as WorkflowRunInsert["stateData"],
       webhookUrl: args.webhookUrl ?? null,
       webhookSecret: args.webhookSecret ?? null,
       linearSessionId: args.linearSessionId ?? null,
@@ -59,25 +62,39 @@ export async function updateRun(
     .set({
       ...(patch.status ? { status: patch.status } : {}),
       ...(Object.hasOwn(patch, "stateData")
-        ? { stateData: patch.stateData as any }
+        ? {
+            stateData: patch.stateData as WorkflowRunInsert["stateData"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "errorMessage")
-        ? { errorMessage: (patch.errorMessage ?? null) as any }
+        ? {
+            errorMessage: (patch.errorMessage ?? null) as WorkflowRunInsert["errorMessage"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "suspendedAt")
-        ? { suspendedAt: (patch.suspendedAt ?? null) as any }
+        ? {
+            suspendedAt: (patch.suspendedAt ?? null) as WorkflowRunInsert["suspendedAt"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "resumedAt")
-        ? { resumedAt: (patch.resumedAt ?? null) as any }
+        ? {
+            resumedAt: (patch.resumedAt ?? null) as WorkflowRunInsert["resumedAt"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "completedAt")
-        ? { completedAt: (patch.completedAt ?? null) as any }
+        ? {
+            completedAt: (patch.completedAt ?? null) as WorkflowRunInsert["completedAt"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "linearSessionId")
-        ? { linearSessionId: (patch.linearSessionId ?? null) as any }
+        ? {
+            linearSessionId: (patch.linearSessionId ?? null) as WorkflowRunInsert["linearSessionId"],
+          }
         : {}),
       ...(Object.hasOwn(patch, "linearSpace")
-        ? { linearSpace: (patch.linearSpace ?? null) as any }
+        ? {
+            linearSpace: (patch.linearSpace ?? null) as WorkflowRunInsert["linearSpace"],
+          }
         : {}),
     })
     .where(eq(workflowRuns.id, runId))
@@ -99,7 +116,7 @@ export async function appendEvent(args: {
       runId: args.runId,
       eventId: args.eventId,
       eventType: args.eventType,
-      eventData: (args.eventData ?? null) as any,
+      eventData: (args.eventData ?? null) as WorkflowEventInsert["eventData"],
       stepId: args.stepId ?? null,
       timestamp: args.timestamp ?? undefined,
     })
