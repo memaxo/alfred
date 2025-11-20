@@ -16,15 +16,14 @@ import type {
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
 import { validateUIMessages } from "ai";
-import type { Tool } from "ai";
 
-type ToolSet = Record<string, Tool>;
+type ToolSet = Record<string, unknown>;
 
 let cachedWorkflowTools: ToolSet | null = null;
 
 function getWorkflowTools(): ToolSet {
   if (!cachedWorkflowTools) {
-    cachedWorkflowTools = buildTools();
+    cachedWorkflowTools = buildTools() as ToolSet;
   }
   return cachedWorkflowTools;
 }
@@ -186,7 +185,9 @@ export async function validateConversationMessages(options: {
   tools?: ToolSet;
 }): Promise<UIMessage[] | null> {
   try {
-    const toolset = options.tools ?? getWorkflowTools();
+    const toolset = (options.tools ?? getWorkflowTools()) as Parameters<
+      typeof validateUIMessages
+    >[0]["tools"];
     const validated = await validateUIMessages({
       messages: options.messages,
       tools: toolset,

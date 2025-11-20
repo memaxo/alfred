@@ -1,6 +1,7 @@
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
 import { useMemo } from "react";
+import { CodeBlock } from "@/components/ai-elements/code-block";
 import {
   Plan,
   PlanContent,
@@ -9,34 +10,46 @@ import {
   PlanHeader,
   PlanTitle,
 } from "@/components/ai-elements/plan";
-import { Task, TaskContent, TaskItem, TaskTrigger } from "@/components/ai-elements/task";
+import {
+  Task,
+  TaskContent,
+  TaskItem,
+  TaskTrigger,
+} from "@/components/ai-elements/task";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
-import { CodeBlock } from "@/components/ai-elements/code-block";
 import { deriveActions } from "@/hooks/use-assistant-stream";
+import { workflowNodeDataSchema } from "@/store/mindscape.schemas";
 import { MindscapeNode } from "./mindscape-node";
 
 export function WorkflowNode({ id, data, selected }: NodeProps) {
-  const messages = (data?.messages as UIMessage[]) || [];
-  const status = (data?.status as string) || "Idle";
+  // Validate and parse node data
+  const result = workflowNodeDataSchema.safeParse(data);
+  const validatedData = result.success
+    ? result.data
+    : { messages: undefined, status: undefined, title: undefined, description: undefined, label: undefined };
+  
+  const messages = (validatedData.messages ??
+    []) as AssistantUIMessage[];
+  const status = validatedData.status ?? "Idle";
 
   const actions = useMemo(() => deriveActions(messages), [messages]);
-  
-  const activeAction = actions.find(a => a.status === 'running');
-  const completedActions = actions.filter(a => a.status === 'completed');
+
+  const activeAction = actions.find((a) => a.status === "running");
+  const completedActions = actions.filter((a) => a.status === "completed");
 
   return (
     <MindscapeNode
       className="w-[400px]"
       id={id}
       selected={selected}
-      title={(data?.label as string) || "Workflow"}
+      title={validatedData.label ?? "Workflow"}
     >
       <div className="p-4">
         <Plan className="border-0 bg-transparent">
           <PlanHeader className="px-0 pt-0">
-            <PlanTitle>{(data?.title as string) || "Execution Plan"}</PlanTitle>
+            <PlanTitle>{validatedData.title ?? "Execution Plan"}</PlanTitle>
             <PlanDescription>
-              {(data?.description as string) || "Processing request..."}
+              {validatedData.description ?? "Processing request..."}
             </PlanDescription>
           </PlanHeader>
 
@@ -60,7 +73,10 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
               {/* Render active action */}
               {activeAction && (
                 <Task defaultOpen={true} key={activeAction.id}>
-                  <TaskTrigger className="animate-pulse text-biolum" title={activeAction.name} />
+                  <TaskTrigger
+                    className="animate-pulse text-biolum"
+                    title={activeAction.name}
+                  />
                   <TaskContent>
                     <TaskItem>Running...</TaskItem>
                   </TaskContent>
@@ -69,12 +85,12 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
             </div>
 
             {activeAction && (
-              <div className="mt-4 border-t border-white/10 pt-4">
+              <div className="mt-4 border-white/10 border-t pt-4">
                 <Tool>
-                  <ToolHeader 
-                    state="input-available" 
-                    title={activeAction.name} 
-                    type="tool-call" 
+                  <ToolHeader
+                    state="input-available"
+                    title={activeAction.name}
+                    type="tool-call"
                   />
                   <ToolContent>
                     <CodeBlock
@@ -88,7 +104,7 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
             )}
           </PlanContent>
 
-          <PlanFooter className="px-0 pb-0 pt-4">
+          <PlanFooter className="px-0 pt-4 pb-0">
             <div className="text-biolum-dim text-xs uppercase tracking-wider">
               Status: {status}
             </div>
@@ -98,4 +114,3 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
     </MindscapeNode>
   );
 }
-

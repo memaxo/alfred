@@ -369,6 +369,85 @@ describe("workflow router", () => {
       ).toBe(true);
     });
 
+    it("persists tool-call and tool-result metadata", async () => {
+      const mockRunId = "tool-run-id";
+      const events: WorkflowEvent[] = [
+        { type: "run", id: mockRunId } as WorkflowEvent,
+        {
+          type: "tool-call",
+          toolCallId: "call-42",
+          toolName: "git.status",
+          input: { repo: "alfred" },
+        } as WorkflowEvent,
+        {
+          type: "tool-result",
+          toolCallId: "call-42",
+          toolName: "git.status",
+          output: { clean: true },
+        } as WorkflowEvent,
+        { type: "progress", pct: 25, message: "checking" } as WorkflowEvent,
+      ];
+
+      const mockStream = async function* () {
+        for (const event of events) {
+          yield event;
+        }
+      };
+
+      workflowRunnerMocks.runPlanV6.mockReturnValue({
+        runId: mockRunId,
+        summary: "tool summary",
+        stream: mockStream(),
+        resume: vi.fn().mockResolvedValue(undefined),
+        cancel: vi.fn(),
+      });
+
+      workflowRepoMocks.createRun.mockResolvedValue({
+        id: mockRunId,
+      } as any);
+
+      const conversationRow = {
+        id: "conv-tool",
+        userId: "test-user",
+        title: null,
+        workflowId: mockRunId,
+        created: new Date(),
+        updated: new Date(),
+      };
+      getConversationByWorkflowMock.mockResolvedValue(conversationRow);
+
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const subscription = toObservable(
+        await caller.workflow.stream({
+          requirement: "tool metadata",
+        })
+      );
+
+      await new Promise<void>((resolve, reject) => {
+        subscription.subscribe({
+          next: () => {},
+          error: reject,
+          complete: () => resolve(),
+        });
+      });
+
+      const toolCallPersist = createMessageMock.mock.calls.find(([, , message]) =>
+        (message as UIMessage).metadata?.workflowEventType === "tool-call"
+      );
+      const toolResultPersist = createMessageMock.mock.calls.find(([, , message]) =>
+        (message as UIMessage).metadata?.workflowEventType === "tool-result"
+      );
+
+      expect(toolCallPersist).toBeDefined();
+      expect(toolResultPersist).toBeDefined();
+      const toolResultMessage = toolResultPersist?.[2] as UIMessage;
+      expect(toolResultMessage.metadata?.workflowEventId).toEqual(
+        expect.any(String)
+      );
+    });
+
     it("handles persistence failures gracefully", async () => {
       const mockRunId = "test-run-id";
       const mockStream = async function* () {

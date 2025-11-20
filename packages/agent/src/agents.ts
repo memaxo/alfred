@@ -1,24 +1,79 @@
-import { ToolLoopAgent, type InferAgentUIMessage, stepCountIs } from "ai";
+import {
+  ToolLoopAgent,
+  type InferAgentUIMessage,
+  stepCountIs,
+  type PrepareStepFunction,
+  type ToolLoopAgentSettings,
+} from "ai";
 
 import { buildAssistantTools, buildTools, getModelId, getOpenAI } from "./v6";
 
 const ASSISTANT_MAX_STEPS = 12;
 const ORCHESTRATOR_MAX_STEPS = 12;
 
-const assistantDefaults = {
+type AssistantTools = ReturnType<typeof buildAssistantTools>;
+type OrchestratorTools = ReturnType<typeof buildTools>;
+
+const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
+  messages,
+}) => {
+  if (messages.length > 40) {
+    return {
+      messages: [messages[0], ...messages.slice(-20)],
+    };
+  }
+  return {};
+};
+
+const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
+  messages,
+  stepNumber,
+  steps,
+}) => {
+  if (messages.length > 60) {
+    return {
+      messages: [messages[0], ...messages.slice(-30)],
+    };
+  }
+  const hasToolCall =
+    steps.flatMap((step) => step.toolCalls ?? []).length > 0 &&
+    stepNumber <= 3;
+  if (hasToolCall) {
+    return {
+      toolChoice: { type: "tool", toolName: "summarize" },
+    };
+  }
+  return {};
+};
+
+const assistantConfig: ToolLoopAgentSettings<never, AssistantTools> = {
   model: getOpenAI().chat(getModelId()),
   tools: buildAssistantTools(),
   stopWhen: stepCountIs(ASSISTANT_MAX_STEPS),
-} as const;
+  prepareStep: assistantPrepareStep,
+};
 
-const orchestratorDefaults = {
+const orchestratorConfig: ToolLoopAgentSettings<never, OrchestratorTools> = {
   model: getOpenAI().chat(getModelId()),
   tools: buildTools(),
   stopWhen: stepCountIs(ORCHESTRATOR_MAX_STEPS),
+  prepareStep: orchestratorPrepareStep,
+};
+
+const assistantDefaults = {
+  model: assistantConfig.model,
+  tools: assistantConfig.tools,
+  stopWhen: assistantConfig.stopWhen,
 } as const;
 
-export const assistantAgent = new ToolLoopAgent(assistantDefaults);
-export const orchestratorAgent = new ToolLoopAgent(orchestratorDefaults);
+const orchestratorDefaults = {
+  model: orchestratorConfig.model,
+  tools: orchestratorConfig.tools,
+  stopWhen: orchestratorConfig.stopWhen,
+} as const;
+
+export const assistantAgent = new ToolLoopAgent(assistantConfig);
+export const orchestratorAgent = new ToolLoopAgent(orchestratorConfig);
 
 export function getAssistantAgentDefaults() {
   return assistantDefaults;

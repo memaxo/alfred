@@ -4,6 +4,7 @@ import { bookRouter } from "./book";
 import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
+import { fsRouter } from "./fs";
 import { jwksRouter } from "./jwks";
 import { linearRouter } from "./linear";
 import { noteRouter } from "./note";
@@ -12,6 +13,7 @@ import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
 import { profileRouter } from "./profile";
 import { remindRouter } from "./remind";
+import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
@@ -44,5 +46,7 @@ export const appRouter: ReturnType<typeof router> = router({
   preference: preferenceRouter,
   privacy: privacyRouter,
   voice: voiceRouter,
+  fs: fsRouter,
+  terminal: terminalRouter,
 });
 export type AppRouter = typeof appRouter;

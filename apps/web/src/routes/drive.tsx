@@ -1,4 +1,4 @@
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ function DriveModeRoute() {
     onTranscript: async (text) => {
       setErrorMessage(null);
       try {
-        const messages: UIMessage[] = [
+        const messages: AssistantUIMessage[] = [
           {
             id: "system-1",
             role: "system",

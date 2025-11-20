@@ -8,7 +8,12 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import {
+  createTRPCClient,
+  httpBatchLink,
+  splitLink,
+  unstable_httpSubscriptionLink,
+} from "@trpc/client";
 import { toast } from "sonner";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
@@ -31,14 +36,20 @@ export const queryClient = new QueryClient({
 
 const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: "include",
-        });
-      },
+    splitLink({
+      condition: (op) => op.type === "subscription",
+      true: unstable_httpSubscriptionLink({
+        url: "/api/trpc",
+      }),
+      false: httpBatchLink({
+        url: "/api/trpc",
+        fetch(url, options) {
+          return fetch(url, {
+            ...options,
+            credentials: "include",
+          });
+        },
+      }),
     }),
   ],
 });

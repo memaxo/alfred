@@ -1,4 +1,4 @@
-import { type buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
+import { getModelId } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
@@ -8,7 +8,9 @@ import {
   consumeStream,
   convertToModelMessages,
   generateId,
+  pruneMessages,
   streamText,
+  type ModelMessage,
   type UIMessage,
 } from "ai";
 import { z } from "zod";
@@ -20,11 +22,42 @@ const requestSchema = z
   })
   .passthrough();
 
-type BuildToolsFn = () => ReturnType<typeof buildAssistantTools>;
+type StreamArgs = Parameters<typeof streamText>[0];
+type AgentDefaults = Pick<StreamArgs, "model" | "tools" | "stopWhen">;
+type GetDefaultsFn = () => AgentDefaults;
+
+export const HISTORY_MAX_MESSAGES = 60;
+
+export function limitUiMessages(messages: UIMessage[]): UIMessage[] {
+  if (!Array.isArray(messages) || messages.length <= HISTORY_MAX_MESSAGES) {
+    return messages;
+  }
+  return messages.slice(-HISTORY_MAX_MESSAGES);
+}
+
+export function pruneMessagesForStream(messages: UIMessage[]): {
+  uiMessages: UIMessage[];
+  modelMessages: ModelMessage[];
+  dropped: number;
+} {
+  const trimmed = limitUiMessages(messages);
+  const modelMessages = convertToModelMessages(trimmed);
+  const pruned = pruneMessages({
+    messages: modelMessages,
+    reasoning: "before-last-message",
+    toolCalls: "before-last-2-messages",
+    emptyMessages: "remove",
+  });
+  return {
+    uiMessages: trimmed,
+    modelMessages: pruned,
+    dropped: messages.length - trimmed.length,
+  };
+}
 
 export async function handleStreamRequest(
   request: Request,
-  buildTools: BuildToolsFn,
+  getDefaults: GetDefaultsFn,
   errorPrefix: string
 ): Promise<Response> {
   if (request.method !== "POST") {
@@ -73,7 +106,8 @@ export async function handleStreamRequest(
     }
 
     let preferencePrompt: string | undefined;
-    const tools = buildTools();
+    const defaults = getDefaults();
+    const tools = defaults.tools ?? {};
 
     if (userId) {
       try {
@@ -90,12 +124,20 @@ export async function handleStreamRequest(
       }
     }
 
+    const { uiMessages: preparedUiMessages, modelMessages, dropped } =
+      pruneMessagesForStream(messages);
+
+    if (dropped > 0) {
+      logger.info(`${errorPrefix}_history_pruned`, {
+        dropped,
+        kept: preparedUiMessages.length,
+      });
+    }
+
     const modelId = getModelId();
-    const model = getOpenAI().chat(modelId);
     const result = streamText({
-      model,
-      messages: convertToModelMessages(messages),
-      tools,
+      ...defaults,
+      messages: modelMessages,
       abortSignal: request.signal,
       system: preferencePrompt,
       onAbort: ({ steps }) => {
@@ -106,7 +148,7 @@ export async function handleStreamRequest(
     });
 
     const response = result.toUIMessageStreamResponse({
-      originalMessages: messages,
+      originalMessages: preparedUiMessages,
       generateMessageId: generateId,
       consumeSseStream: consumeStream,
       messageMetadata: ({ part }) => {

@@ -1,6 +1,6 @@
 import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
 import type { WorkflowEvent } from "@alfred/type/plan";
-import type { UIMessage } from "@alfred/type/stream";
+import type { OrchestratorUIMessage } from "@alfred/agent";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
@@ -72,7 +72,7 @@ function OrchestratorRunRoute() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [messages, setMessages] = useState<OrchestratorUIMessage[]>([]);
   const logCount = logs.length;
   const subscriptionRef = useRef<null | (() => void)>(null);
   const logIdRef = useRef(0);
@@ -94,7 +94,10 @@ function OrchestratorRunRoute() {
   }, [seenEventIds]);
 
   const mergeMessages = useCallback(
-    (incoming: UIMessage[], direction: "prepend" | "append") => {
+    (
+      incoming: OrchestratorUIMessage[],
+      direction: "prepend" | "append"
+    ) => {
       if (!incoming.length) {
         return;
       }
@@ -985,7 +988,7 @@ function collectUnseenReplayItems(
   items: WorkflowReplayItem[],
   seenIds: Set<string>
 ) {
-  const incomingMessages: UIMessage[] = [];
+  const incomingMessages: OrchestratorUIMessage[] = [];
   const ids: string[] = [];
 
   for (const item of items) {
@@ -1037,7 +1040,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isUiMessage(value: unknown): value is UIMessage {
+function isUiMessage(value: unknown): value is OrchestratorUIMessage {
   return (
     isPlainObject(value) &&
     typeof value.id === "string" &&
@@ -1046,7 +1049,9 @@ function isUiMessage(value: unknown): value is UIMessage {
   );
 }
 
-function isUiMessageArray(value: unknown): value is UIMessage[] {
+function isUiMessageArray(
+  value: unknown
+): value is OrchestratorUIMessage[] {
   return Array.isArray(value) && value.every(isUiMessage);
 }
 
@@ -1066,10 +1071,15 @@ function toWorkflowEvent(
 
 function getUiMessagesFromReplayItem(
   row: WorkflowReplayItem
-): UIMessage[] | null {
+): OrchestratorUIMessage[] | null {
   if (row.eventType === "ui-message" && isUiMessageArray(row.eventData)) {
     return row.eventData;
   }
   const workflowEvent = toWorkflowEvent(row.eventType, row.eventData);
-  return workflowEvent ? (eventToUiMessages(workflowEvent) ?? null) : null;
+  if (!workflowEvent) {
+    return null;
+  }
+  return (eventToUiMessages(workflowEvent) ?? null) as
+    | OrchestratorUIMessage[]
+    | null;
 }

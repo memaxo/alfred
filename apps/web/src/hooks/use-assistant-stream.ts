@@ -1,7 +1,7 @@
 import { useChat } from "@ai-sdk/react";
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type AssistantActionStatus =
   | "pending"
@@ -20,16 +20,19 @@ export type AssistantAction = {
 
 type UseAssistantStreamOptions = {
   onError?: (error: Error) => void;
+  initialMessages?: AssistantUIMessage[];
+  initialConversationId?: string | null;
 };
 
 export type UseAssistantStreamReturn = {
-  messages: UIMessage[];
+  messages: AssistantUIMessage[];
   actions: AssistantAction[];
   status: string;
   error: Error | null;
   send: (text: string) => void;
   clear: () => void;
-  hydrate: (messages: UIMessage[]) => void;
+  hydrate: (messages: AssistantUIMessage[]) => void;
+  conversationId: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -40,7 +43,9 @@ function toArgs(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
-export function deriveActions(messages: UIMessage[]): AssistantAction[] {
+export function deriveActions(
+  messages: AssistantUIMessage[]
+): AssistantAction[] {
   const actionMap = new Map<string, AssistantAction>();
 
   for (const message of messages) {
@@ -90,10 +95,53 @@ export function deriveActions(messages: UIMessage[]): AssistantAction[] {
 export function useAssistantStream(
   options: UseAssistantStreamOptions = {}
 ): UseAssistantStreamReturn {
-  const { onError } = options;
+  const { onError, initialMessages, initialConversationId } = options;
+  const [conversationId, setConversationId] = useState<string | null>(
+    initialConversationId ?? null
+  );
+  const conversationIdRef = useRef<string | undefined>(
+    initialConversationId ?? undefined
+  );
+  const mountedRef = useRef(true);
+  const transportRef = useRef<DefaultChatTransport<AssistantUIMessage>>();
 
-  const chat = useChat<UIMessage>({
-    transport: new DefaultChatTransport({ api: "/api/assistant" }),
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  if (!transportRef.current) {
+    const trackedFetch = async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1]
+    ) => {
+      const response = await fetch(input, init);
+      const headerId = response.headers.get("x-conversation-id");
+      if (headerId) {
+        conversationIdRef.current = headerId;
+        if (mountedRef.current) {
+          setConversationId(headerId);
+        }
+      }
+      return response;
+    };
+
+    transportRef.current = new DefaultChatTransport({
+      api: "/api/assistant",
+      fetch: trackedFetch,
+      prepareSendMessagesRequest: ({ body }) => ({
+        body: {
+          ...(body ?? {}),
+          conversationId: conversationIdRef.current,
+        },
+      }),
+    });
+  }
+
+  const chat = useChat<AssistantUIMessage>({
+    transport: transportRef.current,
+    messages: initialMessages ?? [],
     onError,
   });
 
@@ -121,7 +169,7 @@ export function useAssistantStream(
   }, [chat]);
 
   const hydrate = useCallback(
-    (messages: UIMessage[]) => {
+    (messages: AssistantUIMessage[]) => {
       chat.setMessages(messages);
     },
     [chat]
@@ -135,5 +183,6 @@ export function useAssistantStream(
     send,
     clear,
     hydrate,
+    conversationId,
   };
 }

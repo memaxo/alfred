@@ -1,11 +1,11 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { assistantChatMock } from "@/test/mock-assistant-chat";
 import { useAssistantStream } from "../use-assistant-stream";
 
-const baseMessage: UIMessage = {
+const baseMessage: AssistantUIMessage = {
   id: "msg-1",
   role: "assistant",
   parts: [
@@ -50,7 +50,7 @@ describe("useAssistantStream integration (without network)", () => {
   });
 
   it("derives actions from tool call parts", () => {
-    const toolMessage: UIMessage = {
+    const toolMessage: AssistantUIMessage = {
       id: "msg-tool",
       role: "assistant",
       parts: [
@@ -81,6 +81,30 @@ describe("useAssistantStream integration (without network)", () => {
       name: "search",
       status: "completed",
     });
+  });
+
+  it("preloads initial messages and conversation id", () => {
+    const initial: AssistantUIMessage[] = [
+      {
+        id: "seed-1",
+        role: "assistant",
+        parts: [{ type: "text", text: "Seeded" }],
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useAssistantStream({
+        initialMessages: initial,
+        initialConversationId: "conv-seed",
+      })
+    );
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]?.parts[0]).toMatchObject({
+      type: "text",
+      text: "Seeded",
+    });
+    expect(result.current.conversationId).toBe("conv-seed");
   });
 
   it("clears messages and resets error state", () => {

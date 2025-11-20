@@ -148,9 +148,28 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Extended `packages/api/test/workflow.router.test.ts` with a long-running executor case that invokes the registered `cancel` callback and asserts the run status transitions to `cancelled`
   - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
 - [ ] Expand router/repo tests to assert UUID persistence, abort flows, tool outputs, and metadata propagation; run `bun test packages/api/test/workflow.router.test.ts`
-- [ ] Share canonical tool definitions with validation/persistence layers so stored tool-call messages remain schema-safe; add tests for multi-modal outputs
+- [x] (2025-11-20 20:35Z) Share canonical tool definitions with validation/persistence layers so stored tool-call messages remain schema-safe
+  - Cached orchestrator tool definitions via `buildTools()` inside `packages/api/src/scheduler/preference-inference.ts` and threaded them through `validateConversationMessages()` so preference inference only ingests AI SDK–valid histories (covered by `packages/api/test/preference.inference.messages.test.ts`)
+  - Runtime AI adapter now hands the live `tools` map to `validateUIMessages` before calling `streamText`, with expectations added to `packages/runtime/test/adapter-preferences.test.ts`
+  - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/preference.inference.messages.test.ts` ✅, `bun test packages/runtime/test/adapter-preferences.test.ts` ✅, `bun test packages/api/test/workflow.router.test.ts` ✅
+- [x] (2025-11-20 21:18Z) Refreshed AI SDK v6 references to guide pruning + hydration work
+  - Reviewed `docs/reference/ai-sdk-v6` materials (notably `reference_ai-sdk-ui_prune-messages.md`, `reference_ai-sdk-ui_convert-to-model-messages.md`, `ai-sdk-ui_chatbot-message-persistence.md`, and `reference_ai-sdk-ui_create-ui-message-stream-response.md`)
+  - Catalogued required primitives for next steps: `streamText`, `validateUIMessages`, `safeValidateUIMessages`, `convertToModelMessages`, `pruneMessages`, `toUIMessageStreamResponse`, `createUIMessageStreamResponse`, `consumeStream`, `DefaultChatTransport`, `useChat`, `UIMessage`, `ModelMessage`, and `Tool` definitions from `ai`
+  - Noted dependency to keep TanStack Start loaders server-only while reading from `conversationRepo` so persisted chats hydrate without bundling DB code client-side
 - [ ] Feed persisted conversations into client `useChat` flows by providing `initialMessages` from conversation repo; add an integration test proving resume behavior
 - [ ] Trigger preference cache invalidation + inference reruns whenever workflow persistence completes so Phase 4.2 learning stays up to date
+
+**Upcoming Priority Tasks (updated 2025-11-20 21:18Z)**
+- [ ] (Persistence & Validation) Implement deterministic `pruneWorkflowMessages()` that trims oldest conversation entries while keeping the most recent tool-call/tool-result pairs intact before AI reuse.
+- [ ] (Persistence & Validation) Extend repo + scheduler tests to assert pruning enforces `MAX_HISTORY_MESSAGES`/token caps and documents the eviction order.
+- [ ] (Streaming & Response Lifecycle) Thread pruned histories through `AISDKAdapter.stream()` inputs (runtime + legacy runner) so `streamText` never receives unbounded transcripts; add regression coverage.
+- [ ] (Streaming & Response Lifecycle) Expand workflow router tests for UUID linkage, abort flows, and persisted tool outputs to guarantee metadata survives replay.
+- [ ] (Tooling & Multi-Modal Support) Add regressions with interleaved `tool-call`/`tool-result` parts to confirm pruning retains the latest multi-modal chain.
+- [ ] (Tooling & Multi-Modal Support) Reuse `validateUIMessages` + `pruneMessages` when orchestrator resumes workflows so cached tool definitions stay schema-safe.
+- [ ] (Client Integration) Build a TanStack Start loader for `/_authed/ai` that fetches the latest assistant conversation via `conversationRepo` and returns `initialMessages`.
+- [ ] (Client Integration) Update `useAssistantStream` + integration tests so the hook hydrates on mount when `initialMessages` exist, proving resumed chats render prior history.
+- [ ] (Operational Hooks) Fire preference cache invalidation + queue inference reruns after workflow persistence completes to keep learning in lockstep with new histories.
+- [ ] (Operational Hooks) Add metrics/logging (e.g., `preference_history_pruned_total`, `preference_cache_invalidations_total`) for the new pruning + invalidation pipeline.
 
 **Monitoring & Metrics:**
 - [ ] Add preference metrics to `packages/api/src/metrics.ts`
@@ -181,6 +200,7 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
 - **Prefer clearing over restoring module mocks**: Using `mock.restore()` inside `resetAllMocks()` removed previously registered module shims (DB/workflow repos), so later tests hit real implementations. Switching to `vi.clearAllMocks()` preserves the module mocks while still resetting call history.
 - **Seeded UUIDs still need version/variant bits**: Hashing workflow identifiers directly into a UUID-shaped string failed validation in tests. For deterministic IDs we now force the version nibble to `4` and adjust the variant nibble (8–b) before formatting, keeping RFC4122 compliance without losing determinism.
 - **Linear orchestrator modules eagerly load tool registries**: Importing `@alfred/agent/orchestrator/*` during tests pulled in `@alfred/agent/src/v6.ts`, which Bun evaluated twice and raised `"assistantToolSources" has already been declared`. Mocking the linear modules in `workflow.router.test.ts` isolates the router tests from the real AI SDK tool registry and prevents duplicate evaluation errors.
+- **Agent tool registry imports require OpenAI env**: Pulling `buildTools()` from `@alfred/agent` also loads helpers that expect `OPENAI_API_KEY`. Tests now mock `@alfred/agent` before importing scheduler utilities so `validateConversationMessages()` can run without real credentials.
 
 ## Decision Log
 

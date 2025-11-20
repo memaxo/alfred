@@ -1,11 +1,11 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import {
   mockGenerateText,
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 import {
   getOrchestratorAgentDefaultsMock,
   resetAgentMocks,
@@ -75,10 +75,7 @@ describe("orchestrator router", () => {
     });
 
     it("throws UNAUTHORIZED when session is missing", async () => {
-      const unauthedCaller = await createTestCaller({
-        userId: "",
-        scopes: [],
-      });
+      const unauthedCaller = await createUnauthedCaller();
 
       await expect(
         unauthedCaller.orchestrator.generate({
@@ -90,7 +87,7 @@ describe("orchestrator router", () => {
             },
           ],
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(/Authentication required/);
     });
 
     it("validates message format", async () => {

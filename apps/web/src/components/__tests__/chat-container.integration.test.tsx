@@ -1,6 +1,6 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { assistantChatMock } from "@/test/mock-assistant-chat";
@@ -10,8 +10,8 @@ mock.module("react-virtuoso", () => ({
     data,
     itemContent,
   }: {
-    data: UIMessage[];
-    itemContent: (index: number, message: UIMessage) => ReactNode;
+    data: AssistantUIMessage[];
+    itemContent: (index: number, message: AssistantUIMessage) => ReactNode;
   }) => (
     <div data-testid="stub-virtuoso">
       {data.map((message, index) => (
@@ -112,5 +112,21 @@ describe("ChatContainer integration", () => {
     await waitFor(() => {
       expect(getByText("Agent state")).toBeTruthy();
     });
+  });
+
+  it("renders initial messages", () => {
+    const initial: AssistantUIMessage[] = [
+      {
+        id: "init-1",
+        role: "assistant",
+        parts: [{ type: "text", text: "Persisted hello" }],
+      },
+    ];
+
+    const { getByText } = render(
+      <ChatContainer agent="assistant" initialMessages={initial} />
+    );
+
+    expect(getByText("Persisted hello")).toBeTruthy();
   });
 });

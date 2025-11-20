@@ -30,6 +30,8 @@ const orchestratorDefaults = {
 
 const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
 const getOrchestratorAgentDefaults = vi.fn(() => orchestratorDefaults);
+const recordMemoryUpdate = vi.fn();
+const recordMemoryForget = vi.fn();
 
 mock.module("@alfred/agent", () => ({
   buildAssistantTools,
@@ -59,8 +61,8 @@ mock.module("@alfred/agent", () => ({
   recordCodexError: noop,
   recordAssistantToolCall: noop,
   recordAssistantEscalation: noop,
-  recordMemoryUpdate: noop,
-  recordMemoryForget: noop,
+  recordMemoryUpdate,
+  recordMemoryForget,
 }));
 
 export function resetAgentMocks() {
@@ -74,6 +76,8 @@ export function resetAgentMocks() {
   getOrchestratorAgentDefaults.mockClear();
   assistantDefaults.stopWhen.mockClear();
   orchestratorDefaults.stopWhen.mockClear();
+  recordMemoryUpdate.mockClear();
+  recordMemoryForget.mockClear();
 }
 
 export {
@@ -84,4 +88,5 @@ export {
   getOrchestratorAgentDefaults as getOrchestratorAgentDefaultsMock,
   getOpenAI as getOpenAIMock,
   getModelId as getModelIdMock,
+  recordMemoryUpdate as recordMemoryUpdateMock,
 };

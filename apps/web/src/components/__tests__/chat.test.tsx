@@ -1,14 +1,14 @@
 import "@/test/dom";
 import { describe, expect, it } from "bun:test";
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { Chat } from "@alfred/ui";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 
 const StubVirtualList: React.ComponentType<{
-  data: UIMessage[];
-  itemContent: (index: number, message: UIMessage) => ReactNode;
+  data: AssistantUIMessage[];
+  itemContent: (index: number, message: AssistantUIMessage) => ReactNode;
   rangeChanged?: (range: { startIndex: number; endIndex: number }) => void;
 }> = ({ data, itemContent, rangeChanged }) => {
   const startIndex = Math.max(data.length - 16, 0);
@@ -32,7 +32,7 @@ const StubVirtualList: React.ComponentType<{
 };
 
 describe("Chat", () => {
-  const createMessages = (count: number): UIMessage[] =>
+  const createMessages = (count: number): AssistantUIMessage[] =>
     Array.from({ length: count }, (_, index) => ({
       id: `msg-${index}`,
       role: index % 2 === 0 ? "user" : "assistant",
@@ -89,7 +89,7 @@ describe("Chat", () => {
   });
 
   it("renders message status metadata", () => {
-    const messages: UIMessage[] = [
+    const messages: AssistantUIMessage[] = [
       {
         id: "msg-1",
         role: "user",

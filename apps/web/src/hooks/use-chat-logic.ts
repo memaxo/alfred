@@ -1,17 +1,23 @@
-import { type UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 
 type UseChatLogicProps = {
   initialAgent?: "assistant" | "orchestrator";
+  initialMessages?: AssistantUIMessage[];
+  initialConversationId?: string | null;
 };
 
-export function useChatLogic({ initialAgent = "assistant" }: UseChatLogicProps = {}) {
+export function useChatLogic({
+  initialAgent = "assistant",
+  initialMessages,
+  initialConversationId,
+}: UseChatLogicProps = {}) {
   const [currentAgent, setCurrentAgent] = useState<"assistant" | "orchestrator">(
     initialAgent
   );
-  const contextsRef = useRef<Map<string, UIMessage[]>>(new Map());
+  const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
 
   const { messages, actions, status, error, send, clear, hydrate } =
     useAssistantStream({
@@ -19,6 +25,8 @@ export function useChatLogic({ initialAgent = "assistant" }: UseChatLogicProps =
         // Error is already displayed in the error state
         // Additional logging handled by error boundaries
       },
+      initialMessages,
+      initialConversationId,
     });
 
   const {

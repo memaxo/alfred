@@ -1,4 +1,4 @@
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
 import { Mic } from "lucide-react";
 import { useCallback, useEffect } from "react";
@@ -17,10 +17,14 @@ import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useMindscapeExecutor } from "@/hooks/use-mindscape-executor";
+import { chatNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
 import { MindscapeNode } from "./mindscape-node";
 
 export function ChatNode({ id, data, selected }: NodeProps) {
+  // Validate and parse node data
+  const result = chatNodeDataSchema.safeParse(data);
+  const validatedData = result.success ? result.data : { messages: undefined, error: undefined };
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -39,26 +43,26 @@ export function ChatNode({ id, data, selected }: NodeProps) {
   // Log errors to node data
   useEffect(() => {
     if (error) {
-      updateArtifactData(id, { error: error.message });
+      updateArtifactData(id, { error: error.message, type: "chat" });
     }
   }, [error, id, updateArtifactData]);
 
   // Hydrate from data on mount
   useEffect(() => {
-    const storedMessages = data?.messages;
+    const storedMessages = validatedData.messages;
     if (
       storedMessages &&
       Array.isArray(storedMessages) &&
       messages.length === 0
     ) {
-      hydrate(storedMessages as UIMessage[]);
+      hydrate(storedMessages as AssistantUIMessage[]);
     }
-  }, [data, messages.length, hydrate]);
+  }, [validatedData.messages, messages.length, hydrate]);
 
   // Sync back to data on change
   useEffect(() => {
     if (messages.length > 0) {
-      updateArtifactData(id, { messages });
+      updateArtifactData(id, { messages, type: "chat" });
     }
   }, [messages, id, updateArtifactData]);
 

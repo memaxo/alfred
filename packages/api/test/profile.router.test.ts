@@ -5,23 +5,53 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
+import {
+  recordMemoryUpdateMock,
+  resetAgentMocks,
+} from "./utils/agent-mock";
 
 setupTestEnv();
 mockPolicyAudit();
 
 const getProfileMock = vi.fn();
 const upsertProfileMock = vi.fn();
-const recordMemoryUpdateMock = vi.fn();
-
 mock.module("@alfred/db", () => ({
+  createDrizzleClient: vi.fn(),
+  createPgClient: vi.fn(),
+  createPgPool: vi.fn(),
+  db: {},
+  assistantRepo: {},
+  deployRepo: {},
+  evalRepo: {},
+  graphRepo: {},
+  linearRepo: {},
+  policyRepo: {},
+  ragRepo: {},
+  conversationRepo: {},
   userRepo: {
     getProfile: getProfileMock,
     upsertProfile: upsertProfileMock,
   },
+  workflowRepo: {},
+  assistantSchema: {},
+  deploySchema: {},
+  evalSchema: {},
+  graphSchema: {},
+  linearSchema: {},
+  policySchema: {},
+  ragSchema: {},
+  conversationSchema: {},
+  userSchema: {},
+  workflowSchema: {},
 }));
 
-mock.module("@alfred/agent", () => ({
-  recordMemoryUpdate: recordMemoryUpdateMock,
+mock.module("node-pty", () => ({
+  spawn: vi.fn(() => ({
+    on: vi.fn(),
+    kill: vi.fn(),
+    resize: vi.fn(),
+    write: vi.fn(),
+  })),
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -34,6 +64,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   resetAllMocks();
+  resetAgentMocks();
 });
 
 describe("profile router", () => {
@@ -89,6 +120,13 @@ describe("profile router", () => {
     it("throws PRECONDITION_FAILED when obligations unmet", async () => {
       const callerWithObligations = await createTestCaller({
         scopes: ["profile.write"],
+      });
+
+      const policyModule = await import("@alfred/policy");
+      const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
+      evaluateMock.mockResolvedValueOnce({
+        allow: true,
+        obligations: ["biometric_required"],
       });
 
       await expect(

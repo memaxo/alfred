@@ -86,7 +86,7 @@ export class AISDKAdapter {
 
       const validatedMessages = (await validateUIMessages({
         messages: options.messages,
-        tools: options.tools,
+        tools: options.tools as Parameters<typeof validateUIMessages>[0]["tools"],
       })) as UIMessage[];
 
       const result = streamText({

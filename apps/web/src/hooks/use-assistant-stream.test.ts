@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import type { UIMessage } from "@alfred/type/stream";
+import type { AssistantUIMessage } from "@alfred/agent";
 import { deriveActions } from "./use-assistant-stream";
 
 function createMessage(
-  parts: UIMessage["parts"],
+  parts: AssistantUIMessage["parts"],
   id = `msg-${Math.random().toString(36).slice(2)}`
-): UIMessage {
+): AssistantUIMessage {
   return {
     id,
     role: "assistant",
@@ -15,7 +15,7 @@ function createMessage(
 
 describe("deriveActions", () => {
   it("collects tool-call and tool-result pairs", () => {
-    const messages: UIMessage[] = [
+    const messages: AssistantUIMessage[] = [
       createMessage([
         {
           type: "tool-call",
@@ -44,7 +44,7 @@ describe("deriveActions", () => {
   });
 
   it("marks unresolved tool calls as running", () => {
-    const messages: UIMessage[] = [
+    const messages: AssistantUIMessage[] = [
       createMessage([
         {
           type: "tool-call",
@@ -66,7 +66,7 @@ describe("deriveActions", () => {
   });
 
   it("updates existing action entries with subsequent results", () => {
-    const messages: UIMessage[] = [
+    const messages: AssistantUIMessage[] = [
       createMessage([
         {
           type: "tool-call",

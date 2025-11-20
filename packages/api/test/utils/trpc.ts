@@ -17,16 +17,40 @@ type CreateCallerOptions = {
   roles?: string[];
   scopes?: string[];
   requestId?: string;
+  obligations?: string[];
 };
 
 /**
  * Creates a test tRPC caller with authenticated session.
  * Use this utility in all API router tests for consistent setup.
  */
-export function createTestCaller(options: CreateCallerOptions = {}) {
-  const userId = options.userId ?? "test-user";
-  const roles = options.roles ?? ["owner"];
-  const scopes = options.scopes ?? ["assistant.write", "assistant.stream"];
+type RuntimeBundle = {
+  userId: string | null;
+  roles: string[];
+  scopes: string[];
+  runtime: {
+    requestId: string;
+    receivedAt: Date;
+    method: string;
+    url: string;
+    ip: string | null;
+    forwardedFor: string[];
+    userAgent: string | null;
+    referer: string | null;
+  };
+  runtimeContext: RuntimeContext;
+};
+
+function createRuntimeBundle(options: {
+  userId: string | null;
+  roles?: string[];
+  scopes?: string[];
+  requestId?: string;
+}): RuntimeBundle {
+  const userId = options.userId;
+  const roles = options.roles ?? (userId ? ["owner"] : []);
+  const scopes =
+    options.scopes ?? (userId ? ["assistant.write", "assistant.stream"] : []);
   const requestId = options.requestId ?? `test-${Date.now()}`;
 
   const receivedAt = new Date();
@@ -53,24 +77,46 @@ export function createTestCaller(options: CreateCallerOptions = {}) {
     ["userScopes", scopes],
   ]);
 
-  // Dynamic import to avoid circular dependencies
-  return import("@alfred/api/routers/index").then((mod) =>
-    mod.appRouter.createCaller({
-      session: {
-        user: {
-          id: userId,
-          roles,
-          scopes,
-          email: `${userId}@test.local`,
-          name: "Test User",
-        },
-        session: { id: `sess-${requestId}` },
+  return { runtime, runtimeContext, userId, roles, scopes };
+}
+
+export async function createTestCaller(options: CreateCallerOptions = {}) {
+  const bundle = createRuntimeBundle({
+    userId: options.userId ?? "test-user",
+    roles: options.roles,
+    scopes: options.scopes,
+    requestId: options.requestId,
+  });
+
+  const mod = await import("@alfred/api/routers/index");
+  return mod.appRouter.createCaller({
+    session: {
+      user: {
+        id: bundle.userId ?? "test-user",
+        roles: bundle.roles,
+        scopes: bundle.scopes,
+        email: `${(bundle.userId ?? "test-user")}@test.local`,
+        name: "Test User",
       },
-      runtime,
-      runtimeContext,
-      policy: {
-        obligations: [],
-      },
-    } as Parameters<typeof mod.appRouter.createCaller>[0])
-  );
+      session: { id: `sess-${bundle.runtime.requestId}` },
+    },
+    runtime: bundle.runtime,
+    runtimeContext: bundle.runtimeContext,
+    policy: {
+      obligations: options.obligations ?? [],
+    },
+  } as Parameters<typeof mod.appRouter.createCaller>[0]);
+}
+
+export async function createUnauthedCaller() {
+  const bundle = createRuntimeBundle({
+    userId: null,
+  });
+  const mod = await import("@alfred/api/routers/index");
+  return mod.appRouter.createCaller({
+    session: null,
+    runtime: bundle.runtime,
+    runtimeContext: bundle.runtimeContext,
+    policy: { obligations: [] },
+  } as Parameters<typeof mod.appRouter.createCaller>[0]);
 }

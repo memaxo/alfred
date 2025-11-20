@@ -395,6 +395,93 @@ export const linearRouter = router({
         isExpired,
       };
     }),
+
+  updateIssue: authedProcedure
+    .use(requirePolicy("linear.updateIssue"))
+    .input(
+      z.object({
+        issueId: z.string(),
+        priority: z.number().optional(),
+        stateId: z.string().optional(),
+        assigneeId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const clientId = getClientId();
+      const installation = await getLinearByOAuth(clientId);
+
+      if (!installation || !installation.token) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "linear_not_connected",
+        });
+      }
+
+      const response = await fetch(LINEAR_GRAPHQL_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${installation.token}`,
+        },
+        body: JSON.stringify({
+          query: `mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+            issueUpdate(id: $id, input: $input) {
+              success
+              issue {
+                id
+                priority
+                state {
+                  id
+                  name
+                }
+                assignee {
+                  id
+                  name
+                }
+              }
+            }
+          }`,
+          variables: {
+            id: input.issueId,
+            input: {
+              priority: input.priority,
+              stateId: input.stateId,
+              assigneeId: input.assigneeId,
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "linear_api_request_failed",
+        });
+      }
+
+      const payload = (await response.json()) as {
+        data?: { issueUpdate?: { success: boolean; issue: unknown } };
+        errors?: unknown;
+      };
+
+      if (payload.errors) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "linear_update_failed",
+          cause: payload.errors,
+        });
+      }
+
+      return payload.data?.issueUpdate;
+    }),
 });
 
 export type LinearRouter = typeof linearRouter;

@@ -11,6 +11,19 @@ import {
 } from "@xyflow/react";
 import { create } from "zustand";
 import { getLayoutedElements } from "@/lib/layout";
+import type { z } from "zod";
+import {
+  getNodeDataSchema,
+  artifactNodeDataSchema,
+  chatNodeDataSchema,
+  codeNodeDataSchema,
+  noteNodeDataSchema,
+  orbNodeDataSchema,
+  reminderNodeDataSchema,
+  terminalNodeDataSchema,
+  ticketNodeDataSchema,
+  workflowNodeDataSchema,
+} from "./mindscape.schemas";
 
 export type ArtifactType =
   | "chat"
@@ -22,12 +35,48 @@ export type ArtifactType =
   | "preview"
   | "note"
   | "reminder"
-  | "ticket";
+  | "ticket"
+  | "code"
+  | "artifact"
+  | "orb";
 
-export type ArtifactData = Record<string, unknown> & {
-  label?: string;
-  type?: ArtifactType;
+/**
+ * Individual node data types inferred from Zod schemas.
+ */
+export type CodeNodeData = z.infer<typeof codeNodeDataSchema> & { type: "code" };
+export type ChatNodeData = z.infer<typeof chatNodeDataSchema> & { type: "chat" };
+export type WorkflowNodeData = z.infer<typeof workflowNodeDataSchema> & {
+  type: "workflow";
 };
+export type TicketNodeData = z.infer<typeof ticketNodeDataSchema> & {
+  type: "ticket";
+};
+export type ReminderNodeData = z.infer<typeof reminderNodeDataSchema> & {
+  type: "reminder";
+};
+export type NoteNodeData = z.infer<typeof noteNodeDataSchema> & { type: "note" };
+export type TerminalNodeData = z.infer<typeof terminalNodeDataSchema> & {
+  type: "terminal";
+};
+export type ArtifactNodeData = z.infer<typeof artifactNodeDataSchema> & {
+  type: "artifact";
+};
+export type OrbNodeData = z.infer<typeof orbNodeDataSchema> & { type: "orb" };
+
+/**
+ * Discriminated union of all artifact data types.
+ * The 'type' field determines which schema applies.
+ */
+export type ArtifactData =
+  | CodeNodeData
+  | ChatNodeData
+  | WorkflowNodeData
+  | TicketNodeData
+  | ReminderNodeData
+  | NoteNodeData
+  | TerminalNodeData
+  | ArtifactNodeData
+  | OrbNodeData;
 
 type MindscapeState = {
   nodes: Node<ArtifactData>[];
@@ -91,15 +140,40 @@ export const useMindscapeStore = create<MindscapeState>()(
         }));
       },
       updateArtifactData: (nodeId, data) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (!node) {
+          return;
+        }
+
+        // Determine node type from node.type or node.data.type
+        const nodeType = node.type || (node.data as ArtifactData).type;
+        const schema = getNodeDataSchema(nodeType);
+
+        // Merge existing data with new data
+        const mergedData = { ...node.data, ...data };
+
+        // Validate merged data (use partial to allow partial updates)
+        const result = schema.partial().safeParse(mergedData);
+
+        if (!result.success) {
+          // Log validation errors but don't crash (graceful degradation)
+          console.warn(
+            `Failed to validate node data for ${nodeId}:`,
+            result.error.errors
+          );
+          return;
+        }
+
+        // Update only if validation succeeds
         set((state) => ({
-          nodes: state.nodes.map((node) => {
-            if (node.id === nodeId) {
+          nodes: state.nodes.map((n) => {
+            if (n.id === nodeId) {
               return {
-                ...node,
-                data: { ...node.data, ...data },
+                ...n,
+                data: { ...n.data, ...result.data } as ArtifactData,
               };
             }
-            return node;
+            return n;
           }),
         }));
       },

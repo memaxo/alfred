@@ -1,8 +1,14 @@
 import { useMindscapeStore } from "@/store/mindscape";
 import { useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
-import { trpc } from "@/utils/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+import { trpc, type TRPCAppRouter } from "@/utils/trpc";
 import { useShallow } from "zustand/react/shallow";
+
+type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+type NoteListItem = RouterOutputs["note"]["list"][number];
+type DueReminderItem = RouterOutputs["remind"]["due"][number];
+type GraphEdge = RouterOutputs["graph"]["getEdges"][number];
 
 export function MindscapeInitializer() {
   const { addArtifact, autoLayout, nodeIds } = useMindscapeStore(
@@ -13,11 +19,8 @@ export function MindscapeInitializer() {
     }))
   );
 
-  // @ts-ignore - trpc type inference issue
   const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
-  // @ts-ignore - trpc type inference issue
   const { data: reminders } = trpc.remind.due.useQuery({});
-  // @ts-ignore - trpc type inference issue
   const { data: edges } = trpc.graph.getEdges.useQuery(
     { nodeIds },
     { enabled: nodeIds.length > 0, refetchInterval: 5000 }
@@ -61,7 +64,7 @@ export function MindscapeInitializer() {
   useEffect(() => {
     if (!notes) return;
 
-    notes.forEach((note: any, index: number) => {
+    notes.forEach((note: NoteListItem, index: number) => {
       const noteNodeId = `note-${note.id}`;
       if (nodeIds.includes(noteNodeId)) return;
 
@@ -83,7 +86,7 @@ export function MindscapeInitializer() {
   useEffect(() => {
     if (!reminders) return;
 
-    reminders.forEach((reminder: any, index: number) => {
+    reminders.forEach((reminder: DueReminderItem, index: number) => {
       const reminderNodeId = `reminder-${reminder.id}`;
       if (nodeIds.includes(reminderNodeId)) return;
 
@@ -104,7 +107,7 @@ export function MindscapeInitializer() {
   useEffect(() => {
     if (!edges) return;
 
-    const newEdges = edges.map((edge: any) => {
+    const newEdges = edges.map((edge: GraphEdge) => {
       // Helper to find the correct node ID for a given DB ID
       const findNodeId = (dbId: string) => {
         // Try to find a node that ends with this DB ID

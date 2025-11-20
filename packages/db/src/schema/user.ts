@@ -18,7 +18,11 @@ import {
 // TODO: [Phase 3] Add proper indexes for performance
 // TODO: [Phase 8] Add vector indexes for facts (HNSW)
 
-export const VECTOR_DIM = 1536;
+// Import embedding dimension from embed package (single source of truth)
+// KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions
+import { EMBEDDING_DIM } from "@alfred/embed";
+
+export const VECTOR_DIM = EMBEDDING_DIM;
 
 /**
  * User profiles (extends Better Auth users)

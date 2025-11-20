@@ -18,7 +18,7 @@ ALTER TABLE rag_chunks
 -- Rebuild HNSW index with optimized parameters for 1024 dimensions
 -- m=16: max connections per layer (good balance for 1024 dims)
 -- ef_construction=100: quality during index build (higher = better but slower)
-CREATE INDEX rag_chunks_embedding_idx ON rag_chunks 
+CREATE INDEX IF NOT EXISTS rag_chunks_embedding_idx ON rag_chunks 
   USING hnsw (embedding vector_cosine_ops)
   WITH (m = 16, ef_construction = 100);
 

@@ -9,6 +9,7 @@
  * - Fast failure: clear error states
  */
 
+import type { AssistantUIMessage } from "@alfred/agent";
 import { Chat } from "@alfred/ui";
 import { Virtuoso } from "react-virtuoso";
 import { useChatLogic } from "@/hooks/use-chat-logic";
@@ -23,9 +24,15 @@ type ChatContainerProps = {
   agent: "assistant" | "orchestrator";
   thread?: string;
   resource?: string;
+  initialMessages?: AssistantUIMessage[];
+  initialConversationId?: string | null;
 };
 
-export function ChatContainer({ agent }: ChatContainerProps) {
+export function ChatContainer({
+  agent,
+  initialMessages,
+  initialConversationId,
+}: ChatContainerProps) {
   const {
     currentAgent,
     messages,
@@ -39,7 +46,11 @@ export function ChatContainer({ agent }: ChatContainerProps) {
     handleAgentChange,
     toggleVoice,
     clear,
-  } = useChatLogic({ initialAgent: agent });
+  } = useChatLogic({
+    initialAgent: agent,
+    initialMessages,
+    initialConversationId,
+  });
 
   const showActionsPanel = actions.length > 0;
   return (

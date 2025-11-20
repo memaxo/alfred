@@ -9,7 +9,7 @@ import { logger } from "../utils/logger";
 // In a distributed system, this would need to be redis/etc, but for local/single-instance it's fine.
 const sessions = new Map<string, pty.IPty>();
 
-export const terminalRouter = router({
+export const terminalRouter: ReturnType<typeof router> = router({
   createSession: authedProcedure
     .input(
       z.object({

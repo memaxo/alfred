@@ -11,29 +11,42 @@ import {
   type ReactFlowProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import type { NodeProps } from "@xyflow/react";
+import type React from "react";
 import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useMindscapeStore } from "@/store/mindscape";
 import { MindscapeInitializer } from "./initializer";
 import { ArtifactNode } from "./nodes/artifact-node";
 import { ChatNode } from "./nodes/chat-node";
+import { CodeNode } from "./nodes/code-node";
+import { NodeErrorBoundary } from "./nodes/error-boundary";
 import { NoteNode } from "./nodes/note-node";
 import { OrbNode } from "./nodes/orb-node";
 import { ReminderNode } from "./nodes/reminder-node";
-import { TicketNode } from "./nodes/ticket-node";
 import { TerminalNode } from "./nodes/terminal-node";
+import { TicketNode } from "./nodes/ticket-node";
 import { WorkflowNode } from "./nodes/workflow-node";
 import { WorkflowManager } from "./workflow-manager";
 
+// Wrap each node component with error boundary
+const wrapWithErrorBoundary = (Component: React.ComponentType<NodeProps>) =>
+  (props: NodeProps) => (
+    <NodeErrorBoundary nodeId={props.id}>
+      <Component {...props} />
+    </NodeErrorBoundary>
+  );
+
 const nodeTypes: NodeTypes = {
-  orb: OrbNode,
-  artifact: ArtifactNode,
-  chat: ChatNode,
-  workflow: WorkflowNode,
-  terminal: TerminalNode,
-  note: NoteNode,
-  reminder: ReminderNode,
-  ticket: TicketNode,
+  orb: wrapWithErrorBoundary(OrbNode),
+  artifact: wrapWithErrorBoundary(ArtifactNode),
+  chat: wrapWithErrorBoundary(ChatNode),
+  workflow: wrapWithErrorBoundary(WorkflowNode),
+  terminal: wrapWithErrorBoundary(TerminalNode),
+  note: wrapWithErrorBoundary(NoteNode),
+  reminder: wrapWithErrorBoundary(ReminderNode),
+  ticket: wrapWithErrorBoundary(TicketNode),
+  code: wrapWithErrorBoundary(CodeNode),
 };
 
 type MindscapeCanvasProps = Omit<

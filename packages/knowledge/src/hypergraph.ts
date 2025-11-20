@@ -3,14 +3,16 @@
  * Zero-allocation design with content-addressed nodes
  */
 
+import { IntervalTree } from "./indices/interval-tree.js";
+
 // Types
 export type NodeId = string & { readonly _: unique symbol };
-type Confidence = number & {
+export type Confidence = number & {
   readonly _: unique symbol;
   readonly min: 0;
   readonly max: 1;
 };
-type Timestamp = number & { readonly _: unique symbol };
+export type Timestamp = number & { readonly _: unique symbol };
 
 export type Knowledge =
   | {
@@ -31,11 +33,11 @@ export type Knowledge =
 
 // Brand constructors with validation
 const nodeId = (s: string): NodeId => s as NodeId;
-const confidence = (n: number): Confidence => {
+export const toConfidence = (n: number): Confidence => {
   if (n < 0 || n > 1) throw new Error("Invalid confidence");
   return n as Confidence;
 };
-const timestamp = (n: number): Timestamp => n as Timestamp;
+export const timestamp = (n: number): Timestamp => n as Timestamp;
 
 export const nodeFromHash = (hash: string): NodeId => nodeId(hash);
 
@@ -86,36 +88,20 @@ class HAMT<V> {
     return this.root.get(bucket)?.get(key);
   }
 
+  *entries(): IterableIterator<[string, V]> {
+    for (const bucket of this.root.values()) {
+      for (const entry of bucket.entries()) {
+        yield entry;
+      }
+    }
+  }
+
   private hash(s: string): number {
     let h = 0;
     for (let i = 0; i < s.length; i++) {
       h = ((h << 5) - h + s.charCodeAt(i)) | 0;
     }
     return h;
-  }
-}
-
-// IntervalTree for temporal queries
-class IntervalTree {
-  private readonly intervals: Array<[Timestamp, Timestamp, NodeId]> = [];
-
-  insert(start: Timestamp, end: Timestamp, id: NodeId): void {
-    // TODO: Implement proper interval tree with balanced structure
-    // Current implementation sorts on every insert (O(n log n))
-    // Should use augmented red-black tree for O(log n) operations
-    this.intervals.push([start, end, id]);
-    this.intervals.sort((a, b) => a[0] - b[0]);
-  }
-
-  query(ts: Timestamp): NodeId[] {
-    const result: NodeId[] = [];
-    for (const [start, end, id] of this.intervals) {
-      if (start <= ts && ts <= end) {
-        result.push(id);
-      }
-      if (start > ts) break;
-    }
-    return result;
   }
 }
 
@@ -178,34 +164,70 @@ export class Hypergraph {
   private readonly spatial = new RTree();
   private readonly ordered = new BTree();
   private readonly edges = new Map<NodeId, Set<NodeId>>();
+  private readonly inbound = new Map<NodeId, Set<NodeId>>();
+  private readonly edgesByKind = new Map<string, Map<NodeId, Set<NodeId>>>();
+  private readonly inboundByKind = new Map<string, Map<NodeId, Set<NodeId>>>();
+  private readonly dirty = new Set<NodeId>();
+  private readonly embeddings = new Map<NodeId, Float32Array>();
+  private nodeCount = 0;
+  private modCount = 0;
 
   add(k: Knowledge): NodeId {
     const id = this.contentAddress(k);
+    const nodeRef = nodeId(id);
+    const existing = this.nodes.get(id);
     this.nodes.set(id, k);
 
-    // Index by type
-    switch (k._) {
-      case "fact":
-        this.temporal.insert(k.ts, k.ts, nodeId(id));
-        this.ordered.insert(k.content, nodeId(id));
-        // TODO: Add fact embeddings to spatial index
-        // Should call embed() function and index in RTree
-        break;
-      case "relation":
-        if (!this.edges.has(k.from)) this.edges.set(k.from, new Set());
-        this.edges.get(k.from)!.add(k.to);
-        break;
-      case "insight":
-        // TODO: Index insights by confidence level
-        // TODO: Add semantic embedding to spatial index
-        break;
-      case "pattern":
-        // TODO: Index patterns by accuracy threshold
-        // TODO: Maintain pattern match cache
-        break;
+    const isNew = !existing;
+
+    if (isNew) {
+      // Index by type
+      switch (k._) {
+        case "fact":
+          this.temporal.insert({ start: k.ts, end: k.ts, id: nodeRef });
+          this.ordered.insert(k.content, nodeRef);
+          // TODO: Add fact embeddings to spatial index
+          // Should call embed() function and index in RTree
+          break;
+        case "relation":
+          if (!this.edges.has(k.from)) this.edges.set(k.from, new Set());
+          this.edges.get(k.from)!.add(k.to);
+
+          if (!this.inbound.has(k.to)) this.inbound.set(k.to, new Set());
+          this.inbound.get(k.to)!.add(k.from);
+
+          const outboundKind = this.ensureKindBucket(
+            this.edgesByKind,
+            k.kind,
+            k.from
+          );
+          outboundKind.add(k.to);
+
+          const inboundKind = this.ensureKindBucket(
+            this.inboundByKind,
+            k.kind,
+            k.to
+          );
+          inboundKind.add(k.from);
+          break;
+        case "insight":
+          // TODO: Index insights by confidence level
+          // TODO: Add semantic embedding to spatial index
+          break;
+        case "pattern":
+          // TODO: Index patterns by accuracy threshold
+          // TODO: Maintain pattern match cache
+          break;
+      }
     }
 
-    return nodeId(id);
+    this.dirty.add(nodeRef);
+    if (isNew) {
+      this.nodeCount++;
+    }
+    this.modCount++;
+
+    return nodeRef;
   }
 
   get(id: NodeId): Knowledge | undefined {
@@ -219,11 +241,76 @@ export class Hypergraph {
 
   // Temporal queries
   between(start: Timestamp, end: Timestamp): NodeId[] {
-    // TODO: Implement actual temporal range query
-    // Should query IntervalTree for all intervals overlapping [start, end]
-    // Current implementation returns empty array
-    const ids: NodeId[] = [];
-    return ids;
+    let rangeStart = start;
+    let rangeEnd = end;
+    if (rangeEnd < rangeStart) {
+      [rangeStart, rangeEnd] = [rangeEnd, rangeStart];
+    }
+    return this.temporal.queryRange(rangeStart, rangeEnd);
+  }
+
+  predecessors(id: NodeId): NodeId[] {
+    return Array.from(this.inbound.get(id) ?? []);
+  }
+
+  neighborsByKind(id: NodeId, kind?: string): NodeId[] {
+    if (!kind) {
+      return this.neighbors(id);
+    }
+    const bucket = this.edgesByKind.get(kind)?.get(id);
+    return bucket ? Array.from(bucket) : [];
+  }
+
+  predecessorsByKind(id: NodeId, kind?: string): NodeId[] {
+    if (!kind) {
+      return this.predecessors(id);
+    }
+    const bucket = this.inboundByKind.get(kind)?.get(id);
+    return bucket ? Array.from(bucket) : [];
+  }
+
+  *entries(): IterableIterator<[NodeId, Knowledge]> {
+    for (const [key, value] of this.nodes.entries()) {
+      yield [nodeId(key), value];
+    }
+  }
+
+  *ids(): IterableIterator<NodeId> {
+    for (const [key] of this.nodes.entries()) {
+      yield nodeId(key);
+    }
+  }
+
+  size(): number {
+    return this.nodeCount;
+  }
+
+  version(): number {
+    return this.modCount;
+  }
+
+  setEmbedding(id: NodeId, vector: Float32Array): void {
+    this.embeddings.set(id, vector);
+    this.dirty.add(id);
+    this.modCount++;
+  }
+
+  getEmbedding(id: NodeId): Float32Array | undefined {
+    return this.embeddings.get(id);
+  }
+
+  getDirty(): NodeId[] {
+    return Array.from(this.dirty);
+  }
+
+  markClean(ids?: NodeId[]): void {
+    if (ids && ids.length > 0) {
+      for (const id of ids) {
+        this.dirty.delete(id);
+      }
+    } else {
+      this.dirty.clear();
+    }
   }
 
   // Content queries
@@ -234,6 +321,24 @@ export class Hypergraph {
 
   private contentAddress(k: Knowledge): string {
     return knowledgeHash(k);
+  }
+
+  private ensureKindBucket(
+    map: Map<string, Map<NodeId, Set<NodeId>>>,
+    kind: string,
+    node: NodeId
+  ): Set<NodeId> {
+    let kindMap = map.get(kind);
+    if (!kindMap) {
+      kindMap = new Map();
+      map.set(kind, kindMap);
+    }
+    let bucket = kindMap.get(node);
+    if (!bucket) {
+      bucket = new Set();
+      kindMap.set(node, bucket);
+    }
+    return bucket;
   }
 }
 
@@ -247,7 +352,7 @@ export const fact = (
 ): Knowledge => ({
   _: "fact",
   content,
-  confidence: confidence(conf),
+  confidence: toConfidence(conf),
   source,
   ts: timestamp(Date.now()),
 });
@@ -273,7 +378,7 @@ export const insight = (
   _: "insight",
   derived,
   conclusion,
-  confidence: confidence(conf),
+  confidence: toConfidence(conf),
 });
 
 export const pattern = (

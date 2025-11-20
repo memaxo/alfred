@@ -1,6 +1,13 @@
-import { describe, expect, it, vi } from "bun:test";
+import { describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
-import { validateConversationMessages } from "../src/scheduler/preference-inference";
+
+mock.module("@alfred/agent", () => ({
+  buildTools: () => ({}),
+}));
+
+const { validateConversationMessages } = await import(
+  "../src/scheduler/preference-inference"
+);
 
 describe("validateConversationMessages", () => {
   it("returns validated messages for well-formed history", async () => {
