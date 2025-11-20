@@ -290,6 +290,22 @@ Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, e
 - **Type Safety**: End-to-end TypeScript, no `any` types
 - **Testing**: Vitest for all packages, integration tests for routers
 
+## Branching Strategy
+
+The repository uses three primary branches:
+
+- **`main`**: Development integration branch. All feature branches merge here first.
+- **`dev`**: Development/staging environment branch. Used for testing integrations before production.
+- **`prod`**: Production branch. Only updated via merges from `dev` after thorough testing.
+
+**Workflow:**
+1. Create feature branches from `main`
+2. Merge feature branches to `main` via pull requests
+3. Periodically merge `main` → `dev` for staging deployments
+4. Merge `dev` → `prod` for production releases after validation
+
+CI runs on all three branches (`main`, `dev`, `prod`) to ensure code quality across environments.
+
 ## Workflow Tips
 
 - Use feature branches off `main`

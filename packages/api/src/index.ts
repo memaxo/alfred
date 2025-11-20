@@ -1,18 +1,7 @@
-import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
-import { startCompressionWorker } from "@alfred/agent/orchestrator/compression-worker";
-import { initializeVoicePools } from "./voice/pools";
+// Auto-initialize API services when module is imported (backward compatibility)
+import { initApiServices } from "./init";
 
-const compressionConfig = compressionWorkerOverrides();
-if (compressionConfig.enabled) {
-  startCompressionWorker(compressionConfig);
-}
-
-// Initialize voice pools if using local models
-if (process.env.VOICE_PROVIDER === "local") {
-  initializeVoicePools().catch((error) => {
-    console.error("[voice] Failed to initialize voice pools:", error);
-  });
-}
+initApiServices();
 
 export type { AppRouter } from "./routers/index";
 
@@ -24,3 +13,6 @@ export {
   router,
   t,
 } from "./trpc";
+
+// Export initialization functions for explicit control
+export { initApiServices, shutdownApiServices } from "./init";

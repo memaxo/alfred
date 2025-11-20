@@ -22,6 +22,11 @@ export function getVoicePools(): {
 }
 
 export async function initializeVoicePools(): Promise<void> {
+  if (sttPool || ttsPool) {
+    console.warn("[voice] Voice pools already initialized, skipping re-initialization");
+    return;
+  }
+
   const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
   
   if (voiceProvider !== "local") {
@@ -54,15 +59,29 @@ export async function initializeVoicePools(): Promise<void> {
     voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium",
   };
 
-  sttPool = new STTPool(sttConfig, sttPoolSize);
-  ttsPool = new TTSPool(ttsConfig, ttsPoolSize);
+  try {
+    sttPool = new STTPool(sttConfig, sttPoolSize);
+    ttsPool = new TTSPool(ttsConfig, ttsPoolSize);
 
-  await sttPool.initialize();
-  await ttsPool.initialize();
+    await sttPool.initialize();
+    await ttsPool.initialize();
 
-  sessionManager = new VoiceSessionManager(sttPool, ttsPool);
+    sessionManager = new VoiceSessionManager(sttPool, ttsPool);
 
-  console.log("[voice] Voice pools initialized");
+    console.log("[voice] Voice pools initialized");
+  } catch (error) {
+    console.error("[voice] Failed to initialize voice pools:", error);
+    // Clean up partial initialization
+    if (sttPool) {
+      await sttPool.shutdown().catch(console.error);
+      sttPool = null;
+    }
+    if (ttsPool) {
+      await ttsPool.shutdown().catch(console.error);
+      ttsPool = null;
+    }
+    throw error;
+  }
 }
 
 export async function shutdownVoicePools(): Promise<void> {
