@@ -9,6 +9,7 @@ import {
   type NodeId,
   type Timestamp,
 } from "./hypergraph.js";
+import { measureAsync, measureSync } from "./metrics.js";
 
 export type PersistFn = (
   resource: string,
@@ -35,20 +36,25 @@ export type HypergraphLoader = {
   loadRelations(resource: string): Promise<RelationRecord[]>;
 };
 
+const PERSIST_BUDGET_MS = 25;
+const LOAD_BUDGET_MS = 30;
+
 export function extractEntries(
   graph: Hypergraph,
   opts?: { onlyDirty?: boolean }
 ): KnowledgeEntry[] {
-  const ids = opts?.onlyDirty ? graph.getDirty() : Array.from(graph.ids());
-  const entries: KnowledgeEntry[] = [];
-  for (const id of ids) {
-    const knowledge = graph.get(id);
-    if (!knowledge) {
-      continue;
+  return measureSync("knowledge.persist.extract", 5, () => {
+    const ids = opts?.onlyDirty ? graph.getDirty() : Array.from(graph.ids());
+    const entries: KnowledgeEntry[] = [];
+    for (const id of ids) {
+      const knowledge = graph.get(id);
+      if (!knowledge) {
+        continue;
+      }
+      entries.push({ hash: knowledgeHash(knowledge), data: knowledge });
     }
-    entries.push({ hash: knowledgeHash(knowledge), data: knowledge });
-  }
-  return entries;
+    return entries;
+  });
 }
 
 export async function persistHypergraph(
@@ -56,13 +62,15 @@ export async function persistHypergraph(
   resource: string,
   persist: PersistFn
 ): Promise<void> {
-  const entries = extractEntries(graph, { onlyDirty: true });
-  if (entries.length === 0) {
-    return;
-  }
-  await persist(resource, entries);
-  const ids = entries.map((entry) => nodeFromHash(entry.hash));
-  graph.markClean(ids);
+  await measureAsync("knowledge.persist.flush", PERSIST_BUDGET_MS, async () => {
+    const entries = extractEntries(graph, { onlyDirty: true });
+    if (entries.length === 0) {
+      return;
+    }
+    await persist(resource, entries);
+    const ids = entries.map((entry) => nodeFromHash(entry.hash));
+    graph.markClean(ids);
+  });
 }
 
 export async function loadHypergraph(
@@ -70,26 +78,28 @@ export async function loadHypergraph(
   graph: Hypergraph,
   loader: HypergraphLoader
 ): Promise<void> {
-  const [nodes, relations] = await Promise.all([
-    loader.loadNodes(resource),
-    loader.loadRelations(resource),
-  ]);
+  await measureAsync("knowledge.persist.load", LOAD_BUDGET_MS, async () => {
+    const [nodes, relations] = await Promise.all([
+      loader.loadNodes(resource),
+      loader.loadRelations(resource),
+    ]);
 
-  for (const node of nodes) {
-    const knowledge = deserializeNode(node);
-    if (knowledge) {
-      graph.add(knowledge);
+    for (const node of nodes) {
+      const knowledge = deserializeNode(node);
+      if (knowledge) {
+        graph.add(knowledge);
+      }
     }
-  }
 
-  for (const relation of relations) {
-    const knowledge = deserializeRelation(relation);
-    if (knowledge) {
-      graph.add(knowledge);
+    for (const relation of relations) {
+      const knowledge = deserializeRelation(relation);
+      if (knowledge) {
+        graph.add(knowledge);
+      }
     }
-  }
 
-  graph.markClean();
+    graph.markClean();
+  });
 }
 
 function deserializeNode(record: NodeRecord): Knowledge | null {

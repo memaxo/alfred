@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import type { UIMessage } from "@alfred/type/stream";
 
-import { db } from "../index";
+import { db, dbDriver } from "../index";
 import { conversations, messages } from "../schema/conversation";
 
 export type ConversationRow = typeof conversations.$inferSelect;
@@ -9,6 +9,11 @@ export type MessageRow = typeof messages.$inferSelect;
 
 const DEFAULT_LIMIT = 100;
 const MAX_PREPARED_LIMIT = 200;
+const usePreparedStatements = dbDriver === "postgres";
+
+type PreparedQuery<TParams, TResult> = {
+  execute(params: TParams): Promise<TResult>;
+};
 
 const conversationSelection = {
   id: conversations.id,
@@ -29,32 +34,78 @@ const messageSelection = {
   created: messages.created,
 };
 
-const getConversationsStmt = db
-  .select(conversationSelection)
-  .from(conversations)
-  .where(eq(conversations.userId, sql.placeholder("userId")))
-  .orderBy(desc(conversations.updated))
-  .limit(MAX_PREPARED_LIMIT)
-  .prepare("get_user_conversations");
+const getConversationsStmt: PreparedQuery<
+  { userId: string },
+  ConversationRow[]
+> = usePreparedStatements
+  ? (db
+      .select(conversationSelection)
+      .from(conversations)
+      .where(eq(conversations.userId, sql.placeholder("userId")))
+      .orderBy(desc(conversations.updated))
+      .limit(MAX_PREPARED_LIMIT)
+      .prepare("get_user_conversations") as PreparedQuery<
+      { userId: string },
+      ConversationRow[]
+    >)
+  : {
+      execute: async ({ userId }) =>
+        db
+          .select(conversationSelection)
+          .from(conversations)
+          .where(eq(conversations.userId, userId))
+          .orderBy(desc(conversations.updated))
+          .limit(MAX_PREPARED_LIMIT),
+    };
 
-const getMessagesStmt = db
-  .select(messageSelection)
-  .from(messages)
-  .where(eq(messages.conversationId, sql.placeholder("conversationId")))
-  .orderBy(messages.created)
-  .prepare("get_conversation_messages");
+const getMessagesStmt: PreparedQuery<
+  { conversationId: string },
+  MessageRow[]
+> = usePreparedStatements
+  ? (db
+      .select(messageSelection)
+      .from(messages)
+      .where(eq(messages.conversationId, sql.placeholder("conversationId")))
+      .orderBy(messages.created)
+      .prepare("get_conversation_messages") as PreparedQuery<
+      { conversationId: string },
+      MessageRow[]
+    >)
+  : {
+      execute: async ({ conversationId }) =>
+        db
+          .select(messageSelection)
+          .from(messages)
+          .where(eq(messages.conversationId, conversationId))
+          .orderBy(messages.created),
+    };
 
-const getMessageStmt = db
-  .select(messageSelection)
-  .from(messages)
-  .where(
-    and(
-      eq(messages.id, sql.placeholder("messageId")),
-      eq(messages.userId, sql.placeholder("userId"))
-    )
-  )
-  .limit(1)
-  .prepare("get_message_with_ownership");
+const getMessageStmt: PreparedQuery<
+  { messageId: string; userId: string },
+  MessageRow[]
+> = usePreparedStatements
+  ? (db
+      .select(messageSelection)
+      .from(messages)
+      .where(
+        and(
+          eq(messages.id, sql.placeholder("messageId")),
+          eq(messages.userId, sql.placeholder("userId"))
+        )
+      )
+      .limit(1)
+      .prepare("get_message_with_ownership") as PreparedQuery<
+      { messageId: string; userId: string },
+      MessageRow[]
+    >)
+  : {
+      execute: async ({ messageId, userId }) =>
+        db
+          .select(messageSelection)
+          .from(messages)
+          .where(and(eq(messages.id, messageId), eq(messages.userId, userId)))
+          .limit(1),
+    };
 
 export async function createConversation(
   userId: string,

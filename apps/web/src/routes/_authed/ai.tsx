@@ -1,12 +1,13 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
+import { preferenceHistoryPrunedTotal } from "@alfred/api/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { validateUIMessages } from "ai";
 import { ChatContainer } from "@/components/chat-container";
 import { RouteError } from "@/components/route-error";
-import { limitUiMessages } from "../api/stream-handler";
+import { limitUiMessages } from "@alfred/type/history";
 
 const loadAssistantConversation = createServerFn({ method: "GET" }).handler(
   async ({ request }): Promise<{
@@ -42,6 +43,12 @@ const loadAssistantConversation = createServerFn({ method: "GET" }).handler(
       }
 
       const limited = limitUiMessages(rawMessages);
+      if (rawMessages.length > limited.length) {
+        preferenceHistoryPrunedTotal.inc(
+          { source: "assistant_loader" },
+          rawMessages.length - limited.length
+        );
+      }
       const validated = (await validateUIMessages({
         messages: limited,
       })) as AssistantUIMessage[];

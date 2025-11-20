@@ -1,12 +1,8 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
 
-mock.module("@alfred/agent", () => ({
-  getModelId: () => "mock-model",
-}));
-
-const { pruneMessagesForStream } = await import("../stream-handler");
+const { pruneMessagesForStream } = await import("../history");
 
 function createTextMessage(id: number): UIMessage {
   return {
@@ -69,5 +65,21 @@ describe("pruneMessagesForStream", () => {
     const { uiMessages } = pruneMessagesForStream(messages);
     const latest = uiMessages.at(-1);
     expect(latest?.parts[0]?.type).toBe("tool-result");
+  });
+
+  it("keeps the newest tool chain even when it would be pruned", () => {
+    const filler = Array.from(
+      { length: MAX_HISTORY_MESSAGES + 15 },
+      (_, index) => createTextMessage(index + 500)
+    );
+    const toolCall = createToolMessage("tool-call");
+    const toolResult = createToolMessage("tool-result");
+    const messages: UIMessage[] = [toolCall, toolResult, ...filler];
+
+    const { uiMessages } = pruneMessagesForStream(messages);
+
+    expect(uiMessages).toHaveLength(MAX_HISTORY_MESSAGES);
+    expect(uiMessages[0]?.id).toBe(toolCall.id);
+    expect(uiMessages[1]?.id).toBe(toolResult.id);
   });
 });

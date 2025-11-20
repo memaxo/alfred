@@ -198,10 +198,42 @@ export const useMindscapeStore = create<MindscapeState>()(
     {
       name: "mindscape-storage",
       partialize: (state) => ({
-        nodes: state.nodes,
+        nodes: state.nodes.map(sanitizeNodeForPersist),
         edges: state.edges,
         isSpaceMode: state.isSpaceMode,
+        focusedNodeId: state.focusedNodeId,
       }),
     }
   )
 );
+
+function sanitizeNodeForPersist(node: Node<ArtifactData>): Node<ArtifactData> {
+  const sanitizedData = sanitizeNodeData(node);
+  return {
+    id: node.id,
+    type: node.type,
+    position: node.position,
+    positionAbsolute: node.positionAbsolute,
+    dragging: false,
+    data: sanitizedData,
+    draggable: node.draggable,
+    height: node.height,
+    width: node.width,
+    selectable: node.selectable,
+  } as Node<ArtifactData>;
+}
+
+function sanitizeNodeData(node: Node<ArtifactData>): ArtifactData {
+  const data = (node.data ?? ({ label: node.id } as ArtifactData)) as ArtifactData;
+
+  if (
+    node.type === "chat" &&
+    "messages" in data &&
+    Array.isArray((data as ChatNodeData).messages)
+  ) {
+    const trimmed = (data as ChatNodeData).messages?.slice(-10);
+    return { ...data, messages: trimmed } as ArtifactData;
+  }
+
+  return data;
+}

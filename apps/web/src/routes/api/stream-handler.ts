@@ -2,19 +2,18 @@ import { getModelId } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
+import { preferenceHistoryPrunedTotal } from "@alfred/api/metrics";
+import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { logger } from "@alfred/api/utils/logger";
-import { clampUiMessages } from "@alfred/type/history";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import {
   consumeStream,
-  convertToModelMessages,
   generateId,
-  pruneMessages,
   streamText,
-  type ModelMessage,
   type UIMessage,
 } from "ai";
 import { z } from "zod";
+import { pruneMessagesForStream } from "./history";
 
 const requestSchema = z
   .object({
@@ -29,26 +28,6 @@ type AgentDefaults = Pick<
   "model" | "tools" | "stopWhen" | "prepareStep"
 >;
 type GetDefaultsFn = () => AgentDefaults;
-
-export function pruneMessagesForStream(messages: UIMessage[]): {
-  uiMessages: UIMessage[];
-  modelMessages: ModelMessage[];
-  dropped: number;
-} {
-  const trimmed = clampUiMessages(messages);
-  const modelMessages = convertToModelMessages(trimmed);
-  const pruned = pruneMessages({
-    messages: modelMessages,
-    reasoning: "before-last-message",
-    toolCalls: "before-last-2-messages",
-    emptyMessages: "remove",
-  });
-  return {
-    uiMessages: trimmed,
-    modelMessages: pruned,
-    dropped: messages.length - trimmed.length,
-  };
-}
 
 export async function handleStreamRequest(
   request: Request,
@@ -91,13 +70,21 @@ export async function handleStreamRequest(
       conversationId = conversation.id;
     }
 
+    const scheduleRefresh = (reason: string, persisted: number) => {
+      if (!userId || persisted === 0) {
+        return;
+      }
+      triggerPreferenceRefresh(userId, { reason });
+    };
+
     if (userId && conversationId) {
-      await persistMessages({
+      const persisted = await persistMessages({
         conversationId,
         userId,
         messages,
         existingMessageIds: persistedMessageIds,
       });
+      scheduleRefresh(`${errorPrefix}_history_seed`, persisted);
     }
 
     let preferencePrompt: string | undefined;
@@ -123,6 +110,7 @@ export async function handleStreamRequest(
       pruneMessagesForStream(messages);
 
     if (dropped > 0) {
+      preferenceHistoryPrunedTotal.inc({ source: errorPrefix }, dropped);
       logger.info(`${errorPrefix}_history_pruned`, {
         dropped,
         kept: preparedUiMessages.length,
@@ -184,12 +172,13 @@ export async function handleStreamRequest(
           });
         }
 
-        await persistMessages({
+        const persisted = await persistMessages({
           conversationId,
           userId,
           messages: streamedMessages,
           existingMessageIds: persistedMessageIds,
         });
+        scheduleRefresh(`${errorPrefix}_stream_complete`, persisted);
       },
     });
 
@@ -230,13 +219,15 @@ async function persistMessages({
   conversationId,
   messages,
   existingMessageIds,
-}: PersistPayload) {
+}: PersistPayload): Promise<number> {
+  let persisted = 0;
   for (const message of messages) {
     if (!message.id || existingMessageIds.has(message.id)) {
       continue;
     }
     try {
       await conversationRepo.createMessage(userId, conversationId, message);
+      persisted += 1;
     } catch (error) {
       logger.warn("conversation_message_persist_failed", {
         conversationId,
@@ -246,4 +237,5 @@ async function persistMessages({
     }
     existingMessageIds.add(message.id);
   }
+  return persisted;
 }

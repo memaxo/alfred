@@ -4,7 +4,7 @@
  */
 
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { db } from "../index";
+import { db, dbDriver } from "../index";
 import {
   autonomy,
   events,
@@ -33,20 +33,49 @@ function sanitizeInsert<T extends Record<string, unknown>>(input: Partial<T>) {
   return copy as Partial<T>;
 }
 
-const getPreferencesStmt = db
-  .select({
-    id: preferences.id,
-    userId: preferences.userId,
-    key: preferences.key,
-    value: preferences.value,
-    confidence: preferences.confidence,
-    source: preferences.source,
-    created: preferences.created,
-    updated: preferences.updated,
-  })
-  .from(preferences)
-  .where(eq(preferences.userId, sql.placeholder("userId")))
-  .prepare("get_user_preferences");
+const usePreparedStatements = dbDriver === "postgres";
+
+type PreparedQuery<TParams, TResult> = {
+  execute(params: TParams): Promise<TResult>;
+};
+
+const getPreferencesStmt: PreparedQuery<
+  { userId: string },
+  PreferenceRow[]
+> = usePreparedStatements
+  ? (db
+      .select({
+        id: preferences.id,
+        userId: preferences.userId,
+        key: preferences.key,
+        value: preferences.value,
+        confidence: preferences.confidence,
+        source: preferences.source,
+        created: preferences.created,
+        updated: preferences.updated,
+      })
+      .from(preferences)
+      .where(eq(preferences.userId, sql.placeholder("userId")))
+      .prepare("get_user_preferences") as PreparedQuery<
+      { userId: string },
+      PreferenceRow[]
+    >)
+  : {
+      execute: async ({ userId }) =>
+        db
+          .select({
+            id: preferences.id,
+            userId: preferences.userId,
+            key: preferences.key,
+            value: preferences.value,
+            confidence: preferences.confidence,
+            source: preferences.source,
+            created: preferences.created,
+            updated: preferences.updated,
+          })
+          .from(preferences)
+          .where(eq(preferences.userId, userId)),
+    };
 
 // Profile operations
 export async function getProfile(userId: string): Promise<ProfileRow | null> {

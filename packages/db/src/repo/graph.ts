@@ -308,46 +308,81 @@ export async function getInboundEdges(
 // Graph traversal helpers
 export async function getNeighbors(
   nodeId: string,
-  direction: "out" | "in" | "both" = "both",
-  kind?: string
-): Promise<NodeRow[]> {
-  const ids = new Set<string>();
+  options?: {
+    resource?: string;
+    direction?: "out" | "in" | "both";
+    kind?: string;
+    limit?: number;
+  }
+): Promise<Array<{ edge: EdgeRow; otherNodeId: string }>> {
+  const direction = options?.direction ?? "both";
+  const kind = options?.kind;
+  const resource = options?.resource;
+  const limit = options?.limit ?? 100;
+
+  const edges: EdgeRow[] = [];
+
+  const loadEdges = async (
+    column: typeof memoryEdges.fromId | typeof memoryEdges.toId,
+    value: string
+  ) => {
+    const predicates = [eq(column, value)];
+    if (kind) {
+      predicates.push(eq(memoryEdges.kind, kind));
+    }
+    if (resource) {
+      predicates.push(eq(memoryEdges.resource, resource));
+    }
+
+    const rows = await db
+      .select()
+      .from(memoryEdges)
+      .where(and(...predicates))
+      .orderBy(desc(memoryEdges.created))
+      .limit(limit);
+
+    edges.push(...rows);
+  };
 
   if (direction === "out" || direction === "both") {
-    const edges = await getOutboundEdges(nodeId, kind);
-    for (const edge of edges) {
-      ids.add(edge.toId);
-    }
+    await loadEdges(memoryEdges.fromId, nodeId);
   }
-
   if (direction === "in" || direction === "both") {
-    const edges = await getInboundEdges(nodeId, kind);
-    for (const edge of edges) {
-      ids.add(edge.fromId);
+    await loadEdges(memoryEdges.toId, nodeId);
+  }
+
+  const seen = new Set<string>();
+  const results: Array<{ edge: EdgeRow; otherNodeId: string }> = [];
+  for (const edge of edges) {
+    if (seen.has(edge.id)) continue;
+    seen.add(edge.id);
+    const otherNodeId = edge.fromId === nodeId ? edge.toId : edge.fromId;
+    results.push({ edge, otherNodeId });
+    if (results.length >= limit) {
+      break;
     }
   }
 
-  if (ids.size === 0) {
-    return [];
-  }
-
-  return db
-    .select()
-    .from(memoryNodes)
-    .where(inArray(memoryNodes.id, Array.from(ids)))
-    .orderBy(desc(memoryNodes.created));
+  return results;
 }
 
 export async function findPath(
   fromId: string,
   toId: string,
-  maxDepth = 5
+  maxDepth = 5,
+  resource?: string
 ): Promise<{ nodeId: string; via: string[] }[]> {
   if (fromId === toId) {
     return [{ nodeId: fromId, via: [] }];
   }
 
   // Recursive CTE for path finding - using raw SQL as Drizzle doesn't support recursive CTEs well
+  const resourceNode = resource
+    ? sql`AND resource = ${resource}`
+    : sql``;
+  const resourceEdge = resource
+    ? sql`AND e.resource = ${resource}`
+    : sql``;
   const query = sql<{
     node_path: string[];
     edge_path: string[];
@@ -360,6 +395,7 @@ export async function findPath(
         0 AS depth
       FROM memory_nodes
       WHERE id = ${fromId}::uuid
+        ${resourceNode}
       UNION ALL
       SELECT
         e.to_id,
@@ -369,6 +405,7 @@ export async function findPath(
       FROM memory_edges e
       JOIN traversal ON traversal.node_id = e.from_id
       WHERE traversal.depth < ${maxDepth}
+        ${resourceEdge}
         AND NOT (e.to_id = ANY(traversal.node_path))
     )
     SELECT node_path, edge_path
@@ -401,7 +438,10 @@ export async function findPath(
   }));
 }
 
-export async function getSubgraph(nodeIds: string[]): Promise<{
+export async function getSubgraph(
+  nodeIds: string[],
+  resource?: string
+): Promise<{
   nodes: NodeRow[];
   edges: EdgeRow[];
 }> {
@@ -411,20 +451,30 @@ export async function getSubgraph(nodeIds: string[]): Promise<{
 
   const uniqueIds = Array.from(new Set(nodeIds));
 
+  const nodePredicates = [inArray(memoryNodes.id, uniqueIds)];
+  if (resource) {
+    nodePredicates.push(eq(memoryNodes.resource, resource));
+  }
+
   const nodes = await db
     .select()
     .from(memoryNodes)
-    .where(inArray(memoryNodes.id, uniqueIds));
+    .where(and(...nodePredicates));
+
+  const edgePredicates = [
+    or(
+      inArray(memoryEdges.fromId, uniqueIds),
+      inArray(memoryEdges.toId, uniqueIds)
+    ),
+  ];
+  if (resource) {
+    edgePredicates.push(eq(memoryEdges.resource, resource));
+  }
 
   const edges = await db
     .select()
     .from(memoryEdges)
-    .where(
-      or(
-        inArray(memoryEdges.fromId, uniqueIds),
-        inArray(memoryEdges.toId, uniqueIds)
-      )
-    )
+    .where(and(...edgePredicates))
     .orderBy(desc(memoryEdges.created));
 
   return { nodes, edges };

@@ -82,8 +82,12 @@ describeFn("graphRepo", () => {
       },
     ]);
 
-    const neighbors = await graphRepo.getNeighbors(nodeIds[0]!);
+    const neighbors = await graphRepo.getNeighbors(nodeIds[0]!, {
+      direction: "out",
+      resource: TEST_RESOURCE,
+    });
     expect(neighbors.length).toBe(1);
-    expect(neighbors[0]?.relation).toBe("supports");
+    expect(neighbors[0]?.edge.kind).toBe("supports");
+    expect(neighbors[0]?.otherNodeId).toBe(nodeIds[1]);
   });
 });

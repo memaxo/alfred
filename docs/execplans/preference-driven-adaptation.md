@@ -173,6 +173,24 @@ Use this section to track granular implementation steps. Every stopping point mu
   - `packages/api/src/scheduler/preference-inference.ts` now clamps validated histories via `clampUiMessages()` so inference never processes more than `MAX_HISTORY_MESSAGES`
   - Expanded `packages/api/test/preference.inference.messages.test.ts` to mock the inference pipeline, assert clamped histories reach `inferResponsePreferences()`, and verify cache invalidation + preference writes fire once per run
   - Tests: `bun test packages/api/test/preference.inference.messages.test.ts`
+- [x] (2025-11-20 22:15Z) Added shared `limitUiMessages` helper and multi-modal regression coverage
+  - Introduced `limitUiMessages()` in `packages/type/src/history.ts` with dedicated coverage in `packages/type/test/history.test.ts` to guarantee the latest tool-call/tool-result chain is never trimmed
+  - Moved streaming-specific pruning to `apps/web/src/routes/api/history.ts`, updated `apps/web/src/routes/api/stream-handler.ts` and TanStack loader `_authed/ai.tsx` to reuse the helper, and ensured scheduler pruning (`packages/api/src/scheduler/preference-inference.ts`) keeps parity
+  - Added regression tests in `apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts` and `packages/api/test/preference.inference.messages.test.ts` proving tool chains survive pruning
+  - Verified with `bun test packages/type/test/history.test.ts`, `bun test apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts`, and `bun test packages/api/test/preference.inference.messages.test.ts`
+- [x] (2025-11-20 22:32Z) Instrumented preference pruning + cache invalidation metrics
+  - Added `preference_history_pruned_total` and `preference_cache_invalidations_total` counters in `packages/api/src/metrics.ts` with stubs under `packages/api/test/utils/mock-metrics.ts`
+  - Wired history pruning increments through the TanStack loader (`apps/web/src/routes/_authed/ai.tsx`), assistant/orchestrator stream handler (`apps/web/src/routes/api/stream-handler.ts`), and inference scheduler (`packages/api/src/scheduler/preference-inference.ts`)
+  - Updated the refresh hook (`packages/api/src/preference/refresh.ts`) to count cache invalidations per reason and expanded regression suites (`packages/api/test/preference.inference.messages.test.ts`, `packages/api/test/preference.refresh.test.ts`) to assert the new metrics fire
+  - Tests: `bun test packages/api/test/preference.inference.messages.test.ts`, `bun test packages/api/test/preference.refresh.test.ts`
+- [x] (2025-11-20 22:46Z) Fired preference refresh after assistant/orchestrator persistence
+  - Updated `apps/web/src/routes/api/stream-handler.ts` to invoke `triggerPreferenceRefresh()` after both the seed persistence and streaming completion phases (guarded by the persisted count) so cache invalidations mirror the workflow router flow
+  - Added `apps/web/src/routes/api/__tests__/stream-handler.refresh.test.ts` to mock the AI SDK pipeline and assert refresh reasons fire for both persistence checkpoints, and reran the pruning regression to ensure behavior stays stable
+  - Tests: `bun test apps/web/src/routes/api/__tests__/stream-handler.refresh.test.ts`, `bun test apps/web/src/routes/api/__tests__/stream-handler.prune.test.ts`
+- [x] (2025-11-20 23:10Z) Applied history clamp + AI SDK pruning in workflow runtime adapter
+  - Updated `packages/runtime/src/adapters/ai.ts` to reuse `limitUiMessages()` and `pruneMessages()` before calling `streamText`, logging dropped counts so orchestrator resumes stay within context limits while preserving the most recent tool chain
+  - Extended `packages/runtime/test/adapter-preferences.test.ts` with a regression that overflows history, asserts `validateUIMessages()` receives clamped input, and verifies `streamText()` sees the pruned set
+  - Tests: `bun test packages/runtime/test/adapter-preferences.test.ts`
 - [ ] Trigger preference cache invalidation + inference reruns whenever workflow persistence completes so Phase 4.2 learning stays up to date
 
 **Upcoming Priority Tasks (updated 2025-11-20 21:47Z)**
@@ -211,6 +229,7 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
 - **Seeded UUIDs still need version/variant bits**: Hashing workflow identifiers directly into a UUID-shaped string failed validation in tests. For deterministic IDs we now force the version nibble to `4` and adjust the variant nibble (8–b) before formatting, keeping RFC4122 compliance without losing determinism.
 - **Linear orchestrator modules eagerly load tool registries**: Importing `@alfred/agent/orchestrator/*` during tests pulled in `@alfred/agent/src/v6.ts`, which Bun evaluated twice and raised `"assistantToolSources" has already been declared`. Mocking the linear modules in `workflow.router.test.ts` isolates the router tests from the real AI SDK tool registry and prevents duplicate evaluation errors.
 - **Agent tool registry imports require OpenAI env**: Pulling `buildTools()` from `@alfred/agent` also loads helpers that expect `OPENAI_API_KEY`. Tests now mock `@alfred/agent` before importing scheduler utilities so `validateConversationMessages()` can run without real credentials.
+- **Zod v4 schema mismatch:** Executing `uiMessageSchema` via the built `dist` output under Node 24 raised `TypeError: def.element._zod.run` because Zod v4 changed the internal array metadata. Tests that import `handleStreamRequest` now mock `@alfred/type/stream.zod` to keep validation lightweight while the runtime continues using the source schema.
 
 ## Decision Log
 

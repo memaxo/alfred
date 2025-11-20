@@ -14,9 +14,10 @@ import type {
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
-import { clampUiMessages } from "@alfred/type/history";
+import { limitUiMessages } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
 import { validateUIMessages } from "ai";
+import { preferenceHistoryPrunedTotal } from "../metrics";
 
 type ToolSet = Record<string, unknown>;
 
@@ -231,7 +232,11 @@ async function loadConversationHistory(
     if (!validated || validated.length === 0) {
       continue;
     }
-    const limited = clampUiMessages(validated);
+    const limited = limitUiMessages(validated);
+    const dropped = validated.length - limited.length;
+    if (dropped > 0) {
+      preferenceHistoryPrunedTotal.inc({ source: "inference" }, dropped);
+    }
     if (limited.length === 0) {
       continue;
     }

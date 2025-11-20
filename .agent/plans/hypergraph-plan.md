@@ -11,8 +11,8 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
 - [x] (2025-11-20 18:45Z) Reframed the legacy plan into the ExecPlan template with mandatory tracking sections so future contributors can update status without rereading ancillary docs.
 - [x] (2025-11-20 19:10Z) Baseline repository orientation: confirmed knowledge hypergraph/query stubs still lack indices/persistence, RAG rerank has no telemetry, API graph router still scans entire table, and db graph repo already exposes getNeighbors/getSubgraph/findPath requiring refinement not creation.
 - [x] (2025-11-20 20:20Z) Weeks 1–2 deliverables (persistence bridge, interval tree, AC-3 query engine, DB indexes, rerank logging) implemented and validated. (Graph indexes + rag source uniqueness migration + RAG telemetry/logging now checked in; all milestone requirements satisfied.)
-- [ ] (2025-11-20 18:45Z) Weeks 2–3 deliverables (LRU cache, graph repo traversal APIs, API router optimization) implemented and validated.
-- [ ] (2025-11-20 18:45Z) Weeks 3–4 optional deliverables (semantic fallback KNN, advanced indices, instrumentation) evaluated and either completed or explicitly deferred.
+- [x] (2025-11-20 20:25Z) Weeks 2–3 deliverables (LRU cache, graph repo traversal APIs, API router optimization) implemented and validated (LRU landed earlier; graph repo now resource-scoped with neighbor/subgraph/path filters; API router avoids scans and hashes edges idempotently).
+- [x] (2025-11-20 20:55Z) Weeks 3–4 optional deliverables (semantic fallback KNN, advanced indices, instrumentation) evaluated and either completed or explicitly deferred. (Completed: semantic KNN fallback + embedding-aware semanticQuery + knn tests + metrics instrumentation for query/persist; Remaining: advanced indices explicitly deferred.)
 
 ## Surprises & Discoveries
 
@@ -37,6 +37,15 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
   Date/Author: 2025-11-20 / Codex.
 - Decision: Added migration `packages/db/src/migrations/0034_graph_rag_indexes.sql`, schema annotations, and RAG telemetry hooks (packages/rag/src/rerank.ts + packages/db/src/repo/rag.ts) so DB indexes/unique constraints + rerank logging requirements are satisfied.
   Rationale: Hardens graph lookups (GIN label search + resource edge indexes) and ensures rerank success/error telemetry is always surfaced (JSON logs optional via `RAG_RERANK_LOG_JSON`).
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Updated graph repo traversal helpers to support resource-scoped neighbor/subgraph queries and wired the API graph router to rely on filtered DB selects with hashed, idempotent connect mutations.
+  Rationale: Removes O(n) scans, aligns with layering rules (apps → packages/db), and ensures future consumers receive consistent edge metadata without duplications.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Shipped optional semantic fallback by adding `packages/knowledge/src/indices/knn.ts`, embedding iterators on the hypergraph, and embedding-aware `semanticQuery` options so small graphs can reuse cached Float32 embeddings before falling back to text heuristics.
+  Rationale: Meets the ExecPlan Week 3–4 stretch goal for semantic recall while keeping the knowledge package pure (callers provide embeddings).
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added lightweight instrumentation via `packages/knowledge/src/metrics.ts` + `@alfred/metrics/performance`, wrapping query execution, semantic fallback, and persistence load/save paths with budget logging so we can spot hot-path regressions without affecting return types.
+  Rationale: Completes the optional instrumentation hook requirement while keeping knowledge functions synchronous and pure.
   Date/Author: 2025-11-20 / Codex.
 
 ## Outcomes & Retrospective
@@ -105,6 +114,12 @@ Keep concise evidence inside this plan—for example, interval-tree insertion lo
         $ bun test packages/rag/test/rerank.test.ts
         ...
         3 pass
+        0 fail
+- 2025-11-20 20:38Z: Semantic KNN fallback + embedding iteration landed; `bun test packages/knowledge` now exercises 18 specs including new knn + embedding-aware semantic tests.
+
+        $ bun test packages/knowledge
+        ...
+        18 pass
         0 fail
 
 ## Interfaces and Dependencies

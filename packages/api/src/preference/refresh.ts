@@ -1,4 +1,5 @@
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
+import { preferenceCacheInvalidationsTotal } from "../metrics";
 import { runPreferenceInference } from "../scheduler/preference-inference";
 import { logger } from "../utils/logger";
 
@@ -48,13 +49,17 @@ export function triggerPreferenceRefresh(
   const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
   pendingUsers.add(userId);
-  void invalidatePreferenceCache(userId).catch((error) => {
-    logger.warn("preference_cache_invalidation_failed", {
-      userId,
-      reason,
-      error: error instanceof Error ? error.message : String(error),
+  void invalidatePreferenceCache(userId)
+    .then(() => {
+      preferenceCacheInvalidationsTotal.inc({ reason });
+    })
+    .catch((error) => {
+      logger.warn("preference_cache_invalidation_failed", {
+        userId,
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
-  });
 
   logger.info("preference_refresh_scheduled", { userId, reason });
   scheduleFlush(debounceMs);

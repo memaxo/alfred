@@ -30,7 +30,9 @@
     "typecheck": "tsc -b --pretty false",
     "test": "bun test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@alfred/metrics": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "*",
     "typescript": "*"

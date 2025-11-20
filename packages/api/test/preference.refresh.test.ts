@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { metricsStub } from "./utils/mock-metrics";
 
 const invalidatePreferenceCacheMock = vi.fn().mockResolvedValue(undefined);
 const runPreferenceInferenceMock = vi.fn().mockResolvedValue(undefined);
@@ -22,6 +23,7 @@ describe("triggerPreferenceRefresh", () => {
     invalidatePreferenceCacheMock.mockReset().mockResolvedValue(undefined);
     runPreferenceInferenceMock.mockReset().mockResolvedValue(undefined);
     __resetPreferenceRefreshQueueForTests();
+    metricsStub.preferenceCacheInvalidationsTotal.inc.mockReset();
   });
 
   it("invalidates caches immediately and runs inference on flush", async () => {
@@ -31,6 +33,9 @@ describe("triggerPreferenceRefresh", () => {
 
     expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("user-1");
     expect(runPreferenceInferenceMock).toHaveBeenCalledWith("user-1");
+    expect(metricsStub.preferenceCacheInvalidationsTotal.inc).toHaveBeenCalledWith(
+      { reason: "test" }
+    );
   });
 
   it("deduplicates repeated triggers before flush", async () => {
@@ -52,5 +57,8 @@ describe("triggerPreferenceRefresh", () => {
 
     expect(invalidatePreferenceCacheMock).not.toHaveBeenCalled();
     expect(runPreferenceInferenceMock).not.toHaveBeenCalled();
+    expect(
+      metricsStub.preferenceCacheInvalidationsTotal.inc
+    ).not.toHaveBeenCalled();
   });
 });

@@ -299,6 +299,16 @@ export class Hypergraph {
     return this.embeddings.get(id);
   }
 
+  *embeddingEntries(): IterableIterator<[NodeId, Float32Array]> {
+    for (const [key, value] of this.embeddings.entries()) {
+      yield [key, value];
+    }
+  }
+
+  embeddingCount(): number {
+    return this.embeddings.size;
+  }
+
   getDirty(): NodeId[] {
     return Array.from(this.dirty);
   }

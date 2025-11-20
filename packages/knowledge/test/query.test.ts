@@ -59,4 +59,20 @@ describe("semanticQuery", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results[0]).toBe(alpha);
   });
+
+  it("prefers embedding KNN results when available", () => {
+    const graph = empty();
+    const alpha = graph.add(fact("Alpha", 0.9, "src"));
+    const beta = graph.add(fact("Beta", 0.9, "src"));
+
+    graph.setEmbedding(alpha, new Float32Array([1, 0]));
+    graph.setEmbedding(beta, new Float32Array([0, 1]));
+
+    const results = semanticQuery("unused", graph, 1, {
+      embedding: new Float32Array([0.99, 0.01]),
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(alpha);
+  });
 });

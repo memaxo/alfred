@@ -4,6 +4,8 @@
  */
 
 import type { Hypergraph, Knowledge, NodeId } from "./hypergraph.js";
+import { knn } from "./indices/knn.js";
+import { measureSync } from "./metrics.js";
 import { LRUCache } from "./util/lru.js";
 
 // Query AST types
@@ -30,6 +32,10 @@ export type Query = {
 
 export type Binding = Map<Variable, string>;
 export type Result = Map<Variable, string>;
+export type SemanticQueryOptions = {
+  embedding?: Float32Array;
+  maxKnnNodes?: number;
+};
 
 export type ReasoningNodeRecord = {
   id: string;
@@ -69,6 +75,8 @@ type Arc = {
 type SerializedResult = Array<[Variable, string]>;
 
 const CACHE = new LRUCache<string, SerializedResult[]>(512);
+const QUERY_BUDGET_MS = 10;
+const SEMANTIC_BUDGET_MS = 15;
 
 // Query parser helpers
 const variable = (name: string): Variable => name as Variable;
@@ -102,7 +110,12 @@ export const compile = (queryString: string): Query => {
 /**
  * Execute query against hypergraph with caching
  */
-export const execute = (query: Query, graph: Hypergraph): Result[] => {
+export const execute = (query: Query, graph: Hypergraph): Result[] =>
+  measureSync("knowledge.query.execute", QUERY_BUDGET_MS, () =>
+    executeInternal(query, graph)
+  );
+
+const executeInternal = (query: Query, graph: Hypergraph): Result[] => {
   const key = canonicalKey(query) + `#v=${graph.version()}`;
   const cached = CACHE.get(key);
   if (cached) {
@@ -134,8 +147,47 @@ export const execute = (query: Query, graph: Hypergraph): Result[] => {
 export const semanticQuery = (
   naturalLanguage: string,
   graph: Hypergraph,
-  limit = 10
+  limit = 10,
+  options?: SemanticQueryOptions
+): NodeId[] =>
+  measureSync("knowledge.query.semantic", SEMANTIC_BUDGET_MS, () =>
+    semanticQueryInternal(naturalLanguage, graph, limit, options)
+  );
+
+const semanticQueryInternal = (
+  naturalLanguage: string,
+  graph: Hypergraph,
+  limit: number,
+  options?: SemanticQueryOptions
 ): NodeId[] => {
+  const seen = new Set<string>();
+  const ordered: NodeId[] = [];
+
+  const embedding = options?.embedding;
+  const maxKnnNodes = options?.maxKnnNodes ?? 10_000;
+  if (
+    embedding &&
+    graph.embeddingCount &&
+    graph.embeddingCount() > 0 &&
+    graph.embeddingCount() <= maxKnnNodes
+  ) {
+    const vectors = Array.from(graph.embeddingEntries()).map(([id, vec]) => ({
+      id,
+      vec,
+    }));
+    const knnResults = knn(vectors, embedding, limit);
+    for (const id of knnResults) {
+      const key = String(id);
+      if (!seen.has(key)) {
+        ordered.push(id);
+        seen.add(key);
+        if (ordered.length >= limit) {
+          return ordered.slice(0, limit);
+        }
+      }
+    }
+  }
+
   const terms = naturalLanguage
     .toLowerCase()
     .split(/\s+/)
@@ -159,10 +211,21 @@ export const semanticQuery = (
     }
   }
 
-  return Array.from(scores.entries())
+  const textRanked = Array.from(scores.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
     .map(([id]) => id);
+
+  for (const id of textRanked) {
+    const key = String(id);
+    if (seen.has(key)) continue;
+    ordered.push(id);
+    seen.add(key);
+    if (ordered.length >= limit) {
+      break;
+    }
+  }
+
+  return ordered.slice(0, limit);
 };
 
 /**

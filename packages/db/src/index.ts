@@ -8,6 +8,7 @@ export {
   createPgClient,
   createPgPool,
   db,
+  dbDriver,
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
 export * as deployRepo from "./repo/deploy";

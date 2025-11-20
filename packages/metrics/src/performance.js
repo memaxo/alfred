@@ -33,4 +33,3 @@ export function measure(startLabel, endLabel) {
 export function markVoice(label) {
     mark(label);
 }
-//# sourceMappingURL=performance.js.map

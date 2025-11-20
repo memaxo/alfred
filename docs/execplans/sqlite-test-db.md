@@ -11,18 +11,23 @@ Developers need the real Postgres connection string for runtime behavior (`confi
 - [x] (2025-11-20 20:35Z) Authored this ExecPlan after reviewing `.agent/PLANS.md`, `packages/db/src/client.ts`, `config/env.example`, and the failing `packages/embed` tests.
 - [x] (2025-11-20 21:05Z) Updated `packages/db/src/client.ts` to detect SQLite URLs (or `bun test` mode without `DATABASE_URL`), instantiate `drizzle-orm/bun-sqlite` with `bun:sqlite`, and fall back to Postgres otherwise.
 - [x] (2025-11-20 21:12Z) Documented the behavior in `README.md`, `packages/db/README.md`, `config/env.example`, and `config/env.test`, pointing readers to the canonical Postgres URL and the new SQLite fallback.
-- [ ] Re-run `bun run typecheck` from the repo root; document pre-existing failures if they persist.
-- [ ] Run a representative test suite (e.g., `cd packages/embed && bun run test`) to confirm it no longer aborts because of a missing Postgres URL.
+- [x] (2025-11-20 21:40Z) Re-ran `bun run typecheck`; failure now limited to existing issues in `packages/knowledge`, `packages/agent`, plus a new `tsvector` import warning which is being fixed within this effort.
+- [x] (2025-11-20 22:00Z) Ran `cd packages/embed && bun run test`; suites progressed until an “Export named 'tsvector' not found” error surfaced once `@alfred/db` initialized successfully under SQLite.
 - [ ] Capture outcomes, surprises, and decisions below.
 
 ## Surprises & Discoveries
 
 - Observation: `drizzle-orm/bun-sqlite` works with tables defined via `pgTable` (it generates SQL the SQLite engine accepts) as long as we create the table manually; quick spike via `tmp-sqlite-test.ts` inserting/selecting rows succeeded. Evidence: local Bun script at 20:55Z printed `[{ id: "a" }]`.
+- Observation: Importing `drizzle-orm/bun-sqlite` directly caused the TypeScript compiler to treat `db.insert()` as a union of Postgres and SQLite builders. Switched to `createRequire` + `any` to load the sqlite driver lazily so downstream repo code keeps the Postgres-only types.
+- Observation: Once the SQLite fallback succeeded, type-checking exposed additional pre-existing issues in `packages/knowledge` (interval-tree nullability) and `packages/agent` (prepare step typing). Also discovered that `tsvector` is no longer exported by `drizzle-orm/pg-core`, so a local `customType` helper was added in `packages/db/src/schema/graph.ts`.
 
 ## Decision Log
 
 - Decision: Default to `sqlite::memory:` only when `BUN_TEST=1` and `DATABASE_URL` is missing, keeping production behavior unchanged while allowing unit tests to run with zero config.
   Rationale: Prevents accidental SQLite usage in dev/production sessions where Postgres is required but not configured.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Load the sqlite driver via `createRequire()` and treat it as `any` so the rest of the codebase retains pure Postgres typings while still executing against SQLite during tests.
+  Rationale: Direct TypeScript imports pulled in SQLite generics and broke every `db.insert()` call; using `require` isolates those types to the fallback path.
   Date/Author: 2025-11-20 / Codex
 
 ## Outcomes & Retrospective

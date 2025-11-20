@@ -73,10 +73,13 @@ export function MindscapeInitializer() {
         type: "note",
         position: { x: 800 + (index * 30), y: -200 + (index * 60) },
         data: {
-          label: note.title || "Untitled",
+          label: note.title?.trim() || "Untitled Note",
+          noteId: note.id,
           title: note.title,
           content: note.content,
           tags: note.tags,
+          mode: "view",
+          updatedAt: note.updatedAt?.toISOString?.() ?? undefined,
         },
       });
     });
@@ -90,14 +93,22 @@ export function MindscapeInitializer() {
       const reminderNodeId = `reminder-${reminder.id}`;
       if (nodeIds.includes(reminderNodeId)) return;
 
+      const dueIso = reminder.due instanceof Date ? reminder.due.toISOString() : reminder.due;
+      const isDue = dueIso ? new Date(dueIso).getTime() <= Date.now() : false;
+      const status = reminder.firedAt ? "fired" : isDue ? "due" : "scheduled";
+
       addArtifact({
         id: reminderNodeId,
         type: "reminder",
         position: { x: -800 - (index * 30), y: -200 + (index * 60) },
         data: {
           label: reminder.title || "Reminder",
+          reminderId: reminder.id,
           title: reminder.title,
-          due: reminder.due,
+          due: dueIso,
+          description: reminder.description ?? undefined,
+          status,
+          mode: "view",
         },
       });
     });
@@ -131,4 +142,3 @@ export function MindscapeInitializer() {
 
   return null;
 }
-

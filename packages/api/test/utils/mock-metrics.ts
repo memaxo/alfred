@@ -50,6 +50,8 @@ export const metricsStub = {
   assistantEscalationsTotal: counter(),
   memoryUpdatesTotal: counter(),
   memoryForgetsTotal: counter(),
+  preferenceHistoryPrunedTotal: counter(),
+  preferenceCacheInvalidationsTotal: counter(),
   voiceSttTotal: counter(),
   voiceSttDurationSeconds: histogram(),
   recordVoiceStt: (_: any) => void 0,

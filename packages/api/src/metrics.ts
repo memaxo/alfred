@@ -257,6 +257,22 @@ export const memoryForgetsTotal = new client.Counter({
 
 // wired via lazy hooks
 
+export const preferenceHistoryPrunedTotal = new client.Counter({
+  name: "preference_history_pruned_total",
+  help: "Count of preference history prune events grouped by source.",
+  labelNames: ["source"] as const,
+  registers: [metricsRegistry],
+});
+
+export const preferenceCacheInvalidationsTotal = new client.Counter({
+  name: "preference_cache_invalidations_total",
+  help: "Count of preference cache invalidations grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+// wired via lazy hooks
+
 export const voiceSttTotal = new client.Counter({
   name: "voice_stt_total",
   help: "Count of voice STT invocations grouped by provider and status.",

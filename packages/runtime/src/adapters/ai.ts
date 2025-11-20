@@ -7,10 +7,12 @@
 
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
+import { limitUiMessages } from "@alfred/type/history";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import type { LanguageModel, Tool } from "ai";
 import {
   convertToModelMessages,
+  pruneMessages,
   streamText,
   validateUIMessages,
 } from "ai";
@@ -84,14 +86,34 @@ export class AISDKAdapter {
       const preferencePrompt = await this.buildPreferencePrompt(options);
       const systemPrompt = mergeSystemPrompts(options.system, preferencePrompt);
 
+      const inputMessages = Array.isArray(options.messages)
+        ? options.messages
+        : [];
+      const limitedMessages = limitUiMessages(inputMessages);
+      const dropped = inputMessages.length - limitedMessages.length;
+      if (dropped > 0) {
+        logger.info("runtime_history_pruned", {
+          runId: this.runId,
+          dropped,
+          kept: limitedMessages.length,
+        });
+      }
+
       const validatedMessages = (await validateUIMessages({
-        messages: options.messages,
+        messages: limitedMessages,
         tools: options.tools as Parameters<typeof validateUIMessages>[0]["tools"],
       })) as UIMessage[];
+      const modelMessages = convertToModelMessages(validatedMessages);
+      const prunedMessages = pruneMessages({
+        messages: modelMessages,
+        reasoning: "before-last-message",
+        toolCalls: "before-last-2-messages",
+        emptyMessages: "remove",
+      });
 
       const result = streamText({
         model: options.model,
-        messages: convertToModelMessages(validatedMessages),
+        messages: prunedMessages,
         tools: options.tools,
         abortSignal: options.abortSignal,
         system: systemPrompt,

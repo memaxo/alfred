@@ -1,15 +1,23 @@
+/// <reference types="bun-types" />
+
 import { Database } from "bun:sqlite";
-import { drizzle as drizzleSqlite, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import { createRequire } from "node:module";
 import { drizzle as drizzlePostgres, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
 import { logger } from "./utils/logger";
+import { ensureSqliteTestSchema } from "./sqlite/schema";
 
 type PgSource = Client | Pool;
-type DrizzleDatabase = NodePgDatabase | BunSQLiteDatabase;
+
+export let dbDriver: "postgres" | "sqlite" = "postgres";
 
 const SQLITE_MEMORY_URL = "sqlite::memory:";
+const require = createRequire(import.meta.url);
+const drizzleSqlite: (...args: any[]) => any = (
+  require("drizzle-orm/bun-sqlite") as { drizzle: (...args: any[]) => any }
+).drizzle;
 
 function resolveConnectionString(
   explicit?: string,
@@ -20,7 +28,12 @@ function resolveConnectionString(
     return value;
   }
 
-  if (allowMockSqlite && process.env.BUN_TEST === "1") {
+  const inBunTest =
+    process.env.BUN_TEST === "1" ||
+    process.env.NODE_ENV === "test" ||
+    process.env.BUN_ENVIRONMENT === "test";
+
+  if (allowMockSqlite && inBunTest) {
     logger.debug("db_sqlite_fallback_enabled", {
       reason: "DATABASE_URL missing during bun test run",
     });
@@ -72,9 +85,10 @@ function normalizeSqliteFilename(value: string): string {
   return value;
 }
 
-function createSqliteDrizzle(connectionString: string): BunSQLiteDatabase {
+function createSqliteDrizzle(connectionString: string) {
   const filename = normalizeSqliteFilename(connectionString);
   const sqlite = new Database(filename, { create: true });
+  ensureSqliteTestSchema(sqlite);
   return drizzleSqlite(sqlite);
 }
 
@@ -110,17 +124,19 @@ export function createPgPool(
   });
 }
 
-export function createDrizzleClient(source?: PgSource): DrizzleDatabase {
+export function createDrizzleClient(source?: PgSource): NodePgDatabase {
   const connectionString = resolveConnectionString(undefined, {
     allowMockSqlite: true,
   });
 
   if (isSqliteConnectionString(connectionString)) {
-    return createSqliteDrizzle(connectionString);
+    dbDriver = "sqlite";
+    return createSqliteDrizzle(connectionString) as unknown as NodePgDatabase;
   }
 
+  dbDriver = "postgres";
   const pg = source ?? createPgPool({ connectionString });
   return drizzlePostgres(pg);
 }
 
-export const db: DrizzleDatabase = createDrizzleClient();
+export const db: NodePgDatabase = createDrizzleClient();

@@ -56,8 +56,12 @@ export const ticketNodeDataSchema = baseArtifactDataSchema.extend({
  * @example { title: "Call client", due: "2024-01-15T10:00:00Z" }
  */
 export const reminderNodeDataSchema = baseArtifactDataSchema.extend({
+  reminderId: z.string().uuid().optional(),
   title: z.string().optional(),
   due: z.string().optional(), // ISO 8601 date string
+  description: z.string().optional(),
+  status: z.enum(["scheduled", "due", "fired"]).optional(),
+  mode: z.enum(["view", "edit"]).optional(),
 });
 
 /**
@@ -65,9 +69,12 @@ export const reminderNodeDataSchema = baseArtifactDataSchema.extend({
  * @example { title: "Meeting notes", content: "Discussed...", tags: ["work", "meeting"] }
  */
 export const noteNodeDataSchema = baseArtifactDataSchema.extend({
+  noteId: z.string().uuid().optional(),
   title: z.string().optional(),
   content: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  mode: z.enum(["view", "edit"]).optional(),
+  updatedAt: z.string().optional(),
 });
 
 /**
@@ -135,4 +142,3 @@ export function getNodeDataSchema(
       return baseArtifactDataSchema;
   }
 }
-

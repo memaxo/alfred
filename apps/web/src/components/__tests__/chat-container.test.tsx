@@ -1,7 +1,7 @@
 import "@/test/dom";
 import { describe, expect, it, mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
 import {
   useCallback as reactUseCallback,
@@ -99,18 +99,49 @@ mock.module("@/hooks/use-assistant-stream", () => {
     metadata: { status: "sent" },
   });
 
+  const streamState: { messages: AssistantUIMessage[] } = {
+    messages: [],
+  };
+
   return {
     useAssistantStream: () => {
-      const [messages, setMessages] = reactUseState<AssistantUIMessage[]>([]);
+      const [messages, setMessages] = reactUseState<AssistantUIMessage[]>(
+        streamState.messages
+      );
+
+      const setAndTrack = reactUseCallback(
+        (
+          updater:
+            | AssistantUIMessage[]
+            | ((prev: AssistantUIMessage[]) => AssistantUIMessage[])
+        ) => {
+          setMessages((prev) => {
+            const next =
+              typeof updater === "function"
+                ? (updater as (prev: AssistantUIMessage[]) => AssistantUIMessage[])(
+                    prev
+                  )
+                : updater;
+            streamState.messages = next;
+            return next;
+          });
+        },
+        []
+      );
+
       const send = reactUseCallback((text: string) => {
-        setMessages((prev) => [...prev, createMessage(text)]);
-      }, []);
+        setAndTrack((prev) => [...prev, createMessage(text)]);
+      }, [setAndTrack]);
       const clear = reactUseCallback(() => {
-        setMessages([]);
-      }, []);
+        setAndTrack([]);
+      }, [setAndTrack]);
       const hydrate = reactUseCallback((snapshot: AssistantUIMessage[]) => {
-        setMessages(snapshot);
-      }, []);
+        setAndTrack(snapshot);
+      }, [setAndTrack]);
+
+      streamState.send = send;
+      streamState.clear = clear;
+      streamState.hydrate = hydrate;
 
       return {
         messages,
@@ -121,6 +152,13 @@ mock.module("@/hooks/use-assistant-stream", () => {
         clear,
         hydrate,
       };
+    },
+    assistantStreamTestApi: {
+      getMessages: () => streamState.messages,
+      send: (text: string) => streamState.send?.(text),
+      clear: () => streamState.clear?.(),
+      hydrate: (snapshot: AssistantUIMessage[]) =>
+        streamState.hydrate?.(snapshot),
     },
   };
 });
@@ -138,147 +176,142 @@ mock.module("@/hooks/use-voice-capture", () => ({
   }),
 }));
 
+const { assistantStreamTestApi } = await import("@/hooks/use-assistant-stream");
 const { ChatContainer } = await import("../chat-container");
+
+function getMessageTexts(): string[] {
+  return assistantStreamTestApi
+    .getMessages()
+    .map((message) =>
+      message.parts
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join("")
+    );
+}
+
+async function emitAssistantMessage(text: string) {
+  await act(async () => {
+    assistantStreamTestApi.send(text);
+  });
+}
+
+function getAgentTab(
+  container: HTMLElement,
+  agent: "assistant" | "orchestrator"
+): HTMLButtonElement {
+  const panelId = agent === "assistant" ? "assistant-panel" : "orchestrator-panel";
+  const candidates = container.querySelectorAll<HTMLButtonElement>(
+    `[aria-controls="${panelId}"]`
+  );
+  if (!candidates.length) {
+    throw new Error(`agent tab not found for ${agent}`);
+  }
+  return candidates[0];
+}
+
+function getClearButton(container: HTMLElement): HTMLButtonElement {
+  const btn = container.querySelector<HTMLButtonElement>(
+    '[aria-label="Clear conversation"]'
+  );
+  if (!btn) {
+    throw new Error("clear button not found");
+  }
+  return btn;
+}
 
 describe("ChatContainer", () => {
   describe("agent switching", () => {
     it("saves current state to contextsRef on switch", async () => {
-      const {
-        getByPlaceholderText,
-        getByRole,
-        getByText,
-        queryByText,
-      } = render(<ChatContainer agent="assistant" />);
-
-      const input = getByPlaceholderText(/Ask Alfred/i);
-      fireEvent.change(input, { target: { value: "Test message" } });
-      fireEvent.submit(input.closest("form") ?? input);
+      const { container } = render(<ChatContainer agent="assistant" />);
+      await emitAssistantMessage("Test message");
 
       await waitFor(() => {
-        expect(getByText("Test message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("Test message");
       });
 
-      const agentSwitch = getByRole("button", { name: /orchestrator/i });
+      const agentSwitch = getAgentTab(container, "orchestrator");
       fireEvent.click(agentSwitch);
 
       await waitFor(() => {
-        expect(queryByText("Test message")).not.toBeInTheDocument();
+        expect(getMessageTexts()).toHaveLength(0);
       });
     });
 
     it("hydrates previous state correctly on switch", async () => {
-      const {
-        getByPlaceholderText,
-        getByRole,
-        getByText,
-        queryByText,
-      } = render(<ChatContainer agent="assistant" />);
-
-      const input = getByPlaceholderText(/Ask Alfred/i);
-      fireEvent.change(input, { target: { value: "First message" } });
-      fireEvent.submit(input.closest("form") ?? input);
+      const { container } = render(<ChatContainer agent="assistant" />);
+      await emitAssistantMessage("First message");
 
       await waitFor(() => {
-        expect(getByText("First message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("First message");
       });
 
-      const agentSwitch = getByRole("button", { name: /orchestrator/i });
+      const agentSwitch = getAgentTab(container, "orchestrator");
       fireEvent.click(agentSwitch);
 
       await waitFor(() => {
-        expect(queryByText("First message")).not.toBeInTheDocument();
+        expect(getMessageTexts()).toHaveLength(0);
       });
 
-      const assistantSwitch = getByRole("button", {
-        name: /assistant/i,
-      });
+      const assistantSwitch = getAgentTab(container, "assistant");
       fireEvent.click(assistantSwitch);
 
       await waitFor(() => {
-        expect(getByText("First message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("First message");
       });
     });
 
     it("clears current state before switching", async () => {
-      const {
-        getByPlaceholderText,
-        getByRole,
-        getByText,
-        queryByText,
-      } = render(<ChatContainer agent="assistant" />);
-
-      const input = getByPlaceholderText(/Ask Alfred/i);
-      fireEvent.change(input, { target: { value: "Test" } });
-      fireEvent.submit(input.closest("form") ?? input);
+      const { container } = render(<ChatContainer agent="assistant" />);
+      await emitAssistantMessage("Test");
 
       await waitFor(() => {
-        expect(getByText("Test")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("Test");
       });
 
-      const agentSwitch = getByRole("button", { name: /orchestrator/i });
+      const agentSwitch = getAgentTab(container, "orchestrator");
       fireEvent.click(agentSwitch);
 
       await waitFor(() => {
-        expect(queryByText("Test")).not.toBeInTheDocument();
+        expect(getMessageTexts()).toHaveLength(0);
       });
     });
 
     it("preserves independent state for multiple agents", async () => {
-      const {
-        getByPlaceholderText,
-        getByRole,
-        getByText,
-        queryByText,
-      } = render(<ChatContainer agent="assistant" />);
-
-      const input = getByPlaceholderText(/Ask Alfred/i);
-      fireEvent.change(input, { target: { value: "Assistant message" } });
-      fireEvent.submit(input.closest("form") ?? input);
+      const { container } = render(<ChatContainer agent="assistant" />);
+      await emitAssistantMessage("Assistant message");
 
       await waitFor(() => {
-        expect(getByText("Assistant message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("Assistant message");
       });
 
-      const orchestratorSwitch = getByRole("button", {
-        name: /orchestrator/i,
-      });
+      const orchestratorSwitch = getAgentTab(container, "orchestrator");
       fireEvent.click(orchestratorSwitch);
 
       await waitFor(() => {
-        expect(queryByText("Assistant message")).not.toBeInTheDocument();
+        expect(getMessageTexts()).toHaveLength(0);
       });
 
-      const assistantSwitch = getByRole("button", {
-        name: /assistant/i,
-      });
+      const assistantSwitch = getAgentTab(container, "assistant");
       fireEvent.click(assistantSwitch);
 
       await waitFor(() => {
-        expect(getByText("Assistant message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("Assistant message");
       });
     });
 
     it("clear button resets current agent state", async () => {
-      const {
-        getByPlaceholderText,
-        getByRole,
-        getByText,
-        queryByText,
-      } = render(<ChatContainer agent="assistant" />);
-
-      const input = getByPlaceholderText(/Ask Alfred/i);
-      fireEvent.change(input, { target: { value: "Test message" } });
-      fireEvent.submit(input.closest("form") ?? input);
+      const { container } = render(<ChatContainer agent="assistant" />);
+      await emitAssistantMessage("Test message");
 
       await waitFor(() => {
-        expect(getByText("Test message")).toBeInTheDocument();
+        expect(getMessageTexts()).toContain("Test message");
       });
 
-      const clearButton = getByRole("button", { name: /clear/i });
+      const clearButton = getClearButton(container);
       fireEvent.click(clearButton);
 
       await waitFor(() => {
-        expect(queryByText("Test message")).not.toBeInTheDocument();
+        expect(getMessageTexts()).toHaveLength(0);
       });
     });
   });

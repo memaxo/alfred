@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
+import { metricsStub } from "./utils/mock-metrics";
 
 mock.module("@alfred/agent", () => ({
   buildTools: () => ({}),
@@ -60,6 +61,25 @@ const {
   validateConversationMessages,
   runPreferenceInference,
 } = await import("../src/scheduler/preference-inference");
+
+function createToolMessage(
+  type: "tool-call" | "tool-result",
+  suffix: string
+): UIMessage {
+  return {
+    id: `${type}-${suffix}`,
+    role: "assistant",
+    parts: [
+      {
+        type,
+        toolCallId: `call-${suffix}`,
+        toolName: "git.status",
+        input: { repo: "alfred" },
+        output: type === "tool-result" ? { clean: true } : undefined,
+      } as UIMessage["parts"][number],
+    ],
+  };
+}
 
 describe("validateConversationMessages", () => {
   it("returns validated messages for well-formed history", async () => {
@@ -133,6 +153,7 @@ describe("runPreferenceInference", () => {
     conversationRepoMock.getConversationHistory.mockReset();
     workflowRepoMock.getToolCalls.mockResolvedValue([]);
     userRepoMock.getFeedback.mockResolvedValue([]);
+    metricsStub.preferenceHistoryPrunedTotal.inc.mockReset();
   });
 
   it("clamps conversation history before inference", async () => {
@@ -187,5 +208,52 @@ describe("runPreferenceInference", () => {
     );
     expect(userRepoMock.setPreference).toHaveBeenCalledTimes(1);
     expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("user-123");
+    expect(metricsStub.preferenceHistoryPrunedTotal.inc).toHaveBeenCalledWith(
+      { source: "inference" },
+      historyMessages.length - MAX_HISTORY_MESSAGES
+    );
+  });
+
+  it("retains the newest tool-call chain when history is limited", async () => {
+    const toolCall = createToolMessage("tool-call", "old");
+    const toolResult = createToolMessage("tool-result", "old");
+    const filler = Array.from(
+      { length: MAX_HISTORY_MESSAGES + 8 },
+      (_, index) =>
+        ({
+          id: `msg-${index}`,
+          role: index % 2 === 0 ? "user" : "assistant",
+          parts: [{ type: "text", text: `message-${index}` }],
+        }) as UIMessage
+    );
+
+    const conversationRow = {
+      id: "conv-tool",
+      userId: "user-456",
+      title: null,
+      created: new Date(),
+      updated: new Date(),
+    };
+
+    conversationRepoMock.getConversations.mockResolvedValueOnce([conversationRow]);
+    conversationRepoMock.getConversationHistory.mockResolvedValueOnce({
+      conversation: conversationRow,
+      messages: [toolCall, toolResult, ...filler],
+    });
+
+    inferResponsePreferencesMock.mockReturnValue(new Map());
+    mergePreferencesMock.mockReturnValue(new Map());
+
+    await runPreferenceInference("user-456");
+
+    const [firstCall] = inferResponsePreferencesMock.mock.calls;
+    expect(firstCall).toBeDefined();
+    const [conversation] = firstCall?.[0] ?? [];
+    expect(conversation?.messages?.[0]?.id).toBe(toolCall.id);
+    expect(conversation?.messages?.[1]?.id).toBe(toolResult.id);
+    expect(metricsStub.preferenceHistoryPrunedTotal.inc).toHaveBeenCalledWith(
+      { source: "inference" },
+      MAX_HISTORY_MESSAGES + 10 - MAX_HISTORY_MESSAGES
+    );
   });
 });

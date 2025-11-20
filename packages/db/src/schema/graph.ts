@@ -4,14 +4,20 @@
  */
 
 import {
+  customType,
   jsonb,
   pgTable,
   real,
   text,
   timestamp,
-  tsvector,
   uuid,
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 // TODO: [Phase 4] Add proper indexes for graph traversal performance
 

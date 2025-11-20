@@ -1,4 +1,5 @@
 import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
@@ -7,11 +8,13 @@ const streamTextMock = vi.fn(() => ({
 }));
 
 const validateUIMessagesMock = vi.fn(async ({ messages }) => messages);
+const pruneMessagesMock = vi.fn(({ messages }) => messages);
 
 mock.module("ai", () => ({
   streamText: streamTextMock,
   convertToModelMessages: (messages: unknown) => messages,
   validateUIMessages: validateUIMessagesMock,
+  pruneMessages: pruneMessagesMock,
 }));
 
 const buildPreferenceSystemPromptMock = vi
@@ -39,6 +42,7 @@ describe("AISDKAdapter preference prompts", () => {
     streamTextMock.mockClear();
     buildPreferenceSystemPromptMock.mockClear();
     validateUIMessagesMock.mockClear();
+    pruneMessagesMock.mockClear();
   });
 
   afterAll(() => {
@@ -102,5 +106,40 @@ describe("AISDKAdapter preference prompts", () => {
 
     expect(streamTextMock).not.toHaveBeenCalled();
     expect(validateUIMessagesMock).toHaveBeenCalled();
+  });
+
+  it("clamps and prunes messages before streaming", async () => {
+    const adapter = new AISDKAdapter();
+    const messages = Array.from(
+      { length: MAX_HISTORY_MESSAGES + 10 },
+      (_, index) => ({
+        id: `msg-${index}`,
+        role: index % 2 === 0 ? "user" : "assistant",
+        parts: [{ type: "text", text: `m-${index}` }],
+      })
+    );
+
+    pruneMessagesMock.mockImplementation(({ messages }) =>
+      messages.slice(-5)
+    );
+
+    const iterator = adapter.stream({ model: "test", messages });
+    for await (const _ of iterator) {
+      // no events
+    }
+
+    const validatedArg = validateUIMessagesMock.mock.calls[0]?.[0]?.messages;
+    expect(validatedArg).toHaveLength(MAX_HISTORY_MESSAGES);
+    expect(validatedArg?.[0]?.id).toBe(`msg-10`);
+
+    expect(pruneMessagesMock).toHaveBeenCalledWith({
+      messages: validatedArg,
+      reasoning: "before-last-message",
+      toolCalls: "before-last-2-messages",
+      emptyMessages: "remove",
+    });
+
+    const streamedMessages = streamTextMock.mock.calls[0]?.[0]?.messages;
+    expect(streamedMessages).toEqual(validatedArg.slice(-5));
   });
 });
