@@ -1,4 +1,5 @@
 import { arrayBufferToBase64 } from "@alfred/voice/audio";
+import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
 
@@ -19,6 +20,23 @@ interface UseVoiceCaptureReturn {
 }
 
 const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
+
+const clearTimeoutClient = createClientOnlyFn((id: number) => {
+  window.clearTimeout(id);
+});
+
+const setTimeoutClient = createClientOnlyFn(
+  (callback: () => void, delay: number) => {
+    return window.setTimeout(callback, delay);
+  }
+);
+
+const getUserMediaClient = createClientOnlyFn(async () => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("media_devices_unavailable");
+  }
+  return await navigator.mediaDevices.getUserMedia({ audio: true });
+});
 
 export function useVoiceCapture({
   onTranscript,
@@ -60,7 +78,7 @@ export function useVoiceCapture({
     }
     audioChunksRef.current = [];
     if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
+      clearTimeoutClient(timeoutRef.current);
       timeoutRef.current = null;
     }
   }, []);
@@ -107,19 +125,11 @@ export function useVoiceCapture({
   }, [handleError, onTranscript, sttMutation]);
 
   const startRecording = useCallback(async () => {
-    if (typeof window === "undefined") {
-      handleError(new Error("voice_unavailable_on_server"));
-      return;
-    }
     if (isRecording || isProcessing) {
       return;
     }
-    if (!navigator.mediaDevices?.getUserMedia) {
-      handleError(new Error("media_devices_unavailable"));
-      return;
-    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getUserMediaClient();
       const recorder = new MediaRecorder(stream);
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
@@ -142,14 +152,19 @@ export function useVoiceCapture({
       setTranscript("");
       setError(null);
       setIsRecording(true);
-      timeoutRef.current = window.setTimeout(() => {
+      const timeoutId = setTimeoutClient(() => {
         stopRecording();
       }, MAX_RECORDING_MS);
+      timeoutRef.current = timeoutId;
     } catch (err) {
       cleanupStream();
-      handleError(err);
+      if (err instanceof Error && err.message === "media_devices_unavailable") {
+        handleError(err);
+      } else {
+        handleError(new Error("voice_unavailable_on_server"));
+      }
     }
-  }, [cleanupStream, handleError, isProcessing, isRecording, processRecording]);
+  }, [cleanupStream, handleError, isProcessing, isRecording, processRecording, stopRecording]);
 
   const stopRecording = useCallback(() => {
     if (!mediaRecorderRef.current) return;

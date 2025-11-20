@@ -23,6 +23,7 @@ type DeleteFactInput =
 export const Route = createFileRoute("/privacy")({
   component: PrivacyRoute,
   errorComponent: RouteError,
+  ssr: "data-only",
 });
 
 function PrivacyRoute() {
@@ -128,9 +129,11 @@ function PrivacyRoute() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-2">
                       <p className="text-muted-foreground text-sm">
-                        {new Date(
-                          fact.created ?? fact.updated ?? Date.now()
-                        ).toLocaleString()}
+                        {typeof window !== "undefined"
+                          ? new Date(
+                              fact.created ?? fact.updated ?? Date.now()
+                            ).toLocaleString()
+                          : fact.created ?? fact.updated ?? ""}
                       </p>
                       <p className="whitespace-pre-wrap text-sm">
                         {fact.content}
@@ -181,9 +184,9 @@ function PrivacyRoute() {
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-base">{event.type}</h3>
                       <span className="text-muted-foreground text-xs">
-                        {new Date(
-                          event.timestamp ?? Date.now()
-                        ).toLocaleString()}
+                        {typeof window !== "undefined"
+                          ? new Date(event.timestamp ?? Date.now()).toLocaleString()
+                          : event.timestamp ?? ""}
                       </span>
                     </div>
                     <pre className="whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-xs">

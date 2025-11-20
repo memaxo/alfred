@@ -1,5 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import Loader from "./components/loader";
+import { RouteError } from "./components/route-error";
 import "./index.css";
 import type { AppRouter } from "@alfred/api";
 import {
@@ -50,6 +51,7 @@ export const getRouter = () => {
     context: { queryClient },
     defaultPendingComponent: () => <Loader />,
     defaultNotFoundComponent: () => <div>Not Found</div>,
+    defaultErrorComponent: RouteError,
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>

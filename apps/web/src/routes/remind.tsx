@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RemindPane, type RemindPaneItem } from "@alfred/ui";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
@@ -23,17 +23,27 @@ export const Route = createFileRoute("/remind")({
 
 function RemindRoute() {
   const utils = trpc.useUtils();
-  const defaultDue = useMemo(() => {
-    const start = new Date(Date.now() + 5 * 60 * 1000);
-    return start.toISOString().slice(0, 16);
-  }, []);
-
+  const [defaultDue, setDefaultDue] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [due, setDue] = useState(defaultDue);
+  const [due, setDue] = useState("");
   const listInput = useMemo(() => ({ limit: 50, offset: 0 }), []);
-  const [dueBefore, setDueBefore] = useState(() => new Date().toISOString());
+  const [dueBefore, setDueBefore] = useState(() => {
+    if (typeof window === "undefined") {
+      return new Date(0).toISOString();
+    }
+    return new Date().toISOString();
+  });
   const dueInput = useMemo(() => ({ before: dueBefore }), [dueBefore]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const start = new Date(Date.now() + 5 * 60 * 1000);
+      const defaultDueValue = start.toISOString().slice(0, 16);
+      setDefaultDue(defaultDueValue);
+      setDue(defaultDueValue);
+    }
+  }, []);
 
   type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
   type RouterInputs = inferRouterInputs<TRPCAppRouter>;
@@ -180,7 +190,10 @@ function RemindRoute() {
                     <div>
                       <h4 className="font-semibold">{reminder.title}</h4>
                       <p className="text-muted-foreground text-xs">
-                        Due {new Date(reminder.due).toLocaleString()}
+                        Due{" "}
+                        {typeof window !== "undefined"
+                          ? new Date(reminder.due).toLocaleString()
+                          : reminder.due}
                       </p>
                     </div>
                     <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700 text-xs">

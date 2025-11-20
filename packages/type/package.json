@@ -31,6 +31,10 @@
       "types": "./dist/guards.d.ts",
       "default": "./src/guards.ts"
     },
+    "./preference": {
+      "types": "./dist/preference.d.ts",
+      "default": "./src/preference.ts"
+    },
     "./runtime-context": {
       "types": "./dist/runtime-context.d.ts",
       "default": "./src/runtime-context.ts"

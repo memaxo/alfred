@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import PromoteDialog from "@/components/deploy/promote-dialog";
@@ -34,22 +35,25 @@ function getHealthKey(app: string, type: string) {
   return `${app}:${type}`;
 }
 
-function suggestProdHost(app: string) {
-  const slug = slugifyApp(app);
-  if (typeof window === "undefined") {
+const suggestProdHost = createIsomorphicFn()
+  .server((app: string) => {
+    const slug = slugifyApp(app);
     return `${slug}.${DEFAULT_DOMAIN_FALLBACK}`;
-  }
-  const domain =
-    import.meta.env?.VITE_APP_DOMAIN ??
-    (window.location.hostname.length > 0
-      ? window.location.hostname
-      : DEFAULT_DOMAIN_FALLBACK);
-  return `${slug}.${domain}`;
-}
+  })
+  .client((app: string) => {
+    const slug = slugifyApp(app);
+    const domain =
+      import.meta.env?.VITE_APP_DOMAIN ??
+      (window.location.hostname.length > 0
+        ? window.location.hostname
+        : DEFAULT_DOMAIN_FALLBACK);
+    return `${slug}.${domain}`;
+  });
 
 export const Route = createFileRoute("/deployments")({
   component: DeploymentsRoute,
   errorComponent: RouteError,
+  ssr: "data-only",
 });
 
 function DeploymentsRoute() {
@@ -309,9 +313,9 @@ function DeploymentsRoute() {
                               </span>
                               {healthTimestamp ? (
                                 <span className="text-muted-foreground text-xs">
-                                  {new Date(
-                                    healthTimestamp
-                                  ).toLocaleTimeString()}
+                                  {typeof window !== "undefined"
+                                    ? new Date(healthTimestamp).toLocaleTimeString()
+                                    : healthTimestamp}
                                 </span>
                               ) : null}
                             </div>
@@ -333,7 +337,9 @@ function DeploymentsRoute() {
                           </td>
                           <td className="px-3 py-2 text-muted-foreground">
                             {deployment.updated
-                              ? new Date(deployment.updated).toLocaleString()
+                              ? typeof window !== "undefined"
+                                ? new Date(deployment.updated).toLocaleString()
+                                : deployment.updated
                               : "—"}
                           </td>
                           <td className="px-3 py-2">

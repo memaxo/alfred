@@ -33,6 +33,21 @@ function sanitizeInsert<T extends Record<string, unknown>>(input: Partial<T>) {
   return copy as Partial<T>;
 }
 
+const getPreferencesStmt = db
+  .select({
+    id: preferences.id,
+    userId: preferences.userId,
+    key: preferences.key,
+    value: preferences.value,
+    confidence: preferences.confidence,
+    source: preferences.source,
+    created: preferences.created,
+    updated: preferences.updated,
+  })
+  .from(preferences)
+  .where(eq(preferences.userId, sql.placeholder("userId")))
+  .prepare("get_user_preferences");
+
 // Profile operations
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
   const rows = await db
@@ -84,13 +99,7 @@ export async function upsertProfile(
 
 // Preference operations
 export async function getPreferences(userId: string): Promise<PreferenceRow[]> {
-  const rows = await db
-    .select()
-    .from(preferences)
-    .where(eq(preferences.userId, userId))
-    .orderBy(desc(preferences.updated));
-
-  return rows;
+  return getPreferencesStmt.execute({ userId });
 }
 
 export async function setPreference(

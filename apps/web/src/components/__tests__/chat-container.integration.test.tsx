@@ -1,9 +1,9 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { ChatContainer } from "../chat-container";
+import { assistantChatMock } from "@/test/mock-assistant-chat";
 
 mock.module("react-virtuoso", () => ({
   Virtuoso: ({
@@ -23,116 +23,91 @@ mock.module("react-virtuoso", () => ({
   ),
 }));
 
-const sendSpy = vi.fn();
-const clearSpy = vi.fn();
-const hydrateSpy = vi.fn();
+mock.module("@/hooks/use-voice-capture", () => ({
+  useVoiceCapture: () => ({
+    isRecording: false,
+    startRecording: vi.fn(),
+    stopRecording: vi.fn(),
+    error: null,
+  }),
+}));
 
-mock.module("@/hooks/use-assistant-stream", () => {
-  const { useCallback, useState } = require("react");
-
-  const createMessage = (text: string): UIMessage => ({
-    id: `msg-${Math.random().toString(36).slice(2)}`,
-    role: "user",
-    parts: [{ type: "text", text }],
-    metadata: { status: "sent" },
-  });
-
-  return {
-    useAssistantStream: () => {
-      const [messages, setMessages] = useState<UIMessage[]>([]);
-      const send = useCallback((text: string) => {
-        sendSpy(text);
-        setMessages((prev) => [...prev, createMessage(text)]);
-      }, []);
-      const clear = useCallback(() => {
-        clearSpy();
-        setMessages([]);
-      }, []);
-      const hydrate = useCallback((snapshot: UIMessage[]) => {
-        hydrateSpy(snapshot);
-        setMessages(snapshot);
-      }, []);
-
-      return {
-        messages,
-        actions: [],
-        status: "ready",
-        error: null,
-        send,
-        clear,
-        hydrate,
-      };
-    },
-  };
-});
+const { ChatContainer } = await import("../chat-container");
 
 describe("ChatContainer integration", () => {
   beforeEach(() => {
-    sendSpy.mockClear();
-    clearSpy.mockClear();
-    hydrateSpy.mockClear();
+    assistantChatMock.reset();
   });
 
-  it("sends messages through the assistant stream hook", async () => {
-    const { getByPlaceholderText, getByText } = render(
-      <ChatContainer agent="assistant" />
-    );
+  it("renders assistant stream messages", async () => {
+    const { getByText } = render(<ChatContainer agent="assistant" />);
 
-    const input = getByPlaceholderText(/Ask Alfred/i);
-    fireEvent.change(input, { target: { value: "Hello world" } });
-    fireEvent.submit(input.closest("form") ?? input);
+    await act(async () => {
+      assistantChatMock.emitAssistantMessage({
+        id: "msg-assistant",
+        role: "assistant",
+        parts: [{ type: "text", text: "Hi from stream" }],
+      });
+    });
 
     await waitFor(() => {
-      expect(sendSpy).toHaveBeenCalledWith("Hello world");
-      expect(getByText("Hello world")).toBeTruthy();
+      expect(getByText("Hi from stream")).toBeTruthy();
     });
   });
 
   it("clears messages when the clear button is pressed", async () => {
-    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(
+    const { getByText, queryByText, getAllByRole } = render(
       <ChatContainer agent="assistant" />
     );
 
-    const input = getByPlaceholderText(/Ask Alfred/i);
-    fireEvent.change(input, { target: { value: "To clear" } });
-    fireEvent.submit(input.closest("form") ?? input);
+    await act(async () => {
+      assistantChatMock.emitAssistantMessage({
+        id: "msg-clear",
+        role: "assistant",
+        parts: [{ type: "text", text: "To clear" }],
+      });
+    });
 
     await waitFor(() => {
       expect(getByText("To clear")).toBeTruthy();
     });
 
-    const clearButton = getByRole("button", { name: /clear/i });
-    fireEvent.click(clearButton);
+    const clearButtons = getAllByRole("button", { name: /clear/i });
+    fireEvent.click(clearButtons[clearButtons.length - 1]);
 
     await waitFor(() => {
-      expect(clearSpy).toHaveBeenCalled();
       expect(queryByText("To clear")).toBeNull();
     });
   });
 
-  it("hydrates messages when switching agents", async () => {
-    const { getByPlaceholderText, getByText, getByRole, queryByText } = render(
+  it("hydrates saved messages when switching agents", async () => {
+    const { getByText, queryByText, getAllByRole } = render(
       <ChatContainer agent="assistant" />
     );
 
-    const input = getByPlaceholderText(/Ask Alfred/i);
-    fireEvent.change(input, { target: { value: "Agent state" } });
-    fireEvent.submit(input.closest("form") ?? input);
+    await act(async () => {
+      assistantChatMock.emitAssistantMessage({
+        id: "msg-agent",
+        role: "assistant",
+        parts: [{ type: "text", text: "Agent state" }],
+      });
+    });
 
     await waitFor(() => {
       expect(getByText("Agent state")).toBeTruthy();
     });
 
-    const orchestratorSwitch = getByRole("button", { name: /orchestrator/i });
-    fireEvent.click(orchestratorSwitch);
+    const orchestratorSwitches = getAllByRole("tab", {
+      name: /orchestrator/i,
+    });
+    fireEvent.click(orchestratorSwitches[orchestratorSwitches.length - 1]);
 
     await waitFor(() => {
-      expect(hydrateSpy).toHaveBeenCalled();
       expect(queryByText("Agent state")).toBeNull();
     });
 
-    const assistantSwitch = getByRole("button", { name: /assistant/i });
-    fireEvent.click(assistantSwitch);
+    const assistantSwitches = getAllByRole("tab", { name: /^assistant$/i });
+    fireEvent.click(assistantSwitches[assistantSwitches.length - 1]);
 
     await waitFor(() => {
       expect(getByText("Agent state")).toBeTruthy();

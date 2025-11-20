@@ -47,7 +47,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 function RootDocument() {
   const isFetching = useRouterState({ select: (s) => s.isLoading });
   return (
-    <html className="dark" lang="en">
+    <html className="dark antialiased" lang="en">
       <head>
         <HeadContent />
       </head>

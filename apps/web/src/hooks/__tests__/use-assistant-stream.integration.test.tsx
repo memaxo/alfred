@@ -1,7 +1,8 @@
 import "@/test/dom";
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { assistantChatMock } from "@/test/mock-assistant-chat";
 import { useAssistantStream } from "../use-assistant-stream";
 
 const baseMessage: UIMessage = {
@@ -16,6 +17,26 @@ const baseMessage: UIMessage = {
 };
 
 describe("useAssistantStream integration (without network)", () => {
+  beforeEach(() => {
+    assistantChatMock.reset();
+  });
+
+  it("sends user input through the chat transport", async () => {
+    const { result } = renderHook(() => useAssistantStream());
+
+    await act(async () => {
+      result.current.send("Ping transport");
+    });
+
+    await waitFor(() => {
+      expect(assistantChatMock.sendSpy).toHaveBeenCalledWith("Ping transport");
+      expect(result.current.messages.at(-1)?.parts[0]).toMatchObject({
+        type: "text",
+        text: "Ping transport",
+      });
+    });
+  });
+
   it("hydrates pre-existing messages", () => {
     const { result } = renderHook(() => useAssistantStream());
 
