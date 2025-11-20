@@ -23,6 +23,15 @@ import {
 import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 import { dbModuleStub } from "./utils/mock-db-client";
+import { resetAgentMocks } from "./utils/agent-mock";
+
+mock.module("@alfred/agent/orchestrator/linear", () => ({
+  emitLinearActivity: vi.fn().mockResolvedValue(undefined),
+}));
+
+mock.module("@alfred/agent/orchestrator/linearmetrics", () => ({
+  configureLinearMetrics: vi.fn(),
+}));
 
 setupTestEnv();
 mockPolicyAudit();
@@ -50,6 +59,9 @@ const workflowStreamDurationSecondsMock = {
 const workflowStreamEventsTotalMock = {
   inc: vi.fn(),
 };
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
@@ -87,6 +99,7 @@ afterEach(() => {
   createConversationMock.mockReset();
   getConversationByWorkflowMock.mockReset();
   createMessageMock.mockReset();
+  resetAgentMocks();
 });
 
 /**
@@ -202,6 +215,20 @@ describe("workflow router", () => {
           parts: [{ type: "text", text: "test requirement" }],
         })
       );
+      const requirementMessage = createMessageMock.mock.calls.find(
+        ([, , message]) => (message as UIMessage).role === "user"
+      )?.[2] as UIMessage | undefined;
+      expect(requirementMessage).toBeDefined();
+      expect(requirementMessage && UUID_REGEX.test(requirementMessage.id)).toBe(
+        true
+      );
+      expect(requirementMessage?.metadata?.workflowMessageKey).toBe(
+        `${mockRunId}:requirement`
+      );
+      expect(requirementMessage?.metadata?.workflowEventType).toBe(
+        "workflow.requirement"
+      );
+      expect(requirementMessage?.metadata?.workflowEventId).toBe(mockRunId);
     });
 
     it("throws UNAUTHORIZED when session is missing", async () => {
@@ -318,6 +345,21 @@ describe("workflow router", () => {
         "conv-stream",
         expect.objectContaining({ role: "user" })
       );
+      const assistantCall = createMessageMock.mock.calls.find(
+        ([, conversationId, message]) =>
+          conversationId === "conv-stream" &&
+          (message as UIMessage).role === "assistant"
+      );
+      expect(assistantCall).toBeDefined();
+      const assistantMessage = assistantCall?.[2] as UIMessage;
+      expect(UUID_REGEX.test(assistantMessage.id)).toBe(true);
+      expect(
+        typeof assistantMessage.metadata?.workflowMessageKey === "string"
+      ).toBe(true);
+      expect(assistantMessage.metadata?.workflowEventType).toBe("assistant");
+      expect(
+        typeof assistantMessage.metadata?.workflowEventId === "string"
+      ).toBe(true);
       expect(
         createMessageMock.mock.calls.some(
           ([, conversationId, message]) =>
@@ -359,6 +401,58 @@ describe("workflow router", () => {
       });
 
       expect(workflowRepoMocks.appendEvent).toHaveBeenCalled();
+    });
+
+    it("marks workflow runs as cancelled when registry cancel is invoked", async () => {
+      const mockRunId = "cancel-run-id";
+      let active = true;
+      const streamingExecutor = {
+        runId: mockRunId,
+        summary: "test",
+        stream: (async function* () {
+          while (active) {
+            yield { type: "progress", pct: 5, message: "working" } as WorkflowEvent;
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        })(),
+        resume: vi.fn().mockResolvedValue(undefined),
+        cancel: vi.fn().mockImplementation(async () => {
+          active = false;
+        }),
+      } as ReturnType<typeof createMockExecutor>;
+
+      workflowRunnerMocks.runPlanV6.mockReturnValue(streamingExecutor);
+      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const observable = toObservable(
+        await caller.workflow.stream({ requirement: "test" })
+      );
+
+      observable.subscribe({
+        next: () => {
+          const registerArgs = runRegistryMocks.register.mock.calls[0]?.[1];
+          registerArgs?.cancel?.();
+        },
+        error: (error) => {
+          throw error;
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      const cancelCall = workflowRepoMocks.updateRun.mock.calls.find(
+        ([, patch]) => patch.status === "cancelled"
+      );
+      expect(cancelCall).toBeTruthy();
+      expect(cancelCall?.[0]).toBe(mockRunId);
+      expect(cancelCall?.[1]).toMatchObject({
+        status: "cancelled",
+        completedAt: expect.any(Date),
+      });
     });
   });
 

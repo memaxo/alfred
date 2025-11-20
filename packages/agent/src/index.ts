@@ -15,3 +15,4 @@ export {
 };
 
 export * from "./metrics";
+export * from "./agents";

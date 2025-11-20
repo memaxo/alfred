@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
 import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
@@ -213,19 +213,37 @@ function deriveWorkflowTitle(requirement: string): string | undefined {
   return `${trimmed.slice(0, limit - 3)}...`;
 }
 
-function workflowMessageId(runId: string, suffix: string): string {
-  return `workflow-${runId}-${suffix}`;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function stableUuidFromSeed(seed: string): string {
+  const digest = createHash("sha256").update(seed).digest("hex").slice(0, 32);
+  const chars = digest.split("");
+  chars[12] = "4"; // UUID version 4
+  const variant = (parseInt(chars[16] ?? "0", 16) & 0x3) | 0x8;
+  chars[16] = variant.toString(16);
+  const normalized = chars.join("");
+  return `${normalized.slice(0, 8)}-${normalized.slice(8, 12)}-${normalized.slice(12, 16)}-${normalized.slice(16, 20)}-${normalized.slice(20, 32)}`;
+}
+
+function ensureUuid(value: string | undefined, seed: string): string {
+  if (typeof value === "string" && UUID_PATTERN.test(value)) {
+    return value;
+  }
+  return stableUuidFromSeed(seed);
 }
 
 function createRequirementMessage(
   input: WorkflowInputPayload,
   runId: string
 ): UIMessage {
+  const workflowMessageKey = `${runId}:requirement`;
   return {
-    id: workflowMessageId(runId, "requirement"),
+    id: ensureUuid(undefined, workflowMessageKey),
     role: "user",
     parts: [{ type: "text", text: input.requirement }],
     metadata: {
+      workflowMessageKey,
       auto: input.auto,
       workspace: input.workspace ?? null,
       repoBase: input.repoBase ?? null,
@@ -270,28 +288,62 @@ async function persistWorkflowMessages(options: {
   userId: string;
   conversationId: string;
   messages: UIMessage[];
-  persistedIds: Set<string>;
+  persistedKeys: Set<string>;
   runId: string;
   baseId?: string;
+  eventType?: string;
+  eventId?: string;
 }) {
-  const { userId, conversationId, messages, persistedIds, runId, baseId } =
-    options;
+  const {
+    userId,
+    conversationId,
+    messages,
+    persistedKeys,
+    runId,
+    baseId,
+    eventType,
+    eventId,
+  } = options;
   for (let index = 0; index < messages.length; index += 1) {
     const original = messages[index]!;
-    const derivedId = baseId
-      ? `${baseId}:${index}`
-      : typeof original.id === "string" && original.id.length > 0
-        ? original.id
-        : workflowMessageId(runId, randomUUID());
+    const metadataObject = (original.metadata ?? {}) as {
+      workflowMessageKey?: unknown;
+      [key: string]: unknown;
+    };
 
-    if (persistedIds.has(derivedId)) {
+    const metadataKey =
+      typeof metadataObject.workflowMessageKey === "string" &&
+      metadataObject.workflowMessageKey.length > 0
+        ? metadataObject.workflowMessageKey
+        : null;
+
+    const dedupeKey = baseId
+      ? `${baseId}:${index}`
+      : metadataKey
+        ? metadataKey
+        : typeof original.id === "string" && original.id.length > 0
+          ? original.id
+          : `${runId}:${index}`;
+
+    if (persistedKeys.has(dedupeKey)) {
       continue;
     }
 
+    const messageId = ensureUuid(
+      typeof original.id === "string" ? original.id : undefined,
+      dedupeKey
+    );
+
     const normalized: UIMessage = {
       ...original,
-      id: derivedId,
+      id: messageId,
       parts: Array.isArray(original.parts) ? original.parts : [],
+      metadata: {
+        ...metadataObject,
+        workflowMessageKey: metadataKey ?? dedupeKey,
+        ...(eventType ? { workflowEventType: eventType } : {}),
+        ...(eventId ? { workflowEventId: eventId } : {}),
+      },
     };
 
     try {
@@ -300,12 +352,12 @@ async function persistWorkflowMessages(options: {
         conversationId,
         normalized
       );
-      persistedIds.add(derivedId);
+      persistedKeys.add(dedupeKey);
     } catch (error) {
       logger.warn("workflow_message_persist_failed", {
         runId,
         conversationId,
-        messageId: derivedId,
+        messageId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -360,16 +412,18 @@ export const workflowRouter: ReturnType<typeof router> = router({
             workflowId: executor.runId,
             title: deriveWorkflowTitle(input.requirement),
           });
-          if (created) {
-            await persistWorkflowMessages({
-              userId: session.user.id,
-              conversationId: conversation.id,
-              messages: [createRequirementMessage(input, executor.runId)],
-              persistedIds: new Set(),
-              runId: executor.runId,
-            });
-          }
-        } catch (error) {
+              if (created) {
+                await persistWorkflowMessages({
+                  userId: session.user.id,
+                  conversationId: conversation.id,
+                  messages: [createRequirementMessage(input, executor.runId)],
+                  persistedKeys: new Set(),
+                  runId: executor.runId,
+                  eventType: "workflow.requirement",
+                  eventId: executor.runId,
+                });
+              }
+            } catch (error) {
           logger.warn("workflow_conversation_init_failed", {
             runId: executor.runId,
             error: error instanceof Error ? error.message : String(error),
@@ -439,6 +493,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const abortController = new AbortController();
         let cancelled = false;
         let timerClosed = false;
+        abortController.signal.addEventListener("abort", () => {
+          cancelled = true;
+        });
 
         const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
         const closeTimer = (status: "ok" | "error" | "cancel") => {
@@ -461,8 +518,59 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         const asyncTask = (async () => {
           let runId: string | null = null;
-          const persistedMessageIds = new Set<string>();
+          const persistedMessageKeys = new Set<string>();
           let workflowConversationId: string | null = null;
+          const markCancelled = async () => {
+            if (!runId) return;
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "cancelled",
+                completedAt: new Date(),
+              });
+              await recordAudit({
+                userId: session.user.id,
+                action: "workflow.stream.cancel",
+                resource: { kind: "workflow", id: runId },
+                decision: "allow",
+              });
+            } catch (error) {
+              logger.warn("workflow_cancellation_update_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+            if (!timerClosed) {
+              recordEvent("cancel");
+              closeTimer("cancel");
+            }
+            emit.complete();
+          };
+
+          const markCompleted = async () => {
+            if (!runId) return;
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "completed",
+                completedAt: new Date(),
+              });
+              await recordAudit({
+                userId: session.user.id,
+                action: "workflow.stream.complete",
+                resource: { kind: "workflow", id: runId },
+                decision: "allow",
+              });
+            } catch (error) {
+              logger.warn("workflow_completion_update_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              // Continue without throwing
+            }
+            recordEvent("complete");
+            closeTimer("ok");
+            emit.complete();
+          };
+
           try {
             // Create executor (runtime or runner based on feature flag)
             const executor = createWorkflowExecutor(input, abortController);
@@ -497,8 +605,10 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   userId: session.user.id,
                   conversationId: conversation.id,
                   messages: [createRequirementMessage(input, runId)],
-                  persistedIds: persistedMessageIds,
+                  persistedKeys: persistedMessageKeys,
                   runId,
+                  eventType: "workflow.requirement",
+                  eventId: runId,
                 });
               }
             } catch (error) {
@@ -515,7 +625,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
               },
               cancel: async () => {
                 cancelled = true;
-                executor.cancel();
+                abortController.abort();
+                await executor.cancel();
               },
               abortController,
             });
@@ -595,9 +706,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
                     userId: session.user.id,
                     conversationId: workflowConversationId,
                     messages: uiMessages,
-                    persistedIds: persistedMessageIds,
+                    persistedKeys: persistedMessageKeys,
                     runId: runId ?? executor.runId,
                     baseId: eventId,
+                    eventType: event.type,
+                    eventId,
                   });
                 }
                 // Push event including its identity for client-side dedupe
@@ -632,30 +745,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
               }
             }
 
-            // Mark completion
-            try {
-              await workflowRepo.updateRun(runId, {
-                status: "completed",
-                completedAt: new Date(),
-              });
-              await recordAudit({
-                userId: session.user.id,
-                action: "workflow.stream.complete",
-                resource: { kind: "workflow", id: runId },
-                decision: "allow",
-              });
-            } catch (error) {
-              logger.warn("workflow_completion_update_failed", {
-                runId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              // Continue without throwing
+            if (cancelled) {
+              await markCancelled();
+              return;
             }
 
-            recordEvent("complete");
-            closeTimer("ok");
-            emit.complete();
+            await markCompleted();
           } catch (error) {
+            if (cancelled) {
+              await markCancelled();
+              return;
+            }
             recordEvent("error");
             closeTimer("error");
             if (runId) {

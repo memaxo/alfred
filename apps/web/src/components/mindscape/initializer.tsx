@@ -1,16 +1,42 @@
 import { useMindscapeStore } from "@/store/mindscape";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
+import { trpc } from "@/utils/trpc";
+import { useShallow } from "zustand/react/shallow";
 
 export function MindscapeInitializer() {
-  const nodes = useMindscapeStore((state) => state.nodes);
-  const addArtifact = useMindscapeStore((state) => state.addArtifact);
-  const autoLayout = useMindscapeStore((state) => state.autoLayout);
+  const { addArtifact, autoLayout, nodeIds } = useMindscapeStore(
+    useShallow((state) => ({
+      addArtifact: state.addArtifact,
+      autoLayout: state.autoLayout,
+      nodeIds: state.nodes.map((n) => n.id),
+    }))
+  );
+
+  // @ts-ignore - trpc type inference issue
+  const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
+  // @ts-ignore - trpc type inference issue
+  const { data: reminders } = trpc.remind.due.useQuery({});
+  // @ts-ignore - trpc type inference issue
+  const { data: edges } = trpc.graph.getEdges.useQuery(
+    { nodeIds },
+    { enabled: nodeIds.length > 0, refetchInterval: 5000 }
+  );
+  const initializedRef = useRef(false);
+  const { setEdges } = useMindscapeStore(useShallow((state) => ({ setEdges: state.setEdges })));
 
   // Initialize with Chat Node after Orb is created
   useEffect(() => {
-    // Wait for Orb to be added by Canvas
-    if (nodes.length === 1 && nodes[0]?.type === "orb") {
+    if (initializedRef.current) return;
+
+    const hasOrb = nodeIds.includes("singularity");
+    // Check for any chat node to avoid duplicates on reload if persisted
+    const hasChat = nodeIds.some((id) => {
+        const node = useMindscapeStore.getState().nodes.find(n => n.id === id);
+        return node?.type === 'chat';
+    });
+
+    if (hasOrb && !hasChat) {
       const chatId = nanoid();
       addArtifact({
         id: chatId,
@@ -22,12 +48,83 @@ export function MindscapeInitializer() {
         },
       });
       
+      initializedRef.current = true;
+
       // Trigger layout after adding chat
       setTimeout(() => {
         autoLayout();
       }, 100);
     }
-  }, [nodes, addArtifact, autoLayout]);
+  }, [nodeIds, addArtifact, autoLayout]);
+
+  // Sync Notes
+  useEffect(() => {
+    if (!notes) return;
+
+    notes.forEach((note: any, index: number) => {
+      const noteNodeId = `note-${note.id}`;
+      if (nodeIds.includes(noteNodeId)) return;
+
+      addArtifact({
+        id: noteNodeId,
+        type: "note",
+        position: { x: 800 + (index * 30), y: -200 + (index * 60) },
+        data: {
+          label: note.title || "Untitled",
+          title: note.title,
+          content: note.content,
+          tags: note.tags,
+        },
+      });
+    });
+  }, [notes, nodeIds, addArtifact]);
+
+  // Sync Reminders
+  useEffect(() => {
+    if (!reminders) return;
+
+    reminders.forEach((reminder: any, index: number) => {
+      const reminderNodeId = `reminder-${reminder.id}`;
+      if (nodeIds.includes(reminderNodeId)) return;
+
+      addArtifact({
+        id: reminderNodeId,
+        type: "reminder",
+        position: { x: -800 - (index * 30), y: -200 + (index * 60) },
+        data: {
+          label: reminder.title || "Reminder",
+          title: reminder.title,
+          due: reminder.due,
+        },
+      });
+    });
+  }, [reminders, nodeIds, addArtifact]);
+
+  // Sync Edges
+  useEffect(() => {
+    if (!edges) return;
+
+    const newEdges = edges.map((edge: any) => {
+      // Helper to find the correct node ID for a given DB ID
+      const findNodeId = (dbId: string) => {
+        // Try to find a node that ends with this DB ID
+        const match = nodeIds.find(id => id.endsWith(dbId));
+        return match || `note-${dbId}`; // Fallback to note prefix if not found (or maybe it's not loaded yet)
+      };
+
+      return {
+        id: edge.id,
+        source: findNodeId(edge.fromId),
+        target: findNodeId(edge.toId),
+        animated: true,
+        style: { stroke: "rgba(255, 255, 255, 0.2)" },
+      };
+    });
+
+    // Only update if edges have changed to avoid loops/jitters
+    // For now, just set them.
+    setEdges(newEdges);
+  }, [edges, setEdges, nodeIds]);
 
   return null;
 }

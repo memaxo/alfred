@@ -9,12 +9,9 @@
  * - Fast failure: clear error states
  */
 
-import type { UIMessage } from "@alfred/type/stream";
 import { Chat } from "@alfred/ui";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
-import { useAssistantStream } from "@/hooks/use-assistant-stream";
-import { useVoiceCapture } from "@/hooks/use-voice-capture";
+import { useChatLogic } from "@/hooks/use-chat-logic";
 import { Actions } from "./actions";
 import { renderPart } from "./chat-render";
 import { Connect } from "./connect";
@@ -29,70 +26,20 @@ type ChatContainerProps = {
 };
 
 export function ChatContainer({ agent }: ChatContainerProps) {
-  const [currentAgent, setCurrentAgent] = useState<
-    "assistant" | "orchestrator"
-  >(agent);
-  const contextsRef = useRef<Map<string, UIMessage[]>>(new Map());
-
-  const { messages, actions, status, error, send, clear, hydrate } =
-    useAssistantStream({
-      onError: (_err) => {
-        // Error is already displayed in the error state
-        // Additional logging handled by error boundaries
-      },
-    });
-
   const {
+    currentAgent,
+    messages,
+    actions,
+    activeActions,
+    status,
+    error,
+    voiceError,
     isRecording,
-    startRecording,
-    stopRecording,
-    error: voiceError,
-  } = useVoiceCapture({
-    onTranscript: (text) => {
-      if (currentAgent === "assistant" && text.trim().length > 0) {
-        send(text);
-      }
-    },
-    onError: (_err) => {
-      // Voice errors are handled by the hook
-    },
-  });
-
-  const activeActions = useMemo(
-    () =>
-      actions.filter(
-        (action) => action.status === "pending" || action.status === "running"
-      ),
-    [actions]
-  );
-
-  const handleSend = useCallback(
-    (input: string) => {
-      if (currentAgent !== "assistant") {
-        // Orchestrator streaming disabled: Use /orchestrator/run route for workflow execution.
-        // This chat interface is for assistant conversations only.
-        return;
-      }
-      send(input);
-    },
-    [currentAgent, send]
-  );
-
-  const handleAgentChange = useCallback(
-    (nextAgent: "assistant" | "orchestrator") => {
-      if (nextAgent === currentAgent) {
-        return;
-      }
-      contextsRef.current.set(currentAgent, messages);
-      clear();
-      setCurrentAgent(nextAgent);
-      const snapshot = contextsRef.current.get(nextAgent);
-      if (snapshot) {
-        hydrate(snapshot);
-      }
-    },
-    [clear, currentAgent, hydrate, messages]
-  );
+    handleSend,
+    handleAgentChange,
+    toggleVoice,
+    clear,
+  } = useChatLogic({ initialAgent: agent });
 
   const showActionsPanel = actions.length > 0;
   return (
@@ -128,13 +75,7 @@ export function ChatContainer({ agent }: ChatContainerProps) {
                 ListComponent={Virtuoso}
                 messages={messages}
                 onSend={handleSend}
-                onVoice={() => {
-                  if (isRecording) {
-                    stopRecording();
-                  } else {
-                    startRecording();
-                  }
-                }}
+                onVoice={toggleVoice}
                 perf
                 placeholder={
                   currentAgent === "assistant"

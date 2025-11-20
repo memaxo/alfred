@@ -15,9 +15,8 @@ import {
 import { renderPart } from "@/components/chat-render";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
-import { useAssistantStream } from "@/hooks/use-assistant-stream";
+import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useMindscapeExecutor } from "@/hooks/use-mindscape-executor";
-import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { useMindscapeStore } from "@/store/mindscape";
 import { MindscapeNode } from "./mindscape-node";
 
@@ -28,12 +27,21 @@ export function ChatNode({ id, data, selected }: NodeProps) {
 
   const { startWorkflow } = useMindscapeExecutor();
 
-  const { messages, send, hydrate } = useAssistantStream({
-    onError: (err) => {
-      // Log error without console
-      updateArtifactData(id, { error: err.message });
-    },
-  });
+  const {
+    messages,
+    handleSend: sendToChat,
+    hydrate,
+    isRecording,
+    toggleVoice,
+    error,
+  } = useChatLogic({ initialAgent: "assistant" });
+
+  // Log errors to node data
+  useEffect(() => {
+    if (error) {
+      updateArtifactData(id, { error: error.message });
+    }
+  }, [error, id, updateArtifactData]);
 
   // Hydrate from data on mount
   useEffect(() => {
@@ -45,7 +53,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     ) {
       hydrate(storedMessages as UIMessage[]);
     }
-  }, [data, messages.length, hydrate]); // Add dependencies
+  }, [data, messages.length, hydrate]);
 
   // Sync back to data on change
   useEffect(() => {
@@ -54,28 +62,18 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     }
   }, [messages, id, updateArtifactData]);
 
-  const handleSend = useCallback(
+  const handleSubmit = useCallback(
     (input: { text: string }) => {
       // Check for commands
       if (input.text.startsWith("/workflow ")) {
         const requirement = input.text.replace("/workflow ", "");
         startWorkflow(requirement);
-        // Add a fake user message to chat for continuity
-        // Actually send() will do that but we might want to intercept
-        // For now let's just send it so it appears in history
+        // We still send it to chat for history
       }
-      send(input.text);
+      sendToChat(input.text);
     },
-    [send, startWorkflow]
+    [sendToChat, startWorkflow]
   );
-
-  const { isRecording, startRecording, stopRecording } = useVoiceCapture({
-    onTranscript: (text) => {
-      if (text.trim().length > 0) {
-        send(text);
-      }
-    },
-  });
 
   return (
     <MindscapeNode
@@ -99,7 +97,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
         </Conversation>
 
         <div className="mt-auto border-white/10 border-t bg-void-surface/50 p-4 backdrop-blur-md">
-          <PromptInput onSubmit={handleSend}>
+          <PromptInput onSubmit={handleSubmit}>
             <PromptInputTextarea
               className="min-h-[60px] border-white/10 bg-void-surface/50 text-biolum placeholder:text-biolum-faint/50"
               placeholder="Interrogate the void... (/workflow to start)"
@@ -107,7 +105,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
             <PromptInputFooter>
               <Button
                 className={`h-8 w-8 ${isRecording ? "animate-pulse text-red-500" : "text-biolum-dim hover:text-biolum"}`}
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={toggleVoice}
                 size="icon"
                 variant="ghost"
               >

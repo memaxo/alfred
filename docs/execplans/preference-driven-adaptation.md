@@ -126,6 +126,31 @@ Use this section to track granular implementation steps. Every stopping point mu
 - [ ] Performance tests (`packages/agent/test/preference/performance.test.ts`)
 - [ ] Integration tests for preference loading (`packages/api/test/preference/loader.test.ts`)
 - [ ] E2E tests for preference-driven adaptation (`packages/api/test/preference/e2e.test.ts`)
+- [x] (2025-11-20 20:06Z) Ensure workflow message persistence uses UUID-safe IDs and logs deterministic linkage inside message metadata
+  - Added deterministic UUID helpers plus metadata `workflowMessageKey` in `packages/api/src/routers/workflow.ts`, switched persistence dedupe tracking to `persistedKeys`, and kept assistant/tool messages intact
+  - Extended `packages/api/test/workflow.router.test.ts` to assert UUID formatting + metadata, then ran `bun run typecheck`, attempted `bun run lint` (script missing), and `bun test packages/api/test/workflow.router.test.ts`
+- [x] (2025-11-20 20:16Z) Add `validateUIMessages`/`convertToModelMessages` guardrails before replaying stored workflow messages for inference/runtime reuse
+  - Introduced `validateConversationMessages()` in `packages/api/src/scheduler/preference-inference.ts` so scheduler skips corrupt histories; exported helper covered by `packages/api/test/preference.inference.messages.test.ts`
+  - Updated `packages/runtime/src/adapters/ai.ts` to validate UI messages before converting them for `streamText`, with new regression in `packages/runtime/test/adapter-preferences.test.ts`
+  - Added linear orchestrator mocks in `packages/api/test/workflow.router.test.ts` to keep tests isolated from AI SDK tool registry side effects
+  - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/runtime/test/adapter-preferences.test.ts` ✅, `bun test packages/api/test/preference.inference.messages.test.ts` ✅, `bun test packages/api/test/workflow.router.test.ts` ✅
+- [x] (2025-11-20 20:19Z) Pass `originalMessages`, `generateMessageId`, `messageMetadata`, and `consumeStream` to the chat stream handler so persistence survives aborts and metadata carries usage data
+  - Enhanced `apps/web/src/routes/api/stream-handler.ts` to cache `modelId`, log aborts, include a `messageMetadata` callback (model, streamId, token usage), and persist partial streams even when aborted
+  - Tests: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
+- [x] (2025-11-20 20:24Z) Persist complete assistant/tool UI message metadata during workflow streaming so inference consumers can replay events precisely
+  - Added `workflowEventType`/`workflowEventId` metadata enrichment when persisting workflow UI messages, ensuring tool calls/results keep their event lineage
+  - Updated `packages/api/test/workflow.router.test.ts` to assert the new metadata on requirement + assistant messages
+  - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
+- [ ] Prune workflow histories before invoking `streamText` to keep context windows within limits while preserving the newest tool outputs; cover via targeted tests
+- [x] (2025-11-20 20:30Z) Wire `onAbort` handling into workflow streaming so partial transcripts persist and telemetry distinguishes abort vs. completion
+  - Added explicit cancellation tracking in `packages/api/src/routers/workflow.ts`: aborting the TRPC subscription (or runtime registry cancel) now marks runs as `cancelled`, records audits, closes timers with `cancel`, and emits completion without surfacing spurious errors
+  - Updated run registry cancel handler to call `abortController.abort()` so the executor stream halts immediately and persisted messages still include the final events processed
+  - Extended `packages/api/test/workflow.router.test.ts` with a long-running executor case that invokes the registered `cancel` callback and asserts the run status transitions to `cancelled`
+  - Quality gates: `bun run typecheck` ✅, `bun run lint` (script missing), `bun test packages/api/test/workflow.router.test.ts` ✅
+- [ ] Expand router/repo tests to assert UUID persistence, abort flows, tool outputs, and metadata propagation; run `bun test packages/api/test/workflow.router.test.ts`
+- [ ] Share canonical tool definitions with validation/persistence layers so stored tool-call messages remain schema-safe; add tests for multi-modal outputs
+- [ ] Feed persisted conversations into client `useChat` flows by providing `initialMessages` from conversation repo; add an integration test proving resume behavior
+- [ ] Trigger preference cache invalidation + inference reruns whenever workflow persistence completes so Phase 4.2 learning stays up to date
 
 **Monitoring & Metrics:**
 - [ ] Add preference metrics to `packages/api/src/metrics.ts`
@@ -154,6 +179,8 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
 - **Shared DB module stub required**: Overriding `@alfred/db` per test caused missing `ragRepo` exports once `mock.restore()` ran. Exporting a mutable `dbModuleStub` from `packages/api/test/utils/mock-db-client.ts` keeps a single mock module that tests can customize without re-registering the module, preventing resolution errors.
 - **Await subscription promises**: `caller.workflow.stream()` returns a promise that resolves to an observable. Wrapping the promise directly in `toObservable` completes immediately and yields zero events. Awaiting first fixed the silent no-op in `packages/api/test/workflow.router.test.ts`.
 - **Prefer clearing over restoring module mocks**: Using `mock.restore()` inside `resetAllMocks()` removed previously registered module shims (DB/workflow repos), so later tests hit real implementations. Switching to `vi.clearAllMocks()` preserves the module mocks while still resetting call history.
+- **Seeded UUIDs still need version/variant bits**: Hashing workflow identifiers directly into a UUID-shaped string failed validation in tests. For deterministic IDs we now force the version nibble to `4` and adjust the variant nibble (8–b) before formatting, keeping RFC4122 compliance without losing determinism.
+- **Linear orchestrator modules eagerly load tool registries**: Importing `@alfred/agent/orchestrator/*` during tests pulled in `@alfred/agent/src/v6.ts`, which Bun evaluated twice and raised `"assistantToolSources" has already been declared`. Mocking the linear modules in `workflow.router.test.ts` isolates the router tests from the real AI SDK tool registry and prevents duplicate evaluation errors.
 
 ## Decision Log
 
@@ -201,10 +228,25 @@ Record every decision made while working on the plan in the format:
   Date/Author: 2025-11-20 (Codex CLI)
   Files affected: packages/api/src/routers/workflow.ts, packages/api/test/workflow.router.test.ts
 
+- Decision: Keep stable workflow linkage in `workflowMessageKey` metadata instead of overloading the UUID primary key
+  Rationale: The `messages.id` column enforces UUIDs, but preference inference relies on deterministic identifiers for dedupe and replay. Storing the stable key inside message metadata preserves deterministic linkage while letting the DB enforce UUID semantics.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/src/routers/workflow.ts, packages/api/test/workflow.router.test.ts
+
 - Decision: Clear mocked call history instead of restoring module mocks between tests
   Rationale: `mock.restore()` removed shared module mocks (DB/workflow repos), causing later tests to hit real implementations. Using `vi.clearAllMocks()` keeps those modules mocked while still resetting spy state, stabilizing workflow router tests.
   Date/Author: 2025-11-20 (Codex CLI)
   Files affected: packages/api/test/utils/router-helpers.ts
+
+- Decision: Validate stored conversation histories with `validateUIMessages` before feeding them into preference inference or runtime adapters
+  Rationale: Persisted workflow messages can accumulate legacy data; running AI SDK validation ensures corrupted payloads are skipped instead of poisoning inference or triggering runtime crashes.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/src/scheduler/preference-inference.ts, packages/runtime/src/adapters/ai.ts, packages/api/test/preference.inference.messages.test.ts, packages/runtime/test/adapter-preferences.test.ts
+
+- Decision: Mock linear orchestrator modules in workflow router tests
+  Rationale: The real `@alfred/agent/orchestrator/*` modules eagerly import the AI SDK tool registry, which Bun attempts to evaluate twice during tests and raises duplicate declaration errors. Injecting lightweight mocks keeps the tests hermetic and avoids brittle bundler behavior.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/test/workflow.router.test.ts
 
 - Decision: Implement Option B (dedicated messages table) for message storage
   Rationale: After reviewing AI SDK v6 patterns, Option B provides clean separation between conversations and messages, enables efficient querying with proper indexes, aligns with AI SDK v6 message persistence best practices, and allows optional workflow linking. Denormalizing `user_id` in messages table enables efficient ownership validation without joins, meeting <10ms performance budget.

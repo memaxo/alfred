@@ -1,4 +1,4 @@
-import { buildTools, getModelId, getOpenAI } from "@alfred/agent";
+import { getOrchestratorAgentDefaults } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { TRPCError } from "@trpc/server";
@@ -63,20 +63,19 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
         });
       }
       try {
-        const model = getOpenAI().chat(getModelId());
         const validatedMessages = validateMessages(input.messages);
         const modelMessages = convertToModelMessages(validatedMessages);
+        const defaults = getOrchestratorAgentDefaults();
         const stopWhen =
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
-            : undefined;
+            : defaults.stopWhen;
 
         const result = await generateText({
-          model,
+          ...defaults,
           messages: modelMessages,
-          tools: buildTools(),
           toolChoice: input.toolChoice,
-          ...(stopWhen ? { stopWhen } : {}),
+          stopWhen,
         });
         const output = sanitizeResult(result);
         const replayId = await persistResult({

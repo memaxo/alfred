@@ -10,6 +10,7 @@ import { toolNote } from "../assistant/src/tool/note";
 import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
 import { toolWebAssistant } from "../assistant/src/tool/web";
+import { toolMindscapeRead, toolMindscapeConnect } from "../assistant/src/tool/mindscape";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
@@ -106,6 +107,8 @@ const assistantToolSources: LegacyTool[] = [
   toolRemind,
   toolTimer,
   toolWebAssistant,
+  toolMindscapeRead,
+  toolMindscapeConnect,
 ];
 
 const orchestratorToolSources: LegacyTool[] = [

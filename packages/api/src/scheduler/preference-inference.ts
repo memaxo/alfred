@@ -8,12 +8,26 @@ import {
 } from "@alfred/agent/preference/inference";
 import { mergePreferences } from "@alfred/agent/preference/merger";
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
+import { buildTools } from "@alfred/agent";
 import type {
   ConversationHistory,
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
+import { validateUIMessages } from "ai";
+import type { Tool } from "ai";
+
+type ToolSet = Record<string, Tool>;
+
+let cachedWorkflowTools: ToolSet | null = null;
+
+function getWorkflowTools(): ToolSet {
+  if (!cachedWorkflowTools) {
+    cachedWorkflowTools = buildTools();
+  }
+  return cachedWorkflowTools;
+}
 
 type WorkflowToolCallRow = Awaited<
   ReturnType<typeof workflowRepo.getToolCalls>
@@ -164,6 +178,30 @@ export function stopPreferenceInferenceScheduler() {
   }
 }
 
+export async function validateConversationMessages(options: {
+  messages: UIMessage[];
+  conversationId: string;
+  userId: string;
+  logger?: Pick<Console, "warn">;
+  tools?: ToolSet;
+}): Promise<UIMessage[] | null> {
+  try {
+    const toolset = options.tools ?? getWorkflowTools();
+    const validated = await validateUIMessages({
+      messages: options.messages,
+      tools: toolset,
+    });
+    return validated as UIMessage[];
+  } catch (error) {
+    options.logger?.warn?.("preference_inference_invalid_history", {
+      conversationId: options.conversationId,
+      userId: options.userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 async function loadConversationHistory(
   userId: string,
   days: number,
@@ -181,11 +219,21 @@ async function loadConversationHistory(
       userId
     );
     if (!history) continue;
+    const validated = await validateConversationMessages({
+      messages: (history.messages ?? []) as UIMessage[],
+      conversationId: history.conversation.id,
+      userId,
+      logger: console,
+      tools: getWorkflowTools(),
+    });
+    if (!validated || validated.length === 0) {
+      continue;
+    }
     histories.push({
       id: history.conversation.id,
       userId: history.conversation.userId,
       title: history.conversation.title ?? undefined,
-      messages: history.messages as UIMessage[],
+      messages: validated,
       createdAt: history.conversation.created ?? new Date(),
       updatedAt: history.conversation.updated ?? new Date(),
     });

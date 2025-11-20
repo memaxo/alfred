@@ -90,7 +90,8 @@ export async function handleStreamRequest(
       }
     }
 
-    const model = getOpenAI().chat(getModelId());
+    const modelId = getModelId();
+    const model = getOpenAI().chat(modelId);
     const result = streamText({
       model,
       messages: convertToModelMessages(messages),
@@ -108,14 +109,42 @@ export async function handleStreamRequest(
       originalMessages: messages,
       generateMessageId: generateId,
       consumeSseStream: consumeStream,
+      messageMetadata: ({ part }) => {
+        const metadata: Record<string, unknown> = {
+          eventType: part.type,
+        };
+        const partWithId = part as { id?: string };
+        if (typeof partWithId.id === "string") {
+          metadata.streamId = partWithId.id;
+        }
+        if (part.type === "start") {
+          metadata.createdAt = new Date().toISOString();
+          metadata.model = modelId;
+        }
+        if (part.type === "finish") {
+          const finishPart = part as {
+            totalUsage?: {
+              totalTokens?: number;
+              promptTokens?: number;
+              completionTokens?: number;
+            };
+          };
+          metadata.totalTokens = finishPart.totalUsage?.totalTokens ?? null;
+          metadata.promptTokens = finishPart.totalUsage?.promptTokens ?? null;
+          metadata.completionTokens =
+            finishPart.totalUsage?.completionTokens ?? null;
+        }
+        return metadata;
+      },
       onFinish: async ({ isAborted, messages: streamedMessages }) => {
-        if (isAborted) {
-          logger.warn(`${errorPrefix}_stream_aborted_on_finish`);
+        if (!userId || !conversationId || !streamedMessages?.length) {
           return;
         }
 
-        if (!userId || !conversationId || !streamedMessages?.length) {
-          return;
+        if (isAborted) {
+          logger.warn(`${errorPrefix}_stream_aborted_on_finish`, {
+            persisted: streamedMessages.length,
+          });
         }
 
         await persistMessages({

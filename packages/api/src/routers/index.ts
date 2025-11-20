@@ -17,9 +17,11 @@ import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
+import { graphRouter } from "./graph";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),
+  graph: graphRouter,
   privateData: protectedProcedure.query(({ ctx }) => ({
     message: "This is private",
     user: ctx.session.user,

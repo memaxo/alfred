@@ -7,10 +7,10 @@
 
 import { cn } from "@/lib/utils";
 
-type ChatStatus = "ready" | "submitted" | "streaming" | "error";
+export type ChatStatus = "ready" | "submitted" | "streaming" | "error";
 
 interface ConnectProps {
-  status: ChatStatus;
+  status: ChatStatus | string;
   agent?: "assistant" | "orchestrator";
   className?: string;
 }
@@ -43,7 +43,7 @@ export function Connect({ status, agent, className }: ConnectProps) {
     },
   };
 
-  const config = statusConfig[status] ?? statusConfig.ready;
+  const config = statusConfig[status as ChatStatus] ?? statusConfig.ready;
 
   return (
     <div

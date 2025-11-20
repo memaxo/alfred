@@ -1,4 +1,4 @@
-import { buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
+import { getAssistantAgentDefaults } from "@alfred/agent";
 import type { UIMessage } from "@alfred/type/stream";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { TRPCError } from "@trpc/server";
@@ -93,20 +93,18 @@ export const assistantRouter: ReturnType<typeof router> = router({
     .input(generateInput)
     .mutation(async ({ input, ctx }) => {
       try {
-        const model = getOpenAI().chat(getModelId());
         const validatedMessages = validateMessages(input.messages);
         const modelMessages = convertToModelMessages(validatedMessages);
+        const defaults = getAssistantAgentDefaults();
         const stopWhen =
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
-            : undefined;
-
+            : defaults.stopWhen;
         const result = await generateText({
-          model,
+          ...defaults,
           messages: modelMessages,
-          tools: buildAssistantTools(),
           toolChoice: input.toolChoice,
-          ...(stopWhen ? { stopWhen } : {}),
+          stopWhen,
         });
 
         const output = sanitizeResult(result);

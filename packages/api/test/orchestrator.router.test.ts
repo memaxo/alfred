@@ -6,23 +6,15 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
+import {
+  getOrchestratorAgentDefaultsMock,
+  resetAgentMocks,
+} from "./utils/agent-mock";
 
 setupTestEnv();
 mockPolicyAudit();
 
 const generateMocks = mockGenerateText();
-
-const getOpenAIMock = vi.fn();
-const getModelIdMock = vi.fn().mockReturnValue("gpt-4");
-const buildToolsMock = vi.fn().mockReturnValue({});
-
-mock.module("@alfred/agent", () => ({
-  getOpenAI: () => ({
-    chat: getOpenAIMock,
-  }),
-  getModelId: getModelIdMock,
-  buildTools: buildToolsMock,
-}));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -34,16 +26,18 @@ beforeAll(async () => {
 
 afterEach(() => {
   resetAllMocks();
-  getOpenAIMock.mockReset();
-  getModelIdMock.mockReturnValue("gpt-4");
-  buildToolsMock.mockReturnValue({});
+  resetAgentMocks();
 });
 
 describe("orchestrator router", () => {
   describe("generate", () => {
     it("generates orchestrator completions via generateText", async () => {
-      const mockModel = { model: "gpt-4" };
-      getOpenAIMock.mockReturnValue(mockModel);
+      const mockDefaults = {
+        model: { name: "orchestrator-model" },
+        tools: { orchestrate: { description: "run" } },
+        stopWhen: vi.fn(),
+      };
+      getOrchestratorAgentDefaultsMock.mockReturnValue(mockDefaults);
 
       generateMocks.generateText.mockResolvedValue({
         text: "orchestrator response",
@@ -67,11 +61,10 @@ describe("orchestrator router", () => {
         maxSteps: 5,
       });
 
-      expect(getOpenAIMock).toHaveBeenCalled();
       expect(generateMocks.generateText).toHaveBeenCalledTimes(1);
       const callArgs = generateMocks.generateText.mock.calls[0]?.[0];
-      expect(callArgs?.model).toBe(mockModel);
-      expect(callArgs?.tools).toBeDefined();
+      expect(callArgs?.model).toBe(mockDefaults.model);
+      expect(callArgs?.tools).toBe(mockDefaults.tools);
       expect(callArgs?.stopWhen).toBeDefined();
       expect(result).toMatchObject({
         text: "orchestrator response",
@@ -101,8 +94,6 @@ describe("orchestrator router", () => {
     });
 
     it("validates message format", async () => {
-      getOpenAIMock.mockReturnValue({ model: "gpt-4" });
-
       await expect(
         caller.orchestrator.generate({
           messages: [{ role: "user", content: "invalid format" }] as any,
@@ -111,7 +102,6 @@ describe("orchestrator router", () => {
     });
 
     it("handles generateText errors", async () => {
-      getOpenAIMock.mockReturnValue({ model: "gpt-4" });
       generateMocks.generateText.mockRejectedValue(new Error("API error"));
 
       await expect(

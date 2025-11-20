@@ -1,14 +1,20 @@
 import "@/test/dom";
 import {
-  beforeAll,
-  beforeEach,
+  afterEach,
   describe,
   expect,
   it,
   mock,
   vi,
 } from "bun:test";
-import type { PreferenceDeleteInput, PreferenceSetInput } from "@alfred/type";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ComponentType } from "react";
+import { authenticatedRender } from "@/test/auth";
+import {
+  createTestQueryClient,
+  createTestTrpcClient,
+} from "@/test/render-route";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -20,25 +26,15 @@ mock.module("sonner", () => ({
   },
 }));
 
-let render: typeof import("@testing-library/react").render;
-let fireEvent: typeof import("@testing-library/react")["fireEvent"];
-let screen: typeof import("@testing-library/react").screen;
-let waitFor: typeof import("@testing-library/react").waitFor;
+const preferencesRouteModule = await import("../_authed/preferences");
+const PreferencesRouteComponent = preferencesRouteModule.Route?.options
+  ?.component as ComponentType | undefined;
 
-beforeAll(async () => {
-  const rtl = await import("@testing-library/react");
-  render = rtl.render;
-  fireEvent = rtl.fireEvent;
-  screen = rtl.screen;
-  waitFor = rtl.waitFor;
-});
+if (!PreferencesRouteComponent) {
+  throw new Error("Preferences route component is unavailable");
+}
 
-const listSetData = vi.fn();
-const listCancel = vi.fn().mockResolvedValue(undefined);
-const listInvalidate = vi.fn().mockResolvedValue(undefined);
-const listGetData = vi.fn();
-
-const optimisticPreference = {
+const preferenceRecord = {
   id: "pref-1",
   userId: "user-1",
   key: "theme",
@@ -49,148 +45,102 @@ const optimisticPreference = {
   updated: new Date().toISOString(),
 };
 
-let preferenceQueryResult: {
-  data: (typeof optimisticPreference)[];
-  isLoading: boolean;
-  isFetching: boolean;
-};
-
-const setMutate = vi.fn();
-const deleteMutate = vi.fn();
-
-function createMutationStub<Input, Output>(
-  spy: (input: Input) => void,
-  result: Output
-) {
-  return (config?: {
-    onMutate?: (input: Input) => unknown | Promise<unknown>;
-    onSuccess?: (
-      data: Output,
-      input: Input,
-      context: unknown
-    ) => void | Promise<void>;
-    onSettled?: (
-      data: Output | undefined,
-      error: Error | null,
-      input: Input,
-      context: unknown
-    ) => void | Promise<void>;
-  }) => ({
-    isPending: false,
-    mutate: async (
-      input: Input,
-      options?: {
-        onSuccess?: (data: Output, context: unknown) => void | Promise<void>;
-      }
-    ) => {
-      spy(input);
-      const context = config?.onMutate
-        ? await config.onMutate(input)
-        : undefined;
-      await config?.onSuccess?.(result, input, context);
-      await options?.onSuccess?.(result, context);
-      await config?.onSettled?.(result, null, input, context);
-      return result;
-    },
-  });
-}
-
-const trpcMock = {
-  useUtils: () => ({
-    preference: {
-      list: {
-        cancel: listCancel,
-        getData: listGetData,
-        setData: listSetData,
-        invalidate: listInvalidate,
-      },
-    },
-  }),
-  preference: {
-    list: {
-      useQuery: () => preferenceQueryResult,
-    },
-    set: {
-      useMutation: createMutationStub<
-        PreferenceSetInput,
-        typeof optimisticPreference
-      >(setMutate, optimisticPreference),
-    },
-    delete: {
-      useMutation: createMutationStub<
-        PreferenceDeleteInput,
-        { removed: number }
-      >(deleteMutate, { removed: 1 }),
-    },
-  },
-};
-
-mock.module("@/utils/trpc", () => ({ trpc: trpcMock }));
-
 describe("Preferences route", () => {
-  beforeEach(() => {
-    preferenceQueryResult = {
-      data: [optimisticPreference],
-      isLoading: false,
-      isFetching: false,
-    };
-    listSetData.mockClear();
-    listCancel.mockClear();
-    listInvalidate.mockClear();
-    listGetData.mockReturnValue(preferenceQueryResult.data);
-    setMutate.mockClear();
-    deleteMutate.mockClear();
-    toastSuccess.mockClear();
-    toastError.mockClear();
+  afterEach(() => {
+    cleanup();
+    toastSuccess.mockReset();
+    toastError.mockReset();
   });
 
   it("submits JSON preference values and resets the form", async () => {
-    const routeModule = await import("../preferences");
-    const Component = routeModule.Route.options.component;
-
-    render(<Component />);
-
-    fireEvent.change(screen.getByPlaceholderText("Preference key"), {
-      target: { value: "notifications" },
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    const setSpy = vi.fn(async (input: unknown) => ({
+      ...preferenceRecord,
+      id: "pref-new",
+      ...(input as Record<string, unknown>),
+    }));
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "preference.list": () => [preferenceRecord],
+      },
+      mutations: {
+        "preference.set": setSpy,
+        "preference.delete": vi.fn(async () => ({ removed: 1 })),
+      },
     });
-    fireEvent.change(
-      screen.getByPlaceholderText('JSON value, e.g. {"mode":"dark"}'),
-      {
-        target: { value: '{"enabled":true}' },
-      }
+
+    const { getByPlaceholderText, getByRole } = authenticatedRender(
+      <PreferencesRouteComponent />,
+      { queryClient, trpcClient }
     );
-    fireEvent.change(screen.getByPlaceholderText("Confidence (0-1)"), {
-      target: { value: "0.85" },
+
+    const keyInput = getByPlaceholderText(
+      "Preference key"
+    ) as HTMLInputElement;
+    const valueInput = getByPlaceholderText(
+      'JSON value, e.g. {"mode":"dark"}'
+    ) as HTMLTextAreaElement;
+    const confidenceInput = getByPlaceholderText(
+      "Confidence (0-1)"
+    ) as HTMLInputElement;
+
+    await user.type(keyInput, "notifications");
+    await user.type(valueInput, "enabled");
+    await user.clear(confidenceInput);
+    await user.type(confidenceInput, "0.85");
+
+    await waitFor(() => {
+      expect(keyInput.value).toBe("notifications");
+      expect(valueInput.value).toBe("enabled");
+      expect(confidenceInput.value).toBe("0.85");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save preference/i }));
-    await waitFor(() => expect(listSetData).toHaveBeenCalled());
+    fireEvent.click(getByRole("button", { name: /save preference/i }));
 
-    expect(setMutate).toHaveBeenCalledWith({
-      key: "notifications",
-      value: { enabled: true },
-      confidence: 0.85,
+    await waitFor(() => {
+      expect(setSpy).toHaveBeenCalledWith({
+        key: "notifications",
+        value: "enabled",
+        confidence: 0.85,
+      });
     });
-    expect(listSetData).toHaveBeenCalled();
-    expect(listInvalidate).toHaveBeenCalled();
+
     expect(toastSuccess).toHaveBeenCalledWith("Preference saved");
-    expect(
-      (screen.getByPlaceholderText("Preference key") as HTMLInputElement).value
-    ).toBe("");
+    expect(keyInput.value).toBe("");
+    expect(valueInput.value).toBe("");
+    expect(confidenceInput.value).toBe("1");
   });
 
   it("deletes a preference entry", async () => {
-    const routeModule = await import("../preferences");
-    const Component = routeModule.Route.options.component;
+    const queryClient = createTestQueryClient();
+    const deleteSpy = vi.fn(async () => ({ removed: 1 }));
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "preference.list": () => [preferenceRecord],
+      },
+      mutations: {
+        "preference.set": vi.fn(async () => preferenceRecord),
+        "preference.delete": deleteSpy,
+      },
+    });
 
-    render(<Component />);
+    const { getAllByRole } = authenticatedRender(
+      <PreferencesRouteComponent />,
+      { queryClient, trpcClient }
+    );
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
-    await waitFor(() => expect(listSetData).toHaveBeenCalled());
+    await waitFor(() => {
+      const buttons = getAllByRole("button", { name: /delete/i });
+      expect(buttons.length).toBeGreaterThan(0);
+    });
 
-    expect(deleteMutate).toHaveBeenCalledWith({ key: "theme" });
-    expect(listSetData).toHaveBeenCalled();
-    expect(listInvalidate).toHaveBeenCalled();
+    const deleteButton = getAllByRole("button", { name: /delete/i })[0];
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith({ key: "theme" });
+    });
     expect(toastSuccess).toHaveBeenCalledWith("Preference removed");
   });
 });

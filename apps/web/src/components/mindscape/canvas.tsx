@@ -17,7 +17,10 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { MindscapeInitializer } from "./initializer";
 import { ArtifactNode } from "./nodes/artifact-node";
 import { ChatNode } from "./nodes/chat-node";
+import { NoteNode } from "./nodes/note-node";
 import { OrbNode } from "./nodes/orb-node";
+import { ReminderNode } from "./nodes/reminder-node";
+import { TicketNode } from "./nodes/ticket-node";
 import { TerminalNode } from "./nodes/terminal-node";
 import { WorkflowNode } from "./nodes/workflow-node";
 import { WorkflowManager } from "./workflow-manager";
@@ -28,6 +31,9 @@ const nodeTypes: NodeTypes = {
   chat: ChatNode,
   workflow: WorkflowNode,
   terminal: TerminalNode,
+  note: NoteNode,
+  reminder: ReminderNode,
+  ticket: TicketNode,
 };
 
 type MindscapeCanvasProps = Omit<

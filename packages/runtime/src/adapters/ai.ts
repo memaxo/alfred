@@ -9,7 +9,11 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import type { LanguageModel, Tool } from "ai";
-import { convertToModelMessages, streamText } from "ai";
+import {
+  convertToModelMessages,
+  streamText,
+  validateUIMessages,
+} from "ai";
 import {
   runtimeAiEventsTotal,
   runtimeAiSdkCallsTotal,
@@ -80,9 +84,14 @@ export class AISDKAdapter {
       const preferencePrompt = await this.buildPreferencePrompt(options);
       const systemPrompt = mergeSystemPrompts(options.system, preferencePrompt);
 
+      const validatedMessages = (await validateUIMessages({
+        messages: options.messages,
+        tools: options.tools,
+      })) as UIMessage[];
+
       const result = streamText({
         model: options.model,
-        messages: convertToModelMessages(options.messages),
+        messages: convertToModelMessages(validatedMessages),
         tools: options.tools,
         abortSignal: options.abortSignal,
         system: systemPrompt,

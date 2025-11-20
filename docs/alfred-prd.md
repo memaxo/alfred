@@ -249,6 +249,11 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [ ] Implement message history with infinite scroll
 - [ ] Add message editing and regeneration
 - [x] Wire to both assistant and orchestrator routers
+- [x] **Symbiotic Mindscape Integration** (New)
+  - [x] Implement infinite canvas UI with React Flow
+  - [x] Create spatial `ChatNode` and `WorkflowNode`
+  - [x] Implement `Cmd+M` toggle for seamless transition
+  - [x] Integrate "Signal in the Void" design system
 
 #### 6.2 Management Panes ✅ (PARTIALLY COMPLETE)
 
@@ -399,6 +404,13 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 **Impact**: Clear ownership (dimension tied to embed implementation), easy to refactor if embedding strategy changes.
 **Status**: ✅ Implemented (2025-11-19)
 
+### 2025-11: Symbiotic Mindscape Interface
+**Decision**: Integrate spatial computing interface ("Mindscape") alongside traditional chat
+**Rationale**: Complex workflows and multi-artifact contexts require more than a linear chat stream. Spatial canvas allows organizing thoughts, workflows, and artifacts naturally.
+**Implementation**: React Flow based canvas, shared `useChatLogic` hook, `Cmd+M` global toggle.
+**Impact**: Enhanced user capability to manage complex tasks and visualize agent reasoning.
+**Status**: ✅ Complete (2025-11-20)
+
 ## Notes
 
 - Phase 1-2 complete (100%)
@@ -418,7 +430,10 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
   - Zero API costs, complete privacy, SOTA quality (93-95% retention)
   - See `packages/embed/README.md` for setup and architecture details
 - Phase 5.1 (Linear) complete - fully implemented and integrated with runtime
-- Phase 6.1 (Chat) complete - streaming UI functional
+- **Phase 6.1 (Chat) & Mindscape complete (100%) - 2025-11-20**
+  - Traditional chat fully functional with streaming
+  - Symbiotic Mindscape integrated with spatial nodes (`ChatNode`, `WorkflowNode`)
+  - Seamless toggle (`Cmd+M`) and shared logic (`useChatLogic`)
 - Phase 6.2-6.4 partially complete - basic panes and settings exist
 - Phase 7.1 partially complete - STT/TTS infrastructure exists
 - **Phase 8 substantially complete** - metrics, logging, tracing, and performance budgets all implemented

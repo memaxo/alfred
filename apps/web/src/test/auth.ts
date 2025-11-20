@@ -22,6 +22,13 @@ export type TestSession = {
   };
 };
 
+export type TestPasskey = {
+  id: string;
+  name: string;
+  deviceType?: string;
+  createdAt?: string;
+};
+
 const sessionState: { current: TestSession } = {
   current: {
     user: {
@@ -37,6 +44,19 @@ const sessionState: { current: TestSession } = {
   },
 };
 
+const passkeyState: { current: TestPasskey[] } = {
+  current: [],
+};
+
+function createPasskey(name: string): TestPasskey {
+  return {
+    id: randomUUID(),
+    name,
+    deviceType: "security-key",
+    createdAt: new Date().toISOString(),
+  };
+}
+
 mock.module("@/lib/auth-client", () => {
   const getSession = vi.fn(async () => ({
     data: sessionState.current,
@@ -49,15 +69,33 @@ mock.module("@/lib/auth-client", () => {
 
   const noopAuthAction = vi.fn();
 
-  return {
-    authClient: {
-      getSession,
-      useSession,
-      signIn: { email: vi.fn(), passkey: vi.fn() },
-      signUp: { email: vi.fn() },
-      signOut: { all: noopAuthAction, current: noopAuthAction },
-    },
+  const passkey = {
+    listUserPasskeys: vi.fn(async () => ({
+      data: [...passkeyState.current],
+    })),
+    addPasskey: vi.fn(async ({ name }: { name: string }) => {
+      const next = createPasskey(name);
+      passkeyState.current = [next, ...passkeyState.current];
+      return { data: next };
+    }),
+    deletePasskey: vi.fn(async ({ id }: { id: string }) => {
+      passkeyState.current = passkeyState.current.filter(
+        (record) => record.id !== id
+      );
+      return { data: { removed: 1 } };
+    }),
   };
+
+  const authClient = {
+    getSession,
+    useSession,
+    signIn: { email: vi.fn(), passkey: vi.fn() },
+    signUp: { email: vi.fn() },
+    signOut: { all: noopAuthAction, current: noopAuthAction },
+    passkey,
+  };
+
+  return { authClient };
 });
 
 export function createTestSession(
@@ -97,6 +135,10 @@ type AuthenticatedRenderOptions = RenderRouteOptions & {
 
 export function setTestSession(session: TestSession) {
   sessionState.current = session;
+}
+
+export function setTestPasskeys(passkeys: TestPasskey[]) {
+  passkeyState.current = passkeys;
 }
 
 /**

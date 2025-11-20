@@ -19,7 +19,10 @@ export type ArtifactType =
   | "result"
   | "terminal"
   | "data"
-  | "preview";
+  | "preview"
+  | "note"
+  | "reminder"
+  | "ticket";
 
 export type ArtifactData = Record<string, unknown> & {
   label?: string;
@@ -48,69 +51,83 @@ type MindscapeState = {
   autoLayout: () => void;
 };
 
-export const useMindscapeStore = create<MindscapeState>((set, get) => ({
-  nodes: [],
-  edges: [],
-  focusedNodeId: null,
-  isSpaceMode: false,
+import { persist } from "zustand/middleware";
 
-  onNodesChange: (changes) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
-  },
-  onEdgesChange: (changes) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
-  },
-  onConnect: (connection: Connection) => {
-    set({
-      edges: addEdge(connection, get().edges),
-    });
-  },
+export const useMindscapeStore = create<MindscapeState>()(
+  persist(
+    (set, get) => ({
+      nodes: [],
+      edges: [],
+      focusedNodeId: null,
+      isSpaceMode: false,
 
-  addArtifact: (node) => {
-    set((state) => ({
-      nodes: [...state.nodes, node],
-    }));
-  },
-  removeArtifact: (nodeId) => {
-    set((state) => ({
-      nodes: state.nodes.filter((n) => n.id !== nodeId),
-      edges: state.edges.filter(
-        (e) => e.source !== nodeId && e.target !== nodeId
-      ),
-    }));
-  },
-  updateArtifactData: (nodeId, data) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: { ...node.data, ...data },
-          };
-        }
-        return node;
+      onNodesChange: (changes) => {
+        set({
+          nodes: applyNodeChanges(changes, get().nodes),
+        });
+      },
+      onEdgesChange: (changes) => {
+        set({
+          edges: applyEdgeChanges(changes, get().edges),
+        });
+      },
+      onConnect: (connection: Connection) => {
+        set({
+          edges: addEdge(connection, get().edges),
+        });
+      },
+
+      addArtifact: (node) => {
+        set((state) => ({
+          nodes: [...state.nodes, node],
+        }));
+      },
+      removeArtifact: (nodeId) => {
+        set((state) => ({
+          nodes: state.nodes.filter((n) => n.id !== nodeId),
+          edges: state.edges.filter(
+            (e) => e.source !== nodeId && e.target !== nodeId
+          ),
+        }));
+      },
+      updateArtifactData: (nodeId, data) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) => {
+            if (node.id === nodeId) {
+              return {
+                ...node,
+                data: { ...node.data, ...data },
+              };
+            }
+            return node;
+          }),
+        }));
+      },
+      focusNode: (nodeId) => {
+        set({ focusedNodeId: nodeId });
+      },
+      setSpaceMode: (isSpaceMode) => {
+        set({ isSpaceMode });
+      },
+      setNodes: (nodes) => {
+        set({ nodes });
+      },
+      setEdges: (edges) => {
+        set({ edges });
+      },
+      autoLayout: () => {
+        const { nodes, edges } = get();
+        const layoutedNodes = getLayoutedElements(nodes, edges);
+        set({ nodes: layoutedNodes });
+      },
+    }),
+    {
+      name: "mindscape-storage",
+      partialize: (state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+        isSpaceMode: state.isSpaceMode,
       }),
-    }));
-  },
-  focusNode: (nodeId) => {
-    set({ focusedNodeId: nodeId });
-  },
-  setSpaceMode: (isSpaceMode) => {
-    set({ isSpaceMode });
-  },
-  setNodes: (nodes) => {
-    set({ nodes });
-  },
-  setEdges: (edges) => {
-    set({ edges });
-  },
-  autoLayout: () => {
-    const { nodes, edges } = get();
-    const layoutedNodes = getLayoutedElements(nodes, edges);
-    set({ nodes: layoutedNodes });
-  },
-}));
+    }
+  )
+);

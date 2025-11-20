@@ -1,14 +1,19 @@
 import "@/test/dom";
 import {
-  beforeAll,
-  beforeEach,
+  afterEach,
   describe,
   expect,
   it,
   mock,
   vi,
 } from "bun:test";
-import type { PrivacyFactDeleteInput } from "@alfred/type";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import type { ComponentType } from "react";
+import { authenticatedRender } from "@/test/auth";
+import {
+  createTestQueryClient,
+  createTestTrpcClient,
+} from "@/test/render-route";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -20,160 +25,82 @@ mock.module("sonner", () => ({
   },
 }));
 
-let render: typeof import("@testing-library/react").render;
-let fireEvent: typeof import("@testing-library/react")["fireEvent"];
-let screen: typeof import("@testing-library/react").screen;
-let waitFor: typeof import("@testing-library/react").waitFor;
+const privacyRouteModule = await import("../_authed/privacy");
+const PrivacyRouteComponent = privacyRouteModule.Route?.options
+  ?.component as ComponentType | undefined;
 
-beforeAll(async () => {
-  const rtl = await import("@testing-library/react");
-  render = rtl.render;
-  fireEvent = rtl.fireEvent;
-  screen = rtl.screen;
-  waitFor = rtl.waitFor;
-});
-
-const factsSetData = vi.fn();
-const factsCancel = vi.fn().mockResolvedValue(undefined);
-const factsInvalidate = vi.fn().mockResolvedValue(undefined);
-const factsGetData = vi.fn();
-
-const deleteSpy = vi.fn();
-
-let factsQueryResult: {
-  data: Array<{
-    id: string;
-    content: string;
-    category?: string | null;
-    source?: string | null;
-    confidence?: number | null;
-    created?: string;
-    updated?: string;
-  }>;
-  isLoading: boolean;
-  isFetching: boolean;
-};
-
-let eventsQueryResult: {
-  data: Array<{
-    id: string;
-    type: string;
-    timestamp?: string;
-    data: unknown;
-    metadata?: unknown;
-  }>;
-  isLoading: boolean;
-  isFetching: boolean;
-};
-
-function createDeleteMutation() {
-  return (config?: {
-    onMutate?: (input: PrivacyFactDeleteInput) => unknown | Promise<unknown>;
-    onSuccess?: (
-      data: { removed: number },
-      input: PrivacyFactDeleteInput,
-      context: unknown
-    ) => void | Promise<void>;
-    onSettled?: (
-      data: { removed: number } | undefined,
-      error: Error | null,
-      input: PrivacyFactDeleteInput,
-      context: unknown
-    ) => void | Promise<void>;
-  }) => ({
-    isPending: false,
-    mutate: async (input: PrivacyFactDeleteInput) => {
-      deleteSpy(input);
-      const context = config?.onMutate
-        ? await config.onMutate(input)
-        : undefined;
-      const result = { removed: 1 };
-      await config?.onSuccess?.(result, input, context);
-      await config?.onSettled?.(result, null, input, context);
-      return result;
-    },
-  });
+if (!PrivacyRouteComponent) {
+  throw new Error("Privacy route component is unavailable");
 }
 
-const trpcMock = {
-  useUtils: () => ({
-    privacy: {
-      facts: {
-        cancel: factsCancel,
-        getData: factsGetData,
-        setData: factsSetData,
-        invalidate: factsInvalidate,
-      },
-    },
-  }),
-  privacy: {
-    facts: {
-      useQuery: () => factsQueryResult,
-    },
-    events: {
-      useQuery: () => eventsQueryResult,
-    },
-    deleteFact: {
-      useMutation: createDeleteMutation(),
-    },
-  },
+const factRecord = {
+  id: "fact-1",
+  userId: "user-1",
+  content: "User prefers email updates.",
+  category: "communication",
+  source: "user",
+  confidence: 0.72,
+  created: new Date().toISOString(),
+  updated: new Date().toISOString(),
 };
 
-mock.module("@/utils/trpc", () => ({ trpc: trpcMock }));
+const eventRecord = {
+  id: "event-1",
+  type: "tool_use",
+  timestamp: new Date().toISOString(),
+  data: { tool: "note" },
+  metadata: { duration: 120 },
+};
 
 describe("Privacy route", () => {
-  beforeEach(() => {
-    factsQueryResult = {
-      data: [
-        {
-          id: "fact-1",
-          content: "User prefers email updates.",
-          category: "communication",
-          source: "user",
-          confidence: 0.72,
-          created: new Date().toISOString(),
-          updated: new Date().toISOString(),
-        },
-      ],
-      isLoading: false,
-      isFetching: false,
-    };
-    eventsQueryResult = {
-      data: [
-        {
-          id: "event-1",
-          type: "tool_use",
-          timestamp: new Date().toISOString(),
-          data: { tool: "note" },
-          metadata: { duration: 120 },
-        },
-      ],
-      isLoading: false,
-      isFetching: false,
-    };
-    factsSetData.mockClear();
-    factsCancel.mockClear();
-    factsInvalidate.mockClear();
-    factsGetData.mockReturnValue(factsQueryResult.data);
-    deleteSpy.mockClear();
-    toastSuccess.mockClear();
-    toastError.mockClear();
+  afterEach(() => {
+    cleanup();
+    toastSuccess.mockReset();
+    toastError.mockReset();
   });
 
-  it("renders facts and deletes an entry", async () => {
-    const routeModule = await import("../privacy");
-    const Component = routeModule.Route.options.component;
+  it("renders facts/events and deletes an entry", async () => {
+    const queryClient = createTestQueryClient();
+    const deleteSpy = vi.fn(async (input: unknown) => ({
+      removed: 1,
+      ...(input as Record<string, unknown>),
+    }));
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "privacy.facts": () => [factRecord],
+        "privacy.events": () => [eventRecord],
+      },
+      mutations: {
+        "privacy.deleteFact": deleteSpy,
+      },
+    });
 
-    render(<Component />);
+    const { getAllByRole, getByText, queryByText } = authenticatedRender(
+      <PrivacyRouteComponent />,
+      { queryClient, trpcClient }
+    );
 
-    expect(screen.getByText("User prefers email updates.")).toBeDefined();
+    await waitFor(() => {
+      expect(queryByText(/loading facts/i)).toBeNull();
+      expect(queryByText(/loading events/i)).toBeNull();
+    });
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
-    await waitFor(() => expect(factsSetData).toHaveBeenCalled());
+    expect(getByText(/user prefers email updates/i)).toBeTruthy();
+    expect(getByText(/tool_use/i)).toBeTruthy();
 
-    expect(deleteSpy).toHaveBeenCalledWith({ id: "fact-1" });
-    expect(factsSetData).toHaveBeenCalled();
-    expect(factsInvalidate).toHaveBeenCalled();
+    const factListItem = getByText(/user prefers email updates/i).closest("li");
+    if (!factListItem) {
+      throw new Error("Fact list item not found");
+    }
+    const factDeleteButton = factListItem.querySelector("button");
+    if (!factDeleteButton) {
+      throw new Error("Fact delete button not found");
+    }
+    fireEvent.click(factDeleteButton);
+
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith({ id: "fact-1" });
+    });
     expect(toastSuccess).toHaveBeenCalledWith("Fact deleted");
   });
 });

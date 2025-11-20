@@ -6,9 +6,12 @@ const streamTextMock = vi.fn(() => ({
   })(),
 }));
 
+const validateUIMessagesMock = vi.fn(async ({ messages }) => messages);
+
 mock.module("ai", () => ({
   streamText: streamTextMock,
   convertToModelMessages: (messages: unknown) => messages,
+  validateUIMessages: validateUIMessagesMock,
 }));
 
 const buildPreferenceSystemPromptMock = vi
@@ -35,6 +38,7 @@ describe("AISDKAdapter preference prompts", () => {
   afterEach(() => {
     streamTextMock.mockClear();
     buildPreferenceSystemPromptMock.mockClear();
+    validateUIMessagesMock.mockClear();
   });
 
   afterAll(() => {
@@ -54,6 +58,14 @@ describe("AISDKAdapter preference prompts", () => {
       toolNames: undefined,
     });
 
+    expect(validateUIMessagesMock).toHaveBeenCalledWith({
+      messages: [],
+      tools: undefined,
+    });
+    expect(validateUIMessagesMock).toHaveBeenCalledWith({
+      messages: [],
+      tools: undefined,
+    });
     const args = streamTextMock.mock.calls[0]?.[0];
     expect(args.system).toContain("Preference Prompt");
   });
@@ -72,5 +84,23 @@ describe("AISDKAdapter preference prompts", () => {
 
     const args = streamTextMock.mock.calls[0]?.[0];
     expect(args.system).toBe("Base Prompt\n\nPreference Prompt");
+  });
+
+  it("propagates validation errors before streaming", async () => {
+    const adapter = new AISDKAdapter();
+    validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
+
+    const iterator = adapter.stream({ model: "test", messages: [] });
+
+    await expect(
+      (async () => {
+        for await (const _ of iterator) {
+          // no events
+        }
+      })()
+    ).rejects.toThrow("invalid");
+
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(validateUIMessagesMock).toHaveBeenCalled();
   });
 });
