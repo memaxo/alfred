@@ -77,6 +77,28 @@ export async function createConversation(
   return row;
 }
 
+export async function getConversationByWorkflow(
+  userId: string,
+  workflowId: string
+): Promise<ConversationRow | null> {
+  if (!workflowId) {
+    return null;
+  }
+
+  const [row] = await db
+    .select(conversationSelection)
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.userId, userId),
+        eq(conversations.workflowId, workflowId)
+      )
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
 export async function getConversation(
   conversationId: string,
   userId: string
@@ -189,4 +211,34 @@ export async function getConversationHistory(
     conversation: convo,
     messages: rows.map(messageRowToUIMessage),
   };
+}
+
+export async function getActiveUserIds(options: {
+  days?: number;
+  limit?: number;
+} = {}): Promise<string[]> {
+  const { days = 30, limit = 100 } = options;
+  const cutoff =
+    typeof days === "number" && Number.isFinite(days) && days > 0
+      ? (() => {
+          const date = new Date();
+          date.setDate(date.getDate() - days);
+          return date;
+        })()
+      : null;
+
+  const baseQuery = db
+    .selectDistinct({ userId: conversations.userId })
+    .from(conversations);
+
+  const filteredQuery = cutoff
+    ? baseQuery.where(gte(conversations.updated, cutoff))
+    : baseQuery;
+
+  const rows = await filteredQuery
+    .orderBy(desc(conversations.updated))
+    .limit(limit);
+  return rows
+    .map((row) => row.userId)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
 }

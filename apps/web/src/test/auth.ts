@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import type { ReactElement } from "react";
+import { mock, vi } from "bun:test";
 import type { RenderResult } from "@testing-library/react";
 import { renderRoute, type RenderRouteOptions } from "./render-route";
 
@@ -20,6 +21,44 @@ export type TestSession = {
     id: string;
   };
 };
+
+const sessionState: { current: TestSession } = {
+  current: {
+    user: {
+      id: "test-user",
+      email: "test-user@example.com",
+      name: "Test User",
+      roles: ["owner"],
+      scopes: ["assistant.write", "assistant.stream"],
+    },
+    session: {
+      id: "sess-test",
+    },
+  },
+};
+
+mock.module("@/lib/auth-client", () => {
+  const getSession = vi.fn(async () => ({
+    data: sessionState.current,
+  }));
+
+  const useSession = () => ({
+    data: sessionState.current,
+    isPending: false,
+  });
+
+  const noopAuthAction = vi.fn();
+
+  return {
+    authClient: {
+      getSession,
+      useSession,
+      signIn: { email: vi.fn(), passkey: vi.fn() },
+      signUp: { email: vi.fn() },
+      signOut: { all: noopAuthAction, current: noopAuthAction },
+    },
+  };
+});
 
 export function createTestSession(
   overrides: Partial<TestSessionUser & { sessionId: string }> = {}
@@ -56,6 +95,10 @@ type AuthenticatedRenderOptions = RenderRouteOptions & {
   session?: TestSession;
 };
 
+export function setTestSession(session: TestSession) {
+  sessionState.current = session;
+}
+
 /**
  * Temporary helper that mirrors renderRoute but documents the intended
  * authentication shape for future suites. Once the Better Auth client exposes
@@ -67,6 +110,6 @@ export function authenticatedRender(
   options: AuthenticatedRenderOptions = {}
 ): RenderResult {
   const session = options.session ?? createTestSession();
-  (globalThis as { __TEST_SESSION__?: TestSession }).__TEST_SESSION__ = session;
+  setTestSession(session);
   return renderRoute(ui, options);
 }

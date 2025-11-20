@@ -1,5 +1,16 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
+import { toObservable } from "./utils/stream";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -11,6 +22,7 @@ import {
 } from "./utils/router-helpers";
 import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
+import { dbModuleStub } from "./utils/mock-db-client";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -19,6 +31,17 @@ const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
 const workflowRunnerMocks = mockWorkflowRunner();
 const workflowRuntimeMocks = mockWorkflowRuntime();
+const createConversationMock = vi.fn();
+const getConversationByWorkflowMock = vi.fn();
+const createMessageMock = vi.fn();
+
+dbModuleStub.conversationRepo = {
+  createConversation: createConversationMock,
+  getConversationByWorkflow: getConversationByWorkflowMock,
+  createMessage: createMessageMock,
+  getConversation: vi.fn(),
+  getMessage: vi.fn(),
+};
 
 const workflowStreamDurationSecondsMock = {
   startTimer: vi.fn().mockReturnValue(() => {}),
@@ -42,12 +65,28 @@ beforeAll(async () => {
   });
 });
 
+beforeEach(() => {
+  getConversationByWorkflowMock.mockResolvedValue(null);
+  createConversationMock.mockResolvedValue({
+    id: "conversation-default",
+    userId: "test-user",
+    title: null,
+    workflowId: "plan",
+    created: new Date(),
+    updated: new Date(),
+  });
+  createMessageMock.mockResolvedValue(null);
+});
+
 afterEach(() => {
   resetAllMocks();
   workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
   workflowStreamEventsTotalMock.inc.mockReset();
   // Reset env flag
   delete process.env.USE_WORKFLOW_RUNTIME;
+  createConversationMock.mockReset();
+  getConversationByWorkflowMock.mockReset();
+  createMessageMock.mockReset();
 });
 
 /**
@@ -107,6 +146,18 @@ describe("workflow router", () => {
         updatedAt: new Date(),
       } as any);
 
+      const conversationRow = {
+        id: "conv-start",
+        userId: "test-user",
+        title: null,
+        workflowId: mockRunId,
+        created: new Date(),
+        updated: new Date(),
+      };
+      getConversationByWorkflowMock.mockResolvedValueOnce(null);
+      createConversationMock.mockResolvedValueOnce(conversationRow);
+      createMessageMock.mockResolvedValue(null);
+
       runRegistryMocks.register.mockResolvedValue(undefined);
 
       const result = await caller.workflow.start({
@@ -134,6 +185,23 @@ describe("workflow router", () => {
         runId: mockRunId,
         summary: mockSummary,
       });
+      expect(getConversationByWorkflowMock).toHaveBeenCalledWith(
+        "test-user",
+        mockRunId
+      );
+      expect(createConversationMock).toHaveBeenCalledWith(
+        "test-user",
+        expect.stringContaining("test requirement"),
+        mockRunId
+      );
+      expect(createMessageMock).toHaveBeenCalledWith(
+        "test-user",
+        "conv-start",
+        expect.objectContaining({
+          role: "user",
+          parts: [{ type: "text", text: "test requirement" }],
+        })
+      );
     });
 
     it("throws UNAUTHORIZED when session is missing", async () => {
@@ -167,7 +235,7 @@ describe("workflow router", () => {
       const mockRunId = "test-run-id";
       const events: WorkflowEvent[] = [
         { type: "run", id: mockRunId } as WorkflowEvent,
-        { type: "progress", pct: 50, message: "halfway" } as WorkflowEvent,
+        { type: "assistant", text: "Workflow complete" } as WorkflowEvent,
         { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
       ];
 
@@ -192,6 +260,18 @@ describe("workflow router", () => {
         status: "running",
       } as any);
 
+      const streamConversationRow = {
+        id: "conv-stream",
+        userId: "test-user",
+        title: null,
+        workflowId: mockRunId,
+        created: new Date(),
+        updated: new Date(),
+      };
+      getConversationByWorkflowMock.mockResolvedValueOnce(null);
+      createConversationMock.mockResolvedValueOnce(streamConversationRow);
+      createMessageMock.mockResolvedValue(null);
+
       workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
       workflowRepoMocks.updateRun.mockResolvedValue({
         id: mockRunId,
@@ -201,9 +281,11 @@ describe("workflow router", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({
-        requirement: "test",
-      });
+      const subscription = toObservable(
+        await caller.workflow.stream({
+          requirement: "test",
+        })
+      );
 
       const receivedEvents: WorkflowEvent[] = [];
       await new Promise<void>((resolve, reject) => {
@@ -220,12 +302,29 @@ describe("workflow router", () => {
 
       expect(receivedEvents).toHaveLength(events.length);
       expect(workflowRepoMocks.appendEvent).toHaveBeenCalledTimes(
-        events.length
+        events.length + 1
       );
       expect(workflowRepoMocks.updateRun).toHaveBeenCalledWith(mockRunId, {
         status: "completed",
         completedAt: expect.any(Date),
       });
+      expect(createConversationMock).toHaveBeenCalledWith(
+        "test-user",
+        expect.any(String),
+        mockRunId
+      );
+      expect(createMessageMock).toHaveBeenCalledWith(
+        "test-user",
+        "conv-stream",
+        expect.objectContaining({ role: "user" })
+      );
+      expect(
+        createMessageMock.mock.calls.some(
+          ([, conversationId, message]) =>
+            conversationId === "conv-stream" &&
+            (message as UIMessage).role === "assistant"
+        )
+      ).toBe(true);
     });
 
     it("handles persistence failures gracefully", async () => {
@@ -245,9 +344,11 @@ describe("workflow router", () => {
       workflowRepoMocks.createRun.mockResolvedValue({} as any);
       workflowRepoMocks.appendEvent.mockRejectedValue(new Error("db error"));
 
-      const subscription = caller.workflow.stream({
-        requirement: "test",
-      });
+      const subscription = toObservable(
+        await caller.workflow.stream({
+          requirement: "test",
+        })
+      );
 
       await new Promise<void>((resolve) => {
         subscription.subscribe({
@@ -468,7 +569,9 @@ describe("workflow router", () => {
         runRegistryMocks.register.mockResolvedValue(undefined);
         runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-        const subscription = caller.workflow.stream({ requirement: "test" });
+        const subscription = toObservable(
+          await caller.workflow.stream({ requirement: "test" })
+        );
         const receivedEvents: WorkflowEvent[] = [];
 
         await new Promise<void>((resolve, reject) => {
@@ -538,7 +641,9 @@ describe("workflow router", () => {
         runRegistryMocks.register.mockResolvedValue(undefined);
         runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-        const subscription = caller.workflow.stream({ requirement: "test" });
+        const subscription = toObservable(
+          await caller.workflow.stream({ requirement: "test" })
+        );
         const receivedEvents: WorkflowEvent[] = [];
 
         await new Promise<void>((resolve, reject) => {
@@ -633,7 +738,7 @@ describe("workflow router", () => {
         const resumeData = { event: "bio-authz" as const, authz: "token-123" };
         await registerCall.resume({ resumeData });
         
-        expect(resumeMock).toHaveBeenCalledWith({ resumeData });
+        expect(resumeMock).toHaveBeenCalledWith(resumeData);
       });
     });
 
@@ -654,7 +759,9 @@ describe("workflow router", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const runnerSubscription = caller.workflow.stream({ requirement: "test" });
+      const runnerSubscription = toObservable(
+        await caller.workflow.stream({ requirement: "test" })
+      );
       const runnerEvents: WorkflowEvent[] = [];
 
       await new Promise<void>((resolve, reject) => {
@@ -675,7 +782,9 @@ describe("workflow router", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const runtimeSubscription = caller.workflow.stream({ requirement: "test" });
+      const runtimeSubscription = toObservable(
+        await caller.workflow.stream({ requirement: "test" })
+      );
       const runtimeEvents: WorkflowEvent[] = [];
 
       await new Promise<void>((resolve, reject) => {

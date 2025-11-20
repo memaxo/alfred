@@ -1,6 +1,6 @@
 import { type buildAssistantTools, getModelId, getOpenAI } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
-import { conversationRepo } from "@alfred/db";
+import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
 import { logger } from "@alfred/api/utils/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";

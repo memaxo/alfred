@@ -86,6 +86,16 @@ export default function UserMenu() {
             Sign Out
           </Button>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Button
+            className="w-full"
+            variant="outline"
+            asChild
+          >
+             <Link to="/mindscape">Mindscape</Link>
+          </Button>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

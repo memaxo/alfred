@@ -27,7 +27,7 @@ type NoteHarnessOptions = {
   onDelete?: (input: { id: string }) => void;
 };
 
-const noteRouteModule = await import("../note");
+const noteRouteModule = await import("../_authed/note");
 const NoteRouteComponent = noteRouteModule.Route?.options
   ?.component as ComponentType | undefined;
 

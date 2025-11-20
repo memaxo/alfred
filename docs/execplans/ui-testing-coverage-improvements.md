@@ -12,7 +12,8 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 - [x] (2025-11-20 20:07Z) Milestone 1 — Added `renderRoute`/test TRPC client helpers plus smoke suite covering login, ai, note, remind, and profile routes.
 - [x] (2025-11-20 21:45Z) Milestone 2 — Swapped hook-level mocks for an AI SDK streaming mock (`apps/web/src/test/mock-assistant-chat.ts`), refactored `chat-container` integration specs to use the real `useAssistantStream`, and added hook-level send tests.
 - [x] (2025-11-20 22:58Z) Milestone 3 — Added `note-flow` integration suite that renders the real `/note` route via `renderRoute`, exercises read/create/delete against deterministic tRPC handlers, and syncs the React Query cache without touching app code.
-- [ ] Milestone 4 — Foundational E2E harness (`createTestServer`, `createTestClient`, `createTestSession`, streaming helpers) wired into Vitest.
+- [x] (2025-11-20 23:45Z) Milestone 4 — Hardened the E2E harness (`createTestServer`, `createTestClient`, `auth.ts`, `stream.ts`) and shipped the first route-level E2E suite (`remind-flow.e2e`) that renders the real `_authed/remind` page against a live Bun server + Postgres. Added a minimal `uiTestAppRouter` to avoid importing unfinished routers while still exercising real tRPC handlers.
+- [x] (2025-11-20 23:58Z) Milestone 5 — Began UI E2E coverage: `remind-flow.e2e`, `note-flow.e2e`, and `workflow-flow.e2e` now run `_authed` routes against the HTTP harness (workflows detail modal uses a lightweight dialog/select mock to stay deterministic).
 - [ ] Milestone 5 — Reminders and workflow regression tests leveraging the E2E harness (coverage gated on time).
 
 ## Surprises & Discoveries
@@ -25,6 +26,16 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   Evidence: `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` at 2025-11-20 22:35Z crashed with “activeElement$1.attachEvent is not a function” until `apps/web/src/test/dom.ts` added harmless no-op implementations.
 - Observation: The current `/note` route only supports list/create/delete—there is no UI pathway for update/optimistic rollback—so the Milestone 3 suite validates read + create + delete while documenting the missing update coverage for follow-up work.
   Evidence: searching for `note.update` under `apps/web/src` returned no usages on 2025-11-20, confirming the flow is absent.
+- Observation: Fresh dev databases often omit the tables referenced in `packages/api/test/utils/db.ts::truncateTables`, so calling it blindly during harness boot explodes before a single test runs.
+  Evidence: `bun test apps/web/src/routes/__tests__/api-e2e-smoke.test.ts` at 2025-11-20 23:02Z failed with `relation "assistant_threads" does not exist` until the harness wrapped truncation in a warning-only guard.
+- Observation: Importing the monolithic `appRouter` pulls in in-progress routers (e.g., `preference`) whose schemas currently throw at module evaluation, preventing the UI harness from even starting.
+  Evidence: `bun test apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx` at 2025-11-20 23:18Z crashed with `TypeError: z.record(...).min is not a function` while loading `packages/api/src/routers/preference.ts`; isolating the routes into `uiTestAppRouter` sidestepped that blockage without touching WIP files.
+- Observation: `note.create` triggers `@alfred/rag` ingestion, which spins up the embedding pool; without initializing the worker, E2E suites exploded with “Pool not initialized – call initialize() first.”
+  Evidence: `bun test apps/web/src/routes/__tests__/note-flow.e2e.test.tsx` at 2025-11-20 23:52Z failed until `apps/web/src/test/app-router.ts` mocked `@alfred/rag`’s `ingest`.
+- Observation: Radix Select/Dialog components expect browser-specific events; jsdom treats our synthetic events as plain objects, so opening the workflows modal initially threw `TypeError: parameter 1 is not of type 'Event'`.
+  Evidence: `bun test apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` at 2025-11-21 00:08Z failed until the test mocked `@radix-ui/react-select` and the shared `dialog` primitives with lightweight passthrough components.
+- Observation: `_authed` routes call `authClient.getSession()` in `beforeLoad`, so tests need a deterministic `authClient` mock; relying on global state led to brittle suites whenever multiple renders ran in parallel.
+  Evidence: concurrent suites intermittently failed to redirect at 2025-11-20 23:30Z until `apps/web/src/test/auth.ts` started stubbing `authClient` and exposing `setTestSession`.
 
 ## Decision Log
 
@@ -49,6 +60,21 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 - Decision: Updated `createNoteHarness` to maintain an in-memory store plus React Query sync helper so `note.list` data updates immediately after create/delete without rewriting the production route.
   Rationale: Mirrors the server’s eventual data while still exercising `trpc` hooks, and keeps the suite deterministic.
   Date/Author: 2025-11-20 / Codex
+- Decision: Wrapped the new `createTestServer` reset logic in a `safeReset` helper that logs failures instead of throwing when migrations have not been applied.
+  Rationale: Developers can still exercise HTTP-level smoke tests (e.g., `healthCheck`) on fresh clones without pausing to hydrate every table; future work can tighten the guard once CI owns the schema.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Introduced `uiTestAppRouter` so UI suites import only the stable routers they need (health, note, remind, token, profile) while backend teams iterate on other endpoints.
+  Rationale: Keeps the harness operational without forcing us to edit in-progress routers like `preference.ts`.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Centralized the `authClient` mock under `apps/web/src/test/auth.ts`, exposing `setTestSession` so `_authed` routes and components depending on `useSession` share the same synthetic user as the HTTP harness.
+  Rationale: Prevents each suite from hand-rolling auth mocks and ensures TanStack `beforeLoad` hooks behave like production.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Stubbed `@alfred/rag` ingestion inside the UI test router shim so note E2E suites don’t need the heavyweight embedding pool initialized.
+  Rationale: Keeps note creation fast and deterministic while still exercising the real tRPC handlers.
+  Date/Author: 2025-11-20 / Codex
+- Decision: UI E2E tests mock Radix Select/Dialog primitives (via `@radix-ui/react-select` and `@/components/ui/dialog`) so jsdom doesn’t choke on browser-only events when opening modals or filters.
+  Rationale: Keeps the focus on verifying tRPC + UI wiring without depending on DOM APIs that jsdom doesn’t emulate.
+  Date/Author: 2025-11-21 / Codex
 
 ## Outcomes & Retrospective
 
@@ -137,9 +163,15 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
     - Smoke suite sample output:
         `bun test apps/web --filter=smoke-critical` → `5 tests passed (45 ms)`.
     - Note flow integration suite:
-        `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` → `3 tests passed (771 ms)`.
-    - E2E harness sample log excerpt:
-        `{ "level": "info", "msg": "test-server-start", "port": 43145 }`
+        `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` → `3 tests passed (752 ms)`.
+    - API E2E harness smoke:
+        `bun test apps/web/src/routes/__tests__/api-e2e-smoke.test.ts` → `1 test passed (326 ms)` (logs a warning if migrations have not created every table yet).
+    - Remind flow E2E (tRPC over HTTP):
+        `bun test apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx` → `2 tests passed (559 ms)` (will emit safe-reset warnings if the shared tables are absent locally).
+    - Note flow E2E (tRPC over HTTP):
+        `bun test apps/web/src/routes/__tests__/note-flow.e2e.test.tsx` → `2 tests passed (636 ms)` (embeddings are mocked to avoid pool initialization).
+    - Workflow flow E2E (tRPC over HTTP):
+        `bun test apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` → `2 tests passed (786 ms)` (Radix Select/Dialog mocked for jsdom compatibility).
 - Note any helper-specific caveats (e.g., “renderRoute must be awaited because loader data is async”). Update this section whenever new suites add noteworthy debugging tips.
 
 ## Interfaces and Dependencies
@@ -152,20 +184,24 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
 - `apps/web/src/test/mock-assistant-chat.ts`
     - Replaces `@ai-sdk/react` and `ai` transports with deterministic mocks. Exports `assistantChatMock` (`sendSpy`, `emitAssistantMessage`, `emitError`, `reset`) so integration and hook tests can exercise the real `useAssistantStream` without touching the network.
 - `apps/web/src/test/server.ts`
-    - Declares `type TestServer = { url: string; port: number; stop(): Promise<void>; db: NodePgDatabase }`.
-    - Functions: `createTestServer`, `cleanupTestServer`, `withTestServer(async (ctx) => { ... })`.
+    - Declares `TestServer` objects with `url`, `port`, `db`, `getSession`, `setSession`, `reset`, and `stop`.
+    - Functions: `createTestServer`, `cleanupTestServer`, `withTestServer(async (ctx) => { ... })`; `safeReset` logs when the schema is missing tables.
 - `apps/web/src/test/client.ts`
-    - Exports `createTestClient(baseUrl: string, session: TestSession)` returning an `@trpc/client` bound to the HTTP test server with auth headers/cookies.
+    - Exports `createTestClient(server, { session, headers })` returning an `@trpc/client` instance bound to the test server with serialized session headers.
+- `apps/web/src/test/app-router.ts`
+    - Defines `uiTestAppRouter`, a slimmed-down router (health, note, remind, token, profile, workflow list/events) used exclusively by UI tests to avoid importing unstable backend modules.
 - `apps/web/src/test/auth.ts`
-    - Defines `createTestSession(userOverrides?)` and `authenticatedRender(ui, session)` hooking into whatever SessionContext `apps/web` uses today.
+    - Defines `TEST_SESSION_HEADER`, `createTestSession(userOverrides?)`, serialization helpers, `setTestSession`, and `authenticatedRender`, plus a global mock of `authClient` so `_authed` routes/readers always see the injected session.
 - `apps/web/src/test/stream.ts`
-    - Utilities: `createMockEventSource(events: StreamEvent[])`, `waitForStreamMessage(kind: string, timeoutMs?: number)`, `emitStreamError(error)`, ensuring chat/workflow E2E tests can assert SSE updates.
+    - Utilities: `createMockStream(seedEvents)` and `waitForStreamMessage(kind, timeoutMs)` to emulate SSE outputs for future workflow/reminder suites.
 - Test suites:
     - `apps/web/src/routes/__tests__/smoke-critical.test.tsx`
     - `apps/web/src/components/__tests__/chat-container.integration.test.tsx` (refactored)
     - `apps/web/src/hooks/__tests__/use-assistant-stream.integration.test.tsx` (refactored)
     - `apps/web/src/routes/__tests__/note-flow.integration.test.tsx`
+    - `apps/web/src/routes/__tests__/note-flow.e2e.test.tsx`
     - `apps/web/src/routes/__tests__/remind-flow.e2e.test.tsx`
+    - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx`
     - `apps/web/src/routes/__tests__/workflow-flow.e2e.test.tsx` (stretch)
 - Dependencies:
     - `@testing-library/react` + `@testing-library/user-event` for UI interaction

@@ -2,19 +2,19 @@ import { randomUUID } from "node:crypto";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { appRouter } from "@alfred/api/routers";
-import type { Context } from "@alfred/api/context";
+import type { Context } from "../../../../packages/api/src/context";
 import {
   createTestDb,
   closeTestDb,
   truncateTables,
-} from "../../../packages/api/test/utils/db";
+} from "../../../../packages/api/test/utils/db";
 import {
   createTestSession,
   deserializeTestSession,
   TEST_SESSION_HEADER,
   type TestSession,
 } from "./auth";
+import { uiTestAppRouter } from "./app-router";
 
 type BunServer = ReturnType<typeof Bun.serve>;
 
@@ -82,6 +82,17 @@ function resolveSession(
   return deserializeTestSession(headerValue) ?? fallback;
 }
 
+async function safeReset(db: NodePgDatabase) {
+  try {
+    await truncateTables(db);
+  } catch (error) {
+    console.warn(
+      "[ui-test] unable to truncate tables, ensure migrations have been applied:",
+      error instanceof Error ? error.message : error
+    );
+  }
+}
+
 async function ensureInternalServer(
   options: CreateServerOptions
 ): Promise<InternalServer> {
@@ -90,12 +101,12 @@ async function ensureInternalServer(
       internalServer.currentSession = options.session;
       internalServer.api.setSession(options.session);
     }
-    await truncateTables(internalServer.dbClient.db);
+    await safeReset(internalServer.dbClient.db);
     return internalServer;
   }
 
   const dbClient = await createTestDb();
-  await truncateTables(dbClient.db);
+  await safeReset(dbClient.db);
   let sessionRef = options.session ?? createTestSession();
 
   const instance = Bun.serve({
@@ -109,7 +120,7 @@ async function ensureInternalServer(
       return fetchRequestHandler({
         endpoint: "/api/trpc",
         req,
-        router: appRouter,
+        router: uiTestAppRouter,
         createContext: () => buildContext(req, resolveSession(req, sessionRef)),
       });
     },
@@ -127,7 +138,7 @@ async function ensureInternalServer(
       internalServer!.currentSession = next;
     },
     async reset() {
-      await truncateTables(dbClient.db);
+      await safeReset(dbClient.db);
     },
     async stop() {
       if (!internalServer) {

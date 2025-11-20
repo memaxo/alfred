@@ -6,6 +6,7 @@ export default function Header() {
     { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
     { to: "/ai", label: "Chat" },
+    { to: "/mindscape", label: "Mindscape" },
     { to: "/note", label: "Notes" },
     { to: "/remind", label: "Reminders" },
     { to: "/timer", label: "Timers" },

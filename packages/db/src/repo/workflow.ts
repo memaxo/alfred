@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workflowEvents, workflowRuns } from "../schema/workflow";
 
@@ -214,6 +214,70 @@ export async function listRuns(args: {
     .offset(args.offset ?? 0);
 
   return rows;
+}
+
+type ToolCallRow = {
+  eventId: string;
+  toolName?: string;
+  args?: Record<string, unknown>;
+  timestamp: Date;
+};
+
+export async function getToolCalls(
+  userId: string,
+  options: { days?: number; limit?: number } = {}
+): Promise<ToolCallRow[]> {
+  const { days, limit = 200 } = options;
+  const cutoff =
+    typeof days === "number" && Number.isFinite(days) && days > 0
+      ? (() => {
+          const date = new Date();
+          date.setDate(date.getDate() - days);
+          return date;
+        })()
+      : null;
+
+  const conditions = [
+    eq(workflowRuns.userId, userId),
+    eq(workflowEvents.eventType, "tool-call"),
+  ];
+
+  if (cutoff) {
+    conditions.push(gte(workflowEvents.timestamp, cutoff));
+  }
+
+  const rows = await db
+    .select({
+      eventId: workflowEvents.eventId,
+      eventData: workflowEvents.eventData,
+      timestamp: workflowEvents.timestamp,
+    })
+    .from(workflowEvents)
+    .innerJoin(workflowRuns, eq(workflowRuns.id, workflowEvents.runId))
+    .where(and(...conditions))
+    .orderBy(desc(workflowEvents.timestamp))
+    .limit(limit);
+
+  return rows.map((row) => {
+    const data =
+      row.eventData && typeof row.eventData === "object"
+        ? (row.eventData as Record<string, unknown>)
+        : {};
+    const toolName =
+      typeof data.toolName === "string" && data.toolName.length > 0
+        ? data.toolName
+        : undefined;
+    const args =
+      data && typeof data.args === "object"
+        ? (data.args as Record<string, unknown>)
+        : undefined;
+    return {
+      eventId: row.eventId,
+      toolName,
+      args,
+      timestamp: row.timestamp ?? new Date(),
+    } satisfies ToolCallRow;
+  });
 }
 
 /**

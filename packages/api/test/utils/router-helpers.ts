@@ -13,6 +13,10 @@ export function mockPolicyAudit() {
   mock.module("@alfred/db/repo/policy", () => ({
     createAuditLog: vi.fn().mockResolvedValue(undefined),
   }));
+  mock.module("@alfred/policy", () => ({
+    evaluate: vi.fn().mockResolvedValue({ allow: true, obligations: [] as string[] }),
+    registerCacheObs: vi.fn(),
+  }));
 }
 
 /**
@@ -140,8 +144,7 @@ export function createTRPCError(
  * Helper to reset all mocks
  */
 export function resetAllMocks() {
-  vi.restoreAllMocks();
-  mock.restore();
+  vi.clearAllMocks();
 }
 
 /**

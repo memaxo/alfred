@@ -2,6 +2,14 @@ import {
   startReminderScheduler,
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
+import {
+  startPreferenceInferenceScheduler,
+  stopPreferenceInferenceScheduler,
+} from "@alfred/api/scheduler/preference-inference";
+import {
+  startPreferenceDecayScheduler,
+  stopPreferenceDecayScheduler,
+} from "@alfred/api/scheduler/preference-decay";
 import { initApiServices, shutdownApiServices } from "@alfred/api/init";
 import { logger } from "@alfred/api/utils/logger";
 
@@ -31,6 +39,18 @@ export function initServer() {
     });
   }
 
+  if (process.env.SCHED_PREFERENCE_INFERENCE === "1") {
+    startPreferenceInferenceScheduler({ logger });
+    startPreferenceDecayScheduler({ logger });
+    logger.info("preference_scheduler_init", {
+      message: "Preference schedulers started",
+    });
+  } else {
+    logger.info("preference_scheduler_disabled", {
+      message: "Set SCHED_PREFERENCE_INFERENCE=1 to enable preference schedulers",
+    });
+  }
+
   // Initialize API services (compression worker, voice pools)
   initApiServices();
 
@@ -43,6 +63,8 @@ export function initServer() {
     import.meta.hot.on?.("vite:beforeFullReload", () => {
       try {
         stopReminderScheduler();
+        stopPreferenceInferenceScheduler();
+        stopPreferenceDecayScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "before_reload",
@@ -54,6 +76,8 @@ export function initServer() {
     import.meta.hot.dispose(() => {
       try {
         stopReminderScheduler();
+        stopPreferenceInferenceScheduler();
+        stopPreferenceDecayScheduler();
       } catch (error) {
         logger.error("assistant_remind_scheduler_stop_failed", {
           context: "on_dispose",
@@ -81,6 +105,16 @@ export function shutdown() {
     logger.info("reminder_scheduler_stopped");
   } catch (error) {
     logger.error("reminder_scheduler_stop_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    stopPreferenceInferenceScheduler();
+    stopPreferenceDecayScheduler();
+    logger.info("preference_schedulers_stopped");
+  } catch (error) {
+    logger.error("preference_scheduler_stop_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

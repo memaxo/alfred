@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
 import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
@@ -10,6 +11,7 @@ import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/api/metrics";
+import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
   ReasoningEdgeRecord,
@@ -17,6 +19,7 @@ import type {
 } from "@alfred/knowledge/query";
 import { createRuntime } from "@alfred/runtime";
 import type { WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
@@ -32,8 +35,6 @@ import { redactEventData } from "../utils/redaction";
 import { runPlanV6 } from "../workflow/runner";
 
 // Feature flag for runtime migration (Phase 3.3)
-const USE_WORKFLOW_RUNTIME = process.env.USE_WORKFLOW_RUNTIME === "true";
-
 configureLinearMetrics({
   linearActivityEmissionsTotal,
   linearActivityDurationSeconds,
@@ -46,11 +47,15 @@ configureLinearMetrics({
  * Returns unified interface matching RunPlanV6 for backward compatibility.
  * Phase 3.3: Conditional creation based on USE_WORKFLOW_RUNTIME flag.
  */
+function shouldUseWorkflowRuntime(): boolean {
+  return process.env.USE_WORKFLOW_RUNTIME === "true";
+}
+
 function createWorkflowExecutor(
   input: z.infer<typeof workflowInput>,
   abortController: AbortController
 ) {
-  if (USE_WORKFLOW_RUNTIME) {
+  if (shouldUseWorkflowRuntime()) {
     // NEW: Use @alfred/runtime
     const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
 
@@ -194,6 +199,119 @@ function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
   }
 }
 
+type WorkflowInputPayload = z.infer<typeof workflowInput>;
+
+function deriveWorkflowTitle(requirement: string): string | undefined {
+  const trimmed = requirement.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const limit = 80;
+  if (trimmed.length <= limit) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, limit - 3)}...`;
+}
+
+function workflowMessageId(runId: string, suffix: string): string {
+  return `workflow-${runId}-${suffix}`;
+}
+
+function createRequirementMessage(
+  input: WorkflowInputPayload,
+  runId: string
+): UIMessage {
+  return {
+    id: workflowMessageId(runId, "requirement"),
+    role: "user",
+    parts: [{ type: "text", text: input.requirement }],
+    metadata: {
+      auto: input.auto,
+      workspace: input.workspace ?? null,
+      repoBase: input.repoBase ?? null,
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
+async function ensureWorkflowConversation(options: {
+  userId: string;
+  workflowId: string;
+  title?: string;
+}) {
+  const existing = await conversationRepo.getConversationByWorkflow(
+    options.userId,
+    options.workflowId
+  );
+  if (existing) {
+    return { conversation: existing, created: false };
+  }
+
+  try {
+    const conversation = await conversationRepo.createConversation(
+      options.userId,
+      options.title,
+      options.workflowId
+    );
+    return { conversation, created: true };
+  } catch (error) {
+    const fallback = await conversationRepo.getConversationByWorkflow(
+      options.userId,
+      options.workflowId
+    );
+    if (fallback) {
+      return { conversation: fallback, created: false };
+    }
+    throw error;
+  }
+}
+
+async function persistWorkflowMessages(options: {
+  userId: string;
+  conversationId: string;
+  messages: UIMessage[];
+  persistedIds: Set<string>;
+  runId: string;
+  baseId?: string;
+}) {
+  const { userId, conversationId, messages, persistedIds, runId, baseId } =
+    options;
+  for (let index = 0; index < messages.length; index += 1) {
+    const original = messages[index]!;
+    const derivedId = baseId
+      ? `${baseId}:${index}`
+      : typeof original.id === "string" && original.id.length > 0
+        ? original.id
+        : workflowMessageId(runId, randomUUID());
+
+    if (persistedIds.has(derivedId)) {
+      continue;
+    }
+
+    const normalized: UIMessage = {
+      ...original,
+      id: derivedId,
+      parts: Array.isArray(original.parts) ? original.parts : [],
+    };
+
+    try {
+      await conversationRepo.createMessage(
+        userId,
+        conversationId,
+        normalized
+      );
+      persistedIds.add(derivedId);
+    } catch (error) {
+      logger.warn("workflow_message_persist_failed", {
+        runId,
+        conversationId,
+        messageId: derivedId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
+
 export const workflowRouter: ReturnType<typeof router> = router({
   start: authedProcedure
     .use(rateLimit)
@@ -201,7 +319,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .input(workflowInput)
     .mutation(async ({ input, ctx }) => {
       const session = ctx.session;
-      if (!session) {
+      if (!session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "session_required",
@@ -235,6 +353,28 @@ export const workflowRouter: ReturnType<typeof router> = router({
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
         });
+
+        try {
+          const { conversation, created } = await ensureWorkflowConversation({
+            userId: session.user.id,
+            workflowId: executor.runId,
+            title: deriveWorkflowTitle(input.requirement),
+          });
+          if (created) {
+            await persistWorkflowMessages({
+              userId: session.user.id,
+              conversationId: conversation.id,
+              messages: [createRequirementMessage(input, executor.runId)],
+              persistedIds: new Set(),
+              runId: executor.runId,
+            });
+          }
+        } catch (error) {
+          logger.warn("workflow_conversation_init_failed", {
+            runId: executor.runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
 
         // Best-effort audit of start
         await recordAudit({
@@ -279,7 +419,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .subscription(({ input, ctx }) =>
       observable<WorkflowEvent>((emit) => {
         const session = ctx.session;
-        if (!session) {
+        if (!session?.user?.id) {
           emit.error(
             new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
           );
@@ -321,6 +461,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         const asyncTask = (async () => {
           let runId: string | null = null;
+          const persistedMessageIds = new Set<string>();
+          let workflowConversationId: string | null = null;
           try {
             // Create executor (runtime or runner based on feature flag)
             const executor = createWorkflowExecutor(input, abortController);
@@ -342,6 +484,30 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
 
             runId = executor.runId;
+            try {
+              const { conversation, created } =
+                await ensureWorkflowConversation({
+                  userId: session.user.id,
+                  workflowId: runId,
+                  title: deriveWorkflowTitle(input.requirement),
+                });
+              workflowConversationId = conversation.id;
+              if (created) {
+                await persistWorkflowMessages({
+                  userId: session.user.id,
+                  conversationId: conversation.id,
+                  messages: [createRequirementMessage(input, runId)],
+                  persistedIds: persistedMessageIds,
+                  runId,
+                });
+              }
+            } catch (error) {
+              logger.warn("workflow_conversation_init_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+
             await runRegistry.register(runId, {
               resume: async ({ resumeData }) => {
                 if (cancelled) return;
@@ -383,11 +549,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
             // Helper to normalize certain events to UIMessage parts for byte-equal replay
             const maybeUiMessages = (
               event: WorkflowEvent
-            ): unknown[] | null => {
+            ): UIMessage[] | null => {
               const msgs = eventToUiMessages(event);
-              return Array.isArray(msgs) && msgs.length > 0
-                ? (msgs as unknown[])
-                : null;
+              return Array.isArray(msgs) && msgs.length > 0 ? msgs : null;
             };
 
             // Consume the generator, persisting each event then pushing to client
@@ -420,6 +584,20 @@ export const workflowRouter: ReturnType<typeof router> = router({
                     }),
                     eventType: "ui-message",
                     eventData: uiMessages,
+                  });
+                }
+                if (
+                  workflowConversationId &&
+                  uiMessages &&
+                  uiMessages.length > 0
+                ) {
+                  await persistWorkflowMessages({
+                    userId: session.user.id,
+                    conversationId: workflowConversationId,
+                    messages: uiMessages,
+                    persistedIds: persistedMessageIds,
+                    runId: runId ?? executor.runId,
+                    baseId: eventId,
                   });
                 }
                 // Push event including its identity for client-side dedupe

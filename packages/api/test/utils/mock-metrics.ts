@@ -70,7 +70,17 @@ mock.module("@alfred/api/src/metrics", () => ({
   ...metricsStub,
 }));
 
-// Policy hooks used by metrics: provide a no-op to avoid import-time side effects
+// Policy hooks used by metrics: provide default no-op implementations.
+const defaultPolicyEvaluate = vi
+  .fn()
+  .mockResolvedValue({ allow: true, obligations: [] as string[] });
+const defaultRegisterCacheObs = vi.fn();
+
+export const policyStub = {
+  evaluate: defaultPolicyEvaluate,
+  registerCacheObs: defaultRegisterCacheObs,
+} as const;
+
 mock.module("@alfred/policy", () => ({
-  registerCacheObs: (_cb: (result: string) => void) => void 0,
+  ...policyStub,
 }));

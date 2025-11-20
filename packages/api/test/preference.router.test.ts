@@ -1,10 +1,15 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
-  mockPolicyAudit,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
+import { dbModuleStub } from "./utils/mock-db-client";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -12,32 +17,78 @@ mockPolicyAudit();
 const getPreferencesMock = vi.fn();
 const setPreferenceMock = vi.fn();
 const deletePreferenceMock = vi.fn();
-const recordMemoryUpdateMock = vi.fn();
-const recordMemoryForgetMock = vi.fn();
+const addFeedbackMock = vi.fn();
+const getMessageMock = vi.fn();
+const messageRowToUIMessageMock = vi.fn();
+const invalidatePreferenceCacheMock = vi.fn();
+const inferPreferenceFromCorrectionMock = vi.fn();
+let recordMemoryUpdateSpy: ReturnType<typeof vi.spyOn>;
+let recordMemoryForgetSpy: ReturnType<typeof vi.spyOn>;
 
-mock.module("@alfred/db", () => ({
-  userRepo: {
-    getPreferences: getPreferencesMock,
-    setPreference: setPreferenceMock,
-    deletePreference: deletePreferenceMock,
+dbModuleStub.userRepo = {
+  getPreferences: getPreferencesMock,
+  setPreference: setPreferenceMock,
+  deletePreference: deletePreferenceMock,
+  addFeedback: addFeedbackMock,
+  getFeedback: vi.fn().mockResolvedValue([]),
+};
+
+dbModuleStub.conversationRepo = {
+  getMessage: getMessageMock,
+  messageRowToUIMessage: messageRowToUIMessageMock,
+  getActiveUserIds: vi.fn().mockResolvedValue([]),
+  getConversations: vi.fn().mockResolvedValue([]),
+  getConversationHistory: vi.fn().mockResolvedValue(null),
+  createConversation: vi.fn(),
+  createMessage: vi.fn(),
+};
+
+dbModuleStub.userSchema = {
+  preferences: {
+    $inferSelect: {},
   },
+};
+
+mock.module("@alfred/agent/preference/loader", () => ({
+  invalidatePreferenceCache: invalidatePreferenceCacheMock,
 }));
 
-mock.module("@alfred/agent", () => ({
-  recordMemoryUpdate: recordMemoryUpdateMock,
-  recordMemoryForget: recordMemoryForgetMock,
+mock.module("@alfred/agent/preference/inference", () => ({
+  inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
 }));
 
-let caller: Awaited<ReturnType<typeof createTestCaller>>;
+let caller: Awaited<ReturnType<
+  (typeof import("./utils/trpc")) ["createTestCaller"]
+>>;
 
 beforeAll(async () => {
+  const { createTestCaller } = await import("./utils/trpc");
+  const agent = await import("@alfred/agent");
+  recordMemoryUpdateSpy = vi
+    .spyOn(agent, "recordMemoryUpdate")
+    .mockImplementation(() => undefined);
+  recordMemoryForgetSpy = vi
+    .spyOn(agent, "recordMemoryForget")
+    .mockImplementation(() => undefined);
   caller = await createTestCaller({
     scopes: ["preference.write"],
   });
 });
 
-afterEach(() => {
-  resetAllMocks();
+beforeEach(() => {
+  getMessageMock.mockReset();
+  messageRowToUIMessageMock.mockReset();
+  messageRowToUIMessageMock.mockImplementation((row) => ({
+    id: row.id,
+    role: "assistant",
+    parts: [{ type: "text", text: row.id }],
+  }));
+  inferPreferenceFromCorrectionMock.mockReset();
+  invalidatePreferenceCacheMock.mockReset();
+  addFeedbackMock.mockReset();
+  getPreferencesMock.mockReset();
+  setPreferenceMock.mockReset();
+  deletePreferenceMock.mockReset();
 });
 
 describe("preference router", () => {
@@ -91,7 +142,10 @@ describe("preference router", () => {
         1.0,
         "user"
       );
-      expect(recordMemoryUpdateMock).toHaveBeenCalledWith("preference", "user");
+      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
+        "preference",
+        "user"
+      );
       expect(result).toEqual(mockPreference);
     });
   });
@@ -105,7 +159,7 @@ describe("preference router", () => {
       });
 
       expect(deletePreferenceMock).toHaveBeenCalledWith("test-user", "theme");
-      expect(recordMemoryForgetMock).toHaveBeenCalledWith("preference");
+      expect(recordMemoryForgetSpy).toHaveBeenCalledWith("preference");
       expect(result).toEqual({ removed: 1 });
     });
 
@@ -118,7 +172,106 @@ describe("preference router", () => {
 
       expect(result).toEqual({ removed: 0 });
       // No forget metrics should be emitted when nothing removed
-      expect(recordMemoryForgetMock).toHaveBeenCalledTimes(0);
+      expect(recordMemoryForgetSpy).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe("updateFromFeedback", () => {
+    it("updates preferences and records feedback", async () => {
+      getMessageMock.mockResolvedValue({
+        id: "msg-1",
+        conversationId: "conv-1",
+      });
+
+      const result = await caller.preference.updateFromFeedback({
+        messageId: "msg-1",
+        rating: 5,
+        tags: ["too_verbose"],
+        preferenceUpdates: {
+          "response.verbosity": "concise",
+        },
+      });
+
+      expect(setPreferenceMock).toHaveBeenCalledWith(
+        "test-user",
+        "response.verbosity",
+        "concise",
+        0.9,
+        "learned"
+      );
+      expect(addFeedbackMock).toHaveBeenCalledWith(
+        "test-user",
+        "conv-1",
+        "msg-1",
+        5,
+        undefined,
+        ["too_verbose"]
+      );
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
+      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
+        "preference",
+        "learned"
+      );
+      expect(result).toEqual({ updated: 1 });
+    });
+
+    it("throws when message not found", async () => {
+      getMessageMock.mockResolvedValue(null);
+
+      await expect(
+        caller.preference.updateFromFeedback({
+          messageId: "missing",
+          preferenceUpdates: { "response.verbosity": "concise" },
+        })
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+  });
+
+  describe("inferFromCorrection", () => {
+    it("persists inferred preference", async () => {
+      getMessageMock
+        .mockResolvedValueOnce({ id: "orig" })
+        .mockResolvedValueOnce({ id: "corr" });
+      inferPreferenceFromCorrectionMock.mockReturnValue({
+        key: "response.verbosity",
+        value: "concise",
+      });
+
+      const result = await caller.preference.inferFromCorrection({
+        originalMessageId: "orig",
+        correctedMessageId: "corr",
+        correctionType: "verbosity",
+      });
+
+      expect(setPreferenceMock).toHaveBeenCalledWith(
+        "test-user",
+        "response.verbosity",
+        "concise",
+        0.7,
+        "inferred"
+      );
+      expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("test-user");
+      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
+        "preference",
+        "inferred"
+      );
+      expect(result).toEqual({ inferred: 1 });
+    });
+
+    it("returns zero when no inference", async () => {
+      getMessageMock
+        .mockResolvedValueOnce({ id: "orig" })
+        .mockResolvedValueOnce({ id: "corr" });
+      inferPreferenceFromCorrectionMock.mockReturnValue(null);
+
+      const result = await caller.preference.inferFromCorrection({
+        originalMessageId: "orig",
+        correctedMessageId: "corr",
+        correctionType: "tone",
+      });
+
+      expect(setPreferenceMock).not.toHaveBeenCalled();
+      expect(result).toEqual({ inferred: 0 });
     });
   });
 });

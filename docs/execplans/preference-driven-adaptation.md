@@ -60,6 +60,9 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Includes cascade deletes, partial indexes, and trigger to keep `updated_at` fresh; applied via `DATABASE_URL=... bun packages/db/scripts/migrate.ts`
 - [x] (2025-11-20 10:52Z) Implement `packages/db/src/repo/conversation.ts` - Conversation and message repository functions
   - Prepared statements for listing, ownership validation, and idempotent `createMessage` with `onConflictDoNothing`
+- [x] (2025-11-20 12:35Z) Repaired DB/Policy type exports for downstream packages
+  - Added `@alfred/db` root path alias in `packages/tsconfig/tsconfig.json` so API packages consume the new conversation/workflow exports without stale dist artifacts
+  - Removed `.ts` extensions from `packages/policy/src/index.ts` and fixed `conversationRepo.getActiveUserIds()` query builder mutation so `bun run typecheck` succeeds
 
 **Preference Loading:**
 - [x] (2025-11-20 10:29Z) Implement `packages/agent/src/preference/loader.ts` - Two-tier caching (L1: LRU, L2: Redis)
@@ -86,18 +89,23 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Server route pulls the Better Auth session, loads preference prompts, and forwards them to `streamText` while returning `X-Conversation-Id`
 - [x] (2025-11-20 10:52Z) Update `apps/web/src/routes/api/stream-handler.ts` - Persist messages in `onFinish` callback using `conversationRepo.createMessage()`
   - Creates conversations on demand, persists user + assistant messages (idempotent) before and after streaming, and logs failures without breaking the response
-- [ ] Update `packages/runtime/src/adapters/ai.ts` - Persist workflow messages (if applicable)
-- [ ] Verify server-only code stays server-only (no isomorphic functions needed)
+- [x] (2025-11-20 12:45Z) Persist workflow conversations/messages via `packages/api/src/routers/workflow.ts`
+  - Spawn conversations per workflow run (tied to `workflowId`), save the initiating requirement, and store assistant/tool UI messages during streaming with deterministic IDs + cache invalidation so preference inference can replay workflows
+  - Added dynamic `USE_WORKFLOW_RUNTIME` detection to keep runner/runtime toggles configurable at runtime; validated with `bun test packages/api/test/workflow.router.test.ts`
+- [x] (2025-11-20 12:45Z) Reconfirmed server-only boundaries for workflow persistence
+  - Moved `conversationRepo` imports to server-side entry points (`@alfred/db/repo/conversation`), ensuring no browser bundles pull DB code; lifted typecheck warnings by targeting source modules directly
 
 **Background Jobs:**
-- [ ] Implement `packages/api/src/schedulers/preference-inference.ts` - Background inference
-- [ ] Implement `packages/api/src/schedulers/preference-decay.ts` - Confidence decay
-- [ ] Add env flag gating (`SCHED_PREFERENCE_INFERENCE=1`)
+- [x] (2025-11-20 12:42Z) Stabilized preference schedulers and gating
+  - Fixed `conversationRepo.getActiveUserIds()` query builder mutation so Drizzle types compile and ensured `workflowRepo.getToolCalls()` metadata exposes tool usage for inference
+  - Added null-safe timestamps plus cache invalidation in `preference-inference.ts` / `preference-decay.ts` and verified `SCHED_PREFERENCE_INFERENCE=1` gating is wired through `apps/web/src/server/bootstrap.ts`
+  - Validated via `bun run typecheck`
 
 **API Endpoints:**
-- [ ] Extend `packages/api/src/routers/preference.ts` - Add `updateFromFeedback` procedure (uses `conversationRepo.getMessage()`)
-- [ ] Extend `packages/api/src/routers/preference.ts` - Add `inferFromCorrection` procedure (uses `conversationRepo.getMessage()`)
-- [ ] Verify messageId ownership validation works correctly
+- [x] (2025-11-20 12:56Z) Hardened preference feedback/correction procedures
+  - Reworked `preference.updateFromFeedback` schema to manually validate keys/values with `preferenceKeySchema`/`preferenceValueSchema`, enforcing ≥1 update and surfacing clear errors
+  - Confirmed ownership checks via `conversationRepo.getMessage()` plus cache invalidation + memory metrics for both feedback and correction flows
+  - Documented lack of `bun run lint` script (command unavailable) and re-ran `bun run typecheck`
 
 **Testing:**
 - [x] (2025-11-20 10:07Z) Unit tests for inference functions (`packages/agent/test/preference/inference.test.ts`)
@@ -112,6 +120,9 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Confirms enum-safe response handling and string scrubbing removes control/injection characters
 - [x] (2025-11-20 10:52Z) Runtime adapter preference tests (`packages/runtime/test/adapter-preferences.test.ts`)
   - Mocks AI SDK + preference builder to verify merged system prompts and ensure injection is observable in code
+- [x] (2025-11-20 12:59Z) Router regression suite for preference feedback
+  - Updated `packages/api/test/preference.router.test.ts` to share `dbModuleStub`, keep mocks stable across cases, and stub policy evaluation
+  - Verified `bun test packages/api/test/preference.router.test.ts` passes (8 assertions, 1 intentional skip)
 - [ ] Performance tests (`packages/agent/test/preference/performance.test.ts`)
 - [ ] Integration tests for preference loading (`packages/api/test/preference/loader.test.ts`)
 - [ ] E2E tests for preference-driven adaptation (`packages/api/test/preference/e2e.test.ts`)
@@ -139,6 +150,10 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
 - **Drizzle CLI journal requirement:** `bun run db:migrate` currently errors with `Can't find meta/_journal.json file`. Running `packages/db/scripts/migrate.ts` with `DATABASE_URL=postgresql://postgres:password@localhost:5432/alfred` successfully verifies migrations until the missing Drizzle metadata is restored.
 - **Package export gap:** `@alfred/type` lacked a `./preference` subpath export, so Bun couldn't resolve `@alfred/type/preference` at runtime. Adding the export in `packages/type/package.json` restored module resolution for loader tests.
 - **Type project reference:** Importing `@alfred/type/stream` inside `@alfred/db` required adding `../type` to `packages/db/tsconfig.json` references; otherwise `tsc -b` complained that the file was outside `rootDir`.
+- **Cross-package Zod schemas broke record()**: Passing `preferenceKeySchema`/`preferenceValueSchema` (instantiated in `@alfred/type`) directly into `z.record()` triggered `TypeError: def.keyType._zod.values` because Bun loads separate Zod instances per package. Evidence: `bun test packages/api/test/preference.router.test.ts` before fix. Impact: preference router now validates keys/values via `safeParse` instead of handing cross-package schemas to `z.record`.
+- **Shared DB module stub required**: Overriding `@alfred/db` per test caused missing `ragRepo` exports once `mock.restore()` ran. Exporting a mutable `dbModuleStub` from `packages/api/test/utils/mock-db-client.ts` keeps a single mock module that tests can customize without re-registering the module, preventing resolution errors.
+- **Await subscription promises**: `caller.workflow.stream()` returns a promise that resolves to an observable. Wrapping the promise directly in `toObservable` completes immediately and yields zero events. Awaiting first fixed the silent no-op in `packages/api/test/workflow.router.test.ts`.
+- **Prefer clearing over restoring module mocks**: Using `mock.restore()` inside `resetAllMocks()` removed previously registered module shims (DB/workflow repos), so later tests hit real implementations. Switching to `vi.clearAllMocks()` preserves the module mocks while still resetting call history.
 
 ## Decision Log
 
@@ -176,6 +191,21 @@ Record every decision made while working on the plan in the format:
   Rationale: Response preferences use enums (safe), but domain preferences may contain arbitrary strings. Strict validation prevents prompt injection while maintaining flexibility for domain-specific preferences.
   Date/Author: 2025-01-XX (Post-review, security hardening)
 
+- Decision: Evaluate `USE_WORKFLOW_RUNTIME` at executor creation time instead of module load
+  Rationale: Tests and deployments need to toggle between the legacy runner and the new runtime without reloading the router. Reading the env flag per call keeps behavior configurable and unblocked `workflow.router.test.ts`.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/src/routers/workflow.ts
+
+- Decision: Persist workflow conversations/messages inside the workflow router
+  Rationale: Workflow streams already normalize events into UI messages. Persisting them at the router (and storing the initiating requirement) ensures conversations stay in sync today while AI SDK integration continues, and avoids coupling the runtime adapter directly to DB writes.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/src/routers/workflow.ts, packages/api/test/workflow.router.test.ts
+
+- Decision: Clear mocked call history instead of restoring module mocks between tests
+  Rationale: `mock.restore()` removed shared module mocks (DB/workflow repos), causing later tests to hit real implementations. Using `vi.clearAllMocks()` keeps those modules mocked while still resetting spy state, stabilizing workflow router tests.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/test/utils/router-helpers.ts
+
 - Decision: Implement Option B (dedicated messages table) for message storage
   Rationale: After reviewing AI SDK v6 patterns, Option B provides clean separation between conversations and messages, enables efficient querying with proper indexes, aligns with AI SDK v6 message persistence best practices, and allows optional workflow linking. Denormalizing `user_id` in messages table enables efficient ownership validation without joins, meeting <10ms performance budget.
   Date/Author: 2025-01-XX (Option B implementation design)
@@ -189,6 +219,15 @@ Record every decision made while working on the plan in the format:
 - Decision: Expose `@alfred/type/preference` as a package export instead of relying solely on tsconfig paths
   Rationale: Bun resolves workspace packages via `package.json` exports during tests; without the `./preference` subpath, dynamic imports failed. Adding the export keeps runtime resolution stable across packages while retaining tsconfig path conveniences.
   Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/type/package.json
+- Decision: Resolve `@alfred/db` from source via tsconfig path alias
+  Rationale: API packages saw stale `dist/index.d.ts` without the new conversation/workflow exports, producing `TS2305` errors. Pointing `"@alfred/db"` to `../db/src/index.ts` keeps type information consistent without waiting for tsdown artifacts.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/tsconfig/tsconfig.json, packages/policy/src/index.ts, packages/db/src/repo/conversation.ts
+- Decision: Validate `preferenceUpdates` keys/values manually instead of piping cross-package Zod schemas into `z.record()`
+  Rationale: Bun loads separate Zod instances per workspace package, so handing `@alfred/type` schemas directly to `z.record()` raised runtime `def.keyType._zod.values` errors. Running `safeParse` per entry keeps validation centralized without mixing schema instances.
+  Date/Author: 2025-11-20 (Codex CLI)
+  Files affected: packages/api/src/routers/preference.ts, packages/api/test/preference.router.test.ts
 
 ## Outcomes & Retrospective
 
@@ -3003,3 +3042,5 @@ The work is organized into logical milestones that can be implemented incrementa
 ## Next Steps
 
 The implementation should proceed milestone by milestone. Start with Milestone 1 and validate each milestone before proceeding to the next. Update the `Progress` section above as each task is completed.
+
+2025-11-20 (Codex CLI): Earlier updates covered scheduler/typecheck fixes and preference router schema/tests; this revision persists workflow conversations/messages, adds dynamic runtime flag detection, and stabilizes workflow router tests. No standalone lint script exists (`bun run lint` is unavailable).
