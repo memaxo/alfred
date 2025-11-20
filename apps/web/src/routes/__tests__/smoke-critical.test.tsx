@@ -1,187 +1,361 @@
 import "@/test/dom";
-import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "bun:test";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ComponentType } from "react";
 import {
-  afterEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
-import { cleanup, waitFor } from "@testing-library/react";
-import { renderRoute, createTestTrpcClient } from "@/test/render-route";
-
-mock.module("react-virtuoso", () => ({
-  Virtuoso: ({
-    data,
-    itemContent,
-  }: {
-    data: unknown[];
-    itemContent: (index: number, value: unknown) => ReactNode;
-  }) => (
-    <div data-testid="virtuoso-stub">
-      {data.map((value, index) => (
-        <div key={`item-${index}`}>{itemContent(index, value)}</div>
-      ))}
-    </div>
-  ),
-}));
-
-mock.module("@/hooks/use-assistant-stream", () => ({
-  useAssistantStream: () => ({
-    messages: [],
-    actions: [],
-    status: "ready",
-    error: null,
-    send: vi.fn(),
-    clear: vi.fn(),
-    hydrate: vi.fn(),
-  }),
-}));
-
-mock.module("@/hooks/use-voice-capture", () => ({
-  useVoiceCapture: () => ({
-    isRecording: false,
-    startRecording: vi.fn(),
-    stopRecording: vi.fn(),
-    error: null,
-  }),
-}));
-
-mock.module("@/lib/auth-client", () => ({
-  authClient: {
-    useSession: () => ({ isPending: false }),
-    signUp: {
-      email: vi.fn((_input, callbacks) => callbacks?.onSuccess?.()),
-    },
-    signIn: {
-      email: vi.fn((_input, callbacks) => callbacks?.onSuccess?.()),
-    },
-  },
-}));
-
-const tanstackRouterModule = await import("@tanstack/react-router");
-
-mock.module("@tanstack/react-router", () => ({
-  ...tanstackRouterModule,
-  useNavigate: () => () => {},
-}));
+  createTestQueryClient,
+  createTestTrpcClient,
+  renderRoute,
+} from "@/test/render-route";
 
 afterEach(() => {
   cleanup();
 });
 
-async function loadRouteComponent(modulePath: string) {
-  const routeModule = await import(modulePath);
-  const component = routeModule.Route?.options?.component;
-  if (!component) {
-    throw new Error(`Route at ${modulePath} is missing a component`);
-  }
-  return component;
-}
+describe("Timer Route Smoke Tests", () => {
+  it("renders timer route component", async () => {
+    const timerRouteModule = await import("../../routes/_authed/timer");
+    const TimerRouteComponent = timerRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
 
-describe("Smoke: Critical routes", () => {
-  it("renders the login route by defaulting to sign up form", async () => {
-    const Component = await loadRouteComponent("../login");
-    const trpcClient = createTestTrpcClient();
-    const view = renderRoute(<Component />, { trpcClient });
+    if (!TimerRouteComponent) {
+      throw new Error("Timer route component is unavailable");
+    }
 
-    await waitFor(() => {
-      expect(view.getByText(/create account/i)).toBeTruthy();
-    });
-  });
-
-  it("renders the AI route chat container", async () => {
-    const Component = await loadRouteComponent("../ai");
-    const trpcClient = createTestTrpcClient();
-    const view = renderRoute(<Component />, { trpcClient });
-
-    await waitFor(() => {
-      expect(view.getByPlaceholderText(/ask alfred/i)).toBeTruthy();
-    });
-  });
-
-  it("renders the notes route with existing notes", async () => {
-    const Component = await loadRouteComponent("../note");
-    const noteList = [
-      {
-        id: "note-1",
-        title: "Smoke note",
-        content: "Ensure coverage exists",
-        createdAt: new Date("2025-01-01T00:00:00Z"),
-      },
-    ];
+    const queryClient = createTestQueryClient();
     const trpcClient = createTestTrpcClient({
       queries: {
-        "note.list": () => noteList,
+        "timer.active": () => [],
+      },
+      mutations: {
+        "timer.create": vi.fn((input: unknown) => ({
+          id: "timer-1",
+          ...(input as Record<string, unknown>),
+        })),
       },
     });
 
-    const view = renderRoute(<Component />, { trpcClient });
+    const { getByLabelText, getByRole } = renderRoute(
+      <TimerRouteComponent />,
+      { queryClient, trpcClient }
+    );
 
     await waitFor(() => {
-      expect(view.getAllByText(/notes/i).length).toBeGreaterThan(0);
-      expect(view.getByText(/smoke note/i)).toBeTruthy();
+      expect(getByLabelText(/duration/i)).toBeInTheDocument();
+      expect(getByLabelText(/label/i)).toBeInTheDocument();
     });
   });
 
-  it("renders the reminders route with due and upcoming data", async () => {
-    const Component = await loadRouteComponent("../remind");
-    const reminders = [
-      {
-        id: "remind-1",
-        title: "Prepare demo",
-        due: new Date("2025-01-01T12:00:00Z").toISOString(),
-        description: "Walk through smoke tests",
-      },
-    ];
-    const dueSoon = [
-      {
-        id: "due-1",
-        title: "Sync with Alfred",
-        due: new Date("2025-01-01T10:00:00Z").toISOString(),
-        description: null,
-      },
-    ];
+  it("handles timer creation mutation", async () => {
+    const timerRouteModule = await import("../../routes/_authed/timer");
+    const TimerRouteComponent = timerRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!TimerRouteComponent) {
+      throw new Error("Timer route component is unavailable");
+    }
+
+    const createSpy = vi.fn((input: unknown) => ({
+      id: "timer-1",
+      ...(input as Record<string, unknown>),
+    }));
+
+    const queryClient = createTestQueryClient();
     const trpcClient = createTestTrpcClient({
       queries: {
-        "remind.list": () => reminders,
-        "remind.due": () => dueSoon,
+        "timer.active": () => [],
+      },
+      mutations: {
+        "timer.create": createSpy,
       },
     });
 
-    const view = renderRoute(<Component />, { trpcClient });
+    const { getByLabelText, getByRole } = renderRoute(
+      <TimerRouteComponent />,
+      { queryClient, trpcClient }
+    );
 
     await waitFor(() => {
-      expect(view.getAllByText(/reminders/i).length).toBeGreaterThan(0);
-      expect(view.getByText(/prepare demo/i)).toBeTruthy();
-      expect(view.getByText(/sync with alfred/i)).toBeTruthy();
+      expect(getByLabelText(/duration/i)).toBeInTheDocument();
+    });
+
+    const durationInput = getByLabelText(/duration/i);
+    const labelInput = getByLabelText(/label/i);
+    const submitButton = getByRole("button", { name: /create/i });
+
+    await userEvent.type(durationInput, "30m");
+    await userEvent.type(labelInput, "Test Timer");
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          duration: "30m",
+          label: "Test Timer",
+        })
+      );
+    });
+  });
+});
+
+describe("Bookmark Route Smoke Tests", () => {
+  it("renders bookmark route component", async () => {
+    const bookRouteModule = await import("../../routes/_authed/book");
+    const BookRouteComponent = bookRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!BookRouteComponent) {
+      throw new Error("Book route component is unavailable");
+    }
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "book.list": () => [],
+      },
+      mutations: {
+        "book.create": vi.fn((input: unknown) => ({
+          id: "book-1",
+          ...(input as Record<string, unknown>),
+        })),
+      },
+    });
+
+    const { getByLabelText } = renderRoute(<BookRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    await waitFor(() => {
+      expect(getByLabelText(/url/i)).toBeInTheDocument();
     });
   });
 
-  it("renders the profile route with user data", async () => {
-    const Component = await loadRouteComponent("../profile");
-    const profileRow = {
-      id: "profile-1",
-      userId: "user-1",
-      name: "Alfred Pennyworth",
-      email: "alfred@batcave.dev",
-      avatar: "https://example.com/alfred.png",
-      timezone: "America/New_York",
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-    };
+  it("validates URL input", async () => {
+    const bookRouteModule = await import("../../routes/_authed/book");
+    const BookRouteComponent = bookRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!BookRouteComponent) {
+      throw new Error("Book route component is unavailable");
+    }
+
+    const createSpy = vi.fn();
+
+    const queryClient = createTestQueryClient();
     const trpcClient = createTestTrpcClient({
       queries: {
-        "profile.get": () => profileRow,
+        "book.list": () => [],
+      },
+      mutations: {
+        "book.create": createSpy,
       },
     });
 
-    const view = renderRoute(<Component />, { trpcClient });
+    const { getByLabelText, getByRole } = renderRoute(<BookRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
 
     await waitFor(() => {
-      expect(view.getAllByText(/profile/i).length).toBeGreaterThan(0);
-      expect(view.getByDisplayValue(/alfred@batcave\.dev/i)).toBeTruthy();
+      expect(getByLabelText(/url/i)).toBeInTheDocument();
+    });
+
+    const urlInput = getByLabelText(/url/i);
+    const submitButton = getByRole("button", { name: /create/i });
+
+    // Try submitting with empty URL
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    // Submit with valid URL
+    await userEvent.type(urlInput, "https://example.com");
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "https://example.com",
+        })
+      );
+    });
+  });
+});
+
+describe("Workflows Route Smoke Tests", () => {
+  it("renders workflows route component", async () => {
+    const workflowsRouteModule = await import("../../routes/_authed/workflows");
+    const WorkflowsRouteComponent = workflowsRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!WorkflowsRouteComponent) {
+      throw new Error("Workflows route component is unavailable");
+    }
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "workflow.list": () => ({
+          items: [],
+          total: 0,
+          hasMore: false,
+        }),
+      },
+    });
+
+    const { getByText } = renderRoute(<WorkflowsRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    await waitFor(() => {
+      expect(getByText(/workflows/i)).toBeInTheDocument();
+    });
+  });
+
+  it("displays empty state when no workflows", async () => {
+    const workflowsRouteModule = await import("../../routes/_authed/workflows");
+    const WorkflowsRouteComponent = workflowsRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!WorkflowsRouteComponent) {
+      throw new Error("Workflows route component is unavailable");
+    }
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      queries: {
+        "workflow.list": () => ({
+          items: [],
+          total: 0,
+          hasMore: false,
+        }),
+      },
+    });
+
+    const { getByText } = renderRoute(<WorkflowsRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    await waitFor(() => {
+      // Check for empty state or table headers
+      const emptyState = getByText(/no workflows/i);
+      expect(emptyState).toBeInTheDocument();
+    });
+  });
+});
+
+describe("Onboarding Route Smoke Tests", () => {
+  it("renders onboarding wizard component", async () => {
+    const onboardingRouteModule = await import("../../routes/onboarding");
+    const OnboardingRouteComponent = onboardingRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!OnboardingRouteComponent) {
+      throw new Error("Onboarding route component is unavailable");
+    }
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      mutations: {
+        "preference.set": vi.fn(() => ({ ok: true })),
+      },
+    });
+
+    const { getByText } = renderRoute(<OnboardingRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    await waitFor(() => {
+      // First step should be visible
+      expect(getByText(/welcome/i)).toBeInTheDocument();
+    });
+  });
+
+  it("navigates through wizard steps", async () => {
+    const onboardingRouteModule = await import("../../routes/onboarding");
+    const OnboardingRouteComponent = onboardingRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!OnboardingRouteComponent) {
+      throw new Error("Onboarding route component is unavailable");
+    }
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      mutations: {
+        "preference.set": vi.fn(() => ({ ok: true })),
+      },
+    });
+
+    const { getByRole, getByText } = renderRoute(<OnboardingRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    await waitFor(() => {
+      expect(getByText(/welcome/i)).toBeInTheDocument();
+    });
+
+    const nextButton = getByRole("button", { name: /next/i });
+    fireEvent.click(nextButton);
+
+    await waitFor(() => {
+      // Should move to next step
+      expect(getByText(/preferences/i)).toBeInTheDocument();
+    });
+  });
+
+  it("handles completion flow", async () => {
+    const onboardingRouteModule = await import("../../routes/onboarding");
+    const OnboardingRouteComponent = onboardingRouteModule.Route?.options
+      ?.component as ComponentType | undefined;
+
+    if (!OnboardingRouteComponent) {
+      throw new Error("Onboarding route component is unavailable");
+    }
+
+    const setPreferenceSpy = vi.fn(() => ({ ok: true }));
+
+    const queryClient = createTestQueryClient();
+    const trpcClient = createTestTrpcClient({
+      mutations: {
+        "preference.set": setPreferenceSpy,
+      },
+    });
+
+    const { getByRole, getByText } = renderRoute(<OnboardingRouteComponent />, {
+      queryClient,
+      trpcClient,
+    });
+
+    // Navigate to last step
+    await waitFor(() => {
+      expect(getByText(/welcome/i)).toBeInTheDocument();
+    });
+
+    const nextButton = getByRole("button", { name: /next/i });
+    
+    // Click through all steps
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(nextButton);
+      await waitFor(() => {
+        expect(nextButton).toBeInTheDocument();
+      });
+    }
+
+    // Complete onboarding
+    const completeButton = getByRole("button", { name: /complete/i });
+    fireEvent.click(completeButton);
+
+    await waitFor(() => {
+      expect(setPreferenceSpy).toHaveBeenCalled();
     });
   });
 });

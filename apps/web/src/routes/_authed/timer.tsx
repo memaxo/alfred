@@ -10,7 +10,7 @@ import { PaneLayout } from "@/components/pane-layout";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/timer")({
+export const Route = createFileRoute("/_authed/timer")({
   component: TimerRoute,
   errorComponent: RouteError,
 });

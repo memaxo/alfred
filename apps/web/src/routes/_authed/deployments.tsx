@@ -50,7 +50,7 @@ const suggestProdHost = createIsomorphicFn()
     return `${slug}.${domain}`;
   });
 
-export const Route = createFileRoute("/deployments")({
+export const Route = createFileRoute("/_authed/deployments")({
   component: DeploymentsRoute,
   errorComponent: RouteError,
   ssr: "data-only",

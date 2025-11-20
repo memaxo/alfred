@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import { Fingerprint, Trash2 } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
@@ -33,7 +35,7 @@ const EMPTY_STATE: ProfileFormState = {
   timezone: "",
 };
 
-export const Route = createFileRoute("/profile")({
+export const Route = createFileRoute("/_authed/profile")({
   component: ProfileRoute,
   errorComponent: RouteError,
 });
@@ -42,6 +44,11 @@ function ProfileRoute() {
   const utils = trpc.useUtils();
   const profileQuery = trpc.profile.get.useQuery();
   const [form, setForm] = useState<ProfileFormState>(EMPTY_STATE);
+  const [passkeys, setPasskeys] = useState<
+    Array<{ id: string; name: string; deviceType?: string; createdAt?: Date }>
+  >([]);
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
+  const [isAddingPasskey, setIsAddingPasskey] = useState(false);
 
   const profile = profileQuery.data;
   const isLoading = profileQuery.isLoading;
@@ -186,6 +193,68 @@ function ProfileRoute() {
     [hasChanges, isPending, prepareInput, updateProfile]
   );
 
+  // Load passkeys
+  useEffect(() => {
+    const loadPasskeys = async () => {
+      setIsLoadingPasskeys(true);
+      try {
+        const result = await authClient.passkey.listUserPasskeys();
+        if (result.data) {
+          setPasskeys(result.data);
+        }
+      } catch (error) {
+        // Silently fail - user might not have passkeys yet
+      } finally {
+        setIsLoadingPasskeys(false);
+      }
+    };
+
+    if (profile) {
+      void loadPasskeys();
+    }
+  }, [profile]);
+
+  const handleAddPasskey = useCallback(async () => {
+    setIsAddingPasskey(true);
+    try {
+      const result = await authClient.passkey.addPasskey({
+        name: `Device ${new Date().toLocaleDateString()}`,
+      });
+      if (result.data) {
+        toast.success("Passkey added successfully");
+        // Reload passkeys
+        const listResult = await authClient.passkey.listUserPasskeys();
+        if (listResult.data) {
+          setPasskeys(listResult.data);
+        }
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to add passkey";
+      toast.error(message);
+    } finally {
+      setIsAddingPasskey(false);
+    }
+  }, []);
+
+  const handleDeletePasskey = useCallback(async (id: string) => {
+    try {
+      const result = await authClient.passkey.deletePasskey({ id });
+      if (result.data) {
+        toast.success("Passkey deleted");
+        // Reload passkeys
+        const listResult = await authClient.passkey.listUserPasskeys();
+        if (listResult.data) {
+          setPasskeys(listResult.data);
+        }
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete passkey";
+      toast.error(message);
+    }
+  }, []);
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
       <Card>
@@ -230,6 +299,69 @@ function ProfileRoute() {
               {isPending ? "Saving…" : "Save changes"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Security & Passkeys</CardTitle>
+          <CardDescription>
+            Manage your passkeys for biometric authentication.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoadingPasskeys ? (
+            <p className="text-muted-foreground text-sm">Loading passkeys…</p>
+          ) : passkeys.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No passkeys registered. Add one to enable biometric authentication.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {passkeys.map((passkey) => (
+                <li
+                  className="flex items-center justify-between rounded-md border p-3"
+                  key={passkey.id}
+                >
+                  <div className="flex items-center gap-3">
+                    <Fingerprint className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{passkey.name}</p>
+                      {passkey.deviceType && (
+                        <p className="text-muted-foreground text-xs">
+                          {passkey.deviceType}
+                        </p>
+                      )}
+                      {passkey.createdAt && (
+                        <p className="text-muted-foreground text-xs">
+                          Added{" "}
+                          {typeof window !== "undefined"
+                            ? new Date(passkey.createdAt).toLocaleDateString()
+                            : passkey.createdAt.toString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleDeletePasskey(passkey.id)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button
+            onClick={handleAddPasskey}
+            disabled={isAddingPasskey}
+            variant="outline"
+            className="w-full"
+          >
+            <Fingerprint className="mr-2 h-4 w-4" />
+            {isAddingPasskey ? "Adding passkey…" : "Add Passkey"}
+          </Button>
         </CardContent>
       </Card>
     </div>

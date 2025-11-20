@@ -34,7 +34,7 @@ const DEFAULT_FORM: PreferenceFormState = {
   confidence: "1",
 };
 
-export const Route = createFileRoute("/preferences")({
+export const Route = createFileRoute("/_authed/preferences")({
   component: PreferencesRoute,
   errorComponent: RouteError,
 });

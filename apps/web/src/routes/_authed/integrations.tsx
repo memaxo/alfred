@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
+import { useCallback } from "react";
+import { toast } from "sonner";
 import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,21 +14,38 @@ import {
 import { BiolumBadge } from "@/components/tremor";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/integrations")({
+export const Route = createFileRoute("/_authed/integrations")({
   component: IntegrationsRoute,
   errorComponent: RouteError,
 });
 
 function IntegrationsRoute() {
-  // Query Linear webhook status (if procedure exists)
-  // For now, we'll show static integration cards
+  const linearStatusQuery = trpc.linear.getStatus.useQuery();
+  const getAuthorizeUrlMutation = trpc.linear.getAuthorizeUrl.useMutation();
 
-  const handleLinearConnect = () => {
-    // TODO: Implement Linear OAuth flow
-    // Open popup window with Linear OAuth URL
-    // Handle callback and token storage
-    window.open("https://linear.app/oauth/authorize", "_blank");
-  };
+  const handleLinearConnect = useCallback(async () => {
+    try {
+      const result = await getAuthorizeUrlMutation.mutateAsync({
+        redirectUri: `${window.location.origin}/auth/callback/linear`,
+      });
+      
+      // Store state in sessionStorage for verification
+      if (result.state) {
+        sessionStorage.setItem("linear_oauth_state", result.state);
+      }
+      
+      // Redirect to Linear OAuth URL
+      window.location.href = result.url;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to start OAuth flow";
+      toast.error(message);
+    }
+  }, [getAuthorizeUrlMutation]);
+
+  const linearStatus = linearStatusQuery.data;
+  const isLinearConnected = linearStatus?.connected ?? false;
+  const isLinearExpired = linearStatus?.connected && linearStatus?.isExpired;
 
   const handleLaminarConnect = () => {
     // TODO: Implement Laminar connection
@@ -56,8 +75,20 @@ function IntegrationsRoute() {
                   Project management and issue tracking
                 </CardDescription>
               </div>
-              <BiolumBadge variant="default">
-                Not Connected
+              <BiolumBadge
+                variant={
+                  isLinearConnected
+                    ? isLinearExpired
+                      ? "warning"
+                      : "success"
+                    : "default"
+                }
+              >
+                {isLinearConnected
+                  ? isLinearExpired
+                    ? "Expired"
+                    : "Connected"
+                  : "Not Connected"}
               </BiolumBadge>
             </div>
           </CardHeader>
@@ -74,11 +105,24 @@ function IntegrationsRoute() {
                 <li>• Workflow automation</li>
               </ul>
             </div>
+            {isLinearConnected && !isLinearExpired && (
+              <p className="text-biolum-dim text-xs">
+                Connected to workspace: {linearStatus.workspace}
+              </p>
+            )}
+            {isLinearExpired && (
+              <p className="text-biolum-dim text-xs">
+                Connection expired. Please reconnect.
+              </p>
+            )}
             <Button
               onClick={handleLinearConnect}
               className="w-full rounded-full"
+              disabled={getAuthorizeUrlMutation.isPending}
             >
-              Connect Linear
+              {isLinearConnected && !isLinearExpired
+                ? "Reconnect Linear"
+                : "Connect Linear"}
               <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>

@@ -1,5 +1,5 @@
 import { Fingerprint } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import { trpc } from "@/utils/trpc";
 
 export type BiometricChallengeDialogProps = {
   open: boolean;
@@ -25,25 +26,81 @@ export function BiometricChallengeDialog({
   workflowId,
 }: BiometricChallengeDialogProps) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const resumeMutation = trpc.workflow.resume.useMutation();
 
-  const handleAuthenticate = async () => {
-    setIsAuthenticating(true);
-    try {
-      // Use Better Auth's passkey authentication
-      // This is a placeholder - actual implementation depends on Better Auth passkey setup
-      // For now, simulate successful authentication
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      toast.success("Biometric authentication successful");
-      onSuccess();
-      onClose();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "biometric_auth_failed";
-      toast.error(message);
-    } finally {
-      setIsAuthenticating(false);
-    }
+  // Auto-trigger passkey flow when dialog opens
+  useEffect(() => {
+    if (!open) return;
+
+    const triggerPasskey = async () => {
+      setIsAuthenticating(true);
+      try {
+        const session = await authClient.getSession();
+        if (!session.data?.user?.email) {
+          toast.error("Session required for biometric authentication");
+          setIsAuthenticating(false);
+          return;
+        }
+
+        // Auto-trigger passkey sign-in
+        const result = await authClient.signIn.passkey({
+          email: session.data.user.email,
+          autoFill: false,
+        });
+
+        if (result.data) {
+          // Passkey sign-in successful - biometric ticket is set automatically via Better Auth hook
+          // Now resume the workflow with bio-authz event
+          if (workflowId) {
+            try {
+              await resumeMutation.mutateAsync({
+                runId: workflowId,
+                event: "bio-authz",
+                authz: "session-ticket", // Server validates requireRecentBiometric
+              });
+              toast.success("Biometric authentication successful");
+              onSuccess();
+              onClose();
+            } catch (resumeError) {
+              const message =
+                resumeError instanceof Error
+                  ? resumeError.message
+                  : "workflow_resume_failed";
+              toast.error(message);
+            }
+          } else {
+            toast.success("Biometric authentication successful");
+            onSuccess();
+            onClose();
+          }
+        }
+      } catch (error) {
+        // User cancellation is not an error - just close dialog
+        const message =
+          error instanceof Error ? error.message : "biometric_auth_failed";
+        
+        // Check if it's a user cancellation (WebAuthn user cancellation)
+        if (
+          message.includes("NotAllowedError") ||
+          message.includes("cancelled") ||
+          message.includes("abort")
+        ) {
+          // User cancelled - don't show error, just close
+          onClose();
+          return;
+        }
+        
+        toast.error(message);
+      } finally {
+        setIsAuthenticating(false);
+      }
+    };
+
+    void triggerPasskey();
+  }, [open, workflowId, onSuccess, onClose, resumeMutation]);
+
+  const handleCancel = () => {
+    onClose();
   };
 
   return (
@@ -76,22 +133,16 @@ export function BiometricChallengeDialog({
           )}
 
           <div className="flex flex-col gap-2">
+            {isAuthenticating ? (
+              <div className="text-biolum-dim text-center py-4">
+                <p>Waiting for biometric authentication...</p>
+                <p className="text-biolum-faint text-xs mt-2">
+                  Your device will prompt you for biometric authentication.
+                </p>
+              </div>
+            ) : null}
             <Button
-              onClick={handleAuthenticate}
-              disabled={isAuthenticating}
-              className="w-full rounded-full"
-            >
-              {isAuthenticating ? (
-                "Authenticating..."
-              ) : (
-                <>
-                  <Fingerprint className="mr-2 h-4 w-4" />
-                  Authenticate with Passkey
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={onClose}
+              onClick={handleCancel}
               variant="outline"
               className="w-full rounded-full"
               disabled={isAuthenticating}

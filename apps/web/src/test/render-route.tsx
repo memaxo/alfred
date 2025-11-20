@@ -106,7 +106,7 @@ export function createTestTrpcClient(
   });
 }
 
-type RenderRouteOptions = {
+export type RenderRouteOptions = {
   queryClient?: QueryClient;
   trpcClient?: TRPCClient<TRPCAppRouter>;
   wrapper?: ComponentType<{ children: ReactNode }>;

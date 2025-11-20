@@ -22,7 +22,7 @@ import { WorkflowDetailModal } from "@/components/workflow-detail-modal";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/workflows")({
+export const Route = createFileRoute("/_authed/workflows")({
   component: WorkflowsRoute,
   errorComponent: RouteError,
 });

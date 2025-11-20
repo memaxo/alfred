@@ -10,7 +10,7 @@ import { PaneLayout } from "@/components/pane-layout";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/book")({
+export const Route = createFileRoute("/_authed/book")({
   component: BookRoute,
   errorComponent: RouteError,
 });

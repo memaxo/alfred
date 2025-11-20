@@ -9,7 +9,7 @@ import { PaneLayout } from "@/components/pane-layout";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/note")({
+export const Route = createFileRoute("/_authed/note")({
   component: NoteRoute,
   errorComponent: RouteError,
 });

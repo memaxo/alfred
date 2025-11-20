@@ -20,7 +20,7 @@ type EventList = inferRouterOutputs<TRPCAppRouter>["privacy"]["events"];
 type DeleteFactInput =
   inferRouterInputs<TRPCAppRouter>["privacy"]["deleteFact"];
 
-export const Route = createFileRoute("/privacy")({
+export const Route = createFileRoute("/_authed/privacy")({
   component: PrivacyRoute,
   errorComponent: RouteError,
   ssr: "data-only",

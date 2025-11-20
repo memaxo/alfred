@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { BiometricChallengeDialog } from "@/components/biometric-challenge-dialog";
 import { Code } from "@/components/code";
 import { Plan } from "@/components/plan";
 import { RouteError } from "@/components/route-error";
@@ -47,9 +48,10 @@ const VALID_SCOPE_EVENTS = new Set<ScopeEvent>([
   "bio-authz",
 ]);
 
-export const Route = createFileRoute("/orchestrator/run")({
+export const Route = createFileRoute("/_authed/orchestrator/run")({
   component: OrchestratorRunRoute,
   errorComponent: RouteError,
+  ssr: false,
 });
 
 function OrchestratorRunRoute() {
@@ -85,6 +87,8 @@ function OrchestratorRunRoute() {
   const hasNewer = page > 0 && order === "desc"; // when newest-first, pages > 0 have newer pages
   const [_oldestEventId, setOldestEventId] = useState<string | null>(null);
   const [_newestEventId, setNewestEventId] = useState<string | null>(null);
+  const [showBiometricDialog, setShowBiometricDialog] = useState(false);
+  const [biometricWorkflowId, setBiometricWorkflowId] = useState<string | null>(null);
   useEffect(() => {
     seenEventIdsRef.current = seenEventIds;
   }, [seenEventIds]);
@@ -386,11 +390,30 @@ function OrchestratorRunRoute() {
     (event: StreamEventPayload) => {
       const message =
         typeof event.message === "string" ? event.message : "workflow_error";
-      setError(message);
-      appendLog("error", message);
-      setStatus("Error");
+      
+      // Check if error is due to biometric requirement (high-risk operation)
+      if (
+        message.includes("biometric_required") ||
+        message.includes("PRECONDITION_FAILED")
+      ) {
+        // Show biometric challenge dialog for high-risk operations
+        if (runId) {
+          setBiometricWorkflowId(runId);
+          setShowBiometricDialog(true);
+          setStatus("Suspended - Biometric Required");
+          appendLog("notice", "Workflow suspended: biometric authentication required");
+        } else {
+          setError(message);
+          appendLog("error", message);
+          setStatus("Error");
+        }
+      } else {
+        setError(message);
+        appendLog("error", message);
+        setStatus("Error");
+      }
     },
-    [appendLog]
+    [appendLog, runId]
   );
 
   const handleCacheEvent = useCallback(
@@ -434,10 +457,19 @@ function OrchestratorRunRoute() {
         return;
       }
       scopeInFlightRef.current.add(scopeEventRaw);
+      
+      // For bio-authz, show biometric dialog instead of automatically getting token
+      if (scopeEventRaw === "bio-authz") {
+        setBiometricWorkflowId(runId);
+        setShowBiometricDialog(true);
+        setStatus("Suspended - Biometric Required");
+        scopeInFlightRef.current.delete(scopeEventRaw);
+        return;
+      }
+      
       (async () => {
         try {
-          const forceElevated = scopeEventRaw === "bio-authz";
-          const token = await getToolToken(scopes, auto, { forceElevated });
+          const token = await getToolToken(scopes, auto);
           await resumeMutation.mutateAsync({
             runId,
             event: scopeEventRaw,
@@ -546,15 +578,40 @@ function OrchestratorRunRoute() {
     onData: handleChunk,
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      appendLog("error", message);
-      setStatus("Error");
-      setIsRunning(false);
-      setStreamInput(null);
-      setRunId(null);
-      scopeInFlightRef.current.clear();
-      subscriptionRef.current?.();
-      subscriptionRef.current = null;
+      
+      // Check if error is due to biometric requirement
+      if (
+        message.includes("biometric_required") ||
+        message.includes("PRECONDITION_FAILED")
+      ) {
+        // Show biometric challenge dialog
+        if (runId) {
+          setBiometricWorkflowId(runId);
+          setShowBiometricDialog(true);
+          setStatus("Suspended - Biometric Required");
+          appendLog("notice", "Workflow suspended: biometric authentication required");
+        } else {
+          setError(message);
+          appendLog("error", message);
+          setStatus("Error");
+          setIsRunning(false);
+          setStreamInput(null);
+          setRunId(null);
+          scopeInFlightRef.current.clear();
+          subscriptionRef.current?.();
+          subscriptionRef.current = null;
+        }
+      } else {
+        setError(message);
+        appendLog("error", message);
+        setStatus("Error");
+        setIsRunning(false);
+        setStreamInput(null);
+        setRunId(null);
+        scopeInFlightRef.current.clear();
+        subscriptionRef.current?.();
+        subscriptionRef.current = null;
+      }
     },
     onComplete() {
       appendLog("info", "Workflow completed");
@@ -878,6 +935,20 @@ function OrchestratorRunRoute() {
           </div>
         </section>
       </div>
+
+      <BiometricChallengeDialog
+        open={showBiometricDialog}
+        onClose={() => {
+          setShowBiometricDialog(false);
+          setBiometricWorkflowId(null);
+        }}
+        onSuccess={() => {
+          setShowBiometricDialog(false);
+          setBiometricWorkflowId(null);
+          // Workflow will automatically resume via the dialog's resume call
+        }}
+        workflowId={biometricWorkflowId ?? undefined}
+      />
     </div>
   );
 }

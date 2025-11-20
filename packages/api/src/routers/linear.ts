@@ -1,7 +1,7 @@
 import { cacheJTI } from "@alfred/auth/token";
 import { linearRepo } from "@alfred/db";
 
-const { upsertLinear } = linearRepo;
+const { upsertLinear, getLinearByOAuth } = linearRepo;
 
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
@@ -362,6 +362,37 @@ export const linearRouter = router({
         user: viewerId,
         scope: token.scope,
         expiresAt: expiresAt?.toISOString() ?? null,
+      };
+    }),
+
+  getStatus: authedProcedure
+    .use(requirePolicy("linear.getStatus"))
+    .query(async ({ ctx }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const clientId = getClientId();
+      const installation = await getLinearByOAuth(clientId);
+
+      if (!installation) {
+        return { connected: false as const };
+      }
+
+      const isExpired = installation.expires
+        ? new Date(installation.expires) < new Date()
+        : false;
+
+      return {
+        connected: true as const,
+        workspace: installation.space,
+        user: installation.appUser,
+        expiresAt: installation.expires?.toISOString() ?? null,
+        isExpired,
       };
     }),
 });
