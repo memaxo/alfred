@@ -16,3 +16,9 @@ globalThis.DocumentFragment = window.DocumentFragment;
 globalThis.MutationObserver = window.MutationObserver;
 globalThis.navigator = window.navigator;
 globalThis.getComputedStyle = window.getComputedStyle;
+(globalThis.document as Document & { documentMode?: number }).documentMode =
+  undefined;
+(HTMLElement.prototype as unknown as { attachEvent?: () => void }).attachEvent =
+  () => undefined;
+(HTMLElement.prototype as unknown as { detachEvent?: () => void }).detachEvent =
+  () => undefined;

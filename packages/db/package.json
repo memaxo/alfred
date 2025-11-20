@@ -36,6 +36,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@alfred/type": "workspace:*",
     "drizzle-orm": "catalog:",
     "pg": "^8.14.1",
     "zod": "catalog:"

@@ -54,6 +54,12 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Added tool-prefix and keyword heuristics returning `DomainName | null` plus helpers for future prompt contexts
 - [x] (2025-11-20 10:29Z) Implement `packages/agent/src/preference/defaults.ts` - Domain default preferences
   - Centralized defaults for proxmox/git/docker/kubernetes with `source: "default"` so loaders can layer them without polluting caches
+- [x] (2025-11-20 10:52Z) Create `packages/db/src/schema/conversation.ts` - Conversations and messages schema (Option B)
+  - Added `conversations`/`messages` tables with JSONB parts aligned to UIMessage format and exported via `conversationSchema`
+- [x] (2025-11-20 10:52Z) Create migration `0025_conversation.sql` - Conversations and messages tables with indexes
+  - Includes cascade deletes, partial indexes, and trigger to keep `updated_at` fresh; applied via `DATABASE_URL=... bun packages/db/scripts/migrate.ts`
+- [x] (2025-11-20 10:52Z) Implement `packages/db/src/repo/conversation.ts` - Conversation and message repository functions
+  - Prepared statements for listing, ownership validation, and idempotent `createMessage` with `onConflictDoNothing`
 
 **Preference Loading:**
 - [x] (2025-11-20 10:29Z) Implement `packages/agent/src/preference/loader.ts` - Two-tier caching (L1: LRU, L2: Redis)
@@ -74,9 +80,12 @@ Use this section to track granular implementation steps. Every stopping point mu
   - `packages/agent/test/preference/prompt.test.ts` measures warmed prompt builds (<1.5 ms avg) and verifies feature-flag behavior
 
 **AI SDK Integration:**
-- [ ] Update `packages/runtime/src/adapters/ai.ts` - Inject preference prompts (userId from constructor)
-- [ ] Update `apps/web/src/routes/api/stream-handler.ts` - Extract userId from session via `auth.api.getSession()`, inject preference prompts
-- [ ] Update `apps/web/src/routes/api/stream-handler.ts` - Persist messages in `onFinish` callback using `conversationRepo.createMessage()`
+- [x] (2025-11-20 10:52Z) Update `packages/runtime/src/adapters/ai.ts` - Inject preference prompts (userId from constructor)
+  - Adapter now accepts `{ runId, userId }`, fetches preference prompts via `buildPreferenceSystemPrompt`, and merges them with any existing system prompt; covered by new `adapter-preferences.test.ts`
+- [x] (2025-11-20 10:52Z) Update `apps/web/src/routes/api/stream-handler.ts` - Extract userId from session via `auth.api.getSession()`, inject preference prompts
+  - Server route pulls the Better Auth session, loads preference prompts, and forwards them to `streamText` while returning `X-Conversation-Id`
+- [x] (2025-11-20 10:52Z) Update `apps/web/src/routes/api/stream-handler.ts` - Persist messages in `onFinish` callback using `conversationRepo.createMessage()`
+  - Creates conversations on demand, persists user + assistant messages (idempotent) before and after streaming, and logs failures without breaking the response
 - [ ] Update `packages/runtime/src/adapters/ai.ts` - Persist workflow messages (if applicable)
 - [ ] Verify server-only code stays server-only (no isomorphic functions needed)
 
@@ -101,6 +110,8 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Validates caching semantics, cache invalidation, domain defaults, and enforces <1 ms L1 / <10 ms DB budgets; Redis timings deferred until env Redis is available
 - [x] (2025-11-20 10:29Z) Sanitization unit tests (`packages/agent/test/preference/sanitize.test.ts`)
   - Confirms enum-safe response handling and string scrubbing removes control/injection characters
+- [x] (2025-11-20 10:52Z) Runtime adapter preference tests (`packages/runtime/test/adapter-preferences.test.ts`)
+  - Mocks AI SDK + preference builder to verify merged system prompts and ensure injection is observable in code
 - [ ] Performance tests (`packages/agent/test/preference/performance.test.ts`)
 - [ ] Integration tests for preference loading (`packages/api/test/preference/loader.test.ts`)
 - [ ] E2E tests for preference-driven adaptation (`packages/api/test/preference/e2e.test.ts`)
@@ -127,6 +138,7 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
 - **UIMessage type already exported:** `UIMessage` type is already exported from `packages/type/src/stream.ts`, so no new type definition needed. Use `UIMessagePart[]` for JSONB parts field.
 - **Drizzle CLI journal requirement:** `bun run db:migrate` currently errors with `Can't find meta/_journal.json file`. Running `packages/db/scripts/migrate.ts` with `DATABASE_URL=postgresql://postgres:password@localhost:5432/alfred` successfully verifies migrations until the missing Drizzle metadata is restored.
 - **Package export gap:** `@alfred/type` lacked a `./preference` subpath export, so Bun couldn't resolve `@alfred/type/preference` at runtime. Adding the export in `packages/type/package.json` restored module resolution for loader tests.
+- **Type project reference:** Importing `@alfred/type/stream` inside `@alfred/db` required adding `../type` to `packages/db/tsconfig.json` references; otherwise `tsc -b` complained that the file was outside `rootDir`.
 
 ## Decision Log
 
@@ -171,6 +183,9 @@ Record every decision made while working on the plan in the format:
 - Decision: Store UIMessage format (not ModelMessage) in messages table
   Rationale: AI SDK v6 recommends storing `UIMessage[]` format for persistence (per `ai-sdk-ui_chatbot-message-persistence.md`). This format includes `parts` array, `id`, `role`, and optional `metadata`, which is ideal for UI rendering and preference inference. Conversion to `ModelMessage` happens at AI SDK boundary via `convertToModelMessages()`.
   Date/Author: 2025-01-XX (Option B implementation design)
+- Decision: Make conversation inserts idempotent with `ON CONFLICT DO NOTHING`
+  Rationale: Clients resend prior history on each request, so inserting by `message.id` must tolerate duplicates without raising errors while still updating timestamps for new entries.
+  Date/Author: 2025-11-20 (Codex CLI)
 - Decision: Expose `@alfred/type/preference` as a package export instead of relying solely on tsconfig paths
   Rationale: Bun resolves workspace packages via `package.json` exports during tests; without the `./preference` subpath, dynamic imports failed. Adding the export keeps runtime resolution stable across packages while retaining tsconfig path conveniences.
   Date/Author: 2025-11-20 (Codex CLI)

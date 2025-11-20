@@ -193,6 +193,29 @@ export async function findRunByLinearSession(
   return row ?? null;
 }
 
+export async function listRuns(args: {
+  userId: string;
+  status?: WorkflowStatus;
+  limit?: number;
+  offset?: number;
+}): Promise<WorkflowRun[]> {
+  const conditions = [eq(workflowRuns.userId, args.userId)];
+  
+  if (args.status) {
+    conditions.push(eq(workflowRuns.status, args.status));
+  }
+
+  const rows = await db
+    .select()
+    .from(workflowRuns)
+    .where(and(...conditions))
+    .orderBy(desc(workflowRuns.created))
+    .limit(args.limit ?? 20)
+    .offset(args.offset ?? 0);
+
+  return rows;
+}
+
 /**
  * Prunes old workflow data based on retention policy.
  * Should be called by a scheduler gated behind env flag per .ruler/02-architecture.md

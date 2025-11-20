@@ -249,6 +249,27 @@ function PreferencesRoute() {
     [setPreference]
   );
 
+  // Find voice preferences
+  const voiceProviderPreference = useMemo(() => {
+    const prefs = preferenceQuery.data ?? [];
+    return prefs.find((p) => p.key === "voice_provider");
+  }, [preferenceQuery.data]);
+
+  const currentVoiceProvider: "local" | "openai" =
+    (voiceProviderPreference?.value as "local" | "openai") ?? "openai";
+
+  const handleVoiceProviderChange = useCallback(
+    (provider: "local" | "openai") => {
+      const input: PreferenceSetInput = {
+        key: "voice_provider",
+        value: provider,
+        confidence: 1,
+      };
+      setPreference.mutate(input);
+    },
+    [setPreference]
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-10">
       <Card>
@@ -264,6 +285,39 @@ function PreferencesRoute() {
             onChange={handleAutonomyChange}
             value={currentAutonomy}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Voice Settings</CardTitle>
+          <CardDescription>
+            Choose your voice provider and model preferences.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="voice-provider" className="text-sm font-medium">
+              Voice Provider
+            </label>
+            <select
+              id="voice-provider"
+              value={currentVoiceProvider}
+              onChange={(e) =>
+                handleVoiceProviderChange(e.target.value as "local" | "openai")
+              }
+              className="w-full rounded-full border border-input bg-background px-4 py-2 text-sm"
+              disabled={isSaving}
+            >
+              <option value="openai">OpenAI (Cloud)</option>
+              <option value="local">Local Models (Faster-Whisper + Piper)</option>
+            </select>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            {currentVoiceProvider === "local"
+              ? "Using local models for privacy and zero-cost voice processing."
+              : "Using OpenAI's cloud models for voice processing."}
+          </p>
         </CardContent>
       </Card>
 

@@ -6,3 +6,7 @@ export type { NotePaneProps } from "./pane/note";
 export { NotePane } from "./pane/note";
 export type { RemindPaneProps } from "./pane/remind";
 export { RemindPane } from "./pane/remind";
+export type { TimerPaneProps, TimerPaneItem } from "./pane/timer";
+export { TimerPane } from "./pane/timer";
+export type { BookmarkPaneProps, BookmarkPaneItem } from "./pane/book";
+export { BookmarkPane } from "./pane/book";

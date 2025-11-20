@@ -1,0 +1,191 @@
+/* Tremor Component Overrides - "Signal in the Void" Aesthetic */
+/* Apply ALFRED's bioluminescent design system to Tremor components */
+
+@layer components {
+  /* Card overrides - HUD aesthetic */
+  .tremor-Card-root {
+    @apply rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl;
+    @apply shadow-none; /* Remove default shadow - self-illuminated elements */
+  }
+
+  /* Text overrides - Bioluminescent */
+  .tremor-Text-root {
+    @apply text-biolum tracking-tight;
+  }
+
+  .tremor-Title-root {
+    @apply text-biolum tracking-tighter;
+  }
+
+  .tremor-Subtitle-root {
+    @apply text-biolum-dim tracking-tight;
+  }
+
+  /* Chart overrides - Void background */
+  .tremor-ChartContainer-root {
+    @apply bg-transparent;
+  }
+
+  /* Remove all box-shadows - elements are self-illuminated */
+  [class*="tremor-"] {
+    box-shadow: none !important;
+  }
+
+  /* Button overrides - Rounded pill */
+  .tremor-Button-root {
+    @apply rounded-full;
+  }
+
+  /* Input overrides - Transparent backgrounds */
+  .tremor-TextInput-root,
+  .tremor-Select-root,
+  .tremor-NumberInput-root,
+  .tremor-SearchSelect-root {
+    @apply bg-void-surface/20 border-white/10 text-biolum;
+    @apply placeholder:text-biolum-faint;
+  }
+
+  .tremor-TextInput-input,
+  .tremor-NumberInput-input {
+    @apply text-biolum;
+  }
+
+  /* Badge overrides - Glow effect */
+  .tremor-Badge-root {
+    @apply bg-biolum/20 text-biolum border-biolum/30;
+    box-shadow: 0 0 10px oklch(0.99 0 0 / 0.2); /* Outer glow */
+  }
+
+  /* Dialog overrides - Void backdrop */
+  .tremor-Dialog-overlay {
+    @apply bg-void/80 backdrop-blur-sm;
+  }
+
+  .tremor-Dialog-content,
+  .tremor-DialogPanel-root {
+    @apply rounded-3xl border border-white/10 bg-void-surface/90 backdrop-blur-xl;
+  }
+
+  /* Table overrides */
+  .tremor-Table-root {
+    @apply bg-transparent;
+  }
+
+  .tremor-TableHead-root {
+    @apply border-b-white/10;
+  }
+
+  .tremor-TableHeaderCell-root {
+    @apply text-biolum-dim tracking-tight;
+  }
+
+  .tremor-TableRow-root {
+    @apply border-b-white/10;
+  }
+
+  .tremor-TableRow-root:hover {
+    @apply bg-void-surface/40;
+  }
+
+  .tremor-TableCell-root {
+    @apply text-biolum;
+  }
+
+  /* Chart color overrides - Bioluminescent palette */
+  .tremor-AreaChart-root .recharts-area {
+    @apply fill-biolum/20 stroke-biolum;
+  }
+
+  .tremor-LineChart-root .recharts-line {
+    @apply stroke-biolum;
+  }
+
+  .tremor-BarChart-root .recharts-bar {
+    @apply fill-biolum/80;
+  }
+
+  .tremor-DonutChart-root .recharts-pie-sector {
+    @apply stroke-void;
+  }
+
+  /* Grid overrides */
+  .tremor-Grid-root {
+    @apply gap-6;
+  }
+
+  /* Metric overrides */
+  .tremor-Metric-root {
+    @apply text-biolum tracking-tighter;
+  }
+
+  /* Progress overrides */
+  .tremor-ProgressBar-background {
+    @apply bg-void-surface/40;
+  }
+
+  .tremor-ProgressBar-bar {
+    @apply bg-biolum;
+  }
+
+  .tremor-ProgressCircle-circle {
+    @apply stroke-biolum;
+  }
+
+  .tremor-ProgressCircle-background {
+    @apply stroke-void-surface/40;
+  }
+
+  /* Callout overrides */
+  .tremor-Callout-root {
+    @apply rounded-3xl border border-white/10 bg-void-surface/40;
+  }
+
+  /* Divider overrides */
+  .tremor-Divider-root {
+    @apply border-white/10;
+  }
+
+  /* List overrides */
+  .tremor-List-root {
+    @apply divide-white/10;
+  }
+
+  .tremor-ListItem-root {
+    @apply border-b-white/10;
+  }
+
+  /* Tab overrides */
+  .tremor-TabList-root {
+    @apply border-b-white/10;
+  }
+
+  .tremor-Tab-root {
+    @apply text-biolum-dim;
+    @apply data-[state=active]:text-biolum data-[state=active]:border-b-biolum;
+  }
+
+  /* Align Tremor animations with ALFRED's fluid easing */
+  [class*="tremor-"] {
+    transition-timing-function: var(--ease-fluid) !important;
+  }
+
+  /* Filterbar specific overrides */
+  .tremor-Select-trigger {
+    @apply bg-void-surface/20 border-white/10 text-biolum;
+  }
+
+  .tremor-Select-content {
+    @apply rounded-3xl border border-white/10 bg-void-surface/90 backdrop-blur-xl;
+  }
+
+  .tremor-Select-item {
+    @apply text-biolum;
+    @apply hover:bg-void-surface/40;
+  }
+
+  /* Icon overrides */
+  .tremor-Icon-root {
+    @apply text-biolum;
+  }
+}
+

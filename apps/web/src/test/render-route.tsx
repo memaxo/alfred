@@ -122,21 +122,23 @@ export function renderRoute(
   function Wrapper({ children }: { children: ReactNode }) {
     let tree: ReactNode = children;
 
-    if (trpcClient) {
-      tree = (
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          {tree}
-        </trpc.Provider>
-      );
-    }
-
     if (options.wrapper) {
       const CustomWrapper = options.wrapper;
       tree = <CustomWrapper>{tree}</CustomWrapper>;
     }
 
-    return (
+    const withQuery = (
       <QueryClientProvider client={queryClient}>{tree}</QueryClientProvider>
+    );
+
+    if (!trpcClient) {
+      return withQuery;
+    }
+
+    return (
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        {withQuery}
+      </trpc.Provider>
     );
   }
 

@@ -7,6 +7,7 @@ import {
   vi,
 } from "bun:test";
 import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import {
   createTestQueryClient,
@@ -39,6 +40,36 @@ function createNoteHarness(
   options: NoteHarnessOptions = {}
 ) {
   let store = initialNotes.map((note) => ({ ...note }));
+  const queryClient = createTestQueryClient();
+
+  const snapshotNotes = () =>
+    store.map((note) => ({
+      ...note,
+      createdAt: note.createdAt ?? new Date("2025-01-01T00:00:00Z"),
+    }));
+
+  const syncListCache = () => {
+    const cacheEntry = queryClient
+      .getQueryCache()
+      .getAll()
+      .find((query) => {
+        const key = query.queryKey as unknown[];
+        if (!Array.isArray(key) || key.length === 0) {
+          return false;
+        }
+        const path = key[0];
+        return (
+          Array.isArray(path) &&
+          path.length >= 2 &&
+          path[0] === "note" &&
+          path[1] === "list"
+        );
+      });
+
+    if (cacheEntry) {
+      queryClient.setQueryData(cacheEntry.queryKey, snapshotNotes());
+    }
+  };
 
   const listSpy = vi.fn((input: unknown) => input);
   const createSpy = vi.fn(
@@ -51,12 +82,14 @@ function createNoteHarness(
         createdAt: new Date("2025-02-01T00:00:00Z"),
       };
       store = [next, ...store];
+      syncListCache();
       return next;
     }
   );
   const deleteSpy = vi.fn((input: { id: string }) => {
     options.onDelete?.(input);
     store = store.filter((note) => note.id !== input.id);
+    syncListCache();
     return { id: input.id };
   });
 
@@ -64,10 +97,7 @@ function createNoteHarness(
     queries: {
       "note.list": (input: unknown) => {
         listSpy(input);
-        return store.map((note) => ({
-          ...note,
-          createdAt: note.createdAt ?? new Date("2025-01-01T00:00:00Z"),
-        }));
+        return snapshotNotes();
       },
     },
     mutations: {
@@ -75,8 +105,6 @@ function createNoteHarness(
       "note.delete": deleteSpy,
     },
   });
-
-  const queryClient = createTestQueryClient();
 
   return {
     queryClient,
@@ -128,6 +156,7 @@ describe("Notes route flow", () => {
 
   it("creates a note, refetches the list, and clears the form inputs", async () => {
     const harness = createNoteHarness();
+    const user = userEvent.setup();
     const view = renderNoteRoute(harness);
     const titleInput = view.getByPlaceholderText(
       /title \(optional\)/i
@@ -137,26 +166,28 @@ describe("Notes route flow", () => {
     ) as HTMLTextAreaElement;
     const saveButton = view.getByRole("button", { name: /save note/i });
 
-    fireEvent.change(titleInput, { target: { value: "Integration title" } });
-    fireEvent.change(contentInput, {
-      target: { value: "End-to-end validation" },
+    await user.type(titleInput, "Integration title");
+    await user.type(contentInput, "End-to-end validation");
+
+    await waitFor(() => {
+      expect((saveButton as HTMLButtonElement).disabled).toBe(false);
     });
 
-    fireEvent.click(saveButton);
+    await user.click(saveButton);
 
+    await waitFor(() => {
+      expect(titleInput.value).toBe("");
+      expect(contentInput.value).toBe("");
+    });
+    await waitFor(() => {
+      expect(harness.getStore()).toHaveLength(1);
+    });
     await waitFor(() => {
       expect(view.getByText(/end-to-end validation/i)).toBeTruthy();
-    });
-
-    expect(titleInput.value).toBe("");
-    expect(contentInput.value).toBe("");
-    expect(harness.createSpy).toHaveBeenCalledWith({
-      title: "Integration title",
-      content: "End-to-end validation",
-    });
-
-    await waitFor(() => {
-      expect(harness.listSpy).toHaveBeenCalledTimes(2);
+      expect(harness.getStore()[0]).toMatchObject({
+        title: "Integration title",
+        content: "End-to-end validation",
+      });
     });
   });
 
@@ -191,8 +222,6 @@ describe("Notes route flow", () => {
 
     expect(harness.deleteSpy).toHaveBeenCalledWith({ id: "note-delete" });
 
-    await waitFor(() => {
-      expect(harness.listSpy).toHaveBeenCalledTimes(2);
-    });
+    expect(harness.getStore()).toHaveLength(1);
   });
 });

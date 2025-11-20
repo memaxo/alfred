@@ -40,7 +40,10 @@ export function DriveMode({
         </p>
       </div>
 
-      <Orb status={status} />
+      <Orb 
+        agentState={status === "listening" ? "listening" : status === "thinking" ? "thinking" : null}
+        className="h-64 w-64"
+      />
 
       {isProcessing && <Load message="Processing your request..." />}
 

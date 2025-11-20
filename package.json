@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bun": "^1.3.2",
     "@types/node": "^22.13.11",
     "bun-types": "^1.3.2",

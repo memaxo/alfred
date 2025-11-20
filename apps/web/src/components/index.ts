@@ -47,4 +47,3 @@ export { Toolbar } from "./toolbar";
 export { Viz } from "./viz";
 export { Voice } from "./voice";
 export { VoiceBtn } from "./voice-btn";
-export { Wave } from "./wave";

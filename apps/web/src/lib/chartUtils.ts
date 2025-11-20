@@ -3,6 +3,26 @@
 export type ColorUtility = "bg" | "stroke" | "fill" | "text";
 
 export const chartColors = {
+  // ALFRED bioluminescent palette (primary)
+  biolum: {
+    bg: "bg-biolum",
+    stroke: "stroke-biolum",
+    fill: "fill-biolum",
+    text: "text-biolum",
+  },
+  "biolum-dim": {
+    bg: "bg-biolum-dim",
+    stroke: "stroke-biolum-dim",
+    fill: "fill-biolum-dim",
+    text: "text-biolum-dim",
+  },
+  "biolum-faint": {
+    bg: "bg-biolum-faint",
+    stroke: "stroke-biolum-faint",
+    fill: "fill-biolum-faint",
+    text: "text-biolum-faint",
+  },
+  // Original colors for multi-series charts
   blue: {
     bg: "bg-blue-500",
     stroke: "stroke-blue-500",

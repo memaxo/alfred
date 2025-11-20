@@ -12,6 +12,7 @@
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],
   "references": [
-    { "path": "../embed" }
+    { "path": "../embed" },
+    { "path": "../type" }
   ]
 }

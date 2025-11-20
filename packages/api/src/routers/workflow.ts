@@ -670,6 +670,27 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   /**
+   * List workflow runs with optional filtering by status
+   */
+  listRuns: authedProcedure
+    .input(
+      z.object({
+        status: z.enum(["running", "suspended", "completed", "failed", "cancelled"]).optional(),
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const runs = await workflowRepo.listRuns({
+        userId: ctx.session.user.id,
+        status: input.status,
+        limit: input.limit,
+        offset: input.offset,
+      });
+      return runs;
+    }),
+
+  /**
    * Replay query: persisted events filtered by type in chronological order.
    * Default type is "ui-message" for assistant/orchestrator replays.
    */

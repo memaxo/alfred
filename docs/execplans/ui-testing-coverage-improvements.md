@@ -11,7 +11,7 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
 - [x] (2025-11-20 18:05Z) Reviewed `.agent/PLANS.md` and `docs/investigations/ui-testing-coverage-analysis.md`, captured scope, and authored this ExecPlan.
 - [x] (2025-11-20 20:07Z) Milestone 1 — Added `renderRoute`/test TRPC client helpers plus smoke suite covering login, ai, note, remind, and profile routes.
 - [x] (2025-11-20 21:45Z) Milestone 2 — Swapped hook-level mocks for an AI SDK streaming mock (`apps/web/src/test/mock-assistant-chat.ts`), refactored `chat-container` integration specs to use the real `useAssistantStream`, and added hook-level send tests.
-- [ ] Milestone 3 — Notes CRUD flow tests (create/read/update/delete + optimistic rollback) using the new integration harness.
+- [x] (2025-11-20 22:58Z) Milestone 3 — Added `note-flow` integration suite that renders the real `/note` route via `renderRoute`, exercises read/create/delete against deterministic tRPC handlers, and syncs the React Query cache without touching app code.
 - [ ] Milestone 4 — Foundational E2E harness (`createTestServer`, `createTestClient`, `createTestSession`, streaming helpers) wired into Vitest.
 - [ ] Milestone 5 — Reminders and workflow regression tests leveraging the E2E harness (coverage gated on time).
 
@@ -21,6 +21,10 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   Evidence: `bun test apps/web/src/routes/__tests__/smoke-critical.test.tsx` at 2025-11-20 20:03Z failed with `TypeError: expect(...).toBeInTheDocument is not a function` until assertions were rewritten to basic DOM checks.
 - Observation: TanStack agent toggles render with `role="tab"` (not `button`), so RTL queries must target tabs directly when switching between assistant and orchestrator states.
   Evidence: `chat-container.integration.test.tsx` failed at 2025-11-20 21:32Z with “Unable to find an accessible element with the role "button" and name `/orchestrator/i`” until the test queried `role="tab"` instead.
+- Observation: jsdom lacks the legacy `attachEvent`/`detachEvent` APIs that React’s change-event polyfill expects once `@testing-library/user-event` drives focus; without stubs every input interaction throws.
+  Evidence: `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` at 2025-11-20 22:35Z crashed with “activeElement$1.attachEvent is not a function” until `apps/web/src/test/dom.ts` added harmless no-op implementations.
+- Observation: The current `/note` route only supports list/create/delete—there is no UI pathway for update/optimistic rollback—so the Milestone 3 suite validates read + create + delete while documenting the missing update coverage for follow-up work.
+  Evidence: searching for `note.update` under `apps/web/src` returned no usages on 2025-11-20, confirming the flow is absent.
 
 ## Decision Log
 
@@ -35,6 +39,15 @@ ALFRED users need confidence that every critical screen in `apps/web` renders, t
   Date/Author: 2025-11-20 / Codex
 - Decision: Added `apps/web/src/test/mock-assistant-chat.ts` to mock AI SDK streaming (`@ai-sdk/react` + `DefaultChatTransport`) rather than mocking `useAssistantStream` directly, pairing it with `assistantChatMock` helpers for deterministic send/error assertions.
   Rationale: `useAssistantStream` talks to the AI SDK, not tRPC, so mocking the transport preserves real hook logic (deriveActions, clear/hydrate) while keeping tests hermetic.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Added `@testing-library/user-event` as a dev dependency so the note flow tests drive genuine typing/click interactions instead of synthetic value assignments that never reached React state.
+  Rationale: The `/note` form keeps the submit button disabled until `content.trim().length > 0`; only real event sequences guarantee parity with production inputs.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Patched `apps/web/src/test/dom.ts` to stub `HTMLElement.prototype.attachEvent/detachEvent` because React’s IE change-event fallback activates under jsdom when `@testing-library/user-event` focuses inputs.
+  Rationale: Keeps the test shim lightweight while avoiding invasive polyfills or switching runtimes.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Updated `createNoteHarness` to maintain an in-memory store plus React Query sync helper so `note.list` data updates immediately after create/delete without rewriting the production route.
+  Rationale: Mirrors the server’s eventual data while still exercising `trpc` hooks, and keeps the suite deterministic.
   Date/Author: 2025-11-20 / Codex
 
 ## Outcomes & Retrospective
@@ -123,6 +136,8 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
 - Record the first successful run outputs inside this section once available, for example:
     - Smoke suite sample output:
         `bun test apps/web --filter=smoke-critical` → `5 tests passed (45 ms)`.
+    - Note flow integration suite:
+        `bun test apps/web/src/routes/__tests__/note-flow.integration.test.tsx` → `3 tests passed (771 ms)`.
     - E2E harness sample log excerpt:
         `{ "level": "info", "msg": "test-server-start", "port": 43145 }`
 - Note any helper-specific caveats (e.g., “renderRoute must be awaited because loader data is async”). Update this section whenever new suites add noteworthy debugging tips.

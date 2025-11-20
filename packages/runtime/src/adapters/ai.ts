@@ -7,6 +7,7 @@
 
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
+import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import type { LanguageModel, Tool } from "ai";
 import { convertToModelMessages, streamText } from "ai";
 import {
@@ -35,11 +36,27 @@ export type StreamOptions = {
  * - tool-call: { toolCallId, toolName, input } (NOT args)
  * - tool-result: { toolCallId, toolName, input, output } (NOT result)
  */
+type AdapterInit = {
+  runId?: string;
+  userId?: string;
+};
+
 export class AISDKAdapter {
   private readonly runId?: string;
+  private readonly userId?: string;
 
-  constructor(runId?: string) {
-    this.runId = runId;
+  constructor();
+  constructor(runId?: string);
+  constructor(init?: AdapterInit);
+  constructor(arg?: string | AdapterInit) {
+    if (typeof arg === "string") {
+      this.runId = arg;
+      this.userId = undefined;
+      return;
+    }
+
+    this.runId = arg?.runId;
+    this.userId = arg?.userId;
   }
 
   /**
@@ -60,12 +77,15 @@ export class AISDKAdapter {
     });
 
     try {
+      const preferencePrompt = await this.buildPreferencePrompt(options);
+      const systemPrompt = mergeSystemPrompts(options.system, preferencePrompt);
+
       const result = streamText({
         model: options.model,
         messages: convertToModelMessages(options.messages),
         tools: options.tools,
         abortSignal: options.abortSignal,
-        system: options.system,
+        system: systemPrompt,
         temperature: options.temperature,
         // maxTokens and maxSteps will be used when integrating AI SDK properly
       });
@@ -183,6 +203,29 @@ export class AISDKAdapter {
 
     return null;
   }
+
+  private async buildPreferencePrompt(
+    options: StreamOptions
+  ): Promise<string | undefined> {
+    if (!this.userId) {
+      return undefined;
+    }
+
+    try {
+      const prompt = await buildPreferenceSystemPrompt(this.userId, {
+        toolNames: options.tools ? Object.keys(options.tools) : undefined,
+        conversationType: "workflow",
+      });
+      return prompt || undefined;
+    } catch (error) {
+      logger.warn("runtime_preference_prompt_failed", {
+        runId: this.runId,
+        userId: this.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    }
+  }
 }
 
 type BaseEvent = { type: string; [key: string]: unknown };
@@ -269,4 +312,14 @@ function isFinishEvent(event: AISDKStreamEvent): event is FinishEvent {
 
 function isErrorEvent(event: AISDKStreamEvent): event is ErrorEvent {
   return event.type === "error" && "error" in event;
+}
+
+function mergeSystemPrompts(
+  base?: string,
+  preference?: string
+): string | undefined {
+  if (base && preference) {
+    return `${base}\n\n${preference}`;
+  }
+  return preference || base || undefined;
 }
