@@ -23,9 +23,9 @@ Each change lists files, code locations, APIs, and side effects.
 - [x] (2025-11-21 00:48Z) Phase 1A: Implemented production-ready N-dimensional RTree (1024D)
 - [x] (2025-11-21 00:50Z) Phase 1B: Implemented production-ready BTree ordered index
 - [x] (2025-11-21 00:51Z) Phase 1C: Added database graph traversal indexes migration
-- [ ] Phase 2A: Implement auto-persist with dirty tracking
-- [ ] Phase 2B: Wire bridge auto-sync with embedding support
-- [ ] Phase 2C: Remove TODO comments and wire embedding index
+- [x] (2025-11-21 00:58Z) Phase 2A: Implemented auto-persist with dirty tracking
+- [x] (2025-11-21 00:58Z) Phase 2B: Wired bridge auto-sync with embedding support
+- [x] (2025-11-21 00:58Z) Phase 2C: Removed embedding TODOs and wired spatial index
 - [ ] Phase 3A: Create unified graph types and ID mapping
 - [ ] Phase 3B: Implement mindscape edge persistence (Mindscape → DB)
 - [ ] Phase 3C: Add node data mapping for mindscape nodes
@@ -65,9 +65,14 @@ _This section will be updated as key decisions are made during implementation._
   Rationale: Deletes are rare compared to inserts; rebuilding from existing entries keeps the tree valid while keeping the implementation simple and predictable.
   Date/Author: 2025-11-21 / Codex
 
+- Decision: Keep embeddings in-memory only and skip dirty flags when graph.setEmbedding runs
+  Rationale: Embeddings serve spatial queries but do not need to be persisted yet; avoiding dirty flags prevents endless persist cycles triggered by auto-embedder.
+  Date/Author: 2025-11-21 / Codex
+
 ## Outcomes & Retrospective
 
 - Phase 1 (2025-11-21 00:51Z): Hypergraph now uses production-ready RTree and BTree indices with dedicated unit tests, and Postgres ships traversal-focused indexes (0035) to keep getNeighbors/findPath queries fast; pending validation confirms Phase 1 acceptance.
+- Phase 2 (2025-11-21 00:58Z): Auto-persist now runs on a timer with optional embedding batches, the assistant bridge exposes startHypergraphSync(), and embeddings stay resident-only, clearing TODO debt around the spatial index.
 
 ---
 

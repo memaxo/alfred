@@ -136,8 +136,6 @@ export class Hypergraph {
         case "fact":
           this.temporal.insert({ start: k.ts, end: k.ts, id: nodeRef });
           this.ordered.insert(k.content, nodeRef);
-          // TODO: Add fact embeddings to spatial index
-          // Should call embed() function and index in RTree
           break;
         case "relation":
           if (!this.edges.has(k.from)) this.edges.set(k.from, new Set());
@@ -161,8 +159,6 @@ export class Hypergraph {
           inboundKind.add(k.from);
           break;
         case "insight":
-          // TODO: Index insights by confidence level
-          // TODO: Add semantic embedding to spatial index
           break;
         case "pattern":
           // TODO: Index patterns by accuracy threshold
@@ -247,7 +243,6 @@ export class Hypergraph {
       vector instanceof Float32Array ? vector : new Float32Array(vector);
     this.embeddings.set(id, stored);
     this.spatial.insertPoint(stored, id);
-    this.dirty.add(id);
     this.modCount++;
   }
 

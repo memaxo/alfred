@@ -2,6 +2,8 @@ import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import {
   loadHypergraph as hydrateHypergraph,
   persistHypergraph as persistInKnowledge,
+  startAutoPersist,
+  type AutoPersistHandle,
   type HypergraphLoader,
   type NodeRecord,
   type RelationRecord,
@@ -10,6 +12,7 @@ import { persistKnowledge } from "./graphstore";
 import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { eq } from "drizzle-orm";
+import { embed as embedVec, embedMany as embedVecMany } from "@alfred/embed";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;
 
@@ -20,6 +23,33 @@ export async function persistHypergraphToDb(
   resource: string
 ): Promise<void> {
   await persistInKnowledge(graph, resource, persistKnowledge);
+}
+
+export type HypergraphSyncOptions = {
+  intervalMs?: number;
+  computeEmbeddings?: boolean;
+  maxPerTick?: number;
+  batchSize?: number;
+};
+
+export function startHypergraphSync(
+  resource: string,
+  graph: Hypergraph,
+  options?: HypergraphSyncOptions
+): AutoPersistHandle {
+  return startAutoPersist(graph, resource, persistKnowledge, {
+    intervalMs: options?.intervalMs,
+    batchSize: options?.batchSize,
+    computeEmbeddings: options?.computeEmbeddings ?? true,
+    embedBatchSize: options?.maxPerTick,
+    embedder: {
+      embed: async (text) => Float32Array.from(await embedVec(text)),
+      embedMany: async (texts) => {
+        const vectors = await embedVecMany(texts);
+        return vectors.map((vec) => Float32Array.from(vec));
+      },
+    },
+  });
 }
 
 export async function loadHypergraphFromDb(
