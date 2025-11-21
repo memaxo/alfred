@@ -3,12 +3,16 @@ import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
 import {
+  historyContextSelectionDurationSeconds,
+  historyContextTierDropsTotal,
+  historyContextTokensTotal,
   preferenceHistoryPrunedTotal,
   preferencePromptFailuresTotal,
   preferencePromptInjectionsTotal,
 } from "@alfred/api/metrics";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { logger } from "@alfred/api/utils/logger";
+import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import {
   consumeStream,
@@ -17,7 +21,6 @@ import {
   type UIMessage,
 } from "ai";
 import { z } from "zod";
-import { pruneMessagesForStream } from "./history";
 
 const requestSchema = z
   .object({
@@ -114,18 +117,51 @@ export async function handleStreamRequest(
       }
     }
 
-    const { uiMessages: preparedUiMessages, modelMessages, dropped } =
-      pruneMessagesForStream(messages);
+    const modelId = getModelId();
+    const stopHistoryTimer =
+      historyContextSelectionDurationSeconds.startTimer({
+        source: errorPrefix,
+      });
+    const historyContext = await buildHistoryContext({
+      messages,
+      modelId,
+      system: preferencePrompt,
+      source: errorPrefix,
+      budget: getHistoryBudgetDefaults(),
+    });
+    stopHistoryTimer();
+
+    const preparedUiMessages = historyContext.uiMessages;
+    const modelMessages = historyContext.modelMessages;
+    const dropped = historyContext.droppedMessages;
+
+    historyContextTokensTotal.inc(
+      { source: errorPrefix, model: modelId, action: "kept" },
+      historyContext.keptTokens
+    );
+    historyContextTokensTotal.inc(
+      { source: errorPrefix, model: modelId, action: "dropped" },
+      historyContext.droppedTokens
+    );
+
+    if (historyContext.selection.dropped.length > 0) {
+      for (const message of historyContext.selection.dropped) {
+        const tier =
+          historyContext.selection.tierByMessage.get(message) ?? "low";
+        historyContextTierDropsTotal.inc({ source: errorPrefix, tier });
+      }
+    }
 
     if (dropped > 0) {
       preferenceHistoryPrunedTotal.inc({ source: errorPrefix }, dropped);
       logger.info(`${errorPrefix}_history_pruned`, {
         dropped,
         kept: preparedUiMessages.length,
+        keptTokens: historyContext.keptTokens,
+        droppedTokens: historyContext.droppedTokens,
       });
     }
 
-    const modelId = getModelId();
     const result = streamText({
       ...defaults,
       messages: modelMessages,

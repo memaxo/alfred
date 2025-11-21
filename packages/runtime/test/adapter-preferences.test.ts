@@ -1,5 +1,4 @@
 import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
-import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
@@ -8,13 +7,38 @@ const streamTextMock = vi.fn(() => ({
 }));
 
 const validateUIMessagesMock = vi.fn(async ({ messages }) => messages);
-const pruneMessagesMock = vi.fn(({ messages }) => messages);
 
 mock.module("ai", () => ({
   streamText: streamTextMock,
-  convertToModelMessages: (messages: unknown) => messages,
   validateUIMessages: validateUIMessagesMock,
-  pruneMessages: pruneMessagesMock,
+}));
+
+const buildHistoryContextMock = vi.fn(async ({ messages }: { messages: unknown[] }) => ({
+  uiMessages: messages,
+  modelMessages: messages,
+  droppedMessages: 0,
+  keptTokens: 100,
+  droppedTokens: 0,
+  selection: {
+    kept: messages as any,
+    dropped: [],
+    tiers: new Map(),
+    tierByMessage: new WeakMap(),
+    keptTokens: 100,
+    droppedTokens: 0,
+    budget: {
+      modelId: "test",
+      maxContextTokens: 1000,
+      historyBudgetTokens: 900,
+      systemTokens: 0,
+      headroomTokens: 100,
+    },
+  },
+}));
+
+mock.module("@alfred/history", () => ({
+  buildHistoryContext: buildHistoryContextMock,
+  getHistoryBudgetDefaults: () => ({})
 }));
 
 const buildPreferenceSystemPromptMock = vi
@@ -29,6 +53,11 @@ mock.module("../src/metrics", () => ({
   runtimeAiEventsTotal: { inc: vi.fn() },
   runtimeAiSdkCallsTotal: { inc: vi.fn() },
   runtimeAiSdkDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
+  runtimeHistorySelectionDurationSeconds: {
+    startTimer: vi.fn().mockReturnValue(() => {}),
+  },
+  runtimeHistoryTokensTotal: { inc: vi.fn() },
+  runtimeHistoryTierDropsTotal: { inc: vi.fn() },
 }));
 
 mock.module("../src/utils/logger", () => ({
@@ -42,7 +71,7 @@ describe("AISDKAdapter preference prompts", () => {
     streamTextMock.mockClear();
     buildPreferenceSystemPromptMock.mockClear();
     validateUIMessagesMock.mockClear();
-    pruneMessagesMock.mockClear();
+    buildHistoryContextMock.mockClear();
   });
 
   afterAll(() => {
@@ -108,38 +137,53 @@ describe("AISDKAdapter preference prompts", () => {
     expect(validateUIMessagesMock).toHaveBeenCalled();
   });
 
-  it("clamps and prunes messages before streaming", async () => {
+  it("builds history context before streaming", async () => {
     const adapter = new AISDKAdapter();
-    const messages = Array.from(
-      { length: MAX_HISTORY_MESSAGES + 10 },
-      (_, index) => ({
-        id: `msg-${index}`,
-        role: index % 2 === 0 ? "user" : "assistant",
-        parts: [{ type: "text", text: `m-${index}` }],
-      })
-    );
+    const messages = Array.from({ length: 5 }, (_, index) => ({
+      id: `msg-${index}`,
+      role: index % 2 === 0 ? "user" : "assistant",
+      parts: [{ type: "text", text: `m-${index}` }],
+    }));
 
-    pruneMessagesMock.mockImplementation(({ messages }) =>
-      messages.slice(-5)
-    );
+    buildHistoryContextMock.mockResolvedValueOnce({
+      uiMessages: messages.slice(-2),
+      modelMessages: messages.slice(-2),
+      droppedMessages: 3,
+      keptTokens: 120,
+      droppedTokens: 45,
+      selection: {
+        kept: messages.slice(-2),
+        dropped: messages.slice(0, 3),
+        tiers: new Map(),
+        tierByMessage: new WeakMap(),
+        keptTokens: 120,
+        droppedTokens: 45,
+        budget: {
+          modelId: "test",
+          maxContextTokens: 1000,
+          historyBudgetTokens: 900,
+          systemTokens: 0,
+          headroomTokens: 100,
+        },
+      },
+    });
 
     const iterator = adapter.stream({ model: "test", messages });
     for await (const _ of iterator) {
       // no events
     }
 
-    const validatedArg = validateUIMessagesMock.mock.calls[0]?.[0]?.messages;
-    expect(validatedArg).toHaveLength(MAX_HISTORY_MESSAGES);
-    expect(validatedArg?.[0]?.id).toBe(`msg-10`);
-
-    expect(pruneMessagesMock).toHaveBeenCalledWith({
-      messages: validatedArg,
-      reasoning: "before-last-message",
-      toolCalls: "before-last-2-messages",
-      emptyMessages: "remove",
+    expect(validateUIMessagesMock).toHaveBeenCalledWith({
+      messages,
+      tools: undefined,
     });
-
+    expect(buildHistoryContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages,
+        source: "runtime-ai-adapter",
+      })
+    );
     const streamedMessages = streamTextMock.mock.calls[0]?.[0]?.messages;
-    expect(streamedMessages).toEqual(validatedArg.slice(-5));
+    expect(streamedMessages).toEqual(messages.slice(-2));
   });
 });

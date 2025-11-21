@@ -7,19 +7,17 @@
 
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
-import { limitUiMessages } from "@alfred/type/history";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
+import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import type { LanguageModel, Tool } from "ai";
-import {
-  convertToModelMessages,
-  pruneMessages,
-  streamText,
-  validateUIMessages,
-} from "ai";
+import { streamText, validateUIMessages } from "ai";
 import {
   runtimeAiEventsTotal,
   runtimeAiSdkCallsTotal,
   runtimeAiSdkDurationSeconds,
+  runtimeHistorySelectionDurationSeconds,
+  runtimeHistoryTierDropsTotal,
+  runtimeHistoryTokensTotal,
 } from "../metrics";
 import { logger } from "../utils/logger";
 
@@ -89,31 +87,54 @@ export class AISDKAdapter {
       const inputMessages = Array.isArray(options.messages)
         ? options.messages
         : [];
-      const limitedMessages = limitUiMessages(inputMessages);
-      const dropped = inputMessages.length - limitedMessages.length;
-      if (dropped > 0) {
+
+      const validatedMessages = (await validateUIMessages({
+        messages: inputMessages,
+        tools: options.tools as Parameters<typeof validateUIMessages>[0]["tools"],
+      })) as UIMessage[];
+
+      const stopHistoryTimer = runtimeHistorySelectionDurationSeconds.startTimer();
+      const historyContext = await buildHistoryContext({
+        messages: validatedMessages,
+        modelId,
+        system: systemPrompt,
+        source: "runtime-ai-adapter",
+        budget: getHistoryBudgetDefaults(),
+      });
+      stopHistoryTimer();
+
+      runtimeHistoryTokensTotal.inc(
+        { action: "kept" },
+        historyContext.keptTokens
+      );
+      runtimeHistoryTokensTotal.inc(
+        { action: "dropped" },
+        historyContext.droppedTokens
+      );
+
+      if (historyContext.selection.dropped.length > 0) {
+        for (const message of historyContext.selection.dropped) {
+          const tier =
+            historyContext.selection.tierByMessage.get(message) ?? "low";
+          runtimeHistoryTierDropsTotal.inc({ tier });
+        }
+      }
+
+      if (historyContext.droppedMessages > 0) {
         logger.info("runtime_history_pruned", {
           runId: this.runId,
-          dropped,
-          kept: limitedMessages.length,
+          dropped: historyContext.droppedMessages,
+          kept: historyContext.uiMessages.length,
+          keptTokens: historyContext.keptTokens,
+          droppedTokens: historyContext.droppedTokens,
         });
       }
 
-      const validatedMessages = (await validateUIMessages({
-        messages: limitedMessages,
-        tools: options.tools as Parameters<typeof validateUIMessages>[0]["tools"],
-      })) as UIMessage[];
-      const modelMessages = convertToModelMessages(validatedMessages);
-      const prunedMessages = pruneMessages({
-        messages: modelMessages,
-        reasoning: "before-last-message",
-        toolCalls: "before-last-2-messages",
-        emptyMessages: "remove",
-      });
+      const modelMessages = historyContext.modelMessages;
 
       const result = streamText({
         model: options.model,
-        messages: prunedMessages,
+        messages: modelMessages,
         tools: options.tools,
         abortSignal: options.abortSignal,
         system: systemPrompt,

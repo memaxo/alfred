@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { z } from "zod";
 import type { UIMessage } from "@alfred/type/stream";
 
@@ -19,6 +19,10 @@ mock.module("@alfred/db/repo/conversation", () => ({
 
 mock.module("@alfred/agent", () => ({
   getModelId: () => "mock-model",
+  buildTools: () => ({}),
+  buildAssistantTools: () => ({}),
+  getOpenAI: () => ({ chat: () => ({}) }),
+  wrapLegacyToolToAISDK: () => ({}),
 }));
 
 mock.module("@alfred/agent/preference/prompt", () => ({
@@ -38,13 +42,32 @@ mock.module("@alfred/api/preference/refresh", () => ({
   triggerPreferenceRefresh: triggerPreferenceRefreshMock,
 }));
 
-const metricsMock = {
-  preferenceHistoryPrunedTotal: { inc: vi.fn() },
-  preferencePromptInjectionsTotal: { inc: vi.fn() },
-  preferencePromptFailuresTotal: { inc: vi.fn() },
-};
-
-mock.module("@alfred/api/metrics", () => metricsMock);
+const historyContextMock = vi.fn(async ({ messages }) => ({
+  uiMessages: messages,
+  modelMessages: messages,
+  droppedMessages: 0,
+  keptTokens: 100,
+  droppedTokens: 0,
+  selection: {
+    kept: messages,
+    dropped: [],
+    tiers: new Map(),
+    tierByMessage: new WeakMap(),
+    keptTokens: 100,
+    droppedTokens: 0,
+    budget: {
+      modelId: "mock-model",
+      maxContextTokens: 1000,
+      historyBudgetTokens: 900,
+      systemTokens: 0,
+      headroomTokens: 100,
+    },
+  },
+}));
+mock.module("@alfred/history", () => ({
+  buildHistoryContext: historyContextMock,
+  getHistoryBudgetDefaults: () => ({})
+}));
 
 const loggerErrorMock = vi.fn();
 mock.module("@alfred/api/utils/logger", () => ({
@@ -90,6 +113,15 @@ mock.module("ai", () => ({
 }));
 
 const { handleStreamRequest } = await import("../stream-handler");
+const metrics = await import("@alfred/api/metrics");
+const preferenceInjectionSpy = vi.spyOn(
+  metrics.preferencePromptInjectionsTotal,
+  "inc"
+);
+const preferenceFailureSpy = vi.spyOn(
+  metrics.preferencePromptFailuresTotal,
+  "inc"
+);
 
 describe("handleStreamRequest preference refresh integration", () => {
   it("triggers preference refresh after persisting initial and streamed messages", async () => {
@@ -127,9 +159,14 @@ describe("handleStreamRequest preference refresh integration", () => {
       reason: "assistant_stream_complete",
     });
     expect(triggerPreferenceRefreshMock).toHaveBeenCalledTimes(2);
-    expect(metricsMock.preferencePromptInjectionsTotal.inc).toHaveBeenCalledWith(
+    expect(preferenceInjectionSpy).toHaveBeenCalledWith(
       { source: "assistant" }
     );
-    expect(metricsMock.preferencePromptFailuresTotal.inc).not.toHaveBeenCalled();
+    expect(preferenceFailureSpy).not.toHaveBeenCalled();
   });
+});
+
+afterEach(() => {
+  preferenceInjectionSpy.mockClear();
+  preferenceFailureSpy.mockClear();
 });

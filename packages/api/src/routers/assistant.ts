@@ -87,6 +87,8 @@ export const assistantRouter: ReturnType<typeof router> = router({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "assistant",
+          model: defaults.model,
+          system: defaults.instructions,
         });
         const stopWhen =
           typeof input.maxSteps === "number"

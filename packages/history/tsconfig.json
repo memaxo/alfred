@@ -12,19 +12,15 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "composite": true
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
   "references": [
     { "path": "../type" },
-    { "path": "../cognitive" },
-    { "path": "../knowledge" },
-    { "path": "../learning" },
-    { "path": "../policy" },
     { "path": "../agent" },
-    { "path": "../history" },
-    { "path": "../db" },
     { "path": "../metrics" }
   ]
 }

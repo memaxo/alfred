@@ -29,6 +29,7 @@
   "exclude": ["node_modules", ".tsbuild"],
   "references": [
     { "path": "../../packages/api" },
-    { "path": "../../packages/auth" }
+    { "path": "../../packages/auth" },
+    { "path": "../../packages/history" }
   ]
 }

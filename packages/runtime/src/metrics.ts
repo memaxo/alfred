@@ -102,6 +102,28 @@ export const runtimeAiEventsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const runtimeHistoryTokensTotal = new client.Counter({
+  name: "runtime_history_tokens_total",
+  help: "Token allocation for runtime history selection grouped by action.",
+  labelNames: ["action"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeHistoryTierDropsTotal = new client.Counter({
+  name: "runtime_history_tier_drops_total",
+  help: "Count of runtime history drops grouped by tier.",
+  labelNames: ["tier"] as const,
+  registers: [metricsRegistry],
+});
+
+export const runtimeHistorySelectionDurationSeconds = new client.Histogram({
+  name: "runtime_history_selection_duration_seconds",
+  help: "Duration of runtime history selection operations.",
+  labelNames: [] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+  registers: [metricsRegistry],
+});
+
 // Knowledge persistence metrics
 
 export const runtimeKnowledgeUpdatesTotal = new client.Counter({

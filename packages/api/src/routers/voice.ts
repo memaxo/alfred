@@ -313,6 +313,8 @@ async function runAssistantForVoice({
     rawMessages: messages,
     tools: defaults.tools,
     source: "assistant",
+    model: defaults.model,
+    system: defaults.instructions,
   });
 
   const result = await generateText({

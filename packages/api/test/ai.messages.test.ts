@@ -1,20 +1,43 @@
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
+
+type HistoryTier = "anchor" | "high" | "medium" | "low";
 import { TRPCError } from "@trpc/server";
 
 const validateUIMessagesMock = vi.fn(
   async ({ messages }: { messages: UIMessage[] }) => messages
 );
-const convertToModelMessagesMock = vi.fn((messages: UIMessage[]) => messages);
-const pruneMessagesMock = vi.fn(({ messages }: { messages: UIMessage[] }) =>
-  messages.slice(-5)
-);
 
 mock.module("ai", () => ({
   validateUIMessages: validateUIMessagesMock,
-  convertToModelMessages: convertToModelMessagesMock,
-  pruneMessages: pruneMessagesMock,
+}));
+
+const buildHistoryContextMock = vi.fn(async ({ messages }: { messages: UIMessage[] }) => ({
+  uiMessages: messages.slice(-3),
+  modelMessages: messages.slice(-3),
+  droppedMessages: messages.length - 3,
+  keptTokens: 300,
+  droppedTokens: 45,
+  selection: {
+    kept: messages.slice(-3),
+    dropped: messages.slice(0, -3),
+    tiers: new Map(),
+    tierByMessage: new WeakMap<UIMessage, "low" | "medium" | "high" | "anchor">(),
+    keptTokens: 300,
+    droppedTokens: 45,
+    budget: {
+      modelId: "unit-test-model",
+      maxContextTokens: 1000,
+      historyBudgetTokens: 900,
+      systemTokens: 0,
+      headroomTokens: 100,
+    },
+  },
+}));
+
+mock.module("@alfred/history", () => ({
+  buildHistoryContext: buildHistoryContextMock,
+  getHistoryBudgetDefaults: () => ({})
 }));
 
 const loggerInfoMock = vi.fn();
@@ -26,19 +49,51 @@ mock.module("../src/utils/logger", () => ({
   },
 }));
 
+const metricMocks = {
+  historyContextTokensTotal: { inc: vi.fn() },
+  historyContextTierDropsTotal: { inc: vi.fn() },
+  historyContextSelectionDurationSeconds: {
+    startTimer: vi.fn().mockReturnValue(() => {}),
+  },
+};
+
+mock.module("../src/metrics", () => metricMocks);
+
 const { prepareModelMessagesForGenerate } = await import("../src/ai/messages");
 
 beforeEach(() => {
   validateUIMessagesMock.mockClear().mockImplementation(
     async ({ messages }: { messages: UIMessage[] }) => messages
   );
-  convertToModelMessagesMock.mockClear().mockImplementation(
-    (messages: UIMessage[]) => messages
-  );
-  pruneMessagesMock.mockClear().mockImplementation(({ messages }) =>
-    messages.slice(-5)
-  );
+  buildHistoryContextMock.mockClear().mockImplementation(async ({ messages }) => ({
+    uiMessages: messages,
+    modelMessages: messages,
+    droppedMessages: 0,
+    keptTokens: 100,
+    droppedTokens: 0,
+    selection: {
+      kept: messages,
+      dropped: [],
+      tiers: new Map(),
+      tierByMessage: new WeakMap(),
+      keptTokens: 100,
+      droppedTokens: 0,
+      budget: {
+        modelId: "unit-test-model",
+        maxContextTokens: 1000,
+        historyBudgetTokens: 900,
+        systemTokens: 0,
+        headroomTokens: 100,
+      },
+    },
+  }));
   loggerInfoMock.mockClear();
+  metricMocks.historyContextTokensTotal.inc.mockClear();
+  metricMocks.historyContextTierDropsTotal.inc.mockClear();
+  metricMocks.historyContextSelectionDurationSeconds.startTimer.mockClear();
+  metricMocks.historyContextSelectionDurationSeconds.startTimer.mockReturnValue(
+    () => {}
+  );
 });
 
 afterAll(() => {
@@ -54,58 +109,77 @@ describe("prepareModelMessagesForGenerate", () => {
     };
   }
 
-  function createToolMessage(
-    type: "tool-call" | "tool-result",
-    suffix: string
-  ): UIMessage {
-    return {
-      id: `${type}-${suffix}`,
-      role: "assistant",
-      parts: [
-        {
-          type,
-          toolCallId: `call-${suffix}`,
-          toolName: "fs.stat",
-          input: { path: "." },
-          output: type === "tool-result" ? { size: 42 } : undefined,
-        } as UIMessage["parts"][number],
-      ],
-    };
-  }
-
-  it("clamps histories while retaining the newest tool chain and returns pruned model messages", async () => {
-    const filler = Array.from(
-      { length: MAX_HISTORY_MESSAGES + 8 },
-      (_, index) => createTextMessage(index + 100)
+  it("builds history context and logs drops", async () => {
+    const rawMessages = Array.from({ length: 8 }, (_, index) =>
+      createTextMessage(index)
     );
-    const toolCall = createToolMessage("tool-call", "old");
-    const toolResult = createToolMessage("tool-result", "old");
-    const rawMessages = [toolCall, toolResult, ...filler];
+    const tierByMessage = new WeakMap<UIMessage, HistoryTier>();
+    const dropped = rawMessages.slice(0, 5);
+    for (const msg of dropped) {
+      tierByMessage.set(msg, "low");
+    }
+    buildHistoryContextMock.mockResolvedValueOnce({
+      uiMessages: rawMessages.slice(-3),
+      modelMessages: rawMessages.slice(-3),
+      droppedMessages: 5,
+      keptTokens: 120,
+      droppedTokens: 45,
+      selection: {
+        kept: rawMessages.slice(-3),
+        dropped,
+        tiers: new Map(dropped.map((msg) => [msg.id, "low" as HistoryTier])),
+        tierByMessage,
+        keptTokens: 120,
+        droppedTokens: 45,
+        budget: {
+          modelId: "unit-test-model",
+          maxContextTokens: 1000,
+          historyBudgetTokens: 900,
+          systemTokens: 0,
+          headroomTokens: 100,
+        },
+      },
+    });
 
     const result = await prepareModelMessagesForGenerate({
       rawMessages,
       tools: { helper: { description: "noop" } },
       source: "assistant",
+      model: "unit-test-model",
+      system: "System prompt",
     });
 
     expect(validateUIMessagesMock).toHaveBeenCalledTimes(1);
-    const validatedArg = validateUIMessagesMock.mock.calls[0]?.[0]?.messages;
-    expect(validatedArg).toHaveLength(rawMessages.length);
-
-    const convertInput = convertToModelMessagesMock.mock.calls[0]?.[0];
-    expect(convertInput).toHaveLength(MAX_HISTORY_MESSAGES);
-    expect(convertInput[0]?.id).toBe(toolCall.id);
-    expect(convertInput[1]?.id).toBe(toolResult.id);
-    expect(pruneMessagesMock).toHaveBeenCalledWith({
-      messages: convertInput,
-      reasoning: "before-last-message",
-      toolCalls: "before-last-2-messages",
-      emptyMessages: "remove",
+    expect(buildHistoryContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: rawMessages,
+        modelId: "unit-test-model",
+        system: "System prompt",
+        source: "assistant",
+      })
+    );
+    expect(result).toEqual(rawMessages.slice(-3));
+    expect(metricMocks.historyContextTokensTotal.inc).toHaveBeenNthCalledWith(
+      1,
+      { source: "assistant", model: "unit-test-model", action: "kept" },
+      120
+    );
+    expect(metricMocks.historyContextTokensTotal.inc).toHaveBeenNthCalledWith(
+      2,
+      { source: "assistant", model: "unit-test-model", action: "dropped" },
+      45
+    );
+    expect(metricMocks.historyContextTierDropsTotal.inc).toHaveBeenCalledWith({
+      source: "assistant",
+      tier: "low",
     });
-    expect(result).toEqual(pruneMessagesMock.mock.results[0]?.value);
     expect(loggerInfoMock).toHaveBeenCalledWith(
       "assistant_history_pruned_generate",
-      expect.objectContaining({ dropped: filler.length + 2 - MAX_HISTORY_MESSAGES })
+      expect.objectContaining({
+        dropped: 5,
+        keptTokens: 120,
+        droppedTokens: 45,
+      })
     );
   });
 
@@ -118,5 +192,7 @@ describe("prepareModelMessagesForGenerate", () => {
         source: "assistant",
       })
     ).rejects.toBeInstanceOf(TRPCError);
+
+    expect(buildHistoryContextMock).not.toHaveBeenCalled();
   });
 });

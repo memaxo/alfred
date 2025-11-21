@@ -1,85 +1,189 @@
-import { describe, expect, it } from "bun:test";
-import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { z } from "zod";
 import type { UIMessage } from "@alfred/type/stream";
 
-const { pruneMessagesForStream } = await import("../history");
+type HistoryTier = "anchor" | "high" | "medium" | "low";
 
-function createTextMessage(id: number): UIMessage {
-  return {
-    id: `msg-${id}`,
-    role: id % 2 === 0 ? "user" : "assistant",
-    parts: [{ type: "text", text: `message-${id}` }],
-  };
-}
+mock.module("@alfred/type/stream.zod", () => ({
+  uiMessageSchema: z.object({
+    id: z.string(),
+    role: z.enum(["user", "assistant"]),
+    parts: z.array(z.object({ type: z.literal("text"), text: z.string() })),
+  }),
+}));
 
-function createToolMessage(type: "tool-call" | "tool-result"): UIMessage {
-  return {
-    id: `${type}-latest`,
+const createConversationMock = vi.fn().mockResolvedValue({ id: "conv-1" });
+const createMessageMock = vi.fn().mockResolvedValue(undefined);
+mock.module("@alfred/db/repo/conversation", () => ({
+  createConversation: createConversationMock,
+  createMessage: createMessageMock,
+}));
+
+mock.module("@alfred/agent", () => ({
+  getModelId: () => "mock-model",
+  buildTools: () => ({}),
+  buildAssistantTools: () => ({}),
+  getOpenAI: () => ({ chat: () => ({}) }),
+  wrapLegacyToolToAISDK: () => ({}),
+}));
+
+mock.module("@alfred/agent/preference/prompt", () => ({
+  buildPreferenceSystemPrompt: vi.fn().mockResolvedValue("pref"),
+}));
+
+mock.module("@alfred/auth", () => ({
+  auth: {
+    api: {
+      getSession: async () => ({ user: { id: "user-1" } }),
+    },
+  },
+}));
+
+const loggerInfoMock = vi.fn();
+mock.module("@alfred/api/utils/logger", () => ({
+  logger: {
+    info: loggerInfoMock,
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+const buildHistoryContextMock = vi.fn(async ({ messages }) => {
+  const droppedMessage: UIMessage = {
+    id: "assistant-old",
     role: "assistant",
-    parts: [
-      {
-        type,
-        toolCallId: "call-123",
-        toolName: "fs.ls",
-        input: { path: "." },
-        output: type === "tool-result" ? { files: 4 } : undefined,
-      } as UIMessage["parts"][number],
-    ],
+    parts: [{ type: "text", text: "old" }],
   };
-}
+  const tierByMessage = new WeakMap<UIMessage, HistoryTier>();
+  tierByMessage.set(droppedMessage, "low");
+  return {
+    uiMessages: messages.slice(-1),
+    modelMessages: messages.slice(-1),
+    droppedMessages: 1,
+    keptTokens: 50,
+    droppedTokens: 25,
+    selection: {
+      kept: messages.slice(-1),
+      dropped: [droppedMessage],
+      tiers: new Map([[droppedMessage.id, "low"]]),
+      tierByMessage,
+      keptTokens: 50,
+      droppedTokens: 25,
+      budget: {
+        modelId: "mock-model",
+        maxContextTokens: 1000,
+        historyBudgetTokens: 900,
+        systemTokens: 0,
+        headroomTokens: 100,
+      },
+    },
+  };
+});
 
-describe("pruneMessagesForStream", () => {
-  it("returns original messages when below the limit", () => {
-    const messages = Array.from({ length: 10 }, (_, index) =>
-      createTextMessage(index)
+mock.module("@alfred/history", () => ({
+  buildHistoryContext: buildHistoryContextMock,
+  getHistoryBudgetDefaults: () => ({})
+}));
+
+const finishPromiseRef: { current: Promise<void> | null } = { current: null };
+
+mock.module("ai", () => ({
+  consumeStream: vi.fn(),
+  generateId: () => "msg-generated",
+  streamText: vi.fn().mockImplementation(() => ({
+    toUIMessageStreamResponse: ({
+      onFinish,
+    }: {
+      onFinish?: (args: {
+        isAborted: boolean;
+        messages?: UIMessage[];
+      }) => Promise<void> | void;
+    }) => {
+      finishPromiseRef.current =
+        onFinish?.({
+          isAborted: false,
+          messages: [
+            {
+              id: "assistant-1",
+              role: "assistant",
+              parts: [{ type: "text", text: "response" }],
+            },
+          ],
+        }) ?? Promise.resolve();
+      return new Response("ok", { status: 200 });
+    },
+  })),
+}));
+
+const { handleStreamRequest } = await import("../stream-handler");
+const metrics = await import("@alfred/api/metrics");
+const historyTokensIncSpy = vi.spyOn(metrics.historyContextTokensTotal, "inc");
+const historyTierDropSpy = vi.spyOn(metrics.historyContextTierDropsTotal, "inc");
+const preferenceHistoryPrunedSpy = vi.spyOn(
+  metrics.preferenceHistoryPrunedTotal,
+  "inc"
+);
+
+describe("handleStreamRequest history integration", () => {
+  it("routes messages through buildHistoryContext and records metrics", async () => {
+    buildHistoryContextMock.mockClear();
+
+    const request = new Request("http://localhost/api/assistant", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          {
+            id: "user-1",
+            role: "user",
+            parts: [{ type: "text", text: "Hello" }],
+          },
+          {
+            id: "assistant-old",
+            role: "assistant",
+            parts: [{ type: "text", text: "Older" }],
+          },
+        ] satisfies UIMessage[],
+      }),
+    });
+
+    const response = await handleStreamRequest(
+      request,
+      () => ({ model: { provider: "test", name: "mock-model" } } as any),
+      "assistant"
     );
-    const { uiMessages, modelMessages, dropped } =
-      pruneMessagesForStream(messages);
-    expect(dropped).toBe(0);
-    expect(uiMessages).toHaveLength(messages.length);
-    expect(modelMessages).toHaveLength(messages.length);
+
+    expect(response.status).toBe(200);
+    await finishPromiseRef.current;
+
+    expect(buildHistoryContextMock).toHaveBeenCalledTimes(1);
+    const callArgs = buildHistoryContextMock.mock.calls[0]?.[0];
+    expect(callArgs.messages).toHaveLength(2);
+    expect(callArgs.source).toBe("assistant");
+
+    expect(historyTokensIncSpy).toHaveBeenNthCalledWith(
+      1,
+      { source: "assistant", model: "mock-model", action: "kept" },
+      50
+    );
+    expect(historyTokensIncSpy).toHaveBeenNthCalledWith(
+      2,
+      { source: "assistant", model: "mock-model", action: "dropped" },
+      25
+    );
+    expect(historyTierDropSpy).toHaveBeenCalledWith({
+      source: "assistant",
+      tier: "low",
+    });
+    expect(preferenceHistoryPrunedSpy).toHaveBeenCalledWith(
+      { source: "assistant" },
+      1
+    );
   });
 
-  it("drops the oldest messages when above the limit", () => {
-    const overLimit = MAX_HISTORY_MESSAGES + 15;
-    const messages = Array.from({ length: overLimit }, (_, index) =>
-      createTextMessage(index)
-    );
-    const { uiMessages, modelMessages, dropped } =
-      pruneMessagesForStream(messages);
-    expect(uiMessages).toHaveLength(MAX_HISTORY_MESSAGES);
-    expect(modelMessages.length).toBeGreaterThan(0);
-    expect(modelMessages.length).toBeLessThanOrEqual(MAX_HISTORY_MESSAGES);
-    expect(uiMessages[0]?.id).toBe(
-      `msg-${overLimit - MAX_HISTORY_MESSAGES}`
-    );
-    expect(dropped).toBe(overLimit - MAX_HISTORY_MESSAGES);
-  });
-
-  it("retains the latest tool-call and tool-result parts", () => {
-    const base = Array.from({ length: MAX_HISTORY_MESSAGES + 5 }, (_, index) =>
-      createTextMessage(index)
-    );
-    const messages: UIMessage[] = [...base, createToolMessage("tool-call"), createToolMessage("tool-result")];
-
-    const { uiMessages } = pruneMessagesForStream(messages);
-    const latest = uiMessages.at(-1);
-    expect(latest?.parts[0]?.type).toBe("tool-result");
-  });
-
-  it("keeps the newest tool chain even when it would be pruned", () => {
-    const filler = Array.from(
-      { length: MAX_HISTORY_MESSAGES + 15 },
-      (_, index) => createTextMessage(index + 500)
-    );
-    const toolCall = createToolMessage("tool-call");
-    const toolResult = createToolMessage("tool-result");
-    const messages: UIMessage[] = [toolCall, toolResult, ...filler];
-
-    const { uiMessages } = pruneMessagesForStream(messages);
-
-    expect(uiMessages).toHaveLength(MAX_HISTORY_MESSAGES);
-    expect(uiMessages[0]?.id).toBe(toolCall.id);
-    expect(uiMessages[1]?.id).toBe(toolResult.id);
+  afterEach(() => {
+    historyTokensIncSpy.mockClear();
+    historyTierDropSpy.mockClear();
+    preferenceHistoryPrunedSpy.mockClear();
   });
 });
