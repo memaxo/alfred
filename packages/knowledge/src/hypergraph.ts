@@ -4,6 +4,7 @@
  */
 
 import { IntervalTree } from "./indices/interval-tree.js";
+import { RTreeND } from "./indices/rtree.js";
 
 // Types
 export type NodeId = string & { readonly _: unique symbol };
@@ -105,30 +106,6 @@ class HAMT<V> {
   }
 }
 
-// RTree for spatial/semantic similarity (simplified 1D for embeddings)
-class RTree {
-  // TODO: Implement proper R-tree with MBR (Minimum Bounding Rectangles)
-  // Current implementation is simplified to 1D, need multi-dimensional support
-  // Should handle 1536-dim vectors from OpenAI embeddings
-  private readonly nodes: Array<[number, number, NodeId]> = [];
-
-  insert(embedding: number, id: NodeId): void {
-    // TODO: Accept full embedding vector, not single number
-    // Should compute MBR and use R-tree splitting algorithm
-    this.nodes.push([embedding, embedding, id]);
-  }
-
-  range(min: number, max: number): NodeId[] {
-    const result: NodeId[] = [];
-    for (const [low, high, id] of this.nodes) {
-      if (low <= max && high >= min) {
-        result.push(id);
-      }
-    }
-    return result;
-  }
-}
-
 // BTree for ordered traversal
 class BTree {
   private readonly order = 32;
@@ -161,7 +138,7 @@ class BTree {
 export class Hypergraph {
   private readonly nodes = new HAMT<Knowledge>();
   private readonly temporal = new IntervalTree();
-  private readonly spatial = new RTree();
+  private readonly spatial = new RTreeND(1024);
   private readonly ordered = new BTree();
   private readonly edges = new Map<NodeId, Set<NodeId>>();
   private readonly inbound = new Map<NodeId, Set<NodeId>>();
@@ -290,7 +267,13 @@ export class Hypergraph {
   }
 
   setEmbedding(id: NodeId, vector: Float32Array): void {
-    this.embeddings.set(id, vector);
+    if (vector.length !== 1024) {
+      throw new Error("embedding_dim_mismatch_1024");
+    }
+    const stored =
+      vector instanceof Float32Array ? vector : new Float32Array(vector);
+    this.embeddings.set(id, stored);
+    this.spatial.insertPoint(stored, id);
     this.dirty.add(id);
     this.modCount++;
   }
