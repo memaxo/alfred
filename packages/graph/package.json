@@ -1,0 +1,32 @@
+{
+  "name": "@alfred/graph",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b --pretty false",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@alfred/db": "workspace:*",
+    "@alfred/knowledge": "workspace:*",
+    "@alfred/rag": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "ai": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "typescript": "*"
+  }
+}

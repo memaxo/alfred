@@ -26,7 +26,7 @@ Each change lists files, code locations, APIs, and side effects.
 - [x] (2025-11-21 00:58Z) Phase 2A: Implemented auto-persist with dirty tracking
 - [x] (2025-11-21 00:58Z) Phase 2B: Wired bridge auto-sync with embedding support
 - [x] (2025-11-21 00:58Z) Phase 2C: Removed embedding TODOs and wired spatial index
-- [ ] Phase 3A: Create unified graph types and ID mapping
+- [x] (2025-11-21 01:02Z) Phase 3A: Created unified graph types and ID mapping
 - [ ] Phase 3B: Implement mindscape edge persistence (Mindscape → DB)
 - [ ] Phase 3C: Add node data mapping for mindscape nodes
 - [ ] Phase 3D: Implement robust edge mapping in initializer (DB → Mindscape)

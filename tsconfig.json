@@ -8,6 +8,7 @@
     { "path": "packages/db" },
     { "path": "packages/agent" },
     { "path": "packages/history" },
+    { "path": "packages/graph" },
     { "path": "packages/runtime" },
     { "path": "packages/api" },
     { "path": "packages/voice" },
