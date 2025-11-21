@@ -4,6 +4,10 @@ import {
   stopCompressionWorker,
 } from "@alfred/agent/orchestrator/compression-worker";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
+import {
+  startVoiceStreamingPrototype,
+  stopVoiceStreamingPrototype,
+} from "./voice/streaming";
 import { logger } from "./utils/logger";
 
 let initialized = false;
@@ -35,11 +39,15 @@ export function initApiServices(): void {
 
   // Initialize voice pools (if using local models)
   if (process.env.VOICE_PROVIDER === "local") {
-    initializeVoicePools().catch((error) => {
-      logger.error("voice_pools_init_failed", {
-        error: error instanceof Error ? error.message : String(error),
+    initializeVoicePools()
+      .then(() => {
+        startVoiceStreamingPrototype();
+      })
+      .catch((error) => {
+        logger.error("voice_pools_init_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
-    });
   }
 }
 
@@ -68,9 +76,9 @@ export function shutdownApiServices(): void {
         error: error instanceof Error ? error.message : String(error),
       });
     });
+    stopVoiceStreamingPrototype();
   }
 
   initialized = false;
   logger.info("api_services_shutdown_complete");
 }
-

@@ -47,7 +47,7 @@ function CallbackComponent() {
       setStatus("error");
       setErrorMessage(search.error);
       setTimeout(() => {
-        navigate({ to: "/_authed/integrations" });
+        navigate({ to: "/mindscape" });
         toast.error("Failed to connect Linear");
       }, 2000);
       return;
@@ -59,7 +59,7 @@ function CallbackComponent() {
       setStatus("error");
       setErrorMessage("missing_params");
       setTimeout(() => {
-        navigate({ to: "/_authed/integrations" });
+        navigate({ to: "/mindscape" });
         toast.error("Missing OAuth parameters");
       }, 2000);
       return;
@@ -70,7 +70,7 @@ function CallbackComponent() {
       .then(() => {
         setStatus("success");
         setTimeout(() => {
-          navigate({ to: "/_authed/integrations" });
+          navigate({ to: "/mindscape" });
           toast.success("Linear connected successfully");
         }, 1000);
       })
@@ -79,7 +79,7 @@ function CallbackComponent() {
         const message = error instanceof Error ? error.message : "oauth_callback_failed";
         setErrorMessage(message);
         setTimeout(() => {
-          navigate({ to: "/_authed/integrations" });
+          navigate({ to: "/mindscape" });
           toast.error(message);
         }, 2000);
       });
@@ -106,4 +106,3 @@ function CallbackComponent() {
     </div>
   );
 }
-

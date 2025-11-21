@@ -46,3 +46,6 @@ jobs:
 
       - name: Hypergraph Smoke (Postgres)
         run: bun run smoke:hypergraph -- --use-existing-db
+
+      - name: Workflow Capture Integration (Postgres)
+        run: WORKFLOW_CAPTURE_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.capture.integration.test.ts

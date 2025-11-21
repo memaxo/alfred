@@ -4,7 +4,12 @@ import { AppState, Platform, Pressable, Text, View } from "react-native";
 import { setupCarPlay } from "@/lib/carplay";
 import { logError } from "@/lib/devlog";
 import { useColorScheme } from "@/lib/use-color-scheme";
-import { drain, registerQueueDrain, useVoiceSessionNative } from "@/lib/voice";
+import {
+  drain,
+  playBase64,
+  registerQueueDrain,
+  useVoiceSessionNative,
+} from "@/lib/voice";
 import type { PendingItem } from "@/lib/voice/queue";
 import { ensureForegroundService } from "@/lib/voice/service";
 import { trpcClient } from "@/utils/trpc";
@@ -51,6 +56,29 @@ export default function DriveScreen() {
           });
           return result;
         }
+        if (item.kind === "s2s") {
+          const response = await trpcClient.voice.speechToSpeech.mutate({
+            audioBase64: item.payload.audioBase64,
+            mimeType: item.payload.mimeType,
+            language: item.payload.language,
+            prompt: item.payload.prompt,
+            thread: item.payload.thread,
+            resource: item.payload.resource,
+            ttsVoice: item.payload.ttsVoice,
+            ttsFormat: item.payload.ttsFormat,
+          });
+          const audio = response?.audio;
+          if (audio?.audioBase64) {
+            await playBase64(audio.audioBase64, audio.mimeType);
+          } else if (response?.assistant?.text) {
+            await voice.speak({
+              text: response.assistant.text,
+              voice: item.payload.ttsVoice ?? "alloy",
+              format: item.payload.ttsFormat ?? "mp3",
+            });
+          }
+          return response;
+        }
 
         const result = await trpcClient.voice.ttsSynthesize.mutate({
           text: item.payload.text,
@@ -70,7 +98,7 @@ export default function DriveScreen() {
         throw error;
       }
     },
-    [voice]
+    [trpcClient, voice]
   );
 
   useEffect(() => {
@@ -113,6 +141,19 @@ export default function DriveScreen() {
     let finalStatus: Status = "idle";
     try {
       setStatus("thinking");
+      if (voice.speechToSpeech) {
+        const result = await voice.speechToSpeech({
+          thread: THREAD_ID,
+          resource: THREAD_ID,
+          ttsVoice: "alloy",
+          ttsFormat: "mp3",
+        });
+        const answer = result?.assistant?.text ?? "";
+        setReply(answer || "I heard you.");
+        setStatus("responding");
+        finalStatus = "idle";
+        return;
+      }
       const result = await voice.stopAndTranscribe();
       if (!result?.text) {
         setStatus("idle");
@@ -146,7 +187,7 @@ export default function DriveScreen() {
     } finally {
       setStatus(finalStatus);
     }
-  }, [voice]);
+  }, [trpcClient, voice]);
 
   const label = useMemo(() => {
     switch (status) {

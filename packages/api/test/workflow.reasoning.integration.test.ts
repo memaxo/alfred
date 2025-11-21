@@ -5,24 +5,18 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, mock } from "bun:test";
-import { RuntimeContext } from "@alfred/type/runtime-context";
+import {
+  createWorkflowCaller,
+  type WorkflowTestUser,
+} from "./utils/workflow-caller";
 
 let persistReasoning: typeof import("@alfred/agent/assistant/src/graphstore").persistReasoning;
-let workflowRouter: typeof import("@alfred/api/routers/workflow").workflowRouter;
 let workflowRepo: typeof import("@alfred/db/repo/workflow");
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
 let workflowRunsTable: typeof import("@alfred/db/schema/workflow").workflowRuns;
 let workflowEventsTable: typeof import("@alfred/db/schema/workflow").workflowEvents;
-
-type SessionUser = {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  scopes: string[];
-};
 
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: async () => undefined,
@@ -33,7 +27,7 @@ mock.module("@alfred/policy", () => ({
   registerCacheObs: () => {},
 }));
 
-const TEST_USER: SessionUser = {
+const TEST_USER: WorkflowTestUser = {
   id: "workflow-integration-user",
   email: "workflow.integration@test.local",
   name: "Workflow Integration",
@@ -44,7 +38,6 @@ const TEST_USER: SessionUser = {
 describe("workflow reasoning integration (sqlite)", () => {
   beforeAll(async () => {
     ({ persistReasoning } = await import("../../agent/assistant/src/graphstore.ts"));
-    ({ workflowRouter } = await import("@alfred/api/routers/workflow"));
     workflowRepo = await import("@alfred/db/repo/workflow");
     const dbModule = await import("@alfred/db");
     db = dbModule.db;
@@ -72,7 +65,7 @@ describe("workflow reasoning integration (sqlite)", () => {
   });
 
   it("returns reasoning chain persisted by the agent", async () => {
-    const caller = createWorkflowCaller();
+    const caller = await createWorkflowCaller({ user: TEST_USER });
     const runId = `run-${Date.now()}`;
     const resource = `workspace-${Date.now()}`;
     const now = Date.now();
@@ -105,33 +98,3 @@ describe("workflow reasoning integration (sqlite)", () => {
     expect(result.chain[1]?.previousHash).toBeTruthy();
   });
 });
-
-function createWorkflowCaller() {
-  const runtime = {
-    requestId: `workflow-test-${Date.now()}`,
-    receivedAt: new Date(),
-    method: "POST",
-    url: "http://localhost/trpc",
-    ip: null,
-    forwardedFor: [] as string[],
-    userAgent: "bun-test",
-    referer: null,
-  };
-
-  const runtimeContext = new RuntimeContext([
-    ["requestId", runtime.requestId],
-    ["receivedAt", runtime.receivedAt.toISOString()],
-    ["method", runtime.method],
-    ["url", runtime.url],
-  ]);
-
-  return workflowRouter.createCaller({
-    session: {
-      user: TEST_USER,
-      session: { id: `sess-${runtime.requestId}` },
-    },
-    runtime,
-    runtimeContext,
-    policy: { obligations: [] },
-  } as Parameters<typeof workflowRouter.createCaller>[0]);
-}

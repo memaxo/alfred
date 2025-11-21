@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { createVoiceSession } from "../src/session";
+import { createVoiceSession, VoiceSessionError } from "../src/session";
 import type { PlatformAdapter, VoiceClient } from "../src/types";
 
 function createAdapter(): PlatformAdapter & {
@@ -89,5 +89,29 @@ describe("createVoiceSession", () => {
       })
     );
     expect(adapter.play).toHaveBeenCalledWith("CCC", "audio/mpeg");
+  });
+
+  it("wraps speech-to-speech failures with captured clip", async () => {
+    const adapter = createAdapter();
+    const failingClient: VoiceClient = {
+      ...baseClient,
+      speechToSpeech: vi.fn(async () => {
+        throw new Error("upstream_failed");
+      }),
+    };
+    const session = createVoiceSession(adapter, failingClient);
+
+    await session.start();
+    let caught: unknown;
+    try {
+      await session.speechToSpeech?.();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(VoiceSessionError);
+    expect(caught).toBeInstanceOf(VoiceSessionError);
+    const voiceError = caught as VoiceSessionError;
+    expect(voiceError.clip?.audioBase64).toBe("AAA");
+    expect(voiceError.clip?.mimeType).toBe("audio/webm");
   });
 });

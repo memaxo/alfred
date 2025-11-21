@@ -19,7 +19,8 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
 - [x] (2025-11-20 23:18Z) Added a sqlite-backed tRPC graph router integration suite and patched the sqlite schema to mirror the Postgres `hash` uniqueness guarantees so API calls can be exercised without Postgres.
 - [x] (2025-11-20 23:35Z) Added a sqlite-backed agent graphstore integration suite so `persistKnowledge` itself is exercised end-to-end and wired it into `bun run test:integration`.
 - [x] (2025-11-20 23:55Z) Added a sqlite-backed workflow reasoning integration suite (persistReasoning → workflow.reasoning) plus a nightly Postgres CI workflow running embed E2E and the capture → persist → reload smoke script against a real database.
-- [ ] (2025-11-21 00:09Z) Investigated full agent capture stream simulation: current workflow runtime integration tests (packages/api/test/workflow.runtime-integration.test.ts) rely on mocked runtimes/run registries and never drive workflow.start → stream → resume through the sqlite persistence path, leaving capture → persist → reload coverage incomplete for streaming workflows. Drafting a sqlite integration test plan to close this.
+- [x] (2025-11-21 00:27Z) Shipped sqlite workflow capture integration (`packages/api/test/workflow.capture.integration.test.ts`) exercising workflow.start, workflow.stream, workflow.resume, and workflow.reasoning end-to-end with the real router/runtime mocks. Test drives persistReasoning → graph reload plus resume dispatch via runRegistry and now runs under `bun run test:integration`.
+- [x] (2025-11-21 00:34Z) Wired the Postgres nightly workflow to run the workflow capture integration suite (`WORKFLOW_CAPTURE_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.capture.integration.test.ts`), so capture → stream → resume → reasoning is exercised against the production driver nightly alongside embed E2E + hypergraph smoke.
 
 ## Surprises & Discoveries
 
@@ -194,6 +195,17 @@ Keep concise evidence inside this plan—for example, interval-tree insertion lo
         ...
         12 pass
         0 fail
+- 2025-11-21 00:27Z: Workflow capture integration suite now part of `bun run test:integration`, covering workflow.start → stream → resume → reasoning on sqlite.
+
+        $ bun run test:integration
+        ...
+        packages/api/test/workflow.capture.integration.test.ts:
+        (pass) workflow capture integration (sqlite) > persists capture reasoning via workflow stream and reloads chain [8.70ms]
+- 2025-11-21 00:33Z: Capture suite now emits assistant UI messages and asserts sqlite `conversations`/`messages` rows, proving the chat timeline persists alongside reasoning traces.
+
+        $ bun test packages/api/test/workflow.capture.integration.test.ts
+        ...
+        (pass) workflow capture integration (sqlite) > persists capture reasoning via workflow stream and reloads chain [124.88ms]
 
 ## Interfaces and Dependencies
 

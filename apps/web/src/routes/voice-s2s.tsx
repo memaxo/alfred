@@ -5,11 +5,11 @@ import { RouteError } from "@/components/route-error";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 
 export const Route = createFileRoute("/voice-s2s")({
-  component: VoiceS2SRoute,
+  component: VoiceS2SRouteView,
   errorComponent: RouteError,
 });
 
-function VoiceS2SRoute() {
+export function VoiceS2SRouteView() {
   const {
     state,
     start,

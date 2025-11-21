@@ -1,4 +1,8 @@
-import type { TtsRequest } from "@alfred/voice/types";
+import type {
+  SpeechToSpeechRequest,
+  SpeechToSpeechResponse,
+  TtsRequest,
+} from "@alfred/voice/types";
 import CarPlay from "@g4rb4g3/react-native-carplay";
 import { Platform } from "react-native";
 
@@ -9,6 +13,11 @@ type VoiceBridge = {
   start: () => Promise<void>;
   stopAndTranscribe: () => Promise<{ text: string } | null>;
   speak: (opts: TtsRequest) => Promise<void>;
+  speechToSpeech?: (
+    overrides?: Partial<
+      Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
+    >
+  ) => Promise<SpeechToSpeechResponse | null>;
   state: {
     capture: string;
   };
@@ -70,6 +79,18 @@ export function setupCarPlay(
             resolve();
           }, VOICE_TIMEOUT_MS);
         });
+        if (voice.speechToSpeech) {
+          const response = await voice.speechToSpeech({
+            thread: "carplay-drive",
+            resource: "carplay-drive",
+            ttsVoice: "alloy",
+            ttsFormat: "mp3",
+          });
+          if (response?.assistant?.text) {
+            onReply(response.assistant.text);
+          }
+          return;
+        }
         const result = await voice.stopAndTranscribe();
         if (result?.text) {
           onReply(result.text);

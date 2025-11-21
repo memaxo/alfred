@@ -215,7 +215,7 @@ export function useVoiceSessionNative(
       start,
       stopAndTranscribe,
       speak,
-       speechToSpeech,
+      speechToSpeech,
       clear: session.clear,
     };
   }, [captureRef, options, trpc]);

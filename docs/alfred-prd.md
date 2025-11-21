@@ -74,6 +74,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Add DB repo tests for core CRUD flows
 - [x] Split CI pipelines into `test:sqlite` (fast, no `DATABASE_URL`) and `test:postgres` (requires real Postgres + `RUN_DB_TESTS=1`) so both database paths stay green
 - [x] Gate model-heavy embedding suites behind `RUN_EMBED_MODEL_TESTS=1` so CI only runs them on demand
+- [x] Added Playwright-based Mindscape suites (`test:mindscape:smoke`, `test:mindscape:integration`, `test:mindscape:e2e`) that launch the real Bun + Postgres stack with minimal mocks to exercise CRUD/admin/workflow/deployment flows end-to-end.
 
 ### Phase 3 — Runtime Integration Layer ✅ (PHASES 3.1-3.5 COMPLETE)
 
@@ -136,17 +137,14 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 
 **Deliverable**: Production-ready observability with dashboards and alerts.
 
-#### 3.6 Migration & Cleanup 🚀 (READY - SIMPLE CUTOVER)
+#### 3.6 Migration & Cleanup 🚀 (COMPLETE - 2025-11-21)
 
-- [ ] Enable runtime locally (set `USE_WORKFLOW_RUNTIME=true`)
-- [ ] Test a few workflows to verify functionality
-- [ ] Check Grafana dashboards show metrics
-- [ ] Remove feature flag from code (make runtime the default)
-- [ ] Delete runPlanV6 function
-- [ ] Delete runner.ts file
-- [ ] Update imports across codebase
+- [x] Enabled runtime locally (set `USE_WORKFLOW_RUNTIME=true`) and validated representative workflows.
+- [x] Verified Grafana dashboards emit runtime metrics after migration.
+- [x] Removed `USE_WORKFLOW_RUNTIME` flag and made WorkflowRuntime the default path.
+- [x] Deleted `runPlanV6`, `runner.ts`, and related imports.
 
-**Deliverable**: Clean migration with deprecated code removed.
+**Deliverable**: Clean migration with deprecated code removed; WorkflowRuntime is the sole execution path.
 
 **Note**: Single-user system - no staged rollout needed. Just enable, test, and clean up.
 
@@ -289,18 +287,23 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 
 - [x] Implement STT with Faster-Whisper (local) or OpenAI Whisper API (`packages/voice/src/process/stt_pool.ts`)
 - [x] Implement TTS with Piper TTS (local) or OpenAI TTS (`packages/voice/src/process/tts_pool.ts`)
+- [x] Ship codec-correct speech-to-speech API (`packages/api/src/routers/voice.ts`) plus shared session core (`packages/voice/src/session.ts`) so web/native/CarPlay all call the same pipeline (Milestones 1‑4).
+- [x] Document the full workflow in `docs/voice/s2s.md` and streaming contract in `docs/voice/streaming.md`; native reference now links to both.
+- [x] Add Drive Mode queue drain + API reference docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) and call out the queue tests (`apps/native/lib/voice/__tests__/queue.test.ts`).
 - [ ] Add voice activity detection (VAD)
 - [ ] Implement streaming audio playback
 - [ ] Add voice session management
-- [ ] Wire voice to assistant router
+- [x] Wire voice to assistant router (Drive Mode/CarPlay/web all call `voice.speechToSpeech`)
+- [x] Prototype low-latency streaming via Bun WebSocket server (`packages/api/src/voice/streaming.ts`, gated by `VOICE_STREAMING_PROTO=1`)
 
 #### 7.2 Mobile-Optimized UI ✅ (PARTIALLY COMPLETE)
 
 - [x] Complete React Native app setup (`apps/native/`)
+- [x] Drive Mode hooked up to unified S2S API with offline queue retries (including new `kind: "s2s"` payload + AsyncStorage tests)
 - [ ] Implement mobile chat interface
-- [ ] Add drive mode with large controls
-- [ ] Implement voice-first interaction flow
-- [ ] Add offline queue for requests
+- [x] Add drive mode with large controls
+- [x] Implement voice-first interaction flow
+- [x] Add offline queue for requests (AsyncStorage-backed queue with exponential backoff; see `docs/voice/s2s.md`)
 - [ ] Implement mobile notifications for reminders
 
 ### Phase 8 — Hardening & Observability ✅ (SUBSTANTIALLY COMPLETE)
@@ -312,6 +315,8 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [ ] Implement evaluation harness with AI SDK v6
 - [x] Add performance budgets and enforcement (validated via tests)
 - [x] Create comprehensive integration test suite (`packages/api/test/`, `packages/runtime/test/`)
+- [x] Add nightly Postgres workflow (`.github/workflows/postgres-nightly.yml`) running embed E2E, hypergraph smoke, and the workflow capture integration against a real database to keep production-only paths covered
+- [x] Add cross-platform voice test coverage: web hook (`apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx`), web route (`apps/web/src/routes/__tests__/voice-s2s.route.test.tsx`), and native queue (`apps/native/lib/voice/__tests__/queue.test.ts`)
 - [ ] Add load testing for concurrent workflows
 
 ### Phase 9 — Deployment & Operations (Week 19-20)

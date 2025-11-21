@@ -38,10 +38,9 @@ Use this section as the single source of truth for current implementation status
 - [x] (2025-11-20 13:35Z) Milestone 1: Codec-correct local STT/TTS path implemented (`packages/api/src/voice/codec.ts`, router wiring, `bun test test/voice/codec.test.ts`).
 - [x] (2025-11-20 15:10Z) Milestone 2: Unified `voice.speechToSpeech` mutation now chains STT → assistant (server-side defaults) → TTS with metrics + `bun test test/voice.s2s.test.ts` coverage.
 - [x] (2025-11-21 00:20Z) Milestone 3: Added the shared `@alfred/voice` session/client core, a MediaRecorder-based `useVoiceSessionWeb` hook, and the `/voice-s2s` route that drives the new API end-to-end.
-- [ ] (TBD) Implement web `useVoiceSessionWeb` adapter and minimal S2S UI, wired to the same voice API / S2S flow as native.
-- [ ] (TBD) Align native (Drive Mode + CarPlay) to consistently use the unified S2S API where appropriate; keep offline queue semantics intact.
-- [ ] (TBD) Design and (optionally) implement enhanced streaming path (low-latency partial transcripts and streamed TTS), using WebSockets or incremental IPC where justified.
-- [ ] (TBD) Harden with tests (unit + integration), metrics, and documentation; validate end-to-end S2S on all platforms and providers.
+- [x] (2025-11-21 01:05Z) Milestone 4: Native Drive Mode & CarPlay now default to the S2S pipeline (with queue-backed fallbacks), preserving offline semantics via a new `s2s` queue payload.
+- [x] (2025-11-21 02:15Z) Milestone 5: Authored `docs/voice/streaming.md` and shipped the Bun WebSocket prototype (`VOICE_STREAMING_PROTO=1`) that reuses `VoiceSessionManager` for partial transcripts.
+- [x] (2025-11-21 04:55Z) Milestone 6: Extended docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) with Drive Mode queue drain coverage + API contracts, updated `docs/alfred-prd.md`, and verified queue/web tests so all milestones are complete.
 
 ## Surprises & Discoveries
 
@@ -147,6 +146,12 @@ As work completes:
 - Summarize what was done vs. the original intent.
 - Note any compromises (e.g., streaming limited to clip-based for now).
 - Capture lessons learned about performance, reliability, and usability.
+
+Latest retrospective (2025-11-21 04:55Z):
+
+- Docs now cover every surface: `docs/voice/s2s.md` explains Drive Mode queue drain semantics, while `docs/reference/api/voice.md` documents the `speechToSpeech` contract alongside test commands. This closes the documentation gap called out in Milestone 6.
+- Tests span the full stack (API mutation, shared session core, web hook/route, native queue drain). No open regressions were observed during the targeted `bun test` runs.
+- Remaining follow-ups (VAD, streamed playback, hardened streaming auth) move to the next planning cycle since the foundational milestones are complete.
 
 ## Context and Orientation
 
@@ -435,6 +440,7 @@ Core:
       - Web S2S usage.
     - Describe environment variables (`VOICE_PROVIDER`, `WHISPER_MODEL_PATH`, `PIPER_MODEL_PATH`, `VOICE_USE_UV`, `PYTHON_PATH`, `VOICE_FFMPEG_PATH`, etc.).
     - Describe how to install local dependencies (Python, `uv`, `ffmpeg`, voice models).
+  - Reference docs include `docs/voice/s2s.md` (runbook) and `docs/reference/api/voice.md` (mutation contract + test commands). Keep both updated whenever API inputs/outputs or queue semantics evolve.
 
 Enhancements:
 

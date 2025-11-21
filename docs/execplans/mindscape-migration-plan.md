@@ -15,14 +15,14 @@ We will transition ALFRED’s primary user interface from traditional route page
 Success criteria:
 
 - Users can perform their daily work (chatting, creating/updating notes/reminders, running workflows, managing timers/bookmarks) entirely inside `/mindscape`.
-- A hybrid path preserves current routes for safety. Deep links and feature flags allow switching.
+- Mindscape is the sole UI; deep links and spawn mechanics provide all navigation without relying on legacy routes.
 - Node state (including position) persists; server data remains the source of truth (tRPC).
 - Accessibility, performance, and discoverability are addressed with keyboard navigation, command palette, search, and deep links.
 
 Non-functional requirements:
 
 - Minimal, austere code; reuse existing components wherever possible.
-- Safe rollout: parallel old/new UIs; easy rollback; idempotent changes.
+- Safe rollout: Mindscape-only UI with rollback handled via git deploys; changes remain idempotent.
 - Observability: logs and simple diagnostics in development to prove correctness.
 
 ## Progress
@@ -173,7 +173,7 @@ Non-functional requirements:
 <decision id="10">
   <chosen>Remove `VITE_MINDSCAPE_PRIMARY` and treat Mindscape as the always-on primary surface.</chosen>
   <rationale>
-    Parity is complete and the fallback UI remains available via explicit links, so the feature flag only added complexity. Dropping it eliminates divergent states, dead branches, and extra documentation.
+    Parity is complete and the fallback UI is no longer required, so the feature flag only added complexity. Dropping it eliminates divergent states, dead branches, and extra documentation.
   </rationale>
   <discards>
     Keeping the flag indefinitely would risk drift between environments and require redundant testing; routing-condition checks would also stick around forever.
@@ -184,7 +184,7 @@ Non-functional requirements:
 ## Outcomes & Retrospective
 
 (Will be updated each phase)
-- Expected at end: Users can do core work in `/mindscape`; old routes remain as fallback. Performance target: smooth panning/zooming at 60fps with 100+ nodes. Accessibility: keyboard navigation and command palette operational. Rollback always available via feature flag.
+- Expected at end: Users can do core work in `/mindscape`; the legacy route-based UI is fully removed. Performance target: smooth panning/zooming at 60fps with 100+ nodes. Accessibility: keyboard navigation and command palette operational. Rollback now requires reverting to a commit prior to the removal.
 
 ### Phase 0 (Enablement) — 2025-11-20
 
@@ -212,9 +212,9 @@ Mindscape is now the universal landing surface: SignIn/SignUp/Onboarding, header
 
 ## Context and Orientation
 
-Two UIs exist:
+Two UIs previously existed, but the legacy one has now been removed:
 
-- Old system (production): TanStack Start routes under `apps/web/src/routes/_authed/*`, using PaneLayout forms and TanStack Query + tRPC. Fully functional.
+- Old system (route-based) used TanStack Start routes under `apps/web/src/routes/_authed/*`, relying on PaneLayout forms plus TanStack Query + tRPC. Those files have been deleted; references remain here solely for historical mapping.
 - New system (Symbiotic Mindscape): `/mindscape` route uses React Flow canvas + Zustand store in `apps/web/src/store/mindscape.ts`, nodes in `apps/web/src/components/mindscape/nodes/*`, plus WorkflowManager for streaming.
 
 Key files (mindscape):
@@ -355,7 +355,6 @@ Core (minimal steps):
 3. Implement CRUD inside NoteNode and ReminderNode; support creation via palette.
 4. Implement missing nodes for Timers, Bookmarks, Todos with basic CRUD.
 5. Provide Command Palette (Cmd+K) to spawn nodes and search artifacts.
-6. Keep `/mindscape` behind a feature flag and retain all routes.
 
 Enhancements (gap-fixing, parity polish):
 1. Add Settings/Privacy/Profile/Integrations/Deployments nodes.
@@ -371,7 +370,7 @@ Milestones (narrative):
 
 - Phase 0 (Enablement): Goal—Make Mindscape addressable (deep links), spawn nodes from command palette, and keep layouts. Work—Query param router integration; extend persist partialize; basic palette. Result—Users can open `/mindscape?spawn=chat` to start chat. Proof—See Concrete Steps.
 
-- Phase 1 (Core CRUD): Goal—Achieve parity for Chat, Notes, Reminders in Mindscape. Work—Add creation flows (modal/panel) in Note/Reminder nodes; hydration + optimistic updates. Result—Users can create/edit/delete notes/reminders without routes. Proof—Create a note in Mindscape; confirm via list in route `/note` for back-compat.
+- Phase 1 (Core CRUD): Goal—Achieve parity for Chat, Notes, Reminders in Mindscape. Work—Add creation flows (modal/panel) in Note/Reminder nodes; hydration + optimistic updates. Result—Users can create/edit/delete notes/reminders without routes. Proof—Create a note in Mindscape, refresh the canvas, and observe the TanStack Query cache hydrated with the saved record.
 
 - Phase 2 (Management): Goal—Timers/Bookmarks/Todos nodes. Work—Implement nodes using existing tRPC; map exactly the route’s logic. Result—Users can manage timers/bookmarks/todos on canvas. Proof—Start a timer, see countdown live.
 
@@ -482,7 +481,7 @@ Core acceptance:
   - Move a NoteNode; refresh; position is unchanged.
 
 - CRUD in nodes:
-  - Create Note in Mindscape; confirm in `/note` list route; delete via node; disappearance persists.
+  - Create Note in Mindscape; refresh `/mindscape` or re-open the NoteNode and confirm it persists; delete via node and observe the cached list update immediately.
 
 - Management artifacts:
   - TimerNode: Start timer 1 min; countdown updates; Complete sets done and removes from active.
@@ -491,13 +490,13 @@ Core acceptance:
 Enhancement acceptance:
 
 - Settings:
-  - Change autonomy via SettingsNode; route `/preferences` reflects same after refetch.
+  - Change autonomy via SettingsNode; reopen the node or inspect the `trpc.preference.list` cache to confirm persistence.
 
 - Privacy:
-  - Export facts via PrivacyNode and observe downloaded JSON; delete an individual fact and confirm it disappears from `/privacy` on refresh.
+  - Export facts via PrivacyNode and observe downloaded JSON; delete an individual fact and confirm it disappears from the node after refetch.
 
 - Profile:
-  - Update display name from ProfileNode and confirm `/profile` shows the new value; add & delete a passkey via the node and verify toast confirmations.
+  - Update display name from ProfileNode, refetch the underlying query, and confirm the node reflects the change; add & delete a passkey via the node and verify toast confirmations.
 
 - Integrations:
   - Use IntegrationsNode to start the Linear OAuth flow (state saved, browser redirected) and see connection badges update once credentials exist.
@@ -508,12 +507,20 @@ Enhancement acceptance:
 - Deployments:
   - Enable live health; table updates; promote dialog works; copy URL to clipboard.
 
-Tests (manual + quick automated smoke if available):
-- Run the web integration tests (if present) or manual flows above. Expect no regressions in old routes.
+## Mindscape Testing Strategy
 
-- Cutover verification:
-  - Start `bun --filter @alfred/web dev`, sign in via `/login`, and confirm you land on `/mindscape` automatically with header + user menu containing only Mindscape navigation.
-  - Attempt to visit `/dashboard` (or other classic routes) directly to ensure they redirect/are inaccessible as standalone UIs.
+1. **Smoke (per PR, <5 min)**  
+   Command: `bun run test:mindscape:smoke`. Boots `bun --filter @alfred/web dev`, uses Playwright to load `/mindscape`, spawn chat/note/reminder nodes, drag + refresh to verify persistence, and asserts no console errors. Real DB/tRPC; only biometric/token issuance is mocked.
+
+2. **Integration (daily CI)**  
+   Command: `bun run test:mindscape:integration`. Drives CRUD + admin + workflow/deployment nodes through Playwright while validating server state via helper APIs. Uses real `workflow.start/stream` and deploy routers; external health endpoints replaced with a lightweight HTTP stub.
+
+3. **Full E2E (nightly + release)**  
+   Command: `bun run test:mindscape:e2e`. Launches the full stack (server, Postgres, background workers) and reenacts login → chat → note/reminder → workflow run → deployment promote → health toggle, capturing HAR + logs for triage.
+
+4. **Cutover verification**  
+   - Start `bun --filter @alfred/web dev`, sign in via `/login`, confirm landing on `/mindscape` with header/user menu containing only Mindscape navigation.  
+   - Attempt to visit `/dashboard` (or other legacy URLs) directly; ensure they 404/redirect, proving the route-based UI is inaccessible.
 
 ## Idempotence and Recovery
 
@@ -522,7 +529,7 @@ Tests (manual + quick automated smoke if available):
 - If a tRPC mutation fails:
   - Do not update node.data; show toast; leave node state editable for retry.
 - Rollback path (without feature flags):
-  - Mindscape is primary, but `/dashboard`, `/ai`, `/note`, `/remind`, `/timer`, `/book`, `/workflows`, `/integrations`, and `/preferences` all remain routable; if spatial UI regresses, direct users to those links while fixes ship.
+  - Mindscape is the only shipped UI. If a rollback is required, redeploy a commit from before the legacy removal; there are no hidden routes or feature flags to toggle at runtime.
   - Deep links and palette spawning continue to function; there is no stateful flag that could leave environments inconsistent.
 
 ## Artifacts and Notes

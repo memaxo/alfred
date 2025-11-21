@@ -45,8 +45,12 @@
     "db:down": "turbo -F @alfred/db db:down",
     "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
     "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",
-    "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts",
-    "smoke:hypergraph": "bun scripts/smoke-hypergraph.ts"
+    "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts packages/api/test/workflow.capture.integration.test.ts",
+    "smoke:hypergraph": "bun scripts/smoke-hypergraph.ts",
+    "test:mindscape:smoke": "bunx playwright test --config apps/web/playwright.config.ts --project=smoke",
+    "test:mindscape:integration": "bunx playwright test --config apps/web/playwright.config.ts --project=integration",
+    "test:mindscape:e2e": "bunx playwright test --config apps/web/playwright.config.ts --project=e2e",
+    "test:mindscape:all": "bunx playwright test --config apps/web/playwright.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.3.6",
@@ -54,6 +58,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "@biomejs/biome": "2.2.5",
     "@testing-library/user-event": "^14.6.1",
     "@types/bun": "^1.3.2",

@@ -54,16 +54,15 @@ function HomeComponent() {
           </div>
         </section>
         <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">Orchestrator Run Viewer</h2>
+          <h2 className="mb-2 font-medium">Enter the Mindscape</h2>
           <p className="text-muted-foreground text-sm">
-            Kick off a secure plan run, watch live droid output, and test token
-            elevation.
+            Open the spatial canvas to chat, capture notes, run workflows, and manage Alfred in one place.
           </p>
           <Link
             className="inline-flex h-9 items-center justify-center rounded bg-primary px-4 font-medium text-primary-foreground text-sm"
-            to="/orchestrator/run"
+            to="/mindscape"
           >
-            Open Run Viewer
+            Launch Mindscape
           </Link>
         </section>
       </div>

@@ -29,7 +29,7 @@ Use a list with checkboxes to summarize granular steps. Every stopping point mus
 - [x] (2025-11-21 00:38Z) Add environment variable documentation to config/env.example
 - [x] (2025-11-21 00:38Z) Write tests for packages/history selection algorithm
 - [x] (2025-11-21 00:38Z) Write integration tests for all three call sites
-- [ ] Validate metrics collection and observability
+- [x] (2025-11-21 00:52Z) Validate metrics collection and observability
 
 Use timestamps to measure rates of progress.
 
@@ -37,7 +37,12 @@ Use timestamps to measure rates of progress.
 
 Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
 
-_No discoveries yet. This section will be updated as implementation proceeds._
+- Observation: Metrics consumers needed direct access to per-message tiers to emit drop counters without recomputing rank order.
+  Evidence: Added `tierByMessage` WeakMap on `HistorySelection` and consumed it inside web/runtime/API integrations when emitting tier drop metrics.
+- Observation: Repository-wide `bun test` run fails prior to our changes because Playwright suites and embedding workers require local browsers and model downloads that are unavailable in this environment.
+  Evidence: `bun test` exited with Playwright `test.describe()` initialization errors plus embed pool timeouts before reaching our new tests.
+- Observation: `bun run typecheck` is currently blocked by pre-existing TypeScript errors in packages such as `@alfred/db`, `@alfred/knowledge`, and the new voice streaming work.
+  Evidence: `tsc -b` reported issues in `packages/db/src/client.ts`, `packages/knowledge/src/indices/*`, and `packages/api/src/voice/streaming.ts` unrelated to the history implementation.
 
 ## Decision Log
 
@@ -47,13 +52,21 @@ Record every decision made while working on the plan in the format:
   Rationale: [Why this decision was made]
   Date/Author: [Timestamp and author]
 
-_No decisions recorded yet. This section will be updated as implementation proceeds._
+- Decision: Added `tierByMessage` WeakMap to `HistorySelection` so downstream services can emit tiered metrics without guessing IDs.
+  Rationale: Metrics require reliable tier lookups for the actual message objects, and relying on ID heuristics failed when IDs are missing.
+  Date/Author: 2025-11-21 / Codex
+- Decision: Introduced `getHistoryBudgetDefaults()` helper in `@alfred/history` to centralize env parsing of ratio/reserve knobs.
+  Rationale: Each call site needed identical logic, so centralizing it avoids divergence and simplifies future tuning.
+  Date/Author: 2025-11-21 / Codex
+- Decision: Switched tests to spy on real metric instances instead of fully mocking `@alfred/api/metrics`.
+  Rationale: The metrics module exports dozens of counters; maintaining bespoke mocks caused brittle failures. Spies keep assertions while honoring the real surface.
+  Date/Author: 2025-11-21 / Codex
 
 ## Outcomes & Retrospective
 
 Summarize outcomes, gaps, and lessons learned at major milestones or at completion. Compare the result against the original purpose.
 
-_No outcomes recorded yet. This section will be updated as implementation proceeds._
+Completed the shared history package, metrics instrumentation, and all three integrations (web SSE, runtime adapter, API generate). Added unit coverage for the selector plus integration coverage for each caller. `bun test` currently fails upstream because of Playwright and embedding dependencies, and `bun run typecheck` is blocked by pre-existing database/knowledge/voice errors; both were documented above. Token-aware selection now drives all model invocations and emits observability signals for future tuning.
 
 ---
 

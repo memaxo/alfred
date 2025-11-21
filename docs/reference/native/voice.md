@@ -10,6 +10,11 @@
 
 ## Current State
 
+- 📘 Reference guides (must-read):
+  - `docs/voice/s2s.md` – one-stop setup for OpenAI vs local providers plus web/native/CarPlay validation steps.
+  - `docs/voice/streaming.md` – WebSocket prototype contract for partial transcripts / future streaming.
+  - `docs/reference/api/voice.md` – backend mutation contract, curl sample, and test/observability references.
+
 - ✅ `apps/native` implements audio capture (`ExpoCapture`), playback (`playBase64`), and streaming primitives via `@alfred/voice` shared core
 - ✅ Authentication and tRPC wiring exist via `auth-client.ts` and `utils/trpc.ts`
 - ✅ Voice session management via `useVoiceSessionNative` hook wrapping `@alfred/voice/session`
