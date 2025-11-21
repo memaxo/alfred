@@ -5,6 +5,7 @@
 
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";
+import { BTreeIndex } from "./indices/btree.js";
 
 // Types
 export type NodeId = string & { readonly _: unique symbol };
@@ -106,40 +107,12 @@ class HAMT<V> {
   }
 }
 
-// BTree for ordered traversal
-class BTree {
-  private readonly order = 32;
-  private readonly keys: string[] = [];
-  private readonly values: NodeId[] = [];
-
-  insert(key: string, id: NodeId): void {
-    // TODO: Implement proper B-tree with node splitting
-    // Current implementation uses array splice (O(n))
-    // Should maintain tree structure with internal/leaf nodes
-    let i = 0;
-    while (i < this.keys.length && this.keys[i] < key) i++;
-    this.keys.splice(i, 0, key);
-    this.values.splice(i, 0, id);
-  }
-
-  range(start: string, end: string): NodeId[] {
-    const result: NodeId[] = [];
-    for (let i = 0; i < this.keys.length; i++) {
-      if (this.keys[i] >= start && this.keys[i] <= end) {
-        result.push(this.values[i]);
-      }
-      if (this.keys[i] > end) break;
-    }
-    return result;
-  }
-}
-
 // Main Hypergraph
 export class Hypergraph {
   private readonly nodes = new HAMT<Knowledge>();
   private readonly temporal = new IntervalTree();
   private readonly spatial = new RTreeND(1024);
-  private readonly ordered = new BTree();
+  private readonly ordered = new BTreeIndex<string, NodeId>(64);
   private readonly edges = new Map<NodeId, Set<NodeId>>();
   private readonly inbound = new Map<NodeId, Set<NodeId>>();
   private readonly edgesByKind = new Map<string, Map<NodeId, Set<NodeId>>>();

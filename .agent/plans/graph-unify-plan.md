@@ -21,7 +21,7 @@ Each change lists files, code locations, APIs, and side effects.
 ## Progress
 
 - [x] (2025-11-21 00:48Z) Phase 1A: Implemented production-ready N-dimensional RTree (1024D)
-- [ ] Phase 1B: Implement production-ready BTree ordered index
+- [x] (2025-11-21 00:50Z) Phase 1B: Implemented production-ready BTree ordered index
 - [ ] Phase 1C: Add database graph traversal indexes migration
 - [ ] Phase 2A: Implement auto-persist with dirty tracking
 - [ ] Phase 2B: Wire bridge auto-sync with embedding support
@@ -55,6 +55,10 @@ _This section will be updated as key decisions are made during implementation._
 
 - Decision: Use logarithmic span metrics for RTreeND area/enlargement heuristics
   Rationale: Prevents floating-point underflow/overflow when comparing 1024-dimensional rectangles while keeping insertion heuristics stable.
+  Date/Author: 2025-11-21 / Codex
+
+- Decision: Rebuild BTreeIndex on delete operations to keep balancing guarantees without complex in-place rebalancing
+  Rationale: Deletes are rare compared to inserts; rebuilding from existing entries keeps the tree valid while keeping the implementation simple and predictable.
   Date/Author: 2025-11-21 / Codex
 
 ## Outcomes & Retrospective
