@@ -27,10 +27,10 @@ Each change lists files, code locations, APIs, and side effects.
 - [x] (2025-11-21 00:58Z) Phase 2B: Wired bridge auto-sync with embedding support
 - [x] (2025-11-21 00:58Z) Phase 2C: Removed embedding TODOs and wired spatial index
 - [x] (2025-11-21 01:02Z) Phase 3A: Created unified graph types and ID mapping
-- [ ] Phase 3B: Implement mindscape edge persistence (Mindscape → DB)
-- [ ] Phase 3C: Add node data mapping for mindscape nodes
-- [ ] Phase 3D: Implement robust edge mapping in initializer (DB → Mindscape)
-- [ ] Phase 3E: Add graph edge subscription for live updates
+- [x] (2025-11-21 01:09Z) Phase 3B: Implemented mindscape edge persistence (Mindscape → DB)
+- [x] (2025-11-21 01:09Z) Phase 3C: Added node data mapping for mindscape nodes
+- [x] (2025-11-21 01:09Z) Phase 3D: Implemented robust edge mapping in initializer (DB → Mindscape)
+- [x] (2025-11-21 01:09Z) Phase 3E: Added graph edge subscription for live updates
 - [ ] Phase 4A: Implement semantic layout using relationships/embeddings
 - [ ] Phase 4B: Create knowledge node visualization component
 - [ ] Phase 5A: Implement query planner across DB graph, Hypergraph, and RAG
@@ -73,6 +73,7 @@ _This section will be updated as key decisions are made during implementation._
 
 - Phase 1 (2025-11-21 00:51Z): Hypergraph now uses production-ready RTree and BTree indices with dedicated unit tests, and Postgres ships traversal-focused indexes (0035) to keep getNeighbors/findPath queries fast; pending validation confirms Phase 1 acceptance.
 - Phase 2 (2025-11-21 00:58Z): Auto-persist now runs on a timer with optional embedding batches, the assistant bridge exposes startHypergraphSync(), and embeddings stay resident-only, clearing TODO debt around the spatial index.
+- Phase 3 (2025-11-21 01:09Z): Created the @alfred/graph package with unified types/mapper plus bridged Mindscape ↔ DB by persisting new edges, storing per-node graph mappings, and syncing live edge updates via TRPC subscriptions.
 
 ---
 

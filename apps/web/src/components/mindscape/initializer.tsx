@@ -1,5 +1,5 @@
-import { useMindscapeStore } from "@/store/mindscape";
-import { useEffect, useRef } from "react";
+import { useMindscapeStore, type ArtifactData } from "@/store/mindscape";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import { nanoid } from "nanoid";
 import type { inferRouterOutputs } from "@trpc/server";
 import { trpc, type TRPCAppRouter } from "@/utils/trpc";
@@ -10,23 +10,46 @@ type NoteListItem = RouterOutputs["note"]["list"][number];
 type DueReminderItem = RouterOutputs["remind"]["due"][number];
 type GraphEdge = RouterOutputs["graph"]["getEdges"][number];
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function MindscapeInitializer() {
-  const { addArtifact, autoLayout, nodeIds } = useMindscapeStore(
+  const { nodes, addArtifact, autoLayout, setEdges } = useMindscapeStore(
     useShallow((state) => ({
+      nodes: state.nodes,
       addArtifact: state.addArtifact,
       autoLayout: state.autoLayout,
-      nodeIds: state.nodes.map((n) => n.id),
+      setEdges: state.setEdges,
     }))
   );
+
+  const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes]);
+  const graphNodeIds = useMemo(() => {
+    const derived = nodes
+      .map((node) => {
+        if (node.data?.graph?.dbId) {
+          return node.data.graph.dbId;
+        }
+        if (UUID_PATTERN.test(node.id)) {
+          return node.id;
+        }
+        const suffix = node.id.split("-").pop();
+        if (suffix && UUID_PATTERN.test(suffix)) {
+          return suffix;
+        }
+        return undefined;
+      })
+      .filter((id): id is string => Boolean(id));
+    return Array.from(new Set(derived));
+  }, [nodes]);
 
   const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
   const { data: reminders } = trpc.remind.due.useQuery({});
   const { data: edges } = trpc.graph.getEdges.useQuery(
-    { nodeIds },
-    { enabled: nodeIds.length > 0, refetchInterval: 5000 }
+    { nodeIds: graphNodeIds },
+    { enabled: graphNodeIds.length > 0, refetchInterval: 5000 }
   );
   const initializedRef = useRef(false);
-  const { setEdges } = useMindscapeStore(useShallow((state) => ({ setEdges: state.setEdges })));
 
   // Initialize with Chat Node after Orb is created
   useEffect(() => {
@@ -80,6 +103,7 @@ export function MindscapeInitializer() {
           tags: note.tags,
           mode: "view",
           updatedAt: note.updatedAt?.toISOString?.() ?? undefined,
+          graph: { dbId: note.id },
         },
       });
     });
@@ -109,36 +133,83 @@ export function MindscapeInitializer() {
           description: reminder.description ?? undefined,
           status,
           mode: "view",
+          graph: { dbId: reminder.id },
         },
       });
     });
   }, [reminders, nodeIds, addArtifact]);
 
-  // Sync Edges
-  useEffect(() => {
-    if (!edges) return;
+  const ensureGraphMapping = useCallback((dbId: string) => {
+    const store = useMindscapeStore.getState();
+    const existing = store.nodes.find((node) => node.data?.graph?.dbId === dbId);
+    if (existing) {
+      return;
+    }
+    const suffixMatch = store.nodes.find((node) => node.id.endsWith(dbId));
+    if (suffixMatch) {
+      store.updateArtifactData(suffixMatch.id, {
+        graph: { dbId },
+      } as Partial<ArtifactData>);
+    }
+  }, []);
 
-    const newEdges = edges.map((edge: GraphEdge) => {
-      // Helper to find the correct node ID for a given DB ID
-      const findNodeId = (dbId: string) => {
-        // Try to find a node that ends with this DB ID
-        const match = nodeIds.find(id => id.endsWith(dbId));
-        return match || `note-${dbId}`; // Fallback to note prefix if not found (or maybe it's not loaded yet)
-      };
+  const findNodeIdByDbId = useCallback(
+    (dbId: string) => {
+      const mapped = nodes.find((node) => node.data?.graph?.dbId === dbId);
+      if (mapped) {
+        return mapped.id;
+      }
+      const suffixMatch = nodes.find((node) => node.id.endsWith(dbId));
+      if (suffixMatch) {
+        return suffixMatch.id;
+      }
+      return `note-${dbId}`;
+    },
+    [nodes]
+  );
 
+  const mapEdgeToFlow = useCallback(
+    (edge: GraphEdge) => {
+      ensureGraphMapping(edge.fromId);
+      ensureGraphMapping(edge.toId);
       return {
         id: edge.id,
-        source: findNodeId(edge.fromId),
-        target: findNodeId(edge.toId),
+        source: findNodeIdByDbId(edge.fromId),
+        target: findNodeIdByDbId(edge.toId),
         animated: true,
         style: { stroke: "rgba(255, 255, 255, 0.2)" },
       };
-    });
+    },
+    [ensureGraphMapping, findNodeIdByDbId]
+  );
 
-    // Only update if edges have changed to avoid loops/jitters
-    // For now, just set them.
+  // Sync Edges
+  useEffect(() => {
+    if (!edges) return;
+    const newEdges = edges.map(mapEdgeToFlow);
     setEdges(newEdges);
-  }, [edges, setEdges, nodeIds]);
+  }, [edges, mapEdgeToFlow, setEdges]);
+
+  trpc.graph.watchEdges.useSubscription(
+    graphNodeIds.length > 0
+      ? { nodeIds: graphNodeIds, resource: "user", pollMs: 5000 }
+      : undefined,
+    {
+      enabled: graphNodeIds.length > 0,
+      onData: ({ edges: incoming }) => {
+        const mapped = incoming.map(mapEdgeToFlow);
+        useMindscapeStore.setState((state) => {
+          const merged = new Map(
+            state.edges.map((edge) => [edge.id ?? `${edge.source}-${edge.target}`, edge])
+          );
+          for (const flowEdge of mapped) {
+            merged.set(flowEdge.id, flowEdge);
+          }
+          return { edges: Array.from(merged.values()) };
+        });
+      },
+    }
+  );
 
   return null;
 }

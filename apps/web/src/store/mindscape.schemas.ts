@@ -1,11 +1,19 @@
 import { z } from "zod";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 
+const graphMappingSchema = z
+  .object({
+    dbId: z.string().uuid().optional(),
+    hgHash: z.string().optional(),
+  })
+  .optional();
+
 /**
  * Base schema for all artifact data - includes common fields.
  */
 const baseArtifactDataSchema = z.object({
   label: z.string().optional(),
+  graph: graphMappingSchema,
 });
 
 /**

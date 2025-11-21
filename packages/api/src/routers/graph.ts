@@ -2,8 +2,11 @@ import { memoryEdges } from "@alfred/db/schema/graph";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 import { db } from "@alfred/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
+import { observable } from "@trpc/server/observable";
+
+type EdgeRow = typeof memoryEdges.$inferSelect;
 
 export const graphRouter = router({
   getEdges: authedProcedure
@@ -75,4 +78,73 @@ export const graphRouter = router({
 
       return existing ?? null;
     }),
+
+  watchEdges: authedProcedure
+    .input(
+      z.object({
+        nodeIds: z.array(z.string()).min(1),
+        resource: z.string().optional(),
+        pollMs: z.number().int().min(500).max(30_000).default(3_000),
+      })
+    )
+    .subscription(({ input }) =>
+      observable<{ edges: EdgeRow[] }>((emit) => {
+        let timeout: ReturnType<typeof setTimeout> | null = null;
+        let stopped = false;
+        let lastIds = new Set<string>();
+        const uniqueIds = Array.from(new Set(input.nodeIds));
+        const resource = input.resource ?? "user";
+
+        const buildWhere = () => {
+          const idPredicate =
+            uniqueIds.length === 1
+              ? or(
+                  eq(memoryEdges.fromId, uniqueIds[0]!),
+                  eq(memoryEdges.toId, uniqueIds[0]!)
+                )
+              : or(
+                  inArray(memoryEdges.fromId, uniqueIds),
+                  inArray(memoryEdges.toId, uniqueIds)
+                );
+          const predicates = [idPredicate];
+          if (resource) {
+            predicates.push(eq(memoryEdges.resource, resource));
+          }
+          return predicates.length === 1 ? predicates[0]! : and(...predicates);
+        };
+
+        const poll = async () => {
+          if (stopped || uniqueIds.length === 0) {
+            return;
+          }
+          try {
+            const rows = await db
+              .select()
+              .from(memoryEdges)
+              .where(buildWhere())
+              .orderBy(memoryEdges.created);
+            const currentIds = new Set(rows.map((row) => row.id));
+            const fresh = rows.filter((row) => !lastIds.has(row.id));
+            if (fresh.length > 0) {
+              emit.next({ edges: fresh });
+            }
+            lastIds = currentIds;
+          } catch (error) {
+            emit.error(error as Error);
+            return;
+          }
+          timeout = setTimeout(poll, input.pollMs);
+        };
+
+        poll();
+
+        return () => {
+          stopped = true;
+          if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
+          }
+        };
+      })
+    ),
 });

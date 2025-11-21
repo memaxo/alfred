@@ -11,6 +11,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   type ReactFlowProps,
+  type OnConnect,
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -48,6 +49,7 @@ import {
   type MindscapeSearchParams,
 } from "./spawn";
 import { MindscapeCommandPalette } from "./command-palette";
+import { trpc } from "@/utils/trpc";
 
 // Wrap each node component with error boundary
 const wrapWithErrorBoundary = (Component: React.ComponentType<NodeProps>) =>
@@ -115,6 +117,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
   );
 
   const reactFlow = useReactFlow<ArtifactData>();
+  const { mutateAsync: connectEdge } = trpc.graph.connect.useMutation();
 
   // Initialize with Orb if empty
   useEffect(() => {
@@ -206,6 +209,38 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     clearSearchParams(["spawn"]);
   }, [spawnQuery, spawnNodeFromType]);
 
+  const onConnectPersisting = useCallback<OnConnect>(
+    async (connection) => {
+      onConnect(connection);
+      const sourceNode = nodes.find((node) => node.id === connection.source);
+      const targetNode = nodes.find((node) => node.id === connection.target);
+      const fromId = sourceNode?.data?.graph?.dbId;
+      const toId = targetNode?.data?.graph?.dbId;
+      if (!(fromId && toId)) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            "Skipping graph.connect because one or both nodes lack dbId mappings",
+            connection
+          );
+        }
+        return;
+      }
+      try {
+        await connectEdge({
+          fromId,
+          toId,
+          kind: "relates_to",
+          resource: "user",
+        });
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("graph.connect failed", error);
+        }
+      }
+    },
+    [connectEdge, nodes, onConnect]
+  );
+
   return (
     <>
       <div className="h-screen w-full bg-[oklch(0.05_0_0)]">
@@ -218,7 +253,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
           minZoom={0.1}
           nodes={nodes}
           nodeTypes={nodeTypes}
-          onConnect={onConnect}
+          onConnect={onConnectPersisting}
           onEdgesChange={onEdgesChange}
           onNodesChange={onNodesChange}
           panOnDrag={true}

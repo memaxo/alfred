@@ -204,7 +204,15 @@ export const useMindscapeStore = create<MindscapeState>()(
         const schema = getNodeDataSchema(nodeType);
 
         // Merge existing data with new data
-        const mergedData = { ...node.data, ...data };
+        const mergedGraph =
+          data.graph !== undefined
+            ? { ...(node.data.graph ?? {}), ...data.graph }
+            : node.data.graph;
+        const mergedData = {
+          ...node.data,
+          ...data,
+          graph: mergedGraph,
+        };
 
         // Validate merged data (use partial to allow partial updates)
         const result = schema.partial().safeParse(mergedData);
