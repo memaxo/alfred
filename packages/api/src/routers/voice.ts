@@ -1,41 +1,41 @@
 import { Buffer } from "node:buffer";
-import { performance } from "node:perf_hooks";
+import { randomUUID } from "node:crypto";
 import { readdir } from "node:fs/promises";
-import { basename } from "node:path";
-import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
-import type { Response } from "undici";
-import { z } from "zod";
-import { userRepo } from "@alfred/db";
-import type { VoiceStreamEvent } from "@alfred/type/voice";
-import { markVoice } from "@alfred/metrics/performance";
-import { requirePolicy } from "../gate";
+import { basename, join } from "node:path";
+import { performance } from "node:perf_hooks";
 import {
   recordVoiceStt,
   recordVoiceTts,
   voiceStreamEventsTotal,
   voiceStreamLatencySeconds,
 } from "@alfred/api/metrics";
+import { userRepo } from "@alfred/db";
+import { logger } from "@alfred/logger";
+import { markVoice } from "@alfred/metrics/performance";
+import type { VoiceStreamEvent } from "@alfred/type/voice";
+import {
+  decodeToPCM16,
+  encodeFromPCM16,
+  isLikelyPCM,
+  PCM_MIME_TYPE,
+} from "@alfred/voice/audio/codec";
+import { TRPCError } from "@trpc/server";
+import { observable } from "@trpc/server/observable";
+import { Response } from "undici";
+import { z } from "zod";
+import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
-import { logger } from "../utils/logger";
-import { getVoicePools } from "../voice/pools";
-import { randomUUID } from "node:crypto";
 import { runAssistantForVoice } from "../voice/assistant";
+import { getVoicePools } from "../voice/pools";
 import {
   claimVoiceSession,
   completeVoiceSession,
   getVoiceSession,
   listVoiceSessions,
   markVoiceSessionError,
-  updateVoiceSession,
   releaseVoiceSession,
+  updateVoiceSession,
 } from "../voice/session-registry";
-import {
-  decodeToPCM16,
-  encodeFromPCM16,
-  isLikelyPCM,
-  PCM_MIME_TYPE,
-} from "../voice/codec";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap for initial MVP clips
 const DEFAULT_STT_MODEL = "whisper-1";
@@ -59,10 +59,21 @@ const ttsInput = z.object({
 
 const voicePreviewInput = z.object({
   voice: z.string().min(1),
-  text: z.string().min(1).max(100).default("Hello, this is a preview of my voice."),
+  text: z
+    .string()
+    .min(1)
+    .max(100)
+    .default("Hello, this is a preview of my voice."),
 });
 
-const voiceSurfaceInput = z.enum(["drive", "carplay", "web", "native", "stream", "unknown"]);
+const voiceSurfaceInput = z.enum([
+  "drive",
+  "carplay",
+  "web",
+  "native",
+  "stream",
+  "unknown",
+]);
 
 const voiceStreamInput = z.object({
   mode: z.enum(["clip", "stream"]).default("stream"),
@@ -90,7 +101,7 @@ const s2sInput = z.object({
   outputCodec: z.string().optional(),
 });
 
-type SpeechToSpeechInput = z.infer<typeof s2sInput>;
+// type SpeechToSpeechInput = z.infer<typeof s2sInput>;
 
 const voiceSessionStatusInput = z
   .object({
@@ -98,11 +109,25 @@ const voiceSessionStatusInput = z
   })
   .optional();
 
+// Simple in-memory cache for available voices (remote)
+// let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
+// const AVAILABLE_VOICE_CACHE_TTL_MS = 3600 * 1000; // 1 hour
+
+// Simple in-memory cache for voice list (local)
+// let voiceListCache: {
+//   data: { id: string; name: string }[];
+//   timestamp: number;
+// } | null = null;
+// const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
 function getVoiceProvider(): "openai" | "local" {
   return (process.env.VOICE_PROVIDER ?? "openai") as "openai" | "local";
 }
 
-async function resolveVoicePreference(userId: string, requestedVoice: string): Promise<string> {
+async function resolveVoicePreference(
+  userId: string,
+  requestedVoice: string
+): Promise<string> {
   // Only override if the requested voice is the default
   if (requestedVoice !== DEFAULT_TTS_VOICE) {
     return requestedVoice;
@@ -110,37 +135,42 @@ async function resolveVoicePreference(userId: string, requestedVoice: string): P
 
   try {
     const prefs = await userRepo.getPreferences(userId);
-    const voicePref = Array.isArray(prefs) 
-      ? prefs.find(p => p.key === "voice.tts")
+    const voicePref = Array.isArray(prefs)
+      ? prefs.find((p) => p.key === "voice.tts")
       : null;
-    
-    if (voicePref?.value && typeof voicePref.value === 'string') {
+
+    if (voicePref?.value && typeof voicePref.value === "string") {
       return voicePref.value;
     }
   } catch (error) {
     logger.warn("failed_to_resolve_voice_preference", { userId, error });
   }
-  
+
   return requestedVoice;
 }
 
-async function resolveSttLanguagePreference(userId: string, requestedLanguage?: string): Promise<string | undefined> {
-  if (requestedLanguage) return requestedLanguage;
+async function resolveSttLanguagePreference(
+  userId: string,
+  requestedLanguage?: string
+): Promise<string | undefined> {
+  if (requestedLanguage) {
+    return requestedLanguage;
+  }
 
   try {
     const prefs = await userRepo.getPreferences(userId);
-    const langPref = Array.isArray(prefs) 
-      ? prefs.find(p => p.key === "voice.stt.language")
+    const langPref = Array.isArray(prefs)
+      ? prefs.find((p) => p.key === "voice.stt.language")
       : null;
-    
-    if (langPref?.value && typeof langPref.value === 'string') {
+
+    if (langPref?.value && typeof langPref.value === "string") {
       return langPref.value;
     }
   } catch (error) {
     logger.warn("failed_to_resolve_stt_preference", { userId, error });
   }
-  
-  return undefined;
+
+  return;
 }
 
 function requireOpenAIConfig() {
@@ -166,7 +196,7 @@ async function transcribeLocal(input: SttInput): Promise<{
 }> {
   const timerStart = performance.now();
   markVoice("stt_local_start");
-  
+
   const { sttPool } = getVoicePools();
 
   // Backpressure check
@@ -189,7 +219,10 @@ async function transcribeLocal(input: SttInput): Promise<{
 
     const durationSeconds = (performance.now() - timerStart) / 1000;
     markVoice("stt_local_complete");
-    voiceStreamLatencySeconds.observe({ stage: "stt_transcribe" }, durationSeconds);
+    voiceStreamLatencySeconds.observe(
+      { stage: "stt_transcribe" },
+      durationSeconds
+    );
     recordVoiceStt({ provider: "local", status: "ok", durationSeconds });
 
     return {
@@ -202,7 +235,10 @@ async function transcribeLocal(input: SttInput): Promise<{
   } catch (error) {
     const durationSeconds = (performance.now() - timerStart) / 1000;
     markVoice("stt_local_error");
-    voiceStreamLatencySeconds.observe({ stage: "stt_transcribe" }, durationSeconds);
+    voiceStreamLatencySeconds.observe(
+      { stage: "stt_transcribe" },
+      durationSeconds
+    );
     recordVoiceStt({ provider: "local", status: "error", durationSeconds });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -221,7 +257,7 @@ async function synthesizeLocal(input: TtsInput): Promise<{
 }> {
   const timerStart = performance.now();
   markVoice("tts_local_start");
-  
+
   const { ttsPool } = getVoicePools();
 
   // Backpressure check
@@ -253,7 +289,10 @@ async function synthesizeLocal(input: TtsInput): Promise<{
     const encoded = await encodeLocalTtsAudio(result.audioBase64, input.format);
     const durationSeconds = (performance.now() - timerStart) / 1000;
     markVoice("tts_local_complete");
-    voiceStreamLatencySeconds.observe({ stage: "tts_synthesize" }, durationSeconds);
+    voiceStreamLatencySeconds.observe(
+      { stage: "tts_synthesize" },
+      durationSeconds
+    );
     recordVoiceTts({ provider: "local", status: "ok", durationSeconds });
 
     return {
@@ -266,7 +305,10 @@ async function synthesizeLocal(input: TtsInput): Promise<{
   } catch (error) {
     const durationSeconds = (performance.now() - timerStart) / 1000;
     markVoice("tts_local_error");
-    voiceStreamLatencySeconds.observe({ stage: "tts_synthesize" }, durationSeconds);
+    voiceStreamLatencySeconds.observe(
+      { stage: "tts_synthesize" },
+      durationSeconds
+    );
     recordVoiceTts({ provider: "local", status: "error", durationSeconds });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -579,9 +621,19 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
+const voiceDownloadInput = z.object({
+  voiceId: z.string().min(1),
+});
 
-// Simple in-memory cache for voice list
-let voiceListCache: { data: { id: string; name: string }[]; timestamp: number } | null = null;
+// Simple in-memory cache for available voices (remote)
+let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
+const AVAILABLE_VOICE_CACHE_TTL_MS = 3600 * 1000; // 1 hour
+
+// Simple in-memory cache for voice list (local)
+let voiceListCache: {
+  data: { id: string; name: string }[];
+  timestamp: number;
+} | null = null;
 const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
 export const voiceRouter: ReturnType<typeof router> = router({
@@ -591,9 +643,12 @@ export const voiceRouter: ReturnType<typeof router> = router({
     .mutation(async ({ input, ctx }) => {
       const session = ctx.session;
       let language = input.language;
-      
+
       if (session) {
-        language = await resolveSttLanguagePreference(session.user.id, input.language);
+        language = await resolveSttLanguagePreference(
+          session.user.id,
+          input.language
+        );
       }
 
       const provider = getVoiceProvider();
@@ -609,7 +664,10 @@ export const voiceRouter: ReturnType<typeof router> = router({
     .mutation(async ({ input, ctx }) => {
       const session = ctx.session;
       if (!session) {
-         throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
 
       const provider = getVoiceProvider();
@@ -656,7 +714,10 @@ export const voiceRouter: ReturnType<typeof router> = router({
 
         let sttLanguage = input.language;
         if (!sttLanguage) {
-            sttLanguage = await resolveSttLanguagePreference(session.user.id, input.language);
+          sttLanguage = await resolveSttLanguagePreference(
+            session.user.id,
+            input.language
+          );
         }
 
         const sttPayload: SttInput = {
@@ -683,22 +744,22 @@ export const voiceRouter: ReturnType<typeof router> = router({
           lastTranscript: transcriptText,
         });
 
-        const assistantResult = await runAssistantForVoice(
-          ctx.runtimeContext,
-          {
-            text: transcriptText,
-            thread: input.thread,
-            resource: input.resource,
-            userId: session.user.id,
-          }
-        );
+        const assistantResult = await runAssistantForVoice(ctx.runtimeContext, {
+          text: transcriptText,
+          thread: input.thread,
+          resource: input.resource,
+          userId: session.user.id,
+        });
 
         await updateVoiceSession(claimedSession.id, {
           status: "responding",
           lastAssistantText: assistantResult.text ?? undefined,
         });
 
-        const ttsVoice = await resolveVoicePreference(session.user.id, input.ttsVoice);
+        const ttsVoice = await resolveVoicePreference(
+          session.user.id,
+          input.ttsVoice
+        );
 
         const ttsPayload: TtsInput = {
           text: assistantResult.text || "I heard you.",
@@ -755,54 +816,202 @@ export const voiceRouter: ReturnType<typeof router> = router({
       }
     }),
 
+  listAvailableModels: authedProcedure.query(async () => {
+    const provider = getVoiceProvider();
+    if (provider !== "local") {
+      return [];
+    }
+
+    if (
+      availableVoiceCache &&
+      Date.now() - availableVoiceCache.timestamp < AVAILABLE_VOICE_CACHE_TTL_MS
+    ) {
+      return availableVoiceCache.data;
+    }
+
+    try {
+      // We use Bun.spawn to run the python script
+      // This requires the python environment to be set up
+      // We assume "python3" is available or we should use the same resolution logic as pools
+      // For simplicity in this router, we'll try "python3" and expect deps to be installed globally or in venv
+      // Ideally we should use a shared helper to run python scripts
+
+      const scriptPath = join(
+        process.cwd(),
+        "packages/voice/scripts/list_available_voices.py"
+      );
+      // Use uv run if available, else python3
+      const cmd = ["uv", "run", "python", scriptPath];
+
+      const proc = Bun.spawn(cmd, {
+        stdout: "pipe",
+        stderr: "pipe",
+        cwd: join(process.cwd(), "packages/voice"),
+      });
+
+      const output = await new Response(proc.stdout).text();
+      const error = await new Response(proc.stderr).text();
+
+      if (error && error.trim().length > 0) {
+        // Some stderr is normal logging, but let's log it just in case
+        logger.debug("list_available_voices_stderr", { stderr: error });
+      }
+
+      const exitCode = await proc.exited;
+      if (exitCode !== 0) {
+        throw new Error(`Script exited with code ${exitCode}: ${error}`);
+      }
+
+      const voices = JSON.parse(output);
+      availableVoiceCache = {
+        data: voices,
+        timestamp: Date.now(),
+      };
+
+      return voices;
+    } catch (error) {
+      logger.warn("failed_to_list_available_models", { error });
+      return [];
+    }
+  }),
+
+  downloadModel: authedProcedure
+    .input(voiceDownloadInput)
+    .mutation(async ({ input }) => {
+      const provider = getVoiceProvider();
+      if (provider !== "local") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "voice_provider_not_local",
+        });
+      }
+
+      try {
+        const scriptPath = join(
+          process.cwd(),
+          "packages/voice/scripts/download_voice.py"
+        );
+        const cmd = [
+          "uv",
+          "run",
+          "python",
+          scriptPath,
+          "--voice",
+          input.voiceId,
+        ];
+
+        const proc = Bun.spawn(cmd, {
+          stdout: "pipe",
+          stderr: "pipe",
+          cwd: join(process.cwd(), "packages/voice"),
+        });
+
+        const output = await new Response(proc.stdout).text();
+        const error = await new Response(proc.stderr).text();
+
+        const exitCode = await proc.exited;
+        if (exitCode !== 0) {
+          // Try to parse error JSON from stderr if possible
+          try {
+            const errJson = JSON.parse(error);
+            throw new Error(errJson.message || error);
+          } catch {
+            throw new Error(`Download failed: ${error || output}`);
+          }
+        }
+
+        // Parse output to verify success
+        try {
+          // Output might be multiple JSON lines or just one
+          // We look for the last line or search for "status": "success"
+          if (!output.includes('"status": "success"')) {
+            throw new Error("Download script did not report success");
+          }
+        } catch (e) {
+          logger.warn("download_voice_output_parse_warn", { output, error: e });
+        }
+
+        // Invalidate local cache so the new voice shows up in listVoices
+        voiceListCache = null;
+
+        return { success: true };
+      } catch (error) {
+        logger.error("failed_to_download_model", {
+          error,
+          voiceId: input.voiceId,
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "failed_to_download_model",
+          cause: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }),
+
   listVoices: authedProcedure.query(async () => {
     const provider = getVoiceProvider();
     if (provider !== "local") {
-        // For OpenAI, return standard voices
-        return [
-            { id: "alloy", name: "Alloy" },
-            { id: "echo", name: "Echo" },
-            { id: "fable", name: "Fable" },
-            { id: "onyx", name: "Onyx" },
-            { id: "nova", name: "Nova" },
-            { id: "shimmer", name: "Shimmer" },
-        ];
+      // For OpenAI, return standard voices
+      return [
+        { id: "alloy", name: "Alloy" },
+        { id: "echo", name: "Echo" },
+        { id: "fable", name: "Fable" },
+        { id: "onyx", name: "Onyx" },
+        { id: "nova", name: "Nova" },
+        { id: "shimmer", name: "Shimmer" },
+      ];
     }
 
-    const modelPath = process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
+    // Check cache
+    if (
+      voiceListCache &&
+      Date.now() - voiceListCache.timestamp < VOICE_CACHE_TTL_MS
+    ) {
+      return voiceListCache.data;
+    }
+
+    const modelPath =
+      process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
     try {
-        const files = await readdir(modelPath);
-        const voices = files
-            .filter(f => f.endsWith(".onnx"))
-            .map(f => {
-                const id = basename(f, ".onnx");
-                return { id, name: id }; 
-            });
-        return voices;
+      const files = await readdir(modelPath);
+      const voices = files
+        .filter((f) => f.endsWith(".onnx"))
+        .map((f) => {
+          const id = basename(f, ".onnx");
+          return { id, name: id };
+        });
+
+      // Update cache
+      voiceListCache = {
+        data: voices,
+        timestamp: Date.now(),
+      };
+
+      return voices;
     } catch (error) {
-        logger.warn("failed_to_list_voices", { error });
-        return [];
+      logger.warn("failed_to_list_voices", { error });
+      return [];
     }
   }),
 
   previewVoice: authedProcedure
     .input(voicePreviewInput)
     .mutation(async ({ input }) => {
-        const provider = getVoiceProvider();
-        if (provider === "local") {
-            return synthesizeLocal({
-                text: input.text,
-                voice: input.voice,
-                format: "mp3", 
-                model: "piper",
-            });
-        }
-        return postSynthesis({
-            text: input.text,
-            voice: input.voice,
-            format: "mp3",
-            model: "gpt-4o-mini-tts",
+      const provider = getVoiceProvider();
+      if (provider === "local") {
+        return synthesizeLocal({
+          text: input.text,
+          voice: input.voice,
+          format: "mp3",
+          model: "piper",
         });
+      }
+      return postSynthesis({
+        text: input.text,
+        voice: input.voice,
+        format: "mp3",
+        model: "gpt-4o-mini-tts",
+      });
     }),
 
   sessions: authedProcedure
@@ -892,8 +1101,14 @@ export const voiceRouter: ReturnType<typeof router> = router({
 
           return () => {
             const durationSeconds = (performance.now() - timerStart) / 1000;
-            voiceStreamLatencySeconds.observe({ stage: "stream_session" }, durationSeconds);
-            voiceStreamEventsTotal.inc({ event: "status", status: "disconnected" });
+            voiceStreamLatencySeconds.observe(
+              { stage: "stream_session" },
+              durationSeconds
+            );
+            voiceStreamEventsTotal.inc({
+              event: "status",
+              status: "disconnected",
+            });
             markVoice("voice_stream_end");
             sessionManager.removeSession(sessionId);
             emit.next({

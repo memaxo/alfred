@@ -42,7 +42,7 @@ function getPublicKey() {
   return publicKeyPromise;
 }
 
-export interface TokenClaims {
+export type TokenClaims = {
   sub: string;
   scopes: string[];
   roles?: string[];
@@ -53,14 +53,14 @@ export interface TokenClaims {
   jti: string;
   aud: string | string[];
   iss: string;
-}
+};
 
-interface IssueOptions {
+type IssueOptions = {
   ttlSec?: number;
   elevated?: boolean;
   mfa?: "passkey" | "none";
   roles?: string[];
-}
+};
 
 export async function issueAccessToken(
   sub: string,
@@ -156,17 +156,17 @@ export async function verifyAccessToken(
   };
 }
 
-export interface ToolPolicyInput {
+export type ToolPolicyInput = {
   action: string;
   resource: PolicyResource;
   context?: Record<string, unknown>;
   audience?: string;
-}
+};
 
-export interface ToolPolicyResult {
+export type ToolPolicyResult = {
   decision: Decision;
   claims: TokenClaims;
-}
+};
 
 export async function requireToolScopesAndPolicy(
   authz: string | undefined,

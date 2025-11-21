@@ -1,20 +1,20 @@
 import { randomUUID } from "node:crypto";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { Context } from "../../../../packages/api/src/context";
 import {
-  createTestDb,
   closeTestDb,
+  createTestDb,
   truncateTables,
 } from "../../../../packages/api/test/utils/db";
+import { uiTestAppRouter } from "./app-router";
 import {
   createTestSession,
   deserializeTestSession,
   TEST_SESSION_HEADER,
   type TestSession,
 } from "./auth";
-import { uiTestAppRouter } from "./app-router";
 
 type BunServer = ReturnType<typeof Bun.serve>;
 
@@ -85,12 +85,7 @@ function resolveSession(
 async function safeReset(db: NodePgDatabase) {
   try {
     await truncateTables(db);
-  } catch (error) {
-    console.warn(
-      "[ui-test] unable to truncate tables, ensure migrations have been applied:",
-      error instanceof Error ? error.message : error
-    );
-  }
+  } catch (_error) {}
 }
 
 async function ensureInternalServer(
@@ -135,7 +130,9 @@ async function ensureInternalServer(
     },
     setSession(next: TestSession) {
       sessionRef = next;
-      internalServer!.currentSession = next;
+      if (internalServer) {
+        internalServer.currentSession = next;
+      }
     },
     async reset() {
       await safeReset(dbClient.db);
@@ -166,9 +163,7 @@ export async function createTestServer(
   return server.api;
 }
 
-export async function cleanupTestServer(
-  server?: TestServer
-): Promise<void> {
+export async function cleanupTestServer(server?: TestServer): Promise<void> {
   if (server) {
     await server.stop();
     return;

@@ -7,6 +7,7 @@ import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
 import { fsRouter } from "./fs";
+import { graphRouter } from "./graph";
 import { jwksRouter } from "./jwks";
 import { linearRouter } from "./linear";
 import { noteRouter } from "./note";
@@ -19,10 +20,9 @@ import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
+import { userRouter } from "./user";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
-import { graphRouter } from "./graph";
-import { userRouter } from "./user";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),

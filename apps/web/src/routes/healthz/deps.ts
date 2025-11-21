@@ -17,11 +17,7 @@ export const Route = createFileRoute("/healthz/deps")({
 
           healthChecksTotal.labels("deps", "ok").inc();
 
-          return new Response(JSON.stringify({ ok: true }), {
-            headers: {
-              "content-type": "application/json",
-            },
-          });
+          return Response.json({ ok: true });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "deps_failed";

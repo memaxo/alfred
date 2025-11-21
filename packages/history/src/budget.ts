@@ -1,11 +1,12 @@
 import type { HistoryBudget } from "./types";
 
-const DEFAULT_HISTORY_RATIO = 0.5;
-const DEFAULT_MIN_SYSTEM_RESERVE = 2_000;
-const DEFAULT_MIN_HEADROOM = 2_000;
+const DEFAULT_MIN_SYSTEM_RESERVE = 2000;
+const DEFAULT_MIN_HEADROOM = 2000;
 
 function parseEnvNumber(raw: string | undefined): number | null {
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }

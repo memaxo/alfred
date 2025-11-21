@@ -10,7 +10,7 @@ import { LRUCache } from "./util/lru.js";
 
 // Query AST types
 export type Variable = string & { readonly _: unique symbol };
-type Atom = string & { readonly _: unique symbol };
+// type Atom = string & { readonly _: unique symbol };
 
 type Term =
   | { _: "var"; name: Variable }
@@ -72,7 +72,7 @@ type Arc = {
   direction: "forward" | "backward";
 };
 
-type SerializedResult = Array<[Variable, string]>;
+type SerializedResult = [Variable, string][];
 
 const CACHE = new LRUCache<string, SerializedResult[]>(512);
 const QUERY_BUDGET_MS = 10;
@@ -116,7 +116,7 @@ export const execute = (query: Query, graph: Hypergraph): Result[] =>
   );
 
 const executeInternal = (query: Query, graph: Hypergraph): Result[] => {
-  const key = canonicalKey(query) + `#v=${graph.version()}`;
+  const key = `${canonicalKey(query)}#v=${graph.version()}`;
   const cached = CACHE.get(key);
   if (cached) {
     return cached.map((entries) => new Map(entries));
@@ -217,7 +217,9 @@ const semanticQueryInternal = (
 
   for (const id of textRanked) {
     const key = String(id);
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     ordered.push(id);
     seen.add(key);
     if (ordered.length >= limit) {
@@ -373,13 +375,20 @@ function generateCandidates(
 
   const backtrack = (index: number) => {
     if (index === orderedVariables.length) {
-      if (query.where.every((clause) => clauseSatisfied(assignment, clause, graph, false))) {
+      if (
+        query.where.every((clause) =>
+          clauseSatisfied(assignment, clause, graph, false)
+        )
+      ) {
         results.push(new Map(assignment));
       }
       return;
     }
 
     const variable = orderedVariables[index];
+    if (!variable) {
+      return;
+    }
     const domain = domains.get(variable);
     if (!domain || domain.size === 0) {
       return;
@@ -401,7 +410,11 @@ function generateCandidates(
   return results;
 }
 
-function applyAC3(domains: Domains, clauses: Clause[], graph: Hypergraph): void {
+function applyAC3(
+  domains: Domains,
+  clauses: Clause[],
+  graph: Hypergraph
+): void {
   const arcs: Arc[] = [];
   const arcMap = new Map<Variable, Arc[]>();
 
@@ -410,20 +423,34 @@ function applyAC3(domains: Domains, clauses: Clause[], graph: Hypergraph): void 
     if (!arcMap.has(arc.from)) {
       arcMap.set(arc.from, []);
     }
-    arcMap.get(arc.from)!.push(arc);
+    arcMap.get(arc.from)?.push(arc);
   };
 
   for (const clause of clauses) {
-    if (clause._ !== "relation") continue;
+    if (clause._ !== "relation") {
+      continue;
+    }
     if (clause.subject._ === "var" && clause.object._ === "var") {
-      enqueue({ from: clause.subject.name, to: clause.object.name, clause, direction: "forward" });
-      enqueue({ from: clause.object.name, to: clause.subject.name, clause, direction: "backward" });
+      enqueue({
+        from: clause.subject.name,
+        to: clause.object.name,
+        clause,
+        direction: "forward",
+      });
+      enqueue({
+        from: clause.object.name,
+        to: clause.subject.name,
+        clause,
+        direction: "backward",
+      });
     }
   }
 
   while (arcs.length > 0) {
     const arc = arcs.shift();
-    if (!arc) break;
+    if (!arc) {
+      break;
+    }
     if (reviseArc(arc, domains, graph)) {
       const neighbors = arcMap.get(arc.from) ?? [];
       for (const neighbor of neighbors) {
@@ -533,9 +560,12 @@ function filterPasses(
   graph: Hypergraph
 ): boolean {
   const node = graph.get(nodeId);
-  if (!node) return false;
+  if (!node) {
+    return false;
+  }
 
-  const numericValue = clause.op === "~" ? NaN : Number.parseFloat(clause.value);
+  const numericValue =
+    clause.op === "~" ? Number.NaN : Number.parseFloat(clause.value);
   switch (clause.op) {
     case ">":
       return getConfidence(node) > numericValue;
@@ -566,12 +596,19 @@ const getConfidence = (node: Knowledge): number => {
 };
 
 const resolveTerm = (term: Term, binding: Binding): string | null => {
-  if (term._ === "const") return term.value;
-  if (term._ === "var") return binding.get(term.name) ?? null;
+  if (term._ === "const") {
+    return term.value;
+  }
+  if (term._ === "var") {
+    return binding.get(term.name) ?? null;
+  }
   return null;
 };
 
-const intersectDomain = (domain: Set<string>, allowed: Iterable<string>): void => {
+const intersectDomain = (
+  domain: Set<string>,
+  allowed: Iterable<string>
+): void => {
   const allowedSet = new Set(allowed);
   for (const value of Array.from(domain)) {
     if (!allowedSet.has(value)) {
@@ -627,17 +664,39 @@ export function reconstructReasoningChain(
   edges: ReasoningEdgeRecord[]
 ): ReasoningStep[] {
   const sorted = [...nodes].sort((a, b) => {
-    const aIndex = readNumberProp(a.properties, "sequenceIndex", Number.MAX_SAFE_INTEGER);
-    const bIndex = readNumberProp(b.properties, "sequenceIndex", Number.MAX_SAFE_INTEGER);
-    if (aIndex !== bIndex) {
+    const aIndex = readNumberProp(
+      a.properties,
+      "sequenceIndex",
+      Number.MAX_SAFE_INTEGER
+    );
+    const bIndex = readNumberProp(
+      b.properties,
+      "sequenceIndex",
+      Number.MAX_SAFE_INTEGER
+    );
+    if (aIndex !== null && bIndex !== null && aIndex !== bIndex) {
       return aIndex - bIndex;
     }
-    const aTs = readNumberProp(a.properties, "timestamp", Number.MAX_SAFE_INTEGER);
-    const bTs = readNumberProp(b.properties, "timestamp", Number.MAX_SAFE_INTEGER);
-    return aTs - bTs;
+    const aTs = readNumberProp(
+      a.properties,
+      "timestamp",
+      Number.MAX_SAFE_INTEGER
+    );
+    const bTs = readNumberProp(
+      b.properties,
+      "timestamp",
+      Number.MAX_SAFE_INTEGER
+    );
+    if (aTs !== null && bTs !== null) {
+      return aTs - bTs;
+    }
+    return 0;
   });
 
-  const relations = new Map<string, Array<{ toId: string; kind: string; timeDelta: number | null }>>();
+  const relations = new Map<
+    string,
+    Array<{ toId: string; kind: string; timeDelta: number | null }>
+  >();
   for (const edge of edges) {
     const bucket = relations.get(edge.fromId) ?? [];
     bucket.push({
@@ -668,7 +727,9 @@ function readNumberProp(
   key: string,
   fallback: number | null
 ): number | null {
-  if (!props) return fallback;
+  if (!props) {
+    return fallback;
+  }
   const value = props[key];
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -687,7 +748,9 @@ function readStringProp(
   key: string,
   fallback: string | null
 ): string | null {
-  if (!props) return fallback;
+  if (!props) {
+    return fallback;
+  }
   const value = props[key];
   return typeof value === "string" ? value : fallback;
 }

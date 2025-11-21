@@ -7,24 +7,23 @@
 
 import { cn } from "@/lib/utils";
 
-interface LoadProps {
+type LoadProps = {
   message?: string;
   className?: string;
-}
+};
 
 export function Load({ message = "Loading...", className }: LoadProps) {
   return (
-    <div
+    <output
       aria-label="Loading"
       aria-live="polite"
       className={cn("flex items-center gap-3", className)}
-      role="status"
     >
       <div
         aria-hidden="true"
         className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent"
       />
       <span className="text-muted-foreground text-sm">{message}</span>
-    </div>
+    </output>
   );
 }

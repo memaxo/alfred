@@ -18,7 +18,9 @@ const noteInputSchema = z.object({
 type NoteInput = z.infer<typeof noteInputSchema>;
 
 function mapNote(row: Awaited<ReturnType<typeof createNote>>) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   const tags = Array.isArray((row as { tags?: unknown }).tags)
     ? ((row as { tags?: unknown }).tags as string[])
     : [];
@@ -98,15 +100,21 @@ export const toolNote = {
         const offset = input.offset ?? 0;
         const rows = await getNotes(input.userId, limit, offset);
         return {
-          notes: rows.map((row) => mapNote(row)!).filter(Boolean),
+          notes: rows.map((row) => mapNote(row)).filter(Boolean) as any[],
         };
       }
       case "update": {
         const id = ensure(input.id, "note_id_required");
         const updates: Parameters<typeof updateNote>[1] = {};
-        if (input.title !== undefined) updates.title = input.title;
-        if (input.content !== undefined) updates.content = input.content;
-        if (input.tags !== undefined) updates.tags = input.tags;
+        if (input.title !== undefined) {
+          updates.title = input.title;
+        }
+        if (input.content !== undefined) {
+          updates.content = input.content;
+        }
+        if (input.tags !== undefined) {
+          updates.tags = input.tags;
+        }
         const count = await updateNote(id, updates);
         return {
           ok: count > 0,

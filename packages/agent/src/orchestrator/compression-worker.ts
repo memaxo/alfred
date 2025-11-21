@@ -5,8 +5,8 @@ import {
   updateNodeConfidenceBatch,
 } from "@alfred/db/src/repo/graph";
 import {
-  DEFAULT_COMPRESSION_CONFIG,
   type CompressionConfig,
+  DEFAULT_COMPRESSION_CONFIG,
 } from "@alfred/knowledge/compression";
 import {
   recordCompressionCycle,
@@ -31,7 +31,6 @@ export function startCompressionWorker(
   config: Partial<CompressionWorkerConfig> = {}
 ): void {
   if (compressionInterval) {
-    console.warn("Compression worker already running");
     return;
   }
 
@@ -41,22 +40,13 @@ export function startCompressionWorker(
   };
 
   if (!finalConfig.enabled) {
-    console.log("Compression worker disabled");
     return;
   }
 
-  console.log(
-    `Starting compression worker (interval ${finalConfig.intervalMs}ms)`
-  );
-
-  runCompression(finalConfig).catch((err) => {
-    console.error("Compression worker initial run failed", err);
-  });
+  runCompression(finalConfig).catch((_err) => {});
 
   compressionInterval = setInterval(() => {
-    runCompression(finalConfig).catch((err) => {
-      console.error("Compression worker run failed", err);
-    });
+    runCompression(finalConfig).catch((_err) => {});
   }, finalConfig.intervalMs);
 }
 
@@ -64,32 +54,23 @@ export function stopCompressionWorker(): void {
   if (compressionInterval) {
     clearInterval(compressionInterval);
     compressionInterval = null;
-    console.log("Compression worker stopped");
   }
 }
 
-async function runCompression(
-  config: CompressionWorkerConfig
-): Promise<void> {
-  const start = Date.now();
+async function runCompression(config: CompressionWorkerConfig): Promise<void> {
+  // Removed unused _start variable
   const stopTimer = startCompressionCycleTimer();
-  console.log("Compression cycle started");
 
   try {
     const decayResult = await applyConfidenceDecay(config);
     recordCompressionNodeUpdate("decay", decayResult.updated);
-    console.log(`Decayed confidences for ${decayResult.updated} nodes`);
 
     const archiveResult = await archiveStaleNodes(config);
     recordCompressionNodeUpdate("archive", archiveResult.archived);
-    console.log(`Archived ${archiveResult.archived} stale nodes`);
 
-    const duration = Date.now() - start;
-    console.log(`Compression cycle completed in ${duration}ms`);
     stopTimer({ outcome: "success" });
     recordCompressionCycle("success");
   } catch (error) {
-    console.error("Compression cycle failed", error);
     stopTimer({ outcome: "error" });
     recordCompressionCycle("error");
     throw error;
@@ -119,7 +100,7 @@ async function applyConfidenceDecay(
         ? Number((node.properties as { confidence?: number }).confidence ?? 0.8)
         : 0.8;
 
-    const factor = Math.pow(0.5, age / config.confidenceDecayHalfLife);
+    const factor = 0.5 ** (age / config.confidenceDecayHalfLife);
     const decayed = Math.max(0, Math.min(1, current * factor));
 
     if (Math.abs(decayed - current) > 0.01) {

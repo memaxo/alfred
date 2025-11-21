@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
 import type { TrackerState } from "@alfred/agent/orchestrator/multi/tracker";
-import { detectNeedsGuidance, detectStuck, updateTracker } from "@alfred/agent/orchestrator/multi/tracker";
+import {
+  detectNeedsGuidance,
+  detectStuck,
+  updateTracker,
+} from "@alfred/agent/orchestrator/multi/tracker";
 
 function emptyState(): TrackerState {
   return { agents: {}, waves: {} };
@@ -140,7 +144,9 @@ describe("tracker.detectStuck", () => {
 describe("tracker.detectNeedsGuidance", () => {
   it("returns false when agent is unknown", () => {
     const state = emptyState();
-    const needs = detectNeedsGuidance(state, "agent-x" as AgentId, ["need guidance"]);
+    const needs = detectNeedsGuidance(state, "agent-x" as AgentId, [
+      "need guidance",
+    ]);
     expect(needs).toBe(false);
   });
 

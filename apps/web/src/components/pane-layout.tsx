@@ -30,11 +30,17 @@ export function PaneLayout({
   className,
 }: PaneLayoutProps) {
   return (
-    <div className={className ?? "mx-auto flex w-full max-w-2xl flex-col gap-6 py-10"}>
+    <div
+      className={
+        className ?? "mx-auto flex w-full max-w-2xl flex-col gap-6 py-10"
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>{title}</CardTitle>
-          {description ? <CardDescription>{description}</CardDescription> : null}
+          {description ? (
+            <CardDescription>{description}</CardDescription>
+          ) : null}
         </CardHeader>
         <CardContent>{createForm}</CardContent>
       </Card>
@@ -42,7 +48,9 @@ export function PaneLayout({
         <CardHeader>
           <CardTitle>Recent {title.toLowerCase()}</CardTitle>
           {description ? (
-            <CardDescription>Newest {title.toLowerCase()} appear first.</CardDescription>
+            <CardDescription>
+              Newest {title.toLowerCase()} appear first.
+            </CardDescription>
           ) : null}
         </CardHeader>
         <CardContent>{paneComponent}</CardContent>
@@ -50,4 +58,3 @@ export function PaneLayout({
     </div>
   );
 }
-

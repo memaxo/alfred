@@ -30,7 +30,9 @@ function toISOString(value: Date | null | undefined) {
 }
 
 function mapReminder(row: Awaited<ReturnType<typeof createReminder>>) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     id: (row as { id: string }).id,
     title: (row as { title: string }).title,
@@ -114,7 +116,9 @@ export const toolRemind = {
         const offset = input.offset ?? 0;
         const rows = await getReminders(input.userId, limit, offset);
         return {
-          reminders: rows.map((row) => mapReminder(row)!).filter(Boolean),
+          reminders: rows
+            .map((row) => mapReminder(row))
+            .filter(Boolean) as any[],
         };
       }
       case "due": {
@@ -125,7 +129,9 @@ export const toolRemind = {
         }
         const rows = await getDueReminders(input.userId, before);
         return {
-          reminders: rows.map((row) => mapReminder(row)!).filter(Boolean),
+          reminders: rows
+            .map((row) => mapReminder(row))
+            .filter(Boolean) as any[],
         };
       }
       case "complete": {

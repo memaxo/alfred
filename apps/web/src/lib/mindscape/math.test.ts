@@ -1,5 +1,5 @@
-import { expect, test, describe } from "bun:test";
-import { signalToCharIndex, GLYPH_SET, oklchToRgb } from "./math";
+import { describe, expect, test } from "bun:test";
+import { GLYPH_SET, oklchToRgb, signalToCharIndex } from "./math";
 
 describe("Mindscape Math", () => {
   test("signalToCharIndex maps 0 to 0", () => {
@@ -16,7 +16,7 @@ describe("Mindscape Math", () => {
     const idx = signalToCharIndex(0.5);
     expect(idx).toBeLessThan(GLYPH_SET.length / 2);
   });
-  
+
   test("oklchToRgb returns valid RGB", () => {
     const [r, g, b] = oklchToRgb(0.5, 0.2, 270);
     expect(r).toBeGreaterThanOrEqual(0);

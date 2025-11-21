@@ -1,6 +1,6 @@
-import { fireEvent, render, waitFor } from "../../test/testing-library";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
+import { fireEvent, render, waitFor } from "../../test/testing-library";
 import { VoiceS2SRouteView } from "../voice-s2s";
 
 const toastSuccess = vi.fn();
@@ -53,14 +53,17 @@ describe("VoiceS2SRouteView", () => {
   });
 
   it("runs speechToSpeech when already recording", async () => {
-    const speechToSpeech = vi
-      .fn()
-      .mockResolvedValue({
-        assistant: { text: "hello" },
-      } satisfies Partial<SpeechToSpeechResponse>);
+    const speechToSpeech = vi.fn().mockResolvedValue({
+      assistant: { text: "hello" },
+    } satisfies Partial<SpeechToSpeechResponse>);
 
     useVoiceSessionWebMock.mockReturnValue({
-      state: { capture: "recording", transcript: "hey", error: null, lastUpdated: 0 },
+      state: {
+        capture: "recording",
+        transcript: "hey",
+        error: null,
+        lastUpdated: 0,
+      },
       start: vi.fn(),
       speechToSpeech,
       isRecording: true,

@@ -1,8 +1,19 @@
 export type TtsFormat = "mp3" | "opus" | "wav";
-export type VoiceSessionSurface = "drive" | "carplay" | "web" | "native" | "stream" | "unknown";
-export type VoiceSessionStatus = "idle" | "recording" | "processing" | "responding" | "error";
+export type VoiceSessionSurface =
+  | "drive"
+  | "carplay"
+  | "web"
+  | "native"
+  | "stream"
+  | "unknown";
+export type VoiceSessionStatus =
+  | "idle"
+  | "recording"
+  | "processing"
+  | "responding"
+  | "error";
 
-export interface VoiceSessionDescriptor {
+export type VoiceSessionDescriptor = {
   id: string;
   surface: VoiceSessionSurface;
   mode: "clip" | "stream";
@@ -18,45 +29,45 @@ export interface VoiceSessionDescriptor {
   lastTranscript?: string;
   lastAssistantText?: string;
   lastError?: string;
-}
+};
 
-export interface VoiceCapturedClip {
+export type VoiceCapturedClip = {
   audioBase64: string;
   mimeType: string;
-}
+};
 
-export interface SttRequest {
+export type SttRequest = {
   audioBase64: string;
   mimeType: string;
   model?: string;
   language?: string;
   prompt?: string;
-}
+};
 
-export interface SttResult {
+export type SttResult = {
   text: string;
   language?: string | null;
   model?: string;
   durationSeconds?: number;
   provider?: string;
-}
+};
 
-export interface TtsRequest {
+export type TtsRequest = {
   text: string;
   voice?: string;
   format?: TtsFormat;
   model?: string;
-}
+};
 
-export interface TtsResult {
+export type TtsResult = {
   audioBase64: string;
   mimeType: string;
   model?: string;
   provider?: string;
   durationSeconds?: number;
-}
+};
 
-export interface SpeechToSpeechRequest {
+export type SpeechToSpeechRequest = {
   audioBase64: string;
   mimeType: string;
   language?: string;
@@ -71,9 +82,9 @@ export interface SpeechToSpeechRequest {
   surface?: VoiceSessionSurface;
   inputCodec?: string;
   outputCodec?: string;
-}
+};
 
-export interface SpeechToSpeechResponse {
+export type SpeechToSpeechResponse = {
   transcript: {
     text: string;
     language?: string | null;
@@ -93,28 +104,30 @@ export interface SpeechToSpeechResponse {
     ttsSeconds?: number | null;
   };
   session?: VoiceSessionDescriptor;
-}
+};
 
-export interface PlatformAdapter {
-  configureSession?: (options?: { background?: boolean }) => Promise<void> | void;
+export type PlatformAdapter = {
+  configureSession?: (options?: {
+    background?: boolean;
+  }) => Promise<void> | void;
   startCapture: () => Promise<void>;
   stopCapture: () => Promise<{ audioBase64: string; mimeType: string } | null>;
   play: (audioBase64: string, mimeType: string) => Promise<void> | void;
-}
+};
 
-export interface VoiceSessionOptions {
+export type VoiceSessionOptions = {
   defaultVoice?: string;
   defaultFormat?: TtsFormat;
-}
+};
 
-export interface VoiceSessionState {
+export type VoiceSessionState = {
   capture: "idle" | "recording" | "processing" | "complete";
   transcript: string;
   error: string | null;
   lastUpdated: number;
-}
+};
 
-export interface VoiceSessionMethods {
+export type VoiceSessionMethods = {
   start(): Promise<void>;
   stopAndTranscribe(
     overrides?: Partial<Pick<SttRequest, "language" | "model" | "prompt">>
@@ -124,16 +137,16 @@ export interface VoiceSessionMethods {
     overrides?: Partial<Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">>
   ) => Promise<SpeechToSpeechResponse | null>;
   clear(): void;
-}
+};
 
 export type VoiceSession = VoiceSessionMethods & {
   state: VoiceSessionState;
 };
 
-export interface VoiceClient {
+export type VoiceClient = {
   sttTranscribe(input: SttRequest): Promise<SttResult>;
   ttsSynthesize(input: TtsRequest): Promise<TtsResult>;
   speechToSpeech?: (
     input: SpeechToSpeechRequest
   ) => Promise<SpeechToSpeechResponse>;
-}
+};

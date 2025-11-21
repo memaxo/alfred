@@ -1,12 +1,17 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import type { WorkflowEvent } from "@alfred/type";
 import { sql } from "drizzle-orm";
 import { closeTestDb, createTestDb, truncateTables } from "./utils/db";
-import {
-  describePostgres,
-  requirePostgresTestEnv,
-} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -28,7 +33,9 @@ describeFn("workflow persistence", () => {
   });
 
   beforeEach(async () => {
-    if (!testDbHarness) return;
+    if (!testDbHarness) {
+      return;
+    }
     await truncateTables(testDbHarness.db);
     await testDbHarness.db.execute(
       sql`TRUNCATE workflow_runs, workflow_events RESTART IDENTITY CASCADE`
@@ -36,7 +43,9 @@ describeFn("workflow persistence", () => {
   });
 
   afterEach(async () => {
-    if (!testDbHarness) return;
+    if (!testDbHarness) {
+      return;
+    }
     await truncateTables(testDbHarness.db);
   });
 

@@ -1,4 +1,5 @@
 import type { ContextBundle } from "@alfred/type/plan";
+import { decomposeSemantically } from "../reasoning/decompose-semantic";
 
 export type SubTaskId = string;
 
@@ -53,16 +54,18 @@ function classifyPath(path: string): Bucket {
 
 function normalisePrefix(path: string): string {
   const idx = path.lastIndexOf("/");
-  if (idx <= 0) return ".";
+  if (idx <= 0) {
+    return ".";
+  }
   return path.slice(0, idx);
 }
 
 function stableId(seed: string): SubTaskId {
   // Deterministic, cheap hash; not cryptographic.
-  let h1 = 0x811c9dc5;
+  let h1 = 0x81_1c_9d_c5;
   for (let i = 0; i < seed.length; i += 1) {
     h1 ^= seed.charCodeAt(i) & 0xff;
-    h1 = (h1 * 0x01000193) >>> 0;
+    h1 = (h1 * 0x01_00_01_93) >>> 0;
   }
   return `T${(h1 >>> 0).toString(16)}`;
 }
@@ -106,6 +109,23 @@ export function decomposeTask(
     ];
   }
 
+  // Phase 1: Semantic Decomposition
+  // If we have file contents, try to decompose semantically.
+  if (context.bundle && files.some((f) => f.content)) {
+    try {
+      const semanticTasks = decomposeSemantically(
+        baseRequirement,
+        context.bundle
+      );
+      if (semanticTasks.length > 0) {
+        return semanticTasks;
+      }
+    } catch (_e) {
+      // Fallback to legacy bucket heuristic if semantic fails
+      // console.warn("Semantic decomposition failed", e);
+    }
+  }
+
   const buckets: Record<Bucket, Set<string>> = {
     backend: new Set<string>(),
     frontend: new Set<string>(),
@@ -115,7 +135,9 @@ export function decomposeTask(
 
   for (const file of files) {
     const path = file.path;
-    if (!path || typeof path !== "string") continue;
+    if (!path || typeof path !== "string") {
+      continue;
+    }
     const bucket = classifyPath(path);
     buckets[bucket].add(normalisePrefix(path));
   }

@@ -9,9 +9,9 @@ import type { EmbedConfig } from "./types";
 
 export class EmbedPool {
   private processes: EmbedProcess[] = [];
-  private poolSize: number;
+  private readonly poolSize: number;
   private currentIndex = 0;
-  private config: EmbedConfig;
+  private readonly config: EmbedConfig;
   private isInitialized = false;
 
   constructor(config: EmbedConfig = {}) {
@@ -21,42 +21,18 @@ export class EmbedPool {
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log("[embed-pool] Already initialized");
       return;
     }
+    await this.ensureDependencies();
+    await this.ensureModelDownloaded();
 
-    try {
-      console.log("[embed-pool] Starting initialization...");
-
-      // Ensure dependencies are installed
-      console.log("[embed-pool] Checking dependencies...");
-      await this.ensureDependencies();
-
-      // Ensure model is downloaded
-      console.log("[embed-pool] Checking model...");
-      await this.ensureModelDownloaded();
-
-      // Spawn worker processes
-      console.log(
-        `[embed-pool] Initializing ${this.poolSize} worker processes...`
-      );
-
-      for (let i = 0; i < this.poolSize; i++) {
-        console.log(
-          `[embed-pool] Starting worker ${i + 1}/${this.poolSize}...`
-        );
-        const proc = new EmbedProcess(this.config);
-        await proc.start();
-        this.processes.push(proc);
-        console.log(`[embed-pool] Worker ${i + 1}/${this.poolSize} ready`);
-      }
-
-      this.isInitialized = true;
-      console.log("[embed-pool] All workers ready");
-    } catch (error) {
-      console.error("[embed-pool] Initialization failed:", error);
-      throw error;
+    for (let i = 0; i < this.poolSize; i++) {
+      const proc = new EmbedProcess(this.config);
+      await proc.start();
+      this.processes.push(proc);
     }
+
+    this.isInitialized = true;
   }
 
   private async ensureDependencies(): Promise<void> {
@@ -74,10 +50,6 @@ export class EmbedPool {
     }
 
     if (!hasUV) {
-      console.log("[embed-pool] UV not found - skipping dependency check");
-      console.log(
-        "[embed-pool] Install UV: curl -LsSf https://astral.sh/uv/install.sh | sh"
-      );
       return;
     }
 
@@ -86,15 +58,8 @@ export class EmbedPool {
     const lockExists = await Bun.file(uvLockPath).exists();
 
     if (venvExists && lockExists) {
-      console.log("[embed-pool] Virtual environment exists");
       return;
     }
-
-    // Run uv sync to create/update venv
-    console.log("[embed-pool] Setting up virtual environment with uv sync...");
-    console.log(
-      "[embed-pool] This may take a few minutes (downloading PyTorch)..."
-    );
 
     const syncProc = Bun.spawn(["uv", "sync"], {
       cwd: embedDir,
@@ -106,8 +71,6 @@ export class EmbedPool {
     if (exitCode !== 0) {
       throw new Error(`uv sync failed with exit code ${exitCode}`);
     }
-
-    console.log("[embed-pool] Dependencies installed successfully");
   }
 
   private async ensureModelDownloaded(): Promise<void> {
@@ -119,13 +82,8 @@ export class EmbedPool {
     // Check if model exists
     const configFile = Bun.file(join(modelPath, "config.json"));
     if (await configFile.exists()) {
-      console.log("[embed-pool] Model already downloaded");
       return;
     }
-
-    // Model not found - download it
-    console.log("[embed-pool] Model not found, downloading...");
-    console.log("[embed-pool] This may take a while (~7 GB)");
 
     const downloadScript = join(
       import.meta.dir,
@@ -165,8 +123,6 @@ export class EmbedPool {
     if (exitCode !== 0) {
       throw new Error(`Model download failed with exit code ${exitCode}`);
     }
-
-    console.log("[embed-pool] Model download complete");
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -197,13 +153,9 @@ export class EmbedPool {
   }
 
   async shutdown(): Promise<void> {
-    console.log("[embed-pool] Shutting down workers...");
-
     await Promise.all(this.processes.map((proc) => proc.shutdown()));
 
     this.processes = [];
     this.isInitialized = false;
-
-    console.log("[embed-pool] Shutdown complete");
   }
 }

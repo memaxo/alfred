@@ -2,14 +2,14 @@ import * as assistantRepo from "@alfred/db/repo/assistant";
 
 type Reminder = Awaited<ReturnType<typeof assistantRepo.getReminders>>[number];
 
-export interface ReminderSchedulerOptions {
+export type ReminderSchedulerOptions = {
   intervalMs?: number;
   jitterMs?: number;
   batchSize?: number;
   logger?: Pick<Console, "info" | "error" | "warn">;
   onFire?: (reminder: Reminder) => Promise<void> | void;
   now?: () => Date;
-}
+};
 
 let schedulerHandle: NodeJS.Timeout | null = null;
 let running = false;

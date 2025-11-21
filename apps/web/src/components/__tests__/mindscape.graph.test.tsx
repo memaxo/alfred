@@ -1,12 +1,12 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import "../../test/testing-library";
 
+import { useMindscapeStore } from "@/store/mindscape";
 import {
-  renderRoute,
   createTestTrpcClient,
+  renderRoute,
   type TestTrpcHandlers,
 } from "@/test/render-route";
-import { useMindscapeStore } from "@/store/mindscape";
 
 describe("MindscapeCanvas graph integration", () => {
   beforeEach(() => {
@@ -20,6 +20,7 @@ describe("MindscapeCanvas graph integration", () => {
       edges: [],
       focusedNodeId: null,
       isSpaceMode: false,
+      ragDocCache: {},
     });
   });
 
@@ -106,15 +107,15 @@ describe("MindscapeCanvas graph integration", () => {
 
     const trpcClient = createTestTrpcClient(handlers);
 
-    const { findByText } = renderRoute(<MindscapeCanvas />, {
+    const { findAllByText } = renderRoute(<MindscapeCanvas />, {
       trpcClient,
     });
 
-    const runtimeNode = await findByText("Runtime Insight Node");
-    expect(runtimeNode).toBeTruthy();
+    const runtimeNodes = await findAllByText("Runtime Insight Node");
+    expect(runtimeNodes.length).toBeGreaterThan(0);
 
-    const ragNode = await findByText("RAG Context Node");
-    expect(ragNode).toBeTruthy();
+    const ragNodes = await findAllByText("RAG Context Node");
+    expect(ragNodes.length).toBeGreaterThan(0);
 
     // The presence of both nodes and a stable render with explains edges
     // is sufficient; React Flow does not expose edges with simple text labels.

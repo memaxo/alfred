@@ -11,6 +11,7 @@ export type AgentSpec = {
   workingDirectory: string;
   environment: "host" | "worktree" | "container"; // New field
   auto: "read" | "low" | "medium" | "high";
+  mandateTDD?: boolean; // Phase 4: TDD
   model?: string;
   profile?: string;
   execPlanPath: string;
@@ -29,13 +30,23 @@ export type WavePlan = {
   dependsOn: WaveId[];
 };
 
-function determineEnvironment(subTask: SubTask, options?: { maxParallel?: number }): "host" | "worktree" {
+function determineEnvironment(
+  _subTask: SubTask,
+  options?: { maxParallel?: number }
+): "host" | "worktree" | "container" {
+  // Phase 11: Docker Support
+  // Use container for high risk tasks or explicit request
+  // For now, we don't have risk analysis in SubTask yet, so we stick to worktree/host default.
+  // But we allow override via options/env if we want to test it.
+  if (process.env.ORCH_USE_CONTAINERS === "1") {
+    return "container";
+  }
+
   // Simple heuristic:
   // If we run >1 agent in parallel, use worktrees to avoid file contention.
   // If priority is 1 (backend/core), maybe host is fine if it's the only one?
   // Safest default for multi-agent is worktree.
-  // But for "Act" phase we might default to worktree.
-  
+
   if ((options?.maxParallel ?? 1) > 1) {
     return "worktree";
   }
@@ -51,6 +62,7 @@ export function buildAgentSpec(
     model?: string;
     profile?: string;
     maxParallel?: number; // Added
+    mandateTDD?: boolean; // Phase 4
     linear?: {
       issueId?: string;
       sessionId?: string;
@@ -62,20 +74,24 @@ export function buildAgentSpec(
   const auto = options?.auto ?? "low";
   const agentId: AgentId = `${runId}:${subTask.id}`;
   const sessionId = agentId;
-  
+
   // Environment determination
   const environment = determineEnvironment(subTask, options);
-  
-  // NOTE: The workingDirectory here is the *base*. 
+
+  // NOTE: The workingDirectory here is the *base*.
   // The runtime will append the worktree path if environment is worktree.
   // But AgentSpec typically carries the *actual* cwd the agent should use.
   // We will let the runtime resolve the final path because it manages the worktree creation.
   // So we keep 'cwd' as the repo root here, and the runtime handles the switch?
   // Or we assume the runtime will mutate it.
   // Let's keep cwd as repo root, and let environment flag dictate behavior in core.ts.
-  
+
   const workingDirectory = cwd;
   const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;
+
+  // Phase 8: Escalation Signal
+  // const _escalationPrompt =
+  //   "\n\nIf you encounter a blocking issue that prevents you from completing the task (e.g., missing dependencies, API key issues, architectural flaws), CREATE a file named 'ESCALATION.md' in your working directory describing the problem, and then EXIT with code 0.";
 
   return {
     agentId,
@@ -84,6 +100,7 @@ export function buildAgentSpec(
     workingDirectory,
     environment,
     auto,
+    mandateTDD: options?.mandateTDD,
     model: options?.model,
     profile: options?.profile,
     execPlanPath,
@@ -94,6 +111,11 @@ export function buildAgentSpec(
       linearAuthz: options?.linear?.authz,
       relevantFiles: subTask.filesHint,
     },
+    // We don't have a 'prompt' field in AgentSpec directly, it's constructed in waves.ts.
+    // Wait, AgentSpec is just config. The prompt is built in runWaves.
+    // So we shouldn't add it here, or we should add a field for 'additionalInstructions'.
+    // But AgentSpec doesn't have it.
+    // I should update runWaves to include this instruction.
   };
 }
 
@@ -102,7 +124,9 @@ export function planWaves(
   options?: { maxParallel?: number }
 ): WavePlan[] {
   const maxParallel = Math.max(1, options?.maxParallel ?? 2);
-  if (subTasks.length === 0) return [];
+  if (subTasks.length === 0) {
+    return [];
+  }
 
   const byId = new Map<SubTaskId, SubTask>();
   for (const task of subTasks) {
@@ -122,10 +146,15 @@ export function planWaves(
   // Stable order: higher priority first, then id.
   const sortReady = () => {
     ready.sort((a, b) => {
-      const ta = byId.get(a)!;
-      const tb = byId.get(b)!;
+      const ta = byId.get(a);
+      const tb = byId.get(b);
+      if (!(ta && tb)) {
+        return 0;
+      }
       const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
-      if (diff !== 0) return diff;
+      if (diff !== 0) {
+        return diff;
+      }
       return a.localeCompare(b);
     });
   };
@@ -140,8 +169,12 @@ export function planWaves(
     const currentWaveTasks: SubTaskId[] = [];
     while (ready.length > 0 && currentWaveTasks.length < maxParallel) {
       const id = ready.shift();
-      if (!id) break;
-      if (scheduled.has(id)) continue;
+      if (!id) {
+        break;
+      }
+      if (scheduled.has(id)) {
+        continue;
+      }
       currentWaveTasks.push(id);
       scheduled.add(id);
     }
@@ -154,10 +187,16 @@ export function planWaves(
     const dependsOn: WaveId[] = [];
     for (const taskId of currentWaveTasks) {
       const deps = graph.get(taskId);
-      if (!deps) continue;
+      if (!deps) {
+        continue;
+      }
       for (const dep of deps) {
         const depWave = waves.find((w) => w.agents.includes(dep));
-        if (depWave && depWave.id !== waveId && !dependsOn.includes(depWave.id)) {
+        if (
+          depWave &&
+          depWave.id !== waveId &&
+          !dependsOn.includes(depWave.id)
+        ) {
           dependsOn.push(depWave.id);
         }
       }
@@ -191,10 +230,15 @@ export function planWaves(
       }
     }
     remaining.sort((a, b) => {
-      const ta = byId.get(a)!;
-      const tb = byId.get(b)!;
+      const ta = byId.get(a);
+      const tb = byId.get(b);
+      if (!(ta && tb)) {
+        return 0;
+      }
       const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
-      if (diff !== 0) return diff;
+      if (diff !== 0) {
+        return diff;
+      }
       return a.localeCompare(b);
     });
     if (remaining.length > 0) {
@@ -213,7 +257,9 @@ function buildDepGraph(subTasks: SubTask[]): Map<SubTaskId, Set<SubTaskId>> {
   return graph;
 }
 
-function computeInDegree(graph: Map<SubTaskId, Set<SubTaskId>>): Map<SubTaskId, number> {
+function computeInDegree(
+  graph: Map<SubTaskId, Set<SubTaskId>>
+): Map<SubTaskId, number> {
   const inDegree = new Map<SubTaskId, number>();
   for (const [task, deps] of graph.entries()) {
     inDegree.set(task, deps.size);

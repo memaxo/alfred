@@ -1,9 +1,9 @@
-import { desc, eq, and, sql, inArray } from "drizzle-orm";
 import { db } from "@alfred/db";
-import { memoryNodes, memoryEdges } from "@alfred/db/schema/graph";
+import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
-type NodeRow = typeof memoryNodes.$inferSelect;
-type EdgeRow = typeof memoryEdges.$inferSelect;
+// type NodeRow = typeof memoryNodes.$inferSelect;
+// type EdgeRow = typeof memoryEdges.$inferSelect;
 
 export type SimilarTaskResult = {
   nodeId: string;
@@ -41,7 +41,9 @@ export async function findSimilarCodexExecutions(
 
   for (const node of executions) {
     const props = node.properties as Record<string, unknown> | null;
-    if (!props) continue;
+    if (!props) {
+      continue;
+    }
 
     const sessionId =
       typeof props.sessionId === "string" ? props.sessionId : null;
@@ -58,8 +60,7 @@ export async function findSimilarCodexExecutions(
     const matchCount = keywords.filter((keyword) =>
       labelLower.includes(keyword)
     ).length;
-    const similarity =
-      keywords.length > 0 ? matchCount / keywords.length : 0;
+    const similarity = keywords.length > 0 ? matchCount / keywords.length : 0;
 
     if (similarity > 0) {
       results.push({
@@ -154,7 +155,9 @@ export async function buildCodexLearningContext(
   let tokenEstimate = 0;
 
   for (const task of similar) {
-    if (!task.result) continue;
+    if (!task.result) {
+      continue;
+    }
 
     const snippet = task.result.substring(0, 500);
     const section = `[Similar Task - ${task.auto ?? "unknown"} autonomy]
@@ -181,4 +184,3 @@ ${sections.join("\n\n")}
 [End Past Context]
 `;
 }
-

@@ -73,7 +73,9 @@ describe("buildMergePlan", () => {
 });
 
 describe("generateMergeExecPlanSkeleton", () => {
-  const { generateMergeExecPlanSkeleton } = require("@alfred/agent/orchestrator/multi/merge");
+  const {
+    generateMergeExecPlanSkeleton,
+  } = require("@alfred/agent/orchestrator/multi/merge");
 
   it("generates expected markdown structure", () => {
     const plan = {
@@ -82,7 +84,7 @@ describe("generateMergeExecPlanSkeleton", () => {
       strategy: "direct",
     };
     const md = generateMergeExecPlanSkeleton("run-abc", plan);
-    
+
     expect(md).toContain("# Merge ExecPlan for run run-abc");
     expect(md).toContain("Merging 2 files");
     expect(md).toContain("- a.ts");

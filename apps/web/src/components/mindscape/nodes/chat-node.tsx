@@ -1,6 +1,6 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
-import { Mic } from "lucide-react";
+import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import {
   Conversation,
@@ -17,14 +17,20 @@ import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useMindscapeExecutor } from "@/hooks/use-mindscape-executor";
-import { chatNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
+import { chatNodeDataSchema } from "@/store/mindscape.schemas";
+import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 
 export function ChatNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   // Validate and parse node data
   const result = chatNodeDataSchema.safeParse(data);
-  const validatedData = result.success ? result.data : { messages: undefined, error: undefined };
+  const validatedData = result.success
+    ? result.data
+    : { messages: undefined, error: undefined };
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -78,6 +84,29 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     },
     [sendToChat, startWorkflow]
   );
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-purple-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-purple-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-purple-500/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+          <MessageSquare className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          Neural Stream
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "bun:test";
-import { describeSqlite } from "@alfred/db/testing";
+import { expect, it } from "bun:test";
 import { graphRepo } from "@alfred/db";
+import { describeSqlite } from "@alfred/db/testing";
 import { runQuery } from "../src/query";
 
 type NodeSeed = {
@@ -50,8 +50,8 @@ describeSqlite("graph.runQuery traverse with sqlite driver", () => {
       {
         resource,
         hash: "edge-a-b",
-        fromId: a!.id,
-        toId: b!.id,
+        fromId: a?.id,
+        toId: b?.id,
         kind: "relates_to",
         weight: 1,
       },
@@ -62,7 +62,7 @@ describeSqlite("graph.runQuery traverse with sqlite driver", () => {
     const result = await runQuery(
       {
         kind: "traverse",
-        nodeId: a!.id,
+        nodeId: a?.id,
         direction: "out",
         resource,
         limit: 10,
@@ -76,4 +76,3 @@ describeSqlite("graph.runQuery traverse with sqlite driver", () => {
     expect(result.edges?.length ?? 0).toBe(1);
   });
 });
-

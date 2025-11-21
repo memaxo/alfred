@@ -15,10 +15,10 @@ beforeEach(() => {
   if (originalFetch) {
     globalThis.fetch = originalFetch;
   } else {
-    delete (globalThis as { fetch?: typeof fetch }).fetch;
+    (globalThis as { fetch?: typeof fetch }).fetch = undefined;
   }
   if (originalApiKey === undefined) {
-    delete process.env.COHERE_API_KEY;
+    process.env.COHERE_API_KEY = undefined;
   } else {
     process.env.COHERE_API_KEY = originalApiKey;
   }
@@ -29,10 +29,10 @@ afterEach(() => {
   if (originalFetch) {
     globalThis.fetch = originalFetch;
   } else {
-    delete (globalThis as { fetch?: typeof fetch }).fetch;
+    (globalThis as { fetch?: typeof fetch }).fetch = undefined;
   }
   if (originalApiKey === undefined) {
-    delete process.env.COHERE_API_KEY;
+    process.env.COHERE_API_KEY = undefined;
   } else {
     process.env.COHERE_API_KEY = originalApiKey;
   }
@@ -40,7 +40,7 @@ afterEach(() => {
 
 describe("rerank telemetry", () => {
   it("invokes success telemetry when API key is missing", async () => {
-    delete process.env.COHERE_API_KEY;
+    process.env.COHERE_API_KEY = undefined;
     const onSuccess = vi.fn();
 
     const results = await rerank({

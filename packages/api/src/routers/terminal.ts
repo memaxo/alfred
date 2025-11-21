@@ -1,9 +1,9 @@
+import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import * as pty from "node-pty";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
-import { logger } from "../utils/logger";
 
 // In-memory store for PTY sessions
 // In a distributed system, this would need to be redis/etc, but for local/single-instance it's fine.
@@ -50,8 +50,8 @@ export const terminalRouter: ReturnType<typeof router> = router({
 
   events: authedProcedure
     .input(z.object({ sessionId: z.string() }))
-    .subscription(({ input }) => {
-      return observable<string>((emit) => {
+    .subscription(({ input }) =>
+      observable<string>((emit) => {
         const ptyProcess = sessions.get(input.sessionId);
         if (!ptyProcess) {
           emit.error(
@@ -75,8 +75,8 @@ export const terminalRouter: ReturnType<typeof router> = router({
           onData.dispose();
           onExit.dispose();
         };
-      });
-    }),
+      })
+    ),
 
   write: authedProcedure
     .input(z.object({ sessionId: z.string(), data: z.string() }))

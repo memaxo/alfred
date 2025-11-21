@@ -1,19 +1,19 @@
 import { getPreferences as getUserPreferences } from "@alfred/db/repo/user";
 import { logger } from "@alfred/metrics";
 import {
-  preferenceKeySchema,
-  preferenceSourceSchema,
-  preferenceValueSchema,
   type DomainName,
   type PreferenceDetail,
   type PreferenceKey,
+  preferenceKeySchema,
+  preferenceSourceSchema,
+  preferenceValueSchema,
 } from "@alfred/type/preference";
 import { RedisClient } from "bun";
 import { LRUCache } from "lru-cache";
 
 import { loadDomainDefaults } from "./defaults";
 
-const L1_CAPACITY = 1_000;
+const L1_CAPACITY = 1000;
 const L1_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const L2_TTL_SECONDS = 10 * 60; // 10 minutes
 const CACHE_CHANNEL = "preference:invalidate";
@@ -251,10 +251,10 @@ function deserializePreferences(
   serialized: string
 ): Map<PreferenceKey, PreferenceDetail> | null {
   try {
-    const entries = JSON.parse(serialized) as Array<[
+    const entries = JSON.parse(serialized) as [
       PreferenceKey,
-      PreferenceDetail
-    ]>;
+      PreferenceDetail,
+    ][];
     const result = new Map<PreferenceKey, PreferenceDetail>();
     for (const [key, detail] of entries) {
       const parsedKey = preferenceKeySchema.safeParse(key);

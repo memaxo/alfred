@@ -1,17 +1,17 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { join, delimiter as pathDelimiter } from "node:path";
-import os from "node:os";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
 import {
-  createTempDir,
-  createFakeExecutable,
-  saveEnvVars,
-  restoreEnvVars,
-  hasUv,
-  createTestVenv,
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
+import {
   cleanupTestVenv,
+  createFakeExecutable,
+  createTestVenv,
+  hasUv,
+  restoreEnvVars,
+  saveEnvVars,
 } from "./utils/python-helpers";
 
 const { resolvePythonExecutable } = __internals;
@@ -49,11 +49,13 @@ describe("Python Executable Resolution", () => {
         // Create fake UV in temp bin
         const tempBin = join(tempVoiceDir, "bin");
         createFakeExecutable(tempBin, "uv");
-        process.env.PATH = [tempBin, process.env.PATH].filter(Boolean).join(pathDelimiter);
+        process.env.PATH = [tempBin, process.env.PATH]
+          .filter(Boolean)
+          .join(pathDelimiter);
       }
 
       process.env.VOICE_USE_UV = "true";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       const result = await resolvePythonExecutable(processInstance)();
 
@@ -68,11 +70,13 @@ describe("Python Executable Resolution", () => {
       if (!uvAvailable) {
         const tempBin = join(tempVoiceDir, "bin");
         createFakeExecutable(tempBin, "uv");
-        process.env.PATH = [tempBin, process.env.PATH].filter(Boolean).join(pathDelimiter);
+        process.env.PATH = [tempBin, process.env.PATH]
+          .filter(Boolean)
+          .join(pathDelimiter);
       }
 
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       const result = await resolvePythonExecutable(processInstance)();
 
@@ -84,11 +88,13 @@ describe("Python Executable Resolution", () => {
       if (!uvAvailable) {
         const tempBin = join(tempVoiceDir, "bin");
         createFakeExecutable(tempBin, "uv");
-        process.env.PATH = [tempBin, process.env.PATH].filter(Boolean).join(pathDelimiter);
+        process.env.PATH = [tempBin, process.env.PATH]
+          .filter(Boolean)
+          .join(pathDelimiter);
       }
 
       process.env.VOICE_USE_UV = "true";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       const result = await resolvePythonExecutable(processInstance)();
 
@@ -101,20 +107,22 @@ describe("Python Executable Resolution", () => {
   describe("Virtual Environment Path", () => {
     it("should use venv Python when .venv exists", async () => {
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       const venvPython = createTestVenv(tempVoiceDir);
 
       const result = await resolvePythonExecutable(processInstance)();
 
       expect(result.cmd[0]).toBe(venvPython);
-      expect(result.cmd[1]).toBe(join(tempVoiceDir, "scripts", "stt_server.py"));
+      expect(result.cmd[1]).toBe(
+        join(tempVoiceDir, "scripts", "stt_server.py")
+      );
       expect(result.cwd).toBe(originalCwd);
     });
 
     it("should skip venv when VOICE_USE_UV=false and venv missing", async () => {
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       // Ensure .venv does not exist
       cleanupTestVenv(tempVoiceDir);
@@ -126,11 +134,11 @@ describe("Python Executable Resolution", () => {
 
     it("should handle platform-specific venv paths", async () => {
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       const venvPython = createTestVenv(tempVoiceDir);
 
-      const result = await resolvePythonExecutable(processInstance)();
+      const _result = await resolvePythonExecutable(processInstance)();
 
       if (process.platform === "win32") {
         expect(venvPython).toContain("Scripts");
@@ -145,7 +153,7 @@ describe("Python Executable Resolution", () => {
   describe("System Python Fallback", () => {
     it("should use system Python when UV and venv unavailable", async () => {
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
       // Ensure UV not available and venv missing
       cleanupTestVenv(tempVoiceDir);
@@ -178,7 +186,9 @@ describe("Python Executable Resolution", () => {
       if (!uvAvailable) {
         const tempBin = join(tempVoiceDir, "bin");
         createFakeExecutable(tempBin, "uv");
-        process.env.PATH = [tempBin, process.env.PATH].filter(Boolean).join(pathDelimiter);
+        process.env.PATH = [tempBin, process.env.PATH]
+          .filter(Boolean)
+          .join(pathDelimiter);
       }
 
       process.env.VOICE_USE_UV = "true";
@@ -190,9 +200,9 @@ describe("Python Executable Resolution", () => {
 
     it("should set process.cwd() for venv/system Python", async () => {
       process.env.VOICE_USE_UV = "false";
-      delete process.env.PYTHON_PATH;
+      process.env.PYTHON_PATH = undefined;
 
-      const venvPython = createTestVenv(tempVoiceDir);
+      const _venvPython = createTestVenv(tempVoiceDir);
 
       const result = await resolvePythonExecutable(processInstance)();
 
@@ -200,4 +210,3 @@ describe("Python Executable Resolution", () => {
     });
   });
 });
-

@@ -1,7 +1,7 @@
-import type { inferRouterOutputs } from "@trpc/server";
 import { useNavigate } from "@tanstack/react-router";
+import type { inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
-import type { ReactNode } from "react";
+import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,13 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BiolumBadge } from "@/components/tremor";
-import { WorkflowErrorPanel, type WorkflowError } from "@/components/workflow-error-panel";
+import { WorkflowErrorPanel } from "@/components/workflow-error-panel";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { trpc } from "@/utils/trpc";
 
-type WorkflowRun = inferRouterOutputs<TRPCAppRouter>["workflow"]["listRuns"][number];
-type WorkflowReasoningResult = inferRouterOutputs<TRPCAppRouter>["workflow"]["reasoning"];
+type WorkflowRun =
+  inferRouterOutputs<TRPCAppRouter>["workflow"]["listRuns"][number];
+type WorkflowReasoningResult =
+  inferRouterOutputs<TRPCAppRouter>["workflow"]["reasoning"];
 type WorkflowEvents = inferRouterOutputs<TRPCAppRouter>["workflow"]["events"];
 
 export type WorkflowDetailModalProps = {
@@ -30,6 +31,7 @@ export function WorkflowDetailModal({
   open,
   onClose,
 }: WorkflowDetailModalProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
     workflow?.status === "failed" ? "error" : "overview"
   );
@@ -47,29 +49,44 @@ export function WorkflowDetailModal({
   const ragDocs: WorkflowReasoningResult["provenance"]["ragDocuments"] =
     reasoningQuery.data?.provenance?.ragDocuments ?? [];
   const reasoningError = reasoningQuery.isError ? reasoningQuery.error : null;
+  const handleNavigateToMindscape = (documentId: string) => {
+    navigate({
+      to: "/mindscape",
+      search: (prev) => ({
+        ...prev,
+        ragDoc: documentId,
+      }),
+    });
+    onClose();
+  };
 
   if (!workflow) {
     return null;
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-4xl rounded-3xl border border-white/10 bg-void-surface/90 backdrop-blur-xl shadow-none">
+    <Dialog onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
+      <DialogContent className="max-w-4xl rounded-3xl border border-white/10 bg-void-surface/90 shadow-none backdrop-blur-xl">
         <WorkflowDetailContent
-          workflow={workflow}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
           events={events}
           eventsLoading={eventsQuery.isLoading}
-          ragDocs={ragDocs}
-          reasoningLoading={reasoningQuery.isLoading}
-          reasoningError={reasoningError}
           footer={
-            <Button onClick={onClose} variant="outline" className="rounded-full">
+            <Button
+              className="rounded-full"
+              onClick={onClose}
+              variant="outline"
+            >
               Close
             </Button>
           }
           onMindscapeNavigate={onClose}
+          onNavigateToMindscape={handleNavigateToMindscape}
+          onTabChange={setActiveTab}
+          ragDocs={ragDocs}
+          reasoningError={reasoningError}
+          reasoningLoading={reasoningQuery.isLoading}
+          workflow={workflow}
         />
       </DialogContent>
     </Dialog>
@@ -87,6 +104,7 @@ type WorkflowDetailContentProps = {
   reasoningError: Error | null;
   footer?: React.ReactNode;
   onMindscapeNavigate?: () => void;
+  onNavigateToMindscape?: (documentId: string) => void;
 };
 
 export function WorkflowDetailContent({
@@ -100,8 +118,8 @@ export function WorkflowDetailContent({
   reasoningError,
   footer,
   onMindscapeNavigate,
+  onNavigateToMindscape,
 }: WorkflowDetailContentProps) {
-  const navigate = useNavigate();
   const showErrorTab = workflow.status === "failed";
 
   return (
@@ -132,38 +150,38 @@ export function WorkflowDetailContent({
         </div>
       </DialogHeader>
 
-      <div className="flex gap-2 border-b border-white/10">
+      <div className="flex gap-2 border-white/10 border-b">
         <button
-          type="button"
-          onClick={() => onTabChange("overview")}
           className={`px-4 py-2 text-sm transition-colors ${
             activeTab === "overview"
-              ? "border-b-2 border-biolum text-biolum"
+              ? "border-biolum border-b-2 text-biolum"
               : "text-biolum-dim hover:text-biolum"
           }`}
+          onClick={() => onTabChange("overview")}
+          type="button"
         >
           Overview
         </button>
         <button
-          type="button"
-          onClick={() => onTabChange("events")}
           className={`px-4 py-2 text-sm transition-colors ${
             activeTab === "events"
-              ? "border-b-2 border-biolum text-biolum"
+              ? "border-biolum border-b-2 text-biolum"
               : "text-biolum-dim hover:text-biolum"
           }`}
+          onClick={() => onTabChange("events")}
+          type="button"
         >
           Events ({events.length})
         </button>
         {showErrorTab && (
           <button
-            type="button"
-            onClick={() => onTabChange("error")}
             className={`px-4 py-2 text-sm transition-colors ${
               activeTab === "error"
-                ? "border-b-2 border-red-400 text-red-400"
+                ? "border-red-400 border-b-2 text-red-400"
                 : "text-biolum-dim hover:text-red-400"
             }`}
+            onClick={() => onTabChange("error")}
+            type="button"
           >
             Error Details
           </button>
@@ -195,7 +213,7 @@ export function WorkflowDetailContent({
               {workflow.errorMessage && (
                 <div className="md:col-span-2">
                   <h4 className="text-red-400 text-sm">Error</h4>
-                  <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/30">
+                  <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-400 text-sm">
                     {workflow.errorMessage}
                   </p>
                 </div>
@@ -203,7 +221,7 @@ export function WorkflowDetailContent({
               {workflow.linearSessionId && (
                 <div className="md:col-span-2">
                   <h4 className="text-biolum-dim text-sm">Linear Session</h4>
-                  <p className="text-biolum text-sm font-mono">
+                  <p className="font-mono text-biolum text-sm">
                     {workflow.linearSessionId}
                   </p>
                   {workflow.linearSpace && (
@@ -217,17 +235,17 @@ export function WorkflowDetailContent({
 
             {workflow.inputData && (
               <div>
-                <h4 className="text-biolum-dim text-sm mb-2">Input Data</h4>
-                <pre className="text-biolum text-xs bg-void-surface/40 p-4 rounded-xl overflow-x-auto font-mono border border-white/10">
+                <h4 className="mb-2 text-biolum-dim text-sm">Input Data</h4>
+                <pre className="overflow-x-auto rounded-xl border border-white/10 bg-void-surface/40 p-4 font-mono text-biolum text-xs">
                   {JSON.stringify(workflow.inputData, null, 2)}
                 </pre>
               </div>
             )}
 
-            <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur p-4">
+            <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h4 className="text-biolum text-sm font-medium">
+                  <h4 className="font-medium text-biolum text-sm">
                     RAG Provenance
                   </h4>
                   <p className="text-biolum-dim text-xs">
@@ -251,30 +269,24 @@ export function WorkflowDetailContent({
                   <ul className="space-y-2">
                     {ragDocs.map((doc) => (
                       <li
-                        key={doc.documentId}
                         className="rounded-2xl border border-white/10 bg-white/5 p-3"
+                        key={doc.documentId}
                       >
-                        <p className="text-biolum text-sm font-medium">
+                        <p className="font-medium text-biolum text-sm">
                           {doc.label || "Document"}
                         </p>
-                        <p className="text-biolum-faint font-mono text-xs">
+                        <p className="font-mono text-biolum-faint text-xs">
                           {doc.documentId.slice(0, 8)}…
                         </p>
                         <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="mt-2 h-7 px-2 text-xs text-biolum"
+                          className="mt-2 h-7 px-2 text-biolum text-xs"
                           onClick={() => {
-                            navigate({
-                              to: "/mindscape",
-                              search: (prev) => ({
-                                ...prev,
-                                ragDoc: doc.documentId,
-                              }),
-                            });
+                            onNavigateToMindscape?.(doc.documentId);
                             onMindscapeNavigate?.();
                           }}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
                         >
                           View in Mindscape
                         </Button>
@@ -290,28 +302,34 @@ export function WorkflowDetailContent({
         {activeTab === "events" && (
           <div className="p-4">
             {eventsLoading ? (
-              <p className="text-biolum-dim text-center py-8">Loading events...</p>
+              <p className="py-8 text-center text-biolum-dim">
+                Loading events...
+              </p>
             ) : events.length === 0 ? (
-              <p className="text-biolum-dim text-center py-8">No events recorded.</p>
+              <p className="py-8 text-center text-biolum-dim">
+                No events recorded.
+              </p>
             ) : (
               <div className="space-y-2">
                 {events.map((event) => (
                   <div
-                    key={event.id}
                     className="rounded-xl border border-white/10 bg-void-surface/20 p-4"
+                    key={event.id}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-biolum text-sm font-medium">
+                          <span className="font-medium text-biolum text-sm">
                             {event.eventType}
                           </span>
                           <span className="text-biolum-faint text-xs">
-                            {new Date(event.timestamp ?? "").toLocaleTimeString()}
+                            {new Date(
+                              event.timestamp ?? ""
+                            ).toLocaleTimeString()}
                           </span>
                         </div>
                         {event.eventData && (
-                          <pre className="text-biolum-dim text-xs mt-2 overflow-x-auto font-mono">
+                          <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
                             {JSON.stringify(event.eventData, null, 2)}
                           </pre>
                         )}
@@ -329,7 +347,7 @@ export function WorkflowDetailContent({
             <WorkflowErrorPanel
               error={{
                 message: workflow.errorMessage ?? "Unknown error",
-                timestamp: workflow.completedAt?.toISOString(),
+                timestamp: normalizeTimestamp(workflow.completedAt),
               }}
               runId={workflow.id}
             />
@@ -338,10 +356,25 @@ export function WorkflowDetailContent({
       </div>
 
       {footer && (
-        <div className="flex gap-2 justify-end border-t border-white/10 pt-4">
+        <div className="flex justify-end gap-2 border-white/10 border-t pt-4">
           {footer}
         </div>
       )}
     </>
   );
+}
+
+function normalizeTimestamp(
+  value: WorkflowRun["completedAt"]
+): string | undefined {
+  if (!value) {
+    return;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return;
 }

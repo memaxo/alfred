@@ -1,16 +1,16 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
+  getOrchestratorAgentDefaultsMock,
+  resetAgentMocks,
+} from "./utils/agent-mock";
+import { metricsStub } from "./utils/mock-metrics";
+import {
   mockGenerateText,
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
-import {
-  getOrchestratorAgentDefaultsMock,
-  resetAgentMocks,
-} from "./utils/agent-mock";
-import { metricsStub } from "./utils/mock-metrics";
 
 setupTestEnv();
 mockPolicyAudit();

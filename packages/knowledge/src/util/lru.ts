@@ -9,7 +9,7 @@ export class LRUCache<K, V> {
   get(key: K): V | undefined {
     const value = this.map.get(key);
     if (value === undefined) {
-      return undefined;
+      return;
     }
     this.map.delete(key);
     this.map.set(key, value);

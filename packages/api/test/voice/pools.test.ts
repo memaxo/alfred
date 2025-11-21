@@ -1,5 +1,9 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { initializeVoicePools, getVoicePools, shutdownVoicePools } from "../../src/voice/pools";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+  getVoicePools,
+  initializeVoicePools,
+  shutdownVoicePools,
+} from "../../src/voice/pools";
 
 describe("Voice Pools Integration", () => {
   beforeEach(async () => {
@@ -35,7 +39,7 @@ describe("Voice Pools Integration", () => {
 
   // Note: Full integration test would require Python dependencies and models
   // This is a placeholder structure for when those are available
-  it.skip("should initialize pools with local provider", async () => {
+  it("should initialize pools with local provider", async () => {
     const originalProvider = process.env.VOICE_PROVIDER;
     process.env.VOICE_PROVIDER = "local";
     process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
@@ -52,4 +56,3 @@ describe("Voice Pools Integration", () => {
     process.env.VOICE_PROVIDER = originalProvider;
   });
 });
-

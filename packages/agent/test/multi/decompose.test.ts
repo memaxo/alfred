@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import {
+  __internals,
+  decomposeTask,
+} from "@alfred/agent/orchestrator/multi/decompose";
 import type { ContextBundle } from "@alfred/type/plan";
-import { decomposeTask, __internals } from "@alfred/agent/orchestrator/multi/decompose";
 
 function makeBundle(paths: string[]): ContextBundle {
   return {
@@ -26,7 +29,7 @@ describe("decomposeTask", () => {
     });
 
     expect(tasks.length).toBe(1);
-    expect(tasks[0]!.deps).toEqual([]);
+    expect(tasks[0]?.deps).toEqual([]);
   });
 
   it("creates backend and frontend subtasks with deps", () => {
@@ -47,11 +50,12 @@ describe("decomposeTask", () => {
     expect(backend).toBeDefined();
     expect(frontend).toBeDefined();
 
-    if (!backend || !frontend) return;
+    if (!(backend && frontend)) {
+      return;
+    }
 
     // Frontend should depend on backend when both exist.
     expect(frontend.deps).toContain(backend.id);
-
   });
 
   it("is deterministic for same input", () => {

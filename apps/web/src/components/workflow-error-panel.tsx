@@ -42,20 +42,23 @@ const commonIssues: Record<string, string[]> = {
 
 function getSuggestedSolutions(errorMessage: string): string[] {
   const lowerMessage = errorMessage.toLowerCase();
-  
+
   if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
     return commonIssues.timeout;
   }
   if (lowerMessage.includes("auth") || lowerMessage.includes("unauthorized")) {
     return commonIssues.authentication;
   }
-  if (lowerMessage.includes("forbidden") || lowerMessage.includes("permission")) {
+  if (
+    lowerMessage.includes("forbidden") ||
+    lowerMessage.includes("permission")
+  ) {
     return commonIssues.permission;
   }
   if (lowerMessage.includes("network") || lowerMessage.includes("connect")) {
     return commonIssues.network;
   }
-  
+
   return [
     "Review the error details below",
     "Check workflow logs for more context",
@@ -82,12 +85,12 @@ export function WorkflowErrorPanel({
             <AlertCircle className="h-6 w-6 text-red-400" strokeWidth={1.5} />
           </div>
           <div className="flex-1">
-            <h3 className="text-red-400 text-lg font-medium tracking-tight">
+            <h3 className="font-medium text-lg text-red-400 tracking-tight">
               Workflow Failed
             </h3>
-            <p className="text-red-300 mt-1">{error.message}</p>
+            <p className="mt-1 text-red-300">{error.message}</p>
             {error.timestamp && (
-              <p className="text-red-400/60 text-xs mt-2">
+              <p className="mt-2 text-red-400/60 text-xs">
                 {new Date(error.timestamp).toLocaleString()}
               </p>
             )}
@@ -97,13 +100,13 @@ export function WorkflowErrorPanel({
       </div>
 
       {/* Suggested Solutions */}
-      <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
-        <h4 className="text-biolum text-sm font-medium mb-3">
+      <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
+        <h4 className="mb-3 font-medium text-biolum text-sm">
           Suggested Solutions
         </h4>
         <ul className="space-y-2">
           {suggestions.map((solution, idx) => (
-            <li key={idx} className="flex gap-2 text-biolum-dim text-sm">
+            <li className="flex gap-2 text-biolum-dim text-sm" key={idx}>
               <span className="text-biolum">•</span>
               {solution}
             </li>
@@ -113,26 +116,30 @@ export function WorkflowErrorPanel({
 
       {/* Affected Resources */}
       {(error.failedStep || error.failedTool) && (
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
-          <h4 className="text-biolum text-sm font-medium mb-3">
+        <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
+          <h4 className="mb-3 font-medium text-biolum text-sm">
             Affected Resources
           </h4>
           <div className="space-y-2 text-sm">
             {error.failedStep && (
               <div>
                 <span className="text-biolum-dim">Failed Step:</span>{" "}
-                <span className="text-biolum font-mono">{error.failedStep}</span>
+                <span className="font-mono text-biolum">
+                  {error.failedStep}
+                </span>
               </div>
             )}
             {error.failedTool && (
               <div>
                 <span className="text-biolum-dim">Failed Tool:</span>{" "}
-                <span className="text-biolum font-mono">{error.failedTool}</span>
+                <span className="font-mono text-biolum">
+                  {error.failedTool}
+                </span>
               </div>
             )}
             <div>
               <span className="text-biolum-dim">Run ID:</span>{" "}
-              <span className="text-biolum font-mono">{runId}</span>
+              <span className="font-mono text-biolum">{runId}</span>
             </div>
           </div>
         </div>
@@ -140,13 +147,13 @@ export function WorkflowErrorPanel({
 
       {/* Stack Trace (Collapsible) */}
       {error.stack && (
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl">
           <button
-            type="button"
+            className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-void-surface/60"
             onClick={() => setShowStack(!showStack)}
-            className="flex w-full items-center justify-between p-6 text-left hover:bg-void-surface/60 transition-colors"
+            type="button"
           >
-            <h4 className="text-biolum text-sm font-medium">Stack Trace</h4>
+            <h4 className="font-medium text-biolum text-sm">Stack Trace</h4>
             {showStack ? (
               <ChevronDown className="h-4 w-4 text-biolum-dim" />
             ) : (
@@ -154,8 +161,8 @@ export function WorkflowErrorPanel({
             )}
           </button>
           {showStack && (
-            <div className="border-t border-white/10 p-6">
-              <pre className="text-red-300 text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+            <div className="border-white/10 border-t p-6">
+              <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-red-300 text-xs">
                 {error.stack}
               </pre>
             </div>
@@ -165,13 +172,13 @@ export function WorkflowErrorPanel({
 
       {/* Context Data (Collapsible) */}
       {error.context && Object.keys(error.context).length > 0 && (
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl">
           <button
-            type="button"
+            className="flex w-full items-center justify-between p-6 text-left transition-colors hover:bg-void-surface/60"
             onClick={() => setShowContext(!showContext)}
-            className="flex w-full items-center justify-between p-6 text-left hover:bg-void-surface/60 transition-colors"
+            type="button"
           >
-            <h4 className="text-biolum text-sm font-medium">Context Data</h4>
+            <h4 className="font-medium text-biolum text-sm">Context Data</h4>
             {showContext ? (
               <ChevronDown className="h-4 w-4 text-biolum-dim" />
             ) : (
@@ -179,8 +186,8 @@ export function WorkflowErrorPanel({
             )}
           </button>
           {showContext && (
-            <div className="border-t border-white/10 p-6">
-              <pre className="text-biolum-dim text-xs font-mono overflow-x-auto">
+            <div className="border-white/10 border-t p-6">
+              <pre className="overflow-x-auto font-mono text-biolum-dim text-xs">
                 {JSON.stringify(error.context, null, 2)}
               </pre>
             </div>
@@ -190,4 +197,3 @@ export function WorkflowErrorPanel({
     </div>
   );
 }
-

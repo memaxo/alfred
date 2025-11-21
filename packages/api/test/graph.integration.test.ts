@@ -5,17 +5,16 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import "./utils/mock-hypergraph";
-import { RuntimeContext } from "@alfred/type/runtime-context";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import { eq } from "drizzle-orm";
-import { EMBEDDING_DIM } from "@alfred/embed";
 
 let persistHypergraphToDb: typeof import("@alfred/agent/assistant/hypergraph-bridge").persistHypergraphToDb;
 let graphRouter: typeof import("@alfred/api/routers/graph").graphRouter;
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
-let ingest: typeof import("@alfred/rag").ingest;
+let _ingest: typeof import("@alfred/rag").ingest;
 let setEmbeddingProvider: typeof import("@alfred/rag").setEmbeddingProvider;
 
 type SessionUser = {
@@ -78,7 +77,7 @@ describe("graph router integration (sqlite)", () => {
       "@alfred/agent/assistant/hypergraph-bridge"
     ));
     const ragModule = await import("@alfred/rag");
-    ingest = ragModule.ingest;
+    _ingest = ragModule.ingest;
     setEmbeddingProvider = ragModule.setEmbeddingProvider;
     const dbModule = await import("@alfred/db");
     db = dbModule.db;
@@ -90,7 +89,7 @@ describe("graph router integration (sqlite)", () => {
 
   afterAll(() => {
     if (ORIGINAL_DB_URL === undefined) {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = ORIGINAL_DB_URL;
     }
@@ -99,8 +98,8 @@ describe("graph router integration (sqlite)", () => {
   afterEach(async () => {
     // Reset RAG embedding provider between tests
     setEmbeddingProvider(null);
-    await db.delete(memoryEdges).execute();
-    await db.delete(memoryNodes).execute();
+    await db.delete(memoryEdges).run();
+    await db.delete(memoryNodes).run();
   });
 
   it("returns persisted edges via graph.getEdges", async () => {
@@ -142,8 +141,14 @@ describe("graph router integration (sqlite)", () => {
     const aNodeIds = await getNodeIds(resourceA);
     const bNodeIds = await getNodeIds(resourceB);
 
-    const edgesA = await caller.getEdges({ nodeIds: aNodeIds, resource: resourceA });
-    const edgesB = await caller.getEdges({ nodeIds: bNodeIds, resource: resourceB });
+    const edgesA = await caller.getEdges({
+      nodeIds: aNodeIds,
+      resource: resourceA,
+    });
+    const edgesB = await caller.getEdges({
+      nodeIds: bNodeIds,
+      resource: resourceB,
+    });
 
     expect(edgesA).toHaveLength(1);
     expect(edgesA[0]?.resource).toBe(resourceA);
@@ -154,8 +159,8 @@ describe("graph router integration (sqlite)", () => {
   it("creates edges via graph.connect on sqlite fallback", async () => {
     const resource = `graph-connect-${Date.now()}`;
     const graph = empty();
-    const source = graph.add(fact("Connect Source", 0.9, "integration"));
-    const target = graph.add(fact("Connect Target", 0.8, "integration"));
+    const _source = graph.add(fact("Connect Source", 0.9, "integration"));
+    const _target = graph.add(fact("Connect Target", 0.8, "integration"));
     await persistHypergraphToDb(graph, resource);
 
     const [fromId, toId] = await getNodeIds(resource);
@@ -185,7 +190,7 @@ describe("graph router integration (sqlite)", () => {
     const caller = createCaller();
 
     const source = `graph-prov-${Date.now()}`;
-    const content = "Graph router provenance test document.";
+    const _content = "Graph router provenance test document.";
 
     // Manually create a rag_document node under user resource to act as provenance anchor
     const ragInsert = await db
@@ -203,7 +208,10 @@ describe("graph router integration (sqlite)", () => {
       })
       .returning();
 
-    const ragNode = ragInsert[0]!;
+    const ragNode = ragInsert[0];
+    if (!ragNode) {
+      throw new Error("ragNode not found");
+    }
     const documentId = source;
 
     // Create a reasoning node manually under workspace resource
@@ -223,17 +231,20 @@ describe("graph router integration (sqlite)", () => {
       })
       .returning();
 
-    const reasoningNode = insertedNodes[0]!;
+    const reasoningNode = insertedNodes[0];
+    if (!reasoningNode) {
+      throw new Error("reasoningNode not found");
+    }
 
     // Create explains edge from rag_document -> reasoning node under user resource
     const [explains] = await db
       .insert(memoryEdges)
       .values({
-        fromId: ragNode!.id,
+        fromId: ragNode?.id,
         toId: reasoningNode.id,
         kind: "explains",
         resource: "user",
-        hash: `explains:${ragNode!.id}:${reasoningNode.id}`,
+        hash: `explains:${ragNode?.id}:${reasoningNode.id}`,
         weight: 1,
         metadata: {
           documentId,
@@ -257,15 +268,13 @@ describe("graph router integration (sqlite)", () => {
 
     const seenRag = result.nodes.some((node: any) => {
       const isRagDoc = node.kind === "rag_document";
-      const props = (node.properties ?? null) as
-        | Record<string, unknown>
-        | null;
+      const props = (node.properties ?? null) as Record<string, unknown> | null;
       return isRagDoc && props?.documentId === documentId;
     });
     expect(seenRag).toBe(true);
 
     const seenExplains = result.edges.some(
-      (edge: any) => edge.kind === "explains",
+      (edge: any) => edge.kind === "explains"
     );
     expect(seenExplains).toBe(true);
   });

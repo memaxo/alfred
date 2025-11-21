@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { RouteError } from "@/components/route-error";
-import { WelcomeStep } from "@/components/onboarding/welcome-step";
-import { PreferencesStep } from "@/components/onboarding/preferences-step";
-import { IntegrationsStep } from "@/components/onboarding/integrations-step";
-import { TourStep } from "@/components/onboarding/tour-step";
 import type { AutonomyLevel } from "@/components/autonomy-slider";
+import { IntegrationsStep } from "@/components/onboarding/integrations-step";
+import { PreferencesStep } from "@/components/onboarding/preferences-step";
+import { TourStep } from "@/components/onboarding/tour-step";
+import { WelcomeStep } from "@/components/onboarding/welcome-step";
+import { RouteError } from "@/components/route-error";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 
@@ -54,7 +54,7 @@ function OnboardingRoute() {
 
       toast.success("Welcome to ALFRED!");
       navigate({ to: "/mindscape" });
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to complete onboarding. Please try again.");
     }
   }, [autonomy, navigate, setPreference]);
@@ -66,29 +66,39 @@ function OnboardingRoute() {
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-void flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center bg-void p-6">
       <div className="w-full max-w-3xl space-y-6">
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-biolum-dim">Step {currentStep} of {TOTAL_STEPS}</span>
+            <span className="text-biolum-dim">
+              Step {currentStep} of {TOTAL_STEPS}
+            </span>
             <span className="text-biolum-dim">{Math.round(progress)}%</span>
           </div>
-          <div className="h-2 rounded-full bg-void-surface/40 overflow-hidden">
+          <div className="h-2 overflow-hidden rounded-full bg-void-surface/40">
             <div
               className="h-full bg-biolum transition-all duration-300"
-              style={{ width: `${progress}%`, boxShadow: "0 0 10px oklch(0.99 0 0 / 0.4)" }}
+              style={{
+                width: `${progress}%`,
+                boxShadow: "0 0 10px oklch(0.99 0 0 / 0.4)",
+              }}
             />
           </div>
         </div>
 
         {/* Step Content */}
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-8">
+        <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-8 backdrop-blur-xl">
           {currentStep === 1 && <WelcomeStep />}
           {currentStep === 2 && (
-            <PreferencesStep autonomy={autonomy} onAutonomyChange={setAutonomy} />
+            <PreferencesStep
+              autonomy={autonomy}
+              onAutonomyChange={setAutonomy}
+            />
           )}
-          {currentStep === 3 && <IntegrationsStep onSkip={handleSkipIntegrations} />}
+          {currentStep === 3 && (
+            <IntegrationsStep onSkip={handleSkipIntegrations} />
+          )}
           {currentStep === 4 && <TourStep onComplete={handleComplete} />}
         </div>
 
@@ -96,16 +106,16 @@ function OnboardingRoute() {
         {currentStep < TOTAL_STEPS && (
           <div className="flex justify-between">
             <Button
-              onClick={handlePrev}
-              variant="outline"
               className="rounded-full"
               disabled={currentStep === 1}
+              onClick={handlePrev}
+              variant="outline"
             >
               Previous
             </Button>
             <Button
-              onClick={currentStep === 3 ? handleSkipIntegrations : handleNext}
               className="rounded-full"
+              onClick={currentStep === 3 ? handleSkipIntegrations : handleNext}
             >
               {currentStep === 3 ? "Skip" : "Next"}
             </Button>

@@ -150,10 +150,18 @@ export async function listDeployments({
 } = {}) {
   let where;
   const predicates = [];
-  if (userId) predicates.push(eq(deployments.userId, userId));
-  if (app) predicates.push(eq(deployments.app, app));
-  if (type) predicates.push(eq(deployments.type, type));
-  if (status) predicates.push(eq(deployments.status, status));
+  if (userId) {
+    predicates.push(eq(deployments.userId, userId));
+  }
+  if (app) {
+    predicates.push(eq(deployments.app, app));
+  }
+  if (type) {
+    predicates.push(eq(deployments.type, type));
+  }
+  if (status) {
+    predicates.push(eq(deployments.status, status));
+  }
   if (predicates.length > 0) {
     where = predicates.length === 1 ? predicates[0] : and(...predicates);
   }

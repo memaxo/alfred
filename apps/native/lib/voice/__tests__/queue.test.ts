@@ -32,7 +32,9 @@ async function snapshotQueue(): Promise<PendingItem[]> {
 
 async function ageQueue(ms: number): Promise<void> {
   const snapshot = await snapshotQueue();
-  if (snapshot.length === 0) return;
+  if (snapshot.length === 0) {
+    return;
+  }
   const aged = snapshot.map((item) => ({
     ...item,
     ts: item.ts - ms,

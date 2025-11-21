@@ -49,7 +49,9 @@ describe("conflict.aggregateConflictMarkers", () => {
 });
 
 describe("conflict.generateConflictExecPlanSkeleton", () => {
-  const { generateConflictExecPlanSkeleton } = require("@alfred/agent/orchestrator/multi/conflict");
+  const {
+    generateConflictExecPlanSkeleton,
+  } = require("@alfred/agent/orchestrator/multi/conflict");
 
   it("generates expected markdown structure", () => {
     const result = {
@@ -66,4 +68,3 @@ describe("conflict.generateConflictExecPlanSkeleton", () => {
     expect(md).toContain("- [ ] (pending) Conflicts analysed.");
   });
 });
-

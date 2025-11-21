@@ -10,15 +10,22 @@ import type { UIMessage } from "@alfred/type/stream";
 import {
   extractStructuredData,
   isDataPartNamed,
+  isToolCallPart,
   isToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "./ai-elements/tool";
 import { Cite } from "./cite";
 import { Code } from "./code";
 import { Plan } from "./plan";
 import { Task } from "./task";
 import { Think } from "./think";
-import { Tool } from "./tool";
 
 function isPlanData(data: unknown): data is {
   requirement: string;
@@ -111,7 +118,10 @@ function isThinkData(data: unknown): data is Array<{
 
 type AssistantPart = AssistantUIMessage["parts"][number];
 
-type PartRenderer = (part: AssistantPart) => ReactNode | null;
+type PartRenderer = (
+  part: AssistantPart,
+  message: AssistantUIMessage
+) => ReactNode | null;
 
 const dataPartRenderers: PartRenderer[] = [
   (part) =>
@@ -138,14 +148,18 @@ const dataPartRenderers: PartRenderer[] = [
     ),
 ];
 
-const partRenderers: PartRenderer[] = [...dataPartRenderers, renderToolResult];
+const partRenderers: PartRenderer[] = [
+  ...dataPartRenderers,
+  renderToolCall,
+  renderToolResult,
+];
 
 export function renderAssistantPart(
   part: AssistantPart,
-  _message: AssistantUIMessage
+  message: AssistantUIMessage
 ): ReactNode {
   for (const renderer of partRenderers) {
-    const rendered = renderer(part);
+    const rendered = renderer(part, message);
     if (rendered) {
       return rendered;
     }
@@ -165,15 +179,60 @@ function renderStructuredPart(
   return render(data);
 }
 
-function renderToolResult(part: AssistantPart): ReactNode | null {
-  if (!isToolResultPart(part)) {
-    return null;
-  }
-  const output = part.output;
-  if (!output || typeof output !== "object") {
+function renderToolCall(
+  part: AssistantPart,
+  message: AssistantUIMessage
+): ReactNode | null {
+  if (!isToolCallPart(part)) {
     return null;
   }
 
+  // Look ahead for matching result
+  const resultPart = message.parts.find(
+    (p) => isToolResultPart(p) && p.toolCallId === part.toolCallId
+  );
+
+  const state = resultPart ? "output-available" : "input-available";
+
+  return (
+    <Tool defaultOpen={!resultPart}>
+      <ToolHeader state={state} title={part.toolName} type="tool-call" />
+      <ToolContent>
+        <ToolInput input={part.input} />
+        {resultPart && isToolResultPart(resultPart) ? (
+          <ToolOutput
+            errorText={undefined}
+            output={resultPart.output} // Errors not strictly typed in Part yet
+          />
+        ) : null}
+      </ToolContent>
+    </Tool>
+  );
+}
+
+function renderToolResult(
+  part: AssistantPart,
+  message: AssistantUIMessage
+): ReactNode | null {
+  if (!isToolResultPart(part)) {
+    return null;
+  }
+
+  // Check if we already rendered this in a tool-call block
+  const callPart = message.parts.find(
+    (p) => isToolCallPart(p) && p.toolCallId === part.toolCallId
+  );
+
+  // If we found the call part, suppress this standalone result
+  // (it was rendered inside the tool-call block)
+  if (callPart) {
+    return null;
+  }
+
+  // Orphaned result (e.g. history where call is missing)
+  const output = part.output;
+
+  // Fallback handling for structured data in output
   if (isPlanData(output)) {
     return <Plan plan={output} />;
   }
@@ -181,27 +240,17 @@ function renderToolResult(part: AssistantPart): ReactNode | null {
     return <Task {...output} />;
   }
 
-  const obj = output as Record<string, unknown>;
-  if (
-    typeof obj.name !== "string" ||
-    typeof obj.args !== "object" ||
-    obj.args === null
-  ) {
-    return null;
-  }
-
-  const validStatuses = ["pending", "running", "completed", "error"];
-  if (typeof obj.status !== "string" || !validStatuses.includes(obj.status)) {
-    return null;
-  }
-
   return (
-    <Tool
-      args={obj.args as Record<string, unknown>}
-      name={obj.name}
-      result={obj.result}
-      status={obj.status as "pending" | "running" | "completed" | "error"}
-    />
+    <Tool defaultOpen={true}>
+      <ToolHeader
+        state="output-available"
+        title={part.toolName ?? "Tool Result"}
+        type="tool-result"
+      />
+      <ToolContent>
+        <ToolOutput errorText={undefined} output={output} />
+      </ToolContent>
+    </Tool>
   );
 }
 
@@ -209,7 +258,4 @@ export const renderPart = (
   part: UIMessage["parts"][number],
   message: UIMessage
 ): ReactNode =>
-  renderAssistantPart(
-    part as AssistantPart,
-    message as AssistantUIMessage
-  );
+  renderAssistantPart(part as AssistantPart, message as AssistantUIMessage);

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
 import { latestNode, spawnNode } from "./helpers/mindscape";
 

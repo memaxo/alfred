@@ -1,9 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { join } from "node:path";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
+import {
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
 
-const { findUvPath, findVenvPython } = __internals;
+const { findUvPath } = __internals;
 
 describe("Cross-Platform Integration", () => {
   it("should use 'which' on Unix platforms", async () => {
@@ -53,7 +56,7 @@ describe("Cross-Platform Integration", () => {
       scriptPath: "/test/script.py",
       modelPath: "test-model",
     };
-    const processInstance = new ModelProcess(config);
+    const _processInstance = new ModelProcess(config);
 
     // Verify path construction (even if file doesn't exist)
     expect(expectedPath).toContain(".venv");
@@ -74,7 +77,7 @@ describe("Cross-Platform Integration", () => {
       scriptPath: "C:\\test\\script.py",
       modelPath: "test-model",
     };
-    const processInstance = new ModelProcess(config);
+    const _processInstance = new ModelProcess(config);
 
     // Verify path construction (even if file doesn't exist)
     expect(expectedPath).toContain(".venv");
@@ -83,10 +86,12 @@ describe("Cross-Platform Integration", () => {
   });
 
   it("should handle path separators correctly", () => {
-    const voiceDir = process.platform === "win32" ? "C:\\test\\voice" : "/test/voice";
-    const venvPath = process.platform === "win32"
-      ? join(voiceDir, ".venv", "Scripts", "python.exe")
-      : join(voiceDir, ".venv", "bin", "python");
+    const voiceDir =
+      process.platform === "win32" ? "C:\\test\\voice" : "/test/voice";
+    const venvPath =
+      process.platform === "win32"
+        ? join(voiceDir, ".venv", "Scripts", "python.exe")
+        : join(voiceDir, ".venv", "bin", "python");
 
     // join() should handle platform-specific separators
     if (process.platform === "win32") {
@@ -98,4 +103,3 @@ describe("Cross-Platform Integration", () => {
     }
   });
 });
-

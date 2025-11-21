@@ -1,9 +1,12 @@
+import type { AIAdapter } from "./ai-adapter";
+
 export class RuntimeContext<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
   private readonly map: Map<string, unknown>;
+  public ai?: AIAdapter;
 
-  constructor(entries: Array<[string, unknown]> = []) {
+  constructor(entries: [string, unknown][] = []) {
     this.map = new Map<string, unknown>();
     for (const [key, value] of entries) {
       this.map.set(String(key), value);
@@ -32,7 +35,7 @@ export class RuntimeContext<
     }
   }
 
-  entries(): Array<[string, unknown]> | IterableIterator<[string, unknown]> {
+  entries(): [string, unknown][] | IterableIterator<[string, unknown]> {
     return this.map.entries();
   }
 

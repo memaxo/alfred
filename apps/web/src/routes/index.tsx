@@ -1,13 +1,13 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
-import { MindscapeEngine } from '@/lib/mindscape/engine';
-import { fetchInitialMindscape } from './index.server';
-import { useVoiceSessionWeb } from '@/hooks/use-voice-session-web';
-import { trpc } from '@/utils/trpc';
-import { Mic, MicOff, Activity, Volume2 } from 'lucide-react';
-import { ScrambleText } from '@/components/scramble-text';
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Activity, Mic, MicOff, Volume2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ScrambleText } from "@/components/scramble-text";
+import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
+import { MindscapeEngine } from "@/lib/mindscape/engine";
+import { trpc } from "@/utils/trpc";
+import { fetchInitialMindscape } from "./index.server";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: Mindscape,
   loader: () => fetchInitialMindscape(),
 });
@@ -24,153 +24,197 @@ function Mindscape() {
 
   // Sync Agent State with Engine
   useEffect(() => {
-    if (!engineRef.current) return;
-    
+    if (!engineRef.current) {
+      return;
+    }
+
     if (voiceSession.state.isSpeaking) {
-        engineRef.current.setAgentState('speaking');
+      engineRef.current.setAgentState("speaking");
     } else if (voiceSession.state.isProcessing) {
-        engineRef.current.setAgentState('processing');
+      engineRef.current.setAgentState("processing");
     } else if (voiceSession.state.isRecording) {
-        engineRef.current.setAgentState('listening');
+      engineRef.current.setAgentState("listening");
     } else {
-        engineRef.current.setAgentState('idle');
+      engineRef.current.setAgentState("idle");
     }
   }, [voiceSession.state]);
 
   const handleEnter = () => {
     engineRef.current?.triggerWarp();
     setTimeout(() => {
-        navigate({ to: '/mindscape' });
+      navigate({ to: "/mindscape" });
     }, 800);
   };
 
   const toggleAudio = async () => {
-    if (!engineRef.current) return;
-    
+    if (!engineRef.current) {
+      return;
+    }
+
     if (!audioEnabled) {
-        await engineRef.current.enableAudio();
-        setAudioEnabled(true);
+      await engineRef.current.enableAudio();
+      setAudioEnabled(true);
     }
   };
-  
+
   const toggleVoiceSession = async () => {
-    if (voiceSession.state.isRecording || voiceSession.state.isProcessing || voiceSession.state.isSpeaking) {
-        voiceSession.clear();
+    if (
+      voiceSession.state.isRecording ||
+      voiceSession.state.isProcessing ||
+      voiceSession.state.isSpeaking
+    ) {
+      voiceSession.clear();
     } else {
-        await toggleAudio(); // Ensure mic is active for visualization too
-        await voiceSession.start();
+      await toggleAudio(); // Ensure mic is active for visualization too
+      await voiceSession.start();
     }
   };
 
   // Push-to-Talk
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-        // Only trigger if not in an input field
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Only trigger if not in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
 
-        if (e.code === 'Space' && !e.repeat && !voiceSession.state.isRecording && !voiceSession.state.isProcessing && !voiceSession.state.isSpeaking) {
-            e.preventDefault();
-            await toggleAudio(); // Ensure context is active
-            await voiceSession.start();
-        }
+      if (
+        e.code === "Space" &&
+        !e.repeat &&
+        !voiceSession.state.isRecording &&
+        !voiceSession.state.isProcessing &&
+        !voiceSession.state.isSpeaking
+      ) {
+        e.preventDefault();
+        await toggleAudio(); // Ensure context is active
+        await voiceSession.start();
+      }
     };
 
     const handleKeyUp = async (e: KeyboardEvent) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
 
-        if (e.code === 'Space' && voiceSession.state.isRecording) {
-            e.preventDefault();
-            await voiceSession.stopAndTranscribe();
-        }
+      if (e.code === "Space" && voiceSession.state.isRecording) {
+        e.preventDefault();
+        await voiceSession.stopAndTranscribe();
+      }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [voiceSession.state, audioEnabled]); // Re-bind when state changes
+  }, [
+    voiceSession.state,
+    toggleAudio,
+    voiceSession.start,
+    voiceSession.stopAndTranscribe,
+  ]); // Re-bind when state changes
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    
+    if (!canvasRef.current) {
+      return;
+    }
+
     // Initialize the engine - Takes over the DOM
     engineRef.current = new MindscapeEngine(canvasRef.current);
-    
+
     // Trigger fade in after a brief moment to allow engine to render first frame
     const timer = setTimeout(() => setIsLoaded(true), 100);
-    
+
     return () => {
-        engineRef.current?.destroy();
-        clearTimeout(timer);
+      engineRef.current?.destroy();
+      clearTimeout(timer);
     };
   }, []);
 
   return (
-    <div className="relative w-full h-screen bg-[oklch(0.05_0_0)] overflow-hidden cursor-none">
+    <div className="relative h-screen w-full cursor-none overflow-hidden bg-[oklch(0.05_0_0)]">
       {/* The Canvas Overlay (WebGPU) */}
-      <canvas 
-        ref={canvasRef} 
-        className={`absolute inset-0 w-full h-full z-10 transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+      <canvas
+        className={`absolute inset-0 z-10 h-full w-full transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+        ref={canvasRef}
       />
 
       {/* The SSR Static Layer (Immediate Visual) */}
-      <pre 
-        className="absolute inset-0 w-full h-full z-0 font-mono text-xs leading-none text-[oklch(0.14_0_0)] select-none pointer-events-none flex items-center justify-center whitespace-pre overflow-hidden"
+      <pre
         aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 flex h-full w-full select-none items-center justify-center overflow-hidden whitespace-pre font-mono text-[oklch(0.14_0_0)] text-xs leading-none"
       >
         {ascii}
       </pre>
 
       {/* UI Overlay */}
-      <div className="absolute z-20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mix-blend-screen pointer-events-auto cursor-auto">
-        <h1 className="font-sans text-6xl font-bold tracking-[-0.04em] text-transparent bg-clip-text bg-gradient-to-b from-[oklch(0.99_0_0)] to-[oklch(0.70_0_0)] mb-8">
+      <div className="-translate-x-1/2 -translate-y-1/2 pointer-events-auto absolute top-1/2 left-1/2 z-20 cursor-auto text-center mix-blend-screen">
+        <h1 className="mb-8 bg-gradient-to-b from-[oklch(0.99_0_0)] to-[oklch(0.70_0_0)] bg-clip-text font-bold font-sans text-6xl text-transparent tracking-[-0.04em]">
           ALFRED
         </h1>
-        
+
         <div className="flex flex-col items-center gap-6">
-            <button 
-                onClick={handleEnter}
-                className="px-6 py-2 rounded-full border border-[oklch(0.40_0_0)] text-[oklch(0.99_0_0)] hover:bg-[oklch(0.99_0_0)] hover:text-[oklch(0.05_0_0)] transition-all duration-300 tracking-tight"
+          <button
+            className="rounded-full border border-[oklch(0.40_0_0)] px-6 py-2 text-[oklch(0.99_0_0)] tracking-tight transition-all duration-300 hover:bg-[oklch(0.99_0_0)] hover:text-[oklch(0.05_0_0)]"
+            onClick={handleEnter}
+          >
+            ENTER MINDSCAPE
+          </button>
+
+          <div className="flex gap-4">
+            <button
+              className={`flex items-center gap-2 text-sm ${audioEnabled ? "text-[oklch(0.99_0_0)]" : "text-[oklch(0.40_0_0)]"} transition-colors hover:text-[oklch(0.99_0_0)]`}
+              onClick={toggleAudio}
+              title="Enable Audio Reactivity"
             >
-                ENTER MINDSCAPE
+              {audioEnabled ? (
+                <Activity className="h-4 w-4" />
+              ) : (
+                <Activity className="h-4 w-4 opacity-50" />
+              )}
             </button>
-            
-            <div className="flex gap-4">
-                <button
-                    onClick={toggleAudio}
-                    className={`flex items-center gap-2 text-sm ${audioEnabled ? 'text-[oklch(0.99_0_0)]' : 'text-[oklch(0.40_0_0)]'} hover:text-[oklch(0.99_0_0)] transition-colors`}
-                    title="Enable Audio Reactivity"
-                >
-                    {audioEnabled ? <Activity className="w-4 h-4" /> : <Activity className="w-4 h-4 opacity-50" />}
-                </button>
-                
-                <button
-                    onClick={toggleVoiceSession}
-                    className={`flex items-center gap-2 text-sm ${voiceSession.state.isRecording ? 'text-red-500 animate-pulse' : voiceSession.state.isProcessing ? 'text-blue-400' : 'text-[oklch(0.40_0_0)]'} hover:text-[oklch(0.99_0_0)] transition-colors`}
-                    title="Talk to Alfred"
-                >
-                    {voiceSession.state.isSpeaking ? <Volume2 className="w-4 h-4" /> : voiceSession.state.isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
+
+            <button
+              className={`flex items-center gap-2 text-sm ${voiceSession.state.isRecording ? "animate-pulse text-red-500" : voiceSession.state.isProcessing ? "text-blue-400" : "text-[oklch(0.40_0_0)]"} transition-colors hover:text-[oklch(0.99_0_0)]`}
+              onClick={toggleVoiceSession}
+              title="Talk to Alfred"
+            >
+              {voiceSession.state.isSpeaking ? (
+                <Volume2 className="h-4 w-4" />
+              ) : voiceSession.state.isRecording ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Minimal Transcript Display */}
+          {(voiceSession.state.transcript ||
+            voiceSession.lastResponse?.assistant.text) && (
+            <div className="mt-4 max-w-md rounded-2xl border border-[oklch(0.20_0_0)] bg-[oklch(0.05_0_0)]/80 p-4 text-left font-mono backdrop-blur-md">
+              {voiceSession.state.transcript && (
+                <p className="mb-2 text-[oklch(0.70_0_0)] text-sm">
+                  {"> "} <ScrambleText text={voiceSession.state.transcript} />
+                </p>
+              )}
+              {voiceSession.lastResponse && (
+                <p className="text-[oklch(0.99_0_0)] text-sm">
+                  <ScrambleText
+                    text={voiceSession.lastResponse.assistant.text}
+                  />
+                </p>
+              )}
             </div>
-            
-            {/* Minimal Transcript Display */}
-            {(voiceSession.state.transcript || voiceSession.lastResponse?.assistant.text) && (
-                <div className="mt-4 p-4 rounded-2xl border border-[oklch(0.20_0_0)] bg-[oklch(0.05_0_0)]/80 backdrop-blur-md max-w-md text-left font-mono">
-                    {voiceSession.state.transcript && (
-                        <p className="text-[oklch(0.70_0_0)] text-sm mb-2">
-                            {'> '} <ScrambleText text={voiceSession.state.transcript} />
-                        </p>
-                    )}
-                    {voiceSession.lastResponse && (
-                        <p className="text-[oklch(0.99_0_0)] text-sm">
-                            <ScrambleText text={voiceSession.lastResponse.assistant.text} />
-                        </p>
-                    )}
-                </div>
-            )}
+          )}
         </div>
       </div>
     </div>

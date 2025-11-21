@@ -1,9 +1,8 @@
 "use client";
 
+import { Check, ChevronsUpDown, Loader2, Pause, Play } from "lucide-react";
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2, Play, Pause } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,14 +17,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { toast } from "sonner";
 
-interface VoiceSelectorProps {
+type VoiceSelectorProps = {
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
-}
+};
 
 export function VoiceSelector({
   value,
@@ -34,23 +33,27 @@ export function VoiceSelector({
 }: VoiceSelectorProps) {
   const [open, setOpen] = React.useState(false);
   const [playingVoice, setPlayingVoice] = React.useState<string | null>(null);
-  const [audioElement, setAudioElement] = React.useState<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] =
+    React.useState<HTMLAudioElement | null>(null);
 
   const voicesQuery = trpc.voice.listVoices.useQuery();
   const previewMutation = trpc.voice.previewVoice.useMutation();
 
   const voices = voicesQuery.data ?? [];
-  const selectedVoice = voices.find((v) => v.id === value) ?? (value ? { id: value, name: value } : null);
+  const selectedVoice =
+    voices.find((v) => v.id === value) ??
+    (value ? { id: value, name: value } : null);
 
   // Cleanup audio on unmount
-  React.useEffect(() => {
-    return () => {
+  React.useEffect(
+    () => () => {
       if (audioElement) {
         audioElement.pause();
         audioElement.src = "";
       }
-    };
-  }, [audioElement]);
+    },
+    [audioElement]
+  );
 
   const handlePlayPreview = async (e: React.MouseEvent, voiceId: string) => {
     e.stopPropagation();
@@ -68,26 +71,28 @@ export function VoiceSelector({
 
     try {
       setPlayingVoice(voiceId); // Show loading/playing state
-      
+
       const result = await previewMutation.mutateAsync({
         voice: voiceId,
         text: "Hello, this is a preview of my voice.",
       });
 
-      const audio = new Audio(`data:${result.mimeType};base64,${result.audioBase64}`);
+      const audio = new Audio(
+        `data:${result.mimeType};base64,${result.audioBase64}`
+      );
       setAudioElement(audio);
-      
+
       audio.onended = () => {
         setPlayingVoice(null);
       };
-      
+
       audio.onerror = () => {
         setPlayingVoice(null);
         toast.error("Failed to play audio preview");
       };
 
       await audio.play();
-    } catch (error) {
+    } catch (_error) {
       setPlayingVoice(null);
       toast.error("Failed to load voice preview");
     }
@@ -96,14 +101,14 @@ export function VoiceSelector({
   const isLoading = voicesQuery.isLoading;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
           disabled={isLoading}
+          role="combobox"
+          variant="outline"
         >
           {selectedVoice ? (
             <span className="truncate">{selectedVoice.name}</span>
@@ -127,28 +132,32 @@ export function VoiceSelector({
             <CommandGroup>
               {voices.map((voice) => (
                 <CommandItem
+                  className="flex items-center gap-2"
                   key={voice.id}
-                  value={voice.id}
                   keywords={[voice.name]}
                   onSelect={(currentValue) => {
                     onValueChange?.(currentValue === value ? "" : currentValue);
                     setOpen(false);
                   }}
-                  className="flex items-center gap-2"
+                  value={voice.id}
                 >
                   <Button
-                    variant="ghost"
-                    size="icon"
                     className="h-6 w-6 shrink-0"
+                    disabled={
+                      previewMutation.isPending &&
+                      playingVoice === voice.id &&
+                      !audioElement
+                    }
                     onClick={(e) => handlePlayPreview(e, voice.id)}
-                    disabled={previewMutation.isPending && playingVoice === voice.id && !audioElement}
+                    size="icon"
+                    variant="ghost"
                   >
                     {playingVoice === voice.id ? (
-                       audioElement && !audioElement.paused ? (
-                         <Pause className="h-3 w-3" />
-                       ) : (
-                         <Loader2 className="h-3 w-3 animate-spin" />
-                       )
+                      audioElement && !audioElement.paused ? (
+                        <Pause className="h-3 w-3" />
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      )
                     ) : (
                       <Play className="h-3 w-3" />
                     )}

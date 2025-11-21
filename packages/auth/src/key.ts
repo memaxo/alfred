@@ -4,10 +4,10 @@
 
 import type { KeyLike } from "jose";
 
-export interface KeyPair {
+export type KeyPair = {
   privateKey: KeyLike;
   publicKey: KeyLike;
-}
+};
 
 export async function loadKeys(): Promise<KeyPair> {
   // TODO: [Phase 3] Load Ed25519 keys from env paths

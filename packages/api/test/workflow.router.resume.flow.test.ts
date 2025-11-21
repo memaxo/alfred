@@ -5,6 +5,7 @@ import "./utils/mock-metrics";
 import "./utils/mock-voice";
 import "./utils/mock-db-client";
 import { metricsStub } from "./utils/mock-metrics";
+
 // Also provide direct mocks here to be extra safe for source-path imports
 // Also mock the absolute source path resolution used by relative imports
 const metricsAbs = new URL("../../src/metrics.ts", import.meta.url).pathname;
@@ -15,11 +16,13 @@ mock.module("@alfred/api/src/metrics", () => ({
   ...metricsStub,
 }));
 // Also mock the runner using absolute source path because the router imports relatively
-const runnerAbs = new URL("../../src/workflow/runner.ts", import.meta.url).pathname;
+const runnerAbs = new URL("../../src/workflow/runner.ts", import.meta.url)
+  .pathname;
 mock.module(runnerAbs, () => ({
   runPlanV6: runPlanV6Mock,
 }));
-const runnerAbsJs = new URL("../../src/workflow/runner.js", import.meta.url).pathname;
+const runnerAbsJs = new URL("../../src/workflow/runner.js", import.meta.url)
+  .pathname;
 mock.module(runnerAbsJs, () => ({
   runPlanV6: runPlanV6Mock,
 }));
@@ -32,13 +35,23 @@ mock.module("@alfred/api/src/trpc", () => {
   const publicProcedure = base;
   const protectedProcedure = base.use((opts: any) => {
     if (!opts.ctx?.session) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "session_required",
+      });
     }
     return opts.next({ ctx: { ...opts.ctx, session: opts.ctx.session } });
   });
   const authedProcedure = protectedProcedure;
   const rateLimit = t.middleware(async ({ next }) => next());
-  return { t, router, publicProcedure, protectedProcedure, authedProcedure, rateLimit };
+  return {
+    t,
+    router,
+    publicProcedure,
+    protectedProcedure,
+    authedProcedure,
+    rateLimit,
+  };
 });
 // Import test helpers dynamically after mocks are registered
 let createTestCaller: typeof import("./utils/trpc")["createTestCaller"];
@@ -88,13 +101,18 @@ mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
 }));
 
-let caller: Awaited<ReturnType<typeof import("./utils/trpc")["createTestCaller"]>>;
+let caller: Awaited<
+  ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
+>;
 
 beforeAll(async () => {
   // Resolve dynamic imports after mocks are in place
   ({ createTestCaller } = await import("./utils/trpc"));
   ({ toObservable } = await import("./utils/stream"));
-  caller = await createTestCaller({ roles: ["user"], scopes: ["workflow.plan", "workflow.stream", "workflow.resume"] });
+  caller = await createTestCaller({
+    roles: ["user"],
+    scopes: ["workflow.plan", "workflow.stream", "workflow.resume"],
+  });
 });
 
 afterEach(() => {
@@ -103,7 +121,9 @@ afterEach(() => {
   updateRunMock.mockClear();
 });
 
-async function subscribeToStream(input: Parameters<(typeof caller)["workflow"]["stream"]>[0]) {
+async function _subscribeToStream(
+  input: Parameters<(typeof caller)["workflow"]["stream"]>[0]
+) {
   const events: WorkflowEvent[] = [];
   const sub: any = toObservable(caller.workflow.stream(input as any));
   await new Promise<void>((resolve, reject) => {
@@ -118,23 +138,32 @@ async function subscribeToStream(input: Parameters<(typeof caller)["workflow"]["
   return events;
 }
 
-describe.skip("workflow router resume flow (integration)", () => {
+describe("workflow router resume flow (integration)", () => {
   it("acknowledges deploy-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     // Prepare runner
-    let resumed = false;
+    let _resumed = false;
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-1",
       summary: "ok",
-      resume: async () => { resumed = true; },
+      resume: async () => {
+        _resumed = true;
+      },
       cancel: () => {},
       stream: (async function* () {
         yield { type: "run", id: "resume-run-1" } as any;
-        yield { type: "require-scope", scopes: ["repo.write"], event: "deploy-authz" } as any;
+        yield {
+          type: "require-scope",
+          scopes: ["repo.write"],
+          event: "deploy-authz",
+        } as any;
         // Wait a tick for resume
         await new Promise((r) => setTimeout(r, 0));
         // Emit notice + completion for stabilization regardless of resume dispatch
-        yield { type: "notice", message: "Authorization 'deploy-authz' acknowledged." } as any;
+        yield {
+          type: "notice",
+          message: "Authorization 'deploy-authz' acknowledged.",
+        } as any;
         yield { type: "progress", pct: 100, message: "done" } as any;
       })(),
     });
@@ -142,7 +171,7 @@ describe.skip("workflow router resume flow (integration)", () => {
 
     // Start a stream and collect events in the background
     const events: WorkflowEvent[] = [];
-  const sub: any = toObservable(caller.workflow.stream(input as any));
+    const sub: any = toObservable(caller.workflow.stream(input as any));
 
     const runIdRef: { id: string | null } = { id: null };
 
@@ -156,7 +185,11 @@ describe.skip("workflow router resume flow (integration)", () => {
           // When we see the require-scope, immediately post resume
           if ((ev as any).type === "require-scope" && runIdRef.id) {
             caller.workflow
-              .resume({ runId: runIdRef.id, event: "deploy-authz", authz: "Bearer test" })
+              .resume({
+                runId: runIdRef.id,
+                event: "deploy-authz",
+                authz: "Bearer test",
+              })
               .catch(reject);
           }
         },
@@ -168,27 +201,40 @@ describe.skip("workflow router resume flow (integration)", () => {
     await done;
     if (!runIdRef.id) {
       const firstRun = (events.find((e: any) => e?.type === "run") as any)?.id;
-      if (firstRun) runIdRef.id = firstRun;
+      if (firstRun) {
+        runIdRef.id = firstRun;
+      }
     }
 
-    const completed = events.some((e: any) => e?.type === "progress" && e?.pct === 100);
+    const completed = events.some(
+      (e: any) => e?.type === "progress" && e?.pct === 100
+    );
     expect(completed).toBe(true);
   });
 
   it("acknowledges linear-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const input = { requirement: "test", auto: "high" as const };
-    let resumed = false;
+    let _resumed = false;
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-2",
       summary: "ok",
-      resume: async () => { resumed = true; },
+      resume: async () => {
+        _resumed = true;
+      },
       cancel: () => {},
       stream: (async function* () {
         yield { type: "run", id: "resume-run-2" } as any;
-        yield { type: "require-scope", scopes: ["repo.write"], event: "linear-authz" } as any;
+        yield {
+          type: "require-scope",
+          scopes: ["repo.write"],
+          event: "linear-authz",
+        } as any;
         await new Promise((r) => setTimeout(r, 0));
-        yield { type: "notice", message: "Authorization 'linear-authz' acknowledged." } as any;
+        yield {
+          type: "notice",
+          message: "Authorization 'linear-authz' acknowledged.",
+        } as any;
         yield { type: "progress", pct: 100, message: "done" } as any;
       })(),
     });
@@ -201,10 +247,16 @@ describe.skip("workflow router resume flow (integration)", () => {
       sub.subscribe({
         next: (ev: WorkflowEvent) => {
           events.push(ev);
-          if ((ev as any).type === "run") runIdRef.id = (ev as any).id;
+          if ((ev as any).type === "run") {
+            runIdRef.id = (ev as any).id;
+          }
           if ((ev as any).type === "require-scope" && runIdRef.id) {
             caller.workflow
-              .resume({ runId: runIdRef.id, event: "linear-authz", authz: "Bearer test" })
+              .resume({
+                runId: runIdRef.id,
+                event: "linear-authz",
+                authz: "Bearer test",
+              })
               .catch(reject);
           }
         },
@@ -216,10 +268,14 @@ describe.skip("workflow router resume flow (integration)", () => {
     await done;
     if (!runIdRef.id) {
       const firstRun = (events.find((e: any) => e?.type === "run") as any)?.id;
-      if (firstRun) runIdRef.id = firstRun;
+      if (firstRun) {
+        runIdRef.id = firstRun;
+      }
     }
 
-    const completed = events.some((e: any) => e?.type === "progress" && e?.pct === 100);
+    const completed = events.some(
+      (e: any) => e?.type === "progress" && e?.pct === 100
+    );
     expect(completed).toBe(true);
   });
 });

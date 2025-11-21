@@ -1,9 +1,6 @@
 import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
-import {
-  describePostgres,
-  requirePostgresTestEnv,
-} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -12,7 +9,9 @@ let ragRepo: typeof import("@alfred/db").ragRepo;
 let db: typeof import("@alfred/db").db;
 
 async function resetRagTables() {
-  if (!db) return;
+  if (!db) {
+    return;
+  }
   await db.execute(
     sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`
   );

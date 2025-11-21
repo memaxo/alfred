@@ -40,7 +40,7 @@ export class GraphIdMapper {
     if (ref.hgHash && this.hash2db.has(ref.hgHash)) {
       return this.hash2db.get(ref.hgHash);
     }
-    return undefined;
+    return;
   }
 
   toUiId(ref: UnifiedNodeRef): string | undefined {
@@ -53,7 +53,7 @@ export class GraphIdMapper {
     if (ref.hgHash && this.hash2ui.has(ref.hgHash)) {
       return this.hash2ui.get(ref.hgHash);
     }
-    return undefined;
+    return;
   }
 
   toHash(ref: UnifiedNodeRef): string | undefined {
@@ -66,6 +66,6 @@ export class GraphIdMapper {
     if (ref.uiId && this.ui2hash.has(ref.uiId)) {
       return this.ui2hash.get(ref.uiId);
     }
-    return undefined;
+    return;
   }
 }

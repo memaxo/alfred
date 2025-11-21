@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { VoiceSessionManager, VoiceSession } from "../../src/voice/session";
-import { STTPool, type ProcessConfig } from "@alfred/voice/process/stt_pool";
-import { TTSPool } from "@alfred/voice/process/tts_pool";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { STTPool } from "@alfred/voice/process/stt";
+import type { TTSPool } from "@alfred/voice/process/tts";
+import { VoiceSession, VoiceSessionManager } from "../../src/voice/session";
 
 // Mock pools for testing
 class MockSTTPool {
@@ -19,7 +19,7 @@ class MockTTSPool {
     return {
       audioBase64: "test",
       mimeType: "audio/pcm",
-      sampleRate: 16000,
+      sampleRate: 16_000,
     };
   }
 }
@@ -122,4 +122,3 @@ describe("VoiceSession", () => {
     expect(isIdle).toBe(false);
   });
 });
-

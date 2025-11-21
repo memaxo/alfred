@@ -1,14 +1,13 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
-import { join, delimiter as pathDelimiter } from "node:path";
 import os from "node:os";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
+import { join, delimiter as pathDelimiter } from "node:path";
 import {
-  createFakeExecutable,
-  saveEnvVars,
-  restoreEnvVars,
-} from "./utils/python-helpers";
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
+import { createFakeExecutable } from "./utils/python-helpers";
 
 const { findUvPath } = __internals;
 

@@ -1,4 +1,4 @@
-import { expect, test, describe, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { MindscapeEngine } from "./engine";
 
 // Mock global DOM
@@ -49,7 +49,7 @@ describe("MindscapeEngine", () => {
     engine = new MindscapeEngine(mockCanvas);
     // We can't easily check private state, but we can check it doesn't crash
     // and calls getContext('2d')
-    
+
     // Spy on getContext?
     // Hard to spy on object method in this setup without proper mock fn
     // But if it runs, it's good.
@@ -57,23 +57,25 @@ describe("MindscapeEngine", () => {
   });
 
   test("checks battery status if available", () => {
-    const getBattery = mock(() => Promise.resolve({
+    const getBattery = mock(() =>
+      Promise.resolve({
         charging: true,
         level: 1,
         addEventListener: () => {},
-        removeEventListener: () => {}
-    }));
-    
+        removeEventListener: () => {},
+      })
+    );
+
     global.navigator = {
-        getBattery
+      getBattery,
     } as any;
 
     engine = new MindscapeEngine(mockCanvas);
     // Expect getBattery to be called
     // Wait for async init?
     // It's called in constructor.
-    
-    // Since we mocked it, we can verify if we had a handle, 
+
+    // Since we mocked it, we can verify if we had a handle,
     // but checking side effects is enough (no crash).
     engine.destroy();
   });

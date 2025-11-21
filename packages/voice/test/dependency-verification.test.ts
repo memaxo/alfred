@@ -1,7 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "bun:test";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Subprocess } from "bun";
+import {
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
 
 const { verifyDependencies } = __internals;
 
@@ -19,7 +22,11 @@ describe("Dependency Verification", () => {
       },
     });
 
-  const createMockSubprocess = (options?: { exitCode?: number; stderr?: string; stdout?: string }) =>
+  const createMockSubprocess = (options?: {
+    exitCode?: number;
+    stderr?: string;
+    stdout?: string;
+  }) =>
     ({
       exited: Promise.resolve(options?.exitCode ?? 0),
       stdout: createMockStream(options?.stdout),
@@ -29,7 +36,9 @@ describe("Dependency Verification", () => {
   beforeEach(() => {
     const mockSubprocess = createMockSubprocess();
     mockSpawn = vi.fn(() => mockSubprocess);
-    spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation((...args) => mockSpawn(...args));
+    spawnSpy = vi
+      .spyOn(Bun, "spawn")
+      .mockImplementation((...args) => mockSpawn(...args));
   });
 
   afterEach(() => {
@@ -70,7 +79,7 @@ describe("Dependency Verification", () => {
     expect(Array.isArray(cmdArgs)).toBe(true);
     const args = cmdArgs as string[];
     expect(args.includes("-c")).toBe(true);
-    expect(args[args.length - 1]).toContain("import faster_whisper");
+    expect(args.at(-1)).toContain("import faster_whisper");
   });
 
   it("should verify dependencies for system Python", async () => {
@@ -93,7 +102,7 @@ describe("Dependency Verification", () => {
     expect(Array.isArray(cmdArgs)).toBe(true);
     const args = cmdArgs as string[];
     expect(args.includes("-c")).toBe(true);
-    expect(args[args.length - 1]).toContain("import faster_whisper");
+    expect(args.at(-1)).toContain("import faster_whisper");
   });
 
   it("should throw helpful error when dependencies missing", async () => {
@@ -114,14 +123,14 @@ describe("Dependency Verification", () => {
     );
 
     const promise = verifyDependencies(processInstance)(cmd);
-    await expect(promise).rejects.toThrow(
-      "Python dependencies not installed"
-    );
+    await expect(promise).rejects.toThrow("Python dependencies not installed");
 
     // Verify error message contains helpful instructions
     const error = (await promise.catch((err) => err)) as Error;
     expect(error).toBeInstanceOf(Error);
-    expect(error.message).toContain("Install with: cd packages/voice && ./scripts/install-deps.sh");
+    expect(error.message).toContain(
+      "Install with: cd packages/voice && ./scripts/install-deps.sh"
+    );
     expect(error.message).toContain("Or use: cd packages/voice && uv sync");
   });
 

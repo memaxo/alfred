@@ -1,29 +1,29 @@
 /**
  * Adapter Integration Tests
- * 
+ *
  * Tests for AI SDK adapter and Storage adapter
  */
 
 import { describe, expect, it } from "bun:test";
+import type { WorkflowEvent } from "@alfred/type/plan";
 import { AISDKAdapter } from "../src/adapters/ai";
 import { NoOpStorageAdapter } from "../src/adapters/storage";
-import type { WorkflowEvent } from "@alfred/type/plan";
 
 describe("AISDKAdapter", () => {
   it("maps text-delta events with correct property names", () => {
     const adapter = new AISDKAdapter();
-    
+
     // Access private mapEvent method for testing
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "text-delta",
       id: "text-1",
       delta: "Hello",
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toMatchObject({
       type: "text-delta",
       id: "text-1",
@@ -34,16 +34,16 @@ describe("AISDKAdapter", () => {
   it("maps tool-call events with input property", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "tool-call",
       toolCallId: "tc-1",
       toolName: "grep",
       input: { pattern: "test" },
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toMatchObject({
       type: "tool-call",
       toolCallId: "tc-1",
@@ -55,7 +55,7 @@ describe("AISDKAdapter", () => {
   it("maps tool-result events with input and output", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "tool-result",
       toolCallId: "tc-1",
@@ -63,9 +63,9 @@ describe("AISDKAdapter", () => {
       input: { pattern: "test" },
       output: { matches: ["test.ts"] },
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toMatchObject({
       type: "tool-result",
       toolCallId: "tc-1",
@@ -78,15 +78,15 @@ describe("AISDKAdapter", () => {
   it("maps finish events", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "finish",
       finishReason: "stop",
       usage: { totalTokens: 100 },
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toMatchObject({
       type: "finish",
       finishReason: "stop",
@@ -97,14 +97,14 @@ describe("AISDKAdapter", () => {
   it("maps error events safely", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEventWithError = {
       type: "error",
       error: new Error("Test error"),
     };
-    
+
     const mapped = mapEvent(sdkEventWithError);
-    
+
     expect(mapped).toMatchObject({
       type: "error",
       message: "Test error",
@@ -114,14 +114,14 @@ describe("AISDKAdapter", () => {
   it("forwards additional event types", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "text-start",
       id: "text-1",
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toMatchObject({
       type: "text-start",
       id: "text-1",
@@ -131,14 +131,14 @@ describe("AISDKAdapter", () => {
   it("returns null for unknown event types", () => {
     const adapter = new AISDKAdapter();
     const mapEvent = (adapter as any).mapEvent.bind(adapter);
-    
+
     const sdkEvent = {
       type: "unknown-event-type",
       data: "test",
     };
-    
+
     const mapped = mapEvent(sdkEvent);
-    
+
     expect(mapped).toBeNull();
   });
 });
@@ -167,4 +167,3 @@ describe("NoOpStorageAdapter", () => {
     ).resolves.toBeUndefined();
   });
 });
-

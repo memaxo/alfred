@@ -189,17 +189,29 @@ function decodeEntities(value: string) {
 }
 
 function clamp(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) return min;
-  if (value < min) return min;
-  if (value > max) return max;
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  if (value < min) {
+    return min;
+  }
+  if (value > max) {
+    return max;
+  }
   return value;
 }
 
 function compressSnippet(value: string | undefined, limit = 220) {
-  if (!value) return;
+  if (!value) {
+    return;
+  }
   const compact = value.replace(/\s+/g, " ").trim();
-  if (compact.length === 0) return;
-  if (compact.length <= limit) return compact;
+  if (compact.length === 0) {
+    return;
+  }
+  if (compact.length <= limit) {
+    return compact;
+  }
   return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
 
@@ -285,7 +297,9 @@ async function performDuckDuckGoSearch(
   let match: RegExpExecArray | null;
   while ((match = linkRegex.exec(html)) && results.length < topK) {
     const href = match[1];
-    if (!href || href.startsWith("/")) continue;
+    if (!href || href.startsWith("/")) {
+      continue;
+    }
     const title = decodeEntities(match[2] ?? "").trim();
     results.push({
       url: href,
@@ -375,13 +389,27 @@ async function performExaSearch(
       liveCrawl: exaOpts?.livecrawl ?? "fallback",
     };
 
-    if (exaOpts?.category) body.category = exaOpts.category;
-    if (exaOpts?.highlights) body.highlights = exaOpts.highlights;
-    if (exaOpts?.summary) body.summary = exaOpts.summary;
-    if (typeof exaOpts?.subpages === "number") body.subpages = exaOpts.subpages;
-    if (exaOpts?.subpageTarget) body.subpageTarget = exaOpts.subpageTarget;
-    if (exaOpts?.extras) body.extras = exaOpts.extras;
-    if (typeof exaOpts?.context !== "undefined") body.context = exaOpts.context;
+    if (exaOpts?.category) {
+      body.category = exaOpts.category;
+    }
+    if (exaOpts?.highlights) {
+      body.highlights = exaOpts.highlights;
+    }
+    if (exaOpts?.summary) {
+      body.summary = exaOpts.summary;
+    }
+    if (typeof exaOpts?.subpages === "number") {
+      body.subpages = exaOpts.subpages;
+    }
+    if (exaOpts?.subpageTarget) {
+      body.subpageTarget = exaOpts.subpageTarget;
+    }
+    if (exaOpts?.extras) {
+      body.extras = exaOpts.extras;
+    }
+    if (typeof exaOpts?.context !== "undefined") {
+      body.context = exaOpts.context;
+    }
 
     const response = await fetch(`${EXA_BASE_URL}/search`, {
       method: "POST",
@@ -561,7 +589,6 @@ async function performSearch(
       return { results: await performSerpApiSearch(query, topK), provider };
     case "tavily":
       throw new Error("web_provider_tavily_unavailable");
-    case "ddg":
     default:
       return {
         results: await performDuckDuckGoSearch(query, topK),
@@ -623,7 +650,9 @@ async function performFetch(
       let received = 0;
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
         if (value) {
           received += value.byteLength;
           if (received <= MAX_FETCH_BYTES) {

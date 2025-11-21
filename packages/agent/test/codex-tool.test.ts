@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import {
   chmodSync,
   mkdirSync,
@@ -14,18 +22,20 @@ import {
   delimiter as pathDelimiter,
   resolve,
 } from "node:path";
+
 // Mock graph repo to avoid pulling DB layer via assistant graphstore
 mock.module("@alfred/db/src/repo/graph", () => ({
   getGraphClient: vi.fn().mockReturnValue({}),
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
   upsertEdges: vi.fn().mockResolvedValue(undefined),
 }));
+
 import { __internals } from "../src/orchestrator/tool/codex";
 
 const { isWithinBase, pickEnvCodex, resolveExecutable, mapAutoToCodex } =
   __internals;
 
-describe.skip("codex tool sandbox helpers", () => {
+describe("codex tool sandbox helpers", () => {
   describe("isWithinBase", () => {
     it("accepts directories nested under the base", () => {
       const base = resolve(os.tmpdir(), "alfred-codex-base");
@@ -73,17 +83,22 @@ describe.skip("codex tool sandbox helpers", () => {
 
     afterEach(() => {
       process.env.PATH = original.PATH ?? "";
-      if (original.CODEX_API_KEY === undefined)
-        delete process.env.CODEX_API_KEY;
-      else process.env.CODEX_API_KEY = original.CODEX_API_KEY;
-      if (original.OPENAI_API_KEY === undefined)
-        delete process.env.OPENAI_API_KEY;
-      else process.env.OPENAI_API_KEY = original.OPENAI_API_KEY;
-      if (original.ORCH_CODEX_ALLOW_OPENAI_KEY === undefined)
-        delete process.env.ORCH_CODEX_ALLOW_OPENAI_KEY;
-      else
+      if (original.CODEX_API_KEY === undefined) {
+        process.env.CODEX_API_KEY = undefined;
+      } else {
+        process.env.CODEX_API_KEY = original.CODEX_API_KEY;
+      }
+      if (original.OPENAI_API_KEY === undefined) {
+        process.env.OPENAI_API_KEY = undefined;
+      } else {
+        process.env.OPENAI_API_KEY = original.OPENAI_API_KEY;
+      }
+      if (original.ORCH_CODEX_ALLOW_OPENAI_KEY === undefined) {
+        process.env.ORCH_CODEX_ALLOW_OPENAI_KEY = undefined;
+      } else {
         process.env.ORCH_CODEX_ALLOW_OPENAI_KEY =
           original.ORCH_CODEX_ALLOW_OPENAI_KEY;
+      }
     });
 
     it("retains PATH and forwards only CODEX_* overrides (plus optional OPENAI)", () => {

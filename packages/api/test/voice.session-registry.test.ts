@@ -18,7 +18,10 @@ describe("voice session registry", () => {
       codec: { input: "audio/webm", output: "mp3" },
     });
     expect(claimed.status).toBe("idle");
-    await updateVoiceSession(claimed.id, { status: "processing", lastTranscript: "hello" });
+    await updateVoiceSession(claimed.id, {
+      status: "processing",
+      lastTranscript: "hello",
+    });
     const snapshot = await getVoiceSession(claimed.id);
     expect(snapshot?.status).toBe("processing");
     expect(snapshot?.lastTranscript).toBe("hello");
@@ -40,12 +43,13 @@ describe("voice session registry", () => {
       mode: "clip",
     });
     expect(claimed.id).toBe("session-1");
-    expect(async () =>
-      await claimVoiceSession({
-        userId: "user-2",
-        sessionId: "session-1",
-        mode: "clip",
-      })
+    expect(
+      async () =>
+        await claimVoiceSession({
+          userId: "user-2",
+          sessionId: "session-1",
+          mode: "clip",
+        })
     ).toThrow("voice_session_conflict");
   });
 });

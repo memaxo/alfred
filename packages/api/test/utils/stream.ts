@@ -34,4 +34,3 @@ export function toObservable<T>(candidate: any) {
     },
   };
 }
-

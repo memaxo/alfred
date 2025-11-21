@@ -1,11 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { getRedis } from "@alfred/auth/redis";
 
-export type VoiceSessionSurface = "drive" | "carplay" | "web" | "native" | "stream" | "unknown";
+export type VoiceSessionSurface =
+  | "drive"
+  | "carplay"
+  | "web"
+  | "native"
+  | "stream"
+  | "unknown";
 export type VoiceSessionMode = "clip" | "stream";
-export type VoiceSessionStatus = "idle" | "recording" | "processing" | "responding" | "error";
+export type VoiceSessionStatus =
+  | "idle"
+  | "recording"
+  | "processing"
+  | "responding"
+  | "error";
 
-export interface VoiceSessionSnapshot {
+export type VoiceSessionSnapshot = {
   id: string;
   userId: string;
   surface: VoiceSessionSurface;
@@ -22,7 +33,7 @@ export interface VoiceSessionSnapshot {
   lastTranscript?: string;
   lastAssistantText?: string;
   lastError?: string;
-}
+};
 
 type MutableSession = VoiceSessionSnapshot;
 
@@ -32,7 +43,14 @@ const SESSION_TTL_SECONDS = 3600; // 1 hour
 const memSessions = new Map<string, MutableSession>();
 const memSessionsByUser = new Map<string, Set<string>>();
 
-const knownSurfaces: VoiceSessionSurface[] = ["drive", "carplay", "web", "native", "stream", "unknown"];
+const knownSurfaces: VoiceSessionSurface[] = [
+  "drive",
+  "carplay",
+  "web",
+  "native",
+  "stream",
+  "unknown",
+];
 
 function normalizeSurface(surface?: string | null): VoiceSessionSurface {
   if (!surface) {
@@ -69,7 +87,7 @@ export async function claimVoiceSession(params: {
   const redis = getRedis();
   const surface = normalizeSurface(params.surface);
   const sessionId = params.sessionId ?? randomUUID();
-  
+
   const timestamp = now();
 
   if (redis) {
@@ -105,48 +123,52 @@ export async function claimVoiceSession(params: {
       };
     }
 
-    await redis.set(keySession(sessionId), JSON.stringify(record), "EX", SESSION_TTL_SECONDS);
+    await redis.set(
+      keySession(sessionId),
+      JSON.stringify(record),
+      "EX",
+      SESSION_TTL_SECONDS
+    );
     await redis.sadd(keyUserSessions(params.userId), sessionId);
-    await redis.expire(keyUserSessions(params.userId), SESSION_TTL_SECONDS); 
-    
+    await redis.expire(keyUserSessions(params.userId), SESSION_TTL_SECONDS);
+
     return record;
-  } else {
-    // In-memory fallback
-    const existing = memSessions.get(sessionId);
-    if (existing && existing.userId !== params.userId) {
-      throw new Error("voice_session_conflict");
-    }
-
-    const record: MutableSession = existing
-      ? {
-          ...existing,
-          surface,
-          mode: params.mode,
-          thread: params.thread ?? existing.thread,
-          resource: params.resource ?? existing.resource,
-          codec: params.codec ?? existing.codec,
-          updatedAt: timestamp,
-        }
-      : {
-          id: sessionId,
-          userId: params.userId,
-          surface,
-          mode: params.mode,
-          status: "idle",
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          thread: params.thread,
-          resource: params.resource,
-          codec: params.codec,
-        };
-
-    memSessions.set(sessionId, record);
-    if (!memSessionsByUser.has(params.userId)) {
-      memSessionsByUser.set(params.userId, new Set());
-    }
-    memSessionsByUser.get(params.userId)!.add(sessionId);
-    return clone(record);
   }
+  // In-memory fallback
+  const existing = memSessions.get(sessionId);
+  if (existing && existing.userId !== params.userId) {
+    throw new Error("voice_session_conflict");
+  }
+
+  const record: MutableSession = existing
+    ? {
+        ...existing,
+        surface,
+        mode: params.mode,
+        thread: params.thread ?? existing.thread,
+        resource: params.resource ?? existing.resource,
+        codec: params.codec ?? existing.codec,
+        updatedAt: timestamp,
+      }
+    : {
+        id: sessionId,
+        userId: params.userId,
+        surface,
+        mode: params.mode,
+        status: "idle",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        thread: params.thread,
+        resource: params.resource,
+        codec: params.codec,
+      };
+
+  memSessions.set(sessionId, record);
+  if (!memSessionsByUser.has(params.userId)) {
+    memSessionsByUser.set(params.userId, new Set());
+  }
+  memSessionsByUser.get(params.userId)?.add(sessionId);
+  return clone(record);
 }
 
 export async function updateVoiceSession(
@@ -155,42 +177,51 @@ export async function updateVoiceSession(
 ): Promise<VoiceSessionSnapshot | null> {
   const redis = getRedis();
   if (redis) {
-     const existingJson = await redis.get(keySession(sessionId));
-     if (!existingJson) return null;
-     
-     const existing = JSON.parse(existingJson) as MutableSession;
-     const updated: MutableSession = {
-        ...existing,
-        ...patch,
-        status: (patch.status ?? existing.status) as VoiceSessionStatus,
-        updatedAt: now(),
-     };
-     await redis.set(keySession(sessionId), JSON.stringify(updated), "EX", SESSION_TTL_SECONDS);
-     return updated;
-  } else {
-    const existing = memSessions.get(sessionId);
-    if (!existing) {
+    const existingJson = await redis.get(keySession(sessionId));
+    if (!existingJson) {
       return null;
     }
+
+    const existing = JSON.parse(existingJson) as MutableSession;
     const updated: MutableSession = {
       ...existing,
       ...patch,
       status: (patch.status ?? existing.status) as VoiceSessionStatus,
       updatedAt: now(),
     };
-    memSessions.set(sessionId, updated);
-    return clone(updated);
+    await redis.set(
+      keySession(sessionId),
+      JSON.stringify(updated),
+      "EX",
+      SESSION_TTL_SECONDS
+    );
+    return updated;
   }
+  const existing = memSessions.get(sessionId);
+  if (!existing) {
+    return null;
+  }
+  const updated: MutableSession = {
+    ...existing,
+    ...patch,
+    status: (patch.status ?? existing.status) as VoiceSessionStatus,
+    updatedAt: now(),
+  };
+  memSessions.set(sessionId, updated);
+  return clone(updated);
 }
 
 export async function completeVoiceSession(
   sessionId: string,
   patch?: Partial<Omit<VoiceSessionSnapshot, "id" | "userId" | "createdAt">>
 ): Promise<VoiceSessionSnapshot | null> {
-    return updateVoiceSession(sessionId, { ...patch, status: "idle" });
+  return updateVoiceSession(sessionId, { ...patch, status: "idle" });
 }
 
-export async function markVoiceSessionError(sessionId: string, message: string) {
+export async function markVoiceSessionError(
+  sessionId: string,
+  message: string
+) {
   await updateVoiceSession(sessionId, {
     status: "error",
     lastError: message,
@@ -202,9 +233,9 @@ export async function releaseVoiceSession(sessionId: string) {
   if (redis) {
     const existingJson = await redis.get(keySession(sessionId));
     if (existingJson) {
-        const existing = JSON.parse(existingJson) as MutableSession;
-        await redis.del(keySession(sessionId));
-        await redis.srem(keyUserSessions(existing.userId), sessionId);
+      const existing = JSON.parse(existingJson) as MutableSession;
+      await redis.del(keySession(sessionId));
+      await redis.srem(keyUserSessions(existing.userId), sessionId);
     }
   } else {
     const existing = memSessions.get(sessionId);
@@ -214,52 +245,56 @@ export async function releaseVoiceSession(sessionId: string) {
     memSessions.delete(sessionId);
     const set = memSessionsByUser.get(existing.userId);
     if (set) {
-        set.delete(sessionId);
-        if (set.size === 0) {
-            memSessionsByUser.delete(existing.userId);
-        }
+      set.delete(sessionId);
+      if (set.size === 0) {
+        memSessionsByUser.delete(existing.userId);
+      }
     }
   }
 }
 
-export async function listVoiceSessions(userId: string): Promise<VoiceSessionSnapshot[]> {
+export async function listVoiceSessions(
+  userId: string
+): Promise<VoiceSessionSnapshot[]> {
   const redis = getRedis();
   if (redis) {
     const ids = await redis.smembers(keyUserSessions(userId));
-    if (!ids || ids.length === 0) return [];
-    
-    const snapshots: VoiceSessionSnapshot[] = [];
-    const jsons = await Promise.all(ids.map(id => redis.get(keySession(id))));
-    
-    for (const json of jsons) {
-        if (json) {
-            snapshots.push(JSON.parse(json));
-        }
-    }
-    return snapshots.sort((a, b) => b.updatedAt - a.updatedAt);
-  } else {
-    const ids = memSessionsByUser.get(userId);
-    if (!ids) {
+    if (!ids || ids.length === 0) {
       return [];
     }
+
     const snapshots: VoiceSessionSnapshot[] = [];
-    for (const id of ids.values()) {
-      const record = memSessions.get(id);
-      if (record) {
-        snapshots.push(clone(record));
+    const jsons = await Promise.all(ids.map((id) => redis.get(keySession(id))));
+
+    for (const json of jsons) {
+      if (json) {
+        snapshots.push(JSON.parse(json));
       }
     }
     return snapshots.sort((a, b) => b.updatedAt - a.updatedAt);
   }
+  const ids = memSessionsByUser.get(userId);
+  if (!ids) {
+    return [];
+  }
+  const snapshots: VoiceSessionSnapshot[] = [];
+  for (const id of ids.values()) {
+    const record = memSessions.get(id);
+    if (record) {
+      snapshots.push(clone(record));
+    }
+  }
+  return snapshots.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function getVoiceSession(sessionId: string): Promise<VoiceSessionSnapshot | null> {
+export async function getVoiceSession(
+  sessionId: string
+): Promise<VoiceSessionSnapshot | null> {
   const redis = getRedis();
   if (redis) {
     const json = await redis.get(keySession(sessionId));
     return json ? JSON.parse(json) : null;
-  } else {
-    const record = memSessions.get(sessionId);
-    return record ? clone(record) : null;
   }
+  const record = memSessions.get(sessionId);
+  return record ? clone(record) : null;
 }

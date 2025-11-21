@@ -32,10 +32,10 @@ describe("extractReasoning", () => {
 
 describe("enrichReasoningContext", () => {
   it("annotates fact sources with thread context", () => {
-    const extraction = extractReasoning(
-      "We are considering option A.",
-      { threadId: "alpha-thread", source: "reasoning:test" }
-    );
+    const extraction = extractReasoning("We are considering option A.", {
+      threadId: "alpha-thread",
+      source: "reasoning:test",
+    });
     const knowledge = toKnowledge(extraction);
 
     const enriched = enrichReasoningContext(knowledge, {

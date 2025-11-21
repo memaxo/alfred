@@ -1,8 +1,4 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   schema: "./src/schema",

@@ -52,7 +52,7 @@ export default function UserMenu() {
                   window.alert(
                     "Elevated token copied to clipboard (scope: droid.exec)"
                   );
-                } catch (error) {
+                } catch (_error) {
                   // Error already handled via window.alert
                   // Errors are also caught by error boundaries
                 } finally {
@@ -87,7 +87,7 @@ export default function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Button className="w-full" variant="outline" asChild>
+          <Button asChild className="w-full" variant="outline">
             <Link to="/mindscape">Mindscape</Link>
           </Button>
         </DropdownMenuItem>

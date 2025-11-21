@@ -1,4 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+
+process.env.OPENAI_API_KEY = "test";
+
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -9,11 +12,24 @@ import { createTestCaller } from "./utils/trpc";
 setupTestEnv();
 mockPolicyAudit();
 
+// Mock node-pty to avoid ABI issues
+mock.module("node-pty", () => ({
+  spawn: () => ({
+    on: () => {},
+    kill: () => {},
+    resize: () => {},
+    write: () => {},
+  }),
+}));
+
 const issueAccessTokenMock = vi.fn();
 const requireRecentBiometricMock = vi.fn();
 
 mock.module("@alfred/auth/token", () => ({
   issueAccessToken: issueAccessTokenMock,
+  verifyAccessToken: vi.fn(),
+  requireToolScopesAndPolicy: vi.fn(),
+  cacheJTI: vi.fn(),
 }));
 
 mock.module("@alfred/auth/biometric", () => ({

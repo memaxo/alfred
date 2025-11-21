@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { sessionManager } from "../src/orchestrator/codex-session";
 
 describe("CodexSessionManager", () => {
@@ -64,4 +64,3 @@ describe("CodexSessionManager", () => {
     expect(updated?.linearIssueId).toBe("ISS-123");
   });
 });
-

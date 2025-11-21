@@ -5,10 +5,7 @@
  * Pure functions following AI SDK v6 part patterns.
  */
 
-import type {
-  AssistantUIMessage,
-  OrchestratorUIMessage,
-} from "@alfred/agent";
+import type { AssistantUIMessage, OrchestratorUIMessage } from "@alfred/agent";
 import {
   extractStructuredData,
   isDataPartNamed,
@@ -69,7 +66,9 @@ export type ParsedMessage = {
 };
 
 function isPlanData(data: unknown): data is ParsedPlan {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== "object") {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
   return (
     typeof obj.requirement === "string" &&
@@ -85,7 +84,9 @@ function isPlanData(data: unknown): data is ParsedPlan {
 }
 
 function isTaskData(data: unknown): data is ParsedTask {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== "object") {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
   return (
     typeof obj.id === "string" &&
@@ -95,7 +96,9 @@ function isTaskData(data: unknown): data is ParsedTask {
 }
 
 function isToolData(data: unknown): data is ParsedTool {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== "object") {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
   return (
     typeof obj.name === "string" &&
@@ -105,17 +108,19 @@ function isToolData(data: unknown): data is ParsedTool {
 }
 
 function isCodeData(data: unknown): data is ParsedCode {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== "object") {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
   return typeof obj.code === "string";
 }
 
 function isCiteData(data: unknown): data is ParsedCite {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== "object") {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
-  return (
-    typeof obj.source === "string" && typeof obj.text === "string"
-  );
+  return typeof obj.source === "string" && typeof obj.text === "string";
 }
 
 function isThinkData(data: unknown): data is ParsedThink {

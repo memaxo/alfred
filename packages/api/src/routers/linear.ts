@@ -5,11 +5,11 @@ const { upsertLinear, getLinearByOAuth } = linearRepo;
 
 import crypto from "node:crypto";
 import { URLSearchParams } from "node:url";
+import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
-import { logger } from "../utils/logger";
 
 const LINEAR_AUTH_BASE = "https://linear.app/oauth/authorize";
 const LINEAR_TOKEN_URL = "https://api.linear.app/oauth/token";
@@ -17,11 +17,11 @@ const LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql";
 const DEFAULT_SCOPE = "read write";
 const STATE_TTL_SECONDS = 10 * 60; // 10 minutes
 
-interface SignedStatePayload {
+type SignedStatePayload = {
   user: string;
   nonce: string;
   ts: number;
-}
+};
 
 function getClientId(): string {
   const value = process.env.LINEAR_CLIENT_ID;
@@ -176,7 +176,7 @@ async function exchangeAuthorizationCode(code: string, redirectUri: string) {
   };
 }
 
-interface LinearViewerPayload {
+type LinearViewerPayload = {
   viewer?: {
     id?: string;
     email?: string | null;
@@ -187,7 +187,7 @@ interface LinearViewerPayload {
       name?: string | null;
     } | null;
   };
-}
+};
 
 async function fetchLinearViewer(
   accessToken: string
@@ -418,7 +418,7 @@ export const linearRouter = router({
       const clientId = getClientId();
       const installation = await getLinearByOAuth(clientId);
 
-      if (!installation || !installation.token) {
+      if (!installation?.token) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "linear_not_connected",

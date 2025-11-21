@@ -1,19 +1,18 @@
 /**
  * Observability Tests for Runtime
- * 
+ *
  * Validates that metrics, logs, and traces are emitted correctly.
  */
 
-import { describe, it, expect, beforeEach, vi } from "bun:test";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+import type { KnowledgeFact, KnowledgeUpdate } from "@alfred/type/knowledge";
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
-import type { KnowledgeUpdate, KnowledgeFact } from "@alfred/type/knowledge";
-import { RuntimeTracer } from "../src/tracing";
 import {
-  runtimeContextBuildDurationSeconds,
   runtimeContextCacheHitsTotal,
   runtimeKnowledgeBatchDurationSeconds,
 } from "../src/metrics";
+import { RuntimeTracer } from "../src/tracing";
 
 describe("Observability: Metrics Emission", () => {
   it("context builder emits duration metrics", async () => {
@@ -22,14 +21,14 @@ describe("Observability: Metrics Emission", () => {
     // Note: Spying on Prometheus histogram observe is tricky because
     // .labels() returns a new object each time. Instead, we validate
     // that the build completes without throwing and logs are emitted.
-    
+
     await expect(
       builder.build({
         requirement: "test",
         workspace: "/test",
       })
     ).resolves.toBeDefined();
-    
+
     // Validate the builder executed successfully
     expect(builder.getCacheSize()).toBe(1);
   });
@@ -62,7 +61,10 @@ describe("Observability: Metrics Emission", () => {
     const engine = new LearningEngine();
 
     // Spy on the histogram startTimer method
-    const timerSpy = vi.spyOn(runtimeKnowledgeBatchDurationSeconds, "startTimer");
+    const timerSpy = vi.spyOn(
+      runtimeKnowledgeBatchDurationSeconds,
+      "startTimer"
+    );
 
     const fact: KnowledgeFact = {
       id: "fact-observability",
@@ -73,10 +75,7 @@ describe("Observability: Metrics Emission", () => {
     };
     const updates: KnowledgeUpdate[] = [{ node: fact }];
 
-    await engine.persistUpdatesBatch(
-      updates,
-      "test-run-id"
-    );
+    await engine.persistUpdatesBatch(updates, "test-run-id");
 
     expect(timerSpy).toHaveBeenCalledWith({ operation: "persist" });
   });
@@ -191,10 +190,7 @@ describe("Observability: Log Context", () => {
 
     // This test validates that persistence doesn't throw when logging
     await expect(
-      engine.persistUpdatesBatch(
-        updates,
-        "test-run-id"
-      )
+      engine.persistUpdatesBatch(updates, "test-run-id")
     ).resolves.toBeUndefined();
   });
 });

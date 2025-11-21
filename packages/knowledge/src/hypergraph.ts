@@ -3,9 +3,9 @@
  * Zero-allocation design with content-addressed nodes
  */
 
+import { BTreeIndex } from "./indices/btree.js";
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";
-import { BTreeIndex } from "./indices/btree.js";
 
 // Types
 export type NodeId = string & { readonly _: unique symbol };
@@ -36,7 +36,9 @@ export type Knowledge =
 // Brand constructors with validation
 const nodeId = (s: string): NodeId => s as NodeId;
 export const toConfidence = (n: number): Confidence => {
-  if (n < 0 || n > 1) throw new Error("Invalid confidence");
+  if (n < 0 || n > 1) {
+    throw new Error("Invalid confidence");
+  }
   return n as Confidence;
 };
 export const timestamp = (n: number): Timestamp => n as Timestamp;
@@ -81,7 +83,7 @@ class HAMT<V> {
     if (!this.root.has(bucket)) {
       this.root.set(bucket, new Map());
     }
-    this.root.get(bucket)!.set(key, value);
+    this.root.get(bucket)?.set(key, value);
   }
 
   get(key: string): V | undefined {
@@ -137,12 +139,16 @@ export class Hypergraph {
           this.temporal.insert({ start: k.ts, end: k.ts, id: nodeRef });
           this.ordered.insert(k.content, nodeRef);
           break;
-        case "relation":
-          if (!this.edges.has(k.from)) this.edges.set(k.from, new Set());
-          this.edges.get(k.from)!.add(k.to);
+        case "relation": {
+          if (!this.edges.has(k.from)) {
+            this.edges.set(k.from, new Set());
+          }
+          this.edges.get(k.from)?.add(k.to);
 
-          if (!this.inbound.has(k.to)) this.inbound.set(k.to, new Set());
-          this.inbound.get(k.to)!.add(k.from);
+          if (!this.inbound.has(k.to)) {
+            this.inbound.set(k.to, new Set());
+          }
+          this.inbound.get(k.to)?.add(k.from);
 
           const outboundKind = this.ensureKindBucket(
             this.edgesByKind,
@@ -158,6 +164,7 @@ export class Hypergraph {
           );
           inboundKind.add(k.from);
           break;
+        }
         case "insight":
           break;
         case "pattern":
@@ -277,7 +284,7 @@ export class Hypergraph {
   // Content queries
   search(pattern: string): NodeId[] {
     // For MVP, use BTree range query
-    return this.ordered.range(pattern, pattern + "\xFF");
+    return this.ordered.range(pattern, `${pattern}\xFF`);
   }
 
   private contentAddress(k: Knowledge): string {

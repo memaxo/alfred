@@ -12,4 +12,3 @@ export default {
     return handler.fetch(request);
   },
 };
-

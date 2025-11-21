@@ -18,8 +18,14 @@ export function TicketNode({ id, data, selected }: NodeProps) {
   const result = ticketNodeDataSchema.safeParse(data);
   const validatedData = result.success
     ? result.data
-    : { title: undefined, status: undefined, priority: undefined, identifier: undefined, issueId: undefined };
-  
+    : {
+        title: undefined,
+        status: undefined,
+        priority: undefined,
+        identifier: undefined,
+        issueId: undefined,
+      };
+
   const title = validatedData.title ?? "Untitled Ticket";
   const status = validatedData.status ?? "todo";
   const priority = validatedData.priority ?? "no_priority";
@@ -37,7 +43,9 @@ export function TicketNode({ id, data, selected }: NodeProps) {
   });
 
   const handlePriorityChange = (newPriority: number) => {
-    if (!issueId) return;
+    if (!issueId) {
+      return;
+    }
     updateIssue.mutate({ issueId, priority: newPriority });
   };
 

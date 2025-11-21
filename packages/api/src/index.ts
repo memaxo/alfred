@@ -3,8 +3,11 @@ import { initApiServices } from "./init";
 
 initApiServices();
 
+// Export internal utilities needed by runtime
+export { generateText } from "./ai/generate";
+export { prepareModelMessagesForGenerate } from "./ai/messages";
+export { initApiServices, shutdownApiServices } from "./init";
 export type { AppRouter } from "./routers/index";
-
 export { appRouter } from "./routers/index";
 export {
   authedProcedure,
@@ -13,6 +16,4 @@ export {
   router,
   t,
 } from "./trpc";
-
-// Export initialization functions for explicit control
-export { initApiServices, shutdownApiServices } from "./init";
+export { sanitizeResult } from "./utils/generate";

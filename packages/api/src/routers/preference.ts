@@ -1,9 +1,11 @@
-import * as conversationRepo from "@alfred/db/repo/conversation";
 import { userRepo, type userSchema } from "@alfred/db";
+import * as conversationRepo from "@alfred/db/repo/conversation";
 
 type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 
 import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent";
+import { inferPreferenceFromCorrection } from "@alfred/agent/preference/inference";
+import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 import {
   preferenceDeleteSchema,
   preferenceListSchema,
@@ -13,8 +15,6 @@ import {
   preferenceKeySchema,
   preferenceValueSchema,
 } from "@alfred/type/preference";
-import { inferPreferenceFromCorrection } from "@alfred/agent/preference/inference";
-import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requirePolicy } from "../gate";

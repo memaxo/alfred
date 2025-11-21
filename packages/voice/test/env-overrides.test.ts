@@ -1,11 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-  saveEnvVars,
-  restoreEnvVars,
-  hasUv,
-} from "./utils/python-helpers";
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
+import { hasUv, restoreEnvVars, saveEnvVars } from "./utils/python-helpers";
 
 const { resolvePythonExecutable } = __internals;
 
@@ -28,9 +27,9 @@ describe("Environment Variable Overrides", () => {
   });
 
   it("should respect VOICE_USE_UV=false", async () => {
-    const uvAvailable = await hasUv();
+    const _uvAvailable = await hasUv();
     process.env.VOICE_USE_UV = "false";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
     const result = await resolvePythonExecutable(processInstance)();
 
@@ -39,8 +38,8 @@ describe("Environment Variable Overrides", () => {
   });
 
   it("should auto-detect UV when VOICE_USE_UV unset", async () => {
-    delete process.env.VOICE_USE_UV;
-    delete process.env.PYTHON_PATH;
+    process.env.VOICE_USE_UV = undefined;
+    process.env.PYTHON_PATH = undefined;
 
     const uvAvailable = await hasUv();
     if (uvAvailable) {
@@ -56,7 +55,7 @@ describe("Environment Variable Overrides", () => {
 
   it("should use UV when VOICE_USE_UV=true", async () => {
     process.env.VOICE_USE_UV = "true";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
     const uvAvailable = await hasUv();
     if (uvAvailable) {
@@ -78,4 +77,3 @@ describe("Environment Variable Overrides", () => {
     expect(result.cmd[0]).toBe("/custom/python");
   });
 });
-

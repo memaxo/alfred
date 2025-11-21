@@ -40,11 +40,11 @@ mock.module("@alfred/runtime", () => ({
 }));
 
 mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: async () => undefined,
+  createAuditLog: async () => {},
 }));
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
-  emitLinearActivity: async () => undefined,
+  emitLinearActivity: async () => {},
   setLinearDelegate: () => {},
   setLinearSessionExternalUrl: () => {},
   setLinearStarted: () => {},
@@ -68,19 +68,14 @@ const TEST_USER: WorkflowTestUser = {
   ],
 };
 
-let persistReasoning:
-  typeof import("../../agent/assistant/src/graphstore.ts").persistReasoning;
+let persistReasoning: typeof import("../../agent/assistant/src/graphstore.ts").persistReasoning;
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
-let workflowRunsTable:
-  typeof import("@alfred/db/schema/workflow").workflowRuns;
-let workflowEventsTable:
-  typeof import("@alfred/db/schema/workflow").workflowEvents;
-let conversationsTable:
-  typeof import("@alfred/db/schema/conversation").conversations;
-let messagesTable:
-  typeof import("@alfred/db/schema/conversation").messages;
+let workflowRunsTable: typeof import("@alfred/db/schema/workflow").workflowRuns;
+let workflowEventsTable: typeof import("@alfred/db/schema/workflow").workflowEvents;
+let conversationsTable: typeof import("@alfred/db/schema/conversation").conversations;
+let messagesTable: typeof import("@alfred/db/schema/conversation").messages;
 
 describe("workflow capture integration (sqlite)", () => {
   beforeAll(async () => {
@@ -103,28 +98,28 @@ describe("workflow capture integration (sqlite)", () => {
   afterAll(() => {
     if (!USE_EXISTING_DB) {
       if (ORIGINAL_DB_URL === undefined) {
-        delete process.env.DATABASE_URL;
+        process.env.DATABASE_URL = undefined;
       } else {
         process.env.DATABASE_URL = ORIGINAL_DB_URL;
       }
     }
     if (ORIGINAL_USE_WORKFLOW_RUNTIME === undefined) {
-      delete process.env.USE_WORKFLOW_RUNTIME;
+      process.env.USE_WORKFLOW_RUNTIME = undefined;
     } else {
       process.env.USE_WORKFLOW_RUNTIME = ORIGINAL_USE_WORKFLOW_RUNTIME;
     }
     if (ORIGINAL_OPENAI_KEY === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      process.env.OPENAI_API_KEY = undefined;
     } else {
       process.env.OPENAI_API_KEY = ORIGINAL_OPENAI_KEY;
     }
     if (ORIGINAL_TRPC_METRICS === undefined) {
-      delete process.env.DISABLE_TRPC_METRICS;
+      process.env.DISABLE_TRPC_METRICS = undefined;
     } else {
       process.env.DISABLE_TRPC_METRICS = ORIGINAL_TRPC_METRICS;
     }
     if (ORIGINAL_HOOK_METRICS === undefined) {
-      delete process.env.DISABLE_METRICS_HOOKS;
+      process.env.DISABLE_METRICS_HOOKS = undefined;
     } else {
       process.env.DISABLE_METRICS_HOOKS = ORIGINAL_HOOK_METRICS;
     }
@@ -161,7 +156,7 @@ describe("workflow capture integration (sqlite)", () => {
 
     const streamRunId = `capture-run-${Date.now()}`;
     const resource = `workspace-capture-${Date.now()}`;
-    const now = Date.now() + 5_000;
+    const now = Date.now() + 5000;
     const traces = [
       { text: "Capture context established", timestamp: now },
       {
@@ -250,10 +245,14 @@ describe("workflow capture integration (sqlite)", () => {
     const conversationId = conversationRows[0]?.id;
     expect(conversationId).toBeTruthy();
 
+    if (!conversationId) {
+      throw new Error("conversationId is null");
+    }
+
     const messageRows = await db
       .select()
       .from(messagesTable)
-      .where(eq(messagesTable.conversationId, conversationId!));
+      .where(eq(messagesTable.conversationId, conversationId));
     expect(messageRows.length).toBeGreaterThanOrEqual(2);
 
     const reasoningResult = await reasoningCaller.reasoning({
@@ -281,7 +280,11 @@ type StreamingExecutorOptions = {
 function createStartExecutor(runId: string) {
   const stream = (async function* () {
     yield { type: "run", id: runId } as WorkflowEvent;
-    yield { type: "progress", pct: 100, message: "start_complete" } as WorkflowEvent;
+    yield {
+      type: "progress",
+      pct: 100,
+      message: "start_complete",
+    } as WorkflowEvent;
   })();
 
   return {

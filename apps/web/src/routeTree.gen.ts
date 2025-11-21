@@ -10,12 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VoiceS2sRouteImport } from './routes/voice-s2s'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MindscapeRouteImport } from './routes/mindscape'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as DriveRouteImport } from './routes/drive'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkflowRunIdRouteImport } from './routes/workflow.$runId'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ApiJwksRouteImport } from './routes/api/jwks'
@@ -29,6 +31,11 @@ import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 const VoiceS2sRoute = VoiceS2sRouteImport.update({
   id: '/voice-s2s',
   path: '/voice-s2s',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -59,6 +66,11 @@ const DriveRoute = DriveRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkflowRunIdRoute = WorkflowRunIdRouteImport.update({
+  id: '/workflow/$runId',
+  path: '/workflow/$runId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthzDepsRoute = HealthzDepsRouteImport.update({
@@ -114,10 +126,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
   '/api/jwks': typeof ApiJwksRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
@@ -132,10 +146,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
   '/api/jwks': typeof ApiJwksRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
@@ -151,10 +167,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
   '/api/jwks': typeof ApiJwksRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
@@ -171,10 +189,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/mindscape'
     | '/onboarding'
+    | '/settings'
     | '/voice-s2s'
     | '/api/jwks'
     | '/api/metrics'
     | '/healthz/deps'
+    | '/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
@@ -189,10 +209,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/mindscape'
     | '/onboarding'
+    | '/settings'
     | '/voice-s2s'
     | '/api/jwks'
     | '/api/metrics'
     | '/healthz/deps'
+    | '/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
@@ -207,10 +229,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/mindscape'
     | '/onboarding'
+    | '/settings'
     | '/voice-s2s'
     | '/api/jwks'
     | '/api/metrics'
     | '/healthz/deps'
+    | '/workflow/$runId'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
@@ -226,9 +250,11 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MindscapeRoute: typeof MindscapeRoute
   OnboardingRoute: typeof OnboardingRoute
+  SettingsRoute: typeof SettingsRoute
   VoiceS2sRoute: typeof VoiceS2sRoute
   ApiJwksRoute: typeof ApiJwksRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
+  WorkflowRunIdRoute: typeof WorkflowRunIdRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLinearWebhookRoute: typeof ApiLinearWebhookRoute
@@ -244,6 +270,13 @@ declare module '@tanstack/react-router' {
       path: '/voice-s2s'
       fullPath: '/voice-s2s'
       preLoaderRoute: typeof VoiceS2sRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -286,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workflow/$runId': {
+      id: '/workflow/$runId'
+      path: '/workflow/$runId'
+      fullPath: '/workflow/$runId'
+      preLoaderRoute: typeof WorkflowRunIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/healthz/deps': {
@@ -372,9 +412,11 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MindscapeRoute: MindscapeRoute,
   OnboardingRoute: OnboardingRoute,
+  SettingsRoute: SettingsRoute,
   VoiceS2sRoute: VoiceS2sRoute,
   ApiJwksRoute: ApiJwksRoute,
   ApiMetricsRoute: ApiMetricsRoute,
+  WorkflowRunIdRoute: WorkflowRunIdRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLinearWebhookRoute: ApiLinearWebhookRoute,

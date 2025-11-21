@@ -2,20 +2,21 @@ import type { Node } from "@xyflow/react";
 import {
   AlarmClock,
   BookMarked,
+  BrainCircuit,
+  ListChecks,
   MessageSquare,
   Network,
-  StickyNote,
-  ListChecks,
-  SlidersHorizontal,
-  ShieldCheck,
-  UserRound,
   PlugZap,
   Rows3,
   ServerCog,
+  ShieldCheck,
+  SlidersHorizontal,
+  StickyNote,
+  UserRound,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { ArtifactData } from "@/store/mindscape";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   CommandDialog,
   CommandEmpty,
@@ -23,8 +24,11 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
+import { type ContextActionId, getActionsForNode } from "@/config/actions";
+import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import type { MindscapeSpawnType } from "./spawn";
 
 const createActions: Array<{
@@ -111,6 +115,12 @@ const createActions: Array<{
     description: "Plan or rerun automations",
     icon: <Network className="h-4 w-4" />,
   },
+  {
+    type: "concept",
+    label: "Visualize Concept",
+    description: "Spawn a concept node",
+    icon: <BrainCircuit className="h-4 w-4" />,
+  },
 ];
 
 type MindscapeCommandPaletteProps = {
@@ -125,6 +135,27 @@ export function MindscapeCommandPalette({
   onFocus,
 }: MindscapeCommandPaletteProps) {
   const [open, setOpen] = useState(false);
+  const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
+  const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
+  const updateArtifactData = useMindscapeStore(
+    (state) => state.updateArtifactData
+  );
+
+  const focusedNode = useMemo(
+    () => (focusedNodeId ? nodes.find((n) => n.id === focusedNodeId) : null),
+    [focusedNodeId, nodes]
+  );
+
+  const contextActions = useMemo(() => {
+    if (!focusedNode) {
+      return [];
+    }
+    const type = focusedNode.type || (focusedNode.data as ArtifactData).type;
+    if (!type) {
+      return [];
+    }
+    return getActionsForNode(type as any); // Cast because node.type string is loose
+  }, [focusedNode]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -165,17 +196,97 @@ export function MindscapeCommandPalette({
     setOpen(false);
   };
 
+  const executeContextAction = (actionId: ContextActionId) => {
+    if (!focusedNode) {
+      return;
+    }
+
+    switch (actionId) {
+      case "delete":
+        removeArtifact(focusedNode.id);
+        toast.success("Node deleted");
+        break;
+      case "focus":
+        onFocus(focusedNode.id);
+        break;
+      case "hide":
+        // Just visual hide for now? Or remove? Let's remove for now.
+        removeArtifact(focusedNode.id);
+        toast.success("Node hidden from graph");
+        break;
+      case "retry":
+        if (focusedNode.type === "workflow") {
+          updateArtifactData(focusedNode.id, { status: "pending" });
+          toast.info("Workflow queued for retry");
+        }
+        break;
+      case "clear-history":
+        if (focusedNode.type === "chat") {
+          updateArtifactData(focusedNode.id, { messages: [] });
+          toast.success("Chat history cleared");
+        }
+        break;
+      case "duplicate":
+        if (focusedNode.type === "note") {
+          toast.info("Duplication not yet implemented");
+        }
+        break;
+      default:
+        toast.info(`Action ${actionId} triggered`);
+    }
+    setOpen(false);
+  };
+
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Create or jump to a node" />
+    <CommandDialog onOpenChange={setOpen} open={open}>
+      <CommandInput
+        placeholder={
+          focusedNode
+            ? `Command ${focusedNode.data.label}...`
+            : "Create or jump to a node"
+        }
+      />
       <CommandList>
-        <CommandEmpty>No matching artifacts</CommandEmpty>
+        <CommandEmpty>No matching commands</CommandEmpty>
+
+        {focusedNode && contextActions.length > 0 && (
+          <>
+            <CommandGroup
+              heading={`Actions for ${focusedNode.data.label || "Selected Node"}`}
+            >
+              {contextActions.map((action) => (
+                <CommandItem
+                  className={
+                    action.variant === "destructive"
+                      ? "text-red-400 aria-selected:text-red-400"
+                      : ""
+                  }
+                  key={action.id}
+                  onSelect={() => executeContextAction(action.id)}
+                  value={`action-${action.id}`}
+                >
+                  <span className="mr-3 opacity-70">
+                    <action.icon className="h-4 w-4" />
+                  </span>
+                  <span className="flex flex-col text-left">
+                    <span className="font-medium">{action.label}</span>
+                  </span>
+                  {action.shortcut && (
+                    <CommandShortcut>{action.shortcut}</CommandShortcut>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
         <CommandGroup heading="Create">
           {createActions.map((action) => (
             <CommandItem
               key={action.type}
-              value={`create-${action.type}`}
               onSelect={() => handleSpawn(action.type)}
+              value={`create-${action.type}`}
             >
               <span className="mr-3 text-biolum">{action.icon}</span>
               <span className="flex flex-col text-left">
@@ -188,13 +299,14 @@ export function MindscapeCommandPalette({
             </CommandItem>
           ))}
         </CommandGroup>
+
         {searchableNodes.length > 0 && (
-          <CommandGroup heading="Existing">
+          <CommandGroup heading="Jump to">
             {searchableNodes.map((node) => (
               <CommandItem
                 key={node.id}
-                value={`focus-${node.id}`}
                 onSelect={() => handleFocus(node.id)}
+                value={`focus-${node.id}`}
               >
                 <span className="mr-2 text-biolum-dim">●</span>
                 <span>{node.label}</span>

@@ -1,16 +1,16 @@
-import { describe, expect, it, beforeEach, mock } from "bun:test";
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
+import { join } from "node:path";
 import { ModelProcess, type ProcessConfig } from "@alfred/voice/process/base";
-import type { Subprocess } from "bun";
 import {
+  cleanupTestVenv,
   createFakeExecutable,
   createTestVenv,
-  saveEnvVars,
   restoreEnvVars,
-  cleanupTestVenv,
+  saveEnvVars,
 } from "@alfred/voice/test/utils/python-helpers";
+import type { Subprocess } from "bun";
 
 describe("Python Process Integration", () => {
   let mockSpawn: ReturnType<typeof mock.fn>;
@@ -54,11 +54,11 @@ describe("Python Process Integration", () => {
   it("should spawn process with UV run command", async () => {
     // Set up UV available
     const tempBin = join(tempVoiceDir, "bin");
-    const uvPath = createFakeExecutable(tempBin, "uv");
+    const _uvPath = createFakeExecutable(tempBin, "uv");
     process.env.PATH = [tempBin, process.env.PATH].filter(Boolean).join(":");
 
     process.env.VOICE_USE_UV = "true";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
     const scriptsDir = join(tempVoiceDir, "scripts");
     mkdirSync(scriptsDir, { recursive: true });
@@ -72,15 +72,16 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock the waitForReady to avoid hanging
-    const originalWaitForReady = processInstance["waitForReady"].bind(processInstance);
-    processInstance["waitForReady"] = async () => {
+    const _originalWaitForReady =
+      processInstance.waitForReady.bind(processInstance);
+    processInstance.waitForReady = async () => {
       // Simulate ready signal
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
-      processInstance["ipc"].handleResponse(mockResponse as any);
+      processInstance.ipc.handleResponse(mockResponse as any);
     };
 
     await processInstance.start();
@@ -96,7 +97,7 @@ describe("Python Process Integration", () => {
 
   it("should spawn process with venv Python", async () => {
     process.env.VOICE_USE_UV = "false";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
     const venvPython = createTestVenv(tempVoiceDir);
 
@@ -112,13 +113,13 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance["waitForReady"] = async () => {
+    processInstance.waitForReady = async () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
-      processInstance["ipc"].handleResponse(mockResponse as any);
+      processInstance.ipc.handleResponse(mockResponse as any);
     };
 
     await processInstance.start();
@@ -132,7 +133,7 @@ describe("Python Process Integration", () => {
 
   it("should spawn process with system Python", async () => {
     process.env.VOICE_USE_UV = "false";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
     // Ensure no UV and no venv
     cleanupTestVenv(tempVoiceDir);
@@ -151,13 +152,13 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance["waitForReady"] = async () => {
+    processInstance.waitForReady = async () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
-      processInstance["ipc"].handleResponse(mockResponse as any);
+      processInstance.ipc.handleResponse(mockResponse as any);
     };
 
     await processInstance.start();
@@ -173,9 +174,9 @@ describe("Python Process Integration", () => {
 
   it("should propagate environment variables correctly", async () => {
     process.env.VOICE_USE_UV = "false";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
-    const venvPython = createTestVenv(tempVoiceDir);
+    const _venvPython = createTestVenv(tempVoiceDir);
 
     const scriptsDir = join(tempVoiceDir, "scripts");
     mkdirSync(scriptsDir, { recursive: true });
@@ -191,13 +192,13 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance["waitForReady"] = async () => {
+    processInstance.waitForReady = async () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
-      processInstance["ipc"].handleResponse(mockResponse as any);
+      processInstance.ipc.handleResponse(mockResponse as any);
     };
 
     await processInstance.start();
@@ -212,9 +213,9 @@ describe("Python Process Integration", () => {
 
   it("should set correct working directory", async () => {
     process.env.VOICE_USE_UV = "false";
-    delete process.env.PYTHON_PATH;
+    process.env.PYTHON_PATH = undefined;
 
-    const venvPython = createTestVenv(tempVoiceDir);
+    const _venvPython = createTestVenv(tempVoiceDir);
 
     const scriptsDir = join(tempVoiceDir, "scripts");
     mkdirSync(scriptsDir, { recursive: true });
@@ -228,13 +229,13 @@ describe("Python Process Integration", () => {
     const processInstance = new ModelProcess(config);
 
     // Mock waitForReady
-    processInstance["waitForReady"] = async () => {
+    processInstance.waitForReady = async () => {
       const mockResponse = {
         id: "init",
         type: "status",
         payload: { message: "STT server ready" },
       };
-      processInstance["ipc"].handleResponse(mockResponse as any);
+      processInstance.ipc.handleResponse(mockResponse as any);
     };
 
     await processInstance.start();
@@ -245,4 +246,3 @@ describe("Python Process Integration", () => {
     expect(callArgs.cwd).toBe(process.cwd());
   });
 });
-

@@ -1,8 +1,8 @@
 import {
-  ToolLoopAgent,
   type InferAgentUIMessage,
-  stepCountIs,
   type PrepareStepFunction,
+  stepCountIs,
+  ToolLoopAgent,
   type ToolLoopAgentSettings,
 } from "ai";
 
@@ -31,7 +31,7 @@ const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
 }) => {
   if (messages.length > 40) {
     return {
-      messages: [messages[0]!, ...messages.slice(-20)],
+      messages: [messages[0], ...messages.slice(-20)].filter(Boolean) as any[],
     };
   }
   return {};
@@ -42,7 +42,7 @@ const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
 }) => {
   if (messages.length > 60) {
     return {
-      messages: [messages[0]!, ...messages.slice(-30)],
+      messages: [messages[0], ...messages.slice(-30)].filter(Boolean) as any[],
     };
   }
   return {};
@@ -102,7 +102,9 @@ export function getOrchestratorAgentDefaults() {
 }
 
 export type AssistantUIMessage = InferAgentUIMessage<typeof assistantAgent>;
-export type OrchestratorUIMessage = InferAgentUIMessage<typeof orchestratorAgent>;
+export type OrchestratorUIMessage = InferAgentUIMessage<
+  typeof orchestratorAgent
+>;
 
 // Expose constants for downstream tuning/testing when required.
 export const ASSISTANT_AGENT_MAX_STEPS = ASSISTANT_MAX_STEPS;

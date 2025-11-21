@@ -1,6 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { mockWorkflowRepo, mockRunRegistry, mockPolicyAudit, resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import { metricsStub } from "./utils/mock-metrics";
+import {
+  mockPolicyAudit,
+  mockRunRegistry,
+  mockWorkflowRepo,
+  resetAllMocks,
+  setupTestEnv,
+} from "./utils/router-helpers";
+
 // Provide targeted metrics mocks for rate limit path so we can assert increments
 const rateLimitInc = vi.fn();
 mock.module("@alfred/api/src/metrics", () => ({
@@ -12,9 +19,10 @@ mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
   rateLimitHitsTotal: { inc: rateLimitInc },
 }));
-import { createTestCaller } from "./utils/trpc";
-import { toObservable } from "./utils/stream";
+
 import type { WorkflowEvent } from "@alfred/type";
+import { toObservable } from "./utils/stream";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -38,13 +46,16 @@ const workflowRunnerMocks = (() => {
 })();
 
 // Mock workflow repo and run-registry to avoid DB/persistence
-const workflowRepoMocks = mockWorkflowRepo();
-const runRegistryMocks = mockRunRegistry();
+const _workflowRepoMocks = mockWorkflowRepo();
+const _runRegistryMocks = mockRunRegistry();
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
-  caller = await createTestCaller({ roles: ["user"], scopes: ["workflow.plan", "workflow.stream", "workflow.resume"] });
+  caller = await createTestCaller({
+    roles: ["user"],
+    scopes: ["workflow.plan", "workflow.stream", "workflow.resume"],
+  });
 });
 
 afterEach(() => {
@@ -70,12 +81,20 @@ describe("workflow.stream rate limit", () => {
 
     // 1st invocation (allowed)
     await new Promise<void>((resolve, reject) => {
-      toObservable(caller.workflow.stream({ requirement: "A" })).subscribe({ next: () => {}, error: reject, complete: resolve });
+      toObservable(caller.workflow.stream({ requirement: "A" })).subscribe({
+        next: () => {},
+        error: reject,
+        complete: resolve,
+      });
     });
 
     // 2nd invocation (allowed)
     await new Promise<void>((resolve, reject) => {
-      toObservable(caller.workflow.stream({ requirement: "B" })).subscribe({ next: () => {}, error: reject, complete: resolve });
+      toObservable(caller.workflow.stream({ requirement: "B" })).subscribe({
+        next: () => {},
+        error: reject,
+        complete: resolve,
+      });
     });
 
     // 3rd invocation should hit rate limit (429)
@@ -91,7 +110,9 @@ describe("workflow.stream rate limit", () => {
             next: () => resolve(),
             error: (err: unknown) => {
               const msg = err instanceof Error ? err.message : String(err);
-              if (/rate_limited/i.test(msg)) matched = true;
+              if (/rate_limited/i.test(msg)) {
+                matched = true;
+              }
               resolve();
             },
             complete: () => resolve(),
@@ -100,12 +121,18 @@ describe("workflow.stream rate limit", () => {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (/rate_limited/i.test(msg)) matched = true;
+      if (/rate_limited/i.test(msg)) {
+        matched = true;
+      }
     }
     // Either we saw the error or metrics recorded a hit
     const incCalled = rateLimitInc.mock.calls.some((args) => {
       const [labels] = args;
-      return labels && (labels.procedure === "workflow.stream" || labels.procedure === undefined);
+      return (
+        labels &&
+        (labels.procedure === "workflow.stream" ||
+          labels.procedure === undefined)
+      );
     });
     expect(matched || incCalled).toBe(true);
   });

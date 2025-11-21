@@ -1,3 +1,3 @@
 export * from "./cognitive";
-export * from "./performance";
 export * from "./logger";
+export * from "./performance";

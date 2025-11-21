@@ -1,5 +1,6 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
+import { Workflow } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CodeBlock } from "@/components/ai-elements/code-block";
@@ -19,8 +20,7 @@ import {
 } from "@/components/ai-elements/task";
 import { Tool, ToolContent, ToolHeader } from "@/components/ai-elements/tool";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -28,11 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { deriveActions } from "@/hooks/use-assistant-stream";
-import { workflowNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
+import { workflowNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
+import { useLOD } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
@@ -40,6 +41,7 @@ type AutoLevel = "read" | "low" | "medium" | "high";
 const autoOptions: AutoLevel[] = ["read", "low", "medium", "high"];
 
 export function WorkflowNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
   // Validate and parse node data
   const result = workflowNodeDataSchema.safeParse(data);
   const validatedData = result.success
@@ -51,9 +53,8 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
         description: undefined,
         label: undefined,
       };
-  
-  const messages = (validatedData.messages ??
-    []) as AssistantUIMessage[];
+
+  const messages = (validatedData.messages ?? []) as AssistantUIMessage[];
   const status = validatedData.status ?? "Idle";
   const hasRun = Boolean(validatedData.runId);
 
@@ -67,10 +68,15 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
     (validatedData.mode as "sequential" | "parallel") ?? "sequential"
   );
 
-  const updateArtifactData = useMindscapeStore((state) => state.updateArtifactData);
+  const updateArtifactData = useMindscapeStore(
+    (state) => state.updateArtifactData
+  );
 
   useEffect(() => {
-    if (validatedData.requirement && validatedData.requirement !== requirementDraft) {
+    if (
+      validatedData.requirement &&
+      validatedData.requirement !== requirementDraft
+    ) {
       setRequirementDraft(validatedData.requirement);
     }
   }, [validatedData.requirement, requirementDraft]);
@@ -112,6 +118,43 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
           ? "text-biolum"
           : "text-biolum-faint";
 
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-biolum/40 backdrop-blur-sm">
+        <div
+          className={`h-1.5 w-1.5 rounded-full ${status === "running" ? "animate-pulse bg-biolum shadow-[0_0_8px_rgba(var(--biolum-rgb),1)]" : "bg-biolum-dim"}`}
+        />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-biolum/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-biolum/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-biolum/10 text-biolum">
+          {status === "running" ? (
+            <Workflow className="h-4 w-4 animate-spin" />
+          ) : (
+            <Workflow className="h-4 w-4" />
+          )}
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="line-clamp-1 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+            {validatedData.label ?? "Workflow"}
+          </span>
+          <span
+            className={`text-[9px] uppercase tracking-wider ${statusBadgeClass}`}
+          >
+            {status}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // LOD 2/3: Full
   return (
     <MindscapeNode
       className="w-[400px]"
@@ -124,13 +167,16 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
           <form className="space-y-3" onSubmit={handleStart}>
             <Textarea
               aria-label="Requirement"
+              className="min-h-[100px]"
+              onChange={(event) => setRequirementDraft(event.target.value)}
               placeholder="Describe what Alfred should do"
               value={requirementDraft}
-              onChange={(event) => setRequirementDraft(event.target.value)}
-              className="min-h-[100px]"
             />
             <div className="flex items-center gap-2">
-              <Select value={autoLevel} onValueChange={(value) => setAutoLevel(value as AutoLevel)}>
+              <Select
+                onValueChange={(value) => setAutoLevel(value as AutoLevel)}
+                value={autoLevel}
+              >
                 <SelectTrigger className="w-[140px]" size="sm">
                   <SelectValue placeholder="Autonomy" />
                 </SelectTrigger>
@@ -142,7 +188,12 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={mode} onValueChange={(value) => setMode(value as "sequential" | "parallel")}>
+              <Select
+                onValueChange={(value) =>
+                  setMode(value as "sequential" | "parallel")
+                }
+                value={mode}
+              >
                 <SelectTrigger className="w-[140px]" size="sm">
                   <SelectValue placeholder="Mode" />
                 </SelectTrigger>
@@ -153,10 +204,18 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" disabled={!requirementDraft.trim()} className="flex-1">
+              <Button
+                className="flex-1"
+                disabled={!requirementDraft.trim()}
+                type="submit"
+              >
                 Launch Workflow
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setRequirementDraft("")}>
+              <Button
+                onClick={() => setRequirementDraft("")}
+                type="button"
+                variant="ghost"
+              >
                 Clear
               </Button>
             </div>
@@ -223,42 +282,46 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
           </PlanContent>
 
           <PlanFooter className="px-0 pt-4 pb-0">
-            <div className={`text-xs uppercase tracking-wider ${statusBadgeClass}`}>
+            <div
+              className={`text-xs uppercase tracking-wider ${statusBadgeClass}`}
+            >
               Status: {status}
             </div>
           </PlanFooter>
         </Plan>
 
         {hasRun && (
-          <div className="space-y-2 border-t border-white/10 pt-3">
-            <div className="flex items-center justify-between text-xs text-biolum-faint">
+          <div className="space-y-2 border-white/10 border-t pt-3">
+            <div className="flex items-center justify-between text-biolum-faint text-xs">
               <span>Run ID: {validatedData.runId?.slice(0, 12)}</span>
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => eventsQuery.refetch()}
                 disabled={eventsQuery.isFetching}
+                onClick={() => eventsQuery.refetch()}
+                size="sm"
+                variant="ghost"
               >
                 Refresh events
               </Button>
             </div>
             <ScrollArea className="h-[140px] rounded-md border border-white/10">
               {eventsQuery.isLoading ? (
-                <p className="p-3 text-center text-sm text-biolum-faint">
+                <p className="p-3 text-center text-biolum-faint text-sm">
                   Loading events…
                 </p>
               ) : events.length === 0 ? (
-                <p className="p-3 text-center text-sm text-biolum-faint">
+                <p className="p-3 text-center text-biolum-faint text-sm">
                   No events recorded for this run yet.
                 </p>
               ) : (
                 <ul className="divide-y divide-white/5 text-sm">
                   {events.slice(0, 10).map((event) => (
                     <li className="p-3" key={event.id}>
-                      <div className="flex items-center justify-between text-xs text-biolum-faint">
+                      <div className="flex items-center justify-between text-biolum-faint text-xs">
                         <span>{event.eventType}</span>
                         {event.timestamp && (
-                          <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                          <span>
+                            {new Date(event.timestamp).toLocaleTimeString()}
+                          </span>
                         )}
                       </div>
                       {event.eventData && (

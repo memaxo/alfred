@@ -1,7 +1,13 @@
 export type VoiceStreamCodec = "pcm" | "mp3" | "opus" | "wav";
-export type VoiceStreamSurface = "drive" | "carplay" | "web" | "native" | "stream" | "unknown";
+export type VoiceStreamSurface =
+  | "drive"
+  | "carplay"
+  | "web"
+  | "native"
+  | "stream"
+  | "unknown";
 
-export interface VoiceStreamStartPayload {
+export type VoiceStreamStartPayload = {
   type: "start";
   sessionId?: string;
   language?: string;
@@ -12,31 +18,32 @@ export interface VoiceStreamStartPayload {
   maxUtteranceMs?: number;
   ttsVoice?: string;
   ttsFormat?: "mp3" | "opus" | "wav";
-}
+};
 
-export interface VoiceStreamAudioChunkPayload {
+export type VoiceStreamAudioChunkPayload = {
   type: "audio_chunk";
-  audioBase64: string;
+  audioBase64?: string;
+  audio?: Uint8Array | ArrayBuffer; // Binary support
   mimeType: string;
   emitPartial?: boolean;
-}
+};
 
-export interface VoiceStreamStopPayload {
+export type VoiceStreamStopPayload = {
   type: "stop";
   reason?: "manual" | "silence" | "timeout";
-}
+};
 
-export interface VoiceStreamStatusEvent {
+export type VoiceStreamStatusEvent = {
   type: "status";
   sessionId: string | null;
   state: "recording" | "processing" | "playing" | "idle";
-}
+};
 
-export interface VoiceStreamAutoStopEvent {
+export type VoiceStreamAutoStopEvent = {
   type: "auto_stop";
   sessionId: string;
   reason: "manual" | "silence" | "timeout";
-}
+};
 
 export type VoiceStreamServerEvent =
   | { type: "ready"; sessionId: null }
@@ -64,6 +71,7 @@ export type VoiceStreamServerEvent =
       endOfUtterance: boolean | null;
     }
   | VoiceStreamAutoStopEvent
+  | { type: "interrupt"; sessionId: string }
   | {
       type: "assistant_message";
       sessionId: string;
@@ -87,12 +95,20 @@ export type VoiceStreamServerEvent =
       message: string;
       code?: string;
     }
-  | { type: "pong"; sessionId?: string | null };
+  | { type: "pong"; sessionId?: string | null }
+  | {
+      type: "telemetry_report";
+      sessionId: string;
+      packetLoss: number;
+      jitter: number;
+      rtt: number;
+      timestamp: number;
+    };
 
-export interface VoiceStreamInput {
+export type VoiceStreamInput = {
   mode?: "clip" | "stream";
   sessionId?: string;
   language?: string;
-}
+};
 
 export type VoiceStreamEvent = VoiceStreamServerEvent;

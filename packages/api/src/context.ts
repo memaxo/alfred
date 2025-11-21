@@ -5,7 +5,7 @@ import { getSessionUser } from "./utils/session";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
-export interface RuntimeMetadata {
+export type RuntimeMetadata = {
   /** Unique identifier for the incoming request */
   requestId: string;
   /** Timestamp when the backend received the request */
@@ -22,20 +22,22 @@ export interface RuntimeMetadata {
   userAgent: string | null;
   /** Referer/Referrer header */
   referer: string | null;
-}
+};
 
-export interface Context {
+export type Context = {
   session: AuthSession | null;
   runtime: RuntimeMetadata;
   runtimeContext: RuntimeContext;
   policy?: {
     obligations: string[];
   };
-}
+};
 
 function parseForwardedFor(headers: Headers) {
   const header = headers.get("x-forwarded-for");
-  if (!header) return [] as string[];
+  if (!header) {
+    return [] as string[];
+  }
   return header
     .split(",")
     .map((entry) => entry.trim())
@@ -105,7 +107,7 @@ export async function createContext({
     })
     .catch(() => null);
 
-  const runtimeContextEntries: Array<[string, unknown]> = [
+  const runtimeContextEntries: [string, unknown][] = [
     ["requestId", runtime.requestId],
     ["receivedAt", runtime.receivedAt.toISOString()],
     ["method", runtime.method],
@@ -134,7 +136,7 @@ export async function createContext({
   }
 
   const runtimeContext = new RuntimeContext<Record<string, unknown>>(
-    runtimeContextEntries as Array<[string, unknown]>
+    runtimeContextEntries as [string, unknown][]
   );
 
   return {
@@ -146,14 +148,14 @@ export async function createContext({
 
 export function cloneRuntimeContext(
   base: RuntimeContext,
-  extras: Array<[string, unknown]> = []
+  extras: [string, unknown][] = []
 ): RuntimeContext {
-  const entries: Array<[string, unknown]> = [];
+  const entries: [string, unknown][] = [];
   base.forEach((value, key) => {
     entries.push([String(key), value]);
   });
   const clone = new RuntimeContext<Record<string, unknown>>(
-    entries as Array<[string, unknown]>
+    entries as [string, unknown][]
   );
   for (const [key, value] of extras) {
     clone.set(key as string, value as unknown);

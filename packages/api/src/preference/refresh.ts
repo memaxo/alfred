@@ -1,13 +1,13 @@
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
+import { logger } from "@alfred/logger";
 import {
   preferenceCacheInvalidationsTotal,
   preferenceRefreshTotal,
 } from "../metrics";
 import { runPreferenceInference } from "../scheduler/preference-inference";
-import { logger } from "../utils/logger";
 
 const pendingUsers = new Set<string>();
-const DEFAULT_DEBOUNCE_MS = 5_000;
+const DEFAULT_DEBOUNCE_MS = 5000;
 let flushTimer: NodeJS.Timeout | null = null;
 
 async function drainQueue() {

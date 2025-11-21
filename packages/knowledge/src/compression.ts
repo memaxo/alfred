@@ -45,7 +45,7 @@ export function decayConfidence(
   }
 
   const current = Number(node.confidence);
-  const factor = Math.pow(0.5, elapsedMs / halfLife);
+  const factor = 0.5 ** (elapsedMs / halfLife);
   const next = updateConfidence(node, current * factor);
   return next;
 }
@@ -65,7 +65,7 @@ export function consolidatePatterns(
     if (!groups.has(normalized)) {
       groups.set(normalized, []);
     }
-    groups.get(normalized)!.push(entry);
+    groups.get(normalized)?.push(entry);
   }
 
   const patterns: Knowledge[] = [];
@@ -76,9 +76,11 @@ export function consolidatePatterns(
     }
 
     const avgConfidence =
-      group.reduce((sum, { data }) => {
-        return sum + Number((data as ConfidentKnowledge).confidence ?? 0);
-      }, 0) / group.length;
+      group.reduce(
+        (sum, { data }) =>
+          sum + Number((data as ConfidentKnowledge).confidence ?? 0),
+        0
+      ) / group.length;
 
     if (avgConfidence < minConfidence) {
       continue;
@@ -155,14 +157,12 @@ export function compressTransitiveRelations(
     if (!adjacency.has(relation.from)) {
       adjacency.set(relation.from, []);
     }
-    adjacency
-      .get(relation.from)!
-      .push({
-        to: relation.to,
-        kind: relation.kind,
-        weight: relation.weight,
-        id: relation.id,
-      });
+    adjacency.get(relation.from)?.push({
+      to: relation.to,
+      kind: relation.kind,
+      weight: relation.weight,
+      id: relation.id,
+    });
   }
 
   const compressed: Array<{
@@ -176,10 +176,14 @@ export function compressTransitiveRelations(
   for (const [from, edges] of adjacency.entries()) {
     for (const first of edges) {
       const nextEdges = adjacency.get(first.to);
-      if (!nextEdges) continue;
+      if (!nextEdges) {
+        continue;
+      }
 
       for (const second of nextEdges) {
-        if (first.kind !== second.kind) continue;
+        if (first.kind !== second.kind) {
+          continue;
+        }
 
         compressed.push({
           from,

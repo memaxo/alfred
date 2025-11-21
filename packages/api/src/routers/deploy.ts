@@ -3,17 +3,19 @@ import { createServer } from "node:net";
 import { toolDocker } from "@alfred/agent/orchestrator/tool/docker";
 import { toolRouter } from "@alfred/agent/orchestrator/tool/router";
 import { deployRepo } from "@alfred/db";
+import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
-import { logger } from "../utils/logger";
 
 const PREVIEW_BIND_HOST = "127.0.0.1";
 
 function parsePortEnv(value: string | undefined, fallback: number) {
-  if (!value) return fallback;
+  if (!value) {
+    return fallback;
+  }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -135,7 +137,9 @@ async function safeRouterRemove(
   host: string | null | undefined,
   authz: string
 ) {
-  if (!host) return;
+  if (!host) {
+    return;
+  }
   try {
     await toolRouter.execute({
       input: {
@@ -157,7 +161,9 @@ async function safeStopContainer(
   nameOrId: string | null | undefined,
   authz: string
 ) {
-  if (!nameOrId) return;
+  if (!nameOrId) {
+    return;
+  }
   try {
     await toolDocker.execute({
       input: {
@@ -209,12 +215,15 @@ const mapPromoteResource = (raw: unknown) => mapDeployResource(raw, "prod");
 const mapRemoveResource = (raw: unknown) => mapDeployResource(raw, "remove");
 const mapHealthResource = (raw: unknown) => {
   const data = raw as { app?: string; apps?: string[]; preview?: boolean };
-  const firstApp =
-    typeof data.app === "string"
-      ? data.app
-      : Array.isArray(data.apps) && data.apps.length > 0
-        ? data.apps[0]!
-        : "all";
+  let firstApp = "all";
+  if (typeof data.app === "string") {
+    firstApp = data.app;
+  } else if (Array.isArray(data.apps) && data.apps.length > 0) {
+    const possibleApp = data.apps[0];
+    if (possibleApp) {
+      firstApp = possibleApp;
+    }
+  }
   return mapDeployResource(
     { app: firstApp } as { app: string },
     data.preview === false ? "prod" : "preview"
@@ -518,7 +527,22 @@ export const deployRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("deploy.promote", mapPromoteResource))
     .input(promoteInput)
     .mutation(async ({ ctx, input }) => {
-      // TODO: Handle policy obligations (e.g., biometric elevation) by pausing the request and resuming once satisfied.
+      // Handle policy obligations (e.g., biometric elevation)
+      const obligations = ctx.policy?.obligations;
+      if (obligations && obligations.length > 0) {
+        // If the PDP returns obligations, it means the current session context
+        // (even if valid) requires additional proof for this specific action.
+        // We throw a specialized error that the client recognizes to trigger elevation.
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "obligation_required",
+          cause: {
+            reason: "deployment_promotion",
+            obligations,
+          },
+        });
+      }
+
       const domain = getAppDomain();
       const slug = slugifyApp(input.app);
       const host = input.host ?? buildProdHost(slug, domain);
@@ -672,12 +696,16 @@ export const deployRouter: ReturnType<typeof router> = router({
         let timer: ReturnType<typeof setInterval> | null = null;
 
         const tick = async () => {
-          if (running || closed) return;
+          if (running || closed) {
+            return;
+          }
           running = true;
           try {
             const deployments = await fetchDeployments();
             for (const record of deployments) {
-              if (!shouldInclude(record.app)) continue;
+              if (!shouldInclude(record.app)) {
+                continue;
+              }
               const result = await probeDeployment({
                 record,
                 authz: input.authz,
@@ -698,7 +726,9 @@ export const deployRouter: ReturnType<typeof router> = router({
                 emit.error(error);
               }
               closed = true;
-              if (timer) clearInterval(timer);
+              if (timer) {
+                clearInterval(timer);
+              }
               return;
             }
             emit.next({
@@ -720,7 +750,9 @@ export const deployRouter: ReturnType<typeof router> = router({
 
         return () => {
           closed = true;
-          if (timer) clearInterval(timer);
+          if (timer) {
+            clearInterval(timer);
+          }
         };
       })
     ),
@@ -729,7 +761,19 @@ export const deployRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("deploy.remove", mapRemoveResource))
     .input(removeInput)
     .mutation(async ({ ctx, input }) => {
-      // TODO: Surface PDP obligations and expose resumable workflow hooks before destructive teardown.
+      // Handle policy obligations
+      const obligations = ctx.policy?.obligations;
+      if (obligations && obligations.length > 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "obligation_required",
+          cause: {
+            reason: "deployment_remove",
+            obligations,
+          },
+        });
+      }
+
       const session = ctx.session;
       const userId = session?.user?.id;
       if (!userId) {

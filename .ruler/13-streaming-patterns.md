@@ -26,7 +26,7 @@
 
 12. **UI message stream abort.** Always use `consumeStream` with `toUIMessageStreamResponse` to ensure `onFinish` is called on abort.
 
-13. **Resource cleanup.** Always clean up in finally blocks.
+14. **Stream accumulation.** Use typed accumulators to segregate and buffer interleaved stream content (reasoning, artifacts, output) before processing, ensuring partial chunks do not corrupt state.
 
 ## Hook Checklist
 

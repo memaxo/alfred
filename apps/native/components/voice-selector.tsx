@@ -1,21 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Platform,
 } from "react-native";
 import { trpc } from "@/utils/trpc";
-import { Ionicons } from "@expo/vector-icons";
 
-interface VoiceSelectorProps {
+type VoiceSelectorProps = {
   value?: string;
   onValueChange?: (value: string) => void;
-}
+};
 
 export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -26,16 +25,18 @@ export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
   const previewMutation = trpc.voice.previewVoice.useMutation();
 
   const voices = voicesQuery.data ?? [];
-  const selectedVoice = voices.find((v) => v.id === value) ?? 
+  const selectedVoice =
+    voices.find((v) => v.id === value) ??
     (value ? { id: value, name: value } : null);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (sound) {
         sound.unloadAsync();
       }
-    };
-  }, [sound]);
+    },
+    [sound]
+  );
 
   const handlePlayPreview = async (voiceId: string) => {
     try {
@@ -64,14 +65,13 @@ export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
       );
 
       setSound(newSound);
-      
+
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setPlayingVoice(null);
         }
       });
-    } catch (error) {
-      console.error("Failed to play preview", error);
+    } catch (_error) {
       setPlayingVoice(null);
     }
   };
@@ -81,60 +81,74 @@ export function VoiceSelector({ value, onValueChange }: VoiceSelectorProps) {
   return (
     <View>
       <TouchableOpacity
-        onPress={() => setModalVisible(true)}
-        disabled={isLoading}
         className="flex-row items-center justify-between rounded-md border border-border bg-background px-4 py-3"
+        disabled={isLoading}
+        onPress={() => setModalVisible(true)}
       >
-        <Text className={selectedVoice ? "text-foreground" : "text-muted-foreground"}>
-          {isLoading ? "Loading voices..." : (selectedVoice?.name ?? "Select a voice...")}
+        <Text
+          className={
+            selectedVoice ? "text-foreground" : "text-muted-foreground"
+          }
+        >
+          {isLoading
+            ? "Loading voices..."
+            : (selectedVoice?.name ?? "Select a voice...")}
         </Text>
-        <Ionicons name="chevron-down" size={20} color="#aaa" />
+        <Ionicons color="#aaa" name="chevron-down" size={20} />
       </TouchableOpacity>
 
       <Modal
         animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
       >
         <View className="flex-1 justify-end bg-black/50">
           <View className="h-2/3 rounded-t-xl bg-background p-4">
             <View className="mb-4 flex-row items-center justify-between">
-              <Text className="font-bold text-xl text-foreground">Select Voice</Text>
+              <Text className="font-bold text-foreground text-xl">
+                Select Voice
+              </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#aaa" />
+                <Ionicons color="#aaa" name="close" size={24} />
               </TouchableOpacity>
             </View>
 
             <ScrollView>
               {voices.map((voice) => (
                 <TouchableOpacity
+                  className="flex-row items-center justify-between border-border border-b py-4"
                   key={voice.id}
-                  className="flex-row items-center justify-between border-b border-border py-4"
                   onPress={() => {
                     onValueChange?.(voice.id);
                     setModalVisible(false);
                   }}
                 >
-                  <View className="flex-row items-center flex-1">
+                  <View className="flex-1 flex-row items-center">
                     <TouchableOpacity
+                      className="mr-3 rounded-full bg-muted p-2"
+                      disabled={
+                        previewMutation.isPending &&
+                        playingVoice === voice.id &&
+                        !sound
+                      }
                       onPress={(e) => {
                         e.stopPropagation(); // Prevent selection when clicking play
                         handlePlayPreview(voice.id);
                       }}
-                      disabled={previewMutation.isPending && playingVoice === voice.id && !sound}
-                      className="mr-3 rounded-full bg-muted p-2"
                     >
-                        {playingVoice === voice.id ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Ionicons name="play" size={16} color="#fff" />
-                        )}
+                      {playingVoice === voice.id ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Ionicons color="#fff" name="play" size={16} />
+                      )}
                     </TouchableOpacity>
-                    <Text className="font-medium text-foreground">{voice.name}</Text>
+                    <Text className="font-medium text-foreground">
+                      {voice.name}
+                    </Text>
                   </View>
                   {value === voice.id && (
-                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Ionicons color="#fff" name="checkmark" size={20} />
                   )}
                 </TouchableOpacity>
               ))}

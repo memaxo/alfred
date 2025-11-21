@@ -1,17 +1,17 @@
+import { initApiServices, shutdownApiServices } from "@alfred/api/init";
 import {
-  startReminderScheduler,
-  stopReminderScheduler,
-} from "@alfred/api/scheduler/remind";
+  startPreferenceDecayScheduler,
+  stopPreferenceDecayScheduler,
+} from "@alfred/api/scheduler/preference-decay";
 import {
   startPreferenceInferenceScheduler,
   stopPreferenceInferenceScheduler,
 } from "@alfred/api/scheduler/preference-inference";
 import {
-  startPreferenceDecayScheduler,
-  stopPreferenceDecayScheduler,
-} from "@alfred/api/scheduler/preference-decay";
-import { initApiServices, shutdownApiServices } from "@alfred/api/init";
-import { logger } from "@alfred/api/utils/logger";
+  startReminderScheduler,
+  stopReminderScheduler,
+} from "@alfred/api/scheduler/remind";
+import { logger } from "@alfred/logger";
 
 let initialized = false;
 
@@ -47,7 +47,8 @@ export function initServer() {
     });
   } else {
     logger.info("preference_scheduler_disabled", {
-      message: "Set SCHED_PREFERENCE_INFERENCE=1 to enable preference schedulers",
+      message:
+        "Set SCHED_PREFERENCE_INFERENCE=1 to enable preference schedulers",
     });
   }
 

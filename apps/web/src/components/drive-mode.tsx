@@ -3,7 +3,7 @@ import { Load } from "./load";
 import { Orb } from "./orb";
 import { VoiceBtn } from "./voice-btn";
 
-interface DriveModeProps {
+type DriveModeProps = {
   transcript: string;
   reply: string;
   error?: string | null;
@@ -12,6 +12,26 @@ interface DriveModeProps {
   onToggle: () => void;
   onComplete: () => void;
   className?: string;
+};
+
+function getAgentState(status: string) {
+  if (status === "listening") {
+    return "listening";
+  }
+  if (status === "thinking") {
+    return "thinking";
+  }
+  return null;
+}
+
+function getStatus(isRecording: boolean, isProcessing: boolean) {
+  if (isRecording) {
+    return "listening";
+  }
+  if (isProcessing) {
+    return "thinking";
+  }
+  return "idle";
 }
 
 export function DriveMode({
@@ -24,7 +44,7 @@ export function DriveMode({
   onComplete,
   className,
 }: DriveModeProps) {
-  const status = isRecording ? "listening" : isProcessing ? "thinking" : "idle";
+  const status = getStatus(isRecording, isProcessing);
 
   return (
     <div
@@ -40,10 +60,7 @@ export function DriveMode({
         </p>
       </div>
 
-      <Orb 
-        agentState={status === "listening" ? "listening" : status === "thinking" ? "thinking" : null}
-        className="h-64 w-64"
-      />
+      <Orb agentState={getAgentState(status)} className="h-64 w-64" />
 
       {isProcessing && <Load message="Processing your request..." />}
 
@@ -82,6 +99,7 @@ export function DriveMode({
         aria-label="Exit drive mode"
         className="rounded-lg border px-6 py-3 font-medium text-sm hover:bg-accent"
         onClick={onComplete}
+        type="button"
       >
         Exit Drive Mode
       </button>

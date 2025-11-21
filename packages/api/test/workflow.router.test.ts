@@ -10,7 +10,9 @@ import {
 } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
-import { toObservable } from "./utils/stream";
+import { resetAgentMocks } from "./utils/agent-mock";
+import { dbModuleStub } from "./utils/mock-db-client";
+import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -20,9 +22,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { metricsStub } from "./utils/mock-metrics";
-import { dbModuleStub } from "./utils/mock-db-client";
-import { resetAgentMocks } from "./utils/agent-mock";
+import { toObservable } from "./utils/stream";
 
 const triggerPreferenceRefreshMock = vi.fn();
 
@@ -108,7 +108,7 @@ afterEach(() => {
   workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
   workflowStreamEventsTotalMock.inc.mockReset();
   // Reset env flag
-  delete process.env.USE_WORKFLOW_RUNTIME;
+  process.env.USE_WORKFLOW_RUNTIME = undefined;
   createConversationMock.mockReset();
   getConversationByWorkflowMock.mockReset();
   createMessageMock.mockReset();
@@ -126,7 +126,11 @@ function setupExecutorPath(useRuntime: boolean) {
 /**
  * Helper to create a mock executor (runtime or runner) with identical interface
  */
-function createMockExecutor(mockRunId: string, mockSummary: string, events: WorkflowEvent[]) {
+function createMockExecutor(
+  mockRunId: string,
+  mockSummary: string,
+  events: WorkflowEvent[]
+) {
   const mockStream = async function* () {
     for (const event of events) {
       yield event;
@@ -460,11 +464,13 @@ describe("workflow router", () => {
         });
       });
 
-      const toolCallPersist = createMessageMock.mock.calls.find(([, , message]) =>
-        (message as UIMessage).metadata?.workflowEventType === "tool-call"
+      const toolCallPersist = createMessageMock.mock.calls.find(
+        ([, , message]) =>
+          (message as UIMessage).metadata?.workflowEventType === "tool-call"
       );
-      const toolResultPersist = createMessageMock.mock.calls.find(([, , message]) =>
-        (message as UIMessage).metadata?.workflowEventType === "tool-result"
+      const toolResultPersist = createMessageMock.mock.calls.find(
+        ([, , message]) =>
+          (message as UIMessage).metadata?.workflowEventType === "tool-result"
       );
 
       expect(toolCallPersist).toBeDefined();
@@ -517,7 +523,11 @@ describe("workflow router", () => {
         summary: "test",
         stream: (async function* () {
           while (active) {
-            yield { type: "progress", pct: 5, message: "working" } as WorkflowEvent;
+            yield {
+              type: "progress",
+              pct: 5,
+              message: "working",
+            } as WorkflowEvent;
             await new Promise((resolve) => setTimeout(resolve, 0));
           }
         })(),
@@ -681,7 +691,9 @@ describe("workflow router", () => {
         },
       ];
 
-      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(
+        mockEvents as any
+      );
 
       const result = await caller.workflow.replay({ runId: mockRunId });
 
@@ -699,7 +711,10 @@ describe("workflow router", () => {
 
     it("supports custom event type filtering", async () => {
       workflowRepoMocks.listEventsByTypePaged.mockResolvedValue([]);
-      await caller.workflow.replay({ runId: "test-run-id", eventType: "progress" });
+      await caller.workflow.replay({
+        runId: "test-run-id",
+        eventType: "progress",
+      });
       expect(workflowRepoMocks.listEventsByTypePaged).toHaveBeenCalledWith({
         runId: "test-run-id",
         eventType: "progress",
@@ -714,7 +729,9 @@ describe("workflow router", () => {
         { eventId: "evt-2", timestamp: new Date("2024-01-02") },
       ];
 
-      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(mockEvents as any);
+      workflowRepoMocks.listEventsByTypePaged.mockResolvedValue(
+        mockEvents as any
+      );
 
       const result = await caller.workflow.replay({
         runId: "test-run-id",
@@ -730,7 +747,7 @@ describe("workflow router", () => {
     describe("with legacy runner (USE_WORKFLOW_RUNTIME=false)", () => {
       it("creates workflow with runPlanV6", async () => {
         setupExecutorPath(false);
-        
+
         const mockRunId = "test-run-id";
         const mockSummary = "Test summary";
         const mockExecutor = createMockExecutor(mockRunId, mockSummary, [
@@ -819,7 +836,7 @@ describe("workflow router", () => {
         expect(workflowRuntimeMocks.createRuntime).toHaveBeenCalledTimes(1);
         expect(workflowRunnerMocks.runPlanV6).not.toHaveBeenCalled();
         expect(result.runId).toBe(mockRunId);
-        
+
         // Verify runtime was called with correct model
         const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
         expect(call).toHaveProperty("model");
@@ -911,10 +928,10 @@ describe("workflow router", () => {
 
         expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
         const registerCall = runRegistryMocks.register.mock.calls[0][1];
-        
+
         // Call cancel handler
         await registerCall.cancel();
-        
+
         expect(cancelMock).toHaveBeenCalledTimes(1);
       });
 
@@ -937,11 +954,11 @@ describe("workflow router", () => {
 
         expect(runRegistryMocks.register).toHaveBeenCalledTimes(1);
         const registerCall = runRegistryMocks.register.mock.calls[0][1];
-        
+
         // Call resume handler
         const resumeData = { event: "bio-authz" as const, authz: "token-123" };
         await registerCall.resume({ resumeData });
-        
+
         expect(resumeMock).toHaveBeenCalledWith(resumeData);
       });
     });
@@ -957,7 +974,9 @@ describe("workflow router", () => {
       setupExecutorPath(false);
       const runnerExecutor = createMockExecutor("test-run-id", "test", events);
       workflowRunnerMocks.runPlanV6.mockReturnValue(runnerExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: "test-run-id" } as any);
+      workflowRepoMocks.createRun.mockResolvedValue({
+        id: "test-run-id",
+      } as any);
       workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
       workflowRepoMocks.updateRun.mockResolvedValue({} as any);
       runRegistryMocks.register.mockResolvedValue(undefined);
@@ -980,7 +999,9 @@ describe("workflow router", () => {
       setupExecutorPath(true);
       const runtimeExecutor = createMockExecutor("test-run-id", "test", events);
       workflowRuntimeMocks.createRuntime.mockReturnValue(runtimeExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: "test-run-id" } as any);
+      workflowRepoMocks.createRun.mockResolvedValue({
+        id: "test-run-id",
+      } as any);
       workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
       workflowRepoMocks.updateRun.mockResolvedValue({} as any);
       runRegistryMocks.register.mockResolvedValue(undefined);
@@ -1004,8 +1025,8 @@ describe("workflow router", () => {
       for (let i = 0; i < runnerEvents.length; i++) {
         const runnerEvent = { ...runnerEvents[i] };
         const runtimeEvent = { ...runtimeEvents[i] };
-        delete (runnerEvent as any).eventId;
-        delete (runtimeEvent as any).eventId;
+        (runnerEvent as any).eventId = undefined;
+        (runtimeEvent as any).eventId = undefined;
         expect(runnerEvent).toEqual(runtimeEvent);
       }
     });

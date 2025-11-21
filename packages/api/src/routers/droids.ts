@@ -1,9 +1,9 @@
+import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
 import { requirePolicy } from "../gate";
-import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { authedProcedure, router } from "../trpc";
 
 const droidRunInputSchema = z.object({
@@ -99,7 +99,9 @@ const droidProcedures = {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
+              if (done) {
+                break;
+              }
               stdoutChunks.push(decoder.decode(value));
             }
           } catch {
@@ -117,7 +119,9 @@ const droidProcedures = {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
+              if (done) {
+                break;
+              }
               stderrChunks.push(decoder.decode(value));
             }
           } catch {
@@ -127,11 +131,7 @@ const droidProcedures = {
       }
 
       let exitCode = 0;
-      try {
-        exitCode = await proc.exited;
-      } catch (error) {
-        throw error;
-      }
+      exitCode = await proc.exited;
 
       droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
 
@@ -202,7 +202,9 @@ const droidProcedures = {
               try {
                 while (true) {
                   const { done, value } = await reader.read();
-                  if (done) break;
+                  if (done) {
+                    break;
+                  }
                   emit.next({ type: "stdout", data: decoder.decode(value) });
                 }
               } catch (error) {
@@ -220,7 +222,9 @@ const droidProcedures = {
               try {
                 while (true) {
                   const { done, value } = await reader.read();
-                  if (done) break;
+                  if (done) {
+                    break;
+                  }
                   emit.next({ type: "stderr", data: decoder.decode(value) });
                 }
               } catch (error) {

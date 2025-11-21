@@ -1,4 +1,4 @@
-import { expect, test, describe, mock } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createFontAtlas } from "./font-atlas";
 
 // Mock OffscreenCanvas
@@ -10,7 +10,7 @@ class MockOffscreenCanvas {
     this.height = height;
   }
   getContext(type: string) {
-    if (type === '2d') {
+    if (type === "2d") {
       return {
         measureText: () => ({ width: 10 }),
         clearRect: () => {},

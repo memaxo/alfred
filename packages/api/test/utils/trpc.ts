@@ -3,15 +3,16 @@
  * Reusable helper for creating authenticated tRPC callers in tests
  */
 
+process.env.OPENAI_API_KEY = "test";
+
 import "./mock-metrics";
 import "./mock-db-client";
 import "./mock-voice";
 import "./mock-hypergraph";
-import type { TRPCAppRouter } from "@alfred/api/routers/index";
+import "./mock-node-pty";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import type { inferRouterInputs } from "@trpc/server";
 
-type RouterInputs = inferRouterInputs<TRPCAppRouter>;
+// type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 
 type CreateCallerOptions = {
   userId?: string;
@@ -96,7 +97,7 @@ export async function createTestCaller(options: CreateCallerOptions = {}) {
         id: bundle.userId ?? "test-user",
         roles: bundle.roles,
         scopes: bundle.scopes,
-        email: `${(bundle.userId ?? "test-user")}@test.local`,
+        email: `${bundle.userId ?? "test-user"}@test.local`,
         name: "Test User",
       },
       session: { id: `sess-${bundle.runtime.requestId}` },

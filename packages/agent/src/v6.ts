@@ -6,11 +6,14 @@ import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
 import { toolHandoff } from "../assistant/src/tool/handoff";
 import { toolHome } from "../assistant/src/tool/home";
+import {
+  toolMindscapeConnect,
+  toolMindscapeRead,
+} from "../assistant/src/tool/mindscape";
 import { toolNote } from "../assistant/src/tool/note";
 import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
 import { toolWebAssistant } from "../assistant/src/tool/web";
-import { toolMindscapeRead, toolMindscapeConnect } from "../assistant/src/tool/mindscape";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
@@ -53,6 +56,13 @@ export function getModelId(): string {
 export function getOpenAI() {
   if (cachedOpenAI) {
     return cachedOpenAI;
+  }
+
+  // Test override: allow empty client in tests if key is missing
+  if (process.env.NODE_ENV === "test" && !firstEnv("OPENAI_API_KEY")) {
+    return {
+      chat: () => ({}),
+    } as any;
   }
 
   const apiKey = firstEnv("OPENAI_API_KEY");

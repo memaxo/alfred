@@ -1,6 +1,6 @@
 import { arrayBufferToBase64, base64ToArrayBuffer } from "./converter";
 
-export const PCM_SAMPLE_RATE = 16000;
+export const PCM_SAMPLE_RATE = 16_000;
 export const PCM_CHANNELS = 1;
 export const PCM_BIT_DEPTH = 16;
 
@@ -63,7 +63,7 @@ export function pcm16Base64ToFloat32(pcmBase64: string): Float32Array {
   const result = new Float32Array(length);
   for (let i = 0; i < length; i += 1) {
     const sample = view.getInt16(i * 2, true);
-    result[i] = sample / 0x8000;
+    result[i] = sample / 0x80_00;
   }
   return result;
 }

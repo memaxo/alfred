@@ -4,9 +4,9 @@
  */
 
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { isSqliteDriver } from "../client";
 import { db } from "../index";
 import { memoryEdges, memoryNodes } from "../schema/graph";
-import { isSqliteDriver } from "../client";
 
 type NodeInsert = typeof memoryNodes.$inferInsert;
 type NodeRow = typeof memoryNodes.$inferSelect;
@@ -60,17 +60,19 @@ function uniqSeeds<T extends { resource: string; hash: string }>(
   const list: T[] = [];
   for (const seed of seeds) {
     const key = `${seed.resource}:${seed.hash}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     list.push(seed);
   }
   return list;
 }
 
-function parseJsonRecord(
-  value: unknown
-): Record<string, unknown> | null {
-  if (!value) return null;
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (!value) {
+    return null;
+  }
   if (typeof value === "object") {
     return value as Record<string, unknown>;
   }
@@ -102,7 +104,9 @@ const numberFromProps = (
   key: string,
   fallback: number
 ): number => {
-  if (!props) return fallback;
+  if (!props) {
+    return fallback;
+  }
   const value = props[key];
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -120,7 +124,9 @@ const stringFromProps = (
   props: Record<string, unknown> | null | undefined,
   key: string
 ): string | null => {
-  if (!props) return null;
+  if (!props) {
+    return null;
+  }
   const value = props[key];
   if (typeof value === "string" && value.length > 0) {
     return value;
@@ -416,7 +422,9 @@ export async function getNeighbors(
   const seen = new Set<string>();
   const results: Array<{ edge: EdgeRow; otherNodeId: string }> = [];
   for (const edge of edges) {
-    if (seen.has(edge.id)) continue;
+    if (seen.has(edge.id)) {
+      continue;
+    }
     seen.add(edge.id);
     const otherNodeId = edge.fromId === nodeId ? edge.toId : edge.fromId;
     results.push({ edge, otherNodeId });
@@ -439,12 +447,8 @@ export async function findPath(
   }
 
   // Recursive CTE for path finding - using raw SQL as Drizzle doesn't support recursive CTEs well
-  const resourceNode = resource
-    ? sql`AND resource = ${resource}`
-    : sql``;
-  const resourceEdge = resource
-    ? sql`AND e.resource = ${resource}`
-    : sql``;
+  const resourceNode = resource ? sql`AND resource = ${resource}` : sql``;
+  const resourceEdge = resource ? sql`AND e.resource = ${resource}` : sql``;
   const query = sql<{
     node_path: string[];
     edge_path: string[];
@@ -730,7 +734,12 @@ export async function getReasoningChain(args: {
     const rawNodes = await db
       .select()
       .from(memoryNodes)
-      .where(and(eq(memoryNodes.resource, args.resource), eq(memoryNodes.kind, "reasoning")))
+      .where(
+        and(
+          eq(memoryNodes.resource, args.resource),
+          eq(memoryNodes.kind, "reasoning")
+        )
+      )
       .orderBy(memoryNodes.created)
       .limit(Math.max(limit * 4, limit));
 
@@ -738,27 +747,51 @@ export async function getReasoningChain(args: {
 
     const filteredNodes = normalizedNodes
       .filter((node) => {
-        if (!args.executionId) return true;
+        if (!args.executionId) {
+          return true;
+        }
         return (
-          stringFromProps(node.properties as Record<string, unknown>, "executionId") ===
-          args.executionId
+          stringFromProps(
+            node.properties as Record<string, unknown>,
+            "executionId"
+          ) === args.executionId
         );
       })
       .filter((node) => {
         if (typeof args.since !== "number" || !Number.isFinite(args.since)) {
           return true;
         }
-        const ts = numberFromProps(node.properties as Record<string, unknown>, "timestamp", -Infinity);
-        return ts >= (args.since ?? -Infinity);
+        const ts = numberFromProps(
+          node.properties as Record<string, unknown>,
+          "timestamp",
+          Number.NEGATIVE_INFINITY
+        );
+        return ts >= (args.since ?? Number.NEGATIVE_INFINITY);
       })
       .sort((a, b) => {
-        const aIndex = numberFromProps(a.properties as Record<string, unknown>, "sequenceIndex", Number.MAX_SAFE_INTEGER);
-        const bIndex = numberFromProps(b.properties as Record<string, unknown>, "sequenceIndex", Number.MAX_SAFE_INTEGER);
+        const aIndex = numberFromProps(
+          a.properties as Record<string, unknown>,
+          "sequenceIndex",
+          Number.MAX_SAFE_INTEGER
+        );
+        const bIndex = numberFromProps(
+          b.properties as Record<string, unknown>,
+          "sequenceIndex",
+          Number.MAX_SAFE_INTEGER
+        );
         if (aIndex !== bIndex) {
           return aIndex - bIndex;
         }
-        const aTs = numberFromProps(a.properties as Record<string, unknown>, "timestamp", Number.MAX_SAFE_INTEGER);
-        const bTs = numberFromProps(b.properties as Record<string, unknown>, "timestamp", Number.MAX_SAFE_INTEGER);
+        const aTs = numberFromProps(
+          a.properties as Record<string, unknown>,
+          "timestamp",
+          Number.MAX_SAFE_INTEGER
+        );
+        const bTs = numberFromProps(
+          b.properties as Record<string, unknown>,
+          "timestamp",
+          Number.MAX_SAFE_INTEGER
+        );
         return aTs - bTs;
       })
       .slice(0, limit);
@@ -778,13 +811,19 @@ export async function getReasoningChain(args: {
         )
       );
 
-    const normalizedEdges = rawEdges
-      .map(normalizeEdge)
-      .sort((a, b) => {
-        const aIndex = numberFromProps(a.metadata as Record<string, unknown>, "fromIndex", 0);
-        const bIndex = numberFromProps(b.metadata as Record<string, unknown>, "fromIndex", 0);
-        return aIndex - bIndex;
-      });
+    const normalizedEdges = rawEdges.map(normalizeEdge).sort((a, b) => {
+      const aIndex = numberFromProps(
+        a.metadata as Record<string, unknown>,
+        "fromIndex",
+        0
+      );
+      const bIndex = numberFromProps(
+        b.metadata as Record<string, unknown>,
+        "fromIndex",
+        0
+      );
+      return aIndex - bIndex;
+    });
 
     return { nodes: filteredNodes, edges: normalizedEdges };
   }

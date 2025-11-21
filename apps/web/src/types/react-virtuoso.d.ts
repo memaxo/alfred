@@ -1,11 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
 
-export interface ListRange {
+export type ListRange = {
   startIndex: number;
   endIndex: number;
-}
+};
 
-export interface VirtuosoProps<T = unknown> {
+export type VirtuosoProps<T = unknown> = {
   data?: T[];
   followOutput?: "smooth" | boolean;
   overscan?: number;
@@ -13,6 +13,6 @@ export interface VirtuosoProps<T = unknown> {
   itemContent: (index: number, item: T) => ReactNode;
   className?: string;
   rangeChanged?: (range: ListRange) => void;
-}
+};
 
 export const Virtuoso: ComponentType<VirtuosoProps>;

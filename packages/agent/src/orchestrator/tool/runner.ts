@@ -1,4 +1,5 @@
 import { spawn } from "bun";
+import type { ProjectConfig } from "../../utils/project-detector";
 
 export type RunnerOutput = {
   stdout: string;
@@ -8,13 +9,33 @@ export type RunnerOutput = {
 };
 
 export const toolRunner = {
-  execute: async (command: string, cwd: string, timeoutMs = 60000): Promise<RunnerOutput> => {
+  execute: async (
+    command: string,
+    cwd: string,
+    timeoutMs = 60_000,
+    projectConfig?: ProjectConfig
+  ): Promise<RunnerOutput> => {
     const start = Date.now();
-    
+
+    // Abstract command handling
+    // If command is a generic alias like "test", "build", "run", map it to projectConfig
+    let finalCommand = command;
+
+    if (projectConfig) {
+      if (command === "test") {
+        finalCommand = projectConfig.testCommand;
+      } else if (command === "build") {
+        finalCommand = projectConfig.buildCommand;
+      } else if (command === "run") {
+        finalCommand = projectConfig.runCommand;
+      } else if (command === "install") {
+        finalCommand = projectConfig.installCommand;
+      }
+    }
+
     // Split command into args properly (naive split for MVP)
-    // In production this should use a proper shell-quote parser or allow array input
-    const [cmd, ...args] = command.split(" ");
-    
+    const [cmd, ...args] = finalCommand.split(" ");
+
     if (!cmd) {
       throw new Error("Empty command");
     }

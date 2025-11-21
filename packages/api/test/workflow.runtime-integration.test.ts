@@ -1,6 +1,6 @@
 /**
  * Workflow Runtime Integration Tests
- * 
+ *
  * Tests specific integration points between workflow router and runtime:
  * - Linear integration (session mapping, activity emission)
  * - Metrics recording
@@ -10,6 +10,7 @@
 
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
+import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -18,7 +19,6 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -35,7 +35,6 @@ const workflowStreamDurationSecondsMock = {
 const workflowStreamEventsTotalMock = {
   inc: vi.fn(),
 };
-
 
 const multiAgentTasksTotalMock = { inc: vi.fn() };
 const multiAgentWavesTotalMock = { inc: vi.fn() };
@@ -64,7 +63,7 @@ afterEach(() => {
   resetAllMocks();
   workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
   workflowStreamEventsTotalMock.inc.mockReset();
-  delete process.env.USE_WORKFLOW_RUNTIME;
+  process.env.USE_WORKFLOW_RUNTIME = undefined;
 });
 
 describe("workflow runtime integration", () => {
@@ -205,7 +204,9 @@ describe("workflow runtime integration", () => {
     it("records workflow stream duration", async () => {
       const mockRunId = "test-run-id";
       const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(stopTimerMock);
+      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
+        stopTimerMock
+      );
 
       const mockExecutor = {
         runId: mockRunId,
@@ -276,19 +277,26 @@ describe("workflow runtime integration", () => {
       });
 
       // Verify metrics recorded: 1 run + N chunks + 1 complete
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({ event: "run" });
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({ event: "complete" });
+      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
+        event: "run",
+      });
+      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
+        event: "complete",
+      });
     });
 
     it("records error events on failure", async () => {
       const mockRunId = "test-run-id";
       const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(stopTimerMock);
+      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
+        stopTimerMock
+      );
 
       const mockExecutor = {
         runId: mockRunId,
         summary: "test",
         stream: (async function* () {
+          yield;
           throw new Error("test error");
         })(),
         resume: vi.fn(),
@@ -310,7 +318,9 @@ describe("workflow runtime integration", () => {
         });
       });
 
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({ event: "error" });
+      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
+        event: "error",
+      });
       expect(stopTimerMock).toHaveBeenCalledWith({ status: "error" });
     });
   });
@@ -373,8 +383,16 @@ describe("workflow runtime integration", () => {
           kind: "review-agent-result",
           data: { role: "review", status: "failed", durationSeconds: 9 },
         } as any,
-        { type: "event", kind: "merge-plan", data: { summary: "merge", expectedFiles: ["a.ts"] } } as any,
-        { type: "event", kind: "review-plan", data: { summary: "review", checks: [] } } as any,
+        {
+          type: "event",
+          kind: "merge-plan",
+          data: { summary: "merge", expectedFiles: ["a.ts"] },
+        } as any,
+        {
+          type: "event",
+          kind: "review-plan",
+          data: { summary: "review", checks: [] },
+        } as any,
       ];
 
       const mockExecutor = {
@@ -406,9 +424,16 @@ describe("workflow runtime integration", () => {
         });
       });
 
-      expect(multiAgentTasksTotalMock.inc).toHaveBeenCalledWith({ status: "created" }, 2);
-      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({ status: "started" });
-      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({ status: "completed" });
+      expect(multiAgentTasksTotalMock.inc).toHaveBeenCalledWith(
+        { status: "created" },
+        2
+      );
+      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({
+        status: "started",
+      });
+      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({
+        status: "completed",
+      });
 
       // Per-agent duration and error metrics
       expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
@@ -438,10 +463,14 @@ describe("workflow runtime integration", () => {
       });
 
       const mergeCall = workflowRepoMocks.appendEvent.mock.calls.find(
-        (c) => c[0]?.eventType === "event" && (c[0]?.eventData as any)?.kind === "merge-plan"
+        (c) =>
+          c[0]?.eventType === "event" &&
+          (c[0]?.eventData as any)?.kind === "merge-plan"
       );
       const reviewCall = workflowRepoMocks.appendEvent.mock.calls.find(
-        (c) => c[0]?.eventType === "event" && (c[0]?.eventData as any)?.kind === "review-plan"
+        (c) =>
+          c[0]?.eventType === "event" &&
+          (c[0]?.eventData as any)?.kind === "review-plan"
       );
 
       expect(mergeCall).toBeTruthy();
@@ -581,7 +610,9 @@ describe("workflow runtime integration", () => {
     it("records cancel event on stream cancellation", async () => {
       const mockRunId = "test-run-id";
       const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(stopTimerMock);
+      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
+        stopTimerMock
+      );
 
       const mockExecutor = {
         runId: mockRunId,
@@ -589,7 +620,7 @@ describe("workflow runtime integration", () => {
         stream: (async function* () {
           yield { type: "run", id: mockRunId } as WorkflowEvent;
           // Simulate long-running workflow
-          await new Promise((resolve) => setTimeout(resolve, 10000));
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
         })(),
         resume: vi.fn(),
         cancel: vi.fn(),
@@ -618,12 +649,18 @@ describe("workflow runtime integration", () => {
       });
 
       // Capture unsubscribe function
-      const sub = subscription.subscribe({ next: () => {}, error: () => {}, complete: () => {} });
+      const sub = subscription.subscribe({
+        next: () => {},
+        error: () => {},
+        complete: () => {},
+      });
       unsubscribe = sub.unsubscribe;
 
       await promise;
 
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({ event: "cancel" });
+      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
+        event: "cancel",
+      });
       expect(stopTimerMock).toHaveBeenCalledWith({ status: "cancel" });
     });
 
@@ -691,11 +728,11 @@ describe("workflow runtime integration", () => {
       const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
       expect(call.model).toBeTruthy();
 
-      delete process.env.OPENAI_MODEL_PLAN;
+      process.env.OPENAI_MODEL_PLAN = undefined;
     });
 
     it("defaults to gpt-4o when OPENAI_MODEL_PLAN not set", async () => {
-      delete process.env.OPENAI_MODEL_PLAN;
+      process.env.OPENAI_MODEL_PLAN = undefined;
 
       const mockRunId = "test-run-id";
       const mockExecutor = {

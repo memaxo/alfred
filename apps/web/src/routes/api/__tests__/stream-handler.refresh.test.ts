@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";
-import { z } from "zod";
 import type { UIMessage } from "@alfred/type/stream";
+import { z } from "zod";
 
 mock.module("@alfred/type/stream.zod", () => ({
   uiMessageSchema: z.object({
@@ -66,11 +66,11 @@ const historyContextMock = vi.fn(async ({ messages }) => ({
 }));
 mock.module("@alfred/history", () => ({
   buildHistoryContext: historyContextMock,
-  getHistoryBudgetDefaults: () => ({})
+  getHistoryBudgetDefaults: () => ({}),
 }));
 
 const loggerErrorMock = vi.fn();
-mock.module("@alfred/api/utils/logger", () => ({
+mock.module("@alfred/logger", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -145,7 +145,7 @@ describe("handleStreamRequest preference refresh integration", () => {
 
     const response = await handleStreamRequest(
       request,
-      () => ({ model: { provider: "test", name: "mock-model" } } as any),
+      () => ({ model: { provider: "test", name: "mock-model" } }) as any,
       "assistant"
     );
 
@@ -159,9 +159,9 @@ describe("handleStreamRequest preference refresh integration", () => {
       reason: "assistant_stream_complete",
     });
     expect(triggerPreferenceRefreshMock).toHaveBeenCalledTimes(2);
-    expect(preferenceInjectionSpy).toHaveBeenCalledWith(
-      { source: "assistant" }
-    );
+    expect(preferenceInjectionSpy).toHaveBeenCalledWith({
+      source: "assistant",
+    });
     expect(preferenceFailureSpy).not.toHaveBeenCalled();
   });
 });

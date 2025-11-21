@@ -1,10 +1,10 @@
 export type Obligation = string;
 
-export interface PolicyRole {
+export type PolicyRole = {
   scopes: string[];
-}
+};
 
-export interface PolicyCondition {
+export type PolicyCondition = {
   /**
    * Source object for the condition. Currently only `context` is supported.
    */
@@ -18,14 +18,14 @@ export interface PolicyCondition {
   in?: unknown[];
   notIn?: unknown[];
   exists?: boolean;
-}
+};
 
-export interface PolicyResourceMatch {
+export type PolicyResourceMatch = {
   kind?: string;
   ids?: string[];
-}
+};
 
-export interface PolicyRule {
+export type PolicyRule = {
   id: string;
   effect?: "allow" | "deny";
   actions: string[];
@@ -35,39 +35,39 @@ export interface PolicyRule {
   obligations?: Obligation[];
   description?: string;
   priority?: number;
-}
+};
 
-export interface PolicyDocument {
+export type PolicyDocument = {
   roles: Record<string, PolicyRole>;
   rules: PolicyRule[];
   scopes: string[];
-}
+};
 
-export interface PolicySubject {
+export type PolicySubject = {
   id: string;
   roles: string[];
   scopes?: string[];
-}
+};
 
-export interface PolicyResource {
+export type PolicyResource = {
   kind: string;
   id?: string;
   attrs?: Record<string, unknown>;
-}
+};
 
-export interface EvaluateInput {
+export type EvaluateInput = {
   subject: PolicySubject;
   action: string;
   resource: PolicyResource;
   context?: Record<string, unknown>;
   traceId?: string;
-}
+};
 
-export interface Decision {
+export type Decision = {
   allow: boolean;
   obligations: Obligation[];
   reason?: string;
   ruleIds?: string[];
-}
+};
 
 export const DEFAULT_POLICY_PATH = "config/policy.yaml";

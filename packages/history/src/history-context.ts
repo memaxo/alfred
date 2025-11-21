@@ -1,5 +1,5 @@
-import { withBudget } from "@alfred/metrics/performance";
 import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
+import { withBudget } from "@alfred/metrics/performance";
 import type { UIMessage } from "@alfred/type/stream";
 import { convertToModelMessages, pruneMessages } from "ai";
 import { getModelContextInfo } from "./model";
@@ -14,9 +14,9 @@ import type {
 const DEFAULT_HISTORY_RATIO = 0.5;
 const MIN_HISTORY_RATIO = 0.05;
 const MAX_HISTORY_RATIO = 0.95;
-const DEFAULT_MIN_SYSTEM_RESERVE = 2_000;
-const DEFAULT_MIN_HEADROOM = 2_000;
-const DEFAULT_RESERVED_TOOLING = 1_000;
+const DEFAULT_MIN_SYSTEM_RESERVE = 2000;
+const DEFAULT_MIN_HEADROOM = 2000;
+const DEFAULT_RESERVED_TOOLING = 1000;
 const HIGH_TIER_OVERDRAFT = 512;
 const MEDIUM_TIER_OVERDRAFT = 256;
 
@@ -28,8 +28,12 @@ const ROLE_WEIGHTS: Record<string, number> = {
 };
 
 function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
+  if (value < min) {
+    return min;
+  }
+  if (value > max) {
+    return max;
+  }
   return value;
 }
 
@@ -59,9 +63,9 @@ export async function buildHistoryContext(
 ): Promise<BuildHistoryContextResult> {
   const sourceLabel = options.source ?? "history";
   return withBudget(`build_history_context_${sourceLabel}`, 10, async () => {
-    const messages = Array.isArray(options.messages)
-      ? [...options.messages]
-      : [];
+    const messages = (
+      Array.isArray(options.messages) ? options.messages : []
+    ).filter((m): m is UIMessage => !!m);
 
     if (messages.length === 0) {
       return emptyResult(options);
@@ -89,7 +93,11 @@ export async function buildHistoryContext(
     const idToIndex = new Map<string, number>();
 
     for (let index = 0; index < messages.length; index += 1) {
-      const key = resolveMessageKey(messages[index]!, index);
+      const message = messages[index];
+      if (!message) {
+        continue;
+      }
+      const key = resolveMessageKey(message, index);
       idToIndex.set(key, index);
     }
 
@@ -100,7 +108,11 @@ export async function buildHistoryContext(
       if (prevAssistant >= 0 && messages[prevAssistant]?.role === "assistant") {
         anchorIndices.add(prevAssistant);
       }
-      const previousUser = findLastIndexByRole(messages, "user", lastUserIndex - 1);
+      const previousUser = findLastIndexByRole(
+        messages,
+        "user",
+        lastUserIndex - 1
+      );
       if (previousUser !== -1) {
         const lastUserTokens = tokensByIndex[lastUserIndex] ?? 0;
         if (lastUserTokens < 64 || lastUserIndex - previousUser <= 2) {
@@ -110,7 +122,11 @@ export async function buildHistoryContext(
     }
 
     if (latestToolChain) {
-      for (let index = latestToolChain.start; index <= latestToolChain.end; index += 1) {
+      for (
+        let index = latestToolChain.start;
+        index <= latestToolChain.end;
+        index += 1
+      ) {
         anchorIndices.add(index);
       }
     }
@@ -147,7 +163,11 @@ export async function buildHistoryContext(
       if (hasToolPart) {
         score += 0.5;
       }
-      if (latestToolChain && index >= latestToolChain.start - 1 && index <= latestToolChain.end + 1) {
+      if (
+        latestToolChain &&
+        index >= latestToolChain.start - 1 &&
+        index <= latestToolChain.end + 1
+      ) {
         score += 1;
       }
       if (isAnchor) {
@@ -213,8 +233,12 @@ export async function buildHistoryContext(
     }
 
     const keptIndices = [...selectedIndices].sort((a, b) => a - b);
-    const keptMessages = keptIndices.map((index) => messages[index]);
-    const droppedMessages = messages.filter((_, index) => !selectedIndices.has(index));
+    const keptMessages = keptIndices
+      .map((index) => messages[index])
+      .filter((m): m is UIMessage => !!m);
+    const droppedMessages = messages.filter(
+      (_, index) => !selectedIndices.has(index)
+    );
 
     const droppedTokens = Math.max(totalTokens - keptTokens, 0);
 
@@ -260,7 +284,9 @@ export async function buildHistoryContext(
   });
 }
 
-function emptyResult(options: BuildHistoryContextOptions): BuildHistoryContextResult {
+function emptyResult(
+  options: BuildHistoryContextOptions
+): BuildHistoryContextResult {
   return {
     uiMessages: [],
     modelMessages: [],
@@ -292,21 +318,28 @@ function resolveBudget(
 ) {
   const overrides = options.budget ?? {};
   const envHistoryRatio = parseEnvNumber(process.env.HISTORY_CONTEXT_RATIO);
-  const envSystemReserve = parseEnvNumber(process.env.HISTORY_MIN_SYSTEM_RESERVE);
+  const envSystemReserve = parseEnvNumber(
+    process.env.HISTORY_MIN_SYSTEM_RESERVE
+  );
   const envHeadroom = parseEnvNumber(process.env.HISTORY_MIN_HEADROOM);
 
   let ratio =
     typeof overrides.historyRatio === "number"
       ? overrides.historyRatio
-      : envHistoryRatio ?? modelContext.defaultHistoryRatio ?? DEFAULT_HISTORY_RATIO;
+      : (envHistoryRatio ??
+        modelContext.defaultHistoryRatio ??
+        DEFAULT_HISTORY_RATIO);
   if (options.aggressive) {
     ratio -= 0.1;
   }
   ratio = clamp(ratio, MIN_HISTORY_RATIO, MAX_HISTORY_RATIO);
 
-  const maxContextTokens = overrides.maxContextTokens ?? modelContext.maxContextTokens;
+  const maxContextTokens =
+    overrides.maxContextTokens ?? modelContext.maxContextTokens;
   const minSystemReserveTokens =
-    overrides.minSystemReserveTokens ?? envSystemReserve ?? DEFAULT_MIN_SYSTEM_RESERVE;
+    overrides.minSystemReserveTokens ??
+    envSystemReserve ??
+    DEFAULT_MIN_SYSTEM_RESERVE;
   const minHeadroomTokens =
     overrides.minHeadroomTokens ?? envHeadroom ?? DEFAULT_MIN_HEADROOM;
   const reservedToolingTokens =
@@ -315,7 +348,10 @@ function resolveBudget(
   const historyWindow = Math.max(0, Math.floor(maxContextTokens * ratio));
   const systemReserve = Math.max(systemTokens, minSystemReserveTokens);
   const headroomTokens = minHeadroomTokens + reservedToolingTokens;
-  const historyBudgetTokens = Math.max(historyWindow - (systemReserve + headroomTokens), 0);
+  const historyBudgetTokens = Math.max(
+    historyWindow - (systemReserve + headroomTokens),
+    0
+  );
 
   return {
     historyBudgetTokens,
@@ -330,7 +366,9 @@ function resolveBudget(
 }
 
 function parseEnvNumber(raw: string | undefined): number | null {
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }
@@ -342,9 +380,10 @@ function estimateMessageTokens(
 ): number {
   const textParts = Array.isArray(message.parts) ? message.parts : [];
   if (textParts.length === 0) {
-    const fallback = typeof (message as { content?: string }).content === "string"
-      ? (message as { content?: string }).content
-      : "";
+    const fallback =
+      typeof (message as { content?: string }).content === "string"
+        ? (message as { content?: string }).content
+        : "";
     return fallback ? estimator.estimate(fallback) : 0;
   }
 
@@ -384,7 +423,11 @@ function serializePart(part: UIMessage["parts"][number]): string {
       result?: unknown;
     };
     const payload =
-      toolPart.output ?? toolPart.result ?? toolPart.input ?? toolPart.args ?? null;
+      toolPart.output ??
+      toolPart.result ??
+      toolPart.input ??
+      toolPart.args ??
+      null;
     return `${toolPart.toolName ?? kind}:${safeJson(payload)}`;
   }
   return safeJson(part);
@@ -398,7 +441,9 @@ function safeJson(value: unknown): string {
   }
 }
 
-function normalizeForceKeep(forceKeep: BuildHistoryContextOptions["forceKeepIds"]): Set<string> {
+function normalizeForceKeep(
+  forceKeep: BuildHistoryContextOptions["forceKeepIds"]
+): Set<string> {
   if (!forceKeep) {
     return new Set();
   }
@@ -406,7 +451,9 @@ function normalizeForceKeep(forceKeep: BuildHistoryContextOptions["forceKeepIds"
     return new Set([...forceKeep].filter((value) => typeof value === "string"));
   }
   if (Array.isArray(forceKeep)) {
-    return new Set(forceKeep.filter((value): value is string => typeof value === "string"));
+    return new Set(
+      forceKeep.filter((value): value is string => typeof value === "string")
+    );
   }
   return new Set();
 }
@@ -417,7 +464,8 @@ function findLastIndexByRole(
   startIndex?: number
 ): number {
   for (
-    let index = typeof startIndex === "number" ? startIndex : messages.length - 1;
+    let index =
+      typeof startIndex === "number" ? startIndex : messages.length - 1;
     index >= 0;
     index -= 1
   ) {
@@ -435,11 +483,11 @@ function findToolChains(messages: readonly UIMessage[]): ToolChain[] {
   let current: ToolChain | null = null;
   for (let index = 0; index < messages.length; index += 1) {
     const message = messages[index];
-    if (messageHasToolPart(message)) {
-      if (!current) {
-        current = { start: index, end: index };
-      } else {
+    if (message && messageHasToolPart(message)) {
+      if (current) {
         current.end = index;
+      } else {
+        current = { start: index, end: index };
       }
     } else if (current) {
       chains.push(current);
@@ -453,9 +501,6 @@ function findToolChains(messages: readonly UIMessage[]): ToolChain[] {
 }
 
 function messageHasToolPart(message: UIMessage): boolean {
-  if (message.role === "tool") {
-    return true;
-  }
   if (!Array.isArray(message.parts)) {
     return false;
   }
@@ -466,7 +511,7 @@ function messageHasToolPart(message: UIMessage): boolean {
 }
 
 function mapToolGroups(
-  messages: readonly UIMessage[],
+  _messages: readonly UIMessage[],
   toolChains: ToolChain[]
 ): Map<number, string> {
   const map = new Map<number, string>();
@@ -511,7 +556,9 @@ function pickHigherTier(a: HistoryTier, b: HistoryTier): HistoryTier {
 }
 
 function getAllowedOverdraft(tier: HistoryTier, budget: number): number {
-  if (budget <= 0) return 0;
+  if (budget <= 0) {
+    return 0;
+  }
   if (tier === "high") {
     return Math.min(HIGH_TIER_OVERDRAFT, Math.floor(budget * 0.2));
   }

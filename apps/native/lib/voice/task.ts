@@ -1,6 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: Expo background fetch API is namespace-based.
 import * as BackgroundFetch from "expo-background-fetch";
-// biome-ignore lint/performance/noNamespaceImport: Expo task manager API is namespace-based.
 import * as TaskManager from "expo-task-manager";
 import { logError } from "@/lib/devlog";
 

@@ -1,15 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import type { ElevenLabs } from "@elevenlabs/elevenlabs-js"
-import { Check, ChevronsUpDown, Pause, Play } from "lucide-react"
-
-import { cn } from "@/lib/utils"
+import type { ElevenLabs } from "@elevenlabs/elevenlabs-js";
+import { Check, ChevronsUpDown, Pause, Play } from "lucide-react";
+import * as React from "react";
 import {
   AudioPlayerProvider,
   useAudioPlayer,
-} from "@/components/ui/audio-player"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/audio-player";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -17,23 +15,24 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import { Orb } from "@/components/ui/orb"
+} from "@/components/ui/command";
+import { Orb } from "@/components/ui/orb";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-interface VoicePickerProps {
-  voices: ElevenLabs.Voice[]
-  value?: string
-  onValueChange?: (value: string) => void
-  placeholder?: string
-  className?: string
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
+type VoicePickerProps = {
+  voices: ElevenLabs.Voice[];
+  value?: string;
+  onValueChange?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
 
 function VoicePicker({
   voices,
@@ -44,22 +43,22 @@ function VoicePicker({
   open,
   onOpenChange,
 }: VoicePickerProps) {
-  const [internalOpen, setInternalOpen] = React.useState(false)
-  const isControlled = open !== undefined
-  const isOpen = isControlled ? open : internalOpen
-  const setIsOpen = isControlled ? onOpenChange : setInternalOpen
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setIsOpen = isControlled ? onOpenChange : setInternalOpen;
 
-  const selectedVoice = voices.find((v) => v.voiceId === value)
+  const selectedVoice = voices.find((v) => v.voiceId === value);
 
   return (
     <AudioPlayerProvider>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover onOpenChange={setIsOpen} open={isOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
-            role="combobox"
             aria-expanded={isOpen}
             className={cn("w-full justify-between", className)}
+            role="combobox"
+            variant="outline"
           >
             {selectedVoice ? (
               <div className="flex items-center gap-2 overflow-hidden">
@@ -82,12 +81,14 @@ function VoicePicker({
               <CommandGroup>
                 {voices.map((voice) => (
                   <VoicePickerItem
-                    key={voice.voiceId}
-                    voice={voice}
                     isSelected={value === voice.voiceId}
+                    key={voice.voiceId}
                     onSelect={() => {
-                      onValueChange?.(voice.voiceId!)
+                      if (voice.voiceId) {
+                        onValueChange?.(voice.voiceId);
+                      }
                     }}
+                    voice={voice}
                   />
                 ))}
               </CommandGroup>
@@ -96,51 +97,56 @@ function VoicePicker({
         </PopoverContent>
       </Popover>
     </AudioPlayerProvider>
-  )
+  );
 }
 
-interface VoicePickerItemProps {
-  voice: ElevenLabs.Voice
-  isSelected: boolean
-  onSelect: () => void
-}
+type VoicePickerItemProps = {
+  voice: ElevenLabs.Voice;
+  isSelected: boolean;
+  onSelect: () => void;
+};
 
 function VoicePickerItem({
   voice,
   isSelected,
   onSelect,
 }: VoicePickerItemProps) {
-  const [isHovered, setIsHovered] = React.useState(false)
-  const player = useAudioPlayer()
+  const [isHovered, setIsHovered] = React.useState(false);
+  const player = useAudioPlayer();
 
-  const preview = voice.previewUrl
+  const preview = voice.previewUrl;
   const audioItem = React.useMemo(
-    () => (preview ? { id: voice.voiceId!, src: preview, data: voice } : null),
+    () =>
+      preview && voice.voiceId
+        ? { id: voice.voiceId, src: preview, data: voice }
+        : null,
     [preview, voice]
-  )
+  );
 
   const isPlaying =
-    audioItem && player.isItemActive(audioItem.id) && player.isPlaying
+    audioItem && player.isItemActive(audioItem.id) && player.isPlaying;
 
   const handlePreview = React.useCallback(
     async (e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
+      e.preventDefault();
+      e.stopPropagation();
 
-      if (!audioItem) return
+      if (!audioItem) {
+        return;
+      }
 
       if (isPlaying) {
-        player.pause()
+        player.pause();
       } else {
-        player.play(audioItem)
+        player.play(audioItem);
       }
     },
     [audioItem, isPlaying, player]
-  )
+  );
 
   return (
     <CommandItem
-      value={voice.voiceId!}
+      className="flex items-center gap-3"
       keywords={[
         voice.name,
         voice.labels?.accent,
@@ -150,13 +156,13 @@ function VoicePickerItem({
         voice.labels?.["use case"],
       ].filter((k): k is string => Boolean(k))}
       onSelect={onSelect}
-      className="flex items-center gap-3"
+      value={voice.voiceId ?? ""}
     >
       <div
         className="relative z-10 size-8 shrink-0 cursor-pointer overflow-visible"
+        onClick={handlePreview}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={handlePreview}
       >
         <Orb
           agentState={isPlaying ? "talking" : undefined}
@@ -176,7 +182,7 @@ function VoicePickerItem({
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-medium">{voice.name}</span>
         {voice.labels && (
-          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             {voice.labels.accent && <span>{voice.labels.accent}</span>}
             {voice.labels.gender && <span>•</span>}
             {voice.labels.gender && (
@@ -197,7 +203,7 @@ function VoicePickerItem({
         )}
       />
     </CommandItem>
-  )
+  );
 }
 
-export { VoicePicker, VoicePickerItem }
+export { VoicePicker, VoicePickerItem };

@@ -6,9 +6,9 @@
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./guards";
+export * from "./history";
 // Knowledge graph types
 export * from "./knowledge";
-export * from "./history";
 // Personalization schemas
 export * from "./personal";
 // Plan types

@@ -1,13 +1,25 @@
 import client from "prom-client";
 export declare const metricsRegistry: client.Registry<"text/plain; version=0.0.4; charset=utf-8">;
 export declare const trpcRequestsTotal: client.Counter<"type" | "procedure">;
-export declare const trpcRequestErrorsTotal: client.Counter<"type" | "code" | "procedure">;
-export declare const trpcRequestDurationSeconds: client.Histogram<"type" | "procedure">;
+export declare const trpcRequestErrorsTotal: client.Counter<
+  "type" | "code" | "procedure"
+>;
+export declare const trpcRequestDurationSeconds: client.Histogram<
+  "type" | "procedure"
+>;
 export declare const healthChecksTotal: client.Counter<"status" | "target">;
-export declare const policyDecisionsTotal: client.Counter<"action" | "decision">;
-export declare const policyObligationsTotal: client.Counter<"action" | "obligation">;
-export declare const runRegistryEventsTotal: client.Counter<"event" | "backend" | "outcome">;
-export declare const runRegistryDispatchDurationSeconds: client.Histogram<"backend" | "outcome">;
+export declare const policyDecisionsTotal: client.Counter<
+  "action" | "decision"
+>;
+export declare const policyObligationsTotal: client.Counter<
+  "action" | "obligation"
+>;
+export declare const runRegistryEventsTotal: client.Counter<
+  "event" | "backend" | "outcome"
+>;
+export declare const runRegistryDispatchDurationSeconds: client.Histogram<
+  "backend" | "outcome"
+>;
 export declare const pdpCacheHitsTotal: client.Counter<"result">;
 export declare const droidExecRunsTotal: client.Counter<"auto" | "exit_code">;
 export declare const droidExecDurationSeconds: client.Histogram<"auto">;
@@ -35,21 +47,31 @@ export declare const voiceSttDurationSeconds: client.Histogram<"provider">;
 export declare const voiceTtsTotal: client.Counter<"status" | "provider">;
 export declare const voiceTtsDurationSeconds: client.Histogram<"provider">;
 export type VoiceMetricStatus = "ok" | "error" | "cancel";
-export declare function recordVoiceStt({ provider, status, durationSeconds, }: {
-    provider?: string;
-    status: VoiceMetricStatus;
-    durationSeconds?: number;
+export declare function recordVoiceStt({
+  provider,
+  status,
+  durationSeconds,
+}: {
+  provider?: string;
+  status: VoiceMetricStatus;
+  durationSeconds?: number;
 }): void;
-export declare function recordVoiceTts({ provider, status, durationSeconds, }: {
-    provider?: string;
-    status: VoiceMetricStatus;
-    durationSeconds?: number;
+export declare function recordVoiceTts({
+  provider,
+  status,
+  durationSeconds,
+}: {
+  provider?: string;
+  status: VoiceMetricStatus;
+  durationSeconds?: number;
 }): void;
 export declare const assistantStreamEventsTotal: client.Counter<"event">;
 export declare const assistantStreamDurationSeconds: client.Histogram<"status">;
 type AssistantStreamStatus = "ok" | "error" | "cancel";
 export declare function recordStreamEvent(event: string): void;
-export declare function startStreamTimer(): ((status: AssistantStreamStatus) => void) | undefined;
+export declare function startStreamTimer():
+  | ((status: AssistantStreamStatus) => void)
+  | undefined;
 export declare const voiceStreamEventsTotal: client.Counter<"status" | "event">;
 export declare const voiceStreamLatencySeconds: client.Histogram<"stage">;
 export declare const voiceQueueDepthCurrent: client.Gauge<string>;
@@ -61,12 +83,15 @@ export declare const runnerStepsTotal: client.Counter<"outcome" | "phase">;
 export declare const runnerErrorsTotal: client.Counter<"reason" | "phase">;
 export declare const replayQueriesTotal: client.Counter<"event_type">;
 export declare const replayQueryDurationSeconds: client.Histogram<"event_type">;
-export declare const linearActivityEmissionsTotal: client.Counter<"status" | "type">;
+export declare const linearActivityEmissionsTotal: client.Counter<
+  "status" | "type"
+>;
 export declare const linearActivityDurationSeconds: client.Histogram<"type">;
 export declare const linearSessionOperationsTotal: client.Counter<"operation">;
-export declare const linearWebhookEventsTotal: client.Counter<"action" | "event_type">;
+export declare const linearWebhookEventsTotal: client.Counter<
+  "action" | "event_type"
+>;
 export declare const linearWebhookWorkflowStartsTotal: client.Counter<string>;
 export declare const linearWebhookWorkflowCancelsTotal: client.Counter<string>;
 export declare const metricsContentType: "text/plain; version=0.0.4; charset=utf-8";
 export declare function getMetricsSnapshot(): Promise<string>;
-export {};

@@ -36,6 +36,6 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 
 12. **Bun.build for bundling.** Use `Bun.build` for all bundling tasks instead of esbuild, webpack, or rollup; leverage its native performance, plugin system, and executable generation capabilities.
 
-13. **Lifecycle script security.** Always explicitly list packages with lifecycle scripts in `trustedDependencies`; never use `--ignore-scripts` as a workaround—fix trust configuration instead.
+14. **Optional dependencies.** Wrap optional or heavy dependencies (WASM, native modules) in dynamic imports with try/catch blocks that provide explicit installation instructions on failure.
 
 

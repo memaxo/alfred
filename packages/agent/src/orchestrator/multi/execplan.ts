@@ -12,7 +12,9 @@ export type ExecPlanSnapshot = {
 function sliceSection(markdown: string, heading: string): string {
   const pattern = new RegExp(`^## ${heading}\\s*$`, "m");
   const match = pattern.exec(markdown);
-  if (!match) return "";
+  if (!match) {
+    return "";
+  }
 
   const start = match.index;
   const rest = markdown.slice(start + match[0].length);
@@ -25,7 +27,7 @@ function sliceSection(markdown: string, heading: string): string {
 
 export function interpretExecPlan(markdown: string): ExecPlanSnapshot {
   const titleMatch = /^#\s+(.+)$/m.exec(markdown);
-  const title = titleMatch ? titleMatch[1]?.trim() ?? "" : "";
+  const title = titleMatch ? (titleMatch[1]?.trim() ?? "") : "";
 
   return {
     title,

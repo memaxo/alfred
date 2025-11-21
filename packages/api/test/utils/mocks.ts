@@ -65,7 +65,7 @@ export function createMockSubscription(
 ): MockSubscriptionCallbacks {
   let callbacks: MockSubscriptionCallbacks = {};
 
-  mockFn = ((input: unknown, options: unknown) => {
+  mockFn = ((_input: unknown, options: unknown) => {
     const opts = options as {
       onStarted?: (unsubscribe: () => void) => void;
       onData?: (chunk: unknown) => void;

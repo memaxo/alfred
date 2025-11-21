@@ -4,10 +4,10 @@ import type { Decision, EvaluateInput, PolicyRule } from "./types";
 
 const CACHE_TTL_MS = 30_000;
 
-interface CachedDecision {
+type CachedDecision = {
   expiresAt: number;
   decision: Decision;
-}
+};
 
 const cache = new Map<string, CachedDecision>();
 

@@ -1,4 +1,7 @@
-import { AutonomySlider, type AutonomyLevel } from "@/components/autonomy-slider";
+import {
+  type AutonomyLevel,
+  AutonomySlider,
+} from "@/components/autonomy-slider";
 
 export type PreferencesStepProps = {
   autonomy: AutonomyLevel;
@@ -11,32 +14,43 @@ export function PreferencesStep({
 }: PreferencesStepProps) {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-3">
-        <h2 className="text-biolum tracking-tighter text-2xl font-bold">
+      <div className="space-y-3 text-center">
+        <h2 className="font-bold text-2xl text-biolum tracking-tighter">
           Set Your Preferences
         </h2>
         <p className="text-biolum-dim">
-          Configure how ALFRED operates. You can change these anytime in Settings.
+          Configure how ALFRED operates. You can change these anytime in
+          Settings.
         </p>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-8">
-        <AutonomySlider value={autonomy} onChange={onAutonomyChange} />
+      <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-8 backdrop-blur-xl">
+        <AutonomySlider onChange={onAutonomyChange} value={autonomy} />
       </div>
 
-      <div className="space-y-3 text-sm text-biolum-dim">
+      <div className="space-y-3 text-biolum-dim text-sm">
         <p>
-          <span className="text-biolum font-medium">Autonomy Level</span> controls how much 
-          independence ALFRED has when executing tasks.
+          <span className="font-medium text-biolum">Autonomy Level</span>{" "}
+          controls how much independence ALFRED has when executing tasks.
         </p>
         <ul className="space-y-2 pl-4">
-          <li>• <span className="text-biolum">Read-only:</span> No actions, only information</li>
-          <li>• <span className="text-biolum">Low:</span> Ask before each action</li>
-          <li>• <span className="text-biolum">Medium:</span> Ask for risky actions only</li>
-          <li>• <span className="text-biolum">High:</span> Execute autonomously with supervision</li>
+          <li>
+            • <span className="text-biolum">Read-only:</span> No actions, only
+            information
+          </li>
+          <li>
+            • <span className="text-biolum">Low:</span> Ask before each action
+          </li>
+          <li>
+            • <span className="text-biolum">Medium:</span> Ask for risky actions
+            only
+          </li>
+          <li>
+            • <span className="text-biolum">High:</span> Execute autonomously
+            with supervision
+          </li>
         </ul>
       </div>
     </div>
   );
 }
-

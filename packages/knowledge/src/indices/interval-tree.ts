@@ -14,11 +14,8 @@ type Node = {
 };
 
 const isRed = (node: Node | null): boolean => node?.color === "R";
-const maxTimestamp = (
-  a: Timestamp,
-  b: Timestamp,
-  c: Timestamp
-): Timestamp => (Math.max(a, b, c) as Timestamp);
+const maxTimestamp = (a: Timestamp, b: Timestamp, c: Timestamp): Timestamp =>
+  Math.max(a, b, c) as Timestamp;
 
 const overlaps = (interval: Interval, start: Timestamp, end: Timestamp) =>
   interval.start <= end && interval.end >= start;
@@ -94,7 +91,9 @@ export class IntervalTree {
     end: Timestamp,
     acc: NodeId[]
   ): void {
-    if (!node) return;
+    if (!node) {
+      return;
+    }
 
     if (node.left && node.left.maxEnd >= start) {
       this.search(node.left, start, end, acc);
@@ -111,23 +110,29 @@ export class IntervalTree {
 
   private fixAfterInsert(node: Node): void {
     let current: Node | null = node;
-    while (current && current.parent && isRed(current.parent)) {
+    while (current?.parent && isRed(current.parent)) {
       const parent: Node = current.parent;
       const grandparent: Node | null = parent.parent;
-      if (!grandparent) break;
+      if (!grandparent) {
+        break;
+      }
       if (parent === grandparent.left) {
         const uncle = grandparent.right;
         if (isRed(uncle)) {
           parent.color = "B";
-          if (uncle) uncle.color = "B";
+          if (uncle) {
+            uncle.color = "B";
+          }
           grandparent.color = "R";
           current = grandparent;
         } else {
           if (current === parent.right) {
             current = parent;
-            this.rotateLeft(current!);
+            if (current) {
+              this.rotateLeft(current);
+            }
           }
-          if (current && current.parent) {
+          if (current?.parent) {
             current.parent.color = "B";
           }
           grandparent.color = "R";
@@ -137,15 +142,19 @@ export class IntervalTree {
         const uncle = grandparent.left;
         if (isRed(uncle)) {
           parent.color = "B";
-          if (uncle) uncle.color = "B";
+          if (uncle) {
+            uncle.color = "B";
+          }
           grandparent.color = "R";
           current = grandparent;
         } else {
           if (current === parent.left) {
             current = parent;
-            this.rotateRight(current!);
+            if (current) {
+              this.rotateRight(current);
+            }
           }
-          if (current && current.parent) {
+          if (current?.parent) {
             current.parent.color = "B";
           }
           grandparent.color = "R";
@@ -160,7 +169,9 @@ export class IntervalTree {
 
   private rotateLeft(x: Node): void {
     const y = x.right;
-    if (!y) return;
+    if (!y) {
+      return;
+    }
 
     x.right = y.left;
     if (y.left) {
@@ -183,7 +194,9 @@ export class IntervalTree {
 
   private rotateRight(y: Node): void {
     const x = y.left;
-    if (!x) return;
+    if (!x) {
+      return;
+    }
 
     y.left = x.right;
     if (x.right) {

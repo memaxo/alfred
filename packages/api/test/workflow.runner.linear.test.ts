@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { metricsStub } from "./utils/mock-metrics";
 
 const emitMock = mock((type: string, params: unknown) => ({
@@ -39,7 +47,9 @@ const { runPlanV6 } = await import("@alfred/api/workflow/runner");
 
 async function collectEvents<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   const results: T[] = [];
-  for await (const event of gen) results.push(event);
+  for await (const event of gen) {
+    results.push(event);
+  }
   return results;
 }
 
@@ -56,7 +66,7 @@ describe("workflow runner linear integration", () => {
 
   afterEach(() => {
     if (originalPublicUrl === undefined) {
-      delete process.env.PUBLIC_URL;
+      process.env.PUBLIC_URL = undefined;
     } else {
       process.env.PUBLIC_URL = originalPublicUrl;
     }

@@ -131,7 +131,9 @@ function rerankResults(
 }
 
 function truncateText(text?: string | null): string | undefined {
-  if (!text) return;
+  if (!text) {
+    return;
+  }
   if (text.length <= MAX_TEXT_PREVIEW) {
     return text;
   }

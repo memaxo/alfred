@@ -1,10 +1,10 @@
+import { createHash } from "node:crypto";
 import {
   enrichReasoningContext,
   extractReasoning,
-  toKnowledge,
   type KnowledgeEntry,
+  toKnowledge,
 } from "@alfred/knowledge/extractor";
-import { createHash } from "node:crypto";
 
 type NodeSeed = {
   resource: string;
@@ -135,13 +135,14 @@ export async function linkRagProvenanceToReasoning(opts: {
 
     const docToReasoning = new Map<string, string[]>();
     for (const node of nodes) {
-      const props = (node.properties ??
-        null) as Record<string, unknown> | null;
+      const props = (node.properties ?? null) as Record<string, unknown> | null;
       const ids = Array.isArray(props?.ragDocumentIds)
-        ? (props!.ragDocumentIds as unknown[])
+        ? (props?.ragDocumentIds as unknown[])
         : [];
       for (const rawId of ids) {
-        if (typeof rawId !== "string" || rawId.length === 0) continue;
+        if (typeof rawId !== "string" || rawId.length === 0) {
+          continue;
+        }
         const list = docToReasoning.get(rawId) ?? [];
         list.push(node.id);
         docToReasoning.set(rawId, list);
@@ -155,7 +156,9 @@ export async function linkRagProvenanceToReasoning(opts: {
     const edgeSeeds: EdgeSeed[] = [];
     for (const [documentId, reasoningIds] of docToReasoning.entries()) {
       const docNode = await findRagDocumentNode(documentId);
-      if (!docNode) continue;
+      if (!docNode) {
+        continue;
+      }
 
       for (const reasoningId of reasoningIds) {
         const edgeHash = createHash("sha256")
@@ -188,9 +191,7 @@ export async function linkRagProvenanceToReasoning(opts: {
     }
 
     await upsertEdges(edgeSeeds as any);
-  } catch (error) {
-    console.error("Failed to link RAG provenance to reasoning", error);
-  }
+  } catch (_error) {}
 }
 
 function makeEdge(
@@ -274,9 +275,7 @@ export async function persistKnowledge(
     }
 
     await upsertEdges(edges as any);
-  } catch (err) {
-    console.error("Failed to persist knowledge graph", err);
-  }
+  } catch (_err) {}
 }
 
 export async function persistExecPlans(opts: {
@@ -339,7 +338,9 @@ export async function persistExecPlans(opts: {
     for (const sub of subtasks) {
       const subHash = execplanSubtaskHash(resource, runId, sub.id);
       const subRow = hashToRow.get(subHash);
-      if (!subRow) continue;
+      if (!subRow) {
+        continue;
+      }
 
       const edgeHash = createHash("sha256")
         .update(resource)
@@ -366,9 +367,7 @@ export async function persistExecPlans(opts: {
     if (edgeSeeds.length > 0) {
       await upsertEdges(edgeSeeds as any);
     }
-  } catch (error) {
-    console.error("Failed to persist execplan nodes", error);
-  }
+  } catch (_error) {}
 }
 
 /**
@@ -451,7 +450,9 @@ export async function persistReasoning(
 
     for (let i = 0; i < nodeSeeds.length; i++) {
       const current = nodeSeeds[i];
-      if (!current) continue;
+      if (!current) {
+        continue;
+      }
       const properties = (current.properties ??= {});
       const previous = nodeSeeds[i - 1];
       const next = nodeSeeds[i + 1];
@@ -475,15 +476,19 @@ export async function persistReasoning(
       for (let i = 0; i < nodeSeeds.length - 1; i++) {
         const currentSeed = nodeSeeds[i];
         const nextSeed = nodeSeeds[i + 1];
-        if (!currentSeed || !nextSeed) continue;
+        if (!(currentSeed && nextSeed)) {
+          continue;
+        }
         const currentRow = hashToRow.get(currentSeed.hash);
         const nextRow = hashToRow.get(nextSeed.hash);
-        if (!currentRow || !nextRow) continue;
+        if (!(currentRow && nextRow)) {
+          continue;
+        }
 
         const delta =
           (traces[i + 1]?.timestamp ?? traces[i]?.timestamp ?? 0) -
           (traces[i]?.timestamp ?? 0);
-          const edgeHash = createHash("sha256")
+        const edgeHash = createHash("sha256")
           .update(resource)
           .update("|")
           .update(currentSeed.hash)
@@ -510,9 +515,7 @@ export async function persistReasoning(
         await upsertEdges(edgeSeeds as any);
       }
     }
-  } catch (err) {
-    console.error("Failed to persist reasoning traces", err);
-  }
+  } catch (_err) {}
 }
 
 type CodexArtifact = {
@@ -596,12 +599,10 @@ export async function persistCodexExecution(
   const artifactSeeds: NodeSeed[] = [];
 
   for (const artifact of options.artifacts ?? []) {
-    if (!artifact.path) continue;
-    const artifactHash = codexArtifactHash(
-      resource,
-      artifact.path,
-      createdAt
-    );
+    if (!artifact.path) {
+      continue;
+    }
+    const artifactHash = codexArtifactHash(resource, artifact.path, createdAt);
     artifactSeeds.push({
       resource,
       hash: artifactHash,
@@ -641,7 +642,9 @@ export async function persistCodexExecution(
     const edgeSeeds: EdgeSeed[] = [];
     for (const seed of artifactSeeds) {
       const artifactRow = hashToRow.get(seed.hash);
-      if (!artifactRow) continue;
+      if (!artifactRow) {
+        continue;
+      }
       const edgeHash = createHash("sha256")
         .update(resource)
         .update("|codex_has_artifact|")
@@ -665,7 +668,5 @@ export async function persistCodexExecution(
     if (edgeSeeds.length > 0) {
       await upsertEdges(edgeSeeds as any);
     }
-  } catch (err) {
-    console.error("Failed to persist codex execution", err);
-  }
+  } catch (_err) {}
 }

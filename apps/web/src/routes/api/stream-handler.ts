@@ -1,7 +1,5 @@
 import { getModelId } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
-import * as conversationRepo from "@alfred/db/repo/conversation";
-import { auth } from "@alfred/auth";
 import {
   historyContextSelectionDurationSeconds,
   historyContextTierDropsTotal,
@@ -11,15 +9,12 @@ import {
   preferencePromptInjectionsTotal,
 } from "@alfred/api/metrics";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
-import { logger } from "@alfred/api/utils/logger";
+import { auth } from "@alfred/auth";
+import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
+import { logger } from "@alfred/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
-import {
-  consumeStream,
-  generateId,
-  streamText,
-  type UIMessage,
-} from "ai";
+import { consumeStream, generateId, streamText, type UIMessage } from "ai";
 import { z } from "zod";
 
 const requestSchema = z
@@ -118,10 +113,9 @@ export async function handleStreamRequest(
     }
 
     const modelId = getModelId();
-    const stopHistoryTimer =
-      historyContextSelectionDurationSeconds.startTimer({
-        source: errorPrefix,
-      });
+    const stopHistoryTimer = historyContextSelectionDurationSeconds.startTimer({
+      source: errorPrefix,
+    });
     const historyContext = await buildHistoryContext({
       messages,
       modelId,
@@ -206,7 +200,7 @@ export async function handleStreamRequest(
         return metadata;
       },
       onFinish: async ({ isAborted, messages: streamedMessages }) => {
-        if (!userId || !conversationId || !streamedMessages?.length) {
+        if (!(userId && conversationId && streamedMessages?.length)) {
           return;
         }
 

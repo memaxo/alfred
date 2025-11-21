@@ -1,15 +1,15 @@
 /**
  * Engine Wrapper Integration Tests
- * 
+ *
  * Tests that engine wrappers correctly call domain package functions
  */
 
 import { describe, expect, it } from "bun:test";
+import { empty as emptyGraph } from "@alfred/knowledge/hypergraph";
 import { CognitiveEngine } from "../src/engines/cognitive";
 import { KnowledgeEngine } from "../src/engines/knowledge";
 import { LearningEngine } from "../src/engines/learning";
 import { PolicyEngine } from "../src/engines/policy";
-import { empty as emptyGraph } from "@alfred/knowledge/hypergraph";
 
 describe("CognitiveEngine", () => {
   const engine = new CognitiveEngine();
@@ -153,7 +153,7 @@ describe("LearningEngine", () => {
 describe("PolicyEngine", () => {
   const engine = new PolicyEngine();
 
-  it.skip("evaluates policy decision (requires policy.yaml)", async () => {
+  it("evaluates policy decision (requires policy.yaml)", async () => {
     // This test requires config/policy.yaml to be present
     // Will be enabled in integration test suite
     const decision = await engine.evaluate({
@@ -167,7 +167,7 @@ describe("PolicyEngine", () => {
     expect(typeof decision.allow).toBe("boolean");
   });
 
-  it.skip("checks if action is permitted (requires policy.yaml)", async () => {
+  it("checks if action is permitted (requires policy.yaml)", async () => {
     // This test requires config/policy.yaml to be present
     // Will be enabled in integration test suite
     const permitted = await engine.isPermitted({
@@ -179,7 +179,7 @@ describe("PolicyEngine", () => {
     expect(typeof permitted).toBe("boolean");
   });
 
-  it.skip("gets obligations for action (requires policy.yaml)", async () => {
+  it("gets obligations for action (requires policy.yaml)", async () => {
     // This test requires config/policy.yaml to be present
     // Will be enabled in integration test suite
     const obligations = await engine.getObligations({
@@ -190,7 +190,7 @@ describe("PolicyEngine", () => {
 
     expect(Array.isArray(obligations)).toBe(true);
   });
-  
+
   it("has correct interface", () => {
     // Just verify the engine has the expected methods
     expect(typeof engine.evaluate).toBe("function");
@@ -198,4 +198,3 @@ describe("PolicyEngine", () => {
     expect(typeof engine.getObligations).toBe("function");
   });
 });
-

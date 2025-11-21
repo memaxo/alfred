@@ -2,7 +2,11 @@ import { describe, expect, it } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
 import { buildHistoryContext } from "../src";
 
-function textMessage(id: string, role: UIMessage["role"], text: string): UIMessage {
+function textMessage(
+  id: string,
+  role: UIMessage["role"],
+  text: string
+): UIMessage {
   return {
     id,
     role,
@@ -63,7 +67,11 @@ describe("buildHistoryContext", () => {
       ],
     };
     const filler = Array.from({ length: 20 }, (_, index) =>
-      textMessage(`filler-${index}`, index % 2 === 0 ? "assistant" : "user", "noise")
+      textMessage(
+        `filler-${index}`,
+        index % 2 === 0 ? "assistant" : "user",
+        "noise"
+      )
     );
     const messages = [...filler, toolCall, toolResult];
 
@@ -86,7 +94,11 @@ describe("buildHistoryContext", () => {
 
   it("tracks tiers and token deltas", async () => {
     const messages = Array.from({ length: 6 }, (_, index) =>
-      textMessage(`msg-${index}`, index % 2 === 0 ? "user" : "assistant", `m-${index}`)
+      textMessage(
+        `msg-${index}`,
+        index % 2 === 0 ? "user" : "assistant",
+        `m-${index}`
+      )
     );
 
     const ctx = await buildHistoryContext({

@@ -8,16 +8,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-interface QueueItem {
+type QueueItem = {
   id: string;
   title: string;
   priority: "low" | "medium" | "high";
-}
+};
 
-interface QueueProps {
+type QueueProps = {
   items: QueueItem[];
   className?: string;
-}
+};
 
 export function Queue({ items, className }: QueueProps) {
   return (

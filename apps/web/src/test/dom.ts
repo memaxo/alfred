@@ -19,54 +19,80 @@ globalThis.getComputedStyle = window.getComputedStyle;
 (globalThis.document as Document & { documentMode?: number }).documentMode =
   undefined;
 (HTMLElement.prototype as unknown as { attachEvent?: () => void }).attachEvent =
-  () => undefined;
+  () => {};
 (HTMLElement.prototype as unknown as { detachEvent?: () => void }).detachEvent =
-  () => undefined;
+  () => {};
 
-// Provide minimal canvas and resize observer shims for jsdom-based tests.
-if (typeof (globalThis as any).HTMLCanvasElement === "undefined") {
-  class CanvasElement extends window.HTMLElement {}
-  (globalThis as any).HTMLCanvasElement = CanvasElement;
-  (window as any).HTMLCanvasElement = CanvasElement;
+if (!HTMLElement.prototype.scrollIntoView) {
+  HTMLElement.prototype.scrollIntoView = () => {};
 }
 
-const HTMLCanvasProto = (globalThis as any)
-  .HTMLCanvasElement.prototype as {
+if (typeof globalThis.requestAnimationFrame === "undefined") {
+  globalThis.requestAnimationFrame = (callback: FrameRequestCallback) =>
+    setTimeout(() => callback(Date.now()), 16) as unknown as number;
+}
+
+if (typeof globalThis.cancelAnimationFrame === "undefined") {
+  globalThis.cancelAnimationFrame = (handle: number) => {
+    clearTimeout(handle);
+  };
+}
+
+// Provide minimal canvas and resize observer shims for jsdom-based tests.
+const CanvasElementCtor = (window as any).HTMLCanvasElement
+  ? (window as any).HTMLCanvasElement
+  : (globalThis as any).HTMLCanvasElement
+    ? (globalThis as any).HTMLCanvasElement
+    : class CanvasElement extends window.HTMLElement {};
+
+(globalThis as any).HTMLCanvasElement = CanvasElementCtor;
+(window as any).HTMLCanvasElement = CanvasElementCtor;
+
+const HTMLCanvasProto = CanvasElementCtor.prototype as {
   getContext?: (contextId: string, options?: unknown) => unknown;
+  toDataURL?: () => string;
 };
-if (!HTMLCanvasProto.getContext) {
-  HTMLCanvasProto.getContext = () => ({
-    fillRect() {},
-    clearRect() {},
-    getImageData: () => ({ data: [] }),
-    putImageData() {},
-    createImageData: () => [],
-    setTransform() {},
-    drawImage() {},
-    save() {},
-    fillText() {},
-    restore() {},
-    beginPath() {},
-    moveTo() {},
-    lineTo() {},
-    closePath() {},
-    stroke() {},
-    translate() {},
-    scale() {},
-    rotate() {},
-    arc() {},
-    fill() {},
-    measureText: () => ({ width: 0 }),
-    transform() {},
-    rect() {},
-    clip() {},
-  });
+
+HTMLCanvasProto.getContext = () => ({
+  fillRect() {},
+  clearRect() {},
+  getImageData: () => ({ data: [] }),
+  putImageData() {},
+  createImageData: () => [],
+  createLinearGradient: () => ({
+    addColorStop() {},
+  }),
+  createRadialGradient: () => ({
+    addColorStop() {},
+  }),
+  createPattern: () => null,
+  setTransform() {},
+  drawImage() {},
+  save() {},
+  fillText() {},
+  restore() {},
+  beginPath() {},
+  moveTo() {},
+  lineTo() {},
+  closePath() {},
+  stroke() {},
+  translate() {},
+  scale() {},
+  rotate() {},
+  arc() {},
+  fill() {},
+  measureText: () => ({ width: 0 }),
+  transform() {},
+  rect() {},
+  clip() {},
+});
+
+if (!HTMLCanvasProto.toDataURL) {
+  HTMLCanvasProto.toDataURL = () => "data:image/png;base64,";
 }
 
 if (typeof (globalThis as any).ResizeObserver === "undefined") {
   const ResizeObserverPolyfill = class ResizeObserver {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    constructor(_callback: (entries: unknown[]) => void) {}
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     observe(): void {}
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -94,3 +120,53 @@ if (typeof (globalThis as any).screen === "undefined") {
     (window as any).screen = screenStub;
   }
 }
+
+const createMemoryStorage = (): Storage => {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    getItem(key: string) {
+      return store.has(key) ? (store.get(key) ?? null) : null;
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+  } as Storage;
+};
+
+const ensureStorage = (key: "localStorage" | "sessionStorage") => {
+  const storage = createMemoryStorage();
+  const assign = (target: typeof globalThis | Window) => {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      value: storage,
+      writable: true,
+    });
+  };
+
+  if (typeof (globalThis as any)[key] === "undefined") {
+    assign(globalThis);
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    typeof (window as any)[key] === "undefined"
+  ) {
+    assign(window);
+  }
+};
+
+ensureStorage("localStorage");
+ensureStorage("sessionStorage");

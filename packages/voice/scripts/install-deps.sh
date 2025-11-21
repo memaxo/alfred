@@ -17,47 +17,27 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-# Detect platform and determine appropriate extra
-PLATFORM="$(uname -s)"
-ARCH="$(uname -m)"
-
-# Determine PyTorch backend extra based on platform
-if [[ "$PLATFORM" == "Darwin" ]]; then
-    # macOS - use CPU extra (MPS is included in default PyTorch builds)
-    EXTRA="cpu"
-    echo "Detected macOS - using CPU extra (MPS support included in PyTorch)"
-elif [[ "$PLATFORM" == "Linux" ]]; then
-    # Linux - try to detect GPU, default to CPU
-    if command -v rocm-smi &> /dev/null; then
-        EXTRA="rocm"
-        echo "Detected ROCm - using ROCm extra"
-    elif command -v nvidia-smi &> /dev/null; then
-        EXTRA="cu128"
-        echo "Detected CUDA - using CUDA 12.8 extra"
-    else
-        EXTRA="cpu"
-        echo "No GPU detected - using CPU extra"
-    fi
-else
-    EXTRA="cpu"
-    echo "Unknown platform - using CPU extra"
-fi
-
 # Use UV sync to create virtual environment and install dependencies
 echo "Creating virtual environment and installing dependencies..."
-uv sync --extra "$EXTRA"
+uv sync
 
 echo "✓ Dependencies installed successfully in virtual environment (.venv)"
+
+# Download Supertonic models
+echo ""
+echo "Downloading Supertonic models..."
+bash "$VOICE_DIR/scripts/download_supertonic.sh"
 
 # Verify installation using UV run (uses virtual environment)
 echo ""
 echo "Verifying installation..."
 uv run python -c "
 try:
-    from faster_whisper import WhisperModel
-    from piper import PiperVoice
-    from silero_vad import load_silero_vad_model
+    import nemo.collections.asr as nemo_asr
+    from silero_vad import load_silero_vad
     import numpy as np
+    import transformers
+    import snac
     print('✓ All core dependencies available')
 except ImportError as e:
     print(f'✗ Missing dependency: {e}')

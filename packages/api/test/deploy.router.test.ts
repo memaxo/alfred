@@ -52,7 +52,7 @@ afterEach(() => {
   resetAllMocks();
 });
 
-describe.skip("deploy router", () => {
+describe("deploy router", () => {
   describe("list", () => {
     it("lists deployments", async () => {
       const mockDeployments = [

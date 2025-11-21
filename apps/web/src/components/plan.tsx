@@ -8,20 +8,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-interface Task {
+type Task = {
   id: string;
   title: string;
   status: "pending" | "running" | "completed" | "error";
   subtasks?: Task[];
-}
+};
 
-interface PlanProps {
+type PlanProps = {
   plan: {
     requirement: string;
     tasks: Task[];
   };
   className?: string;
-}
+};
 
 export function Plan({ plan, className }: PlanProps) {
   return (

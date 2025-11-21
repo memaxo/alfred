@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  MAX_HISTORY_MESSAGES,
-  limitUiMessages,
-} from "../src/history";
+import { limitUiMessages, MAX_HISTORY_MESSAGES } from "../src/history";
 import type { UIMessage } from "../src/stream";
 
 function createTextMessage(id: number): UIMessage {
@@ -60,9 +57,8 @@ describe("limitUiMessages", () => {
   });
 
   it("retains a lone tool-result message outside the window", () => {
-    const base = Array.from(
-      { length: MAX_HISTORY_MESSAGES + 5 },
-      (_, index) => createTextMessage(index + 2000)
+    const base = Array.from({ length: MAX_HISTORY_MESSAGES + 5 }, (_, index) =>
+      createTextMessage(index + 2000)
     );
     const toolResult = createToolMessage("tool-result", "solo");
     const messages = [toolResult, ...base];

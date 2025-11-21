@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
-import { cosineSim, knn } from "../src/indices/knn";
 import { nodeFromHash } from "../src/hypergraph";
+import { cosineSim, knn } from "../src/indices/knn";
 
 describe("knn", () => {
   it("computes cosine similarity", () => {

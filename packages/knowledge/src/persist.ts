@@ -1,13 +1,13 @@
 import type { KnowledgeEntry } from "./extractor.js";
 import {
-  knowledgeHash,
-  nodeFromHash,
-  timestamp,
-  toConfidence,
   type Hypergraph,
   type Knowledge,
+  knowledgeHash,
   type NodeId,
+  nodeFromHash,
   type Timestamp,
+  timestamp,
+  toConfidence,
 } from "./hypergraph.js";
 import { measureAsync, measureSync } from "./metrics.js";
 
@@ -58,7 +58,7 @@ export type AutoPersistHandle = {
 
 const PERSIST_BUDGET_MS = 25;
 const LOAD_BUDGET_MS = 30;
-const DEFAULT_INTERVAL_MS = 5_000;
+const DEFAULT_INTERVAL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 100;
 const DEFAULT_EMBED_BATCH = 50;
 
@@ -133,12 +133,14 @@ export function startAutoPersist(
 ): AutoPersistHandle {
   const intervalMs = Math.max(250, options.intervalMs ?? DEFAULT_INTERVAL_MS);
   const batchSize = Math.max(1, options.batchSize ?? DEFAULT_BATCH_SIZE);
-  const embedBatchSize = Math.max(1, options.embedBatchSize ?? DEFAULT_EMBED_BATCH);
+  const embedBatchSize = Math.max(
+    1,
+    options.embedBatchSize ?? DEFAULT_EMBED_BATCH
+  );
   const computeEmbeddings = options.computeEmbeddings ?? true;
   const embedder = options.embedder;
   const isEmbeddable =
-    options.isEmbeddable ??
-    ((knowledge: Knowledge) => knowledge._ === "fact");
+    options.isEmbeddable ?? ((knowledge: Knowledge) => knowledge._ === "fact");
   const onError = options.onError;
   const processedEmbeddings = new Set<NodeId>();
   let stopped = false;
@@ -182,7 +184,7 @@ export function startAutoPersist(
   };
 
   const embedMissing = async (): Promise<void> => {
-    if (!computeEmbeddings || !embedder) {
+    if (!(computeEmbeddings && embedder)) {
       return;
     }
     const candidates: Array<{ id: NodeId; text: string }> = [];
@@ -216,9 +218,11 @@ export function startAutoPersist(
     }
     for (let i = 0; i < candidates.length; i++) {
       const vector = vectors[i];
-      if (!vector) continue;
-      graph.setEmbedding(candidates[i]!.id, vector);
-      processedEmbeddings.add(candidates[i]!.id);
+      if (!vector) {
+        continue;
+      }
+      graph.setEmbedding(candidates[i]?.id, vector);
+      processedEmbeddings.add(candidates[i]?.id);
     }
   };
 
@@ -266,9 +270,7 @@ function deserializeNode(record: NodeRecord): Knowledge | null {
       return {
         _: "fact",
         content: record.label,
-        confidence: toConfidence(
-          clamp01(readNumber(props, "confidence", 0.8))
-        ),
+        confidence: toConfidence(clamp01(readNumber(props, "confidence", 0.8))),
         source: readString(props, "source", "unknown"),
         ts: readTimestamp(props, "ts", Date.now()),
       };
@@ -307,9 +309,10 @@ function deserializeRelation(record: RelationRecord): Knowledge | null {
     from: nodeFromHash(record.fromHash),
     to: nodeFromHash(record.toHash),
     kind: record.kind,
-    weight: typeof record.weight === "number" && Number.isFinite(record.weight)
-      ? record.weight
-      : 1,
+    weight:
+      typeof record.weight === "number" && Number.isFinite(record.weight)
+        ? record.weight
+        : 1,
   };
 }
 
@@ -363,8 +366,12 @@ function readTimestamp(
 }
 
 function clamp01(value: number): number {
-  if (value < 0) return 0;
-  if (value > 1) return 1;
+  if (value < 0) {
+    return 0;
+  }
+  if (value > 1) {
+    return 1;
+  }
   return value;
 }
 

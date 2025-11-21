@@ -12,6 +12,7 @@ import { Toolbar } from "@/components/ai-elements/toolbar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMindscapeStore } from "@/store/mindscape";
+import { useNodeFocus } from "../lod";
 
 export type MindscapeNodeProps = {
   id: string;
@@ -38,6 +39,7 @@ export function MindscapeNode({
   handles = { source: true, target: true },
 }: MindscapeNodeProps) {
   const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
+  const { isDimmed, isFocused } = useNodeFocus(id);
 
   return (
     <Node
@@ -46,6 +48,9 @@ export function MindscapeNode({
         "min-w-[300px] border border-white/10 bg-void-surface/40 backdrop-blur-xl transition-all duration-500 ease-fluid",
         selected &&
           "scale-[1.01] border-biolum shadow-[0_0_15px_rgba(var(--biolum-rgb),0.3)]",
+        isDimmed && "scale-95 opacity-20 blur-sm grayscale",
+        isFocused &&
+          "z-50 scale-105 border-biolum shadow-[0_0_30px_rgba(var(--biolum-rgb),0.2)]",
         className
       )}
       handles={{

@@ -5,11 +5,11 @@ import type {
   SttRequest,
   SttResult,
   TtsRequest,
+  VoiceCapturedClip,
   VoiceClient,
   VoiceSession,
   VoiceSessionOptions,
   VoiceSessionState,
-  VoiceCapturedClip,
 } from "./types";
 
 const DEFAULT_VOICE = "alloy";
@@ -73,7 +73,7 @@ export function createVoiceSession(
   const finishCapture = async () => {
     const clip = await adapter.stopCapture();
     recordingActive = false;
-    if (!clip || !clip.audioBase64) {
+    if (!clip?.audioBase64) {
       updateState(state, {
         capture: "idle",
         error: "capture_empty",

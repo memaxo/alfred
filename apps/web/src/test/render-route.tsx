@@ -1,17 +1,13 @@
-import type { ReactElement, ReactNode, ComponentType } from "react";
-import { render } from "@testing-library/react";
 import {
   QueryClient,
-  QueryClientProvider,
   type QueryClientConfig,
+  QueryClientProvider,
 } from "@tanstack/react-query";
-import {
-  createTRPCClient,
-  type TRPCClient,
-  type TRPCLink,
-} from "@trpc/client";
+import { createTRPCClient, type TRPCClient, type TRPCLink } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import type { ComponentType, ReactElement, ReactNode } from "react";
+import { render } from "@/test/testing-library";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 export type TestTrpcHandler = (input: unknown) => unknown | Promise<unknown>;
 
@@ -27,7 +23,7 @@ export type TestTrpcHandlers = {
         error: (error: unknown) => void;
         complete: () => void;
       }
-    ) => void | (() => void)
+    ) => undefined | (() => void)
   >;
 };
 
@@ -53,53 +49,55 @@ export function createTestQueryClient(
 export function createTestTrpcClient(
   handlers: TestTrpcHandlers = {}
 ): TRPCClient<TRPCAppRouter> {
-  const handlerLink: TRPCLink<TRPCAppRouter> = () => ({ op }) =>
-    observable((observer) => {
-      const map =
-        op.type === "query"
-          ? handlers.queries
-          : op.type === "mutation"
-            ? handlers.mutations
-            : handlers.subscriptions;
-      const handler = map?.[op.path];
+  const handlerLink: TRPCLink<TRPCAppRouter> =
+    () =>
+    ({ op }) =>
+      observable((observer) => {
+        const map =
+          op.type === "query"
+            ? handlers.queries
+            : op.type === "mutation"
+              ? handlers.mutations
+              : handlers.subscriptions;
+        const handler = map?.[op.path];
 
-      if (op.type === "subscription") {
-        if (!handler) {
-          observer.complete?.();
-          return () => undefined;
+        if (op.type === "subscription") {
+          if (!handler) {
+            observer.complete?.();
+            return () => {};
+          }
+          const cleanup = handler(op.input, {
+            next: (value) =>
+              observer.next({
+                result: {
+                  type: "data",
+                  data: value,
+                },
+              }),
+            error: (error) => observer.error?.(error),
+            complete: () => observer.complete?.(),
+          });
+          return () => {
+            if (typeof cleanup === "function") {
+              cleanup();
+            }
+          };
         }
-        const cleanup = handler(op.input, {
-          next: (value) =>
+
+        Promise.resolve(handler ? handler(op.input) : undefined)
+          .then((data) => {
             observer.next({
               result: {
                 type: "data",
-                data: value,
+                data,
               },
-            }),
-          error: (error) => observer.error?.(error),
-          complete: () => observer.complete?.(),
-        });
-        return () => {
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
-        };
-      }
+            });
+            observer.complete?.();
+          })
+          .catch((error) => observer.error?.(error));
 
-      Promise.resolve(handler ? handler(op.input) : undefined)
-        .then((data) => {
-          observer.next({
-            result: {
-              type: "data",
-              data,
-            },
-          });
-          observer.complete?.();
-        })
-        .catch((error) => observer.error?.(error));
-
-      return () => undefined;
-    });
+        return () => {};
+      });
 
   return createTRPCClient<TRPCAppRouter>({
     links: [handlerLink],

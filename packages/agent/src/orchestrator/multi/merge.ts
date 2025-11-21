@@ -40,7 +40,9 @@ function collectFiles(outcomes: AgentOutcome[]): string[] {
 
   for (const outcome of outcomes) {
     const result = outcome.result;
-    if (!result) continue;
+    if (!result) {
+      continue;
+    }
 
     for (const change of result.changes ?? []) {
       const path = String(change).trim();
@@ -89,7 +91,7 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
 
   const parts: string[] = [];
   parts.push(
-    `Merge results from ${subOutcomes.length} agents (${completed.length} completed, ${failed.length} failed, ${stuck.length} stuck).`,
+    `Merge results from ${subOutcomes.length} agents (${completed.length} completed, ${failed.length} failed, ${stuck.length} stuck).`
   );
 
   let strategy: "worktree" | "branch" | "direct" = "direct";
@@ -122,7 +124,9 @@ export function generateMergeExecPlanSkeleton(
   const lines: string[] = [];
   lines.push(`# Merge ExecPlan for run ${runId}`);
   lines.push("");
-  lines.push("This ExecPlan guides a merge analysis for the multi-agent workflow.");
+  lines.push(
+    "This ExecPlan guides a merge analysis for the multi-agent workflow."
+  );
   lines.push("");
   lines.push("## Purpose");
   lines.push("");
@@ -134,7 +138,7 @@ export function generateMergeExecPlanSkeleton(
   lines.push("");
   lines.push(mergePlan.summary);
   lines.push("");
-  
+
   if (mergePlan.branches && mergePlan.branches.length > 0) {
     lines.push("Branches to merge:");
     for (const branch of mergePlan.branches) {
@@ -159,8 +163,12 @@ export function generateMergeExecPlanSkeleton(
   } else {
     lines.push("- Identify overlapping or conflicting edits between agents.");
   }
-  lines.push("- Verify that each changed file still compiles and satisfies its contracts.");
-  lines.push("- Note any risky areas that require focused tests or manual review.");
+  lines.push(
+    "- Verify that each changed file still compiles and satisfies its contracts."
+  );
+  lines.push(
+    "- Note any risky areas that require focused tests or manual review."
+  );
   lines.push("");
   lines.push("## Progress");
   lines.push("");

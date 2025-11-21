@@ -56,7 +56,9 @@ function safeRealpath(p: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
+  if (!(baseReal && targetReal)) {
+    return false;
+  }
   const relative = path.relative(baseReal, targetReal);
   return (
     relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
@@ -114,10 +116,10 @@ type ToolWriter =
   | { write: (chunk: unknown) => Promise<void> | void }
   | undefined;
 
-export interface DroidExecuteArgs {
+export type DroidExecuteArgs = {
   input: DroidToolInput;
   writer?: ToolWriter;
-}
+};
 
 function buildFlags(input: DroidToolInput) {
   const flags = ["exec", "-o", input.out];
@@ -146,8 +148,12 @@ function pickEnv(custom: Record<string, string> | undefined) {
   }
 
   for (const [key, value] of Object.entries(custom)) {
-    if (!key || typeof value !== "string") continue;
-    if (key === "PATH") continue;
+    if (!key || typeof value !== "string") {
+      continue;
+    }
+    if (key === "PATH") {
+      continue;
+    }
     if (key.startsWith("DROID_")) {
       safeEnv[key] = value;
     }
@@ -208,7 +214,9 @@ function streamStdout(
   writer: ToolWriter,
   accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
 ) {
-  if (!proc.stdout || typeof proc.stdout === "number") return;
+  if (!proc.stdout || typeof proc.stdout === "number") {
+    return;
+  }
 
   const reader = proc.stdout.getReader();
   const decoder = new TextDecoder();
@@ -217,7 +225,9 @@ function streamStdout(
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         const text = decoder.decode(value);
         accumulator.capturedBytes += Buffer.byteLength(text);
@@ -257,7 +267,9 @@ function streamStdout(
 }
 
 function streamStderr(proc: ReturnType<typeof Bun.spawn>, writer: ToolWriter) {
-  if (!proc.stderr || typeof proc.stderr === "number") return;
+  if (!proc.stderr || typeof proc.stderr === "number") {
+    return;
+  }
 
   const reader = proc.stderr.getReader();
   const decoder = new TextDecoder();
@@ -266,7 +278,9 @@ function streamStderr(proc: ReturnType<typeof Bun.spawn>, writer: ToolWriter) {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         void Promise.resolve(
           writer?.write?.({ type: "stderr", text: decoder.decode(value) })

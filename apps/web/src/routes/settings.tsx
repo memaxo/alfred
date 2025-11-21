@@ -11,12 +11,14 @@ export const Route = createFileRoute("/settings")({
 function SettingsRoute() {
   const [previewText, setPreviewText] = useState("Hello, I am Alfred.");
   const utils = trpc.useUtils();
-  
+
   const { data: voices } = trpc.voice.listVoices.useQuery();
   const { data: prefs } = trpc.user.getPreferences.useQuery();
-  
-  const currentVoice = prefs?.find((p) => p.key === "voice.tts")?.value as string | undefined;
-  
+
+  const currentVoice = prefs?.find((p) => p.key === "voice.tts")?.value as
+    | string
+    | undefined;
+
   const setPreference = trpc.user.setPreference.useMutation({
     onSuccess: () => {
       toast.success("Voice updated");
@@ -26,12 +28,14 @@ function SettingsRoute() {
 
   const previewVoice = trpc.voice.previewVoice.useMutation({
     onSuccess: (result) => {
-      const audio = new Audio(`data:${result.mimeType};base64,${result.audioBase64}`);
+      const audio = new Audio(
+        `data:${result.mimeType};base64,${result.audioBase64}`
+      );
       audio.play();
     },
     onError: (error) => {
       toast.error(error.message);
-    }
+    },
   });
 
   const handleVoiceChange = (voiceId: string) => {
@@ -42,16 +46,18 @@ function SettingsRoute() {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl py-10 space-y-8">
+    <div className="container mx-auto max-w-2xl space-y-8 py-10">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your voice and application preferences.</p>
+        <h1 className="font-bold text-3xl tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your voice and application preferences.
+        </p>
       </div>
 
       <div className="space-y-4 rounded-xl border p-6">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Voice</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="font-semibold text-xl">Voice</h2>
+          <p className="text-muted-foreground text-sm">
             Choose the voice Alfred uses for speech-to-speech responses.
           </p>
         </div>
@@ -59,16 +65,18 @@ function SettingsRoute() {
         <div className="grid gap-4 sm:grid-cols-2">
           {voices?.map((voice) => (
             <div
-              key={voice.id}
               className={`relative flex cursor-pointer flex-col gap-2 rounded-lg border p-4 hover:bg-accent ${
                 currentVoice === voice.id ? "border-primary bg-accent" : ""
               }`}
+              key={voice.id}
               onClick={() => handleVoiceChange(voice.id)}
             >
               <div className="font-medium">{voice.name}</div>
-              <div className="text-xs text-muted-foreground">ID: {voice.id}</div>
+              <div className="text-muted-foreground text-xs">
+                ID: {voice.id}
+              </div>
               {currentVoice === voice.id && (
-                <div className="absolute right-4 top-4 h-2 w-2 rounded-full bg-primary" />
+                <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-primary" />
               )}
             </div>
           ))}
@@ -76,10 +84,10 @@ function SettingsRoute() {
 
         <div className="flex gap-2 pt-4">
           <input
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            value={previewText}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:font-medium file:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             onChange={(e) => setPreviewText(e.target.value)}
             placeholder="Type something to preview..."
+            value={previewText}
           />
           <Button
             disabled={!currentVoice || previewVoice.isPending}

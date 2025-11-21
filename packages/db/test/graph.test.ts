@@ -1,9 +1,6 @@
 import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
-import {
-  describePostgres,
-  requirePostgresTestEnv,
-} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -14,7 +11,9 @@ let graphRepo: typeof import("@alfred/db").graphRepo;
 let db: typeof import("@alfred/db").db;
 
 async function resetGraph() {
-  if (!db) return;
+  if (!db) {
+    return;
+  }
   await db.execute(
     sql`TRUNCATE memory_edges, memory_nodes RESTART IDENTITY CASCADE`
   );
@@ -76,22 +75,29 @@ describeFn("graphRepo", () => {
     ]);
     const nodeIds = Array.from(nodes.values()).map((node) => node.id);
 
+    const id1 = nodeIds[0];
+    const id2 = nodeIds[1];
+
+    if (!(id1 && id2)) {
+      throw new Error("Missing node ids");
+    }
+
     await graphRepo.upsertEdges([
       {
         resource: TEST_RESOURCE,
-        fromNodeId: nodeIds[0]!,
-        toNodeId: nodeIds[1]!,
+        fromNodeId: id1,
+        toNodeId: id2,
         relation: "supports",
         weight: 0.8,
       },
     ]);
 
-    const neighbors = await graphRepo.getNeighbors(nodeIds[0]!, {
+    const neighbors = await graphRepo.getNeighbors(id1, {
       direction: "out",
       resource: TEST_RESOURCE,
     });
     expect(neighbors.length).toBe(1);
     expect(neighbors[0]?.edge.kind).toBe("supports");
-    expect(neighbors[0]?.otherNodeId).toBe(nodeIds[1]);
+    expect(neighbors[0]?.otherNodeId).toBe(id2);
   });
 });

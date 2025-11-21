@@ -27,9 +27,9 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { WorkflowEvent } from "@alfred/type";
-import { eq, and } from "drizzle-orm";
 import { EMBEDDING_DIM } from "@alfred/embed";
+import type { WorkflowEvent } from "@alfred/type";
+import { eq } from "drizzle-orm";
 import { toObservable } from "./utils/stream";
 import "./utils/mock-metrics";
 import {
@@ -44,11 +44,11 @@ mock.module("@alfred/runtime", () => ({
 }));
 
 mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: async () => undefined,
+  createAuditLog: async () => {},
 }));
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
-  emitLinearActivity: async () => undefined,
+  emitLinearActivity: async () => {},
   setLinearDelegate: () => {},
   setLinearSessionExternalUrl: () => {},
   setLinearStarted: () => {},
@@ -78,10 +78,8 @@ let setEmbeddingProvider: typeof import("@alfred/rag").setEmbeddingProvider;
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
-let workflowRunsTable:
-  typeof import("@alfred/db/schema/workflow").workflowRuns;
-let workflowEventsTable:
-  typeof import("@alfred/db/schema/workflow").workflowEvents;
+let workflowRunsTable: typeof import("@alfred/db/schema/workflow").workflowRuns;
+let workflowEventsTable: typeof import("@alfred/db/schema/workflow").workflowEvents;
 
 describe("workflow runtime stream provenance (sqlite)", () => {
   beforeAll(async () => {
@@ -102,33 +100,33 @@ describe("workflow runtime stream provenance (sqlite)", () => {
   afterAll(() => {
     if (!USE_EXISTING_DB) {
       if (ORIGINAL_DB_URL === undefined) {
-        delete process.env.DATABASE_URL;
+        process.env.DATABASE_URL = undefined;
       } else {
         process.env.DATABASE_URL = ORIGINAL_DB_URL;
       }
     }
     if (ORIGINAL_USE_WORKFLOW_RUNTIME === undefined) {
-      delete process.env.USE_WORKFLOW_RUNTIME;
+      process.env.USE_WORKFLOW_RUNTIME = undefined;
     } else {
       process.env.USE_WORKFLOW_RUNTIME = ORIGINAL_USE_WORKFLOW_RUNTIME;
     }
     if (ORIGINAL_OPENAI_KEY === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      process.env.OPENAI_API_KEY = undefined;
     } else {
       process.env.OPENAI_API_KEY = ORIGINAL_OPENAI_KEY;
     }
     if (ORIGINAL_TRPC_METRICS === undefined) {
-      delete process.env.DISABLE_TRPC_METRICS;
+      process.env.DISABLE_TRPC_METRICS = undefined;
     } else {
       process.env.DISABLE_TRPC_METRICS = ORIGINAL_TRPC_METRICS;
     }
     if (ORIGINAL_HOOK_METRICS === undefined) {
-      delete process.env.DISABLE_METRICS_HOOKS;
+      process.env.DISABLE_METRICS_HOOKS = undefined;
     } else {
       process.env.DISABLE_METRICS_HOOKS = ORIGINAL_HOOK_METRICS;
     }
     if (ORIGINAL_RAG_ENRICH === undefined) {
-      delete process.env.RAG_ENRICH_GRAPH;
+      process.env.RAG_ENRICH_GRAPH = undefined;
     } else {
       process.env.RAG_ENRICH_GRAPH = ORIGINAL_RAG_ENRICH;
     }
@@ -137,12 +135,9 @@ describe("workflow runtime stream provenance (sqlite)", () => {
   beforeEach(() => {
     // Stub embeddings to avoid heavy local models
     setEmbeddingProvider({
-      embed: async () =>
-        Array.from({ length: EMBEDDING_DIM }, () => 0.1),
+      embed: async () => Array.from({ length: EMBEDDING_DIM }, () => 0.1),
       embedMany: async (texts: string[]) =>
-        texts.map(() =>
-          Array.from({ length: EMBEDDING_DIM }, () => 0.1),
-        ),
+        texts.map(() => Array.from({ length: EMBEDDING_DIM }, () => 0.1)),
     });
   });
 
@@ -186,7 +181,7 @@ describe("workflow runtime stream provenance (sqlite)", () => {
         runId,
         ragDocumentId: documentId,
         traces,
-      }),
+      })
     );
 
     const events: WorkflowEvent[] = [];
@@ -214,8 +209,8 @@ describe("workflow runtime stream provenance (sqlite)", () => {
         (event) =>
           event.type === "progress" &&
           (event as any).pct === 100 &&
-          (event as any).message === "completed",
-      ),
+          (event as any).message === "completed"
+      )
     ).toBe(true);
 
     const runRows = await db

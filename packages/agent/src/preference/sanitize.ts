@@ -1,10 +1,10 @@
 import {
   explanationDepthSchema,
   formatSchema,
-  toneSchema,
-  verbositySchema,
   type PreferenceDetail,
   type PreferenceKey,
+  toneSchema,
+  verbositySchema,
 } from "@alfred/type/preference";
 
 type ResponseEnumSchema =
@@ -22,7 +22,7 @@ const RESPONSE_ENUM_SCHEMAS: Record<string, ResponseEnumSchema> = {
 
 const MAX_STRING_LENGTH = 200;
 const CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]/g;
-const INJECTION_CHARS = /[<>\[\]{}\\]/g;
+const INJECTION_CHARS = /[<>[\]{}\\]/g;
 
 export function sanitizePreferences(
   preferences: Map<PreferenceKey, PreferenceDetail>
@@ -72,7 +72,7 @@ function sanitizeValue(
     return sanitizeObject(value as Record<string, unknown>);
   }
 
-  return undefined;
+  return;
 }
 
 function sanitizeString(value: string): string {
@@ -83,9 +83,7 @@ function sanitizeString(value: string): string {
     .trim();
 }
 
-function sanitizeObject(
-  obj: Record<string, unknown>
-): Record<string, unknown> {
+function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === "string") {

@@ -78,9 +78,9 @@ mock.module("@alfred/ui", () => ({
           <input
             aria-label="assistant-input"
             disabled={disabled}
+            onChange={(event) => setValue(event.target.value)}
             placeholder={placeholder}
             value={value}
-            onChange={(event) => setValue(event.target.value)}
           />
           <button disabled={disabled} type="submit">
             Send
@@ -118,9 +118,11 @@ mock.module("@/hooks/use-assistant-stream", () => {
           setMessages((prev) => {
             const next =
               typeof updater === "function"
-                ? (updater as (prev: AssistantUIMessage[]) => AssistantUIMessage[])(
-                    prev
-                  )
+                ? (
+                    updater as (
+                      prev: AssistantUIMessage[]
+                    ) => AssistantUIMessage[]
+                  )(prev)
                 : updater;
             streamState.messages = next;
             return next;
@@ -129,15 +131,21 @@ mock.module("@/hooks/use-assistant-stream", () => {
         []
       );
 
-      const send = reactUseCallback((text: string) => {
-        setAndTrack((prev) => [...prev, createMessage(text)]);
-      }, [setAndTrack]);
+      const send = reactUseCallback(
+        (text: string) => {
+          setAndTrack((prev) => [...prev, createMessage(text)]);
+        },
+        [setAndTrack]
+      );
       const clear = reactUseCallback(() => {
         setAndTrack([]);
       }, [setAndTrack]);
-      const hydrate = reactUseCallback((snapshot: AssistantUIMessage[]) => {
-        setAndTrack(snapshot);
-      }, [setAndTrack]);
+      const hydrate = reactUseCallback(
+        (snapshot: AssistantUIMessage[]) => {
+          setAndTrack(snapshot);
+        },
+        [setAndTrack]
+      );
 
       streamState.send = send;
       streamState.clear = clear;
@@ -199,7 +207,8 @@ function getAgentTab(
   container: HTMLElement,
   agent: "assistant" | "orchestrator"
 ): HTMLButtonElement {
-  const panelId = agent === "assistant" ? "assistant-panel" : "orchestrator-panel";
+  const panelId =
+    agent === "assistant" ? "assistant-panel" : "orchestrator-panel";
   const candidates = container.querySelectorAll<HTMLButtonElement>(
     `[aria-controls="${panelId}"]`
   );

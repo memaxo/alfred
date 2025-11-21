@@ -27,6 +27,7 @@
     "@ai-sdk/google": "catalog:",
     "@alfred/agent": "workspace:*",
     "@alfred/auth": "workspace:*",
+    "@alfred/logger": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@trpc/client": "catalog:",

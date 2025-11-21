@@ -46,7 +46,7 @@ type TaskResponse = { exitstatus: "OK" | string };
 type PveEnvelope<T> = { data: T };
 
 export class proxmox {
-  private cfg: Required<ProxmoxCfg>;
+  private readonly cfg: Required<ProxmoxCfg>;
 
   constructor(cfg: ProxmoxCfg) {
     this.cfg = {
@@ -83,11 +83,7 @@ export class proxmox {
     return this.request<UpidResponse>("DELETE", `/nodes/${node}/lxc/${vmid}`);
   }
 
-  lxcSnapshot(
-    node: string,
-    vmid: number,
-    name: string
-  ): Promise<UpidResponse> {
+  lxcSnapshot(node: string, vmid: number, name: string): Promise<UpidResponse> {
     return this.request<UpidResponse>(
       "POST",
       `/nodes/${node}/lxc/${vmid}/snapshot`,
@@ -97,11 +93,7 @@ export class proxmox {
     );
   }
 
-  lxcRollback(
-    node: string,
-    vmid: number,
-    name: string
-  ): Promise<UpidResponse> {
+  lxcRollback(node: string, vmid: number, name: string): Promise<UpidResponse> {
     return this.request<UpidResponse>(
       "POST",
       `/nodes/${node}/lxc/${vmid}/snapshot/${name}/rollback`

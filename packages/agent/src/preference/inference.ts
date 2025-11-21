@@ -58,7 +58,7 @@ function buildPreferenceDetail(
     value,
     source,
     confidence,
-    evidence: evidence && evidence.length ? evidence : undefined,
+    evidence: evidence?.length ? evidence : undefined,
   };
 }
 
@@ -94,7 +94,10 @@ function joinText(message: UIMessage): string {
     return "";
   }
   return message.parts
-    .filter((part): part is { type: "text"; text: string } => part.type === "text" && Boolean(part.text))
+    .filter(
+      (part): part is { type: "text"; text: string } =>
+        part.type === "text" && Boolean(part.text)
+    )
     .map((part) => part.text)
     .join(" ");
 }
@@ -115,40 +118,58 @@ export function inferResponsePreferences(
     collectUserTexts(conversation.messages)
   );
 
-  for (const [verbosity, hints] of Object.entries(VERBOSITY_HINTS) as Array<[
+  for (const [verbosity, hints] of Object.entries(VERBOSITY_HINTS) as [
     ResponseVerbosity,
-    string[]
-  ]>) {
-    const matches = countHints(userTexts, hints);
-    if (matches > 0) {
-      preferences.set("response.verbosity", buildPreferenceDetail(verbosity, "inferred", calculateConfidence(matches), conversations.map((c) => c.id)));
-      break;
-    }
-  }
-
-  for (const [tone, hints] of Object.entries(TONE_HINTS) as Array<[
-    ResponseTone,
-    string[]
-  ]>) {
+    string[],
+  ][]) {
     const matches = countHints(userTexts, hints);
     if (matches > 0) {
       preferences.set(
-        "response.tone",
-        buildPreferenceDetail(tone, "inferred", calculateConfidence(matches), conversations.map((c) => c.id))
+        "response.verbosity",
+        buildPreferenceDetail(
+          verbosity,
+          "inferred",
+          calculateConfidence(matches),
+          conversations.map((c) => c.id)
+        )
       );
       break;
     }
   }
 
-  for (const [format, hints] of Object.entries(FORMAT_HINTS) as Array<[
+  for (const [tone, hints] of Object.entries(TONE_HINTS) as [
+    ResponseTone,
+    string[],
+  ][]) {
+    const matches = countHints(userTexts, hints);
+    if (matches > 0) {
+      preferences.set(
+        "response.tone",
+        buildPreferenceDetail(
+          tone,
+          "inferred",
+          calculateConfidence(matches),
+          conversations.map((c) => c.id)
+        )
+      );
+      break;
+    }
+  }
+
+  for (const [format, hints] of Object.entries(FORMAT_HINTS) as [
     ResponseFormat,
-    string[]
-  ]>) {
+    string[],
+  ][]) {
     const matches = countHints(userTexts, hints);
     if (matches > 0) {
       preferences.set(
         "response.format",
-        buildPreferenceDetail(format, "inferred", calculateConfidence(matches), conversations.map((c) => c.id))
+        buildPreferenceDetail(
+          format,
+          "inferred",
+          calculateConfidence(matches),
+          conversations.map((c) => c.id)
+        )
       );
       break;
     }
@@ -177,7 +198,7 @@ export function inferDomainPreferences(
     if (!grouped.has(domain)) {
       grouped.set(domain, []);
     }
-    grouped.get(domain)!.push(call);
+    grouped.get(domain)?.push(call);
   }
 
   for (const [domain, calls] of grouped) {
@@ -243,7 +264,9 @@ export function inferPreferencesFromFeedback(
   }
 
   const formatSignals = feedbackItems.filter((item) =>
-    item.tags?.some((tag) => tag === "prefer_bullets" || tag === "prefer_paragraph")
+    item.tags?.some(
+      (tag) => tag === "prefer_bullets" || tag === "prefer_paragraph"
+    )
   );
 
   if (formatSignals.length) {
@@ -275,7 +298,7 @@ export function inferPreferenceFromCorrection(
   const originalText = joinText(original);
   const correctedText = joinText(corrected);
 
-  if (!originalText || !correctedText) {
+  if (!(originalText && correctedText)) {
     return null;
   }
 
@@ -302,7 +325,9 @@ export function inferPreferenceFromCorrection(
 
   if (correctionType === "content") {
     const explanation = detectExplanationDepth(originalText, correctedText);
-    return explanation ? { key: "response.explanation_depth", value: explanation } : null;
+    return explanation
+      ? { key: "response.explanation_depth", value: explanation }
+      : null;
   }
 
   return null;
@@ -315,13 +340,16 @@ function extractDomain(toolName: string): string | null {
   return toolName.split(".")[0] ?? null;
 }
 
-function inferConfigFormatPreference(calls: ToolCallHistory[]):
-  | { value: string; count: number }
-  | null {
+function inferConfigFormatPreference(
+  calls: ToolCallHistory[]
+): { value: string; count: number } | null {
   const counts = new Map<string, number>();
 
   for (const call of calls) {
-    const explicitFormat = readStringProperty(call.parameters, ["format", "type"]);
+    const explicitFormat = readStringProperty(call.parameters, [
+      "format",
+      "type",
+    ]);
     if (explicitFormat) {
       const key = explicitFormat.toLowerCase();
       counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -339,13 +367,17 @@ function inferConfigFormatPreference(calls: ToolCallHistory[]):
     return null;
   }
 
-  const [value, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]!;
+  const topEntry = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (!topEntry) {
+    return null;
+  }
+  const [value, count] = topEntry;
   return { value, count };
 }
 
-function inferToolPreference(calls: ToolCallHistory[]):
-  | { value: string; count: number }
-  | null {
+function inferToolPreference(
+  calls: ToolCallHistory[]
+): { value: string; count: number } | null {
   const counts = new Map<string, number>();
 
   for (const call of calls) {
@@ -356,7 +388,11 @@ function inferToolPreference(calls: ToolCallHistory[]):
     return null;
   }
 
-  const [value, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]!;
+  const topEntry = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (!topEntry) {
+    return null;
+  }
+  const [value, count] = topEntry;
   return { value, count };
 }
 
@@ -374,10 +410,10 @@ function readStringProperty(
 }
 
 function detectTone(text: string): ResponseTone | null {
-  for (const [tone, pattern] of Object.entries(toneHeuristics) as Array<[
+  for (const [tone, pattern] of Object.entries(toneHeuristics) as [
     ResponseTone,
-    RegExp
-  ]>) {
+    RegExp,
+  ][]) {
     if (pattern.test(text)) {
       return tone;
     }
@@ -402,7 +438,9 @@ function detectExplanationDepth(
   correctedText: string
 ): PreferenceDetail["value"] | null {
   const originalSentences = originalText.split(/[.!?]/).filter(Boolean).length;
-  const correctedSentences = correctedText.split(/[.!?]/).filter(Boolean).length;
+  const correctedSentences = correctedText
+    .split(/[.!?]/)
+    .filter(Boolean).length;
 
   if (correctedSentences >= originalSentences + 2) {
     return "deep";

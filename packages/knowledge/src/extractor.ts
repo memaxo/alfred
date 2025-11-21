@@ -1,8 +1,5 @@
-/**
- * LLM Fact Extraction and Causal Inference
- * Pure functional extraction with no dependencies
- */
-
+import * as chrono from "chrono-node";
+import nlp from "compromise";
 import type { Knowledge } from "./hypergraph.js";
 import {
   fact,
@@ -12,6 +9,7 @@ import {
   pattern,
   relation,
 } from "./hypergraph.js";
+import { detectDomains, getDomainBoost } from "./taxonomy.js";
 
 // Extraction types
 type ExtractedFact = {
@@ -19,7 +17,8 @@ type ExtractedFact = {
   confidence: number;
   source: string;
   entities: string[];
-  relations: Array<[string, string, string]>; // [from, relation, to]
+  relations: [string, string, string][]; // [from, relation, to]
+  topics: string[];
 };
 
 type CausalLink = {
@@ -33,21 +32,9 @@ type ExtractionResult = {
   facts: ExtractedFact[];
   causality: CausalLink[];
   entities: Set<string>;
-  contradictions: Array<[string, string]>;
+  contradictions: [string, string][];
+  topics: string[];
 };
-
-// TODO: Replace with proper NER (Named Entity Recognition)
-// Consider using compromise.js or calling LLM for entity extraction
-// Current regex patterns miss many entity types:
-// - Organizations, locations, products
-// - Email addresses, URLs, phone numbers
-// - Technical terms, acronyms
-const ENTITY_PATTERNS = [
-  /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b/g, // Proper nouns
-  /\b\d{4}\b/g, // Years
-  /\b\d+(?:\.\d+)?%\b/g, // Percentages
-  /\$\d+(?:,\d{3})*(?:\.\d{2})?/g, // Money
-] as const;
 
 // Causal markers
 const CAUSAL_MARKERS = [
@@ -77,31 +64,73 @@ const CONFIDENCE_MODIFIERS = {
  * Extract facts from natural language text
  * Zero allocation design - reuses buffers
  */
-export const extract = (text: string, source: string): ExtractionResult => {
+export const extract = async (
+  text: string,
+  source: string
+): Promise<ExtractionResult> => {
   const facts: ExtractedFact[] = [];
   const causality: CausalLink[] = [];
   const entities = new Set<string>();
-  const contradictions: Array<[string, string]> = [];
+  const contradictions: [string, string][] = [];
 
-  // TODO: Implement proper sentence segmentation
-  // Current approach fails on:
-  // - Abbreviations (Dr., Inc., etc.)
-  // - Decimal numbers (3.14)
-  // - URLs and email addresses
-  // Consider using natural or compromise.js
-  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  // Import the classifier dynamically to avoid top-level await or heavy init issues
+  // This is a defensive measure for test environments that might not mock the classifier correctly
+  const { classifier } = await import("./classifier.js");
+
+  // Detect global topics for the text block
+  // Use both keyword detection (fast) and vector classification (semantic)
+  const keywordTopics = detectDomains(text);
+  const semanticTopics = await classifier.classify(text);
+
+  const globalTopics = Array.from(
+    new Set([...keywordTopics, ...semanticTopics])
+  );
+  const globalBoost = getDomainBoost(globalTopics);
+
+  const doc = nlp(text);
+  const sentences = doc.sentences().out("array");
 
   for (const sentence of sentences) {
+    const sDoc = nlp(sentence);
     const trimmed = sentence.trim();
-    if (trimmed.length === 0) continue;
+    if (trimmed.length === 0) {
+      continue;
+    }
 
-    // Extract entities
+    // Detect local topics for the sentence
+    // We union with global topics to ensure context isn't lost
+    const localTopics = detectDomains(trimmed);
+    const topics = Array.from(new Set([...globalTopics, ...localTopics]));
+    const boost = Math.max(globalBoost, getDomainBoost(localTopics));
+
+    // Extract entities using compromise
     const sentenceEntities: string[] = [];
-    for (const pattern of ENTITY_PATTERNS) {
-      const matches = trimmed.match(pattern) || [];
-      for (const match of matches) {
-        entities.add(match);
-        sentenceEntities.push(match);
+    const people = sDoc.people().out("array");
+    const places = sDoc.places().out("array");
+    const orgs = sDoc.organizations().out("array");
+    const topicEntities = sDoc.topics().out("array"); // Fallback for other proper nouns
+    const nouns = sDoc.nouns().out("array"); // Catch-all for capitalized terms
+
+    const allEntities = [
+      ...new Set([...people, ...places, ...orgs, ...topicEntities, ...nouns]),
+    ];
+
+    for (const entity of allEntities) {
+      // Simple heuristic: only keep entities that look like proper nouns (capitalized)
+      // unless they were explicitly detected as people/places/orgs
+      const isExplicit =
+        people.includes(entity) ||
+        places.includes(entity) ||
+        orgs.includes(entity);
+      const isCapitalized = /^[A-Z]/.test(entity);
+
+      if (isExplicit || isCapitalized) {
+        // Strip trailing punctuation (.,!?)
+        const cleanEntity = entity.replace(/[.,!?]+$/, "");
+        if (cleanEntity.length > 0) {
+          entities.add(cleanEntity);
+          sentenceEntities.push(cleanEntity);
+        }
       }
     }
 
@@ -114,22 +143,53 @@ export const extract = (text: string, source: string): ExtractionResult => {
       }
     }
 
-    // TODO: Implement proper relation extraction
-    // Current approach just marks co-occurrence as "related_to"
-    // Should:
-    // - Use dependency parsing to find actual relationships
-    // - Extract typed relations (works_for, located_in, part_of)
-    // - Consider verb phrases between entities
-    // - Use pre-trained relation extraction models
-    const relations: Array<[string, string, string]> = [];
+    // Apply domain boost
+    // Cap confidence at 1.0
+    confidence = Math.min(1.0, confidence * boost);
+
+    // Extract relations
+    // Simple heuristic: if we have Subject + Verb + Object structure
+    // compromise allows finding this somewhat
+    const relations: [string, string, string][] = [];
+
+    // 1. Pairwise co-occurrence (fallback)
     if (sentenceEntities.length >= 2) {
       for (let i = 0; i < sentenceEntities.length - 1; i++) {
         for (let j = i + 1; j < sentenceEntities.length; j++) {
-          relations.push([
-            sentenceEntities[i],
-            "related_to",
-            sentenceEntities[j],
-          ]);
+          const e1 = sentenceEntities[i];
+          const e2 = sentenceEntities[j];
+          if (e1 && e2) {
+            relations.push([e1, "related_to", e2]);
+          }
+        }
+      }
+    }
+
+    // 2. Verb-based extraction (Subject -> Verb -> Object)
+    // This is a simplification; improving it requires a full dependency parser
+    // or a dedicated relation extraction model.
+    // We can use compromise's .verbs() to get the action.
+    const verbs = sDoc.verbs().out("array");
+    if (verbs.length > 0 && sentenceEntities.length >= 2) {
+      // Try to find entities before and after the main verb
+      const mainVerb = verbs[0];
+      // Check if mainVerb is defined before splitting
+      if (mainVerb) {
+        const parts = sentence.split(mainVerb);
+        if (parts.length === 2) {
+          const before = parts[0];
+          const after = parts[1];
+
+          // Add null checks for before/after
+          if (before && after) {
+            const subject = sentenceEntities.find((e) => before.includes(e));
+            const object = sentenceEntities.find((e) => after.includes(e));
+
+            if (subject && object) {
+              // More specific relation found
+              relations.push([subject, mainVerb, object]);
+            }
+          }
         }
       }
     }
@@ -139,14 +199,15 @@ export const extract = (text: string, source: string): ExtractionResult => {
     for (const marker of CAUSAL_MARKERS) {
       const markerIndex = lowerSentence.indexOf(marker);
       if (markerIndex !== -1) {
-        // TODO: Implement proper causal parsing
-        // Current approach is too simplistic:
-        // - Doesn't handle complex sentence structures
-        // - Misses nested causality
-        // - No validation of causal direction
-        // Should use dependency parsing or causal inference models
-        const cause = trimmed.substring(0, markerIndex).trim();
-        const effect = trimmed.substring(markerIndex + marker.length).trim();
+        // Simple split on marker
+        const cause = trimmed
+          .substring(0, markerIndex)
+          .trim()
+          .replace(/[.,!?]+$/, "");
+        const effect = trimmed
+          .substring(markerIndex + marker.length)
+          .trim()
+          .replace(/[.,!?]+$/, "");
 
         if (cause.length > 0 && effect.length > 0) {
           causality.push({
@@ -167,19 +228,23 @@ export const extract = (text: string, source: string): ExtractionResult => {
       source,
       entities: sentenceEntities,
       relations,
+      topics,
     });
   }
 
-  // Detect contradictions (simple negation check for MVP)
+  // Detect contradictions (using compromise for negation check)
   for (let i = 0; i < facts.length; i++) {
     for (let j = i + 1; j < facts.length; j++) {
-      if (detectContradiction(facts[i].content, facts[j].content)) {
-        contradictions.push([facts[i].content, facts[j].content]);
+      // Add non-null assertions or checks for facts[i] and facts[j]
+      const factI = facts[i];
+      const factJ = facts[j];
+      if (factI && factJ && detectContradiction(factI.content, factJ.content)) {
+        contradictions.push([factI.content, factJ.content]);
       }
     }
   }
 
-  return { facts, causality, entities, contradictions };
+  return { facts, causality, entities, contradictions, topics: globalTopics };
 };
 
 /**
@@ -188,37 +253,48 @@ export const extract = (text: string, source: string): ExtractionResult => {
 export type KnowledgeEntry = {
   hash: string;
   data: Knowledge;
+  topics?: string[];
 };
 
 export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
   const list: KnowledgeEntry[] = [];
   const seen = new Set<string>();
 
-  const insert = (item: Knowledge) => {
+  const insert = (item: Knowledge, topics: string[] = []) => {
     const hash = knowledgeHash(item);
     if (!seen.has(hash)) {
       seen.add(hash);
-      list.push({ hash, data: item });
+      list.push({ hash, data: item, topics });
     }
-    return nodeFromHash(hash);
+    return nodeFromHash(hash); // Returns NodeId which is a string
   };
 
   for (const f of result.facts) {
-    insert(fact(f.content, f.confidence, f.source));
+    insert(fact(f.content, f.confidence, f.source), f.topics);
   }
 
   for (const c of result.causality) {
-    const causeNode = insert(fact(c.cause, c.confidence, "inferred"));
-    const effectNode = insert(fact(c.effect, c.confidence, "inferred"));
+    const causeNode = insert(
+      fact(c.cause, c.confidence, "inferred"),
+      result.topics
+    );
+    const effectNode = insert(
+      fact(c.effect, c.confidence, "inferred"),
+      result.topics
+    );
 
     if (causeNode && effectNode) {
-      insert(relation(causeNode, effectNode, "causes", c.confidence));
+      insert(
+        relation(causeNode, effectNode, "causes", c.confidence),
+        result.topics
+      );
       insert(
         insight(
           [causeNode, effectNode],
           `${c.cause} causes ${c.effect}`,
           c.confidence
-        )
+        ),
+        result.topics
       );
     }
   }
@@ -237,26 +313,75 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
  * Consider using textual entailment models
  */
 const detectContradiction = (s1: string, s2: string): boolean => {
+  const doc1 = nlp(s1);
+  const doc2 = nlp(s2);
+
+  // Check for explicit negation in one but not the other
+  const hasNegation1 = doc1.has("#Negative");
+  const hasNegation2 = doc2.has("#Negative");
+
+  if (hasNegation1 === hasNegation2) {
+    return false;
+  }
+
+  // Normalize to compare core content
+  // This is basic; essentially "I like pizza" vs "I do not like pizza"
+  // We strip the negative and compare
+  // compromise allows toggling negation
+
+  if (hasNegation1) {
+    // remove negation from s1 and see if it roughly matches s2
+    // This is tricky to do reliably without changing meaning,
+    // but we can try to match verbs/nouns
+    const verbs1 = doc1.verbs().toPositive().out("array");
+    const verbs2 = doc2.verbs().out("array");
+
+    // If main verbs match after removing negation
+    const intersection = verbs1.filter((v: string) => verbs2.includes(v));
+    if (intersection.length > 0) {
+      // Check if subjects/objects overlap significantly
+      const nouns1 = doc1.nouns().out("array");
+      const nouns2 = doc2.nouns().out("array");
+      const nounIntersection = nouns1.filter((n: string) => nouns2.includes(n));
+      if (nounIntersection.length >= 2) {
+        return true; // Subject + Object match
+      }
+    }
+  }
+
+  if (hasNegation2) {
+    const verbs1 = doc1.verbs().out("array");
+    const verbs2 = doc2.verbs().toPositive().out("array");
+
+    const intersection = verbs1.filter((v: string) => verbs2.includes(v));
+    if (intersection.length > 0) {
+      const nouns1 = doc1.nouns().out("array");
+      const nouns2 = doc2.nouns().out("array");
+      const nounIntersection = nouns1.filter((n: string) => nouns2.includes(n));
+      if (nounIntersection.length >= 2) {
+        return true;
+      }
+    }
+  }
+
+  // Fallback to simple keyword negation check if structure fails
   const negations = ["not", "no", "never", "none", "neither"];
   const s1Lower = s1.toLowerCase();
   const s2Lower = s2.toLowerCase();
 
-  // Check if one contains negation of key terms in the other
   for (const negation of negations) {
     if (s1Lower.includes(negation) && !s2Lower.includes(negation)) {
-      // Extract key terms from s2 and check if negated in s1
       const s2Terms = s2Lower.split(/\s+/);
       for (const term of s2Terms) {
-        if (term.length > 3 && s1Lower.includes(negation + " " + term)) {
+        if (term.length > 3 && s1Lower.includes(`${negation} ${term}`)) {
           return true;
         }
       }
     }
     if (s2Lower.includes(negation) && !s1Lower.includes(negation)) {
-      // Extract key terms from s1 and check if negated in s2
       const s1Terms = s1Lower.split(/\s+/);
       for (const term of s1Terms) {
-        if (term.length > 3 && s2Lower.includes(negation + " " + term)) {
+        if (term.length > 3 && s2Lower.includes(`${negation} ${term}`)) {
           return true;
         }
       }
@@ -273,7 +398,9 @@ export const inferPattern = (
   examples: string[],
   minSupport = 0.7
 ): Knowledge | null => {
-  if (examples.length < 3) return null;
+  if (examples.length < 3) {
+    return null;
+  }
 
   // TODO: Implement proper pattern mining
   // Current approach just finds common tokens
@@ -302,7 +429,9 @@ export const inferPattern = (
     }
   }
 
-  if (commonTokens.length === 0) return null;
+  if (commonTokens.length === 0) {
+    return null;
+  }
 
   // Generate pattern rule
   const rule = `Common pattern: ${commonTokens.join(", ")}`;
@@ -319,36 +448,58 @@ export const extractTemporal = (
 ): Array<{ time: Date; fact: string }> => {
   const temporal: Array<{ time: Date; fact: string }> = [];
 
-  // TODO: Use proper date/time parsing library (chrono-node, date-fns)
-  // Current patterns miss:
-  // - Relative dates (yesterday, next week, 3 days ago)
-  // - Time expressions (3pm, 14:30, noon)
-  // - Date ranges (Jan 1-5, Q3 2023)
-  // - Informal dates (last summer, early 2020s)
-  // - Different locales and formats
-  const datePatterns = [
-    /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,
-    /(\d{4}-\d{2}-\d{2})/g,
-    /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi,
-  ];
+  // Use chrono-node for parsing
+  const parsed = chrono.parse(text);
 
-  for (const pattern of datePatterns) {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      try {
-        const date = new Date(match[0]);
-        if (!isNaN(date.getTime())) {
-          // Find sentence containing this date
-          const sentences = text.split(/[.!?]+/);
-          for (const sentence of sentences) {
-            if (sentence.includes(match[0])) {
-              temporal.push({ time: date, fact: sentence.trim() });
-              break;
+  for (const result of parsed) {
+    const date = result.start.date();
+    const textMatch = result.text;
+
+    // Find context (sentence)
+    // Simple heuristic: expand around the match until punctuation
+    const index = result.index;
+    let start = index;
+    while (start > 0 && !/[.!?]/.test(text[start - 1] || "")) {
+      start--;
+    }
+    let end = index + textMatch.length;
+    while (end < text.length && !/[.!?]/.test(text[end] || "")) {
+      end++;
+    }
+
+    const sentence = text.substring(start, end + 1).trim();
+    temporal.push({ time: date, fact: sentence });
+  }
+
+  // Fallback to regex if chrono misses (though chrono is quite good)
+  // Keeping existing regex logic as backup or for specific formats not covered
+  if (temporal.length === 0) {
+    const datePatterns = [
+      /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,
+      /(\d{4}-\d{2}-\d{2})/g,
+      /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi,
+    ];
+
+    for (const pattern of datePatterns) {
+      const matches = text.matchAll(pattern);
+      for (const match of matches) {
+        try {
+          // Avoid duplicates if chrono already found it (heuristic check)
+          // But here we are in the fallback block
+          const date = new Date(match[0]);
+          if (!Number.isNaN(date.getTime())) {
+            // Find sentence containing this date
+            const sentences = text.split(/[.!?]+/);
+            for (const sentence of sentences) {
+              if (sentence.includes(match[0])) {
+                temporal.push({ time: date, fact: sentence.trim() });
+                break;
+              }
             }
           }
+        } catch {
+          // Invalid date, skip
         }
-      } catch {
-        // Invalid date, skip
       }
     }
   }
@@ -360,15 +511,15 @@ export const extractTemporal = (
  * Extract knowledge from Codex reasoning traces
  * Focuses on decision rationale, alternatives, and causal chains
  */
-export const extractReasoning = (
+export const extractReasoning = async (
   text: string,
   context: {
     threadId?: string;
     turnId?: string;
     source?: string;
   }
-): ExtractionResult => {
-  const result = extract(text, context.source ?? "codex-reasoning");
+): Promise<ExtractionResult> => {
+  const result = await extract(text, context.source ?? "codex-reasoning");
 
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
 
@@ -391,6 +542,7 @@ export const extractReasoning = (
           source: "decision-reasoning",
           entities: [],
           relations: [],
+          topics: result.topics,
         });
         break;
       }
@@ -415,6 +567,7 @@ export const extractReasoning = (
           source: "alternative-reasoning",
           entities: [],
           relations: [],
+          topics: result.topics,
         });
         break;
       }
@@ -435,8 +588,8 @@ export const enrichReasoningContext = (
     sessionId?: string;
     timestamp: number;
   }
-): KnowledgeEntry[] => {
-  return entries.map((entry) => {
+): KnowledgeEntry[] =>
+  entries.map((entry) => {
     if (entry.data._ === "fact") {
       return {
         ...entry,
@@ -448,4 +601,3 @@ export const enrichReasoningContext = (
     }
     return entry;
   });
-};

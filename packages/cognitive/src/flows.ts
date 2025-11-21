@@ -1,5 +1,5 @@
-import { extractReasoning } from "@alfred/knowledge/extractor";
 import type { Hypergraph } from "@alfred/knowledge";
+import { extractReasoning } from "@alfred/knowledge/extractor";
 import type {
   CaptureResult,
   CognitiveConfidence,
@@ -94,10 +94,10 @@ export function synthesize(
 /**
  * Capture reasoning traces into cognitive facts
  */
-export function captureReasoning(
+export async function captureReasoning(
   traces: Array<{ text: string; timestamp: number }>,
   context: { threadId?: string; executionId?: string }
-): CaptureResult {
+): Promise<CaptureResult> {
   if (traces.length === 0) {
     return {
       facts: [],
@@ -116,7 +116,7 @@ export function captureReasoning(
     );
     fact.timestamp = new Date(trace.timestamp).toISOString();
 
-    const extraction = extractReasoning(trace.text, {
+    const extraction = await extractReasoning(trace.text, {
       threadId: context.threadId,
       source: `reasoning:${context.executionId ?? "unknown"}`,
     });
@@ -141,8 +141,7 @@ export function captureReasoning(
   }
 
   const avgLength =
-    traces.reduce((sum, entry) => sum + entry.text.length, 0) /
-    traces.length;
+    traces.reduce((sum, entry) => sum + entry.text.length, 0) / traces.length;
   const baseConfidence = 0.7;
   const lengthBonus = Math.min(0.2, avgLength / 500);
   const ambiguityPenalty = ambiguities.length * 0.05;
@@ -184,8 +183,7 @@ export function reflect(
   actual: unknown,
   reasoning?: Array<{ text: string; timestamp: number }>
 ): ReflectionResult {
-  const mismatch: string[] =
-    expected === actual ? [] : ["outcome_mismatch"];
+  const mismatch: string[] = expected === actual ? [] : ["outcome_mismatch"];
   const updates: KnowledgeUpdate[] = [];
   const lessons: string[] = [];
 

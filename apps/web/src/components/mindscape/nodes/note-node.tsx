@@ -1,21 +1,24 @@
+import type { inferRouterInputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
 import { FileText, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { inferRouterInputs } from "@trpc/server";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { MindscapeNode } from "./mindscape-node";
-import { noteNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { noteNodeDataSchema } from "@/store/mindscape.schemas";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 
 const NOTE_LIST_KEY = { limit: 50, offset: 0 } as const;
 
 export function NoteNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
   const result = noteNodeDataSchema.safeParse(data);
   const parsed = result.success
     ? result.data
@@ -26,6 +29,8 @@ export function NoteNode({ id, data, selected }: NodeProps) {
         tags: undefined,
         mode: "edit" as const,
       };
+
+  // ... (rest of logic remains similar)
 
   const computedMode = parsed.mode ?? (parsed.noteId ? "view" : "edit");
   const isEditing = computedMode === "edit";
@@ -124,7 +129,7 @@ export function NoteNode({ id, data, selected }: NodeProps) {
       payload.content = draftContent;
     }
 
-    if (!payload.title && !payload.content) {
+    if (!(payload.title || payload.content)) {
       toast.info("No changes to save");
       updateArtifactData(id, { mode: "view" });
       return;
@@ -160,7 +165,9 @@ export function NoteNode({ id, data, selected }: NodeProps) {
   const headerIcon = <FileText className="h-4 w-4 text-yellow-500" />;
 
   const updatedLabel = useMemo(() => {
-    if (!parsed.updatedAt) return null;
+    if (!parsed.updatedAt) {
+      return null;
+    }
     const date = new Date(parsed.updatedAt);
     if (Number.isNaN(date.getTime())) {
       return parsed.updatedAt;
@@ -168,6 +175,30 @@ export function NoteNode({ id, data, selected }: NodeProps) {
     return date.toLocaleString();
   }, [parsed.updatedAt]);
 
+  // LOD 0: Tiny - Just an icon dot
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-yellow-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small - Icon + Label (Minimal)
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-yellow-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-yellow-500/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/10 text-yellow-500">
+          <FileText className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          {parsed.title?.trim() || "Untitled Note"}
+        </span>
+      </div>
+    );
+  }
+
+  // LOD 2/3: Medium/Full - Original card logic
   return (
     <MindscapeNode
       className="w-[360px] border-yellow-500/20 bg-yellow-950/10"
@@ -192,16 +223,16 @@ export function NoteNode({ id, data, selected }: NodeProps) {
               value={draftContent}
             />
             <div className="flex items-center justify-between">
-                <Button
-                  className="text-red-500"
-                  disabled={isDeleting}
-                  onClick={handleDelete}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  {parsed.noteId ? "Delete" : "Discard"}
-                </Button>
+              <Button
+                className="text-red-500"
+                disabled={isDeleting}
+                onClick={handleDelete}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {parsed.noteId ? "Delete" : "Discard"}
+              </Button>
               <div className="flex gap-2">
                 <Button
                   onClick={handleCancel}
@@ -225,13 +256,15 @@ export function NoteNode({ id, data, selected }: NodeProps) {
           </form>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between text-xs text-biolum-faint">
+            <div className="flex items-center justify-between text-biolum-faint text-xs">
               <span>{parsed.noteId ? "Synced" : "Draft"}</span>
               {updatedLabel && <span>Updated {updatedLabel}</span>}
             </div>
             <ScrollArea className="h-[200px]">
-              <div className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {parsed.content || <span className="italic opacity-50">No content</span>}
+              <div className="whitespace-pre-wrap text-muted-foreground text-sm">
+                {parsed.content || (
+                  <span className="italic opacity-50">No content</span>
+                )}
               </div>
             </ScrollArea>
             {parsed.tags && parsed.tags.length > 0 && (

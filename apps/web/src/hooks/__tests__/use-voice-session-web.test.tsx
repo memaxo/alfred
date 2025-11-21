@@ -1,6 +1,6 @@
 import "@/test/dom";
-import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { act, renderHook } from "@testing-library/react";
 import { useVoiceSessionWeb } from "../use-voice-session-web";
 
 const sttMutate = vi.fn();
@@ -32,16 +32,16 @@ mock.module("@/utils/trpc", () => {
 class MockMediaRecorder {
   public state: "inactive" | "recording" = "inactive";
   public ondataavailable?: (event: { data: Blob }) => void;
-  private stopListeners: ((event: Event) => void)[] = [];
-
-  constructor(_stream: MediaStream) {}
+  private readonly stopListeners: ((event: Event) => void)[] = [];
 
   start() {
     this.state = "recording";
   }
 
   stop() {
-    if (this.state === "inactive") return;
+    if (this.state === "inactive") {
+      return;
+    }
     this.state = "inactive";
     this.stopListeners.forEach((listener) => listener(new Event("stop")));
   }
@@ -67,9 +67,12 @@ Object.defineProperty(globalThis, "MediaRecorder", {
   value: MediaRecorderCtor,
 });
 
-const getUserMediaMock = vi.fn(async () => ({
-  getTracks: () => [],
-}) as MediaStream);
+const getUserMediaMock = vi.fn(
+  async () =>
+    ({
+      getTracks: () => [],
+    }) as MediaStream
+);
 
 Object.assign(globalThis.navigator, {
   mediaDevices: {

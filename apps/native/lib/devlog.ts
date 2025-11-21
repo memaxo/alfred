@@ -20,6 +20,5 @@ export function logError(scope: string, error: unknown): void {
     message = JSON.stringify(error);
   }
 
-  // biome-ignore lint/suspicious/noConsole: Dev logging helper centralizes console usage.
   console.error(`[${scope}] ${message}`, error);
 }

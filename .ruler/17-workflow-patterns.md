@@ -29,7 +29,7 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
 
-4. **Event replay.** Events must be replayable. Store full event data, not summaries.
+5. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
 
 ## Workflow Status Lifecycle
 

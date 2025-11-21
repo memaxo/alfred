@@ -25,7 +25,9 @@ function toISOString(value: Date | null | undefined) {
 }
 
 function mapTimer(row: Awaited<ReturnType<typeof createTimer>>) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     id: (row as { id: string }).id,
     label: (row as { label?: string | null }).label ?? null,
@@ -100,7 +102,7 @@ export const toolTimer = {
       case "active": {
         const rows = await getActiveTimers(input.userId);
         return {
-          timers: rows.map((row) => mapTimer(row)!).filter(Boolean),
+          timers: rows.map((row) => mapTimer(row)).filter(Boolean) as any[],
         };
       }
       case "done": {

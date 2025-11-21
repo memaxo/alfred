@@ -1,24 +1,24 @@
 import crypto from "node:crypto";
-import {
-  LinearWebhooks,
-  LINEAR_WEBHOOK_SIGNATURE_HEADER,
-  LINEAR_WEBHOOK_TS_FIELD,
-} from "@linear/sdk/webhooks";
 import { appRouter } from "@alfred/api";
 import {
+  linearWebhookEventsTotal,
+  linearWebhookWorkflowCancelsTotal,
+  linearWebhookWorkflowStartsTotal,
   webhookErrorsTotal,
   webhookEventsTotal,
-  linearWebhookEventsTotal,
-  linearWebhookWorkflowStartsTotal,
-  linearWebhookWorkflowCancelsTotal,
 } from "@alfred/api/metrics";
-import { logger } from "@alfred/api/utils/logger";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { RuntimeContext } from "@alfred/type/runtime-context";
-import { createFileRoute } from "@tanstack/react-router";
-import * as workflowRepo from "@alfred/db/repo/workflow";
-import { linearRepo } from "@alfred/db";
 import { runRegistry } from "@alfred/api/run-registry";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { linearRepo } from "@alfred/db";
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import { logger } from "@alfred/logger";
+import { RuntimeContext } from "@alfred/type/runtime-context";
+import {
+  LINEAR_WEBHOOK_SIGNATURE_HEADER,
+  LINEAR_WEBHOOK_TS_FIELD,
+  LinearWebhooks,
+} from "@linear/sdk/webhooks";
+import { createFileRoute } from "@tanstack/react-router";
 
 const MAX_AGE_SECONDS = 5 * 60; // tolerate up to 5 minutes of clock drift
 
@@ -40,10 +40,7 @@ function extractWorkspace(payload: unknown): string | null {
   return data?.workspace?.id ?? null;
 }
 
-function isAssignedToAlfred(
-  payload: unknown,
-  appUserId: string
-): boolean {
+function isAssignedToAlfred(payload: unknown, appUserId: string): boolean {
   const issue = (payload as { data?: { assignee?: { id?: string } } })?.data;
   return issue?.assignee?.id === appUserId;
 }
@@ -74,7 +71,7 @@ function extractEventType(body: unknown): string {
   return "unknown";
 }
 
-const AUTHZ_PATHS: Array<string[]> = [
+const AUTHZ_PATHS: string[][] = [
   ["data", "authorization"],
   ["data", "authz"],
   ["data", "agentSession", "authorization"],
@@ -132,11 +129,14 @@ async function handleLinearWebhookEvent(args: {
       if (installation && isAssignedToAlfred(payload, installation.appUser)) {
         const issueId = extractIssueId(payload);
         if (issueId) {
-          const existingRun = await workflowRepo.findRunByLinearSession(issueId);
+          const existingRun =
+            await workflowRepo.findRunByLinearSession(issueId);
           if (!existingRun || existingRun.status !== "running") {
-            const issue = (payload as {
-              data?: { title?: string; description?: string };
-            })?.data;
+            const issue = (
+              payload as {
+                data?: { title?: string; description?: string };
+              }
+            )?.data;
             const requirement =
               issue?.description ?? issue?.title ?? "Work on Linear issue";
 
@@ -248,7 +248,7 @@ export const Route = createFileRoute("/api/linear/webhook")({
         let secret: string;
         try {
           secret = getWebhookSecret();
-        } catch (error) {
+        } catch (_error) {
           webhookErrorsTotal.labels("secret").inc();
           return new Response("missing_secret", { status: 500 });
         }
@@ -269,10 +269,9 @@ export const Route = createFileRoute("/api/linear/webhook")({
           return new Response("invalid_payload", { status: 400 });
         }
 
-        const timestampValue =
-          (payload as Record<string, unknown> | null)?.[
-            LINEAR_WEBHOOK_TS_FIELD
-          ];
+        const timestampValue = (payload as Record<string, unknown> | null)?.[
+          LINEAR_WEBHOOK_TS_FIELD
+        ];
         let timestamp: number | undefined;
         if (typeof timestampValue === "number") {
           timestamp = timestampValue;

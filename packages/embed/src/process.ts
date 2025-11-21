@@ -15,18 +15,18 @@ import type {
 
 export class EmbedProcess {
   private process: Subprocess | null = null;
-  private config: EmbedConfig;
+  private readonly config: EmbedConfig;
   private startTime = 0;
   private requestCount = 0;
   private errorCount = 0;
   private lastPing: number | null = null;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private isShuttingDown = false;
-  private pendingRequests = new Map<
+  private readonly pendingRequests = new Map<
     string,
     (response: EmbedResponse) => void
   >();
-  private requestTimeout: number;
+  private readonly requestTimeout: number;
   private readyPromise: Promise<void> | null = null;
   private readyResolver: (() => void) | null = null;
 
@@ -101,7 +101,9 @@ export class EmbedProcess {
   }
 
   private setupEventHandlers(): void {
-    if (!this.process) return;
+    if (!this.process) {
+      return;
+    }
 
     // Handle stdout (IPC responses)
     if (this.process.stdout && typeof this.process.stdout !== "number") {
@@ -117,17 +119,20 @@ export class EmbedProcess {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          console.error("[embed-process stderr]", text);
+          if (done) {
+            break;
+          }
+          // Consume stream but ignore content
+          decoder.decode(value);
         }
       })();
     }
   }
 
   private async startReading(): Promise<void> {
-    if (!this.process?.stdout || typeof this.process.stdout === "number")
+    if (!this.process?.stdout || typeof this.process.stdout === "number") {
       return;
+    }
 
     const reader = this.process.stdout.getReader();
     const decoder = new TextDecoder();
@@ -135,20 +140,22 @@ export class EmbedProcess {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+          continue;
+        }
         try {
           const response: EmbedResponse = JSON.parse(line);
           this.handleResponse(response);
-        } catch (error) {
-          console.error("[embed-process] Failed to parse response:", error);
-        }
+        } catch (_error) {}
       }
     }
   }
@@ -165,8 +172,6 @@ export class EmbedProcess {
 
     // Log status messages
     if (response.type === "status") {
-      const message = response.payload?.message;
-      console.log(`[embed-process] Status: ${message}`);
       return;
     }
 
@@ -214,7 +219,7 @@ export class EmbedProcess {
         return;
       }
 
-      const line = JSON.stringify(request) + "\n";
+      const line = `${JSON.stringify(request)}\n`;
       this.process.stdin.write(line);
     });
   }
@@ -242,7 +247,6 @@ export class EmbedProcess {
     });
 
     await this.readyPromise;
-    console.log("[embed-process] Worker ready");
   }
 
   private startHealthCheck(): void {
@@ -250,9 +254,7 @@ export class EmbedProcess {
       try {
         await this.ping();
         this.lastPing = Date.now();
-      } catch (error) {
-        console.error("[embed-process] Health check failed:", error);
-      }
+      } catch (_error) {}
     }, 30_000); // Check every 30 seconds
   }
 
@@ -284,7 +286,7 @@ export class EmbedProcess {
         return;
       }
 
-      const line = JSON.stringify(request) + "\n";
+      const line = `${JSON.stringify(request)}\n`;
       this.process.stdin.write(line);
     });
   }
@@ -300,7 +302,9 @@ export class EmbedProcess {
   }
 
   async shutdown(): Promise<void> {
-    if (this.isShuttingDown) return;
+    if (this.isShuttingDown) {
+      return;
+    }
     this.isShuttingDown = true;
 
     if (this.healthCheckInterval) {

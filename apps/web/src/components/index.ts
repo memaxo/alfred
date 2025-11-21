@@ -7,6 +7,7 @@
 
 // AI SDK Elements
 export { Actions } from "./actions";
+export { Tool } from "./ai-elements/tool";
 export { Artifact } from "./artifact";
 // Voice & Audio
 export { Audio } from "./audio";
@@ -42,7 +43,6 @@ export { Response } from "./response";
 export { Task } from "./task";
 export { Think } from "./think";
 export { Thought } from "./thought";
-export { Tool } from "./tool";
 export { Toolbar } from "./toolbar";
 export { Viz } from "./viz";
 export { Voice } from "./voice";

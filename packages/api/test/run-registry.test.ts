@@ -28,7 +28,7 @@ mock.module("@alfred/api/metrics", () => ({
 
 const loggerWarnMock = vi.fn();
 
-mock.module("../../src/utils/logger", () => ({
+mock.module("@alfred/logger", () => ({
   logger: {
     warn: loggerWarnMock,
   },

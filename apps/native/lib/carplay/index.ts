@@ -27,9 +27,7 @@ type VoiceBridge = {
   stopAndTranscribe: () => Promise<{ text: string } | null>;
   speak: (opts: TtsRequest) => Promise<void>;
   speechToSpeech?: (
-    overrides?: Partial<
-      Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
-    >
+    overrides?: Partial<Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">>
   ) => Promise<SpeechToSpeechResponse | null>;
   state: {
     capture: string;
@@ -47,7 +45,7 @@ const delay = (ms: number) =>
   });
 
 async function waitForStreamReply(voice: VoiceBridge): Promise<string | null> {
-  if (!voice.stream || !voice.stream.supported) {
+  if (!voice.stream?.supported) {
     return null;
   }
   const start = Date.now();
@@ -72,6 +70,64 @@ async function waitForStreamReply(voice: VoiceBridge): Promise<string | null> {
     }
   }
   return latestReply || null;
+}
+
+async function handleVoiceButtonPress(
+  voice: VoiceBridge,
+  onReply: (text: string) => void
+) {
+  try {
+    if (voice.stream?.supported) {
+      try {
+        await voice.stream.start();
+        const reply = await waitForStreamReply(voice);
+        if (reply) {
+          onReply(reply);
+        }
+        return;
+      } catch (_streamError) {
+        // ignore
+      }
+    }
+    await voice.start();
+    // Wait for user to speak (monitor capture state or use a timeout)
+    // Poll the capture state until it indicates speech is detected or timeout
+    await new Promise<void>((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (
+          voice.state.capture === "recording" ||
+          voice.state.capture === "complete"
+        ) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, POLL_INTERVAL_MS);
+      // Timeout after configured duration
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve();
+      }, VOICE_TIMEOUT_MS);
+    });
+    if (voice.speechToSpeech) {
+      const response = await voice.speechToSpeech({
+        thread: "carplay-drive",
+        resource: "carplay-drive",
+        ttsVoice: "alloy",
+        ttsFormat: "mp3",
+      });
+      if (response?.assistant?.text) {
+        onReply(response.assistant.text);
+      }
+      return;
+    }
+    const result = await voice.stopAndTranscribe();
+    if (result?.text) {
+      onReply(result.text);
+      await voice.speak({ text: result.text, format: "mp3" });
+    }
+  } catch (_error) {
+    // ignore
+  }
 }
 
 export function setupCarPlay(
@@ -107,61 +163,7 @@ export function setupCarPlay(
     const listenButton = new VoiceControlButton({
       id: "alfred-voice",
       onPress: async () => {
-        try {
-          if (voice.stream?.supported) {
-            try {
-              await voice.stream.start();
-              const reply = await waitForStreamReply(voice);
-              if (reply) {
-                onReply(reply);
-              }
-              return;
-            } catch (streamError) {
-              console.warn(
-                "[carplay] streaming failed, falling back to clip mode",
-                streamError
-              );
-            }
-          }
-          await voice.start();
-          // Wait for user to speak (monitor capture state or use a timeout)
-          // Poll the capture state until it indicates speech is detected or timeout
-          await new Promise<void>((resolve) => {
-            const checkInterval = setInterval(() => {
-              if (
-                voice.state.capture === "recording" ||
-                voice.state.capture === "complete"
-              ) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, POLL_INTERVAL_MS);
-            // Timeout after configured duration
-            setTimeout(() => {
-              clearInterval(checkInterval);
-              resolve();
-            }, VOICE_TIMEOUT_MS);
-          });
-          if (voice.speechToSpeech) {
-            const response = await voice.speechToSpeech({
-              thread: "carplay-drive",
-              resource: "carplay-drive",
-              ttsVoice: "alloy",
-              ttsFormat: "mp3",
-            });
-            if (response?.assistant?.text) {
-              onReply(response.assistant.text);
-            }
-            return;
-          }
-          const result = await voice.stopAndTranscribe();
-          if (result?.text) {
-            onReply(result.text);
-            await voice.speak({ text: result.text, format: "mp3" });
-          }
-        } catch (error) {
-          console.warn("[carplay] voice interaction failed", error);
-        }
+        await handleVoiceButtonPress(voice, onReply);
       },
     });
 

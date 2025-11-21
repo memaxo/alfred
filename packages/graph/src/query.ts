@@ -1,12 +1,16 @@
-import { retrieve as ragRetrieve } from "@alfred/rag";
 import * as graphRepo from "@alfred/db/repo/graph";
 import type { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import type { Hypergraph, Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
+import type {
+  Hypergraph,
+  Knowledge,
+  NodeId,
+} from "@alfred/knowledge/hypergraph";
 import {
   execute as executeDatalog,
-  parse as parseQuery,
   semanticQuery as hyperSemantic,
+  parse as parseQuery,
 } from "@alfred/knowledge/query";
+import { retrieve as ragRetrieve } from "@alfred/rag";
 import type { UnifiedEdge, UnifiedNode, UnifiedNodeKind } from "./unified.js";
 
 type DbNode = typeof memoryNodes.$inferSelect;
@@ -111,8 +115,7 @@ async function runPath(
     return { nodes: [], edges: [] };
   }
   const nodeIds = path.map((entry) => entry.nodeId);
-  const requiredEdgeIds =
-    path[path.length - 1]?.via ?? [];
+  const requiredEdgeIds = path.at(-1)?.via ?? [];
   const subgraph = await graphRepo.getSubgraph(nodeIds, resource);
   const nodeMap = mapNodes(subgraph.nodes);
   const edges = subgraph.edges
@@ -138,13 +141,10 @@ async function runDatalog(
   for (const binding of bindings) {
     for (const value of binding.values()) {
       const knowledge = graph.get(value as NodeId);
-      if (!knowledge) continue;
-      appendKnowledgeEntry(
-        value as string,
-        knowledge,
-        nodes,
-        edges
-      );
+      if (!knowledge) {
+        continue;
+      }
+      appendKnowledgeEntry(value as string, knowledge, nodes, edges);
     }
   }
   return {
@@ -167,9 +167,13 @@ async function runSemantic(
     const semanticNodes: UnifiedNode[] = [];
     const nodeSet = new Set<string>();
     for (const id of ids) {
-      if (nodeSet.has(id)) continue;
+      if (nodeSet.has(id)) {
+        continue;
+      }
       const knowledge = context.graph.get(id as NodeId);
-      if (!knowledge) continue;
+      if (!knowledge) {
+        continue;
+      }
       semanticNodes.push(mapKnowledgeNode(id as string, knowledge));
       nodeSet.add(id as string);
     }
@@ -185,7 +189,10 @@ async function runSemantic(
         `rag-${index}`,
     },
     kind: "insight",
-    label: (chunk.metadata?.title as string) ?? (chunk.metadata?.documentId as string) ?? "Context",
+    label:
+      (chunk.metadata?.title as string) ??
+      (chunk.metadata?.documentId as string) ??
+      "Context",
     properties: {
       content: chunk.content,
       metadata: chunk.metadata,
@@ -208,7 +215,8 @@ function mapNodeRow(row: DbNode): UnifiedNode {
     id: { dbId: row.id },
     kind,
     label: row.label,
-    properties: row.properties ?? undefined,
+    properties:
+      (row.properties as unknown as Record<string, unknown>) ?? undefined,
   };
 }
 
@@ -249,10 +257,7 @@ function appendKnowledgeEntry(
   }
 }
 
-function mapKnowledgeNode(
-  id: string,
-  knowledge: Knowledge
-): UnifiedNode {
+function mapKnowledgeNode(id: string, knowledge: Knowledge): UnifiedNode {
   return {
     id: { hgHash: id },
     kind: knowledge._,
@@ -295,6 +300,6 @@ function buildKnowledgeProperties(
         accuracy: knowledge.accuracy,
       };
     default:
-      return undefined;
+      return;
   }
 }

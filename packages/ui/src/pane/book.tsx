@@ -30,7 +30,7 @@ export function BookmarkPane({
   if (items.length === 0) {
     return (
       <div className={className}>
-        <p className="text-biolum-dim text-center py-8">
+        <p className="py-8 text-center text-biolum-dim">
           No bookmarks yet. Add one above to get started.
         </p>
       </div>
@@ -38,22 +38,24 @@ export function BookmarkPane({
   }
 
   return (
-    <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}>
+    <div
+      className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}
+    >
       {items.map((bookmark) => (
         <div
+          className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl"
           key={bookmark.id}
-          className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6 flex flex-col gap-3"
         >
           {/* Title */}
           <div className="flex-1">
-            <h3 className="text-biolum tracking-tighter text-base font-medium line-clamp-2">
+            <h3 className="line-clamp-2 font-medium text-base text-biolum tracking-tighter">
               {bookmark.title || "Untitled Bookmark"}
             </h3>
             <a
+              className="text-biolum-dim text-sm underline decoration-white/20 transition-colors hover:text-biolum hover:decoration-white/40"
               href={bookmark.url}
-              target="_blank"
               rel="noopener noreferrer"
-              className="text-biolum-dim text-sm hover:text-biolum transition-colors underline decoration-white/20 hover:decoration-white/40"
+              target="_blank"
             >
               {extractDomain(bookmark.url)}
             </a>
@@ -62,10 +64,13 @@ export function BookmarkPane({
           {/* Tags */}
           {bookmark.tags && bookmark.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {(typeof bookmark.tags === "string" ? bookmark.tags.split(",") : bookmark.tags).map((tag, idx) => (
+              {(typeof bookmark.tags === "string"
+                ? bookmark.tags.split(",")
+                : bookmark.tags
+              ).map((tag, idx) => (
                 <span
+                  className="rounded-full border border-white/10 bg-biolum/10 px-2 py-1 text-biolum-dim text-xs"
                   key={idx}
-                  className="px-2 py-1 rounded-full text-xs bg-biolum/10 text-biolum-dim border border-white/10"
                 >
                   {typeof tag === "string" ? tag.trim() : tag}
                 </span>
@@ -81,19 +86,19 @@ export function BookmarkPane({
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-white/10">
+          <div className="flex gap-2 border-white/10 border-t pt-2">
             <a
+              className="flex-1 rounded-full bg-biolum/10 px-3 py-1.5 text-center text-biolum text-sm transition-colors hover:bg-biolum/20"
               href={bookmark.url}
-              target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 px-3 py-1.5 rounded-full bg-biolum/10 text-biolum text-sm text-center hover:bg-biolum/20 transition-colors"
+              target="_blank"
             >
               Open
             </a>
             <button
-              type="button"
+              className="rounded-full border border-red-500/30 bg-red-500/20 px-3 py-1.5 text-red-400 text-sm transition-colors hover:bg-red-500/30"
               onClick={() => onDelete(bookmark.id)}
-              className="px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 text-sm border border-red-500/30 hover:bg-red-500/30 transition-colors"
+              type="button"
             >
               Delete
             </button>
@@ -103,4 +108,3 @@ export function BookmarkPane({
     </div>
   );
 }
-

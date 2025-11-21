@@ -99,15 +99,7 @@ function DriveModeRoute() {
       setErrorMessage(message);
       toast.error(message);
     });
-  }, [
-    busy,
-    clearTranscript,
-    isRecording,
-    setReply,
-    setErrorMessage,
-    startRecording,
-    stopRecording,
-  ]);
+  }, [busy, clearTranscript, isRecording, startRecording, stopRecording]);
 
   const handleExit = useCallback(() => {
     navigate({ to: "/" });

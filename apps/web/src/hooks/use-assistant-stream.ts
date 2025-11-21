@@ -105,11 +105,12 @@ export function useAssistantStream(
   const mountedRef = useRef(true);
   const transportRef = useRef<DefaultChatTransport<AssistantUIMessage>>();
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       mountedRef.current = false;
-    };
-  }, []);
+    },
+    []
+  );
 
   if (!transportRef.current) {
     const trackedFetch = async (

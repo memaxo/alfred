@@ -12,7 +12,9 @@ type AuditArgs = {
 
 export async function recordAudit(args: AuditArgs): Promise<void> {
   try {
-    if (!process.env.DATABASE_URL) return;
+    if (!process.env.DATABASE_URL) {
+      return;
+    }
     const policyRepo = await import("@alfred/db/repo/policy");
     await policyRepo.createAuditLog({
       userId: args.userId ?? "",

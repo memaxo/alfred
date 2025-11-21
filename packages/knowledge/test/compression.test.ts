@@ -1,17 +1,17 @@
 import { describe, expect, it } from "bun:test";
 
 import {
-  DEFAULT_COMPRESSION_CONFIG,
   consolidatePatterns,
+  DEFAULT_COMPRESSION_CONFIG,
   decayConfidence,
   promoteToInsights,
 } from "../src/compression";
 import {
   fact,
-  knowledgeHash,
-  nodeFromHash,
   type Knowledge,
+  knowledgeHash,
   type NodeId,
+  nodeFromHash,
 } from "../src/hypergraph";
 
 describe("decayConfidence", () => {
@@ -55,7 +55,7 @@ describe("consolidatePatterns", () => {
   it("handles large batches without duplication", () => {
     const entries: Array<{ id: NodeId; data: Knowledge }> = [];
 
-    for (let i = 0; i < 1_000; i++) {
+    for (let i = 0; i < 1000; i++) {
       const node = fact(`Observation ${i % 5}`, 0.8, "reasoning");
       const id = nodeFromHash(knowledgeHash(node));
       entries.push({ id, data: node });
@@ -79,18 +79,12 @@ describe("promoteToInsights", () => {
 
     const now = Date.now();
     const accessLog = [
-      { nodeId: factId, timestamp: now - 1_000 },
-      { nodeId: factId, timestamp: now - 2_000 },
-      { nodeId: factId, timestamp: now - 3_000 },
+      { nodeId: factId, timestamp: now - 1000 },
+      { nodeId: factId, timestamp: now - 2000 },
+      { nodeId: factId, timestamp: now - 3000 },
     ];
 
-    const insights = promoteToInsights(
-      accessLog,
-      nodes,
-      2,
-      10_000,
-      now
-    );
+    const insights = promoteToInsights(accessLog, nodes, 2, 10_000, now);
 
     expect(insights.length).toBe(1);
     expect(insights[0].conclusion).toContain("Frequently accessed");

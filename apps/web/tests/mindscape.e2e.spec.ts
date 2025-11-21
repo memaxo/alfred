@@ -1,17 +1,17 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
 import { latestNode, openCommandPalette, spawnNode } from "./helpers/mindscape";
 
 test.describe("Mindscape e2e", () => {
-  test("end-to-end scenario across reloads and navigation", async ({ page }) => {
+  test("end-to-end scenario across reloads and navigation", async ({
+    page,
+  }) => {
     await signUpTestUser(page);
 
     await spawnNode(page, "New Note");
     const noteNode = latestNode(page, "note");
     await noteNode.getByPlaceholder("Title (optional)").fill("E2E Note");
-    await noteNode
-      .getByPlaceholder("Write your note...")
-      .fill("E2E body text");
+    await noteNode.getByPlaceholder("Write your note...").fill("E2E body text");
     await noteNode.getByRole("button", { name: "Save" }).click();
 
     await page.reload({ waitUntil: "networkidle" });

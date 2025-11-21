@@ -36,6 +36,8 @@ export function isToolResultPart(
   toolName?: string;
   output?: unknown;
   toolCallId?: string;
+  isError?: boolean;
+  errorText?: string;
 } {
   return part.type === "tool-result";
 }

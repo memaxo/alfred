@@ -1,18 +1,18 @@
-import { Component, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
+import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { MindscapeNode } from "./mindscape-node";
 
-interface NodeErrorBoundaryProps {
+type NodeErrorBoundaryProps = {
   children: ReactNode;
   nodeId: string;
   onError?: (error: Error, errorInfo: unknown) => void;
-}
+};
 
-interface NodeErrorBoundaryState {
+type NodeErrorBoundaryState = {
   hasError: boolean;
   error: Error | null;
-}
+};
 
 /**
  * Error boundary specifically for mindscape nodes.
@@ -33,8 +33,6 @@ export class NodeErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: unknown) {
     this.props.onError?.(error, errorInfo);
-    // Log error for debugging
-    console.error(`Node error (${this.props.nodeId}):`, error, errorInfo);
   }
 
   handleReset = () => {
@@ -44,15 +42,11 @@ export class NodeErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <MindscapeNode
-          id={this.props.nodeId}
-          selected={false}
-          title="Error"
-        >
+        <MindscapeNode id={this.props.nodeId} selected={false} title="Error">
           <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
             <AlertTriangle className="h-8 w-8 text-red-500" />
             <div className="space-y-2">
-              <p className="text-biolum text-sm font-medium">
+              <p className="font-medium text-biolum text-sm">
                 Node failed to render
               </p>
               <p className="text-biolum-dim text-xs">
@@ -75,4 +69,3 @@ export class NodeErrorBoundary extends Component<
     return this.props.children;
   }
 }
-

@@ -6,7 +6,10 @@ import { mock, vi } from "bun:test";
 const dbStub = new Proxy(
   {},
   {
-    get: () => () => ({ returning: () => [], execute: async () => ({ rows: [] }) }),
+    get: () => () => ({
+      returning: () => [],
+      execute: async () => ({ rows: [] }),
+    }),
   }
 );
 
@@ -61,8 +64,14 @@ export const dbModuleStub = {
 };
 
 mock.module("@alfred/db", () => dbModuleStub);
-mock.module("@alfred/db/repo/conversation", () => dbModuleStub.conversationRepo);
-mock.module("@alfred/db/src/repo/conversation", () => dbModuleStub.conversationRepo);
+mock.module(
+  "@alfred/db/repo/conversation",
+  () => dbModuleStub.conversationRepo
+);
+mock.module(
+  "@alfred/db/src/repo/conversation",
+  () => dbModuleStub.conversationRepo
+);
 mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
 mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
 
@@ -71,5 +80,5 @@ process.env.DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
 
 // No-op policy audit logging during tests
 mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: async () => undefined,
+  createAuditLog: async () => {},
 }));

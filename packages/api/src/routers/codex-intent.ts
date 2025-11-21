@@ -1,5 +1,5 @@
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
@@ -116,4 +116,3 @@ const codexIntentProcedures = {
 };
 
 export const codexIntentRouter = router(codexIntentProcedures);
-

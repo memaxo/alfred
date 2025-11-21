@@ -1,31 +1,32 @@
 import type { Subprocess } from "bun";
 
-export interface IPCRequest {
+export type IPCRequest = {
   id: string;
   type: string;
   payload?: unknown;
-}
+};
 
-export interface IPCResponse {
+export type IPCResponse = {
   id: string;
   type: "status" | "transcript" | "audio" | "error" | "ping" | "shutdown";
   payload?: unknown;
-}
+};
 
-export interface IPCBridgeOptions {
+export type IPCBridgeOptions = {
   requestTimeout?: number;
-}
+};
 
 export class IPCBridge {
-  private pendingRequests = new Map<
+  private readonly pendingRequests = new Map<
     string,
     {
       resolve: (response: IPCResponse) => void;
       reject: (error: Error) => void;
       timeout: ReturnType<typeof setTimeout>;
+      onPartial?: (response: IPCResponse) => void;
     }
   >();
-  private requestTimeout: number;
+  private readonly requestTimeout: number;
 
   constructor(options: IPCBridgeOptions = {}) {
     this.requestTimeout = options.requestTimeout ?? 10_000;
@@ -42,7 +43,8 @@ export class IPCBridge {
   async sendRequest(
     process: Subprocess,
     request: IPCRequest,
-    timeoutMs?: number
+    timeoutMs?: number,
+    onPartial?: (response: IPCResponse) => void
   ): Promise<IPCResponse> {
     return new Promise((resolve, reject) => {
       const timeout = timeoutMs ?? this.requestTimeout;
@@ -61,6 +63,7 @@ export class IPCBridge {
           reject(error);
         },
         timeout: timeoutId,
+        onPartial,
       });
 
       // Send request to process
@@ -70,7 +73,7 @@ export class IPCBridge {
         return;
       }
 
-      const requestJson = JSON.stringify(request) + "\n";
+      const requestJson = `${JSON.stringify(request)}\n`;
       process.stdin.write(requestJson);
     });
   }
@@ -78,13 +81,25 @@ export class IPCBridge {
   handleResponse(response: IPCResponse): void {
     const pending = this.pendingRequests.get(response.id);
     if (pending) {
-      this.pendingRequests.delete(response.id);
       if (response.type === "error") {
+        this.pendingRequests.delete(response.id);
         const errorMessage =
           (response.payload as { message?: string })?.message ??
           "Unknown error";
         pending.reject(new Error(errorMessage));
+        return;
+      }
+
+      // Check for partial response (streaming)
+      const isFinal = (response.payload as { isFinal?: boolean })?.isFinal;
+
+      if (isFinal === false && pending.onPartial) {
+        // Reset timeout on activity
+        pending.timeout.refresh();
+        pending.onPartial(response);
       } else {
+        // Final response or no streaming handler
+        this.pendingRequests.delete(response.id);
         pending.resolve(response);
       }
     }

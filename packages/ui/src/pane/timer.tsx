@@ -47,7 +47,7 @@ export function TimerPane({
   if (items.length === 0) {
     return (
       <div className={className}>
-        <p className="text-biolum-dim text-center py-8">
+        <p className="py-8 text-center text-biolum-dim">
           No active timers. Create one above to get started.
         </p>
       </div>
@@ -55,22 +55,28 @@ export function TimerPane({
   }
 
   return (
-    <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}>
+    <div
+      className={`grid gap-4 md:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}
+    >
       {items.map((timer) => {
-        const isActive = timer.startedAt && !timer.completedAt && !timer.cancelledAt;
-        const elapsed = isActive && timer.startedAt ? calculateElapsed(timer.startedAt) : 0;
-        const remaining = isActive ? calculateRemaining(timer.duration, elapsed) : timer.duration;
+        const isActive =
+          timer.startedAt && !timer.completedAt && !timer.cancelledAt;
+        const elapsed =
+          isActive && timer.startedAt ? calculateElapsed(timer.startedAt) : 0;
+        const remaining = isActive
+          ? calculateRemaining(timer.duration, elapsed)
+          : timer.duration;
         const progress = isActive ? (elapsed / timer.duration) * 100 : 0;
         const isComplete = remaining === 0;
 
         return (
           <div
+            className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl"
             key={timer.id}
-            className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6 flex flex-col gap-4"
           >
             {/* Label and Duration */}
             <div>
-              <h3 className="text-biolum tracking-tighter text-lg font-medium">
+              <h3 className="font-medium text-biolum text-lg tracking-tighter">
                 {timer.label || "Timer"}
               </h3>
               <p className="text-biolum-dim text-sm">
@@ -80,28 +86,28 @@ export function TimerPane({
 
             {/* Progress Circle */}
             <div className="flex items-center justify-center py-4">
-              <div className="relative w-32 h-32">
+              <div className="relative h-32 w-32">
                 {/* Background circle */}
-                <svg className="w-32 h-32 transform -rotate-90">
+                <svg className="-rotate-90 h-32 w-32 transform">
                   <circle
                     cx="64"
                     cy="64"
+                    fill="none"
                     r="56"
                     stroke="oklch(0.14 0 0)"
                     strokeWidth="8"
-                    fill="none"
                   />
                   {/* Progress circle */}
                   <circle
+                    className="transition-all duration-1000"
                     cx="64"
                     cy="64"
+                    fill="none"
                     r="56"
                     stroke="oklch(0.99 0 0)"
-                    strokeWidth="8"
-                    fill="none"
                     strokeDasharray={`${2 * Math.PI * 56}`}
                     strokeDashoffset={`${2 * Math.PI * 56 * (1 - progress / 100)}`}
-                    className="transition-all duration-1000"
+                    strokeWidth="8"
                     style={{
                       filter: "drop-shadow(0 0 8px oklch(0.99 0 0 / 0.3))",
                     }}
@@ -109,13 +115,11 @@ export function TimerPane({
                 </svg>
                 {/* Time display */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-biolum text-2xl font-mono tracking-tight">
+                  <span className="font-mono text-2xl text-biolum tracking-tight">
                     {formatTime(remaining)}
                   </span>
                   {isActive && (
-                    <span className="text-biolum-dim text-xs">
-                      remaining
-                    </span>
+                    <span className="text-biolum-dim text-xs">remaining</span>
                   )}
                 </div>
               </div>
@@ -124,14 +128,14 @@ export function TimerPane({
             {/* Status Badge */}
             {timer.completedAt && (
               <div className="flex justify-center">
-                <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-3 py-1 text-emerald-400 text-xs">
                   Completed
                 </span>
               </div>
             )}
             {timer.cancelledAt && (
               <div className="flex justify-center">
-                <span className="px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30">
+                <span className="rounded-full border border-red-500/30 bg-red-500/20 px-3 py-1 text-red-400 text-xs">
                   Cancelled
                 </span>
               </div>
@@ -141,17 +145,19 @@ export function TimerPane({
             {isActive && (
               <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={() => isComplete ? onComplete(timer.id) : onComplete(timer.id)}
-                  className="flex-1 px-4 py-2 rounded-full bg-biolum text-void font-medium hover:bg-biolum/90 transition-colors"
+                  className="flex-1 rounded-full bg-biolum px-4 py-2 font-medium text-void transition-colors hover:bg-biolum/90"
                   disabled={!isComplete}
+                  onClick={() =>
+                    isComplete ? onComplete(timer.id) : onComplete(timer.id)
+                  }
+                  type="button"
                 >
                   {isComplete ? "Complete" : "Mark Complete"}
                 </button>
                 <button
-                  type="button"
+                  className="rounded-full border border-red-500/30 bg-red-500/20 px-4 py-2 text-red-400 transition-colors hover:bg-red-500/30"
                   onClick={() => onCancel(timer.id)}
-                  className="px-4 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                  type="button"
                 >
                   Cancel
                 </button>
@@ -163,4 +169,3 @@ export function TimerPane({
     </div>
   );
 }
-

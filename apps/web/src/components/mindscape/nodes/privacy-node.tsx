@@ -1,25 +1,25 @@
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
 import { ShieldCheck, Trash2 } from "lucide-react";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { PrivacyControls } from "@/components/privacy-controls";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MindscapeNode } from "./mindscape-node";
-import { privacyNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { privacyNodeDataSchema } from "@/store/mindscape.schemas";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 const factInput = { limit: 12, offset: 0 } as const;
 const eventInput = { limit: 12, offset: 0 } as const;
 
-type DeleteFactInput = inferRouterInputs<TRPCAppRouter>["privacy"]["deleteFact"];
+type DeleteFactInput =
+  inferRouterInputs<TRPCAppRouter>["privacy"]["deleteFact"];
 type FactList = inferRouterOutputs<TRPCAppRouter>["privacy"]["facts"];
-type EventList = inferRouterOutputs<TRPCAppRouter>["privacy"]["events"];
 
 export function PrivacyNode({ id, data, selected }: NodeProps) {
-  const parsed = privacyNodeDataSchema.safeParse(data);
+  const _parsed = privacyNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -79,10 +79,10 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
   };
 
   const handleForget = () => {
-    facts.forEach((fact) => {
+    for (const fact of facts) {
       const input: DeleteFactInput = { id: fact.id };
       deleteFact.mutate(input);
-    });
+    }
   };
 
   const eventsToShow = useMemo(() => events.slice(0, 5), [events]);
@@ -104,23 +104,31 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
         />
 
         <section className="space-y-2">
-          <p className="text-biolum text-sm font-medium">Stored facts</p>
+          <p className="font-medium text-biolum text-sm">Stored facts</p>
           <ScrollArea className="h-[160px] rounded-md border border-white/10">
             {factQuery.isLoading ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">Loading facts…</p>
+              <p className="p-3 text-center text-biolum-faint text-sm">
+                Loading facts…
+              </p>
             ) : facts.length === 0 ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">No stored facts.</p>
+              <p className="p-3 text-center text-biolum-faint text-sm">
+                No stored facts.
+              </p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {facts.map((fact) => (
-                  <li className="flex items-start justify-between gap-2 p-3" key={fact.id}>
+                  <li
+                    className="flex items-start justify-between gap-2 p-3"
+                    key={fact.id}
+                  >
                     <div>
-                      <p className="text-xs text-biolum-faint">
+                      <p className="text-biolum-faint text-xs">
                         {fact.created ?? fact.updated ?? ""}
                       </p>
                       <p className="text-sm">{fact.content}</p>
-                      <p className="text-xs text-biolum-faint">
-                        {fact.category ?? "general"} • confidence {fact.confidence ?? 1}
+                      <p className="text-biolum-faint text-xs">
+                        {fact.category ?? "general"} • confidence{" "}
+                        {fact.confidence ?? 1}
                       </p>
                     </div>
                     <Button
@@ -140,17 +148,21 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
         </section>
 
         <section className="space-y-2">
-          <p className="text-biolum text-sm font-medium">Recent events</p>
+          <p className="font-medium text-biolum text-sm">Recent events</p>
           <ScrollArea className="h-[140px] rounded-md border border-white/10">
             {eventQuery.isLoading ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">Loading events…</p>
+              <p className="p-3 text-center text-biolum-faint text-sm">
+                Loading events…
+              </p>
             ) : eventsToShow.length === 0 ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">No events recorded.</p>
+              <p className="p-3 text-center text-biolum-faint text-sm">
+                No events recorded.
+              </p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {eventsToShow.map((event) => (
                   <li className="space-y-1 p-3" key={event.id}>
-                    <div className="flex items-center justify-between text-xs text-biolum-faint">
+                    <div className="flex items-center justify-between text-biolum-faint text-xs">
                       <span>{event.type}</span>
                       <span>
                         {event.timestamp

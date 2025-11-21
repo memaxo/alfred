@@ -8,19 +8,19 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface MicDevice {
+type MicDevice = {
   id: string;
   label: string;
-}
+};
 
-interface MicProps {
+type MicProps = {
   devices: MicDevice[];
   selected: string;
   onSelect: (deviceId: string) => void;
   isRecording: boolean;
   onToggleRecord: () => void;
   className?: string;
-}
+};
 
 export function Mic({
   devices,

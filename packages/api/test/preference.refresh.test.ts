@@ -34,9 +34,9 @@ describe("triggerPreferenceRefresh", () => {
 
     expect(invalidatePreferenceCacheMock).toHaveBeenCalledWith("user-1");
     expect(runPreferenceInferenceMock).toHaveBeenCalledWith("user-1");
-    expect(metricsStub.preferenceCacheInvalidationsTotal.inc).toHaveBeenCalledWith(
-      { reason: "test" }
-    );
+    expect(
+      metricsStub.preferenceCacheInvalidationsTotal.inc
+    ).toHaveBeenCalledWith({ reason: "test" });
     expect(metricsStub.preferenceRefreshTotal.inc).toHaveBeenCalledWith({
       reason: "test",
     });

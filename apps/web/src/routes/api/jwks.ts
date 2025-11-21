@@ -6,11 +6,7 @@ export const Route = createFileRoute("/api/jwks")({
     handlers: {
       GET: async () => {
         const jwks = await getJWKS();
-        return new Response(JSON.stringify(jwks), {
-          headers: {
-            "content-type": "application/json",
-          },
-        });
+        return Response.json(jwks);
       },
     },
   },

@@ -1,6 +1,6 @@
+import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
-import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

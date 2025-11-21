@@ -1,11 +1,11 @@
-import { appRouter } from "@alfred/api/routers/index";
 import { createContext } from "@alfred/api/context";
-import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
+import { appRouter } from "@alfred/api/routers/index";
+import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { RouteError } from "@/components/route-error";
-import { toast } from "sonner";
 
 const processCallback = createServerFn({ method: "POST" })
   .inputValidator(
@@ -17,12 +17,12 @@ const processCallback = createServerFn({ method: "POST" })
   .handler(async ({ data, request }) => {
     const ctx = await createContext({ req: request });
     const caller = appRouter.createCaller(ctx);
-    
+
     const result = await caller.linear.oauthCallback({
       code: data.code,
       state: data.state,
     });
-    
+
     return result;
   });
 
@@ -39,9 +39,11 @@ export const Route = createFileRoute("/auth/callback/linear")({
 function CallbackComponent() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
+  const [status, setStatus] = useState<"processing" | "success" | "error">(
+    "processing"
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (search.error) {
       setStatus("error");
@@ -52,10 +54,10 @@ function CallbackComponent() {
       }, 2000);
       return;
     }
-    
+
     const { code, state } = search;
-    
-    if (!code || !state) {
+
+    if (!(code && state)) {
       setStatus("error");
       setErrorMessage("missing_params");
       setTimeout(() => {
@@ -64,7 +66,7 @@ function CallbackComponent() {
       }, 2000);
       return;
     }
-    
+
     // Process callback
     processCallback({ data: { code, state } })
       .then(() => {
@@ -76,7 +78,8 @@ function CallbackComponent() {
       })
       .catch((error) => {
         setStatus("error");
-        const message = error instanceof Error ? error.message : "oauth_callback_failed";
+        const message =
+          error instanceof Error ? error.message : "oauth_callback_failed";
         setErrorMessage(message);
         setTimeout(() => {
           navigate({ to: "/mindscape" });
@@ -84,10 +87,10 @@ function CallbackComponent() {
         }, 2000);
       });
   }, [search, navigate]);
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center space-y-4">
+      <div className="space-y-4 text-center">
         {status === "processing" && (
           <p className="text-biolum">Connecting to Linear...</p>
         )}

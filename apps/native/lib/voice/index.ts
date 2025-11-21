@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Native voice API exposes a curated surface from one entrypoint.
 export { ExpoCapture } from "./capture";
 export { configureAudioSession } from "./config";
 export { playBase64 } from "./play";

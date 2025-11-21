@@ -1,4 +1,4 @@
-import { logger } from "../utils/logger";
+import { logger } from "@alfred/logger";
 import {
   workflowProvenanceDurationSeconds,
   workflowProvenanceEdgesTotal,
@@ -38,10 +38,8 @@ export async function workflowProvenance(options: {
         : workflowProvenanceDurationSeconds.startTimer();
 
     const mod = await import(
-      new URL(
-        "../../../agent/assistant/src/graphstore.ts",
-        import.meta.url
-      ).href
+      new URL("../../../agent/assistant/src/graphstore.ts", import.meta.url)
+        .href
     );
     const { persistReasoning, linkRagProvenanceToReasoning } = mod as {
       persistReasoning: (

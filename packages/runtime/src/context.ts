@@ -12,8 +12,8 @@ import {
   gatherWebContext,
 } from "@alfred/agent/orchestrator/flow/context";
 import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
+import { logger } from "@alfred/logger";
 import type { ContextBundle, SearchReceipt } from "@alfred/type/plan";
-import { logger } from "./utils/logger";
 import { KnowledgeEngine } from "./engines/knowledge";
 import {
   runtimeContextBuildDurationSeconds,
@@ -78,7 +78,7 @@ const MS_TO_SECONDS = 1000; // Conversion factor from milliseconds to seconds
  * Periodically evicts expired entries to prevent unbounded growth.
  */
 export class ContextBuilder {
-  private cache: Map<string, CachedContext> = new Map();
+  private readonly cache: Map<string, CachedContext> = new Map();
 
   /**
    * Build execution context with caching

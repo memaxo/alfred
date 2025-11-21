@@ -15,9 +15,9 @@ import {
 
 type TaskInsert = typeof tasks.$inferInsert;
 type NoteInsert = typeof notes.$inferInsert;
-type ReminderInsert = typeof reminders.$inferInsert;
-type BookmarkInsert = typeof bookmarks.$inferInsert;
-type TimerInsert = typeof timers.$inferInsert;
+// type ReminderInsert = typeof reminders.$inferInsert;
+// type BookmarkInsert = typeof bookmarks.$inferInsert;
+// type TimerInsert = typeof timers.$inferInsert;
 
 function cleanUpdates<T extends Record<string, unknown>>(
   updates: Partial<T>,
@@ -68,7 +68,9 @@ export async function getTasks(userId: string, status?: string, limit = 100) {
 
 export async function updateTask(taskId: string, updates: Partial<TaskInsert>) {
   const patch = cleanUpdates<TaskInsert>(updates, ["id", "userId", "created"]);
-  if (Object.keys(patch).length === 0) return 0;
+  if (Object.keys(patch).length === 0) {
+    return 0;
+  }
   patch.updated = sql`NOW()`;
 
   const rows = await db
@@ -118,7 +120,9 @@ export async function getNotes(userId: string, limit = 100, offset = 0) {
 
 export async function updateNote(noteId: string, updates: Partial<NoteInsert>) {
   const patch = cleanUpdates<NoteInsert>(updates, ["id", "userId", "created"]);
-  if (Object.keys(patch).length === 0) return 0;
+  if (Object.keys(patch).length === 0) {
+    return 0;
+  }
   patch.updated = sql`NOW()`;
 
   const rows = await db

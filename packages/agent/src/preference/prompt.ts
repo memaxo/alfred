@@ -1,8 +1,8 @@
 import { logger } from "@alfred/metrics";
-import {
-  type DomainName,
-  type PreferenceDetail,
-  type PreferenceKey,
+import type {
+  DomainName,
+  PreferenceDetail,
+  PreferenceKey,
 } from "@alfred/type/preference";
 
 import { detectDomain } from "./domain";
@@ -64,7 +64,9 @@ function shouldApplyPreferences(userId: string): boolean {
   }
 
   const rollout = Number.parseInt(process.env[ROLLOUT_FLAG] ?? "100", 10);
-  const normalized = Number.isFinite(rollout) ? Math.min(Math.max(rollout, 0), 100) : 100;
+  const normalized = Number.isFinite(rollout)
+    ? Math.min(Math.max(rollout, 0), 100)
+    : 100;
 
   if (normalized >= 100) {
     return true;

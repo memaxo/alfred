@@ -7,17 +7,22 @@
 
 import { cn } from "@/lib/utils";
 
-interface EdgeProps {
+type EdgeProps = {
   from: string;
   to: string;
   label?: string;
   className?: string;
-}
+};
 
-export function Edge({ from, to, label, className }: EdgeProps) {
+export function Edge({ label, className }: EdgeProps) {
   return (
     <div className={cn("relative", className)}>
-      <svg className="pointer-events-none absolute inset-0 h-full w-full">
+      <svg
+        aria-label="Connection edge"
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        role="img"
+      >
+        <title>Connection edge</title>
         <line
           stroke="currentColor"
           strokeDasharray="5,5"

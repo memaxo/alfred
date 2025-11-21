@@ -1,6 +1,6 @@
-import { TRPCError } from "@trpc/server";
-import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
@@ -9,7 +9,7 @@ const PROJECT_ROOT = process.cwd();
 
 function validatePath(requestedPath: string) {
   const resolvedPath = path.resolve(PROJECT_ROOT, requestedPath);
-  
+
   // Ensure the path is within the project root
   if (!resolvedPath.startsWith(PROJECT_ROOT)) {
     throw new TRPCError({
@@ -27,7 +27,7 @@ export const fsRouter = router({
     .query(({ input }) => {
       try {
         const filePath = validatePath(input.path);
-        
+
         if (!existsSync(filePath)) {
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -37,7 +37,7 @@ export const fsRouter = router({
 
         const stats = statSync(filePath);
         if (!stats.isFile()) {
-           throw new TRPCError({
+          throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Path is not a file",
           });
@@ -46,10 +46,12 @@ export const fsRouter = router({
         const content = readFileSync(filePath, "utf-8");
         return { content };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to read file: " + (error as Error).message,
+          message: `Failed to read file: ${(error as Error).message}`,
         });
       }
     }),
@@ -62,10 +64,12 @@ export const fsRouter = router({
         writeFileSync(filePath, input.content, "utf-8");
         return { success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to write file: " + (error as Error).message,
+          message: `Failed to write file: ${(error as Error).message}`,
         });
       }
     }),

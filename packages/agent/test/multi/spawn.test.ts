@@ -18,11 +18,7 @@ describe("planWaves", () => {
   });
 
   it("creates single wave when no deps", () => {
-    const tasks: SubTask[] = [
-      makeTask("a"),
-      makeTask("b"),
-      makeTask("c"),
-    ];
+    const tasks: SubTask[] = [makeTask("a"), makeTask("b"), makeTask("c")];
     const waves = planWaves(tasks, { maxParallel: 2 });
     expect(waves.length).toBeGreaterThanOrEqual(1);
     const allAgents = waves.flatMap((w) => w.agents);
@@ -61,10 +57,7 @@ describe("planWaves", () => {
   });
 
   it("falls back gracefully on cycles", () => {
-    const tasks: SubTask[] = [
-      makeTask("a", ["b"]),
-      makeTask("b", ["a"]),
-    ];
+    const tasks: SubTask[] = [makeTask("a", ["b"]), makeTask("b", ["a"])];
     const waves = planWaves(tasks, { maxParallel: 2 });
     const allAgents = waves.flatMap((w) => w.agents);
     expect(new Set(allAgents)).toEqual(new Set(["a", "b"]));

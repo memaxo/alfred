@@ -7,15 +7,15 @@
 
 import { cn } from "@/lib/utils";
 
-interface TaskProps {
+type TaskProps = {
   id: string;
   title: string;
   status: "pending" | "running" | "completed" | "error";
   progress?: number;
   className?: string;
-}
+};
 
-export function Task({ id, title, status, progress, className }: TaskProps) {
+export function Task({ title, status, progress, className }: TaskProps) {
   return (
     <div className={cn("rounded border p-3", className)}>
       <div className="flex items-center justify-between">

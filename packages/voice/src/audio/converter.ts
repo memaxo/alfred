@@ -27,7 +27,8 @@ function decodeBase64(base64: string): string {
  */
 export function base64ToBuffer(base64: string): ArrayBuffer {
   // Handle data URI format (data:mime;base64,...)
-  const base64Data = base64.includes(",") ? base64.split(",")[1]! : base64;
+  const parts = base64.split(",");
+  const base64Data = (parts.length > 1 ? parts[1] : base64) ?? "";
   const binaryString = decodeBase64(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -68,7 +69,8 @@ export function bufferToBase64Node(buffer: Buffer, mimeType?: string): string {
  * Convert base64 string to Buffer (Node.js/Bun)
  */
 export function base64ToBufferNode(base64: string): Buffer {
-  const base64Data = base64.includes(",") ? base64.split(",")[1]! : base64;
+  const parts = base64.split(",");
+  const base64Data = (parts.length > 1 ? parts[1] : base64) ?? "";
   return Buffer.from(base64Data, "base64");
 }
 

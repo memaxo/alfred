@@ -1,13 +1,13 @@
 import { ragRepo } from "@alfred/db";
 import { embed } from "./doc";
 
-export interface CodeFile {
+export type CodeFile = {
   path: string;
   content: string;
   startLine?: number;
   endLine?: number;
   tokens?: number;
-}
+};
 
 export async function ingestCodeFiles(
   source: string,

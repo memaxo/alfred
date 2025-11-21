@@ -4,14 +4,14 @@ import type {
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
 
-export interface SupervisionEvent {
+export type SupervisionEvent = {
   input: unknown;
   output: unknown;
   expected: unknown;
   error: number;
   context?: Record<string, unknown>;
   ts: string;
-}
+};
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const confidence = (value: number) => clamp(value) as KnowledgeConfidence;

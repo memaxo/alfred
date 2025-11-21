@@ -11,7 +11,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   if (originalApiKey === undefined) {
-    delete process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = undefined;
   } else {
     process.env.OPENAI_API_KEY = originalApiKey;
   }

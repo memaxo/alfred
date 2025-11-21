@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { MindscapeCanvas } from "@/components/mindscape/canvas";
 import { ClientOnly } from "@/components/ai-elements/client-only";
+import { MindscapeCanvas } from "@/components/mindscape/canvas";
 import { mindscapeSpawnTypes } from "@/components/mindscape/spawn";
 
 const mindscapeSearchSchema = z.object({
@@ -18,9 +18,24 @@ export const Route = createFileRoute("/mindscape")({
 
 function MindscapeRoute() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
   return (
     <ClientOnly>
-      <MindscapeCanvas searchParams={search} />
+      <MindscapeCanvas
+        onRagDocNavigate={(documentId) =>
+          navigate({
+            to: "/mindscape",
+            search: (prev) => ({
+              ...prev,
+              ragDoc: documentId,
+            }),
+          })
+        }
+        onWorkflowNavigate={(runId) =>
+          navigate({ to: "/workflow/$runId", params: { runId } })
+        }
+        searchParams={search}
+      />
     </ClientOnly>
   );
 }

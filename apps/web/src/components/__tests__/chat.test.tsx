@@ -19,7 +19,7 @@ const StubVirtualList: React.ComponentType<{
       endIndex: data.length > 0 ? data.length - 1 : 0,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startIndex, data.length]);
+  }, [startIndex, data.length, rangeChanged]);
   return (
     <div data-testid="stub-virtual-list">
       {visible.map((message, idx) => (
@@ -68,7 +68,7 @@ describe("Chat", () => {
     }
     const messages = createMessages(200);
 
-    const { getAllByText, getByText } = render(
+    const { getByText } = render(
       <Chat
         ListComponent={StubVirtualList}
         messages={messages}

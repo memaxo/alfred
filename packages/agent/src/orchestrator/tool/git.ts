@@ -55,7 +55,9 @@ function safeRealpath(p: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
+  if (!(baseReal && targetReal)) {
+    return false;
+  }
   const relative = path.relative(baseReal, targetReal);
   return (
     relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
@@ -215,7 +217,9 @@ async function runGit({
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           const text = decoder.decode(value);
           accumulator.capturedBytes += Buffer.byteLength(text);
@@ -247,7 +251,9 @@ async function runGit({
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           const text = decoder.decode(value);
           if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
@@ -323,7 +329,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_branch_create_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_branch_create_failed");
+        }
         return { ok: true };
       }
 
@@ -336,7 +344,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_branch_update_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_branch_update_failed");
+        }
         return { ok: true };
       }
 
@@ -348,7 +358,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_branch_delete_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_branch_delete_failed");
+        }
         return { ok: true };
       }
 
@@ -360,7 +372,9 @@ export const toolGit = {
         );
         const args = ["worktree", "add", wtPath, ref];
         const { exitCode } = await runGit({ cwd, args, writer, timeoutSec });
-        if (exitCode !== 0) throw new Error("git_worktree_add_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_worktree_add_failed");
+        }
         return { ok: true, details: { path: wtPath, ref } };
       }
 
@@ -372,7 +386,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_worktree_remove_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_worktree_remove_failed");
+        }
         return { ok: true };
       }
 
@@ -426,7 +442,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_push_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_push_failed");
+        }
         return { ok: true };
       }
 
@@ -438,7 +456,9 @@ export const toolGit = {
         }
         args.push(ref);
         const { exitCode } = await runGit({ cwd, args, writer, timeoutSec });
-        if (exitCode !== 0) throw new Error("git_merge_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_merge_failed");
+        }
         return { ok: true };
       }
 
@@ -449,7 +469,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_status_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_status_failed");
+        }
         return { ok: true, details: { status: stdout } };
       }
 
@@ -464,7 +486,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_diff_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_diff_failed");
+        }
         return {
           ok: true,
           details: { files: stdout.split(/\r?\n/).filter(Boolean) },
@@ -482,7 +506,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_fetch_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_fetch_failed");
+        }
         return { ok: true };
       }
 
@@ -494,7 +520,9 @@ export const toolGit = {
           writer,
           timeoutSec,
         });
-        if (exitCode !== 0) throw new Error("git_reset_failed");
+        if (exitCode !== 0) {
+          throw new Error("git_reset_failed");
+        }
         return { ok: true };
       }
 

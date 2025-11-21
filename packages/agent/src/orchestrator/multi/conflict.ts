@@ -7,7 +7,9 @@ export type ConflictScanResult = {
 const MARKER_PATTERNS = ["<<<<<<<", "=======", ">>>>>>>"];
 
 export function countConflictMarkers(content: string): number {
-  if (!content) return 0;
+  if (!content) {
+    return 0;
+  }
   let count = 0;
   for (const marker of MARKER_PATTERNS) {
     let idx = content.indexOf(marker);
@@ -73,7 +75,9 @@ export function generateConflictExecPlanSkeleton(
   lines.push("## Plan");
   lines.push("");
   lines.push("- For each conflicted file, identify the competing changes.");
-  lines.push("- Propose how each conflict should be resolved (which side, or a merge of both).");
+  lines.push(
+    "- Propose how each conflict should be resolved (which side, or a merge of both)."
+  );
   lines.push("- Note any areas requiring manual review or additional tests.");
   lines.push("");
   lines.push("## Progress");
@@ -94,4 +98,3 @@ export function generateConflictExecPlanSkeleton(
   lines.push("");
   return lines.join("\n");
 }
-

@@ -19,6 +19,7 @@ export const workflowRuns = pgTable("workflow_runs", {
   suspendedAt: timestamp("suspended_at", { withTimezone: true }),
   resumedAt: timestamp("resumed_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  learnedAt: timestamp("learned_at", { withTimezone: true }),
   errorMessage: text("error_message"),
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),

@@ -2,11 +2,14 @@
 
 import { Database } from "bun:sqlite";
 import { createRequire } from "node:module";
-import { drizzle as drizzlePostgres, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { logger } from "@alfred/logger";
+import {
+  drizzle as drizzlePostgres,
+  type NodePgDatabase,
+} from "drizzle-orm/node-postgres";
 import { Client, type ClientConfig, Pool, type PoolConfig } from "pg";
-import { logger } from "./utils/logger";
 import { ensureSqliteTestSchema } from "./sqlite/schema";
 
 type PgSource = Client | Pool;
@@ -124,13 +127,10 @@ function createSqliteDrizzle(connectionString: string) {
     const normalized =
       typeof source === "string"
         ? source
-            .replace(
-              /gen_random_uuid\(\)/g,
-              "lower(hex(randomblob(16)))"
-            )
+            .replace(/gen_random_uuid\(\)/g, "lower(hex(randomblob(16)))")
             .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
         : source;
-    return originalPrepare(normalized as string, ...params);
+    return originalPrepare(normalized as string, ...(params as any[]));
   }) as typeof sqlite.prepare;
   ensureSqliteTestSchema(sqlite);
   return drizzleSqlite(sqlite);

@@ -1,9 +1,6 @@
 import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
-import {
-  describePostgres,
-  requirePostgresTestEnv,
-} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -14,7 +11,9 @@ let userRepo: typeof import("@alfred/db").userRepo;
 let db: typeof import("@alfred/db").db;
 
 async function resetUserTables() {
-  if (!db) return;
+  if (!db) {
+    return;
+  }
   await db.execute(
     sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`
   );

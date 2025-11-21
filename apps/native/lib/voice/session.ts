@@ -1,9 +1,9 @@
 import { markVoice } from "@alfred/metrics/performance";
+import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { wrapPCM16AsWavBase64 } from "@alfred/voice/audio";
 import type { PlatformAdapter, VoiceSession } from "@alfred/voice/session";
 import { createVoiceSession, VoiceSessionError } from "@alfred/voice/session";
 import { VoiceStreamClient } from "@alfred/voice/stream";
-import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { createVoiceClient } from "@alfred/voice/transport";
 import type {
   SpeechToSpeechRequest,
@@ -11,14 +11,9 @@ import type {
   VoiceSessionDescriptor,
   VoiceSessionSurface,
 } from "@alfred/voice/types";
-import type { VoiceStreamServerEvent } from "@alfred/type/voice";
 import { Audio } from "expo-av";
-import {
-  deleteAsync,
-  EncodingType,
-  readAsStringAsync,
-} from "expo-file-system";
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { deleteAsync, EncodingType, readAsStringAsync } from "expo-file-system";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExpoCapture } from "./capture";
 import { configureAudioSession } from "./config";
 import { getVoiceStreamUrl } from "./env";
@@ -154,12 +149,13 @@ type NativeStreamState = {
   sessionId: string | null;
 };
 
-const STREAM_CHUNK_MS = 1_200;
+const STREAM_CHUNK_MS = 1200;
 const STREAM_TIMEOUT_MS = 20_000;
 const STREAM_CAPTURE_MIME = "audio/m4a";
 
 function generateVoiceSessionId() {
-  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } })
+    .crypto;
   if (cryptoObj && typeof cryptoObj.randomUUID === "function") {
     return cryptoObj.randomUUID();
   }
@@ -214,6 +210,55 @@ export function useVoiceSessionNative(
     [adapter, client]
   );
 
+  const streamUrlRef = useRef(getVoiceStreamUrl());
+  const [streamState, setStreamState] = useState<NativeStreamState>({
+    supported: Boolean(streamUrlRef.current),
+    status: "idle",
+    transcript: "",
+    assistantText: "",
+    vadConfidence: null,
+    autoStopReason: null,
+    error: null,
+    sessionId: null,
+  });
+  const sessionIdRef = useRef<string>(generateVoiceSessionId());
+  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(
+    null
+  );
+
+  const streamClientRef = useRef<VoiceStreamClient | null>(null);
+  const streamingActiveRef = useRef(false);
+  const streamingStopRef = useRef(false);
+  const currentRecordingRef = useRef<Audio.Recording | null>(null);
+  const playbackQueueRef = useRef<string[]>([]);
+  const playbackRunningRef = useRef(false);
+  const syncSessionInfo = useCallback(
+    (snapshot: VoiceSessionDescriptor | null) => {
+      if (snapshot?.id) {
+        sessionIdRef.current = snapshot.id;
+      }
+      setSessionInfo(snapshot);
+    },
+    []
+  );
+
+  const refreshSessionInfo = useCallback(async () => {
+    try {
+      const sessions = (await resolveQuery(
+        trpc,
+        "voice.sessions",
+        undefined
+      )) as VoiceSessionDescriptor[] | undefined | null;
+      const snapshot = sessions && sessions.length > 0 ? sessions[0] : null;
+      if (snapshot) {
+        syncSessionInfo(snapshot);
+      }
+      return snapshot;
+    } catch (_error) {
+      return null;
+    }
+  }, [syncSessionInfo, trpc]);
+
   const start = useCallback(async () => {
     markVoice("fast_capture_start");
     await session.start();
@@ -262,105 +307,60 @@ export function useVoiceSessionNative(
     [session]
   );
 
+  const speechToSpeechCallback = useCallback(
+    async (
+      overrides?: Partial<
+        Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
+      >
+    ) => {
+      const payloadOverrides = {
+        thread: overrides?.thread ?? speechDefaults.thread,
+        resource: overrides?.resource ?? speechDefaults.resource,
+        ttsVoice: overrides?.ttsVoice ?? speechDefaults.ttsVoice,
+        ttsFormat: overrides?.ttsFormat ?? speechDefaults.ttsFormat,
+        language: overrides?.language ?? speechDefaults.language,
+        prompt: overrides?.prompt ?? speechDefaults.prompt,
+        sttModel: overrides?.sttModel,
+        ttsModel: overrides?.ttsModel,
+        sessionId: sessionIdRef.current,
+        surface: sessionSurface,
+      };
+      try {
+        const result = await session.speechToSpeech?.(payloadOverrides);
+        if (result?.session) {
+          syncSessionInfo(result.session);
+        }
+        markVoice("fast_stream_flush");
+        return result ?? null;
+      } catch (error) {
+        if (error instanceof VoiceSessionError && error.clip) {
+          const queuedPayload: VoiceS2SPayload = {
+            audioBase64: error.clip.audioBase64,
+            mimeType: error.clip.mimeType,
+            language: payloadOverrides.language,
+            prompt: payloadOverrides.prompt,
+            thread: payloadOverrides.thread,
+            resource: payloadOverrides.resource,
+            ttsVoice: payloadOverrides.ttsVoice,
+            ttsFormat: payloadOverrides.ttsFormat,
+            sessionId: sessionIdRef.current,
+            surface: sessionSurface,
+          };
+          await enqueue({
+            kind: "s2s",
+            payload: queuedPayload,
+          });
+        }
+        throw error;
+      }
+    },
+    [session, sessionSurface, speechDefaults, syncSessionInfo]
+  );
+
   const speechToSpeech =
     preferSpeechToSpeech && session.speechToSpeech
-      ? useCallback(
-          async (
-            overrides?: Partial<
-              Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
-            >
-          ) => {
-            const payloadOverrides = {
-              thread: overrides?.thread ?? speechDefaults.thread,
-              resource: overrides?.resource ?? speechDefaults.resource,
-              ttsVoice: overrides?.ttsVoice ?? speechDefaults.ttsVoice,
-              ttsFormat: overrides?.ttsFormat ?? speechDefaults.ttsFormat,
-              language: overrides?.language ?? speechDefaults.language,
-              prompt: overrides?.prompt ?? speechDefaults.prompt,
-              sttModel: overrides?.sttModel,
-              ttsModel: overrides?.ttsModel,
-              sessionId: sessionIdRef.current,
-              surface: sessionSurface,
-            };
-            try {
-              const result = await session.speechToSpeech?.(payloadOverrides);
-              if (result?.session) {
-                syncSessionInfo(result.session);
-              }
-              markVoice("fast_stream_flush");
-              return result ?? null;
-            } catch (error) {
-              if (error instanceof VoiceSessionError && error.clip) {
-                const queuedPayload: VoiceS2SPayload = {
-                  audioBase64: error.clip.audioBase64,
-                  mimeType: error.clip.mimeType,
-                  language: payloadOverrides.language,
-                  prompt: payloadOverrides.prompt,
-                  thread: payloadOverrides.thread,
-                  resource: payloadOverrides.resource,
-                  ttsVoice: payloadOverrides.ttsVoice,
-                  ttsFormat: payloadOverrides.ttsFormat,
-                  sessionId: sessionIdRef.current,
-                  surface: sessionSurface,
-                };
-                await enqueue({
-                  kind: "s2s",
-                  payload: queuedPayload,
-                });
-              }
-              throw error;
-            }
-          },
-          [session, sessionSurface, speechDefaults, syncSessionInfo]
-        )
+      ? speechToSpeechCallback
       : undefined;
-
-  const streamUrlRef = useRef(getVoiceStreamUrl());
-  const [streamState, setStreamState] = useState<NativeStreamState>({
-    supported: Boolean(streamUrlRef.current),
-    status: "idle",
-    transcript: "",
-    assistantText: "",
-    vadConfidence: null,
-    autoStopReason: null,
-    error: null,
-    sessionId: null,
-  });
-  const sessionIdRef = useRef<string>(generateVoiceSessionId());
-  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
-
-  const streamClientRef = useRef<VoiceStreamClient | null>(null);
-  const streamingActiveRef = useRef(false);
-  const streamingStopRef = useRef(false);
-  const currentRecordingRef = useRef<Audio.Recording | null>(null);
-  const playbackQueueRef = useRef<string[]>([]);
-  const playbackRunningRef = useRef(false);
-  const syncSessionInfo = useCallback((snapshot: VoiceSessionDescriptor | null) => {
-    if (snapshot?.id) {
-      sessionIdRef.current = snapshot.id;
-    }
-    setSessionInfo(snapshot);
-  }, []);
-
-  const refreshSessionInfo = useCallback(async () => {
-    try {
-      const sessions = (await resolveQuery(trpc, "voice.sessions", undefined)) as
-        | VoiceSessionDescriptor[]
-        | undefined
-        | null;
-      const snapshot = sessions && sessions.length > 0 ? sessions[0] : null;
-      if (snapshot) {
-        syncSessionInfo(snapshot);
-      }
-      return snapshot;
-    } catch (error) {
-      console.warn(
-        "[voice] session refresh failed",
-        error instanceof Error ? error.message : String(error)
-      );
-      return null;
-    }
-  }, [syncSessionInfo, trpc]);
 
   useEffect(() => {
     streamUrlRef.current = getVoiceStreamUrl();
@@ -371,7 +371,9 @@ export function useVoiceSessionNative(
   }, []);
 
   useEffect(() => {
-    refreshSessionInfo().catch(() => undefined);
+    refreshSessionInfo().catch(() => {
+      // ignore
+    });
   }, [refreshSessionInfo]);
 
   const enqueuePlayback = useCallback(async (pcmBase64: string) => {
@@ -383,8 +385,10 @@ export function useVoiceSessionNative(
     playbackRunningRef.current = true;
     try {
       while (playbackQueueRef.current.length > 0) {
-        const clip = playbackQueueRef.current.shift()!;
-        await playBase64(clip, "audio/wav");
+        const clip = playbackQueueRef.current.shift();
+        if (clip) {
+          await playBase64(clip, "audio/wav");
+        }
       }
     } finally {
       playbackRunningRef.current = false;
@@ -460,6 +464,19 @@ export function useVoiceSessionNative(
           status: "idle",
         }));
       },
+      onInterrupt: () => {
+        // Clear any queued playback
+        playbackQueueRef.current = [];
+        // If we have an active audio object (how Expo handles it?),
+        // playBase64 doesn't return a handle to stop.
+        // It's fire-and-forget in the current implementation.
+        // We would need to refactor playBase64 to return sound object to stop it.
+        // For now, we just clear the queue.
+        setStreamState((prev) => ({
+          ...prev,
+          status: "recording", // Resume listening state
+        }));
+      },
       onStatus: (event: { state: StreamStatus }) => {
         setStreamState((prev) => ({
           ...prev,
@@ -486,10 +503,7 @@ export function useVoiceSessionNative(
     if (streamClientRef.current) {
       return streamClientRef.current;
     }
-    const client = new VoiceStreamClient(
-      { url },
-      streamHandlers
-    );
+    const client = new VoiceStreamClient({ url }, streamHandlers);
     streamClientRef.current = client;
     return client;
   }, [streamHandlers]);
@@ -520,7 +534,9 @@ export function useVoiceSessionNative(
       await deleteAsync(uri, { idempotent: true });
       return { audioBase64, mimeType: STREAM_CAPTURE_MIME };
     } catch (error) {
-      await deleteAsync(uri, { idempotent: true }).catch(() => {});
+      await deleteAsync(uri, { idempotent: true }).catch(() => {
+        // ignore
+      });
       throw error instanceof Error ? error : new Error(String(error));
     }
   }, []);
@@ -544,8 +560,12 @@ export function useVoiceSessionNative(
           if (!clip || streamingStopRef.current) {
             continue;
           }
+          // Convert base64 to binary for transport
+          const binary = Uint8Array.from(atob(clip.audioBase64), (c) =>
+            c.charCodeAt(0)
+          );
           await client.sendAudioChunk({
-            audioBase64: clip.audioBase64,
+            audio: binary,
             mimeType: clip.mimeType,
           });
         }
@@ -595,7 +615,12 @@ export function useVoiceSessionNative(
       }));
       throw error;
     }
-  }, [ensureStreamClient, preferredStreamCodec, runStreamCapture, sessionSurface]);
+  }, [
+    ensureStreamClient,
+    preferredStreamCodec,
+    runStreamCapture,
+    sessionSurface,
+  ]);
 
   const stopStreaming = useCallback(async () => {
     setStreamState((prev) => ({
@@ -616,15 +641,24 @@ export function useVoiceSessionNative(
     }
   }, [stopStreamingCapture]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       void stopStreamingCapture();
       const client = streamClientRef.current;
       if (client) {
         void client.close();
       }
-    };
-  }, [stopStreamingCapture]);
+    },
+    [stopStreamingCapture]
+  );
+
+  const startFallback = async () => {
+    throw new Error("voice_streaming_unavailable");
+  };
+
+  const stopFallback = async () => {
+    // ignore
+  };
 
   const streamApi = {
     supported: streamState.supported,
@@ -635,12 +669,8 @@ export function useVoiceSessionNative(
     autoStopReason: streamState.autoStopReason,
     error: streamState.error,
     sessionId: streamState.sessionId,
-    start: streamState.supported
-      ? startStreaming
-      : async () => {
-          throw new Error("voice_streaming_unavailable");
-        },
-    stop: streamState.supported ? stopStreaming : async () => {},
+    start: streamState.supported ? startStreaming : startFallback,
+    stop: streamState.supported ? stopStreaming : stopFallback,
     isActive: streamState.status === "recording",
   };
 

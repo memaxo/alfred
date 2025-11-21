@@ -1,23 +1,26 @@
+import type { inferRouterInputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
 import { Settings2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { toast } from "sonner";
-import { AutonomySlider, type AutonomyLevel } from "@/components/autonomy-slider";
+import {
+  type AutonomyLevel,
+  AutonomySlider,
+} from "@/components/autonomy-slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { MindscapeNode } from "./mindscape-node";
-import { settingsNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { settingsNodeDataSchema } from "@/store/mindscape.schemas";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 const listInput = { limit: 100, offset: 0 } as const;
 
-type PreferenceList = inferRouterOutputs<TRPCAppRouter>["preference"]["list"];
 type PreferenceSetInput = inferRouterInputs<TRPCAppRouter>["preference"]["set"];
-type PreferenceDeleteInput = inferRouterInputs<TRPCAppRouter>["preference"]["delete"];
+type PreferenceDeleteInput =
+  inferRouterInputs<TRPCAppRouter>["preference"]["delete"];
 
 export function SettingsNode({ id, data, selected }: NodeProps) {
   const parseResult = settingsNodeDataSchema.safeParse(data);
@@ -34,12 +37,15 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
   const preferenceQuery = trpc.preference.list.useQuery(listInput);
   const preferences = preferenceQuery.data ?? [];
 
-  const autonomyPreference = useMemo(() => {
-    return preferences.find((pref) => pref.key === "autonomy");
-  }, [preferences]);
+  const autonomyPreference = useMemo(
+    () => preferences.find((pref) => pref.key === "autonomy"),
+    [preferences]
+  );
 
   const currentAutonomy: AutonomyLevel =
-    (autonomyPreference?.value as AutonomyLevel) ?? persisted?.autonomy ?? "low";
+    (autonomyPreference?.value as AutonomyLevel) ??
+    persisted?.autonomy ??
+    "low";
 
   const setPreference = trpc.preference.set.useMutation({
     onSuccess: async () => {
@@ -62,7 +68,11 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
   });
 
   const handleAutonomyChange = (level: AutonomyLevel) => {
-    const input: PreferenceSetInput = { key: "autonomy", value: level, confidence: 1 };
+    const input: PreferenceSetInput = {
+      key: "autonomy",
+      value: level,
+      confidence: 1,
+    };
     setPreference.mutate(input, {
       onSuccess: () => {
         updateArtifactData(id, { autonomy: level });
@@ -120,7 +130,7 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
     >
       <div className="flex flex-col gap-4 p-4">
         <section className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-biolum-faint">
+          <div className="flex items-center justify-between text-biolum-faint text-xs">
             <span>Autonomy</span>
             <span className="capitalize">{currentAutonomy}</span>
           </div>
@@ -132,7 +142,7 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
         </section>
 
         <section className="space-y-2">
-          <p className="text-biolum text-sm font-medium">Custom preference</p>
+          <p className="font-medium text-biolum text-sm">Custom preference</p>
           <form className="space-y-2" onSubmit={handleCustomSave}>
             <Input
               onChange={(event) => setCustomKey(event.target.value)}
@@ -157,23 +167,28 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
 
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-biolum text-sm font-medium">Stored keys</p>
+            <p className="font-medium text-biolum text-sm">Stored keys</p>
             <span className="text-biolum-faint text-xs">
               {preferences.length} total
             </span>
           </div>
           <ScrollArea className="h-[180px] rounded-md border border-white/10">
             {preferenceItems.length === 0 ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">
+              <p className="p-3 text-center text-biolum-faint text-sm">
                 No preferences yet.
               </p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {preferenceItems.map((pref) => (
-                  <li className="flex items-start justify-between gap-2 p-3" key={pref.id}>
+                  <li
+                    className="flex items-start justify-between gap-2 p-3"
+                    key={pref.id}
+                  >
                     <div>
-                      <p className="font-medium text-sm text-biolum">{pref.key}</p>
-                      <pre className="mt-1 whitespace-pre-wrap break-words text-xs text-biolum-faint">
+                      <p className="font-medium text-biolum text-sm">
+                        {pref.key}
+                      </p>
+                      <pre className="mt-1 whitespace-pre-wrap break-words text-biolum-faint text-xs">
                         {typeof pref.value === "string"
                           ? pref.value
                           : JSON.stringify(pref.value, null, 2)}

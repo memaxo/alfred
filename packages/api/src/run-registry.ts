@@ -1,35 +1,33 @@
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
-
-import type { RuntimeContext } from "@alfred/type/runtime-context";
-import { redis as defaultRedis, RedisClient } from "bun";
-
 import {
   runRegistryDispatchDurationSeconds,
   runRegistryEventsTotal,
 } from "@alfred/api/metrics";
-import { logger } from "./utils/logger";
+import { logger } from "@alfred/logger";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import { redis as defaultRedis, RedisClient } from "bun";
 
 export type ResumePayload = {
   event: "deploy-authz" | "linear-authz" | "bio-authz";
   authz: string;
 };
 
-export interface RunHandle {
+export type RunHandle = {
   resume(args: {
     resumeData: ResumePayload;
     runtimeContext?: RuntimeContext;
   }): Promise<unknown>;
   cancel(): Promise<unknown>;
   abortController: AbortController;
-}
+};
 
-export interface RunRegistry {
+export type RunRegistry = {
   register(runId: string, handle: RunHandle): Promise<void> | void;
   unregister(runId: string): Promise<void> | void;
   dispatchResume(runId: string, payload: ResumePayload): Promise<boolean>;
-}
+};
 
 type RegistryEvent = "register" | "unregister" | "dispatch" | "deliver";
 type RegistryOutcome = "ok" | "error" | "miss" | "local" | "delivered";

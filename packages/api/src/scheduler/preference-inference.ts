@@ -1,20 +1,20 @@
-import * as conversationRepo from "@alfred/db/repo/conversation";
-import * as userRepo from "@alfred/db/repo/user";
-import * as workflowRepo from "@alfred/db/repo/workflow";
+import { buildTools } from "@alfred/agent";
 import {
   inferDomainPreferences,
   inferPreferencesFromFeedback,
   inferResponsePreferences,
 } from "@alfred/agent/preference/inference";
-import { mergePreferences } from "@alfred/agent/preference/merger";
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
-import { buildTools } from "@alfred/agent";
+import { mergePreferences } from "@alfred/agent/preference/merger";
+import * as conversationRepo from "@alfred/db/repo/conversation";
+import * as userRepo from "@alfred/db/repo/user";
+import * as workflowRepo from "@alfred/db/repo/workflow";
+import { limitUiMessages } from "@alfred/type/history";
 import type {
   ConversationHistory,
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
-import { limitUiMessages } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
 import { validateUIMessages } from "ai";
 import { preferenceHistoryPrunedTotal } from "../metrics";
@@ -60,11 +60,7 @@ export async function runPreferenceInference(
   const domainPrefs = inferDomainPreferences(toolCalls);
   const feedbackPrefs = inferPreferencesFromFeedback(feedback);
 
-  const merged = mergePreferences([
-    responsePrefs,
-    domainPrefs,
-    feedbackPrefs,
-  ]);
+  const merged = mergePreferences([responsePrefs, domainPrefs, feedbackPrefs]);
 
   let updated = false;
   for (const [key, detail] of merged) {
@@ -221,7 +217,9 @@ async function loadConversationHistory(
       convo.id,
       userId
     );
-    if (!history) continue;
+    if (!history) {
+      continue;
+    }
     const validated = await validateConversationMessages({
       messages: (history.messages ?? []) as UIMessage[],
       conversationId: history.conversation.id,
@@ -291,7 +289,9 @@ async function loadFeedback(
 }
 
 function inferDomain(toolName?: string): string {
-  if (!toolName) return "general";
+  if (!toolName) {
+    return "general";
+  }
   const [segment] = toolName.split(".");
   return segment ?? "general";
 }

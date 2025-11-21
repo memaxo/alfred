@@ -13,7 +13,7 @@ import {
 
 describe("audio pcm helpers", () => {
   it("wraps PCM payloads in a WAV container", () => {
-    const samples = new Int16Array([0, 32767, -32768, 1024]);
+    const samples = new Int16Array([0, 32_767, -32_768, 1024]);
     const pcmBase64 = arrayBufferToBase64(samples.buffer);
 
     const wavBase64 = wrapPCM16AsWavBase64(pcmBase64);
@@ -44,7 +44,7 @@ describe("audio pcm helpers", () => {
   });
 
   it("converts PCM16 base64 to Float32 samples", () => {
-    const samples = new Int16Array([0, 32767, -32768]);
+    const samples = new Int16Array([0, 32_767, -32_768]);
     const pcmBase64 = arrayBufferToBase64(samples.buffer);
 
     const floats = pcm16Base64ToFloat32(pcmBase64);

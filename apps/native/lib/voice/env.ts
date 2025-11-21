@@ -1,10 +1,11 @@
 const STREAM_PATH = "/voice/stream";
 const DEFAULT_PORT = "8788";
+const TRAILING_SLASH_REGEX = /\/$/;
 
 export function getVoiceStreamUrl(): string | null {
   const direct = process.env.EXPO_PUBLIC_VOICE_STREAM_URL?.trim();
   if (direct) {
-    return direct.replace(/\/$/, "") + STREAM_PATH;
+    return direct.replace(TRAILING_SLASH_REGEX, "") + STREAM_PATH;
   }
   const base = process.env.EXPO_PUBLIC_SERVER_URL;
   if (!base) {

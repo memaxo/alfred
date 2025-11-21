@@ -1,16 +1,16 @@
 import type { NodeProps } from "@xyflow/react";
-import { ExternalLink, PlugZap, ShieldCheck, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, PlugZap, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { BiolumBadge } from "@/components/tremor";
-import { MindscapeNode } from "./mindscape-node";
-import { integrationsNodeDataSchema } from "@/store/mindscape.schemas";
+import { Button } from "@/components/ui/button";
 import { useMindscapeStore } from "@/store/mindscape";
+import { integrationsNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 export function IntegrationsNode({ id, data, selected }: NodeProps) {
-  const parsed = integrationsNodeDataSchema.safeParse(data);
+  const _parsed = integrationsNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -59,7 +59,7 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
         <section className="rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-biolum text-sm font-semibold">Linear</p>
+              <p className="font-semibold text-biolum text-sm">Linear</p>
               <p className="text-biolum-faint text-xs">
                 Project management & issue tracking
               </p>
@@ -81,12 +81,12 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
             </BiolumBadge>
           </div>
           {linearStatus?.workspace && !isLinearExpired && (
-            <p className="mt-2 text-xs text-biolum-faint">
+            <p className="mt-2 text-biolum-faint text-xs">
               Workspace: {linearStatus.workspace}
             </p>
           )}
           {isLinearExpired && (
-            <p className="mt-2 text-xs text-amber-300">
+            <p className="mt-2 text-amber-300 text-xs">
               Connection expired. Reconnect below.
             </p>
           )}
@@ -113,17 +113,18 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
         <section className="rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-biolum text-sm font-semibold">Laminar</p>
+              <p className="font-semibold text-biolum text-sm">Laminar</p>
               <p className="text-biolum-faint text-xs">
                 LLM observability + evals
               </p>
             </div>
             <BiolumBadge variant="default">Manual</BiolumBadge>
           </div>
-          <p className="mt-2 text-xs text-biolum-faint">
-            Configure Laminar via environment variables to stream evaluation data from workflows.
+          <p className="mt-2 text-biolum-faint text-xs">
+            Configure Laminar via environment variables to stream evaluation
+            data from workflows.
           </p>
-          <Button className="mt-4 w-full" variant="outline" disabled>
+          <Button className="mt-4 w-full" disabled variant="outline">
             Configure in env
           </Button>
         </section>
@@ -131,15 +132,16 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
         <section className="rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-biolum text-sm font-semibold">Security</p>
+              <p className="font-semibold text-biolum text-sm">Security</p>
               <p className="text-biolum-faint text-xs">
                 Privacy & policy webhooks
               </p>
             </div>
             <ShieldCheck className="h-4 w-4 text-emerald-200" />
           </div>
-          <p className="mt-2 text-xs text-biolum-faint">
-            Configure outbound webhooks and policy actions from the Privacy node.
+          <p className="mt-2 text-biolum-faint text-xs">
+            Configure outbound webhooks and policy actions from the Privacy
+            node.
           </p>
         </section>
       </div>

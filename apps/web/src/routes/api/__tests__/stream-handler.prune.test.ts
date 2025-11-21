@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";
-import { z } from "zod";
 import type { UIMessage } from "@alfred/type/stream";
+import { z } from "zod";
 
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 
@@ -40,7 +40,7 @@ mock.module("@alfred/auth", () => ({
 }));
 
 const loggerInfoMock = vi.fn();
-mock.module("@alfred/api/utils/logger", () => ({
+mock.module("@alfred/logger", () => ({
   logger: {
     info: loggerInfoMock,
     warn: vi.fn(),
@@ -82,7 +82,7 @@ const buildHistoryContextMock = vi.fn(async ({ messages }) => {
 
 mock.module("@alfred/history", () => ({
   buildHistoryContext: buildHistoryContextMock,
-  getHistoryBudgetDefaults: () => ({})
+  getHistoryBudgetDefaults: () => ({}),
 }));
 
 const finishPromiseRef: { current: Promise<void> | null } = { current: null };
@@ -118,7 +118,10 @@ mock.module("ai", () => ({
 const { handleStreamRequest } = await import("../stream-handler");
 const metrics = await import("@alfred/api/metrics");
 const historyTokensIncSpy = vi.spyOn(metrics.historyContextTokensTotal, "inc");
-const historyTierDropSpy = vi.spyOn(metrics.historyContextTierDropsTotal, "inc");
+const historyTierDropSpy = vi.spyOn(
+  metrics.historyContextTierDropsTotal,
+  "inc"
+);
 const preferenceHistoryPrunedSpy = vi.spyOn(
   metrics.preferenceHistoryPrunedTotal,
   "inc"
@@ -149,7 +152,7 @@ describe("handleStreamRequest history integration", () => {
 
     const response = await handleStreamRequest(
       request,
-      () => ({ model: { provider: "test", name: "mock-model" } } as any),
+      () => ({ model: { provider: "test", name: "mock-model" } }) as any,
       "assistant"
     );
 

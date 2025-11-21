@@ -1,13 +1,13 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
-import { ModelProcess, type ProcessConfig } from "../src/process/base";
-import { __internals } from "../src/process/base";
+import { join } from "node:path";
 import {
-  createTestVenv,
-  cleanupTestVenv,
-} from "./utils/python-helpers";
+  __internals,
+  ModelProcess,
+  type ProcessConfig,
+} from "../src/process/base";
+import { cleanupTestVenv, createTestVenv } from "./utils/python-helpers";
 
 const { findVenvPython } = __internals;
 
@@ -99,14 +99,16 @@ describe("Virtual Environment Detection", () => {
 
   it("should handle file system errors gracefully", async () => {
     // Create .venv with invalid Python path (directory instead of file)
-    const venvBinDir = process.platform === "win32"
-      ? join(tempVoiceDir, ".venv", "Scripts")
-      : join(tempVoiceDir, ".venv", "bin");
+    const venvBinDir =
+      process.platform === "win32"
+        ? join(tempVoiceDir, ".venv", "Scripts")
+        : join(tempVoiceDir, ".venv", "bin");
     mkdirSync(venvBinDir, { recursive: true });
 
-    const pythonPath = process.platform === "win32"
-      ? join(venvBinDir, "python.exe")
-      : join(venvBinDir, "python");
+    const pythonPath =
+      process.platform === "win32"
+        ? join(venvBinDir, "python.exe")
+        : join(venvBinDir, "python");
 
     // Create directory instead of file
     mkdirSync(pythonPath, { recursive: true });
@@ -123,4 +125,3 @@ describe("Virtual Environment Detection", () => {
     expect(result).toBeNull();
   });
 });
-

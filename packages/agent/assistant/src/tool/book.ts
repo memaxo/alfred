@@ -23,7 +23,9 @@ function toISOString(value: Date | null | undefined) {
 }
 
 function mapBookmark(row: Awaited<ReturnType<typeof createBookmark>>) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   const tags = Array.isArray((row as { tags?: unknown }).tags)
     ? ((row as { tags?: unknown }).tags as string[])
     : [];
@@ -100,7 +102,9 @@ export const toolBook = {
         const offset = input.offset ?? 0;
         const rows = await getBookmarks(input.userId, limit, offset);
         return {
-          bookmarks: rows.map((row) => mapBookmark(row)!).filter(Boolean),
+          bookmarks: rows
+            .map((row) => mapBookmark(row))
+            .filter(Boolean) as any[],
         };
       }
       case "delete": {

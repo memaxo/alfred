@@ -1,8 +1,8 @@
 import * as workflowRepo from "@alfred/db/repo/workflow";
+import { logger } from "@alfred/logger";
 import { generateText } from "ai";
-import { logger } from "../utils/logger";
-import { normalizeToUiMessages } from "./normalize";
 import { makeEventId } from "../utils/event-id";
+import { normalizeToUiMessages } from "./normalize";
 
 type PersistArgs = {
   userId: string;
@@ -30,7 +30,11 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       stateData: null,
     });
     const uiMessages = normalizeToUiMessages((args.result ?? {}) as any);
-    const eventId = makeEventId({ runId, type: "ui-message", data: uiMessages });
+    const eventId = makeEventId({
+      runId,
+      type: "ui-message",
+      data: uiMessages,
+    });
     await workflowRepo.appendEvent({
       runId,
       eventId,

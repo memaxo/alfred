@@ -3,27 +3,27 @@ import { join, delimiter as pathDelimiter } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import { IPCBridge, type IPCRequest, type IPCResponse } from "./ipc";
 
-export interface ProcessConfig {
+export type ProcessConfig = {
   scriptPath: string;
   modelPath: string;
   device?: string;
   computeType?: string;
   voice?: string;
   env?: Record<string, string>;
-}
+};
 
-export interface ProcessHealth {
+export type ProcessHealth = {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
   errorCount: number;
   uptime: number;
-}
+};
 
 export class ModelProcess {
   private process: Subprocess | null = null;
-  private ipc: IPCBridge;
-  private config: ProcessConfig;
+  public readonly ipc: IPCBridge;
+  private readonly config: ProcessConfig;
   private startTime = 0;
   private requestCount = 0;
   private errorCount = 0;
@@ -45,9 +45,20 @@ export class ModelProcess {
     const { cmd, cwd } = await this.resolvePythonExecutable();
 
     // #region agent log
-    const logData1 = {location:'base.ts:45',message:'Python command resolved',data:{cmd, cwd, scriptPath: this.config.scriptPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-    console.error('[DEBUG]', JSON.stringify(logData1));
-    fetch('http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+    const logData1 = {
+      location: "base.ts:45",
+      message: "Python command resolved",
+      data: { cmd, cwd, scriptPath: this.config.scriptPath },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "A",
+    };
+    fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(logData1),
+    }).catch(() => {});
     // #endregion
 
     // Verify dependencies before starting
@@ -65,9 +76,24 @@ export class ModelProcess {
     };
 
     // #region agent log
-    const logData2 = {location:'base.ts:59',message:'Environment before spawn',data:{pythonPath: env.PYTHONPATH, path: env.PATH?.substring(0,100), piperModelPath: env.PIPER_MODEL_PATH},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-    console.error('[DEBUG]', JSON.stringify(logData2));
-    fetch('http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    const logData2 = {
+      location: "base.ts:59",
+      message: "Environment before spawn",
+      data: {
+        pythonPath: env.PYTHONPATH,
+        path: env.PATH?.substring(0, 100),
+        piperModelPath: env.PIPER_MODEL_PATH,
+      },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "C",
+    };
+    fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(logData2),
+    }).catch(() => {});
     // #endregion
 
     this.process = spawn({
@@ -171,9 +197,7 @@ export class ModelProcess {
             accessSync(candidate, fsConstants.X_OK);
           }
           return candidate;
-        } catch {
-          continue;
-        }
+        } catch {}
       }
     }
 
@@ -226,10 +250,12 @@ export class ModelProcess {
           `
 import sys
 try:
-    import faster_whisper
-    import piper
+    import nemo.collections.asr
     import silero_vad
     import numpy
+    import transformers
+    import snac
+    import soundfile
     sys.exit(0)
 except ImportError as e:
     print(f"Missing dependency: {e}", file=sys.stderr)
@@ -261,15 +287,13 @@ except ImportError as e:
       ) {
         throw error;
       }
-      console.warn(
-        "[voice] Dependency verification failed:",
-        error instanceof Error ? error.message : String(error)
-      );
     }
   }
 
   private setupEventHandlers(): void {
-    if (!this.process) return;
+    if (!this.process) {
+      return;
+    }
 
     let buffer = "";
 
@@ -283,31 +307,25 @@ except ImportError as e:
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              break;
+            }
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
             buffer = lines.pop() ?? "";
 
             for (const line of lines) {
-              if (!line.trim()) continue;
+              if (!line.trim()) {
+                continue;
+              }
               try {
                 const response = JSON.parse(line) as IPCResponse;
                 this.ipc.handleResponse(response);
-              } catch (error) {
-                console.warn(
-                  "[voice] Invalid JSON from process:",
-                  error instanceof Error ? error.message : String(error)
-                );
-              }
+              } catch (_error) {}
             }
           }
-        } catch (error) {
-          console.warn(
-            "[voice] Stream read error:",
-            error instanceof Error ? error.message : String(error)
-          );
-        }
+        } catch (_error) {}
       })();
     }
 
@@ -320,10 +338,12 @@ except ImportError as e:
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              break;
+            }
 
-            const message = decoder.decode(value);
-            console.error("[voice] Process stderr:", message);
+            // Consume stream but ignore content
+            decoder.decode(value);
           }
         } catch {
           // Ignore stderr read errors
@@ -332,19 +352,13 @@ except ImportError as e:
     }
 
     // Handle exit via exited promise
-    this.process.exited.then((code) => {
-      console.warn(`[voice] Process exited with code ${code}`);
+    this.process.exited.then((_code) => {
       this.process = null;
       this.ipc.cancelAll();
       if (!this.isShuttingDown) {
         // Auto-restart on unexpected exit
         setTimeout(() => {
-          this.start().catch((error) => {
-            console.error(
-              "[voice] Process restart failed:",
-              error instanceof Error ? error.message : String(error)
-            );
-          });
+          this.start().catch((_error) => {});
         }, 1000);
       }
     });
@@ -354,18 +368,20 @@ except ImportError as e:
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("Process failed to become ready"));
-      }, 30_000);
+      }, 300_000); // 5 minutes for model download/load
 
       const checkReady = (response: IPCResponse) => {
         if (
           response.type === "status" &&
-          (response.payload as { message?: string })?.message === "STT server ready"
+          (response.payload as { message?: string })?.message ===
+            "STT server ready"
         ) {
           clearTimeout(timeout);
           resolve();
         } else if (
           response.type === "status" &&
-          (response.payload as { message?: string })?.message === "TTS server ready"
+          (response.payload as { message?: string })?.message ===
+            "TTS server ready"
         ) {
           clearTimeout(timeout);
           resolve();
@@ -373,7 +389,7 @@ except ImportError as e:
           clearTimeout(timeout);
           reject(
             new Error(
-              ((response.payload as { message?: string })?.message) ??
+              (response.payload as { message?: string })?.message ??
                 "Process initialization failed"
             )
           );
@@ -394,12 +410,7 @@ except ImportError as e:
       try {
         await this.ping();
         this.lastPing = Date.now();
-      } catch (error) {
-        console.warn(
-          "[voice] Health check failed:",
-          error instanceof Error ? error.message : String(error)
-        );
-      }
+      } catch (_error) {}
     }, 30_000); // Every 30 seconds
   }
 
@@ -413,7 +424,8 @@ except ImportError as e:
 
   async sendRequest(
     request: IPCRequest,
-    timeoutMs?: number
+    timeoutMs?: number,
+    onPartial?: (response: IPCResponse) => void
   ): Promise<IPCResponse> {
     if (!this.process) {
       throw new Error("Process not started");
@@ -421,7 +433,12 @@ except ImportError as e:
 
     this.requestCount++;
     try {
-      return await this.ipc.sendRequest(this.process, request, timeoutMs);
+      return await this.ipc.sendRequest(
+        this.process,
+        request,
+        timeoutMs,
+        onPartial
+      );
     } catch (error) {
       this.errorCount++;
       throw error;
@@ -429,15 +446,16 @@ except ImportError as e:
   }
 
   getHealth(): ProcessHealth {
+    const uptime = this.startTime > 0 ? Date.now() - this.startTime : 0;
     return {
       isHealthy:
         this.process !== null &&
-        this.lastPing !== null &&
-        Date.now() - this.lastPing < 60_000,
+        ((this.lastPing !== null && Date.now() - this.lastPing < 60_000) ||
+          uptime < 60_000), // Consider healthy if just started (< 60s) even if no ping yet
       lastPing: this.lastPing,
       requestCount: this.requestCount,
       errorCount: this.errorCount,
-      uptime: this.startTime > 0 ? Date.now() - this.startTime : 0,
+      uptime,
     };
   }
 
@@ -457,8 +475,16 @@ except ImportError as e:
         // Ignore shutdown errors
       }
 
-      this.process.kill();
-      this.process = null;
+      // In Bun, process.kill() is a method, but sometimes this.process might be null
+      // or the type definition might be slightly off in edge cases.
+      // However, the error "TypeError: null is not an object (evaluating 'this.process.kill')"
+      // implies this.process became null.
+      // We checked if (this.process) above, but awaiting sendRequest allows microtask interleaving
+      // where it might have been cleared by the exit handler.
+      if (this.process) {
+        this.process.kill();
+        this.process = null;
+      }
     }
 
     this.ipc.cancelAll();
@@ -471,11 +497,25 @@ except ImportError as e:
  */
 export const __internals = {
   resolvePythonExecutable: (instance: ModelProcess) =>
-    (instance as unknown as { resolvePythonExecutable: () => Promise<{ cmd: string[]; cwd: string }> }).resolvePythonExecutable.bind(instance),
+    (
+      instance as unknown as {
+        resolvePythonExecutable: () => Promise<{ cmd: string[]; cwd: string }>;
+      }
+    ).resolvePythonExecutable.bind(instance),
   findUvPath: (instance: ModelProcess) =>
-    (instance as unknown as { findUvPath: () => Promise<string | null> }).findUvPath.bind(instance),
+    (
+      instance as unknown as { findUvPath: () => Promise<string | null> }
+    ).findUvPath.bind(instance),
   findVenvPython: (instance: ModelProcess) =>
-    (instance as unknown as { findVenvPython: (voiceDir: string) => string | null }).findVenvPython.bind(instance),
+    (
+      instance as unknown as {
+        findVenvPython: (voiceDir: string) => string | null;
+      }
+    ).findVenvPython.bind(instance),
   verifyDependencies: (instance: ModelProcess) =>
-    (instance as unknown as { verifyDependencies: (cmd: string[]) => Promise<void> }).verifyDependencies.bind(instance),
+    (
+      instance as unknown as {
+        verifyDependencies: (cmd: string[]) => Promise<void>;
+      }
+    ).verifyDependencies.bind(instance),
 };

@@ -5,13 +5,13 @@ import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { requirePolicy } from "../gate";
-import { authedProcedure, rateLimit, router } from "../trpc";
-import { toTRPCError } from "../utils/error";
-import { sanitizeResult } from "../utils/generate";
 import {
   orchestratorGenerateDurationSeconds,
   orchestratorGenerateRequestsTotal,
 } from "../metrics";
+import { authedProcedure, rateLimit, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
+import { sanitizeResult } from "../utils/generate";
 
 const ORCHESTRATOR_MAX_STEPS = 12;
 

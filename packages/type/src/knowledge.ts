@@ -4,39 +4,39 @@
 
 export type KnowledgeConfidence = number & { readonly _: unique symbol };
 
-export interface KnowledgeFact {
+export type KnowledgeFact = {
   id: string;
   content: string;
   confidence: KnowledgeConfidence;
   source?: string;
   timestamp?: string;
   tags?: string[];
-}
+};
 
-export interface KnowledgeRelation {
+export type KnowledgeRelation = {
   id: string;
   from: string;
   to: string;
   kind: string;
   weight?: number;
   metadata?: Record<string, unknown>;
-}
+};
 
-export interface KnowledgeInsight {
+export type KnowledgeInsight = {
   id: string;
   derived: string[];
   conclusion: string;
   confidence: KnowledgeConfidence;
   rationale?: string;
-}
+};
 
-export interface KnowledgePattern {
+export type KnowledgePattern = {
   id: string;
   examples: string[];
   rule: string;
   accuracy?: number;
   notes?: string;
-}
+};
 
 export type KnowledgeNode =
   | KnowledgeFact
@@ -44,7 +44,7 @@ export type KnowledgeNode =
   | KnowledgeInsight
   | KnowledgePattern;
 
-export interface KnowledgeUpdate {
+export type KnowledgeUpdate = {
   node: KnowledgeNode;
   replace?: boolean;
-}
+};

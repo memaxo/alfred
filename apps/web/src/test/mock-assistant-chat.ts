@@ -1,7 +1,7 @@
+import { mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import type { Dispatch, SetStateAction } from "react";
-import { mock, vi } from "bun:test";
 
 const stateHandlers: {
   setMessages?: Dispatch<SetStateAction<AssistantUIMessage[]>>;

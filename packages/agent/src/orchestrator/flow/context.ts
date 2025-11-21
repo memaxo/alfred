@@ -99,10 +99,16 @@ function serializeBundle(bundle: ContextBundle) {
 }
 
 function compressSnippet(value: string | undefined, limit = WEB_SUMMARY_LIMIT) {
-  if (!value) return;
+  if (!value) {
+    return;
+  }
   const compact = value.replace(/\s+/g, " ").trim();
-  if (compact.length === 0) return;
-  if (compact.length <= limit) return compact;
+  if (compact.length === 0) {
+    return;
+  }
+  if (compact.length <= limit) {
+    return compact;
+  }
   return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
 
@@ -121,9 +127,13 @@ function parseDroidOutput(raw: string): SearchReceiptItem[] {
     }
     const items: SearchReceiptItem[] = [];
     for (const entry of parsed.files) {
-      if (!entry || typeof entry !== "object") continue;
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
       const pathValue = typeof entry.path === "string" ? entry.path : undefined;
-      if (!pathValue) continue;
+      if (!pathValue) {
+        continue;
+      }
       const score = Number(entry.score);
       items.push({
         id: `code:${pathValue}`,
@@ -161,7 +171,9 @@ async function fallbackScan(
 
   while (queue.length > 0 && collected.length < topK * 4) {
     const current = queue.pop();
-    if (!current) continue;
+    if (!current) {
+      continue;
+    }
     let entries: string[];
     try {
       entries = await readdir(current);
@@ -173,11 +185,16 @@ async function fallbackScan(
         entryName.startsWith(".") &&
         !exts.has(`.${entryName}`) &&
         ignore.has(entryName)
-      )
+      ) {
         continue;
-      if (ignore.has(entryName)) continue;
+      }
+      if (ignore.has(entryName)) {
+        continue;
+      }
       const resolved = path.join(current, entryName);
-      if (!within(cw, resolved)) continue;
+      if (!within(cw, resolved)) {
+        continue;
+      }
       let entryStats;
       try {
         entryStats = await stat(resolved);
@@ -189,7 +206,9 @@ async function fallbackScan(
         continue;
       }
       const ext = path.extname(entryName).toLowerCase();
-      if (exts.size > 0 && !exts.has(ext)) continue;
+      if (exts.size > 0 && !exts.has(ext)) {
+        continue;
+      }
       const relPath = path.relative(cw, resolved) || entryName;
       const lowerPath = relPath.toLowerCase();
       let score = 0;
@@ -221,7 +240,9 @@ async function fallbackScan(
 }
 
 function summariseReceipt(items: SearchReceiptItem[]) {
-  if (items.length === 0) return "No files identified.";
+  if (items.length === 0) {
+    return "No files identified.";
+  }
   return `Top ${Math.min(5, items.length)} files: ${items
     .slice(0, 5)
     .map((item) => item.path ?? item.id)
@@ -561,15 +582,25 @@ export async function buildContextBundle({
   const sorted = [...(receipts.code ?? [])].sort((a, b) => b.score - a.score);
 
   for (const item of sorted) {
-    if (budget <= 0) break;
+    if (budget <= 0) {
+      break;
+    }
     const relativePath = item.path ?? item.id.replace(/^code:/, "");
-    if (!relativePath) continue;
+    if (!relativePath) {
+      continue;
+    }
     const fullPath = path.resolve(resolvedCw, relativePath);
-    if (!within(resolvedCw, fullPath)) continue;
+    if (!within(resolvedCw, fullPath)) {
+      continue;
+    }
     const ext = path.extname(fullPath).toLowerCase();
-    if (extSet.size > 0 && !extSet.has(ext)) continue;
+    if (extSet.size > 0 && !extSet.has(ext)) {
+      continue;
+    }
     const content = await readFileSlice(fullPath);
-    if (content === null || content.length === 0) continue;
+    if (content === null || content.length === 0) {
+      continue;
+    }
 
     let tokens = estimator.estimate(content);
     const startLine = 1;

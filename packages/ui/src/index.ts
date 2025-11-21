@@ -1,12 +1,12 @@
 export type { ChatProps } from "./chat/chat";
 export { Chat } from "./chat/chat";
+export type { BookmarkPaneItem, BookmarkPaneProps } from "./pane/book";
+export { BookmarkPane } from "./pane/book";
 export type { HomePaneProps } from "./pane/home";
 export { HomePane } from "./pane/home";
 export type { NotePaneProps } from "./pane/note";
 export { NotePane } from "./pane/note";
 export type { RemindPaneProps } from "./pane/remind";
 export { RemindPane } from "./pane/remind";
-export type { TimerPaneProps, TimerPaneItem } from "./pane/timer";
+export type { TimerPaneItem, TimerPaneProps } from "./pane/timer";
 export { TimerPane } from "./pane/timer";
-export type { BookmarkPaneProps, BookmarkPaneItem } from "./pane/book";
-export { BookmarkPane } from "./pane/book";

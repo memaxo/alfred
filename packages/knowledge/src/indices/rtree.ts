@@ -10,7 +10,10 @@ type NodeEntry = {
 
 class RTreeNode {
   readonly entries: NodeEntry[] = [];
-  constructor(readonly leaf: boolean, public parent: RTreeNode | null) {}
+  constructor(
+    readonly leaf: boolean,
+    public parent: RTreeNode | null
+  ) {}
 }
 
 class MinHeap<T> {
@@ -26,11 +29,11 @@ class MinHeap<T> {
 
   pop(): T | undefined {
     if (this.data.length === 0) {
-      return undefined;
+      return;
     }
     const top = this.data[0];
-    const last = this.data.pop()!;
-    if (this.data.length > 0) {
+    const last = this.data.pop();
+    if (last !== undefined && this.data.length > 0) {
       this.data[0] = last;
       this.bubbleDown(0);
     }
@@ -48,13 +51,16 @@ class MinHeap<T> {
   private bubbleUp(index: number): void {
     while (index > 0) {
       const parent = (index - 1) >> 1;
-      if (this.cmp(this.data[index]!, this.data[parent]!) >= 0) {
+      const parentVal = this.data[parent];
+      const indexVal = this.data[index];
+      if (parentVal === undefined || indexVal === undefined) {
         break;
       }
-      [this.data[index], this.data[parent]] = [
-        this.data[parent]!,
-        this.data[index]!,
-      ];
+
+      if (this.cmp(indexVal, parentVal) >= 0) {
+        break;
+      }
+      [this.data[index], this.data[parent]] = [parentVal, indexVal];
       index = parent;
     }
   }
@@ -65,25 +71,47 @@ class MinHeap<T> {
       let smallest = index;
       const left = index * 2 + 1;
       const right = index * 2 + 2;
-      if (
-        left < length &&
-        this.cmp(this.data[left]!, this.data[smallest]!) < 0
-      ) {
-        smallest = left;
+
+      const smallestVal = this.data[smallest];
+      if (smallestVal === undefined) {
+        break;
       }
-      if (
-        right < length &&
-        this.cmp(this.data[right]!, this.data[smallest]!) < 0
-      ) {
-        smallest = right;
+
+      if (left < length) {
+        const leftVal = this.data[left];
+        // Use current smallest value for comparison, which might have changed if we updated smallest
+        const currentSmallestVal = this.data[smallest];
+        if (
+          leftVal !== undefined &&
+          currentSmallestVal !== undefined &&
+          this.cmp(leftVal, currentSmallestVal) < 0
+        ) {
+          smallest = left;
+        }
       }
+
+      if (right < length) {
+        const rightVal = this.data[right];
+        const currentSmallestVal = this.data[smallest];
+        if (
+          rightVal !== undefined &&
+          currentSmallestVal !== undefined &&
+          this.cmp(rightVal, currentSmallestVal) < 0
+        ) {
+          smallest = right;
+        }
+      }
+
       if (smallest === index) {
         break;
       }
-      [this.data[index], this.data[smallest]] = [
-        this.data[smallest]!,
-        this.data[index]!,
-      ];
+
+      const valIndex = this.data[index];
+      const valSmallest = this.data[smallest];
+
+      if (valIndex !== undefined && valSmallest !== undefined) {
+        [this.data[index], this.data[smallest]] = [valSmallest, valIndex];
+      }
       index = smallest;
     }
   }
@@ -142,7 +170,10 @@ export class RTreeND {
     const hits: NodeId[] = [];
     const stack: RTreeNode[] = [this.root];
     while (stack.length > 0) {
-      const node = stack.pop()!;
+      const node = stack.pop();
+      if (!node) {
+        continue;
+      }
       for (const entry of node.entries) {
         if (!this.intersects(entry.rect, normalized)) {
           continue;
@@ -175,25 +206,36 @@ export class RTreeND {
     });
     heap.push({ node: this.root, dist: 0 });
     const results: Array<{ id: NodeId; dist: number }> = [];
-    const worst = (): number =>
-      results.length < k ? Number.POSITIVE_INFINITY : results[results.length - 1]!
-        .dist;
+    const worst = (): number => {
+      if (results.length < k) {
+        return Number.POSITIVE_INFINITY;
+      }
+      const last = results.at(-1);
+      return last?.dist ?? Number.POSITIVE_INFINITY;
+    };
 
     while (heap.size > 0) {
-      const current = heap.pop()!;
+      const current = heap.pop();
+      if (!current) {
+        break;
+      }
       if (current.dist > worst()) {
         break;
       }
       const node = current.node;
       if (node.leaf) {
         for (const entry of node.entries) {
-          if (!entry.id) continue;
+          if (!entry.id) {
+            continue;
+          }
           const dist = this.distancePointRect(point, entry.rect);
           this.insertResult(results, { id: entry.id, dist }, k);
         }
       } else {
         for (const entry of node.entries) {
-          if (!entry.child) continue;
+          if (!entry.child) {
+            continue;
+          }
           heap.push({
             node: entry.child,
             dist: this.distancePointRect(point, entry.rect),
@@ -223,10 +265,7 @@ export class RTreeND {
   }
 
   private ensureRect(rect: HyperRect): void {
-    if (
-      rect.min.length !== this.dim ||
-      rect.max.length !== this.dim
-    ) {
+    if (rect.min.length !== this.dim || rect.max.length !== this.dim) {
       throw new Error(`rtree_dim_mismatch_${this.dim}`);
     }
   }
@@ -235,8 +274,10 @@ export class RTreeND {
     const min = new Float32Array(this.dim);
     const max = new Float32Array(this.dim);
     for (let i = 0; i < this.dim; i++) {
-      const lo = Math.min(rect.min[i]!, rect.max[i]!);
-      const hi = Math.max(rect.min[i]!, rect.max[i]!);
+      const minVal = rect.min[i] ?? 0;
+      const maxVal = rect.max[i] ?? 0;
+      const lo = Math.min(minVal, maxVal);
+      const hi = Math.max(minVal, maxVal);
       min[i] = lo;
       max[i] = hi;
     }
@@ -264,7 +305,7 @@ export class RTreeND {
         }
       }
     }
-    if (!best || !best.child) {
+    if (!best?.child) {
       throw new Error("rtree_choose_leaf_failed");
     }
     return this.chooseLeaf(best.child, rect);
@@ -313,20 +354,23 @@ export class RTreeND {
     const groupA: NodeEntry[] = [];
     const groupB: NodeEntry[] = [];
     const seeds = this.pickSeeds(entries);
-    groupA.push(seeds[0]!);
-    groupB.push(seeds[1]!);
-    const remaining = entries.filter((entry) => entry !== seeds[0] && entry !== seeds[1]);
+    const seed0 = seeds[0];
+    const seed1 = seeds[1];
+    if (!(seed0 && seed1)) {
+      throw new Error("Split node seeds missing");
+    }
+    groupA.push(seed0);
+    groupB.push(seed1);
+    const remaining = entries.filter(
+      (entry) => entry !== seed0 && entry !== seed1
+    );
 
     while (remaining.length > 0) {
-      if (
-        groupA.length + remaining.length === this.minEntries
-      ) {
+      if (groupA.length + remaining.length === this.minEntries) {
         groupA.push(...remaining.splice(0));
         break;
       }
-      if (
-        groupB.length + remaining.length === this.minEntries
-      ) {
+      if (groupB.length + remaining.length === this.minEntries) {
         groupB.push(...remaining.splice(0));
         break;
       }
@@ -379,25 +423,39 @@ export class RTreeND {
     return sibling;
   }
 
+  private tighten(node: RTreeNode): void {
+    const rect = this.computeNodeRect(node);
+    if (node.parent) {
+      const entry = node.parent.entries.find((e) => e.child === node);
+      if (entry) {
+        entry.rect = rect;
+      }
+    }
+  }
+
   private pickSeeds(entries: NodeEntry[]): [NodeEntry, NodeEntry] {
     let maxWaste = -1;
     let seed1: NodeEntry | null = null;
     let seed2: NodeEntry | null = null;
     for (let i = 0; i < entries.length - 1; i++) {
       for (let j = i + 1; j < entries.length; j++) {
-        const rect = this.combine(entries[i]!.rect, entries[j]!.rect);
+        const rect = this.combine(entries[i]?.rect, entries[j]?.rect);
         const waste =
           this.measure(rect) -
-          this.measure(entries[i]!.rect) -
-          this.measure(entries[j]!.rect);
+          this.measure(entries[i]?.rect) -
+          this.measure(entries[j]?.rect);
         if (waste > maxWaste) {
-          maxWaste = waste;
-          seed1 = entries[i]!;
-          seed2 = entries[j]!;
+          const e1 = entries[i];
+          const e2 = entries[j];
+          if (e1 && e2) {
+            maxWaste = waste;
+            seed1 = e1;
+            seed2 = e2;
+          }
         }
       }
     }
-    if (!seed1 || !seed2) {
+    if (!(seed1 && seed2)) {
       throw new Error("rtree_pick_seeds_failed");
     }
     return [seed1, seed2];
@@ -411,9 +469,10 @@ export class RTreeND {
     let maxDiff = -1;
     let next: NodeEntry | null = null;
     for (const entry of entries) {
-      const diff =
-        Math.abs(this.enlargement(rectA, entry.rect) -
-        this.enlargement(rectB, entry.rect));
+      const diff = Math.abs(
+        this.enlargement(rectA, entry.rect) -
+          this.enlargement(rectB, entry.rect)
+      );
       if (diff > maxDiff) {
         maxDiff = diff;
         next = entry;
@@ -432,9 +491,9 @@ export class RTreeND {
         max: new Float32Array(this.dim),
       };
     }
-    let rect = entries[0]!.rect;
+    let rect = entries[0]?.rect;
     for (let i = 1; i < entries.length; i++) {
-      rect = this.combine(rect, entries[i]!.rect);
+      rect = this.combine(rect, entries[i]?.rect);
     }
     return rect;
   }
@@ -456,16 +515,24 @@ export class RTreeND {
       const max = new Float32Array(this.dim);
       return { min, max };
     }
-    let min = new Float32Array(node.entries[0]!.rect.min);
-    let max = new Float32Array(node.entries[0]!.rect.max);
+    const min = new Float32Array(node.entries[0]?.rect.min);
+    const max = new Float32Array(node.entries[0]?.rect.max);
     for (let i = 1; i < node.entries.length; i++) {
-      const entry = node.entries[i]!;
+      const entry = node.entries[i];
+      if (!entry) {
+        continue;
+      }
       for (let d = 0; d < this.dim; d++) {
-        if (entry.rect.min[d]! < min[d]!) {
-          min[d] = entry.rect.min[d]!;
+        const entryMin = entry.rect.min[d] ?? 0;
+        const entryMax = entry.rect.max[d] ?? 0;
+        const currentMin = min[d] ?? 0;
+        const currentMax = max[d] ?? 0;
+
+        if (entryMin < currentMin) {
+          min[d] = entryMin;
         }
-        if (entry.rect.max[d]! > max[d]!) {
-          max[d] = entry.rect.max[d]!;
+        if (entryMax > currentMax) {
+          max[d] = entryMax;
         }
       }
     }
@@ -477,7 +544,14 @@ export class RTreeND {
     const reinserts: NodeEntry[] = [];
     while (node) {
       if (node !== this.root && node.entries.length < this.minEntries) {
-        const parent = node.parent!;
+        const parent = node.parent;
+        if (!parent) {
+          // If node is root, we can't go up.
+          // But the loop condition check was `node !== this.root`
+          // So this should not happen if logic is correct.
+          // But to satisfy TS/Biome:
+          throw new Error("Node is not root but has no parent");
+        }
         const idx = parent.entries.findIndex((entry) => entry.child === node);
         if (idx >= 0) {
           parent.entries.splice(idx, 1);
@@ -528,8 +602,13 @@ export class RTreeND {
     const min = new Float32Array(this.dim);
     const max = new Float32Array(this.dim);
     for (let i = 0; i < this.dim; i++) {
-      min[i] = Math.min(a.min[i]!, b.min[i]!);
-      max[i] = Math.max(a.max[i]!, b.max[i]!);
+      const aMin = a.min[i] ?? 0;
+      const bMin = b.min[i] ?? 0;
+      const aMax = a.max[i] ?? 0;
+      const bMax = b.max[i] ?? 0;
+
+      min[i] = Math.min(aMin, bMin);
+      max[i] = Math.max(aMax, bMax);
     }
     return { min, max };
   }
@@ -537,7 +616,9 @@ export class RTreeND {
   private measure(rect: HyperRect): number {
     let sum = 0;
     for (let i = 0; i < this.dim; i++) {
-      const span = Math.max(rect.max[i]! - rect.min[i]!, 0);
+      const minVal = rect.min[i] ?? 0;
+      const maxVal = rect.max[i] ?? 0;
+      const span = Math.max(maxVal - minVal, 0);
       sum += Math.log1p(span);
     }
     return sum;
@@ -550,7 +631,12 @@ export class RTreeND {
 
   private intersects(a: HyperRect, b: HyperRect): boolean {
     for (let i = 0; i < this.dim; i++) {
-      if (a.min[i]! > b.max[i]! || a.max[i]! < b.min[i]!) {
+      const aMin = a.min[i] ?? 0;
+      const aMax = a.max[i] ?? 0;
+      const bMin = b.min[i] ?? 0;
+      const bMax = b.max[i] ?? 0;
+
+      if (aMin > bMax || aMax < bMin) {
         return false;
       }
     }
@@ -560,9 +646,9 @@ export class RTreeND {
   private distancePointRect(point: Float32Array, rect: HyperRect): number {
     let sum = 0;
     for (let i = 0; i < this.dim; i++) {
-      const p = point[i]!;
-      const min = rect.min[i]!;
-      const max = rect.max[i]!;
+      const p = point[i] ?? 0;
+      const min = rect.min[i] ?? 0;
+      const max = rect.max[i] ?? 0;
       let delta = 0;
       if (p < min) {
         delta = min - p;
@@ -581,7 +667,8 @@ export class RTreeND {
   ): void {
     let inserted = false;
     for (let i = 0; i < results.length; i++) {
-      if (entry.dist < results[i]!.dist) {
+      const current = results[i];
+      if (current && entry.dist < current.dist) {
         results.splice(i, 0, entry);
         inserted = true;
         break;

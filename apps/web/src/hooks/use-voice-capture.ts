@@ -3,12 +3,12 @@ import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
 
-interface UseVoiceCaptureOptions {
+type UseVoiceCaptureOptions = {
   onTranscript?: (text: string) => Promise<void> | void;
   onError?: (error: Error) => void;
-}
+};
 
-interface UseVoiceCaptureReturn {
+type UseVoiceCaptureReturn = {
   isRecording: boolean;
   isProcessing: boolean;
   transcript: string;
@@ -17,7 +17,7 @@ interface UseVoiceCaptureReturn {
   stopRecording: () => void;
   playAudio: (audioBase64: string, mimeType: string) => void;
   clearTranscript: () => void;
-}
+};
 
 const MAX_RECORDING_MS = 10_000; // keep clips short for MVP
 
@@ -26,9 +26,7 @@ const clearTimeoutClient = createClientOnlyFn((id: number) => {
 });
 
 const setTimeoutClient = createClientOnlyFn(
-  (callback: () => void, delay: number) => {
-    return window.setTimeout(callback, delay);
-  }
+  (callback: () => void, delay: number) => window.setTimeout(callback, delay)
 );
 
 const getUserMediaClient = createClientOnlyFn(async () => {
@@ -53,6 +51,14 @@ export function useVoiceCapture({
   const timeoutRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Assume this can now handle raw Buffer/ArrayBuffer if we updated VoiceStreamClient.
+  // For now, if we want to stream raw audio, we need access to the stream client instance.
+  // But sttMutation is a tRPC procedure, not the stream client.
+  // The stream client is usually accessed via `useVoiceSession` or similar hook that uses `VoiceStreamClient`.
+  // Wait, `useVoiceCapture` seems to be using `sttTranscribe` mutation (HTTP POST), not streaming.
+  // The streaming hook is likely `useVoiceSessionWeb` or similar.
+
+  // Let's check `apps/web/src/hooks/use-voice-session-web.ts` which was in the file list.
   const sttMutation = trpc.voice.sttTranscribe.useMutation();
 
   const isProcessing = useMemo(
@@ -124,6 +130,20 @@ export function useVoiceCapture({
     }
   }, [handleError, onTranscript, sttMutation]);
 
+  const stopRecording = useCallback(() => {
+    if (!mediaRecorderRef.current) {
+      return;
+    }
+    if (mediaRecorderRef.current.state === "inactive") {
+      return;
+    }
+    try {
+      mediaRecorderRef.current.stop();
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+
   const startRecording = useCallback(async () => {
     if (isRecording || isProcessing) {
       return;
@@ -164,21 +184,20 @@ export function useVoiceCapture({
         handleError(new Error("voice_unavailable_on_server"));
       }
     }
-  }, [cleanupStream, handleError, isProcessing, isRecording, processRecording, stopRecording]);
-
-  const stopRecording = useCallback(() => {
-    if (!mediaRecorderRef.current) return;
-    if (mediaRecorderRef.current.state === "inactive") return;
-    try {
-      mediaRecorderRef.current.stop();
-    } catch (err) {
-      handleError(err);
-    }
-  }, [handleError]);
+  }, [
+    cleanupStream,
+    handleError,
+    isProcessing,
+    isRecording,
+    processRecording,
+    stopRecording,
+  ]);
 
   const playAudio = useCallback(
     (audioBase64: string, mimeType: string) => {
-      if (!audioBase64) return;
+      if (!audioBase64) {
+        return;
+      }
       const source = `data:${mimeType};base64,${audioBase64}`;
       if (audioRef.current) {
         audioRef.current.pause();

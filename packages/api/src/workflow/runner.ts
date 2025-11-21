@@ -8,16 +8,23 @@ import {
   setLinearSessionExternalUrl,
   setLinearStarted,
 } from "@alfred/agent/orchestrator/linear";
-import type { WorkflowEvent } from "@alfred/type";
 import { logger } from "@alfred/metrics";
+import type { WorkflowEvent } from "@alfred/type";
+
 // Lazy metrics loader to avoid heavy deps during unit tests
 type RunnerCounters = {
-  runnerStepsTotal: { inc: (labels: { phase: string; outcome: string }) => void };
-  runnerErrorsTotal: { inc: (labels: { phase: string; reason: string }) => void };
+  runnerStepsTotal: {
+    inc: (labels: { phase: string; outcome: string }) => void;
+  };
+  runnerErrorsTotal: {
+    inc: (labels: { phase: string; reason: string }) => void;
+  };
 };
 let metricsRef: RunnerCounters | null = null;
 async function metrics(): Promise<RunnerCounters> {
-  if (metricsRef) return metricsRef;
+  if (metricsRef) {
+    return metricsRef;
+  }
   try {
     const m = await import("@alfred/api/metrics");
     metricsRef = {
@@ -61,7 +68,7 @@ const stringify = (value: unknown): string | undefined => {
   try {
     return JSON.stringify(value);
   } catch {
-    return undefined;
+    return;
   }
 };
 
@@ -139,7 +146,10 @@ async function* executePhaseWithTimeout(
     yield { type: "step-complete", phase } as any;
   } catch (error) {
     (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
-    (await metrics()).runnerErrorsTotal.inc({ phase, reason: error instanceof Error ? error.name : "error" });
+    (await metrics()).runnerErrorsTotal.inc({
+      phase,
+      reason: error instanceof Error ? error.name : "error",
+    });
     yield createErrorEvent(
       error instanceof Error ? error.message : String(error)
     );
@@ -149,13 +159,13 @@ async function* executePhaseWithTimeout(
 /**
  * @deprecated Use WorkflowRuntime from @alfred/runtime instead.
  * This runner will be removed in v2.0.0 after runtime integration is complete.
- * 
+ *
  * Migration guide:
  * ```typescript
  * // OLD:
  * import { runPlanV6 } from '../workflow/runner';
  * const runner = runPlanV6(input, { signal: abortController.signal });
- * 
+ *
  * // NEW:
  * import { createRuntime } from '@alfred/runtime';
  * import { openai } from '@ai-sdk/openai';
@@ -164,13 +174,13 @@ async function* executePhaseWithTimeout(
  *   model: openai('gpt-4o'),
  *   signal: abortController.signal,
  * });
- * 
+ *
  * // Stream consumption is identical:
  * for await (const event of runtime.stream) {
  *   // ... same handling logic
  * }
  * ```
- * 
+ *
  * Minimal, Mastra-free runner that emits WorkflowEvent chunks.
  *
  * This runner is intentionally simple: it models a planning phase with
@@ -209,7 +219,9 @@ export function runPlanV6(
 
   const signal = opts?.signal;
   if (signal) {
-    if (signal.aborted) cancelled = true;
+    if (signal.aborted) {
+      cancelled = true;
+    }
     signal.addEventListener("abort", () => {
       cancelled = true;
     });
@@ -359,10 +371,12 @@ export function runPlanV6(
         }
 
         if (resumeQueue.length > 0) {
-          const resume = resumeQueue.shift()!;
-          yield createNoticeEvent(
-            `Authorization '${resume.event}' acknowledged.`
-          );
+          const resume = resumeQueue.shift();
+          if (resume) {
+            yield createNoticeEvent(
+              `Authorization '${resume.event}' acknowledged.`
+            );
+          }
         } else if (timeoutMs > 0) {
           const resumePromise = new Promise<ResumePayload | null>((resolve) => {
             resumeResolver = resolve;
@@ -506,13 +520,11 @@ export function runPlanV6(
           completionMessage = trimmed;
         }
       }
-      finalMessage =
-        completionMessage ?? "Workflow completed successfully.";
+      finalMessage = completionMessage ?? "Workflow completed successfully.";
       yield createProgressEvent(100, "workflow_completed");
     } catch (error) {
       finalStatus = "failed";
-      finalMessage =
-        error instanceof Error ? error.message : String(error);
+      finalMessage = error instanceof Error ? error.message : String(error);
       throw error;
     } finally {
       if (linear) {

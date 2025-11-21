@@ -1,14 +1,16 @@
 import { createRequire } from "node:module";
 
-export interface TokenEstimator {
+export type TokenEstimator = {
   estimate(text: string): number;
   estimateLines(lines: string[]): number;
-}
+};
 
 const DEFAULT_DIVISOR = 4;
 
 function heuristicCount(text: string) {
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
   return Math.ceil(text.length / DEFAULT_DIVISOR);
 }
 

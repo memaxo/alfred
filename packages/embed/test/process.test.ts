@@ -3,17 +3,14 @@
  * Tests IPC communication, error handling, and health checks
  */
 
-import { describe, test, expect, afterEach } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { EmbedProcess } from "../src/process";
 
 const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";
 const describeModel = RUN_EMBED_MODEL_TESTS
   ? describe
   : (name: string, factory: Parameters<typeof describe>[1]) =>
-      describe.skip(
-        `${name} (requires RUN_EMBED_MODEL_TESTS=1)`,
-        factory
-      );
+      describe.skip(`${name} (requires RUN_EMBED_MODEL_TESTS=1)`, factory);
 
 describeModel("EmbedProcess - Unit Tests", () => {
   const processes: EmbedProcess[] = [];

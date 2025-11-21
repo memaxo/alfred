@@ -2,21 +2,23 @@
   "name": "@alfred/runtime",
   "version": "0.1.0",
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./src/*.ts"
-    }
-  },
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b -w",
     "typecheck": "tsc -b --pretty false",
     "test": "bun test"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "bun": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "bun": "./src/*.ts",
+      "default": "./dist/*.js"
+    }
   },
   "dependencies": {
     "@alfred/agent": "workspace:*",
@@ -24,6 +26,7 @@
     "@alfred/db": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
+    "@alfred/logger": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
     "ai": "catalog:",
@@ -34,4 +37,3 @@
     "typescript": "*"
   }
 }
-

@@ -26,7 +26,9 @@ describe("workflow runner", () => {
       const events: WorkflowEvent[] = [];
       for await (const event of runner.stream) {
         events.push(event);
-        if (events.length >= 3) break;
+        if (events.length >= 3) {
+          break;
+        }
       }
 
       expect(events[0]).toMatchObject({
@@ -43,7 +45,9 @@ describe("workflow runner", () => {
       const events: WorkflowEvent[] = [];
       for await (const event of runner.stream) {
         events.push(event);
-        if (events.length >= 10) break;
+        if (events.length >= 10) {
+          break;
+        }
       }
 
       const progressEvents = events.filter((e) => e.type === "progress");
@@ -224,7 +228,7 @@ describe("workflow runner", () => {
         events.push(event);
       }
 
-      const lastEvent = events[events.length - 1];
+      const lastEvent = events.at(-1);
       expect(lastEvent).toMatchObject({
         type: "progress",
         pct: 100,

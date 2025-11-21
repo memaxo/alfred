@@ -1,14 +1,19 @@
-import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
 import {
   startCompressionWorker,
   stopCompressionWorker,
 } from "@alfred/agent/orchestrator/compression-worker";
+import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
+import {
+  startLearningWorker,
+  stopLearningWorker,
+} from "@alfred/agent/orchestrator/learning-worker";
+import { logger } from "@alfred/logger";
+import { resumeInterruptedPlans } from "@alfred/runtime";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
 import {
   startVoiceStreamingPrototype,
   stopVoiceStreamingPrototype,
 } from "./voice/streaming";
-import { logger } from "./utils/logger";
 
 let initialized = false;
 
@@ -16,6 +21,7 @@ let initialized = false;
  * Initialize all API services
  * - Compression worker (if enabled)
  * - Voice pools (if using local models)
+ * - Resume interrupted plans
  */
 export function initApiServices(): void {
   if (initialized) {
@@ -36,6 +42,21 @@ export function initApiServices(): void {
       message: "Compression worker disabled",
     });
   }
+
+  // Initialize learning worker (if enabled via env)
+  if (process.env.ENABLE_LEARNING_WORKER === "1") {
+    startLearningWorker();
+    logger.info("learning_worker_init", {
+      message: "Learning worker started",
+    });
+  }
+
+  // Resume interrupted plans from DB (background)
+  resumeInterruptedPlans().catch((error) => {
+    logger.error("resume_plans_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
 
   // Initialize voice pools (if using local models)
   if (process.env.VOICE_PROVIDER === "local") {
@@ -62,6 +83,7 @@ export function shutdownApiServices(): void {
   // Stop compression worker
   try {
     stopCompressionWorker();
+    stopLearningWorker();
     logger.info("compression_worker_stopped");
   } catch (error) {
     logger.error("compression_worker_stop_failed", {

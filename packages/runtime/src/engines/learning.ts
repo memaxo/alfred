@@ -6,14 +6,14 @@
  */
 
 import {
-  supervise,
   type SupervisionEvent as LearningSupervisionEvent,
+  supervise,
 } from "@alfred/learning/self_supervision";
+import { logger } from "@alfred/logger";
 import type { KnowledgeUpdate } from "@alfred/type/knowledge";
-import { logger } from "../utils/logger";
 import {
-  runtimeKnowledgeUpdatesTotal,
   runtimeKnowledgeBatchDurationSeconds,
+  runtimeKnowledgeUpdatesTotal,
 } from "../metrics";
 import { RuntimeKnowledgeBridge } from "./bridge";
 
@@ -33,10 +33,10 @@ const MAX_OUTCOMES = 1000;
 
 /**
  * Learning Engine provides self-supervision capabilities
- * 
+ *
  * Records outcomes during execution and generates knowledge updates at completion.
  * Updates are batched and persisted asynchronously (fire-and-forget).
- * 
+ *
  * Memory-bounded: Evicts oldest outcomes when MAX_OUTCOMES is reached (FIFO/LRU).
  */
 export class LearningEngine {
@@ -45,7 +45,7 @@ export class LearningEngine {
 
   /**
    * Record phase outcome for learning
-   * 
+   *
    * Evicts oldest outcome if at capacity to prevent memory leaks
    */
   recordOutcome(outcome: SupervisionEvent): void {
@@ -58,7 +58,7 @@ export class LearningEngine {
 
   /**
    * Process all recorded outcomes and generate knowledge updates
-   * 
+   *
    * Returns array of updates to be persisted.
    * Does NOT persist directly - caller handles persistence.
    */
@@ -88,7 +88,7 @@ export class LearningEngine {
   clear(): void {
     this.outcomes = [];
   }
-  
+
   /**
    * Get maximum capacity
    */
@@ -98,10 +98,10 @@ export class LearningEngine {
 
   /**
    * Persist updates in batches with metrics and logging
-   * 
+   *
    * Processes updates in chunks of 100 for efficiency.
    * Non-blocking: Logs failures but doesn't throw.
-   * 
+   *
    * @param updates Knowledge updates to persist
    * @param runId Workflow run ID for logging
    */
@@ -109,7 +109,9 @@ export class LearningEngine {
     updates: KnowledgeUpdate[],
     runId: string
   ): Promise<void> {
-    if (updates.length === 0) return;
+    if (updates.length === 0) {
+      return;
+    }
 
     const startTime = Date.now();
     const stopTimer = runtimeKnowledgeBatchDurationSeconds.startTimer({

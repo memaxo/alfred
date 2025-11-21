@@ -68,32 +68,38 @@ export async function updateRun(
         : {}),
       ...(Object.hasOwn(patch, "errorMessage")
         ? {
-            errorMessage: (patch.errorMessage ?? null) as WorkflowRunInsert["errorMessage"],
+            errorMessage: (patch.errorMessage ??
+              null) as WorkflowRunInsert["errorMessage"],
           }
         : {}),
       ...(Object.hasOwn(patch, "suspendedAt")
         ? {
-            suspendedAt: (patch.suspendedAt ?? null) as WorkflowRunInsert["suspendedAt"],
+            suspendedAt: (patch.suspendedAt ??
+              null) as WorkflowRunInsert["suspendedAt"],
           }
         : {}),
       ...(Object.hasOwn(patch, "resumedAt")
         ? {
-            resumedAt: (patch.resumedAt ?? null) as WorkflowRunInsert["resumedAt"],
+            resumedAt: (patch.resumedAt ??
+              null) as WorkflowRunInsert["resumedAt"],
           }
         : {}),
       ...(Object.hasOwn(patch, "completedAt")
         ? {
-            completedAt: (patch.completedAt ?? null) as WorkflowRunInsert["completedAt"],
+            completedAt: (patch.completedAt ??
+              null) as WorkflowRunInsert["completedAt"],
           }
         : {}),
       ...(Object.hasOwn(patch, "linearSessionId")
         ? {
-            linearSessionId: (patch.linearSessionId ?? null) as WorkflowRunInsert["linearSessionId"],
+            linearSessionId: (patch.linearSessionId ??
+              null) as WorkflowRunInsert["linearSessionId"],
           }
         : {}),
       ...(Object.hasOwn(patch, "linearSpace")
         ? {
-            linearSpace: (patch.linearSpace ?? null) as WorkflowRunInsert["linearSpace"],
+            linearSpace: (patch.linearSpace ??
+              null) as WorkflowRunInsert["linearSpace"],
           }
         : {}),
     })
@@ -138,7 +144,12 @@ export async function listEventsByType(runId: string, eventType: string) {
   const rows = await db
     .select()
     .from(workflowEvents)
-    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)))
+    .where(
+      and(
+        eq(workflowEvents.runId, runId),
+        eq(workflowEvents.eventType, eventType)
+      )
+    )
     .orderBy(workflowEvents.timestamp);
   // Return oldest-first for replay consumers
   return rows;
@@ -156,7 +167,12 @@ export async function listEventsByTypePaged(args: {
   const base = db
     .select()
     .from(workflowEvents)
-    .where(and(eq(workflowEvents.runId, args.runId), eq(workflowEvents.eventType, args.eventType)))
+    .where(
+      and(
+        eq(workflowEvents.runId, args.runId),
+        eq(workflowEvents.eventType, args.eventType)
+      )
+    )
     .limit(pageSize)
     .offset(page * pageSize);
   const rows = await (args.order === "desc"
@@ -169,7 +185,12 @@ export async function countEventsByType(runId: string, eventType: string) {
   const rows = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(workflowEvents)
-    .where(and(eq(workflowEvents.runId, runId), eq(workflowEvents.eventType, eventType)));
+    .where(
+      and(
+        eq(workflowEvents.runId, runId),
+        eq(workflowEvents.eventType, eventType)
+      )
+    );
   return Number(rows?.[0]?.count ?? 0);
 }
 
@@ -200,7 +221,7 @@ export async function listRuns(args: {
   offset?: number;
 }): Promise<WorkflowRun[]> {
   const conditions = [eq(workflowRuns.userId, args.userId)];
-  
+
   if (args.status) {
     conditions.push(eq(workflowRuns.status, args.status));
   }

@@ -5,28 +5,28 @@
  * TODO: Migrate to AI SDK v6 rerank() when @ai-sdk/cohere adds rerankingModel() support
  */
 export type RerankTelemetry = {
-    onError?: (ctx: {
-        query: string;
-        model: string;
-        docCount: number;
-        error: unknown;
-    }) => void;
-    onSuccess?: (ctx: {
-        query: string;
-        model: string;
-        docCount: number;
-        durationMs: number;
-    }) => void;
+  onError?: (ctx: {
+    query: string;
+    model: string;
+    docCount: number;
+    error: unknown;
+  }) => void;
+  onSuccess?: (ctx: {
+    query: string;
+    model: string;
+    docCount: number;
+    durationMs: number;
+  }) => void;
 };
 export type RerankOptions = {
-    query: string;
-    documents: Array<{
-        id: string;
-        text: string;
-    }>;
-    topN?: number;
-    model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
-    telemetry?: RerankTelemetry;
+  query: string;
+  documents: Array<{
+    id: string;
+    text: string;
+  }>;
+  topN?: number;
+  model?: "rerank-v3.5" | "rerank-english-v3.0" | "rerank-multilingual-v3.0";
+  telemetry?: RerankTelemetry;
 };
 export type RerankResult = {
   id: string;
@@ -42,10 +42,10 @@ export type RerankResult = {
  * when @ai-sdk/cohere adds rerankingModel() support.
  */
 export declare function rerank({
-    query,
-    documents,
-    topN,
-    model,
-    telemetry,
+  query,
+  documents,
+  topN,
+  model,
+  telemetry,
 }: RerankOptions): Promise<RerankResult[]>;
 //# sourceMappingURL=rerank.d.ts.map

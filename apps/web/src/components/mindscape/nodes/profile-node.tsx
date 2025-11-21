@@ -1,27 +1,21 @@
+import { useForm } from "@tanstack/react-form";
+import type { inferRouterOutputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { Fingerprint, UserCircle2, Volume2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MindscapeNode } from "./mindscape-node";
-import { profileNodeDataSchema } from "@/store/mindscape.schemas";
-import { useMindscapeStore } from "@/store/mindscape";
-import { authClient } from "@/lib/auth-client";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
 import { VoiceSelector } from "@/components/voice-selector";
-
-const EMPTY_STATE = {
-  name: "",
-  email: "",
-  avatar: "",
-  timezone: "",
-};
+import { authClient } from "@/lib/auth-client";
+import { useMindscapeStore } from "@/store/mindscape";
+import { profileNodeDataSchema } from "@/store/mindscape.schemas";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 type ProfileRow = inferRouterOutputs<TRPCAppRouter>["profile"]["get"];
-type ProfileUpdateInput = inferRouterInputs<TRPCAppRouter>["profile"]["update"];
+// type ProfileUpdateInput = inferRouterInputs<TRPCAppRouter>["profile"]["update"];
 
 type PasskeyInfo = {
   id: string;
@@ -31,12 +25,11 @@ type PasskeyInfo = {
 };
 
 export function ProfileNode({ id, data, selected }: NodeProps) {
-  const parsed = profileNodeDataSchema.safeParse(data);
+  const _parsed = profileNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
 
-  const [form, setForm] = useState(EMPTY_STATE);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [isAddingPasskey, setIsAddingPasskey] = useState(false);
   const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
@@ -47,124 +40,75 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
   const isLoadingProfile = profileQuery.isLoading;
 
   // Preference query for voice settings
-  const preferenceQuery = trpc.preference.list.useQuery({ limit: 100, offset: 0 });
+  const preferenceQuery = trpc.preference.list.useQuery({
+    limit: 100,
+    offset: 0,
+  });
   const preferences = preferenceQuery.data ?? [];
-  
-  const currentVoice = useMemo(() => {
-    const pref = preferences.find(p => p.key === "voice.tts");
-    if (!pref?.value) return undefined;
-    
-    // Handle potential JSON string encoding
+
+  const currentVoice = (() => {
+    const pref = preferences.find((p) => p.key === "voice.tts");
+    if (!pref?.value) {
+      return;
+    }
     if (typeof pref.value === "string") {
       try {
-        // Check if it's a double-encoded string
         if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
-             return JSON.parse(pref.value);
+          return JSON.parse(pref.value);
         }
       } catch {
-        // ignore
+        // ignore JSON parse error
       }
       return pref.value;
     }
-    return undefined;
-  }, [preferences]);
+    return;
+  })();
 
-  const currentLanguage = useMemo(() => {
-    const pref = preferences.find(p => p.key === "voice.stt.language");
-    if (!pref?.value) return undefined;
-    
-    if (typeof pref.value === "string") {
-        try {
-            if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
-                return JSON.parse(pref.value);
-            }
-        } catch {}
-        return pref.value;
+  const currentLanguage = (() => {
+    const pref = preferences.find((p) => p.key === "voice.stt.language");
+    if (!pref?.value) {
+      return;
     }
-    return undefined;
-  }, [preferences]);
+    if (typeof pref.value === "string") {
+      try {
+        if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
+          return JSON.parse(pref.value);
+        }
+      } catch {
+        // ignore JSON parse error
+      }
+      return pref.value;
+    }
+    return;
+  })();
 
   const setPreference = trpc.preference.set.useMutation({
     onSuccess: async () => {
-        toast.success("Preference saved");
-        await utils.preference.list.invalidate();
+      toast.success("Preference saved");
+      await utils.preference.list.invalidate();
     },
     onError: (error) => {
-        toast.error(error.message ?? "preference_update_failed");
-    }
+      toast.error(error.message ?? "preference_update_failed");
+    },
   });
 
   const handleVoiceChange = (voice: string) => {
-     setPreference.mutate({
-         key: "voice.tts",
-         value: voice,
-         confidence: 1,
-         source: "user"
-     });
+    setPreference.mutate({
+      key: "voice.tts",
+      value: voice,
+      confidence: 1,
+      source: "user",
+    });
   };
 
   const handleLanguageChange = (lang: string) => {
     setPreference.mutate({
-        key: "voice.stt.language",
-        value: lang,
-        confidence: 1,
-        source: "user"
+      key: "voice.stt.language",
+      value: lang,
+      confidence: 1,
+      source: "user",
     });
   };
-
-  useEffect(() => {
-    if (profile) {
-      const next = {
-        name: profile.name ?? "",
-        email: profile.email ?? "",
-        avatar: profile.avatar ?? "",
-        timezone: profile.timezone ?? "",
-      };
-      setForm(next);
-      updateArtifactData(id, { lastUpdatedAt: new Date().toISOString() });
-    } else if (!profileQuery.isFetching) {
-      setForm(EMPTY_STATE);
-    }
-  }, [profile, profileQuery.isFetching, id, updateArtifactData]);
-
-  useEffect(() => {
-    const loadPasskeys = async () => {
-      setIsLoadingPasskeys(true);
-      try {
-        const result = await authClient.passkey.listUserPasskeys();
-        if (result.data) {
-          setPasskeys(result.data);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setIsLoadingPasskeys(false);
-      }
-    };
-
-    if (profile) {
-      void loadPasskeys();
-    }
-  }, [profile]);
-
-  const normalizedProfile = useMemo(() => {
-    if (!profile) return EMPTY_STATE;
-    return {
-      name: profile.name ?? "",
-      email: profile.email ?? "",
-      avatar: profile.avatar ?? "",
-      timezone: profile.timezone ?? "",
-    };
-  }, [profile]);
-
-  const hasChanges = useMemo(() => {
-    return (
-      form.name.trim() !== normalizedProfile.name ||
-      form.email.trim() !== normalizedProfile.email ||
-      form.avatar.trim() !== normalizedProfile.avatar ||
-      form.timezone.trim() !== normalizedProfile.timezone
-    );
-  }, [form, normalizedProfile]);
 
   const updateProfile = trpc.profile.update.useMutation({
     onMutate: async (input) => {
@@ -195,24 +139,55 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
     },
   });
 
-  const prepareInput = (): ProfileUpdateInput => {
-    const payload: ProfileUpdateInput = {};
-    payload.name = form.name.trim() || null;
-    payload.email = form.email.trim() || null;
-    payload.avatar = form.avatar.trim() || null;
-    if (form.timezone.trim()) {
-      payload.timezone = form.timezone.trim();
-    }
-    return payload;
-  };
+  const form = useForm({
+    defaultValues: {
+      name: profile?.name ?? "",
+      email: profile?.email ?? "",
+      avatar: profile?.avatar ?? "",
+      timezone: profile?.timezone ?? "",
+    },
+    onSubmit: async ({ value }) => {
+      await updateProfile.mutateAsync({
+        name: value.name.trim() || null,
+        email: value.email.trim() || null,
+        avatar: value.avatar.trim() || null,
+        timezone: value.timezone.trim() || null,
+      });
+    },
+  });
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!hasChanges || updateProfile.isPending) {
-      return;
+  // Sync form with profile data when it loads
+  useEffect(() => {
+    if (profile && !form.state.isDirty) {
+      form.reset({
+        name: profile.name ?? "",
+        email: profile.email ?? "",
+        avatar: profile.avatar ?? "",
+        timezone: profile.timezone ?? "",
+      });
+      updateArtifactData(id, { lastUpdatedAt: new Date().toISOString() });
     }
-    updateProfile.mutate(prepareInput());
-  };
+  }, [profile, form, id, updateArtifactData]);
+
+  useEffect(() => {
+    const loadPasskeys = async () => {
+      setIsLoadingPasskeys(true);
+      try {
+        const result = await authClient.passkey.listUserPasskeys();
+        if (result.data) {
+          setPasskeys(result.data);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsLoadingPasskeys(false);
+      }
+    };
+
+    if (profile) {
+      void loadPasskeys();
+    }
+  }, [profile]);
 
   const handleAddPasskey = useCallback(async () => {
     setIsAddingPasskey(true);
@@ -262,77 +237,109 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
       title="Profile"
     >
       <div className="flex flex-col gap-4 p-4">
-        <form className="space-y-2" onSubmit={handleSubmit}>
-          <Input
-            autoComplete="name"
-            disabled={isLoadingProfile || updateProfile.isPending}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, name: event.target.value }))
-            }
-            placeholder="Name"
-            value={form.name}
-          />
-          <Input
-            autoComplete="email"
-            disabled={isLoadingProfile || updateProfile.isPending}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, email: event.target.value }))
-            }
-            placeholder="Email"
-            type="email"
-            value={form.email}
-          />
-          <Input
-            disabled={isLoadingProfile || updateProfile.isPending}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, avatar: event.target.value }))
-            }
-            placeholder="Avatar URL"
-            type="url"
-            value={form.avatar}
-          />
-          <Input
-            disabled={isLoadingProfile || updateProfile.isPending}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, timezone: event.target.value }))
-            }
-            placeholder="Timezone (e.g. America/New_York)"
-            value={form.timezone}
-          />
-          <Button
-            className="w-full"
-            disabled={!hasChanges || updateProfile.isPending || isLoadingProfile}
-            type="submit"
+        <form
+          className="space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field name="name">
+            {(field) => (
+              <Input
+                autoComplete="name"
+                disabled={isLoadingProfile || updateProfile.isPending}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Name"
+                value={field.state.value}
+              />
+            )}
+          </form.Field>
+          <form.Field name="email">
+            {(field) => (
+              <Input
+                autoComplete="email"
+                disabled={isLoadingProfile || updateProfile.isPending}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Email"
+                type="email"
+                value={field.state.value}
+              />
+            )}
+          </form.Field>
+          <form.Field name="avatar">
+            {(field) => (
+              <Input
+                disabled={isLoadingProfile || updateProfile.isPending}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Avatar URL"
+                type="url"
+                value={field.state.value}
+              />
+            )}
+          </form.Field>
+          <form.Field name="timezone">
+            {(field) => (
+              <Input
+                disabled={isLoadingProfile || updateProfile.isPending}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Timezone (e.g. America/New_York)"
+                value={field.state.value}
+              />
+            )}
+          </form.Field>
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
-            {updateProfile.isPending ? "Saving…" : "Save changes"}
-          </Button>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                className="w-full"
+                disabled={!canSubmit || isLoadingProfile}
+                type="submit"
+              >
+                {isSubmitting || updateProfile.isPending
+                  ? "Saving…"
+                  : "Save changes"}
+              </Button>
+            )}
+          </form.Subscribe>
         </form>
 
         <section className="space-y-2">
-           <div className="flex items-center justify-between">
-            <p className="text-biolum text-sm font-medium">Voice</p>
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-biolum text-sm">Voice</p>
             <Volume2 className="h-4 w-4 text-indigo-200" />
-           </div>
-           <VoiceSelector 
-              value={currentVoice as string | undefined}
-              onValueChange={handleVoiceChange}
-           />
-        </section>
-
-        <section className="space-y-2">
-           <div className="flex items-center justify-between">
-            <p className="text-biolum text-sm font-medium">Language</p>
-           </div>
-           <Input
-              placeholder="e.g. en, es, fr (Auto if empty)"
-              value={(currentLanguage as string) ?? ""}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-           />
+          </div>
+          <VoiceSelector
+            onValueChange={handleVoiceChange}
+            value={currentVoice as string | undefined}
+          />
         </section>
 
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-biolum text-sm font-medium">Passkeys</p>
+            <p className="font-medium text-biolum text-sm">Language</p>
+          </div>
+          <Input
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            placeholder="e.g. en, es, fr (Auto if empty)"
+            value={(currentLanguage as string) ?? ""}
+          />
+        </section>
+
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-biolum text-sm">Passkeys</p>
             <Button
               disabled={isAddingPasskey}
               onClick={handleAddPasskey}
@@ -345,25 +352,31 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
           </div>
           <ScrollArea className="h-[180px] rounded-md border border-white/10">
             {isLoadingPasskeys ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">
+              <p className="p-3 text-center text-biolum-faint text-sm">
                 Loading passkeys…
               </p>
             ) : passkeys.length === 0 ? (
-              <p className="p-3 text-center text-sm text-biolum-faint">
+              <p className="p-3 text-center text-biolum-faint text-sm">
                 No passkeys yet.
               </p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {passkeys.map((passkey) => (
-                  <li className="flex items-center justify-between p-3" key={passkey.id}>
+                  <li
+                    className="flex items-center justify-between p-3"
+                    key={passkey.id}
+                  >
                     <div>
-                      <p className="text-sm font-medium">{passkey.name}</p>
+                      <p className="font-medium text-sm">{passkey.name}</p>
                       {passkey.deviceType && (
-                        <p className="text-xs text-biolum-faint">{passkey.deviceType}</p>
+                        <p className="text-biolum-faint text-xs">
+                          {passkey.deviceType}
+                        </p>
                       )}
                       {passkey.createdAt && (
-                        <p className="text-xs text-biolum-faint">
-                          Added {new Date(passkey.createdAt).toLocaleDateString()}
+                        <p className="text-biolum-faint text-xs">
+                          Added{" "}
+                          {new Date(passkey.createdAt).toLocaleDateString()}
                         </p>
                       )}
                     </div>

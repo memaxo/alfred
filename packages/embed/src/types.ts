@@ -22,18 +22,17 @@ export type EmbedResponse = {
   };
 };
 
-export interface EmbedConfig {
+export type EmbedConfig = {
   modelName?: string;
   device?: "auto" | "cpu" | "rocm" | "mps";
   poolSize?: number;
   requestTimeout?: number;
-}
+};
 
-export interface ProcessHealth {
+export type ProcessHealth = {
   isHealthy: boolean;
   lastPing: number | null;
   requestCount: number;
   errorCount: number;
   uptime: number;
-}
-
+};

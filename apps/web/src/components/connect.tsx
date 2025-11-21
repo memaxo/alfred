@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
 
 export type ChatStatus = "ready" | "submitted" | "streaming" | "error";
 
-interface ConnectProps {
+type ConnectProps = {
   status: ChatStatus | string;
   agent?: "assistant" | "orchestrator";
   className?: string;
-}
+};
 
 export function Connect({ status, agent, className }: ConnectProps) {
   const statusConfig = {
@@ -46,11 +46,10 @@ export function Connect({ status, agent, className }: ConnectProps) {
   const config = statusConfig[status as ChatStatus] ?? statusConfig.ready;
 
   return (
-    <div
+    <output
       aria-label={`Connection status: ${config.ariaLabel}`}
       aria-live="polite"
       className={cn("flex items-center gap-2", className)}
-      role="status"
     >
       <div
         aria-hidden="true"
@@ -62,6 +61,6 @@ export function Connect({ status, agent, className }: ConnectProps) {
       {agent && (
         <span className="text-muted-foreground text-xs">({agent})</span>
       )}
-    </div>
+    </output>
   );
 }

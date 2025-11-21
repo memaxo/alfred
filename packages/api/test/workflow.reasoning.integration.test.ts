@@ -4,7 +4,15 @@ process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.OPENAI_API_KEY ??= "test-key";
 
-import { afterAll, afterEach, beforeAll, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 import {
   createWorkflowCaller,
   type WorkflowTestUser,
@@ -19,7 +27,7 @@ let workflowRunsTable: typeof import("@alfred/db/schema/workflow").workflowRuns;
 let workflowEventsTable: typeof import("@alfred/db/schema/workflow").workflowEvents;
 
 mock.module("@alfred/db/repo/policy", () => ({
-  createAuditLog: async () => undefined,
+  createAuditLog: async () => {},
 }));
 
 mock.module("@alfred/policy", () => ({
@@ -37,7 +45,9 @@ const TEST_USER: WorkflowTestUser = {
 
 describe("workflow reasoning integration (sqlite)", () => {
   beforeAll(async () => {
-    ({ persistReasoning } = await import("../../agent/assistant/src/graphstore.ts"));
+    ({ persistReasoning } = await import(
+      "../../agent/assistant/src/graphstore.ts"
+    ));
     workflowRepo = await import("@alfred/db/repo/workflow");
     const dbModule = await import("@alfred/db");
     db = dbModule.db;
@@ -51,7 +61,7 @@ describe("workflow reasoning integration (sqlite)", () => {
 
   afterAll(() => {
     if (ORIGINAL_DB_URL === undefined) {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = ORIGINAL_DB_URL;
     }
@@ -77,7 +87,7 @@ describe("workflow reasoning integration (sqlite)", () => {
       inputData: {
         cw: resource,
         executionId: runId,
-        reasoningSince: now - 1_000,
+        reasoningSince: now - 1000,
       },
     });
 

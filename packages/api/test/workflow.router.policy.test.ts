@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import "./utils/mock-metrics";
-import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 
@@ -12,7 +12,6 @@ mock.module("@alfred/db/src/repo/graph", () => ({
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
   upsertEdges: vi.fn().mockResolvedValue(undefined),
 }));
-
 
 // Mock policy evaluate to attach an obligation
 const evaluateMock = vi.fn();
@@ -43,7 +42,10 @@ mock.module("@alfred/api/workflow/runner", () => ({
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
-  caller = await createTestCaller({ roles: ["user"], scopes: ["workflow.start"] });
+  caller = await createTestCaller({
+    roles: ["user"],
+    scopes: ["workflow.start"],
+  });
 });
 
 afterEach(() => {
@@ -52,7 +54,10 @@ afterEach(() => {
 
 describe("workflow router policy obligations", () => {
   it("rejects medium autonomy when biometric obligation present", async () => {
-    evaluateMock.mockResolvedValue({ allow: true, obligations: ["requireBio"] });
+    evaluateMock.mockResolvedValue({
+      allow: true,
+      obligations: ["requireBio"],
+    });
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
       summary: "stub",
@@ -67,7 +72,10 @@ describe("workflow router policy obligations", () => {
   });
 
   it("rejects stream when biometric obligation present (PRECONDITION_FAILED)", async () => {
-    evaluateMock.mockResolvedValue({ allow: true, obligations: ["requireBio"] });
+    evaluateMock.mockResolvedValue({
+      allow: true,
+      obligations: ["requireBio"],
+    });
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
       summary: "stub",
@@ -76,7 +84,9 @@ describe("workflow router policy obligations", () => {
       cancel: () => {},
     });
 
-    const sub: any = toObservable(caller.workflow.stream({ requirement: "do X", auto: "medium" }));
+    const sub: any = toObservable(
+      caller.workflow.stream({ requirement: "do X", auto: "medium" })
+    );
     await new Promise<void>((resolve) => {
       sub.subscribe({
         next: () => resolve(),

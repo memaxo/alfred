@@ -3,12 +3,12 @@
  * Document and chunk operations with vector embeddings
  */
 
-import { rerank, type RerankTelemetry } from "@alfred/rag";
+import { type RerankTelemetry, rerank } from "@alfred/rag";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../index";
 import { ragChunks, ragDocuments } from "../schema/rag";
 
-type DocumentInsert = typeof ragDocuments.$inferInsert;
+// type DocumentInsert = typeof ragDocuments.$inferInsert;
 type DocumentRow = typeof ragDocuments.$inferSelect;
 type ChunkInsert = typeof ragChunks.$inferInsert;
 type ChunkRow = typeof ragChunks.$inferSelect;
@@ -247,7 +247,7 @@ export async function searchChunksHybrid({
     `;
 
     const result = await tx.execute(hybridQuery);
-    let hybridResults = (result.rows as Array<ChunkSearchResult>)
+    let hybridResults = (result.rows as ChunkSearchResult[])
       .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
       .slice(0, limit);
 
@@ -298,19 +298,15 @@ function buildRerankTelemetry(query: string, model: string): RerankTelemetry {
 
   const log = (level: "info" | "error", payload: Record<string, unknown>) => {
     if (logJson) {
-      const line = JSON.stringify({ level, event: "rag.rerank", ...payload });
+      const _line = JSON.stringify({ level, event: "rag.rerank", ...payload });
       if (level === "info") {
-        console.log(line);
       } else {
-        console.error(line);
       }
       return;
     }
 
     if (level === "info") {
-      console.log("[rag.rerank.ok]", payload);
     } else {
-      console.error("[rag.rerank.error]", payload);
     }
   };
 

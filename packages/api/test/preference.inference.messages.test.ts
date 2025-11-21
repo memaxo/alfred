@@ -57,10 +57,9 @@ mock.module("@alfred/agent/preference/loader", () => ({
   invalidatePreferenceCache: invalidatePreferenceCacheMock,
 }));
 
-const {
-  validateConversationMessages,
-  runPreferenceInference,
-} = await import("../src/scheduler/preference-inference");
+const { validateConversationMessages, runPreferenceInference } = await import(
+  "../src/scheduler/preference-inference"
+);
 
 function createToolMessage(
   type: "tool-call" | "tool-result",
@@ -174,7 +173,9 @@ describe("runPreferenceInference", () => {
       updated: new Date(),
     };
 
-    conversationRepoMock.getConversations.mockResolvedValueOnce([conversationRow]);
+    conversationRepoMock.getConversations.mockResolvedValueOnce([
+      conversationRow,
+    ]);
     conversationRepoMock.getConversationHistory.mockResolvedValueOnce({
       conversation: conversationRow,
       messages: historyMessages,
@@ -235,7 +236,9 @@ describe("runPreferenceInference", () => {
       updated: new Date(),
     };
 
-    conversationRepoMock.getConversations.mockResolvedValueOnce([conversationRow]);
+    conversationRepoMock.getConversations.mockResolvedValueOnce([
+      conversationRow,
+    ]);
     conversationRepoMock.getConversationHistory.mockResolvedValueOnce({
       conversation: conversationRow,
       messages: [toolCall, toolResult, ...filler],

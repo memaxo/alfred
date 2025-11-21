@@ -1,29 +1,27 @@
 /**
  * Cognitive Engine Wrapper
- * 
+ *
  * Wraps pure cognitive state functions from @alfred/cognitive
  * Provides runtime context around domain functions without adding side effects
  */
 
 import {
+  type AutonomyGradient,
+  type CognitiveState,
   capturing,
-  thinking,
+  type Decision,
   deciding,
   executing,
-  reflecting,
   idle,
-  type CognitiveState,
-  type Decision,
-  type Plan,
   type Outcome,
+  type Plan,
+  reflecting,
+  thinking,
 } from "@alfred/cognitive/state";
-
-// AutonomyGradient is a branded number type from cognitive package
-type AutonomyGradient = number;
 
 /**
  * CognitiveEngine provides domain function wrappers
- * 
+ *
  * All methods are pure - they call domain functions and return results.
  * No side effects, no persistence, no metrics.
  */
@@ -60,7 +58,7 @@ export class CognitiveEngine {
    * Transition to executing state (running plan)
    */
   execute(plan: Plan, auto: AutonomyGradient): CognitiveState {
-    return executing(plan, auto as any);
+    return executing(plan, auto);
   }
 
   /**
@@ -70,4 +68,3 @@ export class CognitiveEngine {
     return reflecting(outcome, expected, actual);
   }
 }
-

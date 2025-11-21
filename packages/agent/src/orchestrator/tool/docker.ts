@@ -56,7 +56,9 @@ function safeRealpath(candidate: string) {
 function isWithinBase(base: string, target: string) {
   const baseReal = safeRealpath(base);
   const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
+  if (!(baseReal && targetReal)) {
+    return false;
+  }
   const relative = path.relative(baseReal, targetReal);
   return (
     relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
@@ -124,6 +126,13 @@ const dockerInputSchema = z.object({
   hostPort: z.number().int().min(1).max(65_535).optional(),
   env: z.record(z.string(), z.string()).optional(),
   network: z.string().optional(),
+  volumes: z.array(z.string()).optional(), // Phase 11: Volume mounts
+  resources: z
+    .object({
+      cpus: z.number().min(0.1).max(16).optional(),
+      memory: z.string().optional(),
+    })
+    .optional(),
   authz: z.string().optional(),
   follow: z.boolean().optional(),
   tail: z.number().int().min(0).max(5000).optional(),
@@ -162,7 +171,9 @@ function ensure(value: string | undefined, error: string) {
 }
 
 function resolveCwd(candidate: string | undefined) {
-  if (!candidate) return process.cwd();
+  if (!candidate) {
+    return process.cwd();
+  }
   return assertAllowedDirectory(candidate);
 }
 
@@ -229,7 +240,9 @@ async function runDocker({
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           const text = decoder.decode(value);
           accumulator.capturedBytes += Buffer.byteLength(text);
@@ -261,7 +274,9 @@ async function runDocker({
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           const text = decoder.decode(value);
           if (accumulator.stderr.length + text.length <= OUTPUT_CAP_BYTES) {
@@ -297,24 +312,38 @@ async function runDocker({
 type InspectPortMapping = { host: number; container: number };
 
 function parseInspectPorts(raw: unknown, containerPort?: number) {
-  if (!Array.isArray(raw) || raw.length === 0) return [];
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return [];
+  }
   const first = raw[0] as Record<string, unknown>;
   const networkSettings = first?.NetworkSettings;
-  if (typeof networkSettings !== "object" || !networkSettings) return [];
+  if (typeof networkSettings !== "object" || !networkSettings) {
+    return [];
+  }
   const ports = (networkSettings as Record<string, unknown>).Ports;
-  if (typeof ports !== "object" || !ports) return [];
+  if (typeof ports !== "object" || !ports) {
+    return [];
+  }
 
   const results: InspectPortMapping[] = [];
   for (const [key, value] of Object.entries(ports as Record<string, unknown>)) {
     const [containerPortRaw] = key.split("/");
-    if (!containerPortRaw) continue;
+    if (!containerPortRaw) {
+      continue;
+    }
     const containerInt = Number.parseInt(containerPortRaw, 10);
-    if (Number.isNaN(containerInt)) continue;
-    if (containerPort && containerInt !== containerPort) continue;
+    if (Number.isNaN(containerInt)) {
+      continue;
+    }
+    if (containerPort && containerInt !== containerPort) {
+      continue;
+    }
 
     if (Array.isArray(value)) {
       for (const binding of value) {
-        if (!binding) continue;
+        if (!binding) {
+          continue;
+        }
         const hostPort = Number.parseInt(
           (binding as Record<string, string>).HostPort ?? "",
           10
@@ -379,6 +408,21 @@ async function executeRun(input: DockerInput, writer: ToolWriter) {
   if (input.env) {
     for (const [key, value] of Object.entries(input.env)) {
       args.push("-e", `${key}=${value}`);
+    }
+  }
+
+  if (input.volumes) {
+    for (const vol of input.volumes) {
+      args.push("-v", vol);
+    }
+  }
+
+  if (input.resources) {
+    if (input.resources.cpus) {
+      args.push("--cpus", String(input.resources.cpus));
+    }
+    if (input.resources.memory) {
+      args.push("--memory", input.resources.memory);
     }
   }
 

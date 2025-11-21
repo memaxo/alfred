@@ -12,32 +12,34 @@ export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-3">
-        <h2 className="text-biolum tracking-tighter text-2xl font-bold">
+      <div className="space-y-3 text-center">
+        <h2 className="font-bold text-2xl text-biolum tracking-tighter">
           Connect Your Tools
         </h2>
         <p className="text-biolum-dim">
-          Connect ALFRED with your favorite tools. You can skip this and connect later.
+          Connect ALFRED with your favorite tools. You can skip this and connect
+          later.
         </p>
       </div>
 
       <div className="space-y-4">
         {/* Linear */}
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
+        <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-biolum tracking-tight font-medium mb-1">
+              <h3 className="mb-1 font-medium text-biolum tracking-tight">
                 Linear
               </h3>
               <p className="text-biolum-dim text-sm">
-                Project management and issue tracking with real-time activity updates.
+                Project management and issue tracking with real-time activity
+                updates.
               </p>
             </div>
             <Button
-              onClick={handleLinearConnect}
-              variant="outline"
-              size="sm"
               className="rounded-full"
+              onClick={handleLinearConnect}
+              size="sm"
+              variant="outline"
             >
               Connect
               <ExternalLink className="ml-2 h-3 w-3" />
@@ -46,10 +48,10 @@ export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
         </div>
 
         {/* Laminar */}
-        <div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
+        <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-biolum tracking-tight font-medium mb-1">
+              <h3 className="mb-1 font-medium text-biolum tracking-tight">
                 Laminar
               </h3>
               <p className="text-biolum-dim text-sm">
@@ -57,10 +59,10 @@ export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
               </p>
             </div>
             <Button
-              variant="outline"
-              size="sm"
               className="rounded-full"
               disabled
+              size="sm"
+              variant="outline"
             >
               Coming Soon
             </Button>
@@ -70,9 +72,9 @@ export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
 
       <div className="flex justify-center pt-4">
         <Button
+          className="text-biolum-dim hover:text-biolum"
           onClick={onSkip}
           variant="ghost"
-          className="text-biolum-dim hover:text-biolum"
         >
           Skip for now
         </Button>
@@ -80,4 +82,3 @@ export function IntegrationsStep({ onSkip }: IntegrationsStepProps) {
     </div>
   );
 }
-

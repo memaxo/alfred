@@ -7,9 +7,9 @@ export type MergeResult = {
   error?: string;
 };
 
-export interface GitTool {
+export type GitTool = {
   execute(args: { input: any; writer?: any }): Promise<any>;
-}
+};
 
 export async function executeMergePlan(
   plan: MergePlan,
@@ -35,7 +35,7 @@ export async function executeMergePlan(
           action: "merge",
           ref: branch,
           cw: workspace,
-          authz: authz, 
+          authz,
         },
         writer,
       });

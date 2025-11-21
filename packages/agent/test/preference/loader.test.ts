@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 const createPreferenceRow = (value = "concise") => ({
   id: `pref-${value}`,
@@ -90,7 +98,8 @@ describe("loadPreferences", () => {
       durations.push(performance.now() - start);
     }
 
-    const avg = durations.reduce((total, duration) => total + duration, 0) /
+    const avg =
+      durations.reduce((total, duration) => total + duration, 0) /
       durations.length;
 
     expect(avg).toBeLessThan(1.2);
@@ -107,7 +116,8 @@ describe("loadPreferences", () => {
       durations.push(performance.now() - start);
     }
 
-    const avg = durations.reduce((total, duration) => total + duration, 0) /
+    const avg =
+      durations.reduce((total, duration) => total + duration, 0) /
       durations.length;
 
     expect(avg).toBeLessThan(10);

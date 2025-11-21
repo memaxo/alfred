@@ -8,12 +8,7 @@ export const verbositySchema = z.enum([
   "verbose",
 ]);
 
-export const toneSchema = z.enum([
-  "formal",
-  "casual",
-  "technical",
-  "friendly",
-]);
+export const toneSchema = z.enum(["formal", "casual", "technical", "friendly"]);
 
 export const formatSchema = z.enum([
   "bullet",
@@ -22,11 +17,7 @@ export const formatSchema = z.enum([
   "narrative",
 ]);
 
-export const explanationDepthSchema = z.enum([
-  "surface",
-  "moderate",
-  "deep",
-]);
+export const explanationDepthSchema = z.enum(["surface", "moderate", "deep"]);
 
 export const domainNameSchema = z.enum([
   "general",
@@ -59,7 +50,7 @@ export const preferenceValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
-  z.record(z.unknown()),
+  z.record(z.string(), z.unknown()),
   z.array(z.unknown()),
 ]);
 

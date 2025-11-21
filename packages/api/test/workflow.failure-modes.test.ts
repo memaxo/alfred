@@ -7,6 +7,7 @@
 
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
+import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
   mockRunRegistry,
@@ -15,7 +16,6 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { metricsStub } from "./utils/mock-metrics";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -64,7 +64,7 @@ afterEach(() => {
   multiAgentWavesTotalMock.inc.mockReset();
   multiAgentAgentDurationSecondsMock.observe.mockReset();
   multiAgentErrorsTotalMock.inc.mockReset();
-  delete process.env.USE_WORKFLOW_RUNTIME;
+  process.env.USE_WORKFLOW_RUNTIME = undefined;
 });
 
 describe("workflow failure modes (runtime)", () => {
@@ -136,7 +136,9 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({ requirement: "test failure" });
+    const subscription = caller.workflow.stream({
+      requirement: "test failure",
+    });
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({
@@ -197,7 +199,9 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({ requirement: "need guidance" });
+    const subscription = caller.workflow.stream({
+      requirement: "need guidance",
+    });
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({
@@ -249,7 +253,9 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({ requirement: "merge conflict" });
+    const subscription = caller.workflow.stream({
+      requirement: "merge conflict",
+    });
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({

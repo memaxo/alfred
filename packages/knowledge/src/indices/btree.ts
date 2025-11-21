@@ -10,14 +10,15 @@ class BTreeNode<K, V> {
 }
 
 const defaultCompare = (a: unknown, b: unknown): number => {
-  if (a === b) return 0;
+  if (a === b) {
+    return 0;
+  }
   return (a as string) < (b as string) ? -1 : 1;
 };
 
 export class BTreeIndex<K = string, V = NodeId> {
   private root: BTreeNode<K, V>;
   private readonly maxKeys: number;
-  private readonly minKeys: number;
 
   constructor(
     readonly order = 64,
@@ -83,11 +84,17 @@ export class BTreeIndex<K = string, V = NodeId> {
   private insertNonFull(node: BTreeNode<K, V>, key: K, value: V): void {
     if (node.leaf) {
       let i = node.keys.length - 1;
-      while (i >= 0 && this.compare(key, node.keys[i]!) < 0) {
-        i--;
+      while (i >= 0) {
+        const k = node.keys[i];
+        if (k !== undefined && this.compare(key, k) < 0) {
+          i--;
+        } else {
+          break;
+        }
       }
-      if (i >= 0 && this.compare(key, node.keys[i]!) === 0) {
-        node.values[i]!.push(value);
+      const k = node.keys[i];
+      if (i >= 0 && k !== undefined && this.compare(key, k) === 0) {
+        node.values[i]?.push(value);
         return;
       }
       node.keys.splice(i + 1, 0, key);
@@ -95,27 +102,47 @@ export class BTreeIndex<K = string, V = NodeId> {
       return;
     }
     let idx = node.keys.length - 1;
-    while (idx >= 0 && this.compare(key, node.keys[idx]!) < 0) {
-      idx--;
+    while (idx >= 0) {
+      const k = node.keys[idx];
+      if (k !== undefined && this.compare(key, k) < 0) {
+        idx--;
+      } else {
+        break;
+      }
     }
     idx++;
-    if (node.children[idx]!.keys.length === this.maxKeys) {
+    if (node.children[idx]?.keys.length === this.maxKeys) {
       this.splitChild(node, idx);
-      if (this.compare(key, node.keys[idx]!) > 0) {
+      const k = node.keys[idx];
+      if (k !== undefined && this.compare(key, k) > 0) {
         idx++;
-      } else if (this.compare(key, node.keys[idx]!) === 0) {
-        node.values[idx]!.push(value);
+      } else if (k !== undefined && this.compare(key, k) === 0) {
+        node.values[idx]?.push(value);
         return;
       }
     }
-    this.insertNonFull(node.children[idx]!, key, value);
+    const child = node.children[idx];
+    if (child) {
+      this.insertNonFull(child, key, value);
+    }
   }
 
   private splitChild(parent: BTreeNode<K, V>, index: number): void {
-    const child = parent.children[index]!;
+    const child = parent.children[index];
+    if (!child) {
+      throw new Error("splitChild: child not found");
+    }
+
     const mid = Math.floor(child.keys.length / 2);
-    const medianKey = child.keys[mid]!;
-    const medianValues = child.values[mid]!;
+    const medianKey = child.keys[mid];
+    if (medianKey === undefined) {
+      throw new Error("splitChild: medianKey not found");
+    }
+
+    const medianValues = child.values[mid];
+    if (!medianValues) {
+      throw new Error("splitChild: medianValues not found");
+    }
 
     const right = new BTreeNode<K, V>(child.leaf);
     right.keys = child.keys.slice(mid + 1);
@@ -140,68 +167,109 @@ export class BTreeIndex<K = string, V = NodeId> {
     acc: V[]
   ): void {
     let i = 0;
-    while (i < node.keys.length && this.compare(node.keys[i]!, start) < 0) {
-      if (!node.leaf) {
-        this.rangeInternal(node.children[i]!, start, end, acc);
+    while (i < node.keys.length) {
+      const k = node.keys[i];
+      if (k !== undefined && this.compare(k, start) < 0) {
+        if (!node.leaf) {
+          const child = node.children[i];
+          if (child) {
+            this.rangeInternal(child, start, end, acc);
+          }
+        }
+        i++;
+      } else {
+        break;
       }
-      i++;
     }
     for (; i < node.keys.length; i++) {
       if (!node.leaf) {
-        this.rangeInternal(node.children[i]!, start, end, acc);
+        const child = node.children[i];
+        if (child) {
+          this.rangeInternal(child, start, end, acc);
+        }
       }
-      if (
-        this.compare(node.keys[i]!, start) >= 0 &&
-        this.compare(node.keys[i]!, end) <= 0
-      ) {
-        acc.push(...node.values[i]!);
+      const k = node.keys[i];
+      if (k === undefined) {
+        continue;
       }
-      if (this.compare(node.keys[i]!, end) > 0) {
+
+      if (this.compare(k, start) >= 0 && this.compare(k, end) <= 0) {
+        const vals = node.values[i];
+        if (vals) {
+          acc.push(...vals);
+        }
+      }
+      if (this.compare(k, end) > 0) {
         if (!node.leaf) {
-          this.rangeInternal(node.children[i + 1]!, start, end, acc);
+          const child = node.children[i + 1];
+          if (child) {
+            this.rangeInternal(child, start, end, acc);
+          }
         }
         return;
       }
     }
-    if (!node.leaf && node.children[node.keys.length]) {
-      this.rangeInternal(
-        node.children[node.keys.length]!,
-        start,
-        end,
-        acc
-      );
+    if (!node.leaf) {
+      const child = node.children[node.keys.length];
+      if (child) {
+        this.rangeInternal(child, start, end, acc);
+      }
     }
   }
 
   private search(node: BTreeNode<K, V>, key: K): V[] | undefined {
     let i = 0;
-    while (i < node.keys.length && this.compare(key, node.keys[i]!) > 0) {
-      i++;
+    while (i < node.keys.length) {
+      const k = node.keys[i];
+      if (k !== undefined && this.compare(key, k) > 0) {
+        i++;
+      } else {
+        break;
+      }
     }
-    if (i < node.keys.length && this.compare(key, node.keys[i]!) === 0) {
-      return node.values[i]!;
+    const k = node.keys[i];
+    if (i < node.keys.length && k !== undefined && this.compare(key, k) === 0) {
+      return node.values[i];
     }
     if (node.leaf) {
-      return undefined;
+      return;
     }
-    return this.search(node.children[i]!, key);
+    const child = node.children[i];
+    if (child) {
+      return this.search(child, key);
+    }
+    return;
   }
 
   private collectAll(node: BTreeNode<K, V>, acc: Array<{ key: K; value: V }>) {
     if (node.leaf) {
       for (let i = 0; i < node.keys.length; i++) {
-        for (const value of node.values[i]!) {
-          acc.push({ key: node.keys[i]!, value });
+        const key = node.keys[i];
+        const values = node.values[i];
+        if (key !== undefined && values) {
+          for (const value of values) {
+            acc.push({ key, value });
+          }
         }
       }
       return;
     }
     for (let i = 0; i < node.keys.length; i++) {
-      this.collectAll(node.children[i]!, acc);
-      for (const value of node.values[i]!) {
-        acc.push({ key: node.keys[i]!, value });
+      const child = node.children[i];
+      if (child) {
+        this.collectAll(child, acc);
+      }
+      const key = node.keys[i];
+      const values = node.values[i];
+      if (key !== undefined && values) {
+        for (const value of values) {
+          acc.push({ key, value });
+        }
       }
     }
-    this.collectAll(node.children[node.keys.length]!, acc);
+    const child = node.children[node.keys.length];
+    if (child) {
+      this.collectAll(child, acc);
+    }
   }
 }

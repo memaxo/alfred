@@ -12,8 +12,12 @@ type Metrics = {
 };
 let metricsRef: Metrics | null = null;
 async function getMetrics(): Promise<Metrics | null> {
-  if (process.env.DISABLE_TRPC_METRICS === "1") return null;
-  if (metricsRef) return metricsRef;
+  if (process.env.DISABLE_TRPC_METRICS === "1") {
+    return null;
+  }
+  if (metricsRef) {
+    return metricsRef;
+  }
   try {
     const m = await import("@alfred/api/metrics");
     metricsRef = {
@@ -31,7 +35,8 @@ async function getMetrics(): Promise<Metrics | null> {
 const metricsMiddleware = t.middleware(async ({ path, type, next }) => {
   const labels = { procedure: path ?? "unknown", type };
   const m = await getMetrics();
-  const stopTimer = m?.trpcRequestDurationSeconds.startTimer(labels) ?? (() => {});
+  const stopTimer =
+    m?.trpcRequestDurationSeconds.startTimer(labels) ?? (() => {});
 
   try {
     const result = await next();
@@ -92,7 +97,9 @@ function getLimitPerMinute() {
 }
 
 function rateKey(userId: string | null, procedure?: string, type?: string) {
-  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(":");
+  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(
+    ":"
+  );
 }
 
 export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
@@ -105,7 +112,10 @@ export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
   } else if (bucket.count + 1 > getLimitPerMinute()) {
     const m = await getMetrics();
     m?.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS" as any, message: "rate_limited" });
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS" as any,
+      message: "rate_limited",
+    });
   } else {
     bucket.count++;
   }

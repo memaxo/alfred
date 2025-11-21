@@ -1,8 +1,8 @@
-import { STTPool, type ProcessConfig } from "@alfred/voice/process/stt_pool";
-import { TTSPool } from "@alfred/voice/process/tts_pool";
-import { VoiceSessionManager } from "./session";
 import { join } from "node:path";
-import { logger } from "../utils/logger";
+import { logger } from "@alfred/logger";
+import { type ProcessConfig, STTPool } from "@alfred/voice/process/stt";
+import { TTSPool } from "@alfred/voice/process/tts";
+import { VoiceSessionManager } from "./session";
 
 // Re-export ProcessConfig for use in this package
 export type { ProcessConfig };
@@ -16,29 +16,38 @@ export function getVoicePools(): {
   ttsPool: TTSPool;
   sessionManager: VoiceSessionManager;
 } {
-  if (!sttPool || !ttsPool || !sessionManager) {
-    throw new Error("Voice pools not initialized. Call initializeVoicePools() first.");
+  if (!(sttPool && ttsPool && sessionManager)) {
+    throw new Error(
+      "Voice pools not initialized. Call initializeVoicePools() first."
+    );
   }
   return { sttPool, ttsPool, sessionManager };
 }
 
 export async function initializeVoicePools(): Promise<void> {
   if (sttPool || ttsPool) {
-    console.warn("[voice] Voice pools already initialized, skipping re-initialization");
     return;
   }
 
   const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
-  
+
   if (voiceProvider !== "local") {
     // OpenAI provider - pools not needed
     return;
   }
 
-  const whisperModelPath = process.env.WHISPER_MODEL_PATH ?? "large-v3-turbo";
-  const piperModelPath = process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
-  const sttPoolSize = parseInt(process.env.VOICE_STT_POOL_SIZE ?? "2", 10);
-  const ttsPoolSize = parseInt(process.env.VOICE_TTS_POOL_SIZE ?? "2", 10);
+  const whisperModelPath =
+    process.env.WHISPER_MODEL_PATH ?? "nvidia/parakeet_realtime_eou_120m-v1";
+  const piperModelPath =
+    process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
+  const sttPoolSize = Number.parseInt(
+    process.env.VOICE_STT_POOL_SIZE ?? "2",
+    10
+  );
+  const ttsPoolSize = Number.parseInt(
+    process.env.VOICE_TTS_POOL_SIZE ?? "1", // Default to 1 for Maya1 (heavy model)
+    10
+  );
 
   function getDefaultDevice(): string {
     if (process.platform === "darwin") {
@@ -54,11 +63,14 @@ export async function initializeVoicePools(): Promise<void> {
     computeType: process.env.WHISPER_COMPUTE_TYPE ?? "int8",
   };
 
-  // TTS now uses TypeScript implementation (no scriptPath needed)
+  // TTS Provider Selection
+  // Default to maya1 if not specified, unless TTS_PROVIDER env var is set
+  // Note: TTSPool constructor now checks TTS_PROVIDER env var directly.
+
   const ttsConfig: ProcessConfig = {
-    scriptPath: "", // Not used for TypeScript TTS implementation
-    modelPath: piperModelPath,
-    voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium",
+    scriptPath: join(process.cwd(), "packages/voice/scripts/maya_tts.py"),
+    modelPath: piperModelPath, // Ignored by Maya1 (uses HF), but kept for type compatibility
+    voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium", // Will be used as description default if not provided in request
   };
 
   try {
@@ -77,28 +89,33 @@ export async function initializeVoicePools(): Promise<void> {
         const sttActive = sttPool.activeCount ?? 0;
         const sttSize = sttPool.size ?? 1;
         if (sttActive >= sttSize) {
-          logger.warn("voice_pool_saturation", { pool: "stt", active: sttActive, size: sttSize });
+          logger.warn("voice_pool_saturation", {
+            pool: "stt",
+            active: sttActive,
+            size: sttSize,
+          });
         }
       }
       if (ttsPool) {
         const ttsActive = ttsPool.activeCount ?? 0;
         const ttsSize = ttsPool.size ?? 1;
         if (ttsActive >= ttsSize) {
-          logger.warn("voice_pool_saturation", { pool: "tts", active: ttsActive, size: ttsSize });
+          logger.warn("voice_pool_saturation", {
+            pool: "tts",
+            active: ttsActive,
+            size: ttsSize,
+          });
         }
       }
-    }, 15000).unref();
-
-    console.log("[voice] Voice pools initialized");
+    }, 15_000).unref();
   } catch (error) {
-    console.error("[voice] Failed to initialize voice pools:", error);
     // Clean up partial initialization
     if (sttPool) {
-      await sttPool.shutdown().catch(console.error);
+      await sttPool.shutdown().catch(() => {});
       sttPool = null;
     }
     if (ttsPool) {
-      await ttsPool.shutdown().catch(console.error);
+      await ttsPool.shutdown().catch(() => {});
       ttsPool = null;
     }
     throw error;
@@ -119,4 +136,3 @@ export async function shutdownVoicePools(): Promise<void> {
     ttsPool = null;
   }
 }
-

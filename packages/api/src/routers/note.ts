@@ -4,10 +4,10 @@ import {
   getNotes,
   updateNote,
 } from "@alfred/db/repo/assistant";
+import { logger } from "@alfred/logger";
 import { ingest } from "@alfred/rag";
 import z from "zod";
 import { authedProcedure, router } from "../trpc";
-import { logger } from "../utils/logger";
 
 // Constants
 const MAX_NOTE_TITLE_LENGTH = 256;

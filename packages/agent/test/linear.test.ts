@@ -106,9 +106,7 @@ describe("linear helpers", () => {
     expect(extractIssueIdFromSession("")).toBeNull();
     expect(extractIssueIdFromSession("   ")).toBeNull();
     expect(
-      extractIssueIdFromSession(
-        "session_abc123_2025-11-12T07:00:00.000Z"
-      )
+      extractIssueIdFromSession("session_abc123_2025-11-12T07:00:00.000Z")
     ).toBe("session_abc123_2025-11-12T07:00:00.000Z");
   });
 });

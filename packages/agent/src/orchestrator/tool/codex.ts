@@ -1,9 +1,4 @@
-import {
-  accessSync,
-  constants as fsConstants,
-  realpathSync,
-  statSync,
-} from "node:fs";
+import { accessSync, constants as fsConstants, statSync } from "node:fs";
 import path from "node:path";
 import {
   clearTimeout as clearNodeTimeout,
@@ -24,45 +19,23 @@ import { z } from "zod";
 import {
   persistCodexExecution,
   persistReasoning,
-} from "../../../assistant/src/graphstore";
+} from "../../../assistant/src/graphstore.js";
 import {
   recordCodexError,
   recordCodexExecRun,
   startCodexExecTimer,
-} from "../../metrics";
-import { sessionManager } from "../codex-session";
+} from "../../metrics.js";
+import {
+  DEFAULT_ALLOW_PREFIXES,
+  isWithinBase,
+  safeRealpath,
+} from "../../security/filesystem.js";
+import { sessionManager } from "../codex-session.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
 const MIN_TIMEOUT_SEC = 30;
 const MAX_TIMEOUT_SEC = 2 * 60 * 60;
-
-const DEFAULT_ALLOW_PREFIXES = (() => {
-  const base = realpathSync(process.cwd());
-  const raw = process.env.ORCH_ALLOW_CWD_PREFIXES;
-  const extras =
-    raw && raw.trim().length > 0
-      ? raw
-          .split(path.delimiter)
-          .map((entry) => entry.trim())
-          .filter(Boolean)
-      : [];
-
-  const prefixes = new Set<string>([base]);
-
-  for (const entry of extras) {
-    try {
-      const absolute = path.isAbsolute(entry)
-        ? entry
-        : path.resolve(base, entry);
-      prefixes.add(realpathSync(absolute));
-    } catch {
-      // Ignore invalid entries so that a malformed env var does not break execution.
-    }
-  }
-
-  return Array.from(prefixes);
-})();
 
 const MCP_ENV_ALLOWLIST = new Set([
   "CONTEXT7_API_KEY",
@@ -80,24 +53,6 @@ const MCP_ENV_ALLOWLIST = new Set([
   "PLAYWRIGHT_HEADLESS",
   "MCP_AUTH_TOKEN",
 ]);
-
-function safeRealpath(candidate: string) {
-  try {
-    return realpathSync(candidate);
-  } catch {
-    return null;
-  }
-}
-
-function isWithinBase(base: string, target: string) {
-  const baseReal = safeRealpath(base);
-  const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
-  const relative = path.relative(baseReal, targetReal);
-  return (
-    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
-  );
-}
 
 function assertAllowedDirectory(candidate: string) {
   const resolved = safeRealpath(candidate);
@@ -133,6 +88,7 @@ const codexInputSchema = z.object({
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
+  containerId: z.string().optional(), // Phase 11: Docker support
   outputSchema: z.record(z.string(), z.unknown()).optional(),
   context: z
     .object({
@@ -211,10 +167,10 @@ type ToolWriter =
   | { write: (chunk: unknown) => Promise<void> | void }
   | undefined;
 
-export interface CodexExecuteArgs {
+export type CodexExecuteArgs = {
   input: CodexToolInput;
   writer?: ToolWriter;
-}
+};
 
 type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";
@@ -271,8 +227,12 @@ function pickEnvCodex(custom: Record<string, string> | undefined) {
   }
 
   for (const [key, value] of Object.entries(custom)) {
-    if (!key || typeof value !== "string") continue;
-    if (key === "PATH") continue;
+    if (!key || typeof value !== "string") {
+      continue;
+    }
+    if (key === "PATH") {
+      continue;
+    }
     if (key.startsWith("CODEX_")) {
       safeEnv[key] = value;
       continue;
@@ -410,7 +370,9 @@ type ReasoningAccumulator = {
 };
 
 function appendFinal(acc: FinalAccumulator, chunk: string) {
-  if (!chunk) return;
+  if (!chunk) {
+    return;
+  }
   const buffer = Buffer.from(chunk);
   if (acc.truncated) {
     acc.storedBytes += buffer.byteLength;
@@ -445,7 +407,9 @@ function normaliseEvent(
 }
 
 function extractAgentMessage(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
   const candidate = item as {
     text?: unknown;
     content?: unknown;
@@ -459,8 +423,12 @@ function extractAgentMessage(item: unknown): string | null {
   if (Array.isArray(candidate.content)) {
     const parts = candidate.content
       .flatMap((entry) => {
-        if (typeof entry === "string") return entry;
-        if (!entry || typeof entry !== "object") return [];
+        if (typeof entry === "string") {
+          return entry;
+        }
+        if (!entry || typeof entry !== "object") {
+          return [];
+        }
         const text = (entry as { text?: unknown }).text;
         return typeof text === "string" ? text : [];
       })
@@ -481,7 +449,9 @@ function extractAgentMessage(item: unknown): string | null {
 }
 
 function extractAggregatedOutput(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
   const value = (item as { aggregated_output?: unknown }).aggregated_output;
   if (typeof value === "string") {
     return value;
@@ -495,7 +465,9 @@ function extractAggregatedOutput(item: unknown): string | null {
 }
 
 function extractReasoning(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
   const candidate = item as { text?: unknown; content?: unknown };
 
   if (typeof candidate.text === "string") {
@@ -505,8 +477,12 @@ function extractReasoning(item: unknown): string | null {
   if (Array.isArray(candidate.content)) {
     const parts = candidate.content
       .flatMap((entry) => {
-        if (typeof entry === "string") return entry;
-        if (!entry || typeof entry !== "object") return [];
+        if (typeof entry === "string") {
+          return entry;
+        }
+        if (!entry || typeof entry !== "object") {
+          return [];
+        }
         const text = (entry as { text?: unknown }).text;
         return typeof text === "string" ? text : [];
       })
@@ -742,7 +718,9 @@ async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
           } else if (item.type === "file_change") {
             const changes = item.changes;
             for (const change of changes) {
-              if (!change?.path) continue;
+              if (!change?.path) {
+                continue;
+              }
               artifacts.push({
                 path: change.path,
                 kind: change.kind,
@@ -815,9 +793,7 @@ async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
       threadId,
       executionId,
       auto: input.auto,
-    }).catch((err) => {
-      console.error("Failed to persist reasoning", err);
-    });
+    }).catch((_err) => {});
   }
 
   const resultText = finalAccumulator.chunks.join("\n").trim();
@@ -828,9 +804,7 @@ async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
     auto: input.auto,
     result: resultText,
     artifacts,
-  }).catch((err) => {
-    console.error("Failed to persist codex execution", err);
-  });
+  }).catch((_err) => {});
 
   if (sessionId && threadId && !existingSession) {
     await sessionManager.createSession(sessionId, threadId);
@@ -864,13 +838,56 @@ export const toolCodex = {
       : process.cwd();
     const sandbox = mapAutoToCodex(input.auto);
 
-    const command = process.env.CODEX_BIN?.trim() || "codex";
-    let executable: string;
-    try {
-      executable = resolveExecutable(command);
-    } catch (error) {
-      recordCodexError("spawn");
-      throw error;
+    // Determine execution command
+    let cmdArgs: string[] = [];
+    const spawnOptions: any = {
+      env: pickEnvCodex(input.env),
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: "ignore",
+    };
+
+    if (input.containerId) {
+      // Run via docker exec
+      const containerId = input.containerId;
+      const codexBin = process.env.DOCKER_CODEX_BIN || "codex"; // Path to codex inside container
+
+      cmdArgs = [
+        "docker",
+        "exec",
+        "-i",
+        // "-u", "node", // User?
+        "-w",
+        "/workspace", // Assume workspace mount point
+      ];
+
+      // Propagate environment variables to container
+      // spawnOptions.env contains the filtered envs (API keys, etc.)
+      if (spawnOptions.env) {
+        for (const [key, val] of Object.entries(spawnOptions.env)) {
+          if (val !== undefined) {
+            cmdArgs.push("-e", `${key}=${val}`);
+          }
+        }
+      }
+
+      cmdArgs.push(containerId, codexBin);
+
+      // When using docker exec, cwd is handled by -w, but Bun.spawn cwd applies to the docker client.
+      // We can keep Bun.spawn cwd as process.cwd() or resolvedCw (host side).
+      spawnOptions.cwd = process.cwd();
+    } else {
+      // Local execution
+      const command = process.env.CODEX_BIN?.trim() || "codex";
+      let executable: string;
+      try {
+        executable = resolveExecutable(command);
+      } catch (error) {
+        recordCodexError("spawn");
+        throw error;
+      }
+      cmdArgs = [executable];
+      spawnOptions.cwd = resolvedCw;
     }
 
     const flags: string[] = [
@@ -880,9 +897,19 @@ export const toolCodex = {
       sandbox.sandbox,
       "--ask-for-approval",
       sandbox.approval,
-      "--cd",
-      resolvedCw,
+      // For local, we use --cd. For docker, we used -w in exec args, but codex might need --cd too?
+      // If we used -w /workspace, codex starts there.
+      // But if codex receives absolute paths in prompt/context that match host paths, that's an issue.
+      // We rely on the environment setup (bind mount) to map host path to container path if possible,
+      // OR we assume the agent works with relative paths.
+      // `resolvedCw` is a host path.
+      // If running in docker, we probably shouldn't pass host path to --cd unless it matches.
+      // Let's skip --cd for docker and rely on -w /workspace
     ];
+
+    if (!input.containerId) {
+      flags.push("--cd", resolvedCw);
+    }
 
     if (input.model) {
       flags.push("-m", input.model);
@@ -900,13 +927,7 @@ export const toolCodex = {
 
     flags.push(input.prompt);
 
-    const proc = Bun.spawn([executable, ...flags], {
-      cwd: resolvedCw,
-      env: pickEnvCodex(input.env),
-      stdout: "pipe",
-      stderr: "pipe",
-      stdin: "ignore",
-    });
+    const proc = Bun.spawn([...cmdArgs, ...flags], spawnOptions);
 
     const stopTimer = startCodexExecTimer(input.auto);
     const recordStage = createStageRecorder();
@@ -955,7 +976,9 @@ export const toolCodex = {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              break;
+            }
 
             stdoutBuffer += decoder.decode(value, { stream: true });
 
@@ -1208,7 +1231,7 @@ export const toolCodex = {
               newlineIndex = stdoutBuffer.indexOf("\n");
             }
           }
-        } catch (error) {
+        } catch (_error) {
           if (!parseFailure) {
             parseFailure = new Error("codex_stream_read_failed");
             recordStage("parse");
@@ -1219,14 +1242,16 @@ export const toolCodex = {
 
     // Handle stderr stream
     if (proc.stderr && typeof proc.stderr !== "number") {
-      const reader = proc.stderr.getReader();
+      const reader = (proc.stderr as ReadableStream).getReader();
       const decoder = new TextDecoder();
 
       (async () => {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              break;
+            }
 
             void Promise.resolve(
               writer?.write?.({ type: "stderr", text: decoder.decode(value) })
@@ -1284,9 +1309,7 @@ export const toolCodex = {
         threadId: threadIdFromEvents,
         executionId,
         auto: input.auto,
-      }).catch((err) => {
-        console.error("Failed to persist reasoning", err);
-      });
+      }).catch((_err) => {});
     }
 
     const resultText = finalAccumulator.chunks.join("\n").trim();
@@ -1297,9 +1320,7 @@ export const toolCodex = {
       auto: input.auto,
       result: resultText,
       artifacts,
-    }).catch((err) => {
-      console.error("Failed to persist codex execution", err);
-    });
+    }).catch((_err) => {});
 
     return {
       result: resultText,

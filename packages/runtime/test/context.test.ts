@@ -1,10 +1,10 @@
 /**
  * Context Builder Tests
- * 
+ *
  * Tests context caching, cache key computation, and TTL expiration
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { ContextBuilder } from "../src/context";
 
 describe("ContextBuilder", () => {
@@ -124,4 +124,3 @@ describe("ContextBuilder", () => {
     expect(context.receipts.web).toBeUndefined();
   });
 });
-

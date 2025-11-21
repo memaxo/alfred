@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MindscapeNode } from "./mindscape-node";
-import { todoNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
+import { todoNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
+import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 
 const FILTERS = [
   { label: "All", value: "all" },
@@ -18,8 +19,11 @@ const FILTERS = [
 ] as const;
 
 export function TodoNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const parsed = todoNodeDataSchema.safeParse(data);
-  const filter = parsed.success ? parsed.data.filter ?? "all" : "all";
+  const filter = parsed.success ? (parsed.data.filter ?? "all") : "all";
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -76,6 +80,29 @@ export function TodoNode({ id, data, selected }: NodeProps) {
     updateArtifactData(id, { filter: value });
   };
 
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-emerald-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-emerald-500/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+          <CheckSquare className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          Todos
+        </span>
+      </div>
+    );
+  }
+
   return (
     <MindscapeNode
       className="w-[320px] border-emerald-500/20 bg-emerald-950/10"
@@ -91,10 +118,7 @@ export function TodoNode({ id, data, selected }: NodeProps) {
             placeholder="Add a task"
             value={text}
           />
-          <Button
-            disabled={createTodo.isPending || !text.trim()}
-            type="submit"
-          >
+          <Button disabled={createTodo.isPending || !text.trim()} type="submit">
             {createTodo.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -122,7 +146,7 @@ export function TodoNode({ id, data, selected }: NodeProps) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
             </div>
           ) : filteredTodos.length === 0 ? (
-            <p className="py-4 text-center text-sm text-biolum-faint">
+            <p className="py-4 text-center text-biolum-faint text-sm">
               {filter === "completed"
                 ? "No completed tasks yet"
                 : "Nothing here yet"}

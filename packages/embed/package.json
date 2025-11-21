@@ -29,4 +29,3 @@
     "download-model": "uv run python scripts/download_model.py"
   }
 }
-

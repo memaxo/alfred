@@ -5,10 +5,11 @@
  * All property names verified against AI SDK v6 specification.
  */
 
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { UIMessage } from "@alfred/type/stream";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
+import { logger } from "@alfred/logger";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, Tool } from "ai";
 import { streamText, validateUIMessages } from "ai";
 import {
@@ -19,7 +20,6 @@ import {
   runtimeHistoryTierDropsTotal,
   runtimeHistoryTokensTotal,
 } from "../metrics";
-import { logger } from "../utils/logger";
 
 export type StreamOptions = {
   model: LanguageModel;
@@ -48,10 +48,7 @@ type AdapterInit = {
 export class AISDKAdapter {
   private readonly runId?: string;
   private readonly userId?: string;
-
-  constructor();
-  constructor(runId?: string);
-  constructor(init?: AdapterInit);
+  constructor(init?: AdapterInit | string);
   constructor(arg?: string | AdapterInit) {
     if (typeof arg === "string") {
       this.runId = arg;
@@ -90,10 +87,13 @@ export class AISDKAdapter {
 
       const validatedMessages = (await validateUIMessages({
         messages: inputMessages,
-        tools: options.tools as Parameters<typeof validateUIMessages>[0]["tools"],
+        tools: options.tools as Parameters<
+          typeof validateUIMessages
+        >[0]["tools"],
       })) as UIMessage[];
 
-      const stopHistoryTimer = runtimeHistorySelectionDurationSeconds.startTimer();
+      const stopHistoryTimer =
+        runtimeHistorySelectionDurationSeconds.startTimer();
       const historyContext = await buildHistoryContext({
         messages: validatedMessages,
         modelId,
@@ -260,7 +260,7 @@ export class AISDKAdapter {
     options: StreamOptions
   ): Promise<string | undefined> {
     if (!this.userId) {
-      return undefined;
+      return;
     }
 
     try {
@@ -275,7 +275,7 @@ export class AISDKAdapter {
         userId: this.userId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return undefined;
+      return;
     }
   }
 }

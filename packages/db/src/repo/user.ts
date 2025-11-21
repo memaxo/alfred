@@ -15,7 +15,7 @@ import {
 } from "../schema/user";
 
 type ProfileInsert = typeof profiles.$inferInsert;
-type PreferenceInsert = typeof preferences.$inferInsert;
+// type PreferenceInsert = typeof preferences.$inferInsert;
 type ProfileRow = typeof profiles.$inferSelect;
 type PreferenceRow = typeof preferences.$inferSelect;
 type FactRow = typeof facts.$inferSelect;
@@ -39,43 +39,41 @@ type PreparedQuery<TParams, TResult> = {
   execute(params: TParams): Promise<TResult>;
 };
 
-const getPreferencesStmt: PreparedQuery<
-  { userId: string },
-  PreferenceRow[]
-> = usePreparedStatements
-  ? (db
-      .select({
-        id: preferences.id,
-        userId: preferences.userId,
-        key: preferences.key,
-        value: preferences.value,
-        confidence: preferences.confidence,
-        source: preferences.source,
-        created: preferences.created,
-        updated: preferences.updated,
-      })
-      .from(preferences)
-      .where(eq(preferences.userId, sql.placeholder("userId")))
-      .prepare("get_user_preferences") as PreparedQuery<
-      { userId: string },
-      PreferenceRow[]
-    >)
-  : {
-      execute: async ({ userId }) =>
-        db
-          .select({
-            id: preferences.id,
-            userId: preferences.userId,
-            key: preferences.key,
-            value: preferences.value,
-            confidence: preferences.confidence,
-            source: preferences.source,
-            created: preferences.created,
-            updated: preferences.updated,
-          })
-          .from(preferences)
-          .where(eq(preferences.userId, userId)),
-    };
+const getPreferencesStmt: PreparedQuery<{ userId: string }, PreferenceRow[]> =
+  usePreparedStatements
+    ? (db
+        .select({
+          id: preferences.id,
+          userId: preferences.userId,
+          key: preferences.key,
+          value: preferences.value,
+          confidence: preferences.confidence,
+          source: preferences.source,
+          created: preferences.created,
+          updated: preferences.updated,
+        })
+        .from(preferences)
+        .where(eq(preferences.userId, sql.placeholder("userId")))
+        .prepare("get_user_preferences") as PreparedQuery<
+        { userId: string },
+        PreferenceRow[]
+      >)
+    : {
+        execute: async ({ userId }) =>
+          db
+            .select({
+              id: preferences.id,
+              userId: preferences.userId,
+              key: preferences.key,
+              value: preferences.value,
+              confidence: preferences.confidence,
+              source: preferences.source,
+              created: preferences.created,
+              updated: preferences.updated,
+            })
+            .from(preferences)
+            .where(eq(preferences.userId, userId)),
+      };
 
 // Profile operations
 export async function getProfile(userId: string): Promise<ProfileRow | null> {

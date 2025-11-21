@@ -1,4 +1,12 @@
-import { describe, expect, it, mock, vi, beforeEach, afterEach } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 
 // Mock the graph repo to avoid DB dependency
 mock.module("@alfred/db/repo/graph", () => ({
@@ -6,11 +14,11 @@ mock.module("@alfred/db/repo/graph", () => ({
   upsertEdges: vi.fn().mockResolvedValue([]),
 }));
 
+import type { AlfredCodexEvent } from "../src/orchestrator/tool/codex";
 import {
   injectLinearContext,
   mapCodexEventToLinearActivity,
 } from "../src/orchestrator/tool/codex-linear";
-import type { AlfredCodexEvent } from "../src/orchestrator/tool/codex";
 
 describe("codex-linear", () => {
   const originalEnv = process.env.DATABASE_URL;
@@ -21,7 +29,7 @@ describe("codex-linear", () => {
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = originalEnv;
     }
@@ -88,4 +96,3 @@ describe("codex-linear", () => {
     });
   });
 });
-

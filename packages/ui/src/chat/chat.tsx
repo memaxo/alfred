@@ -5,11 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getAgentLabel,
   getTimestamp,
+  isDataPart,
   isReasoningPart,
   isTextPart,
   isToolCallPart,
   isToolResultPart,
-  isDataPart,
 } from "./parts";
 
 type VirtualRange = { startIndex: number; endIndex: number };
@@ -35,7 +35,10 @@ export type ChatProps = {
   onVoice?: () => void;
   voiceLabel?: string;
   voiceDisabled?: boolean;
-  renderPart?: (part: UIMessage["parts"][number], message: UIMessage) => ReactNode | null;
+  renderPart?: (
+    part: UIMessage["parts"][number],
+    message: UIMessage
+  ) => ReactNode | null;
 };
 
 type ToolCallBlock = {
@@ -171,7 +174,10 @@ function renderToolResults(block: RenderBlock) {
 function renderDefaultMessage(
   block: RenderBlock,
   message: UIMessage,
-  renderPart?: (part: UIMessage["parts"][number], message: UIMessage) => ReactNode | null
+  renderPart?: (
+    part: UIMessage["parts"][number],
+    message: UIMessage
+  ) => ReactNode | null
 ) {
   const structuredParts: ReactNode[] = [];
   if (renderPart) {
@@ -180,7 +186,13 @@ function renderDefaultMessage(
         const rendered = renderPart(part, message);
         if (rendered) {
           structuredParts.push(
-            <div key={part.type === "tool-result" ? part.toolCallId ?? structuredParts.length : (part as { id?: string }).id ?? structuredParts.length}>
+            <div
+              key={
+                part.type === "tool-result"
+                  ? (part.toolCallId ?? structuredParts.length)
+                  : ((part as { id?: string }).id ?? structuredParts.length)
+              }
+            >
               {rendered}
             </div>
           );
@@ -237,7 +249,9 @@ export function Chat({
 
   const handleRangeChanged = useCallback(
     (next: VirtualRange) => {
-      if (!perf) return;
+      if (!perf) {
+        return;
+      }
       setRange(next);
     },
     [perf]

@@ -97,21 +97,26 @@ export function PromoteDialog({
         </header>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 px-6 py-5">
-            <label className="block font-medium text-sm">
+            <label className="block font-medium text-sm" htmlFor="deploy-host">
               Production Host (optional)
               <Input
                 className="mt-1"
                 disabled={isSubmitting}
+                id="deploy-host"
                 onChange={(event) => setHost(event.target.value)}
                 placeholder="app.example.com"
                 value={host}
               />
             </label>
-            <label className="block font-medium text-sm">
+            <label
+              className="block font-medium text-sm"
+              htmlFor="deploy-upstream"
+            >
               Upstream URL
               <Input
                 className="mt-1"
                 disabled={isSubmitting}
+                id="deploy-upstream"
                 onChange={(event) => setUpstream(event.target.value)}
                 placeholder="https://your-service.internal"
                 required

@@ -18,7 +18,13 @@ export type AgentEvent =
       status: "running" | "completed" | "failed";
       ts: number;
     }
-  | { type: "codex/file"; agentId: AgentId; path: string; kind: string; ts: number }
+  | {
+      type: "codex/file";
+      agentId: AgentId;
+      path: string;
+      kind: string;
+      ts: number;
+    }
   | { type: "notice"; agentId: AgentId; message: string; ts: number };
 
 export type TrackerAgentState = {
@@ -42,7 +48,11 @@ export type TrackerState = {
 function cloneState(state: TrackerState): TrackerState {
   const agents: Record<AgentId, TrackerAgentState> = {};
   for (const [id, value] of Object.entries(state.agents)) {
-    agents[id as AgentId] = { ...value, commands: [...value.commands], filesChanged: [...value.filesChanged] };
+    agents[id as AgentId] = {
+      ...value,
+      commands: [...value.commands],
+      filesChanged: [...value.filesChanged],
+    };
   }
 
   const waves: Record<WaveId, TrackerWaveState> = {};
@@ -53,7 +63,12 @@ function cloneState(state: TrackerState): TrackerState {
   return { agents, waves };
 }
 
-function ensureAgent(state: TrackerState, agentId: AgentId, subTaskId?: SubTaskId, ts?: number): void {
+function ensureAgent(
+  state: TrackerState,
+  agentId: AgentId,
+  subTaskId?: SubTaskId,
+  ts?: number
+): void {
   const existing = state.agents[agentId];
   if (existing) {
     if (ts && ts > existing.lastEventTs) {
@@ -72,11 +87,16 @@ function ensureAgent(state: TrackerState, agentId: AgentId, subTaskId?: SubTaskI
 }
 
 function normaliseTime(ts: number | undefined): number {
-  if (!ts || !Number.isFinite(ts)) return Date.now();
+  if (!(ts && Number.isFinite(ts))) {
+    return Date.now();
+  }
   return ts;
 }
 
-export function updateTracker(state: TrackerState, event: AgentEvent): TrackerState {
+export function updateTracker(
+  state: TrackerState,
+  event: AgentEvent
+): TrackerState {
   const next = cloneState(state);
   const ts = normaliseTime(event.ts);
 
@@ -84,7 +104,9 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/thought": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
       agent.status = agent.status === "created" ? "running" : agent.status;
       agent.lastEventTs = ts;
       agent.loopScore = Math.max(0, agent.loopScore - 0.1);
@@ -93,7 +115,9 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/command": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
       agent.lastEventTs = ts;
       agent.commands.push(event.command);
       if (event.status === "completed") {
@@ -109,7 +133,9 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/file": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
       agent.lastEventTs = ts;
       agent.filesChanged.push(event.path);
       agent.loopScore += 0.5;
@@ -118,7 +144,9 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "notice": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) break;
+      if (!agent) {
+        break;
+      }
       agent.lastEventTs = ts;
       break;
     }
@@ -138,7 +166,9 @@ export function detectStuck(
   }
 ): boolean {
   const agent = state.agents[agentId];
-  if (!agent) return false;
+  if (!agent) {
+    return false;
+  }
 
   const noProgressMs = opts?.noProgressMs ?? 120_000;
   const maxRepeats = opts?.maxRepeats ?? 5;
@@ -180,7 +210,9 @@ export function detectNeedsGuidance(
   thoughts: string[]
 ): boolean {
   const agent = state.agents[agentId];
-  if (!agent) return false;
+  if (!agent) {
+    return false;
+  }
 
   if (!Array.isArray(thoughts) || thoughts.length === 0) {
     return false;

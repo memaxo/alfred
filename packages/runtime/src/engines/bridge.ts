@@ -1,11 +1,12 @@
+import { persistHypergraphToDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import {
   empty as createHypergraph,
+  type Hypergraph,
   fact as hyperFact,
   insight as hyperInsight,
   pattern as hyperPattern,
   relation as hyperRelation,
   nodeFromHash,
-  type Hypergraph,
 } from "@alfred/knowledge/hypergraph";
 import type {
   KnowledgeFact,
@@ -15,12 +16,11 @@ import type {
   KnowledgeRelation,
   KnowledgeUpdate,
 } from "@alfred/type/knowledge";
-import { persistHypergraphToDb } from "@alfred/agent/assistant/hypergraph-bridge";
 
-export interface RuntimeKnowledgeContext {
+export type RuntimeKnowledgeContext = {
   resource: string;
   runId: string;
-}
+};
 
 /**
  * RuntimeKnowledgeBridge
@@ -125,4 +125,3 @@ function isPattern(node: KnowledgeNode): node is KnowledgePattern {
 function isRelation(node: KnowledgeNode): node is KnowledgeRelation {
   return "from" in node && "to" in node && "kind" in node;
 }
-

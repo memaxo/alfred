@@ -2,6 +2,7 @@ import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
+    yield;
     return;
   })(),
 }));
@@ -13,32 +14,34 @@ mock.module("ai", () => ({
   validateUIMessages: validateUIMessagesMock,
 }));
 
-const buildHistoryContextMock = vi.fn(async ({ messages }: { messages: unknown[] }) => ({
-  uiMessages: messages,
-  modelMessages: messages,
-  droppedMessages: 0,
-  keptTokens: 100,
-  droppedTokens: 0,
-  selection: {
-    kept: messages as any,
-    dropped: [],
-    tiers: new Map(),
-    tierByMessage: new WeakMap(),
+const buildHistoryContextMock = vi.fn(
+  async ({ messages }: { messages: unknown[] }) => ({
+    uiMessages: messages,
+    modelMessages: messages,
+    droppedMessages: 0,
     keptTokens: 100,
     droppedTokens: 0,
-    budget: {
-      modelId: "test",
-      maxContextTokens: 1000,
-      historyBudgetTokens: 900,
-      systemTokens: 0,
-      headroomTokens: 100,
+    selection: {
+      kept: messages as any,
+      dropped: [],
+      tiers: new Map(),
+      tierByMessage: new WeakMap(),
+      keptTokens: 100,
+      droppedTokens: 0,
+      budget: {
+        modelId: "test",
+        maxContextTokens: 1000,
+        historyBudgetTokens: 900,
+        systemTokens: 0,
+        headroomTokens: 100,
+      },
     },
-  },
-}));
+  })
+);
 
 mock.module("@alfred/history", () => ({
   buildHistoryContext: buildHistoryContextMock,
-  getHistoryBudgetDefaults: () => ({})
+  getHistoryBudgetDefaults: () => ({}),
 }));
 
 const buildPreferenceSystemPromptMock = vi
@@ -52,7 +55,9 @@ mock.module("@alfred/agent/preference/prompt", () => ({
 mock.module("../src/metrics", () => ({
   runtimeAiEventsTotal: { inc: vi.fn() },
   runtimeAiSdkCallsTotal: { inc: vi.fn() },
-  runtimeAiSdkDurationSeconds: { startTimer: vi.fn().mockReturnValue(() => {}) },
+  runtimeAiSdkDurationSeconds: {
+    startTimer: vi.fn().mockReturnValue(() => {}),
+  },
   runtimeHistorySelectionDurationSeconds: {
     startTimer: vi.fn().mockReturnValue(() => {}),
   },
@@ -60,7 +65,7 @@ mock.module("../src/metrics", () => ({
   runtimeHistoryTierDropsTotal: { inc: vi.fn() },
 }));
 
-mock.module("../src/utils/logger", () => ({
+mock.module("@alfred/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 

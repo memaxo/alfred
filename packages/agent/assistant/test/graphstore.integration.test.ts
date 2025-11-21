@@ -23,7 +23,7 @@ describe("graphstore integration (sqlite)", () => {
 
   afterAll(() => {
     if (ORIGINAL_DB_URL === undefined) {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = ORIGINAL_DB_URL;
     }
@@ -38,7 +38,9 @@ describe("graphstore integration (sqlite)", () => {
     const resource = `graphstore-${Date.now()}`;
     const graph = buildGraph();
     const entries = extractEntries(graph);
-    const factCount = entries.filter((entry) => entry.data._ !== "relation").length;
+    const factCount = entries.filter(
+      (entry) => entry.data._ !== "relation"
+    ).length;
     const relationCount = entries.length - factCount;
 
     await persistKnowledge(resource, entries);

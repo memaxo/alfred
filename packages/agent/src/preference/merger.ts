@@ -20,7 +20,7 @@ function getPriority(source: PreferenceSource): number {
  * and confidence as the secondary tiebreaker. Pure and deterministic.
  */
 export function mergePreferences(
-  preferenceMaps: Array<Map<PreferenceKey, PreferenceDetail>>
+  preferenceMaps: Map<PreferenceKey, PreferenceDetail>[]
 ): Map<PreferenceKey, PreferenceDetail> {
   const merged = new Map<PreferenceKey, PreferenceDetail>();
 

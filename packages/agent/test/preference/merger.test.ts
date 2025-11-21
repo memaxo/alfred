@@ -1,12 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import type { PreferenceDetail, PreferenceKey } from "@alfred/type/preference";
 import { mergePreferences } from "../../src/preference/merger";
-import type {
-  PreferenceDetail,
-  PreferenceKey,
-} from "@alfred/type/preference";
 
 function mapFromEntries(
-  entries: Array<[PreferenceKey, PreferenceDetail]>
+  entries: [PreferenceKey, PreferenceDetail][]
 ): Map<PreferenceKey, PreferenceDetail> {
   return new Map(entries);
 }
@@ -14,10 +11,16 @@ function mapFromEntries(
 describe("mergePreferences", () => {
   it("prefers higher priority sources", () => {
     const inferred = mapFromEntries([
-      ["response.verbosity", { value: "concise", source: "inferred", confidence: 0.6 }],
+      [
+        "response.verbosity",
+        { value: "concise", source: "inferred", confidence: 0.6 },
+      ],
     ]);
     const user = mapFromEntries([
-      ["response.verbosity", { value: "verbose", source: "user", confidence: 0.9 }],
+      [
+        "response.verbosity",
+        { value: "verbose", source: "user", confidence: 0.9 },
+      ],
     ]);
 
     const merged = mergePreferences([inferred, user]);
@@ -27,10 +30,16 @@ describe("mergePreferences", () => {
 
   it("falls back to higher confidence when sources match", () => {
     const learnedLow = mapFromEntries([
-      ["response.format", { value: "paragraph", source: "learned", confidence: 0.6 }],
+      [
+        "response.format",
+        { value: "paragraph", source: "learned", confidence: 0.6 },
+      ],
     ]);
     const learnedHigh = mapFromEntries([
-      ["response.format", { value: "bullet", source: "learned", confidence: 0.9 }],
+      [
+        "response.format",
+        { value: "bullet", source: "learned", confidence: 0.9 },
+      ],
     ]);
 
     const merged = mergePreferences([learnedLow, learnedHigh]);

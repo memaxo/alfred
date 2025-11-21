@@ -2,9 +2,9 @@
  * WorkflowRuntime core tests
  */
 
-import { describe, expect, it, beforeEach } from "bun:test";
-import type { LanguageModel } from "ai";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
 import { createRuntime } from "../src/core";
 import type { RuntimeInput } from "../src/types";
 
@@ -15,7 +15,7 @@ describe("WorkflowRuntime", () => {
   beforeEach(() => {
     // Create minimal mock model (will be enhanced in Phase 3.2)
     mockModel = {} as LanguageModel;
-    
+
     baseInput = {
       requirement: "test requirement",
       auto: "low",
@@ -40,24 +40,24 @@ describe("WorkflowRuntime", () => {
 
       // Verify basic event sequence
       const eventTypes = events.map((e) => e.type);
-      
+
       // Should start with 'run' event
       expect(eventTypes[0]).toBe("run");
-      
+
       // Should have progress events
       expect(eventTypes.some((t) => t === "progress")).toBe(true);
-      
+
       // Should have step-start and step-complete for each phase
       const stepStarts = events.filter((e) => e.type === "step-start");
       const stepCompletes = events.filter((e) => e.type === "step-complete");
-      
+
       expect(stepStarts.length).toBe(4); // scan, plan, act, report
       expect(stepCompletes.length).toBe(4);
-      
+
       // Verify phase order in step events
       const phases = stepStarts.map((e: any) => e.phase);
       expect(phases).toEqual(["scan", "plan", "act", "report"]);
-      
+
       // Should end with 100% progress
       const lastProgress = events.filter((e) => e.type === "progress").pop();
       expect(lastProgress).toMatchObject({
@@ -82,12 +82,15 @@ describe("WorkflowRuntime", () => {
 
       // Should have progress at phase boundaries
       expect(progressEvents.length).toBeGreaterThan(0);
-      
+
       // First progress should be 0% (initializing)
-      expect(progressEvents[0]).toMatchObject({ pct: 0, message: "initializing" });
-      
+      expect(progressEvents[0]).toMatchObject({
+        pct: 0,
+        message: "initializing",
+      });
+
       // Last progress should be 100% (completed)
-      const last = progressEvents[progressEvents.length - 1];
+      const last = progressEvents.at(-1);
       expect(last).toMatchObject({ pct: 100, message: "completed" });
     });
   });
@@ -110,8 +113,13 @@ describe("WorkflowRuntime", () => {
 
       // Should emit run event and cancellation notice
       expect(events[0].type).toBe("run");
-      expect(events.some((e) => e.type === "notice" && (e as any).message?.includes("cancelled"))).toBe(true);
-      
+      expect(
+        events.some(
+          (e) =>
+            e.type === "notice" && (e as any).message?.includes("cancelled")
+        )
+      ).toBe(true);
+
       // Should not execute phases
       const stepStarts = events.filter((e) => e.type === "step-start");
       expect(stepStarts.length).toBe(0);
@@ -136,12 +144,14 @@ describe("WorkflowRuntime", () => {
         }
 
         // Break after 10 events to avoid hanging
-        if (eventCount > 10) break;
+        if (eventCount > 10) {
+          break;
+        }
       }
 
       // Should have started execution
       expect(events[0].type).toBe("run");
-      
+
       // Should emit cancellation notice
       const cancelledEvent = events.find(
         (e) => e.type === "notice" && (e as any).message?.includes("cancelled")
@@ -191,12 +201,12 @@ describe("WorkflowRuntime", () => {
       });
 
       const events: WorkflowEvent[] = [];
-      
+
       try {
         for await (const event of runtime.stream) {
           events.push(event);
         }
-      } catch (error) {
+      } catch (_error) {
         // Error thrown from stream
       }
 
@@ -218,7 +228,7 @@ describe("WorkflowRuntime", () => {
       expect(runtime).toHaveProperty("stream");
       expect(runtime).toHaveProperty("resume");
       expect(runtime).toHaveProperty("cancel");
-      
+
       expect(typeof runtime.runId).toBe("string");
       expect(typeof runtime.summary).toBe("string");
       expect(typeof runtime.resume).toBe("function");
@@ -242,4 +252,3 @@ describe("WorkflowRuntime", () => {
     });
   });
 });
-

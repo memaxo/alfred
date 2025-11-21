@@ -1,6 +1,6 @@
 /**
  * Storage Adapter
- * 
+ *
  * Abstraction layer for workflow persistence.
  * Runtime uses this interface, router provides implementation via dependency injection.
  */
@@ -9,11 +9,11 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 
 /**
  * Storage operations for workflow persistence
- * 
+ *
  * Runtime doesn't know about database internals - it uses this interface.
  * Router/API layer provides implementation that talks to @alfred/db
  */
-export interface StorageAdapter {
+export type StorageAdapter = {
   /**
    * Append single event to workflow run
    */
@@ -32,7 +32,7 @@ export interface StorageAdapter {
     status: "running" | "completed" | "failed" | "cancelled",
     message?: string
   ): Promise<void>;
-}
+};
 
 /**
  * No-op storage adapter for testing
@@ -42,7 +42,10 @@ export class NoOpStorageAdapter implements StorageAdapter {
     // No-op
   }
 
-  async appendEventBatch(_runId: string, _events: WorkflowEvent[]): Promise<void> {
+  async appendEventBatch(
+    _runId: string,
+    _events: WorkflowEvent[]
+  ): Promise<void> {
     // No-op
   }
 
@@ -54,4 +57,3 @@ export class NoOpStorageAdapter implements StorageAdapter {
     // No-op
   }
 }
-

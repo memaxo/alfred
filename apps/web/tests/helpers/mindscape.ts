@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { platformShortcutKey } from "./auth";
 
 export async function openCommandPalette(page: Page) {
@@ -18,5 +18,7 @@ export function latestNode(page: Page, type: string): Locator {
 }
 
 export async function waitForToast(page: Page, message: string) {
-  await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: message })
+  ).toBeVisible();
 }

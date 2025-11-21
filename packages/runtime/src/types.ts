@@ -1,13 +1,13 @@
 /**
  * Runtime type definitions
- * 
+ *
  * Pure types for workflow execution runtime.
  * Runtime is a leaf package - no runtime-specific types should leak to other packages.
  */
 
-import { z } from "zod";
-import type { LanguageModel } from "ai";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
+import { z } from "zod";
 
 /**
  * Resume payload for in-flight authorization
@@ -39,6 +39,7 @@ export type RuntimeInput = {
   workspace?: string;
   repoBase?: string;
   mode?: "sequential" | "parallel";
+  interactive?: boolean; // Phase 12: Interactive Mode
   linear?: {
     sessionId: string;
     space: string;
@@ -61,18 +62,24 @@ export type RuntimeInput = {
 export type RuntimeOptions = {
   /** Input parameters */
   input: RuntimeInput;
-  
+
   /** AI model to use for planning */
   model: LanguageModel;
-  
+
   /** Cancellation signal */
   signal?: AbortSignal;
-  
+
   /** Step timeout in milliseconds (default: 5 minutes) */
   stepTimeoutMs?: number;
-  
+
   /** Workflow timeout in milliseconds (default: 30 minutes) */
   workflowTimeoutMs?: number;
+
+  /** Override run ID (e.g. for hydration) */
+  runId?: string;
+
+  /** Event history for hydration */
+  history?: WorkflowEvent[];
 };
 
 /**
@@ -81,25 +88,25 @@ export type RuntimeOptions = {
 export type RuntimeState = {
   /** Unique run identifier */
   runId: string;
-  
+
   /** Current execution phase */
   phase: WorkflowPhase | null;
-  
+
   /** Cancellation flag */
   cancelled: boolean;
-  
+
   /** Resume promise resolver */
   resumeResolver: ((payload: ResumePayload | null) => void) | null;
-  
+
   /** Queued resume payloads */
   resumeQueue: ResumePayload[];
-  
+
   /** Resume timeout handle for cleanup */
   resumeTimeout: NodeJS.Timeout | null;
-  
+
   /** Final workflow status */
-  finalStatus: "completed" | "failed" | "cancelled" | null;
-  
+  finalStatus: "completed" | "failed" | "cancelled" | "suspended" | null;
+
   /** Final error message if failed */
   finalMessage: string | null;
 };
@@ -110,16 +117,16 @@ export type RuntimeState = {
 export type WorkflowRuntime = {
   /** Unique run identifier */
   runId: string;
-  
+
   /** Human-readable summary */
   summary: string;
-  
+
   /** Event stream for consumption */
   stream: AsyncGenerator<WorkflowEvent, void, void>;
-  
+
   /** Resume with authorization */
   resume(payload: ResumePayload): Promise<void>;
-  
+
   /** Cancel execution */
   cancel(): void;
 };
@@ -133,20 +140,25 @@ export const runtimeInputSchema = z.object({
   workspace: z.string().optional(),
   repoBase: z.string().optional(),
   mode: z.enum(["sequential", "parallel"]).optional(),
-  linear: z.object({
-    sessionId: z.string().min(1),
-    space: z.string().min(1),
-    authz: z.string().min(1),
-  }).optional(),
-  context: z.object({
-    enable: z.boolean().optional(),
-    web: z.boolean().optional(),
-    topK: z.number().int().min(1).max(100).optional(),
-    maxTokens: z.number().int().min(2000).max(200_000).optional(),
-    exts: z.array(z.string()).optional(),
-    ignore: z.array(z.string()).optional(),
-    seeds: z.array(z.string()).optional(),
-  }).optional(),
+  interactive: z.boolean().optional(),
+  linear: z
+    .object({
+      sessionId: z.string().min(1),
+      space: z.string().min(1),
+      authz: z.string().min(1),
+    })
+    .optional(),
+  context: z
+    .object({
+      enable: z.boolean().optional(),
+      web: z.boolean().optional(),
+      topK: z.number().int().min(1).max(100).optional(),
+      maxTokens: z.number().int().min(2000).max(200_000).optional(),
+      exts: z.array(z.string()).optional(),
+      ignore: z.array(z.string()).optional(),
+      seeds: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -158,16 +170,25 @@ export const runtimeOptionsSchema = z.object({
     message: "Model must be provided",
   }),
   signal: z.custom<AbortSignal>().optional(),
-  stepTimeoutMs: z.number().int().min(1000, "Step timeout must be at least 1 second").optional(),
-  workflowTimeoutMs: z.number().int().min(1000, "Workflow timeout must be at least 1 second").optional(),
+  stepTimeoutMs: z
+    .number()
+    .int()
+    .min(1000, "Step timeout must be at least 1 second")
+    .optional(),
+  workflowTimeoutMs: z
+    .number()
+    .int()
+    .min(1000, "Workflow timeout must be at least 1 second")
+    .optional(),
+  runId: z.string().uuid().optional(),
+  history: z.array(z.custom<WorkflowEvent>()).optional(),
 });
 
 /**
  * Validate runtime options
- * 
+ *
  * Throws ZodError with details if validation fails
  */
 export function validateRuntimeOptions(options: unknown): RuntimeOptions {
   return runtimeOptionsSchema.parse(options);
 }
-

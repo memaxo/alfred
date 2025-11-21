@@ -43,11 +43,11 @@ const policyDocumentSchema = z.object({
   scopes: z.array(z.string()).default([]),
 });
 
-interface PolicyCache {
+type PolicyCache = {
   path: string;
   mtimeMs: number;
   doc: PolicyDocument;
-}
+};
 
 let cache: PolicyCache | null = null;
 

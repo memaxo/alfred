@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
-import { Buffer } from "node:buffer";
-import type { ReactElement } from "react";
 import { mock, vi } from "bun:test";
+import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 import type { RenderResult } from "@testing-library/react";
-import { renderRoute, type RenderRouteOptions } from "./render-route";
+import type { ReactElement } from "react";
+import { type RenderRouteOptions, renderRoute } from "./render-route";
 
 export const TEST_SESSION_HEADER = "x-alfred-test-session";
 
@@ -120,10 +120,16 @@ export function serializeTestSession(session: TestSession): string {
   return Buffer.from(JSON.stringify(session), "utf8").toString("base64");
 }
 
-export function deserializeTestSession(value: string | null): TestSession | null {
-  if (!value) return null;
+export function deserializeTestSession(
+  value: string | null
+): TestSession | null {
+  if (!value) {
+    return null;
+  }
   try {
-    return JSON.parse(Buffer.from(value, "base64").toString("utf8")) as TestSession;
+    return JSON.parse(
+      Buffer.from(value, "base64").toString("utf8")
+    ) as TestSession;
   } catch (_error) {
     return null;
   }

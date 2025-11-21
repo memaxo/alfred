@@ -12,7 +12,10 @@ const MESSAGE_KEYWORDS: Array<{ domain: DomainName; matcher: RegExp }> = [
   { domain: "proxmox", matcher: /\b(proxmox|lxc|vmid|cluster)\b/i },
   { domain: "git", matcher: /\b(git|commit|branch|merge|rebase)\b/i },
   { domain: "docker", matcher: /\b(docker|compose|container|image)\b/i },
-  { domain: "kubernetes", matcher: /\b(kubernetes|k8s|pod|deployment|cluster)\b/i },
+  {
+    domain: "kubernetes",
+    matcher: /\b(kubernetes|k8s|pod|deployment|cluster)\b/i,
+  },
 ];
 
 export type ToolDictionary = Record<string, { name?: string } | undefined>;
@@ -48,9 +51,7 @@ export function extractDomainFromToolName(name: string): DomainName | null {
   return null;
 }
 
-function normalizeToolNames(
-  tools?: ToolDictionary | string[]
-): string[] {
+function normalizeToolNames(tools?: ToolDictionary | string[]): string[] {
   if (!tools) {
     return [];
   }
@@ -64,14 +65,15 @@ function normalizeToolNames(
 
 function normalizeMessageText(messages: UIMessage[]): string {
   return messages
-    .map((message) =>
-      message.parts
-        ?.filter(
-          (part): part is { type: "text"; text: string } =>
-            part.type === "text" && typeof part.text === "string"
-        )
-        .map((part) => part.text.toLowerCase())
-        .join(" ") ?? ""
+    .map(
+      (message) =>
+        message.parts
+          ?.filter(
+            (part): part is { type: "text"; text: string } =>
+              part.type === "text" && typeof part.text === "string"
+          )
+          .map((part) => part.text.toLowerCase())
+          .join(" ") ?? ""
     )
     .join(" ");
 }

@@ -1,8 +1,8 @@
 import { limitUiMessages } from "@alfred/type/history";
 import {
   convertToModelMessages,
-  pruneMessages,
   type ModelMessage,
+  pruneMessages,
   type UIMessage,
 } from "ai";
 

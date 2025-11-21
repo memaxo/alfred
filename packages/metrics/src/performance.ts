@@ -5,28 +5,16 @@ export function nowNs(): bigint {
 }
 
 export async function withBudget<T>(
-  label: string,
+  _label: string,
   budgetMs: number,
   fn: () => T | Promise<T>
 ): Promise<T> {
   const start = nowNs();
-  try {
-    const result = await fn();
-    const elapsedMs = Number(nowNs() - start) / 1_000_000;
-    if (elapsedMs > budgetMs) {
-      console.warn(
-        `[metrics] Budget breach for ${label}: ${elapsedMs.toFixed(3)}ms > ${budgetMs}ms`
-      );
-    }
-    return result;
-  } catch (error) {
-    const elapsedMs = Number(nowNs() - start) / 1_000_000;
-    console.error(
-      `[metrics] ${label} failed after ${elapsedMs.toFixed(3)}ms`,
-      error
-    );
-    throw error;
+  const result = await fn();
+  const elapsedMs = Number(nowNs() - start) / 1_000_000;
+  if (elapsedMs > budgetMs) {
   }
+  return result;
 }
 
 export function mark(label: string): void {

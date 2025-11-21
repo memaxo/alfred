@@ -62,7 +62,7 @@ export const implementationPlanSchema = z.object({
   created: z.date().default(() => new Date()),
   started: z.date().optional(),
   completed: z.date().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ImplementationPlan = z.infer<typeof implementationPlanSchema>;
@@ -216,7 +216,7 @@ export const planReportSchema = z.object({
   }),
   context: planReportContextSchema.optional(),
   run: planReportRunSchema.optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type PlanReport = z.infer<typeof planReportSchema>;
@@ -321,12 +321,11 @@ export type WorkflowEvent =
       key: readonly unknown[];
       value: unknown;
     })
-  |
-      (WorkflowEventBase & {
-        type: "context";
-        phase: "scan" | "web" | "bundle";
-        message?: string;
-        receipts?: SearchReceipt;
-        bundle?: ContextBundle;
-      })
+  | (WorkflowEventBase & {
+      type: "context";
+      phase: "scan" | "web" | "bundle";
+      message?: string;
+      receipts?: SearchReceipt;
+      bundle?: ContextBundle;
+    })
   | (WorkflowEventBase & { type: string; [key: string]: unknown });

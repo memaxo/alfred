@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-
-import { RTreeND, type HyperRect } from "../src/indices/rtree.js";
 import type { NodeId } from "../src/hypergraph.js";
+import { type HyperRect, RTreeND } from "../src/indices/rtree.js";
 
 const node = (value: string): NodeId => value as NodeId;
 
@@ -37,7 +36,7 @@ describe("RTreeND", () => {
 
     const neighbors = tree.nearestK(new Float32Array([1, 1]), 2);
     expect(neighbors.map((n) => n.id)).toEqual([node("p"), node("r")]);
-    expect(neighbors[0]!.dist).toBeCloseTo(Math.sqrt(2));
+    expect(neighbors[0]?.dist).toBeCloseTo(Math.sqrt(2));
   });
 
   test("remove deletes existing ids", () => {

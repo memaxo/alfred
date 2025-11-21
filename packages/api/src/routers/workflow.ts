@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
-import { openai } from "@ai-sdk/openai";
 import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
 import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
 import {
@@ -9,42 +6,49 @@ import {
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,
   linearSessionOperationsTotal,
+  multiAgentAgentDurationSeconds,
+  multiAgentErrorsTotal,
+  multiAgentTasksTotal,
+  multiAgentWavesTotal,
   replayQueriesTotal,
   replayQueryDurationSeconds,
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
-  multiAgentTasksTotal,
-  multiAgentWavesTotal,
-  multiAgentAgentDurationSeconds,
-  multiAgentErrorsTotal,
 } from "@alfred/api/metrics";
-import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
   ReasoningEdgeRecord,
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
-import { createRuntime } from "@alfred/runtime";
+import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { eventToUiMessages } from "../ai/normalize";
-import { triggerPreferenceRefresh } from "../preference/refresh";
 import { requirePolicy } from "../gate";
+import { triggerPreferenceRefresh } from "../preference/refresh";
 import { runRegistry } from "../run-registry";
+import {
+  createRequirementMessage,
+  createWorkflowExecutor,
+  deriveWorkflowTitle,
+  ensureObligations,
+  ensureWorkflowConversation,
+  mapWorkflowResource,
+  mapWorkflowRunResource,
+  persistWorkflowMessages,
+  shouldUseWorkflowRuntime,
+  workflowInput,
+} from "../services/workflow";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { recordAudit } from "../utils/audit";
 import { toTRPCError } from "../utils/error";
 import { makeEventId } from "../utils/event-id";
-import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
-import { runPlanV6 } from "../workflow/runner";
-import {
-  type ReasonTrace,
-  workflowProvenance,
-} from "../workflow/provenance";
+import { type ReasonTrace, workflowProvenance } from "../workflow/provenance";
 
 // Feature flag for runtime migration (Phase 3.3)
 configureLinearMetrics({
@@ -76,350 +80,11 @@ configureLinearMetrics({
   }
 })();
 
-/**
- * Create workflow executor (runtime or runner based on feature flag)
- *
- * Returns unified interface matching RunPlanV6 for backward compatibility.
- * Phase 3.3: Conditional creation based on USE_WORKFLOW_RUNTIME flag.
- */
-function shouldUseWorkflowRuntime(): boolean {
-  return process.env.USE_WORKFLOW_RUNTIME === "true";
-}
-
-function createWorkflowExecutor(
-  input: z.infer<typeof workflowInput>,
-  abortController: AbortController
-) {
-  if (shouldUseWorkflowRuntime()) {
-    // NEW: Use @alfred/runtime
-    const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
-
-    return createRuntime({
-      input: {
-        requirement: input.requirement,
-        auto: input.auto,
-        workspace: input.workspace,
-        repoBase: input.repoBase,
-        mode: input.mode,
-        context: input.context,
-        linear:
-          input.linear?.sessionId && input.authzLinear
-            ? {
-                sessionId: input.linear.sessionId,
-                space: input.linear.space,
-                authz: input.authzLinear,
-              }
-            : undefined,
-      },
-      model,
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-    });
-  }
-  // EXISTING: Use deprecated runPlanV6
-  return runPlanV6(
-    {
-      requirement: input.requirement,
-      auto: input.auto,
-      workspace: input.workspace,
-      repoBase: input.repoBase,
-      mode: input.mode,
-      context: input.context,
-      ...(input.linear?.sessionId && input.authzLinear
-        ? {
-            linear: {
-              sessionId: input.linear.sessionId,
-              space: input.linear.space,
-              authz: input.authzLinear,
-            },
-          }
-        : {}),
-    },
-    {
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-    }
-  );
-}
-
-const workflowInput = z.object({
-  requirement: z.string().min(1),
-  auto: z.enum(["read", "low", "medium", "high"]).default("low"),
-  authz: z.string().optional(),
-  cw: z.string().optional(),
-  mode: z.enum(["sequential", "parallel"]).default("sequential"),
-  workspace: z.string().optional(),
-  repoBase: z.string().optional(),
-  profile: z.string().min(1).optional(),
-  authzDeploy: z.string().optional(),
-  authzLinear: z.string().optional(),
-  preview: z
-    .object({
-      host: z.string().min(1),
-      upstream: z.string().url().optional(),
-      tls: z.boolean().optional(),
-    })
-    .optional(),
-  previewBuild: z
-    .object({
-      context: z.string().min(1),
-      dockerfile: z.string().optional(),
-      image: z.string().optional(),
-      port: z.number().int().min(1).max(65_535).optional(),
-      env: z.record(z.string(), z.string()).optional(),
-    })
-    .optional(),
-  promote: z
-    .object({
-      host: z.string().min(1),
-      upstream: z.string().url(),
-      tls: z.boolean().optional(),
-    })
-    .optional(),
-  linear: z
-    .object({
-      space: z.string().min(1),
-      teamId: z.string().optional(),
-      sessionId: z.string().min(1),
-    })
-    .optional(),
-  context: z
-    .object({
-      enable: z.boolean().optional(),
-      web: z.boolean().optional(),
-      topK: z.number().int().min(1).max(100).optional(),
-      maxTokens: z.number().int().min(2000).max(200_000).optional(),
-      exts: z.array(z.string()).optional(),
-      ignore: z.array(z.string()).optional(),
-      seeds: z.array(z.string().url()).optional(),
-    })
-    .optional(),
-  userId: z.string().min(1).optional(),
-  policyObligations: z.array(z.string()).optional(),
-});
-
-const mapWorkflowResource = (raw: unknown) => {
-  const input = raw as Partial<z.infer<typeof workflowInput>>;
-  return {
-    kind: "workflow" as const,
-    id: "plan",
-    attrs: {
-      auto: input?.auto ?? "read",
-      mode: input?.mode ?? "sequential",
-    },
-  };
-};
-
-const mapWorkflowRunResource = (raw: unknown) => {
-  const input = raw as { runId?: string };
-  return {
-    kind: "workflow" as const,
-    id: input?.runId ?? "run",
-    attrs: {},
-  };
-};
-
-function coerceRecord(value: unknown): Record<string, unknown> {
-  if (!value) {
-    return {};
-  }
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return typeof parsed === "object" && parsed !== null
-        ? (parsed as Record<string, unknown>)
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  if (typeof value === "object") {
-    return value as Record<string, unknown>;
+function coerceRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
   }
   return {};
-}
-
-function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
-  if (ctx.policy?.obligations?.length) {
-    const obligations = ctx.policy.obligations;
-    if (obligations.includes("requireBio")) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "biometric_required",
-        cause: obligations,
-      });
-    }
-  }
-}
-
-type WorkflowInputPayload = z.infer<typeof workflowInput>;
-
-function deriveWorkflowTitle(requirement: string): string | undefined {
-  const trimmed = requirement.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  const limit = 80;
-  if (trimmed.length <= limit) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, limit - 3)}...`;
-}
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function stableUuidFromSeed(seed: string): string {
-  const digest = createHash("sha256").update(seed).digest("hex").slice(0, 32);
-  const chars = digest.split("");
-  chars[12] = "4"; // UUID version 4
-  const variant = (parseInt(chars[16] ?? "0", 16) & 0x3) | 0x8;
-  chars[16] = variant.toString(16);
-  const normalized = chars.join("");
-  return `${normalized.slice(0, 8)}-${normalized.slice(8, 12)}-${normalized.slice(12, 16)}-${normalized.slice(16, 20)}-${normalized.slice(20, 32)}`;
-}
-
-function ensureUuid(value: string | undefined, seed: string): string {
-  if (typeof value === "string" && UUID_PATTERN.test(value)) {
-    return value;
-  }
-  return stableUuidFromSeed(seed);
-}
-
-function createRequirementMessage(
-  input: WorkflowInputPayload,
-  runId: string
-): UIMessage {
-  const workflowMessageKey = `${runId}:requirement`;
-  return {
-    id: ensureUuid(undefined, workflowMessageKey),
-    role: "user",
-    parts: [{ type: "text", text: input.requirement }],
-    metadata: {
-      workflowMessageKey,
-      auto: input.auto,
-      workspace: input.workspace ?? null,
-      repoBase: input.repoBase ?? null,
-      createdAt: new Date().toISOString(),
-    },
-  };
-}
-
-async function ensureWorkflowConversation(options: {
-  userId: string;
-  workflowId: string;
-  title?: string;
-}) {
-  const existing = await conversationRepo.getConversationByWorkflow(
-    options.userId,
-    options.workflowId
-  );
-  if (existing) {
-    return { conversation: existing, created: false };
-  }
-
-  try {
-    const conversation = await conversationRepo.createConversation(
-      options.userId,
-      options.title,
-      options.workflowId
-    );
-    return { conversation, created: true };
-  } catch (error) {
-    const fallback = await conversationRepo.getConversationByWorkflow(
-      options.userId,
-      options.workflowId
-    );
-    if (fallback) {
-      return { conversation: fallback, created: false };
-    }
-    throw error;
-  }
-}
-
-async function persistWorkflowMessages(options: {
-  userId: string;
-  conversationId: string;
-  messages: UIMessage[];
-  persistedKeys: Set<string>;
-  runId: string;
-  baseId?: string;
-  eventType?: string;
-  eventId?: string;
-}): Promise<number> {
-  const {
-    userId,
-    conversationId,
-    messages,
-    persistedKeys,
-    runId,
-    baseId,
-    eventType,
-    eventId,
-  } = options;
-  let persistedCount = 0;
-  for (let index = 0; index < messages.length; index += 1) {
-    const original = messages[index]!;
-    const metadataObject = (original.metadata ?? {}) as {
-      workflowMessageKey?: unknown;
-      [key: string]: unknown;
-    };
-
-    const metadataKey =
-      typeof metadataObject.workflowMessageKey === "string" &&
-      metadataObject.workflowMessageKey.length > 0
-        ? metadataObject.workflowMessageKey
-        : null;
-
-    const dedupeKey = baseId
-      ? `${baseId}:${index}`
-      : metadataKey
-        ? metadataKey
-        : typeof original.id === "string" && original.id.length > 0
-          ? original.id
-          : `${runId}:${index}`;
-
-    if (persistedKeys.has(dedupeKey)) {
-      continue;
-    }
-
-    const messageId = ensureUuid(
-      typeof original.id === "string" ? original.id : undefined,
-      dedupeKey
-    );
-
-    const normalized: UIMessage = {
-      ...original,
-      id: messageId,
-      parts: Array.isArray(original.parts) ? original.parts : [],
-      metadata: {
-        ...metadataObject,
-        workflowMessageKey: metadataKey ?? dedupeKey,
-        ...(eventType ? { workflowEventType: eventType } : {}),
-        ...(eventId ? { workflowEventId: eventId } : {}),
-      },
-    };
-
-    try {
-      await conversationRepo.createMessage(
-        userId,
-        conversationId,
-        normalized
-      );
-      persistedKeys.add(dedupeKey);
-      persistedCount += 1;
-    } catch (error) {
-      logger.warn("workflow_message_persist_failed", {
-        runId,
-        conversationId,
-        messageId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-  return persistedCount;
 }
 
 export const workflowRouter: ReturnType<typeof router> = router({
@@ -445,11 +110,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
         const abortController = new AbortController();
 
         // Create executor (runtime or runner based on feature flag)
+        // For start mutation, we don't pass history as it's a fresh run
         const executor = createWorkflowExecutor(input, abortController);
 
         // Create durable run row now so clients may hydrate history
         const storedInput = {
-          ...input,
+          ...(input as any),
           executionId: executor.runId,
           reasoningSince: Date.now(),
         };
@@ -470,23 +136,23 @@ export const workflowRouter: ReturnType<typeof router> = router({
             workflowId: executor.runId,
             title: deriveWorkflowTitle(input.requirement),
           });
-              if (created) {
-                const persisted = await persistWorkflowMessages({
-                  userId: session.user.id,
-                  conversationId: conversation.id,
-                  messages: [createRequirementMessage(input, executor.runId)],
-                  persistedKeys: new Set(),
-                  runId: executor.runId,
-                  eventType: "workflow.requirement",
-                  eventId: executor.runId,
-                });
-                if (persisted > 0) {
-                  triggerPreferenceRefresh(session.user.id, {
-                    reason: "workflow_requirement",
-                  });
-                }
-              }
-            } catch (error) {
+          if (created) {
+            const persisted = await persistWorkflowMessages({
+              userId: session.user.id,
+              conversationId: conversation.id,
+              messages: [createRequirementMessage(input, executor.runId)],
+              persistedKeys: new Set(),
+              runId: executor.runId,
+              eventType: "workflow.requirement",
+              eventId: executor.runId,
+            });
+            if (persisted > 0) {
+              triggerPreferenceRefresh(session.user.id, {
+                reason: "workflow_requirement",
+              });
+            }
+          }
+        } catch (error) {
           logger.warn("workflow_conversation_init_failed", {
             runId: executor.runId,
             error: error instanceof Error ? error.message : String(error),
@@ -555,6 +221,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         const abortController = new AbortController();
         let cancelled = false;
+        let suspended = false;
         let timerClosed = false;
         abortController.signal.addEventListener("abort", () => {
           cancelled = true;
@@ -562,7 +229,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
         const closeTimer = (status: "ok" | "error" | "cancel") => {
-          if (timerClosed) return;
+          if (timerClosed) {
+            return;
+          }
           stopStreamTimer({ status });
           timerClosed = true;
         };
@@ -574,7 +243,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
         };
 
         const push = (event: WorkflowEvent) => {
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
           recordEvent(event.type === "progress" ? "progress" : "chunk");
           emit.next(event);
         };
@@ -590,7 +261,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
             triggerPreferenceRefresh(session.user.id, { reason });
 
           const markCancelled = async () => {
-            if (!runId) return;
+            if (!runId) {
+              return;
+            }
             try {
               await workflowRepo.updateRun(runId, {
                 status: "cancelled",
@@ -616,8 +289,43 @@ export const workflowRouter: ReturnType<typeof router> = router({
             emit.complete();
           };
 
+          const markSuspended = async () => {
+            if (!runId) {
+              return;
+            }
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "suspended",
+                completedAt: undefined, // Not complete yet
+              });
+              await recordAudit({
+                userId: session.user.id,
+                action: "workflow.stream.suspend",
+                resource: { kind: "workflow", id: runId },
+                decision: "allow",
+              });
+              refreshPreferences("workflow_stream_suspended");
+            } catch (error) {
+              logger.warn("workflow_suspension_update_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+            // We don't emit error or complete, just end stream?
+            // If we emit complete, the client might think it's done.
+            // But trpc subscription ending usually means "done" or "connection closed".
+            // Client handles status update via "notice" or separate query.
+            if (!timerClosed) {
+              recordEvent("complete"); // Use complete for metric or add suspended?
+              closeTimer("ok");
+            }
+            emit.complete();
+          };
+
           const markCompleted = async () => {
-            if (!runId) return;
+            if (!runId) {
+              return;
+            }
             try {
               await workflowRepo.updateRun(runId, {
                 status: "completed",
@@ -643,8 +351,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
           };
 
           const addReasoning = (event: WorkflowEvent) => {
-            if (!useRuntime) return;
-            if (event.type !== "reasoning") return;
+            if (!useRuntime) {
+              return;
+            }
+            if (event.type !== "reasoning") {
+              return;
+            }
             const payload = event as any;
             const text =
               typeof payload.text === "string" && payload.text.length > 0
@@ -653,31 +365,63 @@ export const workflowRouter: ReturnType<typeof router> = router({
                     payload.reasoning.length > 0
                   ? payload.reasoning
                   : null;
-            if (!text) return;
+            if (!text) {
+              return;
+            }
             reasonTraces.push({ text, timestamp: Date.now() });
           };
 
           try {
+            // Recovery Logic:
+            // If runId is provided, we are resuming/recovering.
+            // We need to fetch history first.
+            let history: WorkflowEvent[] | undefined;
+            if (runId) {
+              const events = await workflowRepo.listEvents(runId);
+              // listEvents returns newest first (desc). Reverse for chronological replay.
+              history = events.reverse().map((e) => ({
+                ...(e.eventData as object),
+                type: e.eventType,
+              })) as WorkflowEvent[];
+
+              // Check if run is already completed/cancelled?
+              // If so, we might just want to replay events to client (replay query does this).
+              // But if user wants to RESUME execution, we proceed.
+              // Assuming caller knows what they are doing by calling stream with runId on a non-terminal run.
+            }
+
             // Create executor (runtime or runner based on feature flag)
-            const executor = createWorkflowExecutor(input, abortController);
+            const executor = createWorkflowExecutor(
+              input,
+              abortController,
+              history
+            );
 
-            const storedInput = {
-              ...input,
-              executionId: executor.runId,
-              reasoningSince: Date.now(),
-            };
+            // Run is created *before* executor starts
+            // This is already handled above in `createRun`? No wait.
+            // We need `executor.runId` only if `runId` was null.
 
-            await workflowRepo.createRun({
-              id: executor.runId,
-              userId: session.user.id,
-              workflowId: "plan",
-              status: "running",
-              inputData: storedInput,
-              linearSessionId: input.linear?.sessionId,
-              linearSpace: input.linear?.space,
-            });
+            if (runId) {
+              // Resume case
+              await workflowRepo.updateRun(runId, { status: "running" });
+            } else {
+              runId = executor.runId;
+              const storedInput = {
+                ...(input as any),
+                executionId: runId,
+                reasoningSince: Date.now(),
+              };
+              await workflowRepo.createRun({
+                id: runId,
+                userId: session.user.id,
+                workflowId: "plan",
+                status: "running",
+                inputData: storedInput,
+                linearSessionId: input.linear?.sessionId,
+                linearSpace: input.linear?.space,
+              });
+            }
 
-            runId = executor.runId;
             try {
               const { conversation, created } =
                 await ensureWorkflowConversation({
@@ -709,7 +453,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
             await runRegistry.register(runId, {
               resume: async ({ resumeData }) => {
-                if (cancelled) return;
+                if (cancelled) {
+                  return;
+                }
                 await executor.resume(resumeData);
               },
               cancel: async () => {
@@ -771,9 +517,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 } else if ((event as any).kind === "wave-result") {
                   const data = (event as any).data || {};
                   const status =
-                    typeof data.status === "string"
-                      ? data.status
-                      : "completed";
+                    typeof data.status === "string" ? data.status : "completed";
                   multiAgentWavesTotal.inc({ status });
 
                   const agents: Array<{
@@ -927,6 +671,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 // Push event including its identity for client-side dedupe
                 push({ ...event, eventId } as WorkflowEvent);
 
+                // Detect suspension
+                if (
+                  event.type === "notice" &&
+                  (event as any).message === "workflow_suspended"
+                ) {
+                  suspended = true;
+                }
+
                 // Emit Linear activities for significant events (backup if runner doesn't emit)
                 if (
                   input.linear?.sessionId &&
@@ -977,14 +729,18 @@ export const workflowRouter: ReturnType<typeof router> = router({
               } catch (error) {
                 logger.warn("workflow_provenance_stream_failed", {
                   runId,
-                  error:
-                    error instanceof Error ? error.message : String(error),
+                  error: error instanceof Error ? error.message : String(error),
                 });
               }
             }
 
             if (cancelled) {
               await markCancelled();
+              return;
+            }
+
+            if (suspended) {
+              await markSuspended();
               return;
             }
 
@@ -1183,10 +939,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
       // referenced by reasoning nodes and load their rag_document labels.
       const docIds = new Set<string>();
       for (const node of nodes) {
-        const props = (node.properties ??
-          null) as Record<string, unknown> | null;
+        const props = (node.properties ?? null) as Record<
+          string,
+          unknown
+        > | null;
         const ids = Array.isArray(props?.ragDocumentIds)
-          ? (props!.ragDocumentIds as unknown[])
+          ? (props?.ragDocumentIds as unknown[])
           : [];
         for (const raw of ids) {
           if (typeof raw === "string" && raw.length > 0) {
@@ -1206,14 +964,16 @@ export const workflowRouter: ReturnType<typeof router> = router({
           .where(
             and(
               eq(memoryNodes.kind, "rag_document"),
-              eq(memoryNodes.resource, "user"),
-            ),
+              eq(memoryNodes.resource, "user")
+            )
           );
 
         documents = rows
           .map((row) => {
-            const props = (row.properties ??
-              null) as Record<string, unknown> | null;
+            const props = (row.properties ?? null) as Record<
+              string,
+              unknown
+            > | null;
             const documentId = props?.documentId;
             return typeof documentId === "string" && docIds.has(documentId)
               ? { documentId, label: row.label }
@@ -1221,7 +981,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           })
           .filter(
             (entry): entry is { documentId: string; label: string } =>
-              entry !== null,
+              entry !== null
           );
       }
 
@@ -1242,7 +1002,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
   listRuns: authedProcedure
     .input(
       z.object({
-        status: z.enum(["running", "suspended", "completed", "failed", "cancelled"]).optional(),
+        status: z
+          .enum(["running", "suspended", "completed", "failed", "cancelled"])
+          .optional(),
         limit: z.number().int().min(1).max(100).default(20),
         offset: z.number().int().min(0).default(0),
       })

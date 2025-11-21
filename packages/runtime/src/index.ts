@@ -1,38 +1,38 @@
 /**
  * @alfred/runtime
- * 
+ *
  * Workflow execution runtime for ALFRED.
  * Pure execution engine with AsyncGenerator interface.
  */
 
 export { createRuntime, WorkflowRuntime } from "./core";
-export type {
-  RuntimeInput,
-  RuntimeOptions,
-  RuntimeState,
-  ResumePayload,
-  WorkflowPhase,
-  PhaseConfig,
-  WorkflowRuntime as IWorkflowRuntime,
-} from "./types";
-
+export { runCognitiveLoop } from "./loops/cognitive";
+export { resumeInterruptedPlans } from "./loops/resume";
 // Export metrics for observability
 export {
-  runtimeExecutionsTotal,
-  runtimeExecutionDurationSeconds,
-  runtimePhasesTotal,
-  runtimePhaseDurationSeconds,
+  runtimeAiEventsTotal,
+  runtimeAiSdkCallsTotal,
+  runtimeAiSdkDurationSeconds,
   runtimeContextBuildDurationSeconds,
   runtimeContextCacheHitsTotal,
   runtimeContextTokensTotal,
-  runtimeAiSdkCallsTotal,
-  runtimeAiSdkDurationSeconds,
-  runtimeAiEventsTotal,
-  runtimeKnowledgeUpdatesTotal,
+  runtimeExecutionDurationSeconds,
+  runtimeExecutionsTotal,
   runtimeKnowledgeBatchDurationSeconds,
+  runtimeKnowledgeUpdatesTotal,
+  runtimePhaseDurationSeconds,
+  runtimePhasesTotal,
 } from "./metrics";
+export type { TraceSpan } from "./tracing";
 
 // Export tracing support
 export { RuntimeTracer } from "./tracing";
-export type { TraceSpan } from "./tracing";
-
+export type {
+  PhaseConfig,
+  ResumePayload,
+  RuntimeInput,
+  RuntimeOptions,
+  RuntimeState,
+  WorkflowPhase,
+  WorkflowRuntime as IWorkflowRuntime,
+} from "./types";

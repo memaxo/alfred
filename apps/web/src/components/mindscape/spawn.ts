@@ -16,6 +16,7 @@ export const mindscapeSpawnTypes = [
   "workflowlist",
   "deployment",
   "workflow",
+  "concept",
 ] as const;
 
 export type MindscapeSpawnType = (typeof mindscapeSpawnTypes)[number];
@@ -53,6 +54,7 @@ const spawnLabels: Record<MindscapeSpawnType, string> = {
   workflowlist: "Workflow List",
   deployment: "Deployments",
   workflow: "Workflow",
+  concept: "Concept",
 };
 
 export function formatSpawnLabel(type: MindscapeSpawnType): string {
@@ -181,6 +183,18 @@ export function createSpawnNode(
         type: "deployment",
         position,
         data: { label: "Deployments", liveHealth: false },
+      };
+    case "concept":
+      return {
+        id,
+        type: "concept",
+        position,
+        data: {
+          label: "New Concept",
+          entityType: "concept",
+          confidence: 1.0,
+          description: "A new concept in the knowledge graph.",
+        },
       };
     default:
       return null;

@@ -1,5 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { createTestCaller, resetAllMocks, setupTestEnv } from "./utils/router-helpers";
+import {
+  createTestCaller,
+  resetAllMocks,
+  setupTestEnv,
+} from "./utils/router-helpers";
 
 setupTestEnv();
 
@@ -17,7 +21,10 @@ mock.module("@alfred/api/ai/generate", () => ({
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
-  caller = await createTestCaller({ roles: ["user"], scopes: ["assistant.write"] });
+  caller = await createTestCaller({
+    roles: ["user"],
+    scopes: ["assistant.write"],
+  });
 });
 
 afterEach(() => {
@@ -41,7 +48,8 @@ describe("rate limiter", () => {
 
     await caller.assistant.generate(payload);
     await caller.assistant.generate(payload);
-    await expect(caller.assistant.generate(payload)).rejects.toThrow(/rate_limited/i);
+    await expect(caller.assistant.generate(payload)).rejects.toThrow(
+      /rate_limited/i
+    );
   });
 });
-

@@ -84,8 +84,12 @@ async function runUpdate(client: LinearClient, input: TicketInput) {
   const issueId = ensure(input.issueId, "ticket_issue_required");
   const payload: Record<string, unknown> = {};
 
-  if (input.title) payload.title = input.title;
-  if (input.description) payload.description = input.description;
+  if (input.title) {
+    payload.title = input.title;
+  }
+  if (input.description) {
+    payload.description = input.description;
+  }
 
   if (Object.keys(payload).length === 0) {
     throw new Error("ticket_update_payload_empty");

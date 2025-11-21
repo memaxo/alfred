@@ -14,8 +14,14 @@ describe("buildPreferenceSystemPrompt", () => {
     loadPreferencesSpy.mockReset();
     loadPreferencesSpy.mockResolvedValue(
       new Map([
-        ["response.verbosity", { value: "concise", source: "user", confidence: 1 }],
-        ["response.tone", { value: "technical", source: "user", confidence: 1 }],
+        [
+          "response.verbosity",
+          { value: "concise", source: "user", confidence: 1 },
+        ],
+        [
+          "response.tone",
+          { value: "technical", source: "user", confidence: 1 },
+        ],
         [
           "domain.proxmox.config_format",
           { value: "yaml", source: "default", confidence: 0.5 },
@@ -25,8 +31,8 @@ describe("buildPreferenceSystemPrompt", () => {
   });
 
   afterEach(() => {
-    delete process.env.PREFERENCE_ADAPTATION_ENABLED;
-    delete process.env.PREFERENCE_ADAPTATION_ROLLOUT_PERCENT;
+    process.env.PREFERENCE_ADAPTATION_ENABLED = undefined;
+    process.env.PREFERENCE_ADAPTATION_ROLLOUT_PERCENT = undefined;
   });
 
   it("builds prompt with response and domain instructions", async () => {

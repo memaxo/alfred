@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { STTPool } from "@alfred/voice/process/stt";
+import type { TTSPool } from "@alfred/voice/process/tts";
 import { VoiceSessionManager } from "../../src/voice/session";
-import type { STTPool } from "@alfred/voice/process/stt_pool";
-import type { TTSPool } from "@alfred/voice/process/tts_pool";
 
 // Mock pools
 class MockSTTPool {
@@ -16,14 +16,18 @@ class MockSTTPool {
 
 class MockTTSPool {
   async synthesize(
-    request: { text: string; voice?: string; streaming?: boolean },
-    onChunk: (chunk: { audioBase64: string; mimeType: string; sampleRate?: number }) => void
+    _request: { text: string; voice?: string; streaming?: boolean },
+    onChunk: (chunk: {
+      audioBase64: string;
+      mimeType: string;
+      sampleRate?: number;
+    }) => void
   ): Promise<void> {
     // Simulate streaming chunks
     onChunk({
       audioBase64: "test",
       mimeType: "audio/pcm",
-      sampleRate: 16000,
+      sampleRate: 16_000,
     });
   }
 }
@@ -80,4 +84,3 @@ describe("Voice Streaming Flow", () => {
     // In practice, cleanup runs every minute and removes sessions idle >5 minutes
   });
 });
-

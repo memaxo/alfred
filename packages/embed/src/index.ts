@@ -7,7 +7,12 @@ import { EmbedPool } from "./pool";
 
 export { EmbedPool } from "./pool";
 export { EmbedProcess } from "./process";
-export type { EmbedConfig, EmbedRequest, EmbedResponse, ProcessHealth } from "./types";
+export type {
+  EmbedConfig,
+  EmbedRequest,
+  EmbedResponse,
+  ProcessHealth,
+} from "./types";
 
 // Embedding dimension for KaLM-Embedding-Gemma3-12B-2511
 // Using 1024 dimensions via Matryoshka Representation Learning (MRL)
@@ -23,7 +28,8 @@ let pool: EmbedPool | null = null;
 export async function embed(text: string): Promise<number[]> {
   if (!pool) {
     pool = new EmbedPool({
-      modelName: process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
+      modelName:
+        process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
       device: (process.env.EMBED_DEVICE as any) ?? "auto",
       poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
     });
@@ -32,11 +38,11 @@ export async function embed(text: string): Promise<number[]> {
 
   const embeddings = await pool.embed([text]);
   const embedding = embeddings[0];
-  
+
   if (!embedding) {
     throw new Error("Failed to generate embedding");
   }
-  
+
   return embedding;
 }
 
@@ -46,7 +52,8 @@ export async function embed(text: string): Promise<number[]> {
 export async function embedMany(texts: string[]): Promise<number[][]> {
   if (!pool) {
     pool = new EmbedPool({
-      modelName: process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
+      modelName:
+        process.env.EMBED_MODEL ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
       device: (process.env.EMBED_DEVICE as any) ?? "auto",
       poolSize: Number(process.env.EMBED_POOL_SIZE ?? 2),
     });
@@ -75,4 +82,3 @@ export function getHealth() {
   }
   return pool.getHealth();
 }
-

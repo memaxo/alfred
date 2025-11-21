@@ -3,19 +3,18 @@ import { describe, expect, it, vi } from "bun:test";
 import {
   empty,
   fact,
+  type Knowledge,
   knowledgeHash,
   nodeFromHash,
   relation,
   timestamp,
   toConfidence,
-  type Knowledge,
-  type NodeId,
 } from "../src/hypergraph";
 import {
   extractEntries,
+  type HypergraphLoader,
   loadHypergraph,
   persistHypergraph,
-  type HypergraphLoader,
   type RelationRecord,
 } from "../src/persist";
 
@@ -47,15 +46,20 @@ describe("extractEntries", () => {
 
     const entries = extractEntries(graph, { onlyDirty: true });
 
+    const baselineKnowledge = graph.get(baseline);
+    if (!baselineKnowledge) {
+      throw new Error("baseline missing");
+    }
+
     expect(entries).toHaveLength(1);
-    expect(entries[0].hash).not.toBe(knowledgeHash(graph.get(baseline)!));
+    expect(entries[0].hash).not.toBe(knowledgeHash(baselineKnowledge));
   });
 });
 
 describe("persistHypergraph", () => {
   it("calls persist function with dirty entries and marks them clean", async () => {
     const graph = empty();
-    const first = graph.add(fact("Alpha", 0.9, "src"));
+    const _first = graph.add(fact("Alpha", 0.9, "src"));
     graph.add(fact("Beta", 0.5, "src"));
 
     const persistFn = vi.fn().mockResolvedValue(undefined);
@@ -72,7 +76,11 @@ describe("persistHypergraph", () => {
     const hashes = persistFn.mock.calls[1][1].map(
       (entry: { hash: string }) => entry.hash
     );
-    expect(hashes).toContain(knowledgeHash(graph.get(third)!));
+    const thirdKnowledge = graph.get(third);
+    if (!thirdKnowledge) {
+      throw new Error("third missing");
+    }
+    expect(hashes).toContain(knowledgeHash(thirdKnowledge));
   });
 });
 
@@ -130,7 +138,7 @@ describe("loadHypergraph", () => {
     expect(graph.getDirty()).toHaveLength(0);
 
     const alpha = graph.get(nodeFromHash(factHash));
-    expect(alpha && alpha._).toBe("fact");
+    expect(alpha?._).toBe("fact");
 
     const neighbors = graph.neighbors(nodeFromHash(factHash));
     expect(neighbors).toContain(nodeFromHash(otherHash));

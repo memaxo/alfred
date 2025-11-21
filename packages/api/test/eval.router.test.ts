@@ -45,7 +45,7 @@ afterEach(() => {
   resetAllMocks();
 });
 
-describe.skip("eval router", () => {
+describe("eval router", () => {
   describe("define", () => {
     it("creates an eval definition", async () => {
       const mockDef = {

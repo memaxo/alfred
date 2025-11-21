@@ -39,11 +39,14 @@ export function configureLinearMetrics(
 ): void {
   metrics = {
     linearActivityEmissionsTotal:
-      partial.linearActivityEmissionsTotal ?? metrics.linearActivityEmissionsTotal,
+      partial.linearActivityEmissionsTotal ??
+      metrics.linearActivityEmissionsTotal,
     linearActivityDurationSeconds:
-      partial.linearActivityDurationSeconds ?? metrics.linearActivityDurationSeconds,
+      partial.linearActivityDurationSeconds ??
+      metrics.linearActivityDurationSeconds,
     linearSessionOperationsTotal:
-      partial.linearSessionOperationsTotal ?? metrics.linearSessionOperationsTotal,
+      partial.linearSessionOperationsTotal ??
+      metrics.linearSessionOperationsTotal,
   };
 }
 

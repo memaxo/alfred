@@ -5,23 +5,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MindscapeNode } from "./mindscape-node";
-import { bookmarkNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
+import { bookmarkNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 const BOOKMARK_LIST_KEY = { limit: 50, offset: 0 } as const;
 
 export function BookmarkNode({ id, data, selected }: NodeProps) {
   const parsed = bookmarkNodeDataSchema.safeParse(data);
-  const bookmarkData = parsed.success
-    ? parsed.data
-    : { lastTags: undefined };
+  const bookmarkData = parsed.success ? parsed.data : { lastTags: undefined };
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
-  const [tags, setTags] = useState(
-    bookmarkData.lastTags?.join(", ") ?? ""
-  );
+  const [tags, setTags] = useState(bookmarkData.lastTags?.join(", ") ?? "");
 
   useEffect(() => {
     setTags(bookmarkData.lastTags?.join(", ") ?? "");
@@ -121,7 +117,11 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
             placeholder="Tags (comma separated)"
             value={tags}
           />
-          <Button disabled={createBookmark.isPending} type="submit" className="w-full">
+          <Button
+            className="w-full"
+            disabled={createBookmark.isPending}
+            type="submit"
+          >
             {createBookmark.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Saving
@@ -138,7 +138,7 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
             </div>
           ) : bookmarkCards.length === 0 ? (
-            <p className="py-4 text-center text-sm text-biolum-faint">
+            <p className="py-4 text-center text-biolum-faint text-sm">
               Save links to see them here.
             </p>
           ) : (
@@ -148,7 +148,7 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
                   className="rounded-md border border-white/10 bg-white/5 p-3"
                   key={bookmark.id}
                 >
-                  <div className="flex items-center justify-between text-sm font-medium">
+                  <div className="flex items-center justify-between font-medium text-sm">
                     <a
                       className="text-cyan-200 hover:underline"
                       href={bookmark.url}
@@ -166,14 +166,14 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
                       <Trash2 className="h-4 w-4 text-cyan-200" />
                     </Button>
                   </div>
-                  <p className="truncate text-xs text-biolum-faint">
+                  <p className="truncate text-biolum-faint text-xs">
                     {bookmark.url}
                   </p>
                   {bookmark.tags && bookmark.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {bookmark.tags.map((tag) => (
                         <span
-                          className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-cyan-200"
+                          className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200 uppercase tracking-wide"
                           key={tag}
                         >
                           {tag}
@@ -197,7 +197,9 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
 }
 
 function parseTags(tags: string): string[] | undefined {
-  if (!tags.trim()) return undefined;
+  if (!tags.trim()) {
+    return;
+  }
   const parts = tags
     .split(",")
     .map((tag) => tag.trim())

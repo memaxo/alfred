@@ -1,31 +1,42 @@
+import type { inferRouterInputs } from "@trpc/server";
 import type { NodeProps } from "@xyflow/react";
 import { formatDistanceToNow } from "date-fns";
 import { Bell, CalendarClock, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { inferRouterInputs } from "@trpc/server";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MindscapeNode } from "./mindscape-node";
-import { reminderNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { reminderNodeDataSchema } from "@/store/mindscape.schemas";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 
 const REMINDER_LIST_KEY = { limit: 50, offset: 0 } as const;
 
 export function ReminderNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const result = reminderNodeDataSchema.safeParse(data);
   const parsed = result.success
     ? result.data
-    : { title: undefined, due: undefined, description: undefined, mode: "edit" as const };
+    : {
+        title: undefined,
+        due: undefined,
+        description: undefined,
+        mode: "edit" as const,
+      };
   const currentStatus = parsed.status ?? deriveStatus(parsed.due, undefined);
   const mode = parsed.mode ?? (parsed.reminderId ? "view" : "edit");
   const isEditing = mode === "edit";
 
   const [draftTitle, setDraftTitle] = useState(parsed.title ?? "");
-  const [draftDescription, setDraftDescription] = useState(parsed.description ?? "");
+  const [draftDescription, setDraftDescription] = useState(
+    parsed.description ?? ""
+  );
   const [draftDue, setDraftDue] = useState(
     toLocalInput(parsed.due) ?? defaultDueInput()
   );
@@ -134,7 +145,7 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
       if (parsed.reminderId) {
         await deleteForReschedule.mutateAsync({ id: parsed.reminderId });
       }
-    } catch (error) {
+    } catch (_error) {
       // Errors handled by mutation hooks
     }
   };
@@ -146,7 +157,9 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
     }
     if (typeof window !== "undefined") {
       const confirmed = window.confirm("Delete this reminder?");
-      if (!confirmed) return;
+      if (!confirmed) {
+        return;
+      }
     }
     deleteReminder.mutate({ id: parsed.reminderId });
   };
@@ -164,18 +177,49 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
 
   const statusBadge = getStatusBadge(currentStatus);
   const relativeDue = useMemo(() => {
-    if (!parsed.due) return "No due date";
+    if (!parsed.due) {
+      return "No due date";
+    }
     const dueDate = new Date(parsed.due);
-    if (Number.isNaN(dueDate.getTime())) return parsed.due;
+    if (Number.isNaN(dueDate.getTime())) {
+      return parsed.due;
+    }
     return `Due ${formatDistanceToNow(dueDate, { addSuffix: true })}`;
   }, [parsed.due]);
 
   const absoluteDue = useMemo(() => {
-    if (!parsed.due) return null;
+    if (!parsed.due) {
+      return null;
+    }
     const dueDate = new Date(parsed.due);
-    if (Number.isNaN(dueDate.getTime())) return parsed.due;
+    if (Number.isNaN(dueDate.getTime())) {
+      return parsed.due;
+    }
     return dueDate.toLocaleString();
   }, [parsed.due]);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-blue-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-blue-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-blue-500/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+          <Bell className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          {parsed.title?.trim() || "Reminder"}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode
@@ -231,21 +275,23 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <Badge className={statusBadge.className}>{statusBadge.label}</Badge>
+              <Badge className={statusBadge.className}>
+                {statusBadge.label}
+              </Badge>
               {absoluteDue && (
                 <span className="text-biolum-faint text-xs">{absoluteDue}</span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-biolum">
+            <div className="flex items-center gap-2 text-biolum text-sm">
               <CalendarClock className="h-4 w-4 text-blue-300" />
               <span>{relativeDue}</span>
             </div>
             {parsed.description ? (
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <p className="whitespace-pre-wrap text-muted-foreground text-sm">
                 {parsed.description}
               </p>
             ) : (
-              <p className="text-sm italic text-biolum-faint">No description</p>
+              <p className="text-biolum-faint text-sm italic">No description</p>
             )}
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
@@ -279,17 +325,27 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
 }
 
 function deriveStatus(dueIso?: string, firedAt?: Date | string | null) {
-  if (firedAt) return "fired" as const;
-  if (!dueIso) return "scheduled" as const;
+  if (firedAt) {
+    return "fired" as const;
+  }
+  if (!dueIso) {
+    return "scheduled" as const;
+  }
   const due = new Date(dueIso);
-  if (Number.isNaN(due.getTime())) return "scheduled" as const;
+  if (Number.isNaN(due.getTime())) {
+    return "scheduled" as const;
+  }
   return due.getTime() <= Date.now() ? "due" : "scheduled";
 }
 
 function toLocalInput(value?: string) {
-  if (!value) return undefined;
+  if (!value) {
+    return;
+  }
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
+  if (Number.isNaN(date.getTime())) {
+    return;
+  }
   return formatForInput(date);
 }
 

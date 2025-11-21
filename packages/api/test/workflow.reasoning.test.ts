@@ -1,9 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import "./utils/mock-metrics";
 import {
-  mockPolicyAudit,
-  setupTestEnv,
-} from "./utils/router-helpers";
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import "./utils/mock-metrics";
+import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -11,7 +16,9 @@ setupTestEnv();
 const getRunMock = vi.fn();
 const getReasoningChainMock = vi.fn();
 const reconstructReasoningChainMock = vi.fn();
-const evaluateMock = vi.fn().mockResolvedValue({ allow: true, obligations: [] });
+const evaluateMock = vi
+  .fn()
+  .mockResolvedValue({ allow: true, obligations: [] });
 
 mockPolicyAudit();
 
@@ -65,7 +72,7 @@ describe("workflow reasoning query", () => {
         hash: "hash-a",
         text: "Considering option alpha",
         index: 0,
-        timestamp: 1735732800000,
+        timestamp: 1_735_732_800_000,
         previousHash: null,
         nextHash: "hash-b",
         relations: [],
@@ -75,7 +82,7 @@ describe("workflow reasoning query", () => {
         hash: "hash-b",
         text: "Selecting option beta",
         index: 1,
-        timestamp: 1735732810000,
+        timestamp: 1_735_732_810_000,
         previousHash: "hash-a",
         nextHash: null,
         relations: [{ toId: "node-b", timeDelta: 1000 }],
@@ -92,7 +99,7 @@ describe("workflow reasoning query", () => {
           kind: "reasoning",
           properties: {
             sequenceIndex: 0,
-            timestamp: 1735732800000,
+            timestamp: 1_735_732_800_000,
             nextHash: "hash-b",
           },
         },
@@ -104,7 +111,7 @@ describe("workflow reasoning query", () => {
           kind: "reasoning",
           properties: {
             sequenceIndex: 1,
-            timestamp: 1735732810000,
+            timestamp: 1_735_732_810_000,
             previousHash: "hash-a",
           },
         },

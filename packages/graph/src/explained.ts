@@ -10,8 +10,8 @@ export async function getExplainingDocuments(reasoningNodeId: string) {
       and(
         eq(memoryEdges.kind, "explains"),
         eq(memoryEdges.toId, reasoningNodeId),
-        eq(memoryEdges.resource, "user"),
-      ),
+        eq(memoryEdges.resource, "user")
+      )
     );
 
   if (edges.length === 0) {
@@ -27,8 +27,8 @@ export async function getExplainingDocuments(reasoningNodeId: string) {
       and(
         eq(memoryNodes.kind, "rag_document"),
         eq(memoryNodes.resource, "user"),
-        inArray(memoryNodes.id, fromIds),
-      ),
+        inArray(memoryNodes.id, fromIds)
+      )
     );
 
   return { nodes, edges };

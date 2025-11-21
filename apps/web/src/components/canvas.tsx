@@ -7,10 +7,10 @@
 
 import { cn } from "@/lib/utils";
 
-interface CanvasProps {
+type CanvasProps = {
   children: React.ReactNode;
   className?: string;
-}
+};
 
 export function Canvas({ children, className }: CanvasProps) {
   return (

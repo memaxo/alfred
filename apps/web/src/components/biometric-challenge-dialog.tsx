@@ -30,7 +30,9 @@ export function BiometricChallengeDialog({
 
   // Auto-trigger passkey flow when dialog opens
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     const triggerPasskey = async () => {
       setIsAuthenticating(true);
@@ -78,7 +80,7 @@ export function BiometricChallengeDialog({
         // User cancellation is not an error - just close dialog
         const message =
           error instanceof Error ? error.message : "biometric_auth_failed";
-        
+
         // Check if it's a user cancellation (WebAuthn user cancellation)
         if (
           message.includes("NotAllowedError") ||
@@ -89,7 +91,7 @@ export function BiometricChallengeDialog({
           onClose();
           return;
         }
-        
+
         toast.error(message);
       } finally {
         setIsAuthenticating(false);
@@ -104,20 +106,23 @@ export function BiometricChallengeDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-md rounded-3xl border border-white/10 bg-void-surface/90 backdrop-blur-xl shadow-none">
+    <Dialog onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
+      <DialogContent className="max-w-md rounded-3xl border border-white/10 bg-void-surface/90 shadow-none backdrop-blur-xl">
         <DialogHeader>
-          <div className="flex justify-center mb-4">
+          <div className="mb-4 flex justify-center">
             <div className="rounded-full bg-biolum/20 p-6">
-              <Fingerprint className="h-12 w-12 text-biolum" strokeWidth={1.5} />
+              <Fingerprint
+                className="h-12 w-12 text-biolum"
+                strokeWidth={1.5}
+              />
             </div>
           </div>
-          <DialogTitle className="text-biolum tracking-tighter text-center">
+          <DialogTitle className="text-center text-biolum tracking-tighter">
             Biometric Authentication Required
           </DialogTitle>
-          <DialogDescription className="text-biolum-dim text-center">
-            This workflow requires elevated permissions. Please authenticate with your 
-            passkey to continue.
+          <DialogDescription className="text-center text-biolum-dim">
+            This workflow requires elevated permissions. Please authenticate
+            with your passkey to continue.
           </DialogDescription>
         </DialogHeader>
 
@@ -134,30 +139,29 @@ export function BiometricChallengeDialog({
 
           <div className="flex flex-col gap-2">
             {isAuthenticating ? (
-              <div className="text-biolum-dim text-center py-4">
+              <div className="py-4 text-center text-biolum-dim">
                 <p>Waiting for biometric authentication...</p>
-                <p className="text-biolum-faint text-xs mt-2">
+                <p className="mt-2 text-biolum-faint text-xs">
                   Your device will prompt you for biometric authentication.
                 </p>
               </div>
             ) : null}
             <Button
-              onClick={handleCancel}
-              variant="outline"
               className="w-full rounded-full"
               disabled={isAuthenticating}
+              onClick={handleCancel}
+              variant="outline"
             >
               Cancel
             </Button>
           </div>
 
-          <p className="text-biolum-faint text-xs text-center">
-            Your device will prompt you for biometric authentication (Face ID, Touch ID, 
-            or Windows Hello).
+          <p className="text-center text-biolum-faint text-xs">
+            Your device will prompt you for biometric authentication (Face ID,
+            Touch ID, or Windows Hello).
           </p>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-

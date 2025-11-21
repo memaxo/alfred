@@ -11,18 +11,13 @@
  * before invoking bun test so @alfred/db initialises the sqlite driver.
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-} from "bun:test";
-import { eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it } from "bun:test";
 import type {
+  KnowledgeConfidence,
   KnowledgeFact,
   KnowledgeUpdate,
-  KnowledgeConfidence,
 } from "@alfred/type/knowledge";
+import { eq } from "drizzle-orm";
 
 type BridgeModule = typeof import("../src/engines/bridge");
 type DbModule = typeof import("@alfred/db");
@@ -56,64 +51,59 @@ describe("RuntimeKnowledgeBridge sqlite integration", () => {
     memoryNodes = graphMod.memoryNodes;
   });
 
-  it(
-    "persists fact nodes into memory_nodes for runtime: resources",
-    async () => {
-      if (!RuntimeKnowledgeBridge || !db || !memoryNodes || !isSqliteDriver) {
-        throw new Error("sqlite bridge test not initialised correctly");
-      }
+  it("persists fact nodes into memory_nodes for runtime: resources", async () => {
+    if (!(RuntimeKnowledgeBridge && db && memoryNodes && isSqliteDriver)) {
+      throw new Error("sqlite bridge test not initialised correctly");
+    }
 
-      if (!isSqliteDriver()) {
-        // Environment is not using sqlite; treat as a soft skip so the
-        // suite remains green under Postgres-only runs.
-        // eslint-disable-next-line no-console
-        console.warn(
-          "Skipping RuntimeKnowledgeBridge sqlite integration test (db driver is not sqlite)"
-        );
-        expect(true).toBe(true);
-        return;
-      }
+    if (!isSqliteDriver()) {
+      // Environment is not using sqlite; treat as a soft skip so the
+      // suite remains green under Postgres-only runs.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "Skipping RuntimeKnowledgeBridge sqlite integration test (db driver is not sqlite)"
+      );
+      expect(true).toBe(true);
+      return;
+    }
 
-      const runId = `runtime-bridge-sqlite-${Date.now()}`;
-      const resource = `runtime:${runId}`;
-      const bridge = new RuntimeKnowledgeBridge({
-        resource,
-        runId,
-      });
+    const runId = `runtime-bridge-sqlite-${Date.now()}`;
+    const resource = `runtime:${runId}`;
+    const bridge = new RuntimeKnowledgeBridge({
+      resource,
+      runId,
+    });
 
-      const fact: KnowledgeFact = {
-        id: `fact-${runId}`,
-        content: "Runtime bridge sqlite integration fact",
-        confidence: 0.9 as KnowledgeConfidence,
-        source: "test:runtime-bridge-sqlite",
-        timestamp: new Date().toISOString(),
-        tags: ["runtime", "sqlite"],
-      };
+    const fact: KnowledgeFact = {
+      id: `fact-${runId}`,
+      content: "Runtime bridge sqlite integration fact",
+      confidence: 0.9 as KnowledgeConfidence,
+      source: "test:runtime-bridge-sqlite",
+      timestamp: new Date().toISOString(),
+      tags: ["runtime", "sqlite"],
+    };
 
-      const updates: KnowledgeUpdate[] = [
-        {
-          node: fact,
-        },
-      ];
+    const updates: KnowledgeUpdate[] = [
+      {
+        node: fact,
+      },
+    ];
 
-      bridge.applyUpdates(updates);
-      await bridge.persist();
+    bridge.applyUpdates(updates);
+    await bridge.persist();
 
-      const rows = await db
-        .select()
-        .from(memoryNodes)
-        .where(eq(memoryNodes.resource, resource));
+    const rows = await db
+      .select()
+      .from(memoryNodes)
+      .where(eq(memoryNodes.resource, resource));
 
-      expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeGreaterThan(0);
 
-      const labels = rows.map((row) => row.label);
-      expect(
-        labels.some((label) =>
-          label.includes("Runtime bridge sqlite integration fact")
-        )
-      ).toBe(true);
-    },
-    20_000
-  );
+    const labels = rows.map((row) => row.label);
+    expect(
+      labels.some((label) =>
+        label.includes("Runtime bridge sqlite integration fact")
+      )
+    ).toBe(true);
+  }, 20_000);
 });
-

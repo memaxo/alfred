@@ -18,8 +18,8 @@ import {
   expect,
   it,
 } from "bun:test";
-import { eq } from "drizzle-orm";
 import { EMBEDDING_DIM } from "@alfred/embed";
+import { eq } from "drizzle-orm";
 
 let ingest: typeof import("@alfred/rag").ingest;
 let workflowProvenance: typeof import("../src/workflow/provenance").workflowProvenance;
@@ -43,25 +43,25 @@ describe("workflow runtime provenance integration (sqlite)", () => {
 
   afterAll(() => {
     if (ORIGINAL_DB_URL === undefined) {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     } else {
       process.env.DATABASE_URL = ORIGINAL_DB_URL;
     }
 
     if (ORIGINAL_RAG_ENRICH === undefined) {
-      delete process.env.RAG_ENRICH_GRAPH;
+      process.env.RAG_ENRICH_GRAPH = undefined;
     } else {
       process.env.RAG_ENRICH_GRAPH = ORIGINAL_RAG_ENRICH;
     }
 
     if (ORIGINAL_TRPC_METRICS === undefined) {
-      delete process.env.DISABLE_TRPC_METRICS;
+      process.env.DISABLE_TRPC_METRICS = undefined;
     } else {
       process.env.DISABLE_TRPC_METRICS = ORIGINAL_TRPC_METRICS;
     }
 
     if (ORIGINAL_HOOK_METRICS === undefined) {
-      delete process.env.DISABLE_METRICS_HOOKS;
+      process.env.DISABLE_METRICS_HOOKS = undefined;
     } else {
       process.env.DISABLE_METRICS_HOOKS = ORIGINAL_HOOK_METRICS;
     }
@@ -70,12 +70,9 @@ describe("workflow runtime provenance integration (sqlite)", () => {
   beforeEach(() => {
     // Stub embeddings to avoid spinning up heavy local models during tests
     setEmbeddingProvider({
-      embed: async () =>
-        Array.from({ length: EMBEDDING_DIM }, () => 0.1),
+      embed: async () => Array.from({ length: EMBEDDING_DIM }, () => 0.1),
       embedMany: async (texts: string[]) =>
-        texts.map(() =>
-          Array.from({ length: EMBEDDING_DIM }, () => 0.1),
-        ),
+        texts.map(() => Array.from({ length: EMBEDDING_DIM }, () => 0.1)),
     });
   });
 
@@ -122,9 +119,7 @@ describe("workflow runtime provenance integration (sqlite)", () => {
     expect(ragNodes.length).toBeGreaterThan(0);
 
     const ragNode = ragNodes.find((row) => {
-      const props = (row.properties ?? null) as
-        | Record<string, unknown>
-        | null;
+      const props = (row.properties ?? null) as Record<string, unknown> | null;
       return props?.documentId === documentId;
     });
 
@@ -138,11 +133,11 @@ describe("workflow runtime provenance integration (sqlite)", () => {
     expect(reasoningNodes.length).toBeGreaterThan(0);
 
     const reasoningNode = reasoningNodes.find((row) => {
-      const props = (row.properties ?? null) as
-        | { ragDocumentIds?: unknown }
-        | null;
+      const props = (row.properties ?? null) as {
+        ragDocumentIds?: unknown;
+      } | null;
       const ids = Array.isArray(props?.ragDocumentIds)
-        ? (props!.ragDocumentIds as unknown[])
+        ? (props?.ragDocumentIds as unknown[])
         : [];
       return ids.includes(documentId);
     });
@@ -157,13 +152,13 @@ describe("workflow runtime provenance integration (sqlite)", () => {
     expect(explainsEdges.length).toBeGreaterThan(0);
 
     const explainEdge = explainsEdges.find((edge) => {
-      if (!ragNode || !reasoningNode) return false;
+      if (!(ragNode && reasoningNode)) {
+        return false;
+      }
       if (edge.fromId !== ragNode.id || edge.toId !== reasoningNode.id) {
         return false;
       }
-      const meta = (edge.metadata ?? null) as
-        | Record<string, unknown>
-        | null;
+      const meta = (edge.metadata ?? null) as Record<string, unknown> | null;
       return meta?.documentId === documentId;
     });
 

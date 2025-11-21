@@ -1,5 +1,5 @@
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { TRPCClient } from "@trpc/client";
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import {
   createTestSession,

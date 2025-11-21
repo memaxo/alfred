@@ -1,4 +1,13 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { EMBEDDING_DIM } from "@alfred/embed";
 
 const createDocumentMock = vi.fn();
@@ -68,7 +77,9 @@ describe("RAG doc functions", () => {
         embed: async () => Array.from({ length: 10 }, () => 0.1),
         embedMany: providerMocks.embedMany,
       });
-      await expect(doc.embed("test")).rejects.toThrow("rag_embed_invalid_vector");
+      await expect(doc.embed("test")).rejects.toThrow(
+        "rag_embed_invalid_vector"
+      );
     });
   });
 
@@ -83,9 +94,13 @@ describe("RAG doc functions", () => {
     it("validates embedding count matches input", async () => {
       doc.setEmbeddingProvider({
         embed: providerMocks.embed,
-        embedMany: async () => [Array.from({ length: EMBEDDING_DIM }, () => 0.1)],
+        embedMany: async () => [
+          Array.from({ length: EMBEDDING_DIM }, () => 0.1),
+        ],
       });
-      await expect(doc.embedMany(["a", "b"])).rejects.toThrow("rag_embed_mismatch");
+      await expect(doc.embedMany(["a", "b"])).rejects.toThrow(
+        "rag_embed_mismatch"
+      );
     });
   });
 
@@ -95,7 +110,10 @@ describe("RAG doc functions", () => {
       createDocumentMock.mockResolvedValue(mockDoc);
       addChunksMock.mockResolvedValue([]);
 
-      const docId = await doc.ingest("test-source", "content one\n\ncontent two");
+      const docId = await doc.ingest(
+        "test-source",
+        "content one\n\ncontent two"
+      );
 
       expect(docId).toBe("doc-id");
       expect(createDocumentMock).toHaveBeenCalled();
@@ -104,7 +122,9 @@ describe("RAG doc functions", () => {
     });
 
     it("skips empty content", async () => {
-      await expect(doc.ingest("test", " ")).rejects.toThrow("rag_empty_content");
+      await expect(doc.ingest("test", " ")).rejects.toThrow(
+        "rag_empty_content"
+      );
     });
   });
 

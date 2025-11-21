@@ -1,4 +1,9 @@
-export type ReviewCheckType = "tests" | "lint" | "static" | "scenario";
+export type ReviewCheckType =
+  | "tests"
+  | "lint"
+  | "static"
+  | "scenario"
+  | "smoke";
 
 export type ReviewCheck = {
   id: string;
@@ -72,7 +77,9 @@ export function generateReviewExecPlanSkeleton(
   const lines: string[] = [];
   lines.push(`# Review ExecPlan for run ${runId}`);
   lines.push("");
-  lines.push("This ExecPlan defines how to validate merged changes for this workflow run.");
+  lines.push(
+    "This ExecPlan defines how to validate merged changes for this workflow run."
+  );
   lines.push("");
   lines.push("## Purpose");
   lines.push("");

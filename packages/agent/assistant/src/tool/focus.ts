@@ -173,7 +173,6 @@ export const toolFocus = {
         ok = true;
         break;
       }
-      case "status":
       default: {
         updated = statusFocus(current);
         break;

@@ -1,5 +1,4 @@
 import {
-  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -8,8 +7,8 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 import { dbModuleStub } from "./utils/mock-db-client";
+import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -57,19 +56,19 @@ mock.module("@alfred/agent/preference/inference", () => ({
   inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
 }));
 
-let caller: Awaited<ReturnType<
-  (typeof import("./utils/trpc")) ["createTestCaller"]
->>;
+let caller: Awaited<
+  ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
+>;
 
 beforeAll(async () => {
   const { createTestCaller } = await import("./utils/trpc");
   const agent = await import("@alfred/agent");
   recordMemoryUpdateSpy = vi
     .spyOn(agent, "recordMemoryUpdate")
-    .mockImplementation(() => undefined);
+    .mockImplementation(() => {});
   recordMemoryForgetSpy = vi
     .spyOn(agent, "recordMemoryForget")
-    .mockImplementation(() => undefined);
+    .mockImplementation(() => {});
   caller = await createTestCaller({
     scopes: ["preference.write"],
   });
@@ -142,10 +141,7 @@ describe("preference router", () => {
         1.0,
         "user"
       );
-      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith(
-        "preference",
-        "user"
-      );
+      expect(recordMemoryUpdateSpy).toHaveBeenCalledWith("preference", "user");
       expect(result).toEqual(mockPreference);
     });
   });
@@ -163,7 +159,7 @@ describe("preference router", () => {
       expect(result).toEqual({ removed: 1 });
     });
 
-    it.skip("returns zero when preference not found", async () => {
+    it("returns zero when preference not found", async () => {
       deletePreferenceMock.mockResolvedValue(0);
 
       const result = await caller.preference.delete({

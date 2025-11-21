@@ -34,7 +34,7 @@ export function analyzeMistakes(
     if (!grouped.has(key)) {
       grouped.set(key, []);
     }
-    grouped.get(key)!.push(entry);
+    grouped.get(key)?.push(entry);
   }
 
   const insights: KnowledgeInsight[] = [];

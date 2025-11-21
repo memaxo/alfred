@@ -7,20 +7,20 @@
  * Applies SQL migrations in order and records them in _migrations.
  */
 
+import { readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readdir } from "node:fs/promises";
 import { Client } from "pg";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, "../src/migrations");
 
-interface Migration {
+type Migration = {
   file: string;
   number: number;
   name: string;
   path: string;
-}
+};
 
 async function loadMigrations(): Promise<Migration[]> {
   const entries = await readdir(MIGRATIONS_DIR);
@@ -28,13 +28,13 @@ async function loadMigrations(): Promise<Migration[]> {
     .filter((file) => file.endsWith(".sql"))
     .map((file) => {
       const match = file.match(/^(\d+)_(.+)\.sql$/);
-      if (!match) {
+      if (!(match?.[1] && match[2])) {
         throw new Error(`Invalid migration filename: ${file}`);
       }
       return {
         file,
-        number: Number.parseInt(match[1]!, 10),
-        name: match[2]!,
+        number: Number.parseInt(match[1], 10),
+        name: match[2],
         path: join(MIGRATIONS_DIR, file),
       };
     })

@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 
+import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { semanticQuery } from "@alfred/knowledge/query";
-import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { eq } from "drizzle-orm";
 
-type HypergraphBridgeModule = typeof import("@alfred/agent/assistant/hypergraph-bridge");
+type HypergraphBridgeModule =
+  typeof import("@alfred/agent/assistant/hypergraph-bridge");
 let persistHypergraphToDb: HypergraphBridgeModule["persistHypergraphToDb"];
 let loadHypergraphFromDb: HypergraphBridgeModule["loadHypergraphFromDb"];
 let db: typeof import("@alfred/db")["db"];
@@ -45,7 +46,9 @@ async function run() {
 
   const results = semanticQuery("alpha", restored, 5);
   if (!results.includes(alpha)) {
-    throw new Error(`Smoke query failed; expected Alpha in results: ${results}`);
+    throw new Error(
+      `Smoke query failed; expected Alpha in results: ${results}`
+    );
   }
 
   console.log(

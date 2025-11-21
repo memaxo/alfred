@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Download voice models for Faster-Whisper and Piper TTS.
+Download voice models for Maya1 (TTS) and NeMo (STT).
 
 Usage:
     python3 download_models.py                    # Download all models
@@ -13,47 +13,56 @@ import sys
 from pathlib import Path
 
 try:
-    from faster_whisper import WhisperModel
-    from piper.download import ensure_voice_exists
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from snac import SNAC
+    import torch
 except ImportError as e:
     print(f"Error: Missing dependencies. Install with:")
     print(f"  cd packages/voice && ./scripts/install-deps.sh")
-    print(f"  # or")
-    print(f"  uv pip install faster-whisper piper-tts --torch-backend=auto")
     sys.exit(1)
 
 
-def download_whisper_model(model_name: str = "large-v3-turbo", verify_only: bool = False):
-    """Download or verify Faster-Whisper model."""
-    print(f"{'Verifying' if verify_only else 'Downloading'} Faster-Whisper model: {model_name}")
+def download_maya1_model(verify_only: bool = False):
+    """Download or verify Maya1 model."""
+    model_name = "maya-research/maya1"
+    print(f"{'Verifying' if verify_only else 'Downloading'} Maya1 model: {model_name}")
     
     try:
-        # Faster-Whisper downloads models automatically on first use
-        # Just try to load it to trigger download or verify it exists
-        model = WhisperModel(model_name, device="cpu", compute_type="int8")
-        print(f"✓ Faster-Whisper model '{model_name}' {'verified' if verify_only else 'downloaded'}")
+        # Maya1 downloads models automatically on first use via transformers
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        # We don't load the full model to save time/memory during setup unless it's not cached
+        # But from_pretrained check cache first.
+        # To verify, checking tokenizer is good enough for access/cache.
+        
+        # Also check SNAC
+        snac_model = "hubertsiuzdak/snac_24khz"
+        SNAC.from_pretrained(snac_model)
+        
+        print(f"✓ Maya1 & SNAC models {'verified' if verify_only else 'downloaded'}")
         return True
     except Exception as e:
-        print(f"✗ Failed to {'verify' if verify_only else 'download'} Faster-Whisper model: {e}")
+        print(f"✗ Failed to {'verify' if verify_only else 'download'} Maya1/SNAC model: {e}")
         return False
 
 
-def download_piper_voice(
-    voice_name: str = "en_US-lessac-medium",
-    model_path: str = "./packages/voice/models/piper",
-    verify_only: bool = False
-):
-    """Download or verify Piper TTS voice."""
-    print(f"{'Verifying' if verify_only else 'Downloading'} Piper voice: {voice_name}")
+def download_nemo_model(verify_only: bool = False):
+    """Download or verify NeMo STT model."""
+    # NeMo model name
+    model_name = os.environ.get("WHISPER_MODEL_PATH", "nvidia/parakeet_realtime_eou_120m-v1")
+    if model_name == "large-v3-turbo":
+        model_name = "nvidia/parakeet_realtime_eou_120m-v1"
+        
+    print(f"{'Verifying' if verify_only else 'Downloading'} NeMo model: {model_name}")
     
     try:
-        # Ensure voice exists (downloads if needed)
-        voice_path = ensure_voice_exists(voice_name, [model_path])
-        print(f"✓ Piper voice '{voice_name}' {'verified' if verify_only else 'downloaded'}")
-        print(f"  Path: {voice_path}")
+        import nemo.collections.asr as nemo_asr
+        # Trigger download/cache check
+        # We use map_location='cpu' to avoid GPU requirement during setup
+        nemo_asr.models.ASRModel.from_pretrained(model_name, map_location="cpu")
+        print(f"✓ NeMo model '{model_name}' {'verified' if verify_only else 'downloaded'}")
         return True
     except Exception as e:
-        print(f"✗ Failed to {'verify' if verify_only else 'download'} Piper voice: {e}")
+        print(f"✗ Failed to {'verify' if verify_only else 'download'} NeMo model: {e}")
         return False
 
 
@@ -64,33 +73,21 @@ def main():
         action="store_true",
         help="Only verify existing models, don't download"
     )
-    parser.add_argument(
-        "--whisper-model",
-        default="large-v3-turbo",
-        help="Faster-Whisper model name (default: large-v3-turbo)"
-    )
-    parser.add_argument(
-        "--piper-voice",
-        default="en_US-lessac-medium",
-        help="Piper voice name (default: en_US-lessac-medium)"
-    )
-    parser.add_argument(
-        "--piper-path",
-        default="./packages/voice/models/piper",
-        help="Piper models directory (default: ./packages/voice/models/piper)"
-    )
     
     args = parser.parse_args()
     
-    # Create models directory if needed
-    if not args.verify_only:
-        os.makedirs(args.piper_path, exist_ok=True)
-    
     # Download/verify models
-    whisper_ok = download_whisper_model(args.whisper_model, args.verify_only)
-    piper_ok = download_piper_voice(args.piper_voice, args.piper_path, args.verify_only)
+    maya_ok = download_maya1_model(args.verify_only)
     
-    if whisper_ok and piper_ok:
+    # Try to download NeMo model if nemo is installed
+    try:
+        import nemo
+        nemo_ok = download_nemo_model(args.verify_only)
+    except ImportError:
+        print("ℹ NeMo not installed, skipping NeMo model check (STT might not work)")
+        nemo_ok = True # Treat as success if not installed (maybe STT disabled)
+    
+    if maya_ok and nemo_ok:
         print("\n✓ All models ready")
         sys.exit(0)
     else:

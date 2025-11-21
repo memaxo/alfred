@@ -3,9 +3,9 @@ import type { PendingItem } from "./voice.types";
 
 export type {
   PendingItem,
+  PendingS2SItem,
   PendingSttItem,
   PendingTtsItem,
-  PendingS2SItem,
 } from "./voice.types";
 
 const KEY = "voice:queue:v1";

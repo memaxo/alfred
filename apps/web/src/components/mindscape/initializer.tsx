@@ -1,13 +1,13 @@
+import type { inferRouterOutputs } from "@trpc/server";
+import { nanoid } from "nanoid";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
-  useMindscapeStore,
   type ArtifactData,
   type KnowledgeNodeData,
+  useMindscapeStore,
 } from "@/store/mindscape";
-import { useEffect, useMemo, useRef, useCallback } from "react";
-import { nanoid } from "nanoid";
-import type { inferRouterOutputs } from "@trpc/server";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
-import { useShallow } from "zustand/react/shallow";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type NoteListItem = RouterOutputs["note"]["list"][number];
@@ -19,15 +19,16 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function MindscapeInitializer() {
-  const { nodes, addArtifact, autoLayout, setEdges, cacheRagDoc } = useMindscapeStore(
-    useShallow((state) => ({
-      nodes: state.nodes,
-      addArtifact: state.addArtifact,
-      autoLayout: state.autoLayout,
-      setEdges: state.setEdges,
-      cacheRagDoc: state.cacheRagDoc,
-    }))
-  );
+  const { nodes, addArtifact, autoLayout, setEdges, cacheRagDoc } =
+    useMindscapeStore(
+      useShallow((state) => ({
+        nodes: state.nodes,
+        addArtifact: state.addArtifact,
+        autoLayout: state.autoLayout,
+        setEdges: state.setEdges,
+        cacheRagDoc: state.cacheRagDoc,
+      }))
+    );
 
   const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes]);
   const graphNodeIds = useMemo(() => {
@@ -43,7 +44,7 @@ export function MindscapeInitializer() {
         if (suffix && UUID_PATTERN.test(suffix)) {
           return suffix;
         }
-        return undefined;
+        return null;
       })
       .filter((id): id is string => Boolean(id));
     return Array.from(new Set(derived));
@@ -59,7 +60,9 @@ export function MindscapeInitializer() {
 
   // Initialize with Chat Node after Orb is created
   useEffect(() => {
-    if (initializedRef.current) return;
+    if (initializedRef.current) {
+      return;
+    }
 
     if (
       typeof process !== "undefined" &&
@@ -74,8 +77,8 @@ export function MindscapeInitializer() {
     const hasOrb = nodeIds.includes("singularity");
     // Check for any chat node to avoid duplicates on reload if persisted
     const hasChat = nodeIds.some((id) => {
-        const node = useMindscapeStore.getState().nodes.find(n => n.id === id);
-        return node?.type === 'chat';
+      const node = useMindscapeStore.getState().nodes.find((n) => n.id === id);
+      return node?.type === "chat";
     });
 
     if (hasOrb && !hasChat) {
@@ -89,7 +92,7 @@ export function MindscapeInitializer() {
           messages: [],
         },
       });
-      
+
       initializedRef.current = true;
 
       // Trigger layout after adding chat
@@ -101,16 +104,20 @@ export function MindscapeInitializer() {
 
   // Sync Notes
   useEffect(() => {
-    if (!notes) return;
+    if (!notes) {
+      return;
+    }
 
     notes.forEach((note: NoteListItem, index: number) => {
       const noteNodeId = `note-${note.id}`;
-      if (nodeIds.includes(noteNodeId)) return;
+      if (nodeIds.includes(noteNodeId)) {
+        return;
+      }
 
       addArtifact({
         id: noteNodeId,
         type: "note",
-        position: { x: 800 + (index * 30), y: -200 + (index * 60) },
+        position: { x: 800 + index * 30, y: -200 + index * 60 },
         data: {
           label: note.title?.trim() || "Untitled Note",
           noteId: note.id,
@@ -127,20 +134,27 @@ export function MindscapeInitializer() {
 
   // Sync Reminders
   useEffect(() => {
-    if (!reminders) return;
+    if (!reminders) {
+      return;
+    }
 
     reminders.forEach((reminder: DueReminderItem, index: number) => {
       const reminderNodeId = `reminder-${reminder.id}`;
-      if (nodeIds.includes(reminderNodeId)) return;
+      if (nodeIds.includes(reminderNodeId)) {
+        return;
+      }
 
-      const dueIso = reminder.due instanceof Date ? reminder.due.toISOString() : reminder.due;
+      const dueIso =
+        reminder.due instanceof Date
+          ? reminder.due.toISOString()
+          : reminder.due;
       const isDue = dueIso ? new Date(dueIso).getTime() <= Date.now() : false;
       const status = reminder.firedAt ? "fired" : isDue ? "due" : "scheduled";
 
       addArtifact({
         id: reminderNodeId,
         type: "reminder",
-        position: { x: -800 - (index * 30), y: -200 + (index * 60) },
+        position: { x: -800 - index * 30, y: -200 + index * 60 },
         data: {
           label: reminder.title || "Reminder",
           reminderId: reminder.id,
@@ -226,7 +240,9 @@ export function MindscapeInitializer() {
   );
 
   useEffect(() => {
-    if (!traverseResult) return;
+    if (!traverseResult) {
+      return;
+    }
 
     traverseResult.nodes.forEach((node: GraphNode, index: number) => {
       const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
@@ -285,7 +301,9 @@ export function MindscapeInitializer() {
   }, [traverseResult, nodeIds, addArtifact, autoLayout]);
 
   useEffect(() => {
-    if (!ragResult) return;
+    if (!ragResult) {
+      return;
+    }
 
     ragResult.nodes.forEach((node: GraphNode, index: number) => {
       const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
@@ -334,7 +352,9 @@ export function MindscapeInitializer() {
 
   const ensureGraphMapping = useCallback((dbId: string) => {
     const store = useMindscapeStore.getState();
-    const existing = store.nodes.find((node) => node.data?.graph?.dbId === dbId);
+    const existing = store.nodes.find(
+      (node) => node.data?.graph?.dbId === dbId
+    );
     if (existing) {
       return;
     }
@@ -365,12 +385,17 @@ export function MindscapeInitializer() {
     (edge: GraphEdge) => {
       ensureGraphMapping(edge.fromId);
       ensureGraphMapping(edge.toId);
-       const isExplains = edge.kind === "explains";
+      const isExplains = edge.kind === "explains";
       return {
         id: edge.id,
         source: findNodeIdByDbId(edge.fromId),
         target: findNodeIdByDbId(edge.toId),
         animated: !isExplains,
+        data: {
+          kind: edge.kind,
+          fromDbId: edge.fromId,
+          toDbId: edge.toId,
+        },
         style: isExplains
           ? {
               stroke: "rgba(16, 185, 129, 0.6)",
@@ -385,7 +410,9 @@ export function MindscapeInitializer() {
 
   // Sync Edges
   useEffect(() => {
-    if (!edges) return;
+    if (!edges) {
+      return;
+    }
     const newEdges = edges.map(mapEdgeToFlow);
     setEdges(newEdges);
   }, [edges, mapEdgeToFlow, setEdges]);
@@ -400,7 +427,10 @@ export function MindscapeInitializer() {
         const mapped = incoming.map(mapEdgeToFlow);
         useMindscapeStore.setState((state) => {
           const merged = new Map(
-            state.edges.map((edge) => [edge.id ?? `${edge.source}-${edge.target}`, edge])
+            state.edges.map((edge) => [
+              edge.id ?? `${edge.source}-${edge.target}`,
+              edge,
+            ])
           );
           for (const flowEdge of mapped) {
             merged.set(flowEdge.id, flowEdge);

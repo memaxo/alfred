@@ -1,31 +1,35 @@
 import computeShader from "./compute.wgsl?raw";
+import { createFontAtlas, type FontAtlas } from "./font-atlas";
 import fragmentShader from "./fragment.wgsl?raw";
-import { createFontAtlas, FontAtlas } from "./font-atlas";
 
 export class MindscapeRenderer {
   device: GPUDevice;
   canvas: HTMLCanvasElement;
   context: GPUCanvasContext;
-  
+
   pipeline: GPUComputePipeline;
   renderPipeline: GPURenderPipeline;
-  
+
   bindGroup: GPUBindGroup;
   renderBindGroup: GPUBindGroup | null = null;
-  
+
   gridBuffer: GPUBuffer;
   uniformBuffer: GPUBuffer;
-  
-  fontAtlas: FontAtlas;
-  
-  width: number = 0;
-  height: number = 0;
 
-  constructor(device: GPUDevice, canvas: HTMLCanvasElement, context: GPUCanvasContext) {
+  fontAtlas: FontAtlas;
+
+  width = 0;
+  height = 0;
+
+  constructor(
+    device: GPUDevice,
+    canvas: HTMLCanvasElement,
+    context: GPUCanvasContext
+  ) {
     this.device = device;
     this.canvas = canvas;
     this.context = context;
-    
+
     this.width = canvas.width;
     this.height = canvas.height;
 
@@ -35,20 +39,20 @@ export class MindscapeRenderer {
     // 2. Buffers
     // Grid Buffer: width * height * sizeof(Cell)
     // Cell is u32 (4 bytes).
-    // Max resolution support? 
+    // Max resolution support?
     // Let's assume max 4k for buffer creation or resize dynamically.
-    // Resizing buffers is expensive. 
+    // Resizing buffers is expensive.
     // We'll start with current size and resize if needed.
     const cellCount = this.calculateGridSize();
     this.gridBuffer = device.createBuffer({
       size: cellCount * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX, // Vertex? No, storage for compute, storage/read for render.
     });
-    
-    // Uniforms: Time(f32), Res(vec2<f32>), Mouse(vec2<f32>) -> 6 floats = 24 bytes. 
-    // Padding to 16 bytes alignment. 
+
+    // Uniforms: Time(f32), Res(vec2<f32>), Mouse(vec2<f32>) -> 6 floats = 24 bytes.
+    // Padding to 16 bytes alignment.
     // Struct: { time, resolution, mouse }
-    // f32, vec2, vec2. 
+    // f32, vec2, vec2.
     // Layout:
     // 0: time (4)
     // 4: padding (4) - alignment for vec2?
@@ -70,7 +74,7 @@ export class MindscapeRenderer {
     });
 
     const renderModule = device.createShaderModule({ code: fragmentShader });
-    
+
     // We need a pipeline layout for render to match bind groups
     // But 'auto' works if we stick to simple.
     this.renderPipeline = device.createRenderPipeline({
@@ -86,9 +90,17 @@ export class MindscapeRenderer {
           {
             format: navigator.gpu.getPreferredCanvasFormat(),
             blend: {
-                color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
-                alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
-            }
+              color: {
+                srcFactor: "src-alpha",
+                dstFactor: "one-minus-src-alpha",
+                operation: "add",
+              },
+              alpha: {
+                srcFactor: "one",
+                dstFactor: "one-minus-src-alpha",
+                operation: "add",
+              },
+            },
           },
         ],
       },
@@ -128,59 +140,64 @@ export class MindscapeRenderer {
       alphaMode: "premultiplied",
     });
   }
-  
+
   private createRenderBindGroup() {
     const sampler = this.device.createSampler({
-        magFilter: 'linear',
-        minFilter: 'linear',
+      magFilter: "linear",
+      minFilter: "linear",
     });
-    
+
     this.renderBindGroup = this.device.createBindGroup({
       layout: this.renderPipeline.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: this.gridBuffer } },
         { binding: 1, resource: { buffer: this.uniformBuffer } },
         { binding: 2, resource: sampler },
-        { binding: 3, resource: (this.fontAtlas.texture as GPUTexture).createView() },
+        {
+          binding: 3,
+          resource: (this.fontAtlas.texture as GPUTexture).createView(),
+        },
       ],
     });
   }
 
   resize(width: number, height: number) {
-    if (this.width === width && this.height === height) return;
-    
+    if (this.width === width && this.height === height) {
+      return;
+    }
+
     this.width = width;
     this.height = height;
     this.canvas.width = width;
     this.canvas.height = height;
-    
+
     // Recreate buffers if needed
     const newSize = this.calculateGridSize();
     if (newSize * 4 > this.gridBuffer.size) {
-        this.gridBuffer.destroy();
-        this.gridBuffer = this.device.createBuffer({
-            size: newSize * 4,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX, // Actually read-only storage in frag
-        });
-        
-        // Recreate bind groups
-        this.bindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.gridBuffer } },
-                { binding: 1, resource: { buffer: this.uniformBuffer } },
-            ],
-        });
-        this.createRenderBindGroup();
+      this.gridBuffer.destroy();
+      this.gridBuffer = this.device.createBuffer({
+        size: newSize * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX, // Actually read-only storage in frag
+      });
+
+      // Recreate bind groups
+      this.bindGroup = this.device.createBindGroup({
+        layout: this.pipeline.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: { buffer: this.gridBuffer } },
+          { binding: 1, resource: { buffer: this.uniformBuffer } },
+        ],
+      });
+      this.createRenderBindGroup();
     }
-    
+
     this.configureContext();
   }
 
   render(
-    time: number, 
-    mouse: Float32Array, 
-    audioLow: number, 
+    time: number,
+    mouse: Float32Array,
+    audioLow: number,
     audioMid: number,
     f1: number,
     f2: number,
@@ -208,25 +225,25 @@ export class MindscapeRenderer {
     // 52: flow_speed
     // 56: pad
     // 60: pad
-    
+
     const uniformData = new Float32Array(16);
     uniformData[0] = time;
     uniformData[1] = audioLow;
     uniformData[2] = audioMid;
-    
+
     uniformData[4] = this.width;
     uniformData[5] = this.height;
-    
+
     uniformData[6] = mouse[0];
     uniformData[7] = mouse[1];
-    
+
     uniformData[8] = f1;
     uniformData[9] = f2;
     uniformData[10] = f3;
     uniformData[11] = tint_h;
     uniformData[12] = tint_c;
     uniformData[13] = flow_speed;
-    
+
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
     const commandEncoder = this.device.createCommandEncoder();
@@ -235,7 +252,7 @@ export class MindscapeRenderer {
     const passEncoder = commandEncoder.beginComputePass();
     passEncoder.setPipeline(this.pipeline);
     passEncoder.setBindGroup(0, this.bindGroup);
-    
+
     // Dispatch
     // Workgroup size (16, 16)
     // Grid size
@@ -257,12 +274,13 @@ export class MindscapeRenderer {
       ],
     };
 
-    const renderPassEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+    const renderPassEncoder =
+      commandEncoder.beginRenderPass(renderPassDescriptor);
     renderPassEncoder.setPipeline(this.renderPipeline);
     if (this.renderBindGroup) {
-        renderPassEncoder.setBindGroup(0, this.renderBindGroup);
-        // Draw 3 vertices (Full screen triangle)
-        renderPassEncoder.draw(3);
+      renderPassEncoder.setBindGroup(0, this.renderBindGroup);
+      // Draw 3 vertices (Full screen triangle)
+      renderPassEncoder.draw(3);
     }
     renderPassEncoder.end();
 

@@ -20,6 +20,10 @@
     "test:postgres": {
       "dependsOn": ["^build"]
     },
+    "setup": {
+      "cache": false,
+      "persistent": false
+    },
     "migrate": {
       "cache": false,
       "persistent": true

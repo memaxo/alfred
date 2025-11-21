@@ -23,7 +23,7 @@ mock.module("@alfred/db/repo/policy", () => ({
 const loggerInfoMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const loggerErrorMock = vi.fn();
-mock.module("@alfred/api/utils/logger", () => ({
+mock.module("@alfred/logger", () => ({
   logger: {
     info: loggerInfoMock,
     warn: loggerWarnMock,

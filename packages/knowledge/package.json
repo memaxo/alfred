@@ -39,7 +39,9 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@alfred/metrics": "workspace:*"
+    "@alfred/metrics": "workspace:*",
+    "chrono-node": "^2.9.0",
+    "compromise": "^14.14.4"
   },
   "devDependencies": {
     "@types/node": "*",

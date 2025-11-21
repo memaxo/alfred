@@ -40,7 +40,10 @@ describe("inferResponsePreferences", () => {
   it("detects verbosity and tone hints", () => {
     const conversations = [
       createConversation([
-        createMessage("user", "You were too verbose last time, be concise and formal."),
+        createMessage(
+          "user",
+          "You were too verbose last time, be concise and formal."
+        ),
       ]),
     ];
 
@@ -118,7 +121,11 @@ describe("inferPreferenceFromCorrection", () => {
       "Here is a very long explanation that goes on and on."
     );
     const corrected = createMessage("assistant", "Keep it short.");
-    const result = inferPreferenceFromCorrection(original, corrected, "verbosity");
+    const result = inferPreferenceFromCorrection(
+      original,
+      corrected,
+      "verbosity"
+    );
     expect(result).toEqual({ key: "response.verbosity", value: "concise" });
   });
 

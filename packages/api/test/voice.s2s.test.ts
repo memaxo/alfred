@@ -1,5 +1,14 @@
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { Buffer } from "node:buffer";
-import { afterAll, afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -50,14 +59,22 @@ beforeAll(async () => {
     .spyOn(agentModule, "getAssistantAgentDefaults")
     .mockReturnValue({
       tools: [],
-      model: { provider: "openai", model: "gpt-4o-mini" },
+      model: {
+        id: "gpt-4o-mini",
+        provider: "openai",
+        modelId: "gpt-4o-mini",
+      } as any,
       stopWhen: undefined,
     });
   const orchestratorSpy = vi
     .spyOn(agentModule, "getOrchestratorAgentDefaults")
     .mockReturnValue({
       tools: [],
-      model: { provider: "openai", model: "gpt-4o-mini" },
+      model: {
+        id: "gpt-4o-mini",
+        provider: "openai",
+        modelId: "gpt-4o-mini",
+      } as any,
       stopWhen: undefined,
     });
   restoreAssistantDefaults = () => assistantSpy.mockRestore();

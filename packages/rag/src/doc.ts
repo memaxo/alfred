@@ -1,11 +1,15 @@
 import { ragRepo } from "@alfred/db";
+import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
 import {
+  EMBEDDING_DIM,
   embed as embedLocal,
   embedMany as embedManyLocal,
-  EMBEDDING_DIM,
 } from "@alfred/embed";
-import { extract, toKnowledge, type KnowledgeEntry } from "@alfred/knowledge/extractor";
-import { upsertNodes, upsertEdges } from "@alfred/db/repo/graph";
+import {
+  extract,
+  type KnowledgeEntry,
+  toKnowledge,
+} from "@alfred/knowledge/extractor";
 
 /**
  * ALFRED RAG Document Processing
@@ -29,12 +33,12 @@ export function setEmbeddingProvider(provider?: EmbeddingProvider | null) {
   embeddingProvider = provider ?? defaultEmbeddingProvider;
 }
 
-export interface Chunk {
+export type Chunk = {
   content: string;
   embedding?: number[];
   order: number;
   metadata?: Record<string, unknown>;
-}
+};
 
 function splitSentences(paragraph: string) {
   const sentences = paragraph
@@ -84,7 +88,7 @@ export async function ingest(
       allEmbeddings.push(...batchEmbeddings);
       processed += batch.length;
       onProgress?.(processed, pieces.length);
-    } catch (error) {
+    } catch (_error) {
       // Log error but continue with remaining batches
       // Note: Using console.error here as this is a pure RAG package without logger dependency
       // In production, this should be handled by the caller's logging infrastructure
@@ -92,7 +96,6 @@ export async function ingest(
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
       ) {
-        console.error(`Failed to embed batch ${i}-${i + batch.length}:`, error);
       }
       // Fill with empty embeddings for failed batch to maintain array length
       allEmbeddings.push(...batch.map(() => []));
@@ -120,13 +123,11 @@ export async function ingest(
         source,
         chunks,
       });
-    } catch (error) {
+    } catch (_error) {
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
       ) {
-        // Best-effort enrichment; log for debugging but do not fail ingest.
-        console.error("Failed to enrich knowledge graph from RAG chunks:", error);
       }
     }
   }
@@ -314,20 +315,16 @@ async function enrichGraphFromChunks(args: {
         },
       },
     ] as any);
-  } catch (error) {
+  } catch (_error) {
     if (
       typeof process !== "undefined" &&
       process.env.NODE_ENV !== "production"
     ) {
-      console.error(
-        "Failed to upsert RAG document node for provenance:",
-        error
-      );
     }
   }
 
   for (const chunk of args.chunks) {
-    const extraction = extract(chunk.content, args.source);
+    const extraction = await extract(chunk.content, args.source);
     const knowledge = toKnowledge(extraction);
     if (knowledge.length > 0) {
       entries.push(...knowledge);
@@ -486,7 +483,6 @@ async function persistRagKnowledge(
 
   await upsertEdges(edges as any);
 }
-
 
 export async function embed(text: string): Promise<number[]> {
   const embedding = await embeddingProvider.embed(text);

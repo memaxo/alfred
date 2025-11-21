@@ -1,6 +1,6 @@
 /**
  * Distributed Tracing Support
- * 
+ *
  * Provides lightweight tracing for workflow runtime execution.
  * Tracks span hierarchies with nanosecond precision.
  */
@@ -21,21 +21,21 @@ export type TraceSpan = {
 
 /**
  * RuntimeTracer manages trace spans for a workflow execution
- * 
+ *
  * Usage:
  * ```typescript
  * const tracer = new RuntimeTracer(runId);
- * 
+ *
  * const spanId = tracer.startSpan("context_build");
  * // ... do work ...
  * tracer.endSpan(spanId, { cached: "false", tokens: 1234 });
- * 
+ *
  * const spans = tracer.getSpans();
  * ```
  */
 export class RuntimeTracer {
-  private spans: Map<string, TraceSpan> = new Map();
-  private runId: string;
+  private readonly spans: Map<string, TraceSpan> = new Map();
+  private readonly runId: string;
   private spanCounter = 0;
 
   constructor(runId: string) {
@@ -44,14 +44,14 @@ export class RuntimeTracer {
 
   /**
    * Start a new trace span
-   * 
+   *
    * @param name Span name (e.g., "context_build", "phase_plan")
    * @param parent Parent span ID for hierarchical tracing
    * @returns Span ID to use when ending the span
    */
   startSpan(name: string, parent?: string): string {
     const id = `${this.runId}-span-${this.spanCounter++}`;
-    
+
     this.spans.set(id, {
       id,
       name,
@@ -59,13 +59,13 @@ export class RuntimeTracer {
       parent,
       tags: {},
     });
-    
+
     return id;
   }
 
   /**
    * End a trace span
-   * 
+   *
    * @param id Span ID returned from startSpan()
    * @param tags Optional tags to attach to the span
    */
@@ -81,7 +81,7 @@ export class RuntimeTracer {
 
   /**
    * Get all spans for this trace
-   * 
+   *
    * Returns spans in chronological order (by start time)
    */
   getSpans(): TraceSpan[] {
@@ -91,13 +91,13 @@ export class RuntimeTracer {
 
   /**
    * Get span duration in milliseconds
-   * 
+   *
    * @param id Span ID
    * @returns Duration in milliseconds, or null if span not found/completed
    */
   getSpanDuration(id: string): number | null {
     const span = this.spans.get(id);
-    if (!span || !span.endNs) {
+    if (!span?.endNs) {
       return null;
     }
     return Number(span.endNs - span.startNs) / 1_000_000;
@@ -105,7 +105,7 @@ export class RuntimeTracer {
 
   /**
    * Get total trace duration in milliseconds
-   * 
+   *
    * Returns duration from first span start to last span end
    */
   getTotalDuration(): number | null {
@@ -115,9 +115,9 @@ export class RuntimeTracer {
     }
 
     const first = spans[0];
-    const last = spans[spans.length - 1];
+    const last = spans.at(-1);
 
-    if (!first || !last || last.endNs === undefined) {
+    if (!(first && last) || last.endNs === undefined) {
       return null;
     }
 

@@ -15,9 +15,9 @@ import { Toaster } from "@/components/ui/sonner";
 import Header from "../components/header";
 import appCss from "../index.css?url";
 
-export interface RouterAppContext {
+export type RouterAppContext = {
   queryClient: QueryClient;
-}
+};
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({

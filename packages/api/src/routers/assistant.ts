@@ -3,16 +3,16 @@ import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
+import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { cloneRuntimeContext } from "../context";
 import { requirePolicy } from "../gate";
-import { authedProcedure, rateLimit, router } from "../trpc";
-import { toTRPCError } from "../utils/error";
-import { sanitizeResult } from "../utils/generate";
-import { prepareModelMessagesForGenerate } from "../ai/messages";
 import {
   assistantGenerateDurationSeconds,
   assistantGenerateRequestsTotal,
 } from "../metrics";
+import { authedProcedure, rateLimit, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
+import { sanitizeResult } from "../utils/generate";
 
 const ASSISTANT_MAX_STEPS = 12;
 

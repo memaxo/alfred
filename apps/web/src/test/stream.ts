@@ -29,12 +29,16 @@ export function createMockStream(
 
   return {
     emit(event: StreamEvent) {
-      if (isClosed) return;
+      if (isClosed) {
+        return;
+      }
       queue.push(event);
       flush();
     },
     error(error: Error) {
-      if (isClosed) return;
+      if (isClosed) {
+        return;
+      }
       isClosed = true;
       while (listeners.length > 0) {
         const listener = listeners.shift();
@@ -52,8 +56,7 @@ export function createMockStream(
       if (isClosed) {
         throw new Error("stream_closed");
       }
-      const match = (event: StreamEvent) =>
-        !kind ? true : event.type === kind;
+      const match = (event: StreamEvent) => (kind ? event.type === kind : true);
       const existingIndex = queue.findIndex(match);
       if (existingIndex >= 0) {
         const [event] = queue.splice(existingIndex, 1);
@@ -62,7 +65,9 @@ export function createMockStream(
       return new Promise<StreamEvent>((resolve, reject) => {
         const timer = setTimeout(() => {
           const index = listeners.indexOf(resolveListener);
-          if (index >= 0) listeners.splice(index, 1);
+          if (index >= 0) {
+            listeners.splice(index, 1);
+          }
           reject(new Error(`stream_timeout_${kind ?? "any"}`));
         }, timeoutMs);
 

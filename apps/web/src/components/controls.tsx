@@ -8,12 +8,12 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface ControlsProps {
+type ControlsProps = {
   agent: "assistant" | "orchestrator";
   onAgentChange: (agent: "assistant" | "orchestrator") => void;
   onClear?: () => void;
   className?: string;
-}
+};
 
 export function Controls({
   agent,
@@ -22,10 +22,9 @@ export function Controls({
   className,
 }: ControlsProps) {
   return (
-    <div
+    <fieldset
       aria-label="Agent controls"
       className={cn("flex items-center gap-2", className)}
-      role="group"
     >
       <div className="flex rounded-lg border bg-muted p-1" role="tablist">
         <Button
@@ -59,6 +58,6 @@ export function Controls({
           Clear
         </Button>
       )}
-    </div>
+    </fieldset>
   );
 }

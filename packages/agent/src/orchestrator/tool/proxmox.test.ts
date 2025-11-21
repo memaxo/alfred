@@ -139,7 +139,7 @@ test("vm_power with action", async () => {
 });
 
 test("missing env returns error", async () => {
-  delete process.env.PROXMOX_HOST;
+  process.env.PROXMOX_HOST = undefined;
 
   const result = await toolProxmox.execute({
     input: {

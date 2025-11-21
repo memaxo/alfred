@@ -73,7 +73,7 @@ describe("ChatContainer integration", () => {
     });
 
     const clearButtons = getAllByRole("button", { name: /clear/i });
-    fireEvent.click(clearButtons[clearButtons.length - 1]);
+    fireEvent.click(clearButtons.at(-1));
 
     await waitFor(() => {
       expect(queryByText("To clear")).toBeNull();
@@ -100,14 +100,14 @@ describe("ChatContainer integration", () => {
     const orchestratorSwitches = getAllByRole("tab", {
       name: /orchestrator/i,
     });
-    fireEvent.click(orchestratorSwitches[orchestratorSwitches.length - 1]);
+    fireEvent.click(orchestratorSwitches.at(-1));
 
     await waitFor(() => {
       expect(queryByText("Agent state")).toBeNull();
     });
 
     const assistantSwitches = getAllByRole("tab", { name: /^assistant$/i });
-    fireEvent.click(assistantSwitches[assistantSwitches.length - 1]);
+    fireEvent.click(assistantSwitches.at(-1));
 
     await waitFor(() => {
       expect(getByText("Agent state")).toBeTruthy();

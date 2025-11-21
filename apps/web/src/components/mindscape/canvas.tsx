@@ -7,63 +7,68 @@ import {
   MiniMap,
   type NodeProps,
   type NodeTypes,
+  type OnConnect,
   Panel,
   ReactFlow,
-  ReactFlowProvider,
   type ReactFlowProps,
-  type OnConnect,
+  ReactFlowProvider,
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useNavigate } from "@tanstack/react-router";
+import type { inferRouterOutputs } from "@trpc/server";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
-import type { inferRouterOutputs } from "@trpc/server";
 import {
-  useMindscapeStore,
   type ArtifactData,
   type KnowledgeNodeData,
+  RAG_DOC_CACHE_LIMIT,
+  RAG_DOC_CACHE_TTL_MS,
+  useMindscapeStore,
 } from "@/store/mindscape";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { MindscapeCommandPalette } from "./command-palette";
+import { MindscapeDetailPanel } from "./detail-panel";
 import { MindscapeInitializer } from "./initializer";
+import { WorkflowManager } from "./monitor";
 import { ArtifactNode } from "./nodes/artifact-node";
+import { BookmarkNode } from "./nodes/bookmark-node";
 import { ChatNode } from "./nodes/chat-node";
 import { CodeNode } from "./nodes/code-node";
+import { ConceptNode } from "./nodes/concept-node";
+import { DeploymentNode } from "./nodes/deployment-node";
 import { NodeErrorBoundary } from "./nodes/error-boundary";
+import { IntegrationsNode } from "./nodes/integrations-node";
+import { KnowledgeNode } from "./nodes/knowledge-node";
 import { NoteNode } from "./nodes/note-node";
 import { OrbNode } from "./nodes/orb-node";
-import { ReminderNode } from "./nodes/reminder-node";
-import { TimerNode } from "./nodes/timer-node";
-import { BookmarkNode } from "./nodes/bookmark-node";
-import { TodoNode } from "./nodes/todo-node";
-import { TerminalNode } from "./nodes/terminal-node";
-import { TicketNode } from "./nodes/ticket-node";
-import { WorkflowNode } from "./nodes/workflow-node";
-import { SettingsNode } from "./nodes/settings-node";
 import { PrivacyNode } from "./nodes/privacy-node";
 import { ProfileNode } from "./nodes/profile-node";
-import { IntegrationsNode } from "./nodes/integrations-node";
+import { ReminderNode } from "./nodes/reminder-node";
+import { SettingsNode } from "./nodes/settings-node";
+import { TerminalNode } from "./nodes/terminal-node";
+import { TicketNode } from "./nodes/ticket-node";
+import { TimerNode } from "./nodes/timer-node";
+import { TodoNode } from "./nodes/todo-node";
 import { WorkflowListNode } from "./nodes/workflow-list-node";
-import { DeploymentNode } from "./nodes/deployment-node";
-import { WorkflowManager } from "./workflow-manager";
-import { KnowledgeNode } from "./nodes/knowledge-node";
+import { WorkflowNode } from "./nodes/workflow-node";
 import {
   createSpawnNode,
   formatSpawnLabel,
-  singletonSpawnTypes,
-  type MindscapeSpawnType,
   type MindscapeSearchParams,
+  type MindscapeSpawnType,
+  singletonSpawnTypes,
 } from "./spawn";
-import { MindscapeCommandPalette } from "./command-palette";
-import { MindscapeDetailPanel } from "./detail-panel";
-import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { MindscapeWorkflowDrawer } from "./workflow-drawer";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
 // Wrap each node component with error boundary
-const wrapWithErrorBoundary = (Component: React.ComponentType<NodeProps>) =>
-  (props: NodeProps) => (
+const wrapWithErrorBoundary =
+  (Component: React.ComponentType<NodeProps>) => (props: NodeProps) => (
     <NodeErrorBoundary nodeId={props.id}>
       <Component {...props} />
     </NodeErrorBoundary>
@@ -89,6 +94,7 @@ const nodeTypes: NodeTypes = {
   workflowlist: wrapWithErrorBoundary(WorkflowListNode),
   deployment: wrapWithErrorBoundary(DeploymentNode),
   knowledge: wrapWithErrorBoundary(KnowledgeNode),
+  concept: wrapWithErrorBoundary(ConceptNode),
 };
 
 type MindscapeCanvasProps = Omit<
@@ -96,20 +102,32 @@ type MindscapeCanvasProps = Omit<
   "nodes" | "edges" | "onNodesChange" | "onEdgesChange" | "onConnect"
 > & {
   searchParams?: MindscapeSearchParams;
+  onWorkflowNavigate?: (runId: string) => void;
 };
 
-export function MindscapeCanvas(props: MindscapeCanvasProps) {
+export function MindscapeCanvas({
+  onWorkflowNavigate,
+  ...props
+}: MindscapeCanvasProps) {
   return (
     <ReactFlowProvider>
-      <MindscapeCanvasInner {...props} />
+      <MindscapeCanvasInner
+        {...props}
+        onWorkflowNavigate={onWorkflowNavigate}
+      />
     </ReactFlowProvider>
   );
 }
 
-function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) {
+function MindscapeCanvasInner({
+  searchParams,
+  onWorkflowNavigate,
+  ...props
+}: MindscapeCanvasProps) {
   const {
     nodes,
     edges,
+    focusedNodeId,
     onNodesChange,
     onEdgesChange,
     onConnect,
@@ -117,10 +135,15 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     focusNode,
     ragDocCache,
     cacheRagDoc,
+    evictRagDoc,
+    recordRagDocCacheHit,
+    recordRagDocCacheMiss,
+    ragDocCacheStats,
   } = useMindscapeStore(
     useShallow((state) => ({
       nodes: state.nodes,
       edges: state.edges,
+      focusedNodeId: state.focusedNodeId,
       onNodesChange: state.onNodesChange,
       onEdgesChange: state.onEdgesChange,
       onConnect: state.onConnect,
@@ -128,7 +151,48 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
       focusNode: state.focusNode,
       ragDocCache: state.ragDocCache,
       cacheRagDoc: state.cacheRagDoc,
+      evictRagDoc: state.evictRagDoc,
+      recordRagDocCacheHit: state.recordRagDocCacheHit,
+      recordRagDocCacheMiss: state.recordRagDocCacheMiss,
+      ragDocCacheStats: state.ragDocCacheStats,
     }))
+  );
+
+  const navigate = useNavigate();
+  const [inspectedRunId, setInspectedRunId] = useState<string | null>(null);
+
+  const handleWorkflowInspect = useCallback((runId: string) => {
+    setInspectedRunId(runId);
+  }, []);
+
+  const handleWorkflowDrawerClose = useCallback(() => {
+    setInspectedRunId(null);
+  }, []);
+
+  const handleWorkflowNavigate = useCallback(
+    (runId: string) => {
+      if (onWorkflowNavigate) {
+        onWorkflowNavigate(runId);
+        return;
+      }
+      if (typeof window !== "undefined") {
+        window.location.assign(`/workflow/${runId}`);
+      }
+    },
+    [onWorkflowNavigate]
+  );
+
+  const handleNavigateToRagDoc = useCallback(
+    (documentId: string) => {
+      navigate({
+        to: "/mindscape",
+        search: (prev) => ({
+          ...prev,
+          ragDoc: documentId,
+        }),
+      });
+    },
+    [navigate]
   );
 
   const reactFlow = useReactFlow<ArtifactData>();
@@ -136,6 +200,34 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
 
   const [showRuntimeKnowledge, setShowRuntimeKnowledge] = useState(true);
   const [showRagKnowledge, setShowRagKnowledge] = useState(true);
+
+  const focusedNode = useMemo(
+    () => nodes.find((candidate) => candidate.id === focusedNodeId) ?? null,
+    [nodes, focusedNodeId]
+  );
+
+  const highlightedRagDocDbId = useMemo(() => {
+    const artifact = focusedNode?.data as ArtifactData | undefined;
+    if (
+      artifact?.type === "knowledge" &&
+      artifact.source === "rag" &&
+      typeof artifact.graph?.dbId === "string"
+    ) {
+      return artifact.graph.dbId;
+    }
+    return null;
+  }, [focusedNode]);
+
+  const ragDocCacheEntryCount = useMemo(
+    () => Object.keys(ragDocCache).length,
+    [ragDocCache]
+  );
+  const ragDocCacheLookupCount =
+    ragDocCacheStats.hits + ragDocCacheStats.misses;
+  const ragDocCacheHitRate =
+    ragDocCacheLookupCount > 0
+      ? Math.round((ragDocCacheStats.hits / ragDocCacheLookupCount) * 100)
+      : 0;
 
   const { visibleNodes, visibleEdges } = useMemo(() => {
     const allowedNodeIds = new Set<string>();
@@ -167,8 +259,37 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
         allowedNodeIds.has(edge.target ?? "")
     );
 
-    return { visibleNodes: filteredNodes, visibleEdges: filteredEdges };
-  }, [nodes, edges, showRuntimeKnowledge, showRagKnowledge]);
+    const styledEdges =
+      highlightedRagDocDbId == null
+        ? filteredEdges
+        : filteredEdges.map((edge) => {
+            if (
+              edge.data?.kind === "explains" &&
+              (edge.data.fromDbId === highlightedRagDocDbId ||
+                edge.data.toDbId === highlightedRagDocDbId)
+            ) {
+              return {
+                ...edge,
+                animated: true,
+                style: {
+                  ...(edge.style ?? {}),
+                  stroke: "rgba(16, 185, 129, 0.95)",
+                  strokeDasharray: "0",
+                  strokeWidth: 2.5,
+                },
+              };
+            }
+            return edge;
+          });
+
+    return { visibleNodes: filteredNodes, visibleEdges: styledEdges };
+  }, [
+    nodes,
+    edges,
+    showRuntimeKnowledge,
+    showRagKnowledge,
+    highlightedRagDocDbId,
+  ]);
 
   // Initialize with Orb if empty
   useEffect(() => {
@@ -194,9 +315,8 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
             duration: 400,
             padding: 0.4,
           });
-        } catch (error) {
+        } catch (_error) {
           if (import.meta.env.DEV) {
-            console.warn("Mindscape focus failed", error);
           }
         }
       });
@@ -215,7 +335,66 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     return nodes.find((node) => node.data?.graph?.dbId === ragDocQuery) ?? null;
   }, [nodes, ragDocQuery]);
 
-  const cachedRagDoc = ragDocQuery ? ragDocCache[ragDocQuery] : undefined;
+  const cachedEntry = ragDocQuery ? ragDocCache[ragDocQuery] : undefined;
+  const cachedRagDoc =
+    cachedEntry && Date.now() - cachedEntry.cachedAt < RAG_DOC_CACHE_TTL_MS
+      ? cachedEntry.data
+      : undefined;
+
+  const lastCacheRecordRef = useRef<{
+    id: string;
+    outcome: "hit" | "miss";
+  } | null>(null);
+
+  useEffect(() => {
+    if (!ragDocQuery) {
+      lastCacheRecordRef.current = null;
+      return;
+    }
+    const outcome: "hit" | "miss" | null = cachedRagDoc
+      ? "hit"
+      : ragDocTargetNode
+        ? null
+        : "miss";
+    if (!outcome) {
+      return;
+    }
+    const prev = lastCacheRecordRef.current;
+    if (prev && prev.id === ragDocQuery && prev.outcome === outcome) {
+      return;
+    }
+    if (outcome === "hit") {
+      recordRagDocCacheHit();
+    } else {
+      recordRagDocCacheMiss();
+    }
+    lastCacheRecordRef.current = { id: ragDocQuery, outcome };
+  }, [
+    cachedRagDoc,
+    ragDocQuery,
+    ragDocTargetNode,
+    recordRagDocCacheHit,
+    recordRagDocCacheMiss,
+  ]);
+
+  const lastLoggedStatsRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+    if (typeof process !== "undefined" && process.env.BUN_TEST === "1") {
+      return;
+    }
+    if (!ragDocCacheStats) {
+      return;
+    }
+    const snapshot = `${ragDocCacheStats.hits}-${ragDocCacheStats.misses}-${ragDocCacheStats.evictions}`;
+    if (snapshot === lastLoggedStatsRef.current) {
+      return;
+    }
+    lastLoggedStatsRef.current = snapshot;
+    // console.debug("[Mindscape] RAG cache", ragDocCacheStats);
+  }, [ragDocCacheStats]);
 
   const shouldHydrateRagDoc = Boolean(
     ragDocQuery && !ragDocTargetNode && !cachedRagDoc
@@ -238,16 +417,11 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
           limit: 1,
         };
 
-  const {
-    data: ragDocGraph,
-    isError: ragDocGraphError,
-  } = trpc.graph.runQuery.useQuery(
-    ragDocQueryInput,
-    {
+  const { data: ragDocGraph, isError: ragDocGraphError } =
+    trpc.graph.runQuery.useQuery(ragDocQueryInput, {
       enabled: shouldHydrateRagDoc,
       retry: 1,
-    }
-  );
+    });
 
   const spawnNodeFromType = useCallback(
     (spawnType: MindscapeSpawnType): string | null => {
@@ -293,12 +467,18 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
   }, [nodeIdQuery, nodes, focusAndCenter]);
 
   useEffect(() => {
-    if (!ragDocQuery || !ragDocTargetNode) {
+    if (!(ragDocQuery && ragDocTargetNode)) {
       return;
     }
     focusAndCenter(ragDocTargetNode.id);
     clearSearchParams(["ragDoc"]);
   }, [ragDocQuery, ragDocTargetNode, focusAndCenter]);
+
+  useEffect(() => {
+    if (cachedEntry && !cachedRagDoc && ragDocQuery) {
+      evictRagDoc(ragDocQuery);
+    }
+  }, [cachedEntry, cachedRagDoc, evictRagDoc, ragDocQuery]);
 
   // Spawn nodes via deep link (?spawn=...)
   useEffect(() => {
@@ -311,7 +491,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
   }, [spawnQuery, spawnNodeFromType]);
 
   useEffect(() => {
-    if (!ragDocQuery || !cachedRagDoc || ragDocTargetNode) {
+    if (!(ragDocQuery && cachedRagDoc) || ragDocTargetNode) {
       return;
     }
     const derivedId = `rag-knowledge-${ragDocQuery}`;
@@ -344,7 +524,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
   ]);
 
   useEffect(() => {
-    if (!ragDocQuery || !ragDocGraphError) {
+    if (!(ragDocQuery && ragDocGraphError)) {
       return;
     }
     toast.error("Unable to load RAG document. Please retry.");
@@ -374,45 +554,45 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
       return;
     }
 
-  const props = (docNode.properties ?? {}) as Record<string, unknown>;
-  const summary =
-    typeof props.content === "string" ? props.content : undefined;
-  const docDbId = docNode.id?.dbId ?? ragDocQuery;
-  const derivedId = `rag-knowledge-${docDbId}`;
+    const props = (docNode.properties ?? {}) as Record<string, unknown>;
+    const summary =
+      typeof props.content === "string" ? props.content : undefined;
+    const docDbId = docNode.id?.dbId ?? ragDocQuery;
+    const derivedId = `rag-knowledge-${docDbId}`;
 
-  const exists = nodes.find((node) => node.id === derivedId);
-  if (!exists) {
-    const knowledgeData: KnowledgeNodeData = {
-      type: "knowledge",
-      label: docNode.label || "RAG Context",
-      kind: docNode.kind,
-      summary,
-      source: "rag",
-      graph: {
-        dbId: docDbId,
-        hgHash: docNode.id?.hgHash,
-      },
-    };
-    addArtifact({
-      id: derivedId,
-      type: "knowledge",
-      position: { x: 100, y: 100 },
-      data: knowledgeData as ArtifactData,
-    });
-    cacheRagDoc(docDbId, knowledgeData);
-  }
+    const exists = nodes.find((node) => node.id === derivedId);
+    if (!exists) {
+      const knowledgeData: KnowledgeNodeData = {
+        type: "knowledge",
+        label: docNode.label || "RAG Context",
+        kind: docNode.kind,
+        summary,
+        source: "rag",
+        graph: {
+          dbId: docDbId,
+          hgHash: docNode.id?.hgHash,
+        },
+      };
+      addArtifact({
+        id: derivedId,
+        type: "knowledge",
+        position: { x: 100, y: 100 },
+        data: knowledgeData as ArtifactData,
+      });
+      cacheRagDoc(docDbId, knowledgeData);
+    }
 
-  focusAndCenter(exists?.id ?? derivedId);
-  clearSearchParams(["ragDoc"]);
-}, [
-  addArtifact,
-  cacheRagDoc,
-  focusAndCenter,
-  nodes,
-  ragDocGraph,
-  ragDocQuery,
-  ragDocTargetNode,
-]);
+    focusAndCenter(exists?.id ?? derivedId);
+    clearSearchParams(["ragDoc"]);
+  }, [
+    addArtifact,
+    cacheRagDoc,
+    focusAndCenter,
+    nodes,
+    ragDocGraph,
+    ragDocQuery,
+    ragDocTargetNode,
+  ]);
 
   const onConnectPersisting = useCallback<OnConnect>(
     async (connection) => {
@@ -423,10 +603,6 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
       const toId = targetNode?.data?.graph?.dbId;
       if (!(fromId && toId)) {
         if (import.meta.env.DEV) {
-          console.warn(
-            "Skipping graph.connect because one or both nodes lack dbId mappings",
-            connection
-          );
         }
         return;
       }
@@ -437,9 +613,8 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
           kind: "relates_to",
           resource: "user",
         });
-      } catch (error) {
+      } catch (_error) {
         if (import.meta.env.DEV) {
-          console.warn("graph.connect failed", error);
         }
       }
     },
@@ -466,6 +641,10 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
           proOptions={{ hideAttribution: true }}
           selectionOnDrag={true}
           {...props}
+          onNodeClick={(_, node) => {
+            // Auto-focus on click for immersive experience
+            focusAndCenter(node.id);
+          }}
         >
           <Background
             className="opacity-50"
@@ -487,11 +666,11 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
             Symbiotic Mindscape v0.1
           </Panel>
           <Panel
-            className="rounded-full border border-white/10 bg-void-surface/80 px-4 py-2 text-[10px] uppercase tracking-widest text-biolum-faint"
+            className="rounded-full border border-white/10 bg-void-surface/80 px-4 py-2 text-[10px] text-biolum-faint uppercase tracking-widest"
             position="top-right"
           >
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold">Knowledge</span>
+              <span className="font-semibold text-xs">Knowledge</span>
               <label className="flex items-center gap-1">
                 <input
                   aria-label="Toggle runtime knowledge"
@@ -518,10 +697,64 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
               </label>
             </div>
           </Panel>
+          <Panel
+            className="rounded-full border border-white/10 bg-void-surface/80 px-4 py-2"
+            position="bottom-right"
+          >
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <span className="font-semibold text-[10px] text-biolum-dim uppercase tracking-widest">
+                  RAG Cache
+                </span>
+                <div className="flex gap-2">
+                  <div className="flex flex-col items-end">
+                    <span className="font-mono text-biolum text-xs">
+                      {ragDocCacheHitRate}%
+                    </span>
+                    <span className="text-[8px] text-biolum-dim">Hit Rate</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-mono text-biolum text-xs">
+                      {ragDocCacheEntryCount}/{RAG_DOC_CACHE_LIMIT}
+                    </span>
+                    <span className="text-[8px] text-biolum-dim">Entries</span>
+                  </div>
+                </div>
+              </div>
+              {import.meta.env.DEV && (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+                  <dt className="text-biolum-dim">Hits</dt>
+                  <dd className="text-right font-mono text-biolum">
+                    {ragDocCacheStats.hits}
+                  </dd>
+                  <dt className="text-biolum-dim">Misses</dt>
+                  <dd className="text-right font-mono text-biolum">
+                    {ragDocCacheStats.misses}
+                  </dd>
+                  <dt className="text-biolum-dim">Evictions</dt>
+                  <dd className="text-right font-mono text-biolum">
+                    {ragDocCacheStats.evictions}
+                  </dd>
+                </dl>
+              )}
+            </div>
+          </Panel>
           <MindscapeInitializer />
           <WorkflowManager />
         </ReactFlow>
-        <MindscapeDetailPanel />
+        <MindscapeDetailPanel
+          onWorkflowInspect={handleWorkflowInspect}
+          onWorkflowNavigate={handleWorkflowNavigate}
+        />
+        <MindscapeWorkflowDrawer
+          onClose={handleWorkflowDrawerClose}
+          onNavigateFull={handleWorkflowNavigate}
+          onNavigateToMindscape={(docId) => {
+            handleNavigateToRagDoc(docId);
+            handleWorkflowDrawerClose();
+          }}
+          runId={inspectedRunId}
+        />
       </div>
       <MindscapeCommandPalette
         nodes={nodes}

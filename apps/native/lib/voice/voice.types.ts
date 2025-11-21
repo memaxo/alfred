@@ -54,7 +54,4 @@ export type PendingS2SItem = {
   lastError?: string;
 };
 
-export type PendingItem =
-  | PendingSttItem
-  | PendingTtsItem
-  | PendingS2SItem;
+export type PendingItem = PendingSttItem | PendingTtsItem | PendingS2SItem;

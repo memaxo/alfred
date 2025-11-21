@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 function uniqueSuffix() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);

@@ -34,12 +34,12 @@
 // - Exit with code 1 if violations found
 // - Pretty print violations
 
-interface Violation {
+type Violation = {
   file: string;
   line: number;
   type: "file" | "class" | "param" | "adjective";
   message: string;
-}
+};
 
 function checkNames(): Violation[] {
   const violations: Violation[] = [];

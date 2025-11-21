@@ -29,7 +29,11 @@ describe("Error Handling", () => {
     // Mock failed dependency verification
     const mockStderr = new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(new TextEncoder().encode("Missing dependency: No module named 'faster_whisper'\n"));
+        controller.enqueue(
+          new TextEncoder().encode(
+            "Missing dependency: No module named 'faster_whisper'\n"
+          )
+        );
         controller.close();
       },
     });
@@ -42,8 +46,9 @@ describe("Error Handling", () => {
     mockSpawn.mockReturnValue(mockSubprocess);
 
     // Mock verifyDependencies to throw
-    const originalVerify = processInstance["verifyDependencies"].bind(processInstance);
-    processInstance["verifyDependencies"] = async (cmd: string[]) => {
+    const originalVerify =
+      processInstance.verifyDependencies.bind(processInstance);
+    processInstance.verifyDependencies = async (cmd: string[]) => {
       if (!cmd[0]?.endsWith("uv") || cmd[1] !== "run") {
         await originalVerify(cmd);
       }
@@ -59,7 +64,9 @@ describe("Error Handling", () => {
     } catch (error) {
       expect(error instanceof Error).toBe(true);
       if (error instanceof Error) {
-        expect(error.message).toContain("Install with: cd packages/voice && ./scripts/install-deps.sh");
+        expect(error.message).toContain(
+          "Install with: cd packages/voice && ./scripts/install-deps.sh"
+        );
         expect(error.message).toContain("Or use: cd packages/voice && uv sync");
       }
     }
@@ -120,8 +127,9 @@ describe("Error Handling", () => {
     mockSpawn.mockReturnValue(mockSubprocess);
 
     // Mock verifyDependencies to throw
-    const originalVerify = processInstance["verifyDependencies"].bind(processInstance);
-    processInstance["verifyDependencies"] = async (cmd: string[]) => {
+    const originalVerify =
+      processInstance.verifyDependencies.bind(processInstance);
+    processInstance.verifyDependencies = async (cmd: string[]) => {
       if (!cmd[0]?.endsWith("uv") || cmd[1] !== "run") {
         await originalVerify(cmd);
       }
@@ -139,4 +147,3 @@ describe("Error Handling", () => {
     }
   });
 });
-

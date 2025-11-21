@@ -1,7 +1,6 @@
 import type {
   VoiceStreamAudioChunkPayload,
   VoiceStreamAutoStopEvent,
-  VoiceStreamCodec,
   VoiceStreamServerEvent,
   VoiceStreamStartPayload,
   VoiceStreamStatusEvent,
@@ -43,6 +42,7 @@ export type VoiceStreamClientHandlers = {
   onTtsComplete?(
     event: Extract<VoiceStreamServerEvent, { type: "tts_complete" }>
   ): void;
+  onInterrupt?(event: { type: "interrupt"; sessionId: string }): void;
   onStatus?(event: VoiceStreamStatusEvent): void;
   onError?(event: Extract<VoiceStreamServerEvent, { type: "error" }>): void;
   onClose?(code: number, reason: string): void;
@@ -51,7 +51,8 @@ export type VoiceStreamClientHandlers = {
 const SESSION_START_TIMEOUT_MS = 10_000;
 
 const isReactNative =
-  typeof navigator !== "undefined" && (navigator as any).product === "ReactNative";
+  typeof navigator !== "undefined" &&
+  (navigator as any).product === "ReactNative";
 
 function createSocket(
   url: string,
@@ -118,9 +119,7 @@ export class VoiceStreamClient {
     return this.socket?.readyState === WebSocket.OPEN;
   }
 
-  async startSession(
-    overrides?: Partial<StartPayload>
-  ): Promise<string> {
+  async startSession(overrides?: Partial<StartPayload>): Promise<string> {
     await this.ensureConnection();
     if (this.sessionPromise) {
       return this.sessionPromise;
@@ -141,18 +140,40 @@ export class VoiceStreamClient {
 
   async sendAudioChunk(payload: AudioChunkPayload): Promise<void> {
     await this.ensureConnection();
-    if (!this.sessionId && !this.sessionPromise) {
+    if (!(this.sessionId || this.sessionPromise)) {
       throw new Error("voice_stream_session_not_started");
     }
+
+    if (payload.audio) {
+      // Send raw binary
+      this.send(payload.audio);
+    } else if (payload.audioBase64) {
+      const buffer = Buffer.from(payload.audioBase64, "base64");
+      this.send(buffer);
+    } else {
+      // Fallback or error
+      throw new Error("audio_payload_empty");
+    }
+  }
+
+  async sendTelemetry(metrics: {
+    packetLoss: number;
+    jitter: number;
+    rtt: number;
+  }): Promise<void> {
+    if (!(this.isConnected() && this.sessionId)) {
+      return;
+    }
     this.send({
-      type: "audio_chunk",
-      audioBase64: payload.audioBase64,
-      mimeType: payload.mimeType ?? "audio/pcm",
-      emitPartial: payload.emitPartial ?? true,
+      type: "telemetry_report",
+      sessionId: this.sessionId,
+      ...metrics,
     });
   }
 
-  async stop(reason: "manual" | "silence" | "timeout" = "manual"): Promise<void> {
+  async stop(
+    reason: "manual" | "silence" | "timeout" = "manual"
+  ): Promise<void> {
     await this.ensureConnection();
     this.send({ type: "stop", reason });
   }
@@ -163,9 +184,7 @@ export class VoiceStreamClient {
       this.socket.close();
     }
     this.socket = null;
-    this.rejectPendingSession(
-      new Error("voice_stream_socket_closed")
-    );
+    this.rejectPendingSession(new Error("voice_stream_socket_closed"));
     this.clearSessionTimer();
   }
 
@@ -241,6 +260,24 @@ export class VoiceStreamClient {
           resolve();
         };
         ws.onmessage = (event) => {
+          if (
+            event.data instanceof ArrayBuffer ||
+            event.data instanceof Buffer
+          ) {
+            const audioBase64 = Buffer.from(event.data as any).toString(
+              "base64"
+            );
+            this.handlers.onTtsChunk?.({
+              type: "tts_chunk",
+              sessionId: this.sessionId ?? "",
+              audioBase64,
+              mimeType: "audio/pcm",
+              sequence: 0,
+              isLast: false,
+            });
+            return;
+          }
+
           try {
             const text = normalizeMessageData(event.data);
             if (!text) {
@@ -314,6 +351,9 @@ export class VoiceStreamClient {
       case "tts_complete":
         this.handlers.onTtsComplete?.(event);
         return;
+      case "interrupt":
+        this.handlers.onInterrupt?.(event);
+        return;
       case "status":
         this.handlers.onStatus?.(event);
         return;
@@ -326,6 +366,9 @@ export class VoiceStreamClient {
         }
         return;
       case "pong":
+        return;
+      case "telemetry_report":
+        // Ignore, server only
         return;
       default:
         return;

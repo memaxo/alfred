@@ -19,11 +19,15 @@ type Autonomy = number & {
 // Brand constructors
 const timestamp = (n: number): Timestamp => n as Timestamp;
 const confidence = (n: number): Confidence => {
-  if (n < 0 || n > 1) throw new Error("Invalid confidence");
+  if (n < 0 || n > 1) {
+    throw new Error("Invalid confidence");
+  }
   return n as Confidence;
 };
 const autonomy = (n: number): Autonomy => {
-  if (n < 0 || n > 1) throw new Error("Invalid autonomy");
+  if (n < 0 || n > 1) {
+    throw new Error("Invalid autonomy");
+  }
   return n as Autonomy;
 };
 
@@ -265,13 +269,19 @@ const calculateError = (expected: string, actual: string): number => {
   // - Semantic similarity for meaning comparison
   // - Structured diff for JSON/object comparison
   // - Custom metrics for domain-specific errors
-  if (expected === actual) return 0;
+  if (expected === actual) {
+    return 0;
+  }
   const maxLen = Math.max(expected.length, actual.length);
-  if (maxLen === 0) return 0;
+  if (maxLen === 0) {
+    return 0;
+  }
 
   let distance = 0;
   for (let i = 0; i < maxLen; i++) {
-    if (expected[i] !== actual[i]) distance++;
+    if (expected[i] !== actual[i]) {
+      distance++;
+    }
   }
 
   return distance / maxLen;
@@ -341,10 +351,18 @@ export const evaluateReasoningQuality = (
   );
 
   let score = 0.5;
-  if (avgLength > 50) score += 0.1;
-  if (hasDecisionPoints) score += 0.15;
-  if (hasAlternatives) score += 0.15;
-  if (hasCausalReasoning) score += 0.1;
+  if (avgLength > 50) {
+    score += 0.1;
+  }
+  if (hasDecisionPoints) {
+    score += 0.15;
+  }
+  if (hasAlternatives) {
+    score += 0.15;
+  }
+  if (hasCausalReasoning) {
+    score += 0.1;
+  }
 
   const positive = outcome._ === "success";
   const strength = Math.min(1, score);
@@ -360,21 +378,30 @@ export const meetsConstraints = (
   for (const constraint of auto.constraints) {
     switch (constraint._) {
       case "temporal":
-        if (Date.now() > constraint.until) return false;
+        if (Date.now() > constraint.until) {
+          return false;
+        }
         break;
       case "scope":
-        if (constraint.forbidden.includes(action)) return false;
+        if (constraint.forbidden.includes(action)) {
+          return false;
+        }
         if (
           constraint.allowed.length > 0 &&
           !constraint.allowed.includes(action)
-        )
+        ) {
           return false;
+        }
         break;
       case "confidence":
-        if (auto.confidence < constraint.minimum) return false;
+        if (auto.confidence < constraint.minimum) {
+          return false;
+        }
         break;
       case "approval":
-        if (constraint.required && auto.level < 0.5) return false;
+        if (constraint.required && auto.level < 0.5) {
+          return false;
+        }
         break;
     }
   }
@@ -462,7 +489,9 @@ function clampDuration(duration?: number) {
 }
 
 function cleanNote(note?: string) {
-  if (!note) return;
+  if (!note) {
+    return;
+  }
   const trimmed = note.trim();
   return trimmed.length === 0 ? undefined : trimmed.slice(0, 280);
 }

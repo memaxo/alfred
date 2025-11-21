@@ -8,4 +8,4 @@
 6. **Automation.** Add new test commands to Turbo pipelines when you create packages so CI can run them consistently. Pair them with `tsc -b` checks (`bun run typecheck` or package-local `npm run typecheck`) so type errors surface alongside failing tests.
 7. **Shared DB harness.** When a suite touches Postgres, instantiate connections through `createTestDb`/`closeTestDb` (`packages/api/test/utils/db.ts`). Use that Drizzle client to truncate tables between tests so no connections or data leak across cases.
 8. **Real integration and e2e.** Prefer end-to-end and integration tests that exercise real boundaries (DB, routers, schedulers, UI flows) over narrow unit tests that only mock behaviour.
-9. **Smoke coverage.** Ensure every runnable surface (CLI, API, schedulers, web app) has at least one `bun test`-driven smoke test that verifies the happy path without extensive mocking.
+10. **Verification scripts.** Create standalone `scripts/test-<domain>.ts` for subsystems relying on native, hardware, or external environments (voice, docker, gpu) to verify integration health outside the test runner.

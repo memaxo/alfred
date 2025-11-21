@@ -14,9 +14,9 @@ export function useChatLogic({
   initialMessages,
   initialConversationId,
 }: UseChatLogicProps = {}) {
-  const [currentAgent, setCurrentAgent] = useState<"assistant" | "orchestrator">(
-    initialAgent
-  );
+  const [currentAgent, setCurrentAgent] = useState<
+    "assistant" | "orchestrator"
+  >(initialAgent);
   const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
 
   const { messages, actions, status, error, send, clear, hydrate } =

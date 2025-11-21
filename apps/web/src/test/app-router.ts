@@ -1,18 +1,18 @@
 import { mock } from "bun:test";
 import { z } from "zod";
-import {
-  router,
-  publicProcedure,
-  authedProcedure,
-} from "../../../../packages/api/src/trpc";
 import { noteRouter } from "../../../../packages/api/src/routers/note";
+import { profileRouter } from "../../../../packages/api/src/routers/profile";
 import { remindRouter } from "../../../../packages/api/src/routers/remind";
 import { tokenRouter } from "../../../../packages/api/src/routers/token";
-import { profileRouter } from "../../../../packages/api/src/routers/profile";
+import {
+  authedProcedure,
+  publicProcedure,
+  router,
+} from "../../../../packages/api/src/trpc";
 import * as workflowRepo from "../../../../packages/db/src/repo/workflow";
 
 mock.module("@alfred/rag", () => ({
-  ingest: async () => undefined,
+  ingest: async () => {},
 }));
 
 const workflowStatusEnum = z.enum([

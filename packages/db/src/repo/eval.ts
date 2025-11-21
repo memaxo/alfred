@@ -134,7 +134,9 @@ export async function addPoints(
   datasetId: string,
   points: Array<{ input: unknown; target?: unknown; metadata?: unknown }>
 ) {
-  if (points.length === 0) return 0;
+  if (points.length === 0) {
+    return 0;
+  }
   const rows = points.map((point) => ({
     datasetId,
     input: point.input,
@@ -188,14 +190,25 @@ export async function updateRun(
   }>
 ) {
   const updates: Partial<typeof evalRuns.$inferInsert> = {};
-  if (patch.status !== undefined) updates.status = patch.status;
-  if (patch.startedAt !== undefined) updates.startedAt = patch.startedAt;
-  if (patch.finishedAt !== undefined) updates.finishedAt = patch.finishedAt;
-  if (patch.stats !== undefined) updates.stats = patch.stats ?? null;
-  if (patch.laminarEvalId !== undefined)
+  if (patch.status !== undefined) {
+    updates.status = patch.status;
+  }
+  if (patch.startedAt !== undefined) {
+    updates.startedAt = patch.startedAt;
+  }
+  if (patch.finishedAt !== undefined) {
+    updates.finishedAt = patch.finishedAt;
+  }
+  if (patch.stats !== undefined) {
+    updates.stats = patch.stats ?? null;
+  }
+  if (patch.laminarEvalId !== undefined) {
     updates.laminarEvalId = patch.laminarEvalId ?? null;
+  }
 
-  if (Object.keys(updates).length === 0) return 0;
+  if (Object.keys(updates).length === 0) {
+    return 0;
+  }
 
   const result = await db
     .update(evalRuns)
@@ -216,7 +229,9 @@ export async function insertScores(
     metadata?: unknown;
   }>
 ) {
-  if (scores.length === 0) return 0;
+  if (scores.length === 0) {
+    return 0;
+  }
   const rows = scores.map((score) => ({
     runId,
     pointId: score.pointId,

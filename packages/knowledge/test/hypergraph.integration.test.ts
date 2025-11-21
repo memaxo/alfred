@@ -1,18 +1,16 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import type * as HypergraphBridge from "@alfred/agent/assistant/hypergraph-bridge";
+import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { and, count, eq } from "drizzle-orm";
-
 import {
   empty,
   fact,
+  type Knowledge,
   relation,
   timestamp,
   toConfidence,
-  type Knowledge,
 } from "../src/hypergraph";
 import { semanticQuery } from "../src/query";
-import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import type * as HypergraphBridge from "@alfred/agent/assistant/hypergraph-bridge";
-import type * as GraphRepo from "@alfred/db/repo/graph";
 
 let persistHypergraphToDb: HypergraphBridge["persistHypergraphToDb"];
 let loadHypergraphFromDb: HypergraphBridge["loadHypergraphFromDb"];
@@ -48,7 +46,7 @@ afterEach(async () => {
 
 afterAll(() => {
   if (originalDbUrl === undefined) {
-    delete process.env.DATABASE_URL;
+    process.env.DATABASE_URL = undefined;
   } else {
     process.env.DATABASE_URL = originalDbUrl;
   }
@@ -95,7 +93,9 @@ describe("hypergraph persistence integration", () => {
       )
       .limit(1)
       .then((rows) => rows[0]);
-    if (!sourceRow) throw new Error("Failed to load persisted source node");
+    if (!sourceRow) {
+      throw new Error("Failed to load persisted source node");
+    }
 
     const neighbors = await graphRepo.getNeighbors(sourceRow.id, {
       resource,

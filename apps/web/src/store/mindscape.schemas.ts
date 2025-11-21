@@ -1,9 +1,9 @@
-import { z } from "zod";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
+import { z } from "zod";
 
 const graphMappingSchema = z
   .object({
-    dbId: z.string().uuid().optional(),
+    dbId: z.string().min(1).optional(),
     hgHash: z.string().optional(),
   })
   .optional();
@@ -140,6 +140,12 @@ export const knowledgeNodeDataSchema = baseArtifactDataSchema.extend({
   runId: z.string().optional(),
 });
 
+export const conceptNodeDataSchema = baseArtifactDataSchema.extend({
+  entityType: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  description: z.string().optional(),
+});
+
 /**
  * Schema for terminal node data.
  * Terminal nodes don't have specific data fields beyond the base.
@@ -175,10 +181,15 @@ export const artifactDataSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("settings") }).merge(settingsNodeDataSchema),
   z.object({ type: z.literal("privacy") }).merge(privacyNodeDataSchema),
   z.object({ type: z.literal("profile") }).merge(profileNodeDataSchema),
-  z.object({ type: z.literal("integrations") }).merge(integrationsNodeDataSchema),
-  z.object({ type: z.literal("workflowlist") }).merge(workflowListNodeDataSchema),
+  z
+    .object({ type: z.literal("integrations") })
+    .merge(integrationsNodeDataSchema),
+  z
+    .object({ type: z.literal("workflowlist") })
+    .merge(workflowListNodeDataSchema),
   z.object({ type: z.literal("deployment") }).merge(deploymentNodeDataSchema),
   z.object({ type: z.literal("knowledge") }).merge(knowledgeNodeDataSchema),
+  z.object({ type: z.literal("concept") }).merge(conceptNodeDataSchema),
   z.object({ type: z.literal("terminal") }).merge(terminalNodeDataSchema),
   z.object({ type: z.literal("artifact") }).merge(artifactNodeDataSchema),
   z.object({ type: z.literal("orb") }).merge(orbNodeDataSchema),
@@ -189,9 +200,7 @@ export const artifactDataSchema = z.discriminatedUnion("type", [
  * @param nodeType - The type of the node
  * @returns The Zod schema for that node type, or base schema if unknown
  */
-export function getNodeDataSchema(
-  nodeType: string | undefined
-): z.ZodTypeAny {
+export function getNodeDataSchema(nodeType: string | undefined): z.ZodTypeAny {
   switch (nodeType) {
     case "code":
       return codeNodeDataSchema;
@@ -225,6 +234,8 @@ export function getNodeDataSchema(
       return deploymentNodeDataSchema;
     case "knowledge":
       return knowledgeNodeDataSchema;
+    case "concept":
+      return conceptNodeDataSchema;
     case "terminal":
       return terminalNodeDataSchema;
     case "artifact":

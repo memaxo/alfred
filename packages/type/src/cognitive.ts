@@ -36,48 +36,48 @@ export type FocusState =
       last?: FocusSessionRecord;
     };
 
-export interface CaptureInput {
+export type CaptureInput = {
   content: string;
   context?: Record<string, unknown>;
-}
+};
 
-export interface CaptureResult {
+export type CaptureResult = {
   facts: KnowledgeFact[];
   confidence: CognitiveConfidence;
   ambiguities: string[];
-}
+};
 
-export interface SynthesisResult {
+export type SynthesisResult = {
   insights: KnowledgeInsight[];
   relations: KnowledgeRelation[];
   contradictions: string[];
-}
+};
 
-export interface ExecutionStep {
+export type ExecutionStep = {
   description: string;
   etaMs?: number;
   metadata?: Record<string, unknown>;
-}
+};
 
-export interface ExecutionPlan {
+export type ExecutionPlan = {
   steps: ExecutionStep[];
   goal?: string;
   autonomy?: Autonomy;
   metadata?: Record<string, unknown>;
-}
+};
 
-export interface ExecutionResult {
+export type ExecutionResult = {
   actions: Array<{
     id: string;
     status: "completed" | "skipped" | "failed";
     detail?: string;
   }>;
-  effects: Array<Record<string, unknown>>;
+  effects: Record<string, unknown>[];
   deviations: string[];
-}
+};
 
-export interface ReflectionResult {
+export type ReflectionResult = {
   errors: string[];
   lessons: string[];
   updates: KnowledgeUpdate[];
-}
+};

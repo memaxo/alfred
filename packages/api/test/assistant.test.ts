@@ -1,12 +1,16 @@
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  expect,
+  it,
+} from "bun:test";
+import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { sql } from "drizzle-orm";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { closeTestDb, createTestDb } from "./utils/db";
-import {
-  describePostgres,
-  requirePostgresTestEnv,
-} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -16,7 +20,9 @@ let appRouter: typeof import("@alfred/api/routers/index").appRouter;
 let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 async function resetAssistantTables() {
-  if (!testDbHarness) return;
+  if (!testDbHarness) {
+    return;
+  }
   await testDbHarness.db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
   );

@@ -11,11 +11,16 @@ describe("normalization round-trip", () => {
       toolResults: [{ id: "t1", toolName: "echo", result: { x: 1 } }],
     } as any;
 
-    const msgs = eventToUiMessages(streamed)!;
+    const msgs = eventToUiMessages(streamed);
+    if (!msgs) {
+      throw new Error("msgs is null");
+    }
     // Simulate persisted replay event
     const replay = { type: "ui-message", messages: msgs } as any;
-    const msgs2 = eventToUiMessages(replay)!;
+    const msgs2 = eventToUiMessages(replay);
+    if (!msgs2) {
+      throw new Error("msgs2 is null");
+    }
     expect(JSON.stringify(msgs2)).toEqual(JSON.stringify(msgs));
   });
 });
-

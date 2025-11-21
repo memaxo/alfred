@@ -9,33 +9,31 @@ import {
   type OnEdgesChange,
   type OnNodesChange,
 } from "@xyflow/react";
-import { create } from "zustand";
-import {
-  getLayoutedElements,
-  getSemanticLayoutedElements,
-} from "@/lib/layout";
 import type { z } from "zod";
+import { create } from "zustand";
+import { getLayoutedElements, getSemanticLayoutedElements } from "@/lib/layout";
 import {
+  type artifactNodeDataSchema,
+  type bookmarkNodeDataSchema,
+  type chatNodeDataSchema,
+  type codeNodeDataSchema,
+  type conceptNodeDataSchema,
+  type deploymentNodeDataSchema,
   getNodeDataSchema,
-  artifactNodeDataSchema,
-  bookmarkNodeDataSchema,
-  chatNodeDataSchema,
-  codeNodeDataSchema,
-  deploymentNodeDataSchema,
-  integrationsNodeDataSchema,
-  knowledgeNodeDataSchema,
-  noteNodeDataSchema,
-  orbNodeDataSchema,
-  privacyNodeDataSchema,
-  profileNodeDataSchema,
-  reminderNodeDataSchema,
-  settingsNodeDataSchema,
-  terminalNodeDataSchema,
-  ticketNodeDataSchema,
-  timerNodeDataSchema,
-  todoNodeDataSchema,
-  workflowListNodeDataSchema,
-  workflowNodeDataSchema,
+  type integrationsNodeDataSchema,
+  type knowledgeNodeDataSchema,
+  type noteNodeDataSchema,
+  type orbNodeDataSchema,
+  type privacyNodeDataSchema,
+  type profileNodeDataSchema,
+  type reminderNodeDataSchema,
+  type settingsNodeDataSchema,
+  type terminalNodeDataSchema,
+  type ticketNodeDataSchema,
+  type timerNodeDataSchema,
+  type todoNodeDataSchema,
+  type workflowListNodeDataSchema,
+  type workflowNodeDataSchema,
 } from "./mindscape.schemas";
 
 export type ArtifactType =
@@ -61,13 +59,18 @@ export type ArtifactType =
   | "deployment"
   | "artifact"
   | "orb"
-  | "knowledge";
+  | "knowledge"
+  | "concept";
 
 /**
  * Individual node data types inferred from Zod schemas.
  */
-export type CodeNodeData = z.infer<typeof codeNodeDataSchema> & { type: "code" };
-export type ChatNodeData = z.infer<typeof chatNodeDataSchema> & { type: "chat" };
+export type CodeNodeData = z.infer<typeof codeNodeDataSchema> & {
+  type: "code";
+};
+export type ChatNodeData = z.infer<typeof chatNodeDataSchema> & {
+  type: "chat";
+};
 export type WorkflowNodeData = z.infer<typeof workflowNodeDataSchema> & {
   type: "workflow";
 };
@@ -77,7 +80,9 @@ export type TicketNodeData = z.infer<typeof ticketNodeDataSchema> & {
 export type ReminderNodeData = z.infer<typeof reminderNodeDataSchema> & {
   type: "reminder";
 };
-export type NoteNodeData = z.infer<typeof noteNodeDataSchema> & { type: "note" };
+export type NoteNodeData = z.infer<typeof noteNodeDataSchema> & {
+  type: "note";
+};
 export type TimerNodeData = z.infer<typeof timerNodeDataSchema> & {
   type: "timer";
 };
@@ -96,10 +101,14 @@ export type PrivacyNodeData = z.infer<typeof privacyNodeDataSchema> & {
 export type ProfileNodeData = z.infer<typeof profileNodeDataSchema> & {
   type: "profile";
 };
-export type IntegrationsNodeData = z.infer<typeof integrationsNodeDataSchema> & {
+export type IntegrationsNodeData = z.infer<
+  typeof integrationsNodeDataSchema
+> & {
   type: "integrations";
 };
-export type WorkflowListNodeData = z.infer<typeof workflowListNodeDataSchema> & {
+export type WorkflowListNodeData = z.infer<
+  typeof workflowListNodeDataSchema
+> & {
   type: "workflowlist";
 };
 export type DeploymentNodeData = z.infer<typeof deploymentNodeDataSchema> & {
@@ -114,6 +123,9 @@ export type ArtifactNodeData = z.infer<typeof artifactNodeDataSchema> & {
 export type OrbNodeData = z.infer<typeof orbNodeDataSchema> & { type: "orb" };
 export type KnowledgeNodeData = z.infer<typeof knowledgeNodeDataSchema> & {
   type: "knowledge";
+};
+export type ConceptNodeData = z.infer<typeof conceptNodeDataSchema> & {
+  type: "concept";
 };
 
 /**
@@ -139,14 +151,43 @@ export type ArtifactData =
   | TerminalNodeData
   | ArtifactNodeData
   | OrbNodeData
-  | KnowledgeNodeData;
+  | KnowledgeNodeData
+  | ConceptNodeData;
+
+type CachedRagDocEntry = {
+  data: KnowledgeNodeData;
+  cachedAt: number;
+};
+
+const resolvePositiveNumber = (value: string | undefined, fallback: number) => {
+  const parsed = Number.parseInt(value ?? "", 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return fallback;
+};
+
+export const RAG_DOC_CACHE_LIMIT = resolvePositiveNumber(
+  import.meta.env?.VITE_MINDSCAPE_RAG_CACHE_LIMIT,
+  50
+);
+
+export const RAG_DOC_CACHE_TTL_MS = resolvePositiveNumber(
+  import.meta.env?.VITE_MINDSCAPE_RAG_CACHE_TTL_MS,
+  5 * 60 * 1000
+);
 
 type MindscapeState = {
   nodes: Node<ArtifactData>[];
   edges: Edge[];
   focusedNodeId: string | null;
   isSpaceMode: boolean;
-  ragDocCache: Record<string, KnowledgeNodeData>;
+  ragDocCache: Record<string, CachedRagDocEntry>;
+  ragDocCacheStats: {
+    hits: number;
+    misses: number;
+    evictions: number;
+  };
 
   // React Flow actions
   onNodesChange: OnNodesChange;
@@ -163,6 +204,9 @@ type MindscapeState = {
   setEdges: (edges: Edge[]) => void;
   autoLayout: () => void;
   cacheRagDoc: (dbId: string, data: KnowledgeNodeData) => void;
+  evictRagDoc: (dbId: string) => void;
+  recordRagDocCacheHit: () => void;
+  recordRagDocCacheMiss: () => void;
 };
 
 import { persist } from "zustand/middleware";
@@ -175,6 +219,11 @@ export const useMindscapeStore = create<MindscapeState>()(
       focusedNodeId: null,
       isSpaceMode: false,
       ragDocCache: {},
+      ragDocCacheStats: {
+        hits: 0,
+        misses: 0,
+        evictions: 0,
+      },
 
       onNodesChange: (changes) => {
         set({
@@ -230,11 +279,6 @@ export const useMindscapeStore = create<MindscapeState>()(
         const result = schema.partial().safeParse(mergedData);
 
         if (!result.success) {
-          // Log validation errors but don't crash (graceful degradation)
-          console.warn(
-            `Failed to validate node data for ${nodeId}:`,
-            result.error.errors
-          );
           return;
         }
 
@@ -264,12 +308,14 @@ export const useMindscapeStore = create<MindscapeState>()(
         set({ edges });
       },
       autoLayout: () => {
-        const { nodes, edges } = get();
+        const { nodes, edges, focusedNodeId } = get();
         const shouldUseSemantic =
           edges.length > 0 ||
           nodes.some((node) => Boolean(node.data?.graph?.dbId));
         const layoutedNodes = shouldUseSemantic
-          ? getSemanticLayoutedElements(nodes, edges)
+          ? getSemanticLayoutedElements(nodes, edges, {
+              focusId: focusedNodeId,
+            })
           : getLayoutedElements(nodes, edges);
         set({ nodes: layoutedNodes });
       },
@@ -277,10 +323,85 @@ export const useMindscapeStore = create<MindscapeState>()(
         if (!dbId) {
           return;
         }
-        set((state) => ({
-          ragDocCache: {
+        set((state) => {
+          const now = Date.now();
+          const next: Record<string, CachedRagDocEntry> = {
             ...state.ragDocCache,
-            [dbId]: data,
+            [dbId]: {
+              data,
+              cachedAt: now,
+            },
+          };
+
+          let evictions = 0;
+          for (const key of Object.keys(next)) {
+            const entry = next[key];
+            if (!entry) {
+              continue;
+            }
+            if (now - entry.cachedAt > RAG_DOC_CACHE_TTL_MS) {
+              delete next[key];
+              evictions += 1;
+            }
+          }
+
+          const keys = Object.keys(next);
+          if (keys.length > RAG_DOC_CACHE_LIMIT) {
+            keys
+              .sort(
+                (a, b) => (next[a]?.cachedAt ?? 0) - (next[b]?.cachedAt ?? 0)
+              )
+              .slice(0, keys.length - RAG_DOC_CACHE_LIMIT)
+              .forEach((key) => {
+                delete next[key];
+                evictions += 1;
+              });
+          }
+
+          return {
+            ragDocCache: next,
+            ragDocCacheStats:
+              evictions > 0
+                ? {
+                    ...state.ragDocCacheStats,
+                    evictions: state.ragDocCacheStats.evictions + evictions,
+                  }
+                : state.ragDocCacheStats,
+          } as Partial<MindscapeState>;
+        });
+      },
+      evictRagDoc: (dbId) => {
+        if (!dbId) {
+          return;
+        }
+        set((state) => {
+          if (!state.ragDocCache[dbId]) {
+            return state;
+          }
+          const next = { ...state.ragDocCache };
+          delete next[dbId];
+          return {
+            ragDocCache: next,
+            ragDocCacheStats: {
+              ...state.ragDocCacheStats,
+              evictions: state.ragDocCacheStats.evictions + 1,
+            },
+          } as Partial<MindscapeState>;
+        });
+      },
+      recordRagDocCacheHit: () => {
+        set((state) => ({
+          ragDocCacheStats: {
+            ...state.ragDocCacheStats,
+            hits: state.ragDocCacheStats.hits + 1,
+          },
+        }));
+      },
+      recordRagDocCacheMiss: () => {
+        set((state) => ({
+          ragDocCacheStats: {
+            ...state.ragDocCacheStats,
+            misses: state.ragDocCacheStats.misses + 1,
           },
         }));
       },
@@ -293,6 +414,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         isSpaceMode: state.isSpaceMode,
         focusedNodeId: state.focusedNodeId,
         ragDocCache: state.ragDocCache,
+        ragDocCacheStats: state.ragDocCacheStats,
       }),
     }
   )
@@ -315,7 +437,8 @@ function sanitizeNodeForPersist(node: Node<ArtifactData>): Node<ArtifactData> {
 }
 
 function sanitizeNodeData(node: Node<ArtifactData>): ArtifactData {
-  const data = (node.data ?? ({ label: node.id } as ArtifactData)) as ArtifactData;
+  const data = (node.data ??
+    ({ label: node.id } as ArtifactData)) as ArtifactData;
 
   if (
     node.type === "chat" &&

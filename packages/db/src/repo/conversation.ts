@@ -1,5 +1,5 @@
-import { and, desc, eq, gte, sql } from "drizzle-orm";
 import type { UIMessage } from "@alfred/type/stream";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import { db, dbDriver } from "../index";
 import { conversations, messages } from "../schema/conversation";
@@ -58,27 +58,25 @@ const getConversationsStmt: PreparedQuery<
           .limit(MAX_PREPARED_LIMIT),
     };
 
-const getMessagesStmt: PreparedQuery<
-  { conversationId: string },
-  MessageRow[]
-> = usePreparedStatements
-  ? (db
-      .select(messageSelection)
-      .from(messages)
-      .where(eq(messages.conversationId, sql.placeholder("conversationId")))
-      .orderBy(messages.created)
-      .prepare("get_conversation_messages") as PreparedQuery<
-      { conversationId: string },
-      MessageRow[]
-    >)
-  : {
-      execute: async ({ conversationId }) =>
-        db
-          .select(messageSelection)
-          .from(messages)
-          .where(eq(messages.conversationId, conversationId))
-          .orderBy(messages.created),
-    };
+const getMessagesStmt: PreparedQuery<{ conversationId: string }, MessageRow[]> =
+  usePreparedStatements
+    ? (db
+        .select(messageSelection)
+        .from(messages)
+        .where(eq(messages.conversationId, sql.placeholder("conversationId")))
+        .orderBy(messages.created)
+        .prepare("get_conversation_messages") as PreparedQuery<
+        { conversationId: string },
+        MessageRow[]
+      >)
+    : {
+        execute: async ({ conversationId }) =>
+          db
+            .select(messageSelection)
+            .from(messages)
+            .where(eq(messages.conversationId, conversationId))
+            .orderBy(messages.created),
+      };
 
 const getMessageStmt: PreparedQuery<
   { messageId: string; userId: string },
@@ -158,7 +156,10 @@ export async function getConversation(
     .select()
     .from(conversations)
     .where(
-      and(eq(conversations.id, conversationId), eq(conversations.userId, userId))
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.userId, userId)
+      )
     )
     .limit(1);
 
@@ -178,7 +179,10 @@ export async function getConversations(
       .select(conversationSelection)
       .from(conversations)
       .where(
-        and(eq(conversations.userId, userId), gte(conversations.created, cutoff))
+        and(
+          eq(conversations.userId, userId),
+          gte(conversations.created, cutoff)
+        )
       )
       .orderBy(desc(conversations.updated))
       .limit(limit);
@@ -264,10 +268,9 @@ export async function getConversationHistory(
   };
 }
 
-export async function getActiveUserIds(options: {
-  days?: number;
-  limit?: number;
-} = {}): Promise<string[]> {
+export async function getActiveUserIds(
+  options: { days?: number; limit?: number } = {}
+): Promise<string[]> {
   const { days = 30, limit = 100 } = options;
   const cutoff =
     typeof days === "number" && Number.isFinite(days) && days > 0

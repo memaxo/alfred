@@ -1,17 +1,20 @@
-import { memoryEdges } from "@alfred/db/schema/graph";
-import { z } from "zod";
-import { authedProcedure, router } from "../trpc";
-import { db } from "@alfred/db";
-import { and, eq, inArray, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { observable } from "@trpc/server/observable";
-import { runQuery as runUnifiedQuery, getExplainingDocuments } from "@alfred/graph";
-import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
 import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import {
   graphQueriesTotal,
   graphQueryDurationSeconds,
 } from "@alfred/api/metrics";
+import { db } from "@alfred/db";
+import { memoryEdges } from "@alfred/db/schema/graph";
+import {
+  getExplainingDocuments,
+  runQuery as runUnifiedQuery,
+} from "@alfred/graph";
+import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
+import { observable } from "@trpc/server/observable";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { z } from "zod";
+import { authedProcedure, router } from "../trpc";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;
 
@@ -63,7 +66,9 @@ export const graphRouter: any = router({
     )
     .query(async ({ input }) => {
       const { nodeIds } = input;
-      if (nodeIds.length === 0) return [];
+      if (nodeIds.length === 0) {
+        return [];
+      }
       const resource = input.resource ?? "user";
 
       return db
@@ -83,7 +88,9 @@ export const graphRouter: any = router({
       z.object({
         fromId: z.string(),
         toId: z.string(),
-        kind: z.enum(["relates_to", "blocks", "depends_on"]).default("relates_to"),
+        kind: z
+          .enum(["relates_to", "blocks", "depends_on"])
+          .default("relates_to"),
         resource: z.string().optional(),
       })
     )
@@ -145,7 +152,7 @@ export const graphRouter: any = router({
       z.object({
         nodeIds: z.array(z.string()).min(1),
         resource: z.string().optional(),
-        pollMs: z.number().int().min(500).max(30_000).default(3_000),
+        pollMs: z.number().int().min(500).max(30_000).default(3000),
       })
     )
     .subscription(({ input }) =>
@@ -157,12 +164,10 @@ export const graphRouter: any = router({
         const resource = input.resource ?? "user";
 
         const buildWhere = () => {
+          const id = uniqueIds[0];
           const idPredicate =
-            uniqueIds.length === 1
-              ? or(
-                  eq(memoryEdges.fromId, uniqueIds[0]!),
-                  eq(memoryEdges.toId, uniqueIds[0]!)
-                )
+            uniqueIds.length === 1 && id
+              ? or(eq(memoryEdges.fromId, id), eq(memoryEdges.toId, id))
               : or(
                   inArray(memoryEdges.fromId, uniqueIds),
                   inArray(memoryEdges.toId, uniqueIds)
@@ -171,7 +176,10 @@ export const graphRouter: any = router({
           if (resource) {
             predicates.push(eq(memoryEdges.resource, resource));
           }
-          return predicates.length === 1 ? predicates[0]! : and(...predicates);
+          const firstPredicate = predicates[0];
+          return predicates.length === 1 && firstPredicate
+            ? firstPredicate
+            : and(...predicates);
         };
 
         const poll = async () => {

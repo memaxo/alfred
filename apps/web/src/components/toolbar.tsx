@@ -8,17 +8,17 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface ToolbarAction {
+type ToolbarAction = {
   id: string;
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
-}
+};
 
-interface ToolbarProps {
+type ToolbarProps = {
   actions: ToolbarAction[];
   className?: string;
-}
+};
 
 export function Toolbar({ actions, className }: ToolbarProps) {
   return (

@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MindscapeNode } from "./mindscape-node";
-import { timerNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
+import { timerNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
+import { MindscapeNode } from "./mindscape-node";
 
 export function TimerNode({ id, data, selected }: NodeProps) {
   const parsed = timerNodeDataSchema.safeParse(data);
@@ -61,7 +61,8 @@ export function TimerNode({ id, data, selected }: NodeProps) {
       toast.success("Timer completed");
       await utils.timer.active.invalidate();
     },
-    onError: (error) => toast.error(error.message ?? "Failed to complete timer"),
+    onError: (error) =>
+      toast.error(error.message ?? "Failed to complete timer"),
   });
 
   const cancelTimer = trpc.timer.cancel.useMutation({
@@ -87,23 +88,25 @@ export function TimerNode({ id, data, selected }: NodeProps) {
     });
   };
 
-  const timerCards = useMemo(() => {
-    return timers.map((timer) => {
-      const startedAt = timer.startedAt
-        ? new Date(timer.startedAt).getTime()
-        : Date.now();
-      const elapsedSeconds = Math.max(0, (now - startedAt) / 1000);
-      const remaining = Math.max(0, timer.duration - elapsedSeconds);
-      const percent = Math.min(100, (elapsedSeconds / timer.duration) * 100);
+  const timerCards = useMemo(
+    () =>
+      timers.map((timer) => {
+        const startedAt = timer.startedAt
+          ? new Date(timer.startedAt).getTime()
+          : Date.now();
+        const elapsedSeconds = Math.max(0, (now - startedAt) / 1000);
+        const remaining = Math.max(0, timer.duration - elapsedSeconds);
+        const percent = Math.min(100, (elapsedSeconds / timer.duration) * 100);
 
-      return {
-        id: timer.id,
-        label: timer.label ?? "Focus Timer",
-        remainingLabel: formatRemaining(remaining),
-        percent,
-      };
-    });
-  }, [timers, now]);
+        return {
+          id: timer.id,
+          label: timer.label ?? "Focus Timer",
+          remainingLabel: formatRemaining(remaining),
+          percent,
+        };
+      }),
+    [timers, now]
+  );
 
   return (
     <MindscapeNode
@@ -150,7 +153,7 @@ export function TimerNode({ id, data, selected }: NodeProps) {
               Loading timers…
             </div>
           ) : timerCards.length === 0 ? (
-            <p className="py-4 text-center text-sm text-biolum-faint">
+            <p className="py-4 text-center text-biolum-faint text-sm">
               No active timers. Start one above.
             </p>
           ) : (
@@ -160,9 +163,9 @@ export function TimerNode({ id, data, selected }: NodeProps) {
                   className="rounded-md border border-white/10 bg-white/5 p-3"
                   key={timer.id}
                 >
-                  <div className="flex items-center justify-between text-sm font-medium">
+                  <div className="flex items-center justify-between font-medium text-sm">
                     <span>{timer.label}</span>
-                    <span className="tabular-nums text-purple-200">
+                    <span className="text-purple-200 tabular-nums">
                       {timer.remainingLabel}
                     </span>
                   </div>

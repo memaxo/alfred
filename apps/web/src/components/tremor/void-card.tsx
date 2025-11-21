@@ -15,4 +15,3 @@ export function VoidCard({ className, children, ...props }: CardProps) {
     </Card>
   );
 }
-

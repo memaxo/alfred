@@ -36,7 +36,7 @@ describe("execplan.interpretExecPlan", () => {
   });
 
   it("handles missing sections gracefully", () => {
-    const md = `# Just Title`;
+    const md = "# Just Title";
     const parsed = interpretExecPlan(md);
     expect(parsed.title).toBe("Just Title");
     expect(parsed.progressSection).toBe("");
@@ -77,7 +77,7 @@ describe("execplan.generateSubtaskExecPlanSkeleton", () => {
     };
 
     const md = generateSubtaskExecPlanSkeleton(task, "run-123");
-    
+
     expect(md).toContain("# Task 1 (Run run-123, T1)");
     expect(md).toContain("## Purpose / Big Picture");
     expect(md).toContain("Do something");

@@ -1,4 +1,8 @@
-import { nowNs } from "@alfred/metrics/performance";
+// import { nowNs } from "@alfred/metrics/performance";
+
+function nowNs(): bigint {
+  return process.hrtime.bigint();
+}
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -8,11 +12,8 @@ function elapsedMs(start: bigint): number {
   return Number(nowNs() - start) / 1_000_000;
 }
 
-function logBudget(label: string, duration: number, budgetMs: number): void {
+function logBudget(_label: string, duration: number, budgetMs: number): void {
   if (duration > budgetMs) {
-    console.warn(
-      `[knowledge.metrics] ${label} ${duration.toFixed(3)}ms > ${budgetMs}ms`
-    );
   }
 }
 

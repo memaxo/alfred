@@ -1,7 +1,8 @@
 // External metric hooks (agent/policy) are wired lazily below to keep tests light
+
+import { logger } from "@alfred/logger";
 import { metricsRegistry } from "@alfred/metrics/registry";
 import client from "prom-client";
-import { logger } from "./utils/logger";
 
 export { metricsRegistry };
 
@@ -252,7 +253,6 @@ export const assistantToolCallsTotal = new client.Counter({
 
 // wired via lazy hooks
 
-
 export const multiAgentTasksTotal = new client.Counter({
   name: "multi_agent_tasks_total",
   help: "Count of multi-agent subtasks grouped by status",
@@ -449,8 +449,12 @@ const observeDuration = (
   provider: string,
   durationSeconds?: number
 ) => {
-  if (typeof durationSeconds !== "number") return;
-  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) return;
+  if (typeof durationSeconds !== "number") {
+    return;
+  }
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+    return;
+  }
   histogram.observe({ provider }, durationSeconds);
 };
 
@@ -701,6 +705,29 @@ export const linearWebhookWorkflowStartsTotal = new client.Counter({
 export const linearWebhookWorkflowCancelsTotal = new client.Counter({
   name: "linear_webhook_workflow_cancels_total",
   help: "Total workflows canceled from Linear webhooks",
+  registers: [metricsRegistry],
+});
+
+export const voiceSessionPacketLossTotal = new client.Counter({
+  name: "voice_session_packet_loss_total",
+  help: "Total count of lost voice packets reported by client",
+  labelNames: ["session_id"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceSessionJitterMillis = new client.Histogram({
+  name: "voice_session_jitter_millis",
+  help: "Voice session jitter in milliseconds reported by client",
+  labelNames: ["session_id"] as const,
+  buckets: [1, 5, 10, 20, 50, 100, 200],
+  registers: [metricsRegistry],
+});
+
+export const voiceSessionRttMillis = new client.Histogram({
+  name: "voice_session_rtt_millis",
+  help: "Voice session round-trip time in milliseconds reported by client",
+  labelNames: ["session_id"] as const,
+  buckets: [10, 20, 50, 100, 200, 500, 1000],
   registers: [metricsRegistry],
 });
 

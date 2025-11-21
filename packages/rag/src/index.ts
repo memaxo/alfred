@@ -2,11 +2,11 @@ export { type CodeFile, ingestCodeFiles } from "./code";
 export {
   type Chunk,
   chunk,
+  type EmbeddingProvider,
   embed,
   embedMany,
   ingest,
   retrieve,
-  type EmbeddingProvider,
   setEmbeddingProvider,
 } from "./doc";
 export {

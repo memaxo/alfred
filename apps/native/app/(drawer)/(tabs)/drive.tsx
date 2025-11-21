@@ -10,30 +10,87 @@ import {
   registerQueueDrain,
   useVoiceSessionNative,
 } from "@/lib/voice";
+import { ensureForegroundService } from "@/lib/voice/foreground";
 import type { PendingItem } from "@/lib/voice/queue";
-import { ensureForegroundService } from "@/lib/voice/service";
 import { trpcClient } from "@/utils/trpc";
 
 const THREAD_ID = "drive-mode";
 
 type Status = "idle" | "holding" | "thinking" | "responding" | "error";
 
+function getDrivePalette(isDarkColorScheme: boolean) {
+  return {
+    background: isDarkColorScheme ? "bg-black" : "bg-white",
+    text: isDarkColorScheme ? "text-white" : "text-black",
+    subtle: isDarkColorScheme ? "text-gray-400" : "text-gray-500",
+    buttonIdle: isDarkColorScheme ? "bg-sky-500" : "bg-blue-500",
+    buttonActive: "bg-emerald-500",
+    buttonError: "bg-rose-500",
+    cardBg: isDarkColorScheme ? "bg-white/5" : "bg-black/5",
+    cardBorder: isDarkColorScheme ? "border-white/10" : "border-black/10",
+    meterTrack: isDarkColorScheme ? "bg-white/20" : "bg-black/10",
+    meterFill: isDarkColorScheme ? "bg-emerald-400" : "bg-emerald-500",
+    streamAccent: isDarkColorScheme ? "text-emerald-300" : "text-emerald-600",
+  };
+}
+
+async function processQueueItem(item: PendingItem, voice: any): Promise<any> {
+  if (item.kind === "stt") {
+    const result = await trpcClient.voice.sttTranscribe.mutate({
+      audioBase64: item.payload.audioBase64,
+      mimeType: item.payload.mimeType,
+      language: item.payload.language,
+      prompt: item.payload.prompt,
+    });
+    return result;
+  }
+  if (item.kind === "s2s") {
+    const response = await trpcClient.voice.speechToSpeech.mutate({
+      audioBase64: item.payload.audioBase64,
+      mimeType: item.payload.mimeType,
+      language: item.payload.language,
+      prompt: item.payload.prompt,
+      thread: item.payload.thread,
+      resource: item.payload.resource,
+      ttsVoice: item.payload.ttsVoice,
+      ttsFormat: item.payload.ttsFormat,
+      sessionId: item.payload.sessionId,
+      surface: item.payload.surface ?? "drive",
+    });
+    const audio = response?.audio;
+    if (audio?.audioBase64) {
+      await playBase64(audio.audioBase64, audio.mimeType);
+    } else if (response?.assistant?.text) {
+      await voice.speak({
+        text: response.assistant.text,
+        voice: item.payload.ttsVoice ?? "alloy",
+        format: item.payload.ttsFormat ?? "mp3",
+      });
+    }
+    voice.syncSession?.(response?.session ?? null);
+    await voice.refreshSession?.();
+    return response;
+  }
+
+  const result = await trpcClient.voice.ttsSynthesize.mutate({
+    text: item.payload.text,
+    voice: item.payload.voice,
+  });
+
+  if (result?.audioBase64) {
+    await voice.speak({
+      text: item.payload.text,
+      format: "mp3",
+      voice: item.payload.voice ?? "alloy",
+    });
+  }
+  return result;
+}
+
 export default function DriveScreen() {
   const { isDarkColorScheme } = useColorScheme();
   const palette = useMemo(
-    () => ({
-      background: isDarkColorScheme ? "bg-black" : "bg-white",
-      text: isDarkColorScheme ? "text-white" : "text-black",
-      subtle: isDarkColorScheme ? "text-gray-400" : "text-gray-500",
-      buttonIdle: isDarkColorScheme ? "bg-sky-500" : "bg-blue-500",
-      buttonActive: "bg-emerald-500",
-      buttonError: "bg-rose-500",
-      cardBg: isDarkColorScheme ? "bg-white/5" : "bg-black/5",
-      cardBorder: isDarkColorScheme ? "border-white/10" : "border-black/10",
-      meterTrack: isDarkColorScheme ? "bg-white/20" : "bg-black/10",
-      meterFill: isDarkColorScheme ? "bg-emerald-400" : "bg-emerald-500",
-      streamAccent: isDarkColorScheme ? "text-emerald-300" : "text-emerald-600",
-    }),
+    () => getDrivePalette(isDarkColorScheme),
     [isDarkColorScheme]
   );
 
@@ -59,62 +116,13 @@ export default function DriveScreen() {
   const processPendingItem = useCallback(
     async (item: PendingItem) => {
       try {
-        if (item.kind === "stt") {
-          const result = await trpcClient.voice.sttTranscribe.mutate({
-            audioBase64: item.payload.audioBase64,
-            mimeType: item.payload.mimeType,
-            language: item.payload.language,
-            prompt: item.payload.prompt,
-          });
-          return result;
-        }
-        if (item.kind === "s2s") {
-          const response = await trpcClient.voice.speechToSpeech.mutate({
-            audioBase64: item.payload.audioBase64,
-            mimeType: item.payload.mimeType,
-            language: item.payload.language,
-            prompt: item.payload.prompt,
-            thread: item.payload.thread,
-            resource: item.payload.resource,
-            ttsVoice: item.payload.ttsVoice,
-            ttsFormat: item.payload.ttsFormat,
-            sessionId: item.payload.sessionId,
-            surface: item.payload.surface ?? "drive",
-          });
-          const audio = response?.audio;
-          if (audio?.audioBase64) {
-            await playBase64(audio.audioBase64, audio.mimeType);
-          } else if (response?.assistant?.text) {
-            await voice.speak({
-              text: response.assistant.text,
-              voice: item.payload.ttsVoice ?? "alloy",
-              format: item.payload.ttsFormat ?? "mp3",
-            });
-          }
-          voice.syncSession?.(response?.session ?? null);
-          await voice.refreshSession?.();
-          return response;
-        }
-
-        const result = await trpcClient.voice.ttsSynthesize.mutate({
-          text: item.payload.text,
-          voice: item.payload.voice,
-        });
-
-        if (result?.audioBase64) {
-          await voice.speak({
-            text: item.payload.text,
-            format: "mp3",
-            voice: item.payload.voice ?? "alloy",
-          });
-        }
-        return result;
+        return await processQueueItem(item, voice);
       } catch (error) {
         logError("voice QueueDrain process", error);
         throw error;
       }
     },
-    [trpcClient, voice]
+    [voice]
   );
 
   useEffect(() => {
@@ -249,7 +257,7 @@ export default function DriveScreen() {
     } finally {
       setStatus(finalStatus);
     }
-  }, [trpcClient, voice]);
+  }, [voice]);
 
   const label = useMemo(() => {
     switch (status) {
@@ -348,7 +356,7 @@ export default function DriveScreen() {
           className={`mt-8 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}
         >
           <View className="flex-row items-center justify-between">
-            <Text className={`text-sm font-semibold ${palette.text}`}>
+            <Text className={`font-semibold text-sm ${palette.text}`}>
               Hands-free streaming
             </Text>
             <Text

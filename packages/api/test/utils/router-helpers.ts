@@ -14,7 +14,9 @@ export function mockPolicyAudit() {
     createAuditLog: vi.fn().mockResolvedValue(undefined),
   }));
   mock.module("@alfred/policy", () => ({
-    evaluate: vi.fn().mockResolvedValue({ allow: true, obligations: [] as string[] }),
+    evaluate: vi
+      .fn()
+      .mockResolvedValue({ allow: true, obligations: [] as string[] }),
     registerCacheObs: vi.fn(),
   }));
 }

@@ -17,14 +17,14 @@ const buildTools = vi.fn(() => orchestratorTools);
 const wrapLegacyToolToAISDK = vi.fn();
 
 const assistantDefaults = {
-  model: { id: "assistant-model" },
+  model: { id: "assistant-model", modelId: "assistant-model" },
   tools: assistantTools,
   stopWhen: vi.fn(),
   prepareStep: vi.fn(),
 };
 
 const orchestratorDefaults = {
-  model: { id: "orchestrator-model" },
+  model: { id: "orchestrator-model", modelId: "orchestrator-model" },
   tools: orchestratorTools,
   stopWhen: vi.fn(),
   prepareStep: vi.fn(),

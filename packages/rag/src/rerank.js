@@ -66,9 +66,7 @@ export async function rerank({
         index: result.index,
       };
     });
-  } catch (error) {
-    // Fallback on error - return original order
-    console.error("Reranking failed:", error);
+  } catch (_error) {
     return documents.slice(0, topN).map((doc, index) => ({
       id: doc.id,
       text: doc.text,

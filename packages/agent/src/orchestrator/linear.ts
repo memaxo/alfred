@@ -1,8 +1,8 @@
 // Minimal, dependency-free stubs to avoid cross-package coupling in agent.
 // Full Linear integration lives in the API layer and DB repos.
 
-import pRetry, { AbortError } from "p-retry";
 import { logger } from "@alfred/metrics";
+import pRetry, { AbortError } from "p-retry";
 
 import { getLinearMetrics } from "./linearmetrics";
 import { toolTicket } from "./tool/ticket";
@@ -32,8 +32,7 @@ export async function emitLinearActivity(
   params: LinearActivityParams
 ): Promise<{ ok: boolean; id?: string }> {
   const metrics = getLinearMetrics();
-  const stopTimer =
-    metrics.linearActivityDurationSeconds.startTimer({ type });
+  const stopTimer = metrics.linearActivityDurationSeconds.startTimer({ type });
   try {
     const result = await pRetry(
       async () => {
@@ -61,7 +60,7 @@ export async function emitLinearActivity(
       {
         retries: 3,
         minTimeout: 1000,
-        maxTimeout: 10000,
+        maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: (error) => {
           const statusCode = (error as any)?.statusCode;
@@ -114,7 +113,7 @@ export async function setLinearDelegate(
       {
         retries: 3,
         minTimeout: 1000,
-        maxTimeout: 10000,
+        maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: (error) => {
           const statusCode = (error as any)?.statusCode;
@@ -153,7 +152,7 @@ export async function setLinearStarted(
       {
         retries: 3,
         minTimeout: 1000,
-        maxTimeout: 10000,
+        maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: (error) => {
           const statusCode = (error as any)?.statusCode;
@@ -203,7 +202,7 @@ export async function setLinearSessionExternalUrl(
       {
         retries: 3,
         minTimeout: 1000,
-        maxTimeout: 10000,
+        maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: (error) => {
           const statusCode = (error as any)?.statusCode;

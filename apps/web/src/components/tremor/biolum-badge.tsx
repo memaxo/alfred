@@ -29,15 +29,10 @@ export function BiolumBadge({
 }: BiolumBadgeProps) {
   return (
     <Badge
-      className={cn(
-        variantStyles[variant],
-        glowStyles[variant],
-        className
-      )}
+      className={cn(variantStyles[variant], glowStyles[variant], className)}
       {...props}
     >
       {children}
     </Badge>
   );
 }
-

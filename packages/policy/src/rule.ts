@@ -6,9 +6,15 @@ import type {
 } from "./types";
 
 function patternMatch(value: string | undefined, pattern?: string): boolean {
-  if (!pattern) return true;
-  if (!value) return false;
-  if (pattern === "*") return true;
+  if (!pattern) {
+    return true;
+  }
+  if (!value) {
+    return false;
+  }
+  if (pattern === "*") {
+    return true;
+  }
   if (pattern.endsWith(".*")) {
     const prefix = pattern.slice(0, -2);
     return value.startsWith(prefix);
@@ -24,7 +30,9 @@ function matchesResource(
   resource: EvaluateInput["resource"],
   match?: PolicyResourceMatch
 ): boolean {
-  if (!match) return true;
+  if (!match) {
+    return true;
+  }
   if (!patternMatch(resource.kind, match.kind)) {
     return false;
   }
@@ -41,7 +49,9 @@ function getValue(
   source: Record<string, unknown> | undefined,
   path: string
 ): unknown {
-  if (!source) return;
+  if (!source) {
+    return;
+  }
   const segments = path.split(".");
   let current: unknown = source;
   for (const segment of segments) {

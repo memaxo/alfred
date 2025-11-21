@@ -6,26 +6,28 @@
  * Fails CI on budget breaches
  */
 
-interface Budget {
+type Budget = {
   file: string;
   function: string;
   line: number;
   budget: string; // e.g., "<100 µs", "<1 ms", "<10 ms"
   budgetMs: number; // Converted to milliseconds
-}
+};
 
-interface Violation {
+type Violation = {
   budget: Budget;
   actualMs: number;
   message: string;
-}
+};
 
 const BUDGET_PATTERN = /\/\/\s*(<[\d.]+)\s*(µs|ms|s)\s*budget/i;
 const FUNCTION_PATTERN = /(?:export\s+)?(?:async\s+)?function\s+(\w+)/g;
 
 function parseBudget(budgetStr: string): number {
   const match = budgetStr.match(/([\d.]+)\s*(µs|ms|s)/i);
-  if (!match) return 0;
+  if (!match) {
+    return 0;
+  }
 
   const value = Number.parseFloat(match[1]);
   const unit = match[2].toLowerCase();
@@ -43,7 +45,7 @@ function parseBudget(budgetStr: string): number {
   }
 }
 
-function findBudgets(filePath: string): Budget[] {
+function _findBudgets(filePath: string): Budget[] {
   const budgets: Budget[] = [];
   const content = Bun.file(filePath).text();
   const lines = content.split("\n");

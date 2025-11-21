@@ -1,14 +1,14 @@
 /**
  * Performance Tests for Runtime
- * 
+ *
  * Validates that runtime components meet performance budgets.
  */
 
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { withBudget } from "@alfred/metrics/performance";
+import type { KnowledgeFact, KnowledgeUpdate } from "@alfred/type/knowledge";
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
-import type { KnowledgeUpdate, KnowledgeFact } from "@alfred/type/knowledge";
 
 describe("Performance: Context Builder", () => {
   let builder: ContextBuilder;

@@ -11,9 +11,15 @@ const toFloat = (value: string | undefined, fallback: number): number => {
 };
 
 const coerceBool = (value: string | undefined, fallback: boolean): boolean => {
-  if (value === undefined) return fallback;
-  if (value === "1" || value.toLowerCase() === "true") return true;
-  if (value === "0" || value.toLowerCase() === "false") return false;
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "1" || value.toLowerCase() === "true") {
+    return true;
+  }
+  if (value === "0" || value.toLowerCase() === "false") {
+    return false;
+  }
   return fallback;
 };
 

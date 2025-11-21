@@ -1,8 +1,8 @@
-import { describe, expect, it, mock, vi } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex";
 import {
-  codexEventToUiMessagePart,
   codexEventsToUiMessage,
+  codexEventToUiMessagePart,
 } from "../src/ai/codex-stream";
 
 describe("codex-stream", () => {
@@ -90,13 +90,10 @@ describe("codex-stream", () => {
     });
 
     it("uses provided message ID", () => {
-      const events: AlfredCodexEvent[] = [
-        { type: "output", content: "test" },
-      ];
+      const events: AlfredCodexEvent[] = [{ type: "output", content: "test" }];
 
       const message = codexEventsToUiMessage(events, "custom-id");
       expect(message?.id).toBe("custom-id");
     });
   });
 });
-

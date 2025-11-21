@@ -1,18 +1,15 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import {
-  mockPolicyAudit,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import {
-  createTestCaller,
-  createUnauthedCaller,
-} from "./utils/trpc";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import {
   getAssistantAgentDefaultsMock,
   resetAgentMocks,
 } from "./utils/agent-mock";
 import { metricsStub } from "./utils/mock-metrics";
+import {
+  mockPolicyAudit,
+  resetAllMocks,
+  setupTestEnv,
+} from "./utils/router-helpers";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -171,29 +168,29 @@ describe("assistant router", () => {
     });
   });
 });
-  it("bubbles validation errors", async () => {
-    validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
+it("bubbles validation errors", async () => {
+  validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
 
-    const caller = await createTestCaller({
-      scopes: ["assistant.write", "assistant.escalate"],
-    });
-
-    await expect(
-      caller.assistant.generate({
-        messages: [
-          {
-            id: "msg-1",
-            role: "user",
-            parts: [{ type: "text", text: "invalid" }],
-          },
-        ],
-      })
-    ).rejects.toThrow(/invalid_message/);
-    expect(generateTextMock).not.toHaveBeenCalled();
-    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
-      { status: "started" }
-    );
-    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
-      { status: "error" }
-    );
+  const caller = await createTestCaller({
+    scopes: ["assistant.write", "assistant.escalate"],
   });
+
+  await expect(
+    caller.assistant.generate({
+      messages: [
+        {
+          id: "msg-1",
+          role: "user",
+          parts: [{ type: "text", text: "invalid" }],
+        },
+      ],
+    })
+  ).rejects.toThrow(/invalid_message/);
+  expect(generateTextMock).not.toHaveBeenCalled();
+  expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith({
+    status: "started",
+  });
+  expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith({
+    status: "error",
+  });
+});

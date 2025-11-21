@@ -32,7 +32,9 @@ function findLatestToolChainBounds(
 
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    if (!message?.parts) continue;
+    if (!message?.parts) {
+      continue;
+    }
 
     if (
       toolResultIndex === -1 &&
@@ -98,6 +100,7 @@ export function limitUiMessages(
     chainBounds.end + 1,
     messages.length - remainingSlots
   );
-  const tailMessages = tailStart < messages.length ? messages.slice(tailStart) : [];
+  const tailMessages =
+    tailStart < messages.length ? messages.slice(tailStart) : [];
   return [...chainMessages, ...tailMessages];
 }

@@ -8,10 +8,10 @@
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface LoadingProps {
+type LoadingProps = {
   message?: string;
   className?: string;
-}
+};
 
 export function Loading({
   message = "Processing...",

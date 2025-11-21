@@ -10,7 +10,10 @@ const MODEL_CONTEXT_TABLE: Record<string, ModelContextInfo> = Object.freeze({
   "openai/gpt-4o": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
   "openai/gpt-4o-mini": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
   "openai/gpt-4.1": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
-  "openai/gpt-4.1-mini": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
+  "openai/gpt-4.1-mini": {
+    maxContextTokens: 128_000,
+    defaultHistoryRatio: 0.5,
+  },
   "openai/gpt-4.1-nano": { maxContextTokens: 64_000, defaultHistoryRatio: 0.5 },
   "openai/o4-mini": { maxContextTokens: 128_000, defaultHistoryRatio: 0.5 },
   "anthropic/claude-3-5-sonnet": {
@@ -44,9 +47,13 @@ function loadEnvOverrides(): Record<string, ModelContextInfo> {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const overrides: Record<string, ModelContextInfo> = {};
     for (const [key, value] of Object.entries(parsed)) {
-      if (!key) continue;
+      if (!key) {
+        continue;
+      }
       if (typeof value === "number" && Number.isFinite(value)) {
-        overrides[normalizeKey(key)] = { maxContextTokens: Math.max(1, Math.trunc(value)) };
+        overrides[normalizeKey(key)] = {
+          maxContextTokens: Math.max(1, Math.trunc(value)),
+        };
         continue;
       }
       if (value && typeof value === "object") {
@@ -56,10 +63,12 @@ function loadEnvOverrides(): Record<string, ModelContextInfo> {
         if (!Number.isFinite(maxContextTokens)) {
           continue;
         }
-        const ratioRaw = (value as { defaultHistoryRatio?: unknown }).defaultHistoryRatio;
-        const ratio = typeof ratioRaw === "number" && Number.isFinite(ratioRaw)
-          ? Math.max(0.05, Math.min(0.95, ratioRaw))
-          : undefined;
+        const ratioRaw = (value as { defaultHistoryRatio?: unknown })
+          .defaultHistoryRatio;
+        const ratio =
+          typeof ratioRaw === "number" && Number.isFinite(ratioRaw)
+            ? Math.max(0.05, Math.min(0.95, ratioRaw))
+            : undefined;
         overrides[normalizeKey(key)] = {
           maxContextTokens: Math.max(1, Math.trunc(maxContextTokens)),
           defaultHistoryRatio: ratio,
@@ -68,10 +77,7 @@ function loadEnvOverrides(): Record<string, ModelContextInfo> {
     }
     envOverridesCache = overrides;
     return envOverridesCache;
-  } catch (error) {
-    console.warn(
-      `[history] Failed to parse HISTORY_MODEL_CONTEXT: ${error instanceof Error ? error.message : String(error)}`
-    );
+  } catch (_error) {
     envOverridesCache = {};
     return envOverridesCache;
   }
