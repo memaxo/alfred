@@ -1,4 +1,5 @@
-import { ModelProcess, type ProcessConfig, type ProcessHealth } from "./base";
+import type { ProcessConfig } from "./base";
+import { PiperTTSManager, type PiperTTSConfig } from "./piper_tts";
 
 // Re-export ProcessConfig for use in other packages
 export type { ProcessConfig };
@@ -15,68 +16,104 @@ export interface TTSChunk {
   sampleRate?: number;
 }
 
+export interface ProcessHealth {
+  isHealthy: boolean;
+  lastPing: number | null;
+  requestCount: number;
+  errorCount: number;
+  uptime: number;
+}
+
 export class TTSPool {
-  private processes: ModelProcess[] = [];
-  private currentIndex = 0;
-  private config: ProcessConfig;
+  private manager: PiperTTSManager;
   private poolSize: number;
+  private _activeCount = 0;
+  private requestCount = 0;
+  private errorCount = 0;
+  private startTime = 0;
+  private initialized = false;
 
   constructor(config: ProcessConfig, poolSize = 2) {
-    this.config = config;
-    this.poolSize = poolSize;
+    // Convert ProcessConfig to PiperTTSConfig
+    const piperConfig: PiperTTSConfig = {
+      modelPath: config.modelPath,
+      defaultVoice: config.voice ?? "en_US-lessac-medium",
+    };
+    this.manager = new PiperTTSManager(piperConfig);
+    this.poolSize = poolSize; // Keep for compatibility, but not used for in-process implementation
+  }
+
+  get size(): number {
+    return this.poolSize;
+  }
+
+  get activeCount(): number {
+    return this._activeCount;
   }
 
   async initialize(): Promise<void> {
-    console.log(
-      `[voice] Initializing TTS pool with ${this.poolSize} processes`
-    );
-
-    for (let i = 0; i < this.poolSize; i++) {
-      const process = new ModelProcess(this.config);
-      this.processes.push(process);
+    if (this.initialized) {
+      return;
     }
 
-    // Start all processes
-    await Promise.all(this.processes.map((p) => p.start()));
+    console.log(`[voice] Initializing TTS pool (TypeScript implementation)`);
 
-    console.log(
-      `[voice] TTS pool ready with ${this.processes.length} processes`
-    );
-  }
-
-  private getNextProcess(): ModelProcess {
-    // Round-robin selection
-    if (this.processes.length === 0) {
-      throw new Error("No processes available");
+    try {
+      await this.manager.initialize();
+      this.startTime = Date.now();
+      this.initialized = true;
+      console.log(`[voice] TTS pool ready`);
+    } catch (error) {
+      throw new Error(
+        `Failed to initialize TTS pool: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-    const process = this.processes[this.currentIndex];
-    if (!process) {
-      throw new Error("Process not found");
-    }
-    this.currentIndex = (this.currentIndex + 1) % this.processes.length;
-    return process;
   }
 
   async synthesize(
     request: TTSRequest,
     onChunk?: (chunk: TTSChunk) => void
   ): Promise<TTSChunk> {
-    const process = this.getNextProcess();
-    const streamingRequested = (request.streaming ?? false) && typeof onChunk === "function";
-
-    if (streamingRequested && onChunk) {
-      return this.streamSentences(process, request, onChunk);
+    if (!this.initialized) {
+      await this.initialize();
     }
 
-    return this.sendSynthesis(process, {
-      text: request.text,
-      voice: request.voice,
-      streaming: request.streaming ?? false,
-    }, onChunk);
+    this._activeCount++;
+    this.requestCount++;
+
+    try {
+      const streamingRequested = (request.streaming ?? false) && typeof onChunk === "function";
+
+      if (streamingRequested && onChunk) {
+        return await this.streamSentences(request, onChunk);
+      }
+
+      const result = await this.manager.synthesize(
+        request.text,
+        request.voice,
+        request.streaming ?? false
+      );
+
+      const chunk: TTSChunk = {
+        audioBase64: result.audioBase64,
+        mimeType: result.mimeType,
+        sampleRate: result.sampleRate,
+      };
+
+      if (onChunk) {
+        onChunk(chunk);
+      }
+
+      return chunk;
+    } catch (error) {
+      this.errorCount++;
+      throw error;
+    } finally {
+      this._activeCount--;
+    }
   }
 
   private async streamSentences(
-    process: ModelProcess,
     request: TTSRequest,
     onChunk: (chunk: TTSChunk) => void
   ): Promise<TTSChunk> {
@@ -85,79 +122,57 @@ export class TTSPool {
     const segments = sentences.length > 0 ? sentences : [request.text];
 
     for (const sentence of segments) {
-      const chunk = await this.sendSynthesis(
-        process,
-        {
-          text: sentence,
-          voice: request.voice,
-          streaming: false,
-        },
-        (partial) => onChunk(partial)
+      const result = await this.manager.synthesize(
+        sentence,
+        request.voice,
+        false
       );
+
+      const chunk: TTSChunk = {
+        audioBase64: result.audioBase64,
+        mimeType: result.mimeType,
+        sampleRate: result.sampleRate,
+      };
+
+      onChunk(chunk);
       lastChunk = chunk;
     }
 
     if (!lastChunk) {
-      lastChunk = await this.sendSynthesis(
-        process,
-        {
-          text: request.text,
-          voice: request.voice,
-          streaming: false,
-        },
-        (partial) => onChunk(partial)
+      const result = await this.manager.synthesize(
+        request.text,
+        request.voice,
+        false
       );
+
+      lastChunk = {
+        audioBase64: result.audioBase64,
+        mimeType: result.mimeType,
+        sampleRate: result.sampleRate,
+      };
+
+      onChunk(lastChunk);
     }
 
     return lastChunk;
   }
 
-  private async sendSynthesis(
-    process: ModelProcess,
-    params: { text: string; voice?: string; streaming: boolean },
-    onChunk?: (chunk: TTSChunk) => void
-  ): Promise<TTSChunk> {
-    const ipcRequest = process["ipc"].createRequest("synthesize", {
-      text: params.text,
-      voice: params.voice,
-      streaming: params.streaming,
-    });
-
-    const response = await process.sendRequest(ipcRequest);
-
-    if (response.type === "error") {
-      throw new Error(
-        (response.payload as { message?: string })?.message ??
-          "Synthesis failed"
-      );
-    }
-
-    if (response.type === "audio" && response.payload) {
-      const payload = response.payload as {
-        audioBase64?: string;
-        mimeType?: string;
-        sampleRate?: number;
-      };
-      const chunk = {
-        audioBase64: payload.audioBase64 ?? "",
-        mimeType: payload.mimeType ?? "audio/pcm",
-        sampleRate: payload.sampleRate,
-      };
-      if (onChunk) {
-        onChunk(chunk);
-      }
-      return chunk;
-    }
-    throw new Error("Unexpected response type");
-  }
-
   getHealth(): ProcessHealth[] {
-    return this.processes.map((p) => p.getHealth());
+    // Return a single health entry for the in-process implementation
+    return [
+      {
+        isHealthy: this.initialized,
+        lastPing: this.initialized ? Date.now() : null,
+        requestCount: this.requestCount,
+        errorCount: this.errorCount,
+        uptime: this.startTime > 0 ? Date.now() - this.startTime : 0,
+      },
+    ];
   }
 
   async shutdown(): Promise<void> {
-    await Promise.all(this.processes.map((p) => p.shutdown()));
-    this.processes = [];
+    await this.manager.shutdown();
+    this.initialized = false;
   }
 }
 

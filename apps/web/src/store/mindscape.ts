@@ -146,6 +146,7 @@ type MindscapeState = {
   edges: Edge[];
   focusedNodeId: string | null;
   isSpaceMode: boolean;
+  ragDocCache: Record<string, KnowledgeNodeData>;
 
   // React Flow actions
   onNodesChange: OnNodesChange;
@@ -161,6 +162,7 @@ type MindscapeState = {
   setNodes: (nodes: Node<ArtifactData>[]) => void;
   setEdges: (edges: Edge[]) => void;
   autoLayout: () => void;
+  cacheRagDoc: (dbId: string, data: KnowledgeNodeData) => void;
 };
 
 import { persist } from "zustand/middleware";
@@ -172,6 +174,7 @@ export const useMindscapeStore = create<MindscapeState>()(
       edges: [],
       focusedNodeId: null,
       isSpaceMode: false,
+      ragDocCache: {},
 
       onNodesChange: (changes) => {
         set({
@@ -270,6 +273,17 @@ export const useMindscapeStore = create<MindscapeState>()(
           : getLayoutedElements(nodes, edges);
         set({ nodes: layoutedNodes });
       },
+      cacheRagDoc: (dbId, data) => {
+        if (!dbId) {
+          return;
+        }
+        set((state) => ({
+          ragDocCache: {
+            ...state.ragDocCache,
+            [dbId]: data,
+          },
+        }));
+      },
     }),
     {
       name: "mindscape-storage",
@@ -278,6 +292,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         edges: state.edges,
         isSpaceMode: state.isSpaceMode,
         focusedNodeId: state.focusedNodeId,
+        ragDocCache: state.ragDocCache,
       }),
     }
   )

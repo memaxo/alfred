@@ -52,3 +52,6 @@ jobs:
 
       - name: Workflow Capture Integration (Postgres)
         run: WORKFLOW_CAPTURE_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.capture.integration.test.ts
+
+      - name: Workflow Runtime Stream Provenance (Postgres)
+        run: WORKFLOW_RUNTIME_STREAM_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.runtime-stream-provenance.integration.test.ts

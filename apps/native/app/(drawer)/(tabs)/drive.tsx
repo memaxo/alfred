@@ -37,7 +37,7 @@ export default function DriveScreen() {
     [isDarkColorScheme]
   );
 
-  const voice = useVoiceSessionNative(trpcClient);
+  const voice = useVoiceSessionNative(trpcClient, { surface: "drive" });
   const useStreaming = voice.stream?.supported ?? false;
   const [status, setStatus] = useState<Status>("idle");
   const [reply, setReply] = useState("");
@@ -49,6 +49,12 @@ export default function DriveScreen() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    voice.refreshSession?.().catch((error) => {
+      logError("voice refresh-session", error);
+    });
+  }, [voice]);
 
   const processPendingItem = useCallback(
     async (item: PendingItem) => {
@@ -86,6 +92,7 @@ export default function DriveScreen() {
             });
           }
           voice.syncSession?.(response?.session ?? null);
+          await voice.refreshSession?.();
           return response;
         }
 

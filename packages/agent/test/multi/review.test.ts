@@ -32,3 +32,23 @@ describe("buildReviewPlan", () => {
     expect(plan.summary.startsWith("Merge completed.")).toBe(true);
   });
 });
+
+describe("generateReviewExecPlanSkeleton", () => {
+  const { generateReviewExecPlanSkeleton } = require("@alfred/agent/orchestrator/multi/review");
+
+  it("generates expected markdown structure", () => {
+    const plan = {
+      summary: "Reviewing changes",
+      checks: [
+        { id: "lint", type: "lint", description: "Run linter" },
+      ],
+    };
+    const md = generateReviewExecPlanSkeleton("run-xyz", plan);
+
+    expect(md).toContain("# Review ExecPlan for run run-xyz");
+    expect(md).toContain("Reviewing changes");
+    expect(md).toContain("- (lint) Run linter");
+    expect(md).toContain("## Plan");
+    expect(md).toContain("- [ ] (pending) Review plan drafted.");
+  });
+});

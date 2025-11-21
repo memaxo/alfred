@@ -29,10 +29,19 @@ export class STTPool {
   private currentIndex = 0;
   private config: ProcessConfig;
   private poolSize: number;
+  private _activeCount = 0;
 
   constructor(config: ProcessConfig, poolSize = 2) {
     this.config = config;
     this.poolSize = poolSize;
+  }
+
+  get size(): number {
+    return this.poolSize;
+  }
+
+  get activeCount(): number {
+    return this._activeCount;
   }
 
   async initialize(): Promise<void> {
@@ -68,46 +77,51 @@ export class STTPool {
 
   async transcribe(request: STTRequest): Promise<STTResult> {
     const process = this.getNextProcess();
-    const ipcRequest = process["ipc"].createRequest("transcribe", {
-      audioBase64: request.audioBase64,
-      mimeType: request.mimeType,
-      language: request.language,
-      prompt: request.prompt,
-      streaming: request.streaming ?? false,
-      vadThreshold: request.vadThreshold,
-      sessionId: request.sessionId,
-    });
+    this._activeCount++;
+    try {
+      const ipcRequest = process["ipc"].createRequest("transcribe", {
+        audioBase64: request.audioBase64,
+        mimeType: request.mimeType,
+        language: request.language,
+        prompt: request.prompt,
+        streaming: request.streaming ?? false,
+        vadThreshold: request.vadThreshold,
+        sessionId: request.sessionId,
+      });
 
-    const response = await process.sendRequest(ipcRequest);
+      const response = await process.sendRequest(ipcRequest);
 
-    if (response.type === "error") {
-      throw new Error(
-        (response.payload as { message?: string })?.message ??
-          "Transcription failed"
-      );
+      if (response.type === "error") {
+        throw new Error(
+          (response.payload as { message?: string })?.message ??
+            "Transcription failed"
+        );
+      }
+
+      const payload = response.payload as {
+        text?: string;
+        language?: string;
+        isPartial?: boolean;
+        isEmpty?: boolean;
+        durationSeconds?: number;
+        model?: string;
+        vadConfidence?: number;
+        endOfUtterance?: boolean;
+      };
+
+      return {
+        text: payload.text ?? "",
+        language: payload.language,
+        isPartial: payload.isPartial,
+        isEmpty: payload.isEmpty,
+        durationSeconds: payload.durationSeconds,
+        model: payload.model,
+        vadConfidence: payload.vadConfidence,
+        endOfUtterance: payload.endOfUtterance,
+      };
+    } finally {
+      this._activeCount--;
     }
-
-    const payload = response.payload as {
-      text?: string;
-      language?: string;
-      isPartial?: boolean;
-      isEmpty?: boolean;
-      durationSeconds?: number;
-      model?: string;
-      vadConfidence?: number;
-      endOfUtterance?: boolean;
-    };
-
-    return {
-      text: payload.text ?? "",
-      language: payload.language,
-      isPartial: payload.isPartial,
-      isEmpty: payload.isEmpty,
-      durationSeconds: payload.durationSeconds,
-      model: payload.model,
-      vadConfidence: payload.vadConfidence,
-      endOfUtterance: payload.endOfUtterance,
-    };
   }
 
   getHealth(): ProcessHealth[] {

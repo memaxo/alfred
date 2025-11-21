@@ -72,5 +72,8 @@
   "peerDependencies": {
     "@alfred/type": "workspace:*",
     "@trpc/client": "^11.6.0"
+  },
+  "dependencies": {
+    "@diffusionstudio/piper-wasm": "^1.0.0"
   }
 }

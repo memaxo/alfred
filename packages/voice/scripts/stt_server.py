@@ -13,13 +13,16 @@ from typing import Optional
 
 try:
     from faster_whisper import WhisperModel
-    from silero_vad import load_silero_vad_model, get_speech_timestamps
+    from silero_vad import load_silero_vad, get_speech_timestamps
     import numpy as np
 except ImportError as e:
     print(json.dumps({
         "id": "error",
         "type": "error",
-        "payload": {"message": f"Missing dependencies. Install with: cd packages/voice && ./scripts/install-deps.sh"}
+        "payload": {
+            "message": f"Missing dependencies: {str(e)}",
+            "error_type": type(e).__name__
+        }
     }), file=sys.stderr, flush=True)
     sys.exit(1)
 
@@ -54,7 +57,7 @@ class STTServer:
             self.device = "cpu"
             self.compute_type = "int8"
         
-        # Load model
+        # Load model (with graceful fallback if a GPU/MPS device is unsupported)
         print(json.dumps({
             "id": "init",
             "type": "status",
@@ -66,19 +69,49 @@ class STTServer:
                 model_path,
                 device=self.device,
                 compute_type=self.compute_type,
-                num_workers=4
+                num_workers=4,
             )
         except Exception as e:
-            print(json.dumps({
-                "id": "error",
-                "type": "error",
-                "payload": {"message": f"Failed to load model: {e}"}
-            }), file=sys.stderr, flush=True)
-            sys.exit(1)
+            # Some environments report "unsupported device mps" even when PyTorch
+            # claims MPS is available. In that case, automatically retry on CPU.
+            message = str(e)
+            if "unsupported device" in message and self.device != "cpu":
+                print(json.dumps({
+                    "id": "warning",
+                    "type": "status",
+                    "payload": {
+                        "message": f"Device '{self.device}' unsupported, falling back to CPU: {message}"
+                    },
+                }), file=sys.stderr, flush=True)
+                try:
+                    self.device = "cpu"
+                    self.compute_type = "int8"
+                    self.model = WhisperModel(
+                        model_path,
+                        device=self.device,
+                        compute_type=self.compute_type,
+                        num_workers=4,
+                    )
+                except Exception as e_cpu:
+                    print(json.dumps({
+                        "id": "error",
+                        "type": "error",
+                        "payload": {
+                            "message": f"Failed to load model on CPU after device fallback: {e_cpu}"
+                        },
+                    }), file=sys.stderr, flush=True)
+                    sys.exit(1)
+            else:
+                print(json.dumps({
+                    "id": "error",
+                    "type": "error",
+                    "payload": {"message": f"Failed to load model: {e}"}
+                }), file=sys.stderr, flush=True)
+                sys.exit(1)
         
         # Load VAD model
         try:
-            self.vad_model, self.vad_utils = load_silero_vad_model()
+            self.vad_model = load_silero_vad()
         except Exception as e:
             print(json.dumps({
                 "id": "warning",
@@ -142,8 +175,7 @@ class STTServer:
         if self.vad_model:
             try:
                 vad_kwargs = {}
-                if isinstance(self.vad_utils, dict):
-                    vad_kwargs.update(self.vad_utils)
+                # VAD utils are now part of get_speech_timestamps function signature
                 if vad_threshold is not None:
                     vad_kwargs["threshold"] = float(vad_threshold)
                 speech_timestamps = get_speech_timestamps(

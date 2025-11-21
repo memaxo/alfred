@@ -13,6 +13,7 @@
   "exclude": ["dist", "**/*.test.ts"],
   "references": [
     { "path": "../db" },
-    { "path": "../embed" }
+    { "path": "../embed" },
+    { "path": "../knowledge" }
   ]
 }

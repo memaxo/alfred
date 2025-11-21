@@ -18,6 +18,7 @@ export type AgentOutcome = {
     artifacts: Array<{ path: string; kind: string }>;
     changes?: string[];
     notes?: string[];
+    branch?: string; // Added: track the branch if worktree was used
   };
   error?: { code: string; message: string };
   metrics?: {
@@ -59,6 +60,16 @@ function collectFiles(outcomes: AgentOutcome[]): string[] {
   return Array.from(files).sort();
 }
 
+function collectBranches(outcomes: AgentOutcome[]): string[] {
+  const branches = new Set<string>();
+  for (const outcome of outcomes) {
+    if (outcome.status === "completed" && outcome.result?.branch) {
+      branches.add(outcome.result.branch);
+    }
+  }
+  return Array.from(branches).sort();
+}
+
 export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
   if (subOutcomes.length === 0) {
     return {
@@ -70,6 +81,7 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
   }
 
   const expectedFiles = collectFiles(subOutcomes);
+  const branches = collectBranches(subOutcomes);
 
   const completed = subOutcomes.filter((o) => o.status === "completed");
   const failed = subOutcomes.filter((o) => o.status === "failed");
@@ -80,7 +92,12 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
     `Merge results from ${subOutcomes.length} agents (${completed.length} completed, ${failed.length} failed, ${stuck.length} stuck).`,
   );
 
-  if (expectedFiles.length > 0) {
+  let strategy: "worktree" | "branch" | "direct" = "direct";
+
+  if (branches.length > 0) {
+    parts.push(`Merging ${branches.length} feature branches.`);
+    strategy = "branch"; // Or "worktree", semantics similar for the agent
+  } else if (expectedFiles.length > 0) {
     parts.push(`Verify merged content for ${expectedFiles.length} files.`);
   } else {
     parts.push("No explicit file changes reported; verify working tree state.");
@@ -88,14 +105,78 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
 
   const summary = parts.join(" ");
 
-  // MVP: choose direct strategy. More advanced strategies (worktrees/branches)
-  // can be introduced later when agents operate on separate branches.
   const plan: MergePlan = {
     summary,
-    strategy: "direct",
+    strategy,
     expectedFiles,
-    branches: [],
+    branches,
   };
 
   return plan;
+}
+
+export function generateMergeExecPlanSkeleton(
+  runId: string,
+  mergePlan: MergePlan
+): string {
+  const lines: string[] = [];
+  lines.push(`# Merge ExecPlan for run ${runId}`);
+  lines.push("");
+  lines.push("This ExecPlan guides a merge analysis for the multi-agent workflow.");
+  lines.push("");
+  lines.push("## Purpose");
+  lines.push("");
+  lines.push(
+    "Understand and validate the combined changes from all subtasks before any merge is applied."
+  );
+  lines.push("");
+  lines.push("## Context");
+  lines.push("");
+  lines.push(mergePlan.summary);
+  lines.push("");
+  
+  if (mergePlan.branches && mergePlan.branches.length > 0) {
+    lines.push("Branches to merge:");
+    for (const branch of mergePlan.branches) {
+      lines.push(`- ${branch}`);
+    }
+    lines.push("");
+  }
+
+  if (mergePlan.expectedFiles && mergePlan.expectedFiles.length > 0) {
+    lines.push("Expected files to inspect (from file events):");
+    for (const file of mergePlan.expectedFiles) {
+      lines.push(`- ${file}`);
+    }
+    lines.push("");
+  }
+  lines.push("## Plan");
+  lines.push("");
+  if (mergePlan.strategy === "branch") {
+    lines.push("- Checkout main branch.");
+    lines.push("- For each feature branch, attempt merge.");
+    lines.push("- Resolve conflicts if any.");
+  } else {
+    lines.push("- Identify overlapping or conflicting edits between agents.");
+  }
+  lines.push("- Verify that each changed file still compiles and satisfies its contracts.");
+  lines.push("- Note any risky areas that require focused tests or manual review.");
+  lines.push("");
+  lines.push("## Progress");
+  lines.push("");
+  lines.push("- [ ] (pending) Merge analysis started.");
+  lines.push("");
+  lines.push("## Surprises & Discoveries");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+  lines.push("## Decision Log");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+  lines.push("## Outcomes & Retrospective");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+  return lines.join("\n");
 }

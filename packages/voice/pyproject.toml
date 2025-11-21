@@ -8,77 +8,24 @@ dependencies = [
     "piper-tts>=1.2.0",
     "silero-vad>=4.0.0",
     "numpy>=1.24.0",
-]
-
-[project.optional-dependencies]
-# CPU-only builds (all platforms)
-cpu = [
     "torch>=2.5.0",
     "torchvision>=0.20.0",
     "torchaudio>=2.5.0",
 ]
 
-# CUDA builds (Linux/Windows only)
-cu121 = [
-    "torch>=2.5.0",
-    "torchvision>=0.20.0",
-    "torchaudio>=2.5.0",
-]
-
-cu128 = [
-    "torch>=2.5.0",
-    "torchvision>=0.20.0",
-    "torchaudio>=2.5.0",
-]
-
-# ROCm builds (Linux AMD only)
-rocm = [
-    "torch>=2.5.0",
-    "torchvision>=0.20.0",
-    "torchaudio>=2.5.0",
-    "pytorch-triton-rocm>=3.3.0",
-]
-
-# MLX framework (Apple Silicon only, optional for future use)
-mlx = [
-    "mlx>=0.19.0",
-    "mlx-lm>=0.19.0",
-]
-
-[tool.uv]
-# Prevent conflicting extras
-conflicts = [
-    [
-        { extra = "cpu" },
-        { extra = "cu121" },
-        { extra = "cu128" },
-        { extra = "rocm" },
-    ],
-]
-
-# PyTorch index sources
+# PyTorch index sources - automatically selects based on platform
 [tool.uv.sources]
-# Combined sources for torch, torchvision, torchaudio
 torch = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cu121", extra = "cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-cu128", extra = "cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
 ]
 torchvision = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cu121", extra = "cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-cu128", extra = "cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
 ]
 torchaudio = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cu121", extra = "cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-cu128", extra = "cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
-]
-pytorch-triton-rocm = [
-    { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
 ]
 
 # PyTorch indexes
@@ -88,27 +35,7 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [[tool.uv.index]]
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-explicit = true
-
-[[tool.uv.index]]
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
-
-[[tool.uv.index]]
-name = "pytorch-rocm"
-url = "https://download.pytorch.org/whl/rocm6.3"
-explicit = true
-
-[tool.uv.scripts]
-# Install dependencies with automatic backend detection
-install = "uv pip install -e . --torch-backend=auto"
-
-# Download models
-download-models = "python scripts/download_models.py"
-
-# Verify installation
-verify = "python scripts/download_models.py --verify-only"
 

@@ -58,7 +58,7 @@ export class MindscapeRenderer {
     // 20: mouse.y (4)
     // Total 24. Round to 32 for safety or just use it.
     this.uniformBuffer = device.createBuffer({
-      size: 32,
+      size: 64, // Up from 32 to 64 bytes (16 floats)
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -177,17 +177,55 @@ export class MindscapeRenderer {
     this.configureContext();
   }
 
-  render(time: number, mouse: Float32Array, audio: number) {
+  render(
+    time: number, 
+    mouse: Float32Array, 
+    audioLow: number, 
+    audioMid: number,
+    f1: number,
+    f2: number,
+    f3: number,
+    tint_h: number,
+    tint_c: number,
+    flow_speed: number
+  ) {
     // Update Uniforms
-    // Struct: time(f32), audio(f32), res(vec2), mouse(vec2)
-    // Layout: 0:time, 4:audio, 8:res.x, 12:res.y, 16:mouse.x, 20:mouse.y
-    const uniformData = new Float32Array(8);
+    // Struct: time, audioLow, audioMid, pad, res(2), mouse(2), f1, f2, f3, tint_h, tint_c, flow_speed, pad(2)
+    // Layout (std140):
+    // 0: time
+    // 4: audioLow
+    // 8: audioMid
+    // 12: pad
+    // 16: res.x
+    // 20: res.y
+    // 24: mouse.x
+    // 28: mouse.y
+    // 32: f1
+    // 36: f2
+    // 40: f3
+    // 44: tint_h
+    // 48: tint_c
+    // 52: flow_speed
+    // 56: pad
+    // 60: pad
+    
+    const uniformData = new Float32Array(16);
     uniformData[0] = time;
-    uniformData[1] = audio;
-    uniformData[2] = this.width;
-    uniformData[3] = this.height;
-    uniformData[4] = mouse[0]; // Mouse X
-    uniformData[5] = mouse[1]; // Mouse Y
+    uniformData[1] = audioLow;
+    uniformData[2] = audioMid;
+    
+    uniformData[4] = this.width;
+    uniformData[5] = this.height;
+    
+    uniformData[6] = mouse[0];
+    uniformData[7] = mouse[1];
+    
+    uniformData[8] = f1;
+    uniformData[9] = f2;
+    uniformData[10] = f3;
+    uniformData[11] = tint_h;
+    uniformData[12] = tint_c;
+    uniformData[13] = flow_speed;
     
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 

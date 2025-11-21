@@ -24,14 +24,43 @@ globalThis.getComputedStyle = window.getComputedStyle;
   () => undefined;
 
 // Provide minimal canvas and resize observer shims for jsdom-based tests.
-if (typeof (globalThis as any).HTMLCanvasElement !== "undefined") {
-  const HTMLCanvasProto = (globalThis as any)
-    .HTMLCanvasElement.prototype as {
-    getContext?: (contextId: string, options?: unknown) => unknown;
-  };
-  if (!HTMLCanvasProto.getContext) {
-    HTMLCanvasProto.getContext = () => null;
-  }
+if (typeof (globalThis as any).HTMLCanvasElement === "undefined") {
+  class CanvasElement extends window.HTMLElement {}
+  (globalThis as any).HTMLCanvasElement = CanvasElement;
+  (window as any).HTMLCanvasElement = CanvasElement;
+}
+
+const HTMLCanvasProto = (globalThis as any)
+  .HTMLCanvasElement.prototype as {
+  getContext?: (contextId: string, options?: unknown) => unknown;
+};
+if (!HTMLCanvasProto.getContext) {
+  HTMLCanvasProto.getContext = () => ({
+    fillRect() {},
+    clearRect() {},
+    getImageData: () => ({ data: [] }),
+    putImageData() {},
+    createImageData: () => [],
+    setTransform() {},
+    drawImage() {},
+    save() {},
+    fillText() {},
+    restore() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    closePath() {},
+    stroke() {},
+    translate() {},
+    scale() {},
+    rotate() {},
+    arc() {},
+    fill() {},
+    measureText: () => ({ width: 0 }),
+    transform() {},
+    rect() {},
+    clip() {},
+  });
 }
 
 if (typeof (globalThis as any).ResizeObserver === "undefined") {

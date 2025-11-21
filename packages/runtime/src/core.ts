@@ -342,6 +342,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     }
 
     const { ContextBuilder } = await import("./context");
+    const { persistExecPlans } = await import(
+      "@alfred/agent/assistant/graphstore"
+    );
     const { decomposeTask } = await import(
       "@alfred/agent/orchestrator/multi/decompose"
     );
@@ -399,12 +402,14 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       "",
     ].join("\n");
 
-    yield {
+    const execplanRootPath = `.agent/plans/${this.runId}.root.md`;
+
+    const execplanPayload = {
       type: "event",
       kind: "execplan-root-created",
       data: {
         runId: this.runId,
-        path: `.agent/plans/${this.runId}.root.md`,
+        path: execplanRootPath,
         content: rootPlan,
         subtasks: subTasks.map((task) => ({
           id: task.id,
@@ -413,6 +418,47 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         })),
       },
     } as any;
+
+    yield execplanPayload;
+
+    // Surface trimmed context details for provenance and UX
+    const bundleFiles =
+      Array.isArray(context.bundle?.files) && context.bundle.files.length > 0
+        ? context.bundle.files.slice(0, 10).map((file) => ({
+            path: file.path,
+            startLine: file.startLine,
+            endLine: file.endLine,
+          }))
+        : [];
+
+    yield {
+      type: "event",
+      kind: "runtime-context",
+      data: {
+        ragDocumentIds: context.ragDocumentIds ?? [],
+        totalTokens: context.totalTokens,
+        bundleFileCount: context.bundle?.files.length ?? 0,
+        bundlePreview: bundleFiles,
+      },
+    } as any;
+
+    // Best-effort ExecPlan graph persistence; failures are logged but non-fatal.
+    try {
+      await persistExecPlans({
+        resource: workspace,
+        runId: this.runId,
+        rootPath: execplanRootPath,
+        subtasks: subTasks.map((task) => ({
+          id: task.id,
+          path: `.agent/plans/${this.runId}/${task.id}.md`,
+        })),
+      });
+    } catch (error) {
+      logger.warn("execplan_graph_persist_failed", {
+        runId: this.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     yield { type: "notice", message: "planning_completed" } as any;
   }
@@ -433,7 +479,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     }
 
     const disableAgents =
-      process.env.NODE_ENV === "test" ||
+      (process.env.NODE_ENV === "test" &&
+        process.env.RUNTIME_TEST_ORCHESTRATION !== "1") ||
       process.env.RUNTIME_DISABLE_CODEX === "1";
 
     if (disableAgents) {
@@ -457,12 +504,17 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     const { updateTracker, detectStuck, detectNeedsGuidance } = await import(
       "@alfred/agent/orchestrator/multi/tracker"
     );
-    const { buildMergePlan } = await import(
+    const { buildMergePlan, generateMergeExecPlanSkeleton } = await import(
       "@alfred/agent/orchestrator/multi/merge"
     );
-    const { buildReviewPlan } = await import(
+    const { buildReviewPlan, generateReviewExecPlanSkeleton } = await import(
       "@alfred/agent/orchestrator/multi/review"
     );
+    const { countConflictMarkers, aggregateConflictMarkers, generateConflictExecPlanSkeleton } =
+      await import("@alfred/agent/orchestrator/multi/conflict");
+    const { worktreeManager } = await import("@alfred/agent/orchestrator/tool/worktree");
+    const { executeMergePlan } = await import("@alfred/agent/orchestrator/multi/merge-executor");
+    const { toolGit } = await import("@alfred/agent/orchestrator/tool/git");
     const { ContextBuilder } = await import("./context");
 
     const workspace = this._input.workspace ?? process.cwd();
@@ -470,6 +522,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     let trackerState: TrackerState = { agents: {}, waves: {} };
     const agentFileHints = new Map<string, Set<string>>();
     const agentSubTaskIds = new Map<string, string>();
+    const createdWorktrees: string[] = []; // Track for cleanup
 
     // Rebuild context and subtasks for MVP; future phases may reuse cached state
     const builder = new ContextBuilder();
@@ -517,6 +570,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           overallFailRate: number;
         }
       | null = null;
+      
+    const allAgentOutcomes: any[] = [];
 
     for (const wave of waves) {
       if (signal.aborted) {
@@ -579,6 +634,32 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       for (const spec of agentSpecs) {
         if (signal.aborted) {
           throw new DOMException("Phase aborted", "AbortError");
+        }
+
+        // Hybrid Tier: Handle Worktree Environment
+        if (spec.environment === "worktree") {
+          try {
+            const worktreePath = await worktreeManager.create(
+              workspace,
+              this.runId,
+              spec.agentId
+            );
+            spec.workingDirectory = worktreePath;
+            createdWorktrees.push(worktreePath);
+            logger.info("worktree_created", {
+              runId: this.runId,
+              agentId: spec.agentId,
+              path: worktreePath,
+            });
+          } catch (error) {
+            logger.warn("worktree_creation_failed", {
+              runId: this.runId,
+              agentId: spec.agentId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Fallback to workspace (Tier 1) or fail? 
+            // Fallback seems safer for now, though less isolated.
+          }
         }
 
         const execPlanPath = spec.execPlanPath;
@@ -731,13 +812,27 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         const rawStatus = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
 
+        // Construct result
+        // If worktree was used, assume the agent committed to the dedicated branch
+        const branchName = spec.environment === "worktree" 
+          ? `agent/${this.runId}/${spec.agentId}` 
+          : undefined;
+
         agentOutcomes.push({
           agentId: spec.agentId,
+          subTaskId: spec.subTaskId,
           stuck,
           status: rawStatus,
           durationSeconds,
           role: "worker",
-        });
+          result: { // Pass to merge planner
+            summary: "codex agent execution",
+            artifacts: [], // We track files in trackerState generally
+            changes: trackerAgent?.filesChanged ?? [],
+            notes: [],
+            branch: branchName,
+          },
+        } as any); // Cast to any because AgentOutcome type in runtime might lag slightly behind local merge definitions if imports vary
       }
 
       for (const ev of waveEvents) {
@@ -775,6 +870,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       totalAgents += waveTotal;
       totalFailedOrStuck += waveFailedOrStuck;
 
+      allAgentOutcomes.push(...agentOutcomes);
+
       const waveFailRate = waveTotal > 0 ? waveFailedOrStuck / waveTotal : 0;
       const overallFailRate =
         totalAgents > 0 ? totalFailedOrStuck / totalAgents : 0;
@@ -805,28 +902,41 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           overallFailRate: abortedWave.overallFailRate,
         },
       } as any;
+      
+      // Cleanup worktrees on abort
+      for (const wt of createdWorktrees) {
+        try {
+          await worktreeManager.remove(workspace, wt);
+        } catch { /* ignore */ }
+      }
+      
       // Skip merge/review when waves are aborted; manual intervention required.
       return;
     }
 
-    const mergeOutcomes = Array.from(agentFileHints.entries()).map(
-      ([agentId, files]) => {
-        const subTaskId = agentSubTaskIds.get(agentId) ?? "unknown";
-        const trackerAgent = trackerState.agents[agentId as any];
-        const status = trackerAgent?.status ?? "completed";
-        return {
-          agentId,
-          subTaskId,
-          status,
-          result: {
-            summary: "codex agent execution",
-            artifacts: [],
-            changes: Array.from(files),
-            notes: [],
-          },
-        };
+    const mergeOutcomes = allAgentOutcomes.map((outcome) => ({
+        agentId: outcome.agentId,
+        subTaskId: (outcome as any).subTaskId ?? "unknown",
+        status: outcome.status,
+        result: (outcome as any).result ?? {
+          summary: "codex agent execution",
+          artifacts: [],
+          changes: [],
+          notes: [],
+        },
+      }));
+
+    // Add fallback for Tier 1 agents (no explicit result object in loop above for legacy path? 
+    // Wait, I added result to agentOutcomes in loop. But legacy code might rely on agentFileHints.
+    // Let's merge both sources.)
+    for (const o of mergeOutcomes) {
+      if (!o.result.changes || o.result.changes.length === 0) {
+        const hints = agentFileHints.get(o.agentId);
+        if (hints) {
+          o.result.changes = Array.from(hints);
+        }
       }
-    );
+    }
 
     const mergePlan = buildMergePlan(mergeOutcomes as any);
 
@@ -834,13 +944,436 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       runId: this.runId,
       expectedFiles: mergePlan.expectedFiles ?? [],
       summary: mergePlan.summary,
+      branches: mergePlan.branches,
     });
+
+    // Phase 9: Automated Merge Execution
+    // If branches exist, attempt to merge them.
+    // We use toolGit via executeMergePlan.
+    // If conflicts occur, they will be caught, and we proceed to conflict handling.
+    
+    if (mergePlan.branches && mergePlan.branches.length > 0) {
+      yield { type: "notice", message: "merge_execution_started" } as any;
+      
+      const mergeResult = await executeMergePlan(
+        mergePlan, 
+        workspace, 
+        toolGit, 
+        {
+          write: (chunk: any) => {
+             // Forward git output events
+             if (chunk?.type === "stdout" || chunk?.type === "stderr") {
+               // Maybe filter or just log?
+             }
+          }
+        },
+        this._input.linear?.authz
+      ).catch(err => {
+        logger.error("merge_execution_error", { error: String(err) });
+        return { status: "failed", mergedBranches: [], error: String(err) } as const;
+      });
+
+      if (mergeResult.status === "completed") {
+        yield { type: "notice", message: "merge_execution_completed" } as any;
+      } else if (mergeResult.status === "conflict") {
+        yield { type: "notice", message: "merge_execution_conflict", branch: mergeResult.conflictBranch } as any;
+        // We continue to conflict detection logic below, which will see the markers in the workspace.
+      } else {
+        logger.warn("merge_execution_failed", { error: mergeResult.error });
+        yield { type: "error", message: "merge_execution_failed" } as any;
+        // Should we abort or try to continue?
+        // If merge failed non-conflict (e.g. unrelated error), probably stuck.
+        // For now, let's assume we might still analyze conflicts if they exist?
+        // Or just fall through.
+      }
+    }
+
+    // Passive conflict detection via conflict markers in expected files
+    let conflictScanResult:
+      | {
+          files: string[];
+          totalMarkers: number;
+          counts: Record<string, number>;
+        }
+      | null = null;
+    try {
+      const fsMod = await import("node:fs/promises");
+      const pathMod = await import("node:path");
+      const expectedFiles = mergePlan.expectedFiles ?? [];
+      const counts: Record<string, number> = {};
+      for (const rel of expectedFiles) {
+        const abs = pathMod.resolve(workspace, rel);
+        try {
+          const content = await fsMod.readFile(abs, "utf8");
+          counts[rel] = countConflictMarkers(content);
+        } catch {
+          // Ignore unreadable or missing files; conflict detection is best-effort.
+        }
+      }
+      conflictScanResult = aggregateConflictMarkers(
+        mergePlan.expectedFiles ?? [],
+        counts
+      );
+    } catch (error) {
+      logger.warn("merge_conflict_scan_failed", {
+        runId: this.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    if (conflictScanResult && conflictScanResult.totalMarkers > 0) {
+      yield {
+        type: "event",
+        kind: "merge-conflict",
+        data: conflictScanResult,
+      } as any;
+
+      // Conflict analysis agent (analysis-only; no edits)
+      const conflictExecPlanPath = `.agent/plans/${this.runId}/conflict.md`;
+      try {
+        const fsMod = await import("node:fs/promises");
+        const pathMod = await import("node:path");
+        const dir = pathMod.dirname(conflictExecPlanPath);
+        await fsMod.mkdir(dir, { recursive: true });
+        try {
+          await fsMod.access(conflictExecPlanPath);
+        } catch {
+          const skeleton = generateConflictExecPlanSkeleton(
+            this.runId,
+            conflictScanResult
+          );
+          await fsMod.writeFile(conflictExecPlanPath, skeleton, "utf8");
+        }
+
+        const promptLines = [
+          "You are a conflict analysis agent.",
+          "",
+          `ExecPlan path: ${conflictExecPlanPath}`,
+          "",
+          "Instructions:",
+          "- Read the ExecPlan at the given path and the conflict summary.",
+          "- Do NOT modify files or run git commands; stay analysis-only.",
+          "- Describe the nature of the conflicts and propose safe resolution strategies.",
+          "- Update the Progress and Decision Log as you reason.",
+          "- Summarise your recommendations at the end.",
+        ];
+        const prompt = promptLines.join("\n");
+
+        const startedAt = Date.now();
+        const conflictEvents: WorkflowEvent[] = [];
+
+        const writer = {
+          write: async (chunk: unknown) => {
+            const payload = chunk as { type?: string; event?: unknown };
+            if (!payload || typeof payload !== "object") return;
+            const type = (payload as any).type;
+            if (type === "stdout" || type === "stderr") {
+              const text = (payload as any).text ?? "";
+              conflictEvents.push({ type, text } as any);
+            } else if (type === "notice") {
+              conflictEvents.push({
+                type: "notice",
+                message: (payload as any).message ?? "conflict_agent_notice",
+              } as any);
+            }
+          },
+        } as const;
+
+        try {
+          await toolCodex.execute({
+            input: {
+              action: "exec",
+              prompt,
+              out: "text",
+              auto: "read", // Enforce read-only for analysis agents
+              cw: this._input.workspace ?? process.cwd(),
+              sessionId: `${this.runId}:conflict`,
+              model: undefined,
+              profile: undefined,
+              context: {},
+            },
+            writer,
+          });
+
+          const finishedAt = Date.now();
+          const durationSeconds = Math.max(
+            0,
+            (finishedAt - startedAt) / 1000
+          );
+
+          for (const ev of conflictEvents) {
+            yield ev;
+          }
+
+          yield {
+            type: "event",
+            kind: "conflict-agent-result",
+            data: {
+              role: "conflict",
+              status: "completed",
+              durationSeconds,
+            },
+          } as any;
+        } catch (error) {
+          const finishedAt = Date.now();
+          const durationSeconds = Math.max(
+            0,
+            (finishedAt - startedAt) / 1000
+          );
+          logger.warn("conflict_agent_execution_failed", {
+            runId: this.runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          for (const ev of conflictEvents) {
+            yield ev;
+          }
+          yield {
+            type: "event",
+            kind: "conflict-agent-result",
+            data: {
+              role: "conflict",
+              status: "failed",
+              durationSeconds,
+            },
+          } as any;
+        }
+      } catch (error) {
+        logger.warn("conflict_agent_initialisation_failed", {
+          runId: this.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // Phase C: Conflict Resolution Agent
+      // If we have conflicts, attempt to resolve them automatically
+      if (conflictScanResult.totalMarkers > 0 && (this._input.auto === "medium" || this._input.auto === "high")) {
+        yield { type: "notice", message: "conflict_resolution_started" } as any;
+        
+        const resolutionExecPlanPath = `.agent/plans/${this.runId}/conflict-resolution.md`;
+        
+        // Create a resolution plan skeleton if it doesn't exist
+        try {
+          const fsMod = await import("node:fs/promises");
+          const pathMod = await import("node:path");
+          const dir = pathMod.dirname(resolutionExecPlanPath);
+          await fsMod.mkdir(dir, { recursive: true });
+          
+          const skeleton = [
+            `# Conflict Resolution Plan for run ${this.runId}`,
+            "",
+            "## Purpose",
+            "Resolve merge conflicts detected in the workspace.",
+            "",
+            "## Instructions",
+            "- Use the analysis from `conflict.md` if available.",
+            "- For each conflicted file, edit the file to remove conflict markers and choose/merge the correct content.",
+            "- Verify the fix by running relevant tests if possible.",
+            "",
+            "## Progress",
+            "- [ ] (pending) Resolution started.",
+          ].join("\n");
+          
+          await fsMod.writeFile(resolutionExecPlanPath, skeleton, "utf8");
+        } catch (e) { 
+          // Ignore
+        }
+
+        const prompt = [
+          "You are a conflict resolution agent.",
+          `ExecPlan path: ${resolutionExecPlanPath}`,
+          "Your goal is to RESOLVE the git merge conflicts in the workspace.",
+          "1. Read the conflict analysis.",
+          "2. Edit the files to resolve conflicts (choose 'current', 'incoming', or merge manually).",
+          "3. Ensure no conflict markers remain.",
+        ].join("\n");
+
+        const startedAt = Date.now();
+        const events: WorkflowEvent[] = [];
+        
+        const writer = {
+          write: async (chunk: unknown) => {
+            // Reuse standard writer logic
+            const payload = chunk as any;
+            if (payload?.type === "stdout" || payload?.type === "stderr") {
+              events.push(payload);
+            }
+          }
+        };
+
+        try {
+          await toolCodex.execute({
+            input: {
+              action: "exec",
+              prompt,
+              out: "text",
+              auto: "medium", // Allow edits for resolution
+              cw: this._input.workspace ?? process.cwd(),
+              sessionId: `${this.runId}:conflict-resolve`,
+              model: undefined,
+              profile: undefined,
+              context: {},
+            },
+            writer,
+          });
+
+          const finishedAt = Date.now();
+          const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+
+          for (const ev of events) yield ev;
+
+          yield {
+            type: "event",
+            kind: "conflict-resolution-result",
+            data: {
+              role: "conflict_resolver",
+              status: "completed",
+              durationSeconds,
+            },
+          } as any;
+
+        } catch (error) {
+          const finishedAt = Date.now();
+          const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+          logger.warn("conflict_resolution_failed", {
+            runId: this.runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          
+          yield {
+            type: "event",
+            kind: "conflict-resolution-result",
+            data: {
+              role: "conflict_resolver",
+              status: "failed",
+              durationSeconds,
+            },
+          } as any;
+        }
+      }
+    }
 
     yield {
       type: "event",
       kind: "merge-plan",
       data: mergePlan,
     } as any;
+
+    // Merge analysis agent (analysis-only; no git operations)
+    const mergeExecPlanPath = `.agent/plans/${this.runId}/merge.md`;
+    try {
+      const fs = await import("node:fs/promises");
+      const path = await import("node:path");
+      const dir = path.dirname(mergeExecPlanPath);
+      await fs.mkdir(dir, { recursive: true });
+      try {
+        await fs.access(mergeExecPlanPath);
+      } catch {
+        const skeleton = generateMergeExecPlanSkeleton(this.runId, mergePlan);
+        await fs.writeFile(mergeExecPlanPath, skeleton, "utf8");
+      }
+
+      const promptLines = [
+        "You are a merge analysis agent.",
+        "",
+        `ExecPlan path: ${mergeExecPlanPath}`,
+        "",
+        "Instructions:",
+        "- Read the ExecPlan at the given path and the merge-plan summary.",
+        "- Do NOT run git commands or mutate the repository; stay analysis-only.",
+        "- Identify overlapping or conflicting edits and areas needing targeted tests.",
+        ...(mergePlan.branches && mergePlan.branches.length > 0
+          ? [
+              "- NOTE: Feature branches exist. Recommend a strategy to merge them (e.g. git merge origin/branch).",
+              "- Check for semantic conflicts between these branches."
+            ]
+          : []),
+        "- Update the Progress and Decision Log sections as you reason.",
+        "- Summarise your conclusions at the end.",
+      ];
+      const prompt = promptLines.join("\n");
+
+      const startedAt = Date.now();
+
+      const mergeEvents: WorkflowEvent[] = [];
+
+      const writer = {
+        write: async (chunk: unknown) => {
+          const payload = chunk as { type?: string; event?: unknown };
+          if (!payload || typeof payload !== "object") return;
+          const type = (payload as any).type;
+          if (type === "stdout" || type === "stderr") {
+            const text = (payload as any).text ?? "";
+            mergeEvents.push({
+              type,
+              text,
+            } as any);
+          } else if (type === "notice") {
+            mergeEvents.push({
+              type: "notice",
+              message: (payload as any).message ?? "merge_agent_notice",
+            } as any);
+          }
+        },
+      } as const;
+
+      try {
+        await toolCodex.execute({
+          input: {
+            action: "exec",
+            prompt,
+            out: "text",
+            auto: "read", // Enforce read-only for analysis agents
+            cw: this._input.workspace ?? process.cwd(),
+            sessionId: `${this.runId}:merge`,
+            model: undefined,
+            profile: undefined,
+            context: {},
+          },
+          writer,
+        });
+
+        const finishedAt = Date.now();
+        const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+
+        for (const ev of mergeEvents) {
+          yield ev;
+        }
+
+        yield {
+          type: "event",
+          kind: "merge-agent-result",
+          data: {
+            role: "merge",
+            status: "completed",
+            durationSeconds,
+          },
+        } as any;
+      } catch (error) {
+        const finishedAt = Date.now();
+        const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+        logger.warn("merge_agent_execution_failed", {
+          runId: this.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        for (const ev of mergeEvents) {
+          yield ev;
+        }
+        yield {
+          type: "event",
+          kind: "merge-agent-result",
+          data: {
+            role: "merge",
+            status: "failed",
+            durationSeconds,
+          },
+        } as any;
+      }
+    } catch (error) {
+      logger.warn("merge_agent_initialisation_failed", {
+        runId: this.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const reviewPlan = buildReviewPlan({
       files: mergePlan.expectedFiles ?? [],
@@ -858,6 +1391,322 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       kind: "review-plan",
       data: reviewPlan,
     } as any;
+    const reviewExecPlanPath = `.agent/plans/${this.runId}/review.md`;
+    try {
+      const fs = await import("node:fs/promises");
+      const path = await import("node:path");
+      const dir = path.dirname(reviewExecPlanPath);
+      await fs.mkdir(dir, { recursive: true });
+      try {
+        await fs.access(reviewExecPlanPath);
+      } catch {
+        const skeleton = generateReviewExecPlanSkeleton(this.runId, reviewPlan);
+        await fs.writeFile(reviewExecPlanPath, skeleton, "utf8");
+      }
+
+      const promptLines = [
+        "You are a review planning agent.",
+        "",
+        `ExecPlan path: ${reviewExecPlanPath}`,
+        "",
+        "Instructions:",
+        "- Read the ExecPlan at the given path and the ReviewPlan summary.",
+        "- Do NOT run tests, lint, or static analysis; only plan them.",
+        "- For each check, specify the exact commands that should be run.",
+        "- Update the Progress and Decision Log as you refine the plan.",
+        "- Summarise the final review plan at the end.",
+      ];
+      const prompt = promptLines.join("\n");
+
+      const startedAt = Date.now();
+
+      const reviewEvents: WorkflowEvent[] = [];
+
+      const writer = {
+        write: async (chunk: unknown) => {
+          const payload = chunk as { type?: string; event?: unknown };
+          if (!payload || typeof payload !== "object") return;
+          const type = (payload as any).type;
+          if (type === "stdout" || type === "stderr") {
+            const text = (payload as any).text ?? "";
+            reviewEvents.push({
+              type,
+              text,
+            } as any);
+          } else if (type === "notice") {
+            reviewEvents.push({
+              type: "notice",
+              message: (payload as any).message ?? "review_agent_notice",
+            } as any);
+          }
+        },
+      } as const;
+
+      try {
+        await toolCodex.execute({
+          input: {
+            action: "exec",
+            prompt,
+            out: "text",
+            auto: "read", // Enforce read-only for analysis agents
+            cw: this._input.workspace ?? process.cwd(),
+            sessionId: `${this.runId}:review`,
+            model: undefined,
+            profile: undefined,
+            context: {},
+          },
+          writer,
+        });
+
+        const finishedAt = Date.now();
+        const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+
+        for (const ev of reviewEvents) {
+          yield ev;
+        }
+
+        yield {
+          type: "event",
+          kind: "review-agent-result",
+          data: {
+            role: "review",
+            status: "completed",
+            durationSeconds,
+          },
+        } as any;
+      } catch (error) {
+        const finishedAt = Date.now();
+        const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+        logger.warn("review_agent_execution_failed", {
+          runId: this.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        for (const ev of reviewEvents) {
+          yield ev;
+        }
+        yield {
+          type: "event",
+          kind: "review-agent-result",
+          data: {
+            role: "review",
+            status: "failed",
+            durationSeconds,
+          },
+        } as any;
+      }
+    } catch (error) {
+      logger.warn("review_agent_initialisation_failed", {
+        runId: this.runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Review execution phase & Self-Correction Loop
+    // If checks are planned, execute them using toolRunner
+    if (reviewPlan.checks && reviewPlan.checks.length > 0) {
+      
+      // Dynamic import to avoid load-time side effects
+      const { toolRunner } = await import("@alfred/agent/orchestrator/tool/runner");
+      
+      const MAX_FIX_ATTEMPTS = 3;
+      let fixAttempts = 0;
+      let reviewPassed = false;
+      let reviewFailures: Array<{ command: string; output: string; error?: string }> = [];
+      const startedAt = Date.now();
+
+      while (fixAttempts <= MAX_FIX_ATTEMPTS && !reviewPassed) {
+        reviewFailures = [];
+        let currentRunPassed = true;
+
+        yield { 
+          type: "notice", 
+          message: fixAttempts === 0 ? "review_execution_started" : "review_retry_started", 
+          attempt: fixAttempts + 1 
+        } as any;
+      
+        for (const check of reviewPlan.checks) {
+          if (!check) continue;
+          
+          let command = "";
+          if (check.type === "static") command = "bun run typecheck";
+          else if (check.type === "lint") command = "bun run lint";
+          else if (check.type === "tests") command = "bun test";
+          else continue; // Skip manual/scenario checks for automated runner
+          
+          try {
+            yield { 
+              type: "event", 
+              kind: "tool-call", 
+              data: { tool: "runner", command } 
+            } as any;
+
+            const result = await toolRunner.execute(command, workspace);
+            
+            yield { 
+              type: "event", 
+              kind: "tool-result", 
+              data: { 
+                tool: "runner", 
+                command, 
+                exitCode: result.exitCode,
+                stdout: result.stdout.slice(0, 1000), // Truncate for event stream
+                durationMs: result.durationMs 
+              } 
+            } as any;
+
+            if (result.exitCode !== 0) {
+              currentRunPassed = false;
+              reviewFailures.push({ 
+                command, 
+                output: (result.stdout + "\n" + result.stderr).slice(0, 5000) 
+              });
+              logger.warn("review_check_failed", { runId: this.runId, command, exitCode: result.exitCode });
+            }
+          } catch (err) {
+            currentRunPassed = false;
+            reviewFailures.push({ 
+              command, 
+              output: "", 
+              error: String(err) 
+            });
+            logger.error("review_command_error", { runId: this.runId, command, error: String(err) });
+          }
+        }
+
+        if (currentRunPassed) {
+          reviewPassed = true;
+          break;
+        }
+
+        // Self-correction: Spawn Fixer Agent if failed and retries allowed
+        if (fixAttempts < MAX_FIX_ATTEMPTS && (this._input.auto === "medium" || this._input.auto === "high")) {
+          yield { type: "notice", message: "self_correction_started" } as any;
+          
+          const fixerExecPlanPath = `.agent/plans/${this.runId}/fixer-${fixAttempts + 1}.md`;
+          
+          try {
+            const fsMod = await import("node:fs/promises");
+            const pathMod = await import("node:path");
+            const dir = pathMod.dirname(fixerExecPlanPath);
+            await fsMod.mkdir(dir, { recursive: true });
+            
+            const failureDetails = reviewFailures.map(f => 
+              `Command: ${f.command}\nError/Output:\n\`\`\`\n${f.output || f.error}\n\`\`\``
+            ).join("\n\n");
+
+            const skeleton = [
+              `# Fixer ExecPlan (Attempt ${fixAttempts + 1})`,
+              "",
+              "## Purpose",
+              "Fix the errors detected during the review phase.",
+              "",
+              "## Context",
+              "The following checks failed:",
+              failureDetails,
+              "",
+              "## Plan",
+              "- Analyze the error output.",
+              "- Locate the source files causing the error.",
+              "- Apply fixes.",
+              "- Verify the fix (the review phase will re-run automatically).",
+              "",
+              "## Progress",
+              "- [ ] (pending) Fix applied.",
+            ].join("\n");
+            
+            await fsMod.writeFile(fixerExecPlanPath, skeleton, "utf8");
+
+            const prompt = [
+              "You are a Self-Correction 'Fixer' Agent.",
+              `ExecPlan path: ${fixerExecPlanPath}`,
+              "Your goal is to FIX the code so that the review checks pass.",
+              "1. Read the error context in the plan.",
+              "2. Edit the code to resolve the errors.",
+              "3. Do not break existing functionality.",
+            ].join("\n");
+
+            const fixerEvents: WorkflowEvent[] = [];
+            const writer = {
+              write: async (chunk: unknown) => {
+                const payload = chunk as { type?: string; event?: unknown };
+                if (!payload || typeof payload !== "object") return;
+                const type = (payload as any).type;
+                if (type === "stdout" || type === "stderr") {
+                   fixerEvents.push({ type, text: (payload as any).text } as any);
+                } else if (type === "notice") {
+                   fixerEvents.push({ type: "notice", message: (payload as any).message } as any);
+                }
+              },
+            } as const;
+
+            // Run the Fixer
+            await toolCodex.execute({
+              input: {
+                action: "exec",
+                prompt,
+                out: "text",
+                auto: this._input.auto, // Inherit write permissions
+                cw: workspace, 
+                sessionId: `${this.runId}:fixer-${fixAttempts}`,
+                model: undefined,
+                profile: undefined,
+                context: {},
+              },
+              writer, 
+            });
+
+            for (const ev of fixerEvents) yield ev;
+
+            yield { 
+              type: "event", 
+              kind: "fixer-agent-result", 
+              data: { 
+                attempt: fixAttempts + 1, 
+                status: "completed" 
+              } 
+            } as any;
+
+          } catch (error) {
+            logger.error("fixer_agent_failed", { error: String(error) });
+            // If fixer crashes, we probably can't recover, but let the loop increment and maybe retry or fail.
+          }
+          
+          fixAttempts++;
+        } else {
+          break; // No more retries or read-only mode
+        }
+      }
+
+      const finishedAt = Date.now();
+      const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+      
+      yield {
+        type: "event",
+        kind: "review-exec-result",
+        data: {
+          role: "review_exec",
+          status: reviewPassed ? "completed" : "failed",
+          durationSeconds,
+          attempts: fixAttempts + (reviewPassed ? 1 : 0), // Count the successful run if passed
+        },
+      } as any;
+    } else if (process.env.RUNTIME_ENABLE_REVIEW_EXEC === "1") {
+      // Keep legacy stub path if needed, or remove it. 
+      // Removing it as we have real execution now.
+    }
+    // Cleanup worktrees after successful execution
+    // We do this after review, so artifacts are available for merge/review if needed (e.g. via file system check)
+    // Although merge agent currently assumes files are in main workspace or committed.
+    // If agents used worktrees, they MUST have committed to their branches for the merge agent (which runs in main workspace usually) to see them?
+    // Or the merge agent should run in a worktree too?
+    // For now, we assume agents committed. 
+    for (const wt of createdWorktrees) {
+      try {
+        await worktreeManager.remove(workspace, wt);
+      } catch (e) {
+        logger.warn("worktree_cleanup_failed", { path: wt, error: String(e) });
+      }
+    }
   }
 
   /**

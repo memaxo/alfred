@@ -8,12 +8,15 @@ import "./utils/mock-hypergraph";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { eq } from "drizzle-orm";
+import { EMBEDDING_DIM } from "@alfred/embed";
 
 let persistHypergraphToDb: typeof import("@alfred/agent/assistant/hypergraph-bridge").persistHypergraphToDb;
 let graphRouter: typeof import("@alfred/api/routers/graph").graphRouter;
 let db: typeof import("@alfred/db").db;
 let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
 let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
+let ingest: typeof import("@alfred/rag").ingest;
+let setEmbeddingProvider: typeof import("@alfred/rag").setEmbeddingProvider;
 
 type SessionUser = {
   id: string;
@@ -74,6 +77,9 @@ describe("graph router integration (sqlite)", () => {
     ({ persistHypergraphToDb } = await import(
       "@alfred/agent/assistant/hypergraph-bridge"
     ));
+    const ragModule = await import("@alfred/rag");
+    ingest = ragModule.ingest;
+    setEmbeddingProvider = ragModule.setEmbeddingProvider;
     const dbModule = await import("@alfred/db");
     db = dbModule.db;
     const schema = await import("@alfred/db/schema/graph");
@@ -91,6 +97,8 @@ describe("graph router integration (sqlite)", () => {
   });
 
   afterEach(async () => {
+    // Reset RAG embedding provider between tests
+    setEmbeddingProvider(null);
     await db.delete(memoryEdges).execute();
     await db.delete(memoryNodes).execute();
   });
@@ -173,8 +181,92 @@ describe("graph router integration (sqlite)", () => {
     expect(edges.some((edge) => edge.id === inserted.id)).toBe(true);
   });
 
-  // NOTE: A dedicated provenance E2E test will live alongside the runtime
-  // integration once the workflow runtime path wires ragDocumentIds through
-  // persistReasoning. For now, provenance linking is covered at unit level
-  // in packages/agent/assistant/test/graphstore-rag-provenance.test.ts.
+  it("traverses explains edges between rag_document and reasoning nodes", async () => {
+    const caller = createCaller();
+
+    const source = `graph-prov-${Date.now()}`;
+    const content = "Graph router provenance test document.";
+
+    // Manually create a rag_document node under user resource to act as provenance anchor
+    const ragInsert = await db
+      .insert(memoryNodes)
+      .values({
+        kind: "rag_document",
+        label: source,
+        resource: "user",
+        hash: `rag_doc:${source}`,
+        properties: {
+          documentId: source,
+          source,
+          ragResource: `rag:${source}`,
+        },
+      })
+      .returning();
+
+    const ragNode = ragInsert[0]!;
+    const documentId = source;
+
+    // Create a reasoning node manually under workspace resource
+    const resource = `graph-prov-workspace-${Date.now()}`;
+    const label = "Reasoning node for graph.runQuery";
+
+    const insertedNodes = await db
+      .insert(memoryNodes)
+      .values({
+        kind: "reasoning",
+        label,
+        resource,
+        hash: `reasoning:${resource}`,
+        properties: {
+          ragDocumentIds: [documentId],
+        },
+      })
+      .returning();
+
+    const reasoningNode = insertedNodes[0]!;
+
+    // Create explains edge from rag_document -> reasoning node under user resource
+    const [explains] = await db
+      .insert(memoryEdges)
+      .values({
+        fromId: ragNode!.id,
+        toId: reasoningNode.id,
+        kind: "explains",
+        resource: "user",
+        hash: `explains:${ragNode!.id}:${reasoningNode.id}`,
+        weight: 1,
+        metadata: {
+          documentId,
+        },
+      })
+      .onConflictDoNothing({ target: memoryEdges.hash })
+      .returning();
+
+    expect(explains).toBeTruthy();
+
+    // Traverse incoming edges to the reasoning node via graph.runQuery
+    const result = await caller.runQuery({
+      kind: "traverse",
+      nodeId: reasoningNode.id,
+      direction: "in",
+      resource: "user",
+    });
+
+    expect(result.nodes.length).toBeGreaterThanOrEqual(1);
+    expect(result.edges.length).toBeGreaterThanOrEqual(1);
+
+    const seenRag = result.nodes.some((node: any) => {
+      const isRagDoc = node.kind === "rag_document";
+      const props = (node.properties ?? null) as
+        | Record<string, unknown>
+        | null;
+      return isRagDoc && props?.documentId === documentId;
+    });
+    expect(seenRag).toBe(true);
+
+    const seenExplains = result.edges.some(
+      (edge: any) => edge.kind === "explains",
+    );
+    expect(seenExplains).toBe(true);
+  });
 });

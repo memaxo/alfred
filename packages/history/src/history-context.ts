@@ -89,7 +89,7 @@ export async function buildHistoryContext(
     const idToIndex = new Map<string, number>();
 
     for (let index = 0; index < messages.length; index += 1) {
-      const key = resolveMessageKey(messages[index], index);
+      const key = resolveMessageKey(messages[index]!, index);
       idToIndex.set(key, index);
     }
 

@@ -19,7 +19,12 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
-import { useMindscapeStore, type ArtifactData } from "@/store/mindscape";
+import type { inferRouterOutputs } from "@trpc/server";
+import {
+  useMindscapeStore,
+  type ArtifactData,
+  type KnowledgeNodeData,
+} from "@/store/mindscape";
 import { MindscapeInitializer } from "./initializer";
 import { ArtifactNode } from "./nodes/artifact-node";
 import { ChatNode } from "./nodes/chat-node";
@@ -50,7 +55,11 @@ import {
   type MindscapeSearchParams,
 } from "./spawn";
 import { MindscapeCommandPalette } from "./command-palette";
-import { trpc } from "@/utils/trpc";
+import { MindscapeDetailPanel } from "./detail-panel";
+import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+
+type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
 // Wrap each node component with error boundary
 const wrapWithErrorBoundary = (Component: React.ComponentType<NodeProps>) =>
@@ -106,6 +115,8 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     onConnect,
     addArtifact,
     focusNode,
+    ragDocCache,
+    cacheRagDoc,
   } = useMindscapeStore(
     useShallow((state) => ({
       nodes: state.nodes,
@@ -115,6 +126,8 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
       onConnect: state.onConnect,
       addArtifact: state.addArtifact,
       focusNode: state.focusNode,
+      ragDocCache: state.ragDocCache,
+      cacheRagDoc: state.cacheRagDoc,
     }))
   );
 
@@ -193,6 +206,48 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
 
   const nodeIdQuery = searchParams?.nodeId;
   const spawnQuery = searchParams?.spawn;
+  const ragDocQuery = searchParams?.ragDoc ?? null;
+
+  const ragDocTargetNode = useMemo(() => {
+    if (!ragDocQuery) {
+      return null;
+    }
+    return nodes.find((node) => node.data?.graph?.dbId === ragDocQuery) ?? null;
+  }, [nodes, ragDocQuery]);
+
+  const cachedRagDoc = ragDocQuery ? ragDocCache[ragDocQuery] : undefined;
+
+  const shouldHydrateRagDoc = Boolean(
+    ragDocQuery && !ragDocTargetNode && !cachedRagDoc
+  );
+
+  const ragDocQueryInput =
+    ragDocQuery && shouldHydrateRagDoc
+      ? {
+          kind: "traverse" as const,
+          nodeId: ragDocQuery,
+          direction: "both" as const,
+          resource: "user",
+          limit: 1,
+        }
+      : {
+          kind: "traverse" as const,
+          nodeId: "noop",
+          direction: "both" as const,
+          resource: "user",
+          limit: 1,
+        };
+
+  const {
+    data: ragDocGraph,
+    isError: ragDocGraphError,
+  } = trpc.graph.runQuery.useQuery(
+    ragDocQueryInput,
+    {
+      enabled: shouldHydrateRagDoc,
+      retry: 1,
+    }
+  );
 
   const spawnNodeFromType = useCallback(
     (spawnType: MindscapeSpawnType): string | null => {
@@ -237,6 +292,14 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     clearSearchParams(["nodeId"]);
   }, [nodeIdQuery, nodes, focusAndCenter]);
 
+  useEffect(() => {
+    if (!ragDocQuery || !ragDocTargetNode) {
+      return;
+    }
+    focusAndCenter(ragDocTargetNode.id);
+    clearSearchParams(["ragDoc"]);
+  }, [ragDocQuery, ragDocTargetNode, focusAndCenter]);
+
   // Spawn nodes via deep link (?spawn=...)
   useEffect(() => {
     if (!spawnQuery) {
@@ -246,6 +309,110 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
     spawnNodeFromType(spawnQuery);
     clearSearchParams(["spawn"]);
   }, [spawnQuery, spawnNodeFromType]);
+
+  useEffect(() => {
+    if (!ragDocQuery || !cachedRagDoc || ragDocTargetNode) {
+      return;
+    }
+    const derivedId = `rag-knowledge-${ragDocQuery}`;
+    const exists = nodes.find((node) => node.id === derivedId);
+    if (!exists) {
+      addArtifact({
+        id: derivedId,
+        type: "knowledge",
+        position: { x: 100, y: 100 },
+        data: {
+          ...cachedRagDoc,
+          type: "knowledge",
+          graph: {
+            dbId: ragDocQuery,
+            hgHash: cachedRagDoc.graph?.hgHash,
+          },
+          source: "rag",
+        } as ArtifactData,
+      });
+    }
+    focusAndCenter(exists?.id ?? derivedId);
+    clearSearchParams(["ragDoc"]);
+  }, [
+    addArtifact,
+    cachedRagDoc,
+    focusAndCenter,
+    nodes,
+    ragDocQuery,
+    ragDocTargetNode,
+  ]);
+
+  useEffect(() => {
+    if (!ragDocQuery || !ragDocGraphError) {
+      return;
+    }
+    toast.error("Unable to load RAG document. Please retry.");
+    if (!ragDocTargetNode) {
+      clearSearchParams(["ragDoc"]);
+    }
+  }, [ragDocGraphError, ragDocQuery, ragDocTargetNode]);
+
+  useEffect(() => {
+    if (!ragDocQuery || ragDocTargetNode) {
+      return;
+    }
+    if (!ragDocGraph || ragDocGraph.nodes.length === 0) {
+      return;
+    }
+    const docNode = (ragDocGraph.nodes as GraphNode[]).find((node) => {
+      const id = node.id ?? {};
+      return (
+        id?.dbId === ragDocQuery ||
+        id?.hgHash === ragDocQuery ||
+        id?.uiId === ragDocQuery
+      );
+    });
+    if (!docNode) {
+      toast.info("RAG document is not available in the graph yet.");
+      clearSearchParams(["ragDoc"]);
+      return;
+    }
+
+  const props = (docNode.properties ?? {}) as Record<string, unknown>;
+  const summary =
+    typeof props.content === "string" ? props.content : undefined;
+  const docDbId = docNode.id?.dbId ?? ragDocQuery;
+  const derivedId = `rag-knowledge-${docDbId}`;
+
+  const exists = nodes.find((node) => node.id === derivedId);
+  if (!exists) {
+    const knowledgeData: KnowledgeNodeData = {
+      type: "knowledge",
+      label: docNode.label || "RAG Context",
+      kind: docNode.kind,
+      summary,
+      source: "rag",
+      graph: {
+        dbId: docDbId,
+        hgHash: docNode.id?.hgHash,
+      },
+    };
+    addArtifact({
+      id: derivedId,
+      type: "knowledge",
+      position: { x: 100, y: 100 },
+      data: knowledgeData as ArtifactData,
+    });
+    cacheRagDoc(docDbId, knowledgeData);
+  }
+
+  focusAndCenter(exists?.id ?? derivedId);
+  clearSearchParams(["ragDoc"]);
+}, [
+  addArtifact,
+  cacheRagDoc,
+  focusAndCenter,
+  nodes,
+  ragDocGraph,
+  ragDocQuery,
+  ragDocTargetNode,
+]);
 
   const onConnectPersisting = useCallback<OnConnect>(
     async (connection) => {
@@ -281,7 +448,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
 
   return (
     <>
-      <div className="h-screen w-full bg-[oklch(0.05_0_0)]">
+      <div className="relative h-screen w-full bg-[oklch(0.05_0_0)]">
         <ReactFlow
           colorMode="dark"
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -354,6 +521,7 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
           <MindscapeInitializer />
           <WorkflowManager />
         </ReactFlow>
+        <MindscapeDetailPanel />
       </div>
       <MindscapeCommandPalette
         nodes={nodes}

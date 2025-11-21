@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { voiceTranscodeDurationSeconds } from "../metrics";
 
 const PCM_SAMPLE_RATE = 16000;
 const PCM_CHANNELS = 1;
@@ -51,42 +52,49 @@ export async function decodeToPCM16({
   audioBase64,
   mimeType,
 }: DecodeRequest): Promise<DecodeResult> {
-  ensureFfmpegAvailable();
-  const cleaned = stripBase64Prefix(audioBase64);
-  const inputBuffer = Buffer.from(cleaned, "base64");
-  if (inputBuffer.byteLength === 0) {
-    throw new Error("audio_payload_empty");
+  const stopTimer = voiceTranscodeDurationSeconds.startTimer({ type: "decode" });
+  try {
+    ensureFfmpegAvailable();
+    const cleaned = stripBase64Prefix(audioBase64);
+    const inputBuffer = Buffer.from(cleaned, "base64");
+    if (inputBuffer.byteLength === 0) {
+      throw new Error("audio_payload_empty");
+    }
+
+    const args = [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      "pipe:0",
+      "-ac",
+      String(PCM_CHANNELS),
+      "-ar",
+      String(PCM_SAMPLE_RATE),
+      "-map_metadata",
+      "-1",
+      "-vn",
+      "-f",
+      "s16le",
+      "pipe:1",
+    ];
+
+    const stdout = runFfmpeg(args, inputBuffer);
+    if (stdout.byteLength === 0) {
+      throw new Error("ffmpeg_decode_empty_output");
+    }
+
+    stopTimer();
+    return {
+      audioBase64: Buffer.from(stdout).toString("base64"),
+      mimeType: PCM_MIME_TYPE,
+      sampleRate: PCM_SAMPLE_RATE,
+      channels: PCM_CHANNELS,
+    };
+  } catch (error) {
+    stopTimer();
+    throw error;
   }
-
-  const args = [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-i",
-    "pipe:0",
-    "-ac",
-    String(PCM_CHANNELS),
-    "-ar",
-    String(PCM_SAMPLE_RATE),
-    "-map_metadata",
-    "-1",
-    "-vn",
-    "-f",
-    "s16le",
-    "pipe:1",
-  ];
-
-  const stdout = runFfmpeg(args, inputBuffer);
-  if (stdout.byteLength === 0) {
-    throw new Error("ffmpeg_decode_empty_output");
-  }
-
-  return {
-    audioBase64: Buffer.from(stdout).toString("base64"),
-    mimeType: PCM_MIME_TYPE,
-    sampleRate: PCM_SAMPLE_RATE,
-    channels: PCM_CHANNELS,
-  };
 }
 
 export interface EncodeRequest {
@@ -106,45 +114,52 @@ export async function encodeFromPCM16({
   format,
   bitrate,
 }: EncodeRequest): Promise<EncodeResult> {
-  ensureFfmpegAvailable();
-  const cleaned = stripBase64Prefix(audioBase64);
-  const inputBuffer = Buffer.from(cleaned, "base64");
-  if (inputBuffer.byteLength === 0) {
-    throw new Error("audio_payload_empty");
+  const stopTimer = voiceTranscodeDurationSeconds.startTimer({ type: "encode" });
+  try {
+    ensureFfmpegAvailable();
+    const cleaned = stripBase64Prefix(audioBase64);
+    const inputBuffer = Buffer.from(cleaned, "base64");
+    if (inputBuffer.byteLength === 0) {
+      throw new Error("audio_payload_empty");
+    }
+
+    const target = resolveFormatConfig(format, bitrate);
+    const args = [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "s16le",
+      "-ac",
+      String(PCM_CHANNELS),
+      "-ar",
+      String(PCM_SAMPLE_RATE),
+      "-i",
+      "pipe:0",
+      ...target.codecArgs,
+      "-map_metadata",
+      "-1",
+      "-vn",
+      "-f",
+      target.container,
+      "pipe:1",
+    ];
+
+    const stdout = runFfmpeg(args, inputBuffer);
+    if (stdout.byteLength === 0) {
+      throw new Error("ffmpeg_encode_empty_output");
+    }
+
+    stopTimer();
+    return {
+      audioBase64: Buffer.from(stdout).toString("base64"),
+      mimeType: target.mimeType,
+      format,
+    };
+  } catch (error) {
+    stopTimer();
+    throw error;
   }
-
-  const target = resolveFormatConfig(format, bitrate);
-  const args = [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-f",
-    "s16le",
-    "-ac",
-    String(PCM_CHANNELS),
-    "-ar",
-    String(PCM_SAMPLE_RATE),
-    "-i",
-    "pipe:0",
-    ...target.codecArgs,
-    "-map_metadata",
-    "-1",
-    "-vn",
-    "-f",
-    target.container,
-    "pipe:1",
-  ];
-
-  const stdout = runFfmpeg(args, inputBuffer);
-  if (stdout.byteLength === 0) {
-    throw new Error("ffmpeg_encode_empty_output");
-  }
-
-  return {
-    audioBase64: Buffer.from(stdout).toString("base64"),
-    mimeType: target.mimeType,
-    format,
-  };
 }
 
 function resolveFormatConfig(format: TargetFormat, bitrate?: string) {

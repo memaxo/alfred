@@ -92,17 +92,34 @@ curl \
 | `bun test packages/api/test/voice.streaming.test.ts` | Streaming authorization helper (session/policy gating). |
 | `bun test packages/api/test/voice.session-registry.test.ts` | Session registry bookkeeping (claim/update/complete + conflict detection). |
 
+## sessions query
+
+`voice.sessions` is a read-only authed procedure that surfaces the in-memory session registry for the current user.
+
+- Input: optional `{ sessionId?: string }`. When supplied, the server returns at most one snapshot (or `[]` if the session isn’t owned by the caller).
+- Output: `VoiceSessionDescriptor[]` (mirrors `session` from the `speechToSpeech` response).
+- Use cases: render Drive Mode/CarPlay/web “hands-free” status on mount; recover session metadata after offline queue drains; debug codec negotiation.
+- Example (tRPC):
+
+```ts
+const sessions = await trpcClient.voice.sessions.query();
+console.log(sessions[0]?.status); // "idle" | "recording" | ...
+```
+
+The shared hooks expose this query via `voice.refreshSession()` (native) and `useVoiceSessionWeb().refreshSession()`.
+
 ## Streaming prototype
 
 - File: `packages/api/src/voice/streaming.ts`.
 - Flag: `VOICE_STREAMING_PROTO=1` enables a Bun WebSocket server on `VOICE_STREAMING_PORT` (default `8788`).
 - Contract: See `docs/voice/streaming.md` for message types (`start`, `audio_chunk`, `vad_state`, `auto_stop`, `assistant_message`, `tts_chunk`, `tts_complete`, `status`, `error`).
 - Input codecs: clients may send PCM, M4A, WebM/Opus, MP3, or WAV chunks. The server normalizes every chunk via ffmpeg before forwarding it to Faster-Whisper/Silero VAD.
-- Output codecs: replies stream as PCM chunks for now; native/web adapters wrap them (WAV + `expo-av`, Web Audio `AudioBuffer`) before playback.
+- Output codecs: set `codec=mp3|opus|wav` in the `start` payload to have the server re-encode each `tts_chunk` before it leaves the socket; omit it (or use `pcm`) to continue receiving raw PCM for lowest latency.
 - Authentication: WebSocket upgrade reuses the browser/native session cookies. The server enforces both `voice.stt` and `voice.tts` policies before accepting the connection, matching the mutation.
 - Clients:
   - Drive Mode/CarPlay (`useVoiceSessionNative.stream`) automatically opt into streaming when the flag/env are set. The UI shows live transcripts + VAD and stops recording automatically when `auto_stop` arrives.
   - `/voice-s2s` exposes a "Streaming Prototype" button guarded by the same policy checks and env variables (`VITE_VOICE_STREAMING_URL` or default host:port).
+- Session registry: every streaming connection claims a session record (matching the `sessionId` returned in `session_started`). Status transitions (`recording → processing → playing → idle`), transcripts, and assistant replies are mirrored into the registry so Drive Mode/web panels can reflect the active session even before clip-based S2S runs.
 - Session registry: every streaming connection claims a session record (matching the `sessionId` returned in `session_started`). Status transitions (`recording → processing → playing → idle`), transcripts, and assistant replies are mirrored into the registry so Drive Mode/web panels can reflect the active session even before clip-based S2S runs.
 
 ## Local provider prerequisites

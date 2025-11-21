@@ -37,7 +37,18 @@ describe("MindscapeCanvas graph integration", () => {
           },
         ],
         "remind.due": () => [],
-        "graph.getEdges": () => [],
+        "graph.getEdges": () => [
+          {
+            id: "edge-explains-1",
+            fromId: "rag-doc-1",
+            toId: "00000000-0000-0000-0000-000000000001",
+            kind: "explains",
+            weight: 1,
+            resource: "user",
+            metadata: { documentId: "doc-1" },
+            created: new Date(),
+          },
+        ],
         "graph.runQuery": (input) => {
           const query = input as { kind?: string };
           if (query.kind === "traverse") {
@@ -69,7 +80,17 @@ describe("MindscapeCanvas graph integration", () => {
                   },
                 },
               ],
-              edges: [],
+              edges: [
+                {
+                  id: "edge-explains-1",
+                  fromId: "rag-doc-1",
+                  toId: "00000000-0000-0000-0000-000000000001",
+                  kind: "explains",
+                  weight: 1,
+                  resource: "user",
+                  metadata: { documentId: "doc-1" },
+                },
+              ],
             };
           }
 
@@ -94,5 +115,8 @@ describe("MindscapeCanvas graph integration", () => {
 
     const ragNode = await findByText("RAG Context Node");
     expect(ragNode).toBeTruthy();
+
+    // The presence of both nodes and a stable render with explains edges
+    // is sufficient; React Flow does not expose edges with simple text labels.
   });
 });

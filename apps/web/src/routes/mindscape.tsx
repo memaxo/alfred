@@ -8,6 +8,7 @@ const mindscapeSearchSchema = z.object({
   nodeId: z.string().optional(),
   spawn: z.enum(mindscapeSpawnTypes).optional(),
   open: z.string().optional(),
+  ragDoc: z.string().uuid().optional(),
 });
 
 export const Route = createFileRoute("/mindscape")({

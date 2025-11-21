@@ -71,3 +71,23 @@ describe("buildMergePlan", () => {
     expect(plan.summary).toContain("1 stuck");
   });
 });
+
+describe("generateMergeExecPlanSkeleton", () => {
+  const { generateMergeExecPlanSkeleton } = require("@alfred/agent/orchestrator/multi/merge");
+
+  it("generates expected markdown structure", () => {
+    const plan = {
+      summary: "Merging 2 files",
+      expectedFiles: ["a.ts", "b.ts"],
+      strategy: "direct",
+    };
+    const md = generateMergeExecPlanSkeleton("run-abc", plan);
+    
+    expect(md).toContain("# Merge ExecPlan for run run-abc");
+    expect(md).toContain("Merging 2 files");
+    expect(md).toContain("- a.ts");
+    expect(md).toContain("- b.ts");
+    expect(md).toContain("## Plan");
+    expect(md).toContain("- [ ] (pending) Merge analysis started.");
+  });
+});

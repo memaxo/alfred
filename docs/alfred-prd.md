@@ -297,6 +297,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Hook CarPlay voice controls into the streaming `.stream` adapter with automatic fallback to clip-based `speechToSpeech` when the WebSocket transport is unavailable.
 - [x] Add voice session management (session registry, session-aware Drive Mode/CarPlay/web UI, and shared `sessionId` propagation)
 - [x] Surface codec hints (`inputCodec`/`outputCodec`) and negotiated session metadata so clients can log/inspect container conversions without guessing.
+- [x] Extend streaming codec negotiation so `codec`=`mp3|opus|wav` re-encodes each `tts_chunk` before it leaves the server, matching the new registry snapshot/docs.
 - [x] Wire voice to assistant router (Drive Mode/CarPlay/web all call `voice.speechToSpeech`)
 - [x] Prototype low-latency streaming via Bun WebSocket server (`packages/api/src/voice/streaming.ts`, gated by `VOICE_STREAMING_PROTO=1`)
 

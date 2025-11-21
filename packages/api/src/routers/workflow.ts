@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import { openai } from "@ai-sdk/openai";
 import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
 import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
@@ -40,6 +41,10 @@ import { makeEventId } from "../utils/event-id";
 import { logger } from "../utils/logger";
 import { redactEventData } from "../utils/redaction";
 import { runPlanV6 } from "../workflow/runner";
+import {
+  type ReasonTrace,
+  workflowProvenance,
+} from "../workflow/provenance";
 
 // Feature flag for runtime migration (Phase 3.3)
 configureLinearMetrics({
@@ -578,14 +583,17 @@ export const workflowRouter: ReturnType<typeof router> = router({
           let runId: string | null = null;
           const persistedMessageKeys = new Set<string>();
           let workflowConversationId: string | null = null;
-        const refreshPreferences = (reason: string) =>
-          triggerPreferenceRefresh(session.user.id, { reason });
+          const useRuntime = shouldUseWorkflowRuntime();
+          const reasonTraces: ReasonTrace[] = [];
 
-        const markCancelled = async () => {
-          if (!runId) return;
-          try {
-            await workflowRepo.updateRun(runId, {
-              status: "cancelled",
+          const refreshPreferences = (reason: string) =>
+            triggerPreferenceRefresh(session.user.id, { reason });
+
+          const markCancelled = async () => {
+            if (!runId) return;
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "cancelled",
                 completedAt: new Date(),
               });
               await recordAudit({
@@ -610,11 +618,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
           const markCompleted = async () => {
             if (!runId) return;
-          try {
-            await workflowRepo.updateRun(runId, {
-              status: "completed",
-              completedAt: new Date(),
-            });
+            try {
+              await workflowRepo.updateRun(runId, {
+                status: "completed",
+                completedAt: new Date(),
+              });
               await recordAudit({
                 userId: session.user.id,
                 action: "workflow.stream.complete",
@@ -632,6 +640,21 @@ export const workflowRouter: ReturnType<typeof router> = router({
             recordEvent("complete");
             closeTimer("ok");
             emit.complete();
+          };
+
+          const addReasoning = (event: WorkflowEvent) => {
+            if (!useRuntime) return;
+            if (event.type !== "reasoning") return;
+            const payload = event as any;
+            const text =
+              typeof payload.text === "string" && payload.text.length > 0
+                ? payload.text
+                : typeof payload.reasoning === "string" &&
+                    payload.reasoning.length > 0
+                  ? payload.reasoning
+                  : null;
+            if (!text) return;
+            reasonTraces.push({ text, timestamp: Date.now() });
           };
 
           try {
@@ -761,7 +784,10 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   }> = Array.isArray(data.agents) ? data.agents : [];
 
                   for (const agent of agents) {
-                    const role = agent.role && agent.role.length > 0 ? agent.role : "worker";
+                    const role =
+                      agent.role && agent.role.length > 0
+                        ? agent.role
+                        : "worker";
                     const rawStatus = agent.status;
                     const outcome: "ok" | "error" | "stuck" =
                       rawStatus === "stuck" || agent.stuck
@@ -771,7 +797,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
                           : "ok";
 
                     const dur = agent.durationSeconds;
-                    if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
+                    if (
+                      typeof dur === "number" &&
+                      Number.isFinite(dur) &&
+                      dur >= 0
+                    ) {
                       multiAgentAgentDurationSeconds.observe(
                         { role, outcome },
                         dur
@@ -784,13 +814,65 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   }
                 } else if ((event as any).kind === "wave-aborted") {
                   multiAgentErrorsTotal.inc({ kind: "wave_aborted" });
+                } else if ((event as any).kind === "merge-conflict") {
+                  multiAgentErrorsTotal.inc({ kind: "merge_conflict" });
                 } else if ((event as any).kind === "merge-plan") {
                   multiAgentTasksTotal.inc({ status: "merged" });
                 } else if ((event as any).kind === "review-plan") {
                   multiAgentTasksTotal.inc({ status: "review" });
+                } else if (
+                  (event as any).kind === "merge-agent-result" ||
+                  (event as any).kind === "review-agent-result" ||
+                  (event as any).kind === "conflict-agent-result" ||
+                  (event as any).kind === "conflict-resolution-result" ||
+                  (event as any).kind === "review-exec-result"
+                ) {
+                  const data = (event as any).data || {};
+                  const role =
+                    typeof data.role === "string" && data.role.length > 0
+                      ? data.role
+                      : "worker";
+                  const rawStatus = data.status as string | undefined;
+                  const outcome: "ok" | "error" | "stuck" =
+                    rawStatus === "stuck"
+                      ? "stuck"
+                      : rawStatus === "failed"
+                        ? "error"
+                        : "ok";
+                  const dur = data.durationSeconds;
+                  if (
+                    typeof dur === "number" &&
+                    Number.isFinite(dur) &&
+                    dur >= 0
+                  ) {
+                    multiAgentAgentDurationSeconds.observe(
+                      { role, outcome },
+                      dur
+                    );
+                  }
+                  if (outcome !== "ok") {
+                    const kind =
+                      (event as any).kind === "merge-agent-result"
+                        ? "merge_failed"
+                        : (event as any).kind === "review-agent-result"
+                          ? "review_failed"
+                          : (event as any).kind === "conflict-agent-result"
+                            ? "merge_conflict_analysis_failed"
+                            : (event as any).kind ===
+                                "conflict-resolution-result"
+                              ? "merge_conflict_resolution_failed"
+                              : "review_exec_failed";
+                    multiAgentErrorsTotal.inc({ kind });
+                  }
                 }
               } catch {
                 // Metrics must never break streaming; ignore metric errors.
+              }
+
+              try {
+                addReasoning(event);
+              } catch {
+                // Reasoning capture must never break streaming.
               }
 
               try {
@@ -871,6 +953,33 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   error: error instanceof Error ? error.message : String(error),
                 });
                 // Continue streaming without throwing
+              }
+            }
+
+            if (!cancelled && useRuntime && runId && reasonTraces.length > 0) {
+              try {
+                const resource =
+                  typeof input.cw === "string" && input.cw.length > 0
+                    ? input.cw
+                    : typeof input.workspace === "string" &&
+                        input.workspace.length > 0
+                      ? input.workspace
+                      : process.cwd();
+
+                await workflowProvenance({
+                  resource,
+                  executionId: runId,
+                  auto: input.auto,
+                  threadId: runId,
+                  traces: reasonTraces,
+                  context: undefined,
+                });
+              } catch (error) {
+                logger.warn("workflow_provenance_stream_failed", {
+                  runId,
+                  error:
+                    error instanceof Error ? error.message : String(error),
+                });
               }
             }
 
@@ -1033,6 +1142,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
       const { reconstructReasoningChain } = await import(
         "@alfred/knowledge/query"
       );
+      const { memoryNodes } = await import("@alfred/db/schema/graph");
+      const { db } = await import("@alfred/db");
 
       const limit = input.limit;
       const initialArgs = {
@@ -1068,11 +1179,60 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
       const chain = reconstructReasoningChain(nodeRecords, edgeRecords);
 
+      // Best-effort provenance enrichment: gather distinct ragDocumentIds
+      // referenced by reasoning nodes and load their rag_document labels.
+      const docIds = new Set<string>();
+      for (const node of nodes) {
+        const props = (node.properties ??
+          null) as Record<string, unknown> | null;
+        const ids = Array.isArray(props?.ragDocumentIds)
+          ? (props!.ragDocumentIds as unknown[])
+          : [];
+        for (const raw of ids) {
+          if (typeof raw === "string" && raw.length > 0) {
+            docIds.add(raw);
+          }
+        }
+      }
+
+      let documents: Array<{ documentId: string; label: string }> = [];
+      if (docIds.size > 0) {
+        const rows = await db
+          .select({
+            label: memoryNodes.label,
+            properties: memoryNodes.properties,
+          })
+          .from(memoryNodes)
+          .where(
+            and(
+              eq(memoryNodes.kind, "rag_document"),
+              eq(memoryNodes.resource, "user"),
+            ),
+          );
+
+        documents = rows
+          .map((row) => {
+            const props = (row.properties ??
+              null) as Record<string, unknown> | null;
+            const documentId = props?.documentId;
+            return typeof documentId === "string" && docIds.has(documentId)
+              ? { documentId, label: row.label }
+              : null;
+          })
+          .filter(
+            (entry): entry is { documentId: string; label: string } =>
+              entry !== null,
+          );
+      }
+
       return {
         runId: run.id,
         resource,
         executionId,
         chain,
+        provenance: {
+          ragDocuments: documents,
+        },
       };
     }),
 

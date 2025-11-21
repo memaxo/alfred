@@ -31,6 +31,7 @@ This guide explains how to run the end-to-end speech-to-speech pipeline across p
 - Clients now send an optional `sessionId` + `surface` with every `speechToSpeech` call (or streaming `start` event). When omitted, the server allocates an ID and returns a snapshot alongside the transcript/audio payload.
 - The API keeps an in-memory registry keyed by `{userId, sessionId}` so Drive Mode, CarPlay, and the `/voice-s2s` route can display continuity: current status (`recording`, `processing`, `responding`), last transcript/assistant text, and codec hints.
 - Hook APIs surface the snapshot as `voice.session` (native) or `useVoiceSessionWeb().session`. Native queue replays preserve `sessionId` so offline jobs update the same record once they succeed.
+- Query `voice.sessions` (tRPC) any time you need to refresh the current snapshot without waiting for another mutation/stream. The web/native adapters call this on mount and expose `refreshSession()` helpers that simply refetch the list and update their panels.
 
 ## Installing Local Models
 

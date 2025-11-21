@@ -363,6 +363,16 @@ describe("workflow runtime integration", () => {
           kind: "wave-aborted",
           data: { waveId: "wave_0", waveFailRate: 0.6, overallFailRate: 0.6 },
         } as any,
+        {
+          type: "event",
+          kind: "merge-agent-result",
+          data: { role: "merge", status: "completed", durationSeconds: 7 },
+        } as any,
+        {
+          type: "event",
+          kind: "review-agent-result",
+          data: { role: "review", status: "failed", durationSeconds: 9 },
+        } as any,
         { type: "event", kind: "merge-plan", data: { summary: "merge", expectedFiles: ["a.ts"] } } as any,
         { type: "event", kind: "review-plan", data: { summary: "review", checks: [] } } as any,
       ];
@@ -414,6 +424,17 @@ describe("workflow runtime integration", () => {
       });
       expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
         kind: "wave_aborted",
+      });
+      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
+        { role: "merge", outcome: "ok" },
+        7
+      );
+      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
+        { role: "review", outcome: "error" },
+        9
+      );
+      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
+        kind: "review_failed",
       });
 
       const mergeCall = workflowRepoMocks.appendEvent.mock.calls.find(

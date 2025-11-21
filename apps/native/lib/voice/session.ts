@@ -3,6 +3,7 @@ import { wrapPCM16AsWavBase64 } from "@alfred/voice/audio";
 import type { PlatformAdapter, VoiceSession } from "@alfred/voice/session";
 import { createVoiceSession, VoiceSessionError } from "@alfred/voice/session";
 import { VoiceStreamClient } from "@alfred/voice/stream";
+import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { createVoiceClient } from "@alfred/voice/transport";
 import type {
   SpeechToSpeechRequest,
@@ -83,6 +84,39 @@ function resolveMutation(
   throw new Error(`tRPC client missing mutation handler for ${path}`);
 }
 
+function hasQuery(
+  value: unknown
+): value is { query: (input: unknown) => Promise<unknown> } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { query?: unknown }).query === "function"
+  );
+}
+
+async function resolveQuery(
+  rawClient: unknown,
+  path: string,
+  input?: unknown
+): Promise<unknown> {
+  const segments = path.split(".");
+  let cursor: unknown = rawClient;
+
+  for (const segment of segments) {
+    if (cursor && typeof cursor === "object" && segment in cursor) {
+      cursor = (cursor as Record<string, unknown>)[segment];
+    } else {
+      cursor = null;
+      break;
+    }
+  }
+
+  if (hasQuery(cursor)) {
+    return cursor.query(input);
+  }
+  throw new Error(`tRPC client missing query handler for ${path}`);
+}
+
 function toMutationAdapter(trpc: unknown): MutationAdapter {
   return {
     mutation: <TInput, TOutput>(path: string, input: TInput) =>
@@ -156,6 +190,13 @@ export function useVoiceSessionNative(
     }),
     [options]
   );
+  const preferredStreamCodec = useMemo<VoiceStreamCodec>(() => {
+    const format = options?.speechDefaults?.ttsFormat ?? "mp3";
+    if (format === "opus" || format === "wav") {
+      return format;
+    }
+    return "mp3";
+  }, [options]);
 
   const adapter: PlatformAdapter = useMemo(
     () => ({
@@ -301,6 +342,26 @@ export function useVoiceSessionNative(
     setSessionInfo(snapshot);
   }, []);
 
+  const refreshSessionInfo = useCallback(async () => {
+    try {
+      const sessions = (await resolveQuery(trpc, "voice.sessions", undefined)) as
+        | VoiceSessionDescriptor[]
+        | undefined
+        | null;
+      const snapshot = sessions && sessions.length > 0 ? sessions[0] : null;
+      if (snapshot) {
+        syncSessionInfo(snapshot);
+      }
+      return snapshot;
+    } catch (error) {
+      console.warn(
+        "[voice] session refresh failed",
+        error instanceof Error ? error.message : String(error)
+      );
+      return null;
+    }
+  }, [syncSessionInfo, trpc]);
+
   useEffect(() => {
     streamUrlRef.current = getVoiceStreamUrl();
     setStreamState((prev) => ({
@@ -308,6 +369,10 @@ export function useVoiceSessionNative(
       supported: Boolean(streamUrlRef.current),
     }));
   }, []);
+
+  useEffect(() => {
+    refreshSessionInfo().catch(() => undefined);
+  }, [refreshSessionInfo]);
 
   const enqueuePlayback = useCallback(async (pcmBase64: string) => {
     const wavBase64 = wrapPCM16AsWavBase64(pcmBase64);
@@ -518,6 +583,7 @@ export function useVoiceSessionNative(
       await client.startSession({
         sessionId: sessionIdRef.current,
         surface: sessionSurface,
+        codec: preferredStreamCodec,
       });
       void runStreamCapture(client);
     } catch (error) {
@@ -529,7 +595,7 @@ export function useVoiceSessionNative(
       }));
       throw error;
     }
-  }, [ensureStreamClient, runStreamCapture, sessionSurface]);
+  }, [ensureStreamClient, preferredStreamCodec, runStreamCapture, sessionSurface]);
 
   const stopStreaming = useCallback(async () => {
     setStreamState((prev) => ({
@@ -588,5 +654,6 @@ export function useVoiceSessionNative(
     stream: streamApi,
     session: sessionInfo,
     syncSession: syncSessionInfo,
+    refreshSession: refreshSessionInfo,
   };
 }

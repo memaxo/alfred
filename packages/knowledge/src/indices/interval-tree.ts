@@ -112,8 +112,8 @@ export class IntervalTree {
   private fixAfterInsert(node: Node): void {
     let current: Node | null = node;
     while (current && current.parent && isRed(current.parent)) {
-      const parent = current.parent;
-      const grandparent = parent.parent;
+      const parent: Node = current.parent;
+      const grandparent: Node | null = parent.parent;
       if (!grandparent) break;
       if (parent === grandparent.left) {
         const uncle = grandparent.right;
@@ -125,9 +125,11 @@ export class IntervalTree {
         } else {
           if (current === parent.right) {
             current = parent;
-            this.rotateLeft(current);
+            this.rotateLeft(current!);
           }
-          current!.parent!.color = "B";
+          if (current && current.parent) {
+            current.parent.color = "B";
+          }
           grandparent.color = "R";
           this.rotateRight(grandparent);
         }
@@ -141,9 +143,11 @@ export class IntervalTree {
         } else {
           if (current === parent.left) {
             current = parent;
-            this.rotateRight(current);
+            this.rotateRight(current!);
           }
-          current!.parent!.color = "B";
+          if (current && current.parent) {
+            current.parent.color = "B";
+          }
           grandparent.color = "R";
           this.rotateLeft(grandparent);
         }

@@ -9,6 +9,7 @@ export type AgentSpec = {
   subTaskId: SubTaskId;
   sessionId: string;
   workingDirectory: string;
+  environment: "host" | "worktree" | "container"; // New field
   auto: "read" | "low" | "medium" | "high";
   model?: string;
   profile?: string;
@@ -28,35 +29,17 @@ export type WavePlan = {
   dependsOn: WaveId[];
 };
 
-function buildDepGraph(subTasks: SubTask[]): Map<SubTaskId, Set<SubTaskId>> {
-  const graph = new Map<SubTaskId, Set<SubTaskId>>();
-  for (const task of subTasks) {
-    if (!graph.has(task.id)) {
-      graph.set(task.id, new Set<SubTaskId>());
-    }
+function determineEnvironment(subTask: SubTask, options?: { maxParallel?: number }): "host" | "worktree" {
+  // Simple heuristic:
+  // If we run >1 agent in parallel, use worktrees to avoid file contention.
+  // If priority is 1 (backend/core), maybe host is fine if it's the only one?
+  // Safest default for multi-agent is worktree.
+  // But for "Act" phase we might default to worktree.
+  
+  if ((options?.maxParallel ?? 1) > 1) {
+    return "worktree";
   }
-  for (const task of subTasks) {
-    const deps = graph.get(task.id)!;
-    for (const dep of task.deps) {
-      if (graph.has(dep)) {
-        deps.add(dep);
-      }
-    }
-  }
-  return graph;
-}
-
-function computeInDegree(graph: Map<SubTaskId, Set<SubTaskId>>): Map<SubTaskId, number> {
-  const inDegree = new Map<SubTaskId, number>();
-  for (const node of graph.keys()) {
-    inDegree.set(node, 0);
-  }
-  for (const [node, deps] of graph.entries()) {
-    for (const dep of deps) {
-      inDegree.set(dep, (inDegree.get(dep) ?? 0) + 1);
-    }
-  }
-  return inDegree;
+  return "host";
 }
 
 export function buildAgentSpec(
@@ -67,6 +50,7 @@ export function buildAgentSpec(
     auto?: "read" | "low" | "medium" | "high";
     model?: string;
     profile?: string;
+    maxParallel?: number; // Added
     linear?: {
       issueId?: string;
       sessionId?: string;
@@ -78,6 +62,18 @@ export function buildAgentSpec(
   const auto = options?.auto ?? "low";
   const agentId: AgentId = `${runId}:${subTask.id}`;
   const sessionId = agentId;
+  
+  // Environment determination
+  const environment = determineEnvironment(subTask, options);
+  
+  // NOTE: The workingDirectory here is the *base*. 
+  // The runtime will append the worktree path if environment is worktree.
+  // But AgentSpec typically carries the *actual* cwd the agent should use.
+  // We will let the runtime resolve the final path because it manages the worktree creation.
+  // So we keep 'cwd' as the repo root here, and the runtime handles the switch?
+  // Or we assume the runtime will mutate it.
+  // Let's keep cwd as repo root, and let environment flag dictate behavior in core.ts.
+  
   const workingDirectory = cwd;
   const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;
 
@@ -86,6 +82,7 @@ export function buildAgentSpec(
     subTaskId: subTask.id,
     sessionId,
     workingDirectory,
+    environment,
     auto,
     model: options?.model,
     profile: options?.profile,
@@ -206,6 +203,22 @@ export function planWaves(
   }
 
   return waves;
+}
+
+function buildDepGraph(subTasks: SubTask[]): Map<SubTaskId, Set<SubTaskId>> {
+  const graph = new Map<SubTaskId, Set<SubTaskId>>();
+  for (const task of subTasks) {
+    graph.set(task.id, new Set(task.deps));
+  }
+  return graph;
+}
+
+function computeInDegree(graph: Map<SubTaskId, Set<SubTaskId>>): Map<SubTaskId, number> {
+  const inDegree = new Map<SubTaskId, number>();
+  for (const [task, deps] of graph.entries()) {
+    inDegree.set(task, deps.size);
+  }
+  return inDegree;
 }
 
 export const __internals = {

@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import type { ServerWebSocket } from "bun";
 import { auth } from "@alfred/auth";
 import * as policyRepo from "@alfred/db/repo/policy";
 import type { EvaluateInput, PolicyResource } from "@alfred/policy";
@@ -13,7 +14,6 @@ import {
   claimVoiceSession,
   completeVoiceSession,
   markVoiceSessionError,
-  releaseVoiceSession,
   updateVoiceSession,
 } from "./session-registry";
 import type { VoiceSessionStatus } from "./session-registry";
@@ -35,23 +35,56 @@ import { runAssistantForVoice } from "./assistant";
 import {
   PCM_MIME_TYPE,
   decodeToPCM16,
+  encodeFromPCM16,
   isLikelyPCM,
 } from "./codec";
 
 const DEFAULT_PORT = 8788;
+const INACTIVITY_TIMEOUT_MS = 30_000; // 30s idle timeout
+const CLEANUP_INTERVAL_MS = 10_000;
+
 let server: ReturnType<typeof Bun.serve> | null = null;
 const activeSessions = new Map<string, VoiceSession>();
+const activeSockets = new Set<ServerWebSocket<VoiceStreamData>>();
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+const SUPPORTED_STREAM_CODECS: StreamCodec[] = ["pcm", "mp3", "opus", "wav"];
+const STREAM_SURFACES: VoiceStreamSurface[] = [
+  "drive",
+  "carplay",
+  "web",
+  "native",
+  "stream",
+  "unknown",
+];
 const STREAM_RESOURCE: PolicyResource = {
   kind: "voice.model",
   id: "local-streaming",
 };
 const REQUIRED_ACTIONS = ["voice.stt", "voice.tts"] as const;
 
+function normalizeSurface(value?: string | null): VoiceStreamSurface {
+  if (!value) return "stream";
+  const lower = value.toLowerCase() as VoiceStreamSurface;
+  return STREAM_SURFACES.includes(lower) ? lower : "stream";
+}
+
+function normalizeCodec(value?: StreamCodec): StreamCodec {
+  if (!value) return "pcm";
+  return SUPPORTED_STREAM_CODECS.includes(value) ? value : "pcm";
+}
+
+const codecToFormat: Partial<Record<StreamCodec, "mp3" | "opus" | "wav">> = {
+  mp3: "mp3",
+  opus: "opus",
+  wav: "wav",
+};
+
 function incrementStreamEvent(event: string, status: "ok" | "error" = "ok") {
   voiceStreamEventsTotal.labels(event, status).inc();
 }
 
-function sendStatusEvent(
+async function sendStatusEvent(
   ws: ServerWebSocket<VoiceStreamData>,
   sessionId: string,
   state: "recording" | "processing" | "playing" | "idle"
@@ -65,7 +98,7 @@ function sendStatusEvent(
       playing: "responding",
       idle: "idle",
     };
-    updateVoiceSession(ws.data.sessionRegistryId, {
+    await updateVoiceSession(ws.data.sessionRegistryId, {
       status: statusMap[state],
     });
   }
@@ -100,6 +133,7 @@ interface VoiceStreamData {
   utteranceStartedAt?: number;
   language?: string;
   sessionRegistryId?: string;
+  lastActivity: number;
 }
 
 async function evaluateVoicePolicy(
@@ -171,7 +205,7 @@ export async function authorizeVoiceStreamRequest(req: Request) {
 
 function parseMessage(message: string | ArrayBuffer | Uint8Array) {
   try {
-    const text = typeof message === "string" ? message : Buffer.from(message).toString();
+    const text = typeof message === "string" ? message : Buffer.from(message as any).toString();
     return JSON.parse(text) as Record<string, unknown>;
   } catch (error) {
     throw new Error("invalid_json" + (error instanceof Error ? `: ${error.message}` : ""));
@@ -213,7 +247,7 @@ async function handleStart(
 
   sessionManager.removeSession(sessionId);
   const session = sessionManager.createSession(userId, sessionId, language);
-  const codec =
+  const requestedCodec =
     payload.codec === "mp3" || payload.codec === "opus" || payload.codec === "wav"
       ? (payload.codec as StreamCodec)
       : "pcm";
@@ -235,22 +269,27 @@ async function handleStart(
       ? (payload.ttsFormat as "mp3" | "opus" | "wav")
       : "mp3";
 
-  const registrySession = claimVoiceSession({
+  const surface = normalizeSurface(
+    (typeof payload.surface === "string" ? payload.surface : ws.data.surface) ?? "stream"
+  );
+  const negotiatedCodec = normalizeCodec(requestedCodec);
+
+  const registrySession = await claimVoiceSession({
     userId,
     sessionId,
-    surface: typeof payload.surface === "string" ? payload.surface : ws.data.surface ?? "stream",
+    surface,
     mode: "stream",
-    codec: { input: codec, output: ttsFormat },
+    codec: { input: requestedCodec, output: negotiatedCodec === "pcm" ? ttsFormat : negotiatedCodec },
   });
-  updateVoiceSession(registrySession.id, { status: "recording" });
+  await updateVoiceSession(registrySession.id, { status: "recording" });
 
   ws.data.sessionRegistryId = registrySession.id;
   ws.data.surface = registrySession.surface;
   ws.data.sessionId = sessionId;
   ws.data.userId = userId;
   ws.data.language = language;
-  ws.data.codec = codec;
-  ws.data.negotiatedCodec = "pcm"; // PCM streaming today; future codecs negotiated here
+  ws.data.codec = requestedCodec;
+  ws.data.negotiatedCodec = negotiatedCodec;
   ws.data.vadThreshold = vadThreshold;
   ws.data.autoStop = autoStop;
   ws.data.maxUtteranceMs = maxUtteranceMs;
@@ -262,17 +301,18 @@ async function handleStart(
   logger.info("voice_stream_proto_start", {
     sessionId,
     language,
-    codec,
-    negotiatedCodec: ws.data.negotiatedCodec,
+    codec: requestedCodec,
+    negotiatedCodec,
+    surface,
   });
   incrementStreamEvent("session_started");
   send(ws, {
     type: "session_started",
     sessionId,
-    codec,
-    negotiatedCodec: ws.data.negotiatedCodec,
+    codec: requestedCodec,
+    negotiatedCodec,
   });
-  sendStatusEvent(ws, sessionId, "recording");
+  await sendStatusEvent(ws, sessionId, "recording");
 }
 
 async function handleChunk(
@@ -312,7 +352,7 @@ async function handleChunk(
         error: messageText,
       });
       if (ws.data.sessionRegistryId) {
-        markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+        await markVoiceSessionError(ws.data.sessionRegistryId, messageText);
       }
       send(ws, {
         type: "error",
@@ -341,7 +381,7 @@ async function handleChunk(
       text: transcript,
     });
     if (ws.data.sessionRegistryId) {
-      updateVoiceSession(ws.data.sessionRegistryId, {
+      await updateVoiceSession(ws.data.sessionRegistryId, {
         lastTranscript: transcript,
       });
     }
@@ -406,7 +446,7 @@ async function handleStop(
   send(ws, { type: "final_transcript", sessionId, text: transcript });
   incrementStreamEvent("final_transcript");
   if (ws.data.sessionRegistryId) {
-    updateVoiceSession(ws.data.sessionRegistryId, {
+    await updateVoiceSession(ws.data.sessionRegistryId, {
       lastTranscript: transcript,
       status: "processing",
     });
@@ -415,13 +455,13 @@ async function handleStop(
   ws.data.sessionId = sessionId; // keep last session id for downstream events
   ws.data.utteranceStartedAt = undefined;
 
-  sendStatusEvent(ws, sessionId, "processing");
+  await sendStatusEvent(ws, sessionId, "processing");
 
   if (!transcript.trim()) {
     if (ws.data.sessionRegistryId) {
-      completeVoiceSession(ws.data.sessionRegistryId);
+      await completeVoiceSession(ws.data.sessionRegistryId);
     }
-    sendStatusEvent(ws, sessionId, "idle");
+    await sendStatusEvent(ws, sessionId, "idle");
     return;
   }
 
@@ -469,13 +509,13 @@ async function handleStop(
       message: messageText,
     });
     if (ws.data.sessionRegistryId) {
-      markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+      await markVoiceSessionError(ws.data.sessionRegistryId, messageText);
     }
     incrementStreamEvent("error", "error");
     return;
   }
   if (ws.data.sessionRegistryId) {
-    updateVoiceSession(ws.data.sessionRegistryId, {
+    await updateVoiceSession(ws.data.sessionRegistryId, {
       lastAssistantText: assistantText,
     });
   }
@@ -492,8 +532,49 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
   let sequence = 0;
   ws.data.ttsInProgress = true;
   const ttsStart = performance.now();
+  const negotiatedCodec = ws.data.negotiatedCodec ?? "pcm";
+  const targetFormat = codecToFormat[negotiatedCodec];
+  let chunkChain = Promise.resolve();
+
+  const enqueueChunk = (chunk: { audioBase64: string; mimeType: string }) => {
+    chunkChain = chunkChain.then(async () => {
+      let payload = chunk;
+      try {
+        if (targetFormat) {
+          const encoded = await encodeFromPCM16({
+            audioBase64: chunk.audioBase64,
+            format: targetFormat,
+          });
+          payload = {
+            audioBase64: encoded.audioBase64,
+            mimeType: encoded.mimeType,
+          };
+        }
+        send(ws, {
+          type: "tts_chunk",
+          sessionId,
+          audioBase64: payload.audioBase64,
+          mimeType: payload.mimeType ?? PCM_MIME_TYPE,
+          sequence: sequence++,
+          isLast: false,
+        });
+        incrementStreamEvent("tts_chunk");
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : String(error);
+        logger.error("voice_stream_proto_tts_encode_failed", {
+          sessionId,
+          error: messageText,
+        });
+        if (ws.data.sessionRegistryId) {
+          await markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+        }
+        throw error;
+      }
+    });
+  };
+
   try {
-    sendStatusEvent(ws, sessionId, "playing");
+    await sendStatusEvent(ws, sessionId, "playing");
     await ttsPool.synthesize(
       {
         text,
@@ -501,24 +582,20 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
         streaming: true,
       },
       (chunk) => {
-        send(ws, {
-          type: "tts_chunk",
-          sessionId,
+        enqueueChunk({
           audioBase64: chunk.audioBase64,
           mimeType: chunk.mimeType ?? PCM_MIME_TYPE,
-          sequence: sequence++,
-          isLast: false,
         });
-        incrementStreamEvent("tts_chunk");
       }
     );
+    await chunkChain;
     send(ws, { type: "tts_complete", sessionId });
     incrementStreamEvent("tts_complete");
     voiceStreamLatencySeconds.observe(
       { stage: "tts" },
       (performance.now() - ttsStart) / 1000
     );
-    sendStatusEvent(ws, sessionId, "idle");
+    await sendStatusEvent(ws, sessionId, "idle");
   } catch (error) {
     const messageText = error instanceof Error ? error.message : String(error);
     logger.error("voice_stream_proto_tts_failed", {
@@ -526,7 +603,7 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
       error: messageText,
     });
     if (ws.data.sessionRegistryId) {
-      markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+      await markVoiceSessionError(ws.data.sessionRegistryId, messageText);
     }
     send(ws, {
       type: "error",
@@ -535,11 +612,11 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
       message: messageText,
     });
     incrementStreamEvent("error", "error");
-    sendStatusEvent(ws, sessionId, "idle");
+    await sendStatusEvent(ws, sessionId, "idle");
   } finally {
     ws.data.ttsInProgress = false;
     if (ws.data.sessionRegistryId) {
-      completeVoiceSession(ws.data.sessionRegistryId);
+      await completeVoiceSession(ws.data.sessionRegistryId);
     }
   }
 }
@@ -612,9 +689,13 @@ export function startVoiceStreamingPrototype(): void {
     },
     websocket: {
       open(ws) {
+        ws.data.surface = "stream";
+        ws.data.lastActivity = Date.now();
+        activeSockets.add(ws);
         send(ws, { type: "ready", sessionId: null });
       },
       async message(ws, message) {
+        ws.data.lastActivity = Date.now();
         try {
           await handleMessage(ws, message);
         } catch (error) {
@@ -631,14 +712,23 @@ export function startVoiceStreamingPrototype(): void {
         }
       },
       close(ws) {
+        activeSockets.delete(ws);
         finalizeSession(ws.data.sessionId);
-        if (ws.data.sessionRegistryId) {
-          releaseVoiceSession(ws.data.sessionRegistryId);
-          ws.data.sessionRegistryId = undefined;
-        }
       },
     },
   });
+
+  cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const ws of activeSockets) {
+        if (now - ws.data.lastActivity > INACTIVITY_TIMEOUT_MS) {
+            logger.info("voice_stream_proto_timeout", { sessionId: ws.data.sessionId });
+            ws.close(1000, "inactivity_timeout");
+            activeSockets.delete(ws);
+            finalizeSession(ws.data.sessionId);
+        }
+    }
+  }, CLEANUP_INTERVAL_MS);
 
   logger.info("voice_stream_proto_listening", {
     port,
@@ -649,6 +739,10 @@ export function stopVoiceStreamingPrototype(): void {
   if (!server) {
     return;
   }
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
   try {
     server.stop(true);
   } catch (error) {
@@ -658,4 +752,5 @@ export function stopVoiceStreamingPrototype(): void {
   }
   server = null;
   activeSessions.clear();
+  activeSockets.clear();
 }

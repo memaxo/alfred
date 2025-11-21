@@ -16,8 +16,8 @@ The user-visible behavior is: “When I inspect a reasoning chain in Mindscape o
 
 - [x] (2025-11-21 04:40Z) Extended `ExecutionContext` (`packages/runtime/src/context.ts`) to include `ragDocumentIds` derived from RAG chunks, added user-scoped `rag_document` nodes in `packages/rag/src/doc.ts`, and implemented `linkRagProvenanceToReasoning` in `packages/agent/assistant/src/graphstore.ts` plus a unit test (`graphstore-rag-provenance.test.ts`) validating `explains` edges are created correctly.
 - [x] (2025-11-21 04:55Z) Updated Mindscape (`apps/web/src/components/mindscape/initializer.tsx` and `knowledge-node.tsx`) to visually distinguish RAG-backed `knowledge` nodes (`source="rag"`) from runtime nodes (`source="runtime"`) and styled `explains` edges as green, dashed connections. Confirmed the Mindscape graph test still passes with DOM shims and mocked tRPC responses.
-- [ ] Wire runtime-backed workflows (via `@alfred/runtime` and the `workflow` router) to pass `ExecutionContext.ragDocumentIds` into `persistReasoning` and call `linkRagProvenanceToReasoning` after reasoning persistence.
-- [ ] Add an end-to-end provenance smoke test for the workflow runtime path (using sqlite) that exercises: ingest RAG documents → run a minimal workflow → persist reasoning + provenance → inspect `explains` edges via graph queries.
+- [x] (2025-11-21 07:14Z) Added a workflow-level provenance helper (`packages/api/src/workflow/provenance.ts`) that calls `persistReasoning` and `linkRagProvenanceToReasoning` via dynamic import, and wired the `workflow.stream` route to accumulate `reasoning` events when `USE_WORKFLOW_RUNTIME=true` so runtime workflows can persist reasoning traces with a single, central adapter.
+- [x] (2025-11-21 07:14Z) Created a sqlite-backed runtime provenance integration test (`packages/api/test/workflow.runtime-provenance.integration.test.ts`) that ingests a RAG document, calls the provenance helper with `ragDocumentIds`, and asserts that `rag_document` nodes, `reasoning` nodes with `ragDocumentIds`, and `explains` edges linking them all exist in `memory_nodes`/`memory_edges`.
 - [ ] Update user-facing docs (`docs/architecture/hypergraph.md` and workflow/runtime docs) to describe how runtime provenance is captured, persisted, and surfaced in Mindscape and the graph API.
 
 ## Surprises & Discoveries
@@ -30,6 +30,9 @@ The user-visible behavior is: “When I inspect a reasoning chain in Mindscape o
 
 - Observation: Mindscape’s use of React Flow and React Three Fiber requires additional DOM shims (for `HTMLCanvasElement.getContext`, `ResizeObserver`, `screen`) to run in Bun/JSDOM. Adding provenance edge styling on top of this is safe but must not introduce new hooks that trigger infinite render loops.
   Evidence: Adjustments to `apps/web/src/test/dom.ts` and refactoring `KnowledgeNode` to use `useMindscapeStore.getState()` inside click handlers rather than as a subscribed hook avoided `Maximum update depth exceeded` errors.
+
+- Observation: Dynamic imports of assistant graph code from the API layer are sensitive to relative paths; imports that worked in tests (`../../agent/assistant/src/graphstore.ts` from `packages/api/test`) did not resolve from `packages/api/src`. Using `import.meta.url` with a `../../../agent/assistant/src/graphstore.ts` URL and typing the module shape explicitly (`persistReasoning`, `linkRagProvenanceToReasoning`) fixed resolution for both runtime code and tests.
+  Evidence: `packages/api/src/workflow/provenance.ts` now uses `new URL("../../../agent/assistant/src/graphstore.ts", import.meta.url)` for the dynamic import, and the new sqlite integration test passes while existing workflow router and capture tests remain green.
 
 ## Decision Log
 
@@ -45,14 +48,22 @@ The user-visible behavior is: “When I inspect a reasoning chain in Mindscape o
   Rationale: Provenance edge creation is a separate concern from reasoning node creation, and having it as an explicit helper allows orchestration code to choose when to invoke it (immediately, deferred, or as a background job) without complicating the core persistence path.
   Date/Author: 2025-11-21, Codex agent.
 
+- Decision: Capture runtime reasoning from explicit `reasoning` WorkflowEvent types only, not from all `assistant` events.
+  Rationale: Workflow capture tests use `assistant` events to summarize already-persisted reasoning; treating those as new reasoning traces created duplicate nodes and changed the reconstructed reasoning chain order. Restricting capture to `reasoning` events keeps provenance faithful to explicit reasoning signals while avoiding interference with existing workflows.
+  Date/Author: 2025-11-21, Codex agent.
+
 ## Outcomes & Retrospective
 
-This section will be filled in once runtime workflows are actually wired to persist provenance and an end-to-end test demonstrates RAG → reasoning links in production code paths. At that point, we will compare:
+With the current changes, runtime workflows have a clear, centralized provenance path and a backing integration test:
 
-- The intended behavior (“workflows clearly show which documents informed each reasoning step”) versus
-- The implemented behavior under sqlite and Postgres, including Mindscape interactions and graph queries.
+- Runtime workflows that emit `reasoning` events now accumulate those events in the `workflow.stream` router when `USE_WORKFLOW_RUNTIME=true`. At the end of the run, the router invokes `workflowProvenance`, which calls `persistReasoning` followed by `linkRagProvenanceToReasoning`. This keeps runtime provenance wiring orthogonal to the legacy runner and centralized in the API layer.
+- The sqlite-backed integration test under `packages/api/test/workflow.runtime-provenance.integration.test.ts` ingests a RAG document, triggers the provenance helper with the document ID, and then asserts that:
+  - A `rag_document` node exists under `resource="user"` with `properties.documentId` matching the ingested document.
+  - A `reasoning` node exists under a workspace-scoped resource with `properties.ragDocumentIds` including that document ID.
+  - An `explains` edge exists from the `rag_document` node to the `reasoning` node with `metadata.documentId` set and `resource="user"`.
+- Existing workflow tests (capture, reasoning, router) remain green, confirming that provenance wiring is additive and does not disturb existing capture → persist → reload flows.
 
-We will also document any issues with path aliases, metrics, or test environment constraints that affected implementation.
+Remaining work is primarily documentation and optional API/UI refinements (for example, adding graph router tests that traverse `explains` edges and extending Mindscape tests to assert the presence and styling of those edges).
 
 ## Context and Orientation
 
@@ -313,4 +324,3 @@ At the end of this ExecPlan, the following interfaces and contracts must hold:
     - `explains` edges are rendered as dashed green connections between RAG and reasoning nodes.
 
 Once these interfaces are stable and the validation criteria pass, runtime workflows will have fully integrated, queryable, and visually meaningful provenance for their use of RAG documents.
-

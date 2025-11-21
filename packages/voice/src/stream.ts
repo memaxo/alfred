@@ -51,7 +51,7 @@ export type VoiceStreamClientHandlers = {
 const SESSION_START_TIMEOUT_MS = 10_000;
 
 const isReactNative =
-  typeof navigator !== "undefined" && navigator.product === "ReactNative";
+  typeof navigator !== "undefined" && (navigator as any).product === "ReactNative";
 
 function createSocket(
   url: string,
@@ -75,7 +75,7 @@ function normalizeMessageData(data: unknown): string {
   ) {
     const buffer = data instanceof ArrayBuffer ? data : data.buffer;
     if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder().decode(buffer);
+      return new TextDecoder().decode(buffer as any);
     }
     const bytes = new Uint8Array(buffer);
     let result = "";

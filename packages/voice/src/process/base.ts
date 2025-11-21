@@ -44,6 +44,12 @@ export class ModelProcess {
     // Resolve Python executable with UV/virtual environment support
     const { cmd, cwd } = await this.resolvePythonExecutable();
 
+    // #region agent log
+    const logData1 = {location:'base.ts:45',message:'Python command resolved',data:{cmd, cwd, scriptPath: this.config.scriptPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+    console.error('[DEBUG]', JSON.stringify(logData1));
+    fetch('http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+    // #endregion
+
     // Verify dependencies before starting
     await this.verifyDependencies(cmd);
 
@@ -57,6 +63,12 @@ export class ModelProcess {
       PIPER_VOICE: this.config.voice ?? "en_US-lessac-medium",
       ...this.config.env,
     };
+
+    // #region agent log
+    const logData2 = {location:'base.ts:59',message:'Environment before spawn',data:{pythonPath: env.PYTHONPATH, path: env.PATH?.substring(0,100), piperModelPath: env.PIPER_MODEL_PATH},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.error('[DEBUG]', JSON.stringify(logData2));
+    fetch('http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    // #endregion
 
     this.process = spawn({
       cmd,
@@ -199,10 +211,17 @@ export class ModelProcess {
       return;
     }
 
+    // Extract Python executable (first element) for verification
+    // cmd may be [python, scriptPath] but we only need python for verification
+    const pythonExecutable = cmd[0];
+    if (!pythonExecutable) {
+      return; // Skip if no executable found
+    }
+
     try {
       const proc = Bun.spawn(
         [
-          ...cmd,
+          pythonExecutable,
           "-c",
           `
 import sys

@@ -1,9 +1,12 @@
 import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
+import { readdir } from "node:fs/promises";
+import { basename } from "node:path";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import type { Response } from "undici";
 import { z } from "zod";
+import { userRepo } from "@alfred/db";
 import type { VoiceStreamEvent } from "@alfred/type/voice";
 import { markVoice } from "@alfred/metrics/performance";
 import { requirePolicy } from "../gate";
@@ -21,8 +24,11 @@ import { runAssistantForVoice } from "../voice/assistant";
 import {
   claimVoiceSession,
   completeVoiceSession,
+  getVoiceSession,
+  listVoiceSessions,
   markVoiceSessionError,
   updateVoiceSession,
+  releaseVoiceSession,
 } from "../voice/session-registry";
 import {
   decodeToPCM16,
@@ -49,6 +55,11 @@ const ttsInput = z.object({
   voice: z.string().min(1).default(DEFAULT_TTS_VOICE),
   format: z.enum(["mp3", "opus", "wav"]).default("mp3"),
   model: z.string().min(1).default(DEFAULT_TTS_MODEL),
+});
+
+const voicePreviewInput = z.object({
+  voice: z.string().min(1),
+  text: z.string().min(1).max(100).default("Hello, this is a preview of my voice."),
 });
 
 const voiceSurfaceInput = z.enum(["drive", "carplay", "web", "native", "stream", "unknown"]);
@@ -81,8 +92,55 @@ const s2sInput = z.object({
 
 type SpeechToSpeechInput = z.infer<typeof s2sInput>;
 
+const voiceSessionStatusInput = z
+  .object({
+    sessionId: z.string().optional(),
+  })
+  .optional();
+
 function getVoiceProvider(): "openai" | "local" {
   return (process.env.VOICE_PROVIDER ?? "openai") as "openai" | "local";
+}
+
+async function resolveVoicePreference(userId: string, requestedVoice: string): Promise<string> {
+  // Only override if the requested voice is the default
+  if (requestedVoice !== DEFAULT_TTS_VOICE) {
+    return requestedVoice;
+  }
+
+  try {
+    const prefs = await userRepo.getPreferences(userId);
+    const voicePref = Array.isArray(prefs) 
+      ? prefs.find(p => p.key === "voice.tts")
+      : null;
+    
+    if (voicePref?.value && typeof voicePref.value === 'string') {
+      return voicePref.value;
+    }
+  } catch (error) {
+    logger.warn("failed_to_resolve_voice_preference", { userId, error });
+  }
+  
+  return requestedVoice;
+}
+
+async function resolveSttLanguagePreference(userId: string, requestedLanguage?: string): Promise<string | undefined> {
+  if (requestedLanguage) return requestedLanguage;
+
+  try {
+    const prefs = await userRepo.getPreferences(userId);
+    const langPref = Array.isArray(prefs) 
+      ? prefs.find(p => p.key === "voice.stt.language")
+      : null;
+    
+    if (langPref?.value && typeof langPref.value === 'string') {
+      return langPref.value;
+    }
+  } catch (error) {
+    logger.warn("failed_to_resolve_stt_preference", { userId, error });
+  }
+  
+  return undefined;
 }
 
 function requireOpenAIConfig() {
@@ -110,6 +168,14 @@ async function transcribeLocal(input: SttInput): Promise<{
   markVoice("stt_local_start");
   
   const { sttPool } = getVoicePools();
+
+  // Backpressure check
+  if (sttPool.activeCount >= sttPool.size) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "voice_stt_pool_saturated",
+    });
+  }
 
   try {
     const normalized = await normalizeLocalSttAudio(input);
@@ -157,6 +223,14 @@ async function synthesizeLocal(input: TtsInput): Promise<{
   markVoice("tts_local_start");
   
   const { ttsPool } = getVoicePools();
+
+  // Backpressure check
+  if (ttsPool.activeCount >= ttsPool.size) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "voice_tts_pool_saturated",
+    });
+  }
 
   try {
     // Map OpenAI voice names to Piper voices
@@ -505,27 +579,46 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
+
+// Simple in-memory cache for voice list
+let voiceListCache: { data: { id: string; name: string }[]; timestamp: number } | null = null;
+const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
 export const voiceRouter: ReturnType<typeof router> = router({
   sttTranscribe: authedProcedure
     .use(requirePolicy("voice.stt", toSttResource))
     .input(sttInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      let language = input.language;
+      
+      if (session) {
+        language = await resolveSttLanguagePreference(session.user.id, input.language);
+      }
+
       const provider = getVoiceProvider();
       if (provider === "local") {
-        return transcribeLocal(input);
+        return transcribeLocal({ ...input, language });
       }
-      return postTranscription(input);
+      return postTranscription({ ...input, language });
     }),
 
   ttsSynthesize: authedProcedure
     .use(requirePolicy("voice.tts", toTtsResource))
     .input(ttsInput)
-    .mutation(async ({ input }) => {
-      const provider = getVoiceProvider();
-      if (provider === "local") {
-        return synthesizeLocal(input);
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session) {
+         throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
       }
-      return postSynthesis(input);
+
+      const provider = getVoiceProvider();
+      const voice = await resolveVoicePreference(session.user.id, input.voice);
+
+      if (provider === "local") {
+        return synthesizeLocal({ ...input, voice });
+      }
+      return postSynthesis({ ...input, voice });
     }),
 
   speechToSpeech: authedProcedure
@@ -543,7 +636,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
       const provider = getVoiceProvider();
       const s2sTimerStart = performance.now();
 
-      const claimedSession = claimVoiceSession({
+      const claimedSession = await claimVoiceSession({
         userId: session.user.id,
         sessionId: input.sessionId,
         surface: input.surface,
@@ -557,14 +650,20 @@ export const voiceRouter: ReturnType<typeof router> = router({
       });
 
       try {
-        updateVoiceSession(claimedSession.id, {
+        await updateVoiceSession(claimedSession.id, {
           status: "processing",
         });
+
+        let sttLanguage = input.language;
+        if (!sttLanguage) {
+            sttLanguage = await resolveSttLanguagePreference(session.user.id, input.language);
+        }
+
         const sttPayload: SttInput = {
           audioBase64: input.audioBase64,
           mimeType: input.mimeType,
           model: input.sttModel,
-          language: input.language,
+          language: sttLanguage,
           prompt: input.prompt,
         };
         const sttResult =
@@ -580,7 +679,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
           });
         }
 
-        updateVoiceSession(claimedSession.id, {
+        await updateVoiceSession(claimedSession.id, {
           lastTranscript: transcriptText,
         });
 
@@ -594,14 +693,16 @@ export const voiceRouter: ReturnType<typeof router> = router({
           }
         );
 
-        updateVoiceSession(claimedSession.id, {
+        await updateVoiceSession(claimedSession.id, {
           status: "responding",
           lastAssistantText: assistantResult.text ?? undefined,
         });
 
+        const ttsVoice = await resolveVoicePreference(session.user.id, input.ttsVoice);
+
         const ttsPayload: TtsInput = {
           text: assistantResult.text || "I heard you.",
-          voice: input.ttsVoice,
+          voice: ttsVoice,
           format: input.ttsFormat,
           model: input.ttsModel,
         };
@@ -625,10 +726,10 @@ export const voiceRouter: ReturnType<typeof router> = router({
         });
 
         const finalSession =
-          completeVoiceSession(claimedSession.id, {
+          (await completeVoiceSession(claimedSession.id, {
             lastTranscript: transcriptText,
             lastAssistantText: assistantResult.text ?? undefined,
-          }) ?? claimedSession;
+          })) ?? claimedSession;
 
         return {
           transcript: sttResult,
@@ -649,8 +750,94 @@ export const voiceRouter: ReturnType<typeof router> = router({
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error ?? "error");
-        markVoiceSessionError(claimedSession.id, message);
+        await markVoiceSessionError(claimedSession.id, message);
         throw error;
+      }
+    }),
+
+  listVoices: authedProcedure.query(async () => {
+    const provider = getVoiceProvider();
+    if (provider !== "local") {
+        // For OpenAI, return standard voices
+        return [
+            { id: "alloy", name: "Alloy" },
+            { id: "echo", name: "Echo" },
+            { id: "fable", name: "Fable" },
+            { id: "onyx", name: "Onyx" },
+            { id: "nova", name: "Nova" },
+            { id: "shimmer", name: "Shimmer" },
+        ];
+    }
+
+    const modelPath = process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
+    try {
+        const files = await readdir(modelPath);
+        const voices = files
+            .filter(f => f.endsWith(".onnx"))
+            .map(f => {
+                const id = basename(f, ".onnx");
+                return { id, name: id }; 
+            });
+        return voices;
+    } catch (error) {
+        logger.warn("failed_to_list_voices", { error });
+        return [];
+    }
+  }),
+
+  previewVoice: authedProcedure
+    .input(voicePreviewInput)
+    .mutation(async ({ input }) => {
+        const provider = getVoiceProvider();
+        if (provider === "local") {
+            return synthesizeLocal({
+                text: input.text,
+                voice: input.voice,
+                format: "mp3", 
+                model: "piper",
+            });
+        }
+        return postSynthesis({
+            text: input.text,
+            voice: input.voice,
+            format: "mp3",
+            model: "gpt-4o-mini-tts",
+        });
+    }),
+
+  sessions: authedProcedure
+    .input(voiceSessionStatusInput)
+    .query(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      if (input?.sessionId) {
+        const snapshot = await getVoiceSession(input.sessionId);
+        if (!snapshot || snapshot.userId !== session.user.id) {
+          return [];
+        }
+        return [snapshot];
+      }
+      return listVoiceSessions(session.user.id);
+    }),
+
+  endSession: authedProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const snapshot = await getVoiceSession(input.sessionId);
+      if (snapshot && snapshot.userId === session.user.id) {
+        await releaseVoiceSession(input.sessionId);
       }
     }),
 
@@ -694,7 +881,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
             type: "status",
             status: "connected",
             timestamp: Date.now(),
-          });
+          } as any);
           voiceStreamEventsTotal.inc({ event: "status", status: "connected" });
           markVoice("voice_stream_connected");
 
@@ -713,7 +900,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
               type: "status",
               status: "disconnected",
               timestamp: Date.now(),
-            });
+            } as any);
           };
         } catch (error) {
           voiceStreamEventsTotal.inc({ event: "error", status: "error" });

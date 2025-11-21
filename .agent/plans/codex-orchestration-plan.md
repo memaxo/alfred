@@ -39,15 +39,15 @@ This section tracks granular implementation steps. Every stopping point must be 
 
 - [ ] Phase 4: Merge agent integration
   - [x] Implement `packages/agent/src/orchestrator/multi/merge.ts` with `buildMergePlan`
-  - [ ] Create merge AgentSpec and execution logic
-  - [ ] Add conflict detection and resolution agent spawning
+  - [x] Create merge AgentSpec and execution logic (analysis-only Codex agent with dedicated ExecPlan)
+  - [x] Add non-destructive conflict detection (marker scan) and conflict-analysis agent spawning
   - [ ] Test merge scenarios (conflict-free and conflicting)
 
 - [ ] Phase 5: Review agent integration
   - [x] Implement `packages/agent/src/orchestrator/multi/review.ts` with `buildReviewPlan`
-  - [ ] Create review AgentSpec with test/lint/static checks
-  - [ ] Wire review agent execution post-merge
-  - [ ] Add review failure handling and remediation
+  - [x] Create review AgentSpec with ExecPlan-driven review planning (analysis-only)
+  - [x] Wire review agent execution post-merge (Codex review planning agent)
+  - [x] Add initial review failure handling via result events and metrics (no automated remediation yet)
 
 - [ ] Phase 6: Error detection and recovery
   - [x] Complete stuck detection heuristics in tracker.ts
@@ -66,7 +66,41 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [ ] Write integration tests for workflow runtime with multi-agent
   - [ ] Write performance tests for decomposition and tracker operations
   - [ ] Validate ExecPlan file creation and persistence
-  - [ ] Verify knowledge graph integration (execplan nodes/edges)
+  - [x] Verify knowledge graph integration (execplan nodes/edges) via ExecPlan node/edge persistence in graphstore
+
+- [ ] Phase 7: Advanced Execution Environments (Hybrid Tier)
+  - [ ] Implement `packages/agent/src/orchestrator/tool/worktree.ts` for managing git worktrees.
+  - [ ] Update `spawn.ts` to assign environment strategy (host vs worktree) based on task risk/parallelism.
+  - [ ] Integrate worktree creation/cleanup in `WorkflowRuntime.executeActPhase`.
+
+- [ ] Phase 8: Session Management (Reliability)
+  - [x] Implement `packages/agent/src/orchestrator/tool/session.ts` (tmux wrapper).
+  - [ ] Expose `toolSession` to agents via MCP or Runtime injection.
+  - [ ] Use `toolSession` for "start dev server" type subtasks.
+
+- [ ] Phase 9: Automated Merge Execution (Action)
+  - [ ] Implement `MergeExecutor` in `core.ts`.
+  - [ ] Use `toolGit` to perform actual merges of worktree branches.
+  - [ ] Handle merge conflicts by spawning the resolution agent (already implemented) iteratively.
+
+- [ ] Phase 10: Self-Correction Loop (Resiliency)
+  - [ ] Update `executeActPhase` to loop on Review failure.
+  - [ ] Spawn a "Fixer" agent with the error output and relevant files.
+  - [ ] Limit retries (e.g., 3 attempts) before escalating to human.
+
+- [ ] Phase 11: Tier 3 Execution (Docker/Ephemeral)
+  - [ ] Implement `toolDocker` environment strategy in `spawn.ts`.
+  - [ ] Mount repo volume or clone into container.
+  - [ ] Use for risky tasks (npm install, large refactors, test execution).
+
+- [ ] Phase 12: Interactive Plan Refinement (Human-in-the-Loop)
+  - [ ] Pause workflow after `Plan` phase (configurable).
+  - [ ] Allow user to edit `ExecPlan.root.md` or subtask files.
+  - [ ] Re-parse plans (`interpretExecPlan`) before starting `Act` phase.
+
+- [ ] Phase 13: Workflow Hydration (Durability)
+  - [ ] Implement `hydrateRuntime(runId)` to restore state from `workflow_events` and `graphstore`.
+  - [ ] Allow resuming a crashed orchestrator process from the last completed wave.
 
 ## Surprises & Discoveries
 
@@ -74,6 +108,8 @@ This section tracks granular implementation steps. Every stopping point must be 
   Evidence: decompose.ts and execplan.ts rely only on @alfred/type/plan ContextBundle and pure helpers.
 - Observation: Multi-agent metrics are most naturally wired at the API/router boundary rather than inside @alfred/runtime.
   Evidence: runtime already exposes per-agent/ wave outcomes as WorkflowEvents; wiring counters/histograms in workflowRouter.stream avoids adding a dependency from packages/runtime to packages/api while still giving full observability.
+- Observation: ExecPlan roots and subtasks can be represented as first-class nodes in the knowledge graph without changing existing reasoning persistence.
+  Evidence: persistExecPlans in graphstore creates execplan_root and execplan_subtask nodes plus subtask_of edges keyed by runId/workspace and is invoked from WorkflowRuntime.executePlanPhase without impacting tests (failures are logged but non-fatal).
 
 ## Decision Log
 
@@ -87,6 +123,14 @@ This section tracks granular implementation steps. Every stopping point must be 
 
 - Decision: Implement wave abort logic in WorkflowRuntime.act based on per-wave and overall failure rates (`>50%` failed/stuck in a wave or `>40%` failed/stuck overall) and emit a `wave-aborted` event instead of attempting merge/review.
   Rationale: Avoid cascading failures and conflicting edits when many agents are stuck or failing; surface a clear terminal signal for operator or higher-level policy to intervene.
+  Date/Author: 2025-11-21 / codex-orchestrator
+
+- Decision: Represent ExecPlans in the knowledge graph via execplan_root and execplan_subtask nodes plus subtask_of edges for each run.
+  Rationale: Enables reasoning and artifact queries to be anchored to concrete planning documents without changing existing reasoning persistence or API contracts.
+  Date/Author: 2025-11-21 / codex-orchestrator
+
+- Decision: Implement merge and review agents as analysis-only Codex runs with dedicated ExecPlans before introducing any git or test execution.
+  Rationale: Preserves repository safety and keeps the orchestration observable and testable while deferring destructive or heavy operations to future phases or higher-trust flows.
   Date/Author: 2025-11-21 / codex-orchestrator
 
 Record every decision made while working on the plan in the format:

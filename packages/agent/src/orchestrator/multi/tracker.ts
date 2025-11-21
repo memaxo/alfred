@@ -84,6 +84,7 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/thought": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
+      if (!agent) break;
       agent.status = agent.status === "created" ? "running" : agent.status;
       agent.lastEventTs = ts;
       agent.loopScore = Math.max(0, agent.loopScore - 0.1);
@@ -92,6 +93,7 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/command": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
+      if (!agent) break;
       agent.lastEventTs = ts;
       agent.commands.push(event.command);
       if (event.status === "completed") {
@@ -107,6 +109,7 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "codex/file": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
+      if (!agent) break;
       agent.lastEventTs = ts;
       agent.filesChanged.push(event.path);
       agent.loopScore += 0.5;
@@ -115,6 +118,7 @@ export function updateTracker(state: TrackerState, event: AgentEvent): TrackerSt
     case "notice": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
+      if (!agent) break;
       agent.lastEventTs = ts;
       break;
     }

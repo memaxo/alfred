@@ -574,6 +574,14 @@ export const voiceQueueDrainDurationSeconds = new client.Histogram({
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
 });
 
+export const voiceTranscodeDurationSeconds = new client.Histogram({
+  name: "voice_transcode_duration_seconds",
+  help: "Duration of voice transcoding operations in seconds grouped by type.",
+  labelNames: ["type"] as const,
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metricsRegistry],
+});
+
 export const voiceProcessHealth = new client.Gauge({
   name: "voice_process_health",
   help: "Health status of voice processes (1 = healthy, 0 = unhealthy) grouped by type.",
@@ -593,6 +601,21 @@ export const workflowStreamDurationSeconds = new client.Histogram({
   help: "Duration of workflow streams in seconds grouped by terminal status.",
   labelNames: ["status"] as const,
   buckets: [0.25, 0.5, 1, 2, 5, 10, 30, 60, 120],
+  registers: [metricsRegistry],
+});
+
+export const workflowProvenanceDurationSeconds = new client.Histogram({
+  name: "workflow_provenance_duration_seconds",
+  help: "Duration of workflow provenance persistence grouped by outcome.",
+  labelNames: ["outcome"] as const,
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const workflowProvenanceEdgesTotal = new client.Counter({
+  name: "workflow_provenance_edges_total",
+  help: "Count of explains edges created during workflow provenance linking.",
+  labelNames: ["outcome"] as const,
   registers: [metricsRegistry],
 });
 

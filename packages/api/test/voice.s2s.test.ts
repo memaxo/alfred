@@ -128,4 +128,42 @@ describe("voice.speechToSpeech", () => {
     expect(result.session?.id).toEqual(expect.any(String));
     expect(result.session?.status).toBe("idle");
   });
+
+  it("returns session snapshots via voice.sessions", async () => {
+    const sttResponse = { text: "hello again", language: "en" };
+    const ttsAudio = Buffer.from("tts audio again");
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => sttResponse,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => ttsAudio.buffer,
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    generateTextMock.mockResolvedValue({
+      text: "response text",
+      toolCalls: [],
+      toolResults: [],
+      usage: null,
+      object: null,
+      steps: [],
+      warnings: [],
+      reasoning: null,
+      finishReason: "stop",
+    });
+    persistResultMock.mockResolvedValue("replay-voice-2");
+
+    await caller.voice.speechToSpeech({
+      audioBase64: Buffer.from("another sample").toString("base64"),
+      mimeType: "audio/webm",
+    });
+    const sessions = await caller.voice.sessions();
+    expect(Array.isArray(sessions)).toBe(true);
+    expect(sessions.length).toBeGreaterThan(0);
+    expect(sessions[0]?.userId).toBe("test-user");
+  });
 });

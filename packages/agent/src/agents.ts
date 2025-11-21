@@ -31,7 +31,7 @@ const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
 }) => {
   if (messages.length > 40) {
     return {
-      messages: [messages[0], ...messages.slice(-20)],
+      messages: [messages[0]!, ...messages.slice(-20)],
     };
   }
   return {};
@@ -42,7 +42,7 @@ const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
 }) => {
   if (messages.length > 60) {
     return {
-      messages: [messages[0], ...messages.slice(-30)],
+      messages: [messages[0]!, ...messages.slice(-30)],
     };
   }
   return {};

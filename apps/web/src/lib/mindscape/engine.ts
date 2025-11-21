@@ -31,7 +31,32 @@ export class MindscapeEngine {
   private analyzer: AnalyserNode | null = null;
   private audioData: Uint8Array | null = null;
   private audioSource: MediaStreamAudioSourceNode | null = null;
-  private audioIntensity: number = 0;
+  private audioLow: number = 0;
+  private audioMid: number = 0;
+
+  // Agent State & Transition
+  // 0: Idle, 1: Listening, 2: Processing, 3: Speaking
+  private agentState: number = 0;
+  
+  // Transition Params (Current)
+  private currentParams = {
+    f1: 10.0,
+    f2: 8.0,
+    f3: 13.0,
+    tint_h: 0.0,
+    tint_c: 0.0,
+    flow_speed: 1.0
+  };
+
+  // Target Params (Based on State)
+  private targetParams = {
+    f1: 10.0,
+    f2: 8.0,
+    f3: 13.0,
+    tint_h: 0.0,
+    tint_c: 0.0,
+    flow_speed: 1.0
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -189,7 +214,12 @@ export class MindscapeEngine {
   }
 
   async enableAudio() {
-    if (this.audioContext) return;
+    if (this.audioContext) {
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+        return;
+    }
 
     try {
         this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -206,6 +236,27 @@ export class MindscapeEngine {
     }
   }
   
+  setAgentState(state: 'idle' | 'listening' | 'processing' | 'speaking') {
+    switch (state) {
+        case 'idle': 
+            this.agentState = 0; 
+            this.targetParams = { f1: 10.0, f2: 8.0, f3: 13.0, tint_h: 0.0, tint_c: 0.0, flow_speed: 1.0 };
+            break;
+        case 'listening': 
+            this.agentState = 1; 
+            this.targetParams = { f1: 12.0, f2: 10.0, f3: 15.0, tint_h: 150.0, tint_c: 0.1, flow_speed: 1.2 };
+            break;
+        case 'processing': 
+            this.agentState = 2; 
+            this.targetParams = { f1: 23.0, f2: 19.0, f3: 29.0, tint_h: 240.0, tint_c: 0.15, flow_speed: 3.0 };
+            break;
+        case 'speaking': 
+            this.agentState = 3; 
+            this.targetParams = { f1: 5.0, f2: 4.0, f3: 7.0, tint_h: 300.0, tint_c: 0.1, flow_speed: 0.8 };
+            break;
+    }
+  }
+
   triggerWarp() {
     console.log("Warp triggered");
     // Visual effect: Speed up time significantly
@@ -237,23 +288,53 @@ export class MindscapeEngine {
     const delta = this.isWarping ? 0.2 : 0.016;
     this.time += delta;
 
-    // Process Audio
+    // Process Audio (Split Bands)
     if (this.analyzer && this.audioData) {
         this.analyzer.getByteFrequencyData(this.audioData);
-        // Calculate average intensity (0-1)
-        let sum = 0;
-        // Focus on bass/mids (first half of bins)
-        const bins = this.audioData.length / 2;
-        for (let i = 0; i < bins; i++) {
-            sum += this.audioData[i];
-        }
-        const avg = sum / bins / 255.0;
-        // Smooth decay
-        this.audioIntensity = Math.max(avg, this.audioIntensity * 0.9);
+        
+        const binCount = this.audioData.length;
+        // Lows: 0 - 20% (Bass)
+        // Mids: 20% - 60% (Voice)
+        const lowBins = Math.floor(binCount * 0.2);
+        const midBins = Math.floor(binCount * 0.6);
+        
+        let sumLow = 0;
+        for (let i = 0; i < lowBins; i++) sumLow += this.audioData[i];
+        
+        let sumMid = 0;
+        for (let i = lowBins; i < midBins; i++) sumMid += this.audioData[i];
+        
+        const avgLow = sumLow / lowBins / 255.0;
+        const avgMid = sumMid / (midBins - lowBins) / 255.0;
+        
+        this.audioLow = Math.max(avgLow, this.audioLow * 0.9);
+        this.audioMid = Math.max(avgMid, this.audioMid * 0.9);
     }
 
+    // Smooth Transitions (Lerp)
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const speed = 0.05; // Transition speed
+    
+    this.currentParams.f1 = lerp(this.currentParams.f1, this.targetParams.f1, speed);
+    this.currentParams.f2 = lerp(this.currentParams.f2, this.targetParams.f2, speed);
+    this.currentParams.f3 = lerp(this.currentParams.f3, this.targetParams.f3, speed);
+    this.currentParams.tint_h = lerp(this.currentParams.tint_h, this.targetParams.tint_h, speed);
+    this.currentParams.tint_c = lerp(this.currentParams.tint_c, this.targetParams.tint_c, speed);
+    this.currentParams.flow_speed = lerp(this.currentParams.flow_speed, this.targetParams.flow_speed, speed);
+
     if (this.isWebGPU && this.renderer) {
-      this.renderer.render(this.time, this.mouse, this.audioIntensity);
+      this.renderer.render(
+        this.time, 
+        this.mouse, 
+        this.audioLow, 
+        this.audioMid,
+        this.currentParams.f1,
+        this.currentParams.f2,
+        this.currentParams.f3,
+        this.currentParams.tint_h,
+        this.currentParams.tint_c,
+        this.currentParams.flow_speed
+      );
     } else {
       this.renderCanvas2D();
     }
@@ -292,12 +373,16 @@ export class MindscapeEngine {
 
         // Interference Pattern (Matches WGSL/Plan)
         // S(x,y,t) = sin(x*f1 + t) + sin(y*f2 - t) + sin((x+y)*f3)
-        const f1 = 10.0;
-        const f2 = 8.0;
-        const f3 = 13.0;
+        let f1 = this.currentParams.f1;
+        let f2 = this.currentParams.f2;
+        let f3 = this.currentParams.f3;
         
-        // Audio Reactivity: Modify Time and Frequencies
-        const t = this.time + this.audioIntensity * 5.0; // Speed up with audio
+        // Modulate Frequencies with Audio (Mid/Voice)
+        f1 += this.audioMid * 5.0;
+        f2 += this.audioMid * 5.0;
+        
+        // Temporal Distortion
+        const t = this.time * 0.5 * this.currentParams.flow_speed;
         
         const interference = Math.sin(u * f1 + t) + 
                              Math.sin(v * f2 - t) + 
@@ -307,7 +392,7 @@ export class MindscapeEngine {
         let intensity = (interference + 3.0) / 6.0;
         
         // Add Audio Pulse
-        intensity += this.audioIntensity * 0.3; // Boost brightness on beat
+        intensity += this.audioMid * 0.3; // Boost brightness on beat
         
         // Exponential curve for Void aesthetic
         intensity = Math.pow(intensity, 3.0);
@@ -316,10 +401,16 @@ export class MindscapeEngine {
         const char = GLYPH_SET[charIndex];
 
         if (char !== ' ') {
-            // Grayscale / White mapping
+            // Color Grading
+            // Use audioMid to boost chroma
+            const tint_c = this.currentParams.tint_c + this.audioMid * 0.1;
+            
             const l = 0.05 + intensity * (0.99 - 0.05);
-            // Use l for r,g,b (grayscale)
-            ctx.fillStyle = `oklch(${l} 0 0)`; 
+            const c = l * 0.5 + tint_c;
+            const h = this.currentParams.tint_h;
+            
+            // OKLCH to RGB string
+            ctx.fillStyle = `oklch(${l} ${c} ${h})`; 
             ctx.fillText(char, x * CELL_WIDTH, y * CELL_HEIGHT);
         }
       }

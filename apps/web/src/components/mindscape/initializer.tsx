@@ -1,4 +1,8 @@
-import { useMindscapeStore, type ArtifactData } from "@/store/mindscape";
+import {
+  useMindscapeStore,
+  type ArtifactData,
+  type KnowledgeNodeData,
+} from "@/store/mindscape";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import { nanoid } from "nanoid";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -15,12 +19,13 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function MindscapeInitializer() {
-  const { nodes, addArtifact, autoLayout, setEdges } = useMindscapeStore(
+  const { nodes, addArtifact, autoLayout, setEdges, cacheRagDoc } = useMindscapeStore(
     useShallow((state) => ({
       nodes: state.nodes,
       addArtifact: state.addArtifact,
       autoLayout: state.autoLayout,
       setEdges: state.setEdges,
+      cacheRagDoc: state.cacheRagDoc,
     }))
   );
 
@@ -242,6 +247,15 @@ export function MindscapeInitializer() {
             : undefined;
       const summary =
         typeof props.content === "string" ? props.content : undefined;
+      const runId =
+        typeof props.executionId === "string" && props.executionId.length > 0
+          ? props.executionId
+          : typeof props.runId === "string" && props.runId.length > 0
+            ? props.runId
+            : typeof props.workflowRunId === "string" &&
+                props.workflowRunId.length > 0
+              ? props.workflowRunId
+              : undefined;
 
       addArtifact({
         id: flowId,
@@ -254,6 +268,7 @@ export function MindscapeInitializer() {
           summary,
           confidence,
           source: "runtime",
+          runId,
           graph: {
             dbId: node.id.dbId,
             hgHash: node.id.hgHash,
@@ -287,22 +302,27 @@ export function MindscapeInitializer() {
       const summary =
         typeof props.content === "string" ? props.content : undefined;
 
+      const knowledgeData: KnowledgeNodeData = {
+        type: "knowledge",
+        label: node.label || "RAG Context",
+        kind: node.kind,
+        summary,
+        source: "rag",
+        graph: {
+          dbId: node.id.dbId,
+          hgHash: node.id.hgHash,
+        },
+      };
+
       addArtifact({
         id: flowId,
         type: "knowledge",
         position: { x: 400 + index * 40, y: 350 + index * 40 },
-        data: {
-          type: "knowledge",
-          label: node.label || "RAG Context",
-          kind: node.kind,
-          summary,
-          source: "rag",
-          graph: {
-            dbId: node.id.dbId,
-            hgHash: node.id.hgHash,
-          },
-        } as ArtifactData,
+        data: knowledgeData as ArtifactData,
       });
+      if (node.id.dbId) {
+        cacheRagDoc(node.id.dbId, knowledgeData);
+      }
     });
 
     if (ragResult.nodes.length > 0) {
@@ -310,7 +330,7 @@ export function MindscapeInitializer() {
         autoLayout();
       }, 0);
     }
-  }, [ragResult, nodeIds, addArtifact, autoLayout]);
+  }, [ragResult, nodeIds, addArtifact, autoLayout, cacheRagDoc]);
 
   const ensureGraphMapping = useCallback((dbId: string) => {
     const store = useMindscapeStore.getState();

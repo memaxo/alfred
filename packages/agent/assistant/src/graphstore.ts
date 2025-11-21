@@ -27,6 +27,28 @@ function nodeKey(resource: string, hash: string): string {
   return `${resource}:${hash}`;
 }
 
+function execplanRootHash(resource: string, runId: string): string {
+  const hash = createHash("sha256");
+  hash.update(resource);
+  hash.update("|execplan_root|");
+  hash.update(runId);
+  return hash.digest("hex");
+}
+
+function execplanSubtaskHash(
+  resource: string,
+  runId: string,
+  subTaskId: string
+): string {
+  const hash = createHash("sha256");
+  hash.update(resource);
+  hash.update("|execplan_subtask|");
+  hash.update(runId);
+  hash.update("|");
+  hash.update(subTaskId);
+  return hash.digest("hex");
+}
+
 function reasoningNodeHash(
   resource: string,
   executionId: string | undefined,
@@ -254,6 +276,98 @@ export async function persistKnowledge(
     await upsertEdges(edges as any);
   } catch (err) {
     console.error("Failed to persist knowledge graph", err);
+  }
+}
+
+export async function persistExecPlans(opts: {
+  resource: string;
+  runId: string;
+  rootPath: string;
+  subtasks: { id: string; path: string }[];
+}): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  const { resource, runId, rootPath, subtasks } = opts;
+
+  const nodeSeeds: NodeSeed[] = [];
+
+  const rootHash = execplanRootHash(resource, runId);
+
+  nodeSeeds.push({
+    resource,
+    hash: rootHash,
+    kind: "execplan_root",
+    label: `ExecPlan root for run ${runId}`,
+    properties: {
+      runId,
+      path: rootPath,
+    },
+  });
+
+  for (const sub of subtasks) {
+    const subHash = execplanSubtaskHash(resource, runId, sub.id);
+    nodeSeeds.push({
+      resource,
+      hash: subHash,
+      kind: "execplan_subtask",
+      label: `Subtask ${sub.id}`,
+      properties: {
+        runId,
+        subTaskId: sub.id,
+        path: sub.path,
+      },
+    });
+  }
+
+  try {
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
+    const nodeMap = await upsertNodes(nodeSeeds as any);
+
+    const hashToRow = new Map<string, { id: string; hash: string }>();
+    for (const row of nodeMap.values()) {
+      hashToRow.set(row.hash, { id: row.id, hash: row.hash });
+    }
+
+    const rootRow = hashToRow.get(rootHash);
+    if (!rootRow) {
+      return;
+    }
+
+    const edgeSeeds: EdgeSeed[] = [];
+    for (const sub of subtasks) {
+      const subHash = execplanSubtaskHash(resource, runId, sub.id);
+      const subRow = hashToRow.get(subHash);
+      if (!subRow) continue;
+
+      const edgeHash = createHash("sha256")
+        .update(resource)
+        .update("|execplan_subtask_of|")
+        .update(subRow.hash)
+        .update("|")
+        .update(rootRow.hash)
+        .digest("hex");
+
+      edgeSeeds.push({
+        resource,
+        hash: edgeHash,
+        fromId: subRow.id,
+        toId: rootRow.id,
+        kind: "subtask_of",
+        weight: 1,
+        metadata: {
+          runId,
+          subTaskId: sub.id,
+        },
+      });
+    }
+
+    if (edgeSeeds.length > 0) {
+      await upsertEdges(edgeSeeds as any);
+    }
+  } catch (error) {
+    console.error("Failed to persist execplan nodes", error);
   }
 }
 

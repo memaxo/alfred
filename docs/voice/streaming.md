@@ -13,6 +13,7 @@ This document describes the current WebSocket prototype, the message contract, a
 - **Authentication**: Same as `voice.speechToSpeech`. The WebSocket upgrade reuses the tRPC session cookies, enforces both `voice.stt` and `voice.tts` policies, and rejects unauthenticated/unauthorized callers before the socket opens. Bring a real session cookie (e.g., from the browser) when testing.
 - **Provider requirement**: Local voice provider (`VOICE_PROVIDER=local`). The prototype forwards audio chunks into the existing `VoiceSessionManager`, which in turn talks to the Faster-Whisper + Piper pools.
 - **Input codec handling**: The server accepts PCM, M4A, WebM, MP3, or Opus chunks. Each chunk is normalized via the ffmpeg helper (`decodeToPCM16`) before the Faster-Whisper pool receives it, so clients can stream whatever their recorder produces.
+- **Output codec negotiation**: Set `codec` in the `start` payload (`pcm|mp3|opus|wav`). The server now re-encodes each TTS chunk via `encodeFromPCM16` so downstream consumers receive the negotiated MIME type, falling back to PCM when the request is unsupported.
 - **Lifecycle**:
   1. Client upgrades to WebSocket, receives `{"type":"ready","sessionId":null}`.
   2. Client sends `start` to allocate a session.
@@ -38,6 +39,7 @@ All frames are UTF-8 JSON. Prototype types:
   "sessionId": "optional",
   "language": "en",
   "codec": "pcm|mp3|opus|wav",
+  "surface": "drive|carplay|web|native|stream|unknown",
   "vadThreshold": 0.6,
   "autoStop": true,
   "maxUtteranceMs": 20000,
@@ -51,7 +53,8 @@ All frames are UTF-8 JSON. Prototype types:
 - `start`
   - `sessionId` (optional): supply to resume an abandoned session; otherwise the server generates one.
   - `language`: passed to `VoiceSessionManager.createSession` for Faster-Whisper hints.
-  - `codec`: preferred outbound codec. The server currently advertises `pcm` in `session_started` but the field is future-proof.
+  - `codec`: preferred outbound codec. The server advertises the negotiated codec in `session_started` and re-encodes chunks to `mp3`/`opus`/`wav` when requested (defaults to PCM).
+  - `surface`: optional hint for the registry/UI so Drive Mode, CarPlay, and web can display the right badge.
   - `vadThreshold`: optional float (0–1) forwarded to Silero VAD; lower values make auto-stop more sensitive.
   - `autoStop`: defaults to `true`; when enabled the server triggers `auto_stop` on silence or when `maxUtteranceMs` elapses.
   - `maxUtteranceMs`: safety stop per utterance (20 s default).
@@ -73,7 +76,7 @@ All frames are UTF-8 JSON. Prototype types:
 { "type": "auto_stop", "sessionId": "uuid", "reason": "silence" }
 { "type": "final_transcript", "sessionId": "uuid", "text": "..." }
 { "type": "assistant_message", "sessionId": "uuid", "text": "...", "replayId": "optional" }
-{ "type": "tts_chunk", "sessionId": "uuid", "audioBase64": "...", "mimeType": "audio/pcm", "sequence": 0, "isLast": false }
+{ "type": "tts_chunk", "sessionId": "uuid", "audioBase64": "...", "mimeType": "audio/mp3|audio/ogg;codecs=opus|audio/wav", "sequence": 0, "isLast": false }
 { "type": "tts_complete", "sessionId": "uuid" }
 { "type": "status", "sessionId": "uuid", "state": "recording|processing|playing|idle" }
 { "type": "error", "sessionId": "uuid", "message": "..." }

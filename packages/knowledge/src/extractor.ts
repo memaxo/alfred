@@ -208,17 +208,19 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
   }
 
   for (const c of result.causality) {
-    const causeId = insert(fact(c.cause, c.confidence, "inferred"));
-    const effectId = insert(fact(c.effect, c.confidence, "inferred"));
+    const causeNode = insert(fact(c.cause, c.confidence, "inferred"));
+    const effectNode = insert(fact(c.effect, c.confidence, "inferred"));
 
-    insert(relation(causeId, effectId, "causes", c.confidence));
-    insert(
-      insight(
-        [causeId, effectId],
-        `${c.cause} causes ${c.effect}`,
-        c.confidence
-      )
-    );
+    if (causeNode && effectNode) {
+      insert(relation(causeNode, effectNode, "causes", c.confidence));
+      insert(
+        insight(
+          [causeNode, effectNode],
+          `${c.cause} causes ${c.effect}`,
+          c.confidence
+        )
+      );
+    }
   }
 
   return list;

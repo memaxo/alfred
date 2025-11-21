@@ -180,12 +180,12 @@ async function runSemantic(
   const nodes = chunks.map((chunk, index) => ({
     id: {
       uiId:
-        chunk.metadata?.documentId ??
-        chunk.metadata?.id ??
+        (chunk.metadata?.documentId as string) ??
+        (chunk.metadata?.id as string) ??
         `rag-${index}`,
     },
     kind: "insight",
-    label: chunk.metadata?.title ?? chunk.metadata?.documentId ?? "Context",
+    label: (chunk.metadata?.title as string) ?? (chunk.metadata?.documentId as string) ?? "Context",
     properties: {
       content: chunk.content,
       metadata: chunk.metadata,

@@ -7,6 +7,7 @@ import type {
   VoiceSessionDescriptor,
   VoiceSessionSurface,
 } from "@alfred/voice/types";
+import type { VoiceStreamCodec } from "@alfred/type/voice";
 import type { VoiceStreamServerEvent } from "@alfred/type/voice";
 import { VoiceStreamClient } from "@alfred/voice/stream";
 import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
@@ -31,6 +32,7 @@ export type UseVoiceSessionWebResult = {
   speak: ReturnType<typeof createVoiceSession>["speak"];
   clear: () => void;
   session: VoiceSessionDescriptor | null;
+  refreshSession: () => Promise<VoiceSessionDescriptor | null>;
   stream: {
     supported: boolean;
     status: StreamStatus;
@@ -135,9 +137,15 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     error: null,
     sessionId: null,
   });
+  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
+  const sessionSurface: VoiceSessionSurface = "web";
   const sessionIdRef = useRef<string>(createSessionId());
   const sessionSurface: VoiceSessionSurface = "web";
   const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
+
+  const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, {
+    staleTime: 60000,
+  });
 
   const syncSessionInfo = useCallback((snapshot: VoiceSessionDescriptor | null) => {
     if (snapshot?.id) {
@@ -145,6 +153,29 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     }
     setSessionInfo(snapshot);
   }, []);
+
+  const { data: sessionData, refetch: refetchSessions } = trpc.voice.sessions.useQuery(
+    undefined,
+    {
+      staleTime: 5000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  useEffect(() => {
+    if (sessionData && sessionData.length > 0) {
+      syncSessionInfo(sessionData[0]);
+    }
+  }, [sessionData, syncSessionInfo]);
+
+  const refreshSession = useCallback(async () => {
+    const result = await refetchSessions();
+    const snapshot = result.data && result.data.length > 0 ? result.data[0] : null;
+    if (snapshot) {
+      syncSessionInfo(snapshot);
+    }
+    return snapshot ?? null;
+  }, [refetchSessions, syncSessionInfo]);
 
   const cleanupStream = useCallback(() => {
     if (timeoutRef.current) {
@@ -490,6 +521,17 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     [ensureAudioPlaybackContext]
   );
 
+  const preferredStreamCodec = useMemo<VoiceStreamCodec>(() => {
+    const sessionCodec = sessionInfo?.codec?.output;
+    const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")?.value as string;
+    const codec = prefsCodec || sessionCodec;
+    
+    if (codec === "mp3" || codec === "opus" || codec === "wav" || codec === "pcm") {
+      return codec;
+    }
+    return "mp3";
+  }, [sessionInfo, prefs]);
+
   const startStreaming = useCallback(async () => {
     if (!streamUrl) {
       throw new Error("voice_streaming_unavailable");
@@ -507,6 +549,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
       await client.startSession({
         sessionId: sessionIdRef.current,
         surface: sessionSurface,
+        codec: preferredStreamCodec,
       });
       await startStreamingRecorder(client);
     } catch (err) {
@@ -519,7 +562,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
       setIsStreamingActive(false);
       throw err;
     }
-  }, [getStreamClient, sessionSurface, startStreamingRecorder, streamUrl]);
+  }, [getStreamClient, preferredStreamCodec, sessionSurface, startStreamingRecorder, streamUrl]);
 
   const stopStreaming = useCallback(async () => {
     await stopStreamingRecorder();
@@ -691,5 +734,6 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     clear,
     stream: streamApi,
     session: sessionInfo,
+     refreshSession,
   };
 }

@@ -1,6 +1,6 @@
 import type { NodeProps } from "@xyflow/react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
-import { Fingerprint, UserCircle2 } from "lucide-react";
+import { Fingerprint, UserCircle2, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { profileNodeDataSchema } from "@/store/mindscape.schemas";
 import { useMindscapeStore } from "@/store/mindscape";
 import { authClient } from "@/lib/auth-client";
 import { trpc, type TRPCAppRouter } from "@/utils/trpc";
+import { VoiceSelector } from "@/components/voice-selector";
 
 const EMPTY_STATE = {
   name: "",
@@ -44,6 +45,72 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
   const profileQuery = trpc.profile.get.useQuery();
   const profile = profileQuery.data;
   const isLoadingProfile = profileQuery.isLoading;
+
+  // Preference query for voice settings
+  const preferenceQuery = trpc.preference.list.useQuery({ limit: 100, offset: 0 });
+  const preferences = preferenceQuery.data ?? [];
+  
+  const currentVoice = useMemo(() => {
+    const pref = preferences.find(p => p.key === "voice.tts");
+    if (!pref?.value) return undefined;
+    
+    // Handle potential JSON string encoding
+    if (typeof pref.value === "string") {
+      try {
+        // Check if it's a double-encoded string
+        if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
+             return JSON.parse(pref.value);
+        }
+      } catch {
+        // ignore
+      }
+      return pref.value;
+    }
+    return undefined;
+  }, [preferences]);
+
+  const currentLanguage = useMemo(() => {
+    const pref = preferences.find(p => p.key === "voice.stt.language");
+    if (!pref?.value) return undefined;
+    
+    if (typeof pref.value === "string") {
+        try {
+            if (pref.value.startsWith('"') && pref.value.endsWith('"')) {
+                return JSON.parse(pref.value);
+            }
+        } catch {}
+        return pref.value;
+    }
+    return undefined;
+  }, [preferences]);
+
+  const setPreference = trpc.preference.set.useMutation({
+    onSuccess: async () => {
+        toast.success("Preference saved");
+        await utils.preference.list.invalidate();
+    },
+    onError: (error) => {
+        toast.error(error.message ?? "preference_update_failed");
+    }
+  });
+
+  const handleVoiceChange = (voice: string) => {
+     setPreference.mutate({
+         key: "voice.tts",
+         value: voice,
+         confidence: 1,
+         source: "user"
+     });
+  };
+
+  const handleLanguageChange = (lang: string) => {
+    setPreference.mutate({
+        key: "voice.stt.language",
+        value: lang,
+        confidence: 1,
+        source: "user"
+    });
+  };
 
   useEffect(() => {
     if (profile) {
@@ -240,6 +307,28 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
             {updateProfile.isPending ? "Saving…" : "Save changes"}
           </Button>
         </form>
+
+        <section className="space-y-2">
+           <div className="flex items-center justify-between">
+            <p className="text-biolum text-sm font-medium">Voice</p>
+            <Volume2 className="h-4 w-4 text-indigo-200" />
+           </div>
+           <VoiceSelector 
+              value={currentVoice as string | undefined}
+              onValueChange={handleVoiceChange}
+           />
+        </section>
+
+        <section className="space-y-2">
+           <div className="flex items-center justify-between">
+            <p className="text-biolum text-sm font-medium">Language</p>
+           </div>
+           <Input
+              placeholder="e.g. en, es, fr (Auto if empty)"
+              value={(currentLanguage as string) ?? ""}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+           />
+        </section>
 
         <section className="space-y-2">
           <div className="flex items-center justify-between">

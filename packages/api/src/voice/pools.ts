@@ -2,6 +2,7 @@ import { STTPool, type ProcessConfig } from "@alfred/voice/process/stt_pool";
 import { TTSPool } from "@alfred/voice/process/tts_pool";
 import { VoiceSessionManager } from "./session";
 import { join } from "node:path";
+import { logger } from "../utils/logger";
 
 // Re-export ProcessConfig for use in this package
 export type { ProcessConfig };
@@ -53,8 +54,9 @@ export async function initializeVoicePools(): Promise<void> {
     computeType: process.env.WHISPER_COMPUTE_TYPE ?? "int8",
   };
 
+  // TTS now uses TypeScript implementation (no scriptPath needed)
   const ttsConfig: ProcessConfig = {
-    scriptPath: join(process.cwd(), "packages/voice/scripts/tts_server.py"),
+    scriptPath: "", // Not used for TypeScript TTS implementation
     modelPath: piperModelPath,
     voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium",
   };
@@ -67,6 +69,25 @@ export async function initializeVoicePools(): Promise<void> {
     await ttsPool.initialize();
 
     sessionManager = new VoiceSessionManager(sttPool, ttsPool);
+
+    // Start health monitoring loop
+    setInterval(() => {
+      if (sttPool) {
+        // Check if pool is saturated
+        const sttActive = sttPool.activeCount ?? 0;
+        const sttSize = sttPool.size ?? 1;
+        if (sttActive >= sttSize) {
+          logger.warn("voice_pool_saturation", { pool: "stt", active: sttActive, size: sttSize });
+        }
+      }
+      if (ttsPool) {
+        const ttsActive = ttsPool.activeCount ?? 0;
+        const ttsSize = ttsPool.size ?? 1;
+        if (ttsActive >= ttsSize) {
+          logger.warn("voice_pool_saturation", { pool: "tts", active: ttsActive, size: ttsSize });
+        }
+      }
+    }, 15000).unref();
 
     console.log("[voice] Voice pools initialized");
   } catch (error) {

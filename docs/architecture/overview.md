@@ -218,6 +218,30 @@ The runtime layer is responsible for:
 - **Updating** them during and after execution
 - **Composing** their outputs into coherent context
 
+### Runtime Events and Provenance
+
+During workflow execution, the runtime emits a small, well-defined set of `WorkflowEvent` shapes that downstream layers use for persistence, replay, and visualization:
+
+- **`reasoning` events** – carry explicit model thoughts (`text` / `reasoning`) that the API layer converts into reasoning traces. These traces are persisted via `persistReasoning` and later reconstructed into reasoning chains for `workflow.reasoning`.
+- **`runtime-context` events** – emitted once per run after context building. The payload includes:
+  - `ragDocumentIds` – the set of RAG document IDs that contributed chunks to the execution context.
+  - `totalTokens` – approximate token count for code + RAG context.
+  - `bundleFileCount` / `bundlePreview` – light metadata about which files were included in the context bundle.
+
+The workflow router listens to these events when `USE_WORKFLOW_RUNTIME=true`:
+
+- It accumulates `reasoning` events into an in-memory array of `{ text, timestamp }` traces for the run.
+- It reads `ragDocumentIds` from the first `runtime-context` event.
+- On stream completion, it calls a provenance helper that:
+  - Invokes `persistReasoning(resource, traces, { executionId, auto, ragDocumentIds })`.
+  - Invokes `linkRagProvenanceToReasoning({ runtimeResource: resource, executionId })` to create `explains` edges between RAG documents and reasoning nodes.
+
+Mindscape and graph APIs consume the resulting graph:
+
+- RAG documents appear as `rag_document` nodes under `resource="user"`.
+- Runtime reasoning appears as `reasoning` nodes under per-workspace resources.
+- Provenance edges appear as `kind="explains"` edges from `rag_document` → `reasoning`, rendered in Mindscape as green, dashed edges and traversable via `graph.runQuery` or the `graph.explainedBy` helper.
+
 ### 2. API ↔ Runtime
 
 API routers are thin wrappers:

@@ -5,9 +5,9 @@ import { db } from "@alfred/db";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { observable } from "@trpc/server/observable";
-import { runQuery as runUnifiedQuery } from "@alfred/graph";
+import { runQuery as runUnifiedQuery, getExplainingDocuments } from "@alfred/graph";
 import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
-import { loadHypergraphFromDb } from "@alfred/agent/assistant/src/hypergraph-bridge";
+import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import {
   graphQueriesTotal,
   graphQueryDurationSeconds,
@@ -53,7 +53,7 @@ const unifiedQuerySchema = z.discriminatedUnion("kind", [
   semanticQuerySchema,
 ]);
 
-export const graphRouter = router({
+export const graphRouter: any = router({
   getEdges: authedProcedure
     .input(
       z.object({
@@ -122,6 +122,22 @@ export const graphRouter = router({
         .limit(1);
 
       return existing ?? null;
+    }),
+
+  explainedBy: authedProcedure
+    .input(
+      z.object({
+        reasoningNodeId: z.string().min(1),
+      })
+    )
+    .query(async ({ input }) => {
+      const { nodes, edges } = await getExplainingDocuments(
+        input.reasoningNodeId
+      );
+      return {
+        nodes,
+        edges,
+      };
     }),
 
   watchEdges: authedProcedure

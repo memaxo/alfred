@@ -353,6 +353,7 @@
         "@ai-sdk/cohere": "^2.0.0",
         "@alfred/db": "workspace:*",
         "@alfred/embed": "workspace:*",
+        "@alfred/knowledge": "workspace:*",
       },
       "devDependencies": {
         "@alfred/tsconfig": "workspace:*",
@@ -412,6 +413,9 @@
     "packages/voice": {
       "name": "@alfred/voice",
       "version": "0.0.1",
+      "dependencies": {
+        "@diffusionstudio/piper-wasm": "^1.0.0",
+      },
       "peerDependencies": {
         "@alfred/type": "workspace:*",
         "@trpc/client": "^11.6.0",
@@ -735,6 +739,8 @@
     "@csstools/css-parser-algorithms": ["@csstools/css-parser-algorithms@3.0.5", "", { "peerDependencies": { "@csstools/css-tokenizer": "^3.0.4" } }, "sha512-DaDeUkXZKjdGhgYaHNJTV9pV7Y9B3b644jCLs9Upc3VeNGg6LWARAT6O+Q+/COo+2gg/bM5rhpMAtf70WqfBdQ=="],
 
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@3.0.4", "", {}, "sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw=="],
+
+    "@diffusionstudio/piper-wasm": ["@diffusionstudio/piper-wasm@1.0.0", "", {}, "sha512-4Hgh7wJ1PuGEVgVi1CpducESnyXwjFRJN4zXjYRpxgquM+Zh6Eqq8ZaiGpCKm4yXvT1Y2SPQXbv0dEckFD9NaQ=="],
 
     "@dimforge/rapier3d-compat": ["@dimforge/rapier3d-compat@0.12.0", "", {}, "sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow=="],
 

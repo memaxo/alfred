@@ -12,6 +12,7 @@ export const Route = createFileRoute("/voice-s2s")({
 export function VoiceS2SRouteView() {
   const {
     state,
+    session,
     start,
     speechToSpeech,
     isRecording,
@@ -232,14 +233,14 @@ export function VoiceS2SRouteView() {
         <p className="mt-1 text-base text-foreground">
           {stream.sessionId
             ? `Streaming ID: ${stream.sessionId}`
-            : voice.session
-              ? `Session ID: ${voice.session.id}`
+            : session
+              ? `Session ID: ${session.id}`
               : "Session pending"}
         </p>
-        {voice.session ? (
+        {session ? (
           <p className="mt-1">
-            Surface: {voice.session.surface} · Updated{" "}
-            {new Date(voice.session.updatedAt).toLocaleTimeString()}
+            Surface: {session.surface} · Updated{" "}
+            {new Date(session.updatedAt).toLocaleTimeString()}
           </p>
         ) : null}
       </div>

@@ -1,8 +1,16 @@
 struct Uniforms {
   time: f32,
-  audio: f32, // Audio Intensity
+  audioLow: f32, // Bass
+  audioMid: f32, // Voice/Mids
   resolution: vec2<f32>,
   mouse: vec2<f32>,
+  // Transition params
+  f1: f32,
+  f2: f32,
+  f3: f32,
+  tint_h: f32,
+  tint_c: f32,
+  flow_speed: f32,
 };
 
 struct Cell {
@@ -73,7 +81,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var dir = normalize(vec3<f32>(p_uv, 1.0));
     
     // Temporal Distortion
-    let t = params.time * 0.5 + params.audio * 2.0; // Speed up with audio
+    let t = params.time * 0.5 * params.flow_speed;
     
     // Rotate camera based on mouse
     // let m = params.mouse / params.resolution * 2.0 - 1.0;
@@ -88,8 +96,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     for (var i = 0; i < 16; i++) {
         var p = pos + dir * d_total;
         
-        // Twist space
-        p.x += sin(t + p.y * 2.0) * 0.2;
+        // Twist space (use audioLow for deep distortion)
+        p.x += sin(t + p.y * 2.0) * 0.2 * (1.0 + params.audioLow);
         p.z += cos(t * 0.7 + p.x * 1.5) * 0.2;
         
         // Rotate object
@@ -97,7 +105,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         p_rot.xy = rot2d(t * 0.2) * p_rot.xy;
         p_rot.xz = rot2d(t * 0.3) * p_rot.xz;
 
-        let d = sdOctahedron(p_rot, 0.8 + params.audio * 0.2); // Pulse size
+        let d = sdOctahedron(p_rot, 0.8 + params.audioMid * 0.2); // Pulse size with Voice
         
         min_d = min(min_d, d); // Keep track of closest approach (glow)
         d_total += d;
@@ -115,11 +123,17 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     
     var intensity = 0.0;
     
-    // Plan Formula: S(x,y,t) = sin(x*f1 + t) + sin(y*f2 - t) + sin((x+y)*f3)
-    let f1 = 10.0;
-    let f2 = 8.0;
-    let f3 = 13.0; // Prime frequency
+    // Base Frequencies
+    var f1 = params.f1;
+    var f2 = params.f2;
+    var f3 = params.f3; 
     
+    // Modulate Frequencies with Audio
+    // Mid/Voice affects interference pattern speed/shape
+    f1 += params.audioMid * 5.0;
+    f2 += params.audioMid * 5.0;
+
+    // Plan Formula: S(x,y,t) = sin(x*f1 + t) + sin(y*f2 - t) + sin((x+y)*f3)
     let interference = sin(uv.x * f1 + t) + sin(uv.y * f2 - t) + sin((uv.x + uv.y) * f3);
     // Normalize interference (-3 to 3 -> 0 to 1 approx)
     let signal = (interference + 3.0) / 6.0;
@@ -135,7 +149,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     }
     
     // Add Audio Pulse
-    intensity += params.audio * 0.3;
+    intensity += params.audioMid * 0.3;
     
     // Exponential curve for Void aesthetic (mostly empty)
     intensity = pow(intensity, 3.0); // Sharper cutoff for more void
@@ -144,20 +158,35 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let char_index = u32(clamp(intensity * 64.0, 0.0, 63.0));
     
     // Color Grading: Void (0.05 0 0) -> Biolum (0.99 0 0)
-    // Void Surface (0.14 0 0) for faint signal
-    // Biolum Dim (0.70 0 0) for medium
-    // Biolum (0.99 0 0) for peak
+    
+    // Use audioMid to boost chroma on beats/voice
+    let tint_c = params.tint_c + params.audioMid * 0.1;
     
     let l = 0.05 + intensity * (0.99 - 0.05);
-    // Keep it grayscale (C=0) as per design system for this effect
-    // Or maybe slight hint of blue/cyan if desired, but "Signal in Void" usually white/red/monochrome.
-    // Plan says Biolum 0.99 0 0 (White).
+    let c = l * 0.5 + tint_c; // Mix grayscale with tint chroma
+    let h = params.tint_h;
     
-    let c = l; 
+    // OKLCH -> RGB (Simplified conversion for shader)
+    // Using approximation where L=brightness, C=saturation, H=hue
+    // This is not accurate OKLCH->sRGB but sufficient for effect
     
-    let r = u32(c * 255.0);
-    let g = u32(c * 255.0);
-    let b = u32(c * 255.0);
+    // We can use a helper or simple cosine map for hue
+    // r = l + c * cos(h)
+    // g = l + c * cos(h - 2pi/3)
+    // b = l + c * cos(h + 2pi/3)
+    // (This is basically HSL logic but applied to L/C)
+    
+    let h_rad = h * 0.0174532925; // deg to rad
+    
+    // Simple spectral mapping
+    var r_f = l + c * cos(h_rad);
+    var g_f = l + c * cos(h_rad - 2.094);
+    var b_f = l + c * cos(h_rad + 2.094);
+    
+    // Clamp
+    let r = u32(clamp(r_f, 0.0, 1.0) * 255.0);
+    let g = u32(clamp(g_f, 0.0, 1.0) * 255.0);
+    let b = u32(clamp(b_f, 0.0, 1.0) * 255.0);
     
     // Pack: Char (8) | R (8) | G (8) | B (8)
     let packed = (char_index << 24) | (r << 16) | (g << 8) | b;

@@ -214,4 +214,53 @@ describe("workflow failure modes (runtime)", () => {
     );
     expect(guidanceCall).toBeTruthy();
   });
+
+  it("records merge-conflict metrics when merge-conflict event is emitted", async () => {
+    const mockRunId = "conflict-run";
+    const events: WorkflowEvent[] = [
+      { type: "run", id: mockRunId } as WorkflowEvent,
+      {
+        type: "event",
+        kind: "merge-conflict",
+        data: {
+          files: ["a.ts", "b.ts"],
+          totalMarkers: 4,
+          counts: { "a.ts": 2, "b.ts": 2 },
+        },
+      } as any,
+    ];
+
+    const mockExecutor = {
+      runId: mockRunId,
+      summary: "conflict scenario",
+      stream: (async function* () {
+        for (const ev of events) {
+          yield ev;
+        }
+      })(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+    };
+
+    workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+    workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+    workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+    workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+    runRegistryMocks.register.mockResolvedValue(undefined);
+    runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+    const subscription = caller.workflow.stream({ requirement: "merge conflict" });
+
+    await new Promise<void>((resolve, reject) => {
+      subscription.subscribe({
+        next: () => {},
+        error: reject,
+        complete: resolve,
+      });
+    });
+
+    expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
+      kind: "merge_conflict",
+    });
+  });
 });
