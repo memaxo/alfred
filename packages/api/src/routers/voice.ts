@@ -4,14 +4,30 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import type { Response } from "undici";
 import { z } from "zod";
+import type { UIMessage } from "@alfred/type/stream";
 import type { VoiceStreamEvent } from "@alfred/type/voice";
+import { getAssistantAgentDefaults } from "@alfred/agent";
 import { markVoice } from "@alfred/metrics/performance";
 import { requirePolicy } from "../gate";
-import { recordVoiceStt, recordVoiceTts, voiceStreamEventsTotal, voiceStreamLatencySeconds } from "@alfred/api/metrics";
+import {
+  recordVoiceStt,
+  recordVoiceTts,
+  voiceStreamEventsTotal,
+  voiceStreamLatencySeconds,
+} from "@alfred/api/metrics";
 import { authedProcedure, router } from "../trpc";
 import { logger } from "../utils/logger";
 import { getVoicePools } from "../voice/pools";
 import { randomUUID } from "node:crypto";
+import { prepareModelMessagesForGenerate } from "../ai/messages";
+import { generateText, persistResult } from "../ai/generate";
+import { sanitizeResult } from "../utils/generate";
+import {
+  decodeToPCM16,
+  encodeFromPCM16,
+  isLikelyPCM,
+  PCM_MIME_TYPE,
+} from "../voice/codec";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap for initial MVP clips
 const DEFAULT_STT_MODEL = "whisper-1";
@@ -41,6 +57,20 @@ const voiceStreamInput = z.object({
 
 type SttInput = z.infer<typeof sttInput>;
 type TtsInput = z.infer<typeof ttsInput>;
+const s2sInput = z.object({
+  audioBase64: z.string().min(1, "audio_base64_required"),
+  mimeType: z.string().min(1, "mime_type_required"),
+  thread: z.string().optional(),
+  resource: z.string().optional(),
+  language: z.string().min(2).max(10).optional(),
+  prompt: z.string().max(400).optional(),
+  sttModel: z.string().min(1).default(DEFAULT_STT_MODEL),
+  ttsModel: z.string().min(1).default(DEFAULT_TTS_MODEL),
+  ttsVoice: z.string().min(1).default(DEFAULT_TTS_VOICE),
+  ttsFormat: z.enum(["mp3", "opus", "wav"]).default("mp3"),
+});
+
+type SpeechToSpeechInput = z.infer<typeof s2sInput>;
 
 function getVoiceProvider(): "openai" | "local" {
   return (process.env.VOICE_PROVIDER ?? "openai") as "openai" | "local";
@@ -73,9 +103,10 @@ async function transcribeLocal(input: SttInput): Promise<{
   const { sttPool } = getVoicePools();
 
   try {
+    const normalized = await normalizeLocalSttAudio(input);
     const result = await sttPool.transcribe({
-      audioBase64: input.audioBase64,
-      mimeType: input.mimeType,
+      audioBase64: normalized.audioBase64,
+      mimeType: normalized.mimeType,
       language: input.language,
       prompt: input.prompt,
       streaming: false,
@@ -136,17 +167,15 @@ async function synthesizeLocal(input: TtsInput): Promise<{
       streaming: false,
     });
 
+    const encoded = await encodeLocalTtsAudio(result.audioBase64, input.format);
     const durationSeconds = (performance.now() - timerStart) / 1000;
     markVoice("tts_local_complete");
     voiceStreamLatencySeconds.observe({ stage: "tts_synthesize" }, durationSeconds);
     recordVoiceTts({ provider: "local", status: "ok", durationSeconds });
 
-    // Convert PCM to requested format (simplified - assumes PCM for now)
-    const mimeType = formatToMime(input.format);
-
     return {
-      audioBase64: result.audioBase64,
-      mimeType,
+      audioBase64: encoded.audioBase64,
+      mimeType: encoded.mimeType,
       model: input.voice ?? "piper",
       provider: "local",
       durationSeconds,
@@ -195,6 +224,118 @@ function formatToMime(format: TtsInput["format"]) {
     default:
       return "audio/mpeg";
   }
+}
+
+async function normalizeLocalSttAudio(input: SttInput) {
+  const sanitized = sanitizeBase64(input.audioBase64);
+  if (!sanitized) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "audio_payload_empty",
+    });
+  }
+
+  if (isLikelyPCM(input.mimeType)) {
+    return {
+      audioBase64: sanitized,
+      mimeType: PCM_MIME_TYPE,
+    };
+  }
+
+  try {
+    const decoded = await decodeToPCM16({
+      audioBase64: sanitized,
+      mimeType: input.mimeType,
+    });
+    return {
+      audioBase64: decoded.audioBase64,
+      mimeType: decoded.mimeType,
+    };
+  } catch (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "local_codec_decode_failed",
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
+async function encodeLocalTtsAudio(
+  audioBase64: string,
+  format: TtsInput["format"]
+) {
+  try {
+    const encoded = await encodeFromPCM16({
+      audioBase64: sanitizeBase64(audioBase64),
+      format,
+    });
+    return encoded;
+  } catch (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "local_codec_encode_failed",
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
+type AssistantRunResult = {
+  text: string;
+  replayId: string | null;
+  raw: ReturnType<typeof sanitizeResult>;
+};
+
+async function runAssistantForVoice({
+  text,
+  thread,
+  resource,
+  userId,
+}: {
+  text: string;
+  thread?: string;
+  resource?: string;
+  userId: string;
+}): Promise<AssistantRunResult> {
+  const defaults = getAssistantAgentDefaults();
+  const threadId = thread ?? `voice:${userId}`;
+  const resourceId = resource ?? threadId;
+
+  const messages: UIMessage[] = [
+    {
+      id: `voice-${Date.now()}`,
+      role: "user",
+      name: "voice",
+      parts: [{ type: "text", text }],
+    },
+  ];
+
+  const modelMessages = await prepareModelMessagesForGenerate({
+    rawMessages: messages,
+    tools: defaults.tools,
+    source: "assistant",
+  });
+
+  const result = await generateText({
+    ...defaults,
+    messages: modelMessages,
+  });
+  const output = sanitizeResult(result);
+  const replayId = await persistResult({
+    userId,
+    kind: "assistant",
+    input: {
+      thread: threadId,
+      resource: resourceId,
+      messages,
+    },
+    result: output,
+  });
+
+  return {
+    text: output.text ?? "",
+    replayId,
+    raw: output,
+  };
 }
 
 async function postTranscription(input: SttInput) {
@@ -435,6 +576,93 @@ export const voiceRouter: ReturnType<typeof router> = router({
         return synthesizeLocal(input);
       }
       return postSynthesis(input);
+    }),
+
+  speechToSpeech: authedProcedure
+    .use(requirePolicy("voice.stt", toSttResource))
+    .use(requirePolicy("voice.tts", toTtsResource))
+    .input(s2sInput)
+    .mutation(async ({ input, ctx }) => {
+      const session = ctx.session;
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const provider = getVoiceProvider();
+      const s2sTimerStart = performance.now();
+
+      const sttPayload: SttInput = {
+        audioBase64: input.audioBase64,
+        mimeType: input.mimeType,
+        model: input.sttModel,
+        language: input.language,
+        prompt: input.prompt,
+      };
+      const sttResult =
+        provider === "local"
+          ? await transcribeLocal(sttPayload)
+          : await postTranscription(sttPayload);
+
+      const transcriptText = sttResult.text?.trim();
+      if (!transcriptText) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "transcription_empty",
+        });
+      }
+
+      const assistantTimerStart = performance.now();
+      const assistantResult = await runAssistantForVoice({
+        text: transcriptText,
+        thread: input.thread,
+        resource: input.resource,
+        userId: session.user.id,
+      });
+      const assistantDurationSeconds =
+        (performance.now() - assistantTimerStart) / 1000;
+
+      const ttsPayload: TtsInput = {
+        text: assistantResult.text || "I heard you.",
+        voice: input.ttsVoice,
+        format: input.ttsFormat,
+        model: input.ttsModel,
+      };
+      const ttsResult =
+        provider === "local"
+          ? await synthesizeLocal(ttsPayload)
+          : await postSynthesis(ttsPayload);
+
+      const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "speech_to_speech" },
+        totalSeconds
+      );
+      logger.info("voice_s2s_complete", {
+        provider,
+        sttModel: sttResult.model,
+        ttsModel: ttsResult.model,
+        totalSeconds,
+        sttSeconds: sttResult.durationSeconds,
+        ttsSeconds: ttsResult.durationSeconds,
+      });
+
+      return {
+        transcript: sttResult,
+        assistant: {
+          text: assistantResult.text,
+          replayId: assistantResult.replayId ?? undefined,
+          raw: assistantResult.raw,
+        },
+        audio: ttsResult,
+        durations: {
+          totalSeconds,
+          sttSeconds: sttResult.durationSeconds ?? null,
+          assistantSeconds: assistantDurationSeconds,
+          ttsSeconds: ttsResult.durationSeconds ?? null,
+        },
+      };
     }),
 
   stream: authedProcedure

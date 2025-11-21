@@ -1,48 +1,45 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type { WorkflowEvent } from "@alfred/type";
 import { sql } from "drizzle-orm";
 import { closeTestDb, createTestDb, truncateTables } from "./utils/db";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describe : describe.skip;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
-beforeAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  testDbHarness = await createTestDb();
-});
-
-afterAll(async () => {
-  if (!SHOULD_RUN) return;
-  await closeTestDb(testDbHarness);
-});
-
-beforeEach(async () => {
-  if (!SHOULD_RUN) return;
-  await truncateTables(testDbHarness.db);
-  await testDbHarness.db.execute(
-    sql`TRUNCATE workflow_runs, workflow_events RESTART IDENTITY CASCADE`
-  );
-});
-
-afterEach(async () => {
-  if (!SHOULD_RUN) return;
-  await truncateTables(testDbHarness.db);
-});
-
 describeFn("workflow persistence", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "workflow persistence tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    testDbHarness = await createTestDb();
+  });
+
+  afterAll(async () => {
+    if (testDbHarness) {
+      await closeTestDb(testDbHarness);
+    }
+  });
+
+  beforeEach(async () => {
+    if (!testDbHarness) return;
+    await truncateTables(testDbHarness.db);
+    await testDbHarness.db.execute(
+      sql`TRUNCATE workflow_runs, workflow_events RESTART IDENTITY CASCADE`
+    );
+  });
+
+  afterEach(async () => {
+    if (!testDbHarness) return;
+    await truncateTables(testDbHarness.db);
+  });
+
   const TEST_USER = "workflow-persistence-test-user";
 
   describe("createRun", () => {

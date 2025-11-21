@@ -6,6 +6,8 @@ export {
   embedMany,
   ingest,
   retrieve,
+  type EmbeddingProvider,
+  setEmbeddingProvider,
 } from "./doc";
 export {
   type RerankOptions,

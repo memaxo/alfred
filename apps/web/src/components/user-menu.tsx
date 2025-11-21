@@ -17,7 +17,6 @@ export default function UserMenu() {
   const navigate = useNavigate();
   const [isRequestingToken, setIsRequestingToken] = useState(false);
   const { data: session, isPending } = authClient.useSession();
-
   if (isPending) {
     return <Skeleton className="h-9 w-24" />;
   }
@@ -88,12 +87,8 @@ export default function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Button
-            className="w-full"
-            variant="outline"
-            asChild
-          >
-             <Link to="/mindscape">Mindscape</Link>
+          <Button className="w-full" variant="outline" asChild>
+            <Link to="/mindscape">Mindscape</Link>
           </Button>
         </DropdownMenuItem>
       </DropdownMenuContent>

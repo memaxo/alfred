@@ -1,5 +1,8 @@
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
-import { preferenceCacheInvalidationsTotal } from "../metrics";
+import {
+  preferenceCacheInvalidationsTotal,
+  preferenceRefreshTotal,
+} from "../metrics";
 import { runPreferenceInference } from "../scheduler/preference-inference";
 import { logger } from "../utils/logger";
 
@@ -49,6 +52,7 @@ export function triggerPreferenceRefresh(
   const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
   pendingUsers.add(userId);
+  preferenceRefreshTotal.inc({ reason });
   void invalidatePreferenceCache(userId)
     .then(() => {
       preferenceCacheInvalidationsTotal.inc({ reason });

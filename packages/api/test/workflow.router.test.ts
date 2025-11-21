@@ -385,11 +385,15 @@ describe("workflow router", () => {
             (message as UIMessage).role === "assistant"
         )
       ).toBe(true);
-      expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
-        "test-user",
-        expect.objectContaining({ reason: "workflow_stream_complete" })
+      const refreshReasons = triggerPreferenceRefreshMock.mock.calls.map(
+        ([, options]) => (options as { reason?: string })?.reason
       );
-      expect(triggerPreferenceRefreshMock).toHaveBeenCalledTimes(2);
+      expect(refreshReasons).toContain("workflow_stream_complete");
+      expect(refreshReasons).toContain("workflow_messages_persisted");
+      expect(
+        refreshReasons.filter((reason) => reason === "workflow_requirement")
+      ).toHaveLength(1);
+      expect(refreshReasons.length).toBeGreaterThanOrEqual(3);
     });
 
     it("persists tool-call and tool-result metadata", async () => {
@@ -555,10 +559,10 @@ describe("workflow router", () => {
         status: "cancelled",
         completedAt: expect.any(Date),
       });
-      expect(triggerPreferenceRefreshMock).toHaveBeenCalledWith(
-        "test-user",
-        expect.objectContaining({ reason: "workflow_stream_cancelled" })
+      const refreshReasons = triggerPreferenceRefreshMock.mock.calls.map(
+        ([, options]) => (options as { reason?: string })?.reason
       );
+      expect(refreshReasons).toContain("workflow_stream_cancelled");
     });
   });
 

@@ -1,8 +1,6 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import type { UIMessage } from "@alfred/type/stream";
-import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { TRPCError } from "@trpc/server";
-import { convertToModelMessages, stepCountIs } from "ai";
+import { stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { cloneRuntimeContext } from "../context";
@@ -10,6 +8,11 @@ import { requirePolicy } from "../gate";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
+import { prepareModelMessagesForGenerate } from "../ai/messages";
+import {
+  assistantGenerateDurationSeconds,
+  assistantGenerateRequestsTotal,
+} from "../metrics";
 
 const ASSISTANT_MAX_STEPS = 12;
 
@@ -57,22 +60,6 @@ const escalateInput = z.object({
 
 type AssistantGenerateInput = z.infer<typeof generateInput>;
 
-function validateMessages(messages: unknown[]): UIMessage[] {
-  const validated: UIMessage[] = [];
-  for (const msg of messages) {
-    const result = uiMessageSchema.safeParse(msg);
-    if (!result.success) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "invalid_message",
-        cause: result.error,
-      });
-    }
-    validated.push(result.data as UIMessage);
-  }
-  return validated;
-}
-
 function mapResource(raw: unknown) {
   const payload = (raw ?? {}) as Partial<AssistantGenerateInput> & {
     requirement?: string;
@@ -92,10 +79,15 @@ export const assistantRouter: ReturnType<typeof router> = router({
     .use(requirePolicy("assistant.generate", (raw) => mapResource(raw)))
     .input(generateInput)
     .mutation(async ({ input, ctx }) => {
+      const stopTimer = assistantGenerateDurationSeconds.startTimer();
+      assistantGenerateRequestsTotal.inc({ status: "started" });
       try {
-        const validatedMessages = validateMessages(input.messages);
-        const modelMessages = convertToModelMessages(validatedMessages);
         const defaults = getAssistantAgentDefaults();
+        const modelMessages = await prepareModelMessagesForGenerate({
+          rawMessages: input.messages,
+          tools: defaults.tools,
+          source: "assistant",
+        });
         const stopWhen =
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
@@ -106,6 +98,8 @@ export const assistantRouter: ReturnType<typeof router> = router({
           toolChoice: input.toolChoice,
           stopWhen,
         });
+        assistantGenerateRequestsTotal.inc({ status: "success" });
+        stopTimer({ status: "success" });
 
         const output = sanitizeResult(result);
         // Persist for replay
@@ -128,6 +122,8 @@ export const assistantRouter: ReturnType<typeof router> = router({
           replayId?: string;
         };
       } catch (error) {
+        assistantGenerateRequestsTotal.inc({ status: "error" });
+        stopTimer({ status: "error" });
         throw toTRPCError(error, "assistant_error");
       }
     }),

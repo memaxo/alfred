@@ -22,6 +22,14 @@
     "./query": {
       "types": "./dist/query.d.ts",
       "default": "./src/query.ts"
+    },
+    "./persist": {
+      "types": "./dist/persist.d.ts",
+      "default": "./src/persist.ts"
+    },
+    "./indices/*": {
+      "types": "./dist/indices/*.d.ts",
+      "default": "./src/indices/*.ts"
     }
   },
   "scripts": {

@@ -20,3 +20,13 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 4. **Nested rules.** Package/app-specific rules live under `<package>/.ruler/`. They automatically merge with root guidance when Ruler runs with `--nested`.
 
+## Rule Conciseness
+
+1. **Keep rules short.** Each rule should be a single sentence or brief bullet point. Avoid verbose explanations, code examples, and reference sections that bloat AGENTS.md.
+
+2. **No examples sections.** Remove code examples, migration checklists, file location lists, testing requirements, and related rules sections. Essential patterns can be mentioned inline within rules.
+
+3. **Condense verbose rules.** When a rule exceeds 3 lines, break it into numbered sub-points or condense to essential information only.
+
+4. **Remove redundancy.** If a concept appears in multiple files, consolidate it. Cross-reference only when necessary.
+

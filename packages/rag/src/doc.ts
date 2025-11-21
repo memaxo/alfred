@@ -11,6 +11,22 @@ import {
 
 const MAX_BATCH_SIZE = 1000;
 
+export type EmbeddingProvider = {
+  embed: (text: string) => Promise<number[]>;
+  embedMany: (texts: string[]) => Promise<number[][]>;
+};
+
+const defaultEmbeddingProvider: EmbeddingProvider = {
+  embed: embedLocal,
+  embedMany: embedManyLocal,
+};
+
+let embeddingProvider: EmbeddingProvider = defaultEmbeddingProvider;
+
+export function setEmbeddingProvider(provider?: EmbeddingProvider | null) {
+  embeddingProvider = provider ?? defaultEmbeddingProvider;
+}
+
 export interface Chunk {
   content: string;
   embedding?: number[];
@@ -243,7 +259,7 @@ export async function chunk(
 }
 
 export async function embed(text: string): Promise<number[]> {
-  const embedding = await embedLocal(text);
+  const embedding = await embeddingProvider.embed(text);
 
   if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIM) {
     throw new Error("rag_embed_invalid_vector");
@@ -261,7 +277,7 @@ export async function embedMany(texts: string[]): Promise<number[][]> {
     return [];
   }
 
-  const embeddings = await embedManyLocal(texts);
+  const embeddings = await embeddingProvider.embedMany(texts);
 
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
     throw new Error("rag_embed_mismatch");

@@ -1,35 +1,39 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describe : describe.skip;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 const TEST_RESOURCE = "test-resource";
 
 let graphRepo: typeof import("@alfred/db").graphRepo;
 let db: typeof import("@alfred/db").db;
 
-beforeAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  const mod = await import("@alfred/db");
-  graphRepo = mod.graphRepo;
-  db = mod.db;
-});
-
 async function resetGraph() {
-  if (!SHOULD_RUN) return;
+  if (!db) return;
   await db.execute(
     sql`TRUNCATE memory_edges, memory_nodes RESTART IDENTITY CASCADE`
   );
 }
 
-beforeEach(async () => {
-  await resetGraph();
-});
-
 describeFn("graphRepo", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "graphRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const mod = await import("@alfred/db");
+    graphRepo = mod.graphRepo;
+    db = mod.db;
+  });
+
+  beforeEach(async () => {
+    await resetGraph();
+  });
+
   it("upserts nodes by resource and hash", async () => {
     const first = await graphRepo.upsertNodes([
       {

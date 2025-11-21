@@ -13,6 +13,10 @@ Developers need the real Postgres connection string for runtime behavior (`confi
 - [x] (2025-11-20 21:12Z) Documented the behavior in `README.md`, `packages/db/README.md`, `config/env.example`, and `config/env.test`, pointing readers to the canonical Postgres URL and the new SQLite fallback.
 - [x] (2025-11-20 21:40Z) Re-ran `bun run typecheck`; failure now limited to existing issues in `packages/knowledge`, `packages/agent`, plus a new `tsvector` import warning which is being fixed within this effort.
 - [x] (2025-11-20 22:00Z) Ran `cd packages/embed && bun run test`; suites progressed until an “Export named 'tsvector' not found” error surfaced once `@alfred/db` initialized successfully under SQLite.
+- [x] (2025-11-20 22:30Z) Added `packages/db/src/sqlite/schema.ts` and auto-ran lightweight DDL plus SQL rewrites (`gen_random_uuid()`, `now()`) so sqlite can ingest documents/messages.
+- [x] (2025-11-20 22:55Z) Updated repos using prepared statements (conversation/user) to fall back to plain queries when sqlite is active, preventing table creation errors during module import.
+- [x] (2025-11-20 23:25Z) Introduced `@alfred/db/testing` helpers (`describePostgres`, `describeSqlite`, `requirePostgresTestEnv`) and applied them to `packages/embed/test/e2e.test.ts` so Postgres-only suites skip automatically when sqlite is active.
+- [x] (2025-11-20 23:45Z) Split testing pipelines: root scripts + Turbo tasks now expose `test:sqlite` (default, no `DATABASE_URL`) and `test:postgres` (requires Postgres, sets `RUN_DB_TESTS=1`). CI runs both before integration/smoke tests.
 - [ ] Capture outcomes, surprises, and decisions below.
 
 ## Surprises & Discoveries
@@ -20,6 +24,10 @@ Developers need the real Postgres connection string for runtime behavior (`confi
 - Observation: `drizzle-orm/bun-sqlite` works with tables defined via `pgTable` (it generates SQL the SQLite engine accepts) as long as we create the table manually; quick spike via `tmp-sqlite-test.ts` inserting/selecting rows succeeded. Evidence: local Bun script at 20:55Z printed `[{ id: "a" }]`.
 - Observation: Importing `drizzle-orm/bun-sqlite` directly caused the TypeScript compiler to treat `db.insert()` as a union of Postgres and SQLite builders. Switched to `createRequire` + `any` to load the sqlite driver lazily so downstream repo code keeps the Postgres-only types.
 - Observation: Once the SQLite fallback succeeded, type-checking exposed additional pre-existing issues in `packages/knowledge` (interval-tree nullability) and `packages/agent` (prepare step typing). Also discovered that `tsvector` is no longer exported by `drizzle-orm/pg-core`, so a local `customType` helper was added in `packages/db/src/schema/graph.ts`.
+- Observation: Bun’s `Database` API doesn’t expose `db.function`, so Postgres-specific calls like `gen_random_uuid()` and `now()` must be rewritten before statements are prepared; string replacements in `sqlite.prepare` keep inserts working.
+- Observation: Even with sqlite tables in place, RAG e2e tests still fail on Postgres-only SQL (`SET LOCAL hnsw.ef_search`). Need a future guard or sqlite-friendly code path for those queries if we want those suites to pass without Postgres.
+- Observation: Providing `describePostgres` / `describeSqlite` wrappers under `@alfred/db/testing` makes Postgres-only suites visibly “skipped” instead of failing with sqlite errors, which gives instant feedback when contributors add new DB tests.
+- Observation: Running `bun run test:postgres` now requires an actual Postgres instance; developers get immediate failures if they forget to set `DATABASE_URL`, while `bun run test:sqlite` remains zero-config for day-to-day work.
 
 ## Decision Log
 
@@ -29,10 +37,16 @@ Developers need the real Postgres connection string for runtime behavior (`confi
 - Decision: Load the sqlite driver via `createRequire()` and treat it as `any` so the rest of the codebase retains pure Postgres typings while still executing against SQLite during tests.
   Rationale: Direct TypeScript imports pulled in SQLite generics and broke every `db.insert()` call; using `require` isolates those types to the fallback path.
   Date/Author: 2025-11-20 / Codex
+- Decision: Introduced `packages/db/src/sqlite/schema.ts` plus statement rewrites for `gen_random_uuid()`/`now()` so sqlite can ingest rows without Postgres extensions.
+  Rationale: Bun’s sqlite bindings don’t expose user-defined SQL functions, so rewriting SQL text is the most reliable cross-platform approach.
+  Date/Author: 2025-11-20 / Codex
+- Decision: Disable prepared statements for conversation/preferences repos when sqlite is active.
+  Rationale: Prepared queries execute at module load time, which fails before sqlite tables exist; falling back to plain selects keeps tests from crashing while preserving prepared statements in Postgres.
+  Date/Author: 2025-11-20 / Codex
 
 ## Outcomes & Retrospective
 
-- To be completed once validation passes.
+- With sqlite fallback enabled, importing `@alfred/db` in Bun tests no longer throws, and unit suites that don’t execute Postgres-only SQL run normally. Full `packages/embed` E2E tests still fail on sqlite because the RAG repository issues `SET LOCAL hnsw.ef_search` and other Postgres-exclusive statements; either those tests need a Postgres URL or the repo requires sqlite-safe branches before we can mark this plan complete.
 
 ## Context and Orientation
 
@@ -50,6 +64,8 @@ Drizzle’s SQLite driver (`drizzle-orm/bun-sqlite`) works with `bun:sqlite`, so
 4. Update `config/env.example` (and optionally `config/env.test`) with comments clarifying: keep the Postgres URL for production, but tests may override with SQLite by exporting `DATABASE_URL=sqlite::memory:` or leaving it blank so the fallback engages automatically during `bun test`.
 5. Document the behavior in `README.md` and `packages/db/README.md`, including the actual Postgres URL path and instructions for tests.
 6. Validate via `bun run typecheck` (expecting unrelated pre-existing TypeScript issues; record them) and `cd packages/embed && bun run test` to confirm the missing-URL failure disappears.
+7. Add `@alfred/db/testing` helpers for Bun test suites and update representative tests (e.g., embed E2E) so they declare their Postgres/sqlite requirements explicitly.
+8. Split root/Turbo test commands into `test:sqlite` and `test:postgres`, update the `ci` script to run both, and document the workflow in the README so contributors know which command to use.
 
 ## Concrete Steps
 

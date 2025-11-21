@@ -17,6 +17,9 @@
     "test": {
       "dependsOn": ["^build"]
     },
+    "test:postgres": {
+      "dependsOn": ["^build"]
+    },
     "migrate": {
       "cache": false,
       "persistent": true

@@ -271,12 +271,63 @@ export const preferenceCacheInvalidationsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const preferenceRefreshTotal = new client.Counter({
+  name: "preference_refresh_total",
+  help: "Count of preference refresh triggers grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const preferencePromptInjectionsTotal = new client.Counter({
+  name: "preference_prompt_injections_total",
+  help: "Count of preference prompt injections grouped by source.",
+  labelNames: ["source"] as const,
+  registers: [metricsRegistry],
+});
+
+export const preferencePromptFailuresTotal = new client.Counter({
+  name: "preference_prompt_failures_total",
+  help: "Count of preference prompt build failures grouped by source.",
+  labelNames: ["source"] as const,
+  registers: [metricsRegistry],
+});
+
 // wired via lazy hooks
 
 export const voiceSttTotal = new client.Counter({
   name: "voice_stt_total",
   help: "Count of voice STT invocations grouped by provider and status.",
   labelNames: ["provider", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const assistantGenerateRequestsTotal = new client.Counter({
+  name: "assistant_generate_requests_total",
+  help: "Count of assistant generate requests grouped by status.",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const assistantGenerateDurationSeconds = new client.Histogram({
+  name: "assistant_generate_duration_seconds",
+  help: "Duration of assistant generate requests grouped by status.",
+  labelNames: ["status"] as const,
+  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metricsRegistry],
+});
+
+export const orchestratorGenerateRequestsTotal = new client.Counter({
+  name: "orchestrator_generate_requests_total",
+  help: "Count of orchestrator generate requests grouped by status.",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const orchestratorGenerateDurationSeconds = new client.Histogram({
+  name: "orchestrator_generate_duration_seconds",
+  help: "Duration of orchestrator generate requests grouped by status.",
+  labelNames: ["status"] as const,
+  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
   registers: [metricsRegistry],
 });
 

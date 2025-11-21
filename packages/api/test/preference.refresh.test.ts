@@ -24,6 +24,7 @@ describe("triggerPreferenceRefresh", () => {
     runPreferenceInferenceMock.mockReset().mockResolvedValue(undefined);
     __resetPreferenceRefreshQueueForTests();
     metricsStub.preferenceCacheInvalidationsTotal.inc.mockReset();
+    metricsStub.preferenceRefreshTotal.inc.mockReset();
   });
 
   it("invalidates caches immediately and runs inference on flush", async () => {
@@ -36,6 +37,9 @@ describe("triggerPreferenceRefresh", () => {
     expect(metricsStub.preferenceCacheInvalidationsTotal.inc).toHaveBeenCalledWith(
       { reason: "test" }
     );
+    expect(metricsStub.preferenceRefreshTotal.inc).toHaveBeenCalledWith({
+      reason: "test",
+    });
   });
 
   it("deduplicates repeated triggers before flush", async () => {
@@ -60,5 +64,6 @@ describe("triggerPreferenceRefresh", () => {
     expect(
       metricsStub.preferenceCacheInvalidationsTotal.inc
     ).not.toHaveBeenCalled();
+    expect(metricsStub.preferenceRefreshTotal.inc).not.toHaveBeenCalled();
   });
 });

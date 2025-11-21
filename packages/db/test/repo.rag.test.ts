@@ -1,37 +1,41 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describe : describe.skip;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 let ragRepo: typeof import("@alfred/db").ragRepo;
 let db: typeof import("@alfred/db").db;
 
-beforeAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  const mod = await import("@alfred/db");
-  ragRepo = mod.ragRepo;
-  db = mod.db;
-});
-
 async function resetRagTables() {
-  if (!SHOULD_RUN) return;
+  if (!db) return;
   await db.execute(
     sql`TRUNCATE rag_chunks, rag_documents RESTART IDENTITY CASCADE`
   );
 }
-
-beforeEach(async () => {
-  await resetRagTables();
-});
 
 function makeVector(seed: number) {
   return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
 }
 
 describeFn("ragRepo", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "ragRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const mod = await import("@alfred/db");
+    ragRepo = mod.ragRepo;
+    db = mod.db;
+  });
+
+  beforeEach(async () => {
+    await resetRagTables();
+  });
+
   it("stores documents and returns them in descending order", async () => {
     await ragRepo.createDocument("source-a", "Doc A", "Author A");
     const second = await ragRepo.createDocument(

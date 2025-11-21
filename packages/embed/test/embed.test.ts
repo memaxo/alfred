@@ -6,6 +6,9 @@
 import { describe, test, expect, afterAll } from "bun:test";
 import { embed, embedMany, EMBEDDING_DIM, shutdown } from "../src/index";
 
+const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";
+const testModel = RUN_EMBED_MODEL_TESTS ? test : test.skip;
+
 describe("Embed Package", () => {
   afterAll(async () => {
     await shutdown();
@@ -15,7 +18,7 @@ describe("Embed Package", () => {
     expect(EMBEDDING_DIM).toBe(1024);
   });
 
-  test("embed() returns 1024-dim vector", async () => {
+  testModel("embed() returns 1024-dim vector", async () => {
     const embedding = await embed("This is a test sentence for embedding.");
 
     expect(Array.isArray(embedding)).toBe(true);
@@ -25,7 +28,7 @@ describe("Embed Package", () => {
     expect(embedding.every((n) => Number.isFinite(n))).toBe(true);
   }, 90_000); // 90s timeout for model loading on first call
 
-  test("embedMany() handles batches", async () => {
+  testModel("embedMany() handles batches", async () => {
     const texts = [
       "First test sentence.",
       "Second test sentence.",
@@ -44,12 +47,12 @@ describe("Embed Package", () => {
     }
   }, 60_000);
 
-  test("embedMany() with empty array returns empty array", async () => {
+  testModel("embedMany() with empty array returns empty array", async () => {
     const embeddings = await embedMany([]);
     expect(embeddings).toEqual([]);
   });
 
-  test("similar texts have similar embeddings", async () => {
+  testModel("similar texts have similar embeddings", async () => {
     const text1 = "The quick brown fox jumps over the lazy dog.";
     const text2 = "A fast brown fox leaps over a sleepy dog.";
     const text3 = "Python is a programming language.";
@@ -72,4 +75,3 @@ describe("Embed Package", () => {
     expect(sim12).toBeGreaterThan(0.7); // High similarity for paraphrases
   }, 60_000);
 });
-

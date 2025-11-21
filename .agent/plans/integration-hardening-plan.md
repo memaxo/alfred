@@ -8,23 +8,51 @@ Guarantee that Alfred’s critical reasoning loop (hypergraph capture + persiste
 
 ## Progress
 
-- [ ] (2025-11-20 21:05Z) Baseline repository survey: confirm existing SQLite harness, smoke scripts, and RAG test behavior so instructions match HEAD.
-- [ ] (2025-11-20 21:05Z) Integration tests: design + land reproducible SQLite-backed tests for hypergraph persistence/query and graph repo traversal; ensure CI/docs capture the RUN_DB_TESTS story.
-- [ ] (2025-11-20 21:05Z) Smoke script: add CLI (or package script) that runs capture → persist → reload → query and document how to call it.
-- [ ] (2025-11-20 21:05Z) RAG/doc tests: rework embedding layer (mockable provider) so `bun test packages/rag` runs without spawn errors; document fallback harness.
-- [ ] (2025-11-20 21:05Z) Validation + docs: update READMEs/ExecPlan with instructions for the new commands; ensure CI wires in the integration suite.
+- [x] (2025-11-20 21:20Z) Baseline repository survey: reviewed SQLite fallback in `packages/db/src/client.ts`, noted missing memory graph schema + absent smoke tooling, and captured findings here.
+- [x] (2025-11-20 22:05Z) Integration tests: shipped `packages/knowledge/test/hypergraph.integration.test.ts`, expanded the SQLite schema, and added `bun run test:integration` for reproducible coverage.
+- [x] (2025-11-20 22:20Z) Smoke script: added `scripts/smoke-hypergraph.ts` with SQLite-by-default behavior and a `--use-existing-db` escape hatch, plus a root `smoke:hypergraph` script.
+- [x] (2025-11-20 22:35Z) RAG/doc tests: introduced `setEmbeddingProvider` and rewrote `packages/rag/test/doc.test.ts` so the suite runs without spinning up the embed pool.
+- [x] (2025-11-20 22:45Z) Validation + docs: updated README command tables/testing guidance, ran `bun run test:integration`, `bun test packages/rag`, `bun test packages/knowledge`, and `bun run smoke:hypergraph`.
+- [x] (2025-11-20 23:18Z) Added `packages/api/test/graph.integration.test.ts`, expanded `bun run test:integration` to run both knowledge + graph router suites, and patched the SQLite schema with a `memory_edges.hash` unique index to keep connect conflicts deterministic.
+- [x] (2025-11-20 23:35Z) Added `packages/agent/assistant/test/graphstore.integration.test.ts` so the agent persistence bridge is covered on sqlite and wired that suite into `bun run test:integration` (now running 3 files / 10 specs).
+- [x] (2025-11-20 23:55Z) Added `packages/api/test/workflow.reasoning.integration.test.ts` plus sqlite workflow tables, updated `workflow.reasoning` JSON parsing, and created `.github/workflows/postgres-nightly.yml` to run embed E2E + hypergraph smoke against Postgres nightly.
 
 ## Surprises & Discoveries
 
-- None yet. Capture unexpected SQLite limitations, Bun test runner quirks, or embed mocking issues here.
+- SQLite fallback originally lacked `memory_nodes` / `memory_edges` tables (and the `label_tsvector` column). Added schema bootstrap + idempotent `ALTER TABLE` calls to keep integration tests deterministic.
+- Drizzle emitted uppercase `NOW()` in generated SQL, so we had to normalize statements (regex replace) rather than relying on Bun’s sqlite driver functions.
+- Static imports pulled in `@alfred/db` before tests/scripts could set `DATABASE_URL`; switching to dynamic imports (and explicit overrides inside integration tests) ensured we always hit SQLite instead of an unset Postgres instance.
 
 ## Decision Log
 
-- Pending future work.
+- Decision: Force integration tests to pin `DATABASE_URL=sqlite::memory:` inside the suite.
+  Rationale: Keeps the tests reproducible regardless of the developer’s shell env; Postgres runs can still opt in manually.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Default the smoke script to SQLite unless `--use-existing-db` is passed.
+  Rationale: Prevents accidental writes to a production database while still allowing explicit Postgres runs.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Introduce `setEmbeddingProvider` so doc/RAG tests can stub embeddings and run without the heavy pool.
+  Rationale: Enables `bun test packages/rag` in CI and keeps tests fast.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Extend the SQLite schema with a `memory_edges.hash` unique index so API-level `graph.connect` tests exercise the same conflict semantics as Postgres while running in-memory.
+  Rationale: Prevents spurious sqlite errors and keeps the fallback truthful when `onConflictDoNothing` targets the hash column.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Create `packages/api/test/graph.integration.test.ts` to drive capture → persist → `graph.getEdges`/`graph.connect` via tRPC, ensuring API consumers are covered by the same sqlite harness used by knowledge tests.
+  Rationale: Validates the end-to-end flow (knowledge bridge → DB → router) without mocking the router or requiring Postgres.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Add `packages/agent/assistant/test/graphstore.integration.test.ts` so `persistKnowledge` is validated directly (nodes + edges + idempotence) under sqlite and include it in the shared `test:integration` command.
+  Rationale: Confirms the agent bridge produces DB rows exactly as expected, catching regressions before they bubble into API layers.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Extend the sqlite schema with workflow tables, add a workflow reasoning sqlite integration test, and parse `workflowRuns.inputData` when it’s a string so sqlite fallbacks behave like Postgres.
+  Rationale: Enables end-to-end coverage for the workflow/assistant entry point without Postgres while keeping router semantics identical.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Add `.github/workflows/postgres-nightly.yml` to run embed E2E and the hypergraph smoke script against Postgres on a schedule (and on-demand) for production-only coverage.
+  Rationale: Ensures vector + Postgres-only flows stay healthy even though default CI relies on sqlite.
+  Date/Author: 2025-11-20 / Codex.
 
 ## Outcomes & Retrospective
 
-Populate after delivering the integration suite and smoke script: highlight the new commands, CI wiring, and any tradeoffs (e.g., SQLite vs Postgres equivalence).
+- Integration + smoke commands now exist (`bun run test:integration`, `bun run smoke:hypergraph`). RAG/doc tests are reliable without native dependencies. API graph router coverage now runs on sqlite, catching regressions before Postgres is available. Remaining work: monitor CI flakiness, add agent/workflow-level coverage, and wire a Postgres-only stage for heavyweight flows.
 
 ## Context and Orientation
 
@@ -70,8 +98,12 @@ Key constraints:
 
 ## Artifacts and Notes
 
-- Capture shell transcripts for `bun run test:integration` and the smoke script once implemented.
-- Record SQLite harness decisions or Postgres-only fallbacks in this section to guide future contributors.
+- 2025-11-20 22:46Z: `bun run test:integration` → 2 pass.
+- 2025-11-20 22:47Z: `bun run smoke:hypergraph` (default SQLite) → emitted `{ event: "smoke.hypergraph", nodes: 3, results: 1 }`.
+- 2025-11-20 22:48Z: `bun test packages/rag` → 13 pass (no embed pool spin-up).
+- 2025-11-20 23:18Z: `bun run test:integration` (knowledge + graph router suites) → 8 pass.
+- 2025-11-20 23:35Z: `bun run test:integration` (knowledge + agent graphstore + graph router suites) → 10 pass.
+- 2025-11-20 23:55Z: `bun run test:integration` (knowledge + agent graphstore + workflow reasoning + graph router suites) → 11 pass.
 
 ## Interfaces and Dependencies
 

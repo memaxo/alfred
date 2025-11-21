@@ -72,6 +72,8 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Add integration test scaffolds for web API routes
 - [x] Add policy evaluation tests
 - [x] Add DB repo tests for core CRUD flows
+- [x] Split CI pipelines into `test:sqlite` (fast, no `DATABASE_URL`) and `test:postgres` (requires real Postgres + `RUN_DB_TESTS=1`) so both database paths stay green
+- [x] Gate model-heavy embedding suites behind `RUN_EMBED_MODEL_TESTS=1` so CI only runs them on demand
 
 ### Phase 3 — Runtime Integration Layer ✅ (PHASES 3.1-3.5 COMPLETE)
 
@@ -192,6 +194,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 3. **UV-based dependency management**: Automatic PyTorch backend selection (ROCm on Linux, MPS on macOS)
 4. **Process pool pattern**: Follows proven `packages/voice` architecture for consistency
 5. **Fire-and-forget embedding**: Note mutations don't wait for embedding (performance over consistency)
+6. **Selective CI coverage**: Embedding suites require `RUN_EMBED_MODEL_TESTS=1`, keeping default CI runs fast while allowing full model validation when needed
 
 #### 4.2 Preference-Driven Adaptation
 

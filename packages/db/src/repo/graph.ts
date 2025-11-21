@@ -6,6 +6,7 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../index";
 import { memoryEdges, memoryNodes } from "../schema/graph";
+import { isSqliteDriver } from "../client";
 
 type NodeInsert = typeof memoryNodes.$inferInsert;
 type NodeRow = typeof memoryNodes.$inferSelect;
@@ -65,6 +66,67 @@ function uniqSeeds<T extends { resource: string; hash: string }>(
   }
   return list;
 }
+
+function parseJsonRecord(
+  value: unknown
+): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function normalizeNode(row: NodeRow): NodeRow {
+  const props = parseJsonRecord(row.properties);
+  return props === row.properties ? row : { ...row, properties: props };
+}
+
+function normalizeEdge(row: EdgeRow): EdgeRow {
+  const metadata = parseJsonRecord(row.metadata);
+  return metadata === row.metadata ? row : { ...row, metadata };
+}
+
+const numberFromProps = (
+  props: Record<string, unknown> | null | undefined,
+  key: string,
+  fallback: number
+): number => {
+  if (!props) return fallback;
+  const value = props[key];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+};
+
+const stringFromProps = (
+  props: Record<string, unknown> | null | undefined,
+  key: string
+): string | null => {
+  if (!props) return null;
+  const value = props[key];
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+  return null;
+};
 
 export async function upsertNodes(
   seeds: NodeSeed[]
@@ -647,6 +709,68 @@ export async function getReasoningChain(args: {
   edges: EdgeRow[];
 }> {
   const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000);
+  if (isSqliteDriver()) {
+    const rawNodes = await db
+      .select()
+      .from(memoryNodes)
+      .where(and(eq(memoryNodes.resource, args.resource), eq(memoryNodes.kind, "reasoning")))
+      .orderBy(memoryNodes.created)
+      .limit(Math.max(limit * 4, limit));
+
+    const normalizedNodes = rawNodes.map(normalizeNode);
+
+    const filteredNodes = normalizedNodes
+      .filter((node) => {
+        if (!args.executionId) return true;
+        return (
+          stringFromProps(node.properties as Record<string, unknown>, "executionId") ===
+          args.executionId
+        );
+      })
+      .filter((node) => {
+        if (typeof args.since !== "number" || !Number.isFinite(args.since)) {
+          return true;
+        }
+        const ts = numberFromProps(node.properties as Record<string, unknown>, "timestamp", -Infinity);
+        return ts >= (args.since ?? -Infinity);
+      })
+      .sort((a, b) => {
+        const aIndex = numberFromProps(a.properties as Record<string, unknown>, "sequenceIndex", Number.MAX_SAFE_INTEGER);
+        const bIndex = numberFromProps(b.properties as Record<string, unknown>, "sequenceIndex", Number.MAX_SAFE_INTEGER);
+        if (aIndex !== bIndex) {
+          return aIndex - bIndex;
+        }
+        const aTs = numberFromProps(a.properties as Record<string, unknown>, "timestamp", Number.MAX_SAFE_INTEGER);
+        const bTs = numberFromProps(b.properties as Record<string, unknown>, "timestamp", Number.MAX_SAFE_INTEGER);
+        return aTs - bTs;
+      })
+      .slice(0, limit);
+
+    const nodeIds = filteredNodes.map((node) => node.id);
+    if (nodeIds.length === 0) {
+      return { nodes: filteredNodes, edges: [] };
+    }
+
+    const rawEdges = await db
+      .select()
+      .from(memoryEdges)
+      .where(
+        and(
+          inArray(memoryEdges.fromId, nodeIds),
+          eq(memoryEdges.kind, "precedes")
+        )
+      );
+
+    const normalizedEdges = rawEdges
+      .map(normalizeEdge)
+      .sort((a, b) => {
+        const aIndex = numberFromProps(a.metadata as Record<string, unknown>, "fromIndex", 0);
+        const bIndex = numberFromProps(b.metadata as Record<string, unknown>, "fromIndex", 0);
+        return aIndex - bIndex;
+      });
+
+    return { nodes: filteredNodes, edges: normalizedEdges };
+  }
 
   const conditions = [
     eq(memoryNodes.resource, args.resource),
@@ -675,10 +799,12 @@ export async function getReasoningChain(args: {
     )
     .limit(limit);
 
-  const nodeIds = nodes.map((node) => node.id);
+  const normalizedNodes = nodes.map(normalizeNode);
+
+  const nodeIds = normalizedNodes.map((node) => node.id);
 
   if (nodeIds.length === 0) {
-    return { nodes, edges: [] };
+    return { nodes: normalizedNodes, edges: [] };
   }
 
   const edges = await db
@@ -692,5 +818,7 @@ export async function getReasoningChain(args: {
     )
     .orderBy(sql`COALESCE((metadata->>'fromIndex')::int, 0)`);
 
-  return { nodes, edges };
+  const normalizedEdges = edges.map(normalizeEdge);
+
+  return { nodes: normalizedNodes, edges: normalizedEdges };
 }

@@ -12,6 +12,10 @@ export const Route = createFileRoute("/_authed")({
         throw: true,
       });
     }
+    redirect({
+      to: "/mindscape",
+      throw: true,
+    });
     return { session };
   },
   component: AuthedLayout,
@@ -21,4 +25,3 @@ export const Route = createFileRoute("/_authed")({
 function AuthedLayout() {
   return <Outlet />;
 }
-

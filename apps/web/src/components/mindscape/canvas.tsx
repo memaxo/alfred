@@ -27,9 +27,18 @@ import { NodeErrorBoundary } from "./nodes/error-boundary";
 import { NoteNode } from "./nodes/note-node";
 import { OrbNode } from "./nodes/orb-node";
 import { ReminderNode } from "./nodes/reminder-node";
+import { TimerNode } from "./nodes/timer-node";
+import { BookmarkNode } from "./nodes/bookmark-node";
+import { TodoNode } from "./nodes/todo-node";
 import { TerminalNode } from "./nodes/terminal-node";
 import { TicketNode } from "./nodes/ticket-node";
 import { WorkflowNode } from "./nodes/workflow-node";
+import { SettingsNode } from "./nodes/settings-node";
+import { PrivacyNode } from "./nodes/privacy-node";
+import { ProfileNode } from "./nodes/profile-node";
+import { IntegrationsNode } from "./nodes/integrations-node";
+import { WorkflowListNode } from "./nodes/workflow-list-node";
+import { DeploymentNode } from "./nodes/deployment-node";
 import { WorkflowManager } from "./workflow-manager";
 import {
   createSpawnNode,
@@ -58,6 +67,15 @@ const nodeTypes: NodeTypes = {
   reminder: wrapWithErrorBoundary(ReminderNode),
   ticket: wrapWithErrorBoundary(TicketNode),
   code: wrapWithErrorBoundary(CodeNode),
+  timer: wrapWithErrorBoundary(TimerNode),
+  bookmark: wrapWithErrorBoundary(BookmarkNode),
+  todo: wrapWithErrorBoundary(TodoNode),
+  settings: wrapWithErrorBoundary(SettingsNode),
+  privacy: wrapWithErrorBoundary(PrivacyNode),
+  profile: wrapWithErrorBoundary(ProfileNode),
+  integrations: wrapWithErrorBoundary(IntegrationsNode),
+  workflowlist: wrapWithErrorBoundary(WorkflowListNode),
+  deployment: wrapWithErrorBoundary(DeploymentNode),
 };
 
 type MindscapeCanvasProps = Omit<

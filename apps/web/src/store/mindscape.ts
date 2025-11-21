@@ -15,13 +15,22 @@ import type { z } from "zod";
 import {
   getNodeDataSchema,
   artifactNodeDataSchema,
+  bookmarkNodeDataSchema,
   chatNodeDataSchema,
   codeNodeDataSchema,
+  deploymentNodeDataSchema,
+  integrationsNodeDataSchema,
   noteNodeDataSchema,
   orbNodeDataSchema,
+  privacyNodeDataSchema,
+  profileNodeDataSchema,
   reminderNodeDataSchema,
+  settingsNodeDataSchema,
   terminalNodeDataSchema,
   ticketNodeDataSchema,
+  timerNodeDataSchema,
+  todoNodeDataSchema,
+  workflowListNodeDataSchema,
   workflowNodeDataSchema,
 } from "./mindscape.schemas";
 
@@ -37,6 +46,15 @@ export type ArtifactType =
   | "reminder"
   | "ticket"
   | "code"
+  | "timer"
+  | "bookmark"
+  | "todo"
+  | "settings"
+  | "privacy"
+  | "profile"
+  | "integrations"
+  | "workflowlist"
+  | "deployment"
   | "artifact"
   | "orb";
 
@@ -55,6 +73,33 @@ export type ReminderNodeData = z.infer<typeof reminderNodeDataSchema> & {
   type: "reminder";
 };
 export type NoteNodeData = z.infer<typeof noteNodeDataSchema> & { type: "note" };
+export type TimerNodeData = z.infer<typeof timerNodeDataSchema> & {
+  type: "timer";
+};
+export type BookmarkNodeData = z.infer<typeof bookmarkNodeDataSchema> & {
+  type: "bookmark";
+};
+export type TodoNodeData = z.infer<typeof todoNodeDataSchema> & {
+  type: "todo";
+};
+export type SettingsNodeData = z.infer<typeof settingsNodeDataSchema> & {
+  type: "settings";
+};
+export type PrivacyNodeData = z.infer<typeof privacyNodeDataSchema> & {
+  type: "privacy";
+};
+export type ProfileNodeData = z.infer<typeof profileNodeDataSchema> & {
+  type: "profile";
+};
+export type IntegrationsNodeData = z.infer<typeof integrationsNodeDataSchema> & {
+  type: "integrations";
+};
+export type WorkflowListNodeData = z.infer<typeof workflowListNodeDataSchema> & {
+  type: "workflowlist";
+};
+export type DeploymentNodeData = z.infer<typeof deploymentNodeDataSchema> & {
+  type: "deployment";
+};
 export type TerminalNodeData = z.infer<typeof terminalNodeDataSchema> & {
   type: "terminal";
 };
@@ -74,6 +119,15 @@ export type ArtifactData =
   | TicketNodeData
   | ReminderNodeData
   | NoteNodeData
+  | TimerNodeData
+  | BookmarkNodeData
+  | TodoNodeData
+  | SettingsNodeData
+  | PrivacyNodeData
+  | ProfileNodeData
+  | IntegrationsNodeData
+  | WorkflowListNodeData
+  | DeploymentNodeData
   | TerminalNodeData
   | ArtifactNodeData
   | OrbNodeData;

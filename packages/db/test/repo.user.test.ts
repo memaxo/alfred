@@ -1,25 +1,20 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describe : describe.skip;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 const TEST_USER = "repo-user-test";
 
 let userRepo: typeof import("@alfred/db").userRepo;
 let db: typeof import("@alfred/db").db;
 
-beforeAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  const mod = await import("@alfred/db");
-  userRepo = mod.userRepo;
-  db = mod.db;
-});
-
 async function resetUserTables() {
-  if (!SHOULD_RUN) return;
+  if (!db) return;
   await db.execute(
     sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`
   );
@@ -29,11 +24,20 @@ function makeVector(seed: number) {
   return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
 }
 
-beforeEach(async () => {
-  await resetUserTables();
-});
-
 describeFn("userRepo", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "userRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const mod = await import("@alfred/db");
+    userRepo = mod.userRepo;
+    db = mod.db;
+  });
+
+  beforeEach(async () => {
+    await resetUserTables();
+  });
+
   it("upserts and retrieves a profile", async () => {
     const initial = await userRepo.upsertProfile(TEST_USER, {
       name: "Test User",

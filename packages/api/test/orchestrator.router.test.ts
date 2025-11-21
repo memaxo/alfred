@@ -10,6 +10,7 @@ import {
   getOrchestratorAgentDefaultsMock,
   resetAgentMocks,
 } from "./utils/agent-mock";
+import { metricsStub } from "./utils/mock-metrics";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -24,6 +25,21 @@ mock.module("node-pty", () => ({
 }));
 
 const generateMocks = mockGenerateText();
+const validateUIMessagesMock = vi.fn(
+  async ({ messages }: { messages: unknown[] }) => messages
+);
+const convertToModelMessagesMock = vi.fn((messages: unknown) => messages);
+const pruneMessagesMock = vi.fn(
+  ({ messages }: { messages: unknown[] }) => messages
+);
+const stepCountIsMock = vi.fn((max: number) => ({ max }));
+
+mock.module("ai", () => ({
+  stepCountIs: stepCountIsMock,
+  validateUIMessages: validateUIMessagesMock,
+  convertToModelMessages: convertToModelMessagesMock,
+  pruneMessages: pruneMessagesMock,
+}));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -36,6 +52,12 @@ beforeAll(async () => {
 afterEach(() => {
   resetAllMocks();
   resetAgentMocks();
+  validateUIMessagesMock.mockClear();
+  convertToModelMessagesMock.mockClear();
+  pruneMessagesMock.mockClear();
+  stepCountIsMock.mockClear();
+  metricsStub.orchestratorGenerateRequestsTotal.inc.mockClear();
+  metricsStub.orchestratorGenerateDurationSeconds.startTimer.mockClear();
 });
 
 describe("orchestrator router", () => {
@@ -83,6 +105,15 @@ describe("orchestrator router", () => {
         finishReason: "stop",
         replayId: "replay-id-123",
       });
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "started" });
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "success" });
+      expect(
+        metricsStub.orchestratorGenerateDurationSeconds.startTimer
+      ).toHaveBeenCalledTimes(1);
     });
 
     it("throws UNAUTHORIZED when session is missing", async () => {
@@ -101,12 +132,23 @@ describe("orchestrator router", () => {
       ).rejects.toThrow(/Authentication required/);
     });
 
-    it("validates message format", async () => {
+    it("rejects invalid messages", async () => {
+      validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
+
       await expect(
         caller.orchestrator.generate({
-          messages: [{ role: "user", content: "invalid format" }] as any,
+          messages: [
+            { id: "x", role: "user", parts: [{ type: "text", text: "bad" }] },
+          ],
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(/invalid_message/);
+      expect(generateMocks.generateText).not.toHaveBeenCalled();
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "started" });
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "error" });
     });
 
     it("handles generateText errors", async () => {
@@ -122,7 +164,13 @@ describe("orchestrator router", () => {
             },
           ],
         })
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({ message: "API error" });
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "started" });
+      expect(
+        metricsStub.orchestratorGenerateRequestsTotal.inc
+      ).toHaveBeenCalledWith({ status: "error" });
     });
   });
 

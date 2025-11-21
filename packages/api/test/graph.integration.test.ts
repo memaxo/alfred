@@ -1,0 +1,174 @@
+const ORIGINAL_DB_URL = process.env.DATABASE_URL;
+process.env.DATABASE_URL = "sqlite::memory:";
+process.env.DISABLE_TRPC_METRICS = "1";
+process.env.DISABLE_METRICS_HOOKS = "1";
+
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { RuntimeContext } from "@alfred/type/runtime-context";
+import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
+import { eq } from "drizzle-orm";
+
+let persistHypergraphToDb: typeof import("@alfred/agent/assistant/hypergraph-bridge").persistHypergraphToDb;
+let graphRouter: typeof import("@alfred/api/routers/graph").graphRouter;
+let db: typeof import("@alfred/db").db;
+let memoryNodes: typeof import("@alfred/db/schema/graph").memoryNodes;
+let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
+
+type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  roles: string[];
+  scopes: string[];
+};
+
+const TEST_USER: SessionUser = {
+  id: "graph-integration-user",
+  email: "graph.integration@test.local",
+  name: "Graph Integration",
+  roles: ["owner"],
+  scopes: ["graph.read", "graph.write", "assistant.write"],
+};
+
+function createCaller() {
+  const runtime = {
+    requestId: `graph-test-${Date.now()}`,
+    receivedAt: new Date(),
+    method: "POST",
+    url: "http://localhost/trpc",
+    ip: null,
+    forwardedFor: [] as string[],
+    userAgent: "bun-test",
+    referer: null,
+  };
+
+  const runtimeContext = new RuntimeContext([
+    ["requestId", runtime.requestId],
+    ["receivedAt", runtime.receivedAt.toISOString()],
+    ["method", runtime.method],
+    ["url", runtime.url],
+  ]);
+
+  return graphRouter.createCaller({
+    session: {
+      user: TEST_USER,
+      session: { id: `sess-${runtime.requestId}` },
+    },
+    runtime,
+    runtimeContext,
+    policy: { obligations: [] },
+  } as Parameters<typeof graphRouter.createCaller>[0]);
+}
+
+async function getNodeIds(resource: string) {
+  const rows = await db
+    .select({ id: memoryNodes.id })
+    .from(memoryNodes)
+    .where(eq(memoryNodes.resource, resource));
+  return rows.map((row) => row.id);
+}
+
+describe("graph router integration (sqlite)", () => {
+  beforeAll(async () => {
+    ({ persistHypergraphToDb } = await import(
+      "@alfred/agent/assistant/hypergraph-bridge"
+    ));
+    const dbModule = await import("@alfred/db");
+    db = dbModule.db;
+    const schema = await import("@alfred/db/schema/graph");
+    memoryNodes = schema.memoryNodes;
+    memoryEdges = schema.memoryEdges;
+    ({ graphRouter } = await import("@alfred/api/routers/graph"));
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_DB_URL === undefined) {
+      delete process.env.DATABASE_URL;
+    } else {
+      process.env.DATABASE_URL = ORIGINAL_DB_URL;
+    }
+  });
+
+  afterEach(async () => {
+    await db.delete(memoryEdges).execute();
+    await db.delete(memoryNodes).execute();
+  });
+
+  it("returns persisted edges via graph.getEdges", async () => {
+    const resource = `graph-router-${Date.now()}`;
+    const graph = empty();
+    const alpha = graph.add(fact("Router Alpha", 0.9, "integration"));
+    const beta = graph.add(fact("Router Beta", 0.8, "integration"));
+    graph.add(relation(alpha, beta, "relates_to"));
+
+    await persistHypergraphToDb(graph, resource);
+
+    const nodeIds = await getNodeIds(resource);
+    expect(nodeIds).toHaveLength(2);
+
+    const caller = createCaller();
+    const edges = await caller.getEdges({ nodeIds, resource });
+
+    expect(edges).toHaveLength(1);
+    expect(edges[0]?.kind).toBe("relates_to");
+    expect(edges[0]?.resource).toBe(resource);
+  });
+
+  it("scopes edge queries to the requested resource", async () => {
+    const resourceA = `graph-router-a-${Date.now()}`;
+    const resourceB = `graph-router-b-${Date.now()}`;
+    const graphA = empty();
+    const a1 = graphA.add(fact("A1", 0.9, "integration"));
+    const a2 = graphA.add(fact("A2", 0.8, "integration"));
+    graphA.add(relation(a1, a2, "relates_to"));
+    await persistHypergraphToDb(graphA, resourceA);
+
+    const graphB = empty();
+    const b1 = graphB.add(fact("B1", 0.7, "integration"));
+    const b2 = graphB.add(fact("B2", 0.6, "integration"));
+    graphB.add(relation(b1, b2, "relates_to"));
+    await persistHypergraphToDb(graphB, resourceB);
+
+    const caller = createCaller();
+    const aNodeIds = await getNodeIds(resourceA);
+    const bNodeIds = await getNodeIds(resourceB);
+
+    const edgesA = await caller.getEdges({ nodeIds: aNodeIds, resource: resourceA });
+    const edgesB = await caller.getEdges({ nodeIds: bNodeIds, resource: resourceB });
+
+    expect(edgesA).toHaveLength(1);
+    expect(edgesA[0]?.resource).toBe(resourceA);
+    expect(edgesB).toHaveLength(1);
+    expect(edgesB[0]?.resource).toBe(resourceB);
+  });
+
+  it("creates edges via graph.connect on sqlite fallback", async () => {
+    const resource = `graph-connect-${Date.now()}`;
+    const graph = empty();
+    const source = graph.add(fact("Connect Source", 0.9, "integration"));
+    const target = graph.add(fact("Connect Target", 0.8, "integration"));
+    await persistHypergraphToDb(graph, resource);
+
+    const [fromId, toId] = await getNodeIds(resource);
+    const caller = createCaller();
+
+    const inserted = await caller.connect({
+      fromId,
+      toId,
+      kind: "depends_on",
+      resource,
+    });
+
+    expect(inserted.resource).toBe(resource);
+    expect(inserted.kind).toBe("depends_on");
+
+    const edgeCount = await db
+      .select({ id: memoryEdges.id })
+      .from(memoryEdges)
+      .where(eq(memoryEdges.resource, resource));
+    expect(edgeCount).toHaveLength(1);
+
+    const edges = await caller.getEdges({ nodeIds: [fromId, toId], resource });
+    expect(edges.some((edge) => edge.id === inserted.id)).toBe(true);
+  });
+});

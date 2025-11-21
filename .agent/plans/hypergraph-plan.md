@@ -13,6 +13,13 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
 - [x] (2025-11-20 20:20Z) Weeks 1–2 deliverables (persistence bridge, interval tree, AC-3 query engine, DB indexes, rerank logging) implemented and validated. (Graph indexes + rag source uniqueness migration + RAG telemetry/logging now checked in; all milestone requirements satisfied.)
 - [x] (2025-11-20 20:25Z) Weeks 2–3 deliverables (LRU cache, graph repo traversal APIs, API router optimization) implemented and validated (LRU landed earlier; graph repo now resource-scoped with neighbor/subgraph/path filters; API router avoids scans and hashes edges idempotently).
 - [x] (2025-11-20 20:55Z) Weeks 3–4 optional deliverables (semantic fallback KNN, advanced indices, instrumentation) evaluated and either completed or explicitly deferred. (Completed: semantic KNN fallback + embedding-aware semanticQuery + knn tests + metrics instrumentation for query/persist; Remaining: advanced indices explicitly deferred.)
+- [x] (2025-11-20 22:15Z) Added SQLite-backed hypergraph persistence integration tests, a reusable smoke harness, and stubbed-embedding RAG doc tests so CI can exercise persistence/RAG workflows without Postgres or the embed pool.
+- [x] (2025-11-20 22:40Z) Wired the root `ci` script to run the SQLite integration suite plus the smoke harness so automation enforces capture → persist → reload coverage on every CI pass.
+- [x] (2025-11-20 22:58Z) Expanded the SQLite integration suite with multi-resource isolation checks, interval-query reload assertions, and dirty-set no-op coverage so persistence bugs surface before hitting Postgres.
+- [x] (2025-11-20 23:18Z) Added a sqlite-backed tRPC graph router integration suite and patched the sqlite schema to mirror the Postgres `hash` uniqueness guarantees so API calls can be exercised without Postgres.
+- [x] (2025-11-20 23:35Z) Added a sqlite-backed agent graphstore integration suite so `persistKnowledge` itself is exercised end-to-end and wired it into `bun run test:integration`.
+- [x] (2025-11-20 23:55Z) Added a sqlite-backed workflow reasoning integration suite (persistReasoning → workflow.reasoning) plus a nightly Postgres CI workflow running embed E2E and the capture → persist → reload smoke script against a real database.
+- [ ] (2025-11-21 00:09Z) Investigated full agent capture stream simulation: current workflow runtime integration tests (packages/api/test/workflow.runtime-integration.test.ts) rely on mocked runtimes/run registries and never drive workflow.start → stream → resume through the sqlite persistence path, leaving capture → persist → reload coverage incomplete for streaming workflows. Drafting a sqlite integration test plan to close this.
 
 ## Surprises & Discoveries
 
@@ -20,6 +27,9 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
   Evidence: inspected repository at 2025-11-20 19:05Z and observed existing exports with limited filtering and TODO comments.
 - Discovery: Full `bun test packages/rag` spins up the local embed pool (heavy GPU download) despite doc tests mocking DB—running the narrower rerank suite avoids this dependency during CI-less validation.
   Evidence: attempted `bun test packages/rag` at 2025-11-20 20:12Z and saw embed pool initialization logs plus timeouts; reran targeted `bun test packages/rag/test/rerank.test.ts` instead.
+- Discovery: SQLite fallback must be selected *before* importing `@alfred/db`, otherwise Drizzle caches the Postgres driver and integration tests still hit Postgres. Fix: override `DATABASE_URL` at the top of each SQLite-based test/smoke script.
+  Evidence: observed Postgres connection attempts while prototyping the integration test until `process.env.DATABASE_URL` was set prior to dynamic imports (2025-11-20 21:55Z).
+- Discovery: The graph router depends on `appRouter`’s import tree (terminal router, OpenAI bindings) and on sqlite schema parity. Resolved by dynamically importing only `graphRouter` after forcing `DATABASE_URL=sqlite::memory:` and by adding a `memory_edges.hash` unique index to the sqlite harness (2025-11-20 23:10Z).
 
 ## Decision Log
 
@@ -46,6 +56,36 @@ Deliver a robust, type-safe bridge between the in-memory hypergraph and the pers
   Date/Author: 2025-11-20 / Codex.
 - Decision: Added lightweight instrumentation via `packages/knowledge/src/metrics.ts` + `@alfred/metrics/performance`, wrapping query execution, semantic fallback, and persistence load/save paths with budget logging so we can spot hot-path regressions without affecting return types.
   Rationale: Completes the optional instrumentation hook requirement while keeping knowledge functions synchronous and pure.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Codified SQLite-backed persistence integration coverage by introducing `packages/knowledge/test/hypergraph.integration.test.ts` plus `bun run test:integration`, ensuring graph ↔ DB flows run in CI without Postgres.
+  Rationale: Validates persistence bridge behavior (dirty tracking, neighbor repo filters) against the same schema as production while keeping tests hermetic.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added `scripts/smoke-hypergraph.ts` and documented `bun run smoke:hypergraph [--use-existing-db]` so ops can manually verify capture → persist → reload without touching test harnesses.
+  Rationale: Provides a <5s diagnostic path for regressions and gives SRE/QA a repeatable repro command.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Refactored RAG doc helpers to use `setEmbeddingProvider` with a stub provider in tests, allowing `bun test packages/rag` to run without spinning up the GPU embed pool while keeping production embeddings unchanged.
+  Rationale: Enables doc ingestion/retrieval tests to run in every CI pass, increasing confidence that capture → embed → retrieve works even when heavy infra is unavailable.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Updated `package.json#scripts.ci` to chain `bun run test:integration` and `bun run smoke:hypergraph` after `turbo run typecheck test`, making persistence smokes part of the default CI contract.
+  Rationale: Ensures regressions in hypergraph ↔ DB flows fail CI even when other suites pass, without requiring contributors to remember bespoke commands.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Hardened the hypergraph integration suite with tests for resource scoping, temporal queries, and dirty-set no-ops so SQLite coverage mirrors the production contract before Postgres runs.
+  Rationale: Regression signals now cover the behaviors most likely to break in production (multi-resource merges, timeline lookups, repeated persists) without needing a live Postgres instance.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Introduced `packages/api/test/graph.integration.test.ts` to exercise `graph.getEdges`/`graph.connect` via tRPC on the sqlite driver, ensuring the agent → DB → API flow works end-to-end without Postgres.
+  Rationale: Validates that persisted edges immediately power API queries and mutations, closing the testing gap between the knowledge bridge and the public router.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added a sqlite unique index on `memory_edges.hash` so `graph.connect`’s `onConflictDoNothing({ target: hash })` clause behaves the same under sqlite as it does in Postgres.
+  Rationale: Aligns the sqlite harness with production constraints, preventing false-negative integration failures and keeping the fallback trustworthy.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Created `packages/agent/assistant/test/graphstore.integration.test.ts` and included it in `bun run test:integration` so the agent persistence bridge is validated alongside knowledge + API suites.
+  Rationale: Ensures `persistKnowledge` writes nodes/edges correctly on sqlite and remains idempotent, closing the gap between the hypergraph package and API consumers.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Added `packages/api/test/workflow.reasoning.integration.test.ts` to drive `persistReasoning` → `workflow.reasoning` on sqlite, covering the workflow/assistant entry point.
+  Rationale: Proves that reasoning traces persisted by the agent can be retrieved via the public router without relying on Postgres-only features.
+  Date/Author: 2025-11-20 / Codex.
+- Decision: Introduced `.github/workflows/postgres-nightly.yml` to run embed E2E plus the hypergraph smoke script against Postgres on a nightly cadence (and on-demand).
+  Rationale: Provides production-parity coverage for vector operations and Postgres-specific constraints without slowing down regular CI lanes.
   Date/Author: 2025-11-20 / Codex.
 
 ## Outcomes & Retrospective
@@ -75,6 +115,12 @@ Alfred’s knowledge subsystem currently keeps cognitive hypergraph state in mem
 4. After wiring the persistence bridge, write a short local script (described in `Artifacts and Notes`) to populate a hypergraph, persist it, reload into a fresh process, and log the node count. Keep that script under `scripts/tmp` or an equivalent scratch area referenced by the plan.
 5. Update API and RAG layers, then run `bun test packages/db packages/api packages/rag` followed by `bun run typecheck` at the root.
 6. Once everything compiles, run `bun run dev:agent` (or the project’s canonical agent start command) and manually exercise a capture + reload workflow, noting observations under `Validation and Acceptance`.
+7. Add a sqlite-backed workflow capture integration test under `packages/api/test/workflow.capture.integration.test.ts` that:
+   - Sets `DATABASE_URL=sqlite::memory:`/metrics disables before imports and uses the real `workflowRouter` via `createCaller` with `workflow.plan`, `workflow.stream`, `workflow.resume`, and `workflow.read` scopes.
+   - Stubs the workflow runtime using `mock.module("@alfred/workflow/runtime", ...)` (or an equivalent shim) so `workflow.start` yields a deterministic async iterator producing capture events that call into `persistKnowledge`/`persistReasoning` while respecting resource IDs.
+   - Calls `caller.workflow.start(...)` to create a run, iterates the returned stream (or subscribes to the start result) until the mock runtime signals completion, and asserts DB tables (`memory_nodes`, `memory_edges`, `workflow_runs`, `workflow_events`) contain the new run data.
+   - Invokes `caller.workflow.resume({ runId })` and `caller.workflow.reasoning({ runId })` after clearing in-memory caches to prove persisted state is reloaded, then asserts the reasoning chain matches the streamed events.
+   - Cleans sqlite tables between tests and registers with `bun run test:integration` so CI exercises the full capture → persist → stream → resume → reasoning cycle.
 
 ## Validation and Acceptance
 
@@ -120,6 +166,33 @@ Keep concise evidence inside this plan—for example, interval-tree insertion lo
         $ bun test packages/knowledge
         ...
         18 pass
+        0 fail
+- 2025-11-20 23:35Z: `bun run test:integration` now runs the hypergraph persistence suite, agent graphstore suite, and the tRPC graph router integration suite on sqlite.
+
+        $ bun run test:integration
+        ...
+        11 pass
+        0 fail
+- 2025-11-20 23:55Z: Workflow reasoning integration suite validates `persistReasoning` → `workflow.reasoning` on sqlite; nightly Postgres workflow added for embed E2E + capture smoke.
+
+        $ bun test packages/api/test/workflow.reasoning.integration.test.ts
+        ...
+        1 pass
+        0 fail
+- 2025-11-20 22:12Z: Smoke harness exercises capture → persist → reload end-to-end; defaults to SQLite but works with `--use-existing-db`.
+
+        $ bun run smoke:hypergraph
+        {
+          "event": "smoke.hypergraph",
+          "resource": "smoke-1732131132000",
+          "nodes": 2,
+          "results": 1
+        }
+- 2025-11-20 22:14Z: RAG doc tests now run entirely in-process with stubbed embeddings, covering chunk/ingest/retrieve flows without GPU infra.
+
+        $ bun test packages/rag
+        ...
+        12 pass
         0 fail
 
 ## Interfaces and Dependencies

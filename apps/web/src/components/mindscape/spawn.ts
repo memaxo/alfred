@@ -9,6 +9,12 @@ export const mindscapeSpawnTypes = [
   "timer",
   "bookmark",
   "todo",
+  "settings",
+  "privacy",
+  "profile",
+  "integrations",
+  "workflowlist",
+  "deployment",
   "workflow",
 ] as const;
 
@@ -20,7 +26,18 @@ export type MindscapeSearchParams = {
   open?: string;
 };
 
-export const singletonSpawnTypes: MindscapeSpawnType[] = ["chat"];
+export const singletonSpawnTypes: MindscapeSpawnType[] = [
+  "chat",
+  "timer",
+  "bookmark",
+  "todo",
+  "settings",
+  "privacy",
+  "profile",
+  "integrations",
+  "workflowlist",
+  "deployment",
+];
 
 const spawnLabels: Record<MindscapeSpawnType, string> = {
   chat: "Chat",
@@ -29,6 +46,12 @@ const spawnLabels: Record<MindscapeSpawnType, string> = {
   timer: "Timer",
   bookmark: "Bookmark",
   todo: "Todo",
+  settings: "Settings",
+  privacy: "Privacy",
+  profile: "Profile",
+  integrations: "Integrations",
+  workflowlist: "Workflow List",
+  deployment: "Deployments",
   workflow: "Workflow",
 };
 
@@ -79,12 +102,85 @@ export function createSpawnNode(
           mode: "edit",
         },
       };
+    case "timer":
+      return {
+        id,
+        type: "timer",
+        position,
+        data: {
+          label: "Timers",
+          defaultMinutes: 25,
+          lastLabel: undefined,
+        },
+      };
+    case "bookmark":
+      return {
+        id,
+        type: "bookmark",
+        position,
+        data: {
+          label: "Bookmarks",
+          lastTags: [],
+        },
+      };
+    case "todo":
+      return {
+        id,
+        type: "todo",
+        position,
+        data: {
+          label: "Todo List",
+          filter: "all",
+        },
+      };
     case "workflow":
       return {
         id,
         type: "workflow",
         position,
         data: { label: "Workflow", status: "Idle", messages: [] },
+      };
+    case "settings":
+      return {
+        id,
+        type: "settings",
+        position,
+        data: { label: "Settings", autonomy: "low", voiceProvider: "local" },
+      };
+    case "privacy":
+      return {
+        id,
+        type: "privacy",
+        position,
+        data: { label: "Privacy" },
+      };
+    case "profile":
+      return {
+        id,
+        type: "profile",
+        position,
+        data: { label: "Profile" },
+      };
+    case "integrations":
+      return {
+        id,
+        type: "integrations",
+        position,
+        data: { label: "Integrations" },
+      };
+    case "workflowlist":
+      return {
+        id,
+        type: "workflowlist",
+        position,
+        data: { label: "Workflows", filter: "all" },
+      };
+    case "deployment":
+      return {
+        id,
+        type: "deployment",
+        position,
+        data: { label: "Deployments", liveHealth: false },
       };
     default:
       return null;

@@ -34,7 +34,7 @@ export default function SignUpForm({
         {
           onSuccess: () => {
             navigate({
-              to: "/dashboard",
+              to: "/mindscape",
             });
             toast.success("Sign up successful");
           },

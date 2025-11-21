@@ -27,7 +27,7 @@
     "check": "biome check --write .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
     "ruler:verify": "bunx @intellectronica/ruler@latest apply --no-gitignore --nested && git diff --exit-code",
-    "ci": "turbo run typecheck test",
+    "ci": "turbo run typecheck && bun run test:sqlite && bun run test:postgres && bun run test:integration && bun run smoke:hypergraph",
     "dev": "turbo dev",
     "build": "turbo build",
     "typecheck": "tsc -b --pretty false",
@@ -42,7 +42,11 @@
     "db:start": "turbo -F @alfred/db db:start",
     "db:watch": "turbo -F @alfred/db db:watch",
     "db:stop": "turbo -F @alfred/db db:stop",
-    "db:down": "turbo -F @alfred/db db:down"
+    "db:down": "turbo -F @alfred/db db:down",
+    "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
+    "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",
+    "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts",
+    "smoke:hypergraph": "bun scripts/smoke-hypergraph.ts"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.3.6",

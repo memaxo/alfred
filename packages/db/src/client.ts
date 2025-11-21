@@ -11,13 +11,44 @@ import { ensureSqliteTestSchema } from "./sqlite/schema";
 
 type PgSource = Client | Pool;
 
-export let dbDriver: "postgres" | "sqlite" = "postgres";
+export type DbDriver = "postgres" | "sqlite";
+export let dbDriver: DbDriver = "postgres";
 
 const SQLITE_MEMORY_URL = "sqlite::memory:";
 const require = createRequire(import.meta.url);
 const drizzleSqlite: (...args: any[]) => any = (
   require("drizzle-orm/bun-sqlite") as { drizzle: (...args: any[]) => any }
 ).drizzle;
+
+export function getDbDriver(): DbDriver {
+  return dbDriver;
+}
+
+export function isPostgresDriver(): boolean {
+  return dbDriver === "postgres";
+}
+
+export function isSqliteDriver(): boolean {
+  return dbDriver === "sqlite";
+}
+
+export function requirePostgresDriver(context?: string): void {
+  if (!isPostgresDriver()) {
+    throw new Error(
+      context ??
+        "This test requires Postgres. Set DATABASE_URL to a Postgres connection string."
+    );
+  }
+}
+
+export function requireSqliteDriver(context?: string): void {
+  if (!isSqliteDriver()) {
+    throw new Error(
+      context ??
+        "This test requires the sqlite fallback. Unset DATABASE_URL to run under sqlite."
+    );
+  }
+}
 
 function resolveConnectionString(
   explicit?: string,
@@ -88,6 +119,19 @@ function normalizeSqliteFilename(value: string): string {
 function createSqliteDrizzle(connectionString: string) {
   const filename = normalizeSqliteFilename(connectionString);
   const sqlite = new Database(filename, { create: true });
+  const originalPrepare = sqlite.prepare.bind(sqlite);
+  sqlite.prepare = ((source: string, ...params: unknown[]) => {
+    const normalized =
+      typeof source === "string"
+        ? source
+            .replace(
+              /gen_random_uuid\(\)/g,
+              "lower(hex(randomblob(16)))"
+            )
+            .replace(/\bnow\(\)/gi, "CURRENT_TIMESTAMP")
+        : source;
+    return originalPrepare(normalized as string, ...params);
+  }) as typeof sqlite.prepare;
   ensureSqliteTestSchema(sqlite);
   return drizzleSqlite(sqlite);
 }

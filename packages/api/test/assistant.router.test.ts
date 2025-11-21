@@ -12,11 +12,27 @@ import {
   getAssistantAgentDefaultsMock,
   resetAgentMocks,
 } from "./utils/agent-mock";
+import { metricsStub } from "./utils/mock-metrics";
 
 setupTestEnv();
 mockPolicyAudit();
 
 const generateTextMock = vi.fn();
+const validateUIMessagesMock = vi.fn(
+  async ({ messages }: { messages: unknown[] }) => messages
+);
+const convertToModelMessagesMock = vi.fn((messages: unknown) => messages);
+const pruneMessagesMock = vi.fn(
+  ({ messages }: { messages: unknown[] }) => messages
+);
+const stepCountIsMock = vi.fn((max: number) => ({ max }));
+
+mock.module("ai", () => ({
+  stepCountIs: stepCountIsMock,
+  validateUIMessages: validateUIMessagesMock,
+  convertToModelMessages: convertToModelMessagesMock,
+  pruneMessages: pruneMessagesMock,
+}));
 
 mock.module("@alfred/api/ai/generate", () => ({
   generateText: generateTextMock,
@@ -48,6 +64,12 @@ afterEach(() => {
   vi.restoreAllMocks();
   generateTextMock.mockReset();
   handoffExecuteMock.mockReset();
+  validateUIMessagesMock.mockClear();
+  convertToModelMessagesMock.mockClear();
+  pruneMessagesMock.mockClear();
+  stepCountIsMock.mockClear();
+  metricsStub.assistantGenerateRequestsTotal.inc.mockClear();
+  metricsStub.assistantGenerateDurationSeconds.startTimer.mockClear();
 });
 
 describe("assistant router", () => {
@@ -78,11 +100,7 @@ describe("assistant router", () => {
     expect(generateTextMock).toHaveBeenCalledTimes(1);
     const callArgs = generateTextMock.mock.calls[0]?.[0];
     expect(callArgs?.messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: "user",
-        }),
-      ])
+      pruneMessagesMock.mock.results[0]?.value
     );
     expect(callArgs?.toolChoice).toBeUndefined();
     expect(callArgs?.model).toBe(
@@ -96,6 +114,15 @@ describe("assistant router", () => {
       usage: { inputTokens: 10, outputTokens: 15 },
       finishReason: "stop",
     });
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "started" }
+    );
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "success" }
+    );
+    expect(
+      metricsStub.assistantGenerateDurationSeconds.startTimer
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("throws UNAUTHORIZED when session missing", async () => {
@@ -144,3 +171,29 @@ describe("assistant router", () => {
     });
   });
 });
+  it("bubbles validation errors", async () => {
+    validateUIMessagesMock.mockRejectedValueOnce(new Error("invalid"));
+
+    const caller = await createTestCaller({
+      scopes: ["assistant.write", "assistant.escalate"],
+    });
+
+    await expect(
+      caller.assistant.generate({
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            parts: [{ type: "text", text: "invalid" }],
+          },
+        ],
+      })
+    ).rejects.toThrow(/invalid_message/);
+    expect(generateTextMock).not.toHaveBeenCalled();
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "started" }
+    );
+    expect(metricsStub.assistantGenerateRequestsTotal.inc).toHaveBeenCalledWith(
+      { status: "error" }
+    );
+  });

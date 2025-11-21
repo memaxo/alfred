@@ -1,36 +1,39 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { beforeAll, beforeEach, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const SHOULD_SKIP = !SHOULD_RUN;
 const TEST_USER = "assistant-test-user";
 
 let assistantRepo: typeof import("@alfred/db").assistantRepo;
 let db: typeof import("@alfred/db").db;
 
-beforeAll(async () => {
-  if (SHOULD_SKIP) {
-    return;
-  }
-  const mod = await import("@alfred/db");
-  assistantRepo = mod.assistantRepo;
-  db = mod.db;
-});
-
 async function resetAssistantTables() {
-  if (SHOULD_SKIP) return;
+  if (!db) return;
   await db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
   );
 }
 
-beforeEach(async () => {
-  await resetAssistantTables();
-});
-
-const describeFn = SHOULD_SKIP ? describe.skip : describe;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 describeFn("assistantRepo", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "assistantRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const mod = await import("@alfred/db");
+    assistantRepo = mod.assistantRepo;
+    db = mod.db;
+  });
+
+  beforeEach(async () => {
+    await resetAssistantTables();
+  });
+
   it("creates and lists notes in descending update order", async () => {
     const first = await assistantRepo.createNote(
       TEST_USER,

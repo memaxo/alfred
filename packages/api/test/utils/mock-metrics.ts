@@ -1,7 +1,11 @@
 import { mock, vi } from "bun:test";
 
 const counter = () => ({ inc: vi.fn(), labels: (..._args: any[]) => ({ inc: vi.fn() }) });
-const histogram = () => ({ startTimer: vi.fn().mockReturnValue(() => {}), labels: (..._args: any[]) => ({ observe: vi.fn() }) });
+const histogram = () => ({
+  startTimer: vi.fn().mockReturnValue(() => {}),
+  observe: vi.fn(),
+  labels: (..._args: any[]) => ({ observe: vi.fn() }),
+});
 
 export const metricsStub = {
   // tRPC
@@ -50,8 +54,15 @@ export const metricsStub = {
   assistantEscalationsTotal: counter(),
   memoryUpdatesTotal: counter(),
   memoryForgetsTotal: counter(),
+  assistantGenerateRequestsTotal: counter(),
+  assistantGenerateDurationSeconds: histogram(),
+  orchestratorGenerateRequestsTotal: counter(),
+  orchestratorGenerateDurationSeconds: histogram(),
   preferenceHistoryPrunedTotal: counter(),
   preferenceCacheInvalidationsTotal: counter(),
+  preferenceRefreshTotal: counter(),
+  preferencePromptInjectionsTotal: counter(),
+  preferencePromptFailuresTotal: counter(),
   voiceSttTotal: counter(),
   voiceSttDurationSeconds: histogram(),
   recordVoiceStt: (_: any) => void 0,

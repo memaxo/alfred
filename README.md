@@ -215,8 +215,10 @@ bun run dev:web
 | `bun run build` | Build all packages/apps |
 | `bun run typecheck` | Solution-style `tsc -b` across packages |
 | `bun run test` | Run all tests |
+| `bun run test:integration` | Run SQLite-backed hypergraph + agent graphstore + workflow reasoning + graph router integration suites |
 | `bun run --filter @alfred/<package> test` | Run tests for specific package |
 | `bun run check` | Lint and format code (Biome) |
+| `bun run smoke:hypergraph` | Execute capture → persist → reload smoke script (uses SQLite unless `--use-existing-db`) |
 | `bun run db:start` | Start Postgres container |
 | `bun run db:migrate` | Apply SQL migrations |
 | `bun run db:studio` | Launch Drizzle Studio |
@@ -237,8 +239,14 @@ Codex metrics (`codex_exec_runs_total`, `codex_exec_duration_seconds`, and `code
 
 - **Type checking:** `bun run typecheck`
 - **Agent tests:** `bun run --filter @alfred/agent test`
+- **Integration tests:** `bun run test:integration` (uses SQLite fallback; respects `DATABASE_URL` when `--use-existing-db` flag passed)
+- **Smoke test:** `bun run smoke:hypergraph` to exercise capture → persist → reload (add `--use-existing-db` to run against Postgres)
+- **Nightly Postgres smoke:** `.github/workflows/postgres-nightly.yml` runs embed E2E plus the capture → persist → reload smoke script against a real Postgres instance.
 - Add package-specific `test`/`typecheck` scripts when introducing new workspaces.
 - Refer to `.ruler/05-testing.md` for expectations (Vitest coverage per repo/router, DB isolation, etc.).
+- **Unit tests (sqlite fallback):** `bun run test:sqlite` runs every workspace’s `test` script without needing `DATABASE_URL`. Tests that depend on `@alfred/db` use the in-memory sqlite harness automatically.
+- **Postgres-backed tests:** provision a Postgres instance, set `DATABASE_URL`, then run `bun run test:postgres`. Packages with real DB suites set `RUN_DB_TESTS=1` internally; the helpers in `@alfred/db/testing` ensure they fail fast if Postgres is unavailable.
+- **Database targets:** When `DATABASE_URL` is unset, tests run against the in-memory sqlite fallback (fast, zero-config). Suites that rely on Postgres-only features must call `describePostgres(...)` or `requirePostgresTestEnv()` from `@alfred/db/testing` so they skip cleanly unless a Postgres URL is provided.
 
 ## Evaluations & Laminar Integration
 

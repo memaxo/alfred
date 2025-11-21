@@ -1,9 +1,17 @@
 import type { Node } from "@xyflow/react";
 import {
   AlarmClock,
+  BookMarked,
   MessageSquare,
   Network,
   StickyNote,
+  ListChecks,
+  SlidersHorizontal,
+  ShieldCheck,
+  UserRound,
+  PlugZap,
+  Rows3,
+  ServerCog,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -42,6 +50,60 @@ const createActions: Array<{
     label: "New Reminder",
     description: "Schedule follow-ups",
     icon: <AlarmClock className="h-4 w-4" />,
+  },
+  {
+    type: "timer",
+    label: "Timer Board",
+    description: "Start and monitor focus timers",
+    icon: <AlarmClock className="h-4 w-4" />,
+  },
+  {
+    type: "bookmark",
+    label: "Bookmark Node",
+    description: "Save links you need later",
+    icon: <BookMarked className="h-4 w-4" />,
+  },
+  {
+    type: "todo",
+    label: "Todo List",
+    description: "Track quick tasks",
+    icon: <ListChecks className="h-4 w-4" />,
+  },
+  {
+    type: "settings",
+    label: "Settings",
+    description: "Adjust autonomy & preferences",
+    icon: <SlidersHorizontal className="h-4 w-4" />,
+  },
+  {
+    type: "privacy",
+    label: "Privacy",
+    description: "Export or redact stored facts",
+    icon: <ShieldCheck className="h-4 w-4" />,
+  },
+  {
+    type: "profile",
+    label: "Profile",
+    description: "Update identity & passkeys",
+    icon: <UserRound className="h-4 w-4" />,
+  },
+  {
+    type: "integrations",
+    label: "Integrations",
+    description: "Connect Linear and more",
+    icon: <PlugZap className="h-4 w-4" />,
+  },
+  {
+    type: "workflowlist",
+    label: "Workflow List",
+    description: "Browse and reopen runs",
+    icon: <Rows3 className="h-4 w-4" />,
+  },
+  {
+    type: "deployment",
+    label: "Deployments",
+    description: "Monitor environments",
+    icon: <ServerCog className="h-4 w-4" />,
   },
   {
     type: "workflow",

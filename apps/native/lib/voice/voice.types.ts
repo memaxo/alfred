@@ -15,6 +15,17 @@ export type VoiceTtsPayload = {
   voice?: string;
 };
 
+export type VoiceS2SPayload = {
+  audioBase64: string;
+  mimeType: string;
+  language?: string;
+  prompt?: string;
+  thread?: string;
+  resource?: string;
+  ttsVoice?: string;
+  ttsFormat?: "mp3" | "opus" | "wav";
+};
+
 export type PendingSttItem = {
   ts: number;
   kind: "stt";
@@ -31,4 +42,15 @@ export type PendingTtsItem = {
   lastError?: string;
 };
 
-export type PendingItem = PendingSttItem | PendingTtsItem;
+export type PendingS2SItem = {
+  ts: number;
+  kind: "s2s";
+  payload: VoiceS2SPayload;
+  retryCount: number;
+  lastError?: string;
+};
+
+export type PendingItem =
+  | PendingSttItem
+  | PendingTtsItem
+  | PendingS2SItem;

@@ -9,6 +9,11 @@ export {
   createPgPool,
   db,
   dbDriver,
+  getDbDriver,
+  isPostgresDriver,
+  isSqliteDriver,
+  requirePostgresDriver,
+  requireSqliteDriver,
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
 export * as deployRepo from "./repo/deploy";

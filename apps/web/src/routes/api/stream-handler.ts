@@ -2,7 +2,11 @@ import { getModelId } from "@alfred/agent";
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { auth } from "@alfred/auth";
-import { preferenceHistoryPrunedTotal } from "@alfred/api/metrics";
+import {
+  preferenceHistoryPrunedTotal,
+  preferencePromptFailuresTotal,
+  preferencePromptInjectionsTotal,
+} from "@alfred/api/metrics";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { logger } from "@alfred/api/utils/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
@@ -98,7 +102,11 @@ export async function handleStreamRequest(
           toolNames: tools ? Object.keys(tools) : undefined,
         });
         preferencePrompt = prompt || undefined;
+        if (preferencePrompt) {
+          preferencePromptInjectionsTotal.inc({ source: errorPrefix });
+        }
       } catch (error) {
+        preferencePromptFailuresTotal.inc({ source: errorPrefix });
         logger.warn(`${errorPrefix}_preference_prompt_failed`, {
           userId,
           error: error instanceof Error ? error.message : String(error),

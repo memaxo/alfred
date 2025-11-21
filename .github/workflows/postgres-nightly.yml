@@ -1,0 +1,48 @@
+name: Postgres Nightly
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  postgres-e2e:
+    name: Postgres E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: alfred
+          POSTGRES_PASSWORD: alfred
+          POSTGRES_DB: alfred
+        options: >-
+          --health-cmd "pg_isready -U alfred" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://alfred:alfred@localhost:5432/alfred
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.18"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run migrations
+        run: bun run db:migrate
+
+      - name: Embed E2E
+        run: bun test packages/embed/test/e2e.test.ts
+
+      - name: Hypergraph Smoke (Postgres)
+        run: bun run smoke:hypergraph -- --use-existing-db

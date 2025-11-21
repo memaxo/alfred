@@ -33,12 +33,24 @@ Non-functional requirements:
 - [x] (2025-11-20 16:45Z) Phase 0/Step 0b: tightened Zustand persistence to snapshot node positions + minimal data (trimmed chat transcripts) and keep `focusedNodeId` in storage.
 - [x] (2025-11-20 17:05Z) Phase 0/Step 0c: shipped Cmd/Ctrl+K command palette with shared spawn/focus logic and hotkey listener.
 - [x] Phase 0 enablement (deep links, spawn palette, position persistence).
-- [ ] Phase 1 parity for Chat, Notes, Reminders (CRUD in nodes; deep-link fallbacks).
-- [ ] Phase 2 parity for Timers, Bookmarks, Todos.
-- [ ] Phase 3 parity for Settings/Privacy/Profile/Integrations.
-- [ ] Phase 4 parity for Workflows/Orchestrator/Deployments; replay and error UX.
-- [ ] Cutover milestone: make `/mindscape` the default post-auth landing via feature flag.
-- [ ] Decommission plan for old routes (retain fallback behind flag).
+- [x] (2025-11-20 18:10Z) Phase 1 prep: expanded note/reminder schemas + initializer/spawn builders to track IDs, modes, and metadata required for CRUD.
+- [x] (2025-11-20 19:05Z) Phase 1: implemented NoteNode in-node create/update/delete flows with optimistic Mindscape store sync + TanStack Query invalidation.
+- [x] (2025-11-20 19:40Z) Phase 1: implemented ReminderNode creation/reschedule/complete/delete flows (reschedule = create replacement then delete old) with status badges and due-time UX.
+- [x] Phase 1 parity for Chat, Notes, Reminders (CRUD in nodes; deep-link fallbacks).
+- [x] (2025-11-20 21:00Z) Phase 2 prep: expanded schemas/store/spawn/canvas for timer/bookmark/todo node types; palette exposes them.
+- [x] (2025-11-20 22:05Z) Phase 2: implemented TimerNode (active list + start form), BookmarkNode (create/list/delete), and TodoNode (filter/add/toggle/delete) with TanStack Query invalidation + status UI.
+- [x] Phase 2 parity for Timers, Bookmarks, Todos.
+- [x] (2025-11-20 22:40Z) Phase 3 prep: added schemas/store/spawn entries for settings/privacy/profile/integrations nodes + palette hooks.
+- [x] (2025-11-20 23:20Z) Phase 3: shipped SettingsNode (autonomy slider + preference editor) and PrivacyNode (fact/events list with export/forget) reusing trpc flows.
+- [x] (2025-11-20 23:55Z) Phase 3: delivered ProfileNode (profile form + passkeys) and IntegrationsNode (Linear connect/reconnect + status badges).
+- [x] Phase 3 parity for Settings/Privacy/Profile/Integrations.
+- [x] (2025-11-21 00:45Z) Phase 4 prep: extended workflow/deployment schemas, store partialization, spawn/palette entries, and WorkflowNode schema for requirements/auto/mode fields.
+- [x] (2025-11-21 02:10Z) Phase 4: implemented WorkflowListNode (filters, detail modal, focus) and upgraded WorkflowNode with run starter + event timeline.
+- [x] (2025-11-21 03:05Z) Phase 4: added DeploymentNode (deploy list, promote/remove/copy, live health stream toggle) reusing deploy routers and PromoteDialog.
+- [x] Phase 4 parity for Workflows/Deployments (list + starter + replay/error inside Mindscape).
+- [x] (2025-11-21 05:05Z) Cutover milestone: Mindscape now defaults for all post-auth flows, header/user menu highlight it while legacy routes remained accessible for a short grace period.
+- [x] (2025-11-21 05:30Z) Feature flag removed entirely; deleted `VITE_MINDSCAPE_PRIMARY`, helper module, and related docs so the rollout is permanent with less surface for drift.
+- [x] (2025-11-21 06:15Z) Legacy removal: stripped header/user menu links, updated docs, and confirmed no affordances remain that expose the route-based UI.
 
 ## Surprises & Discoveries
 
@@ -54,6 +66,8 @@ Non-functional requirements:
   Evidence: apps/web/src/components/mindscape/canvas.tsx now exports a provider-wrapped component while the inner hook drives focus centering.
 - Observation: `bun --filter web typecheck` currently fails due to pre-existing issues in other packages (knowledge indexes, Linear webhooks, shared tests), so Phase 0 validation relies on manual testing until workspace type hygiene improves.
   Evidence: bun report (2025-11-20) highlights errors in `packages/knowledge`, `packages/agent`, and `apps/web/src/routes/*` unrelated to Mindscape changes.
+- Observation: `remind` router exposes create/delete/fire but no update endpoint, so rescheduling is implemented by creating a replacement reminder then deleting the old record once the new one persists.
+  Evidence: packages/api/src/routers/remind.ts exports create/list/due/fire/delete only; ReminderNode now orchestrates create→delete sequencing.
 
 ## Decision Log
 
@@ -123,6 +137,50 @@ Non-functional requirements:
   <date-author>2025-11-20 / AI Agent</date-author>
 </decision>
 
+<decision id="7">
+  <chosen>Reminder reschedule = create new reminder, then delete the prior record once the new one succeeds.</chosen>
+  <rationale>
+    The remind router lacks an update mutation, so replacing the reminder preserves reliability (no data loss) while keeping the node bound to the freshest record. Deleting the previous reminder after creation avoids duplicate notifications.
+  </rationale>
+  <discards>
+    Deleting the old reminder before creating a new one risked losing the task if the new mutation failed; leaving both reminders active would send duplicate alerts.
+  </discards>
+  <date-author>2025-11-20 / AI Agent</date-author>
+</decision>
+
+<decision id="8">
+  <chosen>Settings/Privacy/Profile/Integrations nodes reuse existing route mutations and limit UI scope to the highest-value controls (autonomy slider, privacy export/forget, profile form + passkeys, Linear connect) to keep nodes compact.</chosen>
+  <rationale>
+    Reusing the route logic avoids duplicating validation rules and keeps TanStack Query cache flows identical, while trimming visuals down to core controls fits the Mindscape node footprint. Palette spawns them on demand, and singleton rules prevent redundant admin panels floating around the canvas.
+  </rationale>
+  <discards>
+    Auto-spawning all admin nodes on load overcrowded the canvas and obscured user intent; re-implementing bespoke logic risked divergence from the battle-tested routes.
+  </discards>
+  <date-author>2025-11-20 / AI Agent</date-author>
+</decision>
+
+<decision id="9">
+  <chosen>Feature-flagged cutover (later removed) allowed staged testing before Mindscape became the permanent default.</chosen>
+  <rationale>
+    Keeping a short-lived flag let us validate Mindscape parity without forcing every user into the new UI immediately.
+  </rationale>
+  <discards>
+    n/a (see Decision 10 for subsequent removal)
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
+<decision id="10">
+  <chosen>Remove `VITE_MINDSCAPE_PRIMARY` and treat Mindscape as the always-on primary surface.</chosen>
+  <rationale>
+    Parity is complete and the fallback UI remains available via explicit links, so the feature flag only added complexity. Dropping it eliminates divergent states, dead branches, and extra documentation.
+  </rationale>
+  <discards>
+    Keeping the flag indefinitely would risk drift between environments and require redundant testing; routing-condition checks would also stick around forever.
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
 ## Outcomes & Retrospective
 
 (Will be updated each phase)
@@ -131,6 +189,26 @@ Non-functional requirements:
 ### Phase 0 (Enablement) — 2025-11-20
 
 Deep links (`nodeId`/`spawn`) hydrate nodes deterministically, positions + focus survive refresh via sanitized Zustand persistence, and the Cmd/Ctrl+K palette provides a discoverable spawn/search surface that reuses the same spawn helpers as the URL flow. Unsupported artifacts (timer/bookmark/todo) are intentionally gated with messaging until their nodes land in Phases 2–3. Next focus: delivering CRUD parity for Chat/Note/Reminder nodes so `/mindscape` stands in for `/ai`, `/note`, and `/remind`.
+
+### Phase 1 (Chat / Note / Reminder Parity) — 2025-11-20
+
+NoteNode now mirrors `/note`: palette-spawned notes open directly in edit mode, saving wires into `trpc.note.create`, existing notes can be edited/deleted inline, and TanStack Query caches refresh automatically. ReminderNode mirrors `/remind`: users can create reminders (with description + due), mark them complete, reschedule (implemented as create-new → delete-old because the API lacks an update call), or remove them entirely without leaving Mindscape. ChatNode already offered full parity, so `/mindscape` now covers the three highest-use routes for daily capture.
+
+### Phase 2 (Timers / Bookmarks / Todos) — 2025-11-20
+
+Timers, bookmarks, and todos now live as dedicated nodes. TimerNode wraps the `/timer` flow (start + monitor + cancel/complete with live countdown). BookmarkNode provides inline URL validation, tag capture, and list management. TodoNode mirrors `/todos` with add/toggle/delete plus in-node filtering (all/active/completed). Palette spawning makes these utilities one keystroke away, so `/mindscape` covers the remaining “management” routes without tabbing away.
+
+### Phase 3 (Settings / Privacy / Profile / Integrations) — 2025-11-20
+
+Admin and configuration routes now live inside Mindscape. SettingsNode exposes the autonomy slider and a lightweight preference editor backed by `trpc.preference.*`. PrivacyNode reuses `PrivacyControls`, displays fact/event lists, and lets users export or forget data inline. ProfileNode mirrors `/profile` with editable form plus passkey add/delete via `authClient`. IntegrationsNode surfaces Linear status with the same OAuth hand-off and badges for Laminar/voice placeholders. Together these nodes eliminate the need to drop back to `_authed` routes for configuration.
+
+### Phase 4 (Workflows / Deployments) — 2025-11-21
+
+WorkflowListNode now replaces `/workflows` with filters, detail modal, and "open in Mindscape" affordances that spawn WorkflowNodes on demand. WorkflowNode itself embeds the requirement/auto/mode starter, streams plan/tool/task updates via `WorkflowManager`, shows event history, and exposes refetch/refresh affordances. DeploymentNode mirrors the `/deployments` list in compact form, wires promote/remove/copy actions through tRPC, and can subscribe to the health stream when live telemetry is toggled on. These pieces bring Orchestrator + Deploy workflows fully into the canvas; next step is making Mindscape the primary landing surface with a reversible flag.
+
+### Cutover (Mindscape Primary) — 2025-11-21
+
+Mindscape is now the universal landing surface: SignIn/SignUp/Onboarding, header, and user menu all route there by default, and all navigation affordances to the old route pages have been removed. The temporary `VITE_MINDSCAPE_PRIMARY` flag served its purpose during verification and has been removed to avoid drift; rollback, if ever needed, would involve reintroducing a fallback route from git history.
 
 ## Context and Orientation
 
@@ -286,6 +364,9 @@ Enhancements (gap-fixing, parity polish):
 4. Add search across artifacts and jump-to-node by title/ID.
 5. Add workflow replay pagination and error panel within nodes.
 
+Cutover (Mindscape primary rollout):
+With parity achieved, Mindscape becomes the default surface for every post-auth flow. All legacy navigation links have been removed so the classic routes are no longer exposed in the UI. No feature flag remains—cutover is now simply part of the baseline experience.
+
 Milestones (narrative):
 
 - Phase 0 (Enablement): Goal—Make Mindscape addressable (deep links), spawn nodes from command palette, and keep layouts. Work—Query param router integration; extend persist partialize; basic palette. Result—Users can open `/mindscape?spawn=chat` to start chat. Proof—See Concrete Steps.
@@ -367,11 +448,16 @@ Enhancements:
    - DeploymentNode lists deployments, shows live health (read token) toggle, promote/remove actions with dialogs.
    - Copy host button remains.
 
+9) Mindscape cutover (final):
+   - Hard-code SignInForm, SignUpForm, and onboarding completion to route to `/mindscape`.
+   - Remove all navigation affordances pointing to `/dashboard`, `/ai`, `/note`, `/remind`, `/timer`, `/book`, `/workflows`, `/integrations`, and `/preferences` so the route-based UI is no longer exposed.
+   - Delete the temporary helper/env var so only one code path governs navigation.
+
 ### How to run and observe (dev)
 
 - Start web app:
   - Working dir: repository root
-  - Command: `pnpm --filter @alfred/web dev` (or the project’s dev command)
+  - Command: `bun --filter @alfred/web dev`
 - Navigate to `/mindscape`.
 - Verify deep links: open `/mindscape?spawn=chat`, `/mindscape?spawn=note`, `/mindscape?nodeId=singularity`.
 - Create a note from the palette and from a NoteNode; refresh page—node remains (position and state).
@@ -407,6 +493,15 @@ Enhancement acceptance:
 - Settings:
   - Change autonomy via SettingsNode; route `/preferences` reflects same after refetch.
 
+- Privacy:
+  - Export facts via PrivacyNode and observe downloaded JSON; delete an individual fact and confirm it disappears from `/privacy` on refresh.
+
+- Profile:
+  - Update display name from ProfileNode and confirm `/profile` shows the new value; add & delete a passkey via the node and verify toast confirmations.
+
+- Integrations:
+  - Use IntegrationsNode to start the Linear OAuth flow (state saved, browser redirected) and see connection badges update once credentials exist.
+
 - Workflows:
   - Start a run from WorkflowNode panel; observe streaming Plan/Task/Tool within node; handle biometric elevation; replay shows persisted UI messages.
 
@@ -416,15 +511,19 @@ Enhancement acceptance:
 Tests (manual + quick automated smoke if available):
 - Run the web integration tests (if present) or manual flows above. Expect no regressions in old routes.
 
+- Cutover verification:
+  - Start `bun --filter @alfred/web dev`, sign in via `/login`, and confirm you land on `/mindscape` automatically with header + user menu containing only Mindscape navigation.
+  - Attempt to visit `/dashboard` (or other classic routes) directly to ensure they redirect/are inaccessible as standalone UIs.
+
 ## Idempotence and Recovery
 
 - All node spawns are idempotent when tied to IDs: `spawn=chat` adds a fresh node unless `spawnOnce=true` gating is implemented; repeated actions are safe.
 - Persistence writes are localStorage via Zustand persist; corrupt entries fallback to initializer baseline without crashing (guard parse with try/catch).
 - If a tRPC mutation fails:
   - Do not update node.data; show toast; leave node state editable for retry.
-- Feature flag allows instant rollback to route-first UX:
-  - Set `VITE_MINDscape_PRIMARY=false` to keep legacy routes as default.
-  - Deep links continue to function but header default remains `/dashboard`.
+- Rollback path (without feature flags):
+  - Mindscape is primary, but `/dashboard`, `/ai`, `/note`, `/remind`, `/timer`, `/book`, `/workflows`, `/integrations`, and `/preferences` all remain routable; if spatial UI regresses, direct users to those links while fixes ship.
+  - Deep links and palette spawning continue to function; there is no stateful flag that could leave environments inconsistent.
 
 ## Artifacts and Notes
 
@@ -507,7 +606,8 @@ Be prescriptive and minimal. Define new node data types in `apps/web/src/store/m
 
 ## Navigation & Discovery Patterns (Spatial UI)
 
-- `/mindscape` link stays in header; feature flag can make it the default landing for authenticated users.
+- `/mindscape` is now the default landing permanently; the header only exposes Home and Mindscape links to eliminate drift back to the route-based UI.
+  - The user menu mirrors this behavior with a single Mindscape shortcut (plus account controls).
 - Command Palette (Cmd+K): spawn nodes, search artifacts by title/ID, and jump to node.
 - Deep links:
   - `/mindscape?nodeId=NOTE-123` → focus a node
@@ -580,8 +680,8 @@ Be prescriptive and minimal. Define new node data types in `apps/web/src/store/m
 
 ## Idempotence & Rollback Plan
 
-- Parallel UIs: Old routes remain functionally intact throughout. Feature flag toggles the default landing.
-- If Mindscape feature creates issues, disable `VITE_MINDSCAPE_PRIMARY` (or equivalent) and continue using routes; deep links remain opt-in.
+- Parallel UIs: Legacy route files remain in the tree only for archival reference but are no longer linked or documented; Mindscape is the sole supported surface.
+- If Mindscape presents issues, reintroduce a fallback by reverting to a prior git commit—no runtime toggles exist, so rollback is an explicit deploy decision.
 
 ## Best Practices (Austere Implementation)
 
@@ -593,4 +693,8 @@ Be prescriptive and minimal. Define new node data types in `apps/web/src/store/m
 ## Revision Note
 
 - 2025-11-20: Phase 0 enablement executed (deep links, spawn helpers, persistence sanitisation, and Cmd/Ctrl+K palette). Document updated accordingly.
+- 2025-11-20: Phase 1 parity complete (NoteNode CRUD, ReminderNode create/reschedule/complete, chat parity validated).
+- 2025-11-20: Phase 2 parity complete (TimerNode/BookmarkNode/TodoNode implemented with palette spawns and server wiring).
+- 2025-11-20: Phase 3 parity complete (Settings/Privacy/Profile/Integrations nodes with existing route logic embedded in Mindscape).
 - Initial plan created with hybrid strategy, deep links, and phased roadmap to minimize risk while delivering incremental value. Future revisions should update `Progress`, `Decision Log`, and `Outcomes & Retrospective` as milestones are delivered.
+- 2025-11-21: Phase 4 added plus cutover tasks documented; later the temporary `VITE_MINDSCAPE_PRIMARY` rollout plan was removed once validation completed, and the document now reflects Mindscape as the unconditional default.

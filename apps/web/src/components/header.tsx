@@ -1,21 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import UserMenu from "./user-menu";
 
-export default function Header() {
-  const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/ai", label: "Chat" },
-    { to: "/mindscape", label: "Mindscape" },
-    { to: "/note", label: "Notes" },
-    { to: "/remind", label: "Reminders" },
-    { to: "/timer", label: "Timers" },
-    { to: "/book", label: "Bookmarks" },
-    { to: "/workflows", label: "Workflows" },
-    { to: "/integrations", label: "Integrations" },
-    { to: "/preferences", label: "Settings" },
-  ] as const;
+const links = [
+  { to: "/", label: "Home" },
+  { to: "/mindscape", label: "Mindscape" },
+] as const;
 
+export default function Header() {
   return (
     <div>
       <div className="flex flex-row items-center justify-between px-2 py-1">

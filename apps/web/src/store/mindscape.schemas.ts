@@ -33,9 +33,16 @@ export const chatNodeDataSchema = baseArtifactDataSchema.extend({
  */
 export const workflowNodeDataSchema = baseArtifactDataSchema.extend({
   messages: z.array(uiMessageSchema).optional(),
-  status: z.enum(["Idle", "running", "completed", "failed"]).optional(),
+  status: z
+    .enum(["Idle", "running", "completed", "failed", "pending", "starting"])
+    .optional(),
   title: z.string().optional(),
   description: z.string().optional(),
+  requirement: z.string().optional(),
+  runId: z.string().optional(),
+  auto: z.enum(["read", "low", "medium", "high"]).optional(),
+  mode: z.enum(["sequential", "parallel"]).optional(),
+  error: z.string().optional(),
 });
 
 /**
@@ -77,6 +84,46 @@ export const noteNodeDataSchema = baseArtifactDataSchema.extend({
   updatedAt: z.string().optional(),
 });
 
+export const timerNodeDataSchema = baseArtifactDataSchema.extend({
+  defaultMinutes: z.number().int().min(1).max(600).optional(),
+  lastLabel: z.string().optional(),
+});
+
+export const bookmarkNodeDataSchema = baseArtifactDataSchema.extend({
+  lastTags: z.array(z.string()).optional(),
+});
+
+export const todoNodeDataSchema = baseArtifactDataSchema.extend({
+  filter: z.enum(["all", "active", "completed"]).optional(),
+});
+
+export const settingsNodeDataSchema = baseArtifactDataSchema.extend({
+  autonomy: z.enum(["read", "low", "medium", "high"]).optional(),
+  voiceProvider: z.enum(["local", "openai"]).optional(),
+});
+
+export const privacyNodeDataSchema = baseArtifactDataSchema.extend({
+  lastExportedAt: z.string().optional(),
+});
+
+export const profileNodeDataSchema = baseArtifactDataSchema.extend({
+  lastUpdatedAt: z.string().optional(),
+});
+
+export const integrationsNodeDataSchema = baseArtifactDataSchema.extend({
+  lastLinearStatus: z.string().optional(),
+});
+
+export const workflowListNodeDataSchema = baseArtifactDataSchema.extend({
+  filter: z
+    .enum(["all", "running", "completed", "failed", "suspended", "cancelled"])
+    .optional(),
+});
+
+export const deploymentNodeDataSchema = baseArtifactDataSchema.extend({
+  liveHealth: z.boolean().optional(),
+});
+
 /**
  * Schema for terminal node data.
  * Terminal nodes don't have specific data fields beyond the base.
@@ -106,6 +153,15 @@ export const artifactDataSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ticket") }).merge(ticketNodeDataSchema),
   z.object({ type: z.literal("reminder") }).merge(reminderNodeDataSchema),
   z.object({ type: z.literal("note") }).merge(noteNodeDataSchema),
+  z.object({ type: z.literal("timer") }).merge(timerNodeDataSchema),
+  z.object({ type: z.literal("bookmark") }).merge(bookmarkNodeDataSchema),
+  z.object({ type: z.literal("todo") }).merge(todoNodeDataSchema),
+  z.object({ type: z.literal("settings") }).merge(settingsNodeDataSchema),
+  z.object({ type: z.literal("privacy") }).merge(privacyNodeDataSchema),
+  z.object({ type: z.literal("profile") }).merge(profileNodeDataSchema),
+  z.object({ type: z.literal("integrations") }).merge(integrationsNodeDataSchema),
+  z.object({ type: z.literal("workflowlist") }).merge(workflowListNodeDataSchema),
+  z.object({ type: z.literal("deployment") }).merge(deploymentNodeDataSchema),
   z.object({ type: z.literal("terminal") }).merge(terminalNodeDataSchema),
   z.object({ type: z.literal("artifact") }).merge(artifactNodeDataSchema),
   z.object({ type: z.literal("orb") }).merge(orbNodeDataSchema),
@@ -132,6 +188,24 @@ export function getNodeDataSchema(
       return reminderNodeDataSchema;
     case "note":
       return noteNodeDataSchema;
+    case "timer":
+      return timerNodeDataSchema;
+    case "bookmark":
+      return bookmarkNodeDataSchema;
+    case "todo":
+      return todoNodeDataSchema;
+    case "settings":
+      return settingsNodeDataSchema;
+    case "privacy":
+      return privacyNodeDataSchema;
+    case "profile":
+      return profileNodeDataSchema;
+    case "integrations":
+      return integrationsNodeDataSchema;
+    case "workflowlist":
+      return workflowListNodeDataSchema;
+    case "deployment":
+      return deploymentNodeDataSchema;
     case "terminal":
       return terminalNodeDataSchema;
     case "artifact":

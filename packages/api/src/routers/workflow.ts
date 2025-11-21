@@ -187,6 +187,26 @@ const mapWorkflowRunResource = (raw: unknown) => {
   };
 };
 
+function coerceRecord(value: unknown): Record<string, unknown> {
+  if (!value) {
+    return {};
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
   if (ctx.policy?.obligations?.length) {
     const obligations = ctx.policy.obligations;
@@ -294,7 +314,7 @@ async function persistWorkflowMessages(options: {
   baseId?: string;
   eventType?: string;
   eventId?: string;
-}) {
+}): Promise<number> {
   const {
     userId,
     conversationId,
@@ -305,6 +325,7 @@ async function persistWorkflowMessages(options: {
     eventType,
     eventId,
   } = options;
+  let persistedCount = 0;
   for (let index = 0; index < messages.length; index += 1) {
     const original = messages[index]!;
     const metadataObject = (original.metadata ?? {}) as {
@@ -354,6 +375,7 @@ async function persistWorkflowMessages(options: {
         normalized
       );
       persistedKeys.add(dedupeKey);
+      persistedCount += 1;
     } catch (error) {
       logger.warn("workflow_message_persist_failed", {
         runId,
@@ -363,6 +385,7 @@ async function persistWorkflowMessages(options: {
       });
     }
   }
+  return persistedCount;
 }
 
 export const workflowRouter: ReturnType<typeof router> = router({
@@ -414,7 +437,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             title: deriveWorkflowTitle(input.requirement),
           });
               if (created) {
-                await persistWorkflowMessages({
+                const persisted = await persistWorkflowMessages({
                   userId: session.user.id,
                   conversationId: conversation.id,
                   messages: [createRequirementMessage(input, executor.runId)],
@@ -423,9 +446,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: "workflow.requirement",
                   eventId: executor.runId,
                 });
-                triggerPreferenceRefresh(session.user.id, {
-                  reason: "workflow_requirement",
-                });
+                if (persisted > 0) {
+                  triggerPreferenceRefresh(session.user.id, {
+                    reason: "workflow_requirement",
+                  });
+                }
               }
             } catch (error) {
           logger.warn("workflow_conversation_init_failed", {
@@ -610,7 +635,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                 });
               workflowConversationId = conversation.id;
               if (created) {
-                await persistWorkflowMessages({
+                const persisted = await persistWorkflowMessages({
                   userId: session.user.id,
                   conversationId: conversation.id,
                   messages: [createRequirementMessage(input, runId)],
@@ -619,7 +644,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   eventType: "workflow.requirement",
                   eventId: runId,
                 });
-                refreshPreferences("workflow_requirement");
+                if (persisted > 0) {
+                  refreshPreferences("workflow_requirement");
+                }
               }
             } catch (error) {
               logger.warn("workflow_conversation_init_failed", {
@@ -712,7 +739,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
                   uiMessages &&
                   uiMessages.length > 0
                 ) {
-                  await persistWorkflowMessages({
+                  const persisted = await persistWorkflowMessages({
                     userId: session.user.id,
                     conversationId: workflowConversationId,
                     messages: uiMessages,
@@ -722,6 +749,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
                     eventType: event.type,
                     eventId,
                   });
+                  if (persisted > 0) {
+                    refreshPreferences("workflow_messages_persisted");
+                  }
                 }
                 // Push event including its identity for client-side dedupe
                 push({ ...event, eventId } as WorkflowEvent);
@@ -888,7 +918,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
       }
 
-      const inputData = (run.inputData ?? {}) as Record<string, unknown>;
+      const inputData = coerceRecord(run.inputData ?? {});
       const resource =
         typeof inputData.cw === "string" && inputData.cw.length > 0
           ? inputData.cw

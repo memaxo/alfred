@@ -48,35 +48,4 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 12. **Code duplication threshold.** When two or more functions or files share >80% identical code, extract shared logic into a reusable function or utility. Duplication above this threshold indicates missing abstraction and increases maintenance burden. Measure duplication by comparing line counts and structure similarity.
 
-## Examples
-
-```typescript
-// ✅ Pure function with budget
-export function normalizeToUIMessage(event: StreamEvent): UIMessage {
-  // <100 µs budget
-  return { ... };
-}
-
-// ❌ Side effect in core logic
-export function processEvent(event: StreamEvent): UIMessage {
-  metrics.increment('events'); // Side effect
-  return { ... };
-}
-
-// ✅ Side effect at boundary
-export async function handleEvent(ctx: Context, event: StreamEvent) {
-  const msg = normalizeToUIMessage(event); // Pure
-  await persistEvent(ctx, msg); // Boundary
-  metrics.increment('events'); // Boundary
-  return msg;
-}
-
-// ❌ Dependency injection pattern
-export function runPlan(deps: { db: DB; metrics: Metrics }) { ... }
-
-// ✅ Direct imports
-import { db } from '@alfred/db';
-import { metrics } from '@alfred/metrics';
-export function runPlan(...) { ... }
-```
 

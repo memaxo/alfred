@@ -191,23 +191,38 @@ Use this section to track granular implementation steps. Every stopping point mu
   - Updated `packages/runtime/src/adapters/ai.ts` to reuse `limitUiMessages()` and `pruneMessages()` before calling `streamText`, logging dropped counts so orchestrator resumes stay within context limits while preserving the most recent tool chain
   - Extended `packages/runtime/test/adapter-preferences.test.ts` with a regression that overflows history, asserts `validateUIMessages()` receives clamped input, and verifies `streamText()` sees the pruned set
   - Tests: `bun test packages/runtime/test/adapter-preferences.test.ts`
-- [ ] Trigger preference cache invalidation + inference reruns whenever workflow persistence completes so Phase 4.2 learning stays up to date
+- [x] (2025-11-20 23:32Z) Reused AI SDK validation + pruning for assistant/orchestrator generate flows
+  - Added `packages/api/src/ai/messages.ts` with `prepareModelMessagesForGenerate()` so both assistant/orchestrator routers clamp via `limitUiMessages()`, validate with AI SDK `validateUIMessages()` (honoring tool registries), prune with `pruneMessages()`, and log drops before forwarding to `generateText`
+  - Updated `packages/api/src/routers/assistant.ts` and `packages/api/src/routers/orchestrator.ts` to consume the helper and expanded router tests to cover validation failure and pruning behavior with explicit mocks for AI SDK utilities
+  - Tests: `bun test packages/api/test/assistant.router.test.ts`, `bun test packages/api/test/orchestrator.router.test.ts`
+- [x] (2025-11-20 23:36Z) Added multi-modal regression for shared generator pipeline
+  - Created `packages/api/test/ai.messages.test.ts` to assert `prepareModelMessagesForGenerate()` retains the newest tool-call/tool-result chain even when histories exceed the limit, logs drop counts, and surfaces `TRPCError` on validation failure
+  - Tests: `bun test packages/api/test/ai.messages.test.ts`
+- [x] (2025-11-20 23:44Z) Trigger preference cache invalidation after workflow message persistence
+  - Updated `persistWorkflowMessages()` to return the count of saved records and wired every call site (start + streaming loop) to trigger `triggerPreferenceRefresh()` with reason `workflow_messages_persisted` whenever new workflow UI messages are stored
+  - Extended `packages/api/test/workflow.router.test.ts` expectations so the stream regression asserts the new reason fires, and ensured cancellation coverage still validates `workflow_stream_cancelled`
+  - Tests: `bun test packages/api/test/workflow.router.test.ts`
+- [x] (2025-11-20 23:48Z) Instrumented message preparation performance budgets
+  - Wrapped `prepareModelMessagesForGenerate()` in `withBudget()` (10 ms) so assistant/orchestrator generate requests emit warnings when history validation/pruning exceeds budgets, ensuring regressions surface quickly without new metrics wiring
+  - Tests: `bun test packages/api/test/ai.messages.test.ts`
+- [x] (2025-11-20 23:52Z) Added effectiveness metrics for assistant/orchestrator generate flows
+  - Introduced `assistant_generate_{requests,duration}` and `orchestrator_generate_{requests,duration}` Prometheus series, incremented in the respective routers with status labels (`started/success/error`) and bucketed latencies covering 10 ms–5 s
+  - Router tests now assert the counters fire for success + failure cases, keeping instrumentation under test without touching Prometheus
+  - Tests: `bun test packages/api/test/assistant.router.test.ts`, `bun test packages/api/test/orchestrator.router.test.ts`
+- [x] (2025-11-20 23:58Z) Completed preference-effectiveness telemetry
+  - Added `preference_refresh_total`, `preference_prompt_injections_total`, and `preference_prompt_failures_total` metrics; `triggerPreferenceRefresh()` now records every reason, and the TanStack stream handler increments prompt success/failure counters whenever `buildPreferenceSystemPrompt()` runs
+  - Expanded `packages/api/test/preference.refresh.test.ts` to assert refresh metrics fire, and `apps/web/src/routes/api/__tests__/stream-handler.refresh.test.ts` now verifies prompt injection increments while failures stay zero
+  - Tests: `bun test packages/api/test/preference.refresh.test.ts`, `bun test apps/web/src/routes/api/__tests__/stream-handler.refresh.test.ts`
+- [ ] Resolve outstanding `bun run typecheck` failures (`packages/db/src/client.ts`, `packages/knowledge/src/indices/interval-tree.ts`, `packages/knowledge/src/query.ts`, `packages/knowledge/src/metrics.ts`, `packages/agent/src/agents.ts`). Current changes intentionally leave these pre-existing errors untouched; see Status section for compiler output.
 
-**Upcoming Priority Tasks (updated 2025-11-20 21:47Z)**
-- [ ] (Tooling & Multi-Modal Support) Add regressions with interleaved `tool-call`/`tool-result` parts to confirm pruning retains the latest multi-modal chain.
-- [ ] (Tooling & Multi-Modal Support) Reuse `validateUIMessages` + `pruneMessages` when orchestrator resumes workflows so cached tool definitions stay schema-safe.
-- [ ] (Operational Hooks) Fire preference cache invalidation + queue inference reruns after workflow persistence completes to keep learning in lockstep with new histories.
-- [ ] (Operational Hooks) Add metrics/logging (e.g., `preference_history_pruned_total`, `preference_cache_invalidations_total`) for the new pruning + invalidation pipeline.
+**Upcoming Priority Tasks (updated 2025-11-20 23:44Z)**
+- [ ] (Operational Hooks) Evaluate remaining operational telemetry (performance instrumentation, effectiveness tracking, rollout flags) for Preference-Driven Adaptation.
 
 **Monitoring & Metrics:**
 - [ ] Add preference metrics to `packages/api/src/metrics.ts`
 - [ ] Add performance instrumentation
 - [ ] Add effectiveness tracking metrics
 
-**Rollout:**
-- [ ] Add feature flag (`PREFERENCE_ADAPTATION_ENABLED`)
-- [ ] Add gradual rollout logic (`PREFERENCE_ADAPTATION_ROLLOUT_PERCENT`)
-- [ ] Document rollout plan and monitoring
 
 ## Surprises & Discoveries
 

@@ -1,37 +1,22 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "bun:test";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { sql } from "drizzle-orm";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { closeTestDb, createTestDb } from "./utils/db";
+import {
+  describePostgres,
+  requirePostgresTestEnv,
+} from "@alfred/db/testing";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describe : describe.skip;
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 const TEST_USER = "api-assistant-test-user";
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
 let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
-beforeAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  const [{ appRouter: router }] = await Promise.all([
-    import("@alfred/api/routers/index"),
-  ]);
-  appRouter = router;
-  testDbHarness = await createTestDb();
-});
-
 async function resetAssistantTables() {
-  if (!SHOULD_RUN) return;
+  if (!testDbHarness) return;
   await testDbHarness.db.execute(
     sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
   );
@@ -69,22 +54,32 @@ function createCaller() {
   } as any);
 }
 
-beforeEach(async () => {
-  await resetAssistantTables();
-});
-
-afterEach(() => {
-  resetAgentMocks();
-});
-
-afterAll(async () => {
-  if (!SHOULD_RUN) {
-    return;
-  }
-  await closeTestDb(testDbHarness);
-});
-
 describeFn("assistant routers", () => {
+  beforeAll(async () => {
+    requirePostgresTestEnv(
+      "assistant router tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+    );
+    const [{ appRouter: router }] = await Promise.all([
+      import("@alfred/api/routers/index"),
+    ]);
+    appRouter = router;
+    testDbHarness = await createTestDb();
+  });
+
+  beforeEach(async () => {
+    await resetAssistantTables();
+  });
+
+  afterEach(() => {
+    resetAgentMocks();
+  });
+
+  afterAll(async () => {
+    if (testDbHarness) {
+      await closeTestDb(testDbHarness);
+    }
+  });
+
   it("creates and lists notes for the authenticated user", async () => {
     const caller = createCaller();
     await caller.note.create({ content: "hello router", title: "Greeting" });

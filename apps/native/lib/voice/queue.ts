@@ -5,6 +5,7 @@ export type {
   PendingItem,
   PendingSttItem,
   PendingTtsItem,
+  PendingS2SItem,
 } from "./voice.types";
 
 const KEY = "voice:queue:v1";

@@ -1,14 +1,21 @@
 import { markVoice } from "@alfred/metrics/performance";
-import type { PlatformAdapter, VoiceSession } from "@alfred/voice/session";
-import { createVoiceSession } from "@alfred/voice/session";
+import type {
+  PlatformAdapter,
+  VoiceSession,
+} from "@alfred/voice/session";
+import { createVoiceSession, VoiceSessionError } from "@alfred/voice/session";
 import { createVoiceClient } from "@alfred/voice/transport";
-import type { SttRequest } from "@alfred/voice/types";
+import type {
+  SpeechToSpeechRequest,
+  SttRequest,
+} from "@alfred/voice/types";
 import { Audio } from "expo-av";
 import { useMemo } from "react";
 import { ExpoCapture } from "./capture";
 import { configureAudioSession } from "./config";
 import { playBase64 } from "./play";
 import { enqueue } from "./queue";
+import type { VoiceS2SPayload } from "./voice.types";
 
 type MutationAdapter = {
   mutation<TInput, TOutput>(path: string, input: TInput): Promise<TOutput>;
@@ -75,12 +82,35 @@ function toMutationAdapter(trpc: unknown): MutationAdapter {
   };
 }
 
-export function useVoiceSessionNative(trpc: unknown) {
+type VoiceSessionNativeOptions = {
+  mode?: "classic" | "s2s";
+  speechDefaults?: Partial<
+    Pick<
+      SpeechToSpeechRequest,
+      "thread" | "resource" | "ttsVoice" | "ttsFormat" | "language" | "prompt"
+    >
+  >;
+};
+
+export function useVoiceSessionNative(
+  trpc: unknown,
+  options?: VoiceSessionNativeOptions
+) {
   const captureRef = useMemo(() => ({ current: new ExpoCapture() }), []);
 
   return useMemo(() => {
     const mutationAdapter = toMutationAdapter(trpc);
     const client = createVoiceClient({ trpc: mutationAdapter });
+    const preferredMode = options?.mode ?? "s2s";
+    const preferSpeechToSpeech = preferredMode !== "classic";
+    const speechDefaults = {
+      thread: options?.speechDefaults?.thread,
+      resource: options?.speechDefaults?.resource,
+      ttsVoice: options?.speechDefaults?.ttsVoice ?? "alloy",
+      ttsFormat: options?.speechDefaults?.ttsFormat ?? "mp3",
+      language: options?.speechDefaults?.language,
+      prompt: options?.speechDefaults?.prompt,
+    };
 
     // Create adapter with capture reference
     const adapter: PlatformAdapter = {
@@ -137,12 +167,56 @@ export function useVoiceSessionNative(trpc: unknown) {
       }
     };
 
+    const speechToSpeech =
+      preferSpeechToSpeech && session.speechToSpeech
+        ? async (
+            overrides?: Partial<
+              Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
+            >
+          ) => {
+            const payloadOverrides = {
+              thread: overrides?.thread ?? speechDefaults.thread,
+              resource: overrides?.resource ?? speechDefaults.resource,
+              ttsVoice: overrides?.ttsVoice ?? speechDefaults.ttsVoice,
+              ttsFormat: overrides?.ttsFormat ?? speechDefaults.ttsFormat,
+              language: overrides?.language ?? speechDefaults.language,
+              prompt: overrides?.prompt ?? speechDefaults.prompt,
+              sttModel: overrides?.sttModel,
+              ttsModel: overrides?.ttsModel,
+            };
+            try {
+              const result = await session.speechToSpeech?.(payloadOverrides);
+              markVoice("fast_stream_flush");
+              return result ?? null;
+            } catch (error) {
+              if (error instanceof VoiceSessionError && error.clip) {
+                const queuedPayload: VoiceS2SPayload = {
+                  audioBase64: error.clip.audioBase64,
+                  mimeType: error.clip.mimeType,
+                  language: payloadOverrides.language,
+                  prompt: payloadOverrides.prompt,
+                  thread: payloadOverrides.thread,
+                  resource: payloadOverrides.resource,
+                  ttsVoice: payloadOverrides.ttsVoice,
+                  ttsFormat: payloadOverrides.ttsFormat,
+                };
+                await enqueue({
+                  kind: "s2s",
+                  payload: queuedPayload,
+                });
+              }
+              throw error;
+            }
+          }
+        : undefined;
+
     return {
       state: session.state,
       start,
       stopAndTranscribe,
       speak,
+       speechToSpeech,
       clear: session.clear,
     };
-  }, [trpc, captureRef]);
+  }, [captureRef, options, trpc]);
 }

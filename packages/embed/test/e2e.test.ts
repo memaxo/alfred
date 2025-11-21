@@ -3,11 +3,19 @@
  * Tests the complete integration from note creation through embedding to retrieval
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { describe, test, expect, afterAll } from "bun:test";
 import { ingest, retrieve } from "@alfred/rag";
+import { describePostgres } from "@alfred/db/testing";
 import { embed, embedMany, shutdown, EMBEDDING_DIM } from "../src/index";
 
-describe("E2E: Note -> RAG -> Embed Flow", () => {
+const RUN_EMBED_MODEL_TESTS = process.env.RUN_EMBED_MODEL_TESTS === "1";
+
+const describePgModel = RUN_EMBED_MODEL_TESTS
+  ? describePostgres
+  : (name: string, factory: Parameters<typeof describePostgres>[1]) =>
+      describe.skip(`${name} (requires RUN_EMBED_MODEL_TESTS=1)`, factory);
+
+describePgModel("E2E: Note -> RAG -> Embed Flow", () => {
   afterAll(async () => {
     await shutdown();
   });
@@ -121,4 +129,3 @@ describe("E2E: Note -> RAG -> Embed Flow", () => {
     console.log("[e2e-test] ✓ Semantic search successfully distinguishes topics");
   }, 150_000);
 });
-

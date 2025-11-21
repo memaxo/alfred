@@ -19,58 +19,10 @@
 7. **Streaming alignment.** Components consuming assistant/workflow streams must rely on hooks such as `useAssistantStream`, handle incremental payloads, and surface error/progress states.
 8. **Shared primitives.** Use the canonical primitives under `apps/web/src/components/ui/` for layout and inputs; introduce new foundations only when existing tokens or utilities fail the requirement.
 
-9. **Error boundaries.** Use route-level error boundaries for error handling:
-    ```typescript
-    // Default error component in router.tsx
-    import { createRouter, ErrorComponent } from '@tanstack/react-router';
-    
-    export function getRouter() {
-      const router = createRouter({
-        routeTree,
-        defaultErrorComponent: ({ error, reset }) => (
-          <div>
-            <p>Error: {error.message}</p>
-            <button onClick={reset}>Retry</button>
-          </div>
-        ),
-      });
-      return router;
-    }
-    
-    // Per-route error component
-    import { createFileRoute, ErrorComponent } from '@tanstack/react-router';
-    import type { ErrorComponentProps } from '@tanstack/react-router';
-    
-    function RouteError({ error, reset }: ErrorComponentProps) {
-      return (
-        <div>
-          <p>Route error: {error.message}</p>
-          <button onClick={reset}>Retry</button>
-        </div>
-      );
-    }
-    
-    export const Route = createFileRoute('/path')({
-      component: Component,
-      errorComponent: RouteError,
-    });
-    ```
+9. **Error boundaries.** Use route-level error boundaries with `defaultErrorComponent` (router) or `errorComponent` (per-route). Call `reset()` to retry rendering.
 
-10. **Loader error handling.** Loaders can throw errors that are caught by error boundaries:
-    ```typescript
-    loader: async () => {
-      const data = await fetchData();
-      if (!data) {
-        throw new Error('Data not found');
-      }
-      return data;
-    },
-    ```
+10. **Loader error handling.** Loaders can throw errors that are caught by error boundaries. Throw errors for missing data or failures.
 
 11. **Component integration priority.** Prefer production-ready components over ad-hoc route implementations. If a component exists (e.g., `ChatContainer`), use it in routes rather than implementing similar functionality directly. Production components include error boundaries, action tracking, and other features that ad-hoc implementations may lack.
 
-## Testing Expectations
-
-- Exercise render, interaction, empty, and error states with React Testing Library.
-- Verify accessibility with `axe-core` (or equivalent) for critical views.
-- Mock streaming hooks deterministically; ensure memoisation keeps rerenders bounded.
+11. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.

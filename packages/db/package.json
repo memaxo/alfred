@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsdown",
     "test": "bun test",
+    "test:postgres": "RUN_DB_TESTS=1 bun test",
     "typecheck": "tsc -b",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",

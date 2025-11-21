@@ -1,0 +1,80 @@
+Large language models have limited context windows - approximately 1 million tokens. In contrast, a typical enterprise monorepo can span thousands of files and several million tokens. There are also millions of tokens worth of information relevant to an engineering organization that lives outside of the codebase. This massive gap between the context that models can hold and the context required to work with real systems is a major bottleneck to deploying agentic workflows at scale.
+
+At Factory, we've addressed these limitations by building multiple layers of scaffolding, such as structured repository overviews, semantic search, targeted file operations, and integrations with enterprise context sources that go beyond just the code, like Datadog, Slack, and Notion. This architecture treats context as a scarce, high-value resource, carefully allocating and curating it with the same rigor one might apply to managing CPU time or memory. The result is a system where every byte of context serves a purpose, directly supporting more reliable, and efficient agentic workflows.
+
+Critical context for effective agents
+Human developers don't write code in isolation. They require many sources of context to create software that integrates with an existing system. For example:
+
+Task Descriptions: What needs to be accomplished, such as "implement a new API endpoint," "fix bug #123," or "refactor the login module." This defines the concrete goal or assignment that initiates the workflow.
+Tools: Details about the resources, tools, and systems available to the developer or agent. Knowing what tools are accessible is crucial for determining how the task can be completed.
+Developer Persona: Information about the developer, including their environment, user name, and role. This helps tailor the workflow to the individual's needs and circumstances.
+Code: The files, functions, and variables currently being modified form the foundation of any code change. This includes syntax requirements, function signatures, and the specific data structures being manipulated. Without this context, even simple changes become impossible to implement correctly.
+Semantic Structure: These are the higher-level patterns and constraints that give meaning to the code. They include architectural and design patterns, business rules that may not be explicitly documented. This knowledge is essential for maintaining system coherence.
+Historical Context: Previous refactoring efforts, bug fixes, and design decisions captured in commit messages or documentation provide crucial insights into why the code evolved as it did. Understanding this history prevents developers from reintroducing resolved issues or contradicting established patterns.
+Collaborative Context: The social and organizational dimensions of software development include coding standards, style guides, and team conventions. These ensure code changes will be accepted by peers and integrate smoothly with the team's workflow.
+When humans lack any of these critical contexts, the quality of their output deteriorates. The same is true for LLMs. It is unfair to throw a codebase at an LLM and expect human-level results when the human has far more context. Without a clear task description, they optimize for the wrong objective or mis-scope the work. Without tool context, they propose steps that rely on unavailable capabilities or miss faster or safer paths. Without developer persona context, they produce outputs that do not fit the user's environment, permissions, or conventions. Without code context, they produce syntactically invalid code. Without semantic context, they generate solutions that violate architectural principles. Without historical context, they reintroduce problems that were previously resolved. And without collaborative context, they produce code that doesn't align with team standards. The result is an agent that generates unusable code that fails to address the underlying requirements.
+
+Why existing approaches fail
+Naive vector retrieval
+By naive vector retrieval we mean splitting up code files into chunks, embedding those chunks, taking top-k nearest neighbors, and stuffing the corresponding code files into context. This allows agents to find multiple files that are similar to the user's query in a single tool call. This empirically works for a surprisingly large number of user queries, but it is worth examining where this fails.
+
+How does a developer actually search through a codebase? They start with a small set of files that may be relevant, then take advantage of the code structure to systematically traverse the codebase, following references, imports, definitions, and call graphs to find the entire set of relevant files. This iterative, multi-hop exploration is essential for understanding how different parts of the system interact.
+
+Lack of structural encoding: Code is not merely text. It is a web of dependencies, inheritance hierarchies, and architectural patterns. Vector embeddings flatten this rich structure into undifferentiated chunks, destroying critical relationships between components.
+Multi-hop reasoning failure: When an agent needs to understand how multiple parts of a system interact (eg. tracing from an API endpoint through middleware to a database model) vector search often retrieves disconnected fragments without the connective tissue.
+Reasoning degradation: Vector search queries often return irrelevant files along with the relevant ones. Flooding an LLM with dozens of irrelevant files actively harms its reasoning capabilities. The model must now sift through noise while attempting to solve the original problem.
+The fundamental issue is that vector retrieval was designed as a general-purpose memory augmentation technique, not as a specialized tool for navigating the structured, hierarchical nature of software.
+
+Will bigger windows solve it?
+Recently, LLMs have started to come with larger context windows, allowing users to fit in a lot more files, potentially everything into the LLMs' context. While that may sound like a cure all, in practice, it does not yield the results that one might expect:
+
+Not Big Enough: Today, frontier models offer context windows that are no more than 1-2 million tokens. That amounts to a few thousand code files, which is still less than most production codebases of our enterprise customers. So any workflow that relies on simply adding everything to context still collides with a hard wall.
+Quality Degradation: Model attention is also not uniform across long sequences of context. Chroma's research report on Context Rot (Hong et al., 2025) measured 18 LLMs and found that "models do not use their context uniformly; instead, their performance grows increasingly unreliable as input length grows." will actually use or even attend to the relevant information. Simply providing more information does not ensure comprehension. In fact, it can degrade quality by overwhelming the model with noise and diluting the signal needed to solve the task at hand.
+Monetary Costs: Token pricing turns naive "just stuff more code" strategies into untenable OpEx for organizations with large engineering teams. Every additional token processed by an LLM incurs a direct cost, and as context windows grow, so too does the cost of inference. For large repositories or complex tasks, the difference between a curated, targeted prompt and a brute-force full-context approach can mean orders of magnitude in operational expenses. When multiplied by the volume of daily queries from dozens or hundreds of developers, these costs quickly spiral, making indiscriminate context stuffing financially unsustainable for any company operating at scale.
+Larger windows do not eliminate the need for disciplined context management. Rather, they make it easier to degrade output quality without proper curation. Effective agentic systems must treat context the way operating systems treat memory and CPU cycles: as finite resources to be budgeted, compacted, and intelligently paged.
+
+Factory's Context Stack
+At Factory, we have worked to build layers of simple yet effective scaffolding into our product that allow our Droids to dynamically manage their context. Our context stack progressively distills "everything the company knows" into "exactly what the Droid needs right now". We break this down into:
+
+Repository Overviews: Factory generates a summary for every repository that the user has connected to the platform. The summary contains the project structure, key packages, build commands, core files, and directory tree. This repo overview is injected at the start of the session, giving the LLM architectural information that would otherwise have cost thousands of exploratory tokens.
+Semantic Search: Though the Droids call tools in whatever order they see fit, semantic search is usually called at the outset after the user submits the query. Using vector embeddings tuned for code-related tasks, the search service returns a list of ranked candidate files and folder summaries that may be relevant to the query.
+File System Commands: Once the Droid has an initial list of candidate files, it starts using file system tools that allow it to fetch targeted files, lines, diffs, or terminal outputs. Because each invocation is highly targeted by specifying line numbers/ranges, we stay inside the context budget even when inspecting large files or logs.
+Enterprise Context Integrations: Beyond code, Factory's context stack is designed to ingest and utilize critical knowledge from other sources across the organization:
+Observability and Logs: Integration with tools like Sentry means Droids can incorporate error traces, performance data, and production incidents directly into their reasoning, allowing for more context-aware debugging and proactive issue detection.
+Internal Documentation: By connecting to platforms like Notion or Google Docs, Factory can pull in design docs, architectural decisions, onboarding guides, and tribal knowledge that often lives outside the codebase. This ensures Droids have access to the full breadth of institutional context, not just what's in git.
+Hierarchical Memory: LLMs lack persistent memory about the users and organizations they serve; we would find that the Droids would ask users for the same preferences every session. To address this, we built hierarchical memory, spanning both individual and organizational layers to provide continuity and context.
+User Memory: handles individual-specific facts that improve future reasoning for a specific user, for example:
+Details about the user's personal development environment: OS, dev containers
+Record of past work within the org: features and products that the user worked on previously, commonly edited repositories
+Working style preferences (e.g., preferred diff view: unified)
+Org Memory: Org Memory encodes the shared institutional knowledge that helps teams move quickly and maintain consistency at scale. By capturing and surfacing these norms, Org Memory ensures that every Droid and developer operates with a shared understanding of how work gets done:
+Company-wide style guides that enforce code formatting and naming conventions
+Standardized code review checklists and onboarding documents
+Documentation templates and guidelines for writing effective internal docs
+By using this context stack, Droids consistently find and operate with only the necessary information for any given task. Users no longer have to spend time on context engineering. The Droids do that for you, proactively surfacing only the most relevant knowledge as you work. This results in code changes that are both reliable and aligned with team and organizational standards.
+
+This precision in context curation translates directly to business impact: Droids suffer fewer context gaps and misunderstandings, meaning less time wasted clarifying intent or fixing misaligned changes. Additionally, by embedding both individual preferences and organizational norms into the Droid workflow, Factory delivers a level of personalization and consistency that out-of-the-box LLM agents cannot match. Developers can trust that their unique workflows are respected, while organizations benefit from adherence to best practices across all projects.
+
+Key metrics improved
+Reduced onboarding and cycle time: With context automatically managed throughout the session, developers can focus on getting work done instead of learning the platform or doing context engineering, accelerating onboarding and time to value.
+Higher code acceptance rates: Code changes align with team standards, reducing back-and-forth in code review.
+Improved retention and satisfaction: With user and organizational memory, each successive session makes the platform more customized to user/team preferences, reducing friction for engineering teams, driving higher adoption and retention.
+Ultimately, Factory's Context Stack transforms agentic workflows from a high-maintenance novelty into a scalable, dependable force multiplier for modern engineering teams.
+
+Future directions
+We anticipate significant advancements in model capabilities along several key dimensions:
+
+Larger context windows: models will be able to process substantially more tokens, narrowing the gap but still falling short of encompassing entire enterprise codebases.
+Better in-window reasoning: Models will become more adept at understanding and utilizing the context they are given, resulting in more reliable outputs.
+Smarter agents: they will get better at planning and tool-use, generating higher quality outputs
+Long-horizon task execution: Models will advance in their ability to plan and execute complex, multi-step tasks over extended periods.
+However, even as we see improvements in these capabilities, certain limitations will persist:
+
+Sensitivity to unrelated context: Models will get distracted and become less effective when given large amounts of unrelated context
+Tool limitations: Without access to the right tools, models will be unable to execute certain tasks, regardless of their intelligence.
+Moreover, there are challenges that LLMs alone will not be able to address:
+
+External memory: Agents will need durable, write-once-read-many memory to retain long-term project state, previous decisions, and user preferences across sessions. This will enable learning across thousands of interactions.
+Multi-agent orchestration: As agents get better at completing tasks autonomously, users will delegate tasks in parallel. This will require an orchestration layer that will have to handle delegation, conflict resolution, and shared state management
+Even with highly capable models, the work of curating context, designing agent harnesses, and orchestrating multi-agent workflows will require disciplined product engineering. Smarter models may reduce, but will not eliminate, the need for disciplined scaffolding around them. Factory's Context Stack is our blueprint for that surrounding infrastructure, ensuring that as models evolve, the agents built on top remain reliable, cost-effective, and aligned with how real teams build software today.
+

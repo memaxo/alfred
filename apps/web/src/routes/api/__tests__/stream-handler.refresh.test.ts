@@ -38,6 +38,14 @@ mock.module("@alfred/api/preference/refresh", () => ({
   triggerPreferenceRefresh: triggerPreferenceRefreshMock,
 }));
 
+const metricsMock = {
+  preferenceHistoryPrunedTotal: { inc: vi.fn() },
+  preferencePromptInjectionsTotal: { inc: vi.fn() },
+  preferencePromptFailuresTotal: { inc: vi.fn() },
+};
+
+mock.module("@alfred/api/metrics", () => metricsMock);
+
 const loggerErrorMock = vi.fn();
 mock.module("@alfred/api/utils/logger", () => ({
   logger: {
@@ -119,5 +127,9 @@ describe("handleStreamRequest preference refresh integration", () => {
       reason: "assistant_stream_complete",
     });
     expect(triggerPreferenceRefreshMock).toHaveBeenCalledTimes(2);
+    expect(metricsMock.preferencePromptInjectionsTotal.inc).toHaveBeenCalledWith(
+      { source: "assistant" }
+    );
+    expect(metricsMock.preferencePromptFailuresTotal.inc).not.toHaveBeenCalled();
   });
 });

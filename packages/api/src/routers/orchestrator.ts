@@ -1,14 +1,17 @@
 import { getOrchestratorAgentDefaults } from "@alfred/agent";
-import type { UIMessage } from "@alfred/type/stream";
-import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { TRPCError } from "@trpc/server";
-import { convertToModelMessages, stepCountIs } from "ai";
+import { stepCountIs } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
+import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { requirePolicy } from "../gate";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 import { sanitizeResult } from "../utils/generate";
+import {
+  orchestratorGenerateDurationSeconds,
+  orchestratorGenerateRequestsTotal,
+} from "../metrics";
 
 const ORCHESTRATOR_MAX_STEPS = 12;
 
@@ -34,22 +37,6 @@ function mapResource(raw: unknown) {
   };
 }
 
-function validateMessages(messages: unknown[]): UIMessage[] {
-  const validated: UIMessage[] = [];
-  for (const msg of messages) {
-    const result = uiMessageSchema.safeParse(msg);
-    if (!result.success) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "invalid_message",
-        cause: result.error,
-      });
-    }
-    validated.push(result.data as UIMessage);
-  }
-  return validated;
-}
-
 export const orchestratorRouter: ReturnType<typeof router> = router({
   generate: authedProcedure
     .use(rateLimit)
@@ -62,10 +49,15 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
           message: "session_required",
         });
       }
+      const stopTimer = orchestratorGenerateDurationSeconds.startTimer();
+      orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {
-        const validatedMessages = validateMessages(input.messages);
-        const modelMessages = convertToModelMessages(validatedMessages);
         const defaults = getOrchestratorAgentDefaults();
+        const modelMessages = await prepareModelMessagesForGenerate({
+          rawMessages: input.messages,
+          tools: defaults.tools,
+          source: "orchestrator",
+        });
         const stopWhen =
           typeof input.maxSteps === "number"
             ? stepCountIs(input.maxSteps)
@@ -84,6 +76,8 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
           input,
           result: output,
         });
+        orchestratorGenerateRequestsTotal.inc({ status: "success" });
+        stopTimer({ status: "success" });
         return {
           ...output,
           replayId: replayId ?? undefined,
@@ -91,6 +85,8 @@ export const orchestratorRouter: ReturnType<typeof router> = router({
           replayId?: string;
         };
       } catch (error) {
+        orchestratorGenerateRequestsTotal.inc({ status: "error" });
+        stopTimer({ status: "error" });
         throw toTRPCError(error, "orchestrator_error");
       }
     }),

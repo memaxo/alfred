@@ -146,7 +146,7 @@ export async function persistKnowledge(
   }
 
   try {
-    const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
     const nodeMap = await upsertNodes(nodeSeeds as any);
     if (edgeSeeds.length === 0) {
       return;
@@ -265,7 +265,7 @@ export async function persistReasoning(
       }
     }
 
-    const { upsertNodes, upsertEdges } = await import("@alfred/db/src/repo/graph");
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
     const nodeMap = await upsertNodes(nodeSeeds as any);
     const hashToRow = new Map<string, { id: string; hash: string }>();
     for (const row of nodeMap.values()) {
