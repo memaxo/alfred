@@ -28,11 +28,17 @@ export default function DriveScreen() {
       buttonIdle: isDarkColorScheme ? "bg-sky-500" : "bg-blue-500",
       buttonActive: "bg-emerald-500",
       buttonError: "bg-rose-500",
+      cardBg: isDarkColorScheme ? "bg-white/5" : "bg-black/5",
+      cardBorder: isDarkColorScheme ? "border-white/10" : "border-black/10",
+      meterTrack: isDarkColorScheme ? "bg-white/20" : "bg-black/10",
+      meterFill: isDarkColorScheme ? "bg-emerald-400" : "bg-emerald-500",
+      streamAccent: isDarkColorScheme ? "text-emerald-300" : "text-emerald-600",
     }),
     [isDarkColorScheme]
   );
 
   const voice = useVoiceSessionNative(trpcClient);
+  const useStreaming = voice.stream?.supported ?? false;
   const [status, setStatus] = useState<Status>("idle");
   const [reply, setReply] = useState("");
 
@@ -66,6 +72,8 @@ export default function DriveScreen() {
             resource: item.payload.resource,
             ttsVoice: item.payload.ttsVoice,
             ttsFormat: item.payload.ttsFormat,
+            sessionId: item.payload.sessionId,
+            surface: item.payload.surface ?? "drive",
           });
           const audio = response?.audio;
           if (audio?.audioBase64) {
@@ -77,6 +85,7 @@ export default function DriveScreen() {
               format: item.payload.ttsFormat ?? "mp3",
             });
           }
+          voice.syncSession?.(response?.session ?? null);
           return response;
         }
 
@@ -130,16 +139,62 @@ export default function DriveScreen() {
     });
   }, [voice]);
 
+  useEffect(() => {
+    if (!voice.stream?.supported) {
+      return;
+    }
+    switch (voice.stream.status) {
+      case "recording":
+        setStatus("holding");
+        break;
+      case "processing":
+        setStatus("thinking");
+        break;
+      case "playing":
+        setStatus("responding");
+        break;
+      case "idle":
+        if (voice.stream.assistantText) {
+          setReply(voice.stream.assistantText);
+          setStatus("idle");
+        }
+        break;
+      case "error":
+        setStatus("error");
+        break;
+      default:
+        break;
+    }
+  }, [
+    voice.stream?.assistantText,
+    voice.stream?.status,
+    voice.stream?.supported,
+  ]);
+
   const handlePressIn = useCallback(async () => {
-    setStatus("holding");
     setReply("");
     voice.clear();
-    await voice.start();
+    try {
+      setStatus("holding");
+      if (voice.stream?.supported) {
+        await voice.stream.start();
+      } else {
+        await voice.start();
+      }
+    } catch (error) {
+      logError("voice DrivePressIn", error);
+      setStatus("error");
+    }
   }, [voice]);
 
   const handlePressOut = useCallback(async () => {
     let finalStatus: Status = "idle";
     try {
+      if (voice.stream?.supported) {
+        setStatus("thinking");
+        await voice.stream.stop();
+        return;
+      }
       setStatus("thinking");
       if (voice.speechToSpeech) {
         const result = await voice.speechToSpeech({
@@ -214,6 +269,36 @@ export default function DriveScreen() {
     return palette.buttonIdle;
   })();
 
+  const transcriptText =
+    useStreaming && voice.stream
+      ? voice.stream.transcript || voice.state.transcript
+      : voice.state.transcript;
+
+  const vadPercent =
+    voice.stream && typeof voice.stream.vadConfidence === "number"
+      ? Math.round(
+          Math.min(1, Math.max(0, voice.stream.vadConfidence ?? 0)) * 100
+        )
+      : null;
+
+  const handsFreeLabel = useMemo(() => {
+    if (!voice.stream?.supported) {
+      return "Hands-free unavailable";
+    }
+    switch (voice.stream.status) {
+      case "recording":
+        return "Listening (auto-stop armed)";
+      case "processing":
+        return "Processing reply…";
+      case "playing":
+        return "Speaking…";
+      case "error":
+        return voice.stream.error ?? "Streaming error";
+      default:
+        return "Tap mic or say “Hey Alfred” to start";
+    }
+  }, [voice.stream?.error, voice.stream?.status, voice.stream?.supported]);
+
   return (
     <View
       className={`flex-1 ${palette.background} items-center justify-center px-6`}
@@ -239,7 +324,7 @@ export default function DriveScreen() {
           className={`mt-2 text-lg ${palette.text} text-center`}
           numberOfLines={3}
         >
-          {voice.state.transcript || "—"}
+          {transcriptText || "—"}
         </Text>
       </View>
       <View className="mt-8 w-full items-center">
@@ -251,9 +336,61 @@ export default function DriveScreen() {
           {reply || "Awaiting reply"}
         </Text>
       </View>
+      {voice.stream?.supported ? (
+        <View
+          className={`mt-8 w-full rounded-2xl border ${palette.cardBorder} ${palette.cardBg} p-4`}
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className={`text-sm font-semibold ${palette.text}`}>
+              Hands-free streaming
+            </Text>
+            <Text
+              className={`text-xs ${
+                voice.stream.status === "recording"
+                  ? palette.streamAccent
+                  : palette.subtle
+              }`}
+            >
+              {voice.stream.status.toUpperCase()}
+            </Text>
+          </View>
+          <Text className={`mt-2 text-base ${palette.text}`}>
+            {handsFreeLabel}
+          </Text>
+          <View
+            className={`mt-4 h-2 w-full overflow-hidden rounded-full ${palette.meterTrack}`}
+          >
+            <View
+              className={`h-full rounded-full ${palette.meterFill}`}
+              style={{ width: `${vadPercent ?? 0}%` }}
+            />
+          </View>
+          <View className="mt-2 flex-row items-center justify-between">
+            <Text className={`text-xs ${palette.subtle}`}>
+              VAD: {vadPercent === null ? "—" : `${vadPercent}%`}
+            </Text>
+            <Text className={`text-xs ${palette.subtle}`}>
+              {voice.stream.autoStopReason
+                ? `Auto-stop: ${voice.stream.autoStopReason}`
+                : "Auto-stop arms on silence"}
+            </Text>
+          </View>
+          {voice.session ? (
+            <Text className={`mt-2 text-xs ${palette.subtle}`}>
+              Session: {voice.session.id.slice(-8)} · Updated{" "}
+              {new Date(voice.session.updatedAt).toLocaleTimeString()}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {voice.state.error ? (
         <Text className="mt-8 text-center text-rose-500 text-sm">
           {voice.state.error}
+        </Text>
+      ) : null}
+      {voice.stream?.error ? (
+        <Text className="mt-2 text-center text-rose-500 text-sm">
+          {voice.stream.error}
         </Text>
       ) : null}
     </View>

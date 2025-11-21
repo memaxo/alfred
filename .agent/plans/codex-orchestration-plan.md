@@ -14,52 +14,52 @@ This document follows the ExecPlan methodology defined in `.agent/PLANS.md` and 
 
 This section tracks granular implementation steps. Every stopping point must be documented here, even if it requires splitting a partially completed task into two ("done" vs. "remaining"). This section must always reflect the actual current state of the work.
 
-- [ ] Phase 1: Task decomposition + root ExecPlan creation
-  - [ ] Implement `packages/agent/src/orchestrator/multi/decompose.ts` with `decomposeTask` function
-  - [ ] Implement `packages/agent/src/orchestrator/multi/execplan.ts` with ExecPlan parsing and generation helpers
-  - [ ] Implement `packages/agent/src/orchestrator/multi/spawn.ts` with `planWaves` function
-  - [ ] Integrate decomposition into `WorkflowRuntime.executePlanPhase`
-  - [ ] Add root ExecPlan creation and event emission
-  - [ ] Write unit tests for decomposition and wave planning
+- [x] Phase 1: Task decomposition + root ExecPlan creation
+  - [x] Implement `packages/agent/src/orchestrator/multi/decompose.ts` with `decomposeTask` function
+  - [x] Implement `packages/agent/src/orchestrator/multi/execplan.ts` with ExecPlan parsing and generation helpers
+  - [x] Implement `packages/agent/src/orchestrator/multi/spawn.ts` with `planWaves` function
+  - [x] Integrate decomposition into `WorkflowRuntime.executePlanPhase`
+  - [x] Add root ExecPlan creation and event emission
+  - [x] Write unit tests for decomposition and wave planning
 
 - [ ] Phase 2: Single-agent ExecPlan execution
-  - [ ] Add `buildAgentSpec` function to spawn.ts
-  - [ ] Wire single Codex agent execution in `executeActPhase`
-  - [ ] Implement ToolWriter for Codex event forwarding
-  - [ ] Add ExecPlan file creation and persistence
-  - [ ] Verify events persist to DB and workflow completes
+  - [x] Add `buildAgentSpec` function to spawn.ts
+  - [x] Wire single Codex agent execution in `executeActPhase`
+  - [x] Implement ToolWriter for Codex event forwarding
+  - [x] Add ExecPlan file creation and persistence
+  - [ ] Verify events persist to DB and workflow completes (pending integration tests)
 
 - [ ] Phase 3: Multi-agent coordination (waves)
-  - [ ] Complete `planWaves` implementation with dependency layering
-  - [ ] Implement concurrent agent execution with bounded parallelism
-  - [ ] Add wave start/result event emission
-  - [ ] Implement `packages/agent/src/orchestrator/multi/tracker.ts` with `updateTracker` and `detectStuck`
-  - [ ] Wire tracker into Codex event handling
-  - [ ] Add integration tests for wave sequencing
+  - [x] Complete `planWaves` implementation with dependency layering
+  - [x] Implement concurrent agent execution with bounded parallelism (sequential per wave for now)
+  - [x] Add wave start/result event emission
+  - [x] Implement `packages/agent/src/orchestrator/multi/tracker.ts` with `updateTracker` and `detectStuck`
+  - [x] Wire tracker into Codex event handling (MVP: classify stuck in wave-result)
+  - [ ] Add integration tests for wave sequencing (pending)
 
 - [ ] Phase 4: Merge agent integration
-  - [ ] Implement `packages/agent/src/orchestrator/multi/merge.ts` with `buildMergePlan`
+  - [x] Implement `packages/agent/src/orchestrator/multi/merge.ts` with `buildMergePlan`
   - [ ] Create merge AgentSpec and execution logic
   - [ ] Add conflict detection and resolution agent spawning
   - [ ] Test merge scenarios (conflict-free and conflicting)
 
 - [ ] Phase 5: Review agent integration
-  - [ ] Implement `packages/agent/src/orchestrator/multi/review.ts` with `buildReviewPlan`
+  - [x] Implement `packages/agent/src/orchestrator/multi/review.ts` with `buildReviewPlan`
   - [ ] Create review AgentSpec with test/lint/static checks
   - [ ] Wire review agent execution post-merge
   - [ ] Add review failure handling and remediation
 
 - [ ] Phase 6: Error detection and recovery
-  - [ ] Complete stuck detection heuristics in tracker.ts
-  - [ ] Add "needs-guidance" detection (regex on thought content)
-  - [ ] Implement wave abort logic for cascading failures
-  - [ ] Add error event emission and surfacing
-  - [ ] Write failure-mode tests (stuck, conflicts, review failures)
+  - [x] Complete stuck detection heuristics in tracker.ts
+  - [x] Add "needs-guidance" detection (regex on thought content)
+  - [x] Implement wave abort logic for cascading failures
+  - [x] Add error event emission and surfacing (wave-aborted)
+  - [x] Write failure-mode tests (stuck, conflicts, review failures)
 
 - [ ] Observability and metrics
-  - [ ] Add multi-agent metrics to `packages/api/src/metrics.ts` and `packages/runtime/src/metrics.ts`
-  - [ ] Add structured logging with runId/waveId/agentId correlation
-  - [ ] Verify metrics increment at correct points in execution
+  - [x] Add multi-agent metrics to `packages/api/src/metrics.ts` and wire them in `workflowRouter.stream`
+  - [x] Add structured logging with runId/waveId/agentId correlation
+  - [x] Verify metrics increment at correct points in execution (router-level tests)
 
 - [ ] Testing and validation
   - [ ] Write unit tests for all pure functions (decompose, spawn, merge, review, tracker, execplan)
@@ -70,19 +70,30 @@ This section tracks granular implementation steps. Every stopping point must be 
 
 ## Surprises & Discoveries
 
-Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
-
-_No entries yet. This section will be updated as implementation proceeds._
+- Observation: Multi-agent decomposition primitives required minimal new types due to existing ContextBundle abstraction.
+  Evidence: decompose.ts and execplan.ts rely only on @alfred/type/plan ContextBundle and pure helpers.
+- Observation: Multi-agent metrics are most naturally wired at the API/router boundary rather than inside @alfred/runtime.
+  Evidence: runtime already exposes per-agent/ wave outcomes as WorkflowEvents; wiring counters/histograms in workflowRouter.stream avoids adding a dependency from packages/runtime to packages/api while still giving full observability.
 
 ## Decision Log
+
+- Decision: Implemented Phase 1 decomposition primitives (decompose, execplan helpers, wave planning) and integrated them into WorkflowRuntime.plan.
+  Rationale: Establish pure, testable core for multi-agent orchestration before wiring Codex execution.
+  Date/Author: 2025-11-21 / codex-orchestrator
+
+- Decision: Wire multi-agent metrics (`multiAgentTasksTotal`, `multiAgentWavesTotal`, `multiAgentAgentDurationSeconds`, `multiAgentErrorsTotal`) at the API router boundary instead of inside @alfred/runtime.
+  Rationale: Preserves import direction (`apps/* → packages/*`) and keeps runtime free of Prometheus dependencies while still exposing all necessary observability via WorkflowEvents.
+  Date/Author: 2025-11-21 / codex-orchestrator
+
+- Decision: Implement wave abort logic in WorkflowRuntime.act based on per-wave and overall failure rates (`>50%` failed/stuck in a wave or `>40%` failed/stuck overall) and emit a `wave-aborted` event instead of attempting merge/review.
+  Rationale: Avoid cascading failures and conflicting edits when many agents are stuck or failing; surface a clear terminal signal for operator or higher-level policy to intervene.
+  Date/Author: 2025-11-21 / codex-orchestrator
 
 Record every decision made while working on the plan in the format:
 
 - Decision: [What was decided]
   Rationale: [Why this choice was made]
   Date/Author: [When and by whom]
-
-_No entries yet. This section will be updated as implementation proceeds._
 
 ## Outcomes & Retrospective
 

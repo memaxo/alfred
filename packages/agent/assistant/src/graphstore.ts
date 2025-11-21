@@ -89,6 +89,88 @@ function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
   }
 }
 
+export async function linkRagProvenanceToReasoning(opts: {
+  runtimeResource: string;
+  executionId: string;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  try {
+    const { getReasoningChain, findRagDocumentNode, upsertEdges } =
+      await import("@alfred/db/repo/graph");
+
+    const { nodes } = await getReasoningChain({
+      resource: opts.runtimeResource,
+      executionId: opts.executionId,
+      limit: 500,
+    });
+
+    if (!nodes.length) {
+      return;
+    }
+
+    const docToReasoning = new Map<string, string[]>();
+    for (const node of nodes) {
+      const props = (node.properties ??
+        null) as Record<string, unknown> | null;
+      const ids = Array.isArray(props?.ragDocumentIds)
+        ? (props!.ragDocumentIds as unknown[])
+        : [];
+      for (const rawId of ids) {
+        if (typeof rawId !== "string" || rawId.length === 0) continue;
+        const list = docToReasoning.get(rawId) ?? [];
+        list.push(node.id);
+        docToReasoning.set(rawId, list);
+      }
+    }
+
+    if (docToReasoning.size === 0) {
+      return;
+    }
+
+    const edgeSeeds: EdgeSeed[] = [];
+    for (const [documentId, reasoningIds] of docToReasoning.entries()) {
+      const docNode = await findRagDocumentNode(documentId);
+      if (!docNode) continue;
+
+      for (const reasoningId of reasoningIds) {
+        const edgeHash = createHash("sha256")
+          .update("user")
+          .update("|rag_explains|")
+          .update(docNode.id)
+          .update("|")
+          .update(reasoningId)
+          .digest("hex");
+
+        edgeSeeds.push({
+          resource: "user",
+          hash: edgeHash,
+          fromId: docNode.id,
+          toId: reasoningId,
+          kind: "explains",
+          weight: 1,
+          metadata: {
+            documentId,
+            reason: "rag_provenance",
+            runtimeResource: opts.runtimeResource,
+            executionId: opts.executionId,
+          },
+        });
+      }
+    }
+
+    if (edgeSeeds.length === 0) {
+      return;
+    }
+
+    await upsertEdges(edgeSeeds as any);
+  } catch (error) {
+    console.error("Failed to link RAG provenance to reasoning", error);
+  }
+}
+
 function makeEdge(
   resource: string,
   entry: KnowledgeEntry,
@@ -186,6 +268,7 @@ export async function persistReasoning(
     threadId?: string;
     executionId?: string;
     auto?: string;
+    ragDocumentIds?: string[];
   }
 ): Promise<void> {
   if (traces.length === 0) {
@@ -247,6 +330,7 @@ export async function persistReasoning(
           threadId: context?.threadId,
           executionId: executionKey,
           auto: context?.auto,
+          ragDocumentIds: context?.ragDocumentIds,
         },
       };
     });

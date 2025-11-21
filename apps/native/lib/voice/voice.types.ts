@@ -1,3 +1,5 @@
+import type { VoiceSessionSurface } from "@alfred/voice/types";
+
 /**
  * Shared voice queue and payload type definitions.
  * Pure types only—no runtime logic should live here.
@@ -24,6 +26,8 @@ export type VoiceS2SPayload = {
   resource?: string;
   ttsVoice?: string;
   ttsFormat?: "mp3" | "opus" | "wav";
+  sessionId?: string;
+  surface?: VoiceSessionSurface;
 };
 
 export type PendingSttItem = {

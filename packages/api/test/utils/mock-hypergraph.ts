@@ -5,3 +5,7 @@ mock.module("@alfred/agent/assistant/src/hypergraph-bridge", () => ({
   persistHypergraphToDb: vi.fn().mockResolvedValue(undefined),
   startHypergraphSync: vi.fn().mockReturnValue({ stop: vi.fn() }),
 }));
+
+mock.module("@alfred/agent/assistant/src/graphstore", () => ({
+  linkRagProvenanceToReasoning: vi.fn().mockResolvedValue(undefined),
+}));

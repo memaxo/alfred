@@ -42,6 +42,9 @@ Use this section as the single source of truth for current implementation status
 - [x] (2025-11-21 02:15Z) Milestone 5: Authored `docs/voice/streaming.md` and shipped the Bun WebSocket prototype (`VOICE_STREAMING_PROTO=1`) that reuses `VoiceSessionManager` for partial transcripts.
 - [x] (2025-11-21 04:55Z) Milestone 6: Extended docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) with Drive Mode queue drain coverage + API contracts, updated `docs/alfred-prd.md`, and verified queue/web tests so all milestones are complete.
 - [x] (2025-11-21 05:25Z) Milestone 7: Streaming prototype now enforces session auth plus `voice.stt`/`voice.tts` policies, ships docs/reference updates, and adds `bun test test/voice.streaming.test.ts` coverage.
+- [x] (2025-11-21 06:45Z) Streaming adapters land on Drive Mode + web: `useVoiceSessionNative` and `useVoiceSessionWeb` now listen for `vad_state`, honor `auto_stop`, buffer PCM `tts_chunk` events, and expose UI affordances (`Drive Mode` screen, `/voice-s2s`). Docs + env examples updated (`docs/voice/s2s.md`, `docs/voice/streaming.md`, `docs/alfred-prd.md`, `apps/web/.env.example`, `apps/native/.env.example`).
+- [x] (2025-11-21 07:35Z) Restored Codex voice metrics in the API test harness, removed the `uv`/`mock.fn` brittleness from `packages/voice` tests, and shipped hands-free polish (Drive Mode VAD meter, `/voice-s2s` indicator, CarPlay streaming fallback) + docs/PRD updates so every surface shows when auto-stop is armed.
+- [x] (2025-11-21 08:45Z) Added the voice session registry + `sessionId`/`surface` plumbing (router, streaming server, native/web hooks, queue, docs) and surfaced codec hints in both request + response payloads so session continuity and container negotiation are observable end to end.
 
 ## Surprises & Discoveries
 
@@ -57,6 +60,12 @@ Use this to capture unexpected findings as you implement the plan. Keep entries 
   Evidence: Running `bun test test/voice.s2s.test.ts` initially crashed with `Cannot find module '../build/Debug/pty.node'`. Adding `mock.module("node-pty", ...)` plus the existing metrics stubs allowed the new speech-to-speech tests to execute.
 - Observation: Router tests now import `@alfred/agent/assistant/src/hypergraph-bridge`, which Bun cannot resolve without mocks when running outside the built agent package.
   Evidence: `bun test test/voice.s2s.test.ts` failed with `Cannot find module '@alfred/agent/assistant/src/hypergraph-bridge'` after adding new suites. Introducing `packages/api/test/utils/mock-hypergraph.ts` stubs keeps the caller bootstrap lightweight.
+- Observation: React Native/Expo cannot stream raw PCM mid-recording; chunked capture is implemented by recording successive ~1.2 s slices (M4A) and letting the server transcode each slice to PCM before Faster-Whisper processes it.
+  Evidence: `apps/native/lib/voice/session.ts` loops `Audio.Recording` per slice while `packages/api/src/voice/streaming.ts` now calls `decodeToPCM16` when the incoming MIME type is not PCM.
+- Observation: Without a shared session registry, Drive Mode/web/CarPlay could not distinguish between concurrent recordings or resumable sessions, making it impossible to render “hands-free” indicators consistently.
+  Evidence: Prior to this change, `voice.speechToSpeech` responses had no notion of session state and Drive Mode queued jobs lost context; new tests (`packages/api/test/voice.session-registry.test.ts`) failed until the registry tracked `sessionId`, surface, and codec metadata.
+- Observation: API router tests regressed whenever new Prometheus metrics were added because the `mock-metrics` helper listed exports manually.
+  Evidence: Running `bun test packages/api/test/voice.s2s.test.ts` failed with “Export named 'codexLinearIntegrationLatencySeconds' not found” until the stub enumerated the latest metrics.
 
 
 As implementation progresses, append more entries, for example:
@@ -138,6 +147,42 @@ Record every important design choice here in structured XML-style entries. For e
   <date-author>2025-11-21 / AI Agent</date-author>
 </decision>
 
+<decision id="7">
+  <chosen>Keep streamed TTS output as PCM chunks and perform any codec/container conversion on the client.</chosen>
+  <rationale>
+    Encoding every 500–1200 ms chunk into MP3/Opus on the server would require spawning ffmpeg per slice, adding >100 ms latency and extra CPU load. Native (`expo-av`) and web (Web Audio) adapters already handle PCM, and can wrap it in WAV/`AudioBuffer`s for playback, so staying PCM keeps sentence-level playback low-latency while leaving headroom to revisit MP3/Opus once we can amortize encoders.
+  </rationale>
+  <discards>
+    Option A (discarded): Re-encode each chunk on the server before sending `tts_chunk`, which would negate the latency gains we just unlocked.
+    Option B (discarded): Ask clients to transcode PCM to MP3/Opus immediately after receipt. This would duplicate code on every platform without solving the core latency/capacity issue.
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
+<decision id="8">
+  <chosen>Generate test-time metric stubs dynamically by parsing `packages/api/src/metrics.ts`.</chosen>
+  <rationale>
+    Keeping a handwritten list of Prometheus exports inside `mock-metrics.ts` meant every new histogram/counter silently broke router suites. Reading the source file once keeps mocks in sync and prevents unrelated work from failing due to missing exports.
+  </rationale>
+  <discards>
+    Option A (discarded): Continue adding missing metrics manually whenever tests break. This is error-prone and wastes time on every new metric.
+    Option B (discarded): Import the real metrics module in tests. That would pull heavy `prom-client` state into every suite and reintroduce Bun-native dependency issues we intentionally avoid.
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
+<decision id="9">
+  <chosen>Introduce an in-memory voice session registry (clip + streaming) plus explicit codec negotiation fields so every surface shares the same session ID and metadata.</chosen>
+  <rationale>
+    A registry gives us a single source of truth for session continuity, preventing Drive Mode/web/CarPlay from clobbering each other and enabling UI indicators (session ID, last transcript, codec). Plumbing `sessionId`, `surface`, and codec hints through the API also lets queue drains and tests verify the container conversions without guessing.
+  </rationale>
+  <discards>
+    Option A (discarded): Keep session state per client only. This would prevent us from showing hands-free status or recovering after offline retries because the server would never know which session a clip belonged to.
+    Option B (discarded): Persist session state immediately in Postgres. Overkill for the current prototype and would slow down `speechToSpeech`. An in-memory map (per API instance) is sufficient until we need cross-instance resumption.
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
 Add new decisions as you go, e.g. around streaming transport choices (WebSocket vs enhanced tRPC) or queue semantics on web.
 
 ## Outcomes & Retrospective
@@ -162,12 +207,15 @@ As work completes:
 - Note any compromises (e.g., streaming limited to clip-based for now).
 - Capture lessons learned about performance, reliability, and usability.
 
-Latest retrospective (2025-11-21 05:30Z):
+Latest retrospective (2025-11-21 07:35Z):
 
 - Docs now cover every surface: `docs/voice/s2s.md` explains Drive Mode queue drain semantics, while `docs/reference/api/voice.md` documents the `speechToSpeech` contract alongside test commands. This closes the documentation gap called out in Milestone 6.
 - Tests span the full stack (API mutation, shared session core, web hook/route, native queue drain). No open regressions were observed during the targeted `bun test` runs.
 - Remaining follow-ups (VAD, streamed playback, hardened streaming auth) move to the next planning cycle since the foundational milestones are complete.
 - Streaming prototype now enforces the same session + policy rules as the core voice routes, and `bun test test/voice.streaming.test.ts` locks the behavior down until downstream TTS streaming lands.
+- Drive Mode + web now run on the same streaming transport as the backend: `useVoiceSessionNative`/`useVoiceSessionWeb` listen for `vad_state`, honor `auto_stop`, and buffer PCM `tts_chunk` playback so hands-free replies work across Drive Mode, CarPlay, and `/voice-s2s`. Related docs (`docs/voice/s2s.md`, `docs/voice/streaming.md`, `docs/alfred-prd.md`) and env examples were updated to match.
+- Hands-free indicators (VAD meter + auto-stop reason) now show up in Drive Mode, CarPlay, and `/voice-s2s`, so every surface makes it obvious when the mic is armed, when the stream is processing, and why it stopped listening.
+- Session continuity + codec negotiation now exist end to end: the registry tracks every `sessionId`, surface, and codec hint; new API request/response fields bubble that metadata to native/web hooks; queue replays preserve session IDs; and the streaming prototype updates the same registry so UI panels always reflect the latest state.
 
 ## Context and Orientation
 

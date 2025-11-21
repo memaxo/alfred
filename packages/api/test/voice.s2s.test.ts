@@ -125,5 +125,7 @@ describe("voice.speechToSpeech", () => {
     expect(result.assistant.text).toBe("hi there");
     expect(result.audio.audioBase64.length).toBeGreaterThan(0);
     expect(result.durations.totalSeconds).toBeGreaterThan(0);
+    expect(result.session?.id).toEqual(expect.any(String));
+    expect(result.session?.status).toBe("idle");
   });
 });

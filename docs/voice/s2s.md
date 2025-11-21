@@ -23,6 +23,14 @@ This guide explains how to run the end-to-end speech-to-speech pipeline across p
 | `VOICE_FFMPEG_PATH` | Optional path override for `ffmpeg` |
 | `VOICE_STREAMING_PROTO` | `1` to enable the WebSocket streaming prototype |
 | `VOICE_STREAMING_PORT` | Port for the prototype server (default `8788`) |
+| `EXPO_PUBLIC_SERVER_URL` / `EXPO_PUBLIC_VOICE_STREAM_URL` | Expo native app API + streaming endpoints |
+| `VITE_VOICE_STREAMING_URL` / `VITE_VOICE_STREAMING_PORT` | Optional overrides for the web streaming endpoint |
+
+## Session management
+
+- Clients now send an optional `sessionId` + `surface` with every `speechToSpeech` call (or streaming `start` event). When omitted, the server allocates an ID and returns a snapshot alongside the transcript/audio payload.
+- The API keeps an in-memory registry keyed by `{userId, sessionId}` so Drive Mode, CarPlay, and the `/voice-s2s` route can display continuity: current status (`recording`, `processing`, `responding`), last transcript/assistant text, and codec hints.
+- Hook APIs surface the snapshot as `voice.session` (native) or `useVoiceSessionWeb().session`. Native queue replays preserve `sessionId` so offline jobs update the same record once they succeed.
 
 ## Installing Local Models
 
@@ -63,6 +71,9 @@ Key commands:
 3. Visit `http://localhost:3000/voice-s2s`.
    - Click the large button to start recording. The button state reflects `idle → recording → processing`.
    - Release to call `voice.speechToSpeech`; the transcript and assistant reply appear, and the synthesized reply plays automatically.
+   - Toggle the "Streaming Prototype" button to exercise the WebSocket transport (`VOICE_STREAMING_PROTO=1`). Partial transcripts and VAD confidence update in real time, and the reply audio starts playing sentence-by-sentence while Piper is still generating.
+   - The streaming panel includes a hands-free status badge plus a VAD meter so you can verify that auto-stop is armed before you take your finger off the mouse. Auto-stop reasons (silence/timeout/manual) are displayed inline whenever the transport releases the mic.
+   - A session card under the controls mirrors the registry snapshot (ID, surface, last update). This mirrors the native panels so QA can correlate Drive Mode + web behavior quickly.
 
 ## Native Drive Mode
 
@@ -77,6 +88,8 @@ Key commands:
 3. In Drive Mode:
    - Hold the mic button to capture audio; on release, Drive Mode calls `voice.speechToSpeech` (falling back to legacy STT/TTS if unavailable).
    - Offline recordings are queued as `kind: "s2s"` jobs and retried automatically when the device regains connectivity. The queue uses exponential backoff (starting at 1s, max 30s) and persists in `AsyncStorage` under `voice:queue:v1`.
+   - When `VOICE_STREAMING_PROTO=1` and `EXPO_PUBLIC_VOICE_STREAM_URL` (or `EXPO_PUBLIC_SERVER_URL`) is reachable, the same mic button uses the streaming transport. Partial transcripts update live, `auto_stop` releases the mic automatically on silence, and PCM `tts_chunk` events start playing immediately (Drive Mode wraps them in WAV and queues them through `expo-av` so replies overlap generation).
+   - The Drive UI now surfaces a “Hands-free streaming” panel that shows the live VAD confidence (Silero probability), the current streaming status, the latest auto-stop reason, and the active `sessionId` + timestamp. Drivers immediately know when the mic is armed vs. when the assistant is responding without guessing.
 
 ### Drive Mode queue drain coverage
 
@@ -89,7 +102,7 @@ Key commands:
 
 ## CarPlay
 
-- CarPlay uses the same `useVoiceSessionNative` abstraction. When CarPlay is connected, pressing the mic button triggers `speechToSpeech`; otherwise it falls back to stop-and-transcribe.
+- CarPlay uses the same `useVoiceSessionNative` abstraction. When streaming is enabled (`VOICE_STREAMING_PROTO=1` + native env vars), the CarPlay voice control button now calls `voice.stream.start()` and waits for the server’s `auto_stop` / `tts_chunk` events before surfacing the reply, so the driver never has to hold the button. If streaming fails or is disabled, the module falls back to the legacy start → stop-and-transcribe flow automatically.
 - Test with a physical device + CarPlay head unit or an iOS simulator paired with the CarPlay simulator.
 
 ## Streaming Prototype (optional)
@@ -103,7 +116,7 @@ wscat -c ws://localhost:8788/voice/stream
 > {"type":"stop"}
 ```
 
-You should see `partial_transcript` and `final_transcript` events in real time.
+You should see `partial_transcript`, `vad_state`, and `final_transcript` events in real time. The Drive Mode + `/voice-s2s` UIs provide buttons to exercise the prototype without touching `wscat`.
 
 ## Validation Checklist
 

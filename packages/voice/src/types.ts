@@ -1,4 +1,24 @@
 export type TtsFormat = "mp3" | "opus" | "wav";
+export type VoiceSessionSurface = "drive" | "carplay" | "web" | "native" | "stream" | "unknown";
+export type VoiceSessionStatus = "idle" | "recording" | "processing" | "responding" | "error";
+
+export interface VoiceSessionDescriptor {
+  id: string;
+  surface: VoiceSessionSurface;
+  mode: "clip" | "stream";
+  status: VoiceSessionStatus;
+  createdAt: number;
+  updatedAt: number;
+  thread?: string;
+  resource?: string;
+  codec?: {
+    input?: string;
+    output?: string;
+  };
+  lastTranscript?: string;
+  lastAssistantText?: string;
+  lastError?: string;
+}
 
 export interface VoiceCapturedClip {
   audioBase64: string;
@@ -47,6 +67,10 @@ export interface SpeechToSpeechRequest {
   ttsModel?: string;
   ttsVoice?: string;
   ttsFormat?: TtsFormat;
+  sessionId?: string;
+  surface?: VoiceSessionSurface;
+  inputCodec?: string;
+  outputCodec?: string;
 }
 
 export interface SpeechToSpeechResponse {
@@ -68,6 +92,7 @@ export interface SpeechToSpeechResponse {
     assistantSeconds?: number | null;
     ttsSeconds?: number | null;
   };
+  session?: VoiceSessionDescriptor;
 }
 
 export interface PlatformAdapter {

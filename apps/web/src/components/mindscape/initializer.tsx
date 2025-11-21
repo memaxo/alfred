@@ -56,6 +56,16 @@ export function MindscapeInitializer() {
   useEffect(() => {
     if (initializedRef.current) return;
 
+    if (
+      typeof process !== "undefined" &&
+      (process.env.BUN_TEST === "1" ||
+        process.env.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1")
+    ) {
+      // Skip chat autospawn in test or when explicitly disabled so
+      // tests and lightweight environments can focus on graph behaviour.
+      return;
+    }
+
     const hasOrb = nodeIds.includes("singularity");
     // Check for any chat node to avoid duplicates on reload if persisted
     const hasChat = nodeIds.some((id) => {
@@ -160,6 +170,56 @@ export function MindscapeInitializer() {
     }
   );
 
+  const ragSeedText = useMemo(() => {
+    if (notes && notes.length > 0) {
+      const first = notes[0];
+      const title = first.title?.trim();
+      if (title && title.length > 0) {
+        return title;
+      }
+      const content =
+        typeof first.content === "string" ? first.content.trim() : "";
+      if (content.length > 0) {
+        return content.slice(0, 256);
+      }
+    }
+
+    if (traverseResult && traverseResult.nodes.length > 0) {
+      const node = traverseResult.nodes[0] as GraphNode;
+      const props = (node.properties ?? {}) as Record<string, unknown>;
+      const summary =
+        typeof props.content === "string" ? props.content.trim() : "";
+      if (summary.length > 0) {
+        return summary.slice(0, 256);
+      }
+      if (node.label && node.label.length > 0) {
+        return node.label;
+      }
+    }
+
+    return "";
+  }, [notes, traverseResult]);
+
+  const { data: ragResult } = trpc.graph.runQuery.useQuery(
+    ragSeedText
+      ? {
+          kind: "semantic" as const,
+          text: ragSeedText,
+          topK: 5,
+          preferRag: true,
+        }
+      : {
+          kind: "semantic" as const,
+          text: "",
+          topK: 0,
+          preferRag: true,
+        },
+    {
+      enabled: Boolean(ragSeedText),
+      refetchInterval: 60_000,
+    }
+  );
+
   useEffect(() => {
     if (!traverseResult) return;
 
@@ -193,6 +253,7 @@ export function MindscapeInitializer() {
           kind: node.kind,
           summary,
           confidence,
+          source: "runtime",
           graph: {
             dbId: node.id.dbId,
             hgHash: node.id.hgHash,
@@ -207,6 +268,49 @@ export function MindscapeInitializer() {
       }, 0);
     }
   }, [traverseResult, nodeIds, addArtifact, autoLayout]);
+
+  useEffect(() => {
+    if (!ragResult) return;
+
+    ragResult.nodes.forEach((node: GraphNode, index: number) => {
+      const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
+      if (!ref) {
+        return;
+      }
+
+      const flowId = `rag-knowledge-${ref}`;
+      if (nodeIds.includes(flowId)) {
+        return;
+      }
+
+      const props = (node.properties ?? {}) as Record<string, unknown>;
+      const summary =
+        typeof props.content === "string" ? props.content : undefined;
+
+      addArtifact({
+        id: flowId,
+        type: "knowledge",
+        position: { x: 400 + index * 40, y: 350 + index * 40 },
+        data: {
+          type: "knowledge",
+          label: node.label || "RAG Context",
+          kind: node.kind,
+          summary,
+          source: "rag",
+          graph: {
+            dbId: node.id.dbId,
+            hgHash: node.id.hgHash,
+          },
+        } as ArtifactData,
+      });
+    });
+
+    if (ragResult.nodes.length > 0) {
+      setTimeout(() => {
+        autoLayout();
+      }, 0);
+    }
+  }, [ragResult, nodeIds, addArtifact, autoLayout]);
 
   const ensureGraphMapping = useCallback((dbId: string) => {
     const store = useMindscapeStore.getState();
@@ -241,12 +345,19 @@ export function MindscapeInitializer() {
     (edge: GraphEdge) => {
       ensureGraphMapping(edge.fromId);
       ensureGraphMapping(edge.toId);
+       const isExplains = edge.kind === "explains";
       return {
         id: edge.id,
         source: findNodeIdByDbId(edge.fromId),
         target: findNodeIdByDbId(edge.toId),
-        animated: true,
-        style: { stroke: "rgba(255, 255, 255, 0.2)" },
+        animated: !isExplains,
+        style: isExplains
+          ? {
+              stroke: "rgba(16, 185, 129, 0.6)",
+              strokeDasharray: "4 2",
+              strokeWidth: 1.5,
+            }
+          : { stroke: "rgba(255, 255, 255, 0.2)" },
       };
     },
     [ensureGraphMapping, findNodeIdByDbId]

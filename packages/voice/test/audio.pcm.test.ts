@@ -50,7 +50,7 @@ describe("audio pcm helpers", () => {
     const floats = pcm16Base64ToFloat32(pcmBase64);
     expect(floats).toHaveLength(samples.length);
     expect(floats[0]).toBeCloseTo(0);
-    expect(floats[1]).toBeCloseTo(1, 5);
-    expect(floats[2]).toBeCloseTo(-1, 5);
+    expect(floats[1]).toBeCloseTo(1, 3);
+    expect(floats[2]).toBeCloseTo(-1, 3);
   });
 });

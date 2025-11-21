@@ -6,8 +6,17 @@ import * as policyRepo from "@alfred/db/repo/policy";
 import type { EvaluateInput, PolicyResource } from "@alfred/policy";
 import { evaluate } from "@alfred/policy";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { VoiceStreamSurface } from "@alfred/type/voice";
 import { getVoicePools } from "./pools";
 import type { VoiceSession } from "./session";
+import {
+  claimVoiceSession,
+  completeVoiceSession,
+  markVoiceSessionError,
+  releaseVoiceSession,
+  updateVoiceSession,
+} from "./session-registry";
+import type { VoiceSessionStatus } from "./session-registry";
 import {
   policyDecisionsTotal,
   policyObligationsTotal,
@@ -49,6 +58,17 @@ function sendStatusEvent(
 ) {
   send(ws, { type: "status", sessionId, state });
   incrementStreamEvent("status");
+  if (ws.data.sessionRegistryId) {
+    const statusMap: Record<typeof state, VoiceSessionStatus> = {
+      recording: "recording",
+      processing: "processing",
+      playing: "responding",
+      idle: "idle",
+    };
+    updateVoiceSession(ws.data.sessionRegistryId, {
+      status: statusMap[state],
+    });
+  }
 }
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
@@ -70,6 +90,7 @@ interface VoiceStreamData {
   runtime?: RuntimeContext;
   codec?: StreamCodec;
   negotiatedCodec?: StreamCodec;
+  surface?: VoiceStreamSurface;
   vadThreshold?: number;
   autoStop?: boolean;
   maxUtteranceMs?: number;
@@ -78,6 +99,7 @@ interface VoiceStreamData {
   ttsInProgress?: boolean;
   utteranceStartedAt?: number;
   language?: string;
+  sessionRegistryId?: string;
 }
 
 async function evaluateVoicePolicy(
@@ -213,6 +235,17 @@ async function handleStart(
       ? (payload.ttsFormat as "mp3" | "opus" | "wav")
       : "mp3";
 
+  const registrySession = claimVoiceSession({
+    userId,
+    sessionId,
+    surface: typeof payload.surface === "string" ? payload.surface : ws.data.surface ?? "stream",
+    mode: "stream",
+    codec: { input: codec, output: ttsFormat },
+  });
+  updateVoiceSession(registrySession.id, { status: "recording" });
+
+  ws.data.sessionRegistryId = registrySession.id;
+  ws.data.surface = registrySession.surface;
   ws.data.sessionId = sessionId;
   ws.data.userId = userId;
   ws.data.language = language;
@@ -278,6 +311,9 @@ async function handleChunk(
         mimeType,
         error: messageText,
       });
+      if (ws.data.sessionRegistryId) {
+        markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+      }
       send(ws, {
         type: "error",
         sessionId,
@@ -304,6 +340,11 @@ async function handleChunk(
       sessionId,
       text: transcript,
     });
+    if (ws.data.sessionRegistryId) {
+      updateVoiceSession(ws.data.sessionRegistryId, {
+        lastTranscript: transcript,
+      });
+    }
     incrementStreamEvent("partial_transcript");
   }
   if (result) {
@@ -364,6 +405,12 @@ async function handleStop(
   const transcript = session.getTranscript();
   send(ws, { type: "final_transcript", sessionId, text: transcript });
   incrementStreamEvent("final_transcript");
+  if (ws.data.sessionRegistryId) {
+    updateVoiceSession(ws.data.sessionRegistryId, {
+      lastTranscript: transcript,
+      status: "processing",
+    });
+  }
   finalizeSession(sessionId);
   ws.data.sessionId = sessionId; // keep last session id for downstream events
   ws.data.utteranceStartedAt = undefined;
@@ -371,6 +418,10 @@ async function handleStop(
   sendStatusEvent(ws, sessionId, "processing");
 
   if (!transcript.trim()) {
+    if (ws.data.sessionRegistryId) {
+      completeVoiceSession(ws.data.sessionRegistryId);
+    }
+    sendStatusEvent(ws, sessionId, "idle");
     return;
   }
 
@@ -417,8 +468,16 @@ async function handleStop(
       code: "assistant_failed",
       message: messageText,
     });
+    if (ws.data.sessionRegistryId) {
+      markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+    }
     incrementStreamEvent("error", "error");
     return;
+  }
+  if (ws.data.sessionRegistryId) {
+    updateVoiceSession(ws.data.sessionRegistryId, {
+      lastAssistantText: assistantText,
+    });
   }
 
   await streamTts(ws, assistantText);
@@ -466,6 +525,9 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
       sessionId,
       error: messageText,
     });
+    if (ws.data.sessionRegistryId) {
+      markVoiceSessionError(ws.data.sessionRegistryId, messageText);
+    }
     send(ws, {
       type: "error",
       sessionId,
@@ -476,6 +538,9 @@ async function streamTts(ws: ServerWebSocket<VoiceStreamData>, text: string) {
     sendStatusEvent(ws, sessionId, "idle");
   } finally {
     ws.data.ttsInProgress = false;
+    if (ws.data.sessionRegistryId) {
+      completeVoiceSession(ws.data.sessionRegistryId);
+    }
   }
 }
 
@@ -567,6 +632,10 @@ export function startVoiceStreamingPrototype(): void {
       },
       close(ws) {
         finalizeSession(ws.data.sessionId);
+        if (ws.data.sessionRegistryId) {
+          releaseVoiceSession(ws.data.sessionRegistryId);
+          ws.data.sessionRegistryId = undefined;
+        }
       },
     },
   });

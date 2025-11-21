@@ -36,10 +36,20 @@ const workflowStreamEventsTotalMock = {
   inc: vi.fn(),
 };
 
+
+const multiAgentTasksTotalMock = { inc: vi.fn() };
+const multiAgentWavesTotalMock = { inc: vi.fn() };
+const multiAgentAgentDurationSecondsMock = { observe: vi.fn() };
+const multiAgentErrorsTotalMock = { inc: vi.fn() };
+
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
   workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
+  multiAgentTasksTotal: multiAgentTasksTotalMock,
+  multiAgentWavesTotal: multiAgentWavesTotalMock,
+  multiAgentAgentDurationSeconds: multiAgentAgentDurationSecondsMock,
+  multiAgentErrorsTotal: multiAgentErrorsTotalMock,
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -302,6 +312,119 @@ describe("workflow runtime integration", () => {
 
       expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({ event: "error" });
       expect(stopTimerMock).toHaveBeenCalledWith({ status: "error" });
+    });
+  });
+
+  describe("Multi-agent metrics", () => {
+    beforeAll(() => {
+      process.env.USE_WORKFLOW_RUNTIME = "true";
+    });
+
+    it("records multi-agent events into metrics and DB", async () => {
+      const mockRunId = "multi-agent-run";
+      const events: WorkflowEvent[] = [
+        { type: "run", id: mockRunId } as WorkflowEvent,
+        {
+          type: "event",
+          kind: "data-subtasks",
+          data: [{ id: "T1" }, { id: "T2" }],
+        } as any,
+        {
+          type: "event",
+          kind: "data-wave-plan",
+          data: { waveId: "wave_0" },
+        } as any,
+        {
+          type: "event",
+          kind: "wave-result",
+          data: {
+            waveId: "wave_0",
+            status: "partial",
+            agents: [
+              {
+                agentId: "agent-1",
+                role: "worker",
+                status: "stuck",
+                stuck: true,
+                durationSeconds: 5,
+              },
+              {
+                agentId: "agent-2",
+                role: "worker",
+                status: "completed",
+                stuck: false,
+                durationSeconds: 2,
+              },
+            ],
+          },
+        } as any,
+        {
+          type: "event",
+          kind: "wave-aborted",
+          data: { waveId: "wave_0", waveFailRate: 0.6, overallFailRate: 0.6 },
+        } as any,
+        { type: "event", kind: "merge-plan", data: { summary: "merge", expectedFiles: ["a.ts"] } } as any,
+        { type: "event", kind: "review-plan", data: { summary: "review", checks: [] } } as any,
+      ];
+
+      const mockExecutor = {
+        runId: mockRunId,
+        summary: "test",
+        stream: (async function* () {
+          for (const ev of events) {
+            yield ev;
+          }
+        })(),
+        resume: vi.fn(),
+        cancel: vi.fn(),
+      };
+
+      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const subscription = caller.workflow.stream({ requirement: "test" });
+
+      await new Promise<void>((resolve, reject) => {
+        subscription.subscribe({
+          next: () => {},
+          error: reject,
+          complete: resolve,
+        });
+      });
+
+      expect(multiAgentTasksTotalMock.inc).toHaveBeenCalledWith({ status: "created" }, 2);
+      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({ status: "started" });
+      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({ status: "completed" });
+
+      // Per-agent duration and error metrics
+      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
+        { role: "worker", outcome: "stuck" },
+        5
+      );
+      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
+        { role: "worker", outcome: "ok" },
+        2
+      );
+      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
+        kind: "stuck_agent",
+      });
+      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
+        kind: "wave_aborted",
+      });
+
+      const mergeCall = workflowRepoMocks.appendEvent.mock.calls.find(
+        (c) => c[0]?.eventType === "event" && (c[0]?.eventData as any)?.kind === "merge-plan"
+      );
+      const reviewCall = workflowRepoMocks.appendEvent.mock.calls.find(
+        (c) => c[0]?.eventType === "event" && (c[0]?.eventData as any)?.kind === "review-plan"
+      );
+
+      expect(mergeCall).toBeTruthy();
+      expect(reviewCall).toBeTruthy();
     });
   });
 
@@ -606,4 +729,3 @@ describe("workflow runtime integration", () => {
     });
   });
 });
-

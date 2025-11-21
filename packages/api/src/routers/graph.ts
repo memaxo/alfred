@@ -8,6 +8,10 @@ import { observable } from "@trpc/server/observable";
 import { runQuery as runUnifiedQuery } from "@alfred/graph";
 import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
 import { loadHypergraphFromDb } from "@alfred/agent/assistant/src/hypergraph-bridge";
+import {
+  graphQueriesTotal,
+  graphQueryDurationSeconds,
+} from "@alfred/api/metrics";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;
 
@@ -193,17 +197,45 @@ export const graphRouter = router({
     .input(unifiedQuerySchema)
     .query(async ({ input }) => {
       const resource = input.resource ?? "user";
+      const kind = input.kind;
       let graphInstance = null;
-      if (
-        input.kind === "datalog" ||
-        (input.kind === "semantic" && input.preferRag !== true)
-      ) {
-        graphInstance = createHypergraph();
-        await loadHypergraphFromDb(resource, graphInstance);
+      let stopTimer: (() => void) | null = null;
+
+      try {
+        try {
+          stopTimer = graphQueryDurationSeconds.startTimer({ kind });
+        } catch {
+          stopTimer = null;
+        }
+
+        if (
+          input.kind === "datalog" ||
+          (input.kind === "semantic" && input.preferRag !== true)
+        ) {
+          graphInstance = createHypergraph();
+          await loadHypergraphFromDb(resource, graphInstance);
+        }
+
+        const result = await runUnifiedQuery(input, {
+          graph: graphInstance ?? undefined,
+          resource,
+        });
+
+        try {
+          graphQueriesTotal.inc({ kind, resource });
+        } catch {
+          // Metrics failures must not affect query results
+        }
+
+        return result;
+      } finally {
+        if (stopTimer) {
+          try {
+            stopTimer();
+          } catch {
+            // Ignore histogram failures
+          }
+        }
       }
-      return runUnifiedQuery(input, {
-        graph: graphInstance ?? undefined,
-        resource,
-      });
     }),
 });

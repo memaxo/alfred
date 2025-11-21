@@ -12,6 +12,10 @@ import {
   replayQueryDurationSeconds,
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
+  multiAgentTasksTotal,
+  multiAgentWavesTotal,
+  multiAgentAgentDurationSeconds,
+  multiAgentErrorsTotal,
 } from "@alfred/api/metrics";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as workflowRepo from "@alfred/db/repo/workflow";
@@ -729,6 +733,66 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
             // Consume the generator, persisting each event then pushing to client
             for await (const event of executor.stream) {
+              try {
+                // Multi-agent observability hooks
+                if (
+                  (event as any).kind === "data-subtasks" &&
+                  Array.isArray((event as any).data)
+                ) {
+                  multiAgentTasksTotal.inc(
+                    { status: "created" },
+                    (event as any).data.length || 1
+                  );
+                } else if ((event as any).kind === "data-wave-plan") {
+                  multiAgentWavesTotal.inc({ status: "started" });
+                } else if ((event as any).kind === "wave-result") {
+                  const data = (event as any).data || {};
+                  const status =
+                    typeof data.status === "string"
+                      ? data.status
+                      : "completed";
+                  multiAgentWavesTotal.inc({ status });
+
+                  const agents: Array<{
+                    role?: string;
+                    status?: string;
+                    stuck?: boolean;
+                    durationSeconds?: number;
+                  }> = Array.isArray(data.agents) ? data.agents : [];
+
+                  for (const agent of agents) {
+                    const role = agent.role && agent.role.length > 0 ? agent.role : "worker";
+                    const rawStatus = agent.status;
+                    const outcome: "ok" | "error" | "stuck" =
+                      rawStatus === "stuck" || agent.stuck
+                        ? "stuck"
+                        : rawStatus === "failed"
+                          ? "error"
+                          : "ok";
+
+                    const dur = agent.durationSeconds;
+                    if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
+                      multiAgentAgentDurationSeconds.observe(
+                        { role, outcome },
+                        dur
+                      );
+                    }
+
+                    if (outcome !== "ok") {
+                      multiAgentErrorsTotal.inc({ kind: "stuck_agent" });
+                    }
+                  }
+                } else if ((event as any).kind === "wave-aborted") {
+                  multiAgentErrorsTotal.inc({ kind: "wave_aborted" });
+                } else if ((event as any).kind === "merge-plan") {
+                  multiAgentTasksTotal.inc({ status: "merged" });
+                } else if ((event as any).kind === "review-plan") {
+                  multiAgentTasksTotal.inc({ status: "review" });
+                }
+              } catch {
+                // Metrics must never break streaming; ignore metric errors.
+              }
+
               try {
                 // Redact PII/secrets before persistence
                 const redactedEventData = redactEventData(event);

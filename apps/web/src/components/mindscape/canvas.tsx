@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type React from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useMindscapeStore, type ArtifactData } from "@/store/mindscape";
@@ -120,6 +120,42 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
 
   const reactFlow = useReactFlow<ArtifactData>();
   const { mutateAsync: connectEdge } = trpc.graph.connect.useMutation();
+
+  const [showRuntimeKnowledge, setShowRuntimeKnowledge] = useState(true);
+  const [showRagKnowledge, setShowRagKnowledge] = useState(true);
+
+  const { visibleNodes, visibleEdges } = useMemo(() => {
+    const allowedNodeIds = new Set<string>();
+
+    const filteredNodes = nodes.filter((node) => {
+      if (node.type !== "knowledge") {
+        allowedNodeIds.add(node.id);
+        return true;
+      }
+      const source = (node.data as ArtifactData | undefined)?.source;
+      if (source === "rag") {
+        if (!showRagKnowledge) {
+          return false;
+        }
+        allowedNodeIds.add(node.id);
+        return true;
+      }
+      // Default and "runtime"/"user" fall under runtime toggle
+      if (!showRuntimeKnowledge) {
+        return false;
+      }
+      allowedNodeIds.add(node.id);
+      return true;
+    });
+
+    const filteredEdges = edges.filter(
+      (edge) =>
+        allowedNodeIds.has(edge.source ?? "") &&
+        allowedNodeIds.has(edge.target ?? "")
+    );
+
+    return { visibleNodes: filteredNodes, visibleEdges: filteredEdges };
+  }, [nodes, edges, showRuntimeKnowledge, showRagKnowledge]);
 
   // Initialize with Orb if empty
   useEffect(() => {
@@ -249,11 +285,11 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
         <ReactFlow
           colorMode="dark"
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          edges={edges}
+          edges={visibleEdges}
           fitView
           maxZoom={4}
           minZoom={0.1}
-          nodes={nodes}
+          nodes={visibleNodes}
           nodeTypes={nodeTypes}
           onConnect={onConnectPersisting}
           onEdgesChange={onEdgesChange}
@@ -282,6 +318,38 @@ function MindscapeCanvasInner({ searchParams, ...props }: MindscapeCanvasProps) 
             position="top-center"
           >
             Symbiotic Mindscape v0.1
+          </Panel>
+          <Panel
+            className="rounded-full border border-white/10 bg-void-surface/80 px-4 py-2 text-[10px] uppercase tracking-widest text-biolum-faint"
+            position="top-right"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold">Knowledge</span>
+              <label className="flex items-center gap-1">
+                <input
+                  aria-label="Toggle runtime knowledge"
+                  checked={showRuntimeKnowledge}
+                  className="h-3 w-3 accent-biolum"
+                  onChange={(event) =>
+                    setShowRuntimeKnowledge(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span className="text-[10px]">Runtime</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  aria-label="Toggle RAG knowledge"
+                  checked={showRagKnowledge}
+                  className="h-3 w-3 accent-emerald-400"
+                  onChange={(event) =>
+                    setShowRagKnowledge(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span className="text-[10px]">RAG</span>
+              </label>
+            </div>
           </Panel>
           <MindscapeInitializer />
           <WorkflowManager />

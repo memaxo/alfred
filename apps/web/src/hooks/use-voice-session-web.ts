@@ -4,6 +4,8 @@ import type {
   SpeechToSpeechRequest,
   SpeechToSpeechResponse,
   VoiceClient,
+  VoiceSessionDescriptor,
+  VoiceSessionSurface,
 } from "@alfred/voice/types";
 import type { VoiceStreamServerEvent } from "@alfred/type/voice";
 import { VoiceStreamClient } from "@alfred/voice/stream";
@@ -28,6 +30,7 @@ export type UseVoiceSessionWebResult = {
   speechToSpeech: (overrides?: SpeechOverrides) => Promise<void>;
   speak: ReturnType<typeof createVoiceSession>["speak"];
   clear: () => void;
+  session: VoiceSessionDescriptor | null;
   stream: {
     supported: boolean;
     status: StreamStatus;
@@ -39,6 +42,7 @@ export type UseVoiceSessionWebResult = {
     isActive: boolean;
     start: () => Promise<void>;
     stop: () => Promise<void>;
+    sessionId: string | null;
   };
 };
 
@@ -63,6 +67,13 @@ type StreamState = {
 
 const MAX_RECORDING_MS = 12_000;
 const STREAM_SLICE_MS = 600;
+
+const createSessionId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `voice-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+};
 
 const getMediaStream = createClientOnlyFn(async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -124,6 +135,16 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     error: null,
     sessionId: null,
   });
+  const sessionIdRef = useRef<string>(createSessionId());
+  const sessionSurface: VoiceSessionSurface = "web";
+  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
+
+  const syncSessionInfo = useCallback((snapshot: VoiceSessionDescriptor | null) => {
+    if (snapshot?.id) {
+      sessionIdRef.current = snapshot.id;
+    }
+    setSessionInfo(snapshot);
+  }, []);
 
   const cleanupStream = useCallback(() => {
     if (timeoutRef.current) {
@@ -348,6 +369,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
           error: null,
           autoStopReason: null,
         }));
+        sessionIdRef.current = event.sessionId;
       },
       onPartialTranscript: (event) => {
         setStreamState((prev) => ({
@@ -482,7 +504,10 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     }));
     try {
       const client = getStreamClient();
-      await client.startSession();
+      await client.startSession({
+        sessionId: sessionIdRef.current,
+        surface: sessionSurface,
+      });
       await startStreamingRecorder(client);
     } catch (err) {
       setStreamState((prev) => ({
@@ -494,7 +519,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
       setIsStreamingActive(false);
       throw err;
     }
-  }, [getStreamClient, startStreamingRecorder, streamUrl]);
+  }, [getStreamClient, sessionSurface, startStreamingRecorder, streamUrl]);
 
   const stopStreaming = useCallback(async () => {
     await stopStreamingRecorder();
@@ -552,7 +577,14 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
       }
       setIsProcessing(true);
       try {
-        const result = await session.speechToSpeech(overrides);
+        const result = await session.speechToSpeech({
+          ...overrides,
+          sessionId: sessionIdRef.current,
+          surface: sessionSurface,
+        });
+        if (result?.session) {
+          syncSessionInfo(result.session);
+        }
         setLastResponse(result ?? null);
         setError(null);
       } catch (err) {
@@ -566,7 +598,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
         syncState();
       }
     },
-    [session, syncState]
+    [session, sessionSurface, syncSessionInfo, syncState]
   );
 
   const speak = useCallback(
@@ -630,6 +662,22 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     ttsMutation.isPending ||
     s2sMutation.isPending;
 
+  const streamApi = {
+    supported: streamState.supported,
+    status: streamState.status,
+    transcript: streamState.transcript,
+    assistantText: streamState.assistantText,
+    vadConfidence: streamState.vadConfidence,
+    autoStopReason: streamState.autoStopReason,
+    error: streamState.error,
+    isActive: isStreamingActive,
+    sessionId: streamState.sessionId,
+    start: streamState.supported ? startStreaming : async () => {
+      throw new Error("voice_streaming_unavailable");
+    },
+    stop: streamState.supported ? stopStreaming : async () => {},
+  };
+
   return {
     state: session.state,
     isRecording,
@@ -641,5 +689,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     speechToSpeech,
     speak,
     clear,
+    stream: streamApi,
+    session: sessionInfo,
   };
 }

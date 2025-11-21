@@ -1,10 +1,12 @@
 export type VoiceStreamCodec = "pcm" | "mp3" | "opus" | "wav";
+export type VoiceStreamSurface = "drive" | "carplay" | "web" | "native" | "stream" | "unknown";
 
 export interface VoiceStreamStartPayload {
   type: "start";
   sessionId?: string;
   language?: string;
   codec?: VoiceStreamCodec;
+  surface?: VoiceStreamSurface;
   vadThreshold?: number;
   autoStop?: boolean;
   maxUtteranceMs?: number;

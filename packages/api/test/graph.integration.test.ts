@@ -4,6 +4,7 @@ process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import "./utils/mock-hypergraph";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { eq } from "drizzle-orm";
@@ -171,4 +172,9 @@ describe("graph router integration (sqlite)", () => {
     const edges = await caller.getEdges({ nodeIds: [fromId, toId], resource });
     expect(edges.some((edge) => edge.id === inserted.id)).toBe(true);
   });
+
+  // NOTE: A dedicated provenance E2E test will live alongside the runtime
+  // integration once the workflow runtime path wires ragDocumentIds through
+  // persistReasoning. For now, provenance linking is covered at unit level
+  // in packages/agent/assistant/test/graphstore-rag-provenance.test.ts.
 });

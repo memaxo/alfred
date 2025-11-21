@@ -136,6 +136,7 @@ export const knowledgeNodeDataSchema = baseArtifactDataSchema.extend({
   kind: z.string().optional(),
   summary: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  source: z.enum(["user", "runtime", "rag"]).optional(),
 });
 
 /**

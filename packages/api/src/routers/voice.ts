@@ -19,6 +19,12 @@ import { getVoicePools } from "../voice/pools";
 import { randomUUID } from "node:crypto";
 import { runAssistantForVoice } from "../voice/assistant";
 import {
+  claimVoiceSession,
+  completeVoiceSession,
+  markVoiceSessionError,
+  updateVoiceSession,
+} from "../voice/session-registry";
+import {
   decodeToPCM16,
   encodeFromPCM16,
   isLikelyPCM,
@@ -45,10 +51,13 @@ const ttsInput = z.object({
   model: z.string().min(1).default(DEFAULT_TTS_MODEL),
 });
 
+const voiceSurfaceInput = z.enum(["drive", "carplay", "web", "native", "stream", "unknown"]);
+
 const voiceStreamInput = z.object({
   mode: z.enum(["clip", "stream"]).default("stream"),
   sessionId: z.string().optional(),
   language: z.string().min(2).max(10).optional(),
+  surface: voiceSurfaceInput.optional(),
 });
 
 type SttInput = z.infer<typeof sttInput>;
@@ -64,6 +73,10 @@ const s2sInput = z.object({
   ttsModel: z.string().min(1).default(DEFAULT_TTS_MODEL),
   ttsVoice: z.string().min(1).default(DEFAULT_TTS_VOICE),
   ttsFormat: z.enum(["mp3", "opus", "wav"]).default("mp3"),
+  sessionId: z.string().min(8).max(64).optional(),
+  surface: voiceSurfaceInput.default("web"),
+  inputCodec: z.string().optional(),
+  outputCodec: z.string().optional(),
 });
 
 type SpeechToSpeechInput = z.infer<typeof s2sInput>;
@@ -530,76 +543,115 @@ export const voiceRouter: ReturnType<typeof router> = router({
       const provider = getVoiceProvider();
       const s2sTimerStart = performance.now();
 
-      const sttPayload: SttInput = {
-        audioBase64: input.audioBase64,
-        mimeType: input.mimeType,
-        model: input.sttModel,
-        language: input.language,
-        prompt: input.prompt,
-      };
-      const sttResult =
-        provider === "local"
-          ? await transcribeLocal(sttPayload)
-          : await postTranscription(sttPayload);
-
-      const transcriptText = sttResult.text?.trim();
-      if (!transcriptText) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "transcription_empty",
-        });
-      }
-
-      const assistantResult = await runAssistantForVoice(
-        ctx.runtimeContext,
-        {
-          text: transcriptText,
-          thread: input.thread,
-          resource: input.resource,
-          userId: session.user.id,
-        }
-      );
-
-      const ttsPayload: TtsInput = {
-        text: assistantResult.text || "I heard you.",
-        voice: input.ttsVoice,
-        format: input.ttsFormat,
-        model: input.ttsModel,
-      };
-      const ttsResult =
-        provider === "local"
-          ? await synthesizeLocal(ttsPayload)
-          : await postSynthesis(ttsPayload);
-
-      const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
-      voiceStreamLatencySeconds.observe(
-        { stage: "speech_to_speech" },
-        totalSeconds
-      );
-      logger.info("voice_s2s_complete", {
-        provider,
-        sttModel: sttResult.model,
-        ttsModel: ttsResult.model,
-        totalSeconds,
-        sttSeconds: sttResult.durationSeconds,
-        ttsSeconds: ttsResult.durationSeconds,
+      const claimedSession = claimVoiceSession({
+        userId: session.user.id,
+        sessionId: input.sessionId,
+        surface: input.surface,
+        mode: "clip",
+        thread: input.thread,
+        resource: input.resource,
+        codec: {
+          input: input.inputCodec ?? input.mimeType,
+          output: input.outputCodec ?? input.ttsFormat,
+        },
       });
 
-      return {
-        transcript: sttResult,
-        assistant: {
-          text: assistantResult.text,
-          replayId: assistantResult.replayId ?? undefined,
-          raw: assistantResult.raw,
-        },
-        audio: ttsResult,
-        durations: {
+      try {
+        updateVoiceSession(claimedSession.id, {
+          status: "processing",
+        });
+        const sttPayload: SttInput = {
+          audioBase64: input.audioBase64,
+          mimeType: input.mimeType,
+          model: input.sttModel,
+          language: input.language,
+          prompt: input.prompt,
+        };
+        const sttResult =
+          provider === "local"
+            ? await transcribeLocal(sttPayload)
+            : await postTranscription(sttPayload);
+
+        const transcriptText = sttResult.text?.trim();
+        if (!transcriptText) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "transcription_empty",
+          });
+        }
+
+        updateVoiceSession(claimedSession.id, {
+          lastTranscript: transcriptText,
+        });
+
+        const assistantResult = await runAssistantForVoice(
+          ctx.runtimeContext,
+          {
+            text: transcriptText,
+            thread: input.thread,
+            resource: input.resource,
+            userId: session.user.id,
+          }
+        );
+
+        updateVoiceSession(claimedSession.id, {
+          status: "responding",
+          lastAssistantText: assistantResult.text ?? undefined,
+        });
+
+        const ttsPayload: TtsInput = {
+          text: assistantResult.text || "I heard you.",
+          voice: input.ttsVoice,
+          format: input.ttsFormat,
+          model: input.ttsModel,
+        };
+        const ttsResult =
+          provider === "local"
+            ? await synthesizeLocal(ttsPayload)
+            : await postSynthesis(ttsPayload);
+
+        const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
+        voiceStreamLatencySeconds.observe(
+          { stage: "speech_to_speech" },
+          totalSeconds
+        );
+        logger.info("voice_s2s_complete", {
+          provider,
+          sttModel: sttResult.model,
+          ttsModel: ttsResult.model,
           totalSeconds,
-          sttSeconds: sttResult.durationSeconds ?? null,
-          assistantSeconds: assistantResult.durationSeconds,
-          ttsSeconds: ttsResult.durationSeconds ?? null,
-        },
-      };
+          sttSeconds: sttResult.durationSeconds,
+          ttsSeconds: ttsResult.durationSeconds,
+        });
+
+        const finalSession =
+          completeVoiceSession(claimedSession.id, {
+            lastTranscript: transcriptText,
+            lastAssistantText: assistantResult.text ?? undefined,
+          }) ?? claimedSession;
+
+        return {
+          transcript: sttResult,
+          assistant: {
+            text: assistantResult.text,
+            replayId: assistantResult.replayId ?? undefined,
+            raw: assistantResult.raw,
+          },
+          audio: ttsResult,
+          durations: {
+            totalSeconds,
+            sttSeconds: sttResult.durationSeconds ?? null,
+            assistantSeconds: assistantResult.durationSeconds,
+            ttsSeconds: ttsResult.durationSeconds ?? null,
+          },
+          session: finalSession,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error ?? "error");
+        markVoiceSessionError(claimedSession.id, message);
+        throw error;
+      }
     }),
 
   stream: authedProcedure

@@ -699,6 +699,23 @@ export async function findStaleNodes(
     .limit(limit);
 }
 
+export async function findRagDocumentNode(
+  documentId: string
+): Promise<NodeRow | null> {
+  const rows = await db
+    .select()
+    .from(memoryNodes)
+    .where(
+      and(
+        eq(memoryNodes.kind, "rag_document"),
+        sql`COALESCE(properties->>'documentId', '') = ${documentId}`
+      )
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 export async function getReasoningChain(args: {
   resource: string;
   executionId?: string | null;

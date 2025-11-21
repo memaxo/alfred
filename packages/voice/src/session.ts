@@ -174,6 +174,10 @@ export function createVoiceSession(
         ttsModel: overrides?.ttsModel,
         ttsVoice: overrides?.ttsVoice ?? defaults.voice,
         ttsFormat: overrides?.ttsFormat ?? defaults.format,
+        sessionId: overrides?.sessionId,
+        surface: overrides?.surface,
+        inputCodec: captured.mimeType,
+        outputCodec: overrides?.ttsFormat ?? defaults.format,
       };
       const result = await client.speechToSpeech(payload);
       if (result?.transcript?.text) {

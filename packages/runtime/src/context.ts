@@ -48,6 +48,7 @@ export type ExecutionContext = {
   bundle: ContextBundle | null;
   totalTokens: number;
   ragChunks?: import("@alfred/rag").Chunk[];
+  ragDocumentIds?: string[];
 };
 
 /**
@@ -165,51 +166,71 @@ export class ContextBuilder {
         maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
       });
 
-      // Retrieve RAG chunks for semantic context
+      // Retrieve RAG chunks for semantic context (disabled in tests to avoid heavy dependencies)
       let ragChunks: import("@alfred/rag").Chunk[] | undefined;
       let ragTokens = 0;
 
-      const ragStartTime = Date.now();
-      try {
-        const knowledgeEngine = new KnowledgeEngine();
-        ragChunks = await knowledgeEngine.retrieveContext(input.requirement, {
-          useHybrid: true,
-          topK: RAG_TOP_K,
-          threshold: RAG_THRESHOLD,
-          useReranking: false,
-        });
+      if (process.env.NODE_ENV !== "test") {
+        const ragStartTime = Date.now();
+        try {
+          const knowledgeEngine = new KnowledgeEngine();
+          ragChunks = await knowledgeEngine.retrieveContext(input.requirement, {
+            useHybrid: true,
+            topK: RAG_TOP_K,
+            threshold: RAG_THRESHOLD,
+            useReranking: false,
+          });
 
-        // Estimate RAG chunk tokens
-        if (ragChunks.length > 0) {
-          const estimator = createTokenEstimator();
-          ragTokens = ragChunks.reduce(
-            (sum, chunk) => sum + estimator.estimate(chunk.content),
-            0
+          // Estimate RAG chunk tokens
+          if (ragChunks.length > 0) {
+            const estimator = createTokenEstimator();
+            ragTokens = ragChunks.reduce(
+              (sum, chunk) => sum + estimator.estimate(chunk.content),
+              0
+            );
+          }
+
+          const ragDurationMs = Date.now() - ragStartTime;
+          runtimeRagRetrievalDurationSeconds.observe(
+            ragDurationMs / MS_TO_SECONDS
           );
+          runtimeRagRetrievalTotal.inc({ status: "ok" });
+
+          logger.debug("runtime_rag_retrieval", {
+            requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
+            chunksCount: ragChunks.length,
+            tokens: ragTokens,
+            durationMs: ragDurationMs,
+          });
+        } catch (error) {
+          // RAG retrieval is non-fatal - continue without chunks
+          const ragDurationMs = Date.now() - ragStartTime;
+          runtimeRagRetrievalTotal.inc({ status: "error" });
+          logger.warn("runtime_rag_retrieval_failed", {
+            requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
+            error: error instanceof Error ? error.message : String(error),
+            durationMs: ragDurationMs,
+          });
+          ragChunks = undefined;
         }
+      }
 
-        const ragDurationMs = Date.now() - ragStartTime;
-        runtimeRagRetrievalDurationSeconds.observe(
-          ragDurationMs / MS_TO_SECONDS
-        );
-        runtimeRagRetrievalTotal.inc({ status: "ok" });
-
-        logger.debug("runtime_rag_retrieval", {
-          requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
-          chunksCount: ragChunks.length,
-          tokens: ragTokens,
-          durationMs: ragDurationMs,
-        });
-      } catch (error) {
-        // RAG retrieval is non-fatal - continue without chunks
-        const ragDurationMs = Date.now() - ragStartTime;
-        runtimeRagRetrievalTotal.inc({ status: "error" });
-        logger.warn("runtime_rag_retrieval_failed", {
-          requirement: input.requirement.slice(0, REQUIREMENT_SLICE_LENGTH),
-          error: error instanceof Error ? error.message : String(error),
-          durationMs: ragDurationMs,
-        });
-        ragChunks = undefined;
+      // Derive provenance: which RAG documents contributed chunks
+      let ragDocumentIds: string[] | undefined;
+      if (ragChunks && ragChunks.length > 0) {
+        const ids = new Set<string>();
+        for (const chunk of ragChunks) {
+          const metadata = (chunk as any)?.metadata as
+            | Record<string, unknown>
+            | undefined;
+          const docId = metadata?.documentId;
+          if (typeof docId === "string" && docId.length > 0) {
+            ids.add(docId);
+          }
+        }
+        if (ids.size > 0) {
+          ragDocumentIds = Array.from(ids);
+        }
       }
 
       // Calculate total tokens
@@ -221,6 +242,7 @@ export class ContextBuilder {
         bundle,
         totalTokens,
         ragChunks,
+        ragDocumentIds,
       };
 
       // Cache the context

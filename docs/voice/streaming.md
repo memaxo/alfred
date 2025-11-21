@@ -12,12 +12,20 @@ This document describes the current WebSocket prototype, the message contract, a
 - **Endpoint**: `ws://<API_HOST>:<VOICE_STREAMING_PORT|8788>/voice/stream`.
 - **Authentication**: Same as `voice.speechToSpeech`. The WebSocket upgrade reuses the tRPC session cookies, enforces both `voice.stt` and `voice.tts` policies, and rejects unauthenticated/unauthorized callers before the socket opens. Bring a real session cookie (e.g., from the browser) when testing.
 - **Provider requirement**: Local voice provider (`VOICE_PROVIDER=local`). The prototype forwards audio chunks into the existing `VoiceSessionManager`, which in turn talks to the Faster-Whisper + Piper pools.
+- **Input codec handling**: The server accepts PCM, M4A, WebM, MP3, or Opus chunks. Each chunk is normalized via the ffmpeg helper (`decodeToPCM16`) before the Faster-Whisper pool receives it, so clients can stream whatever their recorder produces.
 - **Lifecycle**:
   1. Client upgrades to WebSocket, receives `{"type":"ready","sessionId":null}`.
   2. Client sends `start` to allocate a session.
   3. Client streams `audio_chunk` events (base64 PCM, 16 kHz mono).
   4. Client sends `stop` to flush transcription and tear down.
   5. Server emits `partial_transcript`, `final_transcript`, and status/error events.
+
+## Configuration
+
+- `VOICE_STREAMING_PROTO=1` enables the Bun WebSocket server; `VOICE_STREAMING_PORT` (default `8788`) controls the port.
+- Web app: set `VITE_VOICE_STREAMING_URL` (optional) and/or `VITE_VOICE_STREAMING_PORT`. When unset, the client derives `ws(s)://<frontend-host>:8788/voice/stream`.
+- Native app: set `EXPO_PUBLIC_VOICE_STREAM_URL` (optional) and/or `EXPO_PUBLIC_VOICE_STREAM_PORT`. When unset, the Expo client derives the URL from `EXPO_PUBLIC_SERVER_URL`.
+
 
 ## Message Contract
 
@@ -78,7 +86,7 @@ The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `p
 
 - `packages/api/src/voice/streaming.ts` hosts the prototype.
 - The server is started automatically when `VOICE_STREAMING_PROTO=1`. The port defaults to `8788` and can be overridden via `VOICE_STREAMING_PORT`.
-- Each connection stores `{ sessionId, userId, runtimeContext, codec preferences }` and reuses the existing `VoiceSessionManager` so all PCM decoding, VAD, and buffering logic stays in one place.
+- Each connection stores `{ sessionId, userId, runtimeContext, codec preferences }`, claims the shared voice session registry, and reuses the existing `VoiceSessionManager` so all PCM decoding, VAD, and buffering logic stays in one place. The registry keeps Drive Mode/web/CarPlay dashboards in sync with the streaming status.
 - Audio chunks call `VoiceSession.processAudioChunk` (now returning VAD metadata) before emitting `partial_transcript` and `vad_state` updates.
 - On `stop` (manual, silence, or timeout), the server emits a final transcript, runs `runAssistantForVoice`, streams PCM `tts_chunk` events via `TTSPool`, and finishes with `tts_complete` + `status: idle`.
 - Logging lives under the `voice_stream_proto_*` keys (`voice_stream_proto_start`, `voice_stream_proto_chunk`, `voice_stream_proto_error`).
@@ -112,11 +120,26 @@ wscat -c ws://localhost:8788/voice/stream
 < {"type":"final_transcript","text":"hello"}
 ```
 
-3. On native/web, reuse the existing capture pipelines, but stop the recorder every few hundred milliseconds and send each chunk as PCM. With `autoStop=true`, the server emits `auto_stop` as soon as VAD marks end-of-utterance; clients should immediately stop recording, wait for `assistant_message`, and begin buffering `tts_chunk` audio for playback.
+3. On native/web, the recorder runs in short slices (≈600–1200 ms) and each slice is uploaded immediately. The server now accepts container formats, so the clients simply base64 encode the slice (`audio/m4a`, `audio/webm`, etc.). With `autoStop=true`, the server emits `auto_stop` as soon as Silero marks end-of-utterance; clients should stop recording, wait for `assistant_message`, and buffer PCM `tts_chunk` events for playback (native wraps them in WAV before calling `expo-av`, web streams them into an `AudioBufferSourceNode`).
+
+### Native (Drive Mode + CarPlay)
+
+- `useVoiceSessionNative` exposes `stream.start()` / `stream.stop()` plus live state (`status`, `transcript`, `assistantText`, `vadConfidence`). Press-and-hold now opens the streaming session; releasing calls `stream.stop()`.
+- Drive Mode displays partial transcripts as `stream.transcript`, automatically transitions to "Thinking…" when the server stops the capture, and begins playback as `tts_chunk` events arrive (chunks are wrapped in temporary WAV files and queued through `expo-av`).
+- The Drive UI also surfaces Silero’s VAD confidence and the latest auto-stop reason under a “Hands-free streaming” panel so drivers know whether the mic is armed, actively recording, or closed.
+- CarPlay now prefers the streaming transport as well: the steering-wheel button calls `voice.stream.start()`, waits for `auto_stop`, and relays the streamed assistant text as soon as it arrives. If streaming is disabled or fails, the button falls back to the clip-based `speechToSpeech` flow automatically.
+- The queue drain (background retry) continues to process clip-based jobs; streaming falls back to clip mode automatically when the WebSocket endpoint is unavailable.
+
+- The web route now exposes two flows:
+  - The original clip-based speech-to-speech button.
+  - A "Streaming Prototype" button that toggles the WebSocket transport.
+- The MediaRecorder runs with a `600 ms` `timeslice` and sends each blob as-is; PCM conversion happens server-side.
+- Playback uses the Web Audio API: each PCM chunk becomes an `AudioBuffer`, queued via `AudioContext`, so the reply starts while Piper is still generating audio.
+- The streaming card shows a live hands-free badge, a VAD meter, and the auto-stop reason so testers can tell when the transport is listening vs. when it has moved on to processing or playback.
 
 ## Future Work
 
-- **Codec negotiation**: accept containerized chunk uploads (M4A/WebM) and transcode server-side via the ffmpeg helper, and honor downstream codec preferences so MP3/Opus clients can avoid PCM decoding.
+- **Downstream codec negotiation**: streamed replies remain PCM for now to keep latency predictable. Once we can amortize encoder startup costs, add optional per-chunk MP3/Opus encoding and advertise it via `negotiatedCodec`.
 - **Adaptive chunk sizing**: feed VAD state back to the client so it can stop sending silence.
 - **Production deployment**: move from the dedicated Bun.serve instance to the shared API server, add health probes, and document scaling/limits.
 

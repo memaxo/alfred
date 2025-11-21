@@ -1,78 +1,41 @@
 import { mock, vi } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const counter = () => ({ inc: vi.fn(), labels: (..._args: any[]) => ({ inc: vi.fn() }) });
-const histogram = () => ({
-  startTimer: vi.fn().mockReturnValue(() => {}),
+const createMetricStub = () => ({
+  inc: vi.fn(),
+  dec: vi.fn(),
   observe: vi.fn(),
-  labels: (..._args: any[]) => ({ observe: vi.fn() }),
+  set: vi.fn(),
+  labels: vi.fn(() => createMetricStub()),
+  startTimer: vi.fn(() => vi.fn()),
 });
 
-export const metricsStub = {
-  // tRPC
-  trpcRequestsTotal: counter(),
-  trpcRequestErrorsTotal: counter(),
-  trpcRequestDurationSeconds: histogram(),
+const metricsSource = readFileSync(
+  join(process.cwd(), "packages/api/src/metrics.ts"),
+  "utf8"
+);
 
-  // Policy
-  policyDecisionsTotal: counter(),
-  policyObligationsTotal: counter(),
+const exportConstRegex = /export const (\w+)/g;
+const metricsStub: Record<string, unknown> = {};
 
-  // Rate limit
-  rateLimitHitsTotal: counter(),
+for (const match of metricsSource.matchAll(exportConstRegex)) {
+  const name = match[1];
+  if (name === "metricsContentType") {
+    metricsStub[name] = "text/plain";
+    continue;
+  }
+  metricsStub[name] = createMetricStub();
+}
 
-  // Stream
-  workflowStreamEventsTotal: counter(),
-  workflowStreamDurationSeconds: histogram(),
-  replayQueriesTotal: counter(),
-  replayQueryDurationSeconds: histogram(),
-  runnerStepsTotal: counter(),
-  runnerErrorsTotal: counter(),
-  linearActivityEmissionsTotal: counter(),
-  linearActivityDurationSeconds: histogram(),
-  linearSessionOperationsTotal: counter(),
-  linearWebhookEventsTotal: counter(),
-  linearWebhookWorkflowStartsTotal: counter(),
-  linearWebhookWorkflowCancelsTotal: counter(),
+metricsStub.metricsRegistry = {};
+metricsStub.recordVoiceStt = vi.fn();
+metricsStub.recordVoiceTts = vi.fn();
+metricsStub.recordStreamEvent = vi.fn();
+metricsStub.startStreamTimer = vi.fn(() => vi.fn());
+metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
 
-  // Misc (provide stubs to satisfy imports)
-  runRegistryEventsTotal: counter(),
-  runRegistryDispatchDurationSeconds: histogram(),
-  droidExecRunsTotal: counter(),
-  droidExecDurationSeconds: histogram(),
-  codexExecRunsTotal: counter(),
-  codexExecDurationSeconds: histogram(),
-  codexErrorsTotal: counter(),
-  evalRunsTotal: counter(),
-  evalDurationSeconds: histogram(),
-  evalScoresTotal: counter(),
-  evalFailuresTotal: counter(),
-  laminarEvalDatapointsTotal: counter(),
-  laminarEvalErrorsTotal: counter(),
-  webhookEventsTotal: counter(),
-  webhookErrorsTotal: counter(),
-  assistantToolCallsTotal: counter(),
-  assistantEscalationsTotal: counter(),
-  memoryUpdatesTotal: counter(),
-  memoryForgetsTotal: counter(),
-  assistantGenerateRequestsTotal: counter(),
-  assistantGenerateDurationSeconds: histogram(),
-  orchestratorGenerateRequestsTotal: counter(),
-  orchestratorGenerateDurationSeconds: histogram(),
-  preferenceHistoryPrunedTotal: counter(),
-  preferenceCacheInvalidationsTotal: counter(),
-  preferenceRefreshTotal: counter(),
-  preferencePromptInjectionsTotal: counter(),
-  preferencePromptFailuresTotal: counter(),
-  voiceSttTotal: counter(),
-  voiceSttDurationSeconds: histogram(),
-  recordVoiceStt: (_: any) => void 0,
-  recordVoiceTts: (_: any) => void 0,
-  compressionCyclesTotal: counter(),
-  compressionCycleDurationSeconds: histogram(),
-  compressionNodesUpdatedTotal: counter(),
-  voiceStreamEventsTotal: counter(),
-  voiceStreamLatencySeconds: histogram(),
-} as const;
+export { metricsStub };
 
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,

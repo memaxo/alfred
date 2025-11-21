@@ -1,5 +1,5 @@
-import { accessSync, constants as fsConstants } from "node:fs";
-import { join } from "node:path";
+import { accessSync, constants as fsConstants, statSync } from "node:fs";
+import { join, delimiter as pathDelimiter } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import { IPCBridge, type IPCRequest, type IPCResponse } from "./ipc";
 
@@ -106,6 +106,14 @@ export class ModelProcess {
       };
     }
 
+    const pythonOverride = process.env.PYTHON_PATH;
+    if (pythonOverride) {
+      return {
+        cmd: [pythonOverride, scriptPath],
+        cwd: process.cwd(),
+      };
+    }
+
     // Check for virtual environment
     const venvPython = this.findVenvPython(voiceDir);
     if (venvPython) {
@@ -116,7 +124,7 @@ export class ModelProcess {
     }
 
     // Fallback to system Python
-    const pythonPath = process.env.PYTHON_PATH ?? "python3";
+    const pythonPath = "python3";
     return {
       cmd: [pythonPath, scriptPath],
       cwd: process.cwd(),
@@ -127,31 +135,36 @@ export class ModelProcess {
    * Find UV executable in PATH
    */
   protected async findUvPath(): Promise<string | null> {
-    try {
-      // Use platform-appropriate command to find executable
-      const findCmd =
-        process.platform === "win32" ? ["where", "uv"] : ["which", "uv"];
-      const proc = Bun.spawn(findCmd, {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const exitCode = await proc.exited;
-      if (exitCode === 0) {
-        const stdout = await new Response(proc.stdout).text();
-        const path = stdout.trim().split("\n")[0]; // Take first result
-        if (path) {
-          // Verify the path exists
-          try {
-            accessSync(path, fsConstants.F_OK);
-            return path;
-          } catch {
-            return null;
+    const pathEnv = process.env.PATH ?? "";
+    if (!pathEnv) {
+      return null;
+    }
+
+    const entries = pathEnv.split(pathDelimiter).filter(Boolean);
+    const candidates =
+      process.platform === "win32"
+        ? ["uv.exe", "uv.cmd", "uv.bat", "uv"]
+        : ["uv"];
+
+    for (const dir of entries) {
+      for (const name of candidates) {
+        const candidate = join(dir, name);
+        try {
+          accessSync(candidate, fsConstants.F_OK);
+          const stats = statSync(candidate);
+          if (!stats.isFile()) {
+            continue;
           }
+          if (process.platform !== "win32") {
+            accessSync(candidate, fsConstants.X_OK);
+          }
+          return candidate;
+        } catch {
+          continue;
         }
       }
-    } catch {
-      // UV not found or find command failed
     }
+
     return null;
   }
 
@@ -166,6 +179,10 @@ export class ModelProcess {
 
     try {
       accessSync(venvPython, fsConstants.F_OK);
+      const stats = statSync(venvPython);
+      if (!stats.isFile()) {
+        return null;
+      }
       return venvPython;
     } catch {
       return null;

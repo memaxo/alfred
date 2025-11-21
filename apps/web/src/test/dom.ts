@@ -22,3 +22,46 @@ globalThis.getComputedStyle = window.getComputedStyle;
   () => undefined;
 (HTMLElement.prototype as unknown as { detachEvent?: () => void }).detachEvent =
   () => undefined;
+
+// Provide minimal canvas and resize observer shims for jsdom-based tests.
+if (typeof (globalThis as any).HTMLCanvasElement !== "undefined") {
+  const HTMLCanvasProto = (globalThis as any)
+    .HTMLCanvasElement.prototype as {
+    getContext?: (contextId: string, options?: unknown) => unknown;
+  };
+  if (!HTMLCanvasProto.getContext) {
+    HTMLCanvasProto.getContext = () => null;
+  }
+}
+
+if (typeof (globalThis as any).ResizeObserver === "undefined") {
+  const ResizeObserverPolyfill = class ResizeObserver {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(_callback: (entries: unknown[]) => void) {}
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    observe(): void {}
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    unobserve(): void {}
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    disconnect(): void {}
+  };
+  (globalThis as any).ResizeObserver = ResizeObserverPolyfill;
+  if (typeof window !== "undefined") {
+    (window as any).ResizeObserver = ResizeObserverPolyfill;
+  }
+}
+
+if (typeof (globalThis as any).screen === "undefined") {
+  const screenStub = {
+    width: 1024,
+    height: 768,
+    availWidth: 1024,
+    availHeight: 768,
+    colorDepth: 24,
+    pixelDepth: 24,
+  };
+  (globalThis as any).screen = screenStub;
+  if (typeof window !== "undefined") {
+    (window as any).screen = screenStub;
+  }
+}

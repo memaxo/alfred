@@ -292,9 +292,11 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Add Drive Mode queue drain + API reference docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) and call out the queue tests (`apps/native/lib/voice/__tests__/queue.test.ts`).
 - [x] Harder streaming prototype with VAD auto-stop + PCM `tts_chunk` events (`packages/api/src/voice/streaming.ts`, `docs/voice/streaming.md`).
 - [x] Harden the streaming prototype with the same auth/policy gates as `voice.speechToSpeech` plus `bun test test/voice.streaming.test.ts` coverage.
-- [ ] Add voice activity detection (VAD)
-- [ ] Implement streaming audio playback
-- [ ] Add voice session management
+- [x] Implement streaming audio playback + adapters (`apps/native/lib/voice/session.ts`, `apps/web/src/hooks/use-voice-session-web.ts`, `/voice-s2s`) so Drive Mode/web auto-stop on VAD, stream transcripts, and play PCM chunks incrementally.
+- [x] Add voice activity detection (VAD) visualizations (Drive Mode, CarPlay, and `/voice-s2s` now surface Silero confidence + auto-stop reasons so users know when hands-free capture is armed)
+- [x] Hook CarPlay voice controls into the streaming `.stream` adapter with automatic fallback to clip-based `speechToSpeech` when the WebSocket transport is unavailable.
+- [x] Add voice session management (session registry, session-aware Drive Mode/CarPlay/web UI, and shared `sessionId` propagation)
+- [x] Surface codec hints (`inputCodec`/`outputCodec`) and negotiated session metadata so clients can log/inspect container conversions without guessing.
 - [x] Wire voice to assistant router (Drive Mode/CarPlay/web all call `voice.speechToSpeech`)
 - [x] Prototype low-latency streaming via Bun WebSocket server (`packages/api/src/voice/streaming.ts`, gated by `VOICE_STREAMING_PROTO=1`)
 

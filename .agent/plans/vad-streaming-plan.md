@@ -6,7 +6,9 @@ This ExecPlan is a living document. Maintain it in accordance with `.agent/PLANS
 
 - [x] (2025-11-21 05:00Z) Extended the STT/VAD plumbing (Python server + `@alfred/voice` pools + `VoiceSession`) and extracted `runAssistantForVoice` so both the clip API and streaming path share one assistant helper.
 - [x] (2025-11-21 05:40Z) Hardened the WebSocket transport with VAD-driven auto-stop, sentence-level streamed TTS chunks, status events, metrics, and updated docs/tests.
-- [ ] Client adapters (Drive Mode/web) consume the new `vad_state`, `auto_stop`, and `tts_chunk` events for hands-free interactions.
+- [x] (2025-11-21 06:45Z) Drive Mode (`apps/native/lib/voice/session.ts`) and web (`apps/web/src/hooks/use-voice-session-web.ts`, `/voice-s2s`) adapters now consume `vad_state`, honor `auto_stop`, and buffer PCM `tts_chunk` playback so the streaming prototype is hands-free end to end. Docs/PRD/env examples updated.
+- [x] (2025-11-21 07:35Z) Added hands-free indicators (VAD meter + auto-stop reason) to Drive Mode and `/voice-s2s`, wired CarPlay to prefer the streaming `.stream` API with automatic fallback, and refreshed `docs/voice/s2s.md`, `docs/voice/streaming.md`, and `docs/alfred-prd.md` to document the UX.
+- [x] (2025-11-21 08:45Z) Streaming server now claims/updates the shared voice session registry so `sessionId`, status, and codec hints stay consistent with clip-based S2S across Drive Mode, CarPlay, and `/voice-s2s`.
 
 ## Surprises & Discoveries
 
@@ -24,7 +26,8 @@ This ExecPlan is a living document. Maintain it in accordance with `.agent/PLANS
 
 ## Outcomes & Retrospective
 
-- The server now auto-stops on silence/timeout, emits `vad_state` and `auto_stop` events, shares a single assistant helper with the clip API, and streams PCM `tts_chunk` events until `tts_complete`. Docs (`docs/voice/streaming.md`, `docs/reference/api/voice.md`, `docs/alfred-prd.md`) and targeted tests (`packages/api/test/voice.streaming.test.ts`, `packages/api/test/voice/streaming.test.ts`, `packages/api/test/voice.s2s.test.ts`) describe and lock in the behavior. Remaining work focuses on client adapters consuming the new events.
+- The server now auto-stops on silence/timeout, emits `vad_state` and `auto_stop` events, shares a single assistant helper with the clip API, and streams PCM `tts_chunk` events until `tts_complete`. Docs (`docs/voice/streaming.md`, `docs/reference/api/voice.md`, `docs/alfred-prd.md`) and targeted tests (`packages/api/test/voice.streaming.test.ts`, `packages/api/test/voice/streaming.test.ts`, `packages/api/test/voice.s2s.test.ts`) describe and lock in the behavior.
+- Drive Mode + `/voice-s2s` + CarPlay consume the same stream: `useVoiceSessionNative/Web` expose `.stream` helpers that stop capture automatically on VAD silence, surface confidence/auto-stop reasons in the UI, and queue PCM playback so users hear the reply while Piper is still synthesizing; CarPlay now prefers the streaming path and falls back to clips when the prototype is disabled.
 
 ## Plan of Work
 

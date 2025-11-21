@@ -24,6 +24,7 @@ This section is a running log of work completed under this ExecPlan. Update it a
 - [x] (2025-11-21 03:40Z) Extended `@alfred/rag` ingestion to optionally enrich the graph via `extract`/`toKnowledge` when `RAG_ENRICH_GRAPH=1` and `DATABASE_URL` is set, and added a Postgres-only assertion to `packages/embed/test/e2e.test.ts` that verifies `rag:` resources populate `memory_nodes` under the nightly workflow.
 - [x] (2025-11-21 03:50Z) Updated Mindscape initializer to call `graph.runQuery` (`kind: "traverse"`) and materialise `UnifiedNode` results as `knowledge` nodes with `graph.dbId`/`graph.hgHash` mappings, plus a component-level test (`mindscape.graph.test.tsx`) that stubs tRPC and confirms knowledge nodes render from unified query output.
 - [x] (2025-11-21 03:55Z) Updated `docs/architecture/hypergraph.md` and this ExecPlan to describe the runtime → hypergraph/graph, RAG → hypergraph/graph, and Mindscape → graph/unified query flows, and extended `.github/workflows/postgres-nightly.yml` to run embed E2E with enrichment enabled and the runtime learning integration test.
+- [x] (2025-11-21 04:15Z) Added a sqlite-backed `RuntimeKnowledgeBridge` integration test (`packages/runtime/test/bridge-sqlite.integration.test.ts`) that applies a concrete `KnowledgeFact` update and asserts that `memory_nodes` rows are created for the corresponding `runtime:<runId>` resource when the sqlite driver is active. Extended Mindscape initializer and `mindscape.graph.test.tsx` to surface RAG-backed semantic knowledge via `graph.runQuery(kind: "semantic", preferRag: true)` so RAG-enriched content appears as `knowledge` nodes in the canvas.
 
 ## Surprises & Discoveries
 
@@ -272,7 +273,13 @@ This section gives exact commands and expected outputs for key milestones. Updat
 
         bun test packages/runtime/test/learning.integration.test.ts
 
-    (Name is illustrative; the plan implementer must create this file.) Expected: tests that previously used a stubbed `writeBatch` now verify that sqlite-backed graph rows are created for the learning updates.
+    Expected: tests that previously used a stubbed `writeBatch` now verify that `LearningEngine.persistUpdatesBatch` applies canonical `KnowledgeUpdate[]` into a per-run hypergraph and calls `persistHypergraphToDb` with a `runtime:<runId>` resource and non-empty graph.
+
+    For direct DB-backed coverage of the runtime bridge under sqlite, run:
+
+        DATABASE_URL=sqlite::memory: bun test packages/runtime/test/bridge-sqlite.integration.test.ts
+
+    Expected: the bridge-specific test confirms that applying a `KnowledgeFact` update via `RuntimeKnowledgeBridge` and calling `persist()` creates at least one row in `memory_nodes` scoped to `resource = "runtime:<runId>"`, with labels matching the inserted fact content.
 
 3. After adding RAG → hypergraph enrichment:
 
@@ -288,7 +295,7 @@ This section gives exact commands and expected outputs for key milestones. Updat
 
         bun test apps/web/src/components/__tests__/mindscape.graph.test.tsx
 
-    Expected: the new test passes, confirming that `MindscapeCanvas` renders a `knowledge` node when `graph.runQuery` returns a `UnifiedNode` and that the UI is wired to the unified graph query API.
+    Expected: the test passes, confirming that `MindscapeCanvas` renders `knowledge` nodes when `graph.runQuery` returns `UnifiedNode` results for both `kind: "traverse"` (runtime/user graph context) and `kind: "semantic"` with `preferRag: true` (RAG-backed knowledge surfaced via the unified query API).
 
 5. Nightly Postgres workflow:
 
@@ -304,8 +311,8 @@ This section gives exact commands and expected outputs for key milestones. Updat
 The work under this ExecPlan is considered acceptable when all of the following are true:
 
 1. **Runtime learning integration:**
-   - Recording supervision events and calling `persistUpdatesBatch` results in new knowledge entries being added to a per-run `Hypergraph` and flushed via `persistHypergraphToDb` with a `resource` derived from the `runId`.
-   - The behavior is covered by `packages/runtime/test/learning.integration.test.ts` (which asserts the bridge call and graph size) and, for DB-backed paths, by existing hypergraph/graph and workflow capture integration suites plus the Postgres nightly workflow.
+  - Recording supervision events and calling `persistUpdatesBatch` results in new knowledge entries being added to a per-run `Hypergraph` and flushed via `persistHypergraphToDb` with a `resource` derived from the `runId`.
+   - The behavior is covered by `packages/runtime/test/learning.integration.test.ts` (which asserts the bridge call and graph size) and, for DB-backed paths, by `packages/runtime/test/bridge-sqlite.integration.test.ts` under the sqlite driver plus existing hypergraph/graph and workflow capture integration suites and the Postgres nightly workflow.
 
 2. **RAG ingestion integration:**
    - Ingesting a document through the RAG pipeline produces:
@@ -314,9 +321,9 @@ The work under this ExecPlan is considered acceptable when all of the following 
    - This behavior is validated by the Postgres embed E2E suite when `RUN_EMBED_MODEL_TESTS=1` and `RAG_ENRICH_GRAPH=1`, which asserts that enriched RAG documents create `rag:`-scoped rows in `memory_nodes`.
 
 3. **Mindscape/UI integration:**
-   - Mindscape renders node(s) and edge(s) that correspond to data accessible via graph endpoints (notes/reminders for `dbId`, plus `knowledge` nodes created from `graph.runQuery` results).
-   - Selecting or connecting nodes that carry `graph.dbId` values continues to use `graph.connect` / `graph.getEdges` / `graph.watchEdges`, while additional knowledge context is sourced via `graph.runQuery`.
-   - UI tests confirm that `MindscapeCanvas` consumes `graph.runQuery` output, and manual smoke tests with Postgres show consistent graphs between UI and backend.
+  - Mindscape renders node(s) and edge(s) that correspond to data accessible via graph endpoints (notes/reminders for `dbId`, plus `knowledge` nodes created from `graph.runQuery` results).
+   - Selecting or connecting nodes that carry `graph.dbId` values continues to use `graph.connect` / `graph.getEdges` / `graph.watchEdges`, while additional knowledge context is sourced via `graph.runQuery` both for local/runtime graph traversal (`kind: "traverse"`) and for RAG-backed semantic retrieval (`kind: "semantic", preferRag: true`).
+   - UI tests confirm that `MindscapeCanvas` consumes `graph.runQuery` output for both runtime/user graph context and RAG-enriched nodes, and manual smoke tests with Postgres show consistent graphs between UI and backend.
 
 4. **Docs and metrics:**
    - `docs/architecture/hypergraph.md` and any relevant RAG or runtime docs clearly describe the new data flows and how to observe them.
@@ -382,7 +389,7 @@ This section specifies the key interfaces and types that should exist when the E
   - The bridge is responsible for:
     - Mapping `KnowledgeNode` variants to hypergraph `Knowledge`.
     - Maintaining a `Hypergraph` instance per context, reusing it across multiple batches for the same run when invoked through `LearningEngine`.
-    - Calling `persistHypergraphToDb` to flush dirty entries to the DB graph.
+    - Calling `persistHypergraphToDb` to flush dirty entries to the DB graph. A dedicated sqlite-backed integration test (`bridge-sqlite.integration.test.ts`) exercises this path directly against `@alfred/db` to ensure `memory_nodes` rows are created for `runtime:` resources under the sqlite test driver.
 
 - **LearningEngine integration (modified):**
   - In `packages/runtime/src/engines/learning.ts`:

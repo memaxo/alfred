@@ -36,9 +36,7 @@ describe("UV Path Detection", () => {
     }
 
     const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = [tempBinDir, originalPath ?? ""]
-      .filter(Boolean)
-      .join(pathDelimiter);
+    process.env.PATH = tempBinDir;
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -57,9 +55,7 @@ describe("UV Path Detection", () => {
     }
 
     const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = [tempBinDir, originalPath ?? ""]
-      .filter(Boolean)
-      .join(pathDelimiter);
+    process.env.PATH = tempBinDir;
 
     const config: ProcessConfig = {
       scriptPath: "C:\\test\\script.py",
@@ -103,9 +99,7 @@ describe("UV Path Detection", () => {
 
   it("should verify UV path exists", async () => {
     const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = [tempBinDir, originalPath ?? ""]
-      .filter(Boolean)
-      .join(pathDelimiter);
+    process.env.PATH = tempBinDir;
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -131,9 +125,7 @@ describe("UV Path Detection", () => {
     const uvPath1 = createFakeExecutable(bin1, "uv");
     createFakeExecutable(bin2, "uv");
 
-    process.env.PATH = [bin1, bin2, originalPath ?? ""]
-      .filter(Boolean)
-      .join(pathDelimiter);
+    process.env.PATH = [bin1, bin2].join(pathDelimiter);
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -147,4 +139,3 @@ describe("UV Path Detection", () => {
     expect(result).toBe(uvPath1);
   });
 });
-

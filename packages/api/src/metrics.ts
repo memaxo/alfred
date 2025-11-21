@@ -252,6 +252,37 @@ export const assistantToolCallsTotal = new client.Counter({
 
 // wired via lazy hooks
 
+
+export const multiAgentTasksTotal = new client.Counter({
+  name: "multi_agent_tasks_total",
+  help: "Count of multi-agent subtasks grouped by status",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const multiAgentWavesTotal = new client.Counter({
+  name: "multi_agent_waves_total",
+  help: "Count of multi-agent waves grouped by status",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const multiAgentAgentDurationSeconds = new client.Histogram({
+  name: "multi_agent_agent_duration_seconds",
+  help: "Duration of agent runs grouped by role/outcome",
+  labelNames: ["role", "outcome"] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300],
+  registers: [metricsRegistry],
+});
+
+export const multiAgentErrorsTotal = new client.Counter({
+  name: "multi_agent_errors_total",
+  help: "Count of multi-agent errors grouped by kind",
+  labelNames: ["kind"] as const,
+  registers: [metricsRegistry],
+});
+
+// wired via lazy hooks
 export const assistantEscalationsTotal = new client.Counter({
   name: "assistant_escalations_total",
   help: "Count of assistant escalations grouped by kind.",
@@ -591,6 +622,21 @@ export const replayQueryDurationSeconds = new client.Histogram({
   help: "Duration of workflow replay queries in seconds grouped by event type.",
   labelNames: ["event_type"] as const,
   buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  registers: [metricsRegistry],
+});
+
+export const graphQueriesTotal = new client.Counter({
+  name: "graph_queries_total",
+  help: "Count of graph queries grouped by kind and resource.",
+  labelNames: ["kind", "resource"] as const,
+  registers: [metricsRegistry],
+});
+
+export const graphQueryDurationSeconds = new client.Histogram({
+  name: "graph_query_duration_seconds",
+  help: "Duration of graph queries in seconds grouped by kind.",
+  labelNames: ["kind"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [metricsRegistry],
 });
 

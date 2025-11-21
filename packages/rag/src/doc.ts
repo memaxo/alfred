@@ -295,6 +295,37 @@ async function enrichGraphFromChunks(args: {
   }
 
   const entries: KnowledgeEntry[] = [];
+
+  // Create a user-scoped document node to anchor provenance links.
+  // This keeps RAG provenance visible to Mindscape and runtime graph
+  // queries without changing existing rag:<source> enrichment.
+  const docResource = "user";
+  try {
+    await upsertNodes([
+      {
+        resource: docResource,
+        hash: `rag_doc:${args.documentId}`,
+        kind: "rag_document",
+        label: args.source,
+        properties: {
+          documentId: args.documentId,
+          source: args.source,
+          ragResource: `rag:${args.source}`,
+        },
+      },
+    ] as any);
+  } catch (error) {
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      console.error(
+        "Failed to upsert RAG document node for provenance:",
+        error
+      );
+    }
+  }
+
   for (const chunk of args.chunks) {
     const extraction = extract(chunk.content, args.source);
     const knowledge = toKnowledge(extraction);
