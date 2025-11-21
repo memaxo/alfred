@@ -5,8 +5,49 @@ import { db } from "@alfred/db";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { observable } from "@trpc/server/observable";
+import { runQuery as runUnifiedQuery } from "@alfred/graph";
+import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
+import { loadHypergraphFromDb } from "@alfred/agent/assistant/src/hypergraph-bridge";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;
+
+const traverseQuerySchema = z.object({
+  kind: z.literal("traverse"),
+  nodeId: z.string(),
+  direction: z.enum(["in", "out", "both"]).optional(),
+  edgeKind: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  resource: z.string().optional(),
+});
+
+const pathQuerySchema = z.object({
+  kind: z.literal("path"),
+  fromId: z.string(),
+  toId: z.string(),
+  maxDepth: z.number().int().min(1).max(10).optional(),
+  resource: z.string().optional(),
+});
+
+const datalogQuerySchema = z.object({
+  kind: z.literal("datalog"),
+  query: z.string().min(1),
+  resource: z.string().optional(),
+});
+
+const semanticQuerySchema = z.object({
+  kind: z.literal("semantic"),
+  text: z.string().min(1),
+  topK: z.number().int().min(1).max(50).optional(),
+  preferRag: z.boolean().optional(),
+  resource: z.string().optional(),
+});
+
+const unifiedQuerySchema = z.discriminatedUnion("kind", [
+  traverseQuerySchema,
+  pathQuerySchema,
+  datalogQuerySchema,
+  semanticQuerySchema,
+]);
 
 export const graphRouter = router({
   getEdges: authedProcedure
@@ -147,4 +188,22 @@ export const graphRouter = router({
         };
       })
     ),
+
+  runQuery: authedProcedure
+    .input(unifiedQuerySchema)
+    .query(async ({ input }) => {
+      const resource = input.resource ?? "user";
+      let graphInstance = null;
+      if (
+        input.kind === "datalog" ||
+        (input.kind === "semantic" && input.preferRag !== true)
+      ) {
+        graphInstance = createHypergraph();
+        await loadHypergraphFromDb(resource, graphInstance);
+      }
+      return runUnifiedQuery(input, {
+        graph: graphInstance ?? undefined,
+        resource,
+      });
+    }),
 });

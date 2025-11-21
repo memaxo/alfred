@@ -33,8 +33,8 @@ Each change lists files, code locations, APIs, and side effects.
 - [x] (2025-11-21 01:09Z) Phase 3E: Added graph edge subscription for live updates
 - [x] (2025-11-21 01:12Z) Phase 4A: Implemented semantic layout using relationships/embeddings
 - [x] (2025-11-21 01:12Z) Phase 4B: Created knowledge node visualization component
-- [ ] Phase 5A: Implement query planner across DB graph, Hypergraph, and RAG
-- [ ] Phase 5B: Add unified API endpoints
+- [x] (2025-11-21 01:18Z) Phase 5A: Implemented query planner across DB graph, Hypergraph, and RAG
+- [x] (2025-11-21 01:18Z) Phase 5B: Added unified API endpoints
 
 ## Surprises & Discoveries
 
@@ -75,6 +75,7 @@ _This section will be updated as key decisions are made during implementation._
 - Phase 2 (2025-11-21 00:58Z): Auto-persist now runs on a timer with optional embedding batches, the assistant bridge exposes startHypergraphSync(), and embeddings stay resident-only, clearing TODO debt around the spatial index.
 - Phase 3 (2025-11-21 01:09Z): Created the @alfred/graph package with unified types/mapper plus bridged Mindscape ↔ DB by persisting new edges, storing per-node graph mappings, and syncing live edge updates via TRPC subscriptions.
 - Phase 4 (2025-11-21 01:12Z): Added a force-directed semantic layout with gravity/repulsion heuristics and introduced the KnowledgeNode visualization so hypergraph nodes render with kind/confidence context in Mindscape.
+- Phase 5 (2025-11-21 01:18Z): Unified queries now route through @alfred/graph’s planner (DB traversal, hypergraph datalog/semantic, and RAG fallback) and the graph router exposes a typed runQuery endpoint that hydrates a Hypergraph on demand.
 
 ---
 
