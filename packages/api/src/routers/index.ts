@@ -1,6 +1,8 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { assistantRouter } from "./assistant";
 import { bookRouter } from "./book";
+import { codexRouter } from "./codex";
+import { codexIntentRouter } from "./codex-intent";
 import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
@@ -33,6 +35,8 @@ export const appRouter: ReturnType<typeof router> = router({
   remind: remindRouter,
   timer: timerRouter,
   book: bookRouter,
+  codex: codexRouter,
+  codexIntent: codexIntentRouter,
   droid: droidsRouter,
   jwks: jwksRouter,
   token: tokenRouter,

@@ -16,6 +16,7 @@ export {
   requireSqliteDriver,
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
+export * as codexLearningRepo from "./repo/codex-learning";
 export * as deployRepo from "./repo/deploy";
 export * as evalRepo from "./repo/eval";
 export * as graphRepo from "./repo/graph";

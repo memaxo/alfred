@@ -1,4 +1,4 @@
-import { STTPool } from "@alfred/voice/process/stt_pool";
+import { STTPool, type STTResult } from "@alfred/voice/process/stt_pool";
 import { TTSPool } from "@alfred/voice/process/tts_pool";
 import { logger } from "../utils/logger";
 
@@ -20,7 +20,11 @@ export class VoiceSession {
     this.config = config;
   }
 
-  async processAudioChunk(audioBase64: string, mimeType: string): Promise<void> {
+  async processAudioChunk(
+    audioBase64: string,
+    mimeType: string,
+    options?: { vadThreshold?: number; sessionId?: string }
+  ): Promise<STTResult | null> {
     this.lastActivity = Date.now();
     this.audioBuffer.push(Buffer.from(audioBase64, "base64"));
 
@@ -31,16 +35,20 @@ export class VoiceSession {
         mimeType,
         language: this.config.language,
         streaming: true,
+        vadThreshold: options?.vadThreshold,
+        sessionId: options?.sessionId ?? this.config.sessionId,
       });
 
       if (result.text) {
         this.transcriptBuffer += result.text + " ";
       }
+      return result;
     } catch (error) {
       logger.error("voice_session_transcribe_error", {
         sessionId: this.config.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
+      return null;
     }
   }
 
@@ -164,4 +172,3 @@ export class VoiceSessionManager {
     }
   }
 }
-

@@ -160,10 +160,9 @@ This document lists all files that need to be analyzed to answer the 20 penetrat
 ## Additional Reference Files
 
 ### Documentation
-- `docs/next-priorities.md` - Priority development goals
+- `docs/alfred-prd.md` - Product Requirements Document and priority development goals
 - `docs/architecture/decisions.md` - Architecture Decision Records
-- `docs/alfred-prd.md` - Product Requirements Document
-- `docs/investigations/linear-agent-activities.md` - Linear integration investigation
+- `docs/execplans/linear-integration.md` - Linear integration plan and outcomes
 - `.ruler/17-workflow-patterns.md` - Workflow patterns
 - `.ruler/09-purity-and-performance.md` - Performance budgets
 
@@ -241,4 +240,3 @@ This document lists all files that need to be analyzed to answer the 20 penetrat
 - **Testing Strategy**: 1-2 hours
 
 **Total**: ~10-15 hours of analysis before writing ExecPlan
-

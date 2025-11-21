@@ -115,6 +115,28 @@ export const codexErrorsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const codexSessionContinuityTotal = new client.Counter({
+  name: "codex_session_continuity_total",
+  help: "Count of Codex session continuity events (resume success/failure).",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const codexStructuredOutputValidationTotal = new client.Counter({
+  name: "codex_structured_output_validation_total",
+  help: "Count of structured output validation results.",
+  labelNames: ["status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const codexLinearIntegrationLatencySeconds = new client.Histogram({
+  name: "codex_linear_integration_latency_seconds",
+  help: "Latency from Codex event emission to Linear activity creation.",
+  labelNames: ["event_type"] as const,
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+  registers: [metricsRegistry],
+});
+
 // wired via lazy hooks
 
 export const evalRunsTotal = new client.Counter({

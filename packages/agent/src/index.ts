@@ -16,3 +16,6 @@ export {
 
 export * from "./metrics";
 export * from "./agents";
+export { sessionManager } from "./orchestrator/codex-session";
+export type { CodexSessionState } from "./orchestrator/codex-session";
+export type { AlfredCodexEvent } from "./orchestrator/tool/codex";

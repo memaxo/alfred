@@ -16,7 +16,17 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@alfred/api/*": ["../../packages/api/src/*"],
+      "@alfred/auth/*": ["../../packages/auth/src/*"],
+      "@alfred/policy/*": ["../../packages/policy/src/*"],
+      "@alfred/db/*": ["../../packages/db/src/*"],
+      "@alfred/rag/*": ["../../packages/rag/src/*"],
+      "@alfred/ui/*": ["../../packages/ui/src/*"],
+      "@alfred/type/*": ["../../packages/type/src/*"],
+      "@alfred/metrics/*": ["../../packages/metrics/src/*"],
+      "@alfred/voice/*": ["../../packages/voice/src/*"],
+      "@alfred/runtime/*": ["../../packages/runtime/src/*"]
     },
     "composite": true,
     "declaration": true,

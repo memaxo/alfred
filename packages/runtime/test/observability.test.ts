@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
+import type { KnowledgeUpdate, KnowledgeFact } from "@alfred/type/knowledge";
 import { RuntimeTracer } from "../src/tracing";
 import {
   runtimeContextBuildDurationSeconds,
@@ -63,8 +64,17 @@ describe("Observability: Metrics Emission", () => {
     // Spy on the histogram startTimer method
     const timerSpy = vi.spyOn(runtimeKnowledgeBatchDurationSeconds, "startTimer");
 
+    const fact: KnowledgeFact = {
+      id: "fact-observability",
+      content: "observability-test",
+      confidence: 0.9 as any,
+      source: "test",
+      timestamp: new Date().toISOString(),
+    };
+    const updates: KnowledgeUpdate[] = [{ node: fact }];
+
     await engine.persistUpdatesBatch(
-      [{ type: "fact", data: {} }],
+      updates,
       "test-run-id"
     );
 
@@ -170,10 +180,19 @@ describe("Observability: Log Context", () => {
   it("learning engine logs include required fields", async () => {
     const engine = new LearningEngine();
 
+    const fact: KnowledgeFact = {
+      id: "fact-log",
+      content: "log-test",
+      confidence: 0.9 as any,
+      source: "test",
+      timestamp: new Date().toISOString(),
+    };
+    const updates: KnowledgeUpdate[] = [{ node: fact }];
+
     // This test validates that persistence doesn't throw when logging
     await expect(
       engine.persistUpdatesBatch(
-        [{ type: "fact", data: { test: true } }],
+        updates,
         "test-run-id"
       )
     ).resolves.toBeUndefined();
@@ -200,4 +219,3 @@ describe("Observability: Metric Labels", () => {
     expect(true).toBe(true);
   });
 });
-

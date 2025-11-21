@@ -117,7 +117,14 @@ class STTServer:
         except (ImportError, AttributeError):
             return False
     
-    def transcribe(self, audio_base64: str, language: Optional[str] = None, prompt: Optional[str] = None) -> dict:
+    def transcribe(
+        self,
+        audio_base64: str,
+        language: Optional[str] = None,
+        prompt: Optional[str] = None,
+        vad_threshold: Optional[float] = None,
+        session_id: Optional[str] = None,
+    ) -> dict:
         """Transcribe audio from base64 string."""
         import base64
         
@@ -126,22 +133,49 @@ class STTServer:
         
         # Convert to numpy array (assuming 16kHz mono PCM)
         audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        total_samples = len(audio_array)
+        duration_seconds = float(total_samples) / 16000.0 if total_samples > 0 else 0.0
+        vad_confidence = None
+        end_of_utterance = False
         
         # Apply VAD if available
         if self.vad_model:
             try:
+                vad_kwargs = {}
+                if isinstance(self.vad_utils, dict):
+                    vad_kwargs.update(self.vad_utils)
+                if vad_threshold is not None:
+                    vad_kwargs["threshold"] = float(vad_threshold)
                 speech_timestamps = get_speech_timestamps(
                     audio_array,
                     self.vad_model,
                     sampling_rate=16000,
-                    **self.vad_utils
+                    **vad_kwargs
                 )
+                speech_samples = 0
+                for ts in speech_timestamps:
+                    start = int(ts.get("start", 0))
+                    end = int(ts.get("end", 0))
+                    if end > start:
+                        speech_samples += end - start
+                if total_samples > 0:
+                    vad_confidence = min(
+                        1.0,
+                        max(0.0, speech_samples / float(total_samples)),
+                    )
+                else:
+                    vad_confidence = 0.0
+                end_of_utterance = speech_samples == 0
                 if not speech_timestamps:
                     return {
                         "text": "",
                         "language": language,
                         "isPartial": False,
                         "isEmpty": True,
+                        "model": self.model_path,
+                        "durationSeconds": duration_seconds,
+                        "vadConfidence": vad_confidence,
+                        "endOfUtterance": True,
                     }
             except Exception:
                 # VAD failed, continue without it
@@ -168,6 +202,9 @@ class STTServer:
             "isPartial": False,
             "isEmpty": len(text) == 0,
             "model": self.model_path,
+            "durationSeconds": duration_seconds,
+            "vadConfidence": vad_confidence,
+            "endOfUtterance": end_of_utterance,
         }
     
     def run(self):
@@ -194,8 +231,16 @@ class STTServer:
                     audio_base64 = payload.get("audioBase64", "")
                     language = payload.get("language")
                     prompt = payload.get("prompt")
+                    vad_threshold = payload.get("vadThreshold")
+                    session_id = payload.get("sessionId")
                     
-                    result = self.transcribe(audio_base64, language, prompt)
+                    result = self.transcribe(
+                        audio_base64,
+                        language,
+                        prompt,
+                        vad_threshold,
+                        session_id,
+                    )
                     
                     print(json.dumps({
                         "id": request_id,
@@ -232,4 +277,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

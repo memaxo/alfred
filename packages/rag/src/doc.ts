@@ -4,6 +4,8 @@ import {
   embedMany as embedManyLocal,
   EMBEDDING_DIM,
 } from "@alfred/embed";
+import { extract, toKnowledge, type KnowledgeEntry } from "@alfred/knowledge/extractor";
+import { upsertNodes, upsertEdges } from "@alfred/db/repo/graph";
 
 /**
  * ALFRED RAG Document Processing
@@ -97,20 +99,37 @@ export async function ingest(
     }
   }
 
-  await ragRepo.addChunks(
-    document.id,
-    pieces.map((piece, index) => ({
-      content: piece,
-      order: index,
-      embedding:
-        allEmbeddings[index]?.length === EMBEDDING_DIM
-          ? allEmbeddings[index]
-          : undefined,
-      metadata: {
+  const chunks = pieces.map((piece, index) => ({
+    content: piece,
+    order: index,
+    embedding:
+      allEmbeddings[index]?.length === EMBEDDING_DIM
+        ? allEmbeddings[index]
+        : undefined,
+    metadata: {
+      source,
+    },
+  }));
+
+  await ragRepo.addChunks(document.id, chunks);
+
+  if (process.env.RAG_ENRICH_GRAPH === "1") {
+    try {
+      await enrichGraphFromChunks({
+        documentId: document.id,
         source,
-      },
-    }))
-  );
+        chunks,
+      });
+    } catch (error) {
+      if (
+        typeof process !== "undefined" &&
+        process.env.NODE_ENV !== "production"
+      ) {
+        // Best-effort enrichment; log for debugging but do not fail ingest.
+        console.error("Failed to enrich knowledge graph from RAG chunks:", error);
+      }
+    }
+  }
 
   return document.id;
 }
@@ -257,6 +276,186 @@ export async function chunk(
   pushBuffer(chunks, buffer);
   return chunks;
 }
+
+type StoredChunk = {
+  content: string;
+  order: number;
+  embedding?: number[];
+  metadata?: Record<string, unknown>;
+};
+
+async function enrichGraphFromChunks(args: {
+  documentId: string;
+  source: string;
+  chunks: StoredChunk[];
+}): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    // No backing database configured; skip enrichment.
+    return;
+  }
+
+  const entries: KnowledgeEntry[] = [];
+  for (const chunk of args.chunks) {
+    const extraction = extract(chunk.content, args.source);
+    const knowledge = toKnowledge(extraction);
+    if (knowledge.length > 0) {
+      entries.push(...knowledge);
+    }
+  }
+
+  if (entries.length === 0) {
+    return;
+  }
+
+  const resource = `rag:${args.source}`;
+  await persistRagKnowledge(resource, entries);
+}
+
+type NodeSeed = {
+  resource: string;
+  hash: string;
+  kind: string;
+  label: string;
+  properties?: Record<string, unknown>;
+};
+
+type EdgeSeed = {
+  resource: string;
+  hash: string;
+  fromId: string;
+  toId: string;
+  kind: string;
+  weight: number;
+  metadata?: Record<string, unknown>;
+};
+
+function nodeKey(resource: string, hash: string): string {
+  return `${resource}:${hash}`;
+}
+
+function makeNode(resource: string, entry: KnowledgeEntry): NodeSeed | null {
+  const { data, hash } = entry;
+  switch (data._) {
+    case "fact":
+      return {
+        resource,
+        hash,
+        kind: data._,
+        label: data.content,
+        properties: {
+          confidence: data.confidence,
+          source: data.source,
+          ts: data.ts,
+        },
+      };
+    case "insight":
+      return {
+        resource,
+        hash,
+        kind: data._,
+        label: data.conclusion,
+        properties: {
+          derived: data.derived,
+          confidence: data.confidence,
+        },
+      };
+    case "pattern":
+      return {
+        resource,
+        hash,
+        kind: data._,
+        label: data.rule,
+        properties: {
+          examples: data.examples,
+          accuracy: data.accuracy,
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+function makeEdge(
+  resource: string,
+  entry: KnowledgeEntry,
+  nodes: Map<string, { id: string }>
+): EdgeSeed | null {
+  if (entry.data._ !== "relation") {
+    return null;
+  }
+
+  const fromHash = String(entry.data.from);
+  const toHash = String(entry.data.to);
+  const from = nodes.get(nodeKey(resource, fromHash));
+  const to = nodes.get(nodeKey(resource, toHash));
+  if (!(from && to)) {
+    return null;
+  }
+
+  return {
+    resource,
+    hash: entry.hash,
+    fromId: from.id,
+    toId: to.id,
+    kind: entry.data.kind,
+    weight: entry.data.weight,
+    metadata: {
+      from: fromHash,
+      to: toHash,
+    },
+  };
+}
+
+async function persistRagKnowledge(
+  resource: string,
+  entries: KnowledgeEntry[]
+): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+
+  const nodeSeeds: NodeSeed[] = [];
+  const edgeSeeds: KnowledgeEntry[] = [];
+
+  for (const entry of entries) {
+    const nodeSeed = makeNode(resource, entry);
+    if (nodeSeed) {
+      nodeSeeds.push(nodeSeed);
+    }
+    if (entry.data._ === "relation") {
+      edgeSeeds.push(entry);
+    }
+  }
+
+  if (nodeSeeds.length === 0) {
+    return;
+  }
+
+  const nodeMap = await upsertNodes(nodeSeeds as any);
+  if (edgeSeeds.length === 0) {
+    return;
+  }
+
+  const idMap = new Map<string, { id: string }>();
+  for (const row of nodeMap.values()) {
+    idMap.set(nodeKey(row.resource, row.hash), { id: row.id });
+  }
+
+  const edges: EdgeSeed[] = [];
+  for (const relation of edgeSeeds) {
+    const seed = makeEdge(resource, relation, idMap);
+    if (seed) {
+      edges.push(seed);
+    }
+  }
+
+  if (edges.length === 0) {
+    return;
+  }
+
+  await upsertEdges(edges as any);
+}
+
 
 export async function embed(text: string): Promise<number[]> {
   const embedding = await embeddingProvider.embed(text);

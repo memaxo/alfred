@@ -316,3 +316,158 @@ export async function persistReasoning(
     console.error("Failed to persist reasoning traces", err);
   }
 }
+
+type CodexArtifact = {
+  path: string;
+  kind: string;
+};
+
+function codexExecutionHash(
+  resource: string,
+  sessionId: string | undefined,
+  threadId: string | undefined,
+  createdAt: number
+): string {
+  const hash = createHash("sha256");
+  hash.update(resource);
+  hash.update("|codex_exec|");
+  hash.update(sessionId ?? "session");
+  hash.update("|");
+  hash.update(threadId ?? "thread");
+  hash.update("|");
+  hash.update(String(createdAt));
+  return hash.digest("hex");
+}
+
+function codexArtifactHash(
+  resource: string,
+  pathValue: string,
+  createdAt: number
+): string {
+  const hash = createHash("sha256");
+  hash.update(resource);
+  hash.update("|codex_artifact|");
+  hash.update(pathValue);
+  hash.update("|");
+  hash.update(String(createdAt));
+  return hash.digest("hex");
+}
+
+export async function persistCodexExecution(
+  resource: string,
+  options: {
+    sessionId?: string;
+    threadId?: string;
+    auto?: string;
+    result: string;
+    artifacts?: CodexArtifact[];
+  }
+): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  const trimmed = options.result.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const createdAt = Date.now();
+  const execHash = codexExecutionHash(
+    resource,
+    options.sessionId,
+    options.threadId,
+    createdAt
+  );
+
+  const nodeSeeds: NodeSeed[] = [];
+
+  nodeSeeds.push({
+    resource,
+    hash: execHash,
+    kind: "codex_execution",
+    label: trimmed.slice(0, 120),
+    properties: {
+      sessionId: options.sessionId,
+      threadId: options.threadId,
+      auto: options.auto,
+      createdAt,
+    },
+  });
+
+  const artifactSeeds: NodeSeed[] = [];
+
+  for (const artifact of options.artifacts ?? []) {
+    if (!artifact.path) continue;
+    const artifactHash = codexArtifactHash(
+      resource,
+      artifact.path,
+      createdAt
+    );
+    artifactSeeds.push({
+      resource,
+      hash: artifactHash,
+      kind: "codex_artifact",
+      label: artifact.path,
+      properties: {
+        path: artifact.path,
+        kind: artifact.kind,
+        sessionId: options.sessionId,
+        threadId: options.threadId,
+        createdAt,
+      },
+    });
+  }
+
+  if (artifactSeeds.length > 0) {
+    nodeSeeds.push(...artifactSeeds);
+  }
+
+  try {
+    const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
+    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const hashToRow = new Map<string, { id: string; hash: string }>();
+    for (const row of nodeMap.values()) {
+      hashToRow.set(row.hash, { id: row.id, hash: row.hash });
+    }
+
+    if (artifactSeeds.length === 0) {
+      return;
+    }
+
+    const execRow = hashToRow.get(execHash);
+    if (!execRow) {
+      return;
+    }
+
+    const edgeSeeds: EdgeSeed[] = [];
+    for (const seed of artifactSeeds) {
+      const artifactRow = hashToRow.get(seed.hash);
+      if (!artifactRow) continue;
+      const edgeHash = createHash("sha256")
+        .update(resource)
+        .update("|codex_has_artifact|")
+        .update(execRow.hash)
+        .update("|")
+        .update(artifactRow.hash)
+        .digest("hex");
+      edgeSeeds.push({
+        resource,
+        hash: edgeHash,
+        fromId: execRow.id,
+        toId: artifactRow.id,
+        kind: "has_artifact",
+        weight: 1,
+        metadata: {
+          type: "codex_execution_artifact",
+        },
+      });
+    }
+
+    if (edgeSeeds.length > 0) {
+      await upsertEdges(edgeSeeds as any);
+    }
+  } catch (err) {
+    console.error("Failed to persist codex execution", err);
+  }
+}

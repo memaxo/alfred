@@ -10,13 +10,27 @@ import {
   setTimeout as setNodeTimeout,
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import {
+  type ApprovalMode,
+  Codex,
+  type SandboxMode,
+  type Thread,
+  type ThreadEvent,
+  type ThreadItem,
+  type ThreadOptions,
+  type TurnOptions,
+} from "@openai/codex-sdk";
 import { z } from "zod";
-import { persistReasoning } from "../../../assistant/src/graphstore";
+import {
+  persistCodexExecution,
+  persistReasoning,
+} from "../../../assistant/src/graphstore";
 import {
   recordCodexError,
   recordCodexExecRun,
   startCodexExecTimer,
 } from "../../metrics";
+import { sessionManager } from "../codex-session";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
@@ -118,6 +132,17 @@ const codexInputSchema = z.object({
     .max(MAX_TIMEOUT_SEC)
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
+  sessionId: z.string().min(1).max(255).optional(),
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
+  context: z
+    .object({
+      linearIssueId: z.string().optional(),
+      linearSessionId: z.string().optional(),
+      linearSpace: z.string().optional(),
+      linearAuthz: z.string().optional(),
+      relevantFiles: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export type CodexToolInput = z.infer<typeof codexInputSchema>;
@@ -142,6 +167,46 @@ const toolOutputSchema = z.object({
     .optional(),
 });
 
+export type AlfredCodexEvent =
+  | {
+      type: "thought";
+      content: string;
+      timestamp: number;
+    }
+  | {
+      type: "command";
+      command: string;
+      status: "running" | "completed" | "failed";
+    }
+  | {
+      type: "output";
+      content: string;
+    }
+  | {
+      type: "artifact";
+      path: string;
+      kind: "file" | "image";
+    };
+
+type CodexArtifactSummary = {
+  path: string;
+  kind: string;
+};
+
+function emitAlfredEvents(
+  writer: ToolWriter,
+  events: AlfredCodexEvent[]
+): void {
+  if (!writer || events.length === 0) {
+    return;
+  }
+  for (const event of events) {
+    void Promise.resolve(writer.write?.({ type: "codex_event", event })).catch(
+      () => {}
+    );
+  }
+}
+
 type ToolWriter =
   | { write: (chunk: unknown) => Promise<void> | void }
   | undefined;
@@ -156,6 +221,8 @@ type SandboxConfig = {
   approval: "on-request";
 };
 
+type CodexBackend = "cli" | "sdk";
+
 const DEFAULT_SANDBOX: SandboxConfig = {
   sandbox: "read-only",
   approval: "on-request",
@@ -167,6 +234,15 @@ const WRITE_SANDBOX: SandboxConfig = {
 
 function mapAutoToCodex(auto: CodexToolInput["auto"]): SandboxConfig {
   return auto === "read" ? DEFAULT_SANDBOX : WRITE_SANDBOX;
+}
+
+function resolveBackend(): CodexBackend {
+  const raw = process.env.ORCH_CODEX_BACKEND;
+  if (!raw) {
+    return "cli";
+  }
+  const normalised = raw.trim().toLowerCase();
+  return normalised === "sdk" ? "sdk" : "cli";
 }
 
 function pickEnvCodex(custom: Record<string, string> | undefined) {
@@ -233,6 +309,56 @@ function resolveExecutable(command: string) {
   }
 
   throw new Error("codex_binary_not_found");
+}
+
+function buildThreadOptions(
+  input: CodexToolInput,
+  resolvedCw: string,
+  sandbox: SandboxConfig
+): ThreadOptions {
+  const options: ThreadOptions = {
+    sandboxMode: sandbox.sandbox as SandboxMode,
+    workingDirectory: resolvedCw,
+    approvalPolicy: sandbox.approval as ApprovalMode,
+  };
+
+  if (input.model) {
+    options.model = input.model;
+  }
+
+  return options;
+}
+
+function buildTurnOptions(
+  input: CodexToolInput,
+  signal: AbortSignal
+): TurnOptions {
+  const options: TurnOptions = {
+    signal,
+  };
+
+  if (input.outputSchema) {
+    options.outputSchema = input.outputSchema;
+  }
+
+  return options;
+}
+
+function createCodexClient(env: Record<string, string>): Codex {
+  const options: {
+    env: Record<string, string>;
+    codexPathOverride?: string;
+  } = {
+    env,
+  };
+
+  const codexBin = process.env.CODEX_BIN?.trim();
+  if (codexBin && codexBin.length > 0) {
+    const resolved = resolveExecutable(codexBin);
+    options.codexPathOverride = resolved;
+  }
+
+  return new Codex(options);
 }
 
 async function enforcePolicy(input: CodexToolInput) {
@@ -393,6 +519,333 @@ function extractReasoning(item: unknown): string | null {
   return null;
 }
 
+async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
+  const resolvedCw = input.cw
+    ? assertAllowedDirectory(input.cw)
+    : process.cwd();
+  const sandbox = mapAutoToCodex(input.auto);
+  const env = pickEnvCodex(input.env);
+
+  const stopTimer = startCodexExecTimer(input.auto);
+  const recordStage = createStageRecorder();
+
+  const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
+  const abortController = new AbortController();
+  let didTimeout = false;
+  const timer = setNodeTimeout(() => {
+    didTimeout = true;
+    recordStage("timeout");
+    abortController.abort();
+    void Promise.resolve(
+      writer?.write?.({
+        type: "notice",
+        message: "codex_exec_timeout",
+      })
+    ).catch(() => {});
+  }, timeoutSec * 1000);
+
+  const finalAccumulator: FinalAccumulator = {
+    chunks: [],
+    storedBytes: 0,
+    truncated: false,
+  };
+  const reasoningAccumulator: ReasoningAccumulator = {
+    traces: [],
+    storedBytes: 0,
+    truncated: false,
+  };
+
+  let runtimeFailure: Error | null = null;
+  let threadIdFromEvents: string | undefined;
+  const artifacts: CodexArtifactSummary[] = [];
+
+  const codex = createCodexClient(env);
+  const threadOptions = buildThreadOptions(input, resolvedCw, sandbox);
+
+  const sessionId = input.sessionId?.trim();
+  const existingSession = sessionId
+    ? await sessionManager.getSession(sessionId)
+    : undefined;
+
+  let thread: Thread;
+  if (existingSession?.threadId) {
+    thread = codex.resumeThread(existingSession.threadId, threadOptions);
+  } else {
+    thread = codex.startThread(threadOptions);
+  }
+
+  try {
+    const turnOptions = buildTurnOptions(input, abortController.signal);
+
+    // Inject Linear context if provided
+    let enrichedPrompt = input.prompt;
+    if (input.context?.linearIssueId) {
+      const { injectLinearContext } = await import("./codex-linear");
+      enrichedPrompt = injectLinearContext(input.prompt, input.context);
+    }
+
+    // Inject learning context from similar past executions
+    if (process.env.CODEX_LEARNING_ENABLED === "true") {
+      const { buildCodexLearningContext } = await import(
+        "@alfred/db/repo/codex-learning"
+      );
+      const learningContext = await buildCodexLearningContext(
+        resolvedCw,
+        input.prompt,
+        2000
+      );
+      if (learningContext) {
+        enrichedPrompt = `${learningContext}\n\n${enrichedPrompt}`;
+      }
+    }
+
+    const streamed = await thread.runStreamed(enrichedPrompt, turnOptions);
+
+    for await (const event of streamed.events as AsyncGenerator<ThreadEvent>) {
+      switch (event.type) {
+        case "thread.started": {
+          const id = event.thread_id;
+          if (typeof id === "string" && id.length > 0) {
+            threadIdFromEvents = id;
+          }
+          break;
+        }
+        case "turn.started": {
+          void Promise.resolve(
+            writer?.write?.({
+              type: "notice",
+              message: "codex_turn_started",
+            })
+          ).catch(() => {});
+          break;
+        }
+        case "turn.completed": {
+          const usage = event.usage;
+          void Promise.resolve(
+            writer?.write?.({
+              type: "notice",
+              message: "codex_turn_completed",
+              usage,
+            })
+          ).catch(() => {});
+          break;
+        }
+        case "turn.failed": {
+          if (!runtimeFailure) {
+            const detail = event.error?.message ?? "codex_turn_failed";
+            runtimeFailure = new Error(`codex_exec_failed:${detail}`);
+            recordStage("runtime");
+          }
+          const errorText = event.error?.message ?? "Codex turn failed.";
+          void Promise.resolve(
+            writer?.write?.({ type: "stderr", text: errorText })
+          ).catch(() => {});
+          break;
+        }
+        case "error": {
+          if (!runtimeFailure) {
+            const message = event.message ?? "codex_stream_error";
+            runtimeFailure = new Error(message);
+            recordStage("runtime");
+          }
+          const message = event.message ?? "Codex reported an error.";
+          void Promise.resolve(
+            writer?.write?.({ type: "stderr", text: message })
+          ).catch(() => {});
+          break;
+        }
+        case "item.completed": {
+          const item: ThreadItem = event.item;
+          const alfredEvents: AlfredCodexEvent[] = [];
+
+          if (item.type === "reasoning") {
+            const reasoningText = item.text.trim();
+            if (reasoningText) {
+              const byteLength = Buffer.from(reasoningText).byteLength;
+
+              if (reasoningAccumulator.truncated) {
+                reasoningAccumulator.storedBytes += byteLength;
+              } else {
+                const remaining =
+                  OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
+                if (remaining > 0) {
+                  reasoningAccumulator.traces.push({
+                    text:
+                      byteLength <= remaining
+                        ? reasoningText
+                        : reasoningText.substring(0, remaining),
+                    timestamp: Date.now(),
+                  });
+                  reasoningAccumulator.storedBytes += Math.min(
+                    byteLength,
+                    remaining
+                  );
+                  if (byteLength > remaining) {
+                    reasoningAccumulator.truncated = true;
+                  }
+                } else {
+                  reasoningAccumulator.truncated = true;
+                }
+              }
+
+              if (input.out === "debug") {
+                void Promise.resolve(
+                  writer?.write?.({
+                    type: "reasoning",
+                    text: reasoningText,
+                  })
+                ).catch(() => {});
+              }
+
+              alfredEvents.push({
+                type: "thought",
+                content: reasoningText,
+                timestamp: Date.now(),
+              });
+            }
+          } else if (item.type === "command_execution") {
+            const output = item.aggregated_output;
+            const status: "running" | "completed" | "failed" =
+              item.status === "in_progress"
+                ? "running"
+                : item.status === "failed"
+                  ? "failed"
+                  : "completed";
+
+            alfredEvents.push({
+              type: "command",
+              command: item.command,
+              status,
+            });
+
+            if (output) {
+              void Promise.resolve(
+                writer?.write?.({ type: "stdout", text: output })
+              ).catch(() => {});
+              alfredEvents.push({
+                type: "output",
+                content: output,
+              });
+            }
+          } else if (item.type === "agent_message") {
+            const text = item.text;
+            if (text) {
+              appendFinal(finalAccumulator, text);
+              void Promise.resolve(
+                writer?.write?.({ type: "stdout", text })
+              ).catch(() => {});
+              alfredEvents.push({
+                type: "output",
+                content: text,
+              });
+            }
+          } else if (item.type === "file_change") {
+            const changes = item.changes;
+            for (const change of changes) {
+              if (!change?.path) continue;
+              artifacts.push({
+                path: change.path,
+                kind: change.kind,
+              });
+              alfredEvents.push({
+                type: "artifact",
+                path: change.path,
+                kind: "file",
+              });
+            }
+          }
+
+          emitAlfredEvents(writer, alfredEvents);
+
+          // Emit to Linear if context available
+          if (input.context && alfredEvents.length > 0) {
+            const { mapCodexEventToLinearActivity } = await import(
+              "./codex-linear"
+            );
+            for (const alfredEvent of alfredEvents) {
+              void mapCodexEventToLinearActivity(alfredEvent, input.context);
+            }
+          }
+          break;
+        }
+        default: {
+          // ignore other event types
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    clearNodeTimeout(timer);
+    stopTimer();
+    if (didTimeout) {
+      throw new Error("codex_exec_timeout");
+    }
+    if (!runtimeFailure) {
+      recordStage("spawn");
+    }
+    throw error;
+  } finally {
+    clearNodeTimeout(timer);
+    stopTimer();
+  }
+
+  const hasFailure = Boolean(runtimeFailure) || didTimeout;
+  const exitCode = hasFailure ? 1 : 0;
+  recordCodexExecRun(input.auto, exitCode);
+
+  if (didTimeout) {
+    throw new Error("codex_exec_timeout");
+  }
+
+  if (runtimeFailure) {
+    throw runtimeFailure;
+  }
+
+  if (finalAccumulator.truncated) {
+    void Promise.resolve(
+      writer?.write?.({ type: "notice", message: "output_truncated" })
+    ).catch(() => {});
+  }
+
+  const resource = resolvedCw;
+  const threadId = thread.id ?? threadIdFromEvents;
+  if (reasoningAccumulator.traces.length > 0) {
+    const executionId = input.sessionId ?? threadId ?? resource;
+    persistReasoning(resource, reasoningAccumulator.traces, {
+      threadId,
+      executionId,
+      auto: input.auto,
+    }).catch((err) => {
+      console.error("Failed to persist reasoning", err);
+    });
+  }
+
+  const resultText = finalAccumulator.chunks.join("\n").trim();
+
+  persistCodexExecution(resource, {
+    sessionId,
+    threadId,
+    auto: input.auto,
+    result: resultText,
+    artifacts,
+  }).catch((err) => {
+    console.error("Failed to persist codex execution", err);
+  });
+
+  if (sessionId && threadId && !existingSession) {
+    await sessionManager.createSession(sessionId, threadId);
+  }
+
+  return {
+    result: resultText,
+    artifacts: [],
+    reasoning:
+      reasoningAccumulator.traces.length > 0
+        ? reasoningAccumulator.traces
+        : undefined,
+  };
+}
+
 export const toolCodex = {
   name: "codex",
   description: "Run the OpenAI Codex CLI in sandboxed, non-interactive mode.",
@@ -400,6 +853,11 @@ export const toolCodex = {
   outputSchema: toolOutputSchema,
   execute: async ({ input, writer }: CodexExecuteArgs) => {
     await enforcePolicy(input);
+
+    const backend = resolveBackend();
+    if (backend === "sdk") {
+      return executeWithSdk({ input, writer });
+    }
 
     const resolvedCw = input.cw
       ? assertAllowedDirectory(input.cw)
@@ -483,6 +941,8 @@ export const toolCodex = {
     };
     let parseFailure: Error | null = null;
     let runtimeFailure: Error | null = null;
+    let threadIdFromEvents: string | undefined;
+    const artifacts: CodexArtifactSummary[] = [];
 
     let stdoutBuffer = "";
 
@@ -534,6 +994,13 @@ export const toolCodex = {
                 }
 
                 switch (eventType) {
+                  case "thread.started": {
+                    const id = (event as { thread_id?: string }).thread_id;
+                    if (typeof id === "string" && id.length > 0) {
+                      threadIdFromEvents = id;
+                    }
+                    break;
+                  }
                   case "turn.started": {
                     void Promise.resolve(
                       writer?.write?.({
@@ -594,6 +1061,8 @@ export const toolCodex = {
                     const item = (event as { item?: unknown }).item;
                     const itemType = (item as { type?: string } | undefined)
                       ?.type;
+                    const alfredEvents: AlfredCodexEvent[] = [];
+
                     if (itemType === "reasoning") {
                       const reasoningText = extractReasoning(item);
                       if (reasoningText) {
@@ -633,13 +1102,49 @@ export const toolCodex = {
                             })
                           ).catch(() => {});
                         }
+
+                        alfredEvents.push({
+                          type: "thought",
+                          content: reasoningText,
+                          timestamp: Date.now(),
+                        });
                       }
                     } else if (itemType === "command_execution") {
                       const output = extractAggregatedOutput(item);
+                      const command = (
+                        item as {
+                          command?: string;
+                          status?: string;
+                        }
+                      ).command;
+                      const statusRaw = (
+                        item as {
+                          status?: string;
+                        }
+                      ).status;
+                      const status: "running" | "completed" | "failed" =
+                        statusRaw === "in_progress"
+                          ? "running"
+                          : statusRaw === "failed"
+                            ? "failed"
+                            : "completed";
+
+                      if (command) {
+                        alfredEvents.push({
+                          type: "command",
+                          command,
+                          status,
+                        });
+                      }
+
                       if (output) {
                         void Promise.resolve(
                           writer?.write?.({ type: "stdout", text: output })
                         ).catch(() => {});
+                        alfredEvents.push({
+                          type: "output",
+                          content: output,
+                        });
                       }
                     } else if (itemType === "agent_message") {
                       const text = extractAgentMessage(item);
@@ -648,6 +1153,47 @@ export const toolCodex = {
                         void Promise.resolve(
                           writer?.write?.({ type: "stdout", text })
                         ).catch(() => {});
+                        alfredEvents.push({
+                          type: "output",
+                          content: text,
+                        });
+                      }
+                    } else if (itemType === "file_change") {
+                      const changes = (
+                        item as {
+                          changes?: Array<{ path?: string; kind?: string }>;
+                        }
+                      ).changes;
+                      if (Array.isArray(changes)) {
+                        for (const change of changes) {
+                          if (!change || typeof change.path !== "string") {
+                            continue;
+                          }
+                          artifacts.push({
+                            path: change.path,
+                            kind: change.kind ?? "file",
+                          });
+                          alfredEvents.push({
+                            type: "artifact",
+                            path: change.path,
+                            kind: "file",
+                          });
+                        }
+                      }
+                    }
+
+                    emitAlfredEvents(writer, alfredEvents);
+
+                    // Emit to Linear if context available
+                    if (input.context && alfredEvents.length > 0) {
+                      const { mapCodexEventToLinearActivity } = await import(
+                        "./codex-linear"
+                      );
+                      for (const alfredEvent of alfredEvents) {
+                        void mapCodexEventToLinearActivity(
+                          alfredEvent,
+                          input.context
+                        );
                       }
                     }
                     break;
@@ -733,16 +1279,31 @@ export const toolCodex = {
 
     if (reasoningAccumulator.traces.length > 0) {
       const resource = resolvedCw;
+      const executionId = input.sessionId ?? threadIdFromEvents ?? resource;
       persistReasoning(resource, reasoningAccumulator.traces, {
+        threadId: threadIdFromEvents,
+        executionId,
         auto: input.auto,
       }).catch((err) => {
         console.error("Failed to persist reasoning", err);
       });
     }
 
+    const resultText = finalAccumulator.chunks.join("\n").trim();
+
+    persistCodexExecution(resolvedCw, {
+      sessionId: input.sessionId,
+      threadId: threadIdFromEvents,
+      auto: input.auto,
+      result: resultText,
+      artifacts,
+    }).catch((err) => {
+      console.error("Failed to persist codex execution", err);
+    });
+
     return {
-      result: finalAccumulator.chunks.join("\n").trim(),
-      artifacts: [],
+      result: resultText,
+      artifacts,
       reasoning:
         reasoningAccumulator.traces.length > 0
           ? reasoningAccumulator.traces

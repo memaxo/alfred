@@ -62,69 +62,93 @@ export class TTSPool {
     onChunk?: (chunk: TTSChunk) => void
   ): Promise<TTSChunk> {
     const process = this.getNextProcess();
-    const ipcRequest = process["ipc"].createRequest("synthesize", {
+    const streamingRequested = (request.streaming ?? false) && typeof onChunk === "function";
+
+    if (streamingRequested && onChunk) {
+      return this.streamSentences(process, request, onChunk);
+    }
+
+    return this.sendSynthesis(process, {
       text: request.text,
       voice: request.voice,
-      streaming: request.streaming ?? onChunk !== undefined,
+      streaming: request.streaming ?? false,
+    }, onChunk);
+  }
+
+  private async streamSentences(
+    process: ModelProcess,
+    request: TTSRequest,
+    onChunk: (chunk: TTSChunk) => void
+  ): Promise<TTSChunk> {
+    const sentences = splitIntoSentences(request.text);
+    let lastChunk: TTSChunk | null = null;
+    const segments = sentences.length > 0 ? sentences : [request.text];
+
+    for (const sentence of segments) {
+      const chunk = await this.sendSynthesis(
+        process,
+        {
+          text: sentence,
+          voice: request.voice,
+          streaming: false,
+        },
+        (partial) => onChunk(partial)
+      );
+      lastChunk = chunk;
+    }
+
+    if (!lastChunk) {
+      lastChunk = await this.sendSynthesis(
+        process,
+        {
+          text: request.text,
+          voice: request.voice,
+          streaming: false,
+        },
+        (partial) => onChunk(partial)
+      );
+    }
+
+    return lastChunk;
+  }
+
+  private async sendSynthesis(
+    process: ModelProcess,
+    params: { text: string; voice?: string; streaming: boolean },
+    onChunk?: (chunk: TTSChunk) => void
+  ): Promise<TTSChunk> {
+    const ipcRequest = process["ipc"].createRequest("synthesize", {
+      text: params.text,
+      voice: params.voice,
+      streaming: params.streaming,
     });
 
-    if (request.streaming && onChunk) {
-      // For streaming, we need to handle multiple responses
-      // This is a simplified version - in practice, you'd set up a listener
-      const response = await process.sendRequest(ipcRequest);
+    const response = await process.sendRequest(ipcRequest);
 
-      if (response.type === "error") {
-        throw new Error(
-          (response.payload as { message?: string })?.message ??
-            "Synthesis failed"
-        );
-      }
-
-      // Handle streaming chunks (simplified - actual implementation would handle multiple chunks)
-      if (response.type === "audio" && response.payload) {
-        const payload = response.payload as {
-          audioBase64?: string;
-          mimeType?: string;
-          sampleRate?: number;
-        };
-        const chunk = {
-          audioBase64: payload.audioBase64 ?? "",
-          mimeType: payload.mimeType ?? "audio/pcm",
-          sampleRate: payload.sampleRate,
-        };
-        onChunk(chunk);
-        return chunk;
-      }
-      throw new Error("Unexpected response type");
-    } else {
-      // Non-streaming: wait for complete response
-      const response = await process.sendRequest(ipcRequest);
-
-      if (response.type === "error") {
-        throw new Error(
-          (response.payload as { message?: string })?.message ??
-            "Synthesis failed"
-        );
-      }
-
-      if (response.type === "audio" && response.payload) {
-        const payload = response.payload as {
-          audioBase64?: string;
-          mimeType?: string;
-          sampleRate?: number;
-        };
-        const chunk = {
-          audioBase64: payload.audioBase64 ?? "",
-          mimeType: payload.mimeType ?? "audio/pcm",
-          sampleRate: payload.sampleRate,
-        };
-        if (onChunk) {
-          onChunk(chunk);
-        }
-        return chunk;
-      }
-      throw new Error("Unexpected response type");
+    if (response.type === "error") {
+      throw new Error(
+        (response.payload as { message?: string })?.message ??
+          "Synthesis failed"
+      );
     }
+
+    if (response.type === "audio" && response.payload) {
+      const payload = response.payload as {
+        audioBase64?: string;
+        mimeType?: string;
+        sampleRate?: number;
+      };
+      const chunk = {
+        audioBase64: payload.audioBase64 ?? "",
+        mimeType: payload.mimeType ?? "audio/pcm",
+        sampleRate: payload.sampleRate,
+      };
+      if (onChunk) {
+        onChunk(chunk);
+      }
+      return chunk;
+    }
+    throw new Error("Unexpected response type");
   }
 
   getHealth(): ProcessHealth[] {
@@ -135,4 +159,14 @@ export class TTSPool {
     await Promise.all(this.processes.map((p) => p.shutdown()));
     this.processes = [];
   }
+}
+
+function splitIntoSentences(text: string): string[] {
+  if (!text) {
+    return [];
+  }
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }

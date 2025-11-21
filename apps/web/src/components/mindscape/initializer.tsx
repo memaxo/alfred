@@ -9,6 +9,7 @@ type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type NoteListItem = RouterOutputs["note"]["list"][number];
 type DueReminderItem = RouterOutputs["remind"]["due"][number];
 type GraphEdge = RouterOutputs["graph"]["getEdges"][number];
+type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -138,6 +139,74 @@ export function MindscapeInitializer() {
       });
     });
   }, [reminders, nodeIds, addArtifact]);
+
+  const primaryGraphNodeId = graphNodeIds[0];
+
+  const { data: traverseResult } = trpc.graph.runQuery.useQuery(
+    primaryGraphNodeId
+      ? {
+          kind: "traverse" as const,
+          nodeId: primaryGraphNodeId,
+          resource: "user",
+        }
+      : {
+          kind: "traverse" as const,
+          nodeId: "",
+          resource: "user",
+        },
+    {
+      enabled: Boolean(primaryGraphNodeId),
+      refetchInterval: 15_000,
+    }
+  );
+
+  useEffect(() => {
+    if (!traverseResult) return;
+
+    traverseResult.nodes.forEach((node: GraphNode, index: number) => {
+      const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
+      if (!ref) {
+        return;
+      }
+      const flowId = `knowledge-${ref}`;
+      if (nodeIds.includes(flowId)) {
+        return;
+      }
+
+      const props = (node.properties ?? {}) as Record<string, unknown>;
+      const confidence =
+        typeof props.confidence === "number"
+          ? props.confidence
+          : typeof props.accuracy === "number"
+            ? props.accuracy
+            : undefined;
+      const summary =
+        typeof props.content === "string" ? props.content : undefined;
+
+      addArtifact({
+        id: flowId,
+        type: "knowledge",
+        position: { x: 200 + index * 40, y: 200 + index * 40 },
+        data: {
+          type: "knowledge",
+          label: node.label,
+          kind: node.kind,
+          summary,
+          confidence,
+          graph: {
+            dbId: node.id.dbId,
+            hgHash: node.id.hgHash,
+          },
+        } as ArtifactData,
+      });
+    });
+
+    if (traverseResult.nodes.length > 0) {
+      setTimeout(() => {
+        autoLayout();
+      }, 0);
+    }
+  }, [traverseResult, nodeIds, addArtifact, autoLayout]);
 
   const ensureGraphMapping = useCallback((dbId: string) => {
     const store = useMindscapeStore.getState();

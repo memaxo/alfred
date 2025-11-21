@@ -41,6 +41,7 @@ Use this section as the single source of truth for current implementation status
 - [x] (2025-11-21 01:05Z) Milestone 4: Native Drive Mode & CarPlay now default to the S2S pipeline (with queue-backed fallbacks), preserving offline semantics via a new `s2s` queue payload.
 - [x] (2025-11-21 02:15Z) Milestone 5: Authored `docs/voice/streaming.md` and shipped the Bun WebSocket prototype (`VOICE_STREAMING_PROTO=1`) that reuses `VoiceSessionManager` for partial transcripts.
 - [x] (2025-11-21 04:55Z) Milestone 6: Extended docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) with Drive Mode queue drain coverage + API contracts, updated `docs/alfred-prd.md`, and verified queue/web tests so all milestones are complete.
+- [x] (2025-11-21 05:25Z) Milestone 7: Streaming prototype now enforces session auth plus `voice.stt`/`voice.tts` policies, ships docs/reference updates, and adds `bun test test/voice.streaming.test.ts` coverage.
 
 ## Surprises & Discoveries
 
@@ -54,6 +55,8 @@ Use this to capture unexpected findings as you implement the plan. Keep entries 
   Evidence: `packages/voice` tests assume `uv` is absent; on this machine `~/.local/bin/uv` exists so "should handle missing uv" style tests fail. `packages/api` fails because `node-pty` native module was built for Node ABI 115 while Bun requires 137, causing most router tests to crash before exercising voice code.
 - Observation: Targeted API tests that import the full router tree must stub `node-pty` because the bundled native binary was compiled for Node ABI 115, whereas Bun expects 137.
   Evidence: Running `bun test test/voice.s2s.test.ts` initially crashed with `Cannot find module '../build/Debug/pty.node'`. Adding `mock.module("node-pty", ...)` plus the existing metrics stubs allowed the new speech-to-speech tests to execute.
+- Observation: Router tests now import `@alfred/agent/assistant/src/hypergraph-bridge`, which Bun cannot resolve without mocks when running outside the built agent package.
+  Evidence: `bun test test/voice.s2s.test.ts` failed with `Cannot find module '@alfred/agent/assistant/src/hypergraph-bridge'` after adding new suites. Introducing `packages/api/test/utils/mock-hypergraph.ts` stubs keeps the caller bootstrap lightweight.
 
 
 As implementation progresses, append more entries, for example:
@@ -123,6 +126,18 @@ Record every important design choice here in structured XML-style entries. For e
   <date-author>2025-11-20 / AI Agent</date-author>
 </decision>
 
+<decision id="6">
+  <chosen>Require the WebSocket streaming prototype to reuse the same session + policy gates as `voice.speechToSpeech` via a dedicated `authorizeVoiceStreamRequest` helper.</chosen>
+  <rationale>
+    Aligning the prototype with the existing `requirePolicy("voice.stt"/"voice.tts")` flow prevents a policy bypass, captures audit logs/metrics, and keeps the code path ready for production hardening without duplicating middleware in every message handler.
+  </rationale>
+  <discards>
+    Option A (discarded): Leave the prototype unauthenticated until the transport is "production ready". This blocked shared testing and exposed an unaudited endpoint.
+    Option B (discarded): Inline ad-hoc policy checks inside each WebSocket event. Centralizing them at upgrade time simplifies reasoning, mirrors the tRPC router, and avoids redundant work per chunk.
+  </discards>
+  <date-author>2025-11-21 / AI Agent</date-author>
+</decision>
+
 Add new decisions as you go, e.g. around streaming transport choices (WebSocket vs enhanced tRPC) or queue semantics on web.
 
 ## Outcomes & Retrospective
@@ -147,11 +162,12 @@ As work completes:
 - Note any compromises (e.g., streaming limited to clip-based for now).
 - Capture lessons learned about performance, reliability, and usability.
 
-Latest retrospective (2025-11-21 04:55Z):
+Latest retrospective (2025-11-21 05:30Z):
 
 - Docs now cover every surface: `docs/voice/s2s.md` explains Drive Mode queue drain semantics, while `docs/reference/api/voice.md` documents the `speechToSpeech` contract alongside test commands. This closes the documentation gap called out in Milestone 6.
 - Tests span the full stack (API mutation, shared session core, web hook/route, native queue drain). No open regressions were observed during the targeted `bun test` runs.
 - Remaining follow-ups (VAD, streamed playback, hardened streaming auth) move to the next planning cycle since the foundational milestones are complete.
+- Streaming prototype now enforces the same session + policy rules as the core voice routes, and `bun test test/voice.streaming.test.ts` locks the behavior down until downstream TTS streaming lands.
 
 ## Context and Orientation
 
@@ -669,6 +685,7 @@ The system should be considered "complete" with respect to this plan when:
   - New tests for:
     - Audio transcoding.
     - `speechToSpeech`.
+    - Streaming authorization helper (`bun test test/voice.streaming.test.ts`).
     - Web/native session hooks.
     all pass.
 

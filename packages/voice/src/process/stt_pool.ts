@@ -9,6 +9,8 @@ export interface STTRequest {
   language?: string;
   prompt?: string;
   streaming?: boolean;
+  vadThreshold?: number;
+  sessionId?: string;
 }
 
 export interface STTResult {
@@ -18,6 +20,8 @@ export interface STTResult {
   isEmpty?: boolean;
   durationSeconds?: number;
   model?: string;
+  vadConfidence?: number;
+  endOfUtterance?: boolean;
 }
 
 export class STTPool {
@@ -70,6 +74,8 @@ export class STTPool {
       language: request.language,
       prompt: request.prompt,
       streaming: request.streaming ?? false,
+      vadThreshold: request.vadThreshold,
+      sessionId: request.sessionId,
     });
 
     const response = await process.sendRequest(ipcRequest);
@@ -88,6 +94,8 @@ export class STTPool {
       isEmpty?: boolean;
       durationSeconds?: number;
       model?: string;
+      vadConfidence?: number;
+      endOfUtterance?: boolean;
     };
 
     return {
@@ -97,6 +105,8 @@ export class STTPool {
       isEmpty: payload.isEmpty,
       durationSeconds: payload.durationSeconds,
       model: payload.model,
+      vadConfidence: payload.vadConfidence,
+      endOfUtterance: payload.endOfUtterance,
     };
   }
 

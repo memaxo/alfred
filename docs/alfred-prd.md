@@ -290,6 +290,8 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Ship codec-correct speech-to-speech API (`packages/api/src/routers/voice.ts`) plus shared session core (`packages/voice/src/session.ts`) so web/native/CarPlay all call the same pipeline (Milestones 1‑4).
 - [x] Document the full workflow in `docs/voice/s2s.md` and streaming contract in `docs/voice/streaming.md`; native reference now links to both.
 - [x] Add Drive Mode queue drain + API reference docs (`docs/voice/s2s.md`, `docs/reference/api/voice.md`) and call out the queue tests (`apps/native/lib/voice/__tests__/queue.test.ts`).
+- [x] Harder streaming prototype with VAD auto-stop + PCM `tts_chunk` events (`packages/api/src/voice/streaming.ts`, `docs/voice/streaming.md`).
+- [x] Harden the streaming prototype with the same auth/policy gates as `voice.speechToSpeech` plus `bun test test/voice.streaming.test.ts` coverage.
 - [ ] Add voice activity detection (VAD)
 - [ ] Implement streaming audio playback
 - [ ] Add voice session management

@@ -51,6 +51,10 @@
       "types": "./dist/audio/converter.d.ts",
       "default": "./src/audio/converter.ts"
     },
+    "./stream": {
+      "types": "./dist/stream.d.ts",
+      "default": "./src/stream.ts"
+    },
     "./test/utils/python-helpers": {
       "types": "./test/utils/python-helpers.d.ts",
       "default": "./test/utils/python-helpers.ts"

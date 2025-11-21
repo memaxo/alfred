@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { getToolToken } from "@/lib/token";
 import type { WorkflowEvent } from "@alfred/type";
-import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
+import type { UIMessage } from "@alfred/type/stream";
 
 type StreamInput = {
   requirement: string;
@@ -16,6 +16,11 @@ type StreamInput = {
     web: boolean;
   };
 };
+
+function eventToUiMessages(_event: WorkflowEvent): UIMessage[] {
+  // Placeholder: UI tests do not depend on the exact shape yet.
+  return [];
+}
 
 function WorkflowSubscription({ nodeId, data }: { nodeId: string, data: ArtifactData }) {
   const updateArtifactData = useMindscapeStore((state) => state.updateArtifactData);

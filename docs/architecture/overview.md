@@ -1,6 +1,6 @@
 # ALFRED Architecture Overview
 
-**Last Updated**: 2025-01-15
+**Last Updated**: 2025-11-21
 
 ## System Vision
 
@@ -26,7 +26,7 @@ Every action considers:
 - Cognitive state (attention, focus, overload)
 
 ### 4. Safe Autonomy
-Security boundaries with biometric elevation for high-risk operations. The policy engine enforces graduated autonomy levels with appropriate safeguards.
+Security boundaries with biometric elevation for high-risk operations. The policy engine enforces graduated autonomy levels with appropriate safeguards, enforced consistently across runtime, API routers, and tools.
 
 ## Architecture Layers
 
@@ -42,7 +42,7 @@ Security boundaries with biometric elevation for high-risk operations. The polic
 └─────────────────────────────┬───────────────────────────────┘
                               │
 ┌─────────────────────────────┴───────────────────────────────┐
-│              Runtime Integration Layer (NEW)                 │
+│              Runtime Integration Layer                      │
 │  packages/runtime - Composes all domain packages            │
 │  - CoreRuntime: Context building, outcome recording         │
 │  - WorkflowRuntime: AI SDK streaming, tool execution        │
@@ -60,9 +60,9 @@ Security boundaries with biometric elevation for high-risk operations. The polic
 
 ## Package Responsibilities
 
-### Runtime Layer (NEW - Phase 3)
+### Runtime Layer
 
-**`packages/runtime/`** - The conductor that orchestrates all domain packages
+**`packages/runtime/`** - The conductor that orchestrates all domain packages, implemented per the Phase 3 runtime ExecPlans.
 
 - **CoreRuntime**: Composes cognitive, knowledge, learning, policy
 - **WorkflowRuntime**: Executes workflows with real AI SDK streaming
@@ -105,11 +105,10 @@ This is the **integration layer** that makes all other packages work together.
 
 ### Tool Packages
 
-**`packages/agent/`** - AI SDK tool definitions
-- `tools/assistant/` - Personal assistant tools (note, remind, timer, book, focus, web, handoff, home)
-- `tools/orchestrator/` - Orchestration tools (codex, docker, droid, git, proxmox, router, ticket, web)
-- `registry.ts` - Tool registration with AI SDK v6
-- `helpers/` - Tool helpers (Linear integration)
+**`packages/agent/`** - AI SDK tool definitions and registries
+- Assistant tools (note, remind, timer, book, focus, web, handoff, home)
+- Orchestrator tools (codex, docker, droid, git, proxmox, router, ticket, web)
+- Tool registry wiring for AI SDK v6 and shared helpers (including Linear integration).
 
 ### Infrastructure Packages
 
@@ -141,12 +140,12 @@ This is the **integration layer** that makes all other packages work together.
 
 ### API Layer
 
-**`packages/api/`** - HTTP/tRPC surface
-- Router definitions for all domains
+**`packages/api/`** - HTTP/tRPC and streaming surface
+- Router definitions for all domains (assistant, orchestrator, workflow, voice, graph, etc.)
 - Context creation (session + runtime metadata)
-- Policy enforcement middleware
-- Rate limiting (note: minimal for single-user)
-- Error handling and normalization
+- Policy enforcement middleware and autonomy band checks
+- Minimal operational guards appropriate for single-user deployment
+- Error handling, normalization, and metrics emission
 
 ## Data Flow
 
@@ -290,7 +289,7 @@ Learning system feeds the knowledge graph:
 - RAG retrieval: <10ms
 - Context building: <100ms
 - Workflow step execution: <5 minutes
-- Total workflow timeout: 30 minutes
+- Total workflow timeout: 30 minutes (with per-step safeguards enforced in runtime and tools)
 
 ## Security Model
 
@@ -400,5 +399,6 @@ Don't optimize:
 
 - [Package Organization](packages.md) - Detailed package structure
 - [Decision Log](decisions.md) - Architecture decision records
-- [Next Priorities](../next-priorities.md) - Current development focus
-
+- [Runtime Integration Plan](../execplans/runtime-integration.md) - Historical runtime design and implementation details
+- [Vector Embedding Hardening](../execplans/vector-dimension-hardening.md) - Embedding schema and performance hardening
+- [UI Mindscape Strategy](../strategy/symbiotic-mindscape.md) - Current UI architecture strategy

@@ -1,36 +1,28 @@
 /**
  * Learning Engine Wrapper
- * 
+ *
  * Wraps self-supervision functions from @alfred/learning
  * Records outcomes and generates knowledge updates
  */
 
-import { supervise } from "@alfred/learning/self_supervision";
+import {
+  supervise,
+  type SupervisionEvent as LearningSupervisionEvent,
+} from "@alfred/learning/self_supervision";
+import type { KnowledgeUpdate } from "@alfred/type/knowledge";
 import { logger } from "../utils/logger";
 import {
   runtimeKnowledgeUpdatesTotal,
   runtimeKnowledgeBatchDurationSeconds,
 } from "../metrics";
+import { RuntimeKnowledgeBridge } from "./bridge";
 
 /**
- * Supervision event for learning from outcomes
+ * Supervision event for learning from outcomes.
+ *
+ * Thin alias to the canonical SupervisionEvent from @alfred/learning.
  */
-export type SupervisionEvent = {
-  input: unknown;
-  output: unknown;
-  expected: unknown;
-  error: number; // 0 for success, 1 for failure
-  context: Record<string, unknown>;
-  ts: string;
-};
-
-/**
- * Knowledge update from supervision
- */
-export type KnowledgeUpdate = {
-  type: "fact" | "relation" | "insight";
-  data: unknown;
-};
+export type SupervisionEvent = LearningSupervisionEvent;
 
 /**
  * Maximum outcomes to retain in memory
@@ -49,6 +41,7 @@ const MAX_OUTCOMES = 1000;
  */
 export class LearningEngine {
   private outcomes: SupervisionEvent[] = [];
+  private readonly bridges = new Map<string, RuntimeKnowledgeBridge>();
 
   /**
    * Record phase outcome for learning
@@ -74,12 +67,8 @@ export class LearningEngine {
 
     for (const outcome of this.outcomes) {
       const result = supervise(outcome);
-      if (result) {
-        // Convert supervision result to knowledge updates
-        updates.push({
-          type: "insight",
-          data: result,
-        });
+      if (Array.isArray(result) && result.length > 0) {
+        updates.push(...result);
       }
     }
 
@@ -133,20 +122,15 @@ export class LearningEngine {
     });
 
     try {
-      // Batch write in chunks of 100
-      const BATCH_SIZE = 100;
-      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-        const batch = updates.slice(i, i + BATCH_SIZE);
-        
-        // TODO: Integrate with actual knowledge persistence (Phase 3.6)
-        // For now, just simulate batch write
-        await this.writeBatch(batch);
-        
-        runtimeKnowledgeUpdatesTotal.inc(
-          { type: "batch", status: "success" },
-          batch.length
-        );
-      }
+      const bridge = this.getBridge(runId);
+      bridge.applyUpdates(updates);
+
+      runtimeKnowledgeUpdatesTotal.inc(
+        { type: "batch", status: "success" },
+        updates.length
+      );
+
+      await bridge.persist();
 
       const durationMs = Date.now() - startTime;
       stopTimer();
@@ -173,17 +157,18 @@ export class LearningEngine {
   }
 
   /**
-   * Write a single batch of updates
-   * 
-   * TODO: Integrate with actual knowledge graph persistence
+   * Get or create the knowledge bridge for a given run.
+   *
+   * Bridges maintain a per-run hypergraph that is flushed to the
+   * durable knowledge graph via persistHypergraphToDb.
    */
-  private async writeBatch(batch: KnowledgeUpdate[]): Promise<void> {
-    if (batch.length === 0) {
-      return;
+  private getBridge(runId: string): RuntimeKnowledgeBridge {
+    let bridge = this.bridges.get(runId);
+    if (!bridge) {
+      const resource = `runtime:${runId}`;
+      bridge = new RuntimeKnowledgeBridge({ runId, resource });
+      this.bridges.set(runId, bridge);
     }
-
-    // Placeholder for actual persistence logic
-    // Will be replaced with real knowledge graph writes in Phase 3.6
-    await new Promise((resolve) => setTimeout(resolve, 1));
+    return bridge;
   }
 }

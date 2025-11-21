@@ -74,13 +74,15 @@ curl \
 | `bun test apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx` | Web adapter calling the mutation and auto-playing the response. |
 | `bun test apps/web/src/routes/__tests__/voice-s2s.route.test.tsx` | UI integration around `useVoiceSessionWeb`. |
 | `bun test apps/native/lib/voice/__tests__/queue.test.ts` | Drive Mode queue drain replaying `speechToSpeech` jobs. |
+| `bun test packages/api/test/voice.streaming.test.ts` | Streaming authorization helper (session/policy gating). |
 
 ## Streaming prototype
 
 - File: `packages/api/src/voice/streaming.ts`.
 - Flag: `VOICE_STREAMING_PROTO=1` enables a Bun WebSocket server on `VOICE_STREAMING_PORT` (default `8788`).
 - Contract: See `docs/voice/streaming.md` for message types (`start`, `audio_chunk`, `stop`, `partial_transcript`, `final_transcript`).
-- Status: Prototype only—no auth/policy checks yet, PCM-only input, and outbound TTS streaming is not implemented.
+- Authentication: WebSocket upgrade reuses the browser/native session cookies. The server enforces both `voice.stt` and `voice.tts` policies before accepting the connection, mirroring `voice.speechToSpeech`.
+- Status: Prototype still limited to PCM input and transcription events (TTS streaming TBD).
 
 ## Local provider prerequisites
 

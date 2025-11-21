@@ -7,7 +7,8 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { withBudget } from "@alfred/metrics/performance";
 import { ContextBuilder } from "../src/context";
-import { LearningEngine, type KnowledgeUpdate } from "../src/engines/learning";
+import { LearningEngine } from "../src/engines/learning";
+import type { KnowledgeUpdate, KnowledgeFact } from "@alfred/type/knowledge";
 
 describe("Performance: Context Builder", () => {
   let builder: ContextBuilder;
@@ -89,9 +90,15 @@ describe("Performance: Learning Engine", () => {
   it("batch persistence meets budget (<1s per 100 updates)", async () => {
     const updates: KnowledgeUpdate[] = [];
     for (let i = 0; i < 100; i++) {
+      const fact: KnowledgeFact = {
+        id: `fact-${i}`,
+        content: `value-${i}`,
+        confidence: 0.9 as any,
+        source: "test",
+        timestamp: new Date().toISOString(),
+      };
       updates.push({
-        type: "fact",
-        data: { value: i },
+        node: fact,
       });
     }
 
@@ -103,9 +110,15 @@ describe("Performance: Learning Engine", () => {
   it("large batch processing meets budget (<5s per 1000 updates)", async () => {
     const updates: KnowledgeUpdate[] = [];
     for (let i = 0; i < 1000; i++) {
+      const fact: KnowledgeFact = {
+        id: `insight-${i}`,
+        content: `learning-${i}`,
+        confidence: 0.8 as any,
+        source: "test",
+        timestamp: new Date().toISOString(),
+      };
       updates.push({
-        type: "insight",
-        data: { insight: `learning ${i}` },
+        node: fact,
       });
     }
 
@@ -162,9 +175,14 @@ describe("Performance: Budget Enforcement", () => {
 
   it("validates batch write time is measured", async () => {
     const engine = new LearningEngine();
-    const updates: KnowledgeUpdate[] = [
-      { type: "fact", data: { test: true } },
-    ];
+    const fact: KnowledgeFact = {
+      id: "fact-duration",
+      content: "duration-test",
+      confidence: 0.9 as any,
+      source: "test",
+      timestamp: new Date().toISOString(),
+    };
+    const updates: KnowledgeUpdate[] = [{ node: fact }];
 
     const start = performance.now();
     await engine.persistUpdatesBatch(updates, "test-run");
@@ -174,4 +192,3 @@ describe("Performance: Budget Enforcement", () => {
     expect(duration).toBeLessThan(100); // 100ms
   });
 });
-

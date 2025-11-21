@@ -6,3 +6,10 @@ export {
   bufferToBase64,
   bufferToBase64Node,
 } from "./converter";
+export {
+  PCM_BIT_DEPTH,
+  PCM_CHANNELS,
+  PCM_SAMPLE_RATE,
+  pcm16Base64ToFloat32,
+  wrapPCM16AsWavBase64,
+} from "./pcm";

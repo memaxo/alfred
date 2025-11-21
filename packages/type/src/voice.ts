@@ -1,49 +1,91 @@
-/**
- * Voice streaming event types
- */
+export type VoiceStreamCodec = "pcm" | "mp3" | "opus" | "wav";
 
-export type VoiceStreamEvent =
+export interface VoiceStreamStartPayload {
+  type: "start";
+  sessionId?: string;
+  language?: string;
+  codec?: VoiceStreamCodec;
+  vadThreshold?: number;
+  autoStop?: boolean;
+  maxUtteranceMs?: number;
+  ttsVoice?: string;
+  ttsFormat?: "mp3" | "opus" | "wav";
+}
+
+export interface VoiceStreamAudioChunkPayload {
+  type: "audio_chunk";
+  audioBase64: string;
+  mimeType: string;
+  emitPartial?: boolean;
+}
+
+export interface VoiceStreamStopPayload {
+  type: "stop";
+  reason?: "manual" | "silence" | "timeout";
+}
+
+export interface VoiceStreamStatusEvent {
+  type: "status";
+  sessionId: string | null;
+  state: "recording" | "processing" | "playing" | "idle";
+}
+
+export interface VoiceStreamAutoStopEvent {
+  type: "auto_stop";
+  sessionId: string;
+  reason: "manual" | "silence" | "timeout";
+}
+
+export type VoiceStreamServerEvent =
+  | { type: "ready"; sessionId: null }
   | {
-      type: "status";
-      status: "connecting" | "connected" | "disconnected";
-      timestamp: number;
+      type: "session_started";
+      sessionId: string;
+      codec: VoiceStreamCodec;
+      negotiatedCodec: VoiceStreamCodec;
     }
   | {
-      type: "audio_chunk";
+      type: "partial_transcript";
+      sessionId: string;
+      text: string;
+    }
+  | {
+      type: "final_transcript";
+      sessionId: string;
+      text: string;
+    }
+  | {
+      type: "vad_state";
+      sessionId: string;
+      vadConfidence: number | null;
+      isEmpty: boolean | null;
+      endOfUtterance: boolean | null;
+    }
+  | VoiceStreamAutoStopEvent
+  | {
+      type: "assistant_message";
+      sessionId: string;
+      text: string;
+      replayId?: string | null;
+      raw?: unknown;
+    }
+  | {
+      type: "tts_chunk";
+      sessionId: string;
       audioBase64: string;
       mimeType: string;
-      sampleRate?: number;
-      timestamp: number;
+      sequence: number;
+      isLast?: boolean;
     }
-  | {
-      type: "transcript_partial";
-      text: string;
-      timestamp: number;
-      language?: string;
-    }
-  | {
-      type: "transcript_final";
-      text: string;
-      language?: string;
-      timestamp: number;
-    }
-  | {
-      type: "synthesis_chunk";
-      audioBase64: string;
-      mimeType: string;
-      sampleRate?: number;
-      timestamp: number;
-    }
+  | { type: "tts_complete"; sessionId: string }
+  | VoiceStreamStatusEvent
   | {
       type: "error";
+      sessionId: string | null;
       message: string;
       code?: string;
-      timestamp: number;
     }
-  | {
-      type: "complete";
-      timestamp: number;
-    };
+  | { type: "pong"; sessionId?: string | null };
 
 export interface VoiceStreamInput {
   mode?: "clip" | "stream";
@@ -51,3 +93,4 @@ export interface VoiceStreamInput {
   language?: string;
 }
 
+export type VoiceStreamEvent = VoiceStreamServerEvent;

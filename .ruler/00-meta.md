@@ -10,6 +10,8 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 2. **Empty directory cleanup.** Remove empty directories after deleting files. Empty directories indicate incomplete cleanup and should be removed to keep the codebase tidy.
 
+3. **Destructive commands.** Avoid running destructive shell or git commands (`rm -rf`, `git reset --hard`, force pushes, mass deletes) unless the risk is clearly low and intent is explicit.
+
 ## Ruler Maintenance
 
 1. **Edit sources.** Modify rule markdown under `.ruler/` (or nested `.ruler/` folders). Generated files such as `AGENTS.md`, `.cursor/rules/*`, and `.aider.conf.yml` should never be edited manually.
@@ -30,3 +32,16 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 4. **Remove redundancy.** If a concept appears in multiple files, consolidate it. Cross-reference only when necessary.
 
+## Code Search Tools
+
+1. **Primary search.** Use `rg` as the default tool for searching across the codebase; fall back to `grep` only when `rg` is unavailable or unsuitable.
+
+2. **AST-aware search.** Use `ast-grep` for syntax-aware or structural searches instead of composing complex regular expressions.
+
+3. **File and tree discovery.** Use `fd` and `lsd` to discover files and directory structures before targeting searches or edits.
+
+## Agent Collaboration
+
+1. **Autonomous execution.** Agents should act autonomously to implement changes end-to-end, using plans and local validation instead of deferring work back to the user.
+
+2. **Shared branches.** Assume the git working tree may be dirty because multiple agents or humans are working concurrently; do not rely on a clean branch or force-reset shared state.

@@ -42,10 +42,13 @@ jobs:
         run: bun run db:migrate
 
       - name: Embed E2E
-        run: bun test packages/embed/test/e2e.test.ts
+        run: RUN_EMBED_MODEL_TESTS=1 RAG_ENRICH_GRAPH=1 bun test packages/embed/test/e2e.test.ts
 
       - name: Hypergraph Smoke (Postgres)
         run: bun run smoke:hypergraph -- --use-existing-db
+
+      - name: Runtime Learning → Graph Integration (Postgres)
+        run: bun test packages/runtime/test/learning.integration.test.ts
 
       - name: Workflow Capture Integration (Postgres)
         run: WORKFLOW_CAPTURE_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.capture.integration.test.ts

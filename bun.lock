@@ -189,6 +189,7 @@
         "@alfred/learning": "workspace:*",
         "@linear/sdk": "^53.0.0",
         "@lmnr-ai/lmnr": "^0.7.4",
+        "@openai/codex-sdk": "^0.61.0",
         "lru-cache": "^11.0.1",
         "p-retry": "6.2.0",
         "zod": "catalog:",
@@ -269,6 +270,21 @@
     "packages/embed": {
       "name": "@alfred/embed",
       "version": "0.0.1",
+    },
+    "packages/graph": {
+      "name": "@alfred/graph",
+      "version": "0.1.0",
+      "dependencies": {
+        "@alfred/db": "workspace:*",
+        "@alfred/knowledge": "workspace:*",
+        "@alfred/rag": "workspace:*",
+        "@alfred/type": "workspace:*",
+        "ai": "catalog:",
+      },
+      "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*",
+      },
     },
     "packages/history": {
       "name": "@alfred/history",
@@ -445,6 +461,8 @@
     "@alfred/db": ["@alfred/db@workspace:packages/db"],
 
     "@alfred/embed": ["@alfred/embed@workspace:packages/embed"],
+
+    "@alfred/graph": ["@alfred/graph@workspace:packages/graph"],
 
     "@alfred/history": ["@alfred/history@workspace:packages/history"],
 
@@ -971,6 +989,8 @@
     "@oozcitak/url": ["@oozcitak/url@1.0.4", "", { "dependencies": { "@oozcitak/infra": "1.0.8", "@oozcitak/util": "8.3.8" } }, "sha512-kDcD8y+y3FCSOvnBI6HJgl00viO/nGbQoCINmQ0h98OhnGITrWR3bOGfwYCthgcrV8AnTJz8MzslTQbC3SOAmw=="],
 
     "@oozcitak/util": ["@oozcitak/util@8.3.8", "", {}, "sha512-T8TbSnGsxo6TDBJx/Sgv/BlVJL3tshxZP7Aq5R1mSnM5OcHY2dQaxLMu2+E8u3gN0MLOzdjurqN4ZRVuzQycOQ=="],
+
+    "@openai/codex-sdk": ["@openai/codex-sdk@0.61.0", "", {}, "sha512-HUGrN9UQ1S3fgTHBi1ffhDA2zXaVVx5BDlZ3hzNazsTa3zl1dn+BY68r5ouDykzqpBOU646TccLAqBZl8dOZeg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 

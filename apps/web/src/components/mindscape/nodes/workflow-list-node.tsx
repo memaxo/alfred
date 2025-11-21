@@ -83,6 +83,7 @@ export function WorkflowListNode({ id, data, selected, x = 0, y = 0 }: NodeProps
         status: run.status,
         runId: run.id,
         messages: [],
+        graph: { dbId: run.id },
       },
     };
     addArtifact(newNode);

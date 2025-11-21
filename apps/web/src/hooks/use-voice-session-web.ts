@@ -1,13 +1,17 @@
-import { arrayBufferToBase64 } from "@alfred/voice/audio";
+import { arrayBufferToBase64, pcm16Base64ToFloat32 } from "@alfred/voice/audio";
 import { createVoiceSession } from "@alfred/voice/session";
 import type {
   SpeechToSpeechRequest,
   SpeechToSpeechResponse,
   VoiceClient,
 } from "@alfred/voice/types";
+import type { VoiceStreamServerEvent } from "@alfred/type/voice";
+import { VoiceStreamClient } from "@alfred/voice/stream";
+import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/utils/trpc";
+import { getVoiceStreamUrl } from "@/utils/voice-stream";
 
 type SpeechOverrides = Partial<
   Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
@@ -24,9 +28,41 @@ export type UseVoiceSessionWebResult = {
   speechToSpeech: (overrides?: SpeechOverrides) => Promise<void>;
   speak: ReturnType<typeof createVoiceSession>["speak"];
   clear: () => void;
+  stream: {
+    supported: boolean;
+    status: StreamStatus;
+    transcript: string;
+    assistantText: string;
+    vadConfidence: number | null;
+    autoStopReason: string | null;
+    error: string | null;
+    isActive: boolean;
+    start: () => Promise<void>;
+    stop: () => Promise<void>;
+  };
+};
+
+type StreamStatus =
+  | "idle"
+  | "connecting"
+  | "recording"
+  | "processing"
+  | "playing"
+  | "error";
+
+type StreamState = {
+  supported: boolean;
+  status: StreamStatus;
+  transcript: string;
+  assistantText: string;
+  vadConfidence: number | null;
+  autoStopReason: string | null;
+  error: string | null;
+  sessionId: string | null;
 };
 
 const MAX_RECORDING_MS = 12_000;
+const STREAM_SLICE_MS = 600;
 
 const getMediaStream = createClientOnlyFn(async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -39,6 +75,13 @@ const createAudioElement = createClientOnlyFn((source: string) => {
   const audio = new Audio(source);
   audio.preload = "auto";
   return audio;
+});
+
+const getAudioContext = createClientOnlyFn(() => {
+  if (typeof AudioContext === "undefined") {
+    throw new Error("audio_context_unavailable");
+  }
+  return new AudioContext();
 });
 
 const clearTimeoutClient = createClientOnlyFn((id: number) =>
@@ -58,12 +101,29 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
   const audioChunksRef = useRef<Blob[]>([]);
   const timeoutRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const streamClientRef = useRef<VoiceStreamClient | null>(null);
+  const streamRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamMediaRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const playbackCursorRef = useRef(0);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isStreamingActive, setIsStreamingActive] = useState(false);
   const [lastResponse, setLastResponse] = useState<SpeechToSpeechResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, forceStateUpdate] = useState(0);
+  const streamUrl = getVoiceStreamUrl();
+  const [streamState, setStreamState] = useState<StreamState>({
+    supported: Boolean(streamUrl),
+    status: "idle",
+    transcript: "",
+    assistantText: "",
+    vadConfidence: null,
+    autoStopReason: null,
+    error: null,
+    sessionId: null,
+  });
 
   const cleanupStream = useCallback(() => {
     if (timeoutRef.current) {
@@ -81,9 +141,47 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     mediaRecorderRef.current = null;
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
+    mediaStreamRef.current = null;
     }
     audioChunksRef.current = [];
+  }, []);
+
+  const stopStreamingRecorder = useCallback(async () => {
+    const recorder = streamRecorderRef.current;
+    const media = streamMediaRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      await new Promise<void>((resolve) => {
+        recorder.addEventListener(
+          "stop",
+          () => {
+            resolve();
+          },
+          { once: true }
+        );
+        try {
+          recorder.stop();
+        } catch {
+          resolve();
+        }
+      });
+    }
+    streamRecorderRef.current = null;
+    if (media) {
+      media.getTracks().forEach((track) => track.stop());
+    }
+    streamMediaRef.current = null;
+  }, []);
+
+  const ensureAudioPlaybackContext = useCallback(async () => {
+    let ctx = audioContextRef.current;
+    if (!ctx) {
+      ctx = getAudioContext();
+      audioContextRef.current = ctx;
+    }
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+    return ctx;
   }, []);
 
   const finalizeRecording = useCallback(async () => {
@@ -196,6 +294,222 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
     };
   }, [s2sMutation, sttMutation, ttsMutation]);
 
+  const handleStreamTtsChunk = useCallback(
+    async (chunk: Extract<VoiceStreamServerEvent, { type: "tts_chunk" }>) => {
+      try {
+        const ctx = await ensureAudioPlaybackContext();
+        const floatData = pcm16Base64ToFloat32(chunk.audioBase64);
+        const buffer = ctx.createBuffer(1, floatData.length, 16000);
+        buffer.copyToChannel(floatData, 0);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        const startTime = Math.max(ctx.currentTime, playbackCursorRef.current);
+        source.start(startTime);
+        playbackCursorRef.current = startTime + buffer.duration;
+        setStreamState((prev) => ({
+          ...prev,
+          status: "playing",
+        }));
+      } catch (err) {
+        setStreamState((prev) => ({
+          ...prev,
+          status: "error",
+          error:
+            err instanceof Error ? err.message : "voice_stream_playback_failed",
+        }));
+      }
+    },
+    [ensureAudioPlaybackContext]
+  );
+
+  const handleStreamAutoStop = useCallback(
+    async (reason: "manual" | "silence" | "timeout") => {
+      setStreamState((prev) => ({
+        ...prev,
+        autoStopReason: reason,
+        status: "processing",
+      }));
+      await stopStreamingRecorder();
+      setIsStreamingActive(false);
+    },
+    [stopStreamingRecorder]
+  );
+
+  const streamHandlers = useMemo<VoiceStreamClientHandlers>(
+    () => ({
+      onSessionStarted: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          status: "recording",
+          sessionId: event.sessionId,
+          transcript: "",
+          assistantText: "",
+          error: null,
+          autoStopReason: null,
+        }));
+      },
+      onPartialTranscript: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          transcript: event.text,
+        }));
+      },
+      onFinalTranscript: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          transcript: event.text,
+        }));
+      },
+      onVadState: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          vadConfidence: event.vadConfidence ?? null,
+        }));
+      },
+      onAutoStop: (event) => {
+        void handleStreamAutoStop(event.reason);
+      },
+      onAssistantMessage: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          assistantText: event.text,
+        }));
+      },
+      onTtsChunk: handleStreamTtsChunk,
+      onTtsComplete: () => {
+        setStreamState((prev) => ({
+          ...prev,
+          status: "idle",
+        }));
+      },
+      onStatus: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          status: event.state,
+        }));
+      },
+      onError: (event) => {
+        setStreamState((prev) => ({
+          ...prev,
+          status: "error",
+          error: event.message,
+        }));
+        setIsStreamingActive(false);
+      },
+    }),
+    [handleStreamAutoStop, handleStreamTtsChunk]
+  );
+
+  const getStreamClient = useCallback(() => {
+    if (!streamUrl) {
+      throw new Error("voice_stream_url_missing");
+    }
+    if (streamClientRef.current) {
+      return streamClientRef.current;
+    }
+    const client = new VoiceStreamClient(
+      {
+        url: streamUrl,
+      },
+      streamHandlers
+    );
+    streamClientRef.current = client;
+    return client;
+  }, [streamHandlers, streamUrl]);
+
+  const startStreamingRecorder = useCallback(
+    async (client: VoiceStreamClient) => {
+      const stream = await getMediaStream();
+      const Recorder = typeof MediaRecorder !== "undefined" ? MediaRecorder : null;
+      if (!Recorder) {
+        throw new Error("media_recorder_unavailable");
+      }
+      await ensureAudioPlaybackContext().catch(() => undefined);
+      const recorder = new Recorder(stream);
+      streamRecorderRef.current = recorder;
+      streamMediaRef.current = stream;
+      setIsStreamingActive(true);
+      recorder.start(STREAM_SLICE_MS);
+      recorder.ondataavailable = async (event) => {
+        if (event.data && event.data.size > 0) {
+          try {
+            const buffer = await event.data.arrayBuffer();
+            const base64 = arrayBufferToBase64(buffer);
+            await client.sendAudioChunk({
+              audioBase64: base64,
+              mimeType: event.data.type || "audio/webm",
+            });
+          } catch (err) {
+            setStreamState((prev) => ({
+              ...prev,
+              status: "error",
+              error:
+                err instanceof Error
+                  ? err.message
+                  : "voice_stream_chunk_failed",
+            }));
+          }
+        }
+      };
+      recorder.onerror = (event) => {
+        const message = event.error?.message ?? "media_recorder_error";
+        setStreamState((prev) => ({
+          ...prev,
+          status: "error",
+          error: message,
+        }));
+      };
+      setStreamState((prev) => ({
+        ...prev,
+        status: "recording",
+      }));
+    },
+    [ensureAudioPlaybackContext]
+  );
+
+  const startStreaming = useCallback(async () => {
+    if (!streamUrl) {
+      throw new Error("voice_streaming_unavailable");
+    }
+    setStreamState((prev) => ({
+      ...prev,
+      status: "connecting",
+      transcript: "",
+      assistantText: "",
+      autoStopReason: null,
+      error: null,
+    }));
+    try {
+      const client = getStreamClient();
+      await client.startSession();
+      await startStreamingRecorder(client);
+    } catch (err) {
+      setStreamState((prev) => ({
+        ...prev,
+        status: "error",
+        error:
+          err instanceof Error ? err.message : "voice_stream_start_failed",
+      }));
+      setIsStreamingActive(false);
+      throw err;
+    }
+  }, [getStreamClient, startStreamingRecorder, streamUrl]);
+
+  const stopStreaming = useCallback(async () => {
+    await stopStreamingRecorder();
+    setIsStreamingActive(false);
+    try {
+      await streamClientRef.current?.stop("manual");
+    } catch (err) {
+      setStreamState((prev) => ({
+        ...prev,
+        error:
+          err instanceof Error ? err.message : "voice_stream_stop_failed",
+      }));
+    }
+  }, [stopStreamingRecorder]);
+
   const session = useMemo(
     () => createVoiceSession(adapter, voiceClient),
     [adapter, voiceClient]
@@ -280,8 +594,24 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
   }, [session, syncState]);
 
   useEffect(() => {
+    setStreamState((prev) => ({
+      ...prev,
+      supported: Boolean(streamUrl),
+    }));
+  }, [streamUrl]);
+
+  useEffect(() => {
     return () => {
       cleanupStream();
+      stopStreamingRecorder().catch(() => undefined);
+      const client = streamClientRef.current;
+      if (client) {
+        void client.close();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => undefined);
+        audioContextRef.current = null;
+      }
       if (audioRef.current) {
         try {
           audioRef.current.pause();
@@ -292,7 +622,7 @@ export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
         audioRef.current = null;
       }
     };
-  }, [cleanupStream]);
+  }, [cleanupStream, stopStreamingRecorder]);
 
   const busy =
     isProcessing ||

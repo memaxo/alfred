@@ -4,9 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import type { Response } from "undici";
 import { z } from "zod";
-import type { UIMessage } from "@alfred/type/stream";
 import type { VoiceStreamEvent } from "@alfred/type/voice";
-import { getAssistantAgentDefaults } from "@alfred/agent";
 import { markVoice } from "@alfred/metrics/performance";
 import { requirePolicy } from "../gate";
 import {
@@ -19,9 +17,7 @@ import { authedProcedure, router } from "../trpc";
 import { logger } from "../utils/logger";
 import { getVoicePools } from "../voice/pools";
 import { randomUUID } from "node:crypto";
-import { prepareModelMessagesForGenerate } from "../ai/messages";
-import { generateText, persistResult } from "../ai/generate";
-import { sanitizeResult } from "../utils/generate";
+import { runAssistantForVoice } from "../voice/assistant";
 import {
   decodeToPCM16,
   encodeFromPCM16,
@@ -277,67 +273,6 @@ async function encodeLocalTtsAudio(
       cause: error instanceof Error ? error : undefined,
     });
   }
-}
-
-type AssistantRunResult = {
-  text: string;
-  replayId: string | null;
-  raw: ReturnType<typeof sanitizeResult>;
-};
-
-async function runAssistantForVoice({
-  text,
-  thread,
-  resource,
-  userId,
-}: {
-  text: string;
-  thread?: string;
-  resource?: string;
-  userId: string;
-}): Promise<AssistantRunResult> {
-  const defaults = getAssistantAgentDefaults();
-  const threadId = thread ?? `voice:${userId}`;
-  const resourceId = resource ?? threadId;
-
-  const messages: UIMessage[] = [
-    {
-      id: `voice-${Date.now()}`,
-      role: "user",
-      name: "voice",
-      parts: [{ type: "text", text }],
-    },
-  ];
-
-  const modelMessages = await prepareModelMessagesForGenerate({
-    rawMessages: messages,
-    tools: defaults.tools,
-    source: "assistant",
-    model: defaults.model,
-    system: defaults.instructions,
-  });
-
-  const result = await generateText({
-    ...defaults,
-    messages: modelMessages,
-  });
-  const output = sanitizeResult(result);
-  const replayId = await persistResult({
-    userId,
-    kind: "assistant",
-    input: {
-      thread: threadId,
-      resource: resourceId,
-      messages,
-    },
-    result: output,
-  });
-
-  return {
-    text: output.text ?? "",
-    replayId,
-    raw: output,
-  };
 }
 
 async function postTranscription(input: SttInput) {
@@ -615,15 +550,15 @@ export const voiceRouter: ReturnType<typeof router> = router({
         });
       }
 
-      const assistantTimerStart = performance.now();
-      const assistantResult = await runAssistantForVoice({
-        text: transcriptText,
-        thread: input.thread,
-        resource: input.resource,
-        userId: session.user.id,
-      });
-      const assistantDurationSeconds =
-        (performance.now() - assistantTimerStart) / 1000;
+      const assistantResult = await runAssistantForVoice(
+        ctx.runtimeContext,
+        {
+          text: transcriptText,
+          thread: input.thread,
+          resource: input.resource,
+          userId: session.user.id,
+        }
+      );
 
       const ttsPayload: TtsInput = {
         text: assistantResult.text || "I heard you.",
@@ -661,7 +596,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
         durations: {
           totalSeconds,
           sttSeconds: sttResult.durationSeconds ?? null,
-          assistantSeconds: assistantDurationSeconds,
+          assistantSeconds: assistantResult.durationSeconds,
           ttsSeconds: ttsResult.durationSeconds ?? null,
         },
       };

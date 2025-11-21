@@ -6,6 +6,7 @@
 import "./mock-metrics";
 import "./mock-db-client";
 import "./mock-voice";
+import "./mock-hypergraph";
 import type { TRPCAppRouter } from "@alfred/api/routers/index";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { inferRouterInputs } from "@trpc/server";

@@ -3,6 +3,8 @@ import { openai } from "@ai-sdk/openai";
 import { emitLinearActivity } from "@alfred/agent/orchestrator/linear";
 import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
 import {
+  codexLinearIntegrationLatencySeconds,
+  codexSessionContinuityTotal,
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,
   linearSessionOperationsTotal,
@@ -41,6 +43,29 @@ configureLinearMetrics({
   linearActivityDurationSeconds,
   linearSessionOperationsTotal,
 });
+
+// Configure Codex-Linear metrics
+(async () => {
+  try {
+    const { configureCodexLinearMetrics } = await import(
+      "@alfred/agent/orchestrator/tool/codex-linear"
+    );
+    const { sessionManager } = await import(
+      "@alfred/agent/orchestrator/codex-session"
+    );
+    configureCodexLinearMetrics({
+      startTimer: (labels: { event_type: string }) =>
+        codexLinearIntegrationLatencySeconds.startTimer(labels),
+    });
+    sessionManager.configureContinuityMetrics((status) => {
+      codexSessionContinuityTotal.inc({ status });
+    });
+  } catch (error) {
+    logger.warn("codex_linear_metrics_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+})();
 
 /**
  * Create workflow executor (runtime or runner based on feature flag)

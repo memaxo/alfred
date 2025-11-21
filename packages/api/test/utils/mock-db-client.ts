@@ -10,8 +10,10 @@ const dbStub = new Proxy(
   }
 );
 
-mock.module("@alfred/db/src/client", () => ({ db: dbStub }));
-mock.module("@alfred/db/client", () => ({ db: dbStub }));
+const isSqliteDriver = vi.fn(() => false);
+
+mock.module("@alfred/db/src/client", () => ({ db: dbStub, isSqliteDriver }));
+mock.module("@alfred/db/client", () => ({ db: dbStub, isSqliteDriver }));
 const defaultConversationRow = {
   id: "conversation-default",
   userId: "test-user",
@@ -23,6 +25,7 @@ const defaultConversationRow = {
 
 export const dbModuleStub = {
   db: dbStub,
+  isSqliteDriver,
   assistantRepo: {},
   deployRepo: {},
   evalRepo: {},

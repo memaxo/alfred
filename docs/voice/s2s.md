@@ -112,4 +112,5 @@ You should see `partial_transcript` and `final_transcript` events in real time.
 - Drive Mode or CarPlay returns a spoken reply with `VOICE_PROVIDER=openai` and `VOICE_PROVIDER=local`.
 - `/voice-s2s` route in the web app records, transcribes, and plays a reply.
 - (Optional) streaming prototype returns `partial_transcript` events while audio chunks are in flight.
+- `bun test packages/api/test/voice.streaming.test.ts` – streaming auth/policy helper.
 - `bun test apps/native/lib/voice/__tests__/queue.test.ts` – native queue enqueue/drain logic.

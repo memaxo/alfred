@@ -5,6 +5,9 @@
 
 import { describe, test, expect, afterAll } from "bun:test";
 import { ingest, retrieve } from "@alfred/rag";
+import { db } from "@alfred/db";
+import { memoryNodes } from "@alfred/db/schema/graph";
+import { eq } from "drizzle-orm";
 import { describePostgres } from "@alfred/db/testing";
 import { embed, embedMany, shutdown, EMBEDDING_DIM } from "../src/index";
 
@@ -128,4 +131,33 @@ describePgModel("E2E: Note -> RAG -> Embed Flow", () => {
 
     console.log("[e2e-test] ✓ Semantic search successfully distinguishes topics");
   }, 150_000);
+
+  test(
+    "RAG enrichment populates memory_nodes when enabled",
+    async () => {
+      if (process.env.RAG_ENRICH_GRAPH !== "1") {
+        // Enrichment is optional; treat as a no-op when disabled.
+        console.log(
+          "[e2e-test] Skipping RAG enrichment → graph assertion (RAG_ENRICH_GRAPH != 1)"
+        );
+        return;
+      }
+
+      const source = `test:rag-graph:${Date.now()}`;
+      const content =
+        "Hypergraph integration test content for knowledge graph enrichment.";
+
+      const documentId = await ingest(source, content);
+      expect(documentId).toBeTruthy();
+
+      const resource = `rag:${source}`;
+      const rows = await db
+        .select()
+        .from(memoryNodes)
+        .where(eq(memoryNodes.resource, resource));
+
+      expect(rows.length).toBeGreaterThan(0);
+    },
+    120_000
+  );
 });
