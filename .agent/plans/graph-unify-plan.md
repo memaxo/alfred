@@ -31,8 +31,8 @@ Each change lists files, code locations, APIs, and side effects.
 - [x] (2025-11-21 01:09Z) Phase 3C: Added node data mapping for mindscape nodes
 - [x] (2025-11-21 01:09Z) Phase 3D: Implemented robust edge mapping in initializer (DB → Mindscape)
 - [x] (2025-11-21 01:09Z) Phase 3E: Added graph edge subscription for live updates
-- [ ] Phase 4A: Implement semantic layout using relationships/embeddings
-- [ ] Phase 4B: Create knowledge node visualization component
+- [x] (2025-11-21 01:12Z) Phase 4A: Implemented semantic layout using relationships/embeddings
+- [x] (2025-11-21 01:12Z) Phase 4B: Created knowledge node visualization component
 - [ ] Phase 5A: Implement query planner across DB graph, Hypergraph, and RAG
 - [ ] Phase 5B: Add unified API endpoints
 
@@ -74,6 +74,7 @@ _This section will be updated as key decisions are made during implementation._
 - Phase 1 (2025-11-21 00:51Z): Hypergraph now uses production-ready RTree and BTree indices with dedicated unit tests, and Postgres ships traversal-focused indexes (0035) to keep getNeighbors/findPath queries fast; pending validation confirms Phase 1 acceptance.
 - Phase 2 (2025-11-21 00:58Z): Auto-persist now runs on a timer with optional embedding batches, the assistant bridge exposes startHypergraphSync(), and embeddings stay resident-only, clearing TODO debt around the spatial index.
 - Phase 3 (2025-11-21 01:09Z): Created the @alfred/graph package with unified types/mapper plus bridged Mindscape ↔ DB by persisting new edges, storing per-node graph mappings, and syncing live edge updates via TRPC subscriptions.
+- Phase 4 (2025-11-21 01:12Z): Added a force-directed semantic layout with gravity/repulsion heuristics and introduced the KnowledgeNode visualization so hypergraph nodes render with kind/confidence context in Mindscape.
 
 ---
 

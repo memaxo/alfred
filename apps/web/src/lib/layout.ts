@@ -1,5 +1,6 @@
 import { type Node, type Edge } from "@xyflow/react";
 import type { ArtifactData } from "@/store/mindscape";
+import { layoutSemantic, type SemanticLayoutOptions } from "./layout-semantic";
 
 // Simple concentric layout
 export function getLayoutedElements(
@@ -61,3 +62,10 @@ export function getLayoutedElements(
   ];
 }
 
+export function getSemanticLayoutedElements(
+  nodes: Node<ArtifactData>[],
+  edges: Edge[],
+  options?: SemanticLayoutOptions
+): Node<ArtifactData>[] {
+  return layoutSemantic(nodes, edges, options);
+}

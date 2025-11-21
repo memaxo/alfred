@@ -41,6 +41,7 @@ import { IntegrationsNode } from "./nodes/integrations-node";
 import { WorkflowListNode } from "./nodes/workflow-list-node";
 import { DeploymentNode } from "./nodes/deployment-node";
 import { WorkflowManager } from "./workflow-manager";
+import { KnowledgeNode } from "./nodes/knowledge-node";
 import {
   createSpawnNode,
   formatSpawnLabel,
@@ -78,6 +79,7 @@ const nodeTypes: NodeTypes = {
   integrations: wrapWithErrorBoundary(IntegrationsNode),
   workflowlist: wrapWithErrorBoundary(WorkflowListNode),
   deployment: wrapWithErrorBoundary(DeploymentNode),
+  knowledge: wrapWithErrorBoundary(KnowledgeNode),
 };
 
 type MindscapeCanvasProps = Omit<

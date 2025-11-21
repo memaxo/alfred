@@ -132,6 +132,12 @@ export const deploymentNodeDataSchema = baseArtifactDataSchema.extend({
   liveHealth: z.boolean().optional(),
 });
 
+export const knowledgeNodeDataSchema = baseArtifactDataSchema.extend({
+  kind: z.string().optional(),
+  summary: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
 /**
  * Schema for terminal node data.
  * Terminal nodes don't have specific data fields beyond the base.
@@ -170,6 +176,7 @@ export const artifactDataSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("integrations") }).merge(integrationsNodeDataSchema),
   z.object({ type: z.literal("workflowlist") }).merge(workflowListNodeDataSchema),
   z.object({ type: z.literal("deployment") }).merge(deploymentNodeDataSchema),
+  z.object({ type: z.literal("knowledge") }).merge(knowledgeNodeDataSchema),
   z.object({ type: z.literal("terminal") }).merge(terminalNodeDataSchema),
   z.object({ type: z.literal("artifact") }).merge(artifactNodeDataSchema),
   z.object({ type: z.literal("orb") }).merge(orbNodeDataSchema),
@@ -214,6 +221,8 @@ export function getNodeDataSchema(
       return workflowListNodeDataSchema;
     case "deployment":
       return deploymentNodeDataSchema;
+    case "knowledge":
+      return knowledgeNodeDataSchema;
     case "terminal":
       return terminalNodeDataSchema;
     case "artifact":

@@ -10,7 +10,10 @@ import {
   type OnNodesChange,
 } from "@xyflow/react";
 import { create } from "zustand";
-import { getLayoutedElements } from "@/lib/layout";
+import {
+  getLayoutedElements,
+  getSemanticLayoutedElements,
+} from "@/lib/layout";
 import type { z } from "zod";
 import {
   getNodeDataSchema,
@@ -20,6 +23,7 @@ import {
   codeNodeDataSchema,
   deploymentNodeDataSchema,
   integrationsNodeDataSchema,
+  knowledgeNodeDataSchema,
   noteNodeDataSchema,
   orbNodeDataSchema,
   privacyNodeDataSchema,
@@ -56,7 +60,8 @@ export type ArtifactType =
   | "workflowlist"
   | "deployment"
   | "artifact"
-  | "orb";
+  | "orb"
+  | "knowledge";
 
 /**
  * Individual node data types inferred from Zod schemas.
@@ -107,6 +112,9 @@ export type ArtifactNodeData = z.infer<typeof artifactNodeDataSchema> & {
   type: "artifact";
 };
 export type OrbNodeData = z.infer<typeof orbNodeDataSchema> & { type: "orb" };
+export type KnowledgeNodeData = z.infer<typeof knowledgeNodeDataSchema> & {
+  type: "knowledge";
+};
 
 /**
  * Discriminated union of all artifact data types.
@@ -130,7 +138,8 @@ export type ArtifactData =
   | DeploymentNodeData
   | TerminalNodeData
   | ArtifactNodeData
-  | OrbNodeData;
+  | OrbNodeData
+  | KnowledgeNodeData;
 
 type MindscapeState = {
   nodes: Node<ArtifactData>[];
@@ -253,7 +262,12 @@ export const useMindscapeStore = create<MindscapeState>()(
       },
       autoLayout: () => {
         const { nodes, edges } = get();
-        const layoutedNodes = getLayoutedElements(nodes, edges);
+        const shouldUseSemantic =
+          edges.length > 0 ||
+          nodes.some((node) => Boolean(node.data?.graph?.dbId));
+        const layoutedNodes = shouldUseSemantic
+          ? getSemanticLayoutedElements(nodes, edges)
+          : getLayoutedElements(nodes, edges);
         set({ nodes: layoutedNodes });
       },
     }),
