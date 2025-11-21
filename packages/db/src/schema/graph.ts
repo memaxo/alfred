@@ -19,7 +19,7 @@ const tsvector = customType<{ data: string; driverData: string }>({
   },
 });
 
-// TODO: [Phase 4] Add proper indexes for graph traversal performance
+// Graph traversal indexes for memory_edges are created in 0035_graph_traversal_indexes.sql
 
 /**
  * Memory nodes (entities in the knowledge graph)
@@ -58,9 +58,10 @@ export const memoryEdges = pgTable("memory_edges", {
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 4] Add index on (fromId, kind) for outbound edge queries
-// TODO: [Phase 4] Add index on (toId, kind) for inbound edge queries
-// TODO: [Phase 4] Add index on kind for filtering by edge type
+// Index coverage:
+// - (from_id, kind) and (to_id, kind) btree indexes (0035)
+// - (from_id, kind, resource) and (to_id, kind, resource) compound indexes (0035)
+// - kind-only index for type filtering (0035)
 
 // TODO: [Phase 4] Add graph traversal helpers in repo layer
 // - getNeighbors(nodeId, direction, kind)

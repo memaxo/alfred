@@ -22,7 +22,7 @@ Each change lists files, code locations, APIs, and side effects.
 
 - [x] (2025-11-21 00:48Z) Phase 1A: Implemented production-ready N-dimensional RTree (1024D)
 - [x] (2025-11-21 00:50Z) Phase 1B: Implemented production-ready BTree ordered index
-- [ ] Phase 1C: Add database graph traversal indexes migration
+- [x] (2025-11-21 00:51Z) Phase 1C: Added database graph traversal indexes migration
 - [ ] Phase 2A: Implement auto-persist with dirty tracking
 - [ ] Phase 2B: Wire bridge auto-sync with embedding support
 - [ ] Phase 2C: Remove TODO comments and wire embedding index
@@ -40,6 +40,10 @@ Each change lists files, code locations, APIs, and side effects.
 
 - Observation: Direct hypervolume calculations in 1024 dimensions quickly underflow/overflow, so the RTree uses log1p-based span measures to pick seeds and compute enlargement reliably.
   Evidence: packages/knowledge/src/indices/rtree.ts (measure/enlargement helpers).
+- Observation: `bun run db:migrate` fails locally because Drizzle's `meta/_journal.json` is missing in packages/db, so migrations cannot be replayed without additional setup.
+  Evidence: CLI error "Error: Can't find meta/_journal.json file" from drizzle-kit migrate.
+- Observation: `bun test` currently fails before finishing due to Playwright suites being invoked from plain `.spec.ts` files (error: "Playwright Test did not expect test.describe() to be called here") and an unrelated timeout in `packages/runtime/test/observability.test.ts`.
+  Evidence: bun test stack traces for apps/web/tests/mindscape.* and packages/runtime/test/observability.test.ts.
 
 ## Decision Log
 
@@ -63,7 +67,7 @@ _This section will be updated as key decisions are made during implementation._
 
 ## Outcomes & Retrospective
 
-_This section will be updated at major milestones or completion to summarize outcomes, gaps, and lessons learned._
+- Phase 1 (2025-11-21 00:51Z): Hypergraph now uses production-ready RTree and BTree indices with dedicated unit tests, and Postgres ships traversal-focused indexes (0035) to keep getNeighbors/findPath queries fast; pending validation confirms Phase 1 acceptance.
 
 ---
 
