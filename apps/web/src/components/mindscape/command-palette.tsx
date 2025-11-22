@@ -60,13 +60,9 @@ export function MindscapeCommandPalette({
   const [inputValue, setInputValue] = useState("");
   const deferredInputValue = useDeferredValue(inputValue);
   const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
-  const edges = useMindscapeStore((state) => state.edges);
   const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
-  );
-  const triggerPathActivity = useMindscapeStore(
-    (state) => state.triggerPathActivity
   );
   const { getUsage, recordUsage } = useCommandUsage();
 
@@ -200,45 +196,6 @@ export function MindscapeCommandPalette({
           toast.info("Duplication not yet implemented");
         }
         break;
-      case "simulate-activation": {
-        const path = [focusedNode.id];
-        let currentId = focusedNode.id;
-
-        // Walk 4 steps
-        for (let i = 0; i < 4; i++) {
-          const connectedEdges = edges.filter(
-            (e) => e.source === currentId || e.target === currentId
-          );
-          if (connectedEdges.length === 0) break;
-
-          // Prefer edges connecting to nodes not in path
-          const candidates = connectedEdges.filter((e) => {
-            const target = e.source === currentId ? e.target : e.source;
-            return !path.includes(target);
-          });
-
-          const edge =
-            candidates.length > 0
-              ? candidates[Math.floor(Math.random() * candidates.length)]
-              : connectedEdges[Math.floor(Math.random() * connectedEdges.length)];
-
-          const nextId = edge.source === currentId ? edge.target : edge.source;
-          if (!path.includes(nextId)) {
-            path.push(nextId);
-            currentId = nextId;
-          } else {
-            break;
-          }
-        }
-
-        if (path.length > 1) {
-          triggerPathActivity(path);
-          toast.success(`Simulating activation path: ${path.length} nodes`);
-        } else {
-          toast.info("No connected nodes to traverse");
-        }
-        break;
-      }
       default:
         toast.info(`Action ${actionId} triggered`);
     }

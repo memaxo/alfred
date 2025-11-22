@@ -8,7 +8,6 @@ import {
   Pin,
   RotateCw,
   Trash2,
-  Zap,
 } from "lucide-react";
 import type { ArtifactType } from "@/store/mindscape";
 
@@ -21,9 +20,7 @@ export type ContextActionId =
   | "view-logs"
   | "summarize"
   | "clear-history"
-  | "hide"
-  | "simulate-activation"
-  | "spawn-starfield";
+  | "hide";
 
 export type ContextAction = {
   id: ContextActionId;
@@ -106,24 +103,6 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     icon: EyeOff,
     validNodeTypes: ["knowledge", "artifact"],
     aliases: ["dismiss", "invisible", "cloak"],
-  },
-
-  // Debug/Simulate
-  {
-    id: "simulate-activation",
-    label: "Simulate Activation",
-    icon: Zap,
-    validNodeTypes: "all",
-    aliases: ["glow", "trigger", "path", "visualize"],
-  },
-  
-  // Stress Test
-  {
-    id: "spawn-starfield",
-    label: "Spawn Starfield (1000 Nodes)",
-    icon: Activity,
-    validNodeTypes: "all",
-    aliases: ["stress test", "benchmark", "load test", "starfield"],
   },
 ];
 

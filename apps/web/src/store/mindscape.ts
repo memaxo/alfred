@@ -204,7 +204,6 @@ type MindscapeState = {
   setNodes: (nodes: Node<ArtifactData>[]) => void;
   setEdges: (edges: Edge[]) => void;
   triggerEdgeActivity: (edgeId: string, durationMs?: number) => void;
-  triggerPathActivity: (nodeIds: string[], durationPerStepMs?: number) => void;
   autoLayout: () => void;
   cacheRagDoc: (dbId: string, data: KnowledgeNodeData) => void;
   evictRagDoc: (dbId: string) => void;
@@ -326,34 +325,6 @@ export const useMindscapeStore = create<MindscapeState>()(
             return { activeEdges: next };
           });
         }, durationMs);
-      },
-      triggerPathActivity: (nodeIds, durationPerStepMs = 500) => {
-        const { edges, triggerEdgeActivity } = get();
-
-        // Find edges connecting the sequence of nodes
-        const pathEdges: string[] = [];
-        for (let i = 0; i < nodeIds.length - 1; i++) {
-          const source = nodeIds[i];
-          const target = nodeIds[i + 1];
-          
-          // Find edge (either direction)
-          const edge = edges.find(
-            (e) =>
-              (e.source === source && e.target === target) ||
-              (e.source === target && e.target === source)
-          );
-          
-          if (edge) {
-            pathEdges.push(edge.id);
-          }
-        }
-
-        // Trigger them sequentially
-        pathEdges.forEach((edgeId, index) => {
-          setTimeout(() => {
-            triggerEdgeActivity(edgeId, durationPerStepMs * 2); // Keep active for 2 steps
-          }, index * durationPerStepMs);
-        });
       },
       autoLayout: () => {
         const { nodes, edges, focusedNodeId } = get();
