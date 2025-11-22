@@ -1,0 +1,11 @@
+# Mindscape Architecture
+
+1. **LOD Polymorphism.** All graph nodes must use `useLOD()` to implement four distinct render states (tiny/small/medium/full). Tiny/small states must minimize DOM depth (no complex sub-trees) to ensure 60fps performance with 1000+ nodes.
+
+2. **Focus Gravity.** Nodes must subscribe to `useNodeFocus()` to apply visual suppression (blur/grayscale/scale-down) when another node is active. The focused node must visually dominate the viewport as a "modal-less modal."
+
+3. **Contextual Commands.** Register actions in `config/actions.ts` with `validNodeTypes`. The Command Palette must filter actions based on the currently focused node ID to provide a context-aware interface.
+
+4. **Algorithmic Isolation.** Keep physics (layout) and search (trie) logic in pure TypeScript files (`lib/*.ts`) separate from React components. This ensures core logic is unit-testable even if the DOM environment is unstable.
+
+5. **Event-Driven Activations.** Use `dispatchMindscapeEvent` to visualize system activity. Never manipulate `activeEdges` directly from functional components. Visualization must be a side effect of real events (Reality-Driven UI).
