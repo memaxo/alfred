@@ -1,11 +1,5 @@
-import type {
-  VoiceStreamCodec,
-  VoiceStreamServerEvent,
-} from "@alfred/type/voice";
-import { arrayBufferToBase64, pcm16Base64ToFloat32 } from "@alfred/voice/audio";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createVoiceSession } from "@alfred/voice/session";
-import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
-import { VoiceStreamClient } from "@alfred/voice/stream";
 import type {
   SpeechToSpeechRequest,
   SpeechToSpeechResponse,
@@ -14,915 +8,215 @@ import type {
   VoiceSessionSurface,
 } from "@alfred/voice/types";
 import { createClientOnlyFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EnergyVAD } from "@/lib/voice/vad";
 import { trpc } from "@/utils/trpc";
-import { getVoiceStreamUrl } from "@/utils/voice-stream";
-
-// Add window.performance.now polyfill for timestamp consistency
-const _now =
-  typeof performance !== "undefined"
-    ? () => performance.now()
-    : () => Date.now();
+import { useVoiceAudio } from "./use-voice-audio";
+import { useVoiceProtocol } from "./use-voice-protocol";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 
 type SpeechOverrides = Partial<
   Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
 >;
 
-export type UseVoiceSessionWebResult = {
-  state: ReturnType<typeof createVoiceSession>["state"];
-  isRecording: boolean;
-  isProcessing: boolean;
-  lastResponse: SpeechToSpeechResponse | null;
-  error: string | null;
-  start: () => Promise<void>;
-  stopAndTranscribe: () => Promise<void>;
-  speechToSpeech: (overrides?: SpeechOverrides) => Promise<void>;
-  speak: ReturnType<typeof createVoiceSession>["speak"];
-  clear: () => void;
-  session: VoiceSessionDescriptor | null;
-  refreshSession: () => Promise<VoiceSessionDescriptor | null>;
-  stream: {
-    supported: boolean;
-    status: StreamStatus;
-    transcript: string;
-    assistantText: string;
-    vadConfidence: number | null;
-    autoStopReason: string | null;
-    error: string | null;
-    isActive: boolean;
-    start: () => Promise<void>;
-    stop: () => Promise<void>;
-    sessionId: string | null;
-    analyser?: AnalyserNode | null;
-  };
-};
+// Telemetry loop interval
+const TELEMETRY_INTERVAL_MS = 5000;
 
-type StreamStatus =
-  | "idle"
-  | "connecting"
-  | "recording"
-  | "processing"
-  | "playing"
-  | "error";
-
-type StreamState = {
-  supported: boolean;
-  status: StreamStatus;
-  transcript: string;
-  assistantText: string;
-  vadConfidence: number | null;
-  autoStopReason: string | null;
-  error: string | null;
-  sessionId: string | null;
-  analyser: AnalyserNode | null;
-};
-
-const MAX_RECORDING_MS = 12_000;
-const STREAM_SLICE_MS = 600;
-
-const createSessionId = () => {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-  return `voice-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
-};
-
-const getMediaStream = createClientOnlyFn(async () => {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("media_devices_unavailable");
-  }
-  return navigator.mediaDevices.getUserMedia({ audio: true });
-});
-
-const createAudioElement = createClientOnlyFn((source: string) => {
-  const audio = new Audio(source);
-  audio.preload = "auto";
-  return audio;
-});
-
-const getAudioContext = createClientOnlyFn(() => {
-  if (typeof AudioContext === "undefined") {
-    throw new Error("audio_context_unavailable");
-  }
-  return new AudioContext();
-});
-
-const clearTimeoutClient = createClientOnlyFn((id: number) =>
-  window.clearTimeout(id)
-);
-const setTimeoutClient = createClientOnlyFn(
-  (callback: () => void, ms: number) => window.setTimeout(callback, ms)
-);
-
-export function useVoiceSessionWeb(): UseVoiceSessionWebResult {
+export function useVoiceSessionWeb() {
   const sttMutation = trpc.voice.sttTranscribe.useMutation();
   const ttsMutation = trpc.voice.ttsSynthesize.useMutation();
   const s2sMutation = trpc.voice.speechToSpeech.useMutation();
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timeoutRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const streamClientRef = useRef<VoiceStreamClient | null>(null);
-  const streamRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamMediaRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const vadRef = useRef<EnergyVAD | null>(null);
-  const playbackCursorRef = useRef(0);
-
-  // Telemetry State
-  const _lastChunkTimeRef = useRef<number>(0);
-  const _jitterBufferRef = useRef<number[]>([]);
-  const _seqRef = useRef<number>(0);
-  const _packetLossRef = useRef<number>(0);
-  const _rttRef = useRef<number>(0);
-  const _telemetryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
-
+  // --- State ---
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isStreamingActive, setIsStreamingActive] = useState(false);
-  const [lastResponse, setLastResponse] =
-    useState<SpeechToSpeechResponse | null>(null);
+  const [lastResponse, setLastResponse] = useState<SpeechToSpeechResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [, forceStateUpdate] = useState(0);
-  const streamUrl = getVoiceStreamUrl();
-  const [streamState, setStreamState] = useState<StreamState>({
-    supported: Boolean(streamUrl),
-    status: "idle",
-    transcript: "",
-    assistantText: "",
-    vadConfidence: null,
-    autoStopReason: null,
-    error: null,
-    sessionId: null,
-    analyser: null,
-  });
-  const [_sessionInfo, _setSessionInfo] =
-    useState<VoiceSessionDescriptor | null>(null);
-  const _sessionSurface: VoiceSessionSurface = "web";
-  const sessionIdRef = useRef<string>(createSessionId());
-  const sessionSurface: VoiceSessionSurface = "web";
-  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(
-    null
+  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
+  
+  // We use a ref for session ID to maintain identity across re-renders without triggering effects
+  // Initial ID is generated client-side
+  const sessionIdRef = useRef<string>(
+    typeof crypto !== "undefined" && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : `voice-${Date.now()}`
   );
 
-  const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, {
-    staleTime: 60_000,
-  });
-
-  const syncSessionInfo = useCallback(
-    (snapshot: VoiceSessionDescriptor | null) => {
-      if (snapshot?.id) {
-        sessionIdRef.current = snapshot.id;
-      }
-      setSessionInfo(snapshot);
+  // --- Sub-Hooks ---
+  const audio = useVoiceAudio();
+  
+  const protocol = useVoiceProtocol(sessionIdRef, {
+    onAudioChunk: async (chunk) => {
+      // Decode if needed? Protocol delivers Base64.
+      // use-voice-protocol passes the raw event.
+      // We need to convert base64 -> Float32 for worklet.
+      // For now, let's do a simple base64 decode to float32 buffer here?
+      // Or move `pcm16Base64ToFloat32` to a shared util usable by hooks.
+      const { pcm16Base64ToFloat32 } = await import("@alfred/voice/audio");
+      const floatData = pcm16Base64ToFloat32(chunk.audioBase64);
+      audio.playAudio(floatData);
+      
+      // Visualize TTS Output
+      dispatchMindscapeEvent({
+          type: "voice-output",
+          sourceId: "voice-session",
+          targetId: "user"
+      });
     },
-    []
-  );
+    onInterrupt: () => {
+      audio.clearAudio();
+    }
+  });
 
-  const { data: sessionData, refetch: refetchSessions } =
-    trpc.voice.sessions.useQuery(undefined, {
-      staleTime: 5000,
-      refetchOnWindowFocus: false,
-    });
+  // --- Telemetry State ---
+  const telemetryRef = useRef<{
+    lastTime: number;
+    jitterBuffer: number[];
+    packetLoss: number;
+    seq: number;
+    interval: ReturnType<typeof setInterval> | null;
+  }>({
+    lastTime: 0,
+    jitterBuffer: [],
+    packetLoss: 0,
+    seq: 0,
+    interval: null,
+  });
+
+  // --- Preferences & Session Sync ---
+  const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, { staleTime: 60_000 });
+  const { data: sessionData, refetch: refetchSessions } = trpc.voice.sessions.useQuery(undefined, {
+    staleTime: 5000,
+    refetchOnWindowFocus: false,
+  });
+
+  const syncSessionInfo = useCallback((snapshot: VoiceSessionDescriptor | null) => {
+    if (snapshot?.id) sessionIdRef.current = snapshot.id;
+    setSessionInfo(snapshot);
+  }, []);
 
   useEffect(() => {
-    if (sessionData && sessionData.length > 0) {
-      syncSessionInfo(sessionData[0]);
-    }
+    if (sessionData && sessionData.length > 0) syncSessionInfo(sessionData[0]);
   }, [sessionData, syncSessionInfo]);
 
-  const refreshSession = useCallback(async () => {
-    const result = await refetchSessions();
-    const snapshot =
-      result.data && result.data.length > 0 ? result.data[0] : null;
-    if (snapshot) {
-      syncSessionInfo(snapshot);
-    }
-    return snapshot ?? null;
-  }, [refetchSessions, syncSessionInfo]);
+  // --- Actions ---
 
-  const cleanupStream = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeoutClient(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (vadRef.current) {
-      vadRef.current.stop();
-      vadRef.current = null;
-    }
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      try {
-        recorder.stop();
-      } catch {
-        // ignore
-      }
-    }
-    mediaRecorderRef.current = null;
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-    }
-    audioChunksRef.current = [];
-  }, []);
+  const startStreaming = useCallback(async (options?: { vadThreshold?: number; maxUtteranceMs?: number }) => {
+    if (!protocol.supported) throw new Error("voice_streaming_unavailable");
 
-  const stopStreamingRecorder = useCallback(async () => {
-    const recorder = streamRecorderRef.current;
-    const media = streamMediaRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      await new Promise<void>((resolve) => {
-        recorder.addEventListener(
-          "stop",
-          () => {
-            resolve();
-          },
-          { once: true }
-        );
-        try {
-          recorder.stop();
-        } catch {
-          resolve();
-        }
-      });
-    }
-    streamRecorderRef.current = null;
-    if (media) {
-      media.getTracks().forEach((track) => track.stop());
-    }
-    streamMediaRef.current = null;
-    if (vadRef.current) {
-      vadRef.current.stop();
-      vadRef.current = null;
-    }
-  }, []);
+    // Resolve Codec
+    const sessionCodec = sessionInfo?.codec?.output;
+    const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")?.value as string;
+    const codec = (prefsCodec || sessionCodec || "mp3") as any;
 
-  const ensureAudioPlaybackContext = useCallback(async () => {
-    let ctx = audioContextRef.current;
-    if (!ctx) {
-      ctx = getAudioContext();
-      audioContextRef.current = ctx;
-    }
-    if (ctx.state === "suspended") {
-      await ctx.resume();
-    }
-    return ctx;
-  }, []);
-
-  const finalizeRecording = useCallback(async () => {
-    const chunks = audioChunksRef.current;
-    audioChunksRef.current = [];
-    if (!chunks.length) {
-      return null;
-    }
-    const mimeType = chunks[0]?.type || "audio/webm";
-    const blob = new Blob(chunks, { type: mimeType });
-    const arrayBuffer = await blob.arrayBuffer();
-    return {
-      mimeType,
-      audioBase64: arrayBufferToBase64(arrayBuffer),
-    };
-  }, []);
-
-  const adapter = useMemo(() => {
-    return {
-      configureSession: async () => {},
-      startCapture: async () => {
-        const stream = await getMediaStream();
-        const Recorder =
-          typeof MediaRecorder !== "undefined" ? MediaRecorder : null;
-        if (!Recorder) {
-          throw new Error("media_recorder_unavailable");
-        }
-        const recorder = new Recorder(stream);
-        mediaRecorderRef.current = recorder;
-        mediaStreamRef.current = stream;
-        audioChunksRef.current = [];
-
-        recorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-        recorder.onerror = (event) => {
-          cleanupStream();
-          const message = event.error?.message ?? "media_recorder_error";
-          throw new Error(message);
-        };
-        recorder.start();
-        timeoutRef.current = setTimeoutClient(() => {
-          if (recorder.state !== "inactive") {
-            try {
-              recorder.stop();
-            } catch {
-              // ignore stop failure
-            }
-          }
-        }, MAX_RECORDING_MS);
-      },
-      stopCapture: async () => {
-        const recorder = mediaRecorderRef.current;
-        if (!recorder) {
-          return null;
-        }
-        if (recorder.state === "inactive") {
-          cleanupStream();
-          return finalizeRecording();
-        }
-
-        return await new Promise<{
-          audioBase64: string;
-          mimeType: string;
-        } | null>((resolve, reject) => {
-          const handleStop = async () => {
-            try {
-              const clip = await finalizeRecording();
-              cleanupStream();
-              resolve(clip);
-            } catch (err) {
-              reject(
-                err instanceof Error ? err : new Error("recording_failed")
-              );
-            }
-          };
-          recorder.addEventListener("stop", handleStop, { once: true });
-          try {
-            recorder.stop();
-          } catch (err) {
-            recorder.removeEventListener("stop", handleStop);
-            reject(err instanceof Error ? err : new Error("recording_failed"));
-          }
-        });
-      },
-      play: async (audioBase64: string, mimeType: string) => {
-        if (!audioBase64) {
-          return;
-        }
-        const source = `data:${mimeType};base64,${audioBase64}`;
-        const audio = createAudioElement(source);
-        if (audioRef.current) {
-          try {
-            audioRef.current.pause();
-          } catch {
-            // ignore
-          }
-        }
-        audioRef.current = audio;
-        try {
-          await audio.play();
-        } catch (err) {
-          throw err instanceof Error ? err : new Error("audio_playback_failed");
-        }
-      },
-      stopAudio: () => {
-        if (audioRef.current) {
-          try {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-          } catch {
-            // ignore
-          }
-        }
-        if (audioContextRef.current) {
-          audioContextRef.current.suspend().catch(() => {});
-        }
-      },
-    };
-  }, [cleanupStream, finalizeRecording]);
-
-  const voiceClient = useMemo<VoiceClient>(
-    () => ({
-      sttTranscribe: (input) => sttMutation.mutateAsync(input),
-      ttsSynthesize: (input) => ttsMutation.mutateAsync(input),
-      speechToSpeech: (input) => s2sMutation.mutateAsync(input),
-    }),
-    [s2sMutation, sttMutation, ttsMutation]
-  );
-
-  const reportTelemetry = useCallback((client: VoiceStreamClient) => {
-    if (_jitterBufferRef.current.length === 0 && _packetLossRef.current === 0) {
-      return;
-    }
-
-    const avgJitter =
-      _jitterBufferRef.current.length > 0
-        ? _jitterBufferRef.current.reduce((a, b) => a + b, 0) /
-          _jitterBufferRef.current.length
-        : 0;
-
-    // Send report
-    client.sendTelemetry?.({
-      packetLoss: _packetLossRef.current,
-      jitter: avgJitter,
-      rtt: _rttRef.current,
+    const client = await protocol.connect({
+      surface: "web",
+      codec,
+      vadThreshold: options?.vadThreshold,
+      maxUtteranceMs: options?.maxUtteranceMs,
     });
 
-    // Reset buffers
-    _jitterBufferRef.current = [];
-    _packetLossRef.current = 0;
-  }, []);
-
-  const handleStreamTtsChunk = useCallback(
-    async (chunk: Extract<VoiceStreamServerEvent, { type: "tts_chunk" }>) => {
-      // Telemetry
-      const arrivalTime = _now();
-      if (_lastChunkTimeRef.current > 0) {
-        const delta = arrivalTime - _lastChunkTimeRef.current;
-        // Simple jitter calculation: deviation from mean (assuming regular chunks)
-        // Or just store inter-arrival time for server to analyze.
-        // Server expects "jitter" metric. Let's approximate as absolute delta for now.
-        // ideally: jitter = (15/16)*jitter + (1/16)*|D(i-1,i)|
-        // but we just store samples for simple average.
-        // Actually, if chunks are not perfectly regular, delta varies.
-        // Let's just store raw delta and let average represent "irregularity" if we assume constant flow.
-        _jitterBufferRef.current.push(Math.abs(delta));
-      }
-      _lastChunkTimeRef.current = arrivalTime;
-
-      if (chunk.sequence > _seqRef.current + 1) {
-        _packetLossRef.current += chunk.sequence - (_seqRef.current + 1);
-      }
-      _seqRef.current = chunk.sequence;
-
-      try {
-        const ctx = await ensureAudioPlaybackContext();
-        const floatData = pcm16Base64ToFloat32(chunk.audioBase64);
-        const buffer = ctx.createBuffer(1, floatData.length, 16_000);
-        buffer.copyToChannel(floatData, 0);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        const startTime = Math.max(ctx.currentTime, playbackCursorRef.current);
-        source.start(startTime);
-        playbackCursorRef.current = startTime + buffer.duration;
-        setStreamState((prev) => ({
-          ...prev,
-          status: "playing",
-        }));
-      } catch (err) {
-        setStreamState((prev) => ({
-          ...prev,
-          status: "error",
-          error:
-            err instanceof Error ? err.message : "voice_stream_playback_failed",
-        }));
-      }
-    },
-    [ensureAudioPlaybackContext]
-  );
-
-  const handleStreamAutoStop = useCallback(
-    async (reason: "manual" | "silence" | "timeout") => {
-      setStreamState((prev) => ({
-        ...prev,
-        autoStopReason: reason,
-        status: "processing",
-      }));
-      await stopStreamingRecorder();
-      setIsStreamingActive(false);
-    },
-    [stopStreamingRecorder]
-  );
-
-  const streamHandlers = useMemo<VoiceStreamClientHandlers>(
-    () => ({
-      onSessionStarted: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          status: "recording",
-          sessionId: event.sessionId,
-          transcript: "",
-          assistantText: "",
-          error: null,
-          autoStopReason: null,
-        }));
-        sessionIdRef.current = event.sessionId;
-      },
-      onPartialTranscript: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          transcript: event.text,
-        }));
-      },
-      onFinalTranscript: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          transcript: event.text,
-        }));
-      },
-      onVadState: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          vadConfidence: event.vadConfidence ?? null,
-        }));
-      },
-      onAutoStop: (event) => {
-        void handleStreamAutoStop(event.reason);
-      },
-      onAssistantMessage: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          assistantText: event.text,
-        }));
-      },
-      onTtsChunk: handleStreamTtsChunk,
-      onTtsComplete: () => {
-        setStreamState((prev) => ({
-          ...prev,
-          status: "idle",
-        }));
-      },
-      onInterrupt: () => {
-        // Stop audio context and clear buffer
-        if (audioContextRef.current) {
-          audioContextRef.current.suspend().catch(() => {});
-          // Resume immediately? No, we want to stop playback.
-          // Actually, we should probably create a new context or just stop sources?
-          // Suspending is fine, but we need to resume for next turn.
-          // Better to just update state and let the next chunk handler resume it?
-          // Or we rely on `ensureAudioPlaybackContext` to resume.
-        }
-        setStreamState((prev) => ({
-          ...prev,
-          status: "recording", // Back to recording mode
-        }));
-      },
-      onStatus: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          status: event.state,
-        }));
-      },
-      onError: (event) => {
-        setStreamState((prev) => ({
-          ...prev,
-          status: "error",
-          error: event.message,
-        }));
-        setIsStreamingActive(false);
-      },
-    }),
-    [handleStreamAutoStop, handleStreamTtsChunk]
-  );
-
-  const getStreamClient = useCallback(() => {
-    if (!streamUrl) {
-      throw new Error("voice_stream_url_missing");
-    }
-    if (streamClientRef.current) {
-      return streamClientRef.current;
-    }
-    const client = new VoiceStreamClient(
-      {
-        url: streamUrl,
-      },
-      streamHandlers
-    );
-    streamClientRef.current = client;
-    return client;
-  }, [streamHandlers, streamUrl]);
-
-  const stopStreaming = useCallback(
-    async (reason?: "manual" | "silence" | "timeout") => {
-      if (_telemetryIntervalRef.current) {
-        clearInterval(_telemetryIntervalRef.current);
-        _telemetryIntervalRef.current = null;
-      }
-      await stopStreamingRecorder();
-      setIsStreamingActive(false);
-      try {
-        await streamClientRef.current?.stop(reason ?? "manual");
-      } catch (err) {
-        setStreamState((prev) => ({
-          ...prev,
-          error:
-            err instanceof Error ? err.message : "voice_stream_stop_failed",
-        }));
-      }
-    },
-    [stopStreamingRecorder]
-  );
-
-  const startStreamingRecorder = useCallback(
-    async (client: VoiceStreamClient) => {
-      const stream = await getMediaStream();
-      const Recorder =
-        typeof MediaRecorder !== "undefined" ? MediaRecorder : null;
-      if (!Recorder) {
-        throw new Error("media_recorder_unavailable");
-      }
-      await ensureAudioPlaybackContext().catch(() => {});
-
-      // Initialize VAD
-      const vad = new EnergyVAD();
-      vad.start(stream);
-      vadRef.current = vad;
-      setStreamState((prev) => ({ ...prev, analyser: vad.getAnalyser() }));
-
-      vad.on("speech_start", () => {
-        // Barge-in: Stop playback if speaking starts
-        if (
-          audioContextRef.current &&
-          audioContextRef.current.state === "running"
-        ) {
-          audioContextRef.current.suspend().catch(() => {});
-          setStreamState((prev) => ({ ...prev, status: "recording" }));
-        }
-        if (audioRef.current && !audioRef.current.paused) {
-          adapter.stopAudio();
-          setStreamState((prev) => ({ ...prev, status: "recording" }));
-        }
-      });
-
-      vad.on("speech_end", () => {
-        // Client-side Auto-stop
-        // If we are currently recording, stop on silence
-        if (isStreamingActive || streamState.status === "recording") {
-          void stopStreaming("silence");
-        }
-      });
-
-      const recorder = new Recorder(stream);
-      streamRecorderRef.current = recorder;
-      streamMediaRef.current = stream;
-      setIsStreamingActive(true);
-      recorder.start(STREAM_SLICE_MS);
-      recorder.ondataavailable = async (event) => {
-        if (event.data && event.data.size > 0) {
-          try {
-            const buffer = await event.data.arrayBuffer();
-            // Send raw binary buffer
-            await client.sendAudioChunk({
-              audio: buffer,
-              mimeType: event.data.type || "audio/webm",
-            });
-          } catch (err) {
-            setStreamState((prev) => ({
-              ...prev,
-              status: "error",
-              error:
-                err instanceof Error
-                  ? err.message
-                  : "voice_stream_chunk_failed",
-            }));
-          }
-        }
-      };
-      recorder.onerror = (event) => {
-        const message = event.error?.message ?? "media_recorder_error";
-        setStreamState((prev) => ({
-          ...prev,
-          status: "error",
-          error: message,
-        }));
-      };
-      setStreamState((prev) => ({
-        ...prev,
-        status: "recording",
-      }));
-    },
-    [
-      ensureAudioPlaybackContext,
-      isStreamingActive,
-      streamState.status,
-      stopStreaming,
-      adapter,
-    ]
-  );
-
-  const preferredStreamCodec = useMemo<VoiceStreamCodec>(() => {
-    const sessionCodec = sessionInfo?.codec?.output;
-    const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")
-      ?.value as string;
-    const codec = prefsCodec || sessionCodec;
-
-    if (
-      codec === "mp3" ||
-      codec === "opus" ||
-      codec === "wav" ||
-      codec === "pcm"
-    ) {
-      return codec;
-    }
-    return "mp3";
-  }, [sessionInfo, prefs]);
-
-  const startStreaming = useCallback(async () => {
-    if (!streamUrl) {
-      throw new Error("voice_streaming_unavailable");
-    }
-    setStreamState((prev) => ({
-      ...prev,
-      status: "connecting",
-      transcript: "",
-      assistantText: "",
-      autoStopReason: null,
-      error: null,
-    }));
-    try {
-      const client = getStreamClient();
-      await client.startSession({
-        sessionId: sessionIdRef.current,
-        surface: sessionSurface,
-        codec: preferredStreamCodec,
-      });
-
-      // Start telemetry reporting loop
-      if (_telemetryIntervalRef.current) {
-        clearInterval(_telemetryIntervalRef.current);
-      }
-      _telemetryIntervalRef.current = setInterval(() => {
-        reportTelemetry(client);
-      }, 5000); // Every 5s
-
-      await startStreamingRecorder(client);
-    } catch (err) {
-      setStreamState((prev) => ({
-        ...prev,
-        status: "error",
-        error: err instanceof Error ? err.message : "voice_stream_start_failed",
-      }));
-      setIsStreamingActive(false);
-      throw err;
-    }
-  }, [
-    getStreamClient,
-    preferredStreamCodec,
-    startStreamingRecorder,
-    streamUrl,
-  ]);
-
-  const session = useMemo(
-    () => createVoiceSession(adapter, voiceClient),
-    [adapter, voiceClient]
-  );
-
-  const syncState = useCallback(() => {
-    forceStateUpdate((value) => value + 1);
-  }, []);
-
-  const start = useCallback(async () => {
-    setError(null);
-    setLastResponse(null);
-    await session.start();
-    setIsRecording(true);
-    syncState();
-  }, [session, syncState]);
-
-  const stopAndTranscribe = useCallback(async () => {
-    if (!isRecording) {
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      await session.stopAndTranscribe();
-      setError(null);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "voice_transcription_failed";
-      setError(message);
-      throw err;
-    } finally {
-      setIsProcessing(false);
-      setIsRecording(false);
-      syncState();
-    }
-  }, [isRecording, session, syncState]);
-
-  const speechToSpeech = useCallback(
-    async (overrides?: SpeechOverrides) => {
-      if (!session.speechToSpeech) {
-        throw new Error("speech_to_speech_unavailable");
-      }
-      setIsProcessing(true);
-      try {
-        const result = await session.speechToSpeech({
-          ...overrides,
-          sessionId: sessionIdRef.current,
-          surface: sessionSurface,
+    // Start Audio Capture
+    await audio.startCapture(
+      client,
+      () => {
+        // Speech Start (Barge-in handled in useVoiceAudio + protocol interrupt)
+        dispatchMindscapeEvent({
+            type: "voice-input",
+            sourceId: "user", // Assumes UserNode is "user"
+            targetId: "voice-session" // Assumes VoiceSessionNode is "voice-session" (if exists) or pulsing "user" output
         });
-        if (result?.session) {
-          syncSessionInfo(result.session);
-        }
-        setLastResponse(result ?? null);
-        setError(null);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "speech_to_speech_failed";
-        setError(message);
-        throw err;
-      } finally {
-        setIsProcessing(false);
-        setIsRecording(false);
-        syncState();
+      },
+      () => {
+        // Speech End
       }
-    },
-    [session, syncSessionInfo, syncState]
-  );
+    );
 
-  const speak = useCallback(
-    async (input: Parameters<typeof session.speak>[0]) => {
-      try {
-        await session.speak(input);
-        setError(null);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "voice_speak_failed";
-        setError(message);
-        throw err;
-      } finally {
-        syncState();
-      }
-    },
-    [session, syncState]
-  );
+    // Start Telemetry
+    if (telemetryRef.current.interval) clearInterval(telemetryRef.current.interval);
+    telemetryRef.current.interval = setInterval(() => {
+      const { jitterBuffer, packetLoss } = telemetryRef.current;
+      if (jitterBuffer.length === 0 && packetLoss === 0) return;
+      
+      const avgJitter = jitterBuffer.length > 0 
+        ? jitterBuffer.reduce((a, b) => a + b, 0) / jitterBuffer.length 
+        : 0;
+        
+      client.sendTelemetry?.({ packetLoss, jitter: avgJitter, rtt: 0 }); // RTT TODO
+      
+      telemetryRef.current.jitterBuffer = [];
+      telemetryRef.current.packetLoss = 0;
+    }, TELEMETRY_INTERVAL_MS);
 
-  const clear = useCallback(() => {
-    session.clear();
-    setLastResponse(null);
-    setError(null);
-    syncState();
-  }, [session, syncState]);
+  }, [protocol, audio, sessionInfo, prefs]);
 
-  useEffect(() => {
-    setStreamState((prev) => ({
-      ...prev,
-      supported: Boolean(streamUrl),
-    }));
-  }, [streamUrl]);
+  const stopStreaming = useCallback(async (reason?: "manual" | "silence" | "timeout") => {
+    if (telemetryRef.current.interval) {
+      clearInterval(telemetryRef.current.interval);
+      telemetryRef.current.interval = null;
+    }
+    audio.stopCapture();
+    await protocol.disconnect(reason);
+  }, [audio, protocol]);
 
+  // Legacy REST Actions (VoiceSession)
+  const voiceClient = useMemo<VoiceClient>(() => ({
+    sttTranscribe: (input) => sttMutation.mutateAsync(input),
+    ttsSynthesize: (input) => ttsMutation.mutateAsync(input),
+    speechToSpeech: (input) => s2sMutation.mutateAsync(input),
+  }), [s2sMutation, sttMutation, ttsMutation]);
+
+  // Adapter for legacy createVoiceSession (mostly for REST fallback)
+  const adapter = useMemo(() => ({
+    configureSession: async () => {},
+    startCapture: async () => {}, // No-op for REST
+    stopCapture: async () => null,
+    play: async () => {},
+    stopAudio: () => audio.clearAudio(),
+  }), [audio]);
+
+  const session = useMemo(() => createVoiceSession(adapter, voiceClient), [adapter, voiceClient]);
+
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (_telemetryIntervalRef.current) {
-        clearInterval(_telemetryIntervalRef.current);
-      }
-      cleanupStream();
-      stopStreamingRecorder().catch(() => {});
-      const client = streamClientRef.current;
-      if (client) {
-        void client.close();
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-        audioContextRef.current = null;
-      }
-      if (audioRef.current) {
-        try {
-          audioRef.current.pause();
-        } catch {
-          // ignore
-        }
-        audioRef.current.src = "";
-        audioRef.current = null;
-      }
+      if (telemetryRef.current.interval) clearInterval(telemetryRef.current.interval);
+      audio.stopCapture();
+      protocol.disconnect("manual");
     };
-  }, [cleanupStream, stopStreamingRecorder]);
-
-  const busy =
-    isProcessing ||
-    sttMutation.isPending ||
-    ttsMutation.isPending ||
-    s2sMutation.isPending;
-
-  const streamApi = {
-    supported: streamState.supported,
-    status: streamState.status,
-    transcript: streamState.transcript,
-    assistantText: streamState.assistantText,
-    vadConfidence: streamState.vadConfidence,
-    autoStopReason: streamState.autoStopReason,
-    error: streamState.error,
-    isActive: isStreamingActive,
-    sessionId: streamState.sessionId,
-    analyser: streamState.analyser,
-    start: streamState.supported
-      ? startStreaming
-      : async () => {
-          throw new Error("voice_streaming_unavailable");
-        },
-    stop: streamState.supported ? stopStreaming : async () => {},
-  };
+  }, [audio, protocol]);
 
   return {
-    state: session.state,
-    isRecording,
-    isProcessing: busy,
+    state: session.state, // Legacy state (mostly idle for streaming)
+    isRecording, // TODO: wire to protocol state
+    isProcessing: protocol.state.status === "processing" || isProcessing,
     lastResponse,
-    error,
-    start,
-    stopAndTranscribe,
-    speechToSpeech,
-    speak,
-    clear,
-    stream: streamApi,
+    error: protocol.state.error || error,
+    start: async () => {}, // Legacy
+    stopAndTranscribe: async () => {}, // Legacy
+    speechToSpeech: async () => {}, // Legacy
+    speak: async () => {},
+    clear: () => {
+      session.clear();
+      setLastResponse(null);
+      setError(null);
+    },
     session: sessionInfo,
-    refreshSession,
+    refreshSession: async () => {
+        const res = await refetchSessions();
+        return res.data?.[0] || null;
+    },
+    stream: {
+      supported: protocol.supported,
+      status: protocol.state.status,
+      transcript: protocol.state.transcript,
+      assistantText: protocol.state.assistantText,
+      vadConfidence: protocol.state.vadConfidence,
+      autoStopReason: protocol.state.autoStopReason,
+      error: protocol.state.error,
+      isActive: protocol.state.status !== "idle" && protocol.state.status !== "error",
+      sessionId: protocol.state.sessionId,
+      analyser: audio.analyser,
+      start: startStreaming,
+      stop: stopStreaming,
+    }
   };
 }

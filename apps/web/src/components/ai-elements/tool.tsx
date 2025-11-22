@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
+import { useEffect } from "react";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
@@ -72,7 +74,20 @@ export const ToolHeader = ({
   type,
   state,
   ...props
-}: ToolHeaderProps) => (
+}: ToolHeaderProps) => {
+  useEffect(() => {
+    // Dispatch mindscape event on state changes
+    // Specifically when tool is running (input-available) or awaiting approval
+    if (state === "input-available" || state === "approval-requested") {
+        dispatchMindscapeEvent({
+            type: "tool-call",
+            targetId: `tool-${type}`, // Assumes tool nodes are prefixed with "tool-"
+            sourceId: "chat" // Assumes chat node is "chat" (or active chat)
+        });
+    }
+  }, [state, type]);
+
+  return (
   <CollapsibleTrigger
     className={cn(
       "flex w-full items-center justify-between gap-4 p-3",
@@ -89,7 +104,8 @@ export const ToolHeader = ({
     </div>
     <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
   </CollapsibleTrigger>
-);
+  );
+};
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 
