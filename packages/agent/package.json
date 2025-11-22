@@ -1,30 +1,47 @@
 {
   "name": "@alfred/agent",
   "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -b",
+    "build": "tsdown"
+  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    },
-    "./assistant/*": {
-      "types": "./assistant/src/*.ts",
-      "default": "./assistant/src/*.ts"
+      "bun": "./src/index.ts",
+      "default": "./src/index.ts",
+      "types": "./dist/index.d.ts"
     },
     "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./src/*.ts"
+      "bun": "./src/*.ts",
+      "default": "./src/*.ts",
+      "types": "./dist/*.d.ts"
+    },
+    "./integrations/*": {
+      "bun": "./src/integrations/*.ts",
+      "default": "./src/integrations/*.ts",
+      "types": "./src/integrations/*.ts"
+    },
+    "./orchestrator/*": {
+      "bun": "./src/orchestrator/*.ts",
+      "default": "./src/orchestrator/*.ts",
+      "types": "./src/orchestrator/*.ts"
+    },
+    "./utils/*": {
+      "bun": "./src/utils/*.ts",
+      "default": "./src/utils/*.ts",
+      "types": "./src/utils/*.ts"
+    },
+    "./workflow/*": {
+      "bun": "./src/workflow/*.ts",
+      "default": "./src/workflow/*.ts",
+      "types": "./src/workflow/*.ts"
+    },
+    "./assistant/*": {
+      "bun": "./assistant/src/*.ts",
+      "default": "./assistant/src/*.ts",
+      "types": "./assistant/src/*.ts"
     }
-  },
-  "scripts": {
-    "build": "tsdown",
-    "typecheck": "tsc -b",
-    "test": "bun test"
-  },
-  "devDependencies": {
-    "tsdown": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.49",
@@ -33,12 +50,24 @@
     "@alfred/db": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "@alfred/metrics": "workspace:*",
+    "@alfred/policy": "workspace:*",
+    "@alfred/type": "workspace:*",
     "@linear/sdk": "^53.0.0",
     "@lmnr-ai/lmnr": "^0.7.4",
     "@openai/codex-sdk": "^0.61.0",
     "lru-cache": "^11.0.1",
+    "oxc-parser": "^0.98.0",
     "p-retry": "6.2.0",
     "playwright": "catalog:",
+    "prom-client": "^15.1.3",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

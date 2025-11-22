@@ -4,7 +4,7 @@ import {
   voiceSessionJitterMillis,
   voiceSessionPacketLossTotal,
   voiceSessionRttMillis,
-} from "@alfred/api/metrics";
+} from "../metrics";
 import type {
   VoiceStreamAudioChunkPayload,
   VoiceStreamServerEvent,
@@ -19,7 +19,8 @@ import {
   PCM_MIME_TYPE,
   type TargetFormat,
 } from "../audio/codec";
-import type { VoiceSession, VoiceSessionManager } from "./session";
+import type { VoiceRegistry } from "./registry";
+import type { VoiceSession } from "./session";
 
 export type VoiceSocketData = {
   userId: string;
@@ -109,7 +110,7 @@ function parseMessage(message: string | ArrayBuffer | Uint8Array) {
 
 export class VoiceSocketHandler {
   constructor(
-    private readonly sessionManager: VoiceSessionManager,
+    private readonly sessionRegistry: VoiceRegistry,
     private readonly hooks: VoiceSocketHooks
   ) {}
 
@@ -209,8 +210,8 @@ export class VoiceSocketHandler {
     const userId = ws.data.userId;
 
     // Create processing session
-    this.sessionManager.removeSession(sessionId);
-    this.sessionManager.createSession(userId, sessionId, language);
+    this.sessionRegistry.removeSession(sessionId);
+    this.sessionRegistry.createSession(userId, sessionId, language);
 
     const requestedCodec = normalizeCodec(payload.codec);
     const negotiatedCodec = requestedCodec; // Simplified negotiation
@@ -257,7 +258,7 @@ export class VoiceSocketHandler {
       throw new Error("session_not_started");
     }
 
-    const session = this.sessionManager.getSession(sessionId);
+    const session = this.sessionRegistry.getSession(sessionId);
     if (!session) {
       throw new Error("session_missing");
     }
@@ -350,7 +351,7 @@ export class VoiceSocketHandler {
       return;
     }
 
-    const session = this.sessionManager.getSession(sessionId);
+    const session = this.sessionRegistry.getSession(sessionId);
     if (!session) {
       return;
     }
@@ -367,7 +368,7 @@ export class VoiceSocketHandler {
     }
 
     // Cleanup session processing state (but keep socket session ID for playback)
-    this.sessionManager.removeSession(sessionId);
+    this.sessionRegistry.removeSession(sessionId);
     // Re-create session for next turn? Or just use it for TTS?
     // Actually we removed it, so we can't use it for TTS synthesis if TTS uses session.
     // But `VoiceSession.streamSynthesis` uses `ttsPool`.
@@ -530,6 +531,6 @@ export class VoiceSocketHandler {
   }
 
   public async cleanup(sessionId: string) {
-    this.sessionManager.removeSession(sessionId);
+    this.sessionRegistry.removeSession(sessionId);
   }
 }

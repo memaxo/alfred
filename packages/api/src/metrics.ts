@@ -6,6 +6,27 @@ import client from "prom-client";
 
 export { metricsRegistry };
 
+const metricsRegistryPatchKey = Symbol.for("alfred.metrics.registry.dedupe");
+
+if (!(globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey]) {
+  const originalRegisterMetric =
+    metricsRegistry.registerMetric.bind(metricsRegistry);
+
+  const patchedRegisterMetric: typeof metricsRegistry.registerMetric = (
+    metric
+  ) => {
+    const existing = metricsRegistry.getSingleMetric((metric as any).name);
+    if (existing && existing !== metric) {
+      metricsRegistry.removeSingleMetric((metric as any).name);
+    }
+    return originalRegisterMetric(metric);
+  };
+
+  metricsRegistry.registerMetric = patchedRegisterMetric;
+  (globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey] =
+    true;
+}
+
 export const trpcRequestsTotal = new client.Counter({
   name: "trpc_requests_total",
   help: "Count of tRPC requests by procedure and type.",
@@ -49,18 +70,41 @@ export const policyObligationsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
-export const runRegistryEventsTotal = new client.Counter({
-  name: "run_registry_events_total",
-  help: "Count of run registry events grouped by event, backend, and outcome.",
-  labelNames: ["event", "backend", "outcome"] as const,
+export {
+  runRegistryDispatchDurationSeconds,
+  runRegistryEventsTotal,
+  workflowStreamEventsTotal,
+  workflowStreamDurationSeconds,
+  workflowProvenanceDurationSeconds,
+  workflowProvenanceEdgesTotal,
+  runnerStepsTotal,
+  runnerErrorsTotal,
+  replayQueriesTotal,
+  replayQueryDurationSeconds,
+  linearActivityEmissionsTotal,
+  linearActivityDurationSeconds,
+  linearSessionOperationsTotal,
+  linearWebhookEventsTotal,
+  linearWebhookWorkflowStartsTotal,
+  linearWebhookWorkflowCancelsTotal,
+  multiAgentTasksTotal,
+  multiAgentWavesTotal,
+  multiAgentAgentDurationSeconds,
+  multiAgentErrorsTotal,
+} from "@alfred/agent/workflow/metrics";
+
+export const graphQueriesTotal = new client.Counter({
+  name: "graph_queries_total",
+  help: "Count of graph queries grouped by kind and resource.",
+  labelNames: ["kind", "resource"] as const,
   registers: [metricsRegistry],
 });
 
-export const runRegistryDispatchDurationSeconds = new client.Histogram({
-  name: "run_registry_dispatch_duration_seconds",
-  help: "Duration of run registry dispatch operations grouped by backend and outcome.",
-  labelNames: ["backend", "outcome"] as const,
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+export const graphQueryDurationSeconds = new client.Histogram({
+  name: "graph_query_duration_seconds",
+  help: "Duration of graph queries in seconds grouped by kind.",
+  labelNames: ["kind"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [metricsRegistry],
 });
 
@@ -259,37 +303,6 @@ export const assistantToolCallsTotal = new client.Counter({
 });
 
 // wired via lazy hooks
-
-export const multiAgentTasksTotal = new client.Counter({
-  name: "multi_agent_tasks_total",
-  help: "Count of multi-agent subtasks grouped by status",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const multiAgentWavesTotal = new client.Counter({
-  name: "multi_agent_waves_total",
-  help: "Count of multi-agent waves grouped by status",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const multiAgentAgentDurationSeconds = new client.Histogram({
-  name: "multi_agent_agent_duration_seconds",
-  help: "Duration of agent runs grouped by role/outcome",
-  labelNames: ["role", "outcome"] as const,
-  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300],
-  registers: [metricsRegistry],
-});
-
-export const multiAgentErrorsTotal = new client.Counter({
-  name: "multi_agent_errors_total",
-  help: "Count of multi-agent errors grouped by kind",
-  labelNames: ["kind"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
 export const assistantEscalationsTotal = new client.Counter({
   name: "assistant_escalations_total",
   help: "Count of assistant escalations grouped by kind.",
@@ -383,358 +396,49 @@ export const historySummarizationsTotal = new client.Counter({
 
 // wired via lazy hooks
 
-export const voiceSttTotal = new client.Counter({
-  name: "voice_stt_total",
-  help: "Count of voice STT invocations grouped by provider and status.",
-  labelNames: ["provider", "status"] as const,
+export {
+  voiceSttTotal,
+  voiceSttDurationSeconds,
+  voiceTtsTotal,
+  voiceTtsDurationSeconds,
+  voiceStreamEventsTotal,
+  voiceStreamLatencySeconds,
+  voiceQueueDepthCurrent,
+  voiceQueueDrainDurationSeconds,
+  voiceTranscodeDurationSeconds,
+  voiceProcessHealth,
+  voiceSessionPacketLossTotal,
+  voiceSessionJitterMillis,
+  voiceSessionRttMillis,
+  recordVoiceStt,
+  recordVoiceTts,
+  type VoiceMetricStatus,
+} from "@alfred/voice/metrics";
+
+
+export const assistantGenerateDurationSeconds = new client.Histogram({
+  name: "assistant_generate_duration_seconds",
+  help: "Duration of assistant generation in seconds.",
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
   registers: [metricsRegistry],
 });
 
 export const assistantGenerateRequestsTotal = new client.Counter({
   name: "assistant_generate_requests_total",
-  help: "Count of assistant generate requests grouped by status.",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const assistantGenerateDurationSeconds = new client.Histogram({
-  name: "assistant_generate_duration_seconds",
-  help: "Duration of assistant generate requests grouped by status.",
-  labelNames: ["status"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export const orchestratorGenerateRequestsTotal = new client.Counter({
-  name: "orchestrator_generate_requests_total",
-  help: "Count of orchestrator generate requests grouped by status.",
-  labelNames: ["status"] as const,
+  help: "Total number of assistant generation requests.",
   registers: [metricsRegistry],
 });
 
 export const orchestratorGenerateDurationSeconds = new client.Histogram({
   name: "orchestrator_generate_duration_seconds",
-  help: "Duration of orchestrator generate requests grouped by status.",
-  labelNames: ["status"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  help: "Duration of orchestrator generation in seconds.",
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
   registers: [metricsRegistry],
 });
 
-export const voiceSttDurationSeconds = new client.Histogram({
-  name: "voice_stt_duration_seconds",
-  help: "Duration of voice STT inference in seconds grouped by provider.",
-  labelNames: ["provider"] as const,
-  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
-  registers: [metricsRegistry],
-});
-
-export const voiceTtsTotal = new client.Counter({
-  name: "voice_tts_total",
-  help: "Count of voice TTS invocations grouped by provider and status.",
-  labelNames: ["provider", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceTtsDurationSeconds = new client.Histogram({
-  name: "voice_tts_duration_seconds",
-  help: "Duration of voice TTS synthesis in seconds grouped by provider.",
-  labelNames: ["provider"] as const,
-  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export type VoiceMetricStatus = "ok" | "error" | "cancel";
-
-// Voice streaming metrics (lightweight stubs to satisfy imports)
-// Voice stream metrics are defined below alongside other stream metrics
-
-const coerceProvider = (provider?: string) =>
-  provider && provider.length > 0 ? provider : "unknown";
-
-const observeDuration = (
-  histogram: client.Histogram,
-  provider: string,
-  durationSeconds?: number
-) => {
-  if (typeof durationSeconds !== "number") {
-    return;
-  }
-  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
-    return;
-  }
-  histogram.observe({ provider }, durationSeconds);
-};
-
-export function recordVoiceStt({
-  provider,
-  status,
-  durationSeconds,
-}: {
-  provider?: string;
-  status: VoiceMetricStatus;
-  durationSeconds?: number;
-}) {
-  const normalizedProvider = coerceProvider(provider);
-  voiceSttTotal.inc({ provider: normalizedProvider, status });
-  observeDuration(voiceSttDurationSeconds, normalizedProvider, durationSeconds);
-}
-
-export function recordVoiceTts({
-  provider,
-  status,
-  durationSeconds,
-}: {
-  provider?: string;
-  status: VoiceMetricStatus;
-  durationSeconds?: number;
-}) {
-  const normalizedProvider = coerceProvider(provider);
-  voiceTtsTotal.inc({ provider: normalizedProvider, status });
-  observeDuration(voiceTtsDurationSeconds, normalizedProvider, durationSeconds);
-}
-
-export const assistantStreamEventsTotal = new client.Counter({
-  name: "assistant_stream_events_total",
-  help: "Count of assistant stream events grouped by event type.",
-  labelNames: ["event"] as const,
-  registers: [metricsRegistry],
-});
-
-export const assistantStreamDurationSeconds = new client.Histogram({
-  name: "assistant_stream_duration_seconds",
-  help: "Duration of assistant streams in seconds grouped by terminal status.",
-  labelNames: ["status"] as const,
-  buckets: [0.25, 0.5, 1, 2, 5, 10, 30, 60, 120],
-  registers: [metricsRegistry],
-});
-
-type AssistantStreamStatus = "ok" | "error" | "cancel";
-
-function normalizeEventLabel(event: string): string {
-  if (!event) {
-    return "unknown";
-  }
-  return event.trim().toLowerCase() || "unknown";
-}
-
-export function recordStreamEvent(event: string): void {
-  try {
-    assistantStreamEventsTotal.inc({ event: normalizeEventLabel(event) });
-  } catch (error) {
-    // Metrics failures should not break critical paths (streaming)
-    // Logged at warn level to maintain observability without impacting performance
-    logger.warn("metrics_stream_event_failed", {
-      event,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-export function startStreamTimer():
-  | ((status: AssistantStreamStatus) => void)
-  | undefined {
-  try {
-    const stopTimer = assistantStreamDurationSeconds.startTimer();
-    return (status: AssistantStreamStatus) => {
-      try {
-        stopTimer({ status });
-      } catch (error) {
-        // Metrics failures should not break critical paths (streaming)
-        // Logged at warn level to maintain observability without impacting performance
-        logger.warn("metrics_timer_stop_failed", {
-          status,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    };
-  } catch (error) {
-    // Metrics failures should not break critical paths (streaming)
-    // Logged at warn level to maintain observability without impacting performance
-    logger.warn("metrics_timer_create_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return;
-  }
-}
-
-export const voiceStreamEventsTotal = new client.Counter({
-  name: "voice_stream_events_total",
-  help: "Count of voice stream events grouped by event type and status.",
-  labelNames: ["event", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceStreamLatencySeconds = new client.Histogram({
-  name: "voice_stream_latency_seconds",
-  help: "Latency of voice stream operations in seconds grouped by stage.",
-  labelNames: ["stage"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export const voiceQueueDepthCurrent = new client.Gauge({
-  name: "voice_queue_depth_current",
-  help: "Current depth of voice queue.",
-  registers: [metricsRegistry],
-});
-
-export const voiceQueueDrainDurationSeconds = new client.Histogram({
-  name: "voice_queue_drain_duration_seconds",
-  help: "Duration of voice queue drain operations in seconds.",
-  registers: [metricsRegistry],
-  buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
-});
-
-export const voiceTranscodeDurationSeconds = new client.Histogram({
-  name: "voice_transcode_duration_seconds",
-  help: "Duration of voice transcoding operations in seconds grouped by type.",
-  labelNames: ["type"] as const,
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export const voiceProcessHealth = new client.Gauge({
-  name: "voice_process_health",
-  help: "Health status of voice processes (1 = healthy, 0 = unhealthy) grouped by type.",
-  labelNames: ["type"] as const,
-  registers: [metricsRegistry],
-});
-
-export const workflowStreamEventsTotal = new client.Counter({
-  name: "workflow_stream_events_total",
-  help: "Count of workflow stream events grouped by event type.",
-  labelNames: ["event"] as const,
-  registers: [metricsRegistry],
-});
-
-export const workflowStreamDurationSeconds = new client.Histogram({
-  name: "workflow_stream_duration_seconds",
-  help: "Duration of workflow streams in seconds grouped by terminal status.",
-  labelNames: ["status"] as const,
-  buckets: [0.25, 0.5, 1, 2, 5, 10, 30, 60, 120],
-  registers: [metricsRegistry],
-});
-
-export const workflowProvenanceDurationSeconds = new client.Histogram({
-  name: "workflow_provenance_duration_seconds",
-  help: "Duration of workflow provenance persistence grouped by outcome.",
-  labelNames: ["outcome"] as const,
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const workflowProvenanceEdgesTotal = new client.Counter({
-  name: "workflow_provenance_edges_total",
-  help: "Count of explains edges created during workflow provenance linking.",
-  labelNames: ["outcome"] as const,
-  registers: [metricsRegistry],
-});
-
-export const runnerStepsTotal = new client.Counter({
-  name: "workflow_runner_steps_total",
-  help: "Count of workflow runner steps grouped by phase and outcome.",
-  labelNames: ["phase", "outcome"] as const,
-  registers: [metricsRegistry],
-});
-
-export const runnerErrorsTotal = new client.Counter({
-  name: "workflow_runner_errors_total",
-  help: "Count of workflow runner errors grouped by phase and reason.",
-  labelNames: ["phase", "reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const replayQueriesTotal = new client.Counter({
-  name: "workflow_replay_queries_total",
-  help: "Count of workflow replay queries grouped by event type.",
-  labelNames: ["event_type"] as const,
-  registers: [metricsRegistry],
-});
-
-export const replayQueryDurationSeconds = new client.Histogram({
-  name: "workflow_replay_query_duration_seconds",
-  help: "Duration of workflow replay queries in seconds grouped by event type.",
-  labelNames: ["event_type"] as const,
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
-  registers: [metricsRegistry],
-});
-
-export const graphQueriesTotal = new client.Counter({
-  name: "graph_queries_total",
-  help: "Count of graph queries grouped by kind and resource.",
-  labelNames: ["kind", "resource"] as const,
-  registers: [metricsRegistry],
-});
-
-export const graphQueryDurationSeconds = new client.Histogram({
-  name: "graph_query_duration_seconds",
-  help: "Duration of graph queries in seconds grouped by kind.",
-  labelNames: ["kind"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const linearActivityEmissionsTotal = new client.Counter({
-  name: "linear_activity_emissions_total",
-  help: "Total Linear agent activity emissions",
-  labelNames: ["type", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const linearActivityDurationSeconds = new client.Histogram({
-  name: "linear_activity_duration_seconds",
-  help: "Duration of Linear activity emissions",
-  labelNames: ["type"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.5, 1, 5],
-  registers: [metricsRegistry],
-});
-
-export const linearSessionOperationsTotal = new client.Counter({
-  name: "linear_session_operations_total",
-  help: "Total Linear session operations (delegate, state, URL)",
-  labelNames: ["operation"] as const,
-  registers: [metricsRegistry],
-});
-
-export const linearWebhookEventsTotal = new client.Counter({
-  name: "linear_webhook_events_total",
-  help: "Total Linear webhook events received",
-  labelNames: ["event_type", "action"] as const,
-  registers: [metricsRegistry],
-});
-
-export const linearWebhookWorkflowStartsTotal = new client.Counter({
-  name: "linear_webhook_workflow_starts_total",
-  help: "Total workflows started from Linear webhooks",
-  registers: [metricsRegistry],
-});
-
-export const linearWebhookWorkflowCancelsTotal = new client.Counter({
-  name: "linear_webhook_workflow_cancels_total",
-  help: "Total workflows canceled from Linear webhooks",
-  registers: [metricsRegistry],
-});
-
-export const voiceSessionPacketLossTotal = new client.Counter({
-  name: "voice_session_packet_loss_total",
-  help: "Total count of lost voice packets reported by client",
-  labelNames: ["session_id"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceSessionJitterMillis = new client.Histogram({
-  name: "voice_session_jitter_millis",
-  help: "Voice session jitter in milliseconds reported by client",
-  labelNames: ["session_id"] as const,
-  buckets: [1, 5, 10, 20, 50, 100, 200],
-  registers: [metricsRegistry],
-});
-
-export const voiceSessionRttMillis = new client.Histogram({
-  name: "voice_session_rtt_millis",
-  help: "Voice session round-trip time in milliseconds reported by client",
-  labelNames: ["session_id"] as const,
-  buckets: [10, 20, 50, 100, 200, 500, 1000],
+export const orchestratorGenerateRequestsTotal = new client.Counter({
+  name: "orchestrator_generate_requests_total",
+  help: "Total number of orchestrator generation requests.",
   registers: [metricsRegistry],
 });
 

@@ -39,8 +39,8 @@ export async function createTask(
   description?: string,
   priority = 0,
   due?: Date
-) {
-  const [row] = await db
+): Promise<typeof tasks.$inferSelect> {
+  const res = await db
     .insert(tasks)
     .values({
       userId,
@@ -50,10 +50,12 @@ export async function createTask(
       due: due ?? null,
     })
     .returning();
+  
+  const row = Array.isArray(res) ? res[0] : (res as any).rows ? (res as any).rows[0] : (res as any)[0];
   return row;
 }
 
-export async function getTasks(userId: string, status?: string, limit = 100) {
+export async function getTasks(userId: string, status?: string, limit = 100): Promise<(typeof tasks.$inferSelect)[]> {
   const where = status
     ? and(eq(tasks.userId, userId), eq(tasks.status, status))
     : eq(tasks.userId, userId);
@@ -66,7 +68,7 @@ export async function getTasks(userId: string, status?: string, limit = 100) {
     .limit(limit);
 }
 
-export async function updateTask(taskId: string, updates: Partial<TaskInsert>) {
+export async function updateTask(taskId: string, updates: Partial<TaskInsert>): Promise<number> {
   const patch = cleanUpdates<TaskInsert>(updates, ["id", "userId", "created"]);
   if (Object.keys(patch).length === 0) {
     return 0;
@@ -81,7 +83,7 @@ export async function updateTask(taskId: string, updates: Partial<TaskInsert>) {
   return rows.length;
 }
 
-export async function deleteTask(taskId: string) {
+export async function deleteTask(taskId: string): Promise<number> {
   const rows = await db
     .delete(tasks)
     .where(eq(tasks.id, taskId))
@@ -95,8 +97,8 @@ export async function createNote(
   content: string,
   title?: string,
   tagsInput?: string[]
-) {
-  const [row] = await db
+): Promise<typeof notes.$inferSelect> {
+  const res = await db
     .insert(notes)
     .values({
       userId,
@@ -105,10 +107,12 @@ export async function createNote(
       tags: tagsInput ?? null,
     })
     .returning();
+  
+  const row = Array.isArray(res) ? res[0] : (res as any).rows ? (res as any).rows[0] : (res as any)[0];
   return row;
 }
 
-export async function getNotes(userId: string, limit = 100, offset = 0) {
+export async function getNotes(userId: string, limit = 100, offset = 0): Promise<(typeof notes.$inferSelect)[]> {
   return db
     .select()
     .from(notes)
@@ -118,7 +122,7 @@ export async function getNotes(userId: string, limit = 100, offset = 0) {
     .offset(offset);
 }
 
-export async function updateNote(noteId: string, updates: Partial<NoteInsert>) {
+export async function updateNote(noteId: string, updates: Partial<NoteInsert>): Promise<number> {
   const patch = cleanUpdates<NoteInsert>(updates, ["id", "userId", "created"]);
   if (Object.keys(patch).length === 0) {
     return 0;
@@ -133,7 +137,7 @@ export async function updateNote(noteId: string, updates: Partial<NoteInsert>) {
   return rows.length;
 }
 
-export async function deleteNote(noteId: string) {
+export async function deleteNote(noteId: string): Promise<number> {
   const rows = await db
     .delete(notes)
     .where(eq(notes.id, noteId))
@@ -148,8 +152,8 @@ export async function createReminder(
   due: Date,
   description?: string,
   recurring?: string
-) {
-  const [row] = await db
+): Promise<typeof reminders.$inferSelect> {
+  const res = await db
     .insert(reminders)
     .values({
       userId,
@@ -159,10 +163,12 @@ export async function createReminder(
       recurring: recurring ?? null,
     })
     .returning();
+  
+  const row = Array.isArray(res) ? res[0] : (res as any).rows ? (res as any).rows[0] : (res as any)[0];
   return row;
 }
 
-export async function getDueReminders(userId: string, before: Date) {
+export async function getDueReminders(userId: string, before: Date): Promise<(typeof reminders.$inferSelect)[]> {
   return db
     .select()
     .from(reminders)
@@ -176,7 +182,7 @@ export async function getDueReminders(userId: string, before: Date) {
     .orderBy(asc(reminders.due));
 }
 
-export async function getReminders(userId: string, limit = 100, offset = 0) {
+export async function getReminders(userId: string, limit = 100, offset = 0): Promise<(typeof reminders.$inferSelect)[]> {
   return db
     .select()
     .from(reminders)
@@ -186,7 +192,7 @@ export async function getReminders(userId: string, limit = 100, offset = 0) {
     .offset(offset);
 }
 
-export async function getDueRemindersAll(before: Date, limit = 100) {
+export async function getDueRemindersAll(before: Date, limit = 100): Promise<(typeof reminders.$inferSelect)[]> {
   return db
     .select()
     .from(reminders)
@@ -195,7 +201,7 @@ export async function getDueRemindersAll(before: Date, limit = 100) {
     .limit(limit);
 }
 
-export async function markReminderFired(reminderId: string) {
+export async function markReminderFired(reminderId: string): Promise<number> {
   const rows = await db
     .update(reminders)
     .set({ fired: true, firedAt: sql`NOW()` })
@@ -204,7 +210,7 @@ export async function markReminderFired(reminderId: string) {
   return rows.length;
 }
 
-export async function deleteReminder(reminderId: string) {
+export async function deleteReminder(reminderId: string): Promise<number> {
   const rows = await db
     .delete(reminders)
     .where(eq(reminders.id, reminderId))
@@ -219,8 +225,8 @@ export async function createBookmark(
   title?: string,
   description?: string,
   tagsInput?: string[]
-) {
-  const [row] = await db
+): Promise<typeof bookmarks.$inferSelect> {
+  const res = await db
     .insert(bookmarks)
     .values({
       userId,
@@ -230,10 +236,12 @@ export async function createBookmark(
       tags: tagsInput ?? null,
     })
     .returning();
+  
+  const row = Array.isArray(res) ? res[0] : (res as any).rows ? (res as any).rows[0] : (res as any)[0];
   return row;
 }
 
-export async function getBookmarks(userId: string, limit = 100, offset = 0) {
+export async function getBookmarks(userId: string, limit = 100, offset = 0): Promise<(typeof bookmarks.$inferSelect)[]> {
   return db
     .select()
     .from(bookmarks)
@@ -243,7 +251,7 @@ export async function getBookmarks(userId: string, limit = 100, offset = 0) {
     .offset(offset);
 }
 
-export async function deleteBookmark(bookmarkId: string) {
+export async function deleteBookmark(bookmarkId: string): Promise<number> {
   const rows = await db
     .delete(bookmarks)
     .where(eq(bookmarks.id, bookmarkId))
@@ -256,8 +264,8 @@ export async function createTimer(
   userId: string,
   durationSec: number,
   label?: string
-) {
-  const [row] = await db
+): Promise<typeof timers.$inferSelect> {
+  const res = await db
     .insert(timers)
     .values({
       userId,
@@ -269,10 +277,12 @@ export async function createTimer(
       completed: false,
     })
     .returning();
+  
+  const row = Array.isArray(res) ? res[0] : (res as any).rows ? (res as any).rows[0] : (res as any)[0];
   return row;
 }
 
-export async function getActiveTimers(userId: string) {
+export async function getActiveTimers(userId: string): Promise<(typeof timers.$inferSelect)[]> {
   return db
     .select()
     .from(timers)
@@ -286,7 +296,7 @@ export async function getActiveTimers(userId: string) {
     .orderBy(asc(timers.end));
 }
 
-export async function markTimerCompleted(timerId: string) {
+export async function markTimerCompleted(timerId: string): Promise<number> {
   const rows = await db
     .update(timers)
     .set({ completed: true, completedAt: sql`NOW()` })
@@ -295,7 +305,7 @@ export async function markTimerCompleted(timerId: string) {
   return rows.length;
 }
 
-export async function cancelTimer(timerId: string) {
+export async function cancelTimer(timerId: string): Promise<number> {
   const rows = await db
     .update(timers)
     .set({ cancelled: true, cancelledAt: sql`NOW()` })
