@@ -28,6 +28,7 @@ import {
   useMindscapeStore,
 } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { MindscapeCommandPalette } from "./command-palette";
 import { MindscapeDetailPanel } from "./detail-panel";
@@ -168,6 +169,9 @@ function MindscapeCanvasInner({
       ragDocCacheStats: state.ragDocCacheStats,
     }))
   );
+
+  // Listen for global Mindscape activations
+  useMindscapeActivations();
 
   // Initialize Physics Worker
   usePhysicsWorker({

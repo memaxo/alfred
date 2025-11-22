@@ -204,6 +204,7 @@ type MindscapeState = {
   setNodes: (nodes: Node<ArtifactData>[]) => void;
   setEdges: (edges: Edge[]) => void;
   triggerEdgeActivity: (edgeId: string, durationMs?: number) => void;
+  triggerNodeActivity: (nodeId: string, type: "input" | "output" | "processing") => void;
   autoLayout: () => void;
   cacheRagDoc: (dbId: string, data: KnowledgeNodeData) => void;
   evictRagDoc: (dbId: string) => void;
@@ -325,6 +326,17 @@ export const useMindscapeStore = create<MindscapeState>()(
             return { activeEdges: next };
           });
         }, durationMs);
+      },
+      triggerNodeActivity: (nodeId, _type) => {
+        const { edges, triggerEdgeActivity } = get();
+        // Find all connected edges
+        const connectedEdges = edges.filter(
+          (e) => e.source === nodeId || e.target === nodeId
+        );
+        // Pulse them
+        connectedEdges.forEach((edge) => {
+          triggerEdgeActivity(edge.id, 1000);
+        });
       },
       autoLayout: () => {
         const { nodes, edges, focusedNodeId } = get();
