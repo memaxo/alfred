@@ -396,7 +396,7 @@ export async function persistReasoning(
   const executionKey = context?.executionId ?? context?.threadId ?? resource;
 
   for (const trace of traces) {
-    const extraction = extractReasoning(trace.text, {
+    const extraction = await extractReasoning(trace.text, {
       threadId: context?.threadId,
       source: `reasoning:${executionKey}`,
     });

@@ -492,6 +492,14 @@ export class RTreeND {
       };
     }
     let rect = entries[0]?.rect;
+
+    // If the first entry has no rect (undefined), fallback to empty rect
+    if (!rect) {
+      const min = new Float32Array(this.dim);
+      const max = new Float32Array(this.dim);
+      rect = { min, max };
+    }
+
     for (let i = 1; i < entries.length; i++) {
       rect = this.combine(rect, entries[i]?.rect);
     }
@@ -515,8 +523,14 @@ export class RTreeND {
       const max = new Float32Array(this.dim);
       return { min, max };
     }
-    const min = new Float32Array(node.entries[0]?.rect.min);
-    const max = new Float32Array(node.entries[0]?.rect.max);
+    const firstRect = node.entries[0]?.rect;
+    if (!firstRect) {
+      const min = new Float32Array(this.dim);
+      const max = new Float32Array(this.dim);
+      return { min, max };
+    }
+    const min = new Float32Array(firstRect.min);
+    const max = new Float32Array(firstRect.max);
     for (let i = 1; i < node.entries.length; i++) {
       const entry = node.entries[i];
       if (!entry) {
@@ -598,9 +612,16 @@ export class RTreeND {
     return acc;
   }
 
-  private combine(a: HyperRect, b: HyperRect): HyperRect {
+  private combine(
+    a: HyperRect | undefined,
+    b: HyperRect | undefined
+  ): HyperRect {
     const min = new Float32Array(this.dim);
     const max = new Float32Array(this.dim);
+
+    if (!a) return b ?? { min, max };
+    if (!b) return a;
+
     for (let i = 0; i < this.dim; i++) {
       const aMin = a.min[i] ?? 0;
       const bMin = b.min[i] ?? 0;
@@ -613,7 +634,8 @@ export class RTreeND {
     return { min, max };
   }
 
-  private measure(rect: HyperRect): number {
+  private measure(rect: HyperRect | undefined): number {
+    if (!rect) return 0;
     let sum = 0;
     for (let i = 0; i < this.dim; i++) {
       const minVal = rect.min[i] ?? 0;
@@ -624,7 +646,8 @@ export class RTreeND {
     return sum;
   }
 
-  private enlargement(base: HyperRect, added: HyperRect): number {
+  private enlargement(base: HyperRect | undefined, added: HyperRect): number {
+    if (!base) return this.measure(added);
     const combined = this.combine(base, added);
     return this.measure(combined) - this.measure(base);
   }

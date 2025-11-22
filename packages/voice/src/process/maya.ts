@@ -1,5 +1,6 @@
 import type { ModelProcess } from "./base";
 import type { IPCResponse } from "./ipc";
+import { MAYA_VOICES, resolveMayaVoice } from "./maya-types";
 import type { TTSChunk, TTSRequest } from "./tts";
 
 export class MayaTTSProcess {
@@ -8,7 +9,7 @@ export class MayaTTSProcess {
 
   constructor(
     process: ModelProcess,
-    defaultVoice = "Realistic male voice in the 30s age with american accent."
+    defaultVoice = MAYA_VOICES.DEFAULT.description
   ) {
     this.process = process;
     this.defaultVoice = defaultVoice;
@@ -18,7 +19,10 @@ export class MayaTTSProcess {
     request: TTSRequest,
     onChunk?: (chunk: TTSChunk) => void
   ): Promise<TTSChunk> {
-    const voice = request.voice || this.defaultVoice;
+    const voice = request.voice
+      ? resolveMayaVoice(request.voice)
+      : this.defaultVoice;
+
     const requestId = crypto.randomUUID();
 
     const payload = {

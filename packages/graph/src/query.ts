@@ -211,12 +211,12 @@ function mapNodes(rows: DbNode[]): Map<string, UnifiedNode> {
 
 function mapNodeRow(row: DbNode): UnifiedNode {
   const kind = (row.kind as UnifiedNodeKind) ?? "other";
+  const props: any = row.properties ?? undefined;
   return {
     id: { dbId: row.id },
     kind,
     label: row.label,
-    properties:
-      (row.properties as unknown as Record<string, unknown>) ?? undefined,
+    properties: props,
   };
 }
 

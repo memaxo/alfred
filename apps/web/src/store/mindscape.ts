@@ -210,6 +210,7 @@ type MindscapeState = {
 };
 
 import { persist } from "zustand/middleware";
+import { queueRagCacheMetric } from "@/lib/mindscape/telemetry";
 
 export const useMindscapeStore = create<MindscapeState>()(
   persist(
@@ -358,7 +359,7 @@ export const useMindscapeStore = create<MindscapeState>()(
               });
           }
 
-          return {
+          const nextState: Partial<MindscapeState> = {
             ragDocCache: next,
             ragDocCacheStats:
               evictions > 0
@@ -367,7 +368,11 @@ export const useMindscapeStore = create<MindscapeState>()(
                     evictions: state.ragDocCacheStats.evictions + evictions,
                   }
                 : state.ragDocCacheStats,
-          } as Partial<MindscapeState>;
+          };
+          if (evictions > 0) {
+            queueRagCacheMetric("eviction", evictions);
+          }
+          return nextState;
         });
       },
       evictRagDoc: (dbId) => {
@@ -380,6 +385,7 @@ export const useMindscapeStore = create<MindscapeState>()(
           }
           const next = { ...state.ragDocCache };
           delete next[dbId];
+          queueRagCacheMetric("eviction");
           return {
             ragDocCache: next,
             ragDocCacheStats: {
@@ -396,6 +402,7 @@ export const useMindscapeStore = create<MindscapeState>()(
             hits: state.ragDocCacheStats.hits + 1,
           },
         }));
+        queueRagCacheMetric("hit");
       },
       recordRagDocCacheMiss: () => {
         set((state) => ({
@@ -404,6 +411,7 @@ export const useMindscapeStore = create<MindscapeState>()(
             misses: state.ragDocCacheStats.misses + 1,
           },
         }));
+        queueRagCacheMetric("miss");
       },
     }),
     {
@@ -450,4 +458,14 @@ function sanitizeNodeData(node: Node<ArtifactData>): ArtifactData {
   }
 
   return data;
+}
+
+declare global {
+  interface Window {
+    __MINDSCAPE_STORE__?: typeof useMindscapeStore;
+  }
+}
+
+if (typeof window !== "undefined" && !window.__MINDSCAPE_STORE__) {
+  window.__MINDSCAPE_STORE__ = useMindscapeStore;
 }

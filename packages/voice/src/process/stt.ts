@@ -84,10 +84,19 @@ export class STTPool {
       const response = await process.sendRequest(ipcRequest);
 
       if (response.type === "error") {
-        throw new Error(
-          (response.payload as { message?: string })?.message ??
-            "Transcription failed"
-        );
+        const payload = response.payload as {
+          message?: string;
+          traceback?: string;
+        };
+        const message = payload?.message ?? "Transcription failed";
+        const traceback = payload?.traceback;
+
+        if (traceback) {
+          // Log detailed traceback if available (could use logger, but here we ensure it propagates or logs)
+          console.error(`STT Process Error Traceback:\n${traceback}`);
+        }
+
+        throw new Error(message);
       }
 
       const payload = response.payload as {

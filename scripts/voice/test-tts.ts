@@ -25,7 +25,7 @@ import {
   getVoicePools,
   initializeVoicePools,
   shutdownVoicePools,
-} from "../packages/api/src/voice/pools";
+} from "../../packages/api/src/voice/pools";
 
 const text =
   process.argv[2] ??

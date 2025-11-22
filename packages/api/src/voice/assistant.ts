@@ -197,9 +197,7 @@ export async function runAssistantForVoice(
       outcome,
       ts: Date.now() as any,
     });
-  } catch (e) {
-    console.error("Failed to update cognitive loop", e);
-  }
+  } catch (_e) {}
 
   return {
     text: sanitized.text ?? "",

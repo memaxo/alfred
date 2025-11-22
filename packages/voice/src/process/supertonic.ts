@@ -109,12 +109,24 @@ class TextToSpeech {
     // Process text
     const { textIds, textMask } = this.textProcessor.call(textList);
 
+    const textIds0 = textIds[0];
+    if (!textIds0) {
+      throw new Error("Text IDs missing");
+    }
     const textIdsFlat = new BigInt64Array(textIds.flat().map((x) => BigInt(x)));
-    const textIdsShape = [bsz, textIds[0].length];
+    const textIdsShape = [bsz, textIds0.length];
     const textIdsTensor = new ort.Tensor("int64", textIdsFlat, textIdsShape);
 
+    const textMask0 = textMask[0];
+    if (!textMask0) {
+      throw new Error("Text mask missing");
+    }
+    const textMask00 = textMask0[0];
+    if (!textMask00) {
+      throw new Error("Text mask inner array missing");
+    }
     const textMaskFlat = new Float32Array(textMask.flat(2));
-    const textMaskShape = [bsz, 1, textMask[0][0].length];
+    const textMaskShape = [bsz, 1, textMask00.length];
     const textMaskTensor = new ort.Tensor(
       "float32",
       textMaskFlat,
@@ -127,11 +139,18 @@ class TextToSpeech {
       style_dp: style.dp,
       text_mask: textMaskTensor,
     });
-    const duration = Array.from(dpOutputs.duration?.data as Float32Array);
+
+    if (!dpOutputs.duration) {
+      throw new Error("Duration prediction failed: output missing");
+    }
+    const duration = Array.from(dpOutputs.duration.data as Float32Array);
 
     // Apply speed factor to duration
     for (let i = 0; i < duration.length; i++) {
-      duration[i] /= speed;
+      const val = duration[i];
+      if (val !== undefined) {
+        duration[i] = val / speed;
+      }
     }
 
     // Encode text
@@ -154,8 +173,16 @@ class TextToSpeech {
       this.cfgs.ttl.latent_dim
     );
 
+    const latentMask0 = latentMask[0];
+    if (!latentMask0) {
+      throw new Error("Latent mask missing");
+    }
+    const latentMask00 = latentMask0[0];
+    if (!latentMask00) {
+      throw new Error("Latent mask inner array missing");
+    }
     const latentMaskFlat = new Float32Array(latentMask.flat(2));
-    const latentMaskShape = [bsz, 1, latentMask[0][0].length];
+    const latentMaskShape = [bsz, 1, latentMask00.length];
     const latentMaskTensor = new ort.Tensor(
       "float32",
       latentMaskFlat,
@@ -177,7 +204,15 @@ class TextToSpeech {
       ]);
 
       const xtFlat = new Float32Array(xt.flat(2) as number[]);
-      const xtShape = [bsz, xt[0].length, xt[0][0].length];
+      const xt0 = xt[0];
+      if (!xt0) {
+        throw new Error("xt[0] missing");
+      }
+      const xt00 = xt0[0];
+      if (!xt00) {
+        throw new Error("xt[0][0] missing");
+      }
+      const xtShape = [bsz, xt0.length, xt00.length];
       const xtTensor = new ort.Tensor("float32", xtFlat, xtShape);
 
       const vectorEstOutputs = await this.vectorEstOrt.run({
@@ -190,13 +225,17 @@ class TextToSpeech {
         total_step: totalStepTensor,
       });
 
+      if (!vectorEstOutputs.denoised_latent) {
+        throw new Error("Vector estimation failed: output missing");
+      }
+
       const denoised = Array.from(
-        vectorEstOutputs.denoised_latent?.data as Float32Array
+        vectorEstOutputs.denoised_latent.data as Float32Array
       );
 
       // Reshape to 3D
-      const latentDim = xt[0].length;
-      const latentLen = xt[0][0].length;
+      const latentDim = xt0.length;
+      const latentLen = xt00.length;
 
       // Reconstruct xt from denoised
       const newXt: number[][][] = [];
@@ -221,14 +260,26 @@ class TextToSpeech {
 
     // Generate waveform
     const finalXtFlat = new Float32Array(xt.flat(2) as number[]);
-    const finalXtShape = [bsz, xt[0].length, xt[0][0].length];
+    const finalXt0 = xt[0];
+    if (!finalXt0) {
+      throw new Error("xt[0] missing");
+    }
+    const finalXt00 = finalXt0[0];
+    if (!finalXt00) {
+      throw new Error("xt[0][0] missing");
+    }
+    const finalXtShape = [bsz, finalXt0.length, finalXt00.length];
     const finalXtTensor = new ort.Tensor("float32", finalXtFlat, finalXtShape);
 
     const vocoderOutputs = await this.vocoderOrt.run({
       latent: finalXtTensor,
     });
 
-    const wav = Array.from(vocoderOutputs.wav_tts?.data as Float32Array);
+    if (!vocoderOutputs.wav_tts) {
+      throw new Error("Vocoder failed: output missing");
+    }
+
+    const wav = Array.from(vocoderOutputs.wav_tts.data as Float32Array);
 
     return { wav, duration };
   }
@@ -317,9 +368,17 @@ class TextToSpeech {
     for (let b = 0; b < bsz; b++) {
       for (let d = 0; d < latentDimVal; d++) {
         for (let t = 0; t < latentLen; t++) {
-          const maskVal = latentMask[b]?.[0]?.[t] ?? 0;
-          if (xt[b]?.[d]) {
-            xt[b][d][t] *= maskVal;
+          const maskRow = latentMask[b]?.[0];
+          const maskVal = maskRow ? (maskRow[t] ?? 0) : 0;
+          const batch = xt[b];
+          if (batch) {
+            const dimRow = batch[d];
+            if (dimRow) {
+              const val = dimRow[t];
+              if (val !== undefined) {
+                dimRow[t] = val * maskVal;
+              }
+            }
           }
         }
       }
@@ -536,12 +595,7 @@ export class SupertonicTTS {
     if (options.voice && options.voice !== this.currentVoice) {
       try {
         await this.loadVoice(options.voice);
-      } catch (_error) {
-        // If loading fails, fallback to current voice or default
-        console.warn(
-          `Failed to load requested voice ${options.voice}, falling back to ${this.currentVoice}`
-        );
-      }
+      } catch (_error) {}
     }
 
     if (!this.currentStyle) {
@@ -552,11 +606,11 @@ export class SupertonicTTS {
       }
     }
 
-    if (!this.currentStyle) {
-      throw new Error("No voice style loaded");
+    if (!(this.currentStyle && this.textToSpeech)) {
+      throw new Error("No voice style loaded or textToSpeech not initialized");
     }
 
-    const result = await this.textToSpeech?.call(
+    const result = await this.textToSpeech.call(
       text,
       this.currentStyle,
       options.steps ?? 5,
@@ -571,7 +625,7 @@ export class SupertonicTTS {
     return {
       audio: result.wav,
       duration: result.duration[0] ?? 0,
-      sampleRate: this.textToSpeech?.sampleRate,
+      sampleRate: this.textToSpeech.sampleRate,
     };
   }
 }

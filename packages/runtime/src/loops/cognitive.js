@@ -101,8 +101,6 @@ async function processEffects(ctx, streamId, state, _autonomy) {
 async function runAssistantGeneration(ctx, streamId, input) {
   // Requires AI Adapter to be present in context
   if (!ctx.ai) {
-    // Fail gracefully if no AI adapter provided (e.g. in tests without mock)
-    console.warn("Cognitive Loop: No AI Adapter provided in context");
     return;
   }
   const defaults = getAssistantAgentDefaults();

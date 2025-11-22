@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import "../../test/testing-library";
+import "../../test/reset-mocks";
 import { fireEvent, render } from "@testing-library/react";
 
 mock.module("@/components/ui/dialog", () => {

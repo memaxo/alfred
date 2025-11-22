@@ -19,15 +19,23 @@ export function useChatLogic({
   >(initialAgent);
   const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
 
-  const { messages, actions, status, error, send, clear, hydrate } =
-    useAssistantStream({
-      onError: (_err) => {
-        // Error is already displayed in the error state
-        // Additional logging handled by error boundaries
-      },
-      initialMessages,
-      initialConversationId,
-    });
+  const {
+    messages,
+    actions,
+    status,
+    error,
+    send,
+    clear,
+    hydrate,
+    addToolResult,
+  } = useAssistantStream({
+    onError: (_err) => {
+      // Error is already displayed in the error state
+      // Additional logging handled by error boundaries
+    },
+    initialMessages,
+    initialConversationId,
+  });
 
   const {
     isRecording,
@@ -103,5 +111,6 @@ export function useChatLogic({
     toggleVoice,
     clear,
     hydrate,
+    addToolResult,
   };
 }

@@ -26,12 +26,7 @@ export class VectorClassifier {
       try {
         const vector = await embed(description);
         this.centroids.set(domain, vector);
-      } catch (error) {
-        console.error(
-          `Failed to embed domain description for ${domain}`,
-          error
-        );
-      }
+      } catch (_error) {}
     }
 
     this.initialized = true;

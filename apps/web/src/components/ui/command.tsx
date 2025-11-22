@@ -59,22 +59,32 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  suggestion,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  suggestion?: string;
+}) {
   return (
     <div
       className="flex h-9 items-center gap-2 border-b px-3"
       data-slot="command-input-wrapper"
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
-      <CommandPrimitive.Input
-        className={cn(
-          "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-          className
+      <div className="relative flex w-full items-center">
+        {suggestion && (
+          <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-0 truncate whitespace-pre text-muted-foreground/50 text-sm">
+            {suggestion}
+          </span>
         )}
-        data-slot="command-input"
-        {...props}
-      />
+        <CommandPrimitive.Input
+          className={cn(
+            "flex h-10 w-full bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            className
+          )}
+          data-slot="command-input"
+          {...props}
+        />
+      </div>
     </div>
   );
 }

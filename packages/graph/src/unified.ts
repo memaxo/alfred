@@ -23,7 +23,7 @@ export type UnifiedNode = {
   id: UnifiedNodeRef;
   kind: UnifiedNodeKind;
   label: string;
-  properties?: Record<string, unknown>;
+  properties?: Record<string, any>;
 };
 
 export type UnifiedEdge = {
@@ -32,7 +32,7 @@ export type UnifiedEdge = {
   target: UnifiedNodeRef;
   kind: string;
   weight?: number;
-  properties?: Record<string, unknown>;
+  properties?: Record<string, any>;
 };
 
 export type ResourceScope = string;

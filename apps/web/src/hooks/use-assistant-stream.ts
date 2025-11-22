@@ -33,6 +33,7 @@ export type UseAssistantStreamReturn = {
   clear: () => void;
   hydrate: (messages: AssistantUIMessage[]) => void;
   conversationId: string | null;
+  addToolResult: (result: { toolCallId: string; result: unknown }) => void;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -185,5 +186,6 @@ export function useAssistantStream(
     clear,
     hydrate,
     conversationId,
+    addToolResult: chat.addToolResult,
   };
 }

@@ -31,6 +31,7 @@ import {
   safeRealpath,
 } from "../../security/filesystem.js";
 import { sessionManager } from "../codex-session.js";
+import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
@@ -1332,6 +1333,28 @@ export const toolCodex = {
     };
   },
 };
+
+const aiToolCodexBase = {
+  name: toolCodex.name,
+  description: toolCodex.description,
+  parameters: toolCodex.inputSchema, // v6 uses parameters or inputSchema? 'parameters' is deprecated but mapped. 'inputSchema' preferred.
+  // AI SDK v6 Tool interface expects inputSchema, execute
+  inputSchema: toolCodex.inputSchema,
+  execute: async (input: CodexToolInput) => toolCodex.execute({ input }),
+};
+
+export const aiToolCodex = withPolicyApproval(aiToolCodexBase, (input) => ({
+  action: "droid.exec",
+  resource: {
+    kind: "repo",
+    id: input.cw ? path.resolve(input.cw) : "cwd",
+  },
+  scopes: ["droid.exec"],
+  authz: input.authz,
+  context: {
+    auto: input.auto,
+  },
+}));
 
 export type ToolCodex = typeof toolCodex;
 

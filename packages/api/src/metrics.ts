@@ -202,6 +202,13 @@ export const compressionCyclesTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const mindscapeRagCacheEventsTotal = new client.Counter({
+  name: "mindscape_rag_cache_events_total",
+  help: "Count of Mindscape RAG cache events grouped by event type.",
+  labelNames: ["event"] as const,
+  registers: [metricsRegistry],
+});
+
 // wired via lazy hooks
 
 export const compressionCycleDurationSeconds = new client.Histogram({

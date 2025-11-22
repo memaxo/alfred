@@ -32,7 +32,11 @@ function MindscapeRoute() {
           })
         }
         onWorkflowNavigate={(runId) =>
-          navigate({ to: "/workflow/$runId", params: { runId } })
+          navigate({
+            to: "/workflow/$runId",
+            params: { runId },
+            search: () => ({ drawer: "1" }),
+          })
         }
         searchParams={search}
       />

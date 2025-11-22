@@ -12,6 +12,7 @@ import {
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -116,6 +117,37 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     </div>
   </div>
 );
+
+export type ToolActionsProps = {
+  state: ToolUIPart["state"];
+  onApprove?: () => void;
+  onDeny?: () => void;
+};
+
+export const ToolActions = ({ state, onApprove, onDeny }: ToolActionsProps) => {
+  if (state !== "approval-requested") return null;
+
+  return (
+    <div className="flex gap-2 border-t bg-muted/20 p-3">
+      <Button
+        className="h-7 rounded-full px-3 text-xs"
+        onClick={onApprove}
+        size="sm"
+        variant="default"
+      >
+        Approve
+      </Button>
+      <Button
+        className="h-7 rounded-full px-3 text-xs"
+        onClick={onDeny}
+        size="sm"
+        variant="outline"
+      >
+        Deny
+      </Button>
+    </div>
+  );
+};
 
 export type ToolOutputProps = ComponentProps<"div"> & {
   output: ToolUIPart["output"];

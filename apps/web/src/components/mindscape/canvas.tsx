@@ -15,7 +15,6 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useNavigate } from "@tanstack/react-router";
 import type { inferRouterOutputs } from "@trpc/server";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -103,16 +102,19 @@ type MindscapeCanvasProps = Omit<
 > & {
   searchParams?: MindscapeSearchParams;
   onWorkflowNavigate?: (runId: string) => void;
+  onRagDocNavigate?: (documentId: string) => void;
 };
 
 export function MindscapeCanvas({
   onWorkflowNavigate,
+  onRagDocNavigate,
   ...props
 }: MindscapeCanvasProps) {
   return (
     <ReactFlowProvider>
       <MindscapeCanvasInner
         {...props}
+        onRagDocNavigate={onRagDocNavigate}
         onWorkflowNavigate={onWorkflowNavigate}
       />
     </ReactFlowProvider>
@@ -122,6 +124,7 @@ export function MindscapeCanvas({
 function MindscapeCanvasInner({
   searchParams,
   onWorkflowNavigate,
+  onRagDocNavigate,
   ...props
 }: MindscapeCanvasProps) {
   const {
@@ -158,8 +161,11 @@ function MindscapeCanvasInner({
     }))
   );
 
-  const navigate = useNavigate();
   const [inspectedRunId, setInspectedRunId] = useState<string | null>(null);
+  const ragDocFocusCooldownRef = useRef<{ id: string | null; at: number }>({
+    id: null,
+    at: 0,
+  });
 
   const handleWorkflowInspect = useCallback((runId: string) => {
     setInspectedRunId(runId);
@@ -184,15 +190,26 @@ function MindscapeCanvasInner({
 
   const handleNavigateToRagDoc = useCallback(
     (documentId: string) => {
-      navigate({
-        to: "/mindscape",
-        search: (prev) => ({
-          ...prev,
-          ragDoc: documentId,
-        }),
-      });
+      if (!documentId) {
+        return;
+      }
+      const now = Date.now();
+      const last = ragDocFocusCooldownRef.current;
+      if (last.id === documentId && now - last.at < 600) {
+        return;
+      }
+      ragDocFocusCooldownRef.current = { id: documentId, at: now };
+      if (onRagDocNavigate) {
+        onRagDocNavigate(documentId);
+        return;
+      }
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("ragDoc", documentId);
+        window.history.replaceState(window.history.state, "", url.toString());
+      }
     },
-    [navigate]
+    [onRagDocNavigate]
   );
 
   const reactFlow = useReactFlow<ArtifactData>();

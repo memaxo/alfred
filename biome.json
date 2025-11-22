@@ -93,7 +93,6 @@
         "noArrayIndexKey": "off",
         "noAssignInExpressions": "off",
         "noBitwiseOperators": "off",
-        "noConsole": "off",
         "noControlCharactersInRegex": "off",
         "noEmptyBlockStatements": "off",
         "noEvolvingTypes": "off",
@@ -101,13 +100,32 @@
         "noImplicitAnyLet": "off",
         "noMisplacedAssertion": "off",
         "noPrototypeBuiltins": "off",
-        "noUnknownAtRules": "off",
         "useAwait": "off",
         "useIterableCallbackReturn": "off"
       }
     }
   },
   "overrides": [
+    {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/native/lib/devlog.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
     {
       "includes": [
         "**/*.test.ts",

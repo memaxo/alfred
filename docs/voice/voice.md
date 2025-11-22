@@ -19,7 +19,7 @@ This reference documents the backend voice endpoints exposed via the `voiceRoute
 | `prompt` | string? | Optional system hint for STT (passed to Faster-Whisper/OpenAI). |
 | `thread` | string? | Optional thread identifier. Defaults to `voice:${userId}` when omitted. |
 | `resource` | string? | Optional resource identifier for policy logging; mirrors `thread` by default. |
-| `ttsVoice` | string? | Optional override for TTS voice (e.g., `alloy`). |
+| `ttsVoice` | string? | Optional override for TTS voice (e.g., `alloy`, `M1`). For Supertonic, use `M1`, `M2`, `F1`, `F2`. |
 | `ttsFormat` | `"mp3" | "opus" | "wav"`? | Optional output format. If omitted, defaults to `mp3`. |
 | `model` | string? | Optional LLM model override. Uses assistant defaults when unset. |
 
@@ -86,6 +86,7 @@ curl \
 
 - Python 3.10+, `uv`, and the Faster-Whisper + Piper deps (`packages/voice/scripts/install-deps.sh`).
 - Models: configure `WHISPER_MODEL_PATH`, `PIPER_MODEL_PATH`, `PIPER_VOICE`.
+- **Supertonic (Optional):** Set `TTS_PROVIDER=supertonic` for lightweight on-device TTS. Run `bun run download-supertonic` in `packages/voice`.
 - `ffmpeg` available on `$PATH` or via `VOICE_FFMPEG_PATH` for codec conversion.
 - See `docs/voice/s2s.md` for installation details and `docs/reference/native/voice.md` for Drive Mode specifics.
 

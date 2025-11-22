@@ -99,7 +99,12 @@ mock.module("@/hooks/use-assistant-stream", () => {
     metadata: { status: "sent" },
   });
 
-  const streamState: { messages: AssistantUIMessage[] } = {
+  const streamState: {
+    messages: AssistantUIMessage[];
+    send?: (text: string) => void;
+    clear?: () => void;
+    hydrate?: (snapshot: AssistantUIMessage[]) => void;
+  } = {
     messages: [],
   };
 
@@ -159,6 +164,8 @@ mock.module("@/hooks/use-assistant-stream", () => {
         send,
         clear,
         hydrate,
+        conversationId: "test-conv-id",
+        addToolResult: vi.fn(),
       };
     },
     assistantStreamTestApi: {

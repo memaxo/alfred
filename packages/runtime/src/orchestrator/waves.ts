@@ -365,14 +365,16 @@ export async function* runWaves(
       } as const;
 
       // Phase 4: Test-Driven Development Loop
+      // If mandated, we first force the agent to write a failing test.
       if (spec.mandateTDD && projectConfig) {
+        const task = subTaskById.get(spec.subTaskId);
         yield { type: "notice", message: "tdd_test_generation_started" } as any;
 
+        // Create a TDD-specific ExecPlan
         const tddPlanPath = spec.execPlanPath.replace(".md", ".tdd.md");
-        // Create TDD plan
         await fs.writeFile(
           tddPlanPath,
-          `# TDD Plan for ${spec.agentId}\n\nGoal: Write a failing reproduction test.`,
+          `# TDD Plan for ${spec.agentId}\n\nGoal: Write a failing reproduction test for the following requirement:\n\n${task?.requirement}`,
           "utf8"
         );
 
@@ -382,11 +384,10 @@ export async function* runWaves(
           "Goal: Write a REPRODUCTION TEST case that fails for the current requirement.",
           "1. Analyze the requirement.",
           "2. Create a new test file (e.g. in tests/ or __tests__) that asserts the desired behavior.",
-          "3. Do NOT implement the feature yet.",
+          "3. Do NOT implement the feature yet. The test MUST FAIL.",
         ].join("\n");
 
         // Run TDD Agent
-        // We use a separate session ID to avoid confusing the main agent context
         await toolCodex.execute({
           input: {
             action: "exec",
@@ -394,12 +395,12 @@ export async function* runWaves(
             out: "text",
             auto: spec.auto,
             cw: spec.workingDirectory,
-            sessionId: `${spec.sessionId}:tdd`,
+            sessionId: `${spec.sessionId}:tdd`, // Separate session
             containerId,
             model: spec.model,
             context: spec.context,
           },
-          writer, // Reuse writer to stream output to user
+          writer,
         });
 
         // Verify Test Fails
@@ -429,7 +430,6 @@ export async function* runWaves(
             type: "notice",
             message: "tdd_warning_test_passed_already",
           } as any;
-          // We proceed, but warn.
         } else {
           yield { type: "notice", message: "tdd_failure_verified" } as any;
         }

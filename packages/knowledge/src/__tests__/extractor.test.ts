@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { extract, extractTemporal } from "../extractor.js";
 
 describe("Knowledge Extractor", () => {
-  test("extract entities using compromise", () => {
+  test("extract entities using compromise", async () => {
     const text = "Elon Musk founded SpaceX in 2002.";
-    const result = extract(text, "test-source");
+    const result = await extract(text, "test-source");
 
     expect(result.facts.length).toBeGreaterThan(0);
     const fact = result.facts[0];
@@ -15,9 +15,9 @@ describe("Knowledge Extractor", () => {
     expect(result.entities.has("SpaceX")).toBe(true);
   });
 
-  test("extract relations using verb heuristics", () => {
+  test("extract relations using verb heuristics", async () => {
     const text = "Elon Musk founded SpaceX.";
-    const result = extract(text, "test-source");
+    const result = await extract(text, "test-source");
 
     // We expect a relation [Elon Musk, founded, SpaceX]
     const hasRelation = result.facts[0].relations.some(
@@ -36,21 +36,21 @@ describe("Knowledge Extractor", () => {
     expect(temporal[0].fact).toContain("meeting");
   });
 
-  test("detect causal relationships", () => {
+  test("detect causal relationships", async () => {
     const text = "The engine failed because the fuel pump was clogged.";
-    const result = extract(text, "test-source");
+    const result = await extract(text, "test-source");
 
     expect(result.causality.length).toBeGreaterThan(0);
     expect(result.causality[0].cause).toBe("The engine failed");
     expect(result.causality[0].effect).toBe("the fuel pump was clogged");
   });
 
-  test("detect contradictions", () => {
+  test("detect contradictions", async () => {
     const text = "The sky is blue. The sky is not blue.";
     // Note: extract processes sentences one by one.
     // We need to pass a single text block that contains both for the contradiction check to happen
     // across the extracted facts from that block.
-    const result = extract(text, "test-source");
+    const result = await extract(text, "test-source");
 
     expect(result.contradictions.length).toBeGreaterThan(0);
   });

@@ -12,6 +12,8 @@ import sys
 import tempfile
 import base64
 import logging
+import time
+import traceback
 from typing import Optional
 
 # Configure logging to stderr to avoid corrupting stdout JSON stream
@@ -22,39 +24,91 @@ logging.basicConfig(
 )
 logger = logging.getLogger("NeMoSTT")
 
-try:
-    import torch
-    import nemo.collections.asr as nemo_asr
-    from silero_vad import load_silero_vad, get_speech_timestamps
-    import numpy as np
-    import soundfile as sf
-except ImportError as e:
+# Global error handler to catch crashes
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
     print(json.dumps({
-        "id": "error",
+        "id": "fatal_error",
         "type": "error",
         "payload": {
-            "message": f"Missing dependencies: {str(e)}",
-            "error_type": type(e).__name__
+            "message": f"Uncaught exception: {exc_value}",
+            "traceback": "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
         }
-    }), file=sys.stderr, flush=True)
-    sys.exit(1)
+    }), file=sys.stdout, flush=True) # Ensure this goes to stdout for the parent process
+
+sys.excepthook = handle_exception
+
+def check_dependencies():
+    """Verify all dependencies are available."""
+    missing = []
+    try:
+        import torch
+    except ImportError:
+        missing.append("torch")
+        
+    try:
+        import nemo.collections.asr as nemo_asr
+    except ImportError:
+        missing.append("nemo_toolkit[asr]")
+        
+    try:
+        import silero_vad
+    except ImportError:
+        missing.append("silero-vad")
+        
+    try:
+        import numpy
+    except ImportError:
+        missing.append("numpy")
+        
+    try:
+        import soundfile
+    except ImportError:
+        missing.append("soundfile")
+        
+    if missing:
+        error_msg = f"Missing dependencies: {', '.join(missing)}"
+        logger.error(error_msg)
+        print(json.dumps({
+            "id": "startup_error",
+            "type": "error",
+            "payload": {
+                "message": error_msg,
+                "error_type": "ImportError"
+            }
+        }), file=sys.stdout, flush=True)
+        sys.exit(1)
+
+check_dependencies()
+
+import torch
+import nemo.collections.asr as nemo_asr
+from silero_vad import load_silero_vad, get_speech_timestamps
+import numpy as np
+import soundfile as sf
 
 
 class STTServer:
     def __init__(self, model_name: str, device: Optional[str] = None):
         """Initialize NeMo Parakeet model with VAD."""
         self.model_name = model_name
+        self.start_time = time.time()
         
         # Device detection logic
         if device is None:
             if torch.cuda.is_available():
                 self.device = "cuda"
             elif torch.backends.mps.is_available():
-                # Check if MPS is actually usable (some ops might fall back)
                 try:
+                    # Test MPS capability
                     x = torch.ones(1, device="mps")
                     self.device = "mps"
-                except:
+                except Exception as e:
+                    logger.warning(f"MPS available but failed test: {e}. Fallback to CPU.")
                     self.device = "cpu"
             else:
                 self.device = "cpu"
@@ -63,6 +117,7 @@ class STTServer:
 
         logger.info(f"Initializing STT Server on device: {self.device}")
         
+        # Signal initialization start
         print(json.dumps({
             "id": "init",
             "type": "status",
@@ -70,57 +125,57 @@ class STTServer:
         }), flush=True)
         
         try:
+            load_start = time.time()
+            
             # NeMo loads models to CUDA by default if available, map_location helps for CPU/MPS
             map_location = torch.device(self.device)
             
-            # For Parakeet, we use the ASRModel.from_pretrained interface
-            # Note: NeMo might try to move to CUDA inside from_pretrained if not careful
             self.model = nemo_asr.models.ASRModel.from_pretrained(
                 model_name=model_name,
                 map_location=map_location
             )
             
+            # Move to device explicitly (required for MPS/CUDA sometimes after load)
+            if self.device != "cpu":
+                self.model.to(self.device)
+                
             # Ensure model is in eval mode
             self.model.freeze()
             
+            load_duration = time.time() - load_start
+            logger.info(f"Model loaded in {load_duration:.2f}s")
+            
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
-            # Fallback to CPU if MPS/CUDA failed
-            if self.device != "cpu":
-                logger.info("Falling back to CPU...")
-                try:
-                    self.device = "cpu"
-                    self.model = nemo_asr.models.ASRModel.from_pretrained(
-                        model_name=model_name,
-                        map_location=torch.device("cpu")
-                    )
-                    self.model.freeze()
-                except Exception as e_cpu:
-                    print(json.dumps({
-                        "id": "error",
-                        "type": "error",
-                        "payload": {"message": f"Failed to load model on CPU fallback: {e_cpu}"}
-                    }), file=sys.stderr, flush=True)
-                    sys.exit(1)
-            else:
-                print(json.dumps({
-                    "id": "error",
-                    "type": "error",
-                    "payload": {"message": f"Failed to load model: {e}"}
-                }), file=sys.stderr, flush=True)
-                sys.exit(1)
+            # Detailed error reporting
+            print(json.dumps({
+                "id": "init_error",
+                "type": "error",
+                "payload": {
+                    "message": f"Failed to load model: {str(e)}",
+                    "traceback": traceback.format_exc()
+                }
+            }), file=sys.stdout, flush=True)
+            sys.exit(1)
         
         # Load VAD model (Silero)
         try:
             self.vad_model = load_silero_vad()
+            logger.info("VAD model loaded successfully")
         except Exception as e:
             logger.warning(f"VAD model not available: {e}")
             self.vad_model = None
         
+        # Ready signal
         print(json.dumps({
             "id": "ready",
             "type": "status",
-            "payload": {"message": "STT server ready"}
+            "payload": {
+                "message": "STT server ready",
+                "device": self.device,
+                "model": self.model_name,
+                "startup_time": time.time() - self.start_time
+            }
         }), flush=True)
     
     def transcribe(
@@ -132,6 +187,7 @@ class STTServer:
         session_id: Optional[str] = None,
     ) -> dict:
         """Transcribe audio from base64 string."""
+        start_ts = time.time()
         
         # Decode audio
         try:
@@ -141,8 +197,11 @@ class STTServer:
 
         # VAD Processing (using numpy buffer)
         # Convert to numpy array (assuming 16kHz mono PCM 16-bit)
-        # Note: NeMo usually expects wav files or specific input. Silero expects float32 numpy.
-        audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        try:
+            audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        except Exception as e:
+             raise ValueError(f"Invalid audio data format (expected PCM16): {e}")
+             
         total_samples = len(audio_array)
         duration_seconds = float(total_samples) / 16000.0 if total_samples > 0 else 0.0
         
@@ -175,8 +234,6 @@ class STTServer:
                 
                 end_of_utterance_silero = (speech_samples == 0)
                 
-                # If strictly no speech detected by VAD, we could return empty early.
-                # But sometimes VAD misses faint speech that ASR catches, so we proceed unless empty.
                 if total_samples == 0:
                      return {
                         "text": "",
@@ -193,7 +250,6 @@ class STTServer:
                 logger.warning(f"VAD processing failed: {e}")
         
         # Transcription with NeMo
-        # NeMo transcribe() takes a list of paths
         text = ""
         
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp_wav:
@@ -204,7 +260,8 @@ class STTServer:
             try:
                 # transcribe() returns a list of strings
                 # verbose=False to avoid stdout pollution
-                transcriptions = self.model.transcribe(paths2audio_files=[tmp_wav.name], verbose=False)
+                # batch_size=1 for single request
+                transcriptions = self.model.transcribe(paths2audio_files=[tmp_wav.name], batch_size=1, verbose=False)
                 if transcriptions and len(transcriptions) > 0:
                     text = transcriptions[0]
             except Exception as e:
@@ -212,12 +269,14 @@ class STTServer:
                 raise e
 
         # Post-process text
-        # Parakeet outputs raw lowercase.
         # Check for <EOU> token
         has_eou_token = "<EOU>" in text
         text = text.replace("<EOU>", "").strip()
         
         end_of_utterance = has_eou_token or end_of_utterance_silero
+        
+        processing_time = time.time() - start_ts
+        logger.info(f"Transcribed {duration_seconds:.2f}s audio in {processing_time:.2f}s (RTF: {processing_time/duration_seconds:.2f})")
         
         return {
             "text": text,
@@ -228,6 +287,7 @@ class STTServer:
             "durationSeconds": duration_seconds,
             "vadConfidence": vad_confidence,
             "endOfUtterance": end_of_utterance,
+            "processingTime": processing_time
         }
     
     def run(self):
@@ -276,10 +336,14 @@ class STTServer:
                         print(json.dumps({
                             "id": request_id,
                             "type": "error",
-                            "payload": {"message": str(e)}
+                            "payload": {
+                                "message": str(e),
+                                "traceback": traceback.format_exc()
+                            }
                         }), flush=True)
                 
                 elif request_type == "shutdown":
+                    logger.info("Shutdown requested")
                     break
                 
             except json.JSONDecodeError:

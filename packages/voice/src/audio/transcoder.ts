@@ -107,8 +107,8 @@ export class Transcoder {
           break;
         }
         if (value) {
-          const msg = new TextDecoder().decode(value);
-          console.warn("[ffmpeg]", msg); // Use it to avoid unused var
+          // Just consume stderr to prevent buffer fill
+          // const _msg = new TextDecoder().decode(value);
         }
       }
     } catch {}

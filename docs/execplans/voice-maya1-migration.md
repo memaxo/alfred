@@ -16,20 +16,36 @@ This migration involves:
 
 ## Progress
 
-- [ ] Phase 1: Dependencies & Environment
-    - [ ] Update `packages/voice/pyproject.toml` with new dependencies.
-    - [ ] Verify Python environment and GPU availability (Maya1 requires GPU for real-time).
-- [ ] Phase 2: Maya1 Implementation
-    - [ ] Create `packages/voice/scripts/maya_tts.py` (Python inference loop).
-    - [ ] Create `packages/voice/src/process/maya.ts` (TypeScript wrapper).
-- [ ] Phase 3: Integration & Replacement
-    - [ ] Update `packages/voice/src/process/tts.ts` to use `MayaTTSProcess`.
-    - [ ] Update `packages/voice/src/process/base.ts` config if needed.
-    - [ ] Test integration with `scripts/test-tts.ts`.
-- [ ] Phase 4: Cleanup
-    - [ ] Remove Piper dependencies and code if no longer needed.
+- [x] Phase 1: Dependencies & Environment
+    - [x] Update `packages/voice/pyproject.toml` with new dependencies.
+    - [x] Verify Python environment and GPU availability (Maya1 requires GPU for real-time).
+- [x] Phase 2: Maya1 Implementation
+    - [x] Create `packages/voice/scripts/maya_tts.py` (Python inference loop).
+    - [x] Create `packages/voice/src/process/maya.ts` (TypeScript wrapper).
+- [x] Phase 3: Integration & Replacement
+    - [x] Update `packages/voice/src/process/tts.ts` to use `MayaTTSProcess`.
+    - [x] Update `packages/voice/src/process/base.ts` config if needed.
+    - [x] Test integration with `scripts/test-tts.ts`.
+- [x] Phase 4: Cleanup
+    - [x] Remove Piper dependencies and code if no longer needed.
+- [x] Phase 5: Setup Automation
+    - [x] Update `install-deps.sh` and `download_models.py`.
+    - [x] Add `setup` script to `package.json` and `turbo.json`.
+    - [x] Update documentation.
 
-## Context and Orientation
+## Outcomes & Retrospective
+
+Successfully migrated TTS from Piper (WASM) to Maya1 (3B Python/PyTorch model).
+- **Quality**: Significantly improved with emotional range (laugh, cry, whisper) and natural prosody.
+- **Latency**: Higher startup latency (~1s) compared to Piper, but acceptable for quality trade-off. Streaming implementation minimizes perceived latency.
+- **Infrastructure**: Moved to a robust Python subprocess architecture managed by `uv`. This also enabled upgrading STT to NVIDIA NeMo Parakeet (120M) for better accuracy than Faster-Whisper.
+- **Setup**: Fully automated via `bun run setup`.
+
+**Surprises & Discoveries:**
+- Maya1 requires significant VRAM (~6GB). Default TTS pool size set to 1 to prevent OOM on consumer GPUs.
+- `uv sync` is much faster and more reliable than manual pip management.
+- `ml_dtypes` version conflicts required pinning in `pyproject.toml`.
+
 
 The current system uses `packages/voice/src/process/piper_tts.ts` (WASM-based) and `packages/voice/src/process/tts.ts` (Pool management). Maya1 is a 3B parameter model that must run in a Python subprocess to access GPU resources via PyTorch.
 

@@ -19,6 +19,7 @@ const defaultCompare = (a: unknown, b: unknown): number => {
 export class BTreeIndex<K = string, V = NodeId> {
   private root: BTreeNode<K, V>;
   private readonly maxKeys: number;
+  private readonly minKeys: number;
 
   constructor(
     readonly order = 64,

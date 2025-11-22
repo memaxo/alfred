@@ -1,4 +1,5 @@
 import "../../test/testing-library";
+import "../../test/reset-mocks";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -179,14 +180,17 @@ describe("Mindscape → Workflow navigation", () => {
     const openFullButtons = await view.findAllByTestId(
       "mindscape-drawer-open-full"
     );
-    fireEvent.click(openFullButtons[openFullButtons.length - 1]);
+    fireEvent.click(openFullButtons.at(-1));
 
     await waitFor(() => {
       expect(history.location.pathname).toBe(`/workflow/${runtimeRunId}`);
+      expect(router.state.location.search).toMatchObject({ drawer: "1" });
     });
 
-    await view.findByText("Workflow Details");
-    await view.findByText("Router Doc");
+    const workflowHeaders = await view.findAllByText("Workflow Details");
+    expect(workflowHeaders.length).toBeGreaterThan(0);
+    const routerDocs = await view.findAllByText("Router Doc");
+    expect(routerDocs.length).toBeGreaterThan(0);
   });
 
   it("renders the provenance error copy when reasoning fails", async () => {
@@ -258,14 +262,16 @@ describe("Mindscape → Workflow navigation", () => {
     const openFullButtons = await view.findAllByTestId(
       "mindscape-drawer-open-full"
     );
-    fireEvent.click(openFullButtons[openFullButtons.length - 1]);
+    fireEvent.click(openFullButtons.at(-1));
 
     await waitFor(() => {
       expect(history.location.pathname).toBe(`/workflow/${runtimeRunId}`);
+      expect(router.state.location.search).toMatchObject({ drawer: "1" });
     });
 
-    await view.findByText(
+    const provenanceErrors = await view.findAllByText(
       "Unable to load provenance. Please retry in a moment."
     );
+    expect(provenanceErrors.length).toBeGreaterThan(0);
   });
 });

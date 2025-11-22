@@ -57,7 +57,9 @@ export async function initializeVoicePools(): Promise<void> {
   }
 
   const sttConfig: ProcessConfig = {
-    scriptPath: join(process.cwd(), "packages/voice/scripts/stt_server.py"),
+    // Point to the python/stt package (which has __main__.py)
+    // When running with uv, we want "python -m stt" ideally, or "python python/stt"
+    scriptPath: join(process.cwd(), "packages/voice/python/stt"),
     modelPath: whisperModelPath,
     device: process.env.WHISPER_DEVICE ?? getDefaultDevice(),
     computeType: process.env.WHISPER_COMPUTE_TYPE ?? "int8",

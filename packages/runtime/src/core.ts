@@ -8,7 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
-import type { LanguageModel } from "ai";
+// import type { LanguageModel } from "ai";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
@@ -22,10 +22,8 @@ import {
   validateRuntimeOptions,
 } from "./types";
 
-const DEFAULT_STEP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+// const DEFAULT_STEP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_WORKFLOW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-
-// const _RESUME_TIMEOUT_MS = 10_000; // 10 seconds
 
 import { ActPhase } from "./pipeline/phases/act";
 import { PlanPhase } from "./pipeline/phases/plan";
@@ -34,12 +32,6 @@ import { ScanPhase } from "./pipeline/phases/scan";
 import { PipelineRunner } from "./pipeline/runner";
 import type { PipelineState } from "./pipeline/types";
 
-/**
- * WorkflowRuntime implements the core execution engine.
- *
- * Maintains backward compatibility with RunPlanV6 interface while providing
- * clean separation of concerns and testability via dependency injection.
- */
 export class WorkflowRuntime implements IWorkflowRuntime {
   readonly runId: string;
   readonly summary: string;
@@ -53,10 +45,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     return this._stream;
   }
 
-  // Reserved for Phase 3.3+ integration (intentionally unused for now)
   private readonly _input: RuntimeInput;
-  private readonly _model: LanguageModel;
-  private readonly stepTimeoutMs: number;
+  // private readonly _model: LanguageModel; // Reserved
+  // private readonly stepTimeoutMs: number; // Reserved
   private readonly workflowTimeoutMs: number;
   private readonly workflowStartTime: number;
 
@@ -72,10 +63,10 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     // Store for Phase 3.3+ when integrating context builder and AI SDK
     this._input = validated.input;
-    this._model = validated.model;
+    // this._model = validated.model;
 
     this.signal = validated.signal;
-    this.stepTimeoutMs = validated.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+    // this.stepTimeoutMs = validated.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
     this.workflowTimeoutMs =
       validated.workflowTimeoutMs ?? DEFAULT_WORKFLOW_TIMEOUT_MS;
     this.workflowStartTime = Date.now();
@@ -90,7 +81,6 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       resumeTimeout: null,
       finalStatus: null,
       finalMessage: null,
-      // projectConfig: null, // Not yet supported in types
     };
 
     // Setup cancellation listener
@@ -321,9 +311,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
    * Get runtime model (for debugging/logging)
    * Reserved for Phase 3.3+ when integrating AI SDK
    */
-  getModel(): LanguageModel {
-    return this._model;
-  }
+  // getModel(): LanguageModel {
+  //   return this._model;
+  // }
 }
 
 /**

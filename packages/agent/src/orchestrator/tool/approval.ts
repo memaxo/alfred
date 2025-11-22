@@ -1,4 +1,3 @@
-import { logger } from "@alfred/api/utils/logger"; // Assuming we can import logger here, or use console
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import type { Tool } from "ai";
 
@@ -15,6 +14,7 @@ export function withPolicyApproval<TInput, TOutput>(
     resource: { kind: string; id: string };
     scopes: string[];
     authz?: string;
+    context?: Record<string, unknown>;
   }
 ): Tool<TInput, TOutput> {
   const needsApproval = async (input: TInput) => {
@@ -29,6 +29,7 @@ export function withPolicyApproval<TInput, TOutput>(
       const result = await requireToolScopesAndPolicy(authz, check.scopes, {
         action: check.action,
         resource: check.resource,
+        context: check.context,
       });
 
       const obligations = (result as any).obligations as string[] | undefined;
@@ -46,7 +47,7 @@ export function withPolicyApproval<TInput, TOutput>(
 
       return false;
     } catch (error) {
-      logger.warn("policy_check_failed_in_approval", {
+      console.warn("policy_check_failed_in_approval", {
         tool: tool.description,
         error: error instanceof Error ? error.message : String(error),
       });

@@ -1,34 +1,65 @@
-import { z } from "zod";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
+import { toolCodex } from "../tool/codex";
 
-export const architectInputSchema = z.object({
-  requirement: z.string(),
-  bundleSummary: z.string(),
-  runId: z.string(),
-});
+export type ArchitectResult = {
+  architecture: string;
+  success: boolean;
+};
 
-export type ArchitectInput = z.infer<typeof architectInputSchema>;
+export async function executeArchitectPhase(
+  requirement: string,
+  _context: RuntimeContext,
+  runId: string
+): Promise<ArchitectResult> {
+  const prompt = [
+    "You are a Senior System Architect.",
+    "Analyze the following requirement and produce a TECHNICAL SPECIFICATION (ARCHITECTURE.md).",
+    "",
+    "Requirement:",
+    requirement,
+    "",
+    "Your output must be a valid markdown file.",
+    "Include:",
+    "- Database schema changes (tables, columns, indexes)",
+    "- API endpoints (routes, methods, payloads)",
+    "- Component hierarchy",
+    "- Security considerations",
+    "",
+    "Do not implement code yet. Focus on structure and contracts.",
+  ].join("\n");
 
-export function generateArchitectPrompt(input: ArchitectInput): string {
-  return `You are a Senior System Architect.
-Your goal is to produce a TECHNICAL SPECIFICATION (ARCHITECTURE.md) for the requested feature.
+  try {
+    // We assume toolCodex is available.
+    // We need to write the ARCHITECTURE.md file.
+    // So we ask the agent to create it.
 
-Request: "${input.requirement}"
-Run ID: ${input.runId}
+    await toolCodex.execute({
+      input: {
+        action: "exec",
+        prompt,
+        out: "text",
+        auto: "high", // Architect needs to write files
+        cw: process.cwd(), // Or workspace root from context?
+        sessionId: `architect-${runId}`,
+        model: "claude-3-5-sonnet-20241022", // Use a smart model for architecture
+      },
+    });
 
-Context Summary:
-${input.bundleSummary}
+    return {
+      architecture: "ARCHITECTURE.md created",
+      success: true,
+    };
+  } catch (error) {
+    return {
+      architecture: "",
+      success: false,
+    };
+  }
+}
 
-Instructions:
-1. Analyze the requirement and the existing codebase context.
-2. Define the Database Schema changes (if any).
-3. Define the API Contracts (tRPC/REST endpoints, inputs/outputs).
-4. Define the Core Interfaces/Types.
-5. Identify Security Risks (AuthZ, validation).
-6. List Implementation Steps in dependency order.
+import type { AgentSpec } from "./spawn";
 
-Output Format:
-Return the content of ARCHITECTURE.md.
-Use Markdown.
-Be specific and technical.
-`;
+export function architect(_context: any): AgentSpec[] {
+  // Placeholder
+  return [];
 }

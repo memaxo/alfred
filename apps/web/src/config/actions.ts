@@ -29,6 +29,7 @@ export type ContextAction = {
   validNodeTypes: ArtifactType[] | "all";
   shortcut?: string;
   variant?: "default" | "destructive";
+  aliases?: string[];
 };
 
 export const CONTEXT_ACTIONS: ContextAction[] = [
@@ -39,6 +40,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     icon: Maximize2,
     validNodeTypes: "all",
     shortcut: "F",
+    aliases: ["zoom", "expand", "view", "open"],
   },
   {
     id: "pin",
@@ -46,6 +48,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     icon: Pin,
     validNodeTypes: "all",
     shortcut: "P",
+    aliases: ["save", "keep", "sticky", "lock"],
   },
   {
     id: "delete",
@@ -54,6 +57,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     validNodeTypes: "all",
     shortcut: "⌫",
     variant: "destructive",
+    aliases: ["remove", "destroy", "trash", "discard"],
   },
 
   // Workflow Actions
@@ -63,12 +67,14 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     icon: RotateCw,
     validNodeTypes: ["workflow"],
     shortcut: "R",
+    aliases: ["rerun", "restart", "replay", "again"],
   },
   {
     id: "view-logs",
     label: "View Logs",
     icon: Activity,
     validNodeTypes: ["workflow"],
+    aliases: ["debug", "history", "events", "trace"],
   },
 
   // Note Actions
@@ -78,6 +84,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     icon: Copy,
     validNodeTypes: ["note"],
     shortcut: "D",
+    aliases: ["clone", "copy", "replicate"],
   },
 
   // Chat Actions
@@ -86,6 +93,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     label: "Clear History",
     icon: MessageSquare,
     validNodeTypes: ["chat"],
+    aliases: ["reset", "wipe", "empty", "new session"],
   },
 
   // Privacy/System
@@ -94,6 +102,7 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     label: "Hide from Graph",
     icon: EyeOff,
     validNodeTypes: ["knowledge", "artifact"],
+    aliases: ["dismiss", "invisible", "cloak"],
   },
 ];
 

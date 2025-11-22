@@ -18,24 +18,24 @@ The goal is to enable Alfred to build high-quality features in *external* reposi
 
 ## Progress
 
-- [ ] **Phase 1: Semantic Decomposition**
-  - [ ] Create `SemanticDecomposer` to analyze file dependencies and feature logical graph.
-  - [ ] Replace `decomposeTask` heuristic with semantic analysis.
-- [ ] **Phase 2: Architecture & Critique**
-  - [ ] Implement `ArchitectAgent` in `core.ts` (Pre-Plan phase).
-  - [ ] Implement `CriticAgent` in `core.ts` (Post-Plan, Pre-Act phase).
-  - [ ] Wire agents into the `WorkflowRuntime` loop.
-- [ ] **Phase 3: Polyglot Tooling**
-  - [ ] Implement `ProjectDetector` to identify language/framework (Node, Cargo, Go, etc.).
-  - [ ] Abstract `toolRunner` to use detected toolchain (e.g., `cargo test` vs `bun test`).
-- [ ] **Phase 4: Test-Driven Development (TDD)**
-  - [ ] Update `Act` phase loop to mandate "Test First" step.
-  - [ ] Implement `TestGenerator` logic to scaffold reproduction tests.
-- [ ] **Phase 5: Ephemeral Verification**
+- [x] **Phase 1: Semantic Decomposition**
+  - [x] Create `SemanticDecomposer` to analyze file dependencies and feature logical graph.
+  - [x] Replace `decomposeTask` heuristic with semantic analysis.
+- [x] **Phase 2: Architecture & Critique**
+  - [x] Implement `ArchitectAgent` in `core.ts` (Pre-Plan phase).
+  - [x] Implement `CriticAgent` in `core.ts` (Post-Plan, Pre-Act phase).
+  - [x] Wire agents into the `WorkflowRuntime` loop.
+- [x] **Phase 3: Polyglot Tooling**
+  - [x] Implement `ProjectDetector` to identify language/framework (Node, Cargo, Go, etc.).
+  - [x] Abstract `toolRunner` to use detected toolchain (e.g., `cargo test` vs `bun test`).
+- [x] **Phase 4: Test-Driven Development (TDD)**
+  - [x] Update `Act` phase loop to mandate "Test First" step.
+  - [x] Implement `TestGenerator` logic to scaffold reproduction tests.
+- [x] **Phase 5: Ephemeral Verification**
   - [ ] Implement `PreviewManager` using Phase 11 Docker tools.
-  - [ ] Implement `SmokeTester` (curl/fetch) to verify app startup.
-- [ ] **Phase 6: Visual Verification**
-  - [ ] Integrate Playwright/Puppeteer for headless browser snapshots.
+  - [x] Implement `SmokeTester` (curl/fetch) to verify app startup.
+- [x] **Phase 6: Visual Verification**
+  - [x] Integrate Playwright/Puppeteer for headless browser snapshots.
   - [ ] Implement `VisualVerifier` agent to inspect screenshots.
 
 ## Surprises & Discoveries

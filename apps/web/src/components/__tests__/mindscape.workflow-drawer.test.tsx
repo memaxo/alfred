@@ -51,7 +51,7 @@ describe("MindscapeWorkflowDrawer", () => {
 
     await view.findByText("Workflow Details");
     const openButtons = view.getAllByTestId("mindscape-drawer-open-full");
-    fireEvent.click(openButtons[openButtons.length - 1]);
+    fireEvent.click(openButtons.at(-1));
 
     expect(navigateMock).toHaveBeenCalledWith("run-123");
   });
@@ -79,9 +79,7 @@ describe("MindscapeWorkflowDrawer", () => {
       }
     );
 
-    const errorMessage = await view.findByText(
-      "Unable to load workflow run."
-    );
+    const errorMessage = await view.findByText("Unable to load workflow run.");
     expect(errorMessage).toBeTruthy();
     expect(view.getByText("Retry")).toBeTruthy();
   });

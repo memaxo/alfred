@@ -24,9 +24,11 @@ import { Route as ApiJwksRouteImport } from './routes/api/jwks'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
+import { Route as ApiMindscapeMetricsRouteImport } from './routes/api/mindscape.metrics'
 import { Route as ApiLinearWebhookRouteImport } from './routes/api/linear/webhook'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
+import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
 
 const VoiceS2sRoute = VoiceS2sRouteImport.update({
   id: '/voice-s2s',
@@ -103,6 +105,11 @@ const ApiOrchestratorSplatRoute = ApiOrchestratorSplatRouteImport.update({
   path: '/api/orchestrator/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMindscapeMetricsRoute = ApiMindscapeMetricsRouteImport.update({
+  id: '/api/mindscape/metrics',
+  path: '/api/mindscape/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLinearWebhookRoute = ApiLinearWebhookRouteImport.update({
   id: '/api/linear/webhook',
   path: '/api/linear/webhook',
@@ -116,6 +123,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 const ApiAssistantSplatRoute = ApiAssistantSplatRouteImport.update({
   id: '/api/assistant/$',
   path: '/api/assistant/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssistantAgentSplatRoute = ApiAssistantAgentSplatRouteImport.update({
+  id: '/api/assistant-agent/$',
+  path: '/api/assistant-agent/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -132,9 +144,11 @@ export interface FileRoutesByFullPath {
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
+  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
@@ -152,9 +166,11 @@ export interface FileRoutesByTo {
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
+  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
@@ -173,9 +189,11 @@ export interface FileRoutesById {
   '/api/metrics': typeof ApiMetricsRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
+  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
@@ -195,9 +213,11 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/healthz/deps'
     | '/workflow/$runId'
+    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
+    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/auth/callback/linear'
@@ -215,9 +235,11 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/healthz/deps'
     | '/workflow/$runId'
+    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
+    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/auth/callback/linear'
@@ -235,9 +257,11 @@ export interface FileRouteTypes {
     | '/api/metrics'
     | '/healthz/deps'
     | '/workflow/$runId'
+    | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
     | '/api/linear/webhook'
+    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/auth/callback/linear'
@@ -255,9 +279,11 @@ export interface RootRouteChildren {
   ApiJwksRoute: typeof ApiJwksRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   WorkflowRunIdRoute: typeof WorkflowRunIdRoute
+  ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLinearWebhookRoute: typeof ApiLinearWebhookRoute
+  ApiMindscapeMetricsRoute: typeof ApiMindscapeMetricsRoute
   ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
   AuthCallbackLinearRoute: typeof AuthCallbackLinearRoute
@@ -370,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrchestratorSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/mindscape/metrics': {
+      id: '/api/mindscape/metrics'
+      path: '/api/mindscape/metrics'
+      fullPath: '/api/mindscape/metrics'
+      preLoaderRoute: typeof ApiMindscapeMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/linear/webhook': {
       id: '/api/linear/webhook'
       path: '/api/linear/webhook'
@@ -389,6 +422,13 @@ declare module '@tanstack/react-router' {
       path: '/api/assistant/$'
       fullPath: '/api/assistant/$'
       preLoaderRoute: typeof ApiAssistantSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assistant-agent/$': {
+      id: '/api/assistant-agent/$'
+      path: '/api/assistant-agent/$'
+      fullPath: '/api/assistant-agent/$'
+      preLoaderRoute: typeof ApiAssistantAgentSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -417,9 +457,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiJwksRoute: ApiJwksRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   WorkflowRunIdRoute: WorkflowRunIdRoute,
+  ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLinearWebhookRoute: ApiLinearWebhookRoute,
+  ApiMindscapeMetricsRoute: ApiMindscapeMetricsRoute,
   ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
   AuthCallbackLinearRoute: AuthCallbackLinearRoute,

@@ -342,8 +342,9 @@ except ImportError as e:
               break;
             }
 
-            // Consume stream but ignore content
-            decoder.decode(value);
+            // Pass stderr to console for visibility
+            const text = decoder.decode(value);
+            process.stderr.write(text);
           }
         } catch {
           // Ignore stderr read errors

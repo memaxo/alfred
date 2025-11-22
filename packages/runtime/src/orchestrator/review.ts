@@ -6,7 +6,7 @@ import {
 } from "@alfred/agent/orchestrator/multi/review";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
-import { runSmokeTest } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
+import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
@@ -186,12 +186,12 @@ export async function* runReviewPhase(
         } else if (check.type === "smoke" && projectConfig) {
           // Phase 5: Ephemeral Verification (Smoke)
           yield { type: "notice", message: "running_smoke_test" } as any;
-          const success = await runSmokeTest(workspace, projectConfig);
-          if (!success) {
+          const result = await smokeTester.verify(workspace, projectConfig);
+          if (!result.success) {
             currentRunPassed = false;
             reviewFailures.push({
               command: "smoke-test",
-              output: "Build/Smoke verification failed",
+              output: result.message,
             });
           }
           continue; // Skip standard runner

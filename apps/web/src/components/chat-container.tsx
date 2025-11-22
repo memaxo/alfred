@@ -11,10 +11,11 @@
 
 import type { AssistantUIMessage } from "@alfred/agent";
 import { Chat } from "@alfred/ui";
+import { useMemo } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { Actions } from "./actions";
-import { renderPart } from "./chat-render";
+import { createPartRenderer } from "./chat-render";
 import { Connect } from "./connect";
 import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
@@ -46,11 +47,17 @@ export function ChatContainer({
     handleAgentChange,
     toggleVoice,
     clear,
+    addToolResult,
   } = useChatLogic({
     initialAgent: agent,
     initialMessages,
     initialConversationId,
   });
+
+  const partRenderer = useMemo(
+    () => createPartRenderer({ onAddToolResult: addToolResult }),
+    [addToolResult]
+  );
 
   const showActionsPanel = actions.length > 0;
   return (
@@ -93,7 +100,7 @@ export function ChatContainer({
                     ? "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
-                renderPart={renderPart}
+                renderPart={partRenderer}
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}

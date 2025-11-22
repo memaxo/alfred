@@ -1,27 +1,40 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { MindscapeWorkflowDrawer } from "@/components/mindscape/workflow-drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
 import { trpc } from "@/utils/trpc";
 
+const workflowSearchSchema = z.object({
+  drawer: z.literal("1").optional(),
+});
+
 export const Route = createFileRoute("/workflow/$runId")({
   component: WorkflowRunRoute,
+  validateSearch: workflowSearchSchema,
 });
 
 function WorkflowRunRoute() {
   const { runId } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const runQuery = trpc.workflow.get.useQuery({ runId });
   const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
     "overview"
   );
+  const [drawerOpen, setDrawerOpen] = useState(search.drawer === "1");
 
   useEffect(() => {
     if (runQuery.data) {
       setActiveTab(runQuery.data.status === "failed" ? "error" : "overview");
     }
   }, [runQuery.data?.status, runQuery.data]);
+
+  useEffect(() => {
+    setDrawerOpen(search.drawer === "1");
+  }, [search.drawer]);
 
   const eventsQuery = trpc.workflow.events.useQuery(
     { runId },
@@ -31,6 +44,16 @@ function WorkflowRunRoute() {
     { runId },
     { enabled: runQuery.isSuccess }
   );
+
+  const setDrawer = (open: boolean) => {
+    setDrawerOpen(open);
+    navigate({
+      to: "/workflow/$runId",
+      params: { runId },
+      search: () => (open ? { drawer: "1" } : {}),
+      replace: true,
+    });
+  };
 
   if (runQuery.isLoading) {
     return (
@@ -91,6 +114,14 @@ function WorkflowRunRoute() {
               >
                 ← Back to Mindscape
               </Button>
+              <Button
+                className="text-biolum-dim hover:text-biolum"
+                onClick={() => setDrawer(true)}
+                size="sm"
+                variant="ghost"
+              >
+                Open Drawer View
+              </Button>
               <p className="font-mono text-biolum-faint text-sm">
                 Run ID: {workflow.id}
               </p>
@@ -120,6 +151,21 @@ function WorkflowRunRoute() {
           </DialogContent>
         </Dialog>
       </div>
+      <MindscapeWorkflowDrawer
+        onClose={() => setDrawer(false)}
+        onNavigateFull={() => setDrawer(false)}
+        onNavigateToMindscape={(documentId) =>
+          navigate({
+            to: "/mindscape",
+            search: (prev) => ({
+              ...prev,
+              ragDoc: documentId,
+            }),
+          })
+        }
+        open={drawerOpen}
+        runId={drawerOpen ? workflow.id : null}
+      />
     </div>
   );
 }

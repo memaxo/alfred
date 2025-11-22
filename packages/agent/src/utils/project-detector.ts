@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import path from "node:path";
+import * as fs from "node:fs/promises";
+// import * as path from "node:path";
 
 export type ProjectType = "node" | "rust" | "python" | "go" | "unknown";
 
@@ -9,108 +9,81 @@ export type ProjectConfig = {
   runCommand: string;
   installCommand: string;
   buildCommand: string;
-  extensions: string[];
 };
 
-export function detectProject(workspace: string): ProjectConfig {
-  // Priority: Node > Rust > Go > Python
-  // (Node is most common for us, but we should be robust)
+const DEFAULT_CONFIG: ProjectConfig = {
+  type: "unknown",
+  testCommand: "echo 'No test command detected'",
+  runCommand: "echo 'No run command detected'",
+  installCommand: "echo 'No install command detected'",
+  buildCommand: "echo 'No build command detected'",
+};
 
-  // 1. Node.js
-  if (existsSync(path.join(workspace, "package.json"))) {
-    // Check for lockfiles to determine package manager
-    let pm = "npm";
+export async function detectProject(root: string): Promise<ProjectConfig> {
+  try {
+    const files = await fs.readdir(root);
+
+    if (files.includes("package.json")) {
+      // Check for bun/yarn/npm/pnpm
+      const hasBun = files.includes("bun.lockb") || files.includes("bun.lock");
+      const hasYarn = files.includes("yarn.lock");
+      const hasPnpm = files.includes("pnpm-lock.yaml");
+
+      const runner = hasBun
+        ? "bun"
+        : hasYarn
+          ? "yarn"
+          : hasPnpm
+            ? "pnpm"
+            : "npm";
+      const runPrefix = runner === "npm" ? "npm run" : runner;
+
+      return {
+        type: "node",
+        testCommand: `${runPrefix} test`,
+        runCommand: `${runPrefix} start`,
+        installCommand: `${runner} install`,
+        buildCommand: `${runPrefix} build`,
+      };
+    }
+
+    if (files.includes("Cargo.toml")) {
+      return {
+        type: "rust",
+        testCommand: "cargo test",
+        runCommand: "cargo run",
+        installCommand: "cargo build", // cargo build installs deps
+        buildCommand: "cargo build --release",
+      };
+    }
+
     if (
-      existsSync(path.join(workspace, "bun.lock")) ||
-      existsSync(path.join(workspace, "bun.lockb"))
+      files.includes("pyproject.toml") ||
+      files.includes("requirements.txt")
     ) {
-      pm = "bun";
-    } else if (existsSync(path.join(workspace, "pnpm-lock.yaml"))) {
-      pm = "pnpm";
-    } else if (existsSync(path.join(workspace, "yarn.lock"))) {
-      pm = "yarn";
+      // Heuristic: prefer pytest
+      return {
+        type: "python",
+        testCommand: "pytest",
+        runCommand: "python main.py", // Generic guess
+        installCommand: "pip install -r requirements.txt",
+        buildCommand: "echo 'Python does not require build'",
+      };
     }
 
-    // Default scripts
-    // We could parse package.json scripts to be smarter
-    let testCmd = `${pm} test`;
-    let runCmd = `${pm} start`;
-    const installCmd = `${pm} install`;
-    const buildCmd = `${pm} run build`;
-
-    // Overrides for Bun
-    if (pm === "bun") {
-      testCmd = "bun test";
-      runCmd = "bun run start";
+    if (files.includes("go.mod")) {
+      return {
+        type: "go",
+        testCommand: "go test ./...",
+        runCommand: "go run .",
+        installCommand: "go mod download",
+        buildCommand: "go build",
+      };
     }
 
-    return {
-      type: "node",
-      testCommand: testCmd,
-      runCommand: runCmd,
-      installCommand: installCmd,
-      buildCommand: buildCmd,
-      extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
-    };
+    return DEFAULT_CONFIG;
+  } catch (error) {
+    void error;
+    return DEFAULT_CONFIG;
   }
-
-  // 2. Rust
-  if (existsSync(path.join(workspace, "Cargo.toml"))) {
-    return {
-      type: "rust",
-      testCommand: "cargo test",
-      runCommand: "cargo run",
-      installCommand: "cargo build", // cargo build fetches deps
-      buildCommand: "cargo build --release",
-      extensions: [".rs", ".toml"],
-    };
-  }
-
-  // 3. Go
-  if (existsSync(path.join(workspace, "go.mod"))) {
-    return {
-      type: "go",
-      testCommand: "go test ./...",
-      runCommand: "go run .",
-      installCommand: "go mod download",
-      buildCommand: "go build -v ./...",
-      extensions: [".go", ".mod"],
-    };
-  }
-
-  // 4. Python
-  if (
-    existsSync(path.join(workspace, "pyproject.toml")) ||
-    existsSync(path.join(workspace, "requirements.txt"))
-  ) {
-    // Detect runner? (poetry, pipenv, uv, pip)
-    // Default to pip/python
-    let testCmd = "python -m pytest";
-    const runCmd = "python main.py"; // Guess
-    let installCmd = "pip install -r requirements.txt";
-
-    if (existsSync(path.join(workspace, "uv.lock"))) {
-      installCmd = "uv sync";
-      testCmd = "uv run pytest";
-    }
-
-    return {
-      type: "python",
-      testCommand: testCmd,
-      runCommand: runCmd,
-      installCommand: installCmd,
-      buildCommand: "", // Python usually interprets
-      extensions: [".py", ".toml", ".txt"],
-    };
-  }
-
-  // Fallback
-  return {
-    type: "unknown",
-    testCommand: "echo 'No test command detected'",
-    runCommand: "echo 'No run command detected'",
-    installCommand: "echo 'No install command detected'",
-    buildCommand: "echo 'No build command detected'",
-    extensions: [],
-  };
 }
