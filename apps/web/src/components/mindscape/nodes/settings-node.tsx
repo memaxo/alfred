@@ -15,6 +15,7 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { settingsNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
 
 const listInput = { limit: 100, offset: 0 } as const;
 
@@ -23,7 +24,12 @@ type PreferenceDeleteInput =
   inferRouterInputs<TRPCAppRouter>["preference"]["delete"];
 
 export function SettingsNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const parseResult = settingsNodeDataSchema.safeParse(data);
+  // ... rest of existing logic ...
+
   const persisted = parseResult.success ? parseResult.data : undefined;
 
   const [customKey, setCustomKey] = useState("");
@@ -119,6 +125,27 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
   };
 
   const preferenceItems = useMemo(() => preferences.slice(0, 8), [preferences]);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-slate-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex items-center gap-2 rounded-full border border-slate-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-slate-500/50">
+        <Settings2 className="h-3 w-3 text-slate-400" />
+        <span className="font-medium text-[10px] text-slate-300 tracking-tight">
+          Settings
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode

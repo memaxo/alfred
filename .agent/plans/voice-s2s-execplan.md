@@ -45,6 +45,7 @@ Use this section as the single source of truth for current implementation status
 - [x] (2025-11-21 06:45Z) Streaming adapters land on Drive Mode + web: `useVoiceSessionNative` and `useVoiceSessionWeb` now listen for `vad_state`, honor `auto_stop`, buffer PCM `tts_chunk` events, and expose UI affordances (`Drive Mode` screen, `/voice-s2s`). Docs + env examples updated (`docs/voice/s2s.md`, `docs/voice/streaming.md`, `docs/alfred-prd.md`, `apps/web/.env.example`, `apps/native/.env.example`).
 - [x] (2025-11-21 07:35Z) Restored Codex voice metrics in the API test harness, removed the `uv`/`mock.fn` brittleness from `packages/voice` tests, and shipped hands-free polish (Drive Mode VAD meter, `/voice-s2s` indicator, CarPlay streaming fallback) + docs/PRD updates so every surface shows when auto-stop is armed.
 - [x] (2025-11-21 08:45Z) Added the voice session registry + `sessionId`/`surface` plumbing (router, streaming server, native/web hooks, queue, docs) and surfaced codec hints in both request + response payloads so session continuity and container negotiation are observable end to end.
+- [x] (2025-11-22 01:00Z) Verified voice runtime using `scripts/verify-voice-runtime.ts` which mocks pools but executes router + codec logic end-to-end. Verified Codec transcoding (WebM -> PCM -> MP3) and Router logic. Added to `scripts/verify-all.ts` suite.
 
 ## Surprises & Discoveries
 

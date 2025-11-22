@@ -578,14 +578,52 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
   };
 }
 
+import { BrainstemSupervisor } from "../../loops/supervisor.js";
+
+// ...
+
 export async function executeCodexLocal({ input, writer }: CodexExecuteArgs) {
   const resolvedCw = input.cw
     ? assertAllowedDirectory(input.cw)
     : process.cwd();
-  const sandbox = mapAutoToCodex(input.auto);
+  // ...
 
-  // Determine execution command
-  let cmdArgs: string[] = [];
+  const proc = Bun.spawn([...cmdArgs, ...flags], spawnOptions);
+  
+  // Initialize Supervisor
+  const supervisor = new BrainstemSupervisor();
+  
+  // We don't have an ID for this specific process other than local exec
+  // But supervisor tracks "active process" for heartbeat.
+  // Since we are in a tool execution, we are the active process.
+  // However, supervisor also tracks entropy on "thoughts".
+  // We need to feed events to it.
+
+  const stopTimer = startCodexExecTimer(input.auto);
+  const recordStage = createStageRecorder();
+  // ...
+
+  // ... inside stream reading loop ...
+              switch (eventType) {
+                case "item.completed": {
+                  const item = (event as { item?: unknown }).item;
+                  const itemType = (item as { type?: string } | undefined)?.type;
+                  const alfredEvents: AlfredCodexEvent[] = [];
+
+                  if (itemType === "reasoning") {
+                    const reasoningText = extractReasoning(item);
+                    if (reasoningText) {
+                      // Feed to Supervisor
+                      const supervision = supervisor.observe({ type: "thought", content: reasoningText });
+                      if (supervision.interrupt) {
+                         // Trigger Interrupt!
+                         // We need to kill the process and throw/return special state.
+                         try { proc.kill("SIGKILL"); } catch {}
+                         throw new Error(`codex_exec_interrupted:${supervision.reason}`);
+                      }
+                      
+                      // ... existing reasoning logic ...
+
   const spawnOptions: any = {
     env: pickEnvCodex(input.env),
     stdout: "pipe",
@@ -855,6 +893,22 @@ export async function executeCodexLocal({ input, writer }: CodexExecuteArgs) {
                   if (itemType === "reasoning") {
                     const reasoningText = extractReasoning(item);
                     if (reasoningText) {
+                      // Feed to Supervisor
+                      const supervision = supervisor.observe({
+                        type: "thought",
+                        content: reasoningText,
+                      });
+                      if (supervision.interrupt) {
+                        try {
+                          proc.kill("SIGKILL");
+                        } catch {
+                          // noop
+                        }
+                        throw new Error(
+                          `codex_exec_interrupted:${supervision.reason}`
+                        );
+                      }
+
                       const byteLength = Buffer.from(reasoningText).byteLength;
 
                       if (reasoningAccumulator.truncated) {

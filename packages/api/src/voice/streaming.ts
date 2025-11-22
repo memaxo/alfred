@@ -129,9 +129,9 @@ export function startVoiceStreamingPrototype(): void {
     return;
   }
 
-  const { sessionManager } = getVoicePools();
+  const { voiceRegistry } = getVoicePools();
 
-  const handler = new VoiceSocketHandler(sessionManager, {
+  const handler = new VoiceSocketHandler(voiceRegistry, {
     onSessionStart: async (userId, sessionId, config) => {
       const session = await claimVoiceSession({
         userId,
@@ -245,7 +245,7 @@ export function startVoiceStreamingPrototype(): void {
       close(ws) {
         activeSockets.delete(ws);
         if (ws.data.sessionId) {
-          sessionManager.removeSession(ws.data.sessionId);
+          voiceRegistry.removeSession(ws.data.sessionId);
         }
       },
     },
@@ -261,7 +261,7 @@ export function startVoiceStreamingPrototype(): void {
         ws.close(1000, "inactivity_timeout");
         activeSockets.delete(ws);
         if (ws.data.sessionId) {
-          sessionManager.removeSession(ws.data.sessionId);
+          voiceRegistry.removeSession(ws.data.sessionId);
         }
       }
     }

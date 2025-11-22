@@ -50,6 +50,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   // private readonly stepTimeoutMs: number; // Reserved
   private readonly workflowTimeoutMs: number;
   private readonly workflowStartTime: number;
+  private readonly authz?: string;
 
   private readonly state: RuntimeState;
   private readonly signal?: AbortSignal;
@@ -63,6 +64,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     // Store for Phase 3.3+ when integrating context builder and AI SDK
     this._input = validated.input;
+    this.authz = validated.authz;
     // this._model = validated.model;
 
     this.signal = validated.signal;
@@ -164,6 +166,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           // Minimal context for now
           ai: null as any, // Pipeline doesn't depend on AI adapter yet
           signal: this.signal,
+          authz: this.authz,
         } as any,
       };
 

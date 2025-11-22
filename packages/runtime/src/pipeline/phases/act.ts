@@ -15,16 +15,29 @@ export class ActPhase implements Phase<RuntimeInput, void> {
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
-      // history is missing here.
-      // executeActPhase(input, runId, signal, history)
-      // We need to pass history via context or input?
-      // The input type RuntimeInput doesn't have history.
-      // But WorkflowRuntime has it.
+      // Safely access authz from context (casted as any because core.ts passes a POJO)
+      const authz = (_context as any).authz;
 
-      const generator = executeActPhase(input, this.runId, controller.signal);
+      const generator = executeActPhase(input, this.runId, controller.signal, undefined, undefined, authz);
+      let result: { escalated: boolean; reason?: string } | undefined;
 
-      for await (const event of generator) {
-        yield event;
+      // Manually iterate to capture return value
+      const iter = generator[Symbol.asyncIterator]();
+      while (true) {
+        const next = await iter.next();
+        if (next.done) {
+          result = next.value;
+          break;
+        }
+        yield next.value;
+      }
+
+      if (result?.escalated) {
+        return {
+          status: "escalate",
+          reason: result.reason ?? "Unknown escalation",
+          targetPhase: "plan", // Re-plan on escalation
+        };
       }
 
       return { status: "success", data: undefined };

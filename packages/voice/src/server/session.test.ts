@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Buffer } from "node:buffer";
 import type { STTPool } from "../process/stt";
 import type { TTSPool } from "../process/tts";
-import { VoiceSession, VoiceSessionManager } from "./session";
+import { VoiceRegistry } from "./registry";
+import { VoiceSession } from "./session";
 
 // Mock Pools
 class MockSTTPool {
@@ -72,15 +73,15 @@ describe("VoiceSession (Server)", () => {
   });
 });
 
-describe("VoiceSessionManager (Server)", () => {
-  let manager: VoiceSessionManager;
+describe("VoiceRegistry (Server)", () => {
+  let manager: VoiceRegistry;
   let sttPool: any;
   let ttsPool: any;
 
   beforeEach(() => {
     sttPool = new MockSTTPool();
     ttsPool = new MockTTSPool();
-    manager = new VoiceSessionManager(sttPool, ttsPool);
+    manager = new VoiceRegistry(sttPool, ttsPool);
   });
 
   afterEach(() => {

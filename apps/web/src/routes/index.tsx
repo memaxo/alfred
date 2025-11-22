@@ -5,7 +5,7 @@ import { ScrambleText } from "@/components/scramble-text";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 import { MindscapeEngine } from "@/lib/mindscape/engine";
 import { trpc } from "@/utils/trpc";
-import { fetchInitialMindscape } from "./index.server";
+import { fetchInitialMindscape } from "@/lib/mindscape/initial-frame.server";
 
 export const Route = createFileRoute("/")({
   component: Mindscape,

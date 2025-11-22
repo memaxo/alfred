@@ -9,9 +9,5 @@ import type { RuntimeContext } from "@alfred/type/runtime-context";
  * 3. Persist Event & Snapshot
  * 4. Execute Side Effects (LLM calls, Tools)
  */
-export declare function runCognitiveLoop(
-  ctx: RuntimeContext,
-  streamId: string,
-  incomingEvent: Event
-): Promise<CognitiveState>;
+export declare function runCognitiveLoop(ctx: RuntimeContext, streamId: string, incomingEvent: Event): Promise<CognitiveState>;
 //# sourceMappingURL=cognitive.d.ts.map

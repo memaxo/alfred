@@ -80,6 +80,9 @@ export type RuntimeOptions = {
 
   /** Event history for hydration */
   history?: WorkflowEvent[];
+
+  /** Authorization token for tool execution */
+  authz?: string;
 };
 
 /**
@@ -182,6 +185,7 @@ export const runtimeOptionsSchema = z.object({
     .optional(),
   runId: z.string().uuid().optional(),
   history: z.array(z.custom<WorkflowEvent>()).optional(),
+  authz: z.string().optional(),
 });
 
 /**

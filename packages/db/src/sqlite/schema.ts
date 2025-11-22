@@ -75,6 +75,7 @@ const statements = [
     content TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     embedding BLOB,
+    content_tsvector TEXT,
     metadata TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES rag_documents(id) ON DELETE CASCADE
@@ -111,6 +112,34 @@ const statements = [
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, key)
+  );`,
+  `CREATE TABLE IF NOT EXISTS cognitive_events (
+    id TEXT PRIMARY KEY,
+    stream_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE INDEX IF NOT EXISTS cognitive_events_stream_idx
+    ON cognitive_events(stream_id);`,
+  `CREATE TABLE IF NOT EXISTS cognitive_snapshots (
+    id TEXT PRIMARY KEY,
+    stream_id TEXT NOT NULL,
+    state TEXT NOT NULL,
+    last_event_id TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE INDEX IF NOT EXISTS cognitive_snapshots_stream_idx
+    ON cognitive_snapshots(stream_id);`,
+  `CREATE TABLE IF NOT EXISTS assistant_notes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT,
+    content TEXT NOT NULL,
+    tags TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT
   );`,
 ];
 

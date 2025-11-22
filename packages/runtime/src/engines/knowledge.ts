@@ -5,10 +5,10 @@
  * Provides runtime context around knowledge queries
  */
 
-import { searchChunksHybrid } from "@alfred/db/repo/rag";
+import { searchChunks, searchChunksHybrid } from "@alfred/db/repo/rag";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import { execute, parse, semanticQuery } from "@alfred/knowledge/query";
-import { type Chunk, embed, retrieve } from "@alfred/rag";
+import { type Chunk, embed, rerank } from "@alfred/rag";
 
 /**
  * KnowledgeEngine provides knowledge graph query operations
@@ -59,6 +59,7 @@ export class KnowledgeEngine {
       topK?: number;
       threshold?: number;
       useReranking?: boolean;
+      boostConcepts?: string[];
     } = {}
   ): Promise<Chunk[]> {
     const {
@@ -66,6 +67,7 @@ export class KnowledgeEngine {
       topK = 10,
       threshold = 0.7,
       useReranking = false,
+      boostConcepts = [],
     } = options;
 
     if (!query || query.trim().length === 0) {
@@ -77,13 +79,52 @@ export class KnowledgeEngine {
 
     // Use hybrid search if enabled, otherwise pure vector search
     if (useHybrid) {
-      const results = await searchChunksHybrid({
+      // We fetch more candidates if reranking is enabled to allow re-ordering
+      // Default limit * 3 for candidate generation
+      const candidateLimit = useReranking ? topK * 3 : topK;
+      
+      let results = await searchChunksHybrid({
         embedding,
         query,
-        limit: topK,
+        limit: candidateLimit,
         threshold,
-        useReranking,
+        boostConcepts,
+        // Note: db function no longer handles reranking
       });
+
+      if (useReranking && results.length > 0) {
+        try {
+          const rerankResults = await rerank({
+            query,
+            documents: results.map((row) => ({
+              id: row.id,
+              text: row.content,
+            })),
+            topN: topK,
+            model: "rerank-v3.5",
+          });
+          
+          const rerankScoreMap = new Map(
+            rerankResults.map((item) => [item.id, item.score])
+          );
+
+          results = results.map((row) => {
+            const rerankScore = rerankScoreMap.get(row.id) ?? 0;
+            // Fusion: 0.7 * hybrid + 0.3 * rerank
+            const finalScore = row.score * 0.7 + rerankScore * 0.3;
+            return { ...row, score: finalScore };
+          });
+          
+          // Sort by new score
+          results.sort((a, b) => b.score - a.score);
+          
+          // Limit to topK
+          results = results.slice(0, topK);
+        } catch (error) {
+           // Continue without reranking on error
+           results = results.slice(0, topK);
+        }
+      }
 
       return results.map((row) => {
         const rawMetadata = row.metadata;
@@ -108,6 +149,26 @@ export class KnowledgeEngine {
     }
 
     // Fallback to pure vector search via retrieve()
-    return retrieve(query, topK, threshold);
+    const results = await searchChunks(embedding, topK, threshold);
+    return results.map((row) => {
+      const rawMetadata = row.metadata;
+      let metadata: Record<string, unknown> | undefined;
+
+      if (rawMetadata && typeof rawMetadata === "object") {
+        metadata = rawMetadata as Record<string, unknown>;
+      } else if (rawMetadata !== undefined) {
+        metadata = { value: rawMetadata };
+      }
+
+      return {
+        content: row.content,
+        order: row.order ?? 0,
+        metadata: {
+          ...(metadata ?? {}),
+          score: row.score,
+          documentId: row.documentId,
+        },
+      };
+    });
   }
 }

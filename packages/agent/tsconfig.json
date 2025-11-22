@@ -1,14 +1,14 @@
 {
-  "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
     "outDir": "dist",
-    "composite": true
+    "sourceMap": true
   },
-  "include": ["src/**/*.ts", "assistant/src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "assistant/src/**/*.ts"],
   "references": [
     { "path": "../auth" },
     { "path": "../policy" },
@@ -16,6 +16,8 @@
     { "path": "../cognitive" },
     { "path": "../knowledge" },
     { "path": "../learning" },
-    { "path": "../metrics" }
+    { "path": "../metrics" },
+    { "path": "../db" },
+    { "path": "../rag" }
   ]
 }

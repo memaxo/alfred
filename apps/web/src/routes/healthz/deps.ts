@@ -1,6 +1,3 @@
-import { healthChecksTotal } from "@alfred/api/metrics";
-import { getRedis } from "@alfred/auth/redis";
-import { db } from "@alfred/db";
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "drizzle-orm";
 
@@ -8,6 +5,10 @@ export const Route = createFileRoute("/healthz/deps")({
   server: {
     handlers: {
       GET: async () => {
+        const { healthChecksTotal } = await import("@alfred/api/metrics");
+        const { getRedis } = await import("@alfred/auth/redis");
+        const { db } = await import("@alfred/db");
+
         try {
           await db.execute(sql`select 1`);
           const redis = getRedis();

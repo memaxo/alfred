@@ -15,7 +15,7 @@ export async function appendEvent(
   streamId: string,
   type: string,
   payload: Record<string, unknown>
-) {
+): Promise<typeof cognitiveEvents.$inferSelect> {
   const [event] = await db
     .insert(cognitiveEvents)
     .values({
@@ -24,14 +24,14 @@ export async function appendEvent(
       payload,
     })
     .returning();
-  return event;
+  return event!;
 }
 
 export async function saveSnapshot(
   streamId: string,
   state: Record<string, unknown>,
   lastEventId: string
-) {
+): Promise<void> {
   await db.insert(cognitiveSnapshots).values({
     streamId,
     state,
@@ -39,7 +39,7 @@ export async function saveSnapshot(
   });
 }
 
-export async function getLatestSnapshot(streamId: string) {
+export async function getLatestSnapshot(streamId: string): Promise<typeof cognitiveSnapshots.$inferSelect | undefined> {
   const [snapshot] = await db
     .select()
     .from(cognitiveSnapshots)
@@ -49,7 +49,7 @@ export async function getLatestSnapshot(streamId: string) {
   return snapshot;
 }
 
-export async function getEventsSince(streamId: string, since: Date) {
+export async function getEventsSince(streamId: string, since: Date): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
   return db
     .select()
     .from(cognitiveEvents)
@@ -66,7 +66,7 @@ export async function getEventsSince(streamId: string, since: Date) {
  * Load all events for a stream to rebuild state
  * In a production system, this would combine snapshot + subsequent events
  */
-export async function getAllEvents(streamId: string) {
+export async function getAllEvents(streamId: string): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
   return db
     .select()
     .from(cognitiveEvents)
@@ -78,7 +78,7 @@ export async function getAllEvents(streamId: string) {
  * Find streams that were in the middle of execution
  * Returns the latest snapshot for streams in 'executing' state
  */
-export async function findActivePlans() {
+export async function findActivePlans(): Promise<(typeof cognitiveSnapshots.$inferSelect)[]> {
   // Get the latest snapshot for each stream
   // distinctOn is available in drizzle-orm/pg-core
   const snapshots = await db

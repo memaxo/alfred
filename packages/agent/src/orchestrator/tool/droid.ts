@@ -212,7 +212,8 @@ function streamStdout(
   proc: ReturnType<typeof Bun.spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
-  accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
+  accumulator: { stdout: string; capturedBytes: number; truncated: boolean },
+  onActivity: () => void
 ) {
   if (!proc.stdout || typeof proc.stdout === "number") {
     return;
@@ -228,6 +229,8 @@ function streamStdout(
         if (done) {
           break;
         }
+
+        onActivity(); // Signal activity
 
         const text = decoder.decode(value);
         accumulator.capturedBytes += Buffer.byteLength(text);
@@ -316,8 +319,39 @@ export const toolDroid = {
 
     const stopDurationTimer = startDroidExecTimer(input.auto);
 
+    // Heartbeat State
+    let lastActivity = Date.now();
+    const HEARTBEAT_TIMEOUT_MS = 60_000;
+    let heartbeatKilled = false;
+
+    const onActivity = () => {
+      lastActivity = Date.now();
+    };
+
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-    const timer = setNodeTimeout(() => {
+    
+    // Combined Timer Loop (Timeout + Heartbeat)
+    const timer = setInterval(() => {
+      const now = Date.now();
+      
+      // Check Hard Timeout
+      // Note: We use a separate setNodeTimeout for the hard limit usually, but we can do it here or keep the original.
+      // The original used setNodeTimeout. Let's keep the original structure for hard timeout if possible, 
+      // but implementing a periodic check is cleaner for heartbeat.
+      
+      // Check Heartbeat
+      if (now - lastActivity > HEARTBEAT_TIMEOUT_MS) {
+        heartbeatKilled = true;
+        try {
+          proc.kill("SIGKILL");
+        } catch {
+          // noop
+        }
+      }
+    }, 1000);
+
+    // Original Hard Timeout
+    const hardTimeoutTimer = setNodeTimeout(() => {
       try {
         proc.kill("SIGKILL");
       } catch {
@@ -337,19 +371,25 @@ export const toolDroid = {
       truncated: false,
     };
 
-    streamStdout(proc, input, writer, accumulator);
+    streamStdout(proc, input, writer, accumulator, onActivity);
     streamStderr(proc, writer);
 
     let exitCode = 0;
     try {
       exitCode = await proc.exited;
     } catch (error) {
-      clearNodeTimeout(timer);
+      clearNodeTimeout(hardTimeoutTimer);
+      clearInterval(timer);
       stopDurationTimer();
       throw error;
     } finally {
-      clearNodeTimeout(timer);
+      clearNodeTimeout(hardTimeoutTimer);
+      clearInterval(timer);
       stopDurationTimer();
+    }
+
+    if (heartbeatKilled) {
+      throw new Error("droid_exec_heartbeat_timeout");
     }
 
     recordDroidExecRun(input.auto, exitCode);

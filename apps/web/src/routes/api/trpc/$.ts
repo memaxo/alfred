@@ -1,9 +1,13 @@
-import { createContext } from "@alfred/api/context";
-import { appRouter } from "@alfred/api/routers/index";
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
-function handler({ request }: { request: Request }) {
+async function handler({ request }: { request: Request }) {
+  const contextPkg = "@alfred/api/context";
+  const routersPkg = "@alfred/api/routers/index";
+
+  const { createContext } = await import(contextPkg);
+  const { appRouter } = await import(routersPkg);
+
   return fetchRequestHandler({
     req: request,
     router: appRouter,

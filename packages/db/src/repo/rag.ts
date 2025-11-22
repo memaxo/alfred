@@ -3,9 +3,8 @@
  * Document and chunk operations with vector embeddings
  */
 
-import { type RerankTelemetry, rerank } from "@alfred/rag";
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { db } from "../index";
+import { db } from "../client";
 import { ragChunks, ragDocuments } from "../schema/rag";
 
 // type DocumentInsert = typeof ragDocuments.$inferInsert;
@@ -156,11 +155,7 @@ export type HybridSearchOptions = {
   denseWeight?: number;
   sparseWeight?: number;
   efSearch?: number;
-  useReranking?: boolean;
-  rerankModel?:
-    | "rerank-v3.5"
-    | "rerank-english-v3.0"
-    | "rerank-multilingual-v3.0";
+  boostConcepts?: string[]; // Concepts to boost (e.g. "Coding", "Security")
 };
 
 export async function searchChunksHybrid({
@@ -172,11 +167,21 @@ export async function searchChunksHybrid({
   denseWeight = 0.7,
   sparseWeight = 0.3,
   efSearch = 40,
-  useReranking = false,
-  rerankModel = "rerank-v3.5",
+  boostConcepts = [],
 }: HybridSearchOptions): Promise<ChunkSearchResult[]> {
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
   const ef = efSearch;
+  
+  // Boost Query construction:
+  // If boostConcepts are present, we construct a combined tsquery using OR (||)
+  // We use plainto_tsquery for each concept to handle natural language input safely
+  let boostRankExpression = sql`0`;
+  
+  if (boostConcepts.length > 0) {
+    const conceptQueries = boostConcepts.map(c => sql`plainto_tsquery('english', ${c})`);
+    const combinedQuery = sql.join(conceptQueries, sql` || `);
+    boostRankExpression = sql`(CASE WHEN content_tsvector @@ (${combinedQuery}) THEN 0.2 ELSE 0 END)`;
+  }
 
   // Use transaction for SET LOCAL
   // Note: SET commands don't support parameterized values, must use sql.raw()
@@ -201,7 +206,12 @@ export async function searchChunksHybrid({
       denseQuery = sql`${denseQuery} AND document_id = ${documentId}`;
     }
 
-    // Sparse full-text search using tsvector
+    // Sparse full-text search using tsvector with Boosting
+    // We add a boost component to the rank if the concepts match
+    const rankExpression = sql`
+          ts_rank(content_tsvector, plainto_tsquery('english', ${query})) + ${boostRankExpression}
+        `;
+
     let sparseQuery = sql`
       SELECT 
         id,
@@ -210,7 +220,7 @@ export async function searchChunksHybrid({
         "order",
         metadata,
         created_at as "created",
-        ts_rank(content_tsvector, plainto_tsquery('english', ${query})) AS sparse_score
+        ${rankExpression} AS sparse_score
       FROM rag_chunks
       WHERE content_tsvector @@ plainto_tsquery('english', ${query})
     `;
@@ -251,79 +261,8 @@ export async function searchChunksHybrid({
       .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
       .slice(0, limit);
 
-    // Apply reranking if enabled
-    if (useReranking && hybridResults.length > 0) {
-      try {
-        const rerankResults = await rerank({
-          query,
-          documents: hybridResults.map((row) => ({
-            id: row.id,
-            text: row.content,
-          })),
-          topN: limit,
-          model: rerankModel,
-          telemetry: buildRerankTelemetry(query, rerankModel),
-        });
-
-        // Create a map of rerank scores by chunk ID
-        const rerankScoreMap = new Map(
-          rerankResults.map((item) => [item.id, item.score])
-        );
-
-        // Apply weighted fusion: finalScore = hybridScore * 0.7 + rerankScore * 0.3
-        hybridResults = hybridResults.map((row) => {
-          const rerankScore = rerankScoreMap.get(row.id) ?? 0;
-          const finalScore = row.score * 0.7 + rerankScore * 0.3;
-          return {
-            ...row,
-            score: finalScore,
-          };
-        });
-
-        // Re-sort by final score
-        hybridResults.sort((a, b) => b.score - a.score);
-      } catch (error) {
-        // Telemetry already captures the failure, so continue with hybrid results
-        void error;
-      }
-    }
-
     return hybridResults.slice(0, limit);
   });
-}
-
-function buildRerankTelemetry(query: string, model: string): RerankTelemetry {
-  const queryPreview = query.length > 120 ? `${query.slice(0, 117)}...` : query;
-  const logJson = process.env.RAG_RERANK_LOG_JSON === "1";
-
-  const log = (level: "info" | "error", payload: Record<string, unknown>) => {
-    if (logJson) {
-      const _line = JSON.stringify({ level, event: "rag.rerank", ...payload });
-      if (level === "info") {
-      } else {
-      }
-      return;
-    }
-
-    if (level === "info") {
-    } else {
-    }
-  };
-
-  return {
-    onSuccess: ({ docCount, durationMs }) =>
-      log("info", { model, docCount, durationMs, queryPreview }),
-    onError: ({ docCount, error }) =>
-      log("error", {
-        model,
-        docCount,
-        queryPreview,
-        error:
-          error instanceof Error
-            ? { message: error.message, name: error.name }
-            : { message: String(error) },
-      }),
-  };
 }
 
 export async function deleteChunk(chunkId: string): Promise<number> {

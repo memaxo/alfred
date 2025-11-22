@@ -110,21 +110,17 @@ class TextToSpeech {
     const { textIds, textMask } = this.textProcessor.call(textList);
 
     const textIds0 = textIds[0];
-    if (!textIds0) {
-      throw new Error("Text IDs missing");
-    }
+    if (!textIds0) throw new Error("textIds[0] missing");
+    
     const textIdsFlat = new BigInt64Array(textIds.flat().map((x) => BigInt(x)));
     const textIdsShape = [bsz, textIds0.length];
     const textIdsTensor = new ort.Tensor("int64", textIdsFlat, textIdsShape);
 
     const textMask0 = textMask[0];
-    if (!textMask0) {
-      throw new Error("Text mask missing");
-    }
+    if (!textMask0) throw new Error("textMask[0] missing");
     const textMask00 = textMask0[0];
-    if (!textMask00) {
-      throw new Error("Text mask inner array missing");
-    }
+    if (!textMask00) throw new Error("textMask[0][0] missing");
+
     const textMaskFlat = new Float32Array(textMask.flat(2));
     const textMaskShape = [bsz, 1, textMask00.length];
     const textMaskTensor = new ort.Tensor(
@@ -174,13 +170,10 @@ class TextToSpeech {
     );
 
     const latentMask0 = latentMask[0];
-    if (!latentMask0) {
-      throw new Error("Latent mask missing");
-    }
+    if (!latentMask0) throw new Error("latentMask[0] missing");
     const latentMask00 = latentMask0[0];
-    if (!latentMask00) {
-      throw new Error("Latent mask inner array missing");
-    }
+    if (!latentMask00) throw new Error("latentMask[0][0] missing");
+
     const latentMaskFlat = new Float32Array(latentMask.flat(2));
     const latentMaskShape = [bsz, 1, latentMask00.length];
     const latentMaskTensor = new ort.Tensor(
@@ -203,15 +196,12 @@ class TextToSpeech {
         bsz,
       ]);
 
-      const xtFlat = new Float32Array(xt.flat(2) as number[]);
       const xt0 = xt[0];
-      if (!xt0) {
-        throw new Error("xt[0] missing");
-      }
+      if (!xt0) throw new Error("xt[0] missing");
       const xt00 = xt0[0];
-      if (!xt00) {
-        throw new Error("xt[0][0] missing");
-      }
+      if (!xt00) throw new Error("xt[0][0] missing");
+
+      const xtFlat = new Float32Array(xt.flat(2) as number[]);
       const xtShape = [bsz, xt0.length, xt00.length];
       const xtTensor = new ort.Tensor("float32", xtFlat, xtShape);
 
@@ -259,15 +249,12 @@ class TextToSpeech {
     }
 
     // Generate waveform
-    const finalXtFlat = new Float32Array(xt.flat(2) as number[]);
     const finalXt0 = xt[0];
-    if (!finalXt0) {
-      throw new Error("xt[0] missing");
-    }
+    if (!finalXt0) throw new Error("xt[0] missing");
     const finalXt00 = finalXt0[0];
-    if (!finalXt00) {
-      throw new Error("xt[0][0] missing");
-    }
+    if (!finalXt00) throw new Error("xt[0][0] missing");
+
+    const finalXtFlat = new Float32Array(xt.flat(2) as number[]);
     const finalXtShape = [bsz, finalXt0.length, finalXt00.length];
     const finalXtTensor = new ort.Tensor("float32", finalXtFlat, finalXtShape);
 
@@ -290,14 +277,16 @@ class TextToSpeech {
     totalStep: number,
     speed = 1.05,
     silenceDuration = 0.3,
-    progressCallback: ((current: number, total: number) => void) | null = null
+    progressCallback: ((current: number, total: number) => void) | null = null,
+    onChunk?: (chunk: { audio: Float32Array; sampleRate: number }) => void
   ) {
     if (style.ttl.dims[0] !== 1) {
       throw new Error(
         "Single speaker text to speech only supports single style"
       );
     }
-    const textList = this.chunkText(text);
+    const maxLen = onChunk ? 1 : 300;
+    const textList = this.chunkText(text, maxLen);
     let wavCat: number[] = [];
     let durCat = 0;
 
@@ -310,14 +299,25 @@ class TextToSpeech {
         progressCallback
       );
 
+      if (duration[0] === undefined) {
+        throw new Error("Duration missing");
+      }
+
       if (wavCat.length === 0) {
         wavCat = wav;
-        durCat = duration[0] ?? 0;
+        durCat = duration[0];
       } else {
         const silenceLen = Math.floor(silenceDuration * this.sampleRate);
         const silence = new Array(silenceLen).fill(0);
         wavCat = [...wavCat, ...silence, ...wav];
-        durCat += (duration[0] ?? 0) + silenceDuration;
+        durCat += duration[0] + silenceDuration;
+      }
+
+      if (onChunk) {
+        onChunk({
+          audio: new Float32Array(wav),
+          sampleRate: this.sampleRate,
+        });
       }
     }
 
@@ -376,7 +376,7 @@ class TextToSpeech {
             if (dimRow) {
               const val = dimRow[t];
               if (val !== undefined) {
-                dimRow[t] = val * maskVal;
+                 dimRow[t] = val * maskVal;
               }
             }
           }
@@ -585,6 +585,7 @@ export class SupertonicTTS {
       steps?: number;
       speed?: number;
       silenceDuration?: number;
+      onChunk?: (chunk: { audio: Float32Array; sampleRate: number }) => void;
     } = {}
   ): Promise<SupertonicSynthesisResult> {
     if (!(this.initialized && this.textToSpeech)) {
@@ -606,7 +607,7 @@ export class SupertonicTTS {
       }
     }
 
-    if (!(this.currentStyle && this.textToSpeech)) {
+    if (!this.currentStyle || !this.textToSpeech) {
       throw new Error("No voice style loaded or textToSpeech not initialized");
     }
 
@@ -615,7 +616,9 @@ export class SupertonicTTS {
       this.currentStyle,
       options.steps ?? 5,
       options.speed ?? 1.05,
-      options.silenceDuration ?? 0.3
+      options.silenceDuration ?? 0.3,
+      null,
+      options.onChunk
     );
 
     if (!result) {

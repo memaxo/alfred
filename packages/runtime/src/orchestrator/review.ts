@@ -2,9 +2,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   buildReviewPlan,
-  generateReviewExecPlanSkeleton,
+  // generateReviewExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/review";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
 import { logger } from "@alfred/logger";
@@ -29,121 +29,6 @@ export async function* runReviewPhase(
     // @ts-expect-error - ReviewCheck typing mismatch in runtime
     checks: reviewPlan.checks?.map((c) => c.kind) ?? [],
   });
-
-  yield {
-    type: "event",
-    kind: "review-plan",
-    data: reviewPlan,
-  } as any;
-  const reviewExecPlanPath = `.agent/plans/${runId}/review.md`;
-  try {
-    const dir = path.dirname(reviewExecPlanPath);
-    await fs.mkdir(dir, { recursive: true });
-    try {
-      await fs.access(reviewExecPlanPath);
-    } catch {
-      const skeleton = generateReviewExecPlanSkeleton(runId, reviewPlan);
-      await fs.writeFile(reviewExecPlanPath, skeleton, "utf8");
-    }
-
-    const promptLines = [
-      "You are a review planning agent.",
-      "",
-      `ExecPlan path: ${reviewExecPlanPath}`,
-      "",
-      "Instructions:",
-      "- Read the ExecPlan at the given path and the ReviewPlan summary.",
-      "- Do NOT run tests, lint, or static analysis; only plan them.",
-      "- For each check, specify the exact commands that should be run.",
-      "- Update the Progress and Decision Log as you refine the plan.",
-      "- Summarise the final review plan at the end.",
-    ];
-    const prompt = promptLines.join("\n");
-
-    const startedAt = Date.now();
-
-    const reviewEvents: WorkflowEvent[] = [];
-
-    const writer = {
-      write: async (chunk: unknown) => {
-        const payload = chunk as { type?: string; event?: unknown };
-        if (!payload || typeof payload !== "object") {
-          return;
-        }
-        const type = (payload as any).type;
-        if (type === "stdout" || type === "stderr") {
-          const text = (payload as any).text ?? "";
-          reviewEvents.push({
-            type,
-            text,
-          } as any);
-        } else if (type === "notice") {
-          reviewEvents.push({
-            type: "notice",
-            message: (payload as any).message ?? "review_agent_notice",
-          } as any);
-        }
-      },
-    } as const;
-
-    try {
-      await toolCodex.execute({
-        input: {
-          action: "exec",
-          prompt,
-          out: "text",
-          auto: "read", // Enforce read-only for analysis agents
-          cw: workspace,
-          sessionId: `${runId}:review`,
-          model: undefined,
-          profile: undefined,
-          context: {},
-        },
-        writer,
-      });
-
-      const finishedAt = Date.now();
-      const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-
-      for (const ev of reviewEvents) {
-        yield ev;
-      }
-
-      yield {
-        type: "event",
-        kind: "review-agent-result",
-        data: {
-          role: "review",
-          status: "completed",
-          durationSeconds,
-        },
-      } as any;
-    } catch (error) {
-      const finishedAt = Date.now();
-      const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-      logger.warn("review_agent_execution_failed", {
-        runId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      for (const ev of reviewEvents) {
-        yield ev;
-      }
-      yield {
-        type: "event",
-        kind: "review-agent-result",
-        data: {
-          role: "review",
-          status: "failed",
-          durationSeconds,
-        },
-      } as any;
-    }
-  } catch (error) {
-    logger.warn("review_agent_initialisation_failed", {
-      runId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 
   // Review execution phase & Self-Correction Loop
   // If checks are planned, execute them using toolRunner

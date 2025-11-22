@@ -16,11 +16,13 @@ import { Route as MindscapeRouteImport } from './routes/mindscape'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as DriveRouteImport } from './routes/drive'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkflowRunIdRouteImport } from './routes/workflow.$runId'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
+import { Route as ExperimentalTuneRouteImport } from './routes/experimental/tune'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
-import { Route as ApiJwksRouteImport } from './routes/api/jwks'
+import { Route as AdminVoiceRouteImport } from './routes/admin/voice'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
@@ -65,6 +67,11 @@ const DriveRoute = DriveRouteImport.update({
   path: '/drive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -80,15 +87,20 @@ const HealthzDepsRoute = HealthzDepsRouteImport.update({
   path: '/deps',
   getParentRoute: () => HealthzRoute,
 } as any)
+const ExperimentalTuneRoute = ExperimentalTuneRouteImport.update({
+  id: '/experimental/tune',
+  path: '/experimental/tune',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMetricsRoute = ApiMetricsRouteImport.update({
   id: '/api/metrics',
   path: '/api/metrics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiJwksRoute = ApiJwksRouteImport.update({
-  id: '/api/jwks',
-  path: '/api/jwks',
-  getParentRoute: () => rootRouteImport,
+const AdminVoiceRoute = AdminVoiceRouteImport.update({
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AuthCallbackLinearRoute = AuthCallbackLinearRouteImport.update({
   id: '/auth/callback/linear',
@@ -133,6 +145,7 @@ const ApiAssistantAgentSplatRoute = ApiAssistantAgentSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/drive': typeof DriveRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
@@ -140,8 +153,9 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
-  '/api/jwks': typeof ApiJwksRoute
+  '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -155,6 +169,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/drive': typeof DriveRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
@@ -162,8 +177,9 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
-  '/api/jwks': typeof ApiJwksRoute
+  '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -178,6 +194,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/drive': typeof DriveRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
@@ -185,8 +202,9 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/voice-s2s': typeof VoiceS2sRoute
-  '/api/jwks': typeof ApiJwksRoute
+  '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -202,6 +220,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/drive'
     | '/healthz'
     | '/login'
@@ -209,8 +228,9 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/settings'
     | '/voice-s2s'
-    | '/api/jwks'
+    | '/admin/voice'
     | '/api/metrics'
+    | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -224,6 +244,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/drive'
     | '/healthz'
     | '/login'
@@ -231,8 +252,9 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/settings'
     | '/voice-s2s'
-    | '/api/jwks'
+    | '/admin/voice'
     | '/api/metrics'
+    | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -246,6 +268,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/drive'
     | '/healthz'
     | '/login'
@@ -253,8 +276,9 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/settings'
     | '/voice-s2s'
-    | '/api/jwks'
+    | '/admin/voice'
     | '/api/metrics'
+    | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -269,6 +293,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   DriveRoute: typeof DriveRoute
   HealthzRoute: typeof HealthzRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -276,8 +301,8 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
   VoiceS2sRoute: typeof VoiceS2sRoute
-  ApiJwksRoute: typeof ApiJwksRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
+  ExperimentalTuneRoute: typeof ExperimentalTuneRoute
   WorkflowRunIdRoute: typeof WorkflowRunIdRoute
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
@@ -340,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -361,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthzDepsRouteImport
       parentRoute: typeof HealthzRoute
     }
+    '/experimental/tune': {
+      id: '/experimental/tune'
+      path: '/experimental/tune'
+      fullPath: '/experimental/tune'
+      preLoaderRoute: typeof ExperimentalTuneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/metrics': {
       id: '/api/metrics'
       path: '/api/metrics'
@@ -368,12 +407,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/jwks': {
-      id: '/api/jwks'
-      path: '/api/jwks'
-      fullPath: '/api/jwks'
-      preLoaderRoute: typeof ApiJwksRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/voice': {
+      id: '/admin/voice'
+      path: '/voice'
+      fullPath: '/admin/voice'
+      preLoaderRoute: typeof AdminVoiceRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/auth/callback/linear': {
       id: '/auth/callback/linear'
@@ -434,6 +473,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminVoiceRoute: typeof AdminVoiceRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminVoiceRoute: AdminVoiceRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface HealthzRouteChildren {
   HealthzDepsRoute: typeof HealthzDepsRoute
 }
@@ -447,6 +496,7 @@ const HealthzRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   DriveRoute: DriveRoute,
   HealthzRoute: HealthzRouteWithChildren,
   LoginRoute: LoginRoute,
@@ -454,8 +504,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
   VoiceS2sRoute: VoiceS2sRoute,
-  ApiJwksRoute: ApiJwksRoute,
   ApiMetricsRoute: ApiMetricsRoute,
+  ExperimentalTuneRoute: ExperimentalTuneRoute,
   WorkflowRunIdRoute: WorkflowRunIdRoute,
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,

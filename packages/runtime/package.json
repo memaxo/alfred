@@ -21,7 +21,6 @@
     }
   },
   "dependencies": {
-    "@alfred/agent": "workspace:*",
     "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/knowledge": "workspace:*",
@@ -29,6 +28,7 @@
     "@alfred/logger": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
+    "@alfred/agent": "workspace:*",
     "ai": "catalog:",
     "zod": "catalog:"
   },

@@ -244,6 +244,21 @@ function stripBase64Prefix(raw: string) {
   return commaIndex >= 0 ? trimmed.slice(commaIndex + 1) : trimmed;
 }
 
+export function inferExtension(mimeType: string) {
+  const mapping: Record<string, string> = {
+    "audio/webm": "webm",
+    "audio/webm;codecs=opus": "webm",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/mpeg": "mp3",
+    "audio/ogg": "ogg",
+    "audio/ogg;codecs=opus": "opus",
+    "audio/mp4": "mp4",
+    "audio/aac": "aac",
+  };
+  return mapping[mimeType.toLowerCase()] ?? "webm";
+}
+
 export function isLikelyPCM(mimeType: string) {
   const normalized = mimeType.toLowerCase();
   return (

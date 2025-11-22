@@ -7,4 +7,5 @@
 5. **Performance budgets.** Enforce: transitions `<100 µs`, graph lookups `<1 ms`, fact extraction `<10 ms`, plan generation `<100 ms`, consolidation `<50 ms` amortised. Instrument hotspots before optimising.
 6. **Autonomy gradient.** Honour the autonomy bands (read-only ≤0.3, suggest ≤0.5, cautious execute ≤0.7, supervised execute ≤0.9, full ≤1.0). Escalate to policy checks whenever the band changes.
 7. **Flows stay pure.** Capture, synthesize, execute, and reflect return data + effects. Never mutate shared state inside a flow; let the orchestrator commit results.
-8. **Learning from error.** Every action records `{prediction, actual, error}` and feeds the learning routines. Missing telemetry is treated as a defect.
+8. **Tool Modularity.** Agent tools (`packages/agent/src/orchestrator/tool/*`) must be split into `definition.ts` (schemas/types), `policy.ts` (security/permissions), and `exec.ts` (runtime logic) when they require custom execution logic beyond a simple function call.
+9. **Learning from error.** Every action records `{prediction, actual, error}` and feeds the learning routines. Missing telemetry is treated as a defect.

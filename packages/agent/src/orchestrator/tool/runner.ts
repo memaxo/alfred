@@ -8,6 +8,8 @@ export type RunnerOutput = {
   durationMs: number;
 };
 
+const DEFAULT_HEARTBEAT_MS = 60_000; // 60s default silence limit
+
 export const toolRunner = {
   execute: async (
     command: string,
@@ -18,7 +20,6 @@ export const toolRunner = {
     const start = Date.now();
 
     // Abstract command handling
-    // If command is a generic alias like "test", "build", "run", map it to projectConfig
     let finalCommand = command;
 
     if (projectConfig) {
@@ -33,7 +34,6 @@ export const toolRunner = {
       }
     }
 
-    // Split command into args properly (naive split for MVP)
     const [cmd, ...args] = finalCommand.split(" ");
 
     if (!cmd) {
@@ -44,26 +44,89 @@ export const toolRunner = {
       cwd,
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, CI: "true" }, // Ensure CI mode for cleaner output
+      env: { ...process.env, CI: "true" },
     });
 
-    const timeout = setTimeout(() => {
+    // Heartbeat & Timeout State
+    let lastActivity = Date.now();
+    let timedOut = false;
+    let heartbeatFailed = false;
+
+    // Hard Timeout (Total Duration)
+    const totalTimeoutTimer = setTimeout(() => {
+      timedOut = true;
       proc.kill();
     }, timeoutMs);
 
+    // Heartbeat Monitor (Silence Duration)
+    // Check every 1s if we exceeded silence limit
+    const heartbeatInterval = setInterval(() => {
+      if (Date.now() - lastActivity > DEFAULT_HEARTBEAT_MS) {
+        heartbeatFailed = true;
+        proc.kill();
+      }
+    }, 1000);
+
+    const stdoutChunks: string[] = [];
+    const stderrChunks: string[] = [];
+    const decoder = new TextDecoder();
+
+    // Stream Readers
+    const readStream = async (
+      readable: ReadableStream | number | null,
+      chunks: string[]
+    ) => {
+      if (!readable || typeof readable === "number") return;
+      const reader = readable.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          lastActivity = Date.now();
+          chunks.push(decoder.decode(value, { stream: true }));
+        }
+      } catch {
+        // ignore read errors (process killed)
+      }
+    };
+
     try {
-      const stdout = await new Response(proc.stdout).text();
-      const stderr = await new Response(proc.stderr).text();
+      await Promise.all([
+        readStream(proc.stdout, stdoutChunks),
+        readStream(proc.stderr, stderrChunks),
+        proc.exited,
+      ]);
+
       const exitCode = await proc.exited;
 
+      if (timedOut) {
+        throw new Error(`Command timed out after ${timeoutMs}ms`);
+      }
+
+      if (heartbeatFailed) {
+        throw new Error(
+          `Command killed due to inactivity (heartbeat) > ${DEFAULT_HEARTBEAT_MS}ms`
+        );
+      }
+
       return {
-        stdout,
-        stderr,
+        stdout: stdoutChunks.join(""),
+        stderr: stderrChunks.join(""),
         exitCode,
         durationMs: Date.now() - start,
       };
+    } catch (err: any) {
+      // Ensure cleanup if promise.all fails
+      proc.kill();
+      if (timedOut) throw new Error(`Command timed out after ${timeoutMs}ms`);
+      if (heartbeatFailed)
+        throw new Error(
+          `Command killed due to inactivity (heartbeat) > ${DEFAULT_HEARTBEAT_MS}ms`
+        );
+      throw err;
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(totalTimeoutTimer);
+      clearInterval(heartbeatInterval);
     }
   },
 };

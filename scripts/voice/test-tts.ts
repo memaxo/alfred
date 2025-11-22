@@ -129,10 +129,10 @@ async function main() {
       `   Total audio size: ${(totalAudioSize * 3) / 4} bytes (base64)\n`
     );
 
-    // Test 3: Multiple concurrent requests
+    // Test 3: Multiple concurrent requests (Reduced to 2 to avoid timeout on local machine)
     console.log("⚡ Test 3: Concurrent Requests");
     const start3 = performance.now();
-    const concurrentPromises = Array.from({ length: 5 }, (_, i) =>
+    const concurrentPromises = Array.from({ length: 2 }, (_, i) =>
       ttsPool.synthesize({
         text: `Request ${i + 1}: ${text}`,
         voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium",

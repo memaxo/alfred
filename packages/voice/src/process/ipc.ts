@@ -16,7 +16,7 @@ export type IPCBridgeOptions = {
   requestTimeout?: number;
 };
 
-export class IPCBridge {
+export class Bridge {
   private readonly pendingRequests = new Map<
     string,
     {

@@ -113,6 +113,7 @@ class STTServer:
         prompt: Optional[str] = None,
         vad_threshold: Optional[float] = None,
         session_id: Optional[str] = None,
+        streaming: bool = False,
     ) -> dict:
         """Transcribe audio from base64 string."""
         from silero_vad import get_speech_timestamps
@@ -191,9 +192,17 @@ class STTServer:
                 # transcribe() returns a list of strings
                 # verbose=False to avoid stdout pollution
                 # batch_size=1 for single request
-                transcriptions = self.model.transcribe(paths2audio_files=[tmp_wav.name], batch_size=1, verbose=False)
+                transcriptions = self.model.transcribe(audio=[tmp_wav.name], batch_size=1, verbose=False)
                 if transcriptions and len(transcriptions) > 0:
-                    text = transcriptions[0]
+                    result = transcriptions[0]
+                    if isinstance(result, str):
+                        text = result
+                    elif hasattr(result, 'text'):
+                        text = result.text
+                    else:
+                        # Fallback or error
+                        logger.warning(f"Unexpected transcription result type: {type(result)}")
+                        text = str(result)
             except Exception as e:
                 logger.error(f"NeMo transcription failed: {e}")
                 raise e
@@ -211,7 +220,7 @@ class STTServer:
         return {
             "text": text,
             "language": "en", # Parakeet is English only
-            "isPartial": False,
+            "isPartial": streaming and not end_of_utterance,
             "isEmpty": len(text) == 0,
             "model": self.model_name,
             "durationSeconds": duration_seconds,

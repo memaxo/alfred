@@ -1,115 +1,38 @@
 import type { NodeProps } from "@xyflow/react";
-import { Play, Sparkles } from "lucide-react";
+import { Play, Sparkles, Brain, Code, Film, Globe, Lock, Music, Network, Newspaper, Share2 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { KnowledgeNodeData } from "@/store/mindscape";
 import { useMindscapeStore } from "@/store/mindscape";
 import { createSpawnNode } from "../spawn";
+import { useLOD, useNodeFocus } from "../lod";
+import { getConfidenceStyle } from "../utils";
 
-// To avoid circular deps if ConceptNode imports from somewhere else,
-// we can duplicate the Badge logic or move it to a shared ui file.
-// Given the constraints, I will duplicate the badge logic here for safety
-// unless I can confirm ConceptNode exports it.
-// ConceptNode does NOT export TopicBadge currently.
-// I will add the badge logic here.
-
-import {
-  Brain,
-  Code,
-  Film,
-  Globe,
-  Lock,
-  Music,
-  Network,
-  Newspaper,
-  Share2,
-} from "lucide-react";
-import type { ReactNode } from "react";
-
-const TOPIC_STYLES: Record<
-  string,
-  { icon: ReactNode; color: string; label: string }
-> = {
-  coding: {
-    icon: <Code className="h-3 w-3" />,
-    color: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    label: "Coding",
-  },
-  ai: {
-    icon: <Brain className="h-3 w-3" />,
-    color: "text-violet-400 bg-violet-400/10 border-violet-400/20",
-    label: "AI",
-  },
-  cybersecurity: {
-    icon: <Lock className="h-3 w-3" />,
-    color: "text-rose-400 bg-rose-400/10 border-rose-400/20",
-    label: "Security",
-  },
-  politics: {
-    icon: <Globe className="h-3 w-3" />,
-    color: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-    label: "Politics",
-  },
-  news: {
-    icon: <Newspaper className="h-3 w-3" />,
-    color: "text-zinc-400 bg-zinc-400/10 border-zinc-400/20",
-    label: "News",
-  },
-  social_media: {
-    icon: <Share2 className="h-3 w-3" />,
-    color: "text-sky-400 bg-sky-400/10 border-sky-400/20",
-    label: "Social",
-  },
-  music: {
-    icon: <Music className="h-3 w-3" />,
-    color: "text-pink-400 bg-pink-400/10 border-pink-400/20",
-    label: "Music",
-  },
-  movies: {
-    icon: <Film className="h-3 w-3" />,
-    color: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-    label: "Movies",
-  },
-};
-
-function TopicBadge({ topic }: { topic: string }) {
-  const style = TOPIC_STYLES[topic] ?? {
-    icon: <Network className="h-3 w-3" />,
-    color: "text-slate-400 bg-slate-400/10 border-slate-400/20",
-    label: topic,
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-medium text-[9px] uppercase tracking-wide ${style.color}`}
-    >
-      {style.icon}
-      {style.label}
-    </span>
-  );
-}
+// ... existing TOPIC_STYLES and TopicBadge ...
 
 export function KnowledgeNode({
+  id,
   data,
   selected,
 }: NodeProps<KnowledgeNodeData>) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const kind = (data.kind ?? "fact").toUpperCase();
   const isRag = data.source === "rag";
   const confidence =
     typeof data.confidence === "number"
       ? `${Math.round(data.confidence * 100)}%`
       : null;
+  
+  const confidenceStyle = getConfidenceStyle(data.confidence, data.archived);
 
   const handleLaunchWorkflow = () => {
-    if (!isRag) {
-      return;
-    }
-
+    if (!isRag) return;
     const { nodes, addArtifact, focusNode, updateArtifactData } =
       useMindscapeStore.getState();
 
     const base = createSpawnNode("workflow", nodes.length);
-    if (!base) {
-      return;
-    }
+    if (!base) return;
 
     const summary = data.summary ?? data.label ?? "RAG context";
     const requirement = `Use this context to help:\n\n${summary}`;
@@ -136,15 +59,47 @@ export function KnowledgeNode({
     } as any);
   };
 
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className={`flex h-3 w-3 items-center justify-center rounded-full backdrop-blur-sm ${
+        isRag ? "bg-emerald-500/40" : "bg-blue-500/40"
+      } ${confidenceStyle.container}`}>
+        <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${
+          isRag ? "bg-emerald-400 shadow-emerald-500/50" : "bg-blue-400 shadow-blue-500/50"
+        }`} />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className={`flex items-center gap-2 rounded-full border bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors ${
+        isRag 
+          ? "border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" 
+          : "border-blue-500/30 text-blue-400 hover:border-blue-500/50"
+      } ${confidenceStyle.container}`}>
+        {isRag ? <Sparkles className="h-3 w-3" /> : <Brain className="h-3 w-3" />}
+        <span className="max-w-[120px] truncate font-medium text-[10px] tracking-tight">
+          {data.label ?? "Knowledge"}
+        </span>
+      </div>
+    );
+  }
+
+  // LOD 2/3: Medium/Full (Existing Card)
+  const borderClass = isRag
+    ? "border-emerald-400/60"
+    : selected
+      ? "border-biolum"
+      : confidenceStyle.border;
+
+  const textClass = isRag ? "text-emerald-50" : selected ? "text-biolum" : confidenceStyle.text;
+
   return (
     <div
-      className={`min-w-[220px] rounded-xl border bg-void-surface/80 px-4 py-3 text-left backdrop-blur ${
-        isRag
-          ? "border-emerald-400/60 text-emerald-50"
-          : selected
-            ? "border-biolum text-biolum"
-            : "border-white/10 text-white/80"
-      }`}
+      className={`min-w-[220px] rounded-xl border bg-void-surface/80 px-4 py-3 text-left backdrop-blur ${borderClass} ${textClass} ${confidenceStyle.container}`}
     >
       <div className="flex items-center justify-between text-white/60 text-xs uppercase tracking-widest">
         <span className="flex items-center gap-1">
@@ -158,13 +113,22 @@ export function KnowledgeNode({
           )}
           <span>{kind}</span>
         </span>
-        {confidence && (
-          <span className="rounded bg-white/10 px-2 py-0.5 text-[10px]">
-            {confidence}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.archived && (
+            <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] text-red-300">
+              ARCHIVED
+            </span>
+          )}
+          {confidence && (
+            <span className={`rounded bg-white/10 px-2 py-0.5 text-[10px] ${
+              (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
+            }`}>
+              {confidence}
+            </span>
+          )}
+        </div>
       </div>
-      <div className="mt-2 font-semibold text-base text-white">
+      <div className="mt-2 font-semibold text-base">
         {data.label ?? "Knowledge"}
       </div>
 

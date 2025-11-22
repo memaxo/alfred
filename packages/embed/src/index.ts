@@ -76,7 +76,7 @@ export async function shutdown(): Promise<void> {
 /**
  * Get health status of embedding workers
  */
-export function getHealth() {
+export function getHealth(): any[] {
   if (!pool) {
     return [];
   }

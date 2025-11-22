@@ -2,6 +2,7 @@ import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { linearRepo } from "@alfred/db";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
+import { withPolicyApproval } from "./approval.js";
 
 const { getLinearByWorkspace } = linearRepo;
 
@@ -286,5 +287,27 @@ export const toolTicket = {
     }
   },
 };
+
+const aiToolTicketBase = {
+  name: toolTicket.name,
+  description: toolTicket.description,
+  parameters: toolTicket.inputSchema,
+  inputSchema: toolTicket.inputSchema,
+  execute: async (input: TicketInput) => {
+    return toolTicket.execute({ input });
+  },
+};
+
+export const aiToolTicket = withPolicyApproval(aiToolTicketBase, (input) => {
+  return {
+    action: `ticket.${input.action}`,
+    resource: {
+      kind: "linear",
+      id: input.space,
+    },
+    scopes: ["linear.write"],
+    authz: input.authz,
+  };
+});
 
 export type ToolTicket = typeof toolTicket;

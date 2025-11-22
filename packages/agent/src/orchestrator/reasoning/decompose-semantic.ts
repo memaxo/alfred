@@ -1,9 +1,12 @@
+import { parseSync } from "oxc-parser";
 import type { ContextBundle } from "@alfred/type/plan";
 import type { SubTask } from "../multi/decompose";
 
 /**
  * Analyze dependency graph from file contents
  * Returns an adjacency list: file -> dependencies
+ * 
+ * Uses oxc-parser for robust AST-based import detection.
  */
 export function analyzeDependencyGraph(
   files: Array<{ path: string; content: string }>
@@ -26,22 +29,49 @@ export function analyzeDependencyGraph(
   // Analyze imports
   for (const file of files) {
     const deps = graph.get(file.path)!;
-    const importRegex = /import\s+.*\s+from\s+['"]([^'"]+)['"]/g;
-    const content = file.content;
-
-    let match;
-    while ((match = importRegex.exec(content)) !== null) {
-      const importPath = match[1];
-
-      // Simple resolution heuristic
-      if (importPath && importPath.startsWith(".")) {
-      } else {
-        // Check if it matches a known file basename (heuristic for project imports)
-        const basename = importPath ? importPath.split("/").pop() : undefined;
-        if (basename && fileMap.has(basename)) {
-          deps.add(fileMap.get(basename)!);
+    
+    try {
+        // Skip non-JS/TS files
+        if (!file.path.match(/\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/)) {
+            continue;
         }
-      }
+
+        const parsed = parseSync(file.path, file.content);
+        
+        // Walk the AST program body to find ImportDeclaration and ExportNamedDeclaration/ExportAllDeclaration
+        // OXC AST structure: program.body is array of statements
+        // Note: oxc-parser returns a Program object which contains body.
+        
+        const statements = parsed.program.body;
+        for (const stmt of statements) {
+            let sourceValue: string | undefined;
+            
+            if (stmt.type === "ImportDeclaration") {
+                sourceValue = stmt.source.value;
+            } else if (stmt.type === "ExportNamedDeclaration" && stmt.source) {
+                sourceValue = stmt.source.value;
+            } else if (stmt.type === "ExportAllDeclaration") {
+                sourceValue = stmt.source.value;
+            }
+            
+            if (sourceValue) {
+                // Resolve import
+                if (sourceValue.startsWith(".")) {
+                    // Relative import - simplistic resolution
+                    // (In production we should resolve relative path properly)
+                } else {
+                    // Bare specifier or alias
+                    // Check if it matches known file basename (simplified project-wide resolution)
+                    const basename = sourceValue.split("/").pop();
+                    if (basename && fileMap.has(basename)) {
+                        deps.add(fileMap.get(basename)!);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        // Fallback or ignore parse errors
+        // console.warn(`Failed to parse ${file.path}:`, e);
     }
   }
 

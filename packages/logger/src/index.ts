@@ -55,15 +55,18 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
   const formatted = formatMessage(level, message, context);
 
   if (typeof formatted === "string") {
+    console.log(formatted);
     return;
   }
 
   // Development pretty printing
-  const { level: _lvl, message: _msg, context: ctx } = formatted;
-  // const _prefix = `[${lvl.toUpperCase()}] ${msg}`;
+  const { level: lvl, message: msg, context: ctx } = formatted;
+  const prefix = `[${lvl.toUpperCase()}] ${msg}`;
 
   if (ctx && Object.keys(ctx).length > 0) {
+    console.log(prefix, ctx);
   } else {
+    console.log(prefix);
   }
 }
 

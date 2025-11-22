@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 

@@ -31,13 +31,11 @@ mock.module("@alfred/db", () => ({
 // import { PlanRunner } from "../src/loops/plan-runner";
 
 describe("PlanRunner", () => {
-  const ctx: any = {};
-  const ai: any = {}; // Not used in this simple runner test yet
   const streamId = "test-stream-id";
 
   it("executes a successful plan", async () => {
     const { PlanRunner } = await import("../src/loops/plan-runner");
-    const runner = new PlanRunner(ctx, ai, streamId);
+    const runner = new PlanRunner(streamId, mockTools);
     const plan: ExecutionPlan = {
       steps: [
         {
@@ -63,7 +61,7 @@ describe("PlanRunner", () => {
 
   it("throws on tool failure", async () => {
     const { PlanRunner } = await import("../src/loops/plan-runner");
-    const runner = new PlanRunner(ctx, ai, streamId);
+    const runner = new PlanRunner(streamId, mockTools);
     const plan: ExecutionPlan = {
       steps: [
         {

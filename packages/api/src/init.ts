@@ -7,6 +7,7 @@ import {
   startLearningWorker,
   stopLearningWorker,
 } from "@alfred/agent/orchestrator/learning-worker";
+import { getAssistantAgentDefaults } from "@alfred/agent";
 import { logger } from "@alfred/logger";
 import { resumeInterruptedPlans } from "@alfred/runtime";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
@@ -52,7 +53,7 @@ export function initApiServices(): void {
   }
 
   // Resume interrupted plans from DB (background)
-  resumeInterruptedPlans().catch((error) => {
+  resumeInterruptedPlans(getAssistantAgentDefaults().tools).catch((error) => {
     logger.error("resume_plans_init_failed", {
       error: error instanceof Error ? error.message : String(error),
     });

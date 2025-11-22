@@ -40,3 +40,15 @@
 
 20. **Static prerendering.** Enable static prerendering via `prerender.enabled` in vite config. Use `autoStaticPathsDiscovery` to automatically discover static routes. Use `crawlLinks` to prerender linked pages. Exclude dynamic routes (with `$` params) and layout routes (prefixed with `_`) from automatic discovery.
 
+21. **Variable-Based Dynamic Imports.** To prevent server-only code leakage into client bundles, imports of server packages (db, agent, policy) in API routes MUST use variable-based dynamic imports:
+    ```typescript
+    // ✅ CORRECT
+    const dbPkg = "@alfred/db";
+    const { db } = await import(dbPkg);
+
+    // ❌ INCORRECT (Vite will bundle this)
+    const { db } = await import("@alfred/db");
+    ```
+
+22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
+

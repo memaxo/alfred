@@ -25,7 +25,7 @@ export async function createRun(args: {
   webhookSecret?: string | null;
   linearSessionId?: string;
   linearSpace?: string;
-}) {
+}): Promise<typeof workflowRuns.$inferSelect | undefined> {
   const [row] = await db
     .insert(workflowRuns)
     .values({
@@ -56,7 +56,7 @@ export async function updateRun(
     linearSessionId: string | null;
     linearSpace: string | null;
   }>
-) {
+): Promise<typeof workflowRuns.$inferSelect | undefined> {
   const [row] = await db
     .update(workflowRuns)
     .set({
@@ -115,7 +115,7 @@ export async function appendEvent(args: {
   stepId?: string | null;
   timestamp?: Date;
   eventId?: string; // Optional explicit event identity; DB default fills if omitted
-}) {
+}): Promise<typeof workflowEvents.$inferSelect | undefined> {
   const [row] = await db
     .insert(workflowEvents)
     .values({
@@ -130,7 +130,7 @@ export async function appendEvent(args: {
   return row;
 }
 
-export async function listEvents(runId: string) {
+export async function listEvents(runId: string): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const rows = await db
     .select()
     .from(workflowEvents)
@@ -140,7 +140,7 @@ export async function listEvents(runId: string) {
   return rows;
 }
 
-export async function listEventsByType(runId: string, eventType: string) {
+export async function listEventsByType(runId: string, eventType: string): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const rows = await db
     .select()
     .from(workflowEvents)
@@ -161,7 +161,7 @@ export async function listEventsByTypePaged(args: {
   page?: number;
   pageSize?: number;
   order?: "asc" | "desc";
-}) {
+}): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const page = Math.max(0, args.page ?? 0);
   const pageSize = Math.min(Math.max(1, args.pageSize ?? 500), 2000);
   const base = db
@@ -181,7 +181,7 @@ export async function listEventsByTypePaged(args: {
   return rows;
 }
 
-export async function countEventsByType(runId: string, eventType: string) {
+export async function countEventsByType(runId: string, eventType: string): Promise<number> {
   const rows = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(workflowEvents)
@@ -194,7 +194,7 @@ export async function countEventsByType(runId: string, eventType: string) {
   return Number(rows?.[0]?.count ?? 0);
 }
 
-export async function getRun(runId: string) {
+export async function getRun(runId: string): Promise<typeof workflowRuns.$inferSelect | null> {
   const [row] = await db
     .select()
     .from(workflowRuns)

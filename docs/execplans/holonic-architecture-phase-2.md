@@ -1,116 +1,65 @@
-# Holonic Architecture Phase 2: Roadmap & ExecPlans
+# ExecPlan: Emergent Graph Classification (Systemic Purity)
 
-This document outlines the five execution plans required to mature the Holonic Cognitive OS architecture from a prototype to a production-grade "Living Environment."
+**Status**: Proposed
+**Goal**: Replace explicit classification (Regex/Vectors) with Graph Topology.
 
----
+## Core Concept
+Instead of labeling input text as "Coding" using a classifier, we rely on the **Knowledge Graph** structure.
+1.  **Anchor Nodes**: The graph is seeded with immutable concepts: `Concept:Coding`, `Concept:Security`, `Concept:Politics`.
+2.  **Proximity**: If a user mentions "React", and the graph contains `(React) --[is_a]--> (Library) --[related_to]--> (Concept:Coding)`, then the topic is "Coding".
+3.  **Emergence**: Classification "emerges" from the relationships, not from a pre-trained model or rigid keyword list.
 
-## Plan 1: Holonic Ecosystem Completion
+## Architecture
 
-### 1. Objective
-Eliminate visual jarring and cognitive dissonance by ensuring **every** node type in the Mindscape supports the Polymorphic LOD (Level of Detail) system. Currently, only core nodes (Note, Workflow, Chat) support it; system nodes remain static.
+### 1. Removal of Sidecars
+- **Delete**: `packages/knowledge/src/classifier.ts` (Vector Model).
+- **Delete**: `packages/knowledge/src/taxonomy.ts` (Regex List).
+- **Refactor**: `packages/knowledge/src/extractor.ts` becomes purely syntactic (Entities/Relations only), synchronous, and fast.
 
-### 2. Scope
-**Target Nodes:**
--   **Knowledge:** `KnowledgeNode`, `ConceptNode`, `BookmarkNode`
--   **System:** `SettingsNode`, `PrivacyNode`, `ProfileNode`, `IntegrationsNode`
--   **Dev Tools:** `CodeNode`, `TerminalNode`, `DeploymentNode`
+### 2. Graph Seeding (The "Memory")
+We need a mechanism to bootstrap the graph with common knowledge so "React" isn't just a random string.
+- **New Module**: `packages/knowledge/src/ontology.ts`
+- **Function**: `seedOntology()` runs on startup (idempotent).
+- **Data**: Minimal set of triples.
+  - `("React", "is_a", "Frontend Library")`
+  - `("Frontend Library", "related_to", "Concept:Coding")`
+  - `("CVE", "is_a", "Vulnerability")`
+  - `("Vulnerability", "related_to", "Concept:Security")`
 
-### 3. Technical Strategy
--   **Pattern Application:** Apply the `useLOD()` and `useNodeFocus()` hooks to all target components.
--   **Visual Consistency:**
-    -   **Tiny (LOD 0):** Render as colored particles (Knowledge=Emerald, System=Slate, Dev=Cyan).
-    -   **Small (LOD 1):** Icon + truncated label.
-    -   **Medium/Full:** Existing implementation with "Focus Mode" styling (glow/scale).
+### 3. Entity Resolution (The "Link")
+When `extractor.ts` finds "React" in user text:
+- It produces a `Fact` node: "User likes React".
+- It produces an entity string: "React".
+- **Integration Point**: `GraphStore` (or `LearningWorker`) must resolve "React" to the existing graph node ID.
+- **Edge Creation**: Create edge `(Fact Node) --[mentions]--> (React Node)`.
 
-### 4. Implementation Steps
-1.  [ ] Refactor **Knowledge Group**:
-    -   `KnowledgeNode`: Particle (Emerald) -> Summary Card -> Full Doc Viewer.
-    -   `ConceptNode`: Particle (Amber) -> Definition Card -> Concept Graph.
-    -   `BookmarkNode`: Particle (Blue) -> Favicon+Title -> Embed/Preview.
-2.  [ ] Refactor **System Group**:
-    -   `Profile/Settings/Privacy`: Particle (Gray) -> Icon -> Form.
-    -   `IntegrationsNode`: Particle (Purple) -> Status Grid -> Config.
-3.  [ ] Refactor **Dev Group**:
-    -   `CodeNode`: Particle (Cyan) -> Snippet Preview -> Editor.
-    -   `TerminalNode`: Particle (Black) -> Last Line -> Full Console.
-4.  [ ] **Verify:** Walk through the graph at all zoom levels to ensure no node "pops" unexpectedly or fails to fade.
+### 4. Context Query (The "Intelligence")
+Replce `adapter.ts` logic with a Graph Query.
+- **Input**: Recent messages -> Extract Entities ("React").
+- **Query**: `graph.findPath({ from: "React", to: ["Concept:Coding", "Concept:Security"], maxDepth: 3 })`.
+- **Result**: Path found to `Concept:Coding`.
+- **Action**: Activate "Coding Persona".
 
----
+## Implementation Steps
 
-## Plan 2: The Loom V2 (Web Worker Physics)
+1.  **Clean Up**: Remove `classifier` and `taxonomy`. Revert `extractor` to sync.
+2.  **Ontology**: Create `ontology.ts` and seed script.
+3.  **Resolution**: Update `packages/agent/assistant/src/graphstore.ts` to perform **Entity Linking** (fuzzy match label to existing nodes).
+4.  **Traversal**: Implement `findNearestConcept` in `packages/db/repo/graph.ts` (optimized SQL query).
+5.  **Adaptation**: Update `assistant.ts` router to use the graph query instead of `adapter.ts`.
 
-### 1. Objective
-Offload the `layoutSemantic` force-directed graph calculations to a Web Worker to maintain 60fps UI performance while scaling from ~50 to ~1000+ nodes. Add "Semantic Clustering" to group nodes by project/context.
+## Benefits
+- **Purity**: No "magic lists". Knowledge is data, not code.
+- **Learning**: If the user teaches ALFRED "Bun is a runtime", and ALFRED knows "Runtimes are Coding", ALFRED *learns* that "Bun" implies "Coding" without a code update.
+- **Performance**: Regex/Vectors run on *every* message. Graph query runs only when adaptation is needed (and is efficiently indexed).
 
-### 2. Technical Strategy
--   **Concurrency:** Move `layoutSemantic.ts` logic into `layout.worker.ts`.
--   **Messaging:** Use a request/response loop: Main thread sends `nodes/edges` -> Worker computes velocities -> Worker sends `positions`.
--   **Clustering:** Introduce a `clusterId` field to `ArtifactData`. Modify physics engine to add a strong attractive force between nodes sharing a `clusterId`.
+## Risks
+- **Cold Start**: System is dumb until the graph is seeded.
+- **Entity Ambiguity**: "React" (verb) vs "React" (noun). The graph needs disambiguation context (future work).
 
-### 3. Implementation Steps
-1.  [ ] **Worker Setup:** Create `apps/web/src/lib/layout.worker.ts`.
-2.  [ ] **Migration:** Move force-simulation logic from the main thread to the worker.
-3.  [ ] **Bridge:** Update `MindscapeStore` to instantiate the worker and listen for position updates.
-4.  [ ] **Optimization:** Implement "Transferable Objects" (Float32Arrays) for position data to minimize serialization overhead.
-5.  [ ] **Cluster Logic:**
-    -   Update `layoutSemantic` to accept `clusterMap`.
-    -   Add `groupGravity` force: `if (a.cluster === b.cluster) force *= 5`.
-
----
-
-## Plan 3: High-Performance "Starfield" (Hybrid Renderer)
-
-### 1. Objective
-Render thousands of nodes with zero DOM overhead when zoomed out (LOD 0). Transition seamlessly from a WebGL/Canvas "Starfield" to React Components as the user zooms in.
-
-### 2. Technical Strategy
--   **Hybrid Layer:**
-    -   **LOD 0 (Tiny):** Render ALL nodes as points on a single `<canvas>` layer via `react-flow`'s `<Background />` or a custom overlay. Set React Node opacity to 0 (or unmount).
-    -   **LOD 1+:** Fade out Canvas points, fade in React Nodes.
--   **Culling:** Use `getNodesInViewport` to only mount React components for nodes currently visible and large enough to read.
-
-### 3. Implementation Steps
-1.  [ ] **Canvas Overlay:** Create `<MindscapeStarfield />` component using a `canvas` element.
-2.  [ ] **Sync Loop:** Bind canvas render loop to `useStore(s => s.transform)`. Draw circles at `node.x * zoom + pan.x`.
-3.  [ ] **Culling Logic:** Modify `MindscapeCanvas` to conditionally render the `ReactFlow` nodes list based on `useLOD()`.
-    -   If `LOD === Tiny`, pass `[]` to ReactFlow (or `display: none`), and render Starfield.
-    -   If `LOD > Tiny`, render ReactFlow nodes and hide Starfield.
-4.  [ ] **Transition:** Add CSS transitions to opacity to smooth the handoff between Canvas and DOM.
-
----
-
-## Plan 4: Contextual Omni-Palette
-
-### 1. Objective
-Transform the "Command Palette" (`Cmd+K`) into a context-aware tool that suggests actions based on the user's current focus (the active Node) rather than just global commands.
-
-### 2. Technical Strategy
--   **Context Resolution:** Hook into `useMindscapeStore.focusedNodeId`.
--   **Action Registry:** Define a map of `NodeType -> Action[]`.
-    -   *Example (Note):* "Summarize", "Translate", "Copy as Markdown".
-    -   *Example (Workflow):* "Retry", "View Logs", "Modify Prompt".
--   **Priority Sorting:** When `Cmd+K` opens, lift "Context Actions" to the top of the list, followed by "Global Actions."
-
-### 3. Implementation Steps
-1.  [ ] **Registry Definition:** Create `apps/web/src/config/actions.ts`. Define actions with `icon`, `label`, `handler`, and `validNodeTypes`.
-2.  [ ] **Update Component:** Refactor `MindscapeCommandPalette` to read `focusedNodeId`.
-3.  [ ] **Dynamic Filtering:** Inside the palette, filter actions: `actions.filter(a => a.validNodeTypes.includes(focusedNode?.type))`.
-4.  [ ] **Gaze Interaction:** (Optional) If no node is "focused" (pinned), use the node currently under the mouse cursor (hover state).
-
----
-
-## Plan 5: "Living" Edge Animations
-
-### 1. Objective
-Visualize data flow and activity. When a Workflow modifies a Note, or a Chat references a File, the connecting edge should visibly "pulse" or "flow" to indicate active transmission.
-
-### 2. Technical Strategy
--   **Edge State:** Add `activity` state to Edges (`idle` | `active` | `error`).
--   **SVG Animation:** Use CSS `stroke-dasharray` and `stroke-dashoffset` keyframes.
--   **Signal Triggers:** Listen for TRPC events or Store updates (e.g., "Workflow Step Complete") to trigger a transient `active` state on relevant edges.
-
-### 3. Implementation Steps
-1.  [ ] **Custom Edge:** Create `LivingEdge.tsx` extending React Flow's `BaseEdge`.
-2.  [ ] **CSS Animation:** Add `@keyframes flow { to { stroke-dashoffset: -100; } }`.
-3.  [ ] **Store Update:** Add `triggerEdgeActivity(edgeId, duration)` to `MindscapeStore`.
-4.  [ ] **Event Hook:** In `WorkflowManager` or `ChatNode`, call `triggerEdgeActivity` when an operation completes, targeting the edge between the Agent and the Artifact.
+## Verification
+- **Test**: `scripts/test-emergent-behavior.ts`.
+- **Scenario**:
+    1.  Seed `(Python) -> (Coding)`.
+    2.  Input: "I love Python".
+    3.  Verify: "Coding Persona" activates.

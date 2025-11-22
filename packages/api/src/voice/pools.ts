@@ -2,26 +2,26 @@ import { join } from "node:path";
 import { logger } from "@alfred/logger";
 import { type ProcessConfig, STTPool } from "@alfred/voice/process/stt";
 import { TTSPool } from "@alfred/voice/process/tts";
-import { VoiceSessionManager } from "./session";
+import { VoiceRegistry } from "./session";
 
 // Re-export ProcessConfig for use in this package
 export type { ProcessConfig };
 
 let sttPool: STTPool | null = null;
 let ttsPool: TTSPool | null = null;
-let sessionManager: VoiceSessionManager | null = null;
+let voiceRegistry: VoiceRegistry | null = null;
 
 export function getVoicePools(): {
   sttPool: STTPool;
   ttsPool: TTSPool;
-  sessionManager: VoiceSessionManager;
+  voiceRegistry: VoiceRegistry;
 } {
-  if (!(sttPool && ttsPool && sessionManager)) {
+  if (!(sttPool && ttsPool && voiceRegistry)) {
     throw new Error(
       "Voice pools not initialized. Call initializeVoicePools() first."
     );
   }
-  return { sttPool, ttsPool, sessionManager };
+  return { sttPool, ttsPool, voiceRegistry };
 }
 
 export async function initializeVoicePools(): Promise<void> {
@@ -31,9 +31,14 @@ export async function initializeVoicePools(): Promise<void> {
 
   const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
 
-  if (voiceProvider !== "local") {
+  if (voiceProvider !== "local" && voiceProvider !== "supertonic") {
     // OpenAI provider - pools not needed
     return;
+  }
+
+  // If VOICE_PROVIDER is supertonic, force TTS_PROVIDER to supertonic
+  if (voiceProvider === "supertonic") {
+    process.env.TTS_PROVIDER = "supertonic";
   }
 
   const whisperModelPath =
@@ -70,7 +75,7 @@ export async function initializeVoicePools(): Promise<void> {
   // Note: TTSPool constructor now checks TTS_PROVIDER env var directly.
 
   const ttsConfig: ProcessConfig = {
-    scriptPath: join(process.cwd(), "packages/voice/scripts/maya_tts.py"),
+    scriptPath: join(process.cwd(), "packages/voice/python/tts"),
     modelPath: piperModelPath, // Ignored by Maya1 (uses HF), but kept for type compatibility
     voice: process.env.PIPER_VOICE ?? "en_US-lessac-medium", // Will be used as description default if not provided in request
   };
@@ -80,9 +85,14 @@ export async function initializeVoicePools(): Promise<void> {
     ttsPool = new TTSPool(ttsConfig, ttsPoolSize);
 
     await sttPool.initialize();
-    await ttsPool.initialize();
+    try {
+      await ttsPool.initialize();
+    } catch (error) {
+      logger.error("tts_pool_init_failed", { error });
+      // Don't fail the whole system if TTS fails, as STT might be the priority for testing
+    }
 
-    sessionManager = new VoiceSessionManager(sttPool, ttsPool);
+    voiceRegistry = new VoiceRegistry(sttPool, ttsPool);
 
     // Start health monitoring loop
     setInterval(() => {
@@ -125,9 +135,9 @@ export async function initializeVoicePools(): Promise<void> {
 }
 
 export async function shutdownVoicePools(): Promise<void> {
-  if (sessionManager) {
-    sessionManager.shutdown();
-    sessionManager = null;
+  if (voiceRegistry) {
+    voiceRegistry.shutdown();
+    voiceRegistry = null;
   }
   if (sttPool) {
     await sttPool.shutdown();

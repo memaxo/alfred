@@ -1,5 +1,5 @@
-import { ragRepo } from "@alfred/db";
-import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
+import * as graphRepo from "@alfred/db/repo/graph/index";
+import * as ragRepo from "@alfred/db/repo/rag";
 import {
   EMBEDDING_DIM,
   embed as embedLocal,
@@ -29,7 +29,7 @@ const defaultEmbeddingProvider: EmbeddingProvider = {
 
 let embeddingProvider: EmbeddingProvider = defaultEmbeddingProvider;
 
-export function setEmbeddingProvider(provider?: EmbeddingProvider | null) {
+export function setEmbeddingProvider(provider?: EmbeddingProvider | null): void {
   embeddingProvider = provider ?? defaultEmbeddingProvider;
 }
 
@@ -40,7 +40,7 @@ export type Chunk = {
   metadata?: Record<string, unknown>;
 };
 
-function splitSentences(paragraph: string) {
+function splitSentences(paragraph: string): string[] {
   const sentences = paragraph
     .split(/(?<=[.!?])\s+/u)
     .map((sentence) => sentence.trim())
@@ -51,7 +51,7 @@ function splitSentences(paragraph: string) {
   return sentences;
 }
 
-function pushBuffer(buffers: string[], buffer: string) {
+function pushBuffer(buffers: string[], buffer: string): void {
   const trimmed = buffer.trim();
   if (trimmed.length > 0) {
     buffers.push(trimmed);
@@ -90,8 +90,6 @@ export async function ingest(
       onProgress?.(processed, pieces.length);
     } catch (_error) {
       // Log error but continue with remaining batches
-      // Note: Using console.error here as this is a pure RAG package without logger dependency
-      // In production, this should be handled by the caller's logging infrastructure
       if (
         typeof process !== "undefined" &&
         process.env.NODE_ENV !== "production"
@@ -183,12 +181,6 @@ export async function chunk(
       ? Math.floor(maxChunkSize)
       : 512;
 
-  // Hierarchical separators: try to preserve structure
-  // 1. Double newlines (paragraphs)
-  // 2. Single newlines (sections)
-  // 3. Sentence boundaries
-  // 4. Hard character limit
-
   const paragraphs = content
     .split(/\n{2,}/u)
     .map((entry) => entry.trim())
@@ -215,7 +207,6 @@ export async function chunk(
       continue;
     }
 
-    // Paragraph too large; try splitting by single newlines first (sections)
     pushBuffer(chunks, buffer);
     buffer = "";
 
@@ -238,7 +229,6 @@ export async function chunk(
         continue;
       }
 
-      // Section still too large; split by sentences
       if (sectionBuffer.length > 0) {
         pushBuffer(chunks, sectionBuffer);
         sectionBuffer = "";
@@ -248,7 +238,6 @@ export async function chunk(
       let sentenceBuffer = "";
       for (const sentence of sentences) {
         if (sentence.length > limit) {
-          // Sentence still too large, fallback to hard split
           const parts = sentence.match(new RegExp(`.{1,${limit}}`, "gu")) ?? [
             sentence,
           ];
@@ -291,18 +280,14 @@ async function enrichGraphFromChunks(args: {
   chunks: StoredChunk[];
 }): Promise<void> {
   if (!process.env.DATABASE_URL) {
-    // No backing database configured; skip enrichment.
     return;
   }
 
   const entries: KnowledgeEntry[] = [];
 
-  // Create a user-scoped document node to anchor provenance links.
-  // This keeps RAG provenance visible to Mindscape and runtime graph
-  // queries without changing existing rag:<source> enrichment.
   const docResource = "user";
   try {
-    await upsertNodes([
+    await graphRepo.upsertNodes([
       {
         resource: docResource,
         hash: `rag_doc:${args.documentId}`,
@@ -324,7 +309,7 @@ async function enrichGraphFromChunks(args: {
   }
 
   for (const chunk of args.chunks) {
-    const extraction = await extract(chunk.content, args.source);
+    const extraction = extract(chunk.content, args.source);
     const knowledge = toKnowledge(extraction);
     if (knowledge.length > 0) {
       entries.push(...knowledge);
@@ -459,14 +444,15 @@ async function persistRagKnowledge(
     return;
   }
 
-  const nodeMap = await upsertNodes(nodeSeeds as any);
+  const nodeMap = await graphRepo.upsertNodes(nodeSeeds as any);
   if (edgeSeeds.length === 0) {
     return;
   }
 
   const idMap = new Map<string, { id: string }>();
   for (const row of nodeMap.values()) {
-    idMap.set(nodeKey(row.resource, row.hash), { id: row.id });
+    const nodeRow = row as { resource: string; hash: string; id: string };
+    idMap.set(nodeKey(nodeRow.resource, nodeRow.hash), { id: nodeRow.id });
   }
 
   const edges: EdgeSeed[] = [];
@@ -481,7 +467,7 @@ async function persistRagKnowledge(
     return;
   }
 
-  await upsertEdges(edges as any);
+  await graphRepo.upsertEdges(edges as any);
 }
 
 export async function embed(text: string): Promise<number[]> {
@@ -494,10 +480,6 @@ export async function embed(text: string): Promise<number[]> {
   return embedding;
 }
 
-/**
- * Batch embedding function using local KaLM model for optimized performance.
- * Processes multiple texts via embedding pool.
- */
 export async function embedMany(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) {
     return [];

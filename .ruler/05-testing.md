@@ -9,3 +9,6 @@
 7. **Shared DB harness.** When a suite touches Postgres, instantiate connections through `createTestDb`/`closeTestDb` (`packages/api/test/utils/db.ts`). Use that Drizzle client to truncate tables between tests so no connections or data leak across cases.
 8. **Real integration and e2e.** Prefer end-to-end and integration tests that exercise real boundaries (DB, routers, schedulers, UI flows) over narrow unit tests that only mock behaviour.
 10. **Verification scripts.** Create standalone `scripts/test-<domain>.ts` for subsystems relying on native, hardware, or external environments (voice, docker, gpu) to verify integration health outside the test runner.
+11. **Level 4 Verification.** Verification scripts (`scripts/verify-*.ts`) must exercise real binaries and infrastructure without mocks; ensure rigorous cleanup of side effects.
+12. **Interaction Testing.** Prefer Playwright E2E tests for complex interactions (drag-and-drop, zoom, keyboard shortcuts) over React Testing Library. Only use unit tests for pure logic and simple component rendering.
+13. **Production Build Verification.** Maintain a `scripts/verify-build.ts` script that builds the application and scans client bundles for forbidden strings (e.g., "postgres", "drizzle-orm", "openai") to detect server code leakage. Run this in CI.

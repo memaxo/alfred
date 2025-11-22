@@ -18,16 +18,17 @@ Agents may encounter blockers that require a change in strategy (e.g., "API key 
 
 ## Progress
 
-- [ ] **Phase 1: Signal Detection**
-  - [ ] Update `AgentSpec` prompt to include instruction: "If blocked, write `ESCALATION.md` and exit."
-  - [ ] Update `runWaves` to check for `ESCALATION.md` existence.
-  - [ ] Add `escalated` state to `WavesResult`.
-- [ ] **Phase 2: Re-planning Loop**
-  - [ ] Refactor `runWaves` to support "Plan Injection".
-  - [ ] If escalation detected:
-    - [ ] Call `decomposeTask` with `{ requirement, escalationContext }`.
-    - [ ] Re-run `planWaves` with new tasks.
-    - [ ] Splice new waves into the execution queue.
+- [x] **Phase 1: Signal Detection**
+  - [x] Update `AgentSpec` prompt to include instruction: "If blocked, write `ESCALATION.md` and exit."
+  - [x] Update `runWaves` to check for `ESCALATION.md` existence.
+  - [x] Add `escalated` state to `WavesResult`.
+- [x] **Phase 2: Re-planning Loop**
+  - [x] Refactor `runWaves` to support "Plan Injection".
+  - [x] If escalation detected:
+    - [x] Call `decomposeTask` with `{ requirement, escalationContext }`.
+    - [x] Re-run `planWaves` with new tasks.
+    - [x] Splice new waves into the execution queue.
+    - *Note*: Implemented via `PipelineRunner` escalation to `PlanPhase`, which effectively restarts planning with context.
 
 ## Simplicity Analysis
 

@@ -1,5 +1,5 @@
+export { VoiceRegistry } from "@alfred/voice/server/registry";
 export {
   VoiceSession,
   type VoiceSessionConfig,
-  VoiceSessionManager,
 } from "@alfred/voice/server/session";

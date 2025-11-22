@@ -9,7 +9,6 @@ import {
   pattern,
   relation,
 } from "./hypergraph.js";
-import { detectDomains, getDomainBoost } from "./taxonomy.js";
 
 // Extraction types
 type ExtractedFact = {
@@ -18,7 +17,6 @@ type ExtractedFact = {
   source: string;
   entities: string[];
   relations: [string, string, string][]; // [from, relation, to]
-  topics: string[];
 };
 
 type CausalLink = {
@@ -33,7 +31,6 @@ type ExtractionResult = {
   causality: CausalLink[];
   entities: Set<string>;
   contradictions: [string, string][];
-  topics: string[];
 };
 
 // Causal markers
@@ -63,29 +60,19 @@ const CONFIDENCE_MODIFIERS = {
 /**
  * Extract facts from natural language text
  * Zero allocation design - reuses buffers
+ * 
+ * PURE, SYNCHRONOUS, FAST.
+ * Removed: Async dependency on Vector Classifier.
+ * Removed: Regex Taxonomy dependency.
  */
-export const extract = async (
+export const extract = (
   text: string,
   source: string
-): Promise<ExtractionResult> => {
+): ExtractionResult => {
   const facts: ExtractedFact[] = [];
   const causality: CausalLink[] = [];
   const entities = new Set<string>();
   const contradictions: [string, string][] = [];
-
-  // Import the classifier dynamically to avoid top-level await or heavy init issues
-  // This is a defensive measure for test environments that might not mock the classifier correctly
-  const { classifier } = await import("./classifier.js");
-
-  // Detect global topics for the text block
-  // Use both keyword detection (fast) and vector classification (semantic)
-  const keywordTopics = detectDomains(text);
-  const semanticTopics = await classifier.classify(text);
-
-  const globalTopics = Array.from(
-    new Set([...keywordTopics, ...semanticTopics])
-  );
-  const globalBoost = getDomainBoost(globalTopics);
 
   const doc = nlp(text);
   const sentences = doc.sentences().out("array");
@@ -96,12 +83,6 @@ export const extract = async (
     if (trimmed.length === 0) {
       continue;
     }
-
-    // Detect local topics for the sentence
-    // We union with global topics to ensure context isn't lost
-    const localTopics = detectDomains(trimmed);
-    const topics = Array.from(new Set([...globalTopics, ...localTopics]));
-    const boost = Math.max(globalBoost, getDomainBoost(localTopics));
 
     // Extract entities using compromise
     const sentenceEntities: string[] = [];
@@ -142,10 +123,6 @@ export const extract = async (
         break;
       }
     }
-
-    // Apply domain boost
-    // Cap confidence at 1.0
-    confidence = Math.min(1.0, confidence * boost);
 
     // Extract relations
     // Simple heuristic: if we have Subject + Verb + Object structure
@@ -228,7 +205,6 @@ export const extract = async (
       source,
       entities: sentenceEntities,
       relations,
-      topics,
     });
   }
 
@@ -244,7 +220,7 @@ export const extract = async (
     }
   }
 
-  return { facts, causality, entities, contradictions, topics: globalTopics };
+  return { facts, causality, entities, contradictions };
 };
 
 /**
@@ -253,48 +229,50 @@ export const extract = async (
 export type KnowledgeEntry = {
   hash: string;
   data: Knowledge;
-  topics?: string[];
 };
 
 export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
   const list: KnowledgeEntry[] = [];
   const seen = new Set<string>();
 
-  const insert = (item: Knowledge, topics: string[] = []) => {
+  const insert = (item: Knowledge) => {
     const hash = knowledgeHash(item);
     if (!seen.has(hash)) {
       seen.add(hash);
-      list.push({ hash, data: item, topics });
+      list.push({ hash, data: item });
     }
     return nodeFromHash(hash); // Returns NodeId which is a string
   };
 
+  // Collect all entities to tag properties (simple domain detection logic placeholder)
+  // In future, we can use graph feedback to tag these nodes with domains
+  // const allEntities = Array.from(result.entities);
+
   for (const f of result.facts) {
-    insert(fact(f.content, f.confidence, f.source), f.topics);
+    // Enriched fact with entities as metadata/properties?
+    // Currently Hypergraph 'Fact' is pure content string.
+    // We rely on Relation nodes to link them.
+    insert(fact(f.content, f.confidence, f.source));
   }
 
   for (const c of result.causality) {
     const causeNode = insert(
-      fact(c.cause, c.confidence, "inferred"),
-      result.topics
+      fact(c.cause, c.confidence, "inferred")
     );
     const effectNode = insert(
-      fact(c.effect, c.confidence, "inferred"),
-      result.topics
+      fact(c.effect, c.confidence, "inferred")
     );
 
     if (causeNode && effectNode) {
       insert(
-        relation(causeNode, effectNode, "causes", c.confidence),
-        result.topics
+        relation(causeNode, effectNode, "causes", c.confidence)
       );
       insert(
         insight(
           [causeNode, effectNode],
           `${c.cause} causes ${c.effect}`,
           c.confidence
-        ),
-        result.topics
+        )
       );
     }
   }
@@ -511,15 +489,15 @@ export const extractTemporal = (
  * Extract knowledge from Codex reasoning traces
  * Focuses on decision rationale, alternatives, and causal chains
  */
-export const extractReasoning = async (
+export const extractReasoning = (
   text: string,
   context: {
     threadId?: string;
     turnId?: string;
     source?: string;
   }
-): Promise<ExtractionResult> => {
-  const result = await extract(text, context.source ?? "codex-reasoning");
+): ExtractionResult => {
+  const result = extract(text, context.source ?? "codex-reasoning");
 
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
 
@@ -542,7 +520,6 @@ export const extractReasoning = async (
           source: "decision-reasoning",
           entities: [],
           relations: [],
-          topics: result.topics,
         });
         break;
       }
@@ -567,7 +544,6 @@ export const extractReasoning = async (
           source: "alternative-reasoning",
           entities: [],
           relations: [],
-          topics: result.topics,
         });
         break;
       }

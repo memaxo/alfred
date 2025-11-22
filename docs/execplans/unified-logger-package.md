@@ -122,7 +122,7 @@ Iterate through each package:
 
 ## Interfaces and Dependencies
 
-**Dependencies**: None (dev-only: `bun-types`, `vitest`/`bun-test`).
+**Dependencies**: None (dev-only: `bun-types`, `bun-test`).
 
 **Interface**:
 ```typescript

@@ -15,6 +15,7 @@
     { "path": "../policy" },
     { "path": "../agent" },
     { "path": "../history" },
-    { "path": "../metrics" }
+    { "path": "../metrics" },
+    { "path": "../runtime" }
   ]
 }

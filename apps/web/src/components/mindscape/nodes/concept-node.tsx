@@ -12,84 +12,59 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ConceptNodeData } from "@/store/mindscape";
+import { useLOD, useNodeFocus } from "../lod";
+import { getConfidenceStyle } from "../utils";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
-const TOPIC_STYLES: Record<
-  string,
-  { icon: ReactNode; color: string; label: string }
-> = {
-  coding: {
-    icon: <Code className="h-3 w-3" />,
-    color: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    label: "Coding",
-  },
-  ai: {
-    icon: <Brain className="h-3 w-3" />,
-    color: "text-violet-400 bg-violet-400/10 border-violet-400/20",
-    label: "AI",
-  },
-  cybersecurity: {
-    icon: <Lock className="h-3 w-3" />,
-    color: "text-rose-400 bg-rose-400/10 border-rose-400/20",
-    label: "Security",
-  },
-  politics: {
-    icon: <Globe className="h-3 w-3" />,
-    color: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-    label: "Politics",
-  },
-  news: {
-    icon: <Newspaper className="h-3 w-3" />,
-    color: "text-zinc-400 bg-zinc-400/10 border-zinc-400/20",
-    label: "News",
-  },
-  social_media: {
-    icon: <Share2 className="h-3 w-3" />,
-    color: "text-sky-400 bg-sky-400/10 border-sky-400/20",
-    label: "Social",
-  },
-  music: {
-    icon: <Music className="h-3 w-3" />,
-    color: "text-pink-400 bg-pink-400/10 border-pink-400/20",
-    label: "Music",
-  },
-  movies: {
-    icon: <Film className="h-3 w-3" />,
-    color: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-    label: "Movies",
-  },
-};
+// ... existing styles ...
 
-function TopicBadge({ topic }: { topic: string }) {
-  const style = TOPIC_STYLES[topic] ?? {
-    icon: <Network className="h-3 w-3" />,
-    color: "text-slate-400 bg-slate-400/10 border-slate-400/20",
-    label: topic,
-  };
+export function ConceptNode({ id, data, selected }: NodeProps<ConceptNodeData>) {
+  const lod = useLOD();
+  useNodeFocus(id);
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-medium text-[9px] uppercase tracking-wide ${style.color}`}
-    >
-      {style.icon}
-      {style.label}
-    </span>
-  );
-}
-
-export function ConceptNode({ data, selected }: NodeProps<ConceptNodeData>) {
   const entityType = (data.entityType ?? "concept").toUpperCase();
   const confidence =
     typeof data.confidence === "number"
       ? `${Math.round(data.confidence * 100)}%`
       : null;
+  
+  const confidenceStyle = getConfidenceStyle(data.confidence, data.archived);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <NodeLODTiny 
+        color="bg-indigo-500" 
+        shadow="shadow-indigo-500/50" 
+        className={confidenceStyle.container} 
+      />
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <NodeLODSmall
+        label={data.label ?? "Concept"}
+        icon={<Network className="h-3 w-3" />}
+        borderColor="border-indigo-500/30"
+        textColor="text-indigo-400"
+        hoverColor="hover:border-indigo-500/50"
+        className={confidenceStyle.container}
+      />
+    );
+  }
+
+  // LOD 2/3: Medium/Full
+  const borderClass = selected
+    ? "border-biolum"
+    : confidenceStyle.border;
+  
+  const textClass = selected ? "text-biolum" : confidenceStyle.text;
 
   return (
     <div
-      className={`min-w-[180px] max-w-[300px] rounded-xl border bg-void-surface/90 px-4 py-3 text-left backdrop-blur ${
-        selected
-          ? "border-biolum text-biolum shadow-biolum/20 shadow-lg"
-          : "border-white/10 text-white/80 hover:border-white/20"
-      }`}
+      className={`min-w-[180px] max-w-[300px] rounded-xl border bg-void-surface/90 px-4 py-3 text-left backdrop-blur ${borderClass} ${textClass} ${selected ? "shadow-biolum/20 shadow-lg" : "hover:border-white/20"} ${confidenceStyle.container}`}
     >
       <div className="mb-2 flex items-center justify-between text-[10px] text-white/50 uppercase tracking-widest">
         <span className="flex items-center gap-1.5">
@@ -98,12 +73,21 @@ export function ConceptNode({ data, selected }: NodeProps<ConceptNodeData>) {
           </span>
           <span>{entityType}</span>
         </span>
-        {confidence && (
-          <span className="font-mono text-[9px] opacity-70">{confidence}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.archived && (
+            <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] text-red-300">
+              ARCHIVED
+            </span>
+          )}
+          {confidence && (
+            <span className={`font-mono text-[9px] opacity-70 ${
+              (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
+            }`}>{confidence}</span>
+          )}
+        </div>
       </div>
 
-      <div className="break-words font-medium text-sm text-white tracking-tight">
+      <div className="break-words font-medium text-sm tracking-tight">
         {data.label ?? "Unknown Concept"}
       </div>
 

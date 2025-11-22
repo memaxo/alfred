@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import type { ServerWebSocket } from "bun";
-import { VoiceSessionManager } from "../../src/server/session";
+import { VoiceRegistry } from "../../src/server/registry";
 import {
   VoiceSocketHandler,
   type VoiceSocketHooks,
@@ -36,11 +36,11 @@ const mockTtsPool = {
   },
 };
 
-const sessionManager = new VoiceSessionManager(
+const registry = new VoiceRegistry(
   mockSttPool as any,
   mockTtsPool as any
 );
-const handler = new VoiceSocketHandler(sessionManager, mockHooks);
+const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8899;
 const server = Bun.serve({
@@ -67,7 +67,7 @@ const server = Bun.serve({
 describe("Latency Benchmark", () => {
   afterAll(() => {
     server.stop();
-    sessionManager.shutdown();
+    registry.shutdown();
   });
 
   it("measures round trip latency", async () => {
@@ -92,9 +92,13 @@ describe("Latency Benchmark", () => {
     const client2 = new VoiceStreamClient(
       { url: `ws://localhost:${PORT}` },
       {
-        onPartialTranscript: () => {
+        onPartialTranscript: (ev) => {
+          // console.log("Got transcript:", ev);
           transcriptReceived = performance.now();
         },
+        onError: (err) => {
+          console.error("Client error:", err);
+        }
       }
     );
 
@@ -110,9 +114,12 @@ describe("Latency Benchmark", () => {
     });
 
     // Wait for transcript
-    while (transcriptReceived === 0 && performance.now() - sendTime < 1000) {
-      await new Promise((r) => setTimeout(r, 5));
+    let loops = 0;
+    while (transcriptReceived === 0 && performance.now() - sendTime < 2000) {
+      await new Promise((r) => setTimeout(r, 10));
+      loops++;
     }
+    // console.log("Loops waited:", loops);
 
     if (transcriptReceived > 0) {
       expect(transcriptReceived - sendTime).toBeLessThan(50); // Expect < 50ms for local loopback + 10ms inference

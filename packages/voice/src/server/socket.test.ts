@@ -30,7 +30,7 @@ mock.module(
 );
 
 import type { ServerWebSocket } from "bun";
-import type { VoiceSessionManager } from "./session";
+import type { VoiceRegistry } from "./registry";
 import {
   type VoiceSocketData,
   VoiceSocketHandler,
@@ -55,7 +55,7 @@ const mockManager = {
   createSession: mock(() => mockSession),
   getSession: mock(() => mockSession),
   removeSession: mock(() => {}),
-} as unknown as VoiceSessionManager;
+} as unknown as VoiceRegistry;
 
 const mockHooks: VoiceSocketHooks = {
   onSessionStart: mock(async () => "reg-1"),

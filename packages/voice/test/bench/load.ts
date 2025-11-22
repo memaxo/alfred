@@ -1,5 +1,5 @@
 import { afterAll, describe, it } from "bun:test";
-import { VoiceSessionManager } from "../../src/server/session";
+import { VoiceRegistry } from "../../src/server/registry";
 import {
   VoiceSocketHandler,
   type VoiceSocketHooks,
@@ -24,11 +24,11 @@ const mockPools = {
   synthesize: async () => {},
 };
 
-const sessionManager = new VoiceSessionManager(
+const registry = new VoiceRegistry(
   mockPools as any,
   mockPools as any
 );
-const handler = new VoiceSocketHandler(sessionManager, mockHooks);
+const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8898;
 const server = Bun.serve({
@@ -52,7 +52,7 @@ const server = Bun.serve({
 describe("Load Benchmark", () => {
   afterAll(() => {
     server.stop();
-    sessionManager.shutdown();
+    registry.shutdown();
   });
 
   it(`handles ${CLIENTS} concurrent sessions sending ${CHUNKS_PER_SEC} chunks/s`, async () => {

@@ -4,7 +4,7 @@
  */
 
 import { and, asc, desc, eq, lt } from "drizzle-orm";
-import { db } from "../index";
+import { db } from "../client";
 import { approvals, auditLogs } from "../schema/policy";
 
 type AuditLogInsert = typeof auditLogs.$inferInsert;
@@ -29,7 +29,7 @@ export async function createAuditLog({
   traceId,
   obligations,
   context,
-}: AuditLogParams) {
+}: AuditLogParams): Promise<typeof auditLogs.$inferSelect | undefined> {
   const record: AuditLogInsert = {
     userId,
     action,
@@ -49,7 +49,7 @@ export async function getAuditLogs(
   action?: string,
   limit = 100,
   offset = 0
-) {
+): Promise<(typeof auditLogs.$inferSelect)[]> {
   const where = action
     ? and(eq(auditLogs.userId, userId), eq(auditLogs.action, action))
     : eq(auditLogs.userId, userId);
@@ -62,7 +62,7 @@ export async function getAuditLogs(
     .offset(offset);
 }
 
-export async function getAuditLogsByTrace(traceId: string) {
+export async function getAuditLogsByTrace(traceId: string): Promise<(typeof auditLogs.$inferSelect)[]> {
   return db
     .select()
     .from(auditLogs)
@@ -79,7 +79,7 @@ export async function createApproval(params: {
   context?: unknown;
   expiresAt?: Date;
   metadata?: unknown;
-}) {
+}): Promise<typeof approvals.$inferSelect | undefined> {
   const record: ApprovalInsert = {
     userId: params.userId,
     action: params.action,
@@ -94,7 +94,7 @@ export async function createApproval(params: {
   return row;
 }
 
-export async function getApproval(approvalId: string) {
+export async function getApproval(approvalId: string): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .select()
     .from(approvals)
@@ -103,7 +103,7 @@ export async function getApproval(approvalId: string) {
   return row ?? null;
 }
 
-export async function getPendingApprovals(userId: string) {
+export async function getPendingApprovals(userId: string): Promise<(typeof approvals.$inferSelect)[]> {
   return db
     .select()
     .from(approvals)
@@ -111,7 +111,7 @@ export async function getPendingApprovals(userId: string) {
     .orderBy(asc(approvals.created));
 }
 
-export async function approveApproval(approvalId: string, approvedBy: string) {
+export async function approveApproval(approvalId: string, approvedBy: string): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .update(approvals)
     .set({ status: "approved", approvedBy, approvedAt: new Date() })
@@ -120,7 +120,7 @@ export async function approveApproval(approvalId: string, approvedBy: string) {
   return row ?? null;
 }
 
-export async function denyApproval(approvalId: string, approvedBy: string) {
+export async function denyApproval(approvalId: string, approvedBy: string): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .update(approvals)
     .set({ status: "denied", approvedBy, approvedAt: new Date() })
@@ -129,7 +129,7 @@ export async function denyApproval(approvalId: string, approvedBy: string) {
   return row ?? null;
 }
 
-export async function expireApprovals() {
+export async function expireApprovals(): Promise<(typeof approvals.$inferSelect)[]> {
   return db
     .update(approvals)
     .set({ status: "denied", approvedBy: "system", approvedAt: new Date() })

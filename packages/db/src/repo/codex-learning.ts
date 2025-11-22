@@ -1,5 +1,5 @@
-import { db } from "@alfred/db";
-import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { db } from "../client.js";
+import { memoryEdges, memoryNodes } from "../schema/graph.js";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 // type NodeRow = typeof memoryNodes.$inferSelect;
@@ -138,6 +138,59 @@ export async function getCodexExecutionReasoning(
 }
 
 /**
+ * Find heuristics (intuitions) applicable to the current task
+ */
+export async function findHeuristics(
+  requirement: string,
+  limit = 3
+): Promise<Array<{ rule: string; confidence: number }>> {
+  // Find heuristic nodes.
+  // Ideally, we'd use vector search here (embedding match on requirement).
+  // For this MVP, we'll match keywords in the label/rule against the requirement.
+  
+  const heuristics = await db
+    .select()
+    .from(memoryNodes)
+    .where(eq(memoryNodes.kind, "heuristic"))
+    .orderBy(desc(memoryNodes.created)) // Newest first
+    .limit(limit * 5); 
+
+  const results: Array<{ rule: string; confidence: number; score: number }> = [];
+
+  const reqLower = requirement.toLowerCase();
+  const keywords = reqLower.split(/\s+/).filter(w => w.length > 3);
+
+  for (const node of heuristics) {
+    const props = node.properties as Record<string, any> || {};
+    const rule = typeof props.rule === 'string' ? props.rule : node.label;
+    const confidence = typeof props.confidence === 'number' ? props.confidence : 0.5;
+    const context = typeof props.context === 'string' ? props.context.toLowerCase() : "";
+
+    // Scoring: 
+    // 1. Match context (if heuristic has a 'context' field like 'python', 'db', etc.)
+    // 2. Match keywords in the rule itself
+    
+    let matches = 0;
+    for (const k of keywords) {
+      if (rule.toLowerCase().includes(k) || context.includes(k)) {
+        matches++;
+      }
+    }
+
+    const score = matches / Math.max(1, keywords.length);
+    
+    if (score > 0.1) { // Threshold
+      results.push({ rule, confidence, score });
+    }
+  }
+
+  return results
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(r => ({ rule: r.rule, confidence: r.confidence }));
+}
+
+/**
  * Build context from similar past tasks for prompt injection
  */
 export async function buildCodexLearningContext(
@@ -146,14 +199,26 @@ export async function buildCodexLearningContext(
   maxTokens = 2000
 ): Promise<string | null> {
   const similar = await findSimilarCodexExecutions(resource, requirement, 3);
+  const heuristics = await findHeuristics(requirement, 3);
 
-  if (similar.length === 0) {
+  if (similar.length === 0 && heuristics.length === 0) {
     return null;
   }
 
   const sections: string[] = [];
   let tokenEstimate = 0;
 
+  // 1. Inject Heuristics (Intuitions) - High Priority
+  if (heuristics.length > 0) {
+    const rules = heuristics.map(h => `- ${h.rule}`).join("\n");
+    const section = `[Intuition / Heuristics]
+Based on past failures, keep these rules in mind:
+${rules}`;
+    sections.push(section);
+    tokenEstimate += Math.ceil(section.length / 4);
+  }
+
+  // 2. Inject Similar Executions
   for (const task of similar) {
     if (!task.result) {
       continue;

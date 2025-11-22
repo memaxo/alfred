@@ -4,7 +4,7 @@
  */
 
 import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
-import { db } from "../index";
+import { db } from "../client";
 import {
   bookmarks,
   notes,

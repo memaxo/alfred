@@ -18,7 +18,7 @@ import {
 /**
  * Tasks (work items tracked by Assistant)
  */
-export const tasks = pgTable("assistant_tasks", {
+export const tasks: any = pgTable("assistant_tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -38,7 +38,7 @@ export const tasks = pgTable("assistant_tasks", {
 /**
  * Notes (freeform user notes)
  */
-export const notes = pgTable("assistant_notes", {
+export const notes: any = pgTable("assistant_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title"),
@@ -55,7 +55,7 @@ export const notes = pgTable("assistant_notes", {
 /**
  * Events (calendar-like events)
  */
-export const events = pgTable("assistant_events", {
+export const events: any = pgTable("assistant_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -73,7 +73,7 @@ export const events = pgTable("assistant_events", {
 /**
  * Reminders (time-based notifications)
  */
-export const reminders = pgTable("assistant_reminders", {
+export const reminders: any = pgTable("assistant_reminders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -92,7 +92,7 @@ export const reminders = pgTable("assistant_reminders", {
 /**
  * Bookmarks (saved URLs and resources)
  */
-export const bookmarks = pgTable("assistant_bookmarks", {
+export const bookmarks: any = pgTable("assistant_bookmarks", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   url: text("url").notNull(),
@@ -108,7 +108,7 @@ export const bookmarks = pgTable("assistant_bookmarks", {
 /**
  * Timers (active countdown timers)
  */
-export const timers = pgTable("assistant_timers", {
+export const timers: any = pgTable("assistant_timers", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   label: text("label"),

@@ -1,10 +1,7 @@
-import { getAssistantAgentDefaults } from "@alfred/agent";
-import type { ExecutionPlan, ExecutionStep } from "@alfred/cognitive/schemas";
+import type { ExecutionPlan, ExecutionStep } from "@alfred/cognitive";
 import { executing, initialAutonomy } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
-import type { AIAdapter } from "@alfred/type/ai-adapter";
-import type { RuntimeContext } from "@alfred/type/runtime-context";
 
 export type StepResult = {
   success: boolean;
@@ -14,23 +11,18 @@ export type StepResult = {
 
 export class PlanRunner {
   constructor(
-    private readonly ctx: RuntimeContext,
-    private readonly ai: AIAdapter,
-    private readonly streamId: string
-  ) {
-    void this.ctx;
-    void this.ai;
-  }
+    private readonly streamId: string,
+    private readonly tools: Record<string, any>
+  ) {}
 
   async executePlan(plan: ExecutionPlan, startStep = 0): Promise<void> {
-    const tools = getAssistantAgentDefaults().tools;
-
     // Get initial lastEventId (needed for snapshots)
     const latestSnapshot = await cognitiveRepo.getLatestSnapshot(this.streamId);
     const lastEventId =
       latestSnapshot?.lastEventId || "00000000-0000-0000-0000-000000000000";
     const currentAutonomy =
       (latestSnapshot?.state as any)?.auto || initialAutonomy();
+    const retryCount = ((latestSnapshot?.state as any)?.retryCount ?? 0) + 1;
 
     for (let i = startStep; i < plan.steps.length; i++) {
       const step = plan.steps[i];
@@ -42,6 +34,7 @@ export class PlanRunner {
       try {
         const state = executing(plan as any, currentAutonomy);
         (state as any).step = i;
+        (state as any).retryCount = retryCount; // Persist retry count
 
         await cognitiveRepo.saveSnapshot(
           this.streamId,
@@ -57,7 +50,7 @@ export class PlanRunner {
       }
 
       // console.log(`Executing step: ${step.description}`);
-      const result = await this.executeStep(step, tools);
+      const result = await this.executeStep(step, this.tools);
 
       if (!result.success) {
         // Fail fast for now - in future, trigger replanning

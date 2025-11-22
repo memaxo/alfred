@@ -4,7 +4,7 @@
  */
 
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { db, dbDriver } from "../index";
+import { db, dbDriver } from "../client";
 import {
   autonomy,
   events,

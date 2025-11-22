@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
@@ -85,9 +85,10 @@ describeFn("graphRepo", () => {
     await graphRepo.upsertEdges([
       {
         resource: TEST_RESOURCE,
-        fromNodeId: id1,
-        toNodeId: id2,
-        relation: "supports",
+        hash: "edge-hash",
+        fromId: id1,
+        toId: id2,
+        kind: "supports",
         weight: 0.8,
       },
     ]);
@@ -99,5 +100,167 @@ describeFn("graphRepo", () => {
     expect(neighbors.length).toBe(1);
     expect(neighbors[0]?.edge.kind).toBe("supports");
     expect(neighbors[0]?.otherNodeId).toBe(id2);
+  });
+
+  it("finds path between nodes", async () => {
+    // Create A -> B -> C
+    const nodes = await graphRepo.upsertNodes([
+      { resource: TEST_RESOURCE, hash: "A", kind: "node", label: "A" },
+      { resource: TEST_RESOURCE, hash: "B", kind: "node", label: "B" },
+      { resource: TEST_RESOURCE, hash: "C", kind: "node", label: "C" },
+    ]);
+
+    const map = new Map<string, string>(); // hash -> id
+    for (const node of nodes.values()) {
+      map.set(node.hash, node.id);
+    }
+
+    const idA = map.get("A")!;
+    const idB = map.get("B")!;
+    const idC = map.get("C")!;
+
+    await graphRepo.upsertEdges([
+      { resource: TEST_RESOURCE, hash: "ab", fromId: idA, toId: idB, kind: "link" },
+      { resource: TEST_RESOURCE, hash: "bc", fromId: idB, toId: idC, kind: "link" },
+    ]);
+
+    const path = await graphRepo.findPath(idA, idC, 5, TEST_RESOURCE);
+    
+    // path is array of { nodeId, via }
+    expect(path.length).toBe(3);
+    expect(path[0]?.nodeId).toBe(idA);
+    expect(path[1]?.nodeId).toBe(idB);
+    expect(path[2]?.nodeId).toBe(idC);
+  });
+
+  it("retrieves subgraph", async () => {
+    // Create A -> B, C -> B
+    const nodes = await graphRepo.upsertNodes([
+      { resource: TEST_RESOURCE, hash: "sub-A", kind: "node", label: "A" },
+      { resource: TEST_RESOURCE, hash: "sub-B", kind: "node", label: "B" },
+      { resource: TEST_RESOURCE, hash: "sub-C", kind: "node", label: "C" },
+      { resource: TEST_RESOURCE, hash: "sub-D", kind: "node", label: "D" }, // Unconnected
+    ]);
+
+    const map = new Map<string, string>();
+    for (const node of nodes.values()) {
+      map.set(node.hash, node.id);
+    }
+
+    const idA = map.get("sub-A")!;
+    const idB = map.get("sub-B")!;
+    const idC = map.get("sub-C")!;
+
+    await graphRepo.upsertEdges([
+      { resource: TEST_RESOURCE, hash: "ab", fromId: idA, toId: idB, kind: "link" },
+      { resource: TEST_RESOURCE, hash: "cb", fromId: idC, toId: idB, kind: "link" },
+    ]);
+
+    // Get subgraph for A and C
+    const { nodes: subNodes, edges: subEdges } = await graphRepo.getSubgraph([idA, idC], TEST_RESOURCE);
+
+    // Should include A and C (explicitly asked)
+    expect(subNodes.some(n => n.id === idA)).toBe(true);
+    expect(subNodes.some(n => n.id === idC)).toBe(true);
+    // Shouldn't implicitly include B just because it's connected, unless we ask for it or the logic does expanding
+    // Logic for getSubgraph: "where id in ids" AND "edges where from in ids OR to in ids"
+    // So it gets edges connected to input nodes, but only returns nodes that are in input list.
+    // Wait, let me check getSubgraph implementation in read.ts/traverse.ts.
+    // It returns nodes matching input IDs.
+    // It returns edges connected to input IDs.
+    
+    expect(subNodes.length).toBe(2); 
+    expect(subEdges.length).toBe(2); // A->B and C->B both touch the set {A, C}
+  });
+
+  it("reconstructs reasoning chain", async () => {
+    const executionId = "exec-1";
+    // Steps 1 -> 2 -> 3
+    const nodes = await graphRepo.upsertNodes([
+      { 
+        resource: TEST_RESOURCE, 
+        hash: "step-1", 
+        kind: "reasoning", 
+        label: "Step 1", 
+        properties: { executionId, sequenceIndex: 1, timestamp: 100 } 
+      },
+      { 
+        resource: TEST_RESOURCE, 
+        hash: "step-2", 
+        kind: "reasoning", 
+        label: "Step 2", 
+        properties: { executionId, sequenceIndex: 2, timestamp: 200 } 
+      },
+      { 
+        resource: TEST_RESOURCE, 
+        hash: "step-3", 
+        kind: "reasoning", 
+        label: "Step 3", 
+        properties: { executionId, sequenceIndex: 3, timestamp: 300 } 
+      },
+    ]);
+
+    const map = new Map<string, string>();
+    for (const node of nodes.values()) {
+      map.set(node.hash, node.id);
+    }
+    const s1 = map.get("step-1")!;
+    const s2 = map.get("step-2")!;
+    const s3 = map.get("step-3")!;
+
+    await graphRepo.upsertEdges([
+      { resource: TEST_RESOURCE, hash: "1-2", fromId: s1, toId: s2, kind: "precedes", metadata: { fromIndex: 1 } },
+      { resource: TEST_RESOURCE, hash: "2-3", fromId: s2, toId: s3, kind: "precedes", metadata: { fromIndex: 2 } },
+    ]);
+
+    const chain = await graphRepo.getReasoningChain({
+      resource: TEST_RESOURCE,
+      executionId
+    });
+
+    expect(chain.nodes.length).toBe(3);
+    expect(chain.nodes[0]?.label).toBe("Step 1");
+    expect(chain.nodes[1]?.label).toBe("Step 2");
+    expect(chain.nodes[2]?.label).toBe("Step 3");
+    expect(chain.edges.length).toBe(2);
+  });
+
+  it("finds nearest concept", async () => {
+    // Concept hierarchy: Programming -> Languages -> TypeScript
+    const nodes = await graphRepo.upsertNodes([
+      { resource: TEST_RESOURCE, hash: "prog", kind: "concept", label: "Programming" },
+      { resource: TEST_RESOURCE, hash: "lang", kind: "concept", label: "Languages" },
+      { resource: TEST_RESOURCE, hash: "ts", kind: "concept", label: "TypeScript" },
+      { resource: TEST_RESOURCE, hash: "cooking", kind: "concept", label: "Cooking" },
+    ]);
+
+    const map = new Map<string, string>();
+    for (const node of nodes.values()) {
+      map.set(node.label, node.id);
+    }
+
+    await graphRepo.upsertEdges([
+      { resource: TEST_RESOURCE, hash: "p-l", fromId: map.get("Programming")!, toId: map.get("Languages")!, kind: "related" },
+      { resource: TEST_RESOURCE, hash: "l-t", fromId: map.get("Languages")!, toId: map.get("TypeScript")!, kind: "related" },
+    ]);
+
+    // Search for "TypeScript" starting from "Programming"
+    const result = await graphRepo.findNearestConcept(
+      "Programming",
+      ["TypeScript", "Cooking"],
+      5,
+      TEST_RESOURCE
+    );
+
+    // It's possible the graph traversal order is different or finding "Cooking" if connected (it's not).
+    // Debugging output if failed.
+    if (!result || result.concept !== "TypeScript") {
+      console.log("Nearest concept result:", JSON.stringify(result));
+    }
+
+    expect(result).not.toBeNull();
+    expect(result?.concept).toBe("TypeScript");
+    // Depth 0=Prog, 1=Lang, 2=TS
+    expect(result?.depth).toBe(2);
   });
 });

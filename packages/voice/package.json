@@ -2,18 +2,35 @@
   "name": "@alfred/voice",
   "version": "0.0.1",
   "type": "module",
+  "scripts": {
+    "dev": "tsc -b -w",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "test": "bun test",
+    "install-deps": "bash scripts/install.sh",
+    "download-models": "uv run python scripts/download.py",
+    "verify": "uv run python scripts/download.py --verify-only",
+    "setup": "bash scripts/install.sh && uv run python scripts/download.py",
+    "setup:ci": "uv sync --frozen && uv run python scripts/download.py",
+    "download-supertonic": "bash scripts/supertonic.sh"
+  },
+  "peerDependencies": {
+    "@alfred/type": "workspace:*",
+    "@trpc/client": "^11.6.0"
+  },
+  "dependencies": {
+    "@alfred/db": "workspace:*",
+    "@alfred/logger": "workspace:*",
+    "@alfred/metrics": "workspace:*",
+    "@diffusionstudio/piper-wasm": "^1.0.0",
+    "@discordjs/opus": "^0.10.0",
+    "onnxruntime-node": "^1.23.2",
+    "piper-wasm": "^0.1.4"
+  },
   "exports": {
     ".": {
       "types": "./dist/types.d.ts",
       "default": "./src/types.ts"
-    },
-    "./server/session": {
-      "types": "./dist/server/session.d.ts",
-      "default": "./src/server/session.ts"
-    },
-    "./server/socket": {
-      "types": "./dist/server/socket.d.ts",
-      "default": "./src/server/socket.ts"
     },
     "./types": {
       "types": "./dist/types.d.ts",
@@ -23,21 +40,45 @@
       "types": "./dist/session.d.ts",
       "default": "./src/session.ts"
     },
+    "./stream": {
+      "types": "./dist/stream.d.ts",
+      "default": "./src/stream.ts"
+    },
+    "./server/session": {
+      "types": "./dist/server/session.d.ts",
+      "default": "./src/server/session.ts"
+    },
+    "./server/registry": {
+      "types": "./dist/server/registry.d.ts",
+      "default": "./src/server/registry.ts"
+    },
+    "./server/socket": {
+      "types": "./dist/server/socket.d.ts",
+      "default": "./src/server/socket.ts"
+    },
     "./audio": {
       "types": "./dist/audio/index.d.ts",
       "default": "./src/audio/index.ts"
     },
-    "./transport": {
-      "types": "./dist/transport/trpc.d.ts",
-      "default": "./src/transport/trpc.ts"
+    "./audio/codec": {
+      "types": "./dist/audio/codec.d.ts",
+      "default": "./src/audio/codec.ts"
     },
-    "./adapters/native": {
-      "types": "./dist/adapters/native.d.ts",
-      "default": "./src/adapters/native.ts"
+    "./audio/opus": {
+      "types": "./dist/audio/opus.d.ts",
+      "default": "./src/audio/opus.ts"
     },
-    "./adapters/web": {
-      "types": "./dist/adapters/web.d.ts",
-      "default": "./src/adapters/web.ts"
+    "./audio/converter": {
+      "types": "./dist/audio/converter.d.ts",
+      "default": "./src/audio/converter.ts"
+    },
+    "./process/base": {
+      "types": "./dist/process/base.d.ts",
+      "default": "./src/process/base.ts"
+    },
+    "./process/ipc": {
+      "types": "./dist/process/ipc.d.ts",
+      "default": "./src/process/ipc.ts"
     },
     "./process/stt": {
       "types": "./dist/process/stt.d.ts",
@@ -51,59 +92,41 @@
       "types": "./dist/process/supertonic.d.ts",
       "default": "./src/process/supertonic.ts"
     },
-    "./process/base": {
-      "types": "./dist/process/base.d.ts",
-      "default": "./src/process/base.ts"
+    "./transport": {
+      "types": "./dist/transport/trpc.d.ts",
+      "default": "./src/transport/trpc.ts"
     },
-    "./process/ipc": {
-      "types": "./dist/process/ipc.d.ts",
-      "default": "./src/process/ipc.ts"
+    "./adapters/web": {
+      "types": "./dist/adapters/web.d.ts",
+      "default": "./src/adapters/web.ts"
     },
-    "./audio/converter": {
-      "types": "./dist/audio/converter.d.ts",
-      "default": "./src/audio/converter.ts"
-    },
-    "./audio/opus": {
-      "types": "./dist/audio/opus.d.ts",
-      "default": "./src/audio/opus.ts"
-    },
-    "./audio/transcoder": {
-      "types": "./dist/audio/transcoder.d.ts",
-      "default": "./src/audio/transcoder.ts"
-    },
-    "./audio/codec": {
-      "types": "./dist/audio/codec.d.ts",
-      "default": "./src/audio/codec.ts"
-    },
-    "./stream": {
-      "types": "./dist/stream.d.ts",
-      "default": "./src/stream.ts"
+    "./adapters/native": {
+      "types": "./dist/adapters/native.d.ts",
+      "default": "./src/adapters/native.ts"
     },
     "./test/utils/python-helpers": {
       "types": "./test/utils/python-helpers.d.ts",
       "default": "./test/utils/python-helpers.ts"
+    },
+    "./metrics": {
+      "types": "./dist/metrics.d.ts",
+      "default": "./src/metrics.ts"
+    },
+    "./services/config": {
+      "types": "./dist/services/config.d.ts",
+      "default": "./src/services/config.ts"
+    },
+    "./services/models": {
+      "types": "./dist/services/models.d.ts",
+      "default": "./src/services/models.ts"
+    },
+    "./services/stt": {
+      "types": "./dist/services/stt.d.ts",
+      "default": "./src/services/stt.ts"
+    },
+    "./services/tts": {
+      "types": "./dist/services/tts.d.ts",
+      "default": "./src/services/tts.ts"
     }
-  },
-  "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
-    "typecheck": "tsc -b",
-    "test": "bun test",
-    "install-deps": "bash scripts/install-deps.sh",
-    "download-models": "uv run python scripts/download_models.py",
-    "download-supertonic": "bash scripts/download_supertonic.sh",
-    "verify": "uv run python scripts/download_models.py --verify-only",
-    "setup": "bash scripts/install-deps.sh && uv run python scripts/download_models.py",
-    "setup:ci": "uv sync --frozen && uv run python scripts/download_models.py"
-  },
-  "peerDependencies": {
-    "@alfred/type": "workspace:*",
-    "@trpc/client": "^11.6.0"
-  },
-  "dependencies": {
-    "@diffusionstudio/piper-wasm": "^1.0.0",
-    "@discordjs/opus": "^0.10.0",
-    "onnxruntime-node": "^1.23.2",
-    "piper-wasm": "^0.1.4"
   }
 }

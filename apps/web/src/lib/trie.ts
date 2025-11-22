@@ -2,16 +2,20 @@ type TrieNode<T> = {
   children: Map<string, TrieNode<T>>;
   value?: T;
   isEndOfWord: boolean;
+  usageCount: number; // To track popularity
 };
 
 export class PrefixTrie<T> {
   private root: TrieNode<T>;
 
   constructor() {
-    this.root = { children: new Map(), isEndOfWord: false };
+    this.root = { children: new Map(), isEndOfWord: false, usageCount: 0 };
   }
 
-  insert(word: string, value: T): void {
+  /**
+   * Inserts a word with a value and an optional usage score.
+   */
+  insert(word: string, value: T, score = 0): void {
     let current = this.root;
     const normalized = word.toLowerCase();
 
@@ -20,26 +24,28 @@ export class PrefixTrie<T> {
         current.children.set(char, {
           children: new Map(),
           isEndOfWord: false,
+          usageCount: 0,
         });
       }
       current = current.children.get(char)!;
     }
 
     current.isEndOfWord = true;
+    current.usageCount = Math.max(current.usageCount, score);
+    
     // Only set value if not already set (prioritize first insertion or handle multiples?)
-    // For commands, we might want the "primary" label even if matched via alias
     if (!current.value) {
       current.value = value;
     }
   }
 
   /**
-   * Finds the value associated with the shortest completion of the prefix.
-   * e.g. if "star" matches "start", return value for "start".
+   * Finds the value associated with the BEST completion of the prefix.
+   * Prioritizes higher usage score, then shorter words.
    */
   findCompletion(prefix: string): { completion: string; value: T } | null {
     if (!prefix) return null;
-
+    
     let current = this.root;
     const normalized = prefix.toLowerCase();
 
@@ -51,41 +57,40 @@ export class PrefixTrie<T> {
       current = current.children.get(char)!;
     }
 
-    // 2. BFS to find the shortest completion (closest node with isEndOfWord)
-    // Actually DFS/recursion is fine here since we just need *a* valid completion
-    // Let's just do a simple greedy traversal for now: pick first child
-
-    const completion = "";
-    const node = current;
-
-    // If the prefix itself is a valid word, return it immediately
-    // (e.g. user typed "chat" and "chat" is a command)
-    if (node.isEndOfWord && node.value) {
-      return { completion: prefix, value: node.value };
+    // 2. BFS to find best completion.
+    // We want the node with highest usageCount.
+    
+    let bestMatch: { completion: string; value: T; score: number } | null = null;
+    
+    // If the prefix itself is a valid word, it's a strong candidate
+    if (current.isEndOfWord && current.value) {
+        bestMatch = { completion: prefix, value: current.value, score: current.usageCount };
     }
 
-    // Otherwise find the "first" word in the subtree
-    const queue: Array<{ node: TrieNode<T>; path: string }> = [
-      { node: current, path: "" },
-    ];
-
-    while (queue.length > 0) {
-      const { node: curr, path } = queue.shift()!;
-
-      if (curr.isEndOfWord && curr.value) {
-        // Reconstruct original casing?
-        // For now we return the key we found.
-        // The caller usually wants the *Label* (value), not the matched string.
-        return { completion: prefix + path, value: curr.value };
-      }
-
-      // Sort children to ensure deterministic order (e.g. alpha)
-      const sortedKeys = Array.from(curr.children.keys()).sort();
-      for (const key of sortedKeys) {
-        queue.push({ node: curr.children.get(key)!, path: path + key });
-      }
+    const queue: Array<{ node: TrieNode<T>, path: string }> = [{ node: current, path: "" }];
+    const maxDepth = 20; // Limit search space
+    
+    let steps = 0;
+    while (queue.length > 0 && steps < 100) {
+        steps++;
+        const { node: curr, path } = queue.shift()!;
+        
+        if (curr.isEndOfWord && curr.value) {
+            const candidateScore = curr.usageCount;
+            // Simple logic: strictly prefer higher usage
+            if (!bestMatch || candidateScore > bestMatch.score) {
+                 bestMatch = { completion: prefix + path, value: curr.value, score: candidateScore };
+            }
+        }
+        
+        const sortedKeys = Array.from(curr.children.keys()).sort();
+        for (const key of sortedKeys) {
+            if (path.length < maxDepth) {
+                queue.push({ node: curr.children.get(key)!, path: path + key });
+            }
+        }
     }
 
-    return null;
+    return bestMatch ? { completion: bestMatch.completion, value: bestMatch.value } : null;
   }
 }

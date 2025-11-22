@@ -11,6 +11,7 @@ import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { deploymentNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
 
 const DEFAULT_DOMAIN_FALLBACK = "alfred.local";
 
@@ -56,6 +57,9 @@ function formatTimestamp(value?: Date | string | null) {
 }
 
 export function DeploymentNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const parsed = deploymentNodeDataSchema.safeParse(data);
   const [promoteState, setPromoteState] = useState<{
     app: string;
@@ -244,6 +248,29 @@ export function DeploymentNode({ id, data, selected }: NodeProps) {
         return "text-biolum-faint";
     }
   };
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-white/10 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-white/20">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
+          <ServerCog className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          Deployments
+        </span>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -9,10 +9,15 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { bookmarkNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const BOOKMARK_LIST_KEY = { limit: 50, offset: 0 } as const;
 
 export function BookmarkNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const parsed = bookmarkNodeDataSchema.safeParse(data);
   const bookmarkData = parsed.success ? parsed.data : { lastTags: undefined };
   const [title, setTitle] = useState("");
@@ -90,6 +95,24 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
       })),
     [bookmarks]
   );
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return <NodeLODTiny color="bg-cyan-500" shadow="shadow-cyan-500/50" />;
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <NodeLODSmall
+        label="Bookmarks"
+        icon={<BookMarked className="h-3 w-3" />}
+        borderColor="border-cyan-500/20"
+        textColor="text-cyan-500"
+        hoverColor="hover:border-cyan-500/40"
+      />
+    );
+  }
 
   return (
     <MindscapeNode
@@ -195,6 +218,7 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
     </MindscapeNode>
   );
 }
+
 
 function parseTags(tags: string): string[] | undefined {
   if (!tags.trim()) {

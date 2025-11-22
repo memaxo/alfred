@@ -38,3 +38,4 @@
     ```
 12. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
 13. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
+14. **Schema parity.** Maintain parity between `packages/db/src/sqlite/schema.ts` and Postgres migrations manually; `bun:sqlite` tests fail otherwise.

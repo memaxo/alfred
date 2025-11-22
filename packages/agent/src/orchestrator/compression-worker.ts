@@ -3,7 +3,7 @@ import {
   findNodesByConfidence,
   findStaleNodes,
   updateNodeConfidenceBatch,
-} from "@alfred/db/src/repo/graph";
+} from "@alfred/db/repo/graph";
 import {
   type CompressionConfig,
   DEFAULT_COMPRESSION_CONFIG,

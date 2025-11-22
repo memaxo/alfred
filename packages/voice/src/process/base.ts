@@ -1,7 +1,7 @@
 import { accessSync, constants as fsConstants, statSync } from "node:fs";
 import { join, delimiter as pathDelimiter } from "node:path";
 import { type Subprocess, spawn } from "bun";
-import { IPCBridge, type IPCRequest, type IPCResponse } from "./ipc";
+import { Bridge, type IPCRequest, type IPCResponse } from "./ipc";
 
 export type ProcessConfig = {
   scriptPath: string;
@@ -10,6 +10,8 @@ export type ProcessConfig = {
   computeType?: string;
   voice?: string;
   env?: Record<string, string>;
+  readyTimeoutMs?: number;
+  requestTimeoutMs?: number;
 };
 
 export type ProcessHealth = {
@@ -20,9 +22,9 @@ export type ProcessHealth = {
   uptime: number;
 };
 
-export class ModelProcess {
+export class Process {
   private process: Subprocess | null = null;
-  public readonly ipc: IPCBridge;
+  public readonly ipc: Bridge;
   private readonly config: ProcessConfig;
   private startTime = 0;
   private requestCount = 0;
@@ -33,7 +35,7 @@ export class ModelProcess {
 
   constructor(config: ProcessConfig) {
     this.config = config;
-    this.ipc = new IPCBridge({ requestTimeout: 10_000 });
+    this.ipc = new Bridge({ requestTimeout: config.requestTimeoutMs ?? 10_000 });
   }
 
   async start(): Promise<void> {
@@ -110,7 +112,7 @@ export class ModelProcess {
     this.startHealthCheck();
 
     // Wait for ready signal
-    await this.waitForReady();
+    await this.waitForReady(this.config.readyTimeoutMs);
   }
 
   /**
@@ -365,11 +367,11 @@ except ImportError as e:
     });
   }
 
-  private async waitForReady(): Promise<void> {
+  private async waitForReady(timeoutMs: number = 300_000): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error("Process failed to become ready"));
-      }, 300_000); // 5 minutes for model download/load
+        reject(new Error(`Process failed to become ready within ${timeoutMs}ms`));
+      }, timeoutMs);
 
       const checkReady = (response: IPCResponse) => {
         if (
@@ -497,23 +499,23 @@ except ImportError as e:
  * Allows testing resolution logic without spawning actual processes.
  */
 export const __internals = {
-  resolvePythonExecutable: (instance: ModelProcess) =>
+  resolvePythonExecutable: (instance: Process) =>
     (
       instance as unknown as {
         resolvePythonExecutable: () => Promise<{ cmd: string[]; cwd: string }>;
       }
     ).resolvePythonExecutable.bind(instance),
-  findUvPath: (instance: ModelProcess) =>
+  findUvPath: (instance: Process) =>
     (
       instance as unknown as { findUvPath: () => Promise<string | null> }
     ).findUvPath.bind(instance),
-  findVenvPython: (instance: ModelProcess) =>
+  findVenvPython: (instance: Process) =>
     (
       instance as unknown as {
         findVenvPython: (voiceDir: string) => string | null;
       }
     ).findVenvPython.bind(instance),
-  verifyDependencies: (instance: ModelProcess) =>
+  verifyDependencies: (instance: Process) =>
     (
       instance as unknown as {
         verifyDependencies: (cmd: string[]) => Promise<void>;

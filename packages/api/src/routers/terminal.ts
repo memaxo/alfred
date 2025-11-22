@@ -1,13 +1,35 @@
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import * as pty from "node-pty";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
+// Mock IPty interface (for reference/typing of dynamic import)
+// interface IPty {
+//   spawn(file: string, args: string[], options: any): IPty;
+//   on(event: string, listener: any): void;
+//   onExit(listener: any): { dispose: () => void };
+//   onData(listener: any): { dispose: () => void };
+//   resize(cols: number, rows: number): void;
+//   write(data: string): void;
+//   kill(signal?: string): void;
+//   dispose(): void;
+// }
+
 // In-memory store for PTY sessions
-// In a distributed system, this would need to be redis/etc, but for local/single-instance it's fine.
-const sessions = new Map<string, pty.IPty>();
+const sessions = new Map<string, any>();
+
+async function getPty() {
+  try {
+    // Dynamically import node-pty only if available
+    // @ts-ignore - optional dependency
+    const mod = await import("node-pty");
+    return mod.default || mod;
+  } catch (error) {
+    logger.warn("terminal_pty_unavailable", { error: error instanceof Error ? error.message : String(error) });
+    return undefined;
+  }
+}
 
 export const terminalRouter: ReturnType<typeof router> = router({
   createSession: authedProcedure
@@ -18,12 +40,20 @@ export const terminalRouter: ReturnType<typeof router> = router({
         cwd: z.string().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
+      const ptyBackend = await getPty();
+      if (!ptyBackend) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Terminal functionality is unavailable on this server",
+        });
+      }
+
       const shell = process.env.SHELL || "bash";
       const sessionId = crypto.randomUUID();
 
       try {
-        const ptyProcess = pty.spawn(shell, [], {
+        const ptyProcess = ptyBackend.spawn(shell, [], {
           name: "xterm-color",
           cols: input.cols,
           rows: input.rows,
@@ -63,7 +93,7 @@ export const terminalRouter: ReturnType<typeof router> = router({
           return () => {};
         }
 
-        const onData = ptyProcess.onData((data) => {
+        const onData = ptyProcess.onData((data: string) => {
           emit.next(data);
         });
 

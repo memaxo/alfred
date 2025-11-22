@@ -261,6 +261,8 @@ export function MindscapeInitializer() {
           : typeof props.accuracy === "number"
             ? props.accuracy
             : undefined;
+      const archived =
+        typeof props.archived === "string" ? props.archived : undefined;
       const summary =
         typeof props.content === "string" ? props.content : undefined;
       const runId =
@@ -283,6 +285,7 @@ export function MindscapeInitializer() {
           kind: node.kind,
           summary,
           confidence,
+          archived,
           source: "runtime",
           runId,
           graph: {

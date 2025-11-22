@@ -20,6 +20,7 @@ export type AssistantAction = {
 
 type UseAssistantStreamOptions = {
   onError?: (error: Error) => void;
+  onResponse?: (response: Response) => void;
   initialMessages?: AssistantUIMessage[];
   initialConversationId?: string | null;
 };
@@ -96,7 +97,8 @@ export function deriveActions(
 export function useAssistantStream(
   options: UseAssistantStreamOptions = {}
 ): UseAssistantStreamReturn {
-  const { onError, initialMessages, initialConversationId } = options;
+  const { onError, initialMessages, initialConversationId, onResponse } =
+    options;
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId ?? null
   );
@@ -125,6 +127,9 @@ export function useAssistantStream(
         if (mountedRef.current) {
           setConversationId(headerId);
         }
+      }
+      if (onResponse) {
+        onResponse(response);
       }
       return response;
     };

@@ -9,7 +9,7 @@ import {
   generateMergeExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/merge";
 import { executeMergePlan } from "@alfred/agent/orchestrator/multi/merge-executor";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";

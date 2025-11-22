@@ -1,4 +1,3 @@
-import { mindscapeRagCacheEventsTotal } from "@alfred/api/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -38,6 +37,10 @@ export const Route = createFileRoute("/api/mindscape/metrics")({
         if (total === 0) {
           return new Response(null, { status: 204 });
         }
+
+        const metricsPkg = "@alfred/api/metrics";
+        const { mindscapeRagCacheEventsTotal } = await import(metricsPkg);
+
         if (hits > 0) {
           mindscapeRagCacheEventsTotal.labels("hit").inc(hits);
         }

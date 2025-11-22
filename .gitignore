@@ -80,3 +80,38 @@ packages/voice/.venv/
 # Git Worktrees
 .worktrees/
 worktrees/
+
+# Generated TypeScript declaration files and maps
+*.d.ts.map
+**/*.d.ts.map
+*.js.map
+**/*.js.map
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test output files
+verification-*.txt
+
+# Agent plan directories (keep .md files)
+.agent/plans/*/
+!.agent/plans/*.md
+
+# Generated JavaScript files in src (but keep source .js files)
+# Note: This pattern is conservative - only ignore .js files that have corresponding .ts files
+packages/db/src/**/*.js
+packages/db/src/**/*.d.ts
+packages/embed/src/**/*.js
+packages/embed/src/**/*.d.ts
+packages/metrics/src/**/*.js
+packages/metrics/src/**/*.d.ts
+packages/runtime/src/**/*.js
+packages/runtime/src/**/*.d.ts
+packages/knowledge/src/**/*.js
+packages/knowledge/src/**/*.d.ts
+packages/db/src/sqlite/*.js
+packages/db/src/sqlite/*.d.ts

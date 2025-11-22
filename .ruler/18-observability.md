@@ -16,7 +16,9 @@ Measure everything, log selectively, expose metrics consistently. Observability 
    });
    ```
 
-2. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
+2. **Domain-Local Metrics.** Define metrics within the package that owns the domain (e.g., `packages/voice/src/metrics.ts`), not in a central monolith. Export them for registration in the main application entry point to keep packages self-contained.
+
+3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
    ```typescript
    logger.error("workflow_failed", {
      runId,
@@ -26,9 +28,9 @@ Measure everything, log selectively, expose metrics consistently. Observability 
    });
    ```
 
-3. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
+4. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
 
-4. **Performance budgets.** Instrument hot paths with histogram metrics:
+5. **Performance budgets.** Instrument hot paths with histogram metrics:
    ```typescript
    const stopTimer = operationDuration.startTimer();
    try {

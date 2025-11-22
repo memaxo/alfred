@@ -1,30 +1,9 @@
-import { createContext } from "@alfred/api/context";
-import { appRouter } from "@alfred/api/routers/index";
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { RouteError } from "@/components/route-error";
-
-const processCallback = createServerFn({ method: "POST" })
-  .inputValidator(
-    z.object({
-      code: z.string().min(1),
-      state: z.string().min(1),
-    })
-  )
-  .handler(async ({ data, request }) => {
-    const ctx = await createContext({ req: request });
-    const caller = appRouter.createCaller(ctx);
-
-    const result = await caller.linear.oauthCallback({
-      code: data.code,
-      state: data.state,
-    });
-
-    return result;
-  });
+import { processCallback } from "@/lib/auth/linear.fn";
 
 export const Route = createFileRoute("/auth/callback/linear")({
   component: CallbackComponent,

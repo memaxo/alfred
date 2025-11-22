@@ -3,7 +3,7 @@ import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge"
 import {
   graphQueriesTotal,
   graphQueryDurationSeconds,
-} from "@alfred/api/metrics";
+} from "../metrics";
 import { db } from "@alfred/db";
 import { memoryEdges } from "@alfred/db/schema/graph";
 import {
@@ -44,7 +44,7 @@ const datalogQuerySchema = z.object({
 const semanticQuerySchema = z.object({
   kind: z.literal("semantic"),
   text: z.string().min(1),
-  topK: z.number().int().min(1).max(50).optional(),
+  topK: z.number().int().min(1).max(1000).optional(),
   preferRag: z.boolean().optional(),
   resource: z.string().optional(),
 });

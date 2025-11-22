@@ -1,4 +1,4 @@
-import { ModelProcess, type ProcessConfig, type ProcessHealth } from "./base";
+import { Process, type ProcessConfig, type ProcessHealth } from "./base";
 
 // Re-export ProcessConfig for use in other packages
 export type { ProcessConfig };
@@ -25,7 +25,7 @@ export type STTResult = {
 };
 
 export class STTPool {
-  private processes: ModelProcess[] = [];
+  private processes: Process[] = [];
   private currentIndex = 0;
   private readonly config: ProcessConfig;
   private readonly poolSize: number;
@@ -46,7 +46,7 @@ export class STTPool {
 
   async initialize(): Promise<void> {
     for (let i = 0; i < this.poolSize; i++) {
-      const process = new ModelProcess(this.config);
+      const process = new Process(this.config);
       this.processes.push(process);
     }
 
@@ -54,7 +54,7 @@ export class STTPool {
     await Promise.all(this.processes.map((p) => p.start()));
   }
 
-  private getNextProcess(): ModelProcess {
+  private getNextProcess(): Process {
     // Round-robin selection
     if (this.processes.length === 0) {
       throw new Error("No processes available");

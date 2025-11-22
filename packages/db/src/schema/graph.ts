@@ -3,6 +3,7 @@
  * Orchestrator knowledge graph for tracking relationships
  */
 
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   customType,
   jsonb,
@@ -11,6 +12,7 @@ import {
   text,
   timestamp,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
 
 const tsvector = customType<{ data: string; driverData: string }>({
@@ -34,6 +36,7 @@ export const memoryNodes = pgTable("memory_nodes", {
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   labelTsvector: tsvector("label_tsvector"),
+  embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
 });
 
 // Index coverage:

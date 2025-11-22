@@ -163,6 +163,30 @@ jobs:
     needs: changes
     uses: ./.github/workflows/ruler-check.yml
 
+  build-verify:
+    name: Build Verification
+    needs: 
+      - changes
+      - ruler
+    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'db' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.18"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Production Build
+        run: bun run verify:build
+
   typecheck:
     name: Typecheck
     needs:

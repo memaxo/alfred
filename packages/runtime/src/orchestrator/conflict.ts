@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { generateConflictExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/conflict";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";

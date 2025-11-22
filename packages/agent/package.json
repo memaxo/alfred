@@ -37,6 +37,11 @@
       "default": "./src/workflow/*.ts",
       "types": "./src/workflow/*.ts"
     },
+    "./assistant/src/adapter": {
+      "bun": "./src/assistant/src/adapter.ts",
+      "default": "./src/assistant/src/adapter.ts",
+      "types": "./src/assistant/src/adapter.ts"
+    },
     "./assistant/*": {
       "bun": "./assistant/src/*.ts",
       "default": "./assistant/src/*.ts",

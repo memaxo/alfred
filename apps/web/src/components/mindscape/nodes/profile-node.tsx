@@ -13,6 +13,7 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { profileNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
 
 type ProfileRow = inferRouterOutputs<TRPCAppRouter>["profile"]["get"];
 // type ProfileUpdateInput = inferRouterInputs<TRPCAppRouter>["profile"]["update"];
@@ -25,12 +26,16 @@ type PasskeyInfo = {
 };
 
 export function ProfileNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const _parsed = profileNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
 
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
+  // ... rest of existing logic ...
   const [isAddingPasskey, setIsAddingPasskey] = useState(false);
   const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
 
@@ -227,6 +232,27 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
       toast.error(message);
     }
   }, []);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-indigo-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex items-center gap-2 rounded-full border border-indigo-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-indigo-500/50">
+        <UserCircle2 className="h-3 w-3 text-indigo-400" />
+        <span className="font-medium text-[10px] text-indigo-300 tracking-tight">
+          Profile
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode

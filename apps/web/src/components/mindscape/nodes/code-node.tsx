@@ -1,13 +1,19 @@
 import Editor from "@monaco-editor/react";
 import type { NodeProps } from "@xyflow/react";
+import { Code2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { codeNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function CodeNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   // Validate and parse node data
   const result = codeNodeDataSchema.safeParse(data);
   const path = result.success ? (result.data.path ?? "") : "";
@@ -52,12 +58,32 @@ export function CodeNode({ id, data, selected }: NodeProps) {
     refetch();
   };
 
+  const label = path ? (path.split("/").pop() ?? "Code Editor") : "Code Editor";
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return <NodeLODTiny color="bg-yellow-500" shadow="shadow-yellow-500/50" />;
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <NodeLODSmall
+        label={label}
+        icon={<Code2 className="h-3 w-3" />}
+        borderColor="border-yellow-500/20"
+        textColor="text-yellow-500"
+        hoverColor="hover:border-yellow-500/40"
+      />
+    );
+  }
+
   return (
     <MindscapeNode
       className="w-[600px]"
       id={id}
       selected={selected}
-      title={path ? (path.split("/").pop() ?? "Code Editor") : "Code Editor"}
+      title={label}
     >
       <div className="flex flex-col overflow-hidden rounded-b-md bg-[#1e1e1e]">
         <div className="flex items-center justify-between border-white/10 border-b bg-zinc-900 px-2 py-1">

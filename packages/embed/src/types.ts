@@ -35,4 +35,6 @@ export type ProcessHealth = {
   requestCount: number;
   errorCount: number;
   uptime: number;
+  status: "idle" | "busy" | "error" | "terminated";
+  lastActive: number;
 };

@@ -136,6 +136,7 @@ export const knowledgeNodeDataSchema = baseArtifactDataSchema.extend({
   kind: z.string().optional(),
   summary: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  archived: z.string().optional(), // ISO timestamp
   source: z.enum(["user", "runtime", "rag"]).optional(),
   runId: z.string().optional(),
 });
@@ -143,6 +144,7 @@ export const knowledgeNodeDataSchema = baseArtifactDataSchema.extend({
 export const conceptNodeDataSchema = baseArtifactDataSchema.extend({
   entityType: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  archived: z.string().optional(), // ISO timestamp
   description: z.string().optional(),
 });
 

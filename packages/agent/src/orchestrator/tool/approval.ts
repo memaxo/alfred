@@ -47,6 +47,7 @@ export function withPolicyApproval<TInput, TOutput>(
 
       return false;
     } catch (error) {
+      // biome-ignore lint/suspicious/noConsole: Log error without breaking flow
       console.warn("policy_check_failed_in_approval", {
         tool: tool.description,
         error: error instanceof Error ? error.message : String(error),

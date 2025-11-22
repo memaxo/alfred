@@ -4,7 +4,7 @@
  */
 
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { db } from "../index";
+import { db } from "../client";
 import {
   evalDatasets,
   evalDefs,
@@ -39,7 +39,7 @@ export async function upsertEvalDef(input: {
   title?: string;
   description?: string;
   config?: unknown;
-}) {
+}): Promise<typeof evalDefs.$inferSelect> {
   const payload = {
     slug: input.slug,
     agent: input.agent,
@@ -63,10 +63,10 @@ export async function upsertEvalDef(input: {
     })
     .returning();
 
-  return row;
+  return row!;
 }
 
-export async function listEvalDefs(limit = 50, offset = 0) {
+export async function listEvalDefs(limit = 50, offset = 0): Promise<(typeof evalDefs.$inferSelect)[]> {
   return db
     .select()
     .from(evalDefs)
@@ -75,7 +75,7 @@ export async function listEvalDefs(limit = 50, offset = 0) {
     .offset(offset);
 }
 
-export async function getEvalDefBySlug(slug: string) {
+export async function getEvalDefBySlug(slug: string): Promise<typeof evalDefs.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDefs)
@@ -84,7 +84,7 @@ export async function getEvalDefBySlug(slug: string) {
   return rows[0] ?? null;
 }
 
-export async function getEvalDefById(id: string) {
+export async function getEvalDefById(id: string): Promise<typeof evalDefs.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDefs)
@@ -98,7 +98,7 @@ export async function createDataset(input: {
   name: string;
   source: string;
   description?: string;
-}) {
+}): Promise<typeof evalDatasets.$inferSelect> {
   const [row] = await db
     .insert(evalDatasets)
     .values({
@@ -108,10 +108,10 @@ export async function createDataset(input: {
       description: input.description ?? null,
     })
     .returning();
-  return row;
+  return row!;
 }
 
-export async function listDatasets(defId: string, limit = 50, offset = 0) {
+export async function listDatasets(defId: string, limit = 50, offset = 0): Promise<(typeof evalDatasets.$inferSelect)[]> {
   return db
     .select()
     .from(evalDatasets)
@@ -121,7 +121,7 @@ export async function listDatasets(defId: string, limit = 50, offset = 0) {
     .offset(offset);
 }
 
-export async function getDatasetById(id: string) {
+export async function getDatasetById(id: string): Promise<typeof evalDatasets.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDatasets)
@@ -133,7 +133,7 @@ export async function getDatasetById(id: string) {
 export async function addPoints(
   datasetId: string,
   points: Array<{ input: unknown; target?: unknown; metadata?: unknown }>
-) {
+): Promise<number> {
   if (points.length === 0) {
     return 0;
   }
@@ -155,7 +155,7 @@ export async function addPoints(
   return inserted;
 }
 
-export async function getPointsForDataset(datasetId: string) {
+export async function getPointsForDataset(datasetId: string): Promise<(typeof evalPoints.$inferSelect)[]> {
   return db
     .select()
     .from(evalPoints)
@@ -167,7 +167,7 @@ export async function createRun(input: {
   defId: string;
   datasetId: string;
   variant?: string;
-}) {
+}): Promise<typeof evalRuns.$inferSelect> {
   const [row] = await db
     .insert(evalRuns)
     .values({
@@ -176,7 +176,7 @@ export async function createRun(input: {
       variant: input.variant ?? null,
     })
     .returning();
-  return row;
+  return row!;
 }
 
 export async function updateRun(
@@ -188,7 +188,7 @@ export async function updateRun(
     stats: unknown;
     laminarEvalId: string | null;
   }>
-) {
+): Promise<number> {
   const updates: Partial<typeof evalRuns.$inferInsert> = {};
   if (patch.status !== undefined) {
     updates.status = patch.status;
@@ -228,7 +228,7 @@ export async function insertScores(
     reason?: unknown;
     metadata?: unknown;
   }>
-) {
+): Promise<number> {
   if (scores.length === 0) {
     return 0;
   }
@@ -272,7 +272,7 @@ export async function getRun(
 
 export async function listRuns(
   input: { defSlug?: string; limit?: number; offset?: number } = {}
-) {
+): Promise<EvalRunWithRelations[]> {
   const limit = input.limit ?? 50;
   const offset = input.offset ?? 0;
 
@@ -296,7 +296,7 @@ export async function listRuns(
     .offset(offset);
 }
 
-export async function listRunScores(runId: string, limit = 100, offset = 0) {
+export async function listRunScores(runId: string, limit = 100, offset = 0): Promise<{ score: typeof evalScores.$inferSelect; point: typeof evalPoints.$inferSelect }[]> {
   return db
     .select({
       score: evalScores,
@@ -310,7 +310,7 @@ export async function listRunScores(runId: string, limit = 100, offset = 0) {
     .offset(offset);
 }
 
-export async function getRunScoreStats(runId: string) {
+export async function getRunScoreStats(runId: string): Promise<{ scorer: string | null; count: number; mean: number | null; min: number | null; max: number | null }[]> {
   return db
     .select({
       scorer: evalScores.scorer,
@@ -324,7 +324,7 @@ export async function getRunScoreStats(runId: string) {
     .groupBy(evalScores.scorer);
 }
 
-export async function verifyRunDataset(runId: string, datasetId: string) {
+export async function verifyRunDataset(runId: string, datasetId: string): Promise<boolean> {
   const rows = await db
     .select({ id: evalRuns.id })
     .from(evalRuns)

@@ -4,7 +4,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { db } from "../index";
+import { db } from "../client";
 import { linearInstallations } from "../schema/linear";
 
 export type LinearInstallation = typeof linearInstallations.$inferSelect;
@@ -18,7 +18,7 @@ export async function upsertLinear(input: {
   scope: string;
   expires?: Date | null;
   metadata?: unknown;
-}) {
+}): Promise<LinearInstallation> {
   const {
     oauthClient,
     appUser,
@@ -59,10 +59,10 @@ export async function upsertLinear(input: {
       },
     })
     .returning();
-  return row;
+  return row!;
 }
 
-export async function getLinearByWorkspace(space: string) {
+export async function getLinearByWorkspace(space: string): Promise<LinearInstallation | null> {
   const rows = await db
     .select()
     .from(linearInstallations)
@@ -72,7 +72,7 @@ export async function getLinearByWorkspace(space: string) {
   return rows[0] ?? null;
 }
 
-export async function getLinearByOAuth(oauthClient: string) {
+export async function getLinearByOAuth(oauthClient: string): Promise<LinearInstallation | null> {
   const rows = await db
     .select()
     .from(linearInstallations)

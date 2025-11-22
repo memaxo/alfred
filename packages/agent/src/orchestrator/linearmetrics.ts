@@ -1,55 +1,32 @@
-type ActivityCounter = {
-  inc: (labels: { type: string; status: string }) => void;
+import {
+  linearActivityDurationSeconds,
+  linearActivityEmissionsTotal,
+  linearSessionOperationsTotal,
+} from "../workflow/metrics";
+
+export {
+  linearActivityDurationSeconds,
+  linearActivityEmissionsTotal,
+  linearSessionOperationsTotal,
 };
 
-type ActivityDuration = {
-  startTimer: (labels: { type: string }) => () => void;
-};
-
-type SessionCounter = {
-  inc: (labels: { operation: string }) => void;
-};
-
+// Keep these types for compatibility if needed, but they are less relevant now that we export directly
 export type LinearMetricsHooks = {
-  linearActivityEmissionsTotal: ActivityCounter;
-  linearActivityDurationSeconds: ActivityDuration;
-  linearSessionOperationsTotal: SessionCounter;
-};
-
-const noopActivityCounter: ActivityCounter = {
-  inc: () => {},
-};
-
-const noopDuration: ActivityDuration = {
-  startTimer: () => () => {},
-};
-
-const noopSessionCounter: SessionCounter = {
-  inc: () => {},
-};
-
-let metrics: LinearMetricsHooks = {
-  linearActivityEmissionsTotal: noopActivityCounter,
-  linearActivityDurationSeconds: noopDuration,
-  linearSessionOperationsTotal: noopSessionCounter,
+  linearActivityEmissionsTotal: typeof linearActivityEmissionsTotal;
+  linearActivityDurationSeconds: typeof linearActivityDurationSeconds;
+  linearSessionOperationsTotal: typeof linearSessionOperationsTotal;
 };
 
 export function configureLinearMetrics(
-  partial: Partial<LinearMetricsHooks>
+  _partial: Partial<LinearMetricsHooks>
 ): void {
-  metrics = {
-    linearActivityEmissionsTotal:
-      partial.linearActivityEmissionsTotal ??
-      metrics.linearActivityEmissionsTotal,
-    linearActivityDurationSeconds:
-      partial.linearActivityDurationSeconds ??
-      metrics.linearActivityDurationSeconds,
-    linearSessionOperationsTotal:
-      partial.linearSessionOperationsTotal ??
-      metrics.linearSessionOperationsTotal,
-  };
+  // No-op: Metrics are now imported directly from @alfred/agent/workflow/metrics
 }
 
-export function getLinearMetrics(): LinearMetricsHooks {
-  return metrics;
+export function getLinearMetrics() {
+  return {
+    linearActivityEmissionsTotal,
+    linearActivityDurationSeconds,
+    linearSessionOperationsTotal,
+  };
 }

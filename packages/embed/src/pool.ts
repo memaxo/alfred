@@ -145,7 +145,13 @@ export class EmbedPool {
     return proc.sendRequest(texts);
   }
 
-  getHealth() {
+  getHealth(): {
+    index: number;
+    pid?: number;
+    status: "idle" | "busy" | "error" | "terminated";
+    lastActive: number;
+    uptime: number;
+  }[] {
     return this.processes.map((proc, index) => ({
       index,
       ...proc.getHealth(),

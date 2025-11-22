@@ -11,6 +11,7 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -531,6 +532,31 @@ export const toolGit = {
     }
   },
 };
+
+const aiToolGitBase = {
+  name: toolGit.name,
+  description: toolGit.description,
+  parameters: toolGit.inputSchema,
+  inputSchema: toolGit.inputSchema,
+  execute: async (input: GitInput) => {
+    return toolGit.execute({ input });
+  },
+};
+
+export const aiToolGit = withPolicyApproval(aiToolGitBase, (input) => {
+  const scopes = READ_ONLY_ACTIONS.has(input.action)
+    ? ["repo.read"]
+    : ["repo.write"];
+  return {
+    action: `git.${input.action}`,
+    resource: {
+      kind: "repo",
+      id: input.cw ? path.resolve(input.cw) : "cwd",
+    },
+    scopes,
+    authz: input.authz,
+  };
+});
 
 export type ToolGit = typeof toolGit;
 

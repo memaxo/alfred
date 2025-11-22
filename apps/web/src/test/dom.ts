@@ -12,6 +12,7 @@ globalThis.self = window as unknown as typeof globalThis;
 globalThis.HTMLElement = window.HTMLElement;
 globalThis.Element = window.Element;
 globalThis.Node = window.Node;
+globalThis.MouseEvent = window.MouseEvent;
 globalThis.DocumentFragment = window.DocumentFragment;
 globalThis.MutationObserver = window.MutationObserver;
 globalThis.navigator = window.navigator;
@@ -170,3 +171,60 @@ const ensureStorage = (key: "localStorage" | "sessionStorage") => {
 
 ensureStorage("localStorage");
 ensureStorage("sessionStorage");
+
+if (typeof globalThis.PointerEvent === "undefined") {
+  class PointerEvent extends MouseEvent {
+    public pointerId: number;
+    public width: number;
+    public height: number;
+    public pressure: number;
+    public tangentialPressure: number;
+    public tiltX: number;
+    public tiltY: number;
+    public twist: number;
+    public pointerType: string;
+    public isPrimary: boolean;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 0;
+      this.width = params.width ?? 1;
+      this.height = params.height ?? 1;
+      this.pressure = params.pressure ?? 0;
+      this.tangentialPressure = params.tangentialPressure ?? 0;
+      this.tiltX = params.tiltX ?? 0;
+      this.tiltY = params.tiltY ?? 0;
+      this.twist = params.twist ?? 0;
+      this.pointerType = params.pointerType ?? "mouse";
+      this.isPrimary = params.isPrimary ?? false;
+    }
+  }
+  (globalThis as any).PointerEvent = PointerEvent;
+  if (typeof window !== "undefined") {
+    (window as any).PointerEvent = PointerEvent;
+  }
+}
+
+// Suppress specific warnings that are noisy in tests
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+console.warn = (...args) => {
+  const msg = args[0];
+  if (typeof msg === "string") {
+    if (msg.includes("THREE.WebGLRenderer")) return;
+    if (msg.includes("The pseudo class \":first-child\" is potentially unsafe"))
+      return;
+    if (msg.includes("The pseudo class \":nth-child\" is potentially unsafe"))
+      return;
+  }
+  originalConsoleWarn(...args);
+};
+
+console.error = (...args) => {
+  const msg = args[0];
+  if (typeof msg === "string") {
+    if (msg.includes("Error creating WebGL context")) return;
+  }
+  originalConsoleError(...args);
+};

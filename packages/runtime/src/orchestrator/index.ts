@@ -1,10 +1,9 @@
-import type { ProjectConfig } from "@alfred/agent/utils/project-detector";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeInput } from "../types";
 import { runConflictPhase } from "./conflict";
 import { runMergeAnalysis, runMergePhase } from "./merge";
 import { runReviewPhase } from "./review";
-import type { OrchestratorContext } from "./types";
+import type { OrchestratorContext, ProjectConfig } from "./types";
 import { runWaves } from "./waves";
 
 export async function* runOrchestrator(
@@ -12,7 +11,9 @@ export async function* runOrchestrator(
   runId: string,
   signal: AbortSignal,
   history?: WorkflowEvent[],
-  projectConfig?: ProjectConfig | null
+  projectConfig?: ProjectConfig | null,
+  escalationContext?: string,
+  authz?: string
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
   const ctx: OrchestratorContext = {
@@ -22,6 +23,8 @@ export async function* runOrchestrator(
     workspace,
     history,
     projectConfig,
+    escalationContext,
+    authz,
   };
 
   // Phase A: Multi-Agent Waves
@@ -51,4 +54,6 @@ export async function* runOrchestrator(
   // Phase E: Review & Self-Correction
   // Plan validation checks (lint, test) and auto-fix if they fail
   yield* runReviewPhase(ctx, mergePlan);
+
+  return; // Placeholder for result type
 }

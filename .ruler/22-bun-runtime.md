@@ -38,4 +38,6 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 
 14. **Optional dependencies.** Wrap optional or heavy dependencies (WASM, native modules) in dynamic imports with try/catch blocks that provide explicit installation instructions on failure.
 
+15. **Prerendering Limitations.** Disable static prerendering (`prerender: { enabled: false }`) if your app relies on runtime-specific APIs (like Bun) that are not available in the build-time prerender environment, or use a compatible compatibility layer.
+
 

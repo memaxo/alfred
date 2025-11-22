@@ -1,27 +1,37 @@
-import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
-import { readdir } from "node:fs/promises";
-import { basename, join } from "node:path";
 import { performance } from "node:perf_hooks";
 import {
-  recordVoiceStt,
-  recordVoiceTts,
   voiceStreamEventsTotal,
   voiceStreamLatencySeconds,
-} from "@alfred/api/metrics";
-import { userRepo } from "@alfred/db";
+} from "@alfred/voice/metrics";
+import {
+  downloadModel,
+  listAvailableModels,
+  listVoices,
+} from "@alfred/voice/services/models";
+import {
+  postTranscription,
+  transcribeLocal,
+  type SttInput,
+} from "@alfred/voice/services/stt";
+import {
+  postSynthesis,
+  synthesizeLocal,
+  type TtsInput,
+} from "@alfred/voice/services/tts";
+import {
+  DEFAULT_STT_MODEL,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  getVoiceProvider,
+  resolveSttLanguagePreference,
+  resolveVoicePreference,
+} from "@alfred/voice/services/config";
 import { logger } from "@alfred/logger";
 import { markVoice } from "@alfred/metrics/performance";
 import type { VoiceStreamEvent } from "@alfred/type/voice";
-import {
-  decodeToPCM16,
-  encodeFromPCM16,
-  isLikelyPCM,
-  PCM_MIME_TYPE,
-} from "@alfred/voice/audio/codec";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import { Response } from "undici";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
@@ -36,11 +46,6 @@ import {
   releaseVoiceSession,
   updateVoiceSession,
 } from "../voice/session-registry";
-
-const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap for initial MVP clips
-const DEFAULT_STT_MODEL = "whisper-1";
-const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
-const DEFAULT_TTS_VOICE = "alloy";
 
 const sttInput = z.object({
   audioBase64: z.string().min(1, "audio_base64_required"),
@@ -82,8 +87,6 @@ const voiceStreamInput = z.object({
   surface: voiceSurfaceInput.optional(),
 });
 
-type SttInput = z.infer<typeof sttInput>;
-type TtsInput = z.infer<typeof ttsInput>;
 const s2sInput = z.object({
   audioBase64: z.string().min(1, "audio_base64_required"),
   mimeType: z.string().min(1, "mime_type_required"),
@@ -101,506 +104,18 @@ const s2sInput = z.object({
   outputCodec: z.string().optional(),
 });
 
-// type SpeechToSpeechInput = z.infer<typeof s2sInput>;
-
 const voiceSessionStatusInput = z
   .object({
     sessionId: z.string().optional(),
   })
   .optional();
 
-// Simple in-memory cache for available voices (remote)
-// let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
-// const AVAILABLE_VOICE_CACHE_TTL_MS = 3600 * 1000; // 1 hour
-
-// Simple in-memory cache for voice list (local)
-// let voiceListCache: {
-//   data: { id: string; name: string }[];
-//   timestamp: number;
-// } | null = null;
-// const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
-
-function getVoiceProvider(): "openai" | "local" {
-  return (process.env.VOICE_PROVIDER ?? "openai") as "openai" | "local";
-}
-
-async function resolveVoicePreference(
-  userId: string,
-  requestedVoice: string
-): Promise<string> {
-  // Only override if the requested voice is the default
-  if (requestedVoice !== DEFAULT_TTS_VOICE) {
-    return requestedVoice;
-  }
-
-  try {
-    const prefs = await userRepo.getPreferences(userId);
-    const voicePref = Array.isArray(prefs)
-      ? prefs.find((p) => p.key === "voice.tts")
-      : null;
-
-    if (voicePref?.value && typeof voicePref.value === "string") {
-      return voicePref.value;
-    }
-  } catch (error) {
-    logger.warn("failed_to_resolve_voice_preference", { userId, error });
-  }
-
-  return requestedVoice;
-}
-
-async function resolveSttLanguagePreference(
-  userId: string,
-  requestedLanguage?: string
-): Promise<string | undefined> {
-  if (requestedLanguage) {
-    return requestedLanguage;
-  }
-
-  try {
-    const prefs = await userRepo.getPreferences(userId);
-    const langPref = Array.isArray(prefs)
-      ? prefs.find((p) => p.key === "voice.stt.language")
-      : null;
-
-    if (langPref?.value && typeof langPref.value === "string") {
-      return langPref.value;
-    }
-  } catch (error) {
-    logger.warn("failed_to_resolve_stt_preference", { userId, error });
-  }
-
-  return;
-}
-
-function requireOpenAIConfig() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "openai_api_key_missing",
-    });
-  }
-  const baseUrl = (
-    process.env.OPENAI_BASE_URL ?? "https://api.openai.com"
-  ).replace(/\/+$/, "");
-  return { apiKey, baseUrl };
-}
-
-async function transcribeLocal(input: SttInput): Promise<{
-  text: string;
-  language: string | null;
-  model: string;
-  provider: string;
-  durationSeconds: number;
-}> {
-  const timerStart = performance.now();
-  markVoice("stt_local_start");
-
-  const { sttPool } = getVoicePools();
-
-  // Backpressure check
-  if (sttPool.activeCount >= sttPool.size) {
-    throw new TRPCError({
-      code: "TOO_MANY_REQUESTS",
-      message: "voice_stt_pool_saturated",
-    });
-  }
-
-  try {
-    const normalized = await normalizeLocalSttAudio(input);
-    const result = await sttPool.transcribe({
-      audioBase64: normalized.audioBase64,
-      mimeType: normalized.mimeType,
-      language: input.language,
-      prompt: input.prompt,
-      streaming: false,
-    });
-
-    const durationSeconds = (performance.now() - timerStart) / 1000;
-    markVoice("stt_local_complete");
-    voiceStreamLatencySeconds.observe(
-      { stage: "stt_transcribe" },
-      durationSeconds
-    );
-    recordVoiceStt({ provider: "local", status: "ok", durationSeconds });
-
-    return {
-      text: result.text,
-      language: result.language ?? null,
-      model: result.model ?? "faster-whisper-large-v3-turbo",
-      provider: "local",
-      durationSeconds,
-    };
-  } catch (error) {
-    const durationSeconds = (performance.now() - timerStart) / 1000;
-    markVoice("stt_local_error");
-    voiceStreamLatencySeconds.observe(
-      { stage: "stt_transcribe" },
-      durationSeconds
-    );
-    recordVoiceStt({ provider: "local", status: "error", durationSeconds });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "local_transcription_failed",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-}
-
-async function synthesizeLocal(input: TtsInput): Promise<{
-  audioBase64: string;
-  mimeType: string;
-  model: string;
-  provider: string;
-  durationSeconds: number;
-}> {
-  const timerStart = performance.now();
-  markVoice("tts_local_start");
-
-  const { ttsPool } = getVoicePools();
-
-  // Backpressure check
-  if (ttsPool.activeCount >= ttsPool.size) {
-    throw new TRPCError({
-      code: "TOO_MANY_REQUESTS",
-      message: "voice_tts_pool_saturated",
-    });
-  }
-
-  try {
-    // Map OpenAI voice names to Piper voices
-    const voiceMap: Record<string, string> = {
-      alloy: "en_US-lessac-medium",
-      echo: "en_US-lessac-medium",
-      fable: "en_US-lessac-medium",
-      onyx: "en_US-lessac-medium",
-      nova: "en_US-lessac-medium",
-      shimmer: "en_US-lessac-medium",
-    };
-    const piperVoice = voiceMap[input.voice] ?? input.voice;
-
-    const result = await ttsPool.synthesize({
-      text: input.text,
-      voice: piperVoice,
-      streaming: false,
-    });
-
-    const encoded = await encodeLocalTtsAudio(result.audioBase64, input.format);
-    const durationSeconds = (performance.now() - timerStart) / 1000;
-    markVoice("tts_local_complete");
-    voiceStreamLatencySeconds.observe(
-      { stage: "tts_synthesize" },
-      durationSeconds
-    );
-    recordVoiceTts({ provider: "local", status: "ok", durationSeconds });
-
-    return {
-      audioBase64: encoded.audioBase64,
-      mimeType: encoded.mimeType,
-      model: input.voice ?? "piper",
-      provider: "local",
-      durationSeconds,
-    };
-  } catch (error) {
-    const durationSeconds = (performance.now() - timerStart) / 1000;
-    markVoice("tts_local_error");
-    voiceStreamLatencySeconds.observe(
-      { stage: "tts_synthesize" },
-      durationSeconds
-    );
-    recordVoiceTts({ provider: "local", status: "error", durationSeconds });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "local_synthesis_failed",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-}
-
-function sanitizeBase64(raw: string) {
-  const commaIndex = raw.indexOf(",");
-  return commaIndex >= 0 ? raw.slice(commaIndex + 1) : raw.trim();
-}
-
-function inferExtension(mimeType: string) {
-  const mapping: Record<string, string> = {
-    "audio/webm": "webm",
-    "audio/webm;codecs=opus": "webm",
-    "audio/wav": "wav",
-    "audio/x-wav": "wav",
-    "audio/mpeg": "mp3",
-    "audio/ogg": "ogg",
-    "audio/ogg;codecs=opus": "opus",
-    "audio/mp4": "mp4",
-    "audio/aac": "aac",
-  };
-  return mapping[mimeType.toLowerCase()] ?? "webm";
-}
-
-function formatToMime(format: TtsInput["format"]) {
-  switch (format) {
-    case "mp3":
-      return "audio/mpeg";
-    case "opus":
-      return "audio/ogg";
-    case "wav":
-      return "audio/wav";
-    default:
-      return "audio/mpeg";
-  }
-}
-
-async function normalizeLocalSttAudio(input: SttInput) {
-  const sanitized = sanitizeBase64(input.audioBase64);
-  if (!sanitized) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "audio_payload_empty",
-    });
-  }
-
-  if (isLikelyPCM(input.mimeType)) {
-    return {
-      audioBase64: sanitized,
-      mimeType: PCM_MIME_TYPE,
-    };
-  }
-
-  try {
-    const decoded = await decodeToPCM16({
-      audioBase64: sanitized,
-      mimeType: input.mimeType,
-    });
-    return {
-      audioBase64: decoded.audioBase64,
-      mimeType: decoded.mimeType,
-    };
-  } catch (error) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "local_codec_decode_failed",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-}
-
-async function encodeLocalTtsAudio(
-  audioBase64: string,
-  format: TtsInput["format"]
-) {
-  try {
-    const encoded = await encodeFromPCM16({
-      audioBase64: sanitizeBase64(audioBase64),
-      format,
-    });
-    return encoded;
-  } catch (error) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "local_codec_encode_failed",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-}
-
-async function postTranscription(input: SttInput) {
-  const { apiKey, baseUrl } = requireOpenAIConfig();
-  const cleaned = sanitizeBase64(input.audioBase64);
-  const audioBuffer = Buffer.from(cleaned, "base64");
-  if (audioBuffer.byteLength === 0) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "audio_payload_empty",
-    });
-  }
-  if (audioBuffer.byteLength > MAX_AUDIO_BYTES) {
-    throw new TRPCError({
-      code: "PAYLOAD_TOO_LARGE",
-      message: "audio_payload_too_large",
-    });
-  }
-
-  const fileName = `speech.${inferExtension(input.mimeType)}`;
-  const form = new FormData();
-  form.append(
-    "file",
-    new File([audioBuffer], fileName, { type: input.mimeType })
-  );
-  form.append("model", input.model);
-  form.append("response_format", "verbose_json");
-  if (input.language) {
-    form.append("language", input.language);
-  }
-  if (input.prompt) {
-    form.append("prompt", input.prompt);
-  }
-
-  const url = `${baseUrl}/v1/audio/transcriptions`;
-  const timerStart = performance.now();
-  let response: Response | null = null;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: form,
-    });
-  } catch (error) {
-    recordVoiceStt({ provider: "openai", status: "error" });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "openai_transcription_network_error",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-
-  const durationSeconds = (performance.now() - timerStart) / 1000;
-  const providerLabel = "openai";
-
-  if (!response.ok) {
-    recordVoiceStt({
-      provider: providerLabel,
-      status: "error",
-      durationSeconds,
-    });
-    const errorPayload = await safeReadError(response);
-    throw new TRPCError({
-      code: response.status === 401 ? "UNAUTHORIZED" : "INTERNAL_SERVER_ERROR",
-      message: "openai_transcription_failed",
-      cause: errorPayload,
-    });
-  }
-
-  const payload = (await response
-    .json()
-    .catch(() => ({ text: "", language: null }))) as {
-    text?: unknown;
-    language?: unknown;
-  };
-  const text = typeof payload.text === "string" ? payload.text : "";
-  const language =
-    typeof payload.language === "string" ? payload.language : null;
-
-  if (!text) {
-    recordVoiceStt({
-      provider: providerLabel,
-      status: "error",
-      durationSeconds,
-    });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "openai_transcription_empty",
-    });
-  }
-
-  recordVoiceStt({ provider: providerLabel, status: "ok", durationSeconds });
-
-  return {
-    text,
-    language,
-    model: input.model,
-    provider: providerLabel,
-    durationSeconds,
-  };
-}
-
-async function postSynthesis(input: TtsInput) {
-  const { apiKey, baseUrl } = requireOpenAIConfig();
-  const mimeType = formatToMime(input.format);
-  const url = `${baseUrl}/v1/audio/speech`;
-  const payload = {
-    model: input.model,
-    voice: input.voice,
-    format: input.format,
-    input: input.text,
-  };
-
-  const timerStart = performance.now();
-  let response: Response | null = null;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    recordVoiceTts({ provider: "openai", status: "error" });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "openai_synthesis_network_error",
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-
-  const durationSeconds = (performance.now() - timerStart) / 1000;
-  const providerLabel = "openai";
-
-  if (!response.ok) {
-    recordVoiceTts({
-      provider: providerLabel,
-      status: "error",
-      durationSeconds,
-    });
-    const errorPayload = await safeReadError(response);
-    throw new TRPCError({
-      code: response.status === 401 ? "UNAUTHORIZED" : "INTERNAL_SERVER_ERROR",
-      message: "openai_synthesis_failed",
-      cause: errorPayload,
-    });
-  }
-
-  const audioBuffer = await response.arrayBuffer();
-  if (!audioBuffer || audioBuffer.byteLength === 0) {
-    recordVoiceTts({
-      provider: providerLabel,
-      status: "error",
-      durationSeconds,
-    });
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "openai_synthesis_empty",
-    });
-  }
-
-  const audioBase64 = Buffer.from(audioBuffer).toString("base64");
-  recordVoiceTts({ provider: providerLabel, status: "ok", durationSeconds });
-  return {
-    audioBase64,
-    mimeType,
-    model: input.model,
-    provider: providerLabel,
-    durationSeconds,
-  };
-}
-
-async function safeReadError(response: Response) {
-  try {
-    const payload = await response.json();
-    if (payload && typeof payload === "object") {
-      return payload;
-    }
-  } catch (error) {
-    logger.debug("error_response_json_parse_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-  try {
-    return await response.text();
-  } catch (error) {
-    logger.warn("error_response_text_parse_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
+const voiceDownloadInput = z.object({
+  voiceId: z.string().min(1),
+});
 
 const toSttResource = (raw: unknown) => {
-  const input = (raw ?? {}) as Partial<SttInput>;
+  const input = (raw ?? {}) as Partial<z.infer<typeof sttInput>>;
   return {
     kind: "voice.model" as const,
     id:
@@ -611,7 +126,7 @@ const toSttResource = (raw: unknown) => {
 };
 
 const toTtsResource = (raw: unknown) => {
-  const input = (raw ?? {}) as Partial<TtsInput>;
+  const input = (raw ?? {}) as Partial<z.infer<typeof ttsInput>>;
   return {
     kind: "voice.model" as const,
     id:
@@ -621,20 +136,16 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
-const voiceDownloadInput = z.object({
-  voiceId: z.string().min(1),
-});
-
-// Simple in-memory cache for available voices (remote)
-let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
-const AVAILABLE_VOICE_CACHE_TTL_MS = 3600 * 1000; // 1 hour
-
-// Simple in-memory cache for voice list (local)
-let voiceListCache: {
-  data: { id: string; name: string }[];
-  timestamp: number;
-} | null = null;
-const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+function toTRPCError(error: unknown, code: TRPCError["code"] = "INTERNAL_SERVER_ERROR") {
+  if (error instanceof TRPCError) {
+    return error;
+  }
+  return new TRPCError({
+    code,
+    message: error instanceof Error ? error.message : String(error),
+    cause: error,
+  });
+}
 
 export const voiceRouter: ReturnType<typeof router> = router({
   sttTranscribe: authedProcedure
@@ -652,10 +163,15 @@ export const voiceRouter: ReturnType<typeof router> = router({
       }
 
       const provider = getVoiceProvider();
-      if (provider === "local") {
-        return transcribeLocal({ ...input, language });
+      try {
+        if (provider === "local") {
+          const { sttPool } = getVoicePools();
+          return await transcribeLocal(sttPool, { ...input, language });
+        }
+        return await postTranscription({ ...input, language });
+      } catch (error) {
+        throw toTRPCError(error);
       }
-      return postTranscription({ ...input, language });
     }),
 
   ttsSynthesize: authedProcedure
@@ -673,10 +189,15 @@ export const voiceRouter: ReturnType<typeof router> = router({
       const provider = getVoiceProvider();
       const voice = await resolveVoicePreference(session.user.id, input.voice);
 
-      if (provider === "local") {
-        return synthesizeLocal({ ...input, voice });
+      try {
+        if (provider === "local") {
+          const { ttsPool } = getVoicePools();
+          return await synthesizeLocal(ttsPool, { ...input, voice });
+        }
+        return await postSynthesis({ ...input, voice });
+      } catch (error) {
+        throw toTRPCError(error);
       }
-      return postSynthesis({ ...input, voice });
     }),
 
   speechToSpeech: authedProcedure
@@ -727,10 +248,14 @@ export const voiceRouter: ReturnType<typeof router> = router({
           language: sttLanguage,
           prompt: input.prompt,
         };
-        const sttResult =
-          provider === "local"
-            ? await transcribeLocal(sttPayload)
-            : await postTranscription(sttPayload);
+        
+        let sttResult;
+        if (provider === "local") {
+          const { sttPool } = getVoicePools();
+          sttResult = await transcribeLocal(sttPool, sttPayload);
+        } else {
+          sttResult = await postTranscription(sttPayload);
+        }
 
         const transcriptText = sttResult.text?.trim();
         if (!transcriptText) {
@@ -767,10 +292,14 @@ export const voiceRouter: ReturnType<typeof router> = router({
           format: input.ttsFormat,
           model: input.ttsModel,
         };
-        const ttsResult =
-          provider === "local"
-            ? await synthesizeLocal(ttsPayload)
-            : await postSynthesis(ttsPayload);
+        
+        let ttsResult;
+        if (provider === "local") {
+          const { ttsPool } = getVoicePools();
+          ttsResult = await synthesizeLocal(ttsPool, ttsPayload);
+        } else {
+          ttsResult = await postSynthesis(ttsPayload);
+        }
 
         const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
         voiceStreamLatencySeconds.observe(
@@ -812,206 +341,51 @@ export const voiceRouter: ReturnType<typeof router> = router({
         const message =
           error instanceof Error ? error.message : String(error ?? "error");
         await markVoiceSessionError(claimedSession.id, message);
-        throw error;
+        throw toTRPCError(error);
       }
     }),
 
   listAvailableModels: authedProcedure.query(async () => {
-    const provider = getVoiceProvider();
-    if (provider !== "local") {
-      return [];
-    }
-
-    if (
-      availableVoiceCache &&
-      Date.now() - availableVoiceCache.timestamp < AVAILABLE_VOICE_CACHE_TTL_MS
-    ) {
-      return availableVoiceCache.data;
-    }
-
-    try {
-      // We use Bun.spawn to run the python script
-      // This requires the python environment to be set up
-      // We assume "python3" is available or we should use the same resolution logic as pools
-      // For simplicity in this router, we'll try "python3" and expect deps to be installed globally or in venv
-      // Ideally we should use a shared helper to run python scripts
-
-      const scriptPath = join(
-        process.cwd(),
-        "packages/voice/scripts/list_available_voices.py"
-      );
-      // Use uv run if available, else python3
-      const cmd = ["uv", "run", "python", scriptPath];
-
-      const proc = Bun.spawn(cmd, {
-        stdout: "pipe",
-        stderr: "pipe",
-        cwd: join(process.cwd(), "packages/voice"),
-      });
-
-      const output = await new Response(proc.stdout).text();
-      const error = await new Response(proc.stderr).text();
-
-      if (error && error.trim().length > 0) {
-        // Some stderr is normal logging, but let's log it just in case
-        logger.debug("list_available_voices_stderr", { stderr: error });
-      }
-
-      const exitCode = await proc.exited;
-      if (exitCode !== 0) {
-        throw new Error(`Script exited with code ${exitCode}: ${error}`);
-      }
-
-      const voices = JSON.parse(output);
-      availableVoiceCache = {
-        data: voices,
-        timestamp: Date.now(),
-      };
-
-      return voices;
-    } catch (error) {
-      logger.warn("failed_to_list_available_models", { error });
-      return [];
-    }
+    return listAvailableModels();
   }),
 
   downloadModel: authedProcedure
     .input(voiceDownloadInput)
     .mutation(async ({ input }) => {
-      const provider = getVoiceProvider();
-      if (provider !== "local") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "voice_provider_not_local",
-        });
-      }
-
       try {
-        const scriptPath = join(
-          process.cwd(),
-          "packages/voice/scripts/download_voice.py"
-        );
-        const cmd = [
-          "uv",
-          "run",
-          "python",
-          scriptPath,
-          "--voice",
-          input.voiceId,
-        ];
-
-        const proc = Bun.spawn(cmd, {
-          stdout: "pipe",
-          stderr: "pipe",
-          cwd: join(process.cwd(), "packages/voice"),
-        });
-
-        const output = await new Response(proc.stdout).text();
-        const error = await new Response(proc.stderr).text();
-
-        const exitCode = await proc.exited;
-        if (exitCode !== 0) {
-          // Try to parse error JSON from stderr if possible
-          try {
-            const errJson = JSON.parse(error);
-            throw new Error(errJson.message || error);
-          } catch {
-            throw new Error(`Download failed: ${error || output}`);
-          }
-        }
-
-        // Parse output to verify success
-        try {
-          // Output might be multiple JSON lines or just one
-          // We look for the last line or search for "status": "success"
-          if (!output.includes('"status": "success"')) {
-            throw new Error("Download script did not report success");
-          }
-        } catch (e) {
-          logger.warn("download_voice_output_parse_warn", { output, error: e });
-        }
-
-        // Invalidate local cache so the new voice shows up in listVoices
-        voiceListCache = null;
-
-        return { success: true };
+        return await downloadModel(input.voiceId);
       } catch (error) {
-        logger.error("failed_to_download_model", {
-          error,
-          voiceId: input.voiceId,
-        });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "failed_to_download_model",
-          cause: error instanceof Error ? error.message : String(error),
-        });
+        throw toTRPCError(error);
       }
     }),
 
   listVoices: authedProcedure.query(async () => {
-    const provider = getVoiceProvider();
-    if (provider !== "local") {
-      // For OpenAI, return standard voices
-      return [
-        { id: "alloy", name: "Alloy" },
-        { id: "echo", name: "Echo" },
-        { id: "fable", name: "Fable" },
-        { id: "onyx", name: "Onyx" },
-        { id: "nova", name: "Nova" },
-        { id: "shimmer", name: "Shimmer" },
-      ];
-    }
-
-    // Check cache
-    if (
-      voiceListCache &&
-      Date.now() - voiceListCache.timestamp < VOICE_CACHE_TTL_MS
-    ) {
-      return voiceListCache.data;
-    }
-
-    const modelPath =
-      process.env.PIPER_MODEL_PATH ?? "./packages/voice/models/piper";
-    try {
-      const files = await readdir(modelPath);
-      const voices = files
-        .filter((f) => f.endsWith(".onnx"))
-        .map((f) => {
-          const id = basename(f, ".onnx");
-          return { id, name: id };
-        });
-
-      // Update cache
-      voiceListCache = {
-        data: voices,
-        timestamp: Date.now(),
-      };
-
-      return voices;
-    } catch (error) {
-      logger.warn("failed_to_list_voices", { error });
-      return [];
-    }
+    return listVoices();
   }),
 
   previewVoice: authedProcedure
     .input(voicePreviewInput)
     .mutation(async ({ input }) => {
       const provider = getVoiceProvider();
-      if (provider === "local") {
-        return synthesizeLocal({
+      try {
+        if (provider === "local") {
+          const { ttsPool } = getVoicePools();
+          return await synthesizeLocal(ttsPool, {
+            text: input.text,
+            voice: input.voice,
+            format: "mp3",
+            model: "piper",
+          });
+        }
+        return await postSynthesis({
           text: input.text,
           voice: input.voice,
           format: "mp3",
-          model: "piper",
+          model: "gpt-4o-mini-tts",
         });
+      } catch (error) {
+        throw toTRPCError(error);
       }
-      return postSynthesis({
-        text: input.text,
-        voice: input.voice,
-        format: "mp3",
-        model: "gpt-4o-mini-tts",
-      });
     }),
 
   sessions: authedProcedure
@@ -1079,8 +453,8 @@ export const voiceRouter: ReturnType<typeof router> = router({
         voiceStreamEventsTotal.inc({ event: "status", status: "connecting" });
 
         try {
-          const { sessionManager } = getVoicePools();
-          sessionManager.createSession(
+          const { voiceRegistry } = getVoicePools();
+          voiceRegistry.createSession(
             session.user.id,
             sessionId,
             input.language
@@ -1094,11 +468,6 @@ export const voiceRouter: ReturnType<typeof router> = router({
           voiceStreamEventsTotal.inc({ event: "status", status: "connected" });
           markVoice("voice_stream_connected");
 
-          // Note: Actual audio chunk processing would happen via a separate mechanism
-          // This is a basic implementation - full bidirectional streaming requires
-          // accepting audio chunks via subscription input, which tRPC doesn't support natively
-          // For now, this provides the connection status and structure
-
           return () => {
             const durationSeconds = (performance.now() - timerStart) / 1000;
             voiceStreamLatencySeconds.observe(
@@ -1110,7 +479,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
               status: "disconnected",
             });
             markVoice("voice_stream_end");
-            sessionManager.removeSession(sessionId);
+            voiceRegistry.removeSession(sessionId);
             emit.next({
               type: "status",
               status: "disconnected",

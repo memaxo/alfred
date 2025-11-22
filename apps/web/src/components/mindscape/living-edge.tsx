@@ -28,7 +28,7 @@ export function LivingEdge({
   const edgeStyle = {
     ...style,
     strokeWidth: isActive ? 2 : 1,
-    stroke: isActive ? "oklch(0.99 0 0)" : "rgba(255, 255, 255, 0.2)", // Biolum vs Dim
+    stroke: isActive ? "var(--color-biolum)" : "rgba(255, 255, 255, 0.2)", // Biolum vs Dim
     strokeDasharray: isActive ? "5 5" : undefined,
     animation: isActive ? "flow 0.5s linear infinite" : undefined,
     transition: "stroke 0.3s, stroke-width 0.3s",
@@ -44,7 +44,7 @@ export function LivingEdge({
           style={{
             ...style,
             strokeWidth: 6,
-            stroke: "rgba(var(--biolum-rgb), 0.3)",
+            stroke: "oklch(0.99 0 0 / 0.3)",
             filter: "blur(4px)",
           }}
         />

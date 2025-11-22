@@ -6,6 +6,7 @@
  */
 
 import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
+import { llmConcurrency, llmRateLimit } from "@alfred/agent/utils/rate-limiter";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
@@ -67,6 +68,16 @@ export class AISDKAdapter {
     options: StreamOptions
   ): AsyncGenerator<WorkflowEvent, void, void> {
     const modelId = this.getModelId(options.model);
+    
+    // Acquire concurrency semaphore and rate limit token
+    await llmConcurrency.acquire();
+    const tokenAcquired = await llmRateLimit.waitFor();
+    
+    if (!tokenAcquired) {
+        llmConcurrency.release();
+        throw new Error("LLM rate limit exceeded (timeout)");
+    }
+
     const startTime = Date.now();
     const stopAi = runtimeAiSdkDurationSeconds.startTimer({ model: modelId });
 
@@ -177,6 +188,8 @@ export class AISDKAdapter {
       });
 
       throw error;
+    } finally {
+        llmConcurrency.release();
     }
   }
 

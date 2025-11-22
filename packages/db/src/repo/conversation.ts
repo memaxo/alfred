@@ -1,8 +1,8 @@
 import type { UIMessage } from "@alfred/type/stream";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 
-import { db, dbDriver } from "../index";
-import { conversations, messages } from "../schema/conversation";
+import { db, dbDriver } from "../client.js";
+import { conversations, messages } from "../schema/conversation.js";
 
 export type ConversationRow = typeof conversations.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;

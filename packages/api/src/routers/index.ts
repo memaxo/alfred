@@ -1,4 +1,5 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc";
+import { adminRouter } from "./admin";
 import { assistantRouter } from "./assistant";
 import { bookRouter } from "./book";
 import { codexRouter } from "./codex";
@@ -26,6 +27,7 @@ import { workflowRouter } from "./workflow";
 
 export const appRouter: ReturnType<typeof router> = router({
   healthCheck: publicProcedure.query(() => "OK"),
+  admin: adminRouter,
   graph: graphRouter,
   user: userRouter,
   privateData: protectedProcedure.query(({ ctx }) => ({

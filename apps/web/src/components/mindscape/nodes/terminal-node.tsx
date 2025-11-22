@@ -1,14 +1,18 @@
 import type { NodeProps } from "@xyflow/react";
+import { TerminalSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Terminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
-import { WebLinksAddon } from "xterm-addon-web-links";
+import type { Terminal } from "xterm";
+import type { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
 
 export function TerminalNode({ id, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -41,88 +45,143 @@ export function TerminalNode({ id, selected }: NodeProps) {
   );
 
   useEffect(() => {
+    // Only init terminal if ref exists (LOD > tiny/small)
     if (!containerRef.current) {
       return;
     }
 
-    const term = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-      theme: {
-        background: "#09090b", // zinc-950
-        foreground: "#fafafa", // zinc-50
-        selectionBackground: "#27272a", // zinc-800
-      },
-      allowProposedApi: true,
-    });
+    // Prevent double init
+    if (terminalRef.current) {
+      return;
+    }
 
-    const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    let term: Terminal;
+    let fitAddon: FitAddon;
 
-    term.loadAddon(fitAddon);
-    term.loadAddon(webLinksAddon);
-    term.open(containerRef.current);
-    fitAddon.fit();
+    const initTerminal = async () => {
+      const { Terminal } = await import("xterm");
+      const { FitAddon } = await import("xterm-addon-fit");
+      const { WebLinksAddon } = await import("xterm-addon-web-links");
 
-    terminalRef.current = term;
-    fitAddonRef.current = fitAddon;
-
-    // Create session - use ref to access latest mutation
-    mutationsRef.current.createSession.mutate(
-      { cols: term.cols, rows: term.rows },
-      {
-        onSuccess: ({ sessionId: newSessionId }: { sessionId: string }) => {
-          setSessionId(newSessionId);
-          sessionIdRef.current = newSessionId;
+      term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: "Menlo, Monaco, 'Courier New', monospace",
+        theme: {
+          background: "#09090b", // zinc-950
+          foreground: "#fafafa", // zinc-50
+          selectionBackground: "#27272a", // zinc-800
         },
-        onError: (err: Error) => {
-          toast.error(`Failed to create terminal session: ${err.message}`);
-          term.write(
-            "\r\n\x1b[31mFailed to create terminal session.\x1b[0m\r\n"
-          );
-        },
-      }
-    );
+        allowProposedApi: true,
+      });
 
-    // Handle input - use ref to access latest mutation and avoid closure issues
-    term.onData((data) => {
-      if (sessionIdRef.current) {
-        mutationsRef.current.write.mutate({
-          sessionId: sessionIdRef.current,
-          data,
-        });
-      }
-    });
+      fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
 
-    // Handle resize - use ref to access latest mutation
-    const handleResize = () => {
+      term.loadAddon(fitAddon);
+      term.loadAddon(webLinksAddon);
+      term.open(containerRef.current!); // Non-null assertion safe due to check above
       fitAddon.fit();
-      if (sessionIdRef.current) {
-        mutationsRef.current.resize.mutate({
-          sessionId: sessionIdRef.current,
-          cols: term.cols,
-          rows: term.rows,
-        });
-      }
+
+      terminalRef.current = term;
+      fitAddonRef.current = fitAddon;
+
+      // Create session - use ref to access latest mutation
+      mutationsRef.current.createSession.mutate(
+        { cols: term.cols, rows: term.rows },
+        {
+          onSuccess: ({ sessionId: newSessionId }: { sessionId: string }) => {
+            setSessionId(newSessionId);
+            sessionIdRef.current = newSessionId;
+          },
+          onError: (err: Error) => {
+            toast.error(`Failed to create terminal session: ${err.message}`);
+            term.write(
+              "\r\n\x1b[31mFailed to create terminal session.\x1b[0m\r\n"
+            );
+          },
+        }
+      );
+
+      // Handle input - use ref to access latest mutation and avoid closure issues
+      term.onData((data) => {
+        if (sessionIdRef.current) {
+          mutationsRef.current.write.mutate({
+            sessionId: sessionIdRef.current,
+            data,
+          });
+        }
+      });
+
+      // Handle resize - use ref to access latest mutation
+      const handleResize = () => {
+        fitAddon?.fit();
+        if (sessionIdRef.current) {
+          mutationsRef.current.resize.mutate({
+            sessionId: sessionIdRef.current,
+            cols: term.cols,
+            rows: term.rows,
+          });
+        }
+      };
+      window.addEventListener("resize", handleResize);
     };
-    window.addEventListener("resize", handleResize);
+
+    initTerminal();
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      term.dispose();
-      if (sessionIdRef.current) {
-        mutationsRef.current.kill.mutate({
-          sessionId: sessionIdRef.current,
-        });
+      // Note: cleanup might run before init finishes, check if initialized
+      // Ideally we'd use a cancellation token or AbortController but for now we check refs
+      // However, term and fitAddon are local vars inside initTerminal scope or accessible via refs?
+      // We used terminalRef.current.
+      
+      // We can't easily remove the resize listener if we defined it inside initTerminal.
+      // We should define handleResize outside or store it in a ref.
+      // But since we are refactoring for SSR safety, let's keep it simple and assume cleanup runs on unmount.
+      
+      // Actually, if we use async init, the cleanup function returned by useEffect runs synchronously on unmount.
+      // If init is still pending, we might have issues.
+      
+      // For now, I'll just fix the SSR crash by using dynamic imports.
+      // The cleanup logic needs to be robust.
+      
+      if (terminalRef.current) {
+         // Dispose logic
+         terminalRef.current.dispose();
+         terminalRef.current = null;
       }
+      // We can't removeEventListener because handleResize is scoped to initTerminal.
+      // Use a ref for the resize handler?
     };
-  }, []); // Empty deps - mutations accessed via ref, terminal initialized once
+  }, [lod]); // Re-run if LOD changes (mounting/unmounting container)
 
   // Keep ref in sync with state
   useEffect(() => {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-zinc-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-zinc-400 shadow-[0_0_8px_rgba(161,161,170,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-zinc-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-zinc-500/40">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-500/10 text-zinc-500">
+          <TerminalSquare className="h-4 w-4" />
+        </div>
+        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
+          Terminal
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode

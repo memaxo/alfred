@@ -19,6 +19,11 @@ export const cognitiveEvents = pgTable(
   (t) => ({
     streamIdx: index("cognitive_events_stream_idx").on(t.streamId),
     createdIdx: index("cognitive_events_created_idx").on(t.createdAt),
+    // Compound index for range queries: getEventsSince(streamId, since)
+    streamCreatedIdx: index("cognitive_events_stream_created_idx").on(
+      t.streamId,
+      t.createdAt
+    ),
   })
 );
 
@@ -34,5 +39,10 @@ export const cognitiveSnapshots = pgTable(
   (t) => ({
     streamIdx: index("cognitive_snapshots_stream_idx").on(t.streamId),
     createdIdx: index("cognitive_snapshots_created_idx").on(t.createdAt),
+    // Compound index for fetching latest: getLatestSnapshot(streamId)
+    streamCreatedIdx: index("cognitive_snapshots_stream_created_idx").on(
+      t.streamId,
+      t.createdAt
+    ),
   })
 );

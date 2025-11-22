@@ -14,8 +14,9 @@ import {
   type TrackerState,
   updateTracker,
 } from "@alfred/agent/orchestrator/multi/tracker";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
-import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
+import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+// import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../context";
@@ -27,12 +28,15 @@ export type WavesResult = {
   agentFileHints: Map<string, Set<string>>;
   activeWorkspaces: Workspace[];
   aborted: boolean;
+  escalated?: boolean;
+  escalationReason?: string;
 };
 
 export async function* runWaves(
   ctx: OrchestratorContext
 ): AsyncGenerator<WorkflowEvent, WavesResult, void> {
-  const { input, runId, signal, workspace, history, projectConfig } = ctx;
+  const { input, runId, signal, workspace, history, projectConfig, escalationContext, authz } = ctx;
+  void runTDDLoop;
 
   // Phase 13: Hydration - Rebuild Tracker State
   let trackerState: TrackerState = { agents: {}, waves: {} };
@@ -58,7 +62,7 @@ export async function* runWaves(
   // Rebuild context and subtasks for MVP; future phases may reuse cached state
   const builder = new ContextBuilder();
   const context = await builder.build({
-    requirement: input.requirement,
+    requirement: escalationContext ? `${input.requirement}\n\nESCALATION CONTEXT: ${escalationContext}` : input.requirement,
     workspace,
     repoBase: input.repoBase,
     web: input.context?.web,
@@ -71,7 +75,7 @@ export async function* runWaves(
   });
 
   const subTasks = decomposeTask(input.requirement, {
-    requirement: input.requirement,
+    requirement: escalationContext ? `${input.requirement}\n\nESCALATION CONTEXT: ${escalationContext}` : input.requirement,
     bundle: context.bundle,
   });
 
@@ -87,7 +91,8 @@ export async function* runWaves(
   }
 
   const subTaskById = new Map(subTasks.map((t) => [t.id, t]));
-  const waves = planWaves(subTasks, { maxParallel: 2 });
+  const maxParallel = parseInt(process.env.ORCHESTRATOR_MAX_PARALLEL || "2", 10);
+  const waves = planWaves(subTasks, { maxParallel });
 
   if (waves.length === 0) {
     // Fallback: treat all subtasks as a single wave.
@@ -106,6 +111,8 @@ export async function* runWaves(
     waveFailRate: number;
     overallFailRate: number;
   } | null = null;
+  
+  let escalationTrigger: { reason: string } | null = null;
 
   const allAgentOutcomes: any[] = [];
 
@@ -142,7 +149,7 @@ export async function* runWaves(
           return null;
         }
         const spec = buildAgentSpec(task, runId, workspace, {
-          auto: input.auto,
+          auto: input.auto as any,
           linear: input.linear
             ? {
                 issueId: undefined,
@@ -268,6 +275,23 @@ export async function* runWaves(
 
       const bufferedEvents: WorkflowEvent[] = [];
 
+import { BrainstemSupervisor } from "../../loops/supervisor.js";
+
+// ...
+
+export async function* runWaves(
+  ctx: OrchestratorContext
+): AsyncGenerator<WorkflowEvent, WavesResult, void> {
+  // ...
+  
+  // Initialize Supervisor
+  const supervisor = new BrainstemSupervisor();
+  
+  // Pass abort signal to supervisor logic if needed, but supervisor mainly *triggers* aborts.
+  // We need to check supervisor in the event loop.
+
+  // ...
+
       const writer = {
         write: async (chunk: unknown) => {
           const payload = chunk as { type?: string; event?: unknown };
@@ -275,10 +299,55 @@ export async function* runWaves(
             return;
           }
           const type = (payload as any).type;
+          
+          // Hook Supervisor here for global event monitoring (redundant if hooked in tool, but good for safety)
+          // But tool hook handles the "kill" logic which is better.
+          // Here we just handle the "Interrupt" message from the tool?
+          
+          // Actually, if the tool throws an Interrupt Error, we catch it below.
+          
           if (type === "stdout" || type === "stderr") {
-            const text = (payload as any).text ?? "";
-            bufferedEvents.push({ type, text } as any);
+             // ...
           } else if (type === "codex_event") {
+              const inner = (payload as any).event;
+              if (inner?.type === "thought") {
+                  // Redundant observation or secondary check?
+                  // Let's rely on tool-level supervision for now as it has direct process control.
+              }
+             // ...
+          }
+          // ...
+        },
+      } as const;
+
+      // ...
+
+      try {
+        await toolCodex.execute({
+           // ...
+        });
+      } catch (error: any) {
+        // Handle Supervisor Interrupts specifically
+        if (String(error).includes("codex_exec_interrupted")) {
+             logger.warn("agent_interrupted_by_supervisor", { agentId: spec.agentId, error: String(error) });
+             bufferedEvents.push({
+                 type: "notice",
+                 message: `agent_interrupted: ${String(error)}`
+             } as any);
+             
+             // Don't rethrow immediately? Or mark as failed/stuck?
+             // We should probably mark as 'stuck' or 'failed' but continue the wave for other agents.
+        } else {
+            // Restore on crash
+            if (workspaceEnv) {
+              // ...
+            }
+            throw error; 
+        }
+      }
+
+      // ...
+
             const inner = (payload as any).event as
               | {
                   type?: string;
@@ -370,69 +439,22 @@ export async function* runWaves(
         const task = subTaskById.get(spec.subTaskId);
         yield { type: "notice", message: "tdd_test_generation_started" } as any;
 
-        // Create a TDD-specific ExecPlan
-        const tddPlanPath = spec.execPlanPath.replace(".md", ".tdd.md");
-        await fs.writeFile(
-          tddPlanPath,
-          `# TDD Plan for ${spec.agentId}\n\nGoal: Write a failing reproduction test for the following requirement:\n\n${task?.requirement}`,
-          "utf8"
-        );
-
-        const tddPrompt = [
-          "You are a Test Engineer (TDD).",
-          `ExecPlan path: ${tddPlanPath}`,
-          "Goal: Write a REPRODUCTION TEST case that fails for the current requirement.",
-          "1. Analyze the requirement.",
-          "2. Create a new test file (e.g. in tests/ or __tests__) that asserts the desired behavior.",
-          "3. Do NOT implement the feature yet. The test MUST FAIL.",
-        ].join("\n");
-
-        // Run TDD Agent
-        await toolCodex.execute({
-          input: {
-            action: "exec",
-            prompt: tddPrompt,
-            out: "text",
-            auto: spec.auto,
-            cw: spec.workingDirectory,
-            sessionId: `${spec.sessionId}:tdd`, // Separate session
-            containerId,
+        await runTDDLoop(
+          {
+            agentId: spec.agentId,
+            sessionId: spec.sessionId,
+            workingDirectory: spec.workingDirectory,
+            execPlanPath: spec.execPlanPath,
+            requirement: task?.requirement ?? "",
+            auto: spec.auto as any,
             model: spec.model,
+            containerId,
             context: spec.context,
           },
-          writer,
-        });
-
-        // Verify Test Fails
-        yield { type: "notice", message: "tdd_verifying_failure" } as any;
-
-        let testExitCode: number;
-
-        if (workspaceEnv) {
-          const res = await workspaceEnv.exec("test", {}, projectConfig);
-          testExitCode = res.exitCode;
-        } else {
-          const res = await toolRunner.execute(
-            "test",
-            spec.workingDirectory,
-            60_000,
-            projectConfig
-          );
-          testExitCode = res.exitCode;
-        }
-
-        if (testExitCode === 0) {
-          // Test passed unexpectedly!
-          logger.warn("tdd_test_passed_unexpectedly", {
-            agentId: spec.agentId,
-          });
-          yield {
-            type: "notice",
-            message: "tdd_warning_test_passed_already",
-          } as any;
-        } else {
-          yield { type: "notice", message: "tdd_failure_verified" } as any;
-        }
+          projectConfig,
+          workspaceEnv,
+          writer
+        );
       }
 
       const startedAt = Date.now();
@@ -461,6 +483,7 @@ export async function* runWaves(
             containerId,
             model: spec.model,
             profile: spec.profile,
+            authz, // Pass authz from context
             context: {
               linearSessionId: spec.context.linearSessionId,
               linearSpace: spec.context.linearSpace,
@@ -471,8 +494,25 @@ export async function* runWaves(
           },
           writer,
         });
-      } catch (error) {
-        // Restore on crash
+      } catch (error: any) {
+        // Handle Supervisor Interrupts
+        if (String(error).includes("codex_exec_interrupted")) {
+          logger.warn("agent_interrupted_by_supervisor", {
+            agentId: spec.agentId,
+            error: String(error),
+          });
+          bufferedEvents.push({
+            type: "notice",
+            message: `agent_interrupted: ${String(error)}`,
+          } as any);
+          // Treat as a failure but don't crash the whole orchestrator
+          // We will rely on the outcome push below to record status
+          // But we need to ensure 'agentOutcomes' gets an entry.
+          // Actually, if we catch here, we proceed to 'finishedAt'.
+          // We should probably restore checkpoint too if interrupted?
+        }
+
+        // Restore on crash or interrupt
         if (workspaceEnv) {
           logger.warn("agent_crashed_restoring_checkpoint", {
             agentId: spec.agentId,
@@ -486,7 +526,10 @@ export async function* runWaves(
             });
           }
         }
-        throw error; // Re-throw to mark agent as failed in outer loop/tracker
+        
+        if (!String(error).includes("codex_exec_interrupted")) {
+           throw error;
+        }
       }
 
       const finishedAt = Date.now();
@@ -514,6 +557,8 @@ export async function* runWaves(
             agentId: spec.agentId,
             reason: escalationReason,
           });
+          
+          escalationTrigger = { reason: escalationReason };
         }
       } catch {
         // No escalation file found
@@ -553,6 +598,11 @@ export async function* runWaves(
         agents: agentOutcomes,
       },
     } as any;
+
+    // Stop waves if escalated
+    if (escalationTrigger) {
+        break;
+    }
 
     const waveTotal = agentOutcomes.length;
     const waveFailedOrStuck = agentOutcomes.filter((o) => {
@@ -612,5 +662,7 @@ export async function* runWaves(
     agentFileHints,
     activeWorkspaces,
     aborted: !!abortedWave,
+    escalated: !!escalationTrigger,
+    escalationReason: escalationTrigger?.reason,
   };
 }

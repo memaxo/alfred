@@ -10,6 +10,7 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { privacyNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
+import { useLOD, useNodeFocus } from "../lod";
 
 const factInput = { limit: 12, offset: 0 } as const;
 const eventInput = { limit: 12, offset: 0 } as const;
@@ -19,11 +20,15 @@ type DeleteFactInput =
 type FactList = inferRouterOutputs<TRPCAppRouter>["privacy"]["facts"];
 
 export function PrivacyNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
   const _parsed = privacyNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
 
+  // ... queries ...
   const utils = trpc.useUtils();
   const factQuery = trpc.privacy.facts.useQuery(factInput);
   const eventQuery = trpc.privacy.events.useQuery(eventInput);
@@ -86,6 +91,27 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
   };
 
   const eventsToShow = useMemo(() => events.slice(0, 5), [events]);
+
+  // LOD 0: Tiny
+  if (lod === "tiny") {
+    return (
+      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-rose-500/40 backdrop-blur-sm">
+        <div className="h-1.5 w-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+      </div>
+    );
+  }
+
+  // LOD 1: Small
+  if (lod === "small") {
+    return (
+      <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-rose-500/50">
+        <ShieldCheck className="h-3 w-3 text-rose-400" />
+        <span className="font-medium text-[10px] text-rose-300 tracking-tight">
+          Privacy
+        </span>
+      </div>
+    );
+  }
 
   return (
     <MindscapeNode

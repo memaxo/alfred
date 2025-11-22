@@ -5,6 +5,7 @@ import type { Phase, PhaseResult, PipelineState } from "./types";
 export class PipelineRunner {
   private readonly state: PipelineState;
   private readonly phases: Map<string, Phase<any, any>> = new Map();
+  private readonly MAX_TRANSITIONS = 50; // Safety limit for escalation loops
 
   constructor(initialState: PipelineState) {
     this.state = initialState;
@@ -21,8 +22,15 @@ export class PipelineRunner {
   async *run<I>(initialInput: I): AsyncGenerator<WorkflowEvent, void, void> {
     const currentInput = initialInput;
     let phaseId = this.state.currentPhaseId;
+    let transitionCount = 0;
 
     while (true) {
+      if (transitionCount++ > this.MAX_TRANSITIONS) {
+        throw new Error(
+          `Pipeline exceeded maximum transitions (${this.MAX_TRANSITIONS}). Possible escalation loop detected.`
+        );
+      }
+
       const phase = this.phases.get(phaseId);
       if (!phase) {
         throw new Error(`Phase not found: ${phaseId}`);

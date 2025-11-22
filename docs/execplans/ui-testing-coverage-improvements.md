@@ -133,7 +133,7 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
     - Execute `bun test apps/web --filter=note-flow` after each scenario addition.
 4. Milestone 4 execution:
     - Add `apps/web/src/test/server.ts`, `client.ts`, `auth.ts`, and `stream.ts` as described above. Each file needs docstrings referencing this ExecPlan for context.
-    - Update `apps/web/vitest.setup.ts` (create if missing) to register global helpers, including aborting leftover servers in `afterAll`.
+    - Update test setup to register global helpers if needed.
     - Add npm scripts (e.g., `"test:ui": "bun test apps/web"`) if missing so new contributors can run suites via a single command.
     - Prove the harness works by writing a minimal E2E test that starts the server, hits `client.health.ping.query()`, and asserts an OK response.
     - Run `bun test apps/web --filter=e2e-smoke` and record expected output under `Artifacts and Notes`.
@@ -149,7 +149,7 @@ These tests prove the entire pipeline works (component → hook → tRPC client 
 - Notes CRUD flow: `bun test apps/web --filter=note-flow` must pass. Commenting out the optimistic cache update in `note.tsx` should cause the “optimistic insert” assertion to fail, proving the test guards behavior.
 - E2E harness: `bun test apps/web --filter=e2e-smoke` starts the server, issues a real HTTP call, and tears everything down without dangling handles. Killing the server mid-test should surface a helpful failure, confirming cleanup logic.
 - Reminders/workflows coverage: once implemented, `bun test apps/web --filter=remind-flow` (and workflow equivalent) should pass and fail if the respective tRPC procedures regress.
-- CI integration: add these suites to Turbo/Vitest pipelines so `bun run test:ui` executes them. Acceptance requires stable runs on the default CI runner (<5 minutes execution).
+- CI integration: add these suites to Turbo/Bun pipelines so `bun run test:ui` executes them. Acceptance requires stable runs on the default CI runner (<5 minutes execution).
 
 ## Idempotence and Recovery
 

@@ -11,6 +11,7 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -708,5 +709,29 @@ export const toolDocker = {
     }
   },
 };
+
+const aiToolDockerBase = {
+  name: toolDocker.name,
+  description: toolDocker.description,
+  parameters: toolDocker.inputSchema,
+  inputSchema: toolDocker.inputSchema,
+  execute: async (input: DockerInput) => {
+    return toolDocker.execute({ input });
+  },
+};
+
+export const aiToolDocker = withPolicyApproval(aiToolDockerBase, (input) => {
+  const scopes =
+    input.action === "exec.probe" ? ["deploy.read"] : ["deploy.write"];
+  return {
+    action: `docker.${input.action}`,
+    resource: {
+      kind: "deploy",
+      id: input.name ?? input.tag ?? "runtime",
+    },
+    scopes,
+    authz: input.authz,
+  };
+});
 
 export type ToolDocker = typeof toolDocker;

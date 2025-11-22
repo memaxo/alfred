@@ -3,13 +3,19 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import { runOrchestrator } from "../orchestrator";
 import type { RuntimeInput } from "../types";
 
+export type ActResult = {
+  escalated: boolean;
+  reason?: string;
+};
+
 export async function* executeActPhase(
   input: RuntimeInput,
   runId: string,
   signal: AbortSignal,
   history?: WorkflowEvent[],
-  projectConfig?: ProjectConfig | null
-): AsyncGenerator<WorkflowEvent, void, void> {
+  projectConfig?: ProjectConfig | null,
+  authz?: string
+): AsyncGenerator<WorkflowEvent, ActResult, void> {
   yield { type: "notice", message: "execution_started" } as WorkflowEvent;
 
   if (signal.aborted) {
@@ -23,8 +29,13 @@ export async function* executeActPhase(
 
   if (disableAgents) {
     yield { type: "notice", message: "execution_placeholder" } as WorkflowEvent;
-    return;
+    return { escalated: false };
   }
 
-  yield* runOrchestrator(input, runId, signal, history, projectConfig);
+  yield* runOrchestrator(input, runId, signal, history, projectConfig, undefined, authz);
+  
+  return {
+    escalated: false,
+    reason: undefined,
+  };
 }

@@ -1,46 +1,81 @@
 {
   "name": "@alfred/db",
+  "version": "0.1.0",
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": {
-        "browser": "./dist/browser.js",
-        "default": "./src/index.ts"
-      }
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./src/*.ts"
-    }
-  },
   "scripts": {
-    "build": "tsdown",
     "test": "bun test",
     "test:postgres": "RUN_DB_TESTS=1 bun test",
     "typecheck": "tsc -b",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
+    "build": "tsdown",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun scripts/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "db:start": "docker compose up -d",
-    "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:watch": "docker compose up"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "browser": {
+        "default": "./dist/src/browser.js",
+        "import": "./dist/src/browser.js"
+      },
+      "default": "./dist/src/index.js",
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./repo/deploy": {
+      "bun": "./src/repo/deploy/index.ts",
+      "default": "./dist/src/repo/deploy/index.js",
+      "import": "./dist/src/repo/deploy/index.js",
+      "types": "./dist/src/repo/deploy/index.d.ts"
+    },
+    "./repo/graph": {
+      "bun": "./src/repo/graph/index.ts",
+      "default": "./dist/src/repo/graph/index.js",
+      "import": "./dist/src/repo/graph/index.js",
+      "types": "./dist/src/repo/graph/index.d.ts"
+    },
+    "./*": {
+      "bun": "./src/*.ts",
+      "default": "./dist/src/*.js",
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts"
+    },
+    "./client": {
+      "default": "./dist/src/client.js",
+      "import": "./dist/src/client.js",
+      "types": "./dist/src/client.d.ts"
+    },
+    "./browser": {
+      "default": "./dist/src/browser.js",
+      "import": "./dist/src/browser.js",
+      "types": "./dist/src/browser.d.ts"
+    },
+    "./testing": {
+      "default": "./dist/src/testing.js",
+      "import": "./dist/src/testing.js",
+      "types": "./dist/src/testing.d.ts"
+    }
+  },
+  "dependencies": {
+    "@alfred/logger": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "^8.14.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.2",
     "@types/pg": "^8.11.11",
+    "drizzle-kit": "^0.31.2",
     "tsdown": "catalog:"
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "@alfred/type": "workspace:*",
-    "@alfred/logger": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "pg": "^8.14.1",
-    "zod": "catalog:"
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test, jest } from "bun:test";
 import { randomUUID } from "node:crypto";
 import {
   startLearningWorker,
@@ -7,7 +7,7 @@ import {
 
 // Mock extraction to avoid NLU overhead in integration test
 mock.module("@alfred/knowledge/extractor", () => ({
-  extract: async () => ({
+  extract: () => ({
     facts: [
       {
         content: "Test Fact",
@@ -15,13 +15,11 @@ mock.module("@alfred/knowledge/extractor", () => ({
         source: "test",
         entities: [],
         relations: [],
-        topics: [],
       },
     ],
     causality: [],
     entities: new Set(),
     contradictions: [],
-    topics: [],
   }),
   toKnowledge: () => [
     {
@@ -32,31 +30,39 @@ mock.module("@alfred/knowledge/extractor", () => ({
         confidence: 1.0,
         source: "test",
       },
-      topics: [],
     },
   ],
 }));
 
-// Mock DB writes to avoid pollution (or use test DB if configured)
-// Since this is an integration test, using real DB might be better IF we have a test DB.
-// However, without a clean teardown, we risk side effects.
-// Let's assume we are running against a test database or we mock the DB interactions.
-// Given the context of previous tests, let's mock the DB calls to control the flow.
+// State for mocks
+let mockRuns: any[] = [];
+let decayCalled = false;
+let pruneCalled = false;
+let cleanupCalled = false;
+let decayedNodes: any[] = [];
+let prunedNodeIds: string[] = [];
 
-const mockRunId = randomUUID();
-const mockRuns = [
-  {
-    id: mockRunId,
-    userId: "user-1",
-    workflowId: "test-flow",
-    status: "completed",
-    inputData: { prompt: "hello" },
-    stateData: { result: "world" },
-    completedAt: new Date(),
-    learnedAt: null,
-  },
-];
+const resetMockState = () => {
+  mockRuns = [
+    {
+      id: randomUUID(),
+      userId: "user-1",
+      workflowId: "test-flow",
+      status: "completed",
+      inputData: { prompt: "hello" },
+      stateData: { result: "world" },
+      completedAt: new Date(),
+      learnedAt: null,
+    },
+  ];
+  decayCalled = false;
+  pruneCalled = false;
+  cleanupCalled = false;
+  decayedNodes = [];
+  prunedNodeIds = [];
+};
 
+// Mock DB
 mock.module("@alfred/db", () => ({
   db: {
     select: () => ({
@@ -71,7 +77,7 @@ mock.module("@alfred/db", () => ({
     update: () => ({
       set: () => ({
         where: async () => {
-          mockRuns[0].learnedAt = new Date(); // Update mock state
+          if (mockRuns[0]) mockRuns[0].learnedAt = new Date();
         },
       }),
     }),
@@ -84,22 +90,105 @@ mock.module("@alfred/db", () => ({
   },
 }));
 
+// Mock Graph Repo
 mock.module("@alfred/db/repo/graph", () => ({
-  upsertNodes: async () => ({ "user:hash-123": { id: "node-1" } }),
+  upsertNodes: async () => new Map([["user:hash-123", { id: "node-1" }]]),
   upsertEdges: async () => {},
+  
+  // Decay mocks
+  findNodesForDecay: async () => {
+    return [{ id: "node-decay-1", properties: { confidence: 1.0 } }];
+  },
+  updateNodeConfidenceBatch: async (updates: any[]) => {
+    decayCalled = true;
+    decayedNodes = updates;
+    return updates.length;
+  },
+
+  // Prune mocks
+  findNodesByConfidence: async (min: number, max: number) => {
+    // Only return nodes if we are testing pruning (max < 1.0)
+    if (max < 0.5) {
+       return [{ id: "node-prune-1", properties: { confidence: 0.1 } }];
+    }
+    return [];
+  },
+  archiveNodes: async (ids: string[]) => {
+    pruneCalled = true;
+    prunedNodeIds = ids;
+    return ids.length;
+  },
+
+  // Cleanup mocks
+  deleteArchivedNodes: async () => {
+    cleanupCalled = true;
+    return 1;
+  },
+}));
+
+// Mock Ontology
+mock.module("@alfred/knowledge/ontology", () => ({
+  getOntologyKnowledge: () => [],
+}));
+
+// Mock RAG
+mock.module("@alfred/rag", () => ({
+  embedMany: async () => [],
 }));
 
 describe("Learning Worker Integration", () => {
-  test("worker picks up unlearned run and marks it learned", async () => {
-    // Start worker with fast polling
-    startLearningWorker({ intervalMs: 100, batchSize: 1 });
+  beforeEach(() => {
+    resetMockState();
+  });
 
-    // Wait for a cycle
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
+  afterEach(() => {
     stopLearningWorker();
+  });
 
-    // Check if learnedAt was updated
+  test("worker picks up unlearned run and marks it learned", async () => {
+    startLearningWorker({ intervalMs: 50, batchSize: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 150));
     expect(mockRuns[0].learnedAt).not.toBeNull();
+  });
+
+  test("worker runs maintenance cycle and triggers decay", async () => {
+    // Short interval, maintenance interval = 0 to force run
+    startLearningWorker({ 
+      intervalMs: 50, 
+      batchSize: 1,
+      maintenanceIntervalMs: 0, // Force immediate maintenance
+      decayFactor: 0.9,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(decayCalled).toBe(true);
+    expect(decayedNodes.length).toBe(1);
+    expect(decayedNodes[0].id).toBe("node-decay-1");
+    expect(decayedNodes[0].confidence).toBe(0.9); // 1.0 * 0.9
+  });
+
+  test("worker triggers pruning for low confidence nodes", async () => {
+    startLearningWorker({ 
+      intervalMs: 50, 
+      maintenanceIntervalMs: 0,
+      pruneConfidence: 0.2 
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(pruneCalled).toBe(true);
+    expect(prunedNodeIds).toContain("node-prune-1");
+  });
+
+  test("worker triggers cleanup for archived nodes", async () => {
+    startLearningWorker({ 
+      intervalMs: 50, 
+      maintenanceIntervalMs: 0 
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(cleanupCalled).toBe(true);
   });
 });

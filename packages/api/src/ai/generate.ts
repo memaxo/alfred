@@ -2,7 +2,7 @@ import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { generateText } from "ai";
 import { makeEventId } from "../utils/event-id";
-import { normalizeToUiMessages } from "./normalize";
+import { normalizeToUiMessages } from "@alfred/agent";
 
 type PersistArgs = {
   userId: string;

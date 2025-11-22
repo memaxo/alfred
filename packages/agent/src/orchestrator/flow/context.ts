@@ -1,7 +1,7 @@
 import "bun";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { ingestCodeFiles } from "@alfred/rag";
+import { ingestCodeFiles } from "../../utils/rag-ingest.js";
 import type {
   ContextBundle,
   ContextFileSlice,

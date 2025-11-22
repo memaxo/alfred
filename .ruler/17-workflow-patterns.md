@@ -31,6 +31,8 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 5. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
 
+6. **Resilience & DLQ.** Persistent workflows must implement Dead Letter Queues (max retry limits) to prevent infinite resume loops.
+
 ## Workflow Status Lifecycle
 
 ```

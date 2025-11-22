@@ -298,6 +298,8 @@ export class EmbedProcess {
       requestCount: this.requestCount,
       errorCount: this.errorCount,
       uptime: Date.now() - this.startTime,
+      status: this.errorCount > 5 ? "error" : this.pendingRequests.size > 0 ? "busy" : "idle",
+      lastActive: this.lastPing ?? 0,
     };
   }
 

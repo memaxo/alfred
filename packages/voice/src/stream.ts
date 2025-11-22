@@ -228,7 +228,15 @@ export class VoiceStreamClient {
       throw new Error("voice_stream_socket_not_ready");
     }
     try {
-      this.socket.send(JSON.stringify(payload));
+      if (
+        payload instanceof ArrayBuffer ||
+        payload instanceof Uint8Array ||
+        payload instanceof Buffer
+      ) {
+        this.socket.send(payload);
+      } else {
+        this.socket.send(JSON.stringify(payload));
+      }
     } catch (error) {
       throw error instanceof Error ? error : new Error(String(error));
     }

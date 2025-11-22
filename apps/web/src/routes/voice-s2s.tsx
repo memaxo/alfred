@@ -10,7 +10,7 @@ export const Route = createFileRoute("/voice-s2s")({
   errorComponent: RouteError,
 });
 
-export function VoiceS2SRouteView() {
+function VoiceS2SRouteView() {
   const {
     state,
     session,
