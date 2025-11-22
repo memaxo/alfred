@@ -28,6 +28,7 @@ import {
   useMindscapeStore,
 } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { MindscapeCommandPalette } from "./command-palette";
 import { MindscapeDetailPanel } from "./detail-panel";
 import { MindscapeInitializer } from "./initializer";
@@ -61,6 +62,7 @@ import {
   singletonSpawnTypes,
 } from "./spawn";
 import { MindscapeWorkflowDrawer } from "./workflow-drawer";
+import { LivingEdge } from "./living-edge";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
@@ -94,6 +96,10 @@ const nodeTypes: NodeTypes = {
   deployment: wrapWithErrorBoundary(DeploymentNode),
   knowledge: wrapWithErrorBoundary(KnowledgeNode),
   concept: wrapWithErrorBoundary(ConceptNode),
+};
+
+const edgeTypes = {
+  default: LivingEdge,
 };
 
 type MindscapeCanvasProps = Omit<
@@ -136,6 +142,7 @@ function MindscapeCanvasInner({
     onConnect,
     addArtifact,
     focusNode,
+    setNodes,
     ragDocCache,
     cacheRagDoc,
     evictRagDoc,
@@ -152,6 +159,7 @@ function MindscapeCanvasInner({
       onConnect: state.onConnect,
       addArtifact: state.addArtifact,
       focusNode: state.focusNode,
+      setNodes: state.setNodes,
       ragDocCache: state.ragDocCache,
       cacheRagDoc: state.cacheRagDoc,
       evictRagDoc: state.evictRagDoc,
@@ -160,6 +168,15 @@ function MindscapeCanvasInner({
       ragDocCacheStats: state.ragDocCacheStats,
     }))
   );
+
+  // Initialize Physics Worker
+  usePhysicsWorker({
+    nodes,
+    edges,
+    focusId: focusedNodeId,
+    setNodes,
+    active: true,
+  });
 
   const [inspectedRunId, setInspectedRunId] = useState<string | null>(null);
   const ragDocFocusCooldownRef = useRef<{ id: string | null; at: number }>({
@@ -645,6 +662,7 @@ function MindscapeCanvasInner({
           colorMode="dark"
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           edges={visibleEdges}
+          edgeTypes={edgeTypes}
           fitView
           maxZoom={4}
           minZoom={0.1}

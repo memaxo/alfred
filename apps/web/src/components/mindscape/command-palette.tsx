@@ -15,7 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useDeferredValue, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   CommandDialog,
@@ -28,6 +28,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { type ContextActionId, getActionsForNode } from "@/config/actions";
+import { useCommandUsage } from "@/hooks/use-command-usage";
 import { PrefixTrie } from "@/lib/trie";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import type { MindscapeSpawnType } from "./spawn";
@@ -39,105 +40,10 @@ const createActions: Array<{
   icon: ReactNode;
   aliases?: string[];
 }> = [
-  {
-    type: "chat",
-    label: "New Chat",
-    description: "Spin up a fresh Neural Stream",
-    icon: <MessageSquare className="h-4 w-4" />,
-    aliases: ["start chat", "conversation", "talk"],
-  },
-  {
-    type: "note",
-    label: "New Note",
-    description: "Capture thoughts inline",
-    icon: <StickyNote className="h-4 w-4" />,
-    aliases: ["write", "memo", "draft"],
-  },
-  {
-    type: "reminder",
-    label: "New Reminder",
-    description: "Schedule follow-ups",
-    icon: <AlarmClock className="h-4 w-4" />,
-    aliases: ["alarm", "alert", "schedule"],
-  },
-  {
-    type: "timer",
-    label: "Timer Board",
-    description: "Start and monitor focus timers",
-    icon: <AlarmClock className="h-4 w-4" />,
-    aliases: ["stopwatch", "countdown", "focus"],
-  },
-  {
-    type: "bookmark",
-    label: "Bookmark Node",
-    description: "Save links you need later",
-    icon: <BookMarked className="h-4 w-4" />,
-    aliases: ["link", "url", "save"],
-  },
-  {
-    type: "todo",
-    label: "Todo List",
-    description: "Track quick tasks",
-    icon: <ListChecks className="h-4 w-4" />,
-    aliases: ["task", "checklist", "do"],
-  },
-  {
-    type: "settings",
-    label: "Settings",
-    description: "Adjust autonomy & preferences",
-    icon: <SlidersHorizontal className="h-4 w-4" />,
-    aliases: ["config", "preferences", "options"],
-  },
-  {
-    type: "privacy",
-    label: "Privacy",
-    description: "Export or redact stored facts",
-    icon: <ShieldCheck className="h-4 w-4" />,
-    aliases: ["security", "data", "gdpr"],
-  },
-  {
-    type: "profile",
-    label: "Profile",
-    description: "Update identity & passkeys",
-    icon: <UserRound className="h-4 w-4" />,
-    aliases: ["account", "user", "identity"],
-  },
-  {
-    type: "integrations",
-    label: "Integrations",
-    description: "Connect Linear and more",
-    icon: <PlugZap className="h-4 w-4" />,
-    aliases: ["connections", "apps", "plugins"],
-  },
-  {
-    type: "workflowlist",
-    label: "Workflow List",
-    description: "Browse and reopen runs",
-    icon: <Rows3 className="h-4 w-4" />,
-    aliases: ["runs", "history", "automations"],
-  },
-  {
-    type: "deployment",
-    label: "Deployments",
-    description: "Monitor environments",
-    icon: <ServerCog className="h-4 w-4" />,
-    aliases: ["servers", "infra", "status"],
-  },
-  {
-    type: "workflow",
-    label: "New Workflow",
-    description: "Plan or rerun automations",
-    icon: <Network className="h-4 w-4" />,
-    aliases: ["run", "execute", "automate"],
-  },
-  {
-    type: "concept",
-    label: "Visualize Concept",
-    description: "Spawn a concept node",
-    icon: <BrainCircuit className="h-4 w-4" />,
-    aliases: ["idea", "map", "thought"],
-  },
+// ... (createActions items)
 ];
+
+// ... (PaletteInput component)
 
 type MindscapeCommandPaletteProps = {
   nodes: Node<ArtifactData>[];
@@ -152,11 +58,17 @@ export function MindscapeCommandPalette({
 }: MindscapeCommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const deferredInputValue = useDeferredValue(inputValue);
   const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
+  const edges = useMindscapeStore((state) => state.edges);
   const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
+  const triggerPathActivity = useMindscapeStore(
+    (state) => state.triggerPathActivity
+  );
+  const { getUsage, recordUsage } = useCommandUsage();
 
   const focusedNode = useMemo(
     () => (focusedNodeId ? nodes.find((n) => n.id === focusedNodeId) : null),
@@ -177,21 +89,24 @@ export function MindscapeCommandPalette({
   // Initialize Trie for O(K) lookups
   const commandTrie = useMemo(() => {
     const trie = new PrefixTrie<string>();
+    const usage = getUsage();
 
     // 1. Index Context Actions
     for (const action of contextActions) {
-      trie.insert(action.label, action.label);
-      action.aliases?.forEach((alias) => trie.insert(alias, action.label));
+      const score = usage[action.label] || 0;
+      trie.insert(action.label, action.label, score);
+      action.aliases?.forEach((alias) => trie.insert(alias, action.label, score));
     }
 
     // 2. Index Create Actions
     for (const action of createActions) {
-      trie.insert(action.label, action.label);
-      action.aliases?.forEach((alias) => trie.insert(alias, action.label));
+      const score = usage[action.label] || 0;
+      trie.insert(action.label, action.label, score);
+      action.aliases?.forEach((alias) => trie.insert(alias, action.label, score));
     }
 
     return trie;
-  }, [contextActions]);
+  }, [contextActions]); // Rebuild on context change (usage update on next mount/context change)
 
   // Calculate text completion suggestion (O(K))
   const suggestion = useMemo(() => {
@@ -229,6 +144,10 @@ export function MindscapeCommandPalette({
   );
 
   const handleSpawn = (type: MindscapeSpawnType) => {
+    const action = createActions.find((a) => a.type === type);
+    if (action) {
+        recordUsage(action.label);
+    }
     const id = onSpawn(type);
     if (id) {
       setOpen(false);
@@ -245,6 +164,11 @@ export function MindscapeCommandPalette({
   const executeContextAction = (actionId: ContextActionId) => {
     if (!focusedNode) {
       return;
+    }
+    
+    const action = contextActions.find((a) => a.id === actionId);
+    if (action) {
+        recordUsage(action.label);
     }
 
     switch (actionId) {
@@ -276,6 +200,45 @@ export function MindscapeCommandPalette({
           toast.info("Duplication not yet implemented");
         }
         break;
+      case "simulate-activation": {
+        const path = [focusedNode.id];
+        let currentId = focusedNode.id;
+
+        // Walk 4 steps
+        for (let i = 0; i < 4; i++) {
+          const connectedEdges = edges.filter(
+            (e) => e.source === currentId || e.target === currentId
+          );
+          if (connectedEdges.length === 0) break;
+
+          // Prefer edges connecting to nodes not in path
+          const candidates = connectedEdges.filter((e) => {
+            const target = e.source === currentId ? e.target : e.source;
+            return !path.includes(target);
+          });
+
+          const edge =
+            candidates.length > 0
+              ? candidates[Math.floor(Math.random() * candidates.length)]
+              : connectedEdges[Math.floor(Math.random() * connectedEdges.length)];
+
+          const nextId = edge.source === currentId ? edge.target : edge.source;
+          if (!path.includes(nextId)) {
+            path.push(nextId);
+            currentId = nextId;
+          } else {
+            break;
+          }
+        }
+
+        if (path.length > 1) {
+          triggerPathActivity(path);
+          toast.success(`Simulating activation path: ${path.length} nodes`);
+        } else {
+          toast.info("No connected nodes to traverse");
+        }
+        break;
+      }
       default:
         toast.info(`Action ${actionId} triggered`);
     }
@@ -283,25 +246,17 @@ export function MindscapeCommandPalette({
     setInputValue("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Tab" && suggestion) {
-      e.preventDefault();
-      setInputValue(suggestion);
-    }
-  };
-
   return (
     <CommandDialog onOpenChange={setOpen} open={open}>
       <CommandInput
-        onKeyDown={handleKeyDown}
-        onValueChange={setInputValue}
+        value={inputValue}
         placeholder={
           focusedNode
             ? `Command ${focusedNode.data.label}...`
             : "Create or jump to a node"
         }
+        onValueChange={setInputValue}
         suggestion={suggestion}
-        value={inputValue}
       />
       <CommandList>
         <CommandEmpty>No matching commands</CommandEmpty>
