@@ -25,4 +25,6 @@
 
 11. **Component integration priority.** Prefer production-ready components over ad-hoc route implementations. If a component exists (e.g., `ChatContainer`), use it in routes rather than implementing similar functionality directly. Production components include error boundaries, action tracking, and other features that ad-hoc implementations may lack.
 
-11. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
+12. **Reality-driven UI.** Visualizations must derive directly from real system state or events. Never implement "simulation" modes, fake data generators, or mock actions in production components.
+
+13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
