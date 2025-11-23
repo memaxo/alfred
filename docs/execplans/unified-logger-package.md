@@ -43,6 +43,11 @@ After this change, developers will import `logger` from `@alfred/logger` instead
 
 The logging system is now unified under `@alfred/logger`. This ensures consistent JSON logging in production across all services (`api`, `runtime`, `db`, `voice`) and developer-friendly pretty printing in development. Duplicated code has been removed.
 
+- **Verified**: All core packages (`api`, `agent`, `runtime`, `db`, `voice`, `metrics`) now depend on `@alfred/logger`.
+- **Removed**: Local `utils/logger.ts` files in `api`, `runtime`, `db` have been removed or are confirmed missing.
+- **Metrics**: The `metrics` package re-exports `logger` for backward compatibility but points to the unified implementation.
+- **Agent**: Updated `learning-worker.ts` and `linear.ts` to use the unified logger.
+
 ## Context and Orientation
 
 Current State:
