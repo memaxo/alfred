@@ -64,6 +64,7 @@ export function MindscapeDetailPanel({
   onWorkflowNavigate,
   onWorkflowInspect,
 }: MindscapeDetailPanelProps = {}) {
+  const nodes = useMindscapeStore((state) => state.nodes);
   const { focusedNodeId, focusNode, nodeType, nodeData } = useMindscapeStore(
     useShallow((state) => {
       const node = state.nodes.find((n) => n.id === state.focusedNodeId);
@@ -138,11 +139,15 @@ export function MindscapeDetailPanel({
   }, [debouncedGraphDbId, provenance]);
 
   const ragDocuments = provenance?.nodes ?? memoizedEntry?.nodes ?? [];
+  // Safe check for nodes definition
+  const hasRagDocuments = Array.isArray(ragDocuments) && ragDocuments.length > 0;
+
   const showLoadingState = Boolean(
     isRuntimeKnowledge &&
       !memoizedEntry &&
       (isDebouncing || (shouldQuery && isLoading))
   );
+
 
   const panelClasses =
     "pointer-events-auto absolute right-4 top-4 z-20 w-80 max-w-sm rounded-3xl border border-white/10 bg-void-surface/80 p-4 text-biolum shadow-2xl backdrop-blur";
@@ -286,7 +291,7 @@ export function MindscapeDetailPanel({
                   Retry
                 </Button>
               </div>
-            ) : ragDocuments.length === 0 ? (
+            ) : !hasRagDocuments ? (
               <p className="text-biolum-dim">No RAG documents linked.</p>
             ) : (
               <ul className="space-y-2">

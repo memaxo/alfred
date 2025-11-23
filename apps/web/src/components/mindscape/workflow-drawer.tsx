@@ -90,6 +90,7 @@ export function MindscapeWorkflowDrawer({
     >
       <DialogContent
         className="h-screen max-w-full translate-y-0 rounded-none border-white/10 border-l bg-void-surface/95 p-0 text-biolum shadow-2xl sm:max-w-lg"
+        data-testid="mindscape-workflow-drawer"
         showCloseButton
         variant="drawer"
       >
@@ -130,10 +131,12 @@ function WorkflowDrawerBody({
   onNavigateToMindscape,
 }: WorkflowDrawerBodyProps) {
   const queryRunId = drawerOpen && runId ? runId : "";
+  console.log("WorkflowDrawerBody render. queryRunId:", queryRunId, "drawerOpen:", drawerOpen);
   const runQuery = trpc.workflow.get.useQuery(
     { runId: queryRunId },
     { enabled: drawerOpen && queryRunId.length > 0 }
   );
+  console.log("runQuery status:", runQuery.status, "data:", runQuery.data, "error:", runQuery.error);
 
   const eventsQuery = trpc.workflow.events.useQuery(
     { runId: queryRunId },

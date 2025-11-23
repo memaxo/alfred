@@ -22,6 +22,8 @@ import { chatNodeDataSchema } from "@/store/mindscape.schemas";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
+import { useFocusedContext } from "@/hooks/use-focused-context";
+import { ContextLens } from "@/components/mindscape/context-lens";
 
 export function ChatNode({ id, data, selected }: NodeProps) {
   // Disable complex chat logic in test mode to prevent infinite loops
@@ -51,6 +53,9 @@ export function ChatNode({ id, data, selected }: NodeProps) {
   );
 
   const { startWorkflow } = useMindscapeExecutor();
+  
+  // Use focused context for RAG injection and visualization
+  const focused = useFocusedContext();
 
   const {
     messages,
@@ -61,12 +66,12 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     error,
   } = useChatLogic({ initialAgent: "assistant" });
 
-  // Log errors to node data
+  // Log errors to node data (with equality check to prevent loops)
   useEffect(() => {
-    if (error) {
+    if (error && validatedData.error !== error.message) {
       updateArtifactData(id, { error: error.message, type: "chat" });
     }
-  }, [error, id, updateArtifactData]);
+  }, [error, id, updateArtifactData, validatedData.error]);
 
   // Hydrate from data on mount
   useEffect(() => {
@@ -74,6 +79,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     if (
       storedMessages &&
       Array.isArray(storedMessages) &&
+      storedMessages.length > 0 && // Ensure we don't hydrate empty arrays repeatedly
       messages.length === 0
     ) {
       hydrate(storedMessages as AssistantUIMessage[]);
@@ -83,9 +89,6 @@ export function ChatNode({ id, data, selected }: NodeProps) {
   // Sync back to data on change
   const lastMessagesRef = useRef<string>("");
   useEffect(() => {
-    // Temporary disable sync to debug infinite loop
-    return;
-    /*
     if (messages.length > 0) {
       const key = JSON.stringify(messages.map((m) => m.id));
       if (key === lastMessagesRef.current) {
@@ -94,7 +97,6 @@ export function ChatNode({ id, data, selected }: NodeProps) {
       lastMessagesRef.current = key;
       updateArtifactData(id, { messages, type: "chat" });
     }
-    */
   }, [messages, id, updateArtifactData]);
 
   const handleSubmit = useCallback(
@@ -134,6 +136,18 @@ export function ChatNode({ id, data, selected }: NodeProps) {
       id={id}
       selected={selected}
       title="Neural Stream"
+      headerActions={
+        // Only show Context Lens if we are NOT focusing the Chat Node itself,
+        // unless the Chat Node has neighbors (Deep RAG)
+        focused.label && (focused.ragDocuments.length > 0 || focused.isLoading) && (
+          <ContextLens
+            label={focused.label}
+            ragDocuments={focused.ragDocuments}
+            isLoading={focused.isLoading}
+            isError={focused.isError}
+          />
+        )
+      }
     >
       <div className="flex h-full flex-col overflow-hidden">
         <Conversation className="min-h-0 flex-1">
@@ -153,7 +167,11 @@ export function ChatNode({ id, data, selected }: NodeProps) {
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputTextarea
               className="min-h-[60px] border-white/10 bg-void-surface/50 text-biolum placeholder:text-biolum-faint/50"
-              placeholder="Interrogate the void... (/workflow to start)"
+              placeholder={
+                focused.label 
+                  ? `Ask about ${focused.label}...` 
+                  : "Interrogate the void... (/workflow to start)"
+              }
             />
             <PromptInputFooter>
               <Button
