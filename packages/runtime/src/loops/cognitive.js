@@ -57,6 +57,8 @@ function calculateEvidence(event) {
  * Pure State Transition Function
  * (Should eventually move to @alfred/cognitive/logic if complex)
  */
+import { cognitivePhysiologyGauge, cognitiveEntropyEventsTotal, } from "@alfred/api/metrics";
+// ...
 function applyTransition(state, auto, event) {
     // Update Physiology based on event
     let nextPhysiology = state.physiology;
@@ -72,6 +74,10 @@ function applyTransition(state, auto, event) {
     else if (event._ === "interrupt") {
         if (event.reason.includes("loop") || event.reason.includes("boredom")) {
             nextPhysiology = updatePhysiology(nextPhysiology, "entropy_high");
+            try {
+                cognitiveEntropyEventsTotal.inc({ type: "high" });
+            }
+            catch { }
         }
         else {
             // General step cost
@@ -82,7 +88,17 @@ function applyTransition(state, auto, event) {
         // General step cost for any other event
         nextPhysiology = updatePhysiology(nextPhysiology, "step");
     }
+    // Expose metrics
+    try {
+        cognitivePhysiologyGauge.set({ metric: "energy" }, nextPhysiology.energy);
+        cognitivePhysiologyGauge.set({ metric: "boredom" }, nextPhysiology.boredom);
+        cognitivePhysiologyGauge.set({ metric: "frustration" }, nextPhysiology.frustration);
+    }
+    catch {
+        // metrics not available in test or init
+    }
     switch (state._) {
+        // ... existing transitions ...
         case "idle":
             if (event._ === "input") {
                 return [thinking(event.content, 1, undefined, nextPhysiology), auto];

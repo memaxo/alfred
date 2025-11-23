@@ -1,7 +1,7 @@
 // Minimal, dependency-free stubs to avoid cross-package coupling in agent.
 // Full Linear integration lives in the API layer and DB repos.
 
-import { logger } from "@alfred/metrics";
+import { logger } from "@alfred/logger";
 import pRetry, { AbortError } from "p-retry";
 
 import { getLinearMetrics } from "./linearmetrics";
