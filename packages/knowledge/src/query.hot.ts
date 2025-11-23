@@ -1,4 +1,4 @@
-import * as queryRepo from "@alfred/db/repo/graph/query";
+import * as queryRepo from "@alfred/db/repo/graph/index";
 
 /**
  * Performance-critical reflection retrieval.

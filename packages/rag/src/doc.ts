@@ -148,7 +148,7 @@ export async function retrieve(
 
   // Apply an extra defensive threshold filter client-side to ensure
   // correctness even when the underlying repo does not enforce it.
-  return rows
+  const chunks = rows
     .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
     .slice(0, k)
     .map((row) => {
@@ -170,6 +170,33 @@ export async function retrieve(
         },
       };
     });
+
+  // Active Recall: Reinforce document nodes for retrieved chunks
+  const documentIds = Array.from(
+    new Set(
+      chunks
+        .map((c) => c.metadata?.documentId)
+        .filter((id): id is string => typeof id === "string")
+    )
+  );
+
+  if (documentIds.length > 0) {
+    // Fire-and-forget to avoid latency
+    void (async () => {
+      try {
+        // Find memory nodes corresponding to these documents
+        // This assumes we created "rag_document" nodes with properties.documentId
+        // Since we don't have a direct lookup by property efficiently without index,
+        // and we only have touchNodes by ID, we'd need to look them up first.
+        // For now, we skip this step until we have a better mapping or index.
+        // Alternatively, if we stored the memory node ID in the chunk metadata, we could use it.
+      } catch (err) {
+        console.error("ACTIVE_RECALL_RAG_ERROR", err);
+      }
+    })();
+  }
+
+  return chunks;
 }
 
 export async function chunk(

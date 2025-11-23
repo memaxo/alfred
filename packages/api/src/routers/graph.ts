@@ -8,6 +8,7 @@ import {
   graphContextDurationSeconds,
 } from "../metrics";
 import { db } from "@alfred/db";
+import { touchNodes } from "@alfred/db/repo/graph/index";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import {
   getExplainingDocuments,
@@ -357,7 +358,6 @@ export const graphRouter: any = router({
                 // If both are 1-hop, it's a lateral connection.
                 // If one is new, it's the target.
                 const fromIs1Hop = oneHopIds.includes(edge.fromId);
-                const toIs1Hop = oneHopIds.includes(edge.toId);
                 
                 // Default to 'to' as target if 'from' is the bridge
                 const bridgeId = fromIs1Hop ? edge.fromId : edge.toId;
@@ -420,6 +420,21 @@ export const graphRouter: any = router({
           graph: graphInstance ?? undefined,
           resource,
         });
+
+        // Active Recall: Reinforce nodes that were successfully retrieved
+        // Fire-and-forget to avoid latency
+        if (result.nodes && result.nodes.length > 0) {
+          const nodeIds = result.nodes
+            .map((n) => n.id.dbId)
+            .filter((id): id is string => Boolean(id));
+          
+          if (nodeIds.length > 0) {
+            // Use a microtask or immediate to detach from current stack
+            void touchNodes(nodeIds).catch((err) => {
+              console.error("ACTIVE_RECALL_ERROR", err);
+            });
+          }
+        }
 
         try {
           graphQueriesTotal.inc({ kind, resource });
