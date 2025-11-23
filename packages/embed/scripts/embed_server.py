@@ -10,6 +10,7 @@ Uses Matryoshka Representation Learning (MRL) to truncate to 1024 dimensions:
 - Compatible with pgvector HNSW index (max 2000 dims)
 """
 
+import os
 import sys
 import json
 import traceback
@@ -37,11 +38,35 @@ print(json.dumps({"id": "init", "type": "status", "payload": {"message": "loadin
 device = detect_device()
 print(json.dumps({"id": "init", "type": "status", "payload": {"message": f"using_device_{device}"}}), flush=True)
 
+# Parse quantization config
+quantization = os.getenv("EMBED_QUANTIZATION")
+model_kwargs = {"dtype": torch.bfloat16}
+
+if quantization == "4bit":
+    try:
+        from transformers import BitsAndBytesConfig
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4"
+        )
+        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "quantization_4bit_enabled"}}), flush=True)
+    except ImportError:
+        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "bitsandbytes_not_found_skipping_quantization"}}), flush=True)
+elif quantization == "8bit":
+    try:
+        from transformers import BitsAndBytesConfig
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "quantization_8bit_enabled"}}), flush=True)
+    except ImportError:
+        print(json.dumps({"id": "init", "type": "status", "payload": {"message": "bitsandbytes_not_found_skipping_quantization"}}), flush=True)
+
 model = SentenceTransformer(
     MODEL_NAME,
     trust_remote_code=True,
     device=device,
-    model_kwargs={"dtype": torch.bfloat16},
+    model_kwargs=model_kwargs,
 )
 
 print(json.dumps({"id": "init", "type": "status", "payload": {"message": "model_loaded"}}), flush=True)

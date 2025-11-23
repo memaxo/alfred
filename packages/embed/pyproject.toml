@@ -8,6 +8,8 @@ dependencies = [
     "huggingface-hub>=0.20.0",
     "numpy>=1.24.0",
     "torch>=2.5.0",
+    "bitsandbytes>=0.42.0 ; sys_platform != 'darwin'",
+    "accelerate>=0.26.0",
     "pytorch-triton-rocm>=3.3.0 ; sys_platform == 'linux'",
 ]
 

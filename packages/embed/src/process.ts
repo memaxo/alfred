@@ -49,6 +49,9 @@ export class EmbedProcess {
       EMBED_MODEL:
         this.config.modelName ?? "tencent/KaLM-Embedding-Gemma3-12B-2511",
       EMBED_DEVICE: this.config.device ?? "auto",
+      EMBED_QUANTIZATION:
+        process.env.EMBED_QUANTIZATION ??
+        (process.env.NODE_ENV !== "production" ? "4bit" : "none"),
     };
 
     const cmd =

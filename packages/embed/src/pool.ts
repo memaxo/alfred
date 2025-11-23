@@ -16,7 +16,8 @@ export class EmbedPool {
 
   constructor(config: EmbedConfig = {}) {
     this.config = config;
-    this.poolSize = config.poolSize ?? 2;
+    const isDev = process.env.NODE_ENV !== "production";
+    this.poolSize = config.poolSize ?? (isDev ? 1 : 2);
   }
 
   async initialize(): Promise<void> {
