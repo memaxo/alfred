@@ -20,5 +20,7 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 7. **JSONB handling.** Use `as any` for JSONB fields (Drizzle limitation). Document this pattern in code comments.
 
-8. **Performance.** All queries must complete in <10ms (p99). Use indexes for all WHERE clauses. Prefer batch operations over loops. Keep transactions short (<100ms).
+8. **Safe tsquery generation.** When constructing `tsquery` for search, always use `plainto_tsquery('english', ...)` for user input or `sql.join(..., sql` || `)` for combining queries. Never string-template raw variables into `to_tsquery` without sanitization.
+
+9. **Performance.** All queries must complete in <10ms (p99). Use indexes for all WHERE clauses. Prefer batch operations over loops. Keep transactions short (<100ms).
 

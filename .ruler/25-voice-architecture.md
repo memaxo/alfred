@@ -1,0 +1,37 @@
+# Voice Architecture Standards
+
+## Core Principle
+
+The Voice system prioritizes **latency** and **privacy**. Use local models (Maya1, NeMo) by default. Use **binary transport** for all audio data. Isolate state in **VoiceRegistry**.
+
+## Rules
+
+1.  **Binary Transport.** All audio chunks (upstream and downstream) must be sent as **binary WebSocket frames** (Buffer/Uint8Array). Never Base64-encode audio in JSON messages on the hot path. JSON is reserved for control events (start, stop, metadata).
+
+2.  **Registry Pattern.** All voice sessions must be managed via `VoiceRegistry`. Never instantiate `VoiceSession` directly in route handlers. Use `registry.createSession()` and `registry.getSession()`.
+
+3.  **Process Isolation.** Model inference runs in persistent Python subprocesses managed by `STTPool` and `TTSPool`. Never spawn one-off Python scripts for request handling. Use IPC (stdin/stdout) for communication.
+
+4.  **Native Codecs.** Use native bindings (`@discordjs/opus`) for audio encoding/decoding. Avoid spawning `ffmpeg` processes for real-time transcoding.
+
+5.  **Maya1 Default.** The default local TTS model is **Maya1**. Fallback to Piper only if explicitly configured. Ensure `transformers` logging is suppressed to prevent JSON serialization errors in IPC.
+
+6.  **Serialization Safety.** In Python scripts, monkeypatch `json.dumps` or strictly sanitize payloads to convert NumPy/Torch types to native Python types before printing to `stdout`.
+
+7.  **Telemetry.** Report Packet Loss, Jitter, and RTT on every session. Use `VoiceSocketHandler` to observe and record these metrics to Prometheus.
+
+8.  **Session Lifecycle.** Enforce a strict 5-minute idle timeout for sessions. `VoiceRegistry` must run a cleanup interval to reap zombie sessions.
+
+9.  **Client-Side Buffering.** Clients must implement a jitter buffer. Prefer `AudioWorklet` for playback to avoid main-thread blocking. Handle `packet_loss` gracefully (concealment or skip).
+
+10. **VAD-Driven Control.** Use server-side VAD (from STT) to drive `auto_stop` logic. Client-side VAD is for barge-in/interruption detection only.
+
+11. **Error Boundaries.** A failure in the voice subsystem (e.g., model crash) must not crash the API server. Catch pool errors and return graceful error codes to the client. Auto-restart crashed pool processes.
+
+12. **Dual-Backend Abstraction.** Use a factory pattern to load backend-specific implementations (MLX, ROCm) at runtime based on hardware detection; never import platform-specific libraries (mlx, bitsandbytes) at the top level of shared modules.
+
+13. **Platform Isolation.** Use environment markers in `pyproject.toml` (e.g., `sys_platform == 'darwin'`) to prevent installing conflicting hardware drivers (ROCm vs MLX) on the wrong OS.
+
+14. **Protocol Termination.** Streaming endpoints must explicitly signal completion (e.g., `isFinal: true` or empty chunk) in the protocol; clients must not rely on socket closure alone.
+
+15. **Stderr Visibility.** Parent processes must capture and log `stderr` from subprocesses in real-time; silent failures during startup are unacceptable.

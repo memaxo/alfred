@@ -10,5 +10,7 @@
 
 5. **Deduplication.** Check `rag_documents.source` before ingestion to avoid duplicate documents. Use `rag_documents_source_idx` for fast lookups.
 
-6. **Error handling.** Embedding failures should not break ingestion—fill with empty arrays and continue. Log errors in development, surface to caller in production.
+6. **Cognitive Context.** Context retrieval must be hybrid: Semantic (Vector) for topic relevance + Structural (Graph) for dependency awareness. Use 2-hop traversal for sparse graphs.
+
+7. **Reranking.** Perform reranking in the Engine layer (`KnowledgeEngine`), not the Repo layer. Repositories should be pure data access; complex ML orchestration and external API calls belong in Engines.
 

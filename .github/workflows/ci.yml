@@ -255,6 +255,35 @@ jobs:
             bunx turbo run test
           fi
 
+  e2e:
+    name: E2E Tests
+    needs:
+      - changes
+      - ruler
+    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'tests' || needs.changes.outputs.lane == 'db' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.18"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: bunx playwright install --with-deps
+
+      - name: Run E2E
+        run: |
+          cd apps/web
+          bun run test:e2e:auto
+
   migrate-dryrun:
     name: DB Dry Run
     needs:
@@ -262,6 +291,7 @@ jobs:
       - ruler
       - typecheck
       - tests
+      - e2e
     if: ${{ needs.changes.outputs.lane == 'db' }}
     runs-on: ubuntu-latest
     steps:
