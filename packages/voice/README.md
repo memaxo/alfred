@@ -6,6 +6,8 @@ The Voice package provides local, privacy-preserving Speech-to-Text (STT) and Te
 
 - **TTS (Text-to-Speech):** Supports multiple providers:
     - [Maya1](https://huggingface.co/maya-research/maya1) (3B parameter model): Expressive, emotional speech generation (default).
+      - **macOS**: Runs on **MLX** (Apple Silicon optimized) for low latency. Requires 4-bit converted weights.
+      - **Linux**: Runs on **PyTorch/ROCm** (AMD) or **CUDA** (NVIDIA) with 4-bit quantization via `bitsandbytes`.
     - [Supertonic](https://huggingface.co/Supertone/supertonic) (66M parameter model): Lightweight, ultra-low latency (up to 167x real-time) on-device TTS via ONNX Runtime.
 - **STT (Speech-to-Text):** Uses NVIDIA [NeMo Parakeet](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/parakeet_realtime_eou_120m) (120M) for fast, accurate transcription with [Silero VAD](https://github.com/snakers4/silero-vad) for voice activity detection.
 - **Runtime:** Python subprocesses managed via `Bun.spawn` and JSON-RPC over stdin/stdout (Maya1/STT), or in-process ONNX Runtime (Supertonic).
@@ -16,7 +18,7 @@ The Voice package provides local, privacy-preserving Speech-to-Text (STT) and Te
 - **Bun** runtime (v1.1+)
 - **Python** 3.10+ (managed via `uv`)
 - **GPU Recommended:**
-    - macOS: Apple Silicon (M1/M2/M3) supported via MPS (Metal Performance Shaders).
+    - macOS: Apple Silicon (M1/M2/M3) supported via **MLX** (Maya1) or MPS (STT).
     - Linux: CUDA (NVIDIA) or ROCm (AMD).
     - CPU fallback is available but significantly slower for Maya1 (TTS). Supertonic runs efficiently on CPU.
 
@@ -27,6 +29,10 @@ The setup process handles everything automatically:
 ```bash
 # From root
 bun run setup
+
+# FOR MACOS (MLX) ONLY:
+# You must convert the Maya1 weights to MLX format before running:
+python packages/voice/scripts/convert_maya1_to_mlx.py --quantize
 ```
 
 This command will:

@@ -108,6 +108,12 @@ export class TTSPool {
         });
       }
       this.initialized = true;
+
+      // Warmup all processes in parallel
+      if (!this.useSupertonic) {
+        // Don't await warmup to avoid blocking initialization
+        this.warmup().catch(err => console.warn("TTS Warmup failed:", err));
+      }
     } catch (error) {
       // Clean up any started processes
       await this.shutdown();
@@ -115,6 +121,23 @@ export class TTSPool {
         `Failed to initialize TTS pool: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  private async warmup(): Promise<void> {
+    const warmupRequest: TTSRequest = {
+      text: "Warmup", // Short text
+      voice: "default",
+      streaming: false
+    };
+
+    await Promise.all(this.processes.map(async (p) => {
+        try {
+            // Send warmup request but don't use the audio
+            await p.wrapper.synthesize(warmupRequest);
+        } catch (e) {
+            // Ignore warmup errors
+        }
+    }));
   }
 
   private getNextAvailable(): {

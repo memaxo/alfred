@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+# Base image with ROCm support (PyTorch 2.1+ for AMD)
+FROM rocm/pytorch:rocm6.0_ubuntu22.04_py3.10_pytorch_2.1.2
+
+WORKDIR /app
+
+# Install system dependencies
+# soundfile needs libsndfile1
+RUN apt-get update && apt-get install -y \
+    libsndfile1 \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast package management
+ENV UV_LINK_MODE=copy
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Create virtual environment
+RUN uv venv .venv
+
+# Copy dependency files
+COPY packages/voice/pyproject.toml packages/voice/uv.lock ./packages/voice/
+
+# Sync dependencies
+# We set sys_platform=linux to ensure we get the Linux/ROCm variants
+WORKDIR /app/packages/voice
+RUN uv sync --frozen --no-install-project
+
+# Copy source code
+COPY packages/voice/python ./python
+COPY packages/voice/src ./src
+COPY packages/voice/scripts ./scripts
+COPY packages/voice/package.json ./package.json
+
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+source .venv/bin/activate\n\
+export PYTHONPATH=$PYTHONPATH:$(pwd)/python\n\
+# Default to Maya1 (no args) or use args if provided\n\
+python -m python.tts.server "$@"\n\
+' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# Expose models directory (should be mounted as volume for persistence)
+VOLUME /app/packages/voice/models
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV MAYA_QUANTIZE_4BIT=true
+
+ENTRYPOINT ["/app/entrypoint.sh"]

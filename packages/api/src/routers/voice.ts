@@ -212,7 +212,13 @@ export const voiceRouter: ReturnType<typeof router> = router({
           message: "session_required",
         });
       }
-      const provider = getVoiceProvider();
+      
+        // Optional: Allow overriding provider for testing
+        let provider = getVoiceProvider();
+        if (input.surface === "web" && process.env.NODE_ENV === "test" && process.env.VOICE_PROVIDER_OVERRIDE) {
+            provider = process.env.VOICE_PROVIDER_OVERRIDE as any;
+        }
+        
       const s2sTimerStart = performance.now();
 
       const claimedSession = await claimVoiceSession({
