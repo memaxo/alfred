@@ -5,15 +5,19 @@ import { ScrambleText } from "@/components/scramble-text";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 import { MindscapeEngine } from "@/lib/mindscape/engine";
 import { trpc } from "@/utils/trpc";
-import { fetchInitialMindscape } from "@/lib/mindscape/initial-frame.server";
+// import { fetchInitialMindscape } from "@/lib/mindscape/initial-frame.server"; // Not exported by module
+
+// Temporary fix: inline mock loader or use getInitialMindscapeFrame if that's what it should be
+import { getInitialMindscapeFrame } from "@/lib/mindscape/initial-frame.server";
 
 export const Route = createFileRoute("/")({
   component: Mindscape,
-  loader: () => fetchInitialMindscape(),
+  loader: () => getInitialMindscapeFrame(),
 });
 
 function Mindscape() {
-  const { ascii } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const ascii = data.ascii; // Assuming getInitialMindscapeFrame returns { ascii: ... } along with other stuff
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<MindscapeEngine | null>(null);

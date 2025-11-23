@@ -14,6 +14,7 @@ import { profileNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 type ProfileRow = inferRouterOutputs<TRPCAppRouter>["profile"]["get"];
 // type ProfileUpdateInput = inferRouterInputs<TRPCAppRouter>["profile"]["update"];
@@ -235,22 +236,19 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-indigo-500/40 backdrop-blur-sm">
-        <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-      </div>
-    );
+    return <NodeLODTiny color="bg-indigo-500" shadow="shadow-indigo-500/50" />;
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex items-center gap-2 rounded-full border border-indigo-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-indigo-500/50">
-        <UserCircle2 className="h-3 w-3 text-indigo-400" />
-        <span className="font-medium text-[10px] text-indigo-300 tracking-tight">
-          Profile
-        </span>
-      </div>
+      <NodeLODSmall
+        label="Profile"
+        icon={<UserCircle2 className="h-3 w-3" />}
+        borderColor="border-indigo-500/30"
+        textColor="text-indigo-300"
+        hoverColor="hover:border-indigo-500/50"
+      />
     );
   }
 

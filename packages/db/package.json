@@ -2,32 +2,34 @@
   "name": "@alfred/db",
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "test": "bun test",
-    "test:postgres": "RUN_DB_TESTS=1 bun test",
-    "typecheck": "tsc -b",
-    "build": "tsdown",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun scripts/migrate.ts",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "db:start": "docker compose up -d",
-    "db:stop": "docker compose stop",
-    "db:down": "docker compose down",
-    "db:watch": "docker compose up"
-  },
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
       "browser": {
         "default": "./dist/src/browser.js",
         "import": "./dist/src/browser.js"
       },
-      "default": "./dist/src/index.js",
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "bun": "./src/index.ts",
+      "default": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "bun": "./src/*.ts",
+      "default": "./dist/src/*.js",
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts"
+    },
+    "./browser": {
+      "default": "./dist/src/browser.js",
+      "import": "./dist/src/browser.js",
+      "types": "./dist/src/browser.d.ts"
+    },
+    "./client": {
+      "default": "./dist/src/client.js",
+      "import": "./dist/src/client.js",
+      "types": "./dist/src/client.d.ts"
     },
     "./repo/deploy": {
       "bun": "./src/repo/deploy/index.ts",
@@ -41,27 +43,26 @@
       "import": "./dist/src/repo/graph/index.js",
       "types": "./dist/src/repo/graph/index.d.ts"
     },
-    "./*": {
-      "bun": "./src/*.ts",
-      "default": "./dist/src/*.js",
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts"
-    },
-    "./client": {
-      "default": "./dist/src/client.js",
-      "import": "./dist/src/client.js",
-      "types": "./dist/src/client.d.ts"
-    },
-    "./browser": {
-      "default": "./dist/src/browser.js",
-      "import": "./dist/src/browser.js",
-      "types": "./dist/src/browser.d.ts"
-    },
     "./testing": {
+      "bun": "./src/testing.ts",
       "default": "./dist/src/testing.js",
       "import": "./dist/src/testing.js",
       "types": "./dist/src/testing.d.ts"
     }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "bun scripts/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose stop",
+    "db:watch": "docker compose up",
+    "db:down": "docker compose down",
+    "test": "bun test",
+    "test:postgres": "RUN_DB_TESTS=1 bun test",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",

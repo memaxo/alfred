@@ -522,3 +522,6 @@ export const __internals = {
       }
     ).verifyDependencies.bind(instance),
 };
+
+// Export alias for tests
+export const ModelProcess = Process;

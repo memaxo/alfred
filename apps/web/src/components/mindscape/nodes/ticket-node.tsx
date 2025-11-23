@@ -13,6 +13,7 @@ import { ticketNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function TicketNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
@@ -81,22 +82,19 @@ export function TicketNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-indigo-500/40 backdrop-blur-sm">
-        <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-      </div>
-    );
+    return <NodeLODTiny color="bg-indigo-500" shadow="shadow-indigo-500/50" />;
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex items-center gap-2 rounded-full border border-indigo-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-indigo-500/50">
-        <Ticket className="h-3 w-3 text-indigo-400" />
-        <span className="max-w-[120px] truncate font-medium text-[10px] text-indigo-300 tracking-tight">
-          {identifier}
-        </span>
-      </div>
+      <NodeLODSmall
+        label={identifier}
+        icon={<Ticket className="h-3 w-3" />}
+        borderColor="border-indigo-500/30"
+        textColor="text-indigo-300"
+        hoverColor="hover:border-indigo-500/50"
+      />
     );
   }
 

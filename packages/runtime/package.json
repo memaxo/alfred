@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
-    "dev": "tsc -b -w",
+    "dev": "echo 'Skipping runtime dev watch'",
     "typecheck": "tsc -b --pretty false",
     "test": "bun test"
   },

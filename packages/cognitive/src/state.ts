@@ -90,6 +90,13 @@ export type Criteria = {
   cost: number;
 };
 
+// Physiological State (Homeostasis)
+export type Physiology = {
+  energy: number;      // 0..1 (decreases with steps)
+  boredom: number;     // 0..1 (increases with repetition)
+  frustration: number; // 0..1 (increases with errors)
+};
+
 // Outcome of execution
 export type Outcome =
   | { _: "success"; result: unknown; duration: number }
@@ -99,12 +106,13 @@ export type Outcome =
 
 // Main cognitive state ADT
 export type CognitiveState =
-  | { _: "idle"; since: Timestamp }
+  | { _: "idle"; since: Timestamp; physiology: Physiology }
   | {
       _: "capturing";
       input: string;
       confidence: Confidence;
       started: Timestamp;
+      physiology: Physiology;
     }
   | {
       _: "thinking";
@@ -113,6 +121,7 @@ export type CognitiveState =
       paths: Path[];
       reasoningTraces?: string[];
       started: Timestamp;
+      physiology: Physiology;
     }
   | {
       _: "deciding";
@@ -120,6 +129,7 @@ export type CognitiveState =
       criteria: Criteria;
       weights: number[];
       deadline: Timestamp;
+      physiology: Physiology;
     }
   | {
       _: "executing";
@@ -127,6 +137,7 @@ export type CognitiveState =
       step: number;
       auto: AutonomyGradient;
       started: Timestamp;
+      physiology: Physiology;
     }
   | {
       _: "reflecting";
@@ -134,6 +145,7 @@ export type CognitiveState =
       expected: string;
       actual: string;
       error: number;
+      physiology: Physiology;
     };
 
 // Autonomy gradient with Bayesian updates
@@ -158,23 +170,37 @@ export type Event =
   | { _: "interrupt"; reason: string; priority: 1 | 2 | 3; ts: Timestamp }
   | { _: "complete"; outcome: Outcome; ts: Timestamp };
 
-// State factories
-export const idle = (): CognitiveState => ({
-  _: "idle",
-  since: timestamp(Date.now()),
+// Physiology Defaults
+const defaultPhysiology = (): Physiology => ({
+  energy: 1.0,
+  boredom: 0.0,
+  frustration: 0.0,
 });
 
-export const capturing = (input: string, conf: number): CognitiveState => ({
+// State factories
+export const idle = (phy?: Physiology): CognitiveState => ({
+  _: "idle",
+  since: timestamp(Date.now()),
+  physiology: phy ?? defaultPhysiology(),
+});
+
+export const capturing = (
+  input: string,
+  conf: number,
+  phy?: Physiology
+): CognitiveState => ({
   _: "capturing",
   input,
   confidence: confidence(conf),
   started: timestamp(Date.now()),
+  physiology: phy ?? defaultPhysiology(),
 });
 
 export const thinking = (
   about: string,
   depth = 1,
-  traces?: string[]
+  traces?: string[],
+  phy?: Physiology
 ): CognitiveState => ({
   _: "thinking",
   about,
@@ -182,41 +208,85 @@ export const thinking = (
   paths: [],
   reasoningTraces: traces,
   started: timestamp(Date.now()),
+  physiology: phy ?? defaultPhysiology(),
 });
 
 export const deciding = (
   options: Decision[],
-  criteria?: Criteria
+  criteria?: Criteria,
+  phy?: Physiology
 ): CognitiveState => ({
   _: "deciding",
   options,
   criteria: criteria || defaultCriteria(),
   weights: [0.4, 0.3, 0.2, 0.1], // safety, speed, accuracy, cost
   deadline: timestamp(Date.now() + 5000), // 5s decision timeout
+  physiology: phy ?? defaultPhysiology(),
 });
 
 export const executing = (
   plan: Plan,
-  auto: AutonomyGradient
+  auto: AutonomyGradient,
+  phy?: Physiology
 ): CognitiveState => ({
   _: "executing",
   plan,
   step: 0,
   auto,
   started: timestamp(Date.now()),
+  physiology: phy ?? defaultPhysiology(),
 });
 
 export const reflecting = (
   outcome: Outcome,
   expected: string,
-  actual: string
+  actual: string,
+  phy?: Physiology
 ): CognitiveState => ({
   _: "reflecting",
   outcome,
   expected,
   actual,
   error: calculateError(expected, actual),
+  physiology: phy ?? defaultPhysiology(),
 });
+
+// Physiology Logic
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+export const updatePhysiology = (
+  current: Physiology,
+  event: "step" | "success" | "error" | "entropy_high" | "entropy_low"
+): Physiology => {
+  let { energy, boredom, frustration } = current;
+
+  switch (event) {
+    case "step":
+      energy -= 0.01;
+      break;
+    case "success":
+      frustration *= 0.5;
+      energy += 0.05;
+      boredom *= 0.9;
+      break;
+    case "error":
+      frustration += 0.2;
+      energy -= 0.05;
+      break;
+    case "entropy_high": // Repetitive loop
+      boredom += 0.3;
+      break;
+    case "entropy_low": // Novelty
+      boredom *= 0.8;
+      break;
+  }
+
+  return {
+    energy: clamp01(energy),
+    boredom: clamp01(boredom),
+    frustration: clamp01(frustration),
+  };
+};
 
 // Autonomy gradient management
 export const initialAutonomy = (): AutonomyGradient => ({
@@ -232,7 +302,8 @@ export const initialAutonomy = (): AutonomyGradient => ({
 
 export const updateAutonomy = (
   current: AutonomyGradient,
-  evidence: Evidence
+  evidence: Evidence,
+  physiology?: Physiology
 ): AutonomyGradient => {
   const prior = current.level;
   const priorConfidence = current.confidence;
@@ -244,8 +315,23 @@ export const updateAutonomy = (
     evidence
   );
 
+  // Physiological Regulation
+  let regulatedLevel = newLevel;
+  if (physiology) {
+    // High frustration forces autonomy drop (stop digging)
+    if (physiology.frustration > 0.7) {
+      regulatedLevel *= 0.5;
+    }
+    // Low energy reduces risky behavior
+    if (physiology.energy < 0.2) {
+      regulatedLevel *= 0.8;
+    }
+    // Boredom increases temperature (exploration) but not necessarily autonomy
+    // (Handled in sampling logic, not permission logic)
+  }
+
   return {
-    level: autonomy(Math.max(0, Math.min(1, newLevel))),
+    level: autonomy(Math.max(0, Math.min(1, regulatedLevel))),
     confidence: confidence(Math.max(0, Math.min(1, newConfidence))),
     evidence: [...current.evidence.slice(-9), evidence], // Keep last 10
     constraints: current.constraints,

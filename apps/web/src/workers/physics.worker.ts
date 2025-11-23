@@ -97,6 +97,7 @@ function tick() {
     for (let j = i + 1; j < nodesArray.length; j++) {
       const a = nodesArray[i];
       const b = nodesArray[j];
+      if (!a || !b) continue;
       if (a.id === config.focusId || b.id === config.focusId) continue; // Don't push anchor? actually anchor stays 0,0 but can push others
 
       const dx = a.x - b.x;
@@ -170,6 +171,7 @@ function tick() {
   // Apply Velocity
   for (let i = 0; i < nodesArray.length; i++) {
     const node = nodesArray[i];
+    if (!node) continue;
     const vel = velocities.get(node.id);
     
     if (node.id === config.focusId) {

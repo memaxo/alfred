@@ -40,4 +40,6 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 
 15. **Prerendering Limitations.** Disable static prerendering (`prerender: { enabled: false }`) if your app relies on runtime-specific APIs (like Bun) that are not available in the build-time prerender environment, or use a compatible compatibility layer.
 
+16. **E2E Test Mode.** When running E2E tests (Playwright), use `VITE_TEST_MODE=true` to enable "Lite Mode" for heavy visualizations (e.g., Mindscape). This disables complex physics simulation and loads a small, static dataset to ensure deterministic testing and prevent timeouts in CI environments.
+
 

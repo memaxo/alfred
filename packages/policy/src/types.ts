@@ -18,6 +18,10 @@ export type PolicyCondition = {
   in?: unknown[];
   notIn?: unknown[];
   exists?: boolean;
+  gt?: number;
+  gte?: number;
+  lt?: number;
+  lte?: number;
 };
 
 export type PolicyResourceMatch = {

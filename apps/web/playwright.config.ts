@@ -22,13 +22,14 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `bun dev -- --host=${HOST} --port=${PORT}`,
+      command: `bun run dev:test -- --host=${HOST} --port=${PORT}`,
       url: BASE_URL,
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",
       stderr: "pipe",
       env: {
         MINDSCAPE_TEST: "1",
+        VITE_TEST_MODE: "true",
         NODE_ENV: process.env.NODE_ENV ?? "test",
       },
     },

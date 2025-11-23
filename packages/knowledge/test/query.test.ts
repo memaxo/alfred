@@ -65,11 +65,20 @@ describe("semanticQuery", () => {
     const alpha = graph.add(fact("Alpha", 0.9, "src"));
     const beta = graph.add(fact("Beta", 0.9, "src"));
 
-    graph.setEmbedding(alpha, new Float32Array([1, 0]));
-    graph.setEmbedding(beta, new Float32Array([0, 1]));
+    const vecA = new Float32Array(1024).fill(0);
+    vecA[0] = 1;
+    const vecB = new Float32Array(1024).fill(0);
+    vecB[1] = 1;
+
+    graph.setEmbedding(alpha, vecA);
+    graph.setEmbedding(beta, vecB);
+
+    const queryVec = new Float32Array(1024).fill(0);
+    queryVec[0] = 0.99;
+    queryVec[1] = 0.01;
 
     const results = semanticQuery("unused", graph, 1, {
-      embedding: new Float32Array([0.99, 0.01]),
+      embedding: queryVec,
     });
 
     expect(results).toHaveLength(1);

@@ -34,7 +34,10 @@ export function MindscapeInitializer() {
   const graphNodeIds = useMemo(() => {
     const derived = nodes
       .map((node) => {
-        if (node.data?.graph?.dbId) {
+        if (
+          node.data?.graph?.dbId &&
+          UUID_PATTERN.test(node.data.graph.dbId)
+        ) {
           return node.data.graph.dbId;
         }
         if (UUID_PATTERN.test(node.id)) {
@@ -47,7 +50,9 @@ export function MindscapeInitializer() {
         return null;
       })
       .filter((id): id is string => Boolean(id));
-    return Array.from(new Set(derived));
+    const ids = Array.from(new Set(derived));
+    // console.log("graphNodeIds calculated:", ids.length, ids[0]);
+    return ids;
   }, [nodes]);
 
   const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
@@ -203,7 +208,11 @@ export function MindscapeInitializer() {
       }
     }
 
-    if (traverseResult && traverseResult.nodes.length > 0) {
+    if (
+      traverseResult &&
+      traverseResult.nodes &&
+      traverseResult.nodes.length > 0
+    ) {
       const node = traverseResult.nodes[0] as GraphNode;
       const props = (node.properties ?? {}) as Record<string, unknown>;
       const summary =
@@ -240,10 +249,11 @@ export function MindscapeInitializer() {
   );
 
   useEffect(() => {
-    if (!traverseResult) {
+    if (!traverseResult || !traverseResult.nodes) {
       return;
     }
 
+    let added = false;
     traverseResult.nodes.forEach((node: GraphNode, index: number) => {
       const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
       if (!ref) {
@@ -254,6 +264,7 @@ export function MindscapeInitializer() {
         return;
       }
 
+      // ... props extraction ...
       const props = (node.properties ?? {}) as Record<string, unknown>;
       const confidence =
         typeof props.confidence === "number"
@@ -294,9 +305,10 @@ export function MindscapeInitializer() {
           },
         } as ArtifactData,
       });
+      added = true;
     });
 
-    if (traverseResult.nodes.length > 0) {
+    if (added && traverseResult.nodes && traverseResult.nodes.length > 0) {
       setTimeout(() => {
         autoLayout();
       }, 0);
@@ -304,10 +316,11 @@ export function MindscapeInitializer() {
   }, [traverseResult, nodeIds, addArtifact, autoLayout]);
 
   useEffect(() => {
-    if (!ragResult) {
+    if (!ragResult || !ragResult.nodes) {
       return;
     }
 
+    let added = false;
     ragResult.nodes.forEach((node: GraphNode, index: number) => {
       const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
       if (!ref) {
@@ -344,9 +357,10 @@ export function MindscapeInitializer() {
       if (node.id.dbId) {
         cacheRagDoc(node.id.dbId, knowledgeData);
       }
+      added = true;
     });
 
-    if (ragResult.nodes.length > 0) {
+    if (added && ragResult.nodes && ragResult.nodes.length > 0) {
       setTimeout(() => {
         autoLayout();
       }, 0);
@@ -386,8 +400,8 @@ export function MindscapeInitializer() {
 
   const mapEdgeToFlow = useCallback(
     (edge: GraphEdge) => {
-      ensureGraphMapping(edge.fromId);
-      ensureGraphMapping(edge.toId);
+      // ensureGraphMapping(edge.fromId);
+      // ensureGraphMapping(edge.toId);
       const isExplains = edge.kind === "explains";
       return {
         id: edge.id,

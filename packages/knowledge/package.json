@@ -7,10 +7,6 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
-    "./hypergraph": {
-      "types": "./dist/hypergraph.d.ts",
-      "default": "./src/hypergraph.ts"
-    },
     "./compression": {
       "types": "./dist/compression.d.ts",
       "default": "./src/compression.ts"
@@ -19,23 +15,39 @@
       "types": "./dist/extractor.d.ts",
       "default": "./src/extractor.ts"
     },
-    "./query": {
-      "types": "./dist/query.d.ts",
-      "default": "./src/query.ts"
+    "./hypergraph": {
+      "types": "./dist/hypergraph.d.ts",
+      "default": "./src/hypergraph.ts"
+    },
+    "./indices/*": {
+      "types": "./dist/indices/*.d.ts",
+      "default": "./src/indices/*.ts"
+    },
+    "./ontology": {
+      "types": "./dist/ontology.d.ts",
+      "default": "./src/ontology.ts"
     },
     "./persist": {
       "types": "./dist/persist.d.ts",
       "default": "./src/persist.ts"
     },
-    "./indices/*": {
-      "types": "./dist/indices/*.d.ts",
-      "default": "./src/indices/*.ts"
+    "./query": {
+      "types": "./dist/query.d.ts",
+      "default": "./src/query.ts"
+    },
+    "./graph.hot": {
+      "types": "./dist/graph.hot.d.ts",
+      "default": "./src/graph.hot.ts"
+    },
+    "./query.hot": {
+      "types": "./dist/query.hot.d.ts",
+      "default": "./src/query.hot.ts"
     }
   },
   "scripts": {
+    "typecheck": "tsc -b --pretty false",
     "build": "tsc -b",
     "dev": "tsc -b -w",
-    "typecheck": "tsc -b --pretty false",
     "test": "bun test"
   },
   "dependencies": {

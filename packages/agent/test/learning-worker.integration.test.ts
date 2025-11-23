@@ -91,7 +91,7 @@ mock.module("@alfred/db", () => ({
 }));
 
 // Mock Graph Repo
-mock.module("@alfred/db/repo/graph", () => ({
+mock.module("@alfred/db/repo/graph/index", () => ({
   upsertNodes: async () => new Map([["user:hash-123", { id: "node-1" }]]),
   upsertEdges: async () => {},
   
@@ -190,5 +190,35 @@ describe("Learning Worker Integration", () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(cleanupCalled).toBe(true);
+  });
+
+  test("worker does not trigger maintenance if interval has not passed", async () => {
+    startLearningWorker({ 
+      intervalMs: 50, 
+      maintenanceIntervalMs: 10000 // Long interval
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(decayCalled).toBe(false);
+    expect(pruneCalled).toBe(false);
+    expect(cleanupCalled).toBe(false);
+  });
+
+  test("worker concurrency: runs processing and maintenance", async () => {
+    // This test is tricky to check exact concurrency without internal spies, 
+    // but we can verify that both happen eventually in the same run loop
+    startLearningWorker({ 
+      intervalMs: 50, 
+      batchSize: 1,
+      maintenanceIntervalMs: 0 
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Run processing happened?
+    expect(mockRuns[0].learnedAt).not.toBeNull();
+    // Maintenance happened?
+    expect(decayCalled).toBe(true);
   });
 });

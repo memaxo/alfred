@@ -1,4 +1,5 @@
 import { useStore } from "@xyflow/react";
+import { useShallow } from "zustand/react/shallow";
 import { useMindscapeStore } from "@/store/mindscape";
 
 export type LODLevel = "tiny" | "small" | "medium" | "full";
@@ -45,10 +46,12 @@ export function useLODVisible(minLevel: LODLevel): boolean {
  * Hook to check if a node is focused or dimmed.
  */
 export function useNodeFocus(nodeId: string) {
-  return useMindscapeStore((state) => {
-    const focusedId = state.focusedNodeId;
-    const isFocused = focusedId === nodeId;
-    const isDimmed = focusedId !== null && !isFocused;
-    return { isFocused, isDimmed };
-  });
+  return useMindscapeStore(
+    useShallow((state) => {
+      const focusedId = state.focusedNodeId;
+      const isFocused = focusedId === nodeId;
+      const isDimmed = focusedId !== null && !isFocused;
+      return { isFocused, isDimmed };
+    })
+  );
 }

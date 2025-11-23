@@ -42,6 +42,11 @@
       "default": "./src/assistant/src/adapter.ts",
       "types": "./src/assistant/src/adapter.ts"
     },
+    "./services/*": {
+      "bun": "./src/services/*.ts",
+      "default": "./src/services/*.ts",
+      "types": "./src/services/*.ts"
+    },
     "./assistant/*": {
       "bun": "./assistant/src/*.ts",
       "default": "./assistant/src/*.ts",

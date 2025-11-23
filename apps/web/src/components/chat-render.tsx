@@ -257,7 +257,7 @@ function renderToolCall(
     <Tool defaultOpen={!resultPart}>
       <ToolHeader state={state} title={part.toolName} type="tool-call" />
       <ToolContent>
-        <ToolInput input={part.input} />
+        <ToolInput input={part.args} />
         {state !== "output-available" && handlers?.onAddToolResult ? (
           <ToolActions
             onApprove={handleApprove}
@@ -268,7 +268,7 @@ function renderToolCall(
         {resultPart && isToolResultPart(resultPart) ? (
           <ToolOutput
             errorText={undefined}
-            output={resultPart.output} // Errors not strictly typed in Part yet
+            output={resultPart.result} // Errors not strictly typed in Part yet
           />
         ) : null}
       </ToolContent>
@@ -296,7 +296,7 @@ function renderToolResult(
   }
 
   // Orphaned result (e.g. history where call is missing)
-  const output = part.output;
+  const output = part.result;
 
   // Fallback handling for structured data in output
   if (isPlanData(output)) {

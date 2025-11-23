@@ -6,6 +6,7 @@ import {
   reflecting,
   thinking,
   updateAutonomy,
+  updatePhysiology,
 } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
@@ -48,7 +49,9 @@ export async function runCognitiveLoop(
   // Update Autonomy if needed (e.g. on feedback)
   if (incomingEvent._ === "feedback") {
     const evidence = calculateEvidence(incomingEvent);
-    autonomy = updateAutonomy(autonomy, evidence);
+    autonomy = updateAutonomy(newAutonomy, evidence, newState.physiology);
+  } else {
+    autonomy = newAutonomy;
   }
 
   // 3. Persist
@@ -61,7 +64,7 @@ export async function runCognitiveLoop(
   // 4. Execute Side Effects (Async)
   // We return the new state immediately, but trigger the "Brain" to process it
   // In a real system, this might be a background job
-  void processEffects(ctx, streamId, newState, newAutonomy);
+  void processEffects(ctx, streamId, newState, autonomy);
 
   return newState;
 }
@@ -85,15 +88,56 @@ function calculateEvidence(event: Event & { _: "feedback" }) {
  * Pure State Transition Function
  * (Should eventually move to @alfred/cognitive/logic if complex)
  */
+import {
+  cognitivePhysiologyGauge,
+  cognitiveEntropyEventsTotal,
+} from "@alfred/api/metrics";
+
+// ...
+
 function applyTransition(
   state: CognitiveState,
   auto: any,
   event: Event
 ): [CognitiveState, any] {
+  
+  // Update Physiology based on event
+  let nextPhysiology = state.physiology;
+  
+  // Map events to physiology signals
+  if (event._ === "complete") {
+    if (event.outcome._ === "success") {
+      nextPhysiology = updatePhysiology(nextPhysiology, "success");
+    } else if (event.outcome._ === "failure") {
+      nextPhysiology = updatePhysiology(nextPhysiology, "error");
+    }
+  } else if (event._ === "interrupt") {
+    if (event.reason.includes("loop") || event.reason.includes("boredom")) {
+      nextPhysiology = updatePhysiology(nextPhysiology, "entropy_high");
+      try { cognitiveEntropyEventsTotal.inc({ type: "high" }); } catch {}
+    } else {
+      // General step cost
+      nextPhysiology = updatePhysiology(nextPhysiology, "step");
+    }
+  } else {
+    // General step cost for any other event
+    nextPhysiology = updatePhysiology(nextPhysiology, "step");
+  }
+
+  // Expose metrics
+  try {
+    cognitivePhysiologyGauge.set({ metric: "energy" }, nextPhysiology.energy);
+    cognitivePhysiologyGauge.set({ metric: "boredom" }, nextPhysiology.boredom);
+    cognitivePhysiologyGauge.set({ metric: "frustration" }, nextPhysiology.frustration);
+  } catch {
+    // metrics not available in test or init
+  }
+
   switch (state._) {
+    // ... existing transitions ...
     case "idle":
       if (event._ === "input") {
-        return [thinking(event.content), auto];
+        return [thinking(event.content, 1, undefined, nextPhysiology), auto];
       }
       break;
 
@@ -102,17 +146,21 @@ function applyTransition(
         // Thinking complete -> Executing or Reflecting?
         // For now, LLM "Thinking" usually results in an execution plan or response
         // We treat the LLM response as an "execution" of a response plan
-        return [reflecting(event.outcome, "unknown", "unknown"), auto];
+        return [reflecting(event.outcome, "unknown", "unknown", nextPhysiology), auto];
       }
       break;
 
     case "reflecting":
       // After reflection, go back to idle
-      return [idle(), auto];
+      return [idle(nextPhysiology), auto];
   }
 
-  // Default: No state change
-  return [state, auto];
+  // Default: No state change, but update physiology
+  // We need to reconstruct the state with new physiology if possible.
+  // Since state is an ADT, we can use spread if we cast or strictly strictly reconstruct.
+  // But `state` is a union.
+  
+  return [{ ...state, physiology: nextPhysiology }, auto];
 }
 
 /**

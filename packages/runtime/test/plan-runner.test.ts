@@ -21,6 +21,7 @@ mock.module("@alfred/agent", () => ({
 
 // Mock Cognitive Repo
 mock.module("@alfred/db", () => ({
+  db: {}, // Mock db to prevent export errors in other tests
   cognitiveRepo: {
     getLatestSnapshot: mock(async () => null),
     saveSnapshot: mock(async () => {}),
@@ -80,5 +81,32 @@ describe("PlanRunner", () => {
     expect(runner.executePlan(plan)).rejects.toThrow(
       "Step failed: fail-tool - Tool failed"
     );
+  });
+
+  it("suspends on tool suspension", async () => {
+    const suspendTools = {
+      "suspend-tool": {
+        execute: mock(async () => {
+          const err = new Error("suspended");
+          err.name = "SuspendedError";
+          throw err;
+        }),
+      }
+    };
+    
+    const { PlanRunner } = await import("../src/loops/plan-runner");
+    const runner = new PlanRunner(streamId, suspendTools);
+    const plan: ExecutionPlan = {
+      steps: [
+        { action: "suspend-tool", params: {}, description: "Suspending", timeout: 1000, retryable: false },
+      ],
+      goal: "suspend",
+      duration: 0,
+      confidence: 1,
+    };
+
+    // Should not throw
+    await runner.executePlan(plan);
+    expect(suspendTools["suspend-tool"].execute).toHaveBeenCalled();
   });
 });

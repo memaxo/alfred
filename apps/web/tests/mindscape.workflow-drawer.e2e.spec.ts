@@ -6,7 +6,7 @@ const WORKFLOW_ID = "run-provenance-1";
 const RAG_DOC_ID = "doc-drawer-1";
 
 const trpcResponse = (json: unknown) =>
-  JSON.stringify([{ result: { data: { json } } }]);
+  JSON.stringify([{ result: { data: json } }]);
 
 async function mockTrpcResponse(
   route: Route,
@@ -107,7 +107,7 @@ test.describe("Mindscape workflow drawer loop", () => {
               label: "Runtime Drawer Node",
               source: "runtime",
               runId: workflowId,
-              graph: { dbId: "runtime-db-1" },
+              graph: { dbId: "123e4567-e89b-12d3-a456-426614174000" },
             },
             selectable: true,
             draggable: true,

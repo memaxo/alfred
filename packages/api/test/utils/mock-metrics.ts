@@ -12,7 +12,7 @@ const createMetricStub = () => ({
 });
 
 const metricsSource = readFileSync(
-  join(process.cwd(), "packages/api/src/metrics.ts"),
+  join(import.meta.dir, "../../src/metrics.ts"),
   "utf8"
 );
 

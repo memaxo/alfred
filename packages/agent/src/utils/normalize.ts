@@ -289,22 +289,19 @@ function createAssistantMessage(parts: MessagePart[]): UIMessage {
 
 function createToolCallPart(call: ToolCallShape): MessagePart {
   return {
-    type: "dynamic-tool",
+    type: "tool-call",
     toolName: inferToolName(call),
     toolCallId: inferToolCallId(call),
-    state: "input-available",
-    input: getToolInput(call) ?? {},
+    args: getToolInput(call) ?? {},
   };
 }
 
 function createToolResultPart(result: ToolResultShape): MessagePart {
   return {
-    type: "dynamic-tool",
+    type: "tool-result",
     toolName: inferToolName(result),
     toolCallId: inferToolCallId(result),
-    state: "output-available",
-    input: getToolInput(result),
-    output: getToolOutput(result),
+    result: getToolOutput(result),
   };
 }
 
@@ -329,11 +326,11 @@ function inferToolName(data: { toolName?: string; name?: string }): string {
 }
 
 function getToolInput(shape: ToolCallShape | ToolResultShape): unknown {
-  if (shape.input !== undefined) {
-    return shape.input;
-  }
   if (shape.args !== undefined) {
     return shape.args;
+  }
+  if (shape.input !== undefined) {
+    return shape.input;
   }
 }
 

@@ -79,7 +79,7 @@ describe("Dependency Verification", () => {
     expect(Array.isArray(cmdArgs)).toBe(true);
     const args = cmdArgs as string[];
     expect(args.includes("-c")).toBe(true);
-    expect(args.at(-1)).toContain("import faster_whisper");
+    expect(args.at(-1)).toContain("import nemo.collections.asr");
   });
 
   it("should verify dependencies for system Python", async () => {
@@ -102,7 +102,7 @@ describe("Dependency Verification", () => {
     expect(Array.isArray(cmdArgs)).toBe(true);
     const args = cmdArgs as string[];
     expect(args.includes("-c")).toBe(true);
-    expect(args.at(-1)).toContain("import faster_whisper");
+    expect(args.at(-1)).toContain("import nemo.collections.asr");
   });
 
   it("should throw helpful error when dependencies missing", async () => {

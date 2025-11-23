@@ -1,4 +1,5 @@
 import { db } from "@alfred/db";
+import { logger } from "@alfred/logger";
 import {
   archiveNodes,
   deleteArchivedNodes,
@@ -16,19 +17,33 @@ import { embedMany } from "@alfred/rag";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
-// Create a simple local logger to avoid cyclic/invalid imports
-const logger = {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  info: (_msg: string, _meta?: Record<string, unknown>) => {},
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  warn: (_msg: string, _meta?: Record<string, unknown>) => {},
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  error: (_msg: string, _meta?: Record<string, unknown>) => {},
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  debug: (_msg: string, _meta?: Record<string, unknown>) => {
-    // no-op or console.debug
-  },
+// Mock metrics if package not available (for tests or circular dep avoidance)
+const mockHistogram = { startTimer: () => () => {} };
+const mockCounter = { inc: () => {} };
+
+let metrics = {
+  memoryMaintenanceDurationSeconds: mockHistogram,
+  memoryNodesDecayedTotal: mockCounter,
+  memoryNodesPrunedTotal: mockCounter,
+  memoryNodesCleanedTotal: mockCounter,
 };
+
+// Lazy load metrics to avoid circular dependencies during initialization
+const loadMetrics = async () => {
+  // We cannot check process.env.NODE_ENV === 'test' reliably here because Bun test runner
+  // might not set it consistently across all environments, or we might WANT to test metrics.
+  // Instead, we wrap the import in a try/catch block which is sufficient safety.
+  try {
+    // @ts-ignore
+    const apiMetrics = await import("@alfred/api/metrics");
+    if (apiMetrics.memoryMaintenanceDurationSeconds) {
+      metrics = apiMetrics;
+    }
+  } catch {
+    // Keep mocks
+  }
+};
+void loadMetrics();
 
 /**
  * Constant Background Learning Worker
@@ -46,7 +61,8 @@ export type LearningWorkerConfig = {
   decayThresholdMs: number;
   decayFactor: number;
   pruneConfidence: number;
-  cleanupAgeMs: number;
+  decayLimit: number;
+  confidenceFloor: number;
   // Episodic Dreaming
   dreamingEnabled: boolean;
   dreamingIntervalMs: number;
@@ -63,6 +79,8 @@ const DEFAULT_CONFIG: LearningWorkerConfig = {
   decayFactor: parseFloat(process.env.MEMORY_DECAY_FACTOR || "0.95"), // Reduce by 5%
   pruneConfidence: parseFloat(process.env.MEMORY_PRUNE_CONFIDENCE || "0.2"), // Prune < 20%
   cleanupAgeMs: parseInt(process.env.MEMORY_CLEANUP_AGE_MS || "2592000000", 10), // 30 days
+  decayLimit: 1000,
+  confidenceFloor: 0.01,
   // Episodic Dreaming
   dreamingEnabled: process.env.DREAMING_ENABLED !== "false",
   dreamingIntervalMs: parseInt(process.env.DREAMING_INTERVAL_MS || "21600000", 10), // 6 hours
@@ -229,22 +247,27 @@ async function processDreaming() {
 
 async function processMemoryMaintenance(config: LearningWorkerConfig) {
   logger.debug("learning_worker_maintenance_started");
+  const stopTimer = metrics.memoryMaintenanceDurationSeconds.startTimer();
   
   try {
     // 1. Decay Confidence
     // Find nodes that haven't been updated recently
-    const staleNodes = await findNodesForDecay(config.decayThresholdMs, 100); // Process in small batches
+    const staleNodes = await findNodesForDecay(config.decayThresholdMs, config.decayLimit);
     if (staleNodes.length > 0) {
       const updates = staleNodes.map((node: any) => {
         const props = (node.properties as Record<string, any>) || {};
         const currentConfidence = typeof props.confidence === 'number' ? props.confidence : 1.0;
+        // Apply floor to prevent underflow
+        const newConfidence = Math.max(config.confidenceFloor, currentConfidence * config.decayFactor);
+        
         return {
           id: node.id,
-          confidence: currentConfidence * config.decayFactor,
+          confidence: newConfidence,
         };
       });
       
       const decayedCount = await updateNodeConfidenceBatch(updates);
+      metrics.memoryNodesDecayedTotal.inc(decayedCount);
       logger.info("learning_worker_decayed", { count: decayedCount });
     }
 
@@ -253,12 +276,14 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
     if (lowConfidenceNodes.length > 0) {
       const ids = lowConfidenceNodes.map((n: any) => n.id);
       const prunedCount = await archiveNodes(ids, "low_confidence");
+      metrics.memoryNodesPrunedTotal.inc(prunedCount);
       logger.info("learning_worker_pruned", { count: prunedCount });
     }
 
     // 3. Cleanup Archived
     const deletedCount = await deleteArchivedNodes(config.cleanupAgeMs);
     if (deletedCount > 0) {
+      metrics.memoryNodesCleanedTotal.inc(deletedCount);
       logger.info("learning_worker_cleanup", { count: deletedCount });
     }
 
@@ -266,6 +291,8 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
     logger.warn("learning_worker_maintenance_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
+  } finally {
+    stopTimer();
   }
 }
 

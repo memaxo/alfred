@@ -1,5 +1,5 @@
-import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex";
+import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";

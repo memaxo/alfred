@@ -181,6 +181,7 @@ type MindscapeState = {
   nodes: Node<ArtifactData>[];
   edges: Edge[];
   activeEdges: Set<string>;
+  highlightedEdgeIds: Set<string>;
   focusedNodeId: string | null;
   isSpaceMode: boolean;
   ragDocCache: Record<string, CachedRagDocEntry>;
@@ -201,8 +202,13 @@ type MindscapeState = {
   updateArtifactData: (nodeId: string, data: Partial<ArtifactData>) => void;
   focusNode: (nodeId: string | null) => void;
   setSpaceMode: (isSpaceMode: boolean) => void;
-  setNodes: (nodes: Node<ArtifactData>[]) => void;
+  setNodes: (
+    nodes:
+      | Node<ArtifactData>[]
+      | ((prev: Node<ArtifactData>[]) => Node<ArtifactData>[])
+  ) => void;
   setEdges: (edges: Edge[]) => void;
+  setHighlightedEdges: (edgeIds: string[]) => void;
   triggerEdgeActivity: (edgeId: string, durationMs?: number) => void;
   triggerNodeActivity: (nodeId: string, type: "input" | "output" | "processing") => void;
   autoLayout: () => void;
@@ -221,6 +227,7 @@ export const useMindscapeStore = create<MindscapeState>()(
       nodes: [],
       edges: [],
       activeEdges: new Set(),
+      highlightedEdgeIds: new Set(),
       focusedNodeId: null,
       isSpaceMode: false,
       ragDocCache: {},
@@ -247,9 +254,14 @@ export const useMindscapeStore = create<MindscapeState>()(
       },
 
       addArtifact: (node) => {
-        set((state) => ({
-          nodes: [...state.nodes, node],
-        }));
+        set((state) => {
+          if (state.nodes.some((n) => n.id === node.id)) {
+            return state;
+          }
+          return {
+            nodes: [...state.nodes, node],
+          };
+        });
       },
       removeArtifact: (nodeId) => {
         set((state) => ({
@@ -306,11 +318,27 @@ export const useMindscapeStore = create<MindscapeState>()(
       setSpaceMode: (isSpaceMode) => {
         set({ isSpaceMode });
       },
-      setNodes: (nodes) => {
-        set({ nodes });
+      setNodes: (nodesOrUpdater) => {
+        set((state) => {
+          const newNodes =
+            typeof nodesOrUpdater === "function"
+              ? nodesOrUpdater(state.nodes)
+              : nodesOrUpdater;
+          console.log("setNodes count:", newNodes.length, "first:", newNodes[0]?.id);
+          return { nodes: newNodes };
+        });
       },
       setEdges: (edges) => {
-        set({ edges });
+        set((state) => {
+          if (edges.length === state.edges.length) {
+             const allMatch = edges.every((e, i) => e.id === state.edges[i]?.id);
+             if (allMatch) return state;
+          }
+          return { edges };
+        });
+      },
+      setHighlightedEdges: (edgeIds) => {
+        set({ highlightedEdgeIds: new Set(edgeIds) });
       },
       triggerEdgeActivity: (edgeId, durationMs = 2000) => {
         set((state) => {

@@ -21,21 +21,7 @@ import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
 import { useFocusedContext } from "@/hooks/use-focused-context";
-import { Info, Sparkles, BookOpen, AlertTriangle } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
-type ChatContainerProps = {
-  agent: "assistant" | "orchestrator";
-  thread?: string;
-  resource?: string;
-  initialMessages?: AssistantUIMessage[];
-  initialConversationId?: string | null;
-};
-
+import { Info, Sparkles, BookOpen, AlertTriangle, Network } from "lucide-react";
 function ContextLens({
   label,
   ragDocuments,
@@ -43,7 +29,7 @@ function ContextLens({
   isError
 }: {
   label: string;
-  ragDocuments: Array<{ label: string; summary: string }>;
+  ragDocuments: Array<{ label: string; summary: string; source: "vector" | "graph" }>;
   isLoading: boolean;
   isError: boolean;
 }) {
@@ -75,6 +61,12 @@ function ContextLens({
   const a11yLabel = isError 
     ? `Context retrieval unavailable for ${label}` 
     : `Active Context: ${label}, ${contextCount} related documents available. Click to view details.`;
+
+  // Sort documents to show Graph edges first
+  const sortedDocs = [...ragDocuments].sort((a, b) => {
+      if (a.source === b.source) return 0;
+      return a.source === "graph" ? -1 : 1;
+  });
 
   return (
     <Popover>
@@ -110,15 +102,18 @@ function ContextLens({
               ? " Related knowledge retrieved automatically:"
               : " No related documents found."}
           </div>
-          {ragDocuments.length > 0 && (
+          {sortedDocs.length > 0 && (
             <div className="space-y-2">
-              {ragDocuments.map((doc, i) => (
+              {sortedDocs.map((doc, i) => (
                 <div
                   key={i}
-                  className="group rounded-lg border border-white/5 bg-white/5 p-2 transition-colors hover:border-white/10 hover:bg-white/10"
+                  className={`group rounded-lg border p-2 transition-colors hover:bg-white/10 ${doc.source === 'graph' ? 'border-indigo-500/20 bg-indigo-500/5 hover:border-indigo-500/30' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
                 >
-                  <div className="mb-1 text-[11px] font-medium text-indigo-200">
-                    {doc.label}
+                  <div className="mb-1 flex items-center gap-1.5">
+                    {doc.source === 'graph' && <Network className="h-3 w-3 text-indigo-400" />}
+                    <span className={`text-[11px] font-medium ${doc.source === 'graph' ? 'text-indigo-300' : 'text-indigo-200'}`}>
+                      {doc.label}
+                    </span>
                   </div>
                   <div className="line-clamp-2 text-[10px] text-white/60">
                     {doc.summary}
@@ -135,10 +130,47 @@ function ContextLens({
 
 export function ChatContainer({
   agent,
+  thread,
+  resource,
   initialMessages,
   initialConversationId,
 }: ChatContainerProps) {
-// ...
+  const {
+    messages,
+    actions,
+    status,
+    handleSend,
+    toggleVoice,
+    isRecording,
+    error,
+    voiceError,
+    currentAgent,
+    showActionsPanel,
+    activeActions,
+  } = useChatLogic({
+    initialAgent: agent,
+    initialMessages,
+    initialConversationId,
+  });
+
+  const focused = useFocusedContext();
+
+  const partRenderer = useMemo(() => createPartRenderer(), []);
+
+  return (
+    <ErrorBoundary>
+      <div className="flex h-full flex-col bg-background">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b p-4">
+          <div className="flex items-center gap-4">
+            <Connect status={status} />
+            <Controls
+              agent={currentAgent}
+              resource={resource}
+              thread={thread}
+            />
+          </div>
+          <div className="flex items-center gap-4">
               {focused.label && (
                 <ContextLens
                   label={focused.label}

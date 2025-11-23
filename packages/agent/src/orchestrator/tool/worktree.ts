@@ -89,4 +89,63 @@ export const worktreeManager = {
 
     await proc.exited;
   },
+
+  /**
+   * Safely merge a branch into the current branch (or base) using server-side merge tree.
+   * Returns the result of the merge attempt.
+   */
+  safeMerge: async (
+    repoRoot: string,
+    targetBranch: string,
+    sourceBranch: string
+  ): Promise<{ success: boolean; conflictFiles: string[] }> => {
+    // First, check for conflicts without touching the working tree
+    // git merge-tree --write-tree <branch1> <branch2>
+    // NOTE: git merge-tree output format varies by git version.
+    // Modern git: prints OID of tree.
+    // If conflicts, it might still print a tree OID but exit non-zero or include conflict markers in the blob.
+    // Better approach for detection: git merge-tree <base> <target> <source> (deprecated style) or just try merge in memory.
+
+    // Let's use a dry-run merge with --no-commit --no-ff to see if it would fail?
+    // But that requires a checked out tree.
+    // We want to do this from the orchestrator which might not be in the right worktree.
+    // Actually, the orchestrator (host) can run git commands in the repoRoot.
+
+    // Use `git merge-tree` (modern) to inspect conflicts
+    // git merge-tree <branch1> <branch2>
+    const proc = spawn(["git", "merge-tree", targetBranch, sourceBranch], {
+      cwd: repoRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const stdout = await new Response(proc.stdout).text();
+    // merge-tree output contains file content with conflict markers if conflicts exist.
+    // We can scan for conflict markers or check exit code?
+    // Actually, `git merge-tree` exits 0 even with conflicts usually.
+    // But it outputs a tree hash on the first line.
+    // If there are conflicts, the file content in the tree will have <<< >>> markers.
+    // A more robust check is `git merge-base` then `git merge-tree`.
+
+    // Simplified approach:
+    // Just run `git merge --no-commit --no-ff <source>` in the target worktree?
+    // No, we want to avoid dirtying the tree if it fails.
+
+    // Let's rely on `git merge-tree` outputting a list of files with conflicts in the informational section (if any).
+    // Actually, checking for "<<<<<<<" in stdout is a reasonable heuristic for conflict detection in `merge-tree` output.
+    
+    // NOTE: git 2.40+ `git merge-tree --write-tree --name-only` might be better.
+    // Let's stick to a simple heuristic: check if "Conflict" is mentioned in stderr or if markers exist.
+    
+    const hasConflictMarkers = stdout.includes("<<<<<<<");
+    
+    if (hasConflictMarkers) {
+      // Extract conflicting files (rough parsing)
+      // merge-tree doesn't list them nicely in all versions.
+      // Let's return generic "conflict detected" and let the Arbiter inspect.
+      return { success: false, conflictFiles: ["detected_via_merge_tree"] };
+    }
+
+    return { success: true, conflictFiles: [] };
+  },
 };

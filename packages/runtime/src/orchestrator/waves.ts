@@ -15,6 +15,7 @@ import {
   updateTracker,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
+// import { BrainstemSupervisor } from "../../loops/supervisor.js";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 // import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { logger } from "@alfred/logger";
@@ -275,23 +276,6 @@ export async function* runWaves(
 
       const bufferedEvents: WorkflowEvent[] = [];
 
-import { BrainstemSupervisor } from "../../loops/supervisor.js";
-
-// ...
-
-export async function* runWaves(
-  ctx: OrchestratorContext
-): AsyncGenerator<WorkflowEvent, WavesResult, void> {
-  // ...
-  
-  // Initialize Supervisor
-  const supervisor = new BrainstemSupervisor();
-  
-  // Pass abort signal to supervisor logic if needed, but supervisor mainly *triggers* aborts.
-  // We need to check supervisor in the event loop.
-
-  // ...
-
       const writer = {
         write: async (chunk: unknown) => {
           const payload = chunk as { type?: string; event?: unknown };
@@ -300,53 +284,7 @@ export async function* runWaves(
           }
           const type = (payload as any).type;
           
-          // Hook Supervisor here for global event monitoring (redundant if hooked in tool, but good for safety)
-          // But tool hook handles the "kill" logic which is better.
-          // Here we just handle the "Interrupt" message from the tool?
-          
-          // Actually, if the tool throws an Interrupt Error, we catch it below.
-          
           if (type === "stdout" || type === "stderr") {
-             // ...
-          } else if (type === "codex_event") {
-              const inner = (payload as any).event;
-              if (inner?.type === "thought") {
-                  // Redundant observation or secondary check?
-                  // Let's rely on tool-level supervision for now as it has direct process control.
-              }
-             // ...
-          }
-          // ...
-        },
-      } as const;
-
-      // ...
-
-      try {
-        await toolCodex.execute({
-           // ...
-        });
-      } catch (error: any) {
-        // Handle Supervisor Interrupts specifically
-        if (String(error).includes("codex_exec_interrupted")) {
-             logger.warn("agent_interrupted_by_supervisor", { agentId: spec.agentId, error: String(error) });
-             bufferedEvents.push({
-                 type: "notice",
-                 message: `agent_interrupted: ${String(error)}`
-             } as any);
-             
-             // Don't rethrow immediately? Or mark as failed/stuck?
-             // We should probably mark as 'stuck' or 'failed' but continue the wave for other agents.
-        } else {
-            // Restore on crash
-            if (workspaceEnv) {
-              // ...
-            }
-            throw error; 
-        }
-      }
-
-      // ...
 
             const inner = (payload as any).event as
               | {
@@ -633,7 +571,100 @@ export async function* runWaves(
       });
       break;
     }
+
+    // Wave Merge & Arbitration Phase
+    // For agents that succeeded in worktrees, try to merge their branches.
+    // If conflict, spawn Arbiter.
+    const successfulAgents = agentOutcomes.filter(
+      (o) => o.status === "completed" && !o.stuck
+    );
+
+    for (const outcome of successfulAgents) {
+      const spec = agentSpecs.find((s) => s.agentId === outcome.agentId);
+      if (spec?.environment === "worktree") {
+        const targetBranch = "dev"; // TODO: Get from context/input
+        const sourceBranch = `agent/${runId}/${spec.agentId}`;
+
+        try {
+          // Attempt optimistic merge
+          const { worktreeManager } = await import("@alfred/agent/orchestrator/tool/worktree");
+          const mergeCheck = await worktreeManager.safeMerge(
+            workspace, // repoRoot
+            targetBranch,
+            sourceBranch
+          );
+
+          if (!mergeCheck.success) {
+            logger.warn("merge_conflict_detected", {
+              runId,
+              agentId: spec.agentId,
+              files: mergeCheck.conflictFiles,
+            });
+
+            yield {
+              type: "notice",
+              message: `merge_conflict_detected:${spec.agentId}`,
+            } as any;
+
+            // Spawn Arbiter
+            const { conflictArbiter } = await import("@alfred/agent/orchestrator/conflict");
+            const resolution = await conflictArbiter.resolve(
+              workspace,
+              runId,
+              targetBranch,
+              sourceBranch,
+              authz
+            );
+
+            if (resolution.status === "resolved") {
+              logger.info("arbiter_resolved_conflict", {
+                runId,
+                agentId: spec.agentId,
+                resolutionBranch: resolution.resolvedBranch,
+              });
+              yield {
+                type: "notice",
+                message: `arbiter_resolved:${spec.agentId}`,
+              } as any;
+              
+              // Finalize merge of the RESOLVED branch into target
+              const proc = Bun.spawn(
+                ["git", "merge", resolution.resolvedBranch],
+                { cwd: workspace }
+              );
+              await proc.exited;
+              
+            } else {
+              logger.error("arbiter_failed_resolution", {
+                runId,
+                agentId: spec.agentId,
+                reason: resolution.reason,
+              });
+              yield {
+                type: "notice",
+                message: `arbiter_failed:${spec.agentId}`,
+              } as any;
+            }
+          } else {
+             // Clean merge possible.
+             // Perform actual merge into target branch (assuming we are on target branch or can checkout)
+             // Note: orchestrator usually runs on host/dev branch.
+             const proc = Bun.spawn(
+                ["git", "merge", sourceBranch],
+                { cwd: workspace }
+             );
+             await proc.exited;
+          }
+        } catch (err) {
+          logger.error("merge_check_failed", {
+            agentId: spec.agentId,
+            error: String(err),
+          });
+        }
+      }
+    }
   }
+
 
   if (abortedWave) {
     yield {

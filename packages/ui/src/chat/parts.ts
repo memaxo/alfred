@@ -23,7 +23,7 @@ export function isToolCallPart(
 ): part is Extract<UIMessage["parts"][number], { type: string }> & {
   type: "tool-call";
   toolName?: string;
-  input?: unknown;
+  args?: unknown;
   toolCallId?: string;
 } {
   return part.type === "tool-call";
@@ -34,7 +34,7 @@ export function isToolResultPart(
 ): part is Extract<UIMessage["parts"][number], { type: string }> & {
   type: "tool-result";
   toolName?: string;
-  output?: unknown;
+  result?: unknown;
   toolCallId?: string;
   isError?: boolean;
   errorText?: string;
@@ -98,7 +98,7 @@ export function extractStructuredData(
     return dataPart.data;
   }
   if (isToolResultPart(part)) {
-    return part.output;
+    return part.result;
   }
   return null;
 }

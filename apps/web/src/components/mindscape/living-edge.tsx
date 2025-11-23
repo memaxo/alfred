@@ -22,29 +22,51 @@ export function LivingEdge({
   });
 
   const activeEdges = useMindscapeStore((state) => state.activeEdges);
+  const highlightedEdgeIds = useMindscapeStore((state) => state.highlightedEdgeIds);
   const isActive = activeEdges.has(id);
+  const isHighlighted = highlightedEdgeIds.has(id);
 
   // Define the "living" style
+  let stroke = style.stroke ?? "rgba(255, 255, 255, 0.2)";
+  let strokeWidth = style.strokeWidth ?? 1;
+  let animation = style.animation;
+  let strokeDasharray = style.strokeDasharray;
+
+  if (isHighlighted) {
+    stroke = "#818cf8"; // Indigo-400
+    strokeWidth = 1.5;
+    // Use existing 'flow' animation but slower for context trace
+    animation = "flow 2s linear infinite"; 
+    strokeDasharray = "5 5";
+  }
+
+  if (isActive) {
+    stroke = "var(--color-biolum)";
+    strokeWidth = 2;
+    animation = "flow 0.5s linear infinite";
+    strokeDasharray = "5 5";
+  }
+
   const edgeStyle = {
     ...style,
-    strokeWidth: isActive ? 2 : 1,
-    stroke: isActive ? "var(--color-biolum)" : "rgba(255, 255, 255, 0.2)", // Biolum vs Dim
-    strokeDasharray: isActive ? "5 5" : undefined,
-    animation: isActive ? "flow 0.5s linear infinite" : undefined,
+    strokeWidth,
+    stroke,
+    strokeDasharray,
+    animation,
     transition: "stroke 0.3s, stroke-width 0.3s",
   };
 
   return (
     <>
-      {/* Glow effect behind the edge when active */}
-      {isActive && (
+      {/* Glow effect behind the edge when active or highlighted */}
+      {(isActive || isHighlighted) && (
         <BaseEdge
           path={edgePath}
           markerEnd={markerEnd}
           style={{
             ...style,
-            strokeWidth: 6,
-            stroke: "oklch(0.99 0 0 / 0.3)",
+            strokeWidth: isActive ? 6 : 4,
+            stroke: isActive ? "oklch(0.99 0 0 / 0.3)" : "rgba(129, 140, 248, 0.3)", // White glow or Indigo glow
             filter: "blur(4px)",
           }}
         />

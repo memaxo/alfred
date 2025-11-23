@@ -10,6 +10,7 @@ import { timerNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function TimerNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
@@ -114,24 +115,19 @@ export function TimerNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-purple-500/40 backdrop-blur-sm">
-        <div className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
-      </div>
-    );
+    return <NodeLODTiny color="bg-purple-500" shadow="shadow-purple-500/50" />;
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-purple-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-purple-500/40">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-          <AlarmClock className="h-4 w-4" />
-        </div>
-        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
-          Timers
-        </span>
-      </div>
+      <NodeLODSmall
+        label="Timers"
+        icon={<AlarmClock className="h-3 w-3" />}
+        borderColor="border-purple-500/20"
+        textColor="text-purple-500"
+        hoverColor="hover:border-purple-500/40"
+      />
     );
   }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ClientOnly } from "@/components/ai-elements/client-only";
 import { MindscapeCanvas } from "@/components/mindscape/canvas";
 import { mindscapeSpawnTypes } from "@/components/mindscape/spawn";
+import { getInitialMindscapeFrame } from "@/lib/mindscape/initial-frame.server";
 
 const mindscapeSearchSchema = z.object({
   nodeId: z.string().optional(),
@@ -14,6 +15,7 @@ const mindscapeSearchSchema = z.object({
 export const Route = createFileRoute("/mindscape")({
   component: MindscapeRoute,
   validateSearch: mindscapeSearchSchema,
+  loader: () => getInitialMindscapeFrame(),
 });
 
 function MindscapeRoute() {

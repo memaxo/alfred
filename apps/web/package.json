@@ -6,7 +6,9 @@
     "build": "vite build",
     "serve": "vite preview",
     "dev": "bunx --bun vite dev --port=3001",
+    "dev:test": "bunx --bun vite dev",
     "typecheck": "tsc -b",
+    "test:e2e:auto": "bun scripts/test-e2e.ts",
     "test": "bun --env-file ../../config/env.test test"
   },
   "dependencies": {

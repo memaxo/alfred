@@ -92,6 +92,20 @@ function evaluateCondition(
   if (condition.notIn) {
     return !condition.notIn.includes(value);
   }
+  if (typeof value === "number") {
+    if (condition.gt !== undefined && value <= condition.gt) {
+      return false;
+    }
+    if (condition.gte !== undefined && value < condition.gte) {
+      return false;
+    }
+    if (condition.lt !== undefined && value >= condition.lt) {
+      return false;
+    }
+    if (condition.lte !== undefined && value > condition.lte) {
+      return false;
+    }
+  }
   return true;
 }
 

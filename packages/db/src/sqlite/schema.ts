@@ -9,11 +9,13 @@ const statements = [
     label TEXT NOT NULL,
     properties TEXT,
     label_tsvector TEXT,
+    embedding BLOB,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(resource, hash)
   );`,
   "ALTER TABLE memory_nodes ADD COLUMN label_tsvector TEXT;",
+  "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
   `CREATE TABLE IF NOT EXISTS memory_edges (
     id TEXT PRIMARY KEY,
     resource TEXT NOT NULL,

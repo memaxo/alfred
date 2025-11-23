@@ -6,6 +6,7 @@ import { useMindscapeStore } from "@/store/mindscape";
 import { createSpawnNode } from "../spawn";
 import { useLOD, useNodeFocus } from "../lod";
 import { getConfidenceStyle } from "../utils";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 // ... existing TOPIC_STYLES and TopicBadge ...
 
@@ -62,29 +63,25 @@ export function KnowledgeNode({
   // LOD 0: Tiny
   if (lod === "tiny") {
     return (
-      <div className={`flex h-3 w-3 items-center justify-center rounded-full backdrop-blur-sm ${
-        isRag ? "bg-emerald-500/40" : "bg-blue-500/40"
-      } ${confidenceStyle.container}`}>
-        <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${
-          isRag ? "bg-emerald-400 shadow-emerald-500/50" : "bg-blue-400 shadow-blue-500/50"
-        }`} />
-      </div>
+      <NodeLODTiny
+        color={isRag ? "bg-emerald-500" : "bg-blue-500"}
+        shadow={isRag ? "shadow-emerald-500/50" : "shadow-blue-500/50"}
+        className={confidenceStyle.container}
+      />
     );
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className={`flex items-center gap-2 rounded-full border bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors ${
-        isRag 
-          ? "border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50" 
-          : "border-blue-500/30 text-blue-400 hover:border-blue-500/50"
-      } ${confidenceStyle.container}`}>
-        {isRag ? <Sparkles className="h-3 w-3" /> : <Brain className="h-3 w-3" />}
-        <span className="max-w-[120px] truncate font-medium text-[10px] tracking-tight">
-          {data.label ?? "Knowledge"}
-        </span>
-      </div>
+      <NodeLODSmall
+        label={data.label ?? "Knowledge"}
+        icon={isRag ? <Sparkles className="h-3 w-3" /> : <Brain className="h-3 w-3" />}
+        borderColor={isRag ? "border-emerald-500/30" : "border-blue-500/30"}
+        textColor={isRag ? "text-emerald-400" : "text-blue-400"}
+        hoverColor={isRag ? "hover:border-emerald-500/50" : "hover:border-blue-500/50"}
+        className={confidenceStyle.container}
+      />
     );
   }
 

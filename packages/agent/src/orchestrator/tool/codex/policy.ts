@@ -124,6 +124,7 @@ export async function enforcePolicy(input: CodexToolInput) {
       },
       context: {
         auto: input.auto,
+        memory_confidence: input.context?.confidence,
       },
     }
   );

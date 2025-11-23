@@ -108,6 +108,26 @@ export const graphQueryDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
+export const graphRagHitsTotal = new client.Counter({
+  name: "graph_rag_hits_total",
+  help: "Count of active RAG hits grouped by source.",
+  labelNames: ["source"] as const,
+  registers: [metricsRegistry],
+});
+
+export const graphRagEmptyTotal = new client.Counter({
+  name: "graph_rag_empty_total",
+  help: "Count of active RAG queries that returned zero results.",
+  registers: [metricsRegistry],
+});
+
+export const graphContextDurationSeconds = new client.Histogram({
+  name: "graph_context_duration_seconds",
+  help: "Duration of context graph queries (Active RAG) in seconds.",
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
 export const pdpCacheHitsTotal = new client.Counter({
   name: "pdp_cache_hits_total",
   help: "Count of policy cache hits and misses.",
@@ -416,6 +436,44 @@ export {
 } from "@alfred/voice/metrics";
 
 
+export const memoryMaintenanceDurationSeconds = new client.Histogram({
+  name: "alfred_memory_maintenance_duration_seconds",
+  help: "Duration of memory maintenance cycles in seconds.",
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+  registers: [metricsRegistry],
+});
+
+export const memoryNodesDecayedTotal = new client.Counter({
+  name: "alfred_memory_nodes_decayed_total",
+  help: "Count of memory nodes that had their confidence decayed.",
+  registers: [metricsRegistry],
+});
+
+export const memoryNodesPrunedTotal = new client.Counter({
+  name: "alfred_memory_nodes_pruned_total",
+  help: "Count of memory nodes archived due to low confidence.",
+  registers: [metricsRegistry],
+});
+
+export const memoryNodesCleanedTotal = new client.Counter({
+  name: "alfred_memory_nodes_cleaned_total",
+  help: "Count of archived memory nodes permanently deleted.",
+  registers: [metricsRegistry],
+});
+
+export const entityLinkingDurationMs = new client.Histogram({
+  name: "entity_linking_duration_ms",
+  help: "Duration of entity linking in milliseconds.",
+  buckets: [1, 5, 10, 20, 50, 100, 200, 500],
+  registers: [metricsRegistry],
+});
+
+export const entityLinkingFallbackTotal = new client.Counter({
+  name: "entity_linking_fallback_total",
+  help: "Count of entity linking fallback events (embedding failure).",
+  registers: [metricsRegistry],
+});
+
 export const assistantGenerateDurationSeconds = new client.Histogram({
   name: "assistant_generate_duration_seconds",
   help: "Duration of assistant generation in seconds.",
@@ -439,6 +497,21 @@ export const orchestratorGenerateDurationSeconds = new client.Histogram({
 export const orchestratorGenerateRequestsTotal = new client.Counter({
   name: "orchestrator_generate_requests_total",
   help: "Total number of orchestrator generation requests.",
+  registers: [metricsRegistry],
+});
+
+// Physiology Metrics
+export const cognitivePhysiologyGauge = new client.Gauge({
+  name: "cognitive_physiology_gauge",
+  help: "Current values of cognitive physiology metrics.",
+  labelNames: ["metric"] as const,
+  registers: [metricsRegistry],
+});
+
+export const cognitiveEntropyEventsTotal = new client.Counter({
+  name: "cognitive_entropy_events_total",
+  help: "Count of entropy events (high/low) triggered by the Supervisor.",
+  labelNames: ["type"] as const,
   registers: [metricsRegistry],
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ToolUIPart } from "ai";
+// import type { ToolUIPart } from "ai";
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -23,6 +23,16 @@ import { CodeBlock } from "./code-block";
 import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { useEffect } from "react";
 
+// Define standard state type internally since AI SDK v6 handles this via hooks
+export type ToolState =
+  | "input-streaming"
+  | "input-available"
+  | "approval-requested"
+  | "approval-responded"
+  | "output-available"
+  | "output-error"
+  | "output-denied";
+
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
@@ -34,13 +44,13 @@ export const Tool = ({ className, ...props }: ToolProps) => (
 
 export type ToolHeaderProps = {
   title?: string;
-  type: ToolUIPart["type"];
-  state: ToolUIPart["state"];
+  type: "tool-call" | "tool-result";
+  state: ToolState;
   className?: string;
 };
 
-const getStatusBadge = (status: ToolUIPart["state"]) => {
-  const labels: Record<ToolUIPart["state"], string> = {
+const getStatusBadge = (status: ToolState) => {
+  const labels: Record<ToolState, string> = {
     "input-streaming": "Pending",
     "input-available": "Running",
     "approval-requested": "Awaiting Approval",
@@ -50,7 +60,7 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
     "output-denied": "Denied",
   };
 
-  const icons: Record<ToolUIPart["state"], ReactNode> = {
+  const icons: Record<ToolState, ReactNode> = {
     "input-streaming": <CircleIcon className="size-4" />,
     "input-available": <ClockIcon className="size-4 animate-pulse" />,
     "approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
@@ -120,7 +130,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
 );
 
 export type ToolInputProps = ComponentProps<"div"> & {
-  input: ToolUIPart["input"];
+  input: unknown;
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
@@ -135,7 +145,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
 );
 
 export type ToolActionsProps = {
-  state: ToolUIPart["state"];
+  state: ToolState;
   onApprove?: () => void;
   onDeny?: () => void;
 };
@@ -166,8 +176,8 @@ export const ToolActions = ({ state, onApprove, onDeny }: ToolActionsProps) => {
 };
 
 export type ToolOutputProps = ComponentProps<"div"> & {
-  output: ToolUIPart["output"];
-  errorText: ToolUIPart["errorText"];
+  output: unknown;
+  errorText?: string;
 };
 
 export const ToolOutput = ({

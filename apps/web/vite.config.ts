@@ -97,7 +97,7 @@ export default defineConfig({
   plugins: [
     tsconfigPaths(),
     tailwindcss(),
-    tanstackHeadScriptsStub,
+    // tanstackHeadScriptsStub, // Removed to potentially fix preamble injection
     tanstackStart({
       prerender: {
         enabled: false,

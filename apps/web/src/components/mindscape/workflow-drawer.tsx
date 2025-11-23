@@ -69,6 +69,7 @@ export function MindscapeWorkflowDrawer({
   onNavigateFull,
   onNavigateToMindscape,
 }: MindscapeWorkflowDrawerProps) {
+  console.log("MindscapeWorkflowDrawer render. runId:", runId, "open:", open);
   const drawerOpen = open ?? Boolean(runId);
   const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
     "overview"

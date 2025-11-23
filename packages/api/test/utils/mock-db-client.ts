@@ -36,6 +36,10 @@ export const dbModuleStub = {
   linearRepo: {},
   policyRepo: {},
   ragRepo: {},
+  cognitiveRepo: {},
+  codexLearningRepo: {},
+  cognitiveEvents: {},
+  cognitiveSnapshots: {},
   conversationRepo: {
     createConversation: vi.fn().mockResolvedValue(defaultConversationRow),
     getConversationByWorkflow: vi.fn().mockResolvedValue(null),

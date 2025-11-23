@@ -29,6 +29,7 @@ import {
 } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
+import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { MindscapeCommandPalette } from "./command-palette";
 import { MindscapeDetailPanel } from "./detail-panel";
@@ -173,13 +174,16 @@ function MindscapeCanvasInner({
   // Listen for global Mindscape activations
   useMindscapeActivations();
 
+  // Enable dynamic graph traversal
+  const { isFetching: isTraversing } = useMindscapeTraversal();
+
   // Initialize Physics Worker
   usePhysicsWorker({
     nodes,
     edges,
     focusId: focusedNodeId,
     setNodes,
-    active: true,
+    active: false,
   });
 
   const [inspectedRunId, setInspectedRunId] = useState<string | null>(null);
@@ -189,6 +193,7 @@ function MindscapeCanvasInner({
   });
 
   const handleWorkflowInspect = useCallback((runId: string) => {
+    console.log("handleWorkflowInspect called with", runId);
     setInspectedRunId(runId);
   }, []);
 
@@ -268,66 +273,8 @@ function MindscapeCanvasInner({
       : 0;
 
   const { visibleNodes, visibleEdges } = useMemo(() => {
-    const allowedNodeIds = new Set<string>();
-
-    const filteredNodes = nodes.filter((node) => {
-      if (node.type !== "knowledge") {
-        allowedNodeIds.add(node.id);
-        return true;
-      }
-      const source = (node.data as ArtifactData | undefined)?.source;
-      if (source === "rag") {
-        if (!showRagKnowledge) {
-          return false;
-        }
-        allowedNodeIds.add(node.id);
-        return true;
-      }
-      // Default and "runtime"/"user" fall under runtime toggle
-      if (!showRuntimeKnowledge) {
-        return false;
-      }
-      allowedNodeIds.add(node.id);
-      return true;
-    });
-
-    const filteredEdges = edges.filter(
-      (edge) =>
-        allowedNodeIds.has(edge.source ?? "") &&
-        allowedNodeIds.has(edge.target ?? "")
-    );
-
-    const styledEdges =
-      highlightedRagDocDbId == null
-        ? filteredEdges
-        : filteredEdges.map((edge) => {
-            if (
-              edge.data?.kind === "explains" &&
-              (edge.data.fromDbId === highlightedRagDocDbId ||
-                edge.data.toDbId === highlightedRagDocDbId)
-            ) {
-              return {
-                ...edge,
-                animated: true,
-                style: {
-                  ...(edge.style ?? {}),
-                  stroke: "rgba(16, 185, 129, 0.95)",
-                  strokeDasharray: "0",
-                  strokeWidth: 2.5,
-                },
-              };
-            }
-            return edge;
-          });
-
-    return { visibleNodes: filteredNodes, visibleEdges: styledEdges };
-  }, [
-    nodes,
-    edges,
-    showRuntimeKnowledge,
-    showRagKnowledge,
-    highlightedRagDocDbId,
-  ]);
+    return { visibleNodes: nodes, visibleEdges: edges };
+  }, [nodes, edges]);
 
   // Initialize with Orb if empty
   useEffect(() => {
@@ -743,7 +690,13 @@ function MindscapeCanvasInner({
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-4">
                 <span className="font-semibold text-[10px] text-biolum-dim uppercase tracking-widest">
-                  RAG Cache
+                  {isTraversing ? (
+                    <span className="animate-pulse text-emerald-400">
+                      Traversing...
+                    </span>
+                  ) : (
+                    "RAG Cache"
+                  )}
                 </span>
                 <div className="flex gap-2">
                   <div className="flex flex-col items-end">

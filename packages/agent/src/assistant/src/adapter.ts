@@ -1,7 +1,4 @@
-import { extract } from "@alfred/knowledge/extractor";
-import { findNearestConcept } from "@alfred/db/repo/graph";
-import { embedMany } from "@alfred/rag";
-import { ANCHORS } from "../../../../knowledge/src/ontology";
+import { linkEntities } from "../../services/entity-linker";
 
 const PERSONAS: Partial<Record<string, string>> = {
   Coding: `
@@ -46,72 +43,7 @@ You are a News Curator.
 export async function analyzeContext(
   messages: Array<{ role: string; content: string }>
 ): Promise<{ domains: string[]; paths: string[][] }> {
-  // Aggregate the last 3 user messages to get current context
-  const recentUserMessages = messages
-    .filter((m) => m.role === "user")
-    .slice(-3)
-    .map((m) => m.content)
-    .join("\n");
-
-  if (!recentUserMessages) {
-    return { domains: [], paths: [] };
-  }
-
-  // 1. Extract entities using simple NLP
-  const extraction = extract(recentUserMessages, "adapter-context");
-  const entities = Array.from(extraction.entities);
-
-  if (entities.length === 0) {
-    return { domains: [], paths: [] };
-  }
-
-  // 2. Query the Graph for connection to Anchor Concepts
-  // We check the first 5 entities to keep latency low
-  const candidates = entities.slice(0, 5);
-  const detectedConcepts = new Set<string>();
-  const detectedPaths: string[][] = [];
-  const targetConcepts = Object.keys(ANCHORS);
-
-  // Generate embeddings for vector-native entity linking
-  let embeddings: number[][] = [];
-  try {
-    embeddings = await embedMany(candidates);
-  } catch (e) {
-    console.warn("Failed to generate embeddings for entity linking", e);
-    // Fallback to empty embeddings (will use string match)
-    embeddings = new Array(candidates.length).fill(undefined);
-  }
-
-  // Parallelize graph queries
-  await Promise.all(
-    candidates.map(async (entity, i) => {
-      try {
-        const result: any = await findNearestConcept(
-          entity || undefined,
-          targetConcepts,
-          3,
-          "ontology",
-          embeddings[i]
-        );
-
-        // Explicitly cast result.node to any to access label if needed, or just use string check
-        if (result && result.node) {
-          const node = result.node as any; // Escape hatch for now as types seem misaligned
-          const nodeLabel = node.label || "unknown";
-          detectedConcepts.add(nodeLabel);
-          detectedPaths.push([entity, nodeLabel]);
-        }
-      } catch (e) {
-        console.error("ADAPTER GRAPH QUERY ERROR:", e);
-        // Ignore graph query errors (fail open)
-      }
-    })
-  );
-
-  return {
-    domains: Array.from(detectedConcepts),
-    paths: detectedPaths,
-  };
+  return linkEntities(messages);
 }
 
 /**

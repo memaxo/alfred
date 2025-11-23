@@ -19,14 +19,15 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 4. **Message parts.** Use canonical AI SDK v6 part types exclusively:
    - `text` - Text content
    - `reasoning` - Reasoning steps (with `text`, `state`, `providerMetadata`)
-   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `input`)
-   - `tool-result` - Tool results (with `toolCallId`, `output`)
+   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `args`)
+   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `result`, `isError`)
    - `file` - File attachments (with `mediaType`, `url`, `filename`)
    - `source-url` - Source URLs
    - `source-document` - Source documents
    - `data-status` - Data status updates
    - `data-cache` - Cache operations
    - `step-start` - Step initiation
+   - **Note:** Do NOT use legacy custom parts like `dynamic-tool`. Use `tool-call` and `tool-result` instead.
 
 5. **No type suppressions.** Avoid `@ts-expect-error`, `@ts-ignore`, and `@ts-nocheck` unless absolutely necessary (e.g., test mocks). If type errors occur, fix the root cause:
    - Use proper type assertions (`as Type`) only after runtime validation

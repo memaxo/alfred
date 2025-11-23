@@ -64,11 +64,14 @@ export function MindscapeCommandPalette({
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
+  const currentNodes = useMindscapeStore((state) => state.nodes);
+  const edges = useMindscapeStore((state) => state.edges);
+  const setEdges = useMindscapeStore((state) => state.setEdges);
   const { getUsage, recordUsage } = useCommandUsage();
 
   const focusedNode = useMemo(
-    () => (focusedNodeId ? nodes.find((n) => n.id === focusedNodeId) : null),
-    [focusedNodeId, nodes]
+    () => (focusedNodeId ? currentNodes.find((n) => n.id === focusedNodeId) : null),
+    [focusedNodeId, currentNodes]
   );
 
   const contextActions = useMemo(() => {
@@ -126,7 +129,7 @@ export function MindscapeCommandPalette({
 
   const searchableNodes = useMemo(
     () =>
-      nodes
+      currentNodes
         .filter((node) => node.id !== "singularity")
         .map((node) => ({
           id: node.id,
@@ -136,7 +139,7 @@ export function MindscapeCommandPalette({
               : undefined) ?? node.id,
           type: node.type ?? "artifact",
         })),
-    [nodes]
+    [currentNodes]
   );
 
   const handleSpawn = (type: MindscapeSpawnType) => {
@@ -196,6 +199,42 @@ export function MindscapeCommandPalette({
           toast.info("Duplication not yet implemented");
         }
         break;
+      case "ask": {
+        // 1. Find or spawn chat node
+        let chatNodeId = currentNodes.find((n) => n.type === "chat")?.id;
+        if (!chatNodeId) {
+          chatNodeId = onSpawn("chat");
+        }
+        if (!chatNodeId) return;
+
+        // 2. Connect chat node to current node (if different)
+        if (focusedNode.id !== chatNodeId) {
+          // Client-side optimistic edge creation
+          const edgeId = `e-${chatNodeId}-${focusedNode.id}`;
+          const newEdge = {
+            id: edgeId,
+            source: chatNodeId,
+            target: focusedNode.id,
+            type: "default",
+            data: { kind: "relates_to" },
+          };
+          
+          const exists = edges.some(
+            (e) =>
+              (e.source === chatNodeId && e.target === focusedNode.id) ||
+              (e.source === focusedNode.id && e.target === chatNodeId)
+          );
+          
+          if (!exists) {
+             setEdges([...edges, newEdge]);
+             toast.success(`Linked Chat to ${focusedNode.data.label}`);
+          }
+        }
+
+        // 3. Focus the chat node
+        onFocus(chatNodeId);
+        break;
+      }
       default:
         toast.info(`Action ${actionId} triggered`);
     }

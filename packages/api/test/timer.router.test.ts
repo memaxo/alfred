@@ -19,6 +19,24 @@ mock.module("@alfred/db/repo/assistant", () => ({
   getActiveTimers: getActiveTimersMock,
   markTimerCompleted: markTimerCompletedMock,
   cancelTimer: cancelTimerMock,
+  // Stubs for other exports to satisfy imports in appRouter
+  createTask: vi.fn(),
+  getTasks: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
+  createNote: vi.fn(),
+  getNotes: vi.fn(),
+  updateNote: vi.fn(),
+  deleteNote: vi.fn(),
+  createReminder: vi.fn(),
+  getDueReminders: vi.fn(),
+  getReminders: vi.fn(),
+  getDueRemindersAll: vi.fn(),
+  markReminderFired: vi.fn(),
+  deleteReminder: vi.fn(),
+  createBookmark: vi.fn(),
+  getBookmarks: vi.fn(),
+  deleteBookmark: vi.fn(),
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;

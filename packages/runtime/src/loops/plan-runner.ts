@@ -4,7 +4,7 @@ import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 
 export type StepResult = {
-  success: boolean;
+  status: "completed" | "failed" | "suspended";
   output?: unknown;
   error?: string;
 };
@@ -52,7 +52,15 @@ export class PlanRunner {
       // console.log(`Executing step: ${step.description}`);
       const result = await this.executeStep(step, this.tools);
 
-      if (!result.success) {
+      if (result.status === "suspended") {
+        logger.info("plan_runner_suspended", { streamId: this.streamId, step: i });
+        // Save state as suspended? Or just exit and let resume pick it up?
+        // If we exit, 'activePlans' query needs to know it's not just crashed.
+        // But for now, simple exit is fine.
+        return;
+      }
+
+      if (result.status === "failed") {
         // Fail fast for now - in future, trigger replanning
         throw new Error(`Step failed: ${step.action} - ${result.error}`);
       }
@@ -66,7 +74,7 @@ export class PlanRunner {
     const tool = tools[step.action];
 
     if (!tool) {
-      return { success: false, error: `Tool not found: ${step.action}` };
+      return { status: "failed", error: `Tool not found: ${step.action}` };
     }
 
     try {
@@ -77,9 +85,12 @@ export class PlanRunner {
         messages: [], // Context might be needed
       });
 
-      return { success: true, output };
+      return { status: "completed", output };
     } catch (error: any) {
-      return { success: false, error: error.message };
+      if (error.message === "suspended" || error.name === "SuspendedError") {
+        return { status: "suspended" };
+      }
+      return { status: "failed", error: error.message };
     }
   }
 }

@@ -20,7 +20,8 @@ export type ContextActionId =
   | "view-logs"
   | "summarize"
   | "clear-history"
-  | "hide";
+  | "hide"
+  | "ask";
 
 export type ContextAction = {
   id: ContextActionId;
@@ -41,6 +42,14 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     validNodeTypes: "all",
     shortcut: "F",
     aliases: ["zoom", "expand", "view", "open"],
+  },
+  {
+    id: "ask",
+    label: "Ask about Node",
+    icon: MessageSquare,
+    validNodeTypes: "all",
+    shortcut: "A",
+    aliases: ["chat", "query", "question", "discuss"],
   },
   {
     id: "pin",

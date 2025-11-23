@@ -35,6 +35,7 @@ import { workflowNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { useLOD } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
 
@@ -121,36 +122,23 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
   // LOD 0: Tiny
   if (lod === "tiny") {
     return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-biolum/40 backdrop-blur-sm">
-        <div
-          className={`h-1.5 w-1.5 rounded-full ${status === "running" ? "animate-pulse bg-biolum shadow-[0_0_8px_rgba(var(--biolum-rgb),1)]" : "bg-biolum-dim"}`}
-        />
-      </div>
+      <NodeLODTiny
+        color={status === "running" ? "bg-biolum" : "bg-biolum-dim"}
+        shadow={status === "running" ? "shadow-[0_0_8px_rgba(var(--biolum-rgb),1)] animate-pulse" : "shadow-biolum-dim/50"}
+      />
     );
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-biolum/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-biolum/40">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-biolum/10 text-biolum">
-          {status === "running" ? (
-            <Workflow className="h-4 w-4 animate-spin" />
-          ) : (
-            <Workflow className="h-4 w-4" />
-          )}
-        </div>
-        <div className="flex flex-col items-center">
-          <span className="line-clamp-1 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
-            {validatedData.label ?? "Workflow"}
-          </span>
-          <span
-            className={`text-[9px] uppercase tracking-wider ${statusBadgeClass}`}
-          >
-            {status}
-          </span>
-        </div>
-      </div>
+      <NodeLODSmall
+        label={validatedData.label ?? "Workflow"}
+        icon={status === "running" ? <Workflow className="h-3 w-3 animate-spin" /> : <Workflow className="h-3 w-3" />}
+        borderColor="border-biolum/20"
+        textColor="text-biolum"
+        hoverColor="hover:border-biolum/40"
+      />
     );
   }
 

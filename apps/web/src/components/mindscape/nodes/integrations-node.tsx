@@ -9,6 +9,7 @@ import { integrationsNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
 import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function IntegrationsNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
@@ -53,22 +54,19 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-cyan-500/40 backdrop-blur-sm">
-        <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-      </div>
-    );
+    return <NodeLODTiny color="bg-cyan-500" shadow="shadow-cyan-500/50" />;
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex items-center gap-2 rounded-full border border-cyan-500/30 bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors hover:border-cyan-500/50">
-        <PlugZap className="h-3 w-3 text-cyan-400" />
-        <span className="font-medium text-[10px] text-cyan-300 tracking-tight">
-          Integrations
-        </span>
-      </div>
+      <NodeLODSmall
+        label="Integrations"
+        icon={<PlugZap className="h-3 w-3" />}
+        borderColor="border-cyan-500/30"
+        textColor="text-cyan-300"
+        hoverColor="hover:border-cyan-500/50"
+      />
     );
   }
 

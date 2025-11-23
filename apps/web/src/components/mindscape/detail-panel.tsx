@@ -64,20 +64,22 @@ export function MindscapeDetailPanel({
   onWorkflowNavigate,
   onWorkflowInspect,
 }: MindscapeDetailPanelProps = {}) {
-  const { focusedNodeId, nodes, focusNode } = useMindscapeStore(
-    useShallow((state) => ({
-      focusedNodeId: state.focusedNodeId,
-      nodes: state.nodes,
-      focusNode: state.focusNode,
-    }))
+  const { focusedNodeId, focusNode, nodeType, nodeData } = useMindscapeStore(
+    useShallow((state) => {
+      const node = state.nodes.find((n) => n.id === state.focusedNodeId);
+      return {
+        focusedNodeId: state.focusedNodeId,
+        focusNode: state.focusNode,
+        nodeType: node?.type,
+        nodeData: node?.data,
+        nodeId: node?.id, // needed for label fallback
+      };
+    })
   );
 
-  const node = useMemo(
-    () => nodes.find((candidate) => candidate.id === focusedNodeId),
-    [nodes, focusedNodeId]
-  );
+  const data = nodeData as ArtifactData | undefined;
+  const node = useMemo(() => ({ id: focusedNodeId ?? "", type: nodeType, data }), [focusedNodeId, nodeType, data]);
 
-  const data = node?.data as ArtifactData | undefined;
   const graphDbId =
     typeof data?.graph?.dbId === "string" ? data.graph.dbId : undefined;
 

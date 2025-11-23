@@ -48,6 +48,7 @@ export const codexInputSchema = z.object({
       linearSpace: z.string().optional(),
       linearAuthz: z.string().optional(),
       relevantFiles: z.array(z.string()).optional(),
+      confidence: z.number().min(0).max(1).optional(),
     })
     .optional(),
 });

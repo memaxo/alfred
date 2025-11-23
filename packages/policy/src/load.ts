@@ -14,6 +14,10 @@ const policyConditionSchema = z.object({
   in: z.array(z.unknown()).optional(),
   notIn: z.array(z.unknown()).optional(),
   exists: z.boolean().optional(),
+  gt: z.number().optional(),
+  gte: z.number().optional(),
+  lt: z.number().optional(),
+  lte: z.number().optional(),
 });
 
 const policyRuleSchema = z.object({

@@ -13,6 +13,7 @@ import { reminderNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const REMINDER_LIST_KEY = { limit: 50, offset: 0 } as const;
 
@@ -200,24 +201,19 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return (
-      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-blue-500/40 backdrop-blur-sm">
-        <div className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
-      </div>
-    );
+    return <NodeLODTiny color="bg-blue-500" shadow="shadow-blue-500/50" />;
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
-      <div className="flex w-[140px] flex-col items-center gap-2 rounded-xl border border-blue-500/20 bg-void-surface/40 p-2 text-center backdrop-blur-md transition-colors hover:border-blue-500/40">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
-          <Bell className="h-4 w-4" />
-        </div>
-        <span className="line-clamp-2 w-full font-medium text-[10px] text-biolum-dim leading-tight tracking-tight">
-          {parsed.title?.trim() || "Reminder"}
-        </span>
-      </div>
+      <NodeLODSmall
+        label={parsed.title?.trim() || "Reminder"}
+        icon={<Bell className="h-3 w-3" />}
+        borderColor="border-blue-500/20"
+        textColor="text-blue-500"
+        hoverColor="hover:border-blue-500/40"
+      />
     );
   }
 

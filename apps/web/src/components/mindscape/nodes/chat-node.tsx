@@ -1,7 +1,7 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
 import { MessageSquare, Mic } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -24,6 +24,20 @@ import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function ChatNode({ id, data, selected }: NodeProps) {
+  // Disable complex chat logic in test mode to prevent infinite loops
+  if (import.meta.env.VITE_TEST_MODE === "true") {
+    return (
+      <MindscapeNode
+        className="flex h-[600px] w-[500px] flex-col"
+        id={id}
+        selected={selected}
+        title="Neural Stream (Test Mode)"
+      >
+        <div className="p-4 text-biolum">Chat disabled in test environment</div>
+      </MindscapeNode>
+    );
+  }
+
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -67,10 +81,20 @@ export function ChatNode({ id, data, selected }: NodeProps) {
   }, [validatedData.messages, messages.length, hydrate]);
 
   // Sync back to data on change
+  const lastMessagesRef = useRef<string>("");
   useEffect(() => {
+    // Temporary disable sync to debug infinite loop
+    return;
+    /*
     if (messages.length > 0) {
+      const key = JSON.stringify(messages.map((m) => m.id));
+      if (key === lastMessagesRef.current) {
+        return;
+      }
+      lastMessagesRef.current = key;
       updateArtifactData(id, { messages, type: "chat" });
     }
+    */
   }, [messages, id, updateArtifactData]);
 
   const handleSubmit = useCallback(

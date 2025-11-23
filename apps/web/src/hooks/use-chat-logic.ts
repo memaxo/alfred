@@ -44,26 +44,45 @@ export function useChatLogic({
         try {
           const data = JSON.parse(header);
           if (data && Array.isArray(data.paths)) {
-            const dbIds = data.paths.flat() as string[];
+            const paths = data.paths as string[][];
             const state = useMindscapeStore.getState();
             
-            // Map DB IDs to UI IDs
-            dbIds.forEach(dbId => {
-                const node = state.nodes.find(
-                  (n) => n.data?.graph?.dbId === dbId || n.id === dbId
-                );
-                
-                if (node) {
-                    // Pulse the node as an output (it was activated/touched)
-                    state.triggerNodeActivity(node.id, "output");
-                    
-                    // Also dispatch event for potential edge activation if we knew source
-                    // For now, just node activation is safer than guessing edges
-                    dispatchMindscapeEvent({
+            // Helper to resolve DB ID to UI Node ID
+            const resolveId = (dbId: string) => {
+              const node = state.nodes.find(
+                (n) => n.data?.graph?.dbId === dbId || n.id === dbId
+              );
+              return node?.id;
+            };
+
+            // Visualize each path sequentially
+            paths.forEach((path, pathIndex) => {
+              // Stagger paths slightly if multiple
+              const pathDelay = pathIndex * 200;
+              
+              path.forEach((nodeId, i) => {
+                const uiId = resolveId(nodeId);
+                if (!uiId) return;
+
+                // Pulse the node
+                setTimeout(() => {
+                  state.triggerNodeActivity(uiId, "processing");
+                }, pathDelay + i * 150);
+
+                // If there is a next node, pulse the edge
+                if (i < path.length - 1) {
+                  const nextUiId = resolveId(path[i + 1]);
+                  if (nextUiId) {
+                    setTimeout(() => {
+                      dispatchMindscapeEvent({
                         type: "rag-retrieval",
-                        targetId: node.id
-                    });
+                        sourceId: uiId,
+                        targetId: nextUiId,
+                      });
+                    }, pathDelay + i * 150);
+                  }
                 }
+              });
             });
           }
         } catch (_e) {
