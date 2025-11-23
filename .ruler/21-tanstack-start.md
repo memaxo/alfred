@@ -50,5 +50,7 @@
     const { db } = await import("@alfred/db");
     ```
 
+    **Exception:** For *local* server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
+
 22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
 

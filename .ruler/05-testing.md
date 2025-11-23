@@ -12,3 +12,5 @@
 11. **Level 4 Verification.** Verification scripts (`scripts/verify-*.ts`) must exercise real binaries and infrastructure without mocks; ensure rigorous cleanup of side effects.
 12. **Interaction Testing.** Prefer Playwright E2E tests for complex interactions (drag-and-drop, zoom, keyboard shortcuts) over React Testing Library. Only use unit tests for pure logic and simple component rendering.
 13. **Production Build Verification.** Maintain a `scripts/verify-build.ts` script that builds the application and scans client bundles for forbidden strings (e.g., "postgres", "drizzle-orm", "openai") to detect server code leakage. Run this in CI.
+14. **E2E Isolation.** E2E tests must run on dynamically allocated ephemeral ports to support concurrent execution. Never rely on hardcoded ports (e.g., 3000) in test scripts. Pass the allocated port via environment variables to the test runner.
+15. **Mock native modules.** Mock unstable native/WASM dependencies (e.g., `onnxruntime`, `piper-wasm`) in unit tests to prevent runner crashes. Use `mock.module` with precise paths.
