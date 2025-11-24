@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
+import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
 
 // Remove static imports to allow mocking
 // import { startVoiceStreamingPrototype, stopVoiceStreamingPrototype } from "../src/voice/streaming";
@@ -28,6 +29,7 @@ mock.module("@alfred/agent", () => ({
     model: "test-model",
     instructions: "system",
   }),
+  normalizeToUiMessages: () => [],
 }));
 
 // Mock dependencies that require native modules or external services
@@ -50,11 +52,7 @@ mock.module("@alfred/db", () => ({
   workflowRepo: {},
 }));
 
-type VoiceFixtureHandle = Awaited<
-  ReturnType<
-    (typeof import("./utils/voice-fixture"))["installVoiceTestPools"]
-  >
->;
+type VoiceFixtureHandle = Awaited<ReturnType<typeof installVoiceTestPools>>;
 
 describe("voice streaming integration", () => {
   let startVoiceStreamingPrototype: any;
@@ -69,17 +67,16 @@ describe("voice streaming integration", () => {
     process.env.VOICE_STREAMING_PROTO = "1";
     process.env.VOICE_STREAMING_PORT = "8799";
 
-    const { installVoiceTestPools } = await import("./utils/voice-fixture");
     voiceFixture = await installVoiceTestPools({
       transcript: "mock transcript",
       chunkText: "stream-chunk",
     });
 
-    const streaming = await import("../src/voice/streaming");
+    const streaming = await import("@alfred/api/voice/streaming");
     startVoiceStreamingPrototype = streaming.startVoiceStreamingPrototype;
     stopVoiceStreamingPrototype = streaming.stopVoiceStreamingPrototype;
 
-    const pools = await import("../src/voice/pools");
+    const pools = await import("@alfred/api/voice/pools");
     initializeVoicePools = pools.initializeVoicePools;
     shutdownVoicePools = pools.shutdownVoicePools;
 

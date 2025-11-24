@@ -1,6 +1,8 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import { idle, initialAutonomy, reflecting, thinking, updateAutonomy, updatePhysiology, } from "@alfred/cognitive/state";
+import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
+import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
+import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/api/metrics";
 // Temporary: Autonomy Logic (to be expanded)
 const AUTONOMY = initialAutonomy();
 /**
@@ -20,10 +22,18 @@ export async function runCognitiveLoop(ctx, streamId, incomingEvent) {
     // Replay history
     for (const record of events) {
         const historicalEvent = record.payload;
-        [state, autonomy] = applyTransition(state, autonomy, historicalEvent);
+        const result = applyTransition(state, autonomy, historicalEvent);
+        state = result.state;
+        autonomy = result.autonomy;
+        recordPhysiologyMetrics(state.physiology);
+        maybeRecordEntropyEvent(historicalEvent);
     }
     // 2. Apply New Event
-    const [newState, newAutonomy] = applyTransition(state, autonomy, incomingEvent);
+    const transition = applyTransition(state, autonomy, incomingEvent);
+    const newState = transition.state;
+    const newAutonomy = transition.autonomy;
+    recordPhysiologyMetrics(newState.physiology);
+    maybeRecordEntropyEvent(incomingEvent);
     // Update Autonomy if needed (e.g. on feedback)
     if (incomingEvent._ === "feedback") {
         const evidence = calculateEvidence(incomingEvent);
@@ -53,78 +63,27 @@ function calculateEvidence(event) {
         strength: 0.5,
     };
 }
-/**
- * Pure State Transition Function
- * (Should eventually move to @alfred/cognitive/logic if complex)
- */
-import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/api/metrics";
-// ...
-function applyTransition(state, auto, event) {
-    // Update Physiology based on event
-    let nextPhysiology = state.physiology;
-    // Map events to physiology signals
-    if (event._ === "complete") {
-        if (event.outcome._ === "success") {
-            nextPhysiology = updatePhysiology(nextPhysiology, "success");
-        }
-        else if (event.outcome._ === "failure") {
-            nextPhysiology = updatePhysiology(nextPhysiology, "error");
-        }
-    }
-    else if (event._ === "interrupt") {
-        if (event.reason.includes("loop") || event.reason.includes("boredom")) {
-            nextPhysiology = updatePhysiology(nextPhysiology, "entropy_high");
-            try {
-                cognitiveEntropyEventsTotal.inc({ type: "high" });
-            }
-            catch { }
-        }
-        else {
-            // General step cost
-            nextPhysiology = updatePhysiology(nextPhysiology, "step");
-        }
-    }
-    else {
-        // General step cost for any other event
-        nextPhysiology = updatePhysiology(nextPhysiology, "step");
-    }
-    // Expose metrics
+const recordPhysiologyMetrics = (physiology) => {
     try {
-        cognitivePhysiologyGauge.set({ metric: "energy" }, nextPhysiology.energy);
-        cognitivePhysiologyGauge.set({ metric: "boredom" }, nextPhysiology.boredom);
-        cognitivePhysiologyGauge.set({ metric: "frustration" }, nextPhysiology.frustration);
+        cognitivePhysiologyGauge.set({ metric: "energy" }, physiology.energy);
+        cognitivePhysiologyGauge.set({ metric: "boredom" }, physiology.boredom);
+        cognitivePhysiologyGauge.set({ metric: "frustration" }, physiology.frustration);
     }
     catch {
-        // metrics not available in test or init
+        // metrics registry not available (tests, local scripts)
     }
-    switch (state._) {
-        // ... existing transitions ...
-        case "idle":
-            if (event._ === "input") {
-                return [thinking(event.content, 1, undefined, nextPhysiology), auto];
-            }
-            break;
-        case "thinking":
-            if (event._ === "complete") {
-                // Thinking complete -> Executing or Reflecting?
-                // For now, LLM "Thinking" usually results in an execution plan or response
-                // We treat the LLM response as an "execution" of a response plan
-                return [
-                    reflecting(event.outcome, "unknown", "unknown", nextPhysiology),
-                    auto,
-                ];
-            }
-            break;
-        case "reflecting":
-            // After reflection, go back to idle
-            return [idle(nextPhysiology), auto];
+};
+const maybeRecordEntropyEvent = (event) => {
+    if (event._ === "interrupt" &&
+        (event.reason.includes("loop") || event.reason.includes("boredom"))) {
+        try {
+            cognitiveEntropyEventsTotal.inc({ type: "high" });
+        }
+        catch {
+            // metrics registry not available
+        }
     }
-    // Default: No state change, but update physiology
-    // We need to reconstruct the state with new physiology if possible.
-    // Since state is an ADT, we can use spread if we cast or strictly strictly reconstruct.
-    // But `state` is a union.
-    return [{ ...state, physiology: nextPhysiology }, auto];
-}
+};
 /**
  * Side Effect Processor ("The Brain")
  * Interprets the state and calls AI/Tools

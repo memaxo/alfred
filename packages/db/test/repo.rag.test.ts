@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
@@ -18,7 +19,9 @@ async function resetRagTables() {
 }
 
 function makeVector(seed: number) {
-  return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
+  return Array.from({ length: EMBEDDING_DIM }, (_, index) =>
+    index === 0 ? seed : 0
+  );
 }
 
 describeFn("ragRepo", () => {

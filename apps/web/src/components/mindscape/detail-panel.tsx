@@ -66,8 +66,8 @@ function getDocTitle(doc: ExplainedNode) {
 }
 
 function getNodeStreamId(
-  node: { id: string };
-  data: ArtifactData | undefined;
+  node: { id: string },
+  data: ArtifactData | undefined,
   graphDbId?: string | null
 ) {
   if (data && typeof (data as { runId?: string }).runId === "string") {

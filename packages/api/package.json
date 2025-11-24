@@ -30,6 +30,7 @@
     "@alfred/logger": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/tune": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@alfred/voice": "workspace:*",
     "@trpc/client": "catalog:",

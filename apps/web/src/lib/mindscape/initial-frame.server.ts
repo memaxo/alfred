@@ -1,9 +1,37 @@
 import { createServerFn } from "@tanstack/react-start";
+import { TEST_SESSION_HEADER } from "@/lib/test-auth";
 
 /**
  * Server-side data fetching for Mindscape initialization.
  * Returns the initial graph snapshot and reflections.
  */
+function resolveTestMode(request: Request) {
+  if (request.headers.get(TEST_SESSION_HEADER)) {
+    return true;
+  }
+  const metaEnv =
+    typeof import.meta !== "undefined"
+      ? ((import.meta as ImportMeta & { env?: Record<string, string> }).env ??
+          {})
+      : {};
+  if (metaEnv?.VITE_TEST_MODE === "true") {
+    return true;
+  }
+  if (metaEnv?.MINDSCAPE_TEST === "1") {
+    return true;
+  }
+  if (process.env.VITE_TEST_MODE === "true") {
+    return true;
+  }
+  if (process.env.MINDSCAPE_TEST === "1") {
+    return true;
+  }
+  if (process.env.NODE_ENV === "test") {
+    return true;
+  }
+  return false;
+}
+
 export const getInitialMindscapeFrame = createServerFn({
   method: "GET",
 }).handler(async (ctx) => {
@@ -12,8 +40,7 @@ export const getInitialMindscapeFrame = createServerFn({
   const userId = "default"; // TODO: Get actual user ID
 
   // Check for Test Mode (Lite Mode)
-  const isTestMode =
-    process.env.VITE_TEST_MODE === "true" || process.env.NODE_ENV === "test";
+  const isTestMode = resolveTestMode(ctx.request);
 
   if (isTestMode) {
     // Return static mock data for E2E tests

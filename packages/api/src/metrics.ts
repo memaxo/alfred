@@ -5,6 +5,12 @@ import { metricsRegistry } from "@alfred/metrics/registry";
 import client from "prom-client";
 
 export { metricsRegistry };
+export {
+  fineTuneRunDurationSeconds,
+  fineTuneRunsTotal,
+  fineTuneSamplesTotal,
+  fineTuneTokensTotal,
+} from "@alfred/tune";
 
 const metricsRegistryPatchKey = Symbol.for("alfred.metrics.registry.dedupe");
 

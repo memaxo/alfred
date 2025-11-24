@@ -46,7 +46,9 @@
       "@alfred/ui": ["packages/ui/src/index.ts"],
       "@alfred/ui/*": ["packages/ui/src/*"],
       "@alfred/voice": ["packages/voice/src/index.ts"],
-      "@alfred/voice/*": ["packages/voice/src/*"]
+      "@alfred/voice/*": ["packages/voice/src/*"],
+      "@alfred/test-kit": ["packages/test-kit/src/index.ts"],
+      "@alfred/test-kit/*": ["packages/test-kit/src/*"]
     }
   }
 }

@@ -14,3 +14,5 @@
 13. **Production Build Verification.** Maintain a `scripts/verify-build.ts` script that builds the application and scans client bundles for forbidden strings (e.g., "postgres", "drizzle-orm", "openai") to detect server code leakage. Run this in CI.
 14. **E2E Isolation.** E2E tests must run on dynamically allocated ephemeral ports to support concurrent execution. Never rely on hardcoded ports (e.g., 3000) in test scripts. Pass the allocated port via environment variables to the test runner.
 15. **Mock native modules.** Mock unstable native/WASM dependencies (e.g., `onnxruntime`, `piper-wasm`) in unit tests to prevent runner crashes. Use `mock.module` with precise paths.
+16. **Mindscape harness first.** Before writing Playwright scenarios for Mindscape suspend/resume flows, add deterministic component or integration tests that drive the zustand store plus stream harness so suspend/biometric/resume transitions stay reproducible.
+17. **Mock auth in Playwright.** Playwright specs that hit Better Auth (e.g., `/api/auth/get-session`, `/api/auth/sign-up/email`) must mock those endpoints so test runs never depend on Postgres availability.

@@ -17,6 +17,14 @@ type PgSource = Client | Pool;
 export type DbDriver = "postgres" | "sqlite";
 export let dbDriver: DbDriver = "postgres";
 
+type RetryOptions = {
+  enabled?: boolean;
+  maxRetries?: number;
+  initialDelay?: number;
+  maxDelay?: number;
+  sleep?: (ms: number) => Promise<void>;
+};
+
 const SQLITE_MEMORY_URL = "sqlite::memory:";
 const require = createRequire(import.meta.url);
 const drizzleSqlite: (...args: any[]) => any = (
@@ -136,21 +144,110 @@ function createSqliteDrizzle(connectionString: string) {
   return drizzleSqlite(sqlite);
 }
 
+const AUTH_ERROR_PATTERNS = [
+  "password",
+  "authentication",
+  "permission denied",
+];
+
+function isAuthError(error: Error): boolean {
+  const message = error.message?.toLowerCase() ?? "";
+  return AUTH_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+export async function connectWithRetry(
+  client: Client,
+  options: {
+    maxRetries?: number;
+    initialDelay?: number;
+    maxDelay?: number;
+    sleep?: (ms: number) => Promise<void>;
+  } = {}
+): Promise<void> {
+  const maxRetries = Math.max(1, options.maxRetries ?? 5);
+  let delay = options.initialDelay ?? 100;
+  const maxDelay = options.maxDelay ?? 5_000;
+  const sleep = options.sleep ?? wait;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await client.connect();
+      return;
+    } catch (error) {
+      lastError =
+        error instanceof Error ? error : new Error(String(error ?? ""));
+
+      if (isAuthError(lastError)) {
+        throw lastError;
+      }
+
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+
+      logger.warn("db_connection_retry", {
+        attempt: attempt + 1,
+        maxRetries,
+        delay,
+        error: lastError.message,
+      });
+
+      await sleep(delay);
+      delay = Math.min(delay * 2, maxDelay);
+    }
+  }
+
+  throw lastError ?? new Error("Connection failed after retries");
+}
+
 export function createPgClient(
   connectionString?: string,
-  config: ClientConfig = {}
+  config: ClientConfig & { retry?: RetryOptions } = {}
 ): Client {
+  const { retry, ...clientConfig } = config;
+
   const client = new Client({
     connectionString: resolveConnectionString(connectionString),
-    ...config,
+    ...clientConfig,
   });
 
-  // TODO: production bootstrap should perform a retry/backoff strategy.
-  client.connect().catch((error) => {
-    logger.error("db_client_connection_failed", {
-      error: error instanceof Error ? error.message : String(error),
+  const envRetryFlag = process.env.DB_RETRY_ENABLED?.toLowerCase();
+  let defaultRetryEnabled = process.env.NODE_ENV === "production";
+  if (envRetryFlag === "true") {
+    defaultRetryEnabled = true;
+  } else if (envRetryFlag === "false") {
+    defaultRetryEnabled = false;
+  }
+
+  const shouldRetry = retry?.enabled ?? defaultRetryEnabled;
+
+  if (shouldRetry) {
+    const maxRetries = retry?.maxRetries ?? 5;
+    connectWithRetry(client, {
+      maxRetries,
+      initialDelay: retry?.initialDelay ?? 100,
+      maxDelay: retry?.maxDelay ?? 5_000,
+      sleep: retry?.sleep,
+    }).catch((error) => {
+      logger.error("db_client_connection_failed_after_retries", {
+        error: error instanceof Error ? error.message : String(error),
+        maxRetries,
+      });
     });
-  });
+  } else {
+    client.connect().catch((error) => {
+      logger.error("db_client_connection_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
 
   return client;
 }

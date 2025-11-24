@@ -82,8 +82,7 @@ export const events = pgTable("user_events", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 8] Add index on (userId, timestamp)
-// TODO: [Phase 8] Add index on (userId, type)
+// Index coverage: user_events_user_timestamp_idx and user_events_user_type_idx (0043)
 
 /**
  * User autonomy settings (per-action type)
@@ -99,7 +98,7 @@ export const autonomy = pgTable("user_autonomy", {
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 9] Add unique index on (userId, action)
+// Index coverage: user_autonomy_user_action_idx unique index (0043)
 
 /**
  * User feedback (on agent responses)

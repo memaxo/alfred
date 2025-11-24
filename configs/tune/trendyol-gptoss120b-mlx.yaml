@@ -1,0 +1,43 @@
+backend: mlx
+model:
+  baseModelPath: /Users/jackmazac/Models/nightmedia/gpt-oss-120b-heretic-v2-mxfp4-q8-hi-mlx
+  quantization: q8
+  modelType: gpt-oss-120b
+data:
+  datasetId: Trendyol/Trendyol-Cybersecurity-Instruction-Tuning-Dataset
+  trainSplit: train
+  template: system-user-assistant-text
+  maxSamples: 8
+  evalRatio: 0.25
+  shuffleSeed: 11
+training:
+  epochs: 1
+  steps: 2
+  batchSize: 1
+  gradientAccumulation: 1
+  learningRate: 0.00002
+  maxSeqLen: 512
+  warmupSteps: 0
+  weightDecay: 0
+  seed: 7
+lora:
+  enabled: true
+  rank: 4
+  alpha: 16
+  dropout: 0.05
+  targetModules:
+    - self_attn.q_proj
+    - self_attn.v_proj
+  layers: 8
+output:
+  outputDir: runs/finetune/gptoss120b-trendyol
+  logDir: runs/finetune/gptoss120b-trendyol/logs
+  saveAdapters: true
+  fuseAdapters: false
+metadata:
+  description: GPT-OSS-120B Trendyol cybersecurity smoke run
+  tags:
+    - trendyol
+    - cybersecurity
+    - gptoss120b
+

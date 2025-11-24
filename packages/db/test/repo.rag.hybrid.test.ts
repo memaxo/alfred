@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
@@ -18,7 +19,9 @@ async function resetRagTables() {
 }
 
 function makeVector(seed: number) {
-  return Array.from({ length: 1536 }, (_, index) => (index === 0 ? seed : 0));
+  return Array.from({ length: EMBEDDING_DIM }, (_, index) =>
+    index === 0 ? seed : 0
+  );
 }
 
 describeFn("searchChunks with efSearch", () => {
@@ -36,13 +39,13 @@ describeFn("searchChunks with efSearch", () => {
   });
 
   it("sets LOCAL ef_search correctly", async () => {
-    await ragRepo.createDocument("source", "Doc");
-    await ragRepo.addChunks("1", [
+    const document = await ragRepo.createDocument("source", "Doc");
+    await ragRepo.addChunks(document.id, [
       { content: "Chunk", embedding: makeVector(0.5) },
     ]);
 
     await expect(
-      ragRepo.searchChunks(makeVector(0.5), 5, 0.1, { efSearch: 120 })
+      ragRepo.searchChunks(makeVector(0.5), 5, 0.1, undefined, 120)
     ).resolves.toBeInstanceOf(Array);
   });
 });

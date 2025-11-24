@@ -1,0 +1,29 @@
+{
+  "name": "@alfred/tune",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "catalog:",
+    "@alfred/metrics": "workspace:*",
+    "prom-client": "^15.1.3",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}
+

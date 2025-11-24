@@ -30,6 +30,9 @@ export default defineConfig({
       env: {
         MINDSCAPE_TEST: "1",
         VITE_TEST_MODE: "true",
+        PLAYWRIGHT_REAL_AUTH: process.env.PLAYWRIGHT_REAL_AUTH ?? "0",
+        VITE_PLAYWRIGHT_REAL_AUTH:
+          process.env.PLAYWRIGHT_REAL_AUTH === "1" ? "1" : "0",
         NODE_ENV: process.env.NODE_ENV ?? "test",
       },
     },

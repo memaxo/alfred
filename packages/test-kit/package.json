@@ -8,7 +8,13 @@
     "./kinetic": "./src/kinetic/index.ts",
     "./cognitive": "./src/cognitive/index.ts",
     "./physical": "./src/physical/index.ts",
-    "./env": "./src/env/index.ts"
+    "./env": "./src/env/index.ts",
+    "./voice": "./src/voice/index.ts",
+    "./voice/*": "./src/voice/*",
+    "./voice/runtime-fixture": "./src/voice/runtime-fixture.ts",
+    "./workflow": "./src/workflow/runtime-fixture.ts",
+    "./workflow/*": "./src/workflow/*",
+    "./workflow/runtime-fixture": "./src/workflow/runtime-fixture.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -23,7 +29,9 @@
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
+    "@alfred/api": "workspace:*",
     "@alfred/db": "workspace:*",
-    "@alfred/type": "workspace:*"
+    "@alfred/type": "workspace:*",
+    "@alfred/voice": "workspace:*"
   }
 }

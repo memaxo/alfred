@@ -255,6 +255,23 @@ jobs:
             bunx turbo run test
           fi
 
+      - name: Verify tmux sessions (default)
+        run: bun scripts/verify-sessions.ts
+        continue-on-error: true
+
+      - name: Verify tmux sessions (fail mode)
+        run: bun scripts/verify-sessions.ts --fail
+        continue-on-error: true
+
+      - name: Verify tmux sessions (session crash)
+        run: bun scripts/verify-sessions.ts --session-crash
+        continue-on-error: true
+
+      - name: Check tmux leaks (best-effort)
+        if: always()
+        run: bun scripts/check-tmux-leaks.ts
+        continue-on-error: true
+
   e2e:
     name: E2E Tests
     needs:

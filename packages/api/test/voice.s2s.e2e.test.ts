@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import { runAssistantForVoice } from "../src/voice/assistant";
 import { VoiceRegistry } from "../src/voice/session";
-import { closeTestDb, createTestDb, type TestDb } from "./utils/db";
-import { createVoiceTestRegistry } from "./utils/voice-fixture";
+import { createVoiceTestRegistry } from "@alfred/test-kit/voice/runtime-fixture";
 
 mock.module("../src/voice/assistant", () => ({
   runAssistantForVoice: mock(async () => ({
@@ -12,11 +11,9 @@ mock.module("../src/voice/assistant", () => ({
 }));
 
 describe("End-to-End Voice Session (S2S)", () => {
-  let db: TestDb;
   let registry: VoiceRegistry;
 
   beforeAll(async () => {
-    db = await createTestDb();
     const setup = createVoiceTestRegistry({
       transcript: "Hello computer",
       chunkText: "chunk",
@@ -25,7 +22,6 @@ describe("End-to-End Voice Session (S2S)", () => {
   });
 
   afterAll(async () => {
-    await closeTestDb(db);
     registry.shutdown();
   });
 

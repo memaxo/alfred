@@ -22,6 +22,7 @@ import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
 import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
+import { tuneRouter } from "./tune";
 import { userRouter } from "./user";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
@@ -58,5 +59,6 @@ export const appRouter: ReturnType<typeof router> = router({
   voice: voiceRouter,
   fs: fsRouter,
   terminal: terminalRouter,
+  tune: tuneRouter,
 });
 export type AppRouter = typeof appRouter;

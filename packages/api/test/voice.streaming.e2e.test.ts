@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { Buffer } from "node:buffer";
+import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
 
 // Define mocks BEFORE any imports
 mock.module("@discordjs/opus", () => ({
@@ -64,67 +65,6 @@ process.env.VOICE_STREAMING_PORT = "8799";
 process.env.VOICE_PROVIDER = "maya1";
 process.env.VOICE_STREAMING_PROTO = "1";
 
-// Mock pools directly to bypass all process logic
-const mockSTTPool = {
-  start: vi.fn(),
-  stop: vi.fn(),
-  initialize: vi.fn().mockResolvedValue(undefined),
-  shutdown: vi.fn().mockResolvedValue(undefined),
-  transcribe: vi
-    .fn()
-    .mockResolvedValue({ text: "Hello world", language: "en" }),
-  activeCount: 0,
-  size: 1,
-};
-
-const mockTTSPool = {
-  start: vi.fn(),
-  stop: vi.fn(),
-  initialize: vi.fn().mockResolvedValue(undefined),
-  shutdown: vi.fn().mockResolvedValue(undefined),
-  synthesize: vi.fn().mockImplementation(async (req: any, onChunk: any) => {
-    if (req.streaming && onChunk) {
-      onChunk({ audioBase64: "chunk1", mimeType: "audio/pcm" });
-      onChunk({ audioBase64: "chunk2", mimeType: "audio/pcm" });
-    }
-    return { audioBase64: "full", mimeType: "audio/pcm" };
-  }),
-  activeCount: 0,
-  size: 1,
-};
-
-const sessions = new Map();
-const mockSessionManager = {
-  createSession: vi.fn((_uid, sid, _lang) => {
-    const session = {
-      id: sid,
-      processAudioChunk: vi.fn().mockResolvedValue({ vadConfidence: 0.9 }),
-      getTranscript: vi.fn().mockReturnValue("Hello world"),
-      clearTranscript: vi.fn(),
-      streamSynthesis: vi.fn(async (_text, _voice, cb) => {
-        await cb(Buffer.from("chunk1", "base64"));
-        await cb(Buffer.from("chunk2", "base64"));
-      }),
-    };
-    sessions.set(sid, session);
-    return session;
-  }),
-  removeSession: vi.fn((sid) => sessions.delete(sid)),
-  getSession: vi.fn((sid) => sessions.get(sid)),
-  updateSession: vi.fn(),
-  handleAudioChunk: vi.fn(),
-};
-
-mock.module("../src/voice/pools", () => ({
-  getVoicePools: () => ({
-    sttPool: mockSTTPool,
-    ttsPool: mockTTSPool,
-    sessionManager: mockSessionManager,
-  }),
-  initializeVoicePools: vi.fn().mockResolvedValue(undefined),
-  shutdownVoicePools: vi.fn().mockResolvedValue(undefined),
-}));
-
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 // import "./utils/mock-voice"; // No longer needed
 import "./utils/mock-node-pty"; // Loads mocked node-pty
@@ -153,6 +93,8 @@ process.env.VOICE_STREAMING_PROTO = "1";
 let wsClient: WebSocket;
 let startVoiceStreamingPrototype: any;
 let stopVoiceStreamingPrototype: any;
+let voiceFixture: Awaited<ReturnType<typeof installVoiceTestPools>> | null =
+  null;
 
 function waitForOpen(ws: WebSocket): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -202,12 +144,17 @@ function waitForBinary(ws: WebSocket): Promise<any> {
 
 describe("voice streaming e2e", () => {
   beforeAll(async () => {
+    voiceFixture = await installVoiceTestPools({
+      transcript: "Hello world",
+      chunkText: "chunk",
+    });
+
     // Initialize pools (using mocks)
-    const { initializeVoicePools } = await import("../src/voice/pools");
+    const { initializeVoicePools } = await import("@alfred/api/voice/pools");
     await initializeVoicePools();
 
     // Import streaming module dynamically
-    const streaming = await import("../src/voice/streaming");
+    const streaming = await import("@alfred/api/voice/streaming");
     startVoiceStreamingPrototype = streaming.startVoiceStreamingPrototype;
     stopVoiceStreamingPrototype = streaming.stopVoiceStreamingPrototype;
 
@@ -219,6 +166,7 @@ describe("voice streaming e2e", () => {
     if (stopVoiceStreamingPrototype) {
       stopVoiceStreamingPrototype();
     }
+    voiceFixture?.restore();
   });
 
   it("handles full session lifecycle: start -> audio -> stop -> playback", async () => {

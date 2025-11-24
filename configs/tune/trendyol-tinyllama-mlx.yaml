@@ -1,0 +1,43 @@
+backend: mlx
+model:
+  baseModelId: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  quantization: none
+  modelType: tinyllama
+data:
+  datasetId: Trendyol/Trendyol-Cybersecurity-Instruction-Tuning-Dataset
+  trainSplit: train
+  template: system-user-assistant-text
+  maxSamples: 64
+  evalRatio: 0.2
+  shuffleSeed: 7
+training:
+  epochs: 1
+  steps: 20
+  batchSize: 1
+  gradientAccumulation: 1
+  learningRate: 0.00005
+  maxSeqLen: 1024
+  warmupSteps: 5
+  weightDecay: 0
+  seed: 13
+lora:
+  enabled: true
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  targetModules:
+    - self_attn.q_proj
+    - self_attn.v_proj
+  layers: 16
+output:
+  outputDir: runs/finetune/tinyllama-trendyol
+  logDir: runs/finetune/tinyllama-trendyol/logs
+  saveAdapters: true
+  fuseAdapters: false
+metadata:
+  description: TinyLlama Trendyol cybersecurity pilot fine-tune
+  tags:
+    - trendyol
+    - cybersecurity
+    - tinyllama
+

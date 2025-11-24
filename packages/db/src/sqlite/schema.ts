@@ -45,13 +45,19 @@ const statements = [
     webhook_secret TEXT,
     linear_session_id TEXT,
     linear_space TEXT,
+    linear_issue_id TEXT,
+    linear_issue_url TEXT,
     suspended_at TEXT,
     resumed_at TEXT,
     completed_at TEXT,
+    learned_at TEXT,
     error_message TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  "ALTER TABLE workflow_runs ADD COLUMN linear_issue_id TEXT;",
+  "ALTER TABLE workflow_runs ADD COLUMN linear_issue_url TEXT;",
+  "ALTER TABLE workflow_runs ADD COLUMN learned_at TEXT;",
   `CREATE TABLE IF NOT EXISTS workflow_events (
     id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL,
@@ -142,6 +148,27 @@ const statements = [
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     metadata TEXT
+  );`,
+  `CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    trace_id TEXT,
+    action TEXT NOT NULL,
+    resource TEXT NOT NULL,
+    decision TEXT NOT NULL,
+    obligations TEXT,
+    context TEXT,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+  );`,
+  `CREATE TABLE IF NOT EXISTS user_feedback (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    conversation_id TEXT,
+    message_id TEXT,
+    rating INTEGER,
+    comment TEXT,
+    tags TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
 ];
 

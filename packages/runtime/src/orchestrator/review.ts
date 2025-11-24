@@ -4,6 +4,8 @@ import {
   buildReviewPlan,
   generateReviewExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/review";
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
+import type { Workspace } from "@alfred/agent/environment/types";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
@@ -12,6 +14,103 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
 
 const REVIEW_PLAN_FILE = (runId: string) => `.agent/plans/${runId}/review.md`;
+function reviewSessionsEnabled() {
+  return (
+    process.env.ORCH_REVIEW_SESSIONS === "1" ||
+    process.env.ORCH_ENABLE_SESSIONS === "1"
+  );
+}
+const REVIEW_FIXER_SESSION_COMMAND =
+  process.env.ORCH_FIXER_SESSION_COMMAND?.trim() ||
+  process.env.ORCH_REVIEW_SESSION_COMMAND?.trim() ||
+  "bash";
+
+type SessionController = {
+  start(attempt: number): Promise<string | null>;
+  stop(sessionId: string | null): Promise<void>;
+  cleanup(): Promise<void>;
+};
+
+function createSessionController(
+  runId: string,
+  repoBase: string
+): SessionController {
+  let workspacePromise: Promise<Workspace | null> | null = null;
+
+  const ensureWorkspace = async () => {
+    if (!workspacePromise) {
+      workspacePromise = WorkspaceFactory.create(
+        "worktree",
+        `review-${runId}`,
+        runId,
+        repoBase,
+        { enableSessions: true }
+      ).catch((error) => {
+        logger.warn("review_session_workspace_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      });
+    }
+    return workspacePromise;
+  };
+
+  return {
+    async start(attempt: number) {
+      const workspace = await ensureWorkspace();
+      if (!workspace?.startSession) {
+        return null;
+      }
+      const name = `ws-${runId}-fixer-${attempt}`;
+      try {
+        return await workspace.startSession(
+          REVIEW_FIXER_SESSION_COMMAND,
+          name
+        );
+      } catch (error) {
+        logger.warn("review_session_start_failed", {
+          runId,
+          sessionId: name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    },
+    async stop(sessionId: string | null) {
+      if (!sessionId) {
+        return;
+      }
+      const workspace = await ensureWorkspace();
+      if (!workspace?.stopSession) {
+        return;
+      }
+      try {
+        await workspace.stopSession(sessionId);
+      } catch (error) {
+        logger.warn("review_session_stop_failed", {
+          runId,
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    async cleanup() {
+      const workspace = await workspacePromise;
+      if (!workspace?.cleanup) {
+        return;
+      }
+      try {
+        await workspace.cleanup();
+      } catch (error) {
+        logger.warn("review_session_cleanup_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+  } satisfies SessionController;
+}
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -165,6 +264,10 @@ export async function* runReviewPhase(
     summary: mergePlan.summary,
   });
 
+  const sessionController = reviewSessionsEnabled()
+    ? createSessionController(runId, workspace)
+    : null;
+
   if (
     (!reviewPlan.checks || reviewPlan.checks.length === 0) &&
     ctx.input.linear?.sessionId
@@ -189,9 +292,10 @@ export async function* runReviewPhase(
     checks: reviewPlan.checks?.map((c) => c.kind) ?? [],
   });
 
-  // Review execution phase & Self-Correction Loop
-  // If checks are planned, execute them using toolRunner
-  if (reviewPlan.checks && reviewPlan.checks.length > 0) {
+  try {
+    // Review execution phase & Self-Correction Loop
+    // If checks are planned, execute them using toolRunner
+    if (reviewPlan.checks && reviewPlan.checks.length > 0) {
     const MAX_FIX_ATTEMPTS = 3;
     let fixAttempts = 0;
     let reviewPassed = false;
@@ -494,21 +598,32 @@ export async function* runReviewPhase(
             },
           } as const;
 
-          // Run the Fixer
-          await toolCodex.execute({
-            input: {
-              action: "exec",
-              prompt,
-              out: "text",
-              auto: fixerAuto,
-              cw: workspace,
-              sessionId: `${runId}:fixer-${fixAttempts}`,
-              model: undefined,
-              profile: undefined,
-              context: {},
-            },
-            writer,
-          });
+          let fixerSessionId: string | null = null;
+          try {
+            if (sessionController) {
+              fixerSessionId = await sessionController.start(
+                fixAttempts + 1
+              );
+            }
+
+            // Run the Fixer
+            await toolCodex.execute({
+              input: {
+                action: "exec",
+                prompt,
+                out: "text",
+                auto: fixerAuto,
+                cw: workspace,
+                sessionId: `${runId}:fixer-${fixAttempts}`,
+                model: undefined,
+                profile: undefined,
+                context: {},
+              },
+              writer,
+            });
+          } finally {
+            await sessionController?.stop(fixerSessionId);
+          }
 
           for (const ev of fixerEvents) {
             yield ev;
@@ -583,5 +698,8 @@ export async function* runReviewPhase(
         attempts,
       },
     } as any;
+  }
+  } finally {
+    await sessionController?.cleanup();
   }
 }

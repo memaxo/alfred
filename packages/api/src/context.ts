@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { auth } from "@alfred/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { getSessionUser } from "./utils/session";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
+
+const TEST_SESSION_HEADER = "x-alfred-test-session";
 
 export type RuntimeMetadata = {
   /** Unique identifier for the incoming request */
@@ -83,6 +86,26 @@ function resolveReferer(headers: Headers) {
   return headers.get("referer") ?? headers.get("referrer");
 }
 
+function parseTestSession(headers: Headers): AuthSession | null {
+  const value = headers.get(TEST_SESSION_HEADER);
+  if (!value) {
+    return null;
+  }
+  try {
+    const payload = Buffer.from(value, "base64").toString("utf8");
+    const parsed = JSON.parse(payload) as AuthSession;
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    if (!parsed.user || !parsed.session) {
+      return null;
+    }
+    return parsed;
+  } catch (_error) {
+    return null;
+  }
+}
+
 export async function createContext({
   req,
 }: {
@@ -101,11 +124,15 @@ export async function createContext({
     referer: resolveReferer(headers),
   };
 
-  const session = await auth.api
-    .getSession({
-      headers,
-    })
-    .catch(() => null);
+  const testSession = parseTestSession(headers);
+
+  const session = testSession
+    ? testSession
+    : await auth.api
+        .getSession({
+          headers,
+        })
+        .catch(() => null);
 
   const runtimeContextEntries: [string, unknown][] = [
     ["requestId", runtime.requestId],

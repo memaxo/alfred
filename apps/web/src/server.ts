@@ -14,6 +14,7 @@ fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
 
 // #endregion
 import handler from "@tanstack/react-start/server-entry";
+import { withRequestTestSession } from "@/lib/test-auth";
 
 // #region agent log
 fetch("http://127.0.0.1:7242/ingest/caddd241-a390-4503-80c3-6cd37f6059b3", {
@@ -86,6 +87,6 @@ export default {
       }),
     }).catch(() => {});
     // #endregion
-    return handler.fetch(request);
+    return withRequestTestSession(request, () => handler.fetch(request));
   },
 };

@@ -55,3 +55,18 @@ jobs:
 
       - name: Workflow Runtime Stream Provenance (Postgres)
         run: WORKFLOW_RUNTIME_STREAM_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.runtime-stream-provenance.integration.test.ts
+
+      - name: Verify tmux sessions (default)
+        run: bun scripts/verify-sessions.ts
+
+      - name: Verify tmux sessions (fail mode)
+        run: bun scripts/verify-sessions.ts --fail
+
+      - name: Verify tmux sessions (session crash)
+        run: bun scripts/verify-sessions.ts --session-crash
+
+      - name: Check tmux leaks
+        run: bun scripts/check-tmux-leaks.ts --strict
+
+      - name: Verify container tmux sessions
+        run: bun tests/sessions-container.ts

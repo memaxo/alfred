@@ -1,163 +1,44 @@
-import { mock, vi } from "bun:test";
-import { Buffer } from "node:buffer";
-import { randomUUID } from "node:crypto";
 import type { RenderResult } from "@testing-library/react";
 import type { ReactElement } from "react";
+import {
+  deserializeTestSession,
+  issueTestSession,
+  serializeTestSession,
+  setTestPasskeys,
+  setTestSession,
+  TEST_SESSION_HEADER,
+  type TestPasskey,
+  type TestSession,
+  type TestSessionUser,
+} from "@/lib/test-auth";
 import { type RenderRouteOptions, renderRoute } from "./render-route";
 
-export const TEST_SESSION_HEADER = "x-alfred-test-session";
-
-export type TestSessionUser = {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  scopes: string[];
+export {
+  TEST_SESSION_HEADER,
+  serializeTestSession,
+  deserializeTestSession,
+  setTestPasskeys,
+  setTestSession,
+  type TestPasskey,
+  type TestSession,
+  type TestSessionUser,
 };
-
-export type TestSession = {
-  user: TestSessionUser;
-  session: {
-    id: string;
-  };
-};
-
-export type TestPasskey = {
-  id: string;
-  name: string;
-  deviceType?: string;
-  createdAt?: string;
-};
-
-const sessionState: { current: TestSession } = {
-  current: {
-    user: {
-      id: "test-user",
-      email: "test-user@example.com",
-      name: "Test User",
-      roles: ["owner"],
-      scopes: ["assistant.write", "assistant.stream"],
-    },
-    session: {
-      id: "sess-test",
-    },
-  },
-};
-
-const passkeyState: { current: TestPasskey[] } = {
-  current: [],
-};
-
-function createPasskey(name: string): TestPasskey {
-  return {
-    id: randomUUID(),
-    name,
-    deviceType: "security-key",
-    createdAt: new Date().toISOString(),
-  };
-}
-
-mock.module("@/lib/auth-client", () => {
-  const getSession = vi.fn(async () => ({
-    data: sessionState.current,
-  }));
-
-  const useSession = () => ({
-    data: sessionState.current,
-    isPending: false,
-  });
-
-  const noopAuthAction = vi.fn();
-
-  const passkey = {
-    listUserPasskeys: vi.fn(async () => ({
-      data: [...passkeyState.current],
-    })),
-    addPasskey: vi.fn(async ({ name }: { name: string }) => {
-      const next = createPasskey(name);
-      passkeyState.current = [next, ...passkeyState.current];
-      return { data: next };
-    }),
-    deletePasskey: vi.fn(async ({ id }: { id: string }) => {
-      passkeyState.current = passkeyState.current.filter(
-        (record) => record.id !== id
-      );
-      return { data: { removed: 1 } };
-    }),
-  };
-
-  const authClient = {
-    getSession,
-    useSession,
-    signIn: { email: vi.fn(), passkey: vi.fn() },
-    signUp: { email: vi.fn() },
-    signOut: { all: noopAuthAction, current: noopAuthAction },
-    passkey,
-  };
-
-  return { authClient };
-});
 
 export function createTestSession(
   overrides: Partial<TestSessionUser & { sessionId: string }> = {}
 ): TestSession {
-  const baseId = overrides.id ?? "test-user";
-  return {
-    user: {
-      id: baseId,
-      email: overrides.email ?? `${baseId}@example.com`,
-      name: overrides.name ?? "Test User",
-      roles: overrides.roles ?? ["owner"],
-      scopes: overrides.scopes ?? ["assistant.write", "assistant.stream"],
-    },
-    session: {
-      id: overrides.sessionId ?? `sess-${randomUUID()}`,
-    },
-  };
-}
-
-export function serializeTestSession(session: TestSession): string {
-  return Buffer.from(JSON.stringify(session), "utf8").toString("base64");
-}
-
-export function deserializeTestSession(
-  value: string | null
-): TestSession | null {
-  if (!value) {
-    return null;
-  }
-  try {
-    return JSON.parse(
-      Buffer.from(value, "base64").toString("utf8")
-    ) as TestSession;
-  } catch (_error) {
-    return null;
-  }
+  return issueTestSession(overrides);
 }
 
 type AuthenticatedRenderOptions = RenderRouteOptions & {
   session?: TestSession;
 };
 
-export function setTestSession(session: TestSession) {
-  sessionState.current = session;
-}
-
-export function setTestPasskeys(passkeys: TestPasskey[]) {
-  passkeyState.current = passkeys;
-}
-
-/**
- * Temporary helper that mirrors renderRoute but documents the intended
- * authentication shape for future suites. Once the Better Auth client exposes
- * a configurable provider we can wire the session through context rather than
- * mocks.
- */
 export function authenticatedRender(
   ui: ReactElement,
   options: AuthenticatedRenderOptions = {}
 ): RenderResult {
-  const session = options.session ?? createTestSession();
+  const session = options.session ?? issueTestSession();
   setTestSession(session);
   return renderRoute(ui, options);
 }

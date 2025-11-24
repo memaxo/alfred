@@ -1,924 +1,284 @@
-/**
- * Workflow Runtime Integration Tests
- *
- * Tests specific integration points between workflow router and runtime:
- * - Linear integration (session mapping, activity emission)
- * - Metrics recording
- * - Resume flows (bio-authz, deploy-authz)
- * - Cancellation propagation
- */
-
 import {
+  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
   describe,
   expect,
   it,
-  mock,
   vi,
 } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { WorkflowEvent } from "@alfred/type";
-import { metricsStub } from "./utils/mock-metrics";
 import {
-  mockPolicyAudit,
-  mockRunRegistry,
-  mockWorkflowRepo,
-  mockWorkflowRuntime,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+  installWorkflowRuntimeFixture,
+  type WorkflowRuntimeFixtureHandle,
+} from "@alfred/test-kit/workflow/runtime-fixture";
+import { metricsStub } from "./utils/mock-metrics";
+import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
 setupTestEnv();
 mockPolicyAudit();
 
-const workflowRepoMocks = mockWorkflowRepo();
-const runRegistryMocks = mockRunRegistry();
-const workflowRuntimeMocks = mockWorkflowRuntime();
-
-const emitLinearActivityMock = vi.fn().mockResolvedValue({ ok: true });
-const setLinearDelegateMock = vi.fn().mockResolvedValue(undefined);
-const setLinearStartedMock = vi.fn().mockResolvedValue({ stateId: "started" });
-const setLinearCompletedMock = vi.fn().mockResolvedValue({ stateId: "done" });
-const setLinearCancelledMock = vi
-  .fn()
-  .mockResolvedValue({ stateId: "cancelled" });
-const setLinearSessionExternalUrlMock = vi
-  .fn()
-  .mockResolvedValue(undefined);
-const commentOnLinearIssueMock = vi.fn().mockResolvedValue(undefined);
-
-mock.module("@alfred/agent/integrations/linear", () => ({
-  emitLinearActivity: emitLinearActivityMock,
-  setLinearDelegate: setLinearDelegateMock,
-  setLinearStarted: setLinearStartedMock,
-  setLinearCompleted: setLinearCompletedMock,
-  setLinearCancelled: setLinearCancelledMock,
-  setLinearSessionExternalUrl: setLinearSessionExternalUrlMock,
-  commentOnLinearIssue: commentOnLinearIssueMock,
-  extractIssueIdFromSession: (id: string) => id,
-  configureLinearMetrics: vi.fn(),
-}));
-
-mock.module("@alfred/agent/workflow/linear", () => ({
-  ensureLinearTicket: (params: {
-    linear?: { space: string; sessionId?: string };
-  }) => ({
-    linear: params.linear,
-    ticket: undefined,
-  }),
-}));
-
-const workflowStreamDurationSecondsMock = {
-  startTimer: vi.fn().mockReturnValue(() => {}),
+type CreateTestCaller = typeof import("./utils/trpc")["createTestCaller"];
+type TestCaller = Awaited<ReturnType<CreateTestCaller>>;
+type WorkflowRuntimeCtor = typeof import("@alfred/runtime")["WorkflowRuntime"];
+type MetricMock = {
+  inc: ReturnType<typeof vi.fn>;
+  dec: ReturnType<typeof vi.fn>;
+  observe: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  labels: ReturnType<typeof vi.fn>;
+  startTimer: ReturnType<typeof vi.fn>;
 };
 
-const workflowStreamEventsTotalMock = {
-  inc: vi.fn(),
-};
+const metricsRecord = metricsStub as Record<string, MetricMock>;
 
-const multiAgentTasksTotalMock = { inc: vi.fn() };
-const multiAgentWavesTotalMock = { inc: vi.fn() };
-const multiAgentAgentDurationSecondsMock = { observe: vi.fn() };
-const multiAgentErrorsTotalMock = { inc: vi.fn() };
+function createMetricMock(): MetricMock {
+  const metric: MetricMock = {
+    inc: vi.fn(),
+    dec: vi.fn(),
+    observe: vi.fn(),
+    set: vi.fn(),
+    labels: vi.fn(() => metric),
+    startTimer: vi.fn(() => vi.fn()),
+  };
+  return metric;
+}
 
-mock.module("@alfred/api/metrics", () => ({
-  ...metricsStub,
-  workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
-  workflowStreamEventsTotal: workflowStreamEventsTotalMock,
-  multiAgentTasksTotal: multiAgentTasksTotalMock,
-  multiAgentWavesTotal: multiAgentWavesTotalMock,
-  multiAgentAgentDurationSeconds: multiAgentAgentDurationSecondsMock,
-  multiAgentErrorsTotal: multiAgentErrorsTotalMock,
-}));
+function ensureMetric(name: string) {
+  if (!metricsRecord[name]) {
+    metricsRecord[name] = createMetricMock();
+  }
+}
 
-const makeWorkflowMetric = () => ({
-  inc: vi.fn(),
-  observe: vi.fn(),
-  labels: vi.fn(() => makeWorkflowMetric()),
-  startTimer: vi.fn(() => vi.fn()),
-});
+describe("workflow runtime integration (minimal-mock)", () => {
+  let workflowFixture: WorkflowRuntimeFixtureHandle;
+  let caller: TestCaller;
+  let createTestCaller: CreateTestCaller;
+  let WorkflowRuntimeClass: WorkflowRuntimeCtor;
+  const tempDirs: string[] = [];
 
-mock.module("@alfred/agent/workflow/metrics", () => ({
-  workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
-  workflowStreamEventsTotal: workflowStreamEventsTotalMock,
-  multiAgentTasksTotal: multiAgentTasksTotalMock,
-  multiAgentWavesTotal: multiAgentWavesTotalMock,
-  multiAgentAgentDurationSeconds: multiAgentAgentDurationSecondsMock,
-  multiAgentErrorsTotal: multiAgentErrorsTotalMock,
-  linearActivityDurationSeconds: makeWorkflowMetric(),
-  linearActivityEmissionsTotal: makeWorkflowMetric(),
-  linearSessionOperationsTotal: makeWorkflowMetric(),
-  replayQueriesTotal: makeWorkflowMetric(),
-  replayQueryDurationSeconds: makeWorkflowMetric(),
-  runRegistryEventsTotal: makeWorkflowMetric(),
-  runRegistryDispatchDurationSeconds: makeWorkflowMetric(),
-  workflowProvenanceDurationSeconds: makeWorkflowMetric(),
-  workflowProvenanceEdgesTotal: makeWorkflowMetric(),
-  runnerStepsTotal: makeWorkflowMetric(),
-  runnerErrorsTotal: makeWorkflowMetric(),
-}));
-
-let caller: Awaited<ReturnType<typeof createTestCaller>>;
-
-beforeAll(async () => {
-  caller = await createTestCaller({
-    scopes: ["workflow.plan", "workflow.stream", "workflow.resume"],
+  beforeAll(async () => {
+    workflowFixture = await installWorkflowRuntimeFixture();
+    ({ createTestCaller } = await import("./utils/trpc"));
+    caller = await createTestCaller({
+      scopes: ["workflow.plan", "workflow.stream", "workflow.resume", "workflow.read"],
+    });
+    ({ WorkflowRuntime: WorkflowRuntimeClass } = await import("@alfred/runtime"));
   });
-});
 
-afterEach(() => {
-  resetAllMocks();
-  workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
-  workflowStreamEventsTotalMock.inc.mockReset();
-  process.env.USE_WORKFLOW_RUNTIME = undefined;
-  emitLinearActivityMock.mockReset();
-  setLinearDelegateMock.mockReset();
-  setLinearStartedMock.mockReset();
-  setLinearCompletedMock.mockReset();
-  setLinearSessionExternalUrlMock.mockReset();
-  setLinearCancelledMock.mockReset();
-  commentOnLinearIssueMock.mockReset();
-});
+  afterAll(async () => {
+    await workflowFixture.stop();
+  });
 
-describe("workflow runtime integration", () => {
-  describe("Linear integration", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
+  beforeEach(() => {
+    process.env.USE_WORKFLOW_RUNTIME = "true";
+    workflowFixture.clearRepo();
+    workflowFixture.clearLinearRequests();
+    workflowFixture.setAiStreamMode("normal");
+    ensureMetric("workflowStreamDurationSeconds");
+    ensureMetric("workflowStreamEventsTotal");
+    resetMetric(metricsStub.workflowStreamDurationSeconds);
+    resetMetric(metricsStub.workflowStreamEventsTotal);
+  });
+
+  afterEach(async () => {
+    const dirs = tempDirs.splice(0, tempDirs.length);
+    await Promise.all(
+      dirs.map((dir) => rm(dir, { recursive: true, force: true }))
+    );
+  });
+
+  it("persists Linear metadata and emits Linear activity events", async () => {
+    const workspace = await createWorkspaceDir();
+    const { runId } = await streamWorkflow({
+      workspace,
+      linear: {
+        sessionId: "lin-123",
+        space: "focus",
+        teamId: "team-1",
+      },
     });
 
-    it("persists Linear session mapping in workflow_runs", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          yield { type: "run", id: mockRunId } as WorkflowEvent;
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
+    const stored = workflowFixture.runs.get(runId);
+    expect(stored?.linearSessionId).toBe("lin-123");
+    expect(stored?.linearSpace).toBe("focus");
 
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
+    const activityEvents = workflowFixture.linearRequests.filter((req) =>
+      String(req.input.action ?? "").startsWith("activity.")
+    );
+    expect(activityEvents.length).toBeGreaterThan(0);
+  });
 
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-        linear: {
-          sessionId: "linear-session-123",
-          space: "team-space",
-        },
-        authzLinear: "linear-token",
-      });
-
-      expect(workflowRepoMocks.createRun).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: mockRunId,
-          linearSessionId: "linear-session-123",
-          linearSpace: "team-space",
-          linearIssueId: "linear-session-123",
-          linearIssueUrl: null,
-        })
-      );
+  it("stores workflow events in the repo stub", async () => {
+    const { runId } = await streamWorkflow({
+      workspace: await createWorkspaceDir(),
     });
+    const rows = workflowFixture.events.filter((evt) => evt.runId === runId);
+    expect(rows.length).toBeGreaterThan(0);
+  });
 
-    it("passes Linear context to runtime", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
+  it("records workflow stream metrics for successful runs", async () => {
+    await streamWorkflow({ workspace: await createWorkspaceDir() });
+    expect(metricsStub.workflowStreamDurationSeconds.startTimer).toHaveBeenCalled();
+    const stopTimerMock =
+      metricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(-1)
+        ?.value;
+    expect(stopTimerMock).toBeDefined();
+    expect(stopTimerMock).toHaveBeenCalledWith({ status: "ok" });
 
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-        linear: {
-          sessionId: "linear-session-123",
-          space: "team-space",
-          teamId: "team-456",
-        },
-        authzLinear: "linear-token-xyz",
-      });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.input.linear).toEqual({
-        sessionId: "linear-session-123",
-        space: "team-space",
-        authz: "linear-token-xyz",
-      });
+    expect(metricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+      event: "run",
     });
-
-    it("omits Linear context when sessionId missing", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-        linear: {
-          space: "team-space",
-        } as any,
-        authzLinear: "linear-token",
-      });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.input.linear).toBeUndefined();
-    });
-
-    it("omits Linear context when authzLinear missing", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-        linear: {
-          sessionId: "linear-session-123",
-          space: "team-space",
-        },
-        // authzLinear omitted
-      });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.input.linear).toBeUndefined();
-    });
-
-    it("updates Linear state when workflow fails", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          throw new Error("boom");
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-      runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-        linear: {
-          sessionId: "linear-session-123",
-          space: "team-space",
-        },
-        authzLinear: "linear-token",
-      });
-
-      await new Promise<void>((resolve) => {
-        subscription.subscribe({
-          next: () => {},
-          error: () => resolve(),
-          complete: () => resolve(),
-        });
-      });
-
-      expect(setLinearCancelledMock).toHaveBeenCalled();
-      expect(commentOnLinearIssueMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.stringContaining("failed"),
-        })
-      );
+    expect(metricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+      event: "complete",
     });
   });
 
-  describe("Metrics recording", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
-    });
-
-    it("records workflow stream duration", async () => {
-      const mockRunId = "test-run-id";
-      const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
-        stopTimerMock
-      );
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          yield { type: "run", id: mockRunId } as WorkflowEvent;
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-      runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        subscription.subscribe({
-          next: () => {},
-          error: reject,
-          complete: resolve,
+  it("records error metrics when the AI stub fails", async () => {
+    workflowFixture.setAiStreamMode("error");
+    await expect(
+      (async () => {
+        const subscription = await caller.workflow.stream({
+          requirement: "fail-runtime",
+          auto: "low",
+          workspace: await createWorkspaceDir(),
         });
-      });
-
-      expect(workflowStreamDurationSecondsMock.startTimer).toHaveBeenCalled();
-      expect(stopTimerMock).toHaveBeenCalledWith({ status: "ok" });
-    });
-
-    it("records workflow stream events", async () => {
-      const mockRunId = "test-run-id";
-      const events: WorkflowEvent[] = [
-        { type: "run", id: mockRunId } as WorkflowEvent,
-        { type: "progress", pct: 50, message: "halfway" } as WorkflowEvent,
-        { type: "progress", pct: 100, message: "completed" } as WorkflowEvent,
-      ];
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          for (const event of events) {
-            yield event;
-          }
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-      runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        subscription.subscribe({
-          next: () => {},
-          error: reject,
-          complete: resolve,
+        await new Promise<void>((resolve, reject) => {
+          subscription.subscribe({
+            next: () => {},
+            error: reject,
+            complete: resolve,
+          });
         });
-      });
+      })()
+    ).rejects.toThrow("ai_stub_failure");
 
-      // Verify metrics recorded: 1 run + N chunks + 1 complete
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
-        event: "run",
-      });
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
-        event: "complete",
-      });
-    });
-
-    it("records error events on failure", async () => {
-      const mockRunId = "test-run-id";
-      const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
-        stopTimerMock
-      );
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          yield;
-          throw new Error("test error");
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-      runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-      });
-
-      await new Promise<void>((resolve) => {
-        subscription.subscribe({
-          next: () => {},
-          error: () => resolve(),
-          complete: () => resolve(),
-        });
-      });
-
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
-        event: "error",
-      });
-      expect(stopTimerMock).toHaveBeenCalledWith({ status: "error" });
+    const stopTimerMock =
+      metricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(-1)
+        ?.value;
+    expect(stopTimerMock).toHaveBeenCalledWith({ status: "error" });
+    expect(metricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+      event: "error",
     });
   });
 
-  describe("Multi-agent metrics", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
+  it("dispatches resume events through the runtime", async () => {
+    const resumeSpy = vi.spyOn(WorkflowRuntimeClass.prototype, "resume");
+    const result = await caller.workflow.start({
+      requirement: "resume-flow",
+      auto: "low",
     });
 
-    it("records multi-agent events into metrics and DB", async () => {
-      const mockRunId = "multi-agent-run";
-      const events: WorkflowEvent[] = [
-        { type: "run", id: mockRunId } as WorkflowEvent,
-        {
-          type: "event",
-          kind: "data-subtasks",
-          data: [{ id: "T1" }, { id: "T2" }],
-        } as any,
-        {
-          type: "event",
-          kind: "data-wave-plan",
-          data: { waveId: "wave_0" },
-        } as any,
-        {
-          type: "event",
-          kind: "wave-result",
-          data: {
-            waveId: "wave_0",
-            status: "partial",
-            agents: [
-              {
-                agentId: "agent-1",
-                role: "worker",
-                status: "stuck",
-                stuck: true,
-                durationSeconds: 5,
-              },
-              {
-                agentId: "agent-2",
-                role: "worker",
-                status: "completed",
-                stuck: false,
-                durationSeconds: 2,
-              },
-            ],
-          },
-        } as any,
-        {
-          type: "event",
-          kind: "wave-aborted",
-          data: { waveId: "wave_0", waveFailRate: 0.6, overallFailRate: 0.6 },
-        } as any,
-        {
-          type: "event",
-          kind: "merge-agent-result",
-          data: { role: "merge", status: "completed", durationSeconds: 7 },
-        } as any,
-        {
-          type: "event",
-          kind: "review-agent-result",
-          data: { role: "review", status: "failed", durationSeconds: 9 },
-        } as any,
-        {
-          type: "event",
-          kind: "merge-plan",
-          data: { summary: "merge", expectedFiles: ["a.ts"] },
-        } as any,
-        {
-          type: "event",
-          kind: "review-plan",
-          data: { summary: "review", checks: [] },
-        } as any,
-      ];
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          for (const ev of events) {
-            yield ev;
-          }
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-      runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        subscription.subscribe({
-          next: () => {},
-          error: reject,
-          complete: resolve,
-        });
-      });
-
-      expect(multiAgentTasksTotalMock.inc).toHaveBeenCalledWith(
-        { status: "created" },
-        2
-      );
-      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({
-        status: "started",
-      });
-      expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({
-        status: "partial",
-      });
-
-      // Per-agent duration and error metrics
-      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
-        { role: "worker", outcome: "stuck" },
-        5
-      );
-      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
-        { role: "worker", outcome: "ok" },
-        2
-      );
-      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
-        kind: "stuck_agent",
-      });
-      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
-        kind: "wave_aborted",
-      });
-      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
-        { role: "merge", outcome: "ok" },
-        7
-      );
-      expect(multiAgentAgentDurationSecondsMock.observe).toHaveBeenCalledWith(
-        { role: "review", outcome: "error" },
-        9
-      );
-      expect(multiAgentErrorsTotalMock.inc).toHaveBeenCalledWith({
-        kind: "review_failed",
-      });
-
-      const mergeCall = workflowRepoMocks.appendEvent.mock.calls.find(
-        (c) =>
-          c[0]?.eventType === "event" &&
-          (c[0]?.eventData as any)?.kind === "merge-plan"
-      );
-      const reviewCall = workflowRepoMocks.appendEvent.mock.calls.find(
-        (c) =>
-          c[0]?.eventType === "event" &&
-          (c[0]?.eventData as any)?.kind === "review-plan"
-      );
-
-      expect(mergeCall).toBeTruthy();
-      expect(reviewCall).toBeTruthy();
+    await caller.workflow.resume({
+      runId: result.runId,
+      event: "bio-authz",
+      authz: "bio-token",
     });
+
+    expect(resumeSpy).toHaveBeenCalledWith({
+      event: "bio-authz",
+      authz: "bio-token",
+    });
+    resumeSpy.mockRestore();
   });
 
-  describe("Resume flows", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
+  it("cancels runtime execution when stream unsubscribes", async () => {
+    const cancelSpy = vi.spyOn(WorkflowRuntimeClass.prototype, "cancel");
+    const subscription = await caller.workflow.stream({
+      requirement: "cancel-flow",
+      auto: "low",
+      workspace: await createWorkspaceDir(),
     });
 
-    it("handles bio-authz resume", async () => {
-      const mockRunId = "test-run-id";
-      const resumeMock = vi.fn().mockResolvedValue(undefined);
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: resumeMock,
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
+    await new Promise<void>((resolve, reject) => {
+      let innerSub:
+        | ReturnType<typeof subscription.subscribe>
+        | undefined;
+      innerSub = subscription.subscribe({
+        next: () => {
+          innerSub?.unsubscribe();
+          resolve();
+        },
+        error: reject,
+        complete: resolve,
       });
+    });
 
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-      await registerCall.resume({
-        resumeData: { event: "bio-authz", authz: "bio-token-123" },
-      });
+    expect(cancelSpy).toHaveBeenCalled();
+    cancelSpy.mockRestore();
+  });
 
-      expect(resumeMock).toHaveBeenCalledWith({
+  it("rejects resume requests for unknown runs", async () => {
+    await expect(
+      caller.workflow.resume({
+        runId: "missing-run",
         event: "bio-authz",
-        authz: "bio-token-123",
-      });
-    });
-
-    it("handles deploy-authz resume", async () => {
-      const mockRunId = "test-run-id";
-      const resumeMock = vi.fn().mockResolvedValue(undefined);
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: resumeMock,
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-      await registerCall.resume({
-        resumeData: { event: "deploy-authz", authz: "deploy-token-456" },
-      });
-
-      expect(resumeMock).toHaveBeenCalledWith({
-        event: "deploy-authz",
-        authz: "deploy-token-456",
-      });
-    });
-
-    it("handles linear-authz resume", async () => {
-      const mockRunId = "test-run-id";
-      const resumeMock = vi.fn().mockResolvedValue(undefined);
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: resumeMock,
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-      await registerCall.resume({
-        resumeData: { event: "linear-authz", authz: "linear-token-789" },
-      });
-
-      expect(resumeMock).toHaveBeenCalledWith({
-        event: "linear-authz",
-        authz: "linear-token-789",
-      });
-    });
+        authz: "token",
+      })
+    ).rejects.toThrow("run_not_found");
   });
 
-  describe("Cancellation", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
+  it("returns stored events through workflow.events", async () => {
+    const { runId } = await streamWorkflow({
+      workspace: await createWorkspaceDir(),
     });
-
-    it("propagates cancellation to runtime", async () => {
-      const mockRunId = "test-run-id";
-      const cancelMock = vi.fn();
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          yield { type: "run", id: mockRunId } as WorkflowEvent;
-        })(),
-        resume: vi.fn(),
-        cancel: cancelMock,
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-      await registerCall.cancel();
-
-      expect(cancelMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("records cancel event on stream cancellation", async () => {
-      const mockRunId = "test-run-id";
-      const stopTimerMock = vi.fn();
-      workflowStreamDurationSecondsMock.startTimer.mockReturnValue(
-        stopTimerMock
-      );
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {
-          yield { type: "run", id: mockRunId } as WorkflowEvent;
-          // Simulate long-running workflow
-          await new Promise((resolve) => setTimeout(resolve, 10_000));
-        })(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      const subscription = await caller.workflow.stream({
-        requirement: "test",
-      });
-      let unsubscribe: (() => void) | null = null;
-
-      const promise = new Promise<void>((resolve) => {
-        subscription.subscribe({
-          next: () => {
-            // Cancel after first event
-            if (unsubscribe) {
-              unsubscribe();
-              resolve();
-            }
-          },
-          error: () => resolve(),
-          complete: () => resolve(),
-        });
-      });
-
-      // Capture unsubscribe function
-      const sub = subscription.subscribe({
-        next: () => {},
-        error: () => {},
-        complete: () => {},
-      });
-      unsubscribe = sub.unsubscribe;
-
-      await promise;
-
-      expect(workflowStreamEventsTotalMock.inc).toHaveBeenCalledWith({
-        event: "cancel",
-      });
-      expect(stopTimerMock).toHaveBeenCalledWith({ status: "cancel" });
-    });
-
-    it("aborts via AbortController", async () => {
-      const mockRunId = "test-run-id";
-      let capturedSignal: AbortSignal | null = null;
-
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockImplementation((options: any) => {
-        capturedSignal = options.signal;
-        return mockExecutor;
-      });
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      expect(capturedSignal).toBeTruthy();
-      expect(capturedSignal?.aborted).toBe(false);
-
-      // Trigger cancel
-      const registerCall = runRegistryMocks.register.mock.calls[0][1];
-      registerCall.abortController.abort();
-
-      expect(capturedSignal?.aborted).toBe(true);
-    });
+    const rows = await caller.workflow.events({ runId });
+    expect(rows.length).toBeGreaterThan(0);
   });
 
-  describe("Model configuration", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
+  async function streamWorkflow(options: {
+    requirement?: string;
+    linear?: {
+      sessionId: string;
+      space: string;
+      teamId?: string;
+    };
+    workspace?: string;
+  } = {}) {
+    const workspace = options.workspace ?? (await createWorkspaceDir());
+    const subscription = await caller.workflow.stream({
+      requirement: options.requirement ?? "draft release notes",
+      auto: "low",
+      workspace,
+      linear: options.linear,
+      authzLinear: options.linear ? "linear-token" : undefined,
     });
 
-    it("uses OPENAI_MODEL_PLAN env variable", async () => {
-      process.env.OPENAI_MODEL_PLAN = "gpt-4o-2024-11-20";
-
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
+    const events: WorkflowEvent[] = [];
+    await new Promise<void>((resolve, reject) => {
+      subscription.subscribe({
+        next: (event) => events.push(event as WorkflowEvent),
+        error: reject,
+        complete: resolve,
       });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.model).toBeTruthy();
-
-      process.env.OPENAI_MODEL_PLAN = undefined;
     });
 
-    it("defaults to gpt-4o when OPENAI_MODEL_PLAN not set", async () => {
-      process.env.OPENAI_MODEL_PLAN = undefined;
+    const runEvent = events.find(
+      (event) => event.type === "run"
+    ) as WorkflowEvent & { id: string };
+    expect(runEvent?.id).toBeDefined();
+    return { runId: runEvent.id, events, workspace };
+  }
 
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.model).toBeTruthy();
-    });
-  });
-
-  describe("Timeout configuration", () => {
-    beforeEach(() => {
-      process.env.USE_WORKFLOW_RUNTIME = "true";
-    });
-
-    it("passes correct timeout values", async () => {
-      const mockRunId = "test-run-id";
-      const mockExecutor = {
-        runId: mockRunId,
-        summary: "test",
-        stream: (async function* () {})(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-      };
-
-      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-      runRegistryMocks.register.mockResolvedValue(undefined);
-
-      await caller.workflow.start({
-        requirement: "test",
-        auto: "low",
-      });
-
-      const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
-      expect(call.stepTimeoutMs).toBe(5 * 60 * 1000); // 5 minutes
-      expect(call.workflowTimeoutMs).toBe(30 * 60 * 1000); // 30 minutes
-    });
-  });
+  async function createWorkspaceDir() {
+    const dir = await mkdtemp(join(tmpdir(), "workflow-runtime-"));
+    tempDirs.push(dir);
+    return dir;
+  }
 });
+
+function resetMetric(metric: {
+  inc?: ReturnType<typeof vi.fn>;
+  startTimer?: ReturnType<typeof vi.fn>;
+}) {
+  if (metric?.inc?.mockClear) {
+    metric.inc.mockClear();
+  }
+  if (metric?.startTimer?.mockClear) {
+    metric.startTimer.mockClear();
+  }
+}

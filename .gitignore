@@ -52,6 +52,7 @@ test-results
 .cache
 tmp
 temp
+docker/**/data/
 
 # Workflow DevKit docs (kept locally but not tracked)
 docs/use-workflow/
@@ -62,6 +63,9 @@ packages/embed/.venv/
 
 # Voice models (large files)
 packages/voice/.venv/
+
+# Tune fine-tune virtualenv
+packages/tune/.venv/
 
 # START Ruler Generated Files
 /AGENTS.md

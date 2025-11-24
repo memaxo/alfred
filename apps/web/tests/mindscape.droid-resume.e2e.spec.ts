@@ -18,7 +18,11 @@ function trpcSuccess(data: unknown) {
 
 test.describe("Mindscape droid biometric resume", () => {
   test.beforeEach(async ({ page }) => {
-    let sessionUser: { id: string; email: string; name: string } | null = null;
+    let sessionUser: { id: string; email: string; name: string } | null = {
+      id: "mindscape-playwright",
+      email: "mindscape+playwright@example.com",
+      name: "Mindscape Playwright",
+    };
 
     await page.route("**/api/auth/get-session", async (route) => {
       await route.fulfill({

@@ -33,7 +33,7 @@ export const DEFAULT_WORKFLOW_TEST_USER: WorkflowTestUser = {
 };
 
 type WorkflowCallerOptions = {
-  user?: WorkflowTestUser;
+  user?: WorkflowTestUser | null;
   runtime?: Partial<WorkflowRuntime>;
   obligations?: string[];
 };
@@ -78,13 +78,19 @@ export async function createWorkflowCaller(
     ["scanContext", null],
   ]);
 
-  const user = options.user ?? DEFAULT_WORKFLOW_TEST_USER;
+  const resolvedUser =
+    options.user === undefined ? DEFAULT_WORKFLOW_TEST_USER : options.user;
+
+  const session =
+    resolvedUser === null
+      ? null
+      : {
+          user: resolvedUser,
+          session: { id: `sess-${runtime.requestId}` },
+    };
 
   return router.createCaller({
-    session: {
-      user,
-      session: { id: `sess-${runtime.requestId}` },
-    },
+    session,
     runtime,
     runtimeContext,
     policy: { obligations: options.obligations ?? [] },
