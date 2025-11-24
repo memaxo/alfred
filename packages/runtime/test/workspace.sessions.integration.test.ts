@@ -178,4 +178,13 @@ describe("workspace session coverage", () => {
     expect(sessionTracker.size).toBe(0);
     await checkTmuxLeaks({ quiet: true });
   });
+
+  it("fails leak detection when tmux sessions remain", async () => {
+    const leakingSessions = ["ws-leak-test-1"];
+    leakInternals.setListHandler(async () => leakingSessions);
+
+    await expect(checkTmuxLeaks({ quiet: true })).rejects.toThrow(
+      "tmux_session_leak_detected"
+    );
+  });
 });

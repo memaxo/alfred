@@ -14,6 +14,7 @@ This note captures the tmux/session reliability coverage that now backs the work
 - `packages/runtime/test/workspace.sessions.integration.test.ts` spins `runReviewPhase` under `ORCH_ENABLE_SESSIONS=1`, verifies fixer sessions start/stop via WorkspaceFactory, and asserts leak cleanup with `check-tmux-leaks`.
 - The same test file now includes a concurrency stress case that races two `startSession` calls on WorktreeWorkspace while a mocked `toolSession` ensures unique IDs and cleanup.
 - `scripts/check-tmux-leaks.ts` lists tmux sessions (default patterns `ws-` / `verify-session-`) and fails on leaks; tests override its list handler for deterministic assertions.
+- Added a regression in `workspace.sessions.integration.test.ts` that pins the failure path by feeding `check-tmux-leaks` a synthetic leak list and asserting it throws.
 - `scripts/verify-sessions.ts` gained `--fail` (simulated missing tmux) and `--session-crash` (kills the tmux server mid-run) in addition to the default happy path.
 - `tests/sessions-container.ts` builds a tiny Docker image with tmux, boots a `ContainerWorkspace`, and proves tmux sessions can start/peek/stop inside the container.
 

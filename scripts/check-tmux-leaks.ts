@@ -72,7 +72,9 @@ type CheckOptions = {
   quiet?: boolean;
 };
 
-export async function checkTmuxLeaks(options?: CheckOptions): Promise<void> {
+export async function checkTmuxLeaks(
+  options?: CheckOptions
+): Promise<string[]> {
   let sessions: string[];
   try {
     sessions = await collectTmuxSessions();
@@ -84,7 +86,7 @@ export async function checkTmuxLeaks(options?: CheckOptions): Promise<void> {
       console.log(
         "[check-tmux-leaks] tmux unavailable; skipping leak detection."
       );
-      return;
+      return [];
     }
     throw error;
   }
@@ -105,6 +107,8 @@ export async function checkTmuxLeaks(options?: CheckOptions): Promise<void> {
   if (!options?.quiet) {
     console.log("[check-tmux-leaks] No leaked workspace sessions detected.");
   }
+
+  return [];
 }
 
 if (import.meta.main) {

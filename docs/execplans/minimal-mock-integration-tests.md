@@ -9,23 +9,30 @@ Our current integration suites rely on bespoke mocks that hide real regressions.
 ## Progress
 
 - [x] (2025-11-24 05:45Z) Captured current state and requirements in this ExecPlan.
-- [ ] Implement shared voice runtime fixture under `packages/test-kit/src/voice`.
-- [ ] Adopt the shared fixture in `packages/api/test/voice.streaming.integration.test.ts` and related suites, ensuring no direct STT/TTS mocks remain.
-- [ ] Build a workflow runtime fixture, migrate `packages/api/test/workflow.runtime-integration.test.ts`, and document acceptance evidence.
+- [x] (2025-11-24 07:05Z) Implemented shared voice runtime fixture under `packages/test-kit/src/voice`, exposed through package exports.
+- [x] (2025-11-24 07:07Z) Adopted the shared fixture in the voice streaming integration and e2e suites, deleting bespoke mocks.
+- [x] (2025-11-24 07:32Z) Built the workflow runtime fixture (voice-neutral), migrated `packages/api/test/workflow.runtime-integration.test.ts`, and captured evidence via dedicated docs/tests.
+- [x] (2025-11-24 07:33Z) Documented setup and commands in `docs/testing/voice-runtime-fixture.md`, then ran the four targeted `bun test` commands (voice streaming integration/e2e, voice S2S e2e, workflow runtime integration).
 
 ## Surprises & Discoveries
 
-- None yet.
+- The runtime imports `@alfred/agent/workflow/metrics` and review gating utilities very early, so deterministic tests must mock those modules before the router loads. The fixture now exports stubs for those metrics plus a tunable review gate to force failure flows without touching production code.
+- Bun refuses to load `packages/runtime/src/orchestrator/review.ts` due to `await` in `finally` when compiling raw TypeScript. Stubbing the module before `WorkflowRuntime` imports prevents the parse error and keeps tests hermetic.
 
 ## Decision Log
 
 - Decision: Use deterministic PCM chunks and transcripts in the shared voice fixture instead of real ffmpeg or Python processes to keep tests fast while still running the true registry and streaming code.  
   Rationale: Determinism plus real registry behavior exposes orchestration bugs without introducing heavy dependencies or GPU requirements.  
   Date/Author: 2025-11-24 / Codex
+- Decision: Provide workflow-specific fixture helpers (metrics stub, review gate toggle, Linear stub server) inside `@alfred/test-kit` instead of per-suite mocks.  
+  Rationale: Shared utilities guarantee the API router, runtime, and test harness observe identical behavior, allow us to induce success/error/cancel flows on demand, and eliminate module import races.  
+  Date/Author: 2025-11-24 / Codex
 
 ## Outcomes & Retrospective
 
-This section must be updated when each milestone completes to summarize achieved behavior, outstanding gaps, and lessons learned.
+- Voice streaming suites now boot the real registry, with deterministic STT/TTS pools provided by the shared fixture. Logs from each `bun test` run show the prototype listener starting, sessions being created, and tests passing without inline mocks.
+- The workflow runtime fixture wires in-memory repos, Linear stub HTTP server, AI/metrics stubs, and review gate controls so the API router exercises the actual runtime. The migrated integration suite covers success, review failure, cancellation, resume, and event persistence scenarios using the real router + runtime.
+- `docs/testing/voice-runtime-fixture.md` records the commands and expected console snippets so contributors can validate the same behavior locally. Remaining work: none for this milestone; future follow-ups can extend the fixture to cover multi-agent scenarios if needed.
 
 ## Context and Orientation
 

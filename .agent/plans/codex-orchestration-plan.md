@@ -70,6 +70,7 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [ ] Validate ExecPlan file creation and persistence
   - [x] Verify knowledge graph integration (execplan nodes/edges) via ExecPlan node/edge persistence in graphstore
   - [x] Add review fallback/integration coverage (`packages/runtime/test/review.fallback.test.ts`, `review.integration.test.ts`) to exercise scoped commands, fixer retries, and debugger ExecPlan generation (2025-11-24)
+  - [x] Cover tmux workspace sessions via `packages/runtime/test/workspace.sessions.integration.test.ts`, leak detection helpers, and verify-sessions/check-tmux-leaks/`tests/sessions-container.ts` automation (2025-11-24)
 
 - [x] Phase 7: Advanced Execution Environments (Hybrid Tier)
   - [x] Implement `packages/agent/src/orchestrator/tool/worktree.ts` for managing git worktrees with metadata, pruning, and safe-merge previews. (2025-11-24)
@@ -1223,9 +1224,26 @@ Extend existing workflow tests:
 
 ### 7.4 Performance tests
 
-- Unit-level micro‑bench:
+- Unit-level micro-bench:
   - decomposeTask with 100 file hints: run 100 iterations and ensure < 100ms p99 on CI hardware (skipping heavy I/O or models).
 - Tracker checks on 10,000 events to remain < 10ms p99.
+
+### 7.5 Session reliability coverage
+
+- packages/runtime/test/workspace.sessions.integration.test.ts
+  - Forces `runReviewPhase` through fixer retries with `ORCH_ENABLE_SESSIONS=1`, asserts `WorkspaceFactory.start/stop` invocations, and runs `check-tmux-leaks` post-run.
+  - Contains a concurrency stress case that races two `WorktreeWorkspace.startSession` calls using a mocked `toolSession` registry.
+  - Adds a regression that feeds `check-tmux-leaks` a synthetic leak list and asserts the helper rejects so tmux debris trips CI before landing.
+- scripts/verify-sessions.ts
+  - Default mode exercises start → send → peek → stop.
+  - `--fail` simulates a missing tmux binary; `--session-crash` kills the tmux server mid-run to assert graceful error propagation.
+- scripts/check-tmux-leaks.ts
+  - CLI that lists tmux sessions (default patterns `ws-` / `verify-session-`) and fails on leaks; tests override its list handler for determinism.
+- tests/sessions-container.ts
+  - Builds a tmux-enabled Docker image, boots a `ContainerWorkspace`, runs tmux commands via `docker exec`, and ensures cleanup removes both container + worktree artifacts.
+- CI
+  - `.github/workflows/ci.yml` runs the default verify-sessions script plus `--fail`, `--session-crash`, and `check-tmux-leaks` (best effort) after the test matrix.
+  - `.github/workflows/postgres-nightly.yml` runs all verify-sessions modes + `check-tmux-leaks --strict` and the container harness as mandatory steps.
 
 ---
 

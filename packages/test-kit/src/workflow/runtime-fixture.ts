@@ -49,6 +49,7 @@ export type WorkflowRuntimeFixtureHandle = {
   linearRequests: LinearRequest[];
   linearStubUrl: string;
   setAiStreamMode(mode: StreamMode): void;
+  setReviewGateFailure(mode: boolean): void;
   clearRepo(): void;
   clearLinearRequests(): void;
   stop(): Promise<void>;
@@ -56,6 +57,43 @@ export type WorkflowRuntimeFixtureHandle = {
 
 const aiStreamState: { mode: StreamMode } = { mode: "normal" };
 const realAiModule = await import("ai");
+const realOpenAiModule = await import("@ai-sdk/openai");
+
+const workflowMetricNames = [
+  "linearActivityDurationSeconds",
+  "linearActivityEmissionsTotal",
+  "linearSessionOperationsTotal",
+  "linearWebhookEventsTotal",
+  "linearWebhookWorkflowCancelsTotal",
+  "linearWebhookWorkflowStartsTotal",
+  "multiAgentAgentDurationSeconds",
+  "multiAgentErrorsTotal",
+  "multiAgentTasksTotal",
+  "multiAgentWavesTotal",
+  "replayQueriesTotal",
+  "replayQueryDurationSeconds",
+  "runnerErrorsTotal",
+  "runnerStepsTotal",
+  "runRegistryDispatchDurationSeconds",
+  "runRegistryEventsTotal",
+  "workflowProvenanceDurationSeconds",
+  "workflowProvenanceEdgesTotal",
+  "workflowStreamDurationSeconds",
+  "workflowStreamEventsTotal",
+] as const;
+
+const createWorkflowMetric = () => ({
+  inc: vi.fn(),
+  dec: vi.fn(),
+  observe: vi.fn(),
+  set: vi.fn(),
+  labels: vi.fn(() => createWorkflowMetric()),
+  startTimer: vi.fn(() => vi.fn()),
+});
+
+export const workflowMetricsStub = Object.fromEntries(
+  workflowMetricNames.map((name) => [name, createWorkflowMetric()])
+) as Record<(typeof workflowMetricNames)[number], ReturnType<typeof createWorkflowMetric>>;
 
 function sortByTimestampDesc(list: WorkflowEventRecord[]) {
   return [...list].sort(
@@ -69,13 +107,14 @@ function sortByTimestampAsc(list: WorkflowEventRecord[]) {
   );
 }
 
-const realOpenAiModule = await import("@ai-sdk/openai");
 mock.module("@ai-sdk/openai", () => ({
   ...realOpenAiModule,
   openai: (modelId: string) => ({ modelId }),
 }));
 
-const streamTextStub = () => {
+mock.module("@alfred/agent/workflow/metrics", () => workflowMetricsStub);
+
+export const aiStreamTextMock = vi.fn(() => {
   if (aiStreamState.mode === "error") {
     return {
       fullStream: (async function* () {
@@ -93,14 +132,14 @@ const streamTextStub = () => {
       };
     })(),
   };
-};
+});
 
 const validateMessagesStub = async ({ messages }: { messages?: unknown[] }) =>
   Array.isArray(messages) ? messages : [];
 
 mock.module("ai", () => ({
   ...realAiModule,
-  streamText: streamTextStub,
+  streamText: aiStreamTextMock,
   validateUIMessages: validateMessagesStub,
 }));
 
@@ -221,13 +260,15 @@ mock.module("@alfred/agent/assistant/graphstore", () => ({
   linkRagProvenanceToReasoning: vi.fn().mockResolvedValue(undefined),
 }));
 
+let reviewGateShouldFail = false;
+
 mock.module("@alfred/agent/workflow/review-gate", () => {
   class ReviewGateStub {
     requireAtLeast() {}
     applyPlan() {}
     recordCheck() {}
     isSatisfied() {
-      return true;
+      return !reviewGateShouldFail;
     }
     summary() {
       return [];
@@ -235,6 +276,10 @@ mock.module("@alfred/agent/workflow/review-gate", () => {
   }
   return { ReviewGate: ReviewGateStub };
 });
+
+export function setReviewGateFailureMode(shouldFail: boolean) {
+  reviewGateShouldFail = shouldFail;
+}
 
 mock.module("@alfred/runtime/orchestrator/review", () => ({
   runReviewPhase: async function* () {
@@ -450,6 +495,9 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
     linearStubUrl,
     setAiStreamMode(mode: StreamMode) {
       aiStreamState.mode = mode;
+    },
+    setReviewGateFailure(mode: boolean) {
+      setReviewGateFailureMode(mode);
     },
     clearRepo() {
       runs.clear();
