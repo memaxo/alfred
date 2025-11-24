@@ -148,6 +148,27 @@ export const conceptNodeDataSchema = baseArtifactDataSchema.extend({
   description: z.string().optional(),
 });
 
+export const droidNodeDataSchema = baseArtifactDataSchema.extend({
+  prompt: z.string().optional(),
+  auto: z.enum(["read", "low", "medium", "high"]).optional(),
+  out: z.enum(["text", "json", "debug"]).optional(),
+  status: z
+    .enum(["idle", "running", "suspended", "completed", "failed"])
+    .optional(),
+  log: z
+    .array(
+      z.object({
+        id: z.string(),
+        channel: z.enum(["stdout", "stderr", "system"]),
+        text: z.string(),
+        at: z.string(),
+      })
+    )
+    .optional(),
+  lastRunId: z.string().uuid().optional(),
+  error: z.string().optional(),
+});
+
 /**
  * Schema for terminal node data.
  * Terminal nodes don't have specific data fields beyond the base.
@@ -190,6 +211,7 @@ export const artifactDataSchema = z.discriminatedUnion("type", [
     .object({ type: z.literal("workflowlist") })
     .merge(workflowListNodeDataSchema),
   z.object({ type: z.literal("deployment") }).merge(deploymentNodeDataSchema),
+  z.object({ type: z.literal("droid") }).merge(droidNodeDataSchema),
   z.object({ type: z.literal("knowledge") }).merge(knowledgeNodeDataSchema),
   z.object({ type: z.literal("concept") }).merge(conceptNodeDataSchema),
   z.object({ type: z.literal("terminal") }).merge(terminalNodeDataSchema),
@@ -238,6 +260,8 @@ export function getNodeDataSchema(nodeType: string | undefined): z.ZodTypeAny {
       return knowledgeNodeDataSchema;
     case "concept":
       return conceptNodeDataSchema;
+    case "droid":
+      return droidNodeDataSchema;
     case "terminal":
       return terminalNodeDataSchema;
     case "artifact":

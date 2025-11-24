@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { voiceRouter } from "@alfred/api/routers/voice";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import * as config from "@alfred/voice/services/config";
 import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
@@ -85,7 +86,10 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
 
     const caller = voiceRouter.createCaller({
       session: { user: { id: "test-user" } },
-      runtimeContext: {},
+      runtimeContext: new RuntimeContext([
+        ["requestId", "voice-e2e"],
+        ["scanContext", null],
+      ]),
     } as any);
 
     // The router expects "audio/webm" or similar usually, but we are sending raw PCM?

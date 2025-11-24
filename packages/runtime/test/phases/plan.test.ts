@@ -124,7 +124,7 @@ describe("executePlanPhase", () => {
     buildMock.mockImplementation(async () => built);
 
     const input = { ...baseInput };
-    const runtimeContext = new RuntimeContext();
+    const runtimeContext = new RuntimeContext([["scanContext", null]]);
 
     const scanPhase = new ScanPhase("run-pipeline");
     const planPhase = new PlanPhase("run-pipeline");

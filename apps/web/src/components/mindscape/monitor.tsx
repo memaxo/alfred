@@ -1,27 +1,17 @@
 import type { WorkflowEvent } from "@alfred/type";
-import type { UIMessage } from "@alfred/type/stream";
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
+import { useWorkflowSseStream, type WorkflowStreamInput } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
-import { trpc } from "@/utils/trpc";
 
-type StreamInput = {
-  requirement: string;
-  authz: string;
-  auto: "read" | "low" | "medium" | "high";
-  mode: "sequential" | "parallel";
+type StreamInput = WorkflowStreamInput & {
   context: {
     enable: boolean;
     web: boolean;
   };
 };
-
-function eventToUiMessages(_event: WorkflowEvent): UIMessage[] {
-  // Placeholder: UI tests do not depend on the exact shape yet.
-  return [];
-}
 
 function WorkflowSubscription({
   nodeId,
@@ -32,6 +22,12 @@ function WorkflowSubscription({
 }) {
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
+  );
+  const recordContextReceipt = useMindscapeStore(
+    (state) => state.recordContextReceipt
+  );
+  const clearContextReceipt = useMindscapeStore(
+    (state) => state.clearContextReceipt
   );
 
   const [streamInput, setStreamInput] = useState<StreamInput | null>(null);
@@ -77,30 +73,44 @@ function WorkflowSubscription({
     }
   }, [status, streamInput, data, nodeId, updateArtifactData]);
 
-  // Subscription
-  const input = streamInput ?? {
-    requirement: "",
-    authz: "",
-    auto: "read",
-    mode: "sequential",
-    context: { enable: false, web: false },
-  };
-
-  trpc.workflow.stream.useSubscription(input, {
-    enabled: !!streamInput,
-    onData(event: WorkflowEvent) {
-      // Pulse outgoing edges on ANY event to visualize activity
+  useWorkflowSseStream({
+    input: streamInput,
+    onWorkflowEvent(event: WorkflowEvent) {
       dispatchMindscapeEvent({
-          type: "workflow-step",
-          sourceId: nodeId
+        type: "workflow-step",
+        sourceId: nodeId,
       });
 
-      // Update node data based on event
       const evtId = (event as any).eventId || Date.now().toString();
       if (processedEvents.current.has(evtId)) {
         return;
       }
       processedEvents.current.add(evtId);
+
+      if (event.type === "data-cache-handoff") {
+        recordContextReceipt(nodeId, {
+          source: "handoff",
+          receipt: (event as any).receipts,
+        });
+        dispatchMindscapeEvent({
+          type: "context-cache",
+          sourceId: nodeId,
+        });
+        return;
+      }
+
+      if (event.type === "context") {
+        recordContextReceipt(nodeId, {
+          source: (event as any).phase ?? "context",
+          phase: (event as any).phase,
+          receipt: (event as any).receipts,
+        });
+        dispatchMindscapeEvent({
+          type: "context-cache",
+          sourceId: nodeId,
+        });
+        return;
+      }
 
       if (event.type === "run") {
         updateArtifactData(nodeId, {
@@ -108,29 +118,29 @@ function WorkflowSubscription({
           runId: (event as any).id,
         });
         setStatus("running");
-      } else if (event.type === "progress") {
-        // Update progress description?
       } else if (event.type === "complete") {
         updateArtifactData(nodeId, { status: "completed" });
-        setStreamInput(null); // Stop stream
+        clearContextReceipt(nodeId);
+        setStreamInput(null);
       } else if (event.type === "error") {
         updateArtifactData(nodeId, {
           status: "failed",
           error: (event as any).message,
         });
+        clearContextReceipt(nodeId);
         setStreamInput(null);
       }
-
-      // For UI messages (Plan/Tasks), we parse them
-      const uiMessages = eventToUiMessages(event);
-      if (uiMessages && uiMessages.length > 0) {
-        updateArtifactData(nodeId, {
-          messages: [...((data.messages as any[]) || []), ...uiMessages],
-        });
+    },
+    onUiMessages(messages) {
+      if (!messages.length) {
+        return;
       }
+      updateArtifactData(nodeId, {
+        messages: [...((data.messages as any[]) || []), ...messages],
+      });
     },
     onError(err) {
-      console.error("Workflow stream error:", err);
+      console.error("Workflow SSE stream error:", err);
       updateArtifactData(nodeId, { status: "failed", error: err.message });
       setStreamInput(null);
     },

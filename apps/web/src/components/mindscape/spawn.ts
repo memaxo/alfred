@@ -16,6 +16,7 @@ export const mindscapeSpawnTypes = [
   "workflowlist",
   "deployment",
   "workflow",
+  "droid",
   "concept",
 ] as const;
 
@@ -29,6 +30,7 @@ export type MindscapeSearchParams = {
 
 export const singletonSpawnTypes: MindscapeSpawnType[] = [
   "chat",
+  "droid",
   "timer",
   "bookmark",
   "todo",
@@ -54,6 +56,7 @@ const spawnLabels: Record<MindscapeSpawnType, string> = {
   workflowlist: "Workflow List",
   deployment: "Deployments",
   workflow: "Workflow",
+  droid: "Droid Exec",
   concept: "Concept",
 };
 
@@ -141,6 +144,20 @@ export function createSpawnNode(
         type: "workflow",
         position,
         data: { label: "Workflow", status: "Idle", messages: [] },
+      };
+    case "droid":
+      return {
+        id,
+        type: "droid",
+        position,
+        data: {
+          label: "Droid Exec",
+          prompt: "",
+          auto: "low",
+          out: "text",
+          status: "idle",
+          log: [],
+        },
       };
     case "settings":
       return {

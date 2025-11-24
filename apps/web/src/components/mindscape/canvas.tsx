@@ -42,6 +42,7 @@ import { ChatNode } from "./nodes/chat-node";
 import { CodeNode } from "./nodes/code-node";
 import { ConceptNode } from "./nodes/concept-node";
 import { DeploymentNode } from "./nodes/deployment-node";
+import { DroidNode } from "./nodes/droid-node";
 import { NodeErrorBoundary } from "./nodes/error-boundary";
 import { IntegrationsNode } from "./nodes/integrations-node";
 import { KnowledgeNode } from "./nodes/knowledge-node";
@@ -83,6 +84,7 @@ const nodeTypes: NodeTypes = {
   chat: wrapWithErrorBoundary(ChatNode),
   workflow: wrapWithErrorBoundary(WorkflowNode),
   terminal: wrapWithErrorBoundary(TerminalNode),
+  droid: wrapWithErrorBoundary(DroidNode),
   note: wrapWithErrorBoundary(NoteNode),
   reminder: wrapWithErrorBoundary(ReminderNode),
   ticket: wrapWithErrorBoundary(TicketNode),

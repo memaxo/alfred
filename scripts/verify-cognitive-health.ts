@@ -11,6 +11,7 @@ import { RuntimeContext } from "@alfred/type/runtime-context";
 import { runCognitiveLoop } from "@alfred/runtime";
 import {
   cognitiveEntropyEventsTotal,
+  cognitiveFeedbackSubmissionsTotal,
   cognitivePhysiologyGauge,
   metricsRegistry,
 } from "@alfred/api/metrics";
@@ -42,7 +43,10 @@ const mockAiAdapter = {
 
 async function verifyMetrics() {
   const streamId = `health-${Date.now()}`;
-  const ctx = new RuntimeContext([["requestId", streamId]]);
+  const ctx = new RuntimeContext([
+    ["requestId", streamId],
+    ["scanContext", null],
+  ]);
   (ctx as RuntimeContext & { ai: typeof mockAiAdapter }).ai = mockAiAdapter;
 
   await runCognitiveLoop(ctx, streamId, {
@@ -59,6 +63,9 @@ async function verifyMetrics() {
     ts: Date.now() as any,
   });
 
+  // Ensure feedback counter reports in metrics output even if no UI submission
+  cognitiveFeedbackSubmissionsTotal.labels("script").inc(0);
+
   const metricsText = await metricsRegistry.metrics();
   if (!metricsText.includes("cognitive_physiology_gauge")) {
     throw new Error("cognitive_physiology_gauge missing from registry output.");
@@ -66,6 +73,11 @@ async function verifyMetrics() {
   if (!metricsText.includes("cognitive_entropy_events_total")) {
     throw new Error(
       "cognitive_entropy_events_total missing from registry output."
+    );
+  }
+  if (!metricsText.includes("cognitive_feedback_submissions_total")) {
+    throw new Error(
+      "cognitive_feedback_submissions_total missing from registry output."
     );
   }
 

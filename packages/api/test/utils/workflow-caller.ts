@@ -75,6 +75,7 @@ export async function createWorkflowCaller(
     ["receivedAt", runtime.receivedAt.toISOString()],
     ["method", runtime.method],
     ["url", runtime.url],
+    ["scanContext", null],
   ]);
 
   const user = options.user ?? DEFAULT_WORKFLOW_TEST_USER;

@@ -114,7 +114,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
           linear: preparedLinear,
         } as typeof input;
 
-        const executor = createWorkflowExecutor(workflowPayload, abortController);
+        const executor = createWorkflowExecutor(
+          workflowPayload,
+          abortController,
+          undefined,
+          ctx.runtimeContext
+        );
 
         const storedInput = {
           ...(workflowPayload as any),

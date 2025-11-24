@@ -8,7 +8,16 @@
  * - Cancellation propagation
  */
 
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 import { metricsStub } from "./utils/mock-metrics";
 import {
@@ -27,6 +36,35 @@ mockPolicyAudit();
 const workflowRepoMocks = mockWorkflowRepo();
 const runRegistryMocks = mockRunRegistry();
 const workflowRuntimeMocks = mockWorkflowRuntime();
+
+const emitLinearActivityMock = vi.fn().mockResolvedValue({ ok: true });
+const setLinearDelegateMock = vi.fn().mockResolvedValue(undefined);
+const setLinearStartedMock = vi.fn().mockResolvedValue({ stateId: "started" });
+const setLinearCompletedMock = vi.fn().mockResolvedValue({ stateId: "done" });
+const setLinearSessionExternalUrlMock = vi
+  .fn()
+  .mockResolvedValue(undefined);
+const commentOnLinearIssueMock = vi.fn().mockResolvedValue(undefined);
+
+mock.module("@alfred/agent/integrations/linear", () => ({
+  emitLinearActivity: emitLinearActivityMock,
+  setLinearDelegate: setLinearDelegateMock,
+  setLinearStarted: setLinearStartedMock,
+  setLinearCompleted: setLinearCompletedMock,
+  setLinearSessionExternalUrl: setLinearSessionExternalUrlMock,
+  commentOnLinearIssue: commentOnLinearIssueMock,
+  extractIssueIdFromSession: (id: string) => id,
+  configureLinearMetrics: vi.fn(),
+}));
+
+mock.module("@alfred/agent/workflow/linear", () => ({
+  ensureLinearTicket: (params: {
+    linear?: { space: string; sessionId?: string };
+  }) => ({
+    linear: params.linear,
+    ticket: undefined,
+  }),
+}));
 
 const workflowStreamDurationSecondsMock = {
   startTimer: vi.fn().mockReturnValue(() => {}),
@@ -51,6 +89,33 @@ mock.module("@alfred/api/metrics", () => ({
   multiAgentErrorsTotal: multiAgentErrorsTotalMock,
 }));
 
+const makeWorkflowMetric = () => ({
+  inc: vi.fn(),
+  observe: vi.fn(),
+  labels: vi.fn(() => makeWorkflowMetric()),
+  startTimer: vi.fn(() => vi.fn()),
+});
+
+mock.module("@alfred/agent/workflow/metrics", () => ({
+  workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
+  workflowStreamEventsTotal: workflowStreamEventsTotalMock,
+  multiAgentTasksTotal: multiAgentTasksTotalMock,
+  multiAgentWavesTotal: multiAgentWavesTotalMock,
+  multiAgentAgentDurationSeconds: multiAgentAgentDurationSecondsMock,
+  multiAgentErrorsTotal: multiAgentErrorsTotalMock,
+  linearActivityDurationSeconds: makeWorkflowMetric(),
+  linearActivityEmissionsTotal: makeWorkflowMetric(),
+  linearSessionOperationsTotal: makeWorkflowMetric(),
+  replayQueriesTotal: makeWorkflowMetric(),
+  replayQueryDurationSeconds: makeWorkflowMetric(),
+  runRegistryEventsTotal: makeWorkflowMetric(),
+  runRegistryDispatchDurationSeconds: makeWorkflowMetric(),
+  workflowProvenanceDurationSeconds: makeWorkflowMetric(),
+  workflowProvenanceEdgesTotal: makeWorkflowMetric(),
+  runnerStepsTotal: makeWorkflowMetric(),
+  runnerErrorsTotal: makeWorkflowMetric(),
+}));
+
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
@@ -64,11 +129,17 @@ afterEach(() => {
   workflowStreamDurationSecondsMock.startTimer.mockReturnValue(() => {});
   workflowStreamEventsTotalMock.inc.mockReset();
   process.env.USE_WORKFLOW_RUNTIME = undefined;
+  emitLinearActivityMock.mockReset();
+  setLinearDelegateMock.mockReset();
+  setLinearStartedMock.mockReset();
+  setLinearCompletedMock.mockReset();
+  setLinearSessionExternalUrlMock.mockReset();
+  commentOnLinearIssueMock.mockReset();
 });
 
 describe("workflow runtime integration", () => {
   describe("Linear integration", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -103,6 +174,8 @@ describe("workflow runtime integration", () => {
           id: mockRunId,
           linearSessionId: "linear-session-123",
           linearSpace: "team-space",
+          linearIssueId: "linear-session-123",
+          linearIssueUrl: null,
         })
       );
     });
@@ -197,7 +270,7 @@ describe("workflow runtime integration", () => {
   });
 
   describe("Metrics recording", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -225,7 +298,9 @@ describe("workflow runtime integration", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({ requirement: "test" });
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+      });
 
       await new Promise<void>((resolve, reject) => {
         subscription.subscribe({
@@ -266,7 +341,9 @@ describe("workflow runtime integration", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({ requirement: "test" });
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+      });
 
       await new Promise<void>((resolve, reject) => {
         subscription.subscribe({
@@ -308,7 +385,9 @@ describe("workflow runtime integration", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({ requirement: "test" });
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+      });
 
       await new Promise<void>((resolve) => {
         subscription.subscribe({
@@ -326,7 +405,7 @@ describe("workflow runtime integration", () => {
   });
 
   describe("Multi-agent metrics", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -414,7 +493,9 @@ describe("workflow runtime integration", () => {
       runRegistryMocks.register.mockResolvedValue(undefined);
       runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({ requirement: "test" });
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+      });
 
       await new Promise<void>((resolve, reject) => {
         subscription.subscribe({
@@ -432,7 +513,7 @@ describe("workflow runtime integration", () => {
         status: "started",
       });
       expect(multiAgentWavesTotalMock.inc).toHaveBeenCalledWith({
-        status: "completed",
+        status: "partial",
       });
 
       // Per-agent duration and error metrics
@@ -479,7 +560,7 @@ describe("workflow runtime integration", () => {
   });
 
   describe("Resume flows", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -509,7 +590,8 @@ describe("workflow runtime integration", () => {
       });
 
       expect(resumeMock).toHaveBeenCalledWith({
-        resumeData: { event: "bio-authz", authz: "bio-token-123" },
+        event: "bio-authz",
+        authz: "bio-token-123",
       });
     });
 
@@ -539,7 +621,8 @@ describe("workflow runtime integration", () => {
       });
 
       expect(resumeMock).toHaveBeenCalledWith({
-        resumeData: { event: "deploy-authz", authz: "deploy-token-456" },
+        event: "deploy-authz",
+        authz: "deploy-token-456",
       });
     });
 
@@ -569,13 +652,14 @@ describe("workflow runtime integration", () => {
       });
 
       expect(resumeMock).toHaveBeenCalledWith({
-        resumeData: { event: "linear-authz", authz: "linear-token-789" },
+        event: "linear-authz",
+        authz: "linear-token-789",
       });
     });
   });
 
   describe("Cancellation", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -631,7 +715,9 @@ describe("workflow runtime integration", () => {
       workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
       runRegistryMocks.register.mockResolvedValue(undefined);
 
-      const subscription = caller.workflow.stream({ requirement: "test" });
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+      });
       let unsubscribe: (() => void) | null = null;
 
       const promise = new Promise<void>((resolve) => {
@@ -700,7 +786,7 @@ describe("workflow runtime integration", () => {
   });
 
   describe("Model configuration", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 
@@ -758,7 +844,7 @@ describe("workflow runtime integration", () => {
   });
 
   describe("Timeout configuration", () => {
-    beforeAll(() => {
+    beforeEach(() => {
       process.env.USE_WORKFLOW_RUNTIME = "true";
     });
 

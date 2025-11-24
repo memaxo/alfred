@@ -1,6 +1,14 @@
 import type { inferRouterOutputs } from "@trpc/server";
 import { Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  CognitiveFeedbackControls,
+} from "@/components/cognitive-feedback/controls";
+import {
+  CognitiveFeedbackDialog,
+  type CognitiveFeedbackDraft,
+} from "@/components/cognitive-feedback/dialog";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { formatRelativeTime } from "@/lib/time";
@@ -10,6 +18,7 @@ import {
   type KnowledgeNodeData,
   useMindscapeStore,
 } from "@/store/mindscape";
+import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
@@ -56,6 +65,20 @@ function getDocTitle(doc: ExplainedNode) {
   return doc.label;
 }
 
+function getNodeStreamId(
+  node: { id: string };
+  data: ArtifactData | undefined;
+  graphDbId?: string | null
+) {
+  if (data && typeof (data as { runId?: string }).runId === "string") {
+    return (data as { runId: string }).runId;
+  }
+  if (graphDbId) {
+    return graphDbId;
+  }
+  return node.id;
+}
+
 type MindscapeDetailPanelProps = {
   onWorkflowNavigate?: (runId: string) => void;
   onWorkflowInspect?: (runId: string) => void;
@@ -66,7 +89,14 @@ export function MindscapeDetailPanel({
   onWorkflowInspect,
 }: MindscapeDetailPanelProps = {}) {
   const nodes = useMindscapeStore((state) => state.nodes);
-  const { focusedNodeId, focusNode, nodeType, nodeData } = useMindscapeStore(
+  const {
+    focusedNodeId,
+    focusNode,
+    nodeType,
+    nodeData,
+    recordFeedback,
+    feedbackByNode,
+  } = useMindscapeStore(
     useShallow((state) => {
       const node = state.nodes.find((n) => n.id === state.focusedNodeId);
       return {
@@ -74,7 +104,9 @@ export function MindscapeDetailPanel({
         focusNode: state.focusNode,
         nodeType: node?.type,
         nodeData: node?.data,
-        nodeId: node?.id, // needed for label fallback
+        nodeId: node?.id,
+        recordFeedback: state.recordFeedback,
+        feedbackByNode: state.feedbackByNode,
       };
     })
   );
@@ -156,6 +188,66 @@ export function MindscapeDetailPanel({
       (isDebouncing || (shouldQuery && isLoading))
   );
 
+  const [feedbackDraft, setFeedbackDraft] =
+    useState<CognitiveFeedbackDraft | null>(null);
+  const {
+    submit: submitFeedback,
+    status: feedbackStatus,
+    error: feedbackError,
+    reset: resetFeedback,
+  } = useCognitiveFeedback();
+  const lastFeedback =
+    focusedNodeId && feedbackByNode ? feedbackByNode[focusedNodeId] : undefined;
+
+  const handleFeedbackIntent = (intent: "positive" | "negative") => {
+    if (!focusedNodeId) {
+      return;
+    }
+    const streamId = getNodeStreamId(node, data, graphDbId);
+    setFeedbackDraft({
+      streamId,
+      expected: getNodeLabel(node),
+      actual: "",
+      intent,
+      surface: "mindscape",
+    });
+  };
+
+  const handleFeedbackClose = (open: boolean) => {
+    if (!open) {
+      setFeedbackDraft(null);
+      resetFeedback();
+    }
+  };
+
+  const handleFeedbackSubmit = async (values: {
+    expected: string;
+    actual: string;
+    surface?: string;
+  }) => {
+    if (!feedbackDraft || !focusedNodeId) {
+      return;
+    }
+    try {
+      await submitFeedback({
+        streamId: feedbackDraft.streamId,
+        expected: values.expected,
+        actual: values.actual,
+        surface: values.surface ?? feedbackDraft.surface ?? "mindscape",
+      });
+      recordFeedback(focusedNodeId, feedbackDraft.intent);
+      toast.success("Mindscape feedback recorded.");
+      setFeedbackDraft(null);
+      resetFeedback();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit feedback.";
+      toast.error(message);
+    }
+  };
+
   const panelClasses =
     "pointer-events-auto absolute right-4 top-4 z-20 w-80 max-w-sm rounded-3xl border border-white/10 bg-void-surface/80 p-4 text-biolum shadow-2xl backdrop-blur";
 
@@ -174,17 +266,20 @@ export function MindscapeDetailPanel({
     );
   }
 
+  const canSubmitFeedback = Boolean(focusedNodeId);
+
   return (
-    <aside className={panelClasses}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-biolum-faint text-xs uppercase tracking-wide">
-            {node.type}
-          </p>
-          <h2 className="font-semibold text-lg tracking-tight">
-            {getNodeLabel(node)}
-          </h2>
-        </div>
+    <>
+      <aside className={panelClasses}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-biolum-faint text-xs uppercase tracking-wide">
+              {node.type}
+            </p>
+            <h2 className="font-semibold text-lg tracking-tight">
+              {getNodeLabel(node)}
+            </h2>
+          </div>
         <button
           aria-label="Close inspector"
           className="rounded-full border border-transparent p-1 text-biolum-faint transition hover:border-white/10 hover:text-biolum"
@@ -194,6 +289,26 @@ export function MindscapeDetailPanel({
           <X className="h-4 w-4" />
         </button>
       </div>
+
+        {canSubmitFeedback ? (
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <CognitiveFeedbackControls
+              disabled={feedbackStatus === "pending"}
+              onNegative={() => handleFeedbackIntent("negative")}
+              onPositive={() => handleFeedbackIntent("positive")}
+              testIdPrefix="mindscape-detail-feedback"
+            />
+            {lastFeedback ? (
+              <span className="text-[10px] uppercase tracking-wide text-biolum-faint">
+                {lastFeedback.intent === "positive"
+                  ? "Marked accurate"
+                  : "Needs revision"}
+                {" · "}
+                {formatRelativeTime(lastFeedback.updatedAt)}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
       <dl className="mt-4 space-y-2 text-biolum-faint text-xs">
         {isKnowledgeData(data) && (
@@ -370,7 +485,15 @@ export function MindscapeDetailPanel({
           </div>
         </section>
       )}
-    </aside>
+      </aside>
+      <CognitiveFeedbackDialog
+        draft={feedbackDraft}
+        error={feedbackError}
+        onOpenChange={handleFeedbackClose}
+        onSubmit={handleFeedbackSubmit}
+        status={feedbackStatus}
+      />
+    </>
   );
 }
 

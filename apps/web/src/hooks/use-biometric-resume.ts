@@ -72,9 +72,15 @@ export function useBiometricResume({ runId, target }: UseBiometricResumeArgs) {
     }
   }, [runId, target, workflowResume, droidResume]);
 
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setPendingRunId(null);
+  }, []);
+
   return {
     isOpen,
     pendingRunId,
     trigger,
+    close,
   };
 }

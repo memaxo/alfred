@@ -247,7 +247,10 @@ async function createWorkflowCaller(
       userAgent: "linear-webhook",
       referer: null,
     },
-    runtimeContext: new h.RuntimeContext([["requestId", requestId]]),
+    runtimeContext: new h.RuntimeContext([
+      ["requestId", requestId],
+      ["scanContext", null],
+    ]),
     policy: {
       obligations: [],
     },

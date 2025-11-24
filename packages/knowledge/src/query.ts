@@ -3,6 +3,7 @@
  * Pure functional query evaluation (AC-3 + MRV backtracking)
  */
 
+import nlp from "compromise";
 import type { Hypergraph, Knowledge, NodeId } from "./hypergraph.js";
 import { knn } from "./indices/knn.js";
 import { measureSync } from "./metrics.js";
@@ -188,10 +189,7 @@ const semanticQueryInternal = (
     }
   }
 
-  const terms = naturalLanguage
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length > 2 && !STOP_WORDS.has(t));
+  const terms = extractQueryTerms(naturalLanguage);
 
   if (terms.length === 0) {
     return [];
@@ -755,32 +753,27 @@ function readStringProp(
   return typeof value === "string" ? value : fallback;
 }
 
-const STOP_WORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "are",
-  "as",
-  "at",
-  "be",
-  "by",
-  "for",
-  "from",
-  "has",
-  "he",
-  "in",
-  "is",
-  "it",
-  "its",
-  "of",
-  "on",
-  "that",
-  "the",
-  "to",
-  "was",
-  "will",
-  "with",
-]);
+const extractQueryTerms = (naturalLanguage: string): string[] => {
+  const doc = nlp(naturalLanguage);
+  const unique = new Set<string>();
+
+  const addTerms = (terms: string[]) => {
+    for (const term of terms) {
+      const normalized = term.trim().toLowerCase();
+      if (normalized.length > 2) {
+        unique.add(normalized);
+      }
+    }
+  };
+
+  addTerms(doc.nouns().out("array"));
+  addTerms(doc.verbs().out("array"));
+  addTerms(doc.people().out("array"));
+  addTerms(doc.organizations().out("array"));
+  addTerms(doc.topics().out("array"));
+
+  return Array.from(unique);
+};
 
 export const builder = {
   facts: (predicate: string): Query => ({

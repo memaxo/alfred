@@ -42,6 +42,18 @@
     "./query.hot": {
       "types": "./dist/query.hot.d.ts",
       "default": "./src/query.hot.ts"
+    },
+    "./reasoning/causality": {
+      "types": "./dist/reasoning/causality.d.ts",
+      "default": "./src/reasoning/causality.ts"
+    },
+    "./reasoning/decisions": {
+      "types": "./dist/reasoning/decisions.d.ts",
+      "default": "./src/reasoning/decisions.ts"
+    },
+    "./reasoning/alternatives": {
+      "types": "./dist/reasoning/alternatives.d.ts",
+      "default": "./src/reasoning/alternatives.ts"
     }
   },
   "scripts": {

@@ -17,7 +17,6 @@ mock.module("@alfred/knowledge/extractor", () => ({
         relations: [],
       },
     ],
-    causality: [],
     entities: new Set(),
     contradictions: [],
   }),
@@ -32,6 +31,18 @@ mock.module("@alfred/knowledge/extractor", () => ({
       },
     },
   ],
+}));
+
+mock.module("@alfred/knowledge/reasoning/causality", () => ({
+  deriveCausalityFromText: async () => [],
+}));
+
+mock.module("@alfred/knowledge/reasoning/decisions", () => ({
+  deriveDecisionFacts: async () => [],
+}));
+
+mock.module("@alfred/knowledge/reasoning/alternatives", () => ({
+  deriveAlternativeFacts: async () => [],
 }));
 
 // State for mocks

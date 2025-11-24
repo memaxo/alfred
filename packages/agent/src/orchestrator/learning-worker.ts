@@ -11,6 +11,9 @@ import {
 } from "@alfred/db/repo/graph/index";
 import { workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
+import { deriveCausalityFromText } from "@alfred/knowledge/reasoning/causality";
+import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
+import { deriveAlternativeFacts } from "@alfred/knowledge/reasoning/alternatives";
 import { knowledgeHash } from "@alfred/knowledge/hypergraph";
 import { getOntologyKnowledge } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
@@ -431,7 +434,29 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   const extraction = extract(textToAnalyze, `run:${run.id}`);
   const knowledgeEntries = toKnowledge(extraction);
 
-  if (knowledgeEntries.length === 0) {
+  const [causalEntries, decisionEntries, alternativeEntries] = await Promise.all(
+    [
+      deriveCausalityFromText(textToAnalyze),
+      deriveDecisionFacts(textToAnalyze),
+      deriveAlternativeFacts(textToAnalyze),
+    ]
+  );
+
+  const knowledgeMap = new Map(
+    knowledgeEntries.map((entry) => [entry.hash, entry])
+  );
+
+  for (const extra of [
+    ...causalEntries,
+    ...decisionEntries,
+    ...alternativeEntries,
+  ]) {
+    knowledgeMap.set(extra.hash, extra);
+  }
+
+  const mergedEntries = Array.from(knowledgeMap.values());
+
+  if (mergedEntries.length === 0) {
     return;
   }
 
@@ -440,7 +465,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   const resource = "user";
 
   // Generate embeddings for nodes
-  const nodeLabels = knowledgeEntries.map((entry) => {
+  const nodeLabels = mergedEntries.map((entry) => {
     if (entry.data._ === "fact") return entry.data.content || "unknown";
     if (entry.data._ === "insight") return entry.data.conclusion || "unknown";
     if (entry.data._ === "pattern") return entry.data.rule || "unknown";
@@ -460,7 +485,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
 
   // Upsert nodes
   const nodeMap = await upsertNodes(
-    knowledgeEntries.map((entry, i) => ({
+    mergedEntries.map((entry, i) => ({
       resource,
       hash: entry.hash,
       kind: entry.data._,
@@ -476,7 +501,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   );
 
   // Upsert relations (edges)
-  const edges = knowledgeEntries.filter((e) => e.data._ === "relation");
+  const edges = mergedEntries.filter((e) => e.data._ === "relation");
 
   const edgesToInsert = edges
     .map((edge) => {

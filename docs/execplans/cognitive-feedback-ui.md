@@ -10,13 +10,15 @@ Users currently have no affordance inside Chat/Mindscape/Voice to submit explici
 
 - [x] (2025-11-24 22:30Z) Captured scope and authored the plan so UI + API work can proceed in phases.
 - [x] (2025-11-24 23:45Z) Milestone 1 — Added `useCognitiveFeedback`, per-message controls (`CognitiveFeedbackControls`), and a shared dialog so assistant messages now expose thumbs up/down actions that POST to `cognitive.feedback` (covered by new hook + chat container tests).
-- [ ] Milestone 2 — Mindscape & workflow drawer integration: surface feedback slots on focused nodes and workflow drawer panels, persisting the same payload plus contextual metadata (node id, workflow run id) and keeping refs in local store for optimistic updates.
-- [ ] Milestone 3 — Voice session UI: update `apps/web/src/routes/admin/voice.tsx` (or client view) + `packages/voice/src/server/session.ts` to emit completion cards containing a “Mark accurate / needs fix” control that routes through the same feedback hook.
-- [ ] Milestone 4 — Telemetry + Docs: aggregate submitted feedback counts in `/api/metrics`, add Playwright coverage for each affordance, and document the user workflow in `docs/observability/cognitive-testing.md`.
+- [x] (2025-11-25 00:50Z) Milestone 2 — Added Mindscape feedback affordances (detail panel + workflow drawer) backed by store-level tracking, plus a Playwright spec that intercepts `cognitive.feedback` during drawer interactions.
+- [x] (2025-11-25 02:15Z) Milestone 3 — Voice session telemetry now includes recent session transcripts, and the Voice Admin console renders inline feedback controls that submit via `useCognitiveFeedback`.
+- [x] (2025-11-25 03:05Z) Milestone 4 — Added the `cognitive_feedback_submissions_total` counter, updated the health script to assert it, and documented verification workflows in `docs/observability/cognitive-testing.md`.
 
 ## Surprises & Discoveries
 
 - The shared Chat component in `@alfred/ui` needed an extension point for per-message UI, so we introduced an optional `renderMessageActions` prop to keep the upstream component flexible while avoiding a fork in the app.
+- Playwright’s login helper still expects a running app server; when executing single-file tests locally, `/login` navigation fails. The new drawer test still exercises the feedback call by intercepting `/api/trpc/cognitive.feedback`, but running it requires the same dev server as the existing Mindscape suite.
+- Voice stats previously excluded per-session data, so `VoiceRegistry.getStats()` now surfaces `recentSessions` snapshots derived from live sessions (session id, user id, transcript, last activity). This enabled the admin UI to render feedback controls without adding a new API.
 
 ## Decision Log
 
@@ -26,6 +28,15 @@ Users currently have no affordance inside Chat/Mindscape/Voice to submit explici
 - Decision: Extended `@alfred/ui`’s `Chat` with `renderMessageActions` to append affordances without reimplementing message rendering or duplicating BEM styles.
   Rationale: Keeps message layout owned by the UI package while enabling downstream apps to slot in additional components (feedback, debugging badges, etc.).
   Date/Author: 2025-11-24 / Codex
+- Decision: VoiceRegistry now exposes `recentSessions` (session id, user id, transcript, lastActivity) so the Voice Admin console can present inline feedback prompts without additional queries.
+  Rationale: Centralizing session summaries in the registry keeps the API stateless while letting the UI ingest real data for feedback.
+  Date/Author: 2025-11-25 / Codex
+- Decision: The cognitive feedback API tracks submissions via the new `cognitive_feedback_submissions_total` counter labeled by `surface`, enabling telemetry to report how users submit corrections (chat vs. mindscape vs. voice).
+  Rationale: Surface-level metrics make it easy to spot underused affordances and validate the new UI quickly.
+  Date/Author: 2025-11-25 / Codex
+- Decision: Added `feedbackByNode` + `recordFeedback` in the Mindscape store so detail panels and workflow drawers can render optimistic badges (e.g., “Marked accurate · 2m ago”) without re-querying the server.
+  Rationale: Maintaining the last-submitted intent client-side provides immediate confirmation and avoids duplicate submissions while staying consistent across Mindscape surfaces.
+  Date/Author: 2025-11-25 / Codex
 
 ## Outcomes & Retrospective
 

@@ -60,6 +60,7 @@ function buildContext(req: Request, session: TestSession | null): Context {
     ["method", runtime.method],
     ["url", runtime.url],
     ["ip", runtime.ip],
+    ["scanContext", null],
   ]);
 
   if (runtime.userAgent) {

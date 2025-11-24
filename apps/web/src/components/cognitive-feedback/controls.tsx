@@ -5,13 +5,22 @@ export type CognitiveFeedbackControlsProps = {
   disabled?: boolean;
   onPositive: () => void;
   onNegative: () => void;
+  testIdPrefix?: string;
 };
 
 export function CognitiveFeedbackControls({
   disabled,
   onPositive,
   onNegative,
+  testIdPrefix,
 }: CognitiveFeedbackControlsProps) {
+  const positiveId = testIdPrefix
+    ? `${testIdPrefix}-positive`
+    : undefined;
+  const negativeId = testIdPrefix
+    ? `${testIdPrefix}-negative`
+    : undefined;
+
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <span className="uppercase tracking-[0.2em] text-[0.65rem]">
@@ -20,6 +29,7 @@ export function CognitiveFeedbackControls({
       <Button
         aria-label="Mark response as helpful"
         className="h-7 w-7 rounded-full border border-white/10 bg-transparent text-muted-foreground hover:bg-white/10"
+        data-testid={positiveId}
         disabled={disabled}
         onClick={onPositive}
         size="icon"
@@ -31,6 +41,7 @@ export function CognitiveFeedbackControls({
       <Button
         aria-label="Mark response as needs revision"
         className="h-7 w-7 rounded-full border border-white/10 bg-transparent text-muted-foreground hover:bg-white/10"
+        data-testid={negativeId}
         disabled={disabled}
         onClick={onNegative}
         size="icon"

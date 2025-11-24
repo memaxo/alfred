@@ -18,6 +18,7 @@ export type BiometricChallengeDialogProps = {
   onSuccess: () => void;
   runId?: string;
   target?: "workflow" | "droid";
+  mode?: "auto" | "external";
 };
 
 export function BiometricChallengeDialog({
@@ -26,6 +27,7 @@ export function BiometricChallengeDialog({
   onSuccess,
   runId,
   target = "workflow",
+  mode = "auto",
 }: BiometricChallengeDialogProps) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const resumeMutation = trpc.workflow.resume.useMutation();
@@ -33,7 +35,7 @@ export function BiometricChallengeDialog({
 
   // Auto-trigger passkey flow when dialog opens
   useEffect(() => {
-    if (!open) {
+    if (!open || mode === "external") {
       return;
     }
 
@@ -102,7 +104,7 @@ export function BiometricChallengeDialog({
     };
 
     void triggerPasskey();
-  }, [open, runId, onSuccess, onClose, resumeMutation, droidResume, target]);
+  }, [open, runId, onSuccess, onClose, resumeMutation, droidResume, target, mode]);
 
   const handleCancel = () => {
     onClose();

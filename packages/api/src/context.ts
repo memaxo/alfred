@@ -135,6 +135,8 @@ export async function createContext({
     runtimeContextEntries.push(["userScopes", [...user.scopes]]);
   }
 
+  runtimeContextEntries.push(["scanContext", null]);
+
   const runtimeContext = new RuntimeContext<Record<string, unknown>>(
     runtimeContextEntries as [string, unknown][]
   );

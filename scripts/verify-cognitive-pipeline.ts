@@ -43,6 +43,7 @@ async function verify() {
     ["requestId", STREAM_ID],
     ["userId", "verify-user"],
     ["scope", "test"],
+    ["scanContext", null],
   ]);
   (ctx as RuntimeContext & { ai: typeof mockAiAdapter }).ai = mockAiAdapter;
 

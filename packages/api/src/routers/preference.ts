@@ -260,7 +260,7 @@ export const preferenceRouter = router({
         }),
       ]);
 
-      const inferred = inferPreferenceFromCorrection(
+      const inferred = await inferPreferenceFromCorrection(
         conversationRepo.messageRowToUIMessage(original),
         conversationRepo.messageRowToUIMessage(corrected),
         input.correctionType

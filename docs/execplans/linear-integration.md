@@ -33,6 +33,8 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 - [x] (2025-11-12 08:12Z) Handle comment creation events
 - [x] (2025-11-12 08:12Z) Write unit tests for Linear helper functions
 - [x] (2025-11-12 08:12Z) Write integration tests for workflow runner
+- [x] (2025-11-24 15:20Z) Added automatic Linear ticket creation/linking when workflows start
+- [x] (2025-11-24 15:35Z) Enforced review checklist + Linear completion gating before marking runs complete
 - [ ] (YYYY-MM-DD HH:MMZ) Manual end-to-end testing with real Linear workspace
 - [x] (2025-11-12 08:12Z) Update documentation with setup instructions
 

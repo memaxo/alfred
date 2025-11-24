@@ -30,7 +30,7 @@ export type CognitiveFeedbackDialogProps = {
   status: CognitiveFeedbackStatus;
   error?: Error | null;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: FormValues) => Promise<void> | void;
+  onSubmit: (values: FormValues & { surface?: CognitiveFeedbackDraft["surface"] }) => Promise<void> | void;
 };
 
 export function CognitiveFeedbackDialog({
@@ -56,10 +56,11 @@ export function CognitiveFeedbackDialog({
     if (!draft || status === "pending") {
       return;
     }
-    await onSubmit({
-      expected: expected.trim() || draft.expected,
-      actual: actual.trim(),
-    });
+      await onSubmit({
+        expected: expected.trim() || draft.expected,
+        actual: actual.trim(),
+        surface: draft.surface,
+      });
   };
 
   const intentLabel =

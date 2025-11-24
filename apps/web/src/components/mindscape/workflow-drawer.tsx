@@ -2,9 +2,20 @@
 
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import {
+  CognitiveFeedbackControls,
+} from "@/components/cognitive-feedback/controls";
+import {
+  CognitiveFeedbackDialog,
+  type CognitiveFeedbackDraft,
+} from "@/components/cognitive-feedback/dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
+import { formatRelativeTime } from "@/lib/time";
+import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
+import { useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 
 type MindscapeWorkflowDrawerProps = {
@@ -176,6 +187,73 @@ function WorkflowDrawerBody({
     return runId ?? "";
   }, [runId, runQuery.data]);
 
+  const recordFeedback = useMindscapeStore(
+    (state) => state.recordFeedback
+  );
+  const workflowFeedback = useMindscapeStore((state) =>
+    runId ? state.feedbackByNode[runId] : undefined
+  );
+  const [feedbackDraft, setFeedbackDraft] =
+    useState<CognitiveFeedbackDraft | null>(null);
+  const {
+    submit: submitFeedback,
+    status: feedbackStatus,
+    error: feedbackError,
+    reset: resetFeedback,
+  } = useCognitiveFeedback();
+
+  const handleFeedbackIntent = (intent: "positive" | "negative") => {
+    if (!runId) {
+      return;
+    }
+    const expected =
+      typeof runQuery.data?.inputData?.requirement === "string"
+        ? runQuery.data?.inputData?.requirement
+        : `Workflow ${runId}`;
+    setFeedbackDraft({
+      streamId: runId,
+      expected,
+      actual: "",
+      intent,
+      surface: "mindscape",
+    });
+  };
+
+  const handleFeedbackClose = (open: boolean) => {
+    if (!open) {
+      setFeedbackDraft(null);
+      resetFeedback();
+    }
+  };
+
+  const handleFeedbackSubmit = async (values: {
+    expected: string;
+    actual: string;
+    surface?: string;
+  }) => {
+    if (!feedbackDraft || !runId) {
+      return;
+    }
+    try {
+      await submitFeedback({
+        streamId: runId,
+        expected: values.expected,
+        actual: values.actual,
+        surface: values.surface ?? feedbackDraft.surface ?? "mindscape",
+      });
+      recordFeedback(runId, feedbackDraft.intent);
+      toast.success("Workflow feedback recorded.");
+      setFeedbackDraft(null);
+      resetFeedback();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit feedback.";
+      toast.error(message);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-white/10 border-b px-5 py-4">
@@ -185,8 +263,25 @@ function WorkflowDrawerBody({
           </p>
           <p className="font-mono text-biolum text-xs">{headerMono}</p>
           <p className="text-biolum-dim text-xs capitalize">{statusLabel}</p>
+          {workflowFeedback ? (
+            <p className="text-[10px] text-biolum-faint uppercase tracking-wide">
+              {workflowFeedback.intent === "positive"
+                ? "Marked accurate"
+                : "Needs revision"}
+              {" · "}
+              {formatRelativeTime(workflowFeedback.updatedAt)}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
+          {runId ? (
+            <CognitiveFeedbackControls
+              disabled={feedbackStatus === "pending"}
+              onNegative={() => handleFeedbackIntent("negative")}
+              onPositive={() => handleFeedbackIntent("positive")}
+              testIdPrefix="mindscape-drawer-feedback"
+            />
+          ) : null}
           <Button
             className="text-biolum-dim hover:text-biolum"
             data-testid="mindscape-drawer-open-full"
@@ -268,6 +363,13 @@ function WorkflowDrawerBody({
           />
         )}
       </div>
+      <CognitiveFeedbackDialog
+        draft={feedbackDraft}
+        error={feedbackError}
+        onOpenChange={handleFeedbackClose}
+        onSubmit={handleFeedbackSubmit}
+        status={feedbackStatus}
+      />
     </div>
   );
 }

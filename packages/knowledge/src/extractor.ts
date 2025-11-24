@@ -19,43 +19,47 @@ type ExtractedFact = {
   relations: [string, string, string][]; // [from, relation, to]
 };
 
-type CausalLink = {
-  cause: string;
-  effect: string;
-  confidence: number;
-  evidence: string[];
-};
-
 type ExtractionResult = {
   facts: ExtractedFact[];
-  causality: CausalLink[];
   entities: Set<string>;
   contradictions: [string, string][];
 };
 
-// Causal markers
-const CAUSAL_MARKERS = [
-  "because",
-  "therefore",
-  "thus",
-  "hence",
-  "as a result",
-  "due to",
-  "owing to",
-  "leads to",
-  "causes",
-  "results in",
-] as const;
+const clampConfidence = (value: number): number =>
+  Math.min(0.98, Math.max(0.2, Number(value.toFixed(2))));
 
-// Confidence modifiers
-const CONFIDENCE_MODIFIERS = {
-  certain: 0.95,
-  likely: 0.8,
-  probable: 0.7,
-  possible: 0.5,
-  uncertain: 0.3,
-  unlikely: 0.2,
-} as const;
+const computeSentenceConfidence = (sentenceDoc: nlp.Document): number => {
+  let confidence = 0.8;
+
+  if (sentenceDoc.has("#Modal")) {
+    confidence -= 0.15;
+  }
+
+  if (sentenceDoc.questions().out("array").length > 0) {
+    confidence -= 0.1;
+  }
+
+  if (sentenceDoc.has("#Negative")) {
+    confidence -= 0.05;
+  }
+
+  const adverbCount = sentenceDoc.match("#Adverb").out("array").length;
+  if (adverbCount > 2) {
+    confidence -= 0.05;
+  }
+
+  const numberCount = sentenceDoc.numbers().out("array").length;
+  if (numberCount > 0) {
+    confidence += 0.05;
+  }
+
+  const quoteCount = sentenceDoc.text().split('"').length - 1;
+  if (quoteCount > 0) {
+    confidence += 0.02;
+  }
+
+  return clampConfidence(confidence);
+};
 
 /**
  * Extract facts from natural language text
@@ -67,7 +71,6 @@ const CONFIDENCE_MODIFIERS = {
  */
 export const extract = (text: string, source: string): ExtractionResult => {
   const facts: ExtractedFact[] = [];
-  const causality: CausalLink[] = [];
   const entities = new Set<string>();
   const contradictions: [string, string][] = [];
 
@@ -112,14 +115,7 @@ export const extract = (text: string, source: string): ExtractionResult => {
       }
     }
 
-    // Determine confidence
-    let confidence = 0.8; // default
-    for (const [modifier, conf] of Object.entries(CONFIDENCE_MODIFIERS)) {
-      if (trimmed.toLowerCase().includes(modifier)) {
-        confidence = conf;
-        break;
-      }
-    }
+    const confidence = computeSentenceConfidence(sDoc);
 
     // Extract relations
     // Simple heuristic: if we have Subject + Verb + Object structure
@@ -168,33 +164,6 @@ export const extract = (text: string, source: string): ExtractionResult => {
       }
     }
 
-    // Check for causal relationships
-    const lowerSentence = trimmed.toLowerCase();
-    for (const marker of CAUSAL_MARKERS) {
-      const markerIndex = lowerSentence.indexOf(marker);
-      if (markerIndex !== -1) {
-        // Simple split on marker
-        const cause = trimmed
-          .substring(0, markerIndex)
-          .trim()
-          .replace(/[.,!?]+$/, "");
-        const effect = trimmed
-          .substring(markerIndex + marker.length)
-          .trim()
-          .replace(/[.,!?]+$/, "");
-
-        if (cause.length > 0 && effect.length > 0) {
-          causality.push({
-            cause,
-            effect,
-            confidence: confidence * 0.9, // Slightly lower for inferred causality
-            evidence: [trimmed],
-          });
-        }
-        break;
-      }
-    }
-
     // Create fact
     facts.push({
       content: trimmed,
@@ -217,7 +186,7 @@ export const extract = (text: string, source: string): ExtractionResult => {
     }
   }
 
-  return { facts, causality, entities, contradictions };
+  return { facts, entities, contradictions };
 };
 
 /**
@@ -250,22 +219,6 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
     // Currently Hypergraph 'Fact' is pure content string.
     // We rely on Relation nodes to link them.
     insert(fact(f.content, f.confidence, f.source));
-  }
-
-  for (const c of result.causality) {
-    const causeNode = insert(fact(c.cause, c.confidence, "inferred"));
-    const effectNode = insert(fact(c.effect, c.confidence, "inferred"));
-
-    if (causeNode && effectNode) {
-      insert(relation(causeNode, effectNode, "causes", c.confidence));
-      insert(
-        insight(
-          [causeNode, effectNode],
-          `${c.cause} causes ${c.effect}`,
-          c.confidence
-        )
-      );
-    }
   }
 
   return list;

@@ -13,7 +13,6 @@ import type { UIMessage } from "@alfred/type/stream";
 import {
   detectToneSemantic,
   inferResponsePreferencesSemantic,
-  type PreferenceScores,
 } from "./semantic";
 
 const FORMAT_MATCHERS: Array<{ format: ResponseFormat; matcher: RegExp }> = [
@@ -26,6 +25,10 @@ const MIN_CONFIDENCE = 0.35;
 
 function scoreToConfidence(score: number): number {
   return Math.min(0.99, Math.max(0.5, 0.5 + score * 0.4));
+}
+
+function calculateConfidence(signals: number, base = 0.5): number {
+  return Math.min(1, base + signals * 0.1);
 }
 
 function buildPreferenceDetail(
@@ -60,6 +63,35 @@ function collectUserTexts(messages: UIMessage[]): string[] {
   return texts;
 }
 
+function aggregateUserSamples(
+  conversations: ConversationHistory[],
+  limit = RESPONSE_SAMPLE_LIMIT
+): string[] {
+  const allTexts = conversations
+    .flatMap((conversation) => collectUserTexts(conversation.messages))
+    .filter((text) => text.length > 0);
+
+  if (allTexts.length <= limit) {
+    return allTexts;
+  }
+
+  return allTexts.slice(-limit);
+}
+
+function selectTopPreference<T extends string>(
+  scores: Array<{ label: T; score: number }> | undefined,
+  threshold: number
+): { label: T; score: number } | null {
+  if (!scores || scores.length === 0) {
+    return null;
+  }
+  const top = scores[0];
+  if (!top || top.score < threshold) {
+    return null;
+  }
+  return top;
+}
+
 function joinText(message: UIMessage): string {
   if (!message.parts) {
     return "";
@@ -77,73 +109,59 @@ function joinText(message: UIMessage): string {
  * Infer response-level preferences (verbosity, tone, format) from conversation history.
  * Pure heuristic using user utterances; no side effects.
  */
-export function inferResponsePreferences(
+export async function inferResponsePreferences(
   conversations: ConversationHistory[]
-): Map<PreferenceKey, PreferenceDetail> {
+): Promise<Map<PreferenceKey, PreferenceDetail>> {
   const preferences = new Map<PreferenceKey, PreferenceDetail>();
   if (!conversations.length) {
     return preferences;
   }
 
-  const userTexts = conversations.flatMap((conversation) =>
-    collectUserTexts(conversation.messages)
-  );
-
-  for (const [verbosity, hints] of Object.entries(VERBOSITY_HINTS) as [
-    ResponseVerbosity,
-    string[],
-  ][]) {
-    const matches = countHints(userTexts, hints);
-    if (matches > 0) {
-      preferences.set(
-        "response.verbosity",
-        buildPreferenceDetail(
-          verbosity,
-          "inferred",
-          calculateConfidence(matches),
-          conversations.map((c) => c.id)
-        )
-      );
-      break;
-    }
+  const samples = aggregateUserSamples(conversations);
+  if (!samples.length) {
+    return preferences;
   }
 
-  for (const [tone, hints] of Object.entries(TONE_HINTS) as [
-    ResponseTone,
-    string[],
-  ][]) {
-    const matches = countHints(userTexts, hints);
-    if (matches > 0) {
-      preferences.set(
-        "response.tone",
-        buildPreferenceDetail(
-          tone,
-          "inferred",
-          calculateConfidence(matches),
-          conversations.map((c) => c.id)
-        )
-      );
-      break;
-    }
+  const scores = await inferResponsePreferencesSemantic(samples);
+  const evidence = conversations.map((conversation) => conversation.id);
+
+  const verbosity = selectTopPreference(scores.verbosity, MIN_CONFIDENCE);
+  if (verbosity) {
+    preferences.set(
+      "response.verbosity",
+      buildPreferenceDetail(
+        verbosity.label,
+        "inferred",
+        scoreToConfidence(verbosity.score),
+        evidence
+      )
+    );
   }
 
-  for (const [format, hints] of Object.entries(FORMAT_HINTS) as [
-    ResponseFormat,
-    string[],
-  ][]) {
-    const matches = countHints(userTexts, hints);
-    if (matches > 0) {
-      preferences.set(
-        "response.format",
-        buildPreferenceDetail(
-          format,
-          "inferred",
-          calculateConfidence(matches),
-          conversations.map((c) => c.id)
-        )
-      );
-      break;
-    }
+  const tone = selectTopPreference(scores.tone, MIN_CONFIDENCE - 0.05);
+  if (tone) {
+    preferences.set(
+      "response.tone",
+      buildPreferenceDetail(
+        tone.label,
+        "inferred",
+        scoreToConfidence(tone.score),
+        evidence
+      )
+    );
+  }
+
+  const format = selectTopPreference(scores.format, MIN_CONFIDENCE);
+  if (format) {
+    preferences.set(
+      "response.format",
+      buildPreferenceDetail(
+        format.label,
+        "inferred",
+        scoreToConfidence(format.score),
+        evidence
+      )
+    );
   }
 
   return preferences;
@@ -261,11 +279,11 @@ export function inferPreferencesFromFeedback(
 /**
  * Compare original vs. corrected messages to infer the preference the correction implies.
  */
-export function inferPreferenceFromCorrection(
+export async function inferPreferenceFromCorrection(
   original: UIMessage,
   corrected: UIMessage,
   correctionType: "verbosity" | "tone" | "format" | "content"
-): { key: PreferenceKey; value: PreferenceDetail["value"] } | null {
+): Promise<{ key: PreferenceKey; value: PreferenceDetail["value"] } | null> {
   const originalText = joinText(original);
   const correctedText = joinText(corrected);
 
@@ -285,7 +303,7 @@ export function inferPreferenceFromCorrection(
   }
 
   if (correctionType === "tone") {
-    const tone = detectTone(correctedText);
+    const tone = await detectToneSemantic(correctedText);
     return tone ? { key: "response.tone", value: tone } : null;
   }
 
@@ -375,18 +393,6 @@ function readStringProperty(
     const value = parameters[key];
     if (typeof value === "string" && value.trim().length) {
       return value.trim();
-    }
-  }
-  return null;
-}
-
-function detectTone(text: string): ResponseTone | null {
-  for (const [tone, pattern] of Object.entries(toneHeuristics) as [
-    ResponseTone,
-    RegExp,
-  ][]) {
-    if (pattern.test(text)) {
-      return tone;
     }
   }
   return null;

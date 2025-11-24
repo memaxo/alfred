@@ -28,6 +28,9 @@ import { ContextBuilder } from "../context";
 import type { ExecutionContext } from "../context";
 import type { OrchestratorContext } from "./types";
 
+const ENABLE_WORKSPACE_SESSIONS =
+  process.env.ORCH_ENABLE_SESSIONS !== "0";
+
 export type WavesResult = {
   trackerState: TrackerState;
   allAgentOutcomes: any[];
@@ -341,7 +344,10 @@ export async function* runWaves(
             spec.agentId,
             runId,
             workspace,
-            { authz: input.linear?.authz }
+            {
+              authz: input.linear?.authz,
+              enableSessions: ENABLE_WORKSPACE_SESSIONS,
+            }
           );
 
           await workspaceEnv.initialize();

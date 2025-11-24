@@ -119,7 +119,7 @@ export function ChatContainer({
   );
 
   const handleFeedbackSubmit = useCallback(
-    async (values: { expected: string; actual: string }) => {
+    async (values: { expected: string; actual: string; surface?: string }) => {
       if (!feedbackDraft) {
         return;
       }
@@ -128,6 +128,7 @@ export function ChatContainer({
           streamId: feedbackDraft.streamId,
           expected: values.expected,
           actual: values.actual,
+          surface: values.surface ?? feedbackDraft.surface ?? "chat",
         });
         toast.success("Feedback recorded.");
         setFeedbackDraft(null);

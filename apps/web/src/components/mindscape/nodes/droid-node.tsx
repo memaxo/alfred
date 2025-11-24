@@ -1,0 +1,468 @@
+import type { NodeProps } from "@xyflow/react";
+import { Bot, PauseCircle, Play, ShieldAlert, Terminal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { nanoid } from "nanoid";
+import { toast } from "sonner";
+import { BiometricChallengeDialog } from "@/components/biometric-challenge-dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useBiometricResume } from "@/hooks/use-biometric-resume";
+import { subscribeToDroidStream, type DroidStreamEvent } from "@/lib/droid/stream-client";
+import { getToolToken } from "@/lib/token";
+import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
+import { useMindscapeStore } from "@/store/mindscape";
+import { droidNodeDataSchema } from "@/store/mindscape.schemas";
+import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
+import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
+
+const MAX_LOG_ENTRIES = 400;
+
+type AutoLevel = "read" | "low" | "medium" | "high";
+type OutFormat = "text" | "json" | "debug";
+
+const autoLevels: Array<{ label: string; value: AutoLevel }> = [
+  { label: "Read", value: "read" },
+  { label: "Low", value: "low" },
+  { label: "Medium", value: "medium" },
+  { label: "High", value: "high" },
+];
+
+const outFormats: Array<{ label: string; value: OutFormat }> = [
+  { label: "Text", value: "text" },
+  { label: "JSON", value: "json" },
+  { label: "Debug", value: "debug" },
+];
+
+type LogEntry = {
+  id: string;
+  channel: "stdout" | "stderr" | "system";
+  text: string;
+  at: string;
+};
+
+type RunStatus = "idle" | "running" | "suspended" | "completed" | "failed";
+
+export function DroidNode({ id, data, selected }: NodeProps) {
+  const lod = useLOD();
+  useNodeFocus(id);
+
+  const parsed = droidNodeDataSchema.safeParse(data);
+  const initial = parsed.success
+    ? parsed.data
+    : {
+        prompt: "",
+        auto: "low" as const,
+        out: "text" as const,
+        status: "idle" as RunStatus,
+        log: [] as LogEntry[],
+        error: undefined,
+        lastRunId: undefined,
+      };
+
+  const allowedAutoValues: AutoLevel[] = ["read", "low", "medium", "high"];
+  const initialAuto: AutoLevel = allowedAutoValues.includes(initial.auto as AutoLevel)
+    ? (initial.auto as AutoLevel)
+    : "low";
+  const initialOut: OutFormat = (["text", "json", "debug"] as OutFormat[]).includes(
+    initial.out as OutFormat
+  )
+    ? (initial.out as OutFormat)
+    : "text";
+
+  const [prompt, setPrompt] = useState(initial.prompt ?? "");
+  const [auto, setAuto] = useState<AutoLevel>(initialAuto);
+  const [out, setOut] = useState<OutFormat>(initialOut);
+  const [status, setStatus] = useState<RunStatus>(
+    (initial.status as RunStatus) ?? "idle"
+  );
+  const [log, setLog] = useState<LogEntry[]>(
+    Array.isArray(initial.log) ? (initial.log as LogEntry[]) : []
+  );
+  const [lastError, setLastError] = useState(initial.error ?? "");
+  const [activeRunId, setActiveRunId] = useState<string | null>(
+    initial.lastRunId ?? null
+  );
+  const [pendingResumeRunId, setPendingResumeRunId] = useState<string | null>(
+    null
+  );
+
+  const updateArtifactData = useMindscapeStore(
+    (state) => state.updateArtifactData
+  );
+
+  const subscriptionRef = useRef<ReturnType<typeof subscribeToDroidStream> | null>(
+    null
+  );
+  const clientRef = useRef<ReturnType<typeof createBrowserTrpcProxyClient> | null>(
+    null
+  );
+
+  if (!clientRef.current) {
+    try {
+      clientRef.current = createBrowserTrpcProxyClient();
+    } catch (error) {
+      console.warn("droid-node: falling back to noop trpc client", error);
+      clientRef.current = {
+        droid: {
+          stream: {
+            subscribe: () => ({
+              subscribe: () => ({ unsubscribe() {} }),
+            }),
+          },
+        },
+      } as unknown as ReturnType<typeof createBrowserTrpcProxyClient>;
+    }
+  }
+
+  const resume = useBiometricResume({
+    runId: pendingResumeRunId,
+    target: "droid",
+  });
+
+  const appendLog = useCallback((entry: Omit<LogEntry, "id">) => {
+    setLog((prev) => {
+      const next = [...prev, { ...entry, id: nanoid() }];
+      if (next.length > MAX_LOG_ENTRIES) {
+        return next.slice(next.length - MAX_LOG_ENTRIES);
+      }
+      return next;
+    });
+  }, []);
+
+  const stopStream = useCallback(() => {
+    subscriptionRef.current?.unsubscribe?.();
+    subscriptionRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopStream();
+    };
+  }, [stopStream]);
+
+  useEffect(() => {
+    updateArtifactData(id, {
+      type: "droid",
+      prompt,
+      auto,
+      out,
+      status,
+      log,
+      error: lastError || undefined,
+      lastRunId: activeRunId ?? undefined,
+    });
+  }, [id, prompt, auto, out, status, log, lastError, activeRunId, updateArtifactData]);
+
+  const handleStreamEvent = useCallback(
+    (event: DroidStreamEvent) => {
+      if (event.type === "stdout" || event.type === "stderr") {
+        appendLog({
+          channel: event.type,
+          text: event.data,
+          at: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (event.type === "exit") {
+        appendLog({
+          channel: "system",
+          text: `Process exited with code ${event.code}`,
+          at: new Date().toISOString(),
+        });
+        setStatus(event.code === 0 ? "completed" : "failed");
+        setActiveRunId(null);
+        setPendingResumeRunId(null);
+      }
+    },
+    [appendLog]
+  );
+
+  const handleRun = useCallback(async () => {
+    if (!prompt.trim()) {
+      toast.error("Prompt is required");
+      return;
+    }
+
+    console.log("[droid-node-test] prompt", prompt);
+    if (process.env.NODE_ENV === "test") {
+      console.log("[droid-node-test] clientRef before guard", clientRef.current);
+    }
+    if (!clientRef.current) {
+      toast.error("TRPC client unavailable");
+      return;
+    }
+
+    stopStream();
+    setStatus("running");
+    setLastError("");
+    setActiveRunId(null);
+    setPendingResumeRunId(null);
+    appendLog({
+      channel: "system",
+      text: `▶︎ ${prompt.trim()}`,
+      at: new Date().toISOString(),
+    });
+
+    try {
+      const token = await getToolToken(["droid.exec"], auto);
+      const authz = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+      const subscription = subscribeToDroidStream({
+        client: clientRef.current,
+        input: {
+          prompt: prompt.trim(),
+          auto,
+          authz,
+          out,
+        },
+        onEvent: handleStreamEvent,
+        onObligation: (payload) => {
+          setStatus("suspended");
+          setActiveRunId(payload.runId);
+          setPendingResumeRunId(payload.runId);
+          appendLog({
+            channel: "system",
+            text: "Biometric elevation required",
+            at: new Date().toISOString(),
+          });
+          void resume.trigger();
+        },
+        onResume: () => {
+          appendLog({
+            channel: "system",
+            text: "Biometric check satisfied. Resuming...",
+            at: new Date().toISOString(),
+          });
+          setStatus("running");
+          setPendingResumeRunId(null);
+        },
+        onError: (error) => {
+          setStatus("failed");
+          setLastError(error.message);
+          appendLog({
+            channel: "system",
+            text: `Error: ${error.message}`,
+            at: new Date().toISOString(),
+          });
+        },
+        onComplete: () => {
+          setPendingResumeRunId(null);
+        },
+      });
+      subscriptionRef.current = subscription;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to start droid";
+      setLastError(message);
+      setStatus("failed");
+      appendLog({
+        channel: "system",
+        text: `Error: ${message}`,
+        at: new Date().toISOString(),
+      });
+      toast.error(message);
+    }
+  }, [appendLog, auto, handleStreamEvent, out, prompt, resume, stopStream]);
+
+  const handleStop = useCallback(() => {
+    stopStream();
+    setStatus("idle");
+    setActiveRunId(null);
+    setPendingResumeRunId(null);
+    appendLog({
+      channel: "system",
+      text: "Stopped",
+      at: new Date().toISOString(),
+    });
+  }, [appendLog, stopStream]);
+
+  const statusBadge = useMemo(() => {
+    switch (status) {
+      case "running":
+        return "text-biolum";
+      case "suspended":
+        return "text-amber-400";
+      case "completed":
+        return "text-emerald-400";
+      case "failed":
+        return "text-red-400";
+      default:
+        return "text-biolum-faint";
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "test") {
+      return;
+    }
+    const globalScope = globalThis as unknown as {
+      __droidTestHooks__?: Record<string, { run: () => Promise<void>; stop: () => void }>;
+    };
+    if (!globalScope.__droidTestHooks__) {
+      globalScope.__droidTestHooks__ = {};
+    }
+    globalScope.__droidTestHooks__[id] = {
+      run: async () => {
+        console.log("[droid-node-test] run invoked", id);
+        await handleRun();
+      },
+      stop: handleStop,
+      version: Date.now(),
+    };
+    return () => {
+      delete globalScope.__droidTestHooks__?.[id];
+    };
+  }, [handleRun, handleStop, id]);
+
+  if (lod === "tiny") {
+    return (
+      <NodeLODTiny
+        color={status === "running" ? "bg-biolum" : "bg-biolum-dim"}
+        shadow="shadow-biolum/30"
+      />
+    );
+  }
+
+  if (lod === "small") {
+    return (
+      <NodeLODSmall
+        borderColor="border-biolum/20"
+        hoverColor="hover:border-biolum/40"
+        icon={<Bot className="h-3 w-3" />}
+        label="Droid Exec"
+        textColor="text-biolum"
+      />
+    );
+  }
+
+  return (
+    <>
+      <MindscapeNode
+        className="w-[440px]"
+        headerActions={
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`${statusBadge} uppercase tracking-wide`}>
+              {status}
+            </span>
+            {activeRunId && (
+              <span className="text-biolum-faint font-mono text-[10px]">
+                {activeRunId.slice(0, 8)}
+              </span>
+            )}
+          </div>
+        }
+        id={id}
+        selected={selected}
+        title="Droid Exec"
+      >
+        <div className="flex flex-col gap-3 p-4">
+          <Textarea
+            aria-label="Droid prompt"
+            minRows={3}
+            onChange={(event) => setPrompt(event.target.value)}
+            placeholder="Describe the task for droid..."
+            value={prompt}
+          />
+          <div className="flex items-center gap-3">
+            <Select onValueChange={(value) => setAuto(value as AutoLevel)} value={auto}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Autonomy" />
+              </SelectTrigger>
+              <SelectContent>
+                {autoLevels.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(value) => setOut(value as OutFormat)} value={out}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Output" />
+              </SelectTrigger>
+              <SelectContent>
+                {outFormats.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              data-testid="droid-run-button"
+              className="flex-1"
+              onClick={status === "running" ? handleStop : handleRun}
+              variant={status === "running" ? "secondary" : "default"}
+            >
+              {status === "running" ? (
+                <>
+                  <PauseCircle className="mr-2 h-4 w-4" /> Stop
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" /> Run
+                </>
+              )}
+            </Button>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/40">
+            <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2 text-xs text-biolum-faint">
+              <Terminal className="h-3 w-3" /> Live Stream
+              {status === "suspended" && (
+                <span className="ml-auto flex items-center gap-1 text-amber-300">
+                  <ShieldAlert className="h-3 w-3" /> Awaiting biometric
+                </span>
+              )}
+            </div>
+            <ScrollArea className="h-48" type="always">
+              <div className="space-y-1 px-3 py-2 font-mono text-xs">
+                {log.length === 0 && (
+                  <p className="text-biolum-faint">No output yet.</p>
+                )}
+                {log.map((entry) => (
+                  <p
+                    className={
+                      entry.channel === "stderr"
+                        ? "text-red-300"
+                        : entry.channel === "system"
+                          ? "text-biolum-faint"
+                          : "text-biolum"
+                    }
+                    key={entry.id}
+                  >
+                    [{new Date(entry.at).toLocaleTimeString()}] {entry.text}
+                  </p>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+          {lastError && (
+            <p className="text-sm text-red-400">{lastError}</p>
+          )}
+        </div>
+      </MindscapeNode>
+      <BiometricChallengeDialog
+        mode="external"
+        onClose={() => {
+          resume.close();
+          setPendingResumeRunId(null);
+        }}
+        onSuccess={() => {
+          setStatus("running");
+        }}
+        open={resume.isOpen}
+        runId={resume.pendingRunId ?? undefined}
+        target="droid"
+      />
+    </>
+  );
+}

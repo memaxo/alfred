@@ -21,6 +21,13 @@ mock.module("../../src/orchestrator/tool/runner", () => ({
   },
 }));
 
+const mockSessionExecute = mock(async () => ({ ok: true, sessions: [] }));
+mock.module("../../src/orchestrator/tool/session", () => ({
+  toolSession: {
+    execute: mockSessionExecute,
+  },
+}));
+
 describe("WorktreeWorkspace", () => {
   const workspace = new WorktreeWorkspace("agent-1", "run-123", "/tmp/repo");
 
@@ -70,5 +77,59 @@ describe("WorktreeWorkspace", () => {
       undefined,
       undefined
     );
+  });
+
+  it("starts and stops sessions when enabled", async () => {
+    const sessionWorkspace = new WorktreeWorkspace(
+      "agent-1",
+      "run-123",
+      "/tmp/repo",
+      { enableSessions: true }
+    );
+    await sessionWorkspace.initialize();
+
+    const sessionId = await sessionWorkspace.startSession(
+      "bun run dev",
+      "dev-session"
+    );
+    expect(sessionId).toContain("dev-session");
+    expect(mockSessionExecute).toHaveBeenCalledWith({
+      input: {
+        action: "start",
+        sessionId,
+        command: "bun run dev",
+      },
+    });
+
+    await sessionWorkspace.stopSession?.(sessionId);
+    expect(mockSessionExecute).toHaveBeenCalledWith({
+      input: {
+        action: "stop",
+        sessionId,
+      },
+    });
+  });
+
+  it("cleans up sessions on cleanup", async () => {
+    const sessionWorkspace = new WorktreeWorkspace(
+      "agent-clean",
+      "run-999",
+      "/tmp/repo",
+      { enableSessions: true }
+    );
+    await sessionWorkspace.initialize();
+    const sessionId = await sessionWorkspace.startSession(
+      "bun watch",
+      "watch-session"
+    );
+    mockSessionExecute.mockClear();
+
+    await sessionWorkspace.cleanup();
+    expect(mockSessionExecute).toHaveBeenCalledWith({
+      input: {
+        action: "stop",
+        sessionId,
+      },
+    });
   });
 });

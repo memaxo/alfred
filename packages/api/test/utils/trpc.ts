@@ -77,6 +77,7 @@ function createRuntimeBundle(options: {
     ["userId", userId],
     ["userRoles", roles],
     ["userScopes", scopes],
+    ["scanContext", null],
   ]);
 
   return { runtime, runtimeContext, userId, roles, scopes };

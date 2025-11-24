@@ -193,6 +193,9 @@ export function generateReviewExecPlanSkeleton(
   lines.push(
     "- Record outcomes and follow-ups clearly in Progress and Decision Log."
   );
+  lines.push(
+    "- Use the 'session' tool (start/peek/send/stop) whenever you need a persistent dev server or long-running command."
+  );
   lines.push("");
   lines.push("## Progress");
   lines.push("");

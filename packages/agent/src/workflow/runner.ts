@@ -199,7 +199,11 @@ export function runPlanV6(
   const runId = randomUUID();
   const summary = `Plan initialized for ${input.requirement}`;
   const linear = input.linear ?? null;
-  const issueId = linear ? extractIssueIdFromSession(linear.sessionId) : null;
+  const issueId = linear?.issueId
+    ? linear.issueId
+    : linear?.sessionId
+      ? extractIssueIdFromSession(linear.sessionId)
+      : null;
   const externalUrlBase =
     process.env.PUBLIC_URL ??
     process.env.VITE_APP_URL ??

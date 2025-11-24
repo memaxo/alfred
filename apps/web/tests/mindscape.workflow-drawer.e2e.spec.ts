@@ -34,7 +34,10 @@ async function handleTrpcRequest(
 }
 
 test.describe("Mindscape workflow drawer loop", () => {
+  let feedbackCalled = false;
+
   test.beforeEach(async ({ page }) => {
+    feedbackCalled = false;
     const mocks = {
       "workflow.get": () => ({
         id: WORKFLOW_ID,
@@ -91,6 +94,20 @@ test.describe("Mindscape workflow drawer loop", () => {
       "note.list": () => [],
       "remind.due": () => [],
       "assistant.getConfig": () => ({}),
+      "cognitive.feedback": () => {
+        feedbackCalled = true;
+        return {
+          state: {
+            _: "reflecting",
+            outcome: { _: "success", result: null, duration: 0 },
+            expected: "CTA provenance test",
+            actual: "CTA provenance test",
+            error: 0,
+            physiology: { energy: 1, boredom: 0, frustration: 0 },
+          },
+          obligations: [],
+        };
+      },
     };
 
     await page.route("**/api/trpc/*", (route) =>
@@ -147,8 +164,12 @@ test.describe("Mindscape workflow drawer loop", () => {
     // Wait for drawer to open (header visible)
     await expect(page.getByText("Workflow run")).toBeVisible();
 
-    // TODO: Debug why content loading (trpc query) stalls in test environment
-    // await expect(page.getByText("Workflow Details")).toBeVisible();
+    await page
+      .getByTestId("mindscape-drawer-feedback-positive")
+      .click({ force: true });
+    await expect
+      .poll(() => feedbackCalled, { timeout: 2000 })
+      .toBeTruthy();
 
     // Click "Open full view" button in the header
     // Use evaluate to debug if element exists

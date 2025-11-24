@@ -102,16 +102,19 @@ function rateKey(userId: string | null, procedure?: string, type?: string) {
   );
 }
 
-export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
-  const userId = (ctx.session as any)?.user?.id ?? null;
-  const key = rateKey(userId, path, type);
+export async function consumeRouteRateLimit(
+  userId: string | null,
+  procedure?: string,
+  type?: string
+): Promise<void> {
+  const key = rateKey(userId, procedure, type);
   const now = Date.now();
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
   } else if (bucket.count + 1 > getLimitPerMinute()) {
     const m = await getMetrics();
-    m?.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
+    m?.rateLimitHitsTotal.inc({ procedure: procedure ?? "unknown" });
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS" as any,
       message: "rate_limited",
@@ -119,5 +122,10 @@ export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
   } else {
     bucket.count++;
   }
+}
+
+export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
+  const userId = (ctx.session as any)?.user?.id ?? null;
+  await consumeRouteRateLimit(userId, path, type);
   return next();
 });

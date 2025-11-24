@@ -13,9 +13,10 @@ export class ContainerWorkspace extends WorktreeWorkspace {
     runId: string,
     repoBase: string,
     readonly image = process.env.ORCH_DOCKER_IMAGE || "node:18-slim",
-    readonly authz?: string
+    readonly authz?: string,
+    enableSessions?: boolean
   ) {
-    super(id, runId, repoBase);
+    super(id, runId, repoBase, { enableSessions });
     this._containerName = `alfred-${runId}-${id.replace(/[^a-zA-Z0-9]/g, "-")}`;
   }
 

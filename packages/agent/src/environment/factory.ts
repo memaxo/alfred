@@ -11,6 +11,7 @@ export const WorkspaceFactory = {
     options?: {
       authz?: string;
       image?: string;
+      enableSessions?: boolean;
     }
   ): Promise<Workspace> => {
     switch (kind) {
@@ -20,15 +21,20 @@ export const WorkspaceFactory = {
           runId,
           repoBase,
           options?.image,
-          options?.authz
+          options?.authz,
+          options?.enableSessions
         );
       case "worktree":
-        return new WorktreeWorkspace(id, runId, repoBase);
+        return new WorktreeWorkspace(id, runId, repoBase, {
+          enableSessions: options?.enableSessions,
+        });
       case "host":
         // Fallback to worktree for safety if 'host' requested in multi-agent?
         // Or implement a dummy HostWorkspace?
         // For now, map host -> worktree to enforce isolation.
-        return new WorktreeWorkspace(id, runId, repoBase);
+        return new WorktreeWorkspace(id, runId, repoBase, {
+          enableSessions: options?.enableSessions,
+        });
       default:
         throw new Error(`Unknown workspace kind: ${kind}`);
     }

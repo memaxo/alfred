@@ -20,6 +20,7 @@ import {
   type codeNodeDataSchema,
   type conceptNodeDataSchema,
   type deploymentNodeDataSchema,
+  type droidNodeDataSchema,
   getNodeDataSchema,
   type integrationsNodeDataSchema,
   type knowledgeNodeDataSchema,
@@ -43,6 +44,7 @@ export type ArtifactType =
   | "tool"
   | "result"
   | "terminal"
+  | "droid"
   | "data"
   | "preview"
   | "note"
@@ -128,6 +130,9 @@ export type KnowledgeNodeData = z.infer<typeof knowledgeNodeDataSchema> & {
 export type ConceptNodeData = z.infer<typeof conceptNodeDataSchema> & {
   type: "concept";
 };
+export type DroidNodeData = z.infer<typeof droidNodeDataSchema> & {
+  type: "droid";
+};
 
 /**
  * Discriminated union of all artifact data types.
@@ -149,6 +154,7 @@ export type ArtifactData =
   | IntegrationsNodeData
   | WorkflowListNodeData
   | DeploymentNodeData
+  | DroidNodeData
   | TerminalNodeData
   | ArtifactNodeData
   | OrbNodeData
@@ -164,6 +170,13 @@ type ContextCacheEntry = {
   receipt?: SearchReceipt;
   phase?: "cache" | "scan" | "web" | "bundle";
   source?: "cache" | "handoff" | "scan";
+  updatedAt: number;
+};
+
+type FeedbackIntent = "positive" | "negative";
+
+type FeedbackEntry = {
+  intent: FeedbackIntent;
   updatedAt: number;
 };
 
@@ -199,6 +212,7 @@ type MindscapeState = {
     evictions: number;
   };
   contextCache: Record<string, ContextCacheEntry>;
+  feedbackByNode: Record<string, FeedbackEntry>;
 
   // React Flow actions
   onNodesChange: OnNodesChange;
@@ -235,6 +249,7 @@ type MindscapeState = {
     }
   ) => void;
   clearContextReceipt: (nodeId: string) => void;
+  recordFeedback: (nodeId: string, intent: FeedbackIntent) => void;
 };
 
 import { persist } from "zustand/middleware";
@@ -256,6 +271,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         evictions: 0,
       },
       contextCache: {},
+      feedbackByNode: {},
 
       onNodesChange: (changes) => {
         set({
@@ -524,6 +540,17 @@ export const useMindscapeStore = create<MindscapeState>()(
           return { contextCache: next } as Partial<MindscapeState>;
         });
       },
+      recordFeedback: (nodeId, intent) => {
+        if (!nodeId) {
+          return;
+        }
+        set((state) => ({
+          feedbackByNode: {
+            ...state.feedbackByNode,
+            [nodeId]: { intent, updatedAt: Date.now() },
+          },
+        }));
+      },
     }),
     {
       name: "mindscape-storage",
@@ -535,6 +562,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         ragDocCache: state.ragDocCache,
         ragDocCacheStats: state.ragDocCacheStats,
         contextCache: state.contextCache,
+        feedbackByNode: state.feedbackByNode,
       }),
     }
   )

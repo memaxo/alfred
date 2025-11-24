@@ -24,7 +24,7 @@ beforeAll(async () => {
   ({ cognitiveRepo } = await import("@alfred/db"));
 });
 
-const ctx = new RuntimeContext();
+const ctx = new RuntimeContext([["scanContext", null]]);
 
 const now = () => Date.now();
 const withTimestamp = <T extends Record<string, unknown>>(event: T) => ({

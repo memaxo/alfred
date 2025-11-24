@@ -1,4 +1,21 @@
 import type { Node } from "@xyflow/react";
+import {
+  Bell,
+  Bookmark,
+  Bot,
+  CheckSquare,
+  FileText,
+  ListChecks,
+  MessageSquare,
+  Plug,
+  Server,
+  Settings,
+  Shapes,
+  Shield,
+  Timer,
+  UserCircle,
+  Workflow,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -25,7 +42,99 @@ const createActions: Array<{
   icon: ReactNode;
   aliases?: string[];
 }> = [
-  // ... (createActions items)
+  {
+    type: "chat",
+    label: "Chat",
+    description: "Start a new Neural Stream conversation.",
+    icon: <MessageSquare className="h-4 w-4" />,
+    aliases: ["talk", "assistant"],
+  },
+  {
+    type: "note",
+    label: "Note",
+    description: "Capture free-form text or findings.",
+    icon: <FileText className="h-4 w-4" />,
+  },
+  {
+    type: "reminder",
+    label: "Reminder",
+    description: "Set a due time so Alfred pings you later.",
+    icon: <Bell className="h-4 w-4" />,
+  },
+  {
+    type: "timer",
+    label: "Timer",
+    description: "Drop a focus timer into the canvas.",
+    icon: <Timer className="h-4 w-4" />,
+  },
+  {
+    type: "todo",
+    label: "Todo",
+    description: "Track actionable items inline.",
+    icon: <CheckSquare className="h-4 w-4" />,
+  },
+  {
+    type: "bookmark",
+    label: "Bookmark",
+    description: "Collect quick links and references.",
+    icon: <Bookmark className="h-4 w-4" />,
+  },
+  {
+    type: "workflow",
+    label: "Workflow",
+    description: "Launch a multi-step autonomous run.",
+    icon: <Workflow className="h-4 w-4" />,
+    aliases: ["plan", "run"],
+  },
+  {
+    type: "workflowlist",
+    label: "Workflow List",
+    description: "Monitor every active workflow.",
+    icon: <ListChecks className="h-4 w-4" />,
+  },
+  {
+    type: "deployment",
+    label: "Deployments",
+    description: "Inspect release health and controls.",
+    icon: <Server className="h-4 w-4" />,
+  },
+  {
+    type: "settings",
+    label: "Settings",
+    description: "Adjust autonomy & voice preferences.",
+    icon: <Settings className="h-4 w-4" />,
+  },
+  {
+    type: "privacy",
+    label: "Privacy",
+    description: "Review data sharing and exports.",
+    icon: <Shield className="h-4 w-4" />,
+  },
+  {
+    type: "profile",
+    label: "Profile",
+    description: "Manage identity & authentication.",
+    icon: <UserCircle className="h-4 w-4" />,
+  },
+  {
+    type: "integrations",
+    label: "Integrations",
+    description: "Wire Linear, GitHub, and more.",
+    icon: <Plug className="h-4 w-4" />,
+  },
+  {
+    type: "concept",
+    label: "Concept",
+    description: "Seed a new knowledge graph entity.",
+    icon: <Shapes className="h-4 w-4" />,
+  },
+  {
+    type: "droid",
+    label: "Droid Exec",
+    description: "Run the policy-gated droid executor.",
+    icon: <Bot className="h-4 w-4" />,
+    aliases: ["exec", "cli"],
+  },
 ];
 
 // ... (PaletteInput component)

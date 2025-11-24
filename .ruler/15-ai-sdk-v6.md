@@ -45,4 +45,15 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
    - Tool messages must have `role: "tool"` with `tool-result` objects in `content` array
    - Never flatten tool call/result structures
 
+8. **Core primitives only.** All LLM, embedding, speech, transcription, or image calls must go through AI SDK Core (`generateText`, `streamText`, `generateObject`, `streamObject`, `embed`, `embedMany`, `generateImage`, `generateSpeech`, `transcribe`) with provider registries or custom providers instead of raw HTTP clients.
+
+9. **UI hooks & transports.** Conversational or completion UIs must rely on `useChat`, `useCompletion`, or `useObject` with the documented text/data stream protocol and `DefaultChatTransport` (or a transport that fully implements the same contract) instead of ad-hoc SSE/WebSocket layers.
+
+10. **Tool hygiene.** Define every tool using `tool()` plus Zod/JSON schemas, keep tool catalogs lean (≤5 per agent), add `.describe` metadata, prefer `.nullable` instead of `.optional`, set `temperature: 0` for structured/tool generations, and orchestrate multi-step tool flows with `stopWhen`, `steps`, `onStepFinish`, and `prepareStep`.
+
+11. **Agents use ToolLoopAgent.** Encapsulate reusable agents with `ToolLoopAgent`, specifying instructions, toolChoice, Output schemas, and `stopWhen` limits; bespoke while-loops or manual tool orchestration require explicit approval.
+
+12. **Structured outputs.** Use `generateObject`/`streamObject` (and `useObject` client-side) for any structured payloads or streamed JSON instead of parsing free-form text, and treat `@ai-sdk/rsc` as experimental unless the official migration guide is followed.
+
+13. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
 

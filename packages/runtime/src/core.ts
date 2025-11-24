@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 // import type { LanguageModel } from "ai";
 import {
   runtimeExecutionDurationSeconds,
@@ -36,6 +37,7 @@ import type { PipelineState } from "./pipeline/types";
 export class WorkflowRuntime implements IWorkflowRuntime {
   readonly runId: string;
   readonly summary: string;
+  private readonly runtimeContext: RuntimeContext<Record<string, unknown>>;
 
   // Lazy generator initialization to prevent eager execution
   private _stream: AsyncGenerator<WorkflowEvent, void, void> | null = null;
@@ -85,6 +87,30 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       finalStatus: null,
       finalMessage: null,
     };
+
+    const providedContext = validated.runtimeContext;
+    if (providedContext) {
+      this.runtimeContext = providedContext as RuntimeContext<Record<string, unknown>>;
+    } else {
+      this.runtimeContext = new RuntimeContext<Record<string, unknown>>([
+        ["ai", null],
+        ["scanContext", null],
+      ]);
+    }
+
+    if (!this.runtimeContext.has("ai")) {
+      this.runtimeContext.set("ai", null);
+    }
+
+    if (this.signal) {
+      this.runtimeContext.set("signal", this.signal);
+    } else if (!this.runtimeContext.has("signal")) {
+      this.runtimeContext.set("signal", null);
+    }
+
+    if (this.authz) {
+      this.runtimeContext.set("authz", this.authz);
+    }
 
     // Setup cancellation listener
     if (this.signal) {
@@ -160,22 +186,10 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       checkTimeout();
 
       // Initialize Pipeline
-      const pipelineContextEntries: [string, unknown][] = [["ai", null]];
-      if (this.signal) {
-        pipelineContextEntries.push(["signal", this.signal]);
-      }
-      if (this.authz) {
-        pipelineContextEntries.push(["authz", this.authz]);
-      }
-
-      const pipelineContext = new RuntimeContext<Record<string, unknown>>(
-        pipelineContextEntries
-      );
-
       const pipelineState: PipelineState = {
         currentPhaseId: "scan",
         history: [],
-        context: pipelineContext,
+        context: this.runtimeContext,
       };
 
       const runner = new PipelineRunner(pipelineState)
@@ -205,33 +219,38 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         return false;
       }.bind(this);
 
-      // 1. Scan
       pipelineState.currentPhaseId = "scan";
       if (yield* checkCancelled()) {
         return;
       }
-      yield* runner.run(this._input);
 
-      // 2. Plan
-      pipelineState.currentPhaseId = "plan";
-      if (yield* checkCancelled()) {
-        return;
-      }
-      yield* runner.run(this._input);
+      const pipelineIterator = runner.run(this._input)[Symbol.asyncIterator]();
+      while (true) {
+        const next = await pipelineIterator.next();
+        if (next.done) {
+          break;
+        }
+        yield next.value;
 
-      // 3. Act
-      pipelineState.currentPhaseId = "act";
-      if (yield* checkCancelled()) {
-        return;
+        if (this.state.cancelled) {
+          await pipelineIterator.return?.();
+          yield {
+            type: "notice",
+            message: "workflow_cancelled_during_execution",
+          } as WorkflowEvent;
+          this.state.finalStatus = "cancelled";
+          runtimeExecutionsTotal.inc({
+            auto: this._input.auto ?? "low",
+            status: "cancelled",
+          });
+          stopWorkflow({ status: "cancelled" });
+          logger.info("runtime_execution_cancelled", {
+            runId: this.runId,
+            phase: pipelineState.currentPhaseId,
+          });
+          return;
+        }
       }
-      yield* runner.run(this._input);
-
-      // 4. Report
-      pipelineState.currentPhaseId = "report";
-      if (yield* checkCancelled()) {
-        return;
-      }
-      yield* runner.run(this._input);
 
       // Workflow completed successfully
       this.state.finalStatus = "completed";

@@ -59,6 +59,7 @@ export function MindscapeInitializer() {
     { enabled: graphNodeIds.length > 0, refetchInterval: 5000 }
   );
   const initializedRef = useRef(false);
+  const droidInitializedRef = useRef(false);
 
   // Initialize with Chat Node after Orb is created
   useEffect(() => {
@@ -103,6 +104,36 @@ export function MindscapeInitializer() {
       }, 100);
     }
   }, [nodeIds, addArtifact, autoLayout]);
+
+  useEffect(() => {
+    if (droidInitializedRef.current) {
+      return;
+    }
+    const hasDroid = nodes.some((node) => node.type === "droid");
+    if (hasDroid) {
+      droidInitializedRef.current = true;
+      return;
+    }
+    const hasOrb = nodeIds.includes("singularity");
+    if (!hasOrb) {
+      return;
+    }
+
+    addArtifact({
+      id: "droid-exec",
+      type: "droid",
+      position: { x: -240, y: 220 },
+      data: {
+        label: "Droid Exec",
+        prompt: "",
+        auto: "low",
+        out: "text",
+        status: "idle",
+        log: [],
+      },
+    });
+    droidInitializedRef.current = true;
+  }, [nodes, nodeIds, addArtifact]);
 
   // Sync Notes
   useEffect(() => {

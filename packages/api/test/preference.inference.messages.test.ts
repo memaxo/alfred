@@ -143,6 +143,7 @@ describe("validateConversationMessages", () => {
 describe("runPreferenceInference", () => {
   beforeEach(() => {
     inferResponsePreferencesMock.mockReset();
+    inferResponsePreferencesMock.mockResolvedValue(new Map());
     inferDomainPreferencesMock.mockReset();
     inferPreferencesFromFeedbackMock.mockReset();
     mergePreferencesMock.mockReset();
@@ -181,7 +182,7 @@ describe("runPreferenceInference", () => {
       messages: historyMessages,
     });
 
-    inferResponsePreferencesMock.mockReturnValue(
+    inferResponsePreferencesMock.mockResolvedValue(
       new Map([
         [
           "response.tone",
@@ -244,7 +245,7 @@ describe("runPreferenceInference", () => {
       messages: [toolCall, toolResult, ...filler],
     });
 
-    inferResponsePreferencesMock.mockReturnValue(new Map());
+    inferResponsePreferencesMock.mockResolvedValue(new Map());
     mergePreferencesMock.mockReturnValue(new Map());
 
     await runPreferenceInference("user-456");

@@ -48,6 +48,7 @@ function createCaller() {
     ["ip", runtime.ip],
     ["forwardedFor", runtime.forwardedFor],
     ["userId", TEST_USER],
+    ["scanContext", null],
   ]);
   return appRouter.createCaller({
     session: {

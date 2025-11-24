@@ -37,11 +37,24 @@ mock.module("node-pty", () => ({
 }));
 
 mock.module("@alfred/agent/orchestrator/linear", () => ({
-  emitLinearActivity: vi.fn().mockResolvedValue(undefined),
+  emitLinearActivity: vi.fn().mockResolvedValue({ ok: true }),
+  setLinearDelegate: vi.fn().mockResolvedValue(undefined),
+  setLinearStarted: vi.fn().mockResolvedValue({ stateId: "started" }),
+  setLinearCompleted: vi.fn().mockResolvedValue({ stateId: "done" }),
+  setLinearSessionExternalUrl: vi.fn().mockResolvedValue(undefined),
+  commentOnLinearIssue: vi.fn().mockResolvedValue(undefined),
+  extractIssueIdFromSession: (id: string) => id,
 }));
 
 mock.module("@alfred/agent/orchestrator/linearmetrics", () => ({
   configureLinearMetrics: vi.fn(),
+}));
+
+mock.module("@alfred/agent/workflow/linear", () => ({
+  ensureLinearTicket: (params: { linear?: unknown }) => ({
+    linear: params.linear,
+    ticket: undefined,
+  }),
 }));
 
 setupTestEnv();
@@ -101,6 +114,7 @@ beforeEach(() => {
     updated: new Date(),
   });
   createMessageMock.mockResolvedValue(null);
+  setupExecutorPath(false);
 });
 
 afterEach(() => {

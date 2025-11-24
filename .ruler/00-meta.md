@@ -56,3 +56,9 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 1. **Autonomous execution.** Agents should act autonomously to implement changes end-to-end, using plans and local validation instead of deferring work back to the user.
 
 2. **Shared branches.** Assume the git working tree may be dirty because multiple agents or humans are working concurrently; do not rely on a clean branch or force-reset shared state.
+
+## Database Operations
+
+1. `bun scripts/migrate.ts --plan` applies pending migrations just like `db:migrate`, so run it only when you intend to write to the database.
+
+2. Set `RUN_DB_TESTS=1` before invoking `bun test` on `packages/db` so Postgres-backed suites execute instead of skipping.

@@ -12,30 +12,30 @@ This document proposes a concrete, repo-specific architecture and implementation
 
 Use this section to track granular implementation steps. Every stopping point must be documented here, even if it requires splitting a partially completed task into two ("done" vs. "remaining"). This section must always reflect the actual current state of the work.
 
-- [ ] Extend ontology with risk and pattern anchors (Concept:HighRisk, Concept:MediumRisk, Concept:LowRisk, Pattern:Causal, Pattern:Decision, Pattern:Alternative)
-- [ ] Create packages/runtime/src/engines/safety.ts with classifyPlanRisk function
-- [ ] Refactor packages/cognitive/src/logic/autonomy.ts to remove keyword lists and accept RiskAssessment
-- [ ] Create packages/agent/src/preference/semantic.ts with semantic inference functions
-- [ ] Refactor packages/agent/src/preference/inference.ts to delegate to semantic module and add async variants
-- [ ] Update packages/api/src/scheduler/preference-inference.ts to use async preference inference
-- [ ] Refactor packages/knowledge/src/extractor.ts to remove CAUSAL_MARKERS, CONFIDENCE_MODIFIERS, and negation fallback
-- [ ] Add structural confidence calculation (computeSentenceConfidence) to extractor
-- [ ] Create packages/knowledge/src/reasoning/causality.ts with deriveCausalityFromText
-- [ ] Create packages/knowledge/src/reasoning/decisions.ts with deriveDecisionFacts
-- [ ] Create packages/knowledge/src/reasoning/alternatives.ts with deriveAlternativeFacts
-- [ ] Update packages/agent/src/orchestrator/learning-worker.ts to invoke reasoning passes
-- [ ] Refactor packages/knowledge/src/query.ts to remove STOP_WORDS and add POS-based term extraction
-- [ ] Integrate risk classification into runtime pipeline phases (plan/act)
-- [ ] Add observability metrics and logging for new semantic operations
-- [ ] Update tests to cover new semantic/structural implementations
+- [x] Extend ontology with risk and pattern anchors (Concept:HighRisk, Concept:MediumRisk, Concept:LowRisk, Pattern:Causal, Pattern:Decision, Pattern:Alternative)
+- [x] Create packages/runtime/src/engines/safety.ts with classifyPlanRisk function
+- [x] Refactor packages/cognitive/src/logic/autonomy.ts to remove keyword lists and accept RiskAssessment
+- [x] Create packages/agent/src/preference/semantic.ts with semantic inference functions
+- [x] Refactor packages/agent/src/preference/inference.ts to delegate to semantic module and add async variants
+- [x] Update packages/api/src/scheduler/preference-inference.ts to use async preference inference
+- [x] Refactor packages/knowledge/src/extractor.ts to remove CAUSAL_MARKERS, CONFIDENCE_MODIFIERS, and negation fallback
+- [x] Add structural confidence calculation (computeSentenceConfidence) to extractor
+- [x] Create packages/knowledge/src/reasoning/causality.ts with deriveCausalityFromText
+- [x] Create packages/knowledge/src/reasoning/decisions.ts with deriveDecisionFacts
+- [x] Create packages/knowledge/src/reasoning/alternatives.ts with deriveAlternativeFacts
+- [x] Update packages/agent/src/orchestrator/learning-worker.ts to invoke reasoning passes
+- [x] Refactor packages/knowledge/src/query.ts to remove STOP_WORDS and add POS-based term extraction
+- [x] Integrate risk classification into runtime pipeline phases (plan/act)
+- [x] Add observability metrics and logging for new semantic operations
+- [x] Update tests to cover new semantic/structural implementations
 - [ ] Run end-to-end validation for all nine magic list replacements
 
 ## Surprises & Discoveries
 
 Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
 
-- Observation: (To be filled during implementation)
-  Evidence: (To be filled during implementation)
+- Observation: Learning-worker integration tests attempted to execute the new reasoning modules and stalled on real embeddings until we mocked `@alfred/knowledge/reasoning/*`.
+  Evidence: `bun test packages/agent/test/learning-worker.integration.test.ts` emitted embed warnings before the mock layer was added.
 
 ## Decision Log
 
@@ -43,23 +43,27 @@ Record every decision made while working on the plan in the format:
 
 - Decision: Keep extractor synchronous and move causal/decision/alternative detection to reasoning passes
   Rationale: Preserve purity and budget; embedding is async
-  Date/Author: 2025-01-XX / ALFRED
+  Date/Author: 2025-11-24 / Codex
 
 - Decision: Risk classification moved to runtime engine and provided to pure gating
   Rationale: Maintain cognitive purity and <100 µs budget
-  Date/Author: 2025-01-XX / ALFRED
+  Date/Author: 2025-11-24 / Codex
 
 - Decision: Preference centroids cached globally; per-user centroids as a future enhancement
   Rationale: Simplicity and performance
-  Date/Author: 2025-01-XX / ALFRED
+  Date/Author: 2025-11-24 / Codex
 
 - Decision: Use gateExecutionWithAssessment to avoid breaking existing gateExecution callers
   Rationale: Backward compatibility while enabling new semantic risk assessment
-  Date/Author: 2025-01-XX / ALFRED
+  Date/Author: 2025-11-24 / Codex
 
 - Decision: Keep async preference inference in scheduler only, not in hot UI paths
   Rationale: Scheduler has direct access to server resources and is not performance-critical
-  Date/Author: 2025-01-XX / ALFRED
+  Date/Author: 2025-11-24 / Codex
+
+- Decision: Add runtime and test env overrides (`RUNTIME_DISABLE_SAFETY_EMBED`, `RUNTIME_FORCE_PLAN_RISK_LEVEL`) so semantic guards stay deterministic under automation.
+  Rationale: Keeps CI and unit suites hermetic while preserving full functionality in production.
+  Date/Author: 2025-11-24 / Codex
 
 ## Outcomes & Retrospective
 

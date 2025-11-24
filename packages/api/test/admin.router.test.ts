@@ -83,6 +83,7 @@ async function createCallerWithCustomSession(session: any) {
   const runtimeContext = new RuntimeContext([
     ["requestId", runtime.requestId],
     ["receivedAt", runtime.receivedAt.toISOString()],
+    ["scanContext", null],
   ]);
   return appRouter.createCaller({
     session,

@@ -80,6 +80,63 @@ async function appendReviewOutcome(
   await fs.writeFile(before + entry + after, "utf8");
 }
 
+async function appendReviewDecision(filePath: string, entry: string) {
+  const content = await fs.readFile(filePath, "utf8");
+  const marker = "## Decision Log";
+  const idx = content.indexOf(marker);
+  if (idx === -1) {
+    return;
+  }
+  const before = content.slice(0, idx + marker.length);
+  const after = content.slice(idx + marker.length);
+  const logEntry = `\n\n- ${entry}\n`;
+  await fs.writeFile(before + logEntry + after, "utf8");
+}
+
+async function createDebuggerExecPlan(
+  runId: string,
+  failures: Array<{ command: string; output: string; error?: string; checkId?: string }>,
+  attempts: number
+) {
+  const filePath = `.agent/plans/${runId}/review-debugger.md`;
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+
+  const failureBlocks = failures.length
+    ? failures
+        .map((f, index) =>
+          [
+            `### Failure ${index + 1} (${f.checkId ?? "unknown"})`,
+            `Command: ${f.command}`,
+            "",
+            "```",
+            f.output || f.error || "<no output>",
+            "```",
+          ].join("\n")
+        )
+        .join("\n\n")
+    : "No command details were captured.";
+
+  const lines = [
+    `# Review Debugger Plan for run ${runId}`,
+    "",
+    `Attempts exhausted: ${attempts}`,
+    "",
+    "## Context",
+    "The automated fixer exhausted its retries. Use this plan to continue investigation manually or with a debugger agent.",
+    "",
+    "## Failed Checks",
+    failureBlocks,
+    "",
+    "## Next Actions",
+    "- Re-run the failing commands locally (bun run lint/test, etc.) to reproduce the error.",
+    "- If a long-running process is required, start it via the session tool (session.start/peek/send/stop).",
+    "- Document findings in this file's Decision Log and update review.md once resolved.",
+  ];
+
+  await fs.writeFile(filePath, lines.join("\n"), "utf8");
+  return filePath;
+}
+
 function buildTestCommandFromPlan(mergePlan: any): string {
   const changed = Array.isArray(mergePlan?.changedPackages)
     ? (mergePlan.changedPackages as string[])
@@ -361,7 +418,9 @@ export async function* runReviewPhase(
               (f) =>
                 `Check: ${f.checkId ?? "unknown"}\nCommand: ${
                   f.command
-                }\nError/Output:\n\`\`\`\n${f.output || f.error}\n\`\`\``
+                }\nError/Output:\n\`\`\`\n${
+                  f.output || f.error || "<no output captured>"
+                }\n\`\`\``
             )
             .join("\n\n");
 
@@ -380,6 +439,7 @@ export async function* runReviewPhase(
             "- Locate the source files causing the error.",
             "- Apply fixes.",
             "- Verify the fix (the review phase will re-run automatically).",
+            "- Use the 'session' tool if you need a persistent dev server (session.start/peek/send/stop).",
             "",
             "## Progress",
             "- [ ] (pending) Fix applied.",
@@ -387,13 +447,18 @@ export async function* runReviewPhase(
 
           await fs.writeFile(fixerExecPlanPath, skeleton, "utf8");
 
+          const fixerAuto = input.auto === "read" ? "medium" : input.auto;
           const prompt = [
             "You are a Self-Correction 'Fixer' Agent.",
             `ExecPlan path: ${fixerExecPlanPath}`,
             "Your goal is to FIX the code so that the review checks pass.",
             "1. Read the error context in the plan.",
             "2. Edit the code to resolve the errors.",
-            "3. Do not break existing functionality.",
+            "3. Re-run the failing commands locally (bun run lint/test, etc.) to verify fixes before exiting.",
+            "4. Use the 'session' tool when you need a persistent tmux session:",
+            "   - session.start <session_id> <command> to launch a dev server or watcher.",
+            "   - session.peek <session_id> to read output, session.send to send commands, session.stop to end it.",
+            "5. Do not break existing functionality.",
           ].join("\n");
 
           const fixerEvents: WorkflowEvent[] = [];
@@ -421,7 +486,7 @@ export async function* runReviewPhase(
               action: "exec",
               prompt,
               out: "text",
-              auto: input.auto, // Inherit write permissions
+              auto: fixerAuto,
               cw: workspace,
               sessionId: `${runId}:fixer-${fixAttempts}`,
               model: undefined,
@@ -464,6 +529,35 @@ export async function* runReviewPhase(
         ? `Automated checks passed after ${attempts} run(s).`
         : `Automated checks failed after ${attempts} run(s).`
     );
+
+    if (!reviewPassed) {
+      const fallbackPlanPath = await createDebuggerExecPlan(
+        runId,
+        reviewFailures,
+        attempts
+      );
+      await appendReviewDecision(
+        reviewExecPlanPath,
+        `Escalated to debugger plan (${path.basename(
+          fallbackPlanPath
+        )}) after ${attempts} attempt(s).`
+      );
+
+      yield {
+        type: "notice",
+        message: "review_fallback_triggered",
+        plan: fallbackPlanPath,
+      } as any;
+
+      yield {
+        type: "event",
+        kind: "review-fallback",
+        data: {
+          plan: fallbackPlanPath,
+          attempts,
+        },
+      } as any;
+    }
 
     yield {
       type: "event",

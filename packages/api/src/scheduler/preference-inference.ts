@@ -56,7 +56,7 @@ export async function runPreferenceInference(
   const toolCalls = await loadToolCalls(userId, lookbackDays, toolLimit);
   const feedback = await loadFeedback(userId, 500);
 
-  const responsePrefs = inferResponsePreferences(conversations);
+  const responsePrefs = await inferResponsePreferences(conversations);
   const domainPrefs = inferDomainPreferences(toolCalls);
   const feedbackPrefs = inferPreferencesFromFeedback(feedback);
 

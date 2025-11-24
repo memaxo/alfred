@@ -2,21 +2,15 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import Loader from "./components/loader";
 import { RouteError } from "./components/route-error";
 import "./index.css";
-import type { AppRouter } from "@alfred/api";
 import {
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import {
-  createTRPCClient,
-  httpBatchLink,
-  splitLink,
-  unstable_httpSubscriptionLink,
-} from "@trpc/client";
 import { toast } from "sonner";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
+import { createBrowserTrpcClient } from "@/lib/trpc-client";
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -34,25 +28,7 @@ export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60 * 1000 } },
 });
 
-const trpcClient = createTRPCClient<AppRouter>({
-  links: [
-    splitLink({
-      condition: (op) => op.type === "subscription",
-      true: unstable_httpSubscriptionLink({
-        url: "/api/trpc",
-      }),
-      false: httpBatchLink({
-        url: "/api/trpc",
-        fetch(url, options) {
-          return fetch(url, {
-            ...options,
-            credentials: "include",
-          });
-        },
-      }),
-    }),
-  ],
-});
+const trpcClient = createBrowserTrpcClient();
 
 export const getRouter = () => {
   const router = createTanStackRouter({

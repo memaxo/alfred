@@ -6,6 +6,7 @@
  */
 
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
 import { z } from "zod";
 
@@ -68,6 +69,9 @@ export type RuntimeOptions = {
 
   /** Cancellation signal */
   signal?: AbortSignal;
+
+  /** Shared RuntimeContext instance (optional) */
+  runtimeContext?: RuntimeContext<Record<string, unknown>>;
 
   /** Step timeout in milliseconds (default: 5 minutes) */
   stepTimeoutMs?: number;
@@ -173,6 +177,9 @@ export const runtimeOptionsSchema = z.object({
     message: "Model must be provided",
   }),
   signal: z.custom<AbortSignal>().optional(),
+  runtimeContext: z
+    .custom<RuntimeContext<Record<string, unknown>>>()
+    .optional(),
   stepTimeoutMs: z
     .number()
     .int()

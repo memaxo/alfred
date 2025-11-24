@@ -18,6 +18,7 @@ import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";
+import { toolSession } from "./orchestrator/tool/session";
 import { toolProxmox } from "./orchestrator/tool/proxmox";
 import { toolRouter } from "./orchestrator/tool/router";
 import { toolTicket } from "./orchestrator/tool/ticket";
@@ -126,6 +127,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolDocker,
   toolDroid,
   toolGit,
+  toolSession,
   toolProxmox,
   toolRouter,
   toolTicket,

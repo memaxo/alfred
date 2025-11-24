@@ -47,4 +47,11 @@ export type Workspace = {
     options?: ExecOptions,
     projectConfig?: ProjectConfig | null
   ): Promise<ExecResult>;
+
+  /**
+   * Optional persistent session helpers (tmux-backed).
+   */
+  startSession?(command: string, sessionId?: string): Promise<string>;
+  stopSession?(sessionId: string): Promise<void>;
+  listSessions?(): Promise<string[]>;
 };

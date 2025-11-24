@@ -50,6 +50,7 @@ function createCaller() {
     ["receivedAt", runtime.receivedAt.toISOString()],
     ["method", runtime.method],
     ["url", runtime.url],
+    ["scanContext", null],
   ]);
 
   return graphRouter.createCaller({

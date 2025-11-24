@@ -529,6 +529,13 @@ export const cognitiveEntropyEventsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const cognitiveFeedbackSubmissionsTotal = new client.Counter({
+  name: "cognitive_feedback_submissions_total",
+  help: "Count of cognitive feedback submissions grouped by surface.",
+  labelNames: ["surface"] as const,
+  registers: [metricsRegistry],
+});
+
 // Lazily wire external metric hooks (agent/policy) to avoid heavy imports in tests
 if (process.env.DISABLE_METRICS_HOOKS !== "1") {
   (async () => {

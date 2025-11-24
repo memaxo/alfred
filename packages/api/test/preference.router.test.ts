@@ -54,6 +54,9 @@ mock.module("@alfred/agent/preference/loader", () => ({
 
 mock.module("@alfred/agent/preference/inference", () => ({
   inferPreferenceFromCorrection: inferPreferenceFromCorrectionMock,
+  inferResponsePreferences: vi.fn().mockResolvedValue(new Map()),
+  inferDomainPreferences: vi.fn().mockReturnValue(new Map()),
+  inferPreferencesFromFeedback: vi.fn().mockReturnValue(new Map()),
 }));
 
 let caller: Awaited<
@@ -83,11 +86,14 @@ beforeEach(() => {
     parts: [{ type: "text", text: row.id }],
   }));
   inferPreferenceFromCorrectionMock.mockReset();
+  inferPreferenceFromCorrectionMock.mockResolvedValue(null);
   invalidatePreferenceCacheMock.mockReset();
   addFeedbackMock.mockReset();
   getPreferencesMock.mockReset();
   setPreferenceMock.mockReset();
   deletePreferenceMock.mockReset();
+  recordMemoryUpdateSpy?.mockClear();
+  recordMemoryForgetSpy?.mockClear();
 });
 
 describe("preference router", () => {
@@ -228,7 +234,7 @@ describe("preference router", () => {
       getMessageMock
         .mockResolvedValueOnce({ id: "orig" })
         .mockResolvedValueOnce({ id: "corr" });
-      inferPreferenceFromCorrectionMock.mockReturnValue({
+      inferPreferenceFromCorrectionMock.mockResolvedValue({
         key: "response.verbosity",
         value: "concise",
       });
@@ -258,7 +264,7 @@ describe("preference router", () => {
       getMessageMock
         .mockResolvedValueOnce({ id: "orig" })
         .mockResolvedValueOnce({ id: "corr" });
-      inferPreferenceFromCorrectionMock.mockReturnValue(null);
+      inferPreferenceFromCorrectionMock.mockResolvedValue(null);
 
       const result = await caller.preference.inferFromCorrection({
         originalMessageId: "orig",

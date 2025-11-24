@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 
+export type FeedbackSurface = "chat" | "mindscape" | "voice";
+
 export type CognitiveFeedbackInput = {
   streamId: string;
   expected: string;
   actual: string;
+  surface?: FeedbackSurface;
 };
 
 export type CognitiveFeedbackStatus =
@@ -25,7 +28,10 @@ export function useCognitiveFeedback() {
 
     try {
       const response = await fetch(
-        `/api/trpc/cognitive.feedback?input=${encodeInput(input)}`,
+        `/api/trpc/cognitive.feedback?input=${encodeInput({
+          ...input,
+          surface: input.surface ?? "chat",
+        })}`,
         {
           body: "[]",
           headers: {

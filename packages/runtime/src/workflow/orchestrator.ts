@@ -48,6 +48,15 @@ export type OrchestratorCallbacks = {
   emitError: (error: any) => void;
   emitNext: (event: WorkflowEvent) => void;
   emitComplete: () => void;
+  emitUiMessages?: (
+    messages: UIMessage[],
+    meta: {
+      runId: string;
+      eventId: string;
+      eventType: string;
+      originalEvent: WorkflowEvent;
+    }
+  ) => void;
 };
 
 export async function orchestrateWorkflowStream(
@@ -381,7 +390,12 @@ export async function orchestrateWorkflowStream(
         })) as WorkflowEvent[];
       }
 
-      const executor = createWorkflowExecutor(input, abortController, history);
+      const executor = createWorkflowExecutor(
+        input,
+        abortController,
+        history,
+        callbacks.context?.runtimeContext
+      );
 
       if (input.runId) {
         runId = input.runId;
@@ -645,6 +659,15 @@ export async function orchestrateWorkflowStream(
               refreshPreferences("workflow_messages_persisted");
             }
           }
+          if (uiMessages && uiMessages.length > 0) {
+            const resolvedRunId = runId ?? executor.runId;
+            callbacks.emitUiMessages?.(uiMessages, {
+              runId: resolvedRunId,
+              eventId,
+              eventType,
+              originalEvent: event,
+            });
+          }
           push({ ...event, eventId } as WorkflowEvent);
 
           if (
@@ -716,20 +739,18 @@ export async function orchestrateWorkflowStream(
         return;
       }
 
-      if (finalStatus === "completed") {
-        if (!reviewGate.isSatisfied()) {
-          throw new Error("review_checklist_incomplete");
-        }
-        if (input.linear?.sessionId && input.authzLinear) {
-          await finalizeLinearSuccess({
-            runId: runId ?? executor.runId,
-            finalMessage,
-            reviewChecks: reviewGate.summary(),
-            linear: input.linear,
-            authz: input.authzLinear,
-            workflowUrl: workflowUrlFor(runId ?? executor.runId),
-          });
-        }
+      if (!reviewGate.isSatisfied()) {
+        throw new Error("review_checklist_incomplete");
+      }
+      if (input.linear?.sessionId && input.authzLinear) {
+        await finalizeLinearSuccess({
+          runId: runId ?? executor.runId,
+          finalMessage: null,
+          reviewChecks: reviewGate.summary(),
+          linear: input.linear,
+          authz: input.authzLinear,
+          workflowUrl: workflowUrlFor(runId ?? executor.runId),
+        });
       }
 
       await markCompleted();

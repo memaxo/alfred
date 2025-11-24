@@ -4,6 +4,7 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
 import type { WorkflowEvent } from "@alfred/type";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -80,7 +81,8 @@ export function shouldUseWorkflowRuntime(): boolean {
 export function createWorkflowExecutor(
   input: z.infer<typeof workflowInput>,
   abortController: AbortController,
-  history?: WorkflowEvent[]
+  history?: WorkflowEvent[],
+  runtimeContext?: RuntimeContext<Record<string, unknown>>
 ) {
   if (shouldUseWorkflowRuntime()) {
     const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
@@ -109,6 +111,7 @@ export function createWorkflowExecutor(
       workflowTimeoutMs: 30 * 60 * 1000,
       runId: input.runId, // Pass runId if resuming
       history, // Pass history if resuming
+      runtimeContext,
     });
   }
   return runPlanV6(

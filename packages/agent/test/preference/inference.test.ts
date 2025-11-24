@@ -1,16 +1,46 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   ConversationHistory,
   FeedbackHistory,
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
-import {
+const inferResponsePreferencesSemanticMock = mock(async () => ({
+  verbosity: [
+    { label: "concise" as ResponseVerbosity, score: 0.62 },
+    { label: "verbose" as ResponseVerbosity, score: 0.2 },
+  ],
+  tone: [{ label: "formal" as ResponseTone, score: 0.58 }],
+  format: [{ label: "bullet" as ResponseFormat, score: 0.4 }],
+}));
+
+const detectToneSemanticMock = mock(async () => "friendly" as ResponseTone);
+
+mock.module("../../src/preference/semantic", () => ({
+  inferResponsePreferencesSemantic: inferResponsePreferencesSemanticMock,
+  detectToneSemantic: detectToneSemanticMock,
+}));
+
+const {
   inferDomainPreferences,
   inferPreferenceFromCorrection,
   inferPreferencesFromFeedback,
   inferResponsePreferences,
-} from "../../src/preference/inference";
+} = await import("../../src/preference/inference");
+
+beforeEach(() => {
+  inferResponsePreferencesSemanticMock.mockReset();
+  inferResponsePreferencesSemanticMock.mockResolvedValue({
+    verbosity: [
+      { label: "concise" as ResponseVerbosity, score: 0.62 },
+      { label: "verbose" as ResponseVerbosity, score: 0.2 },
+    ],
+    tone: [{ label: "formal" as ResponseTone, score: 0.58 }],
+    format: [{ label: "bullet" as ResponseFormat, score: 0.4 }],
+  });
+  detectToneSemanticMock.mockReset();
+  detectToneSemanticMock.mockResolvedValue("friendly");
+});
 
 let idCounter = 0;
 function uid(prefix: string): string {
@@ -37,7 +67,7 @@ function createConversation(messages: UIMessage[]): ConversationHistory {
 }
 
 describe("inferResponsePreferences", () => {
-  it("detects verbosity and tone hints", () => {
+  it("maps semantic scores into preference details", async () => {
     const conversations = [
       createConversation([
         createMessage(
@@ -47,9 +77,10 @@ describe("inferResponsePreferences", () => {
       ]),
     ];
 
-    const prefs = inferResponsePreferences(conversations);
+    const prefs = await inferResponsePreferences(conversations);
     expect(prefs.get("response.verbosity")?.value).toBe("concise");
     expect(prefs.get("response.tone")?.value).toBe("formal");
+    expect(prefs.get("response.format")?.value).toBe("bullet");
   });
 });
 
@@ -115,13 +146,13 @@ describe("inferPreferencesFromFeedback", () => {
 });
 
 describe("inferPreferenceFromCorrection", () => {
-  it("detects verbosity changes", () => {
+  it("detects verbosity changes", async () => {
     const original = createMessage(
       "assistant",
       "Here is a very long explanation that goes on and on."
     );
     const corrected = createMessage("assistant", "Keep it short.");
-    const result = inferPreferenceFromCorrection(
+    const result = await inferPreferenceFromCorrection(
       original,
       corrected,
       "verbosity"
@@ -129,7 +160,7 @@ describe("inferPreferenceFromCorrection", () => {
     expect(result).toEqual({ key: "response.verbosity", value: "concise" });
   });
 
-  it("detects format preferences from corrections", () => {
+  it("detects format preferences from corrections", async () => {
     const original = createMessage(
       "assistant",
       "Paragraph one. Paragraph two."
@@ -138,7 +169,23 @@ describe("inferPreferenceFromCorrection", () => {
       "assistant",
       "- First point\n- Second point"
     );
-    const result = inferPreferenceFromCorrection(original, corrected, "format");
+    const result = await inferPreferenceFromCorrection(
+      original,
+      corrected,
+      "format"
+    );
     expect(result).toEqual({ key: "response.format", value: "bullet" });
+  });
+
+  it("delegates tone detection to semantic classifier", async () => {
+    detectToneSemanticMock.mockResolvedValueOnce("formal");
+    const original = createMessage("assistant", "hi");
+    const corrected = createMessage("assistant", "Regards, Alfred.");
+    const result = await inferPreferenceFromCorrection(
+      original,
+      corrected,
+      "tone"
+    );
+    expect(result).toEqual({ key: "response.tone", value: "formal" });
   });
 });

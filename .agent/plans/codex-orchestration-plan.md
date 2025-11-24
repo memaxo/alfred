@@ -49,6 +49,7 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [x] Wire review agent execution post-merge (Codex review planning agent)
   - [x] Add initial review failure handling via result events and metrics (no automated remediation yet)
   - [x] Automate scoped validation (bun test per changed package plus scripts/verify-*.ts) and update review ExecPlan progress/outcomes based on pass/fail results (2025-11-24)
+  - [x] Elevate fixer autonomy (auto≥medium), advertise `session.*` tooling, and queue a debugger ExecPlan when retries are exhausted so humans know the next owner. (2025-11-24)
 
 - [ ] Phase 6: Error detection and recovery
   - [x] Complete stuck detection heuristics in tracker.ts
@@ -76,8 +77,8 @@ This section tracks granular implementation steps. Every stopping point must be 
 
 - [ ] Phase 8: Session Management (Reliability)
   - [x] Implement `packages/agent/src/orchestrator/tool/session.ts` (tmux wrapper).
-  - [ ] Expose `toolSession` to agents via MCP or Runtime injection.
-  - [ ] Use `toolSession` for "start dev server" type subtasks.
+  - [x] Expose `toolSession` via workspace factory + tool registry so Codex agents can start persistent sessions. (2025-11-24)
+  - [x] Teach review/fixer plans how to use `session.start/peek/send/stop` for dev-server workflows. (2025-11-24)
 
 - [x] Phase 9: Automated Merge Execution (Action)
   - [x] Implement `MergeExecutor` in `packages/agent/src/orchestrator/multi/merge-executor.ts` with deterministic sequencing and previewed merges. (2025-11-24)
@@ -144,6 +145,14 @@ This section tracks granular implementation steps. Every stopping point must be 
 
 - Decision: Scope automated review to changed packages and trigger only the relevant `scripts/verify-*.ts`, updating the review ExecPlan with pass/fail status for each check.
   Rationale: Cuts validation time while giving auditors a durable record of what ran and why, satisfying the "collect → merge → validate" goal.
+  Date/Author: 2025-11-24 / codex-executor
+
+- Decision: Expose `toolSession` via the workspace factory and tool registry so agents (especially fixers) can launch persistent tmux sessions when a dev server or watcher is required.
+  Rationale: Review/self-correction tasks often need a long-running process; wiring sessions into the environment avoids polluting the main terminal and keeps instructions consistent.
+  Date/Author: 2025-11-24 / codex-executor
+
+- Decision: When automated review retries are exhausted, create a dedicated debugger ExecPlan and log the hand-off in review.md so humans (or a future debugger agent) have clear ownership.
+  Rationale: Prevents silent failures in Phase 5 by surfacing who owns the next action and capturing the failing command transcripts for manual follow-up.
   Date/Author: 2025-11-24 / codex-executor
 
 Record every decision made while working on the plan in the format:

@@ -1,21 +1,14 @@
+import "@/test/reset-mocks";
 import "@/test/dom";
 import { act, render, waitFor } from "@testing-library/react";
 import type { WorkflowEvent } from "@alfred/type";
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import type { UseWorkflowSseStreamOptions } from "@/hooks/use-workflow-sse-stream";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
-const subscriptionMock = vi.fn();
 const tokenMock = vi.fn();
 const dispatchMindscapeEventMock = vi.fn();
-
-mock.module("@/utils/trpc", () => ({
-  trpc: {
-    workflow: {
-      stream: {
-        useSubscription: subscriptionMock,
-      },
-    },
-  },
-}));
+let latestHandlers: UseWorkflowSseStreamOptions | null = null;
+let useWorkflowSseStreamSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 mock.module("@/lib/token", () => ({
   getToolToken: tokenMock,
@@ -29,8 +22,22 @@ import { WorkflowManager } from "@/components/mindscape/monitor";
 import { useMindscapeStore } from "@/store/mindscape";
 
 describe("WorkflowManager context cache events", () => {
+  beforeAll(async () => {
+    const hookModule = await import("@/hooks/use-workflow-sse-stream");
+    useWorkflowSseStreamSpy = vi
+      .spyOn(hookModule, "useWorkflowSseStream")
+      .mockImplementation((options: UseWorkflowSseStreamOptions) => {
+        latestHandlers = options;
+        return { status: "open", error: null };
+      });
+  });
+
+  afterAll(() => {
+    useWorkflowSseStreamSpy?.mockRestore();
+  });
+
   beforeEach(() => {
-    subscriptionMock.mockReset();
+    latestHandlers = null;
     tokenMock.mockReset();
     dispatchMindscapeEventMock.mockReset();
     tokenMock.mockResolvedValue("test-token");
@@ -71,20 +78,10 @@ describe("WorkflowManager context cache events", () => {
       ],
     }));
 
-    let subscriptionHandler:
-      | { onData?: (event: WorkflowEvent) => void }
-      | undefined;
-    subscriptionMock.mockImplementation((_input, handler) => {
-      subscriptionHandler = handler;
-    });
-
     render(<WorkflowManager />);
 
     await waitFor(() => {
-      expect(subscriptionMock).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(subscriptionHandler?.onData).toBeDefined();
+      expect(latestHandlers?.onWorkflowEvent).toBeDefined();
     });
 
     const cacheEvent: WorkflowEvent = {
@@ -98,7 +95,7 @@ describe("WorkflowManager context cache events", () => {
     } as any;
 
     act(() => {
-      subscriptionHandler?.onData?.(cacheEvent);
+      latestHandlers?.onWorkflowEvent?.(cacheEvent);
     });
 
     await waitFor(() => {
@@ -122,7 +119,7 @@ describe("WorkflowManager context cache events", () => {
     } as any;
 
     act(() => {
-      subscriptionHandler?.onData?.(contextEvent);
+      latestHandlers?.onWorkflowEvent?.(contextEvent);
     });
 
     await waitFor(() => {
@@ -132,7 +129,7 @@ describe("WorkflowManager context cache events", () => {
     });
 
     act(() => {
-      subscriptionHandler?.onData?.({
+      latestHandlers?.onWorkflowEvent?.({
         type: "complete",
         eventId: "done",
       } as any);

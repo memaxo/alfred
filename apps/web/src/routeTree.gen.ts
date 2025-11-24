@@ -25,6 +25,7 @@ import { Route as DevEdgesRouteImport } from './routes/dev/edges'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as AdminVoiceRouteImport } from './routes/admin/voice'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
+import { Route as ApiWorkflowStreamRouteImport } from './routes/api/workflow/stream'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
 import { Route as ApiMindscapeMetricsRouteImport } from './routes/api/mindscape.metrics'
@@ -113,6 +114,11 @@ const AuthCallbackLinearRoute = AuthCallbackLinearRouteImport.update({
   path: '/auth/callback/linear',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkflowStreamRoute = ApiWorkflowStreamRouteImport.update({
+  id: '/api/workflow/stream',
+  path: '/api/workflow/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   id: '/api/trpc/$',
   path: '/api/trpc/$',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
 }
 export interface FileRoutesByTo {
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
 }
 export interface FileRoutesById {
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
 }
 export interface FileRouteTypes {
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
+    | '/api/workflow/stream'
     | '/auth/callback/linear'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
+    | '/api/workflow/stream'
     | '/auth/callback/linear'
   id:
     | '__root__'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
+    | '/api/workflow/stream'
     | '/auth/callback/linear'
   fileRoutesById: FileRoutesById
 }
@@ -324,6 +336,7 @@ export interface RootRouteChildren {
   ApiMindscapeMetricsRoute: typeof ApiMindscapeMetricsRoute
   ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
+  ApiWorkflowStreamRoute: typeof ApiWorkflowStreamRoute
   AuthCallbackLinearRoute: typeof AuthCallbackLinearRoute
 }
 
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackLinearRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/workflow/stream': {
+      id: '/api/workflow/stream'
+      path: '/api/workflow/stream'
+      fullPath: '/api/workflow/stream'
+      preLoaderRoute: typeof ApiWorkflowStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -535,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMindscapeMetricsRoute: ApiMindscapeMetricsRoute,
   ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
+  ApiWorkflowStreamRoute: ApiWorkflowStreamRoute,
   AuthCallbackLinearRoute: AuthCallbackLinearRoute,
 }
 export const routeTree = rootRouteImport

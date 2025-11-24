@@ -34,6 +34,8 @@ const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
 const getOrchestratorAgentDefaults = vi.fn(() => orchestratorDefaults);
 const recordMemoryUpdate = vi.fn();
 const recordMemoryForget = vi.fn();
+const eventToUiMessages = vi.fn(() => []);
+const normalizeToUiMessages = vi.fn(() => []);
 
 mock.module("@alfred/agent", () => ({
   buildAssistantTools,
@@ -65,6 +67,8 @@ mock.module("@alfred/agent", () => ({
   recordAssistantEscalation: noop,
   recordMemoryUpdate,
   recordMemoryForget,
+  eventToUiMessages,
+  normalizeToUiMessages,
 }));
 
 export function resetAgentMocks() {
@@ -93,4 +97,7 @@ export {
   getOpenAI as getOpenAIMock,
   getModelId as getModelIdMock,
   recordMemoryUpdate as recordMemoryUpdateMock,
+  recordMemoryForget as recordMemoryForgetMock,
+  eventToUiMessages as eventToUiMessagesMock,
+  normalizeToUiMessages as normalizeToUiMessagesMock,
 };

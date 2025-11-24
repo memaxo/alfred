@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
+import { metricsStub } from "./utils/mock-metrics";
 
 setupTestEnv();
 
@@ -65,6 +66,7 @@ describe("cognitive router", () => {
       streamId: "verify-stream",
       expected: "target",
       actual: "target",
+      surface: "chat",
     });
 
     expect(runCognitiveLoopMock).toHaveBeenCalledTimes(1);
@@ -77,6 +79,9 @@ describe("cognitive router", () => {
     });
     expect(response.state).toBe(state);
     expect(response.obligations).toEqual(["mfa_required"]);
+    expect(
+      metricsStub.cognitiveFeedbackSubmissionsTotal.labels
+    ).toHaveBeenCalledWith("chat");
   });
 
   it("denies feedback when policy evaluation rejects", async () => {

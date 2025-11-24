@@ -143,4 +143,8 @@ export class VoiceSession {
   getUserId(): string {
     return this.config.userId;
   }
+
+  getLastActivity(): number {
+    return this.lastActivity;
+  }
 }

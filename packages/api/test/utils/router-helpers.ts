@@ -73,6 +73,14 @@ export function mockRunRegistry() {
     },
   }));
 
+  mock.module("@alfred/agent/workflow/registry", () => ({
+    runRegistry: {
+      register: registerMock,
+      unregister: unregisterMock,
+      dispatchResume: dispatchResumeMock,
+    },
+  }));
+
   return {
     register: registerMock,
     unregister: unregisterMock,
@@ -108,6 +116,10 @@ export function mockWorkflowRunner() {
     runPlanV6: runPlanV6Mock,
   }));
 
+  mock.module("@alfred/agent/workflow/runner", () => ({
+    runPlanV6: runPlanV6Mock,
+  }));
+
   return {
     runPlanV6: runPlanV6Mock,
   };
@@ -118,13 +130,16 @@ export function mockWorkflowRunner() {
  */
 export function mockWorkflowRuntime() {
   const createRuntimeMock = vi.fn();
+  const runCognitiveLoopMock = vi.fn();
 
   mock.module("@alfred/runtime", () => ({
     createRuntime: createRuntimeMock,
+    runCognitiveLoop: runCognitiveLoopMock,
   }));
 
   return {
     createRuntime: createRuntimeMock,
+    runCognitiveLoop: runCognitiveLoopMock,
   };
 }
 

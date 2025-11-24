@@ -6,6 +6,10 @@ import type {
 } from "@alfred/cognitive/logic/autonomy";
 import { RISK_ANCHORS } from "@alfred/knowledge/ontology";
 import { embedMany } from "@alfred/rag";
+import {
+  runtimeSafetyAssessmentTotal,
+  runtimeSafetyClassificationDurationSeconds,
+} from "../metrics";
 
 const MAX_STEPS = 8;
 const DEFAULT_ASSESSMENT: RiskAssessment = { level: "low", score: 0 };
@@ -146,66 +150,103 @@ export async function classifyPlanRisk(
   const forcedLevel = process.env
     .RUNTIME_FORCE_PLAN_RISK_LEVEL as RiskLevel | undefined;
   if (forcedLevel && FALLBACK_SCORES[forcedLevel] !== undefined) {
+    runtimeSafetyClassificationDurationSeconds.observe({ mode: "forced" }, 0);
+    runtimeSafetyAssessmentTotal.inc({
+      level: forcedLevel,
+      status: "forced",
+    });
     return forcedAssessment(forcedLevel);
   }
 
   if (process.env.RUNTIME_DISABLE_SAFETY_EMBED === "1") {
-    return DEFAULT_ASSESSMENT;
-  }
-
-  const maxSteps = options.maxSteps ?? MAX_STEPS;
-  const steps = plan.steps.slice(0, maxSteps);
-  if (!steps.length) {
-    return DEFAULT_ASSESSMENT;
-  }
-
-  const stepTexts = steps.map((step, index) => describeStep(step, index));
-  let stepEmbeddings: number[][] = [];
-  try {
-    stepEmbeddings = await embedMany(stepTexts);
-  } catch (error) {
-    logger.warn("safety_risk_embedding_failed", {
-      error: error instanceof Error ? error.message : String(error),
+    runtimeSafetyClassificationDurationSeconds.observe({ mode: "disabled" }, 0);
+    runtimeSafetyAssessmentTotal.inc({
+      level: DEFAULT_ASSESSMENT.level,
+      status: "disabled",
     });
     return DEFAULT_ASSESSMENT;
   }
 
-  const planVector = averageVectors(stepEmbeddings);
-  if (!planVector) {
-    return DEFAULT_ASSESSMENT;
-  }
-
-  let centroidMap: Map<RiskLevel, Float32Array>;
+  const endTimer = runtimeSafetyClassificationDurationSeconds.startTimer({
+    mode: "semantic",
+  });
   try {
-    centroidMap = await getRiskCentroids();
-  } catch (error) {
-    logger.warn("safety_anchor_embedding_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return DEFAULT_ASSESSMENT;
-  }
-
-  let topLevel: RiskLevel = "low";
-  let topScore = -1;
-  for (const [level, centroid] of centroidMap) {
-    const similarity = cosine(planVector, centroid);
-    if (similarity > topScore) {
-      topScore = similarity;
-      topLevel = level;
+    const maxSteps = options.maxSteps ?? MAX_STEPS;
+    const steps = plan.steps.slice(0, maxSteps);
+    if (!steps.length) {
+      runtimeSafetyAssessmentTotal.inc({
+        level: DEFAULT_ASSESSMENT.level,
+        status: "empty",
+      });
+      return DEFAULT_ASSESSMENT;
     }
-  }
 
-  const normalized = normalizeScore(topScore);
-  let resolvedLevel: RiskLevel = topLevel;
-  if (normalized < 0.35) {
-    resolvedLevel = "low";
-  } else if (normalized < 0.6 && topLevel === "high") {
-    resolvedLevel = "medium";
-  }
+    const stepTexts = steps.map((step, index) => describeStep(step, index));
+    let stepEmbeddings: number[][] = [];
+    try {
+      stepEmbeddings = await embedMany(stepTexts);
+    } catch (error) {
+      logger.warn("safety_risk_embedding_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      runtimeSafetyAssessmentTotal.inc({
+        level: DEFAULT_ASSESSMENT.level,
+        status: "fallback",
+      });
+      return DEFAULT_ASSESSMENT;
+    }
 
-  return {
-    level: resolvedLevel,
-    score: Number(normalized.toFixed(3)),
-    anchors: anchorsForLevel(resolvedLevel),
-  };
+    const planVector = averageVectors(stepEmbeddings);
+    if (!planVector) {
+      runtimeSafetyAssessmentTotal.inc({
+        level: DEFAULT_ASSESSMENT.level,
+        status: "fallback",
+      });
+      return DEFAULT_ASSESSMENT;
+    }
+
+    let centroidMap: Map<RiskLevel, Float32Array>;
+    try {
+      centroidMap = await getRiskCentroids();
+    } catch (error) {
+      logger.warn("safety_anchor_embedding_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      runtimeSafetyAssessmentTotal.inc({
+        level: DEFAULT_ASSESSMENT.level,
+        status: "fallback",
+      });
+      return DEFAULT_ASSESSMENT;
+    }
+
+    let topLevel: RiskLevel = "low";
+    let topScore = -1;
+    for (const [level, centroid] of centroidMap) {
+      const similarity = cosine(planVector, centroid);
+      if (similarity > topScore) {
+        topScore = similarity;
+        topLevel = level;
+      }
+    }
+    const normalized = normalizeScore(topScore);
+    let resolvedLevel: RiskLevel = topLevel;
+    if (normalized < 0.35) {
+      resolvedLevel = "low";
+    } else if (normalized < 0.6 && topLevel === "high") {
+      resolvedLevel = "medium";
+    }
+
+    runtimeSafetyAssessmentTotal.inc({
+      level: resolvedLevel,
+      status: "success",
+    });
+
+    return {
+      level: resolvedLevel,
+      score: Number(normalized.toFixed(3)),
+      anchors: anchorsForLevel(resolvedLevel),
+    };
+  } finally {
+    endTimer();
+  }
 }

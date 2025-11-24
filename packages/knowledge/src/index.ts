@@ -11,3 +11,6 @@ export * from "./indices/knn.js";
 export * from "./ontology.js";
 export * from "./persist.js";
 export * from "./query.js";
+export * from "./reasoning/causality.js";
+export * from "./reasoning/decisions.js";
+export * from "./reasoning/alternatives.js";
