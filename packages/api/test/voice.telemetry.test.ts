@@ -32,8 +32,8 @@ describe("voice telemetry summary", () => {
   });
 
   it("aggregates histogram samples across labels", async () => {
-    voiceSttDurationSeconds.labels("local").observe(0.4);
-    voiceSttDurationSeconds.labels("local").observe(0.6);
+    voiceSttDurationSeconds.labels("maya1").observe(0.4);
+    voiceSttDurationSeconds.labels("maya1").observe(0.6);
     voiceSttDurationSeconds.labels("cloud").observe(0.8);
 
     voiceSessionRttMillis.labels("session-a").observe(120);

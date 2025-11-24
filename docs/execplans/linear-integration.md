@@ -39,6 +39,16 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 - [ ] (YYYY-MM-DD HH:MMZ) Manual end-to-end testing with real Linear workspace
 - [x] (2025-11-12 08:12Z) Update documentation with setup instructions
 
+### Manual Validation Runbook (Pending Credentials)
+
+1. Install the Alfred Linear integration into a disposable workspace and note the workspace ID, default team ID, and OAuth token. Ensure the webhook endpoint (`/api/linear/webhook`) is reachable from Linear (tunnel via `ngrok` if running locally).
+2. Assign a Linear issue to the Alfred app user. Within 10 seconds you should see a “workflow started” comment with the run URL and the issue should transition to the “In Progress” column.
+3. Let the workflow complete successfully. Expect a completion comment referencing the review checks plus the external workflow URL, and the issue should move into the “Completed/Done” column.
+4. Trigger a failure (e.g., break a test). Confirm the issue transitions to the “Blocked/Cancelled” state and receives a failure comment with the captured error message and workflow link.
+5. Manually move the issue to “Completed” inside Linear. The webhook should cancel the Alfred run, add a cancellation comment, and increment the cancel metric.
+
+These steps remain blocked in this environment because the required Linear sandbox credentials are not available. Once access is granted, execute the runbook and record the observed timestamps here.
+
 
 ## Surprises & Discoveries
 

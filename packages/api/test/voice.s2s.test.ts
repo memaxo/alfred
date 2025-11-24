@@ -111,12 +111,12 @@ afterAll(() => {
 });
 
 describe("voice.speechToSpeech", () => {
-  it("runs STT → assistant → TTS using local provider", async () => {
+  it("runs STT → assistant → TTS using the Maya1 provider", async () => {
     const sttResponse = {
       text: "hello alfred",
       language: "en",
       model: "faster-whisper",
-      provider: "local",
+      provider: "maya1",
       durationSeconds: 0.1,
     };
     const ttsAudio = Buffer.from("tts audio");
@@ -126,7 +126,7 @@ describe("voice.speechToSpeech", () => {
       audioBase64: ttsAudio.toString("base64"),
       mimeType: "audio/mpeg",
       model: "maya1",
-      provider: "local",
+      provider: "maya1",
       durationSeconds: 0.2,
     });
     generateTextMock.mockResolvedValue({
@@ -169,7 +169,7 @@ describe("voice.speechToSpeech", () => {
       text: "hello again",
       language: "en",
       model: "faster-whisper",
-      provider: "local",
+      provider: "maya1",
       durationSeconds: 0.1,
     };
     const ttsAudio = Buffer.from("tts audio again");
@@ -179,7 +179,7 @@ describe("voice.speechToSpeech", () => {
       audioBase64: ttsAudio.toString("base64"),
       mimeType: "audio/mpeg",
       model: "maya1",
-      provider: "local",
+      provider: "maya1",
       durationSeconds: 0.2,
     });
     generateTextMock.mockResolvedValue({

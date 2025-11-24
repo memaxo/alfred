@@ -19,7 +19,7 @@ describe("Voice Pools Integration", () => {
     await shutdownVoicePools();
   });
 
-  it("should skip initialization when VOICE_PROVIDER is not local", async () => {
+  it("should skip initialization when VOICE_PROVIDER is not on-device", async () => {
     const originalProvider = process.env.VOICE_PROVIDER;
     process.env.VOICE_PROVIDER = "openai";
 
@@ -39,9 +39,9 @@ describe("Voice Pools Integration", () => {
 
   // Note: Full integration test would require Python dependencies and models
   // This is a placeholder structure for when those are available
-  it("should initialize pools with local provider", async () => {
+  it("should initialize pools with the Maya1 provider", async () => {
     const originalProvider = process.env.VOICE_PROVIDER;
-    process.env.VOICE_PROVIDER = "local";
+    process.env.VOICE_PROVIDER = "maya1";
     process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
     process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";
 

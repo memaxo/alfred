@@ -26,34 +26,32 @@ mock.module("p-retry", () => {
 const { emitLinearActivity, extractIssueIdFromSession } = await import(
   "../src/orchestrator/linear"
 );
-const { configureLinearMetrics } = await import(
-  "../src/orchestrator/linearmetrics"
-);
+const metricMocks = {
+  emissionsInc: mock(),
+  durationStart: mock(() => () => {}),
+  sessionInc: mock(),
+};
+
+mock.module("../src/workflow/metrics", () => ({
+  linearActivityEmissionsTotal: { inc: metricMocks.emissionsInc },
+  linearActivityDurationSeconds: {
+    startTimer: metricMocks.durationStart,
+  },
+  linearSessionOperationsTotal: { inc: metricMocks.sessionInc },
+}));
 const { ensureLinearTicket } = await import("../src/workflow/linear");
 
 describe("linear helpers", () => {
   beforeEach(() => {
     executeMock.mockReset();
     loggerWarnMock.mockReset();
-    configureLinearMetrics({
-      linearActivityEmissionsTotal: { inc: () => {} },
-      linearActivityDurationSeconds: { startTimer: () => () => {} },
-      linearSessionOperationsTotal: { inc: () => {} },
-    });
+    metricMocks.emissionsInc.mockReset();
+    metricMocks.durationStart.mockReset();
+    metricMocks.durationStart.mockImplementation(() => () => {});
+    metricMocks.sessionInc.mockReset();
   });
 
   it("emitLinearActivity forwards parameters and records success metrics", async () => {
-    const emissionsInc = mock();
-    const timerStop = mock();
-
-    configureLinearMetrics({
-      linearActivityEmissionsTotal: { inc: emissionsInc },
-      linearActivityDurationSeconds: {
-        startTimer: () => () => timerStop(),
-      },
-      linearSessionOperationsTotal: { inc: () => {} },
-    });
-
     executeMock.mockResolvedValueOnce({ ok: true, id: "activity-321" });
 
     const result = await emitLinearActivity("thought", {
@@ -82,21 +80,14 @@ describe("linear helpers", () => {
         ephemeral: true,
       },
     });
-    expect(emissionsInc).toHaveBeenCalledWith({
+    expect(metricMocks.emissionsInc).toHaveBeenCalledWith({
       type: "thought",
       status: "success",
     });
-    expect(timerStop).toHaveBeenCalledTimes(1);
+    expect(metricMocks.durationStart).toHaveBeenCalledTimes(1);
   });
 
   it("emitLinearActivity returns failure without throwing when tool errors", async () => {
-    const emissionsInc = mock();
-    configureLinearMetrics({
-      linearActivityEmissionsTotal: { inc: emissionsInc },
-      linearActivityDurationSeconds: { startTimer: () => () => {} },
-      linearSessionOperationsTotal: { inc: () => {} },
-    });
-
     executeMock.mockRejectedValueOnce(new Error("linear-fault"));
 
     const result = await emitLinearActivity("action", {
@@ -106,7 +97,7 @@ describe("linear helpers", () => {
     });
 
     expect(result).toEqual({ ok: false });
-    expect(emissionsInc).toHaveBeenCalledWith({
+    expect(metricMocks.emissionsInc).toHaveBeenCalledWith({
       type: "action",
       status: "failure",
     });

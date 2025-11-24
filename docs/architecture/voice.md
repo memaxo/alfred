@@ -64,7 +64,7 @@ Manages persistent Python subprocesses for model inference.
 ## Configuration
 
 Environment variables control the behavior:
-- `VOICE_PROVIDER`: `local` (default Maya1) or `supertonic` (ONNX TTS).
+- `VOICE_PROVIDER`: `maya1` (default) or `supertonic` (ONNX TTS).
 - `WHISPER_MODEL_PATH`: HuggingFace ID for STT model.
 - `PIPER_MODEL_PATH`: Path or ID for TTS model (Maya uses internal HF path).
 - `VOICE_STT_POOL_SIZE`: Number of concurrent STT processes (default: 2).

@@ -95,7 +95,7 @@ The architecture runs the core API and Voice services in a privileged LXC contai
     ```bash
     DATABASE_URL=postgresql://...
     REDIS_URL=redis://...
-    VOICE_PROVIDER=local
+    VOICE_PROVIDER=maya1
     WHISPER_DEVICE=rocm # or "cuda" mapped to rocm
     # Maya1 uses HF transformers auto-device map
     ```

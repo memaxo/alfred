@@ -12,7 +12,7 @@ Verify that the `voice` tRPC router correctly streams audio chunks from the `TTS
     *   **Happy Path**: Request TTS with `streaming: true` and verify that `onChunk` events are received by the caller (via a mocked `trpc` subscription or generator, depending on implementation).
     *   **Format Verification**: Assert that received chunks are Base64 encoded PCM Int16 (as required by the client).
     *   **Error Propagation**: Simulate a stream error in the pool and verify it propagates to the client.
-    *   **Provider Selection**: Verify `VOICE_PROVIDER` env var correctly toggles between `local` (Maya1) and `supertonic` paths in the router.
+    *   **Provider Selection**: Verify `VOICE_PROVIDER` env var correctly toggles between `maya1` and `supertonic` paths in the router.
 
 ## Outcomes & Retrospective
 *   **Success**: A passing test suite confirming low-latency chunk delivery.

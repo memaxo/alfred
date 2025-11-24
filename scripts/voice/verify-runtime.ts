@@ -13,7 +13,7 @@
  *   bun run scripts/verify-voice-runtime.ts
  *
  * Environment variables:
- *   VOICE_PROVIDER=local (required)
+ *   VOICE_PROVIDER=maya1 (required)
  *   PIPER_MODEL_PATH
  *   WHISPER_MODEL_PATH
  *   STRICT_LATENCY=1 (optional, fails on latency violations)
@@ -41,10 +41,10 @@ async function main() {
   console.log("🎤 ALFRED Voice Runtime Verification (Level 4)\n");
 
   // Check environment
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
-  if (voiceProvider !== "local") {
-    console.error("❌ VOICE_PROVIDER must be set to 'local'");
-    console.error("   Set it with: export VOICE_PROVIDER=local");
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  if (voiceProvider !== "maya1") {
+    console.error("❌ VOICE_PROVIDER must be set to 'maya1'");
+    console.error("   Set it with: export VOICE_PROVIDER=maya1");
     process.exit(1);
   }
 

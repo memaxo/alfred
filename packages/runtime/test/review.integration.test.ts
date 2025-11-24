@@ -7,13 +7,14 @@ import { preparePlanDir, cleanupPlanDir, mockRunner } from "./utils/review-helpe
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
 
-describe("review fallback integration", () => {
+describe("review integration happy path", () => {
   let restoreRunner: (() => void) | undefined;
-  let restoreCodex: (() => void) | undefined;
+  let originalCodex: typeof toolCodex.execute;
   let originalSmoke: typeof smokeTester.verify;
 
   beforeEach(() => {
     process.env.ORCH_TMUX_DISABLED = "1";
+    originalCodex = toolCodex.execute;
     originalSmoke = smokeTester.verify;
   });
 
@@ -21,38 +22,32 @@ describe("review fallback integration", () => {
     delete process.env.ORCH_TMUX_DISABLED;
     restoreRunner?.();
     restoreRunner = undefined;
-    restoreCodex?.();
-    restoreCodex = undefined;
+    toolCodex.execute = originalCodex;
     smokeTester.verify = originalSmoke;
   });
 
-  it("creates debugger plan and emits fallback events", async () => {
-    const runId = `review-run-${Date.now().toString(36)}`;
+  it("marks review checks as PASS and avoids fallback", async () => {
+    const runId = `review-ok-${Date.now().toString(36)}`;
     await preparePlanDir(runId);
 
-    const commands: string[] = [];
+    const runnerCommands: string[] = [];
     restoreRunner = mockRunner(async ({ command }) => {
-      commands.push(command);
+      runnerCommands.push(command);
       return {
-        stdout: "fail",
-        stderr: "stack trace",
-        exitCode: 1,
-        durationMs: 5,
+        stdout: "ok",
+        stderr: "",
+        exitCode: 0,
+        durationMs: 1,
       };
     });
 
-    const originalCodex = toolCodex.execute;
     toolCodex.execute = async () => undefined;
-    restoreCodex = () => {
-      toolCodex.execute = originalCodex;
-    };
-
     smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
-        requirement: "Investigate failing tests",
-        auto: "medium",
+        requirement: "Ensure review passes",
+        auto: "low",
       },
       runId,
       signal: new AbortController().signal,
@@ -61,16 +56,15 @@ describe("review fallback integration", () => {
     } as OrchestratorContext;
 
     const mergePlan = {
-      summary: "changes staged",
-      expectedFiles: ["packages/agent/src/foo.ts"],
-      changedPackages: ["packages/agent", "apps/web"],
+      summary: "safe",
+      expectedFiles: ["apps/web/src/foo.tsx"],
+      changedPackages: ["apps/web"],
       targetBranch: "dev",
       branches: [],
     };
 
     const events: any[] = [];
     let reviewContent = "";
-    let debuggerContent = "";
     try {
       const generator = runReviewPhase(ctx, mergePlan);
       for await (const event of generator) {
@@ -78,37 +72,27 @@ describe("review fallback integration", () => {
       }
 
       const reviewPlanPath = path.join(".agent", "plans", runId, "review.md");
-      const debuggerPlanPath = path.join(
-        ".agent",
-        "plans",
-        runId,
-        "review-debugger.md"
-      );
       reviewContent = await fs.readFile(reviewPlanPath, "utf8");
-      debuggerContent = await fs.readFile(debuggerPlanPath, "utf8");
     } finally {
       await cleanupPlanDir(runId);
     }
 
-    const expectedCommands = [
-      "bun test packages/agent apps/web",
+    expect(runnerCommands).toEqual([
+      "bun test apps/web",
       "bun run lint",
       "bun run typecheck",
-      "bun scripts/verify-orchestrator.ts",
-      "bun scripts/verify-resilience.ts",
-    ];
-    const uniqueCommands = Array.from(new Set(commands));
-    expect(uniqueCommands).toEqual(expectedCommands);
-    expect(commands.length).toBeGreaterThanOrEqual(expectedCommands.length);
+      "bun scripts/verify-build.ts",
+    ]);
 
-    expect(reviewContent).toContain("Escalated to debugger plan");
-    expect(debuggerContent).toContain("Failure 1 (tests)");
+    expect(reviewContent).toContain("[tests] PASS");
+    expect(reviewContent).toContain("[lint] PASS");
+    expect(reviewContent).toContain("[static] PASS");
+    expect(reviewContent).not.toContain("Escalated to debugger plan");
 
     expect(
-      events.some((event) => event?.message === "review_fallback_triggered")
+      events.every((event) => event?.message !== "review_fallback_triggered")
     ).toBe(true);
-    expect(
-      events.some((event) => event?.kind === "review-fallback")
-    ).toBe(true);
+
+    await cleanupPlanDir(runId);
   });
 });

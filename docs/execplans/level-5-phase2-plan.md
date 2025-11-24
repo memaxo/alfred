@@ -15,7 +15,7 @@ To prove that the "Physical Layer" (Sensors/Actuators) works on real hardware, a
   - Create `packages/test-kit/test/e2e/voice.test.ts`.
   - Use `SyntheticSignal.sine(440)` as input.
   - Send to `voiceRouter.speechToSpeech`.
-  - *Conditional*: If `HardwareProbe.gpu` is true, use `VOICE_PROVIDER=local` (real Whisper). Else, keep `VOICE_PROVIDER=local` and mock the STT/TTS pools (no cloud fallback).
+  - *Conditional*: If `HardwareProbe.gpu` is true, use `VOICE_PROVIDER=maya1` (real Whisper). Else, keep `VOICE_PROVIDER=maya1` and mock the STT/TTS pools (no cloud fallback).
   - Assert output is valid audio (header check).
 
 - [ ] **Step 2: Complex Coding Scenario**

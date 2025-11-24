@@ -61,7 +61,7 @@ mock.module("@alfred/agent", () => ({
 // Set env vars
 process.env.OPENAI_API_KEY = "test-key";
 process.env.VOICE_STREAMING_PORT = "8799";
-process.env.VOICE_PROVIDER = "local";
+process.env.VOICE_PROVIDER = "maya1";
 process.env.VOICE_STREAMING_PROTO = "1";
 
 // Mock pools directly to bypass all process logic
@@ -147,7 +147,7 @@ mock.module("../src/ai/generate", () => ({
 // We need a client WebSocket to test the server
 const PORT = 8799;
 process.env.VOICE_STREAMING_PORT = String(PORT);
-process.env.VOICE_PROVIDER = "local";
+process.env.VOICE_PROVIDER = "maya1";
 process.env.VOICE_STREAMING_PROTO = "1";
 
 let wsClient: WebSocket;

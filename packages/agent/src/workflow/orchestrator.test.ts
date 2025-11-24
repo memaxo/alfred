@@ -35,6 +35,7 @@ mock.module("./services", () => ({
   shouldUseWorkflowRuntime: () => false,
   createRequirementMessage: createRequirementMessageMock,
   deriveWorkflowTitle: () => "Run",
+  ensureObligations: vi.fn(),
 }));
 
 mock.module("./linear", () => ({
@@ -49,6 +50,7 @@ mock.module("../integrations/linear", () => ({
   setLinearDelegate: vi.fn().mockResolvedValue(undefined),
   setLinearSessionExternalUrl: vi.fn().mockResolvedValue(undefined),
   setLinearStarted: vi.fn().mockResolvedValue(undefined),
+  setLinearCancelled: vi.fn().mockResolvedValue(undefined),
 }));
 
 const recordAuditMock = vi.fn().mockResolvedValue(undefined);

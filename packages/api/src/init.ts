@@ -59,8 +59,9 @@ export function initApiServices(): void {
     });
   });
 
-  // Initialize voice pools (if using local models)
-  if (process.env.VOICE_PROVIDER === "local") {
+  // Initialize voice pools (Maya1 or Supertonic)
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
     initializeVoicePools()
       .then(() => {
         startVoiceStreamingPrototype();
@@ -92,8 +93,9 @@ export function shutdownApiServices(): void {
     });
   }
 
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
   // Shutdown voice pools
-  if (process.env.VOICE_PROVIDER === "local") {
+  if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
     shutdownVoicePools().catch((error) => {
       logger.error("voice_pools_shutdown_failed", {
         error: error instanceof Error ? error.message : String(error),

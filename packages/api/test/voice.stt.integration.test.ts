@@ -10,7 +10,7 @@ describe("STT Integration (Parakeet)", () => {
 
   beforeAll(async () => {
     // Set up environment for local provider
-    process.env.VOICE_PROVIDER = "local";
+    process.env.VOICE_PROVIDER = "maya1";
     process.env.WHISPER_MODEL_PATH = "nvidia/parakeet_realtime_eou_120m-v1";
     // Use a smaller pool for testing
     process.env.VOICE_STT_POOL_SIZE = "1";

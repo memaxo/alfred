@@ -1,45 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
-import { STTPool } from "@alfred/voice/process/stt";
-import { TTSPool } from "@alfred/voice/process/tts";
 import { runAssistantForVoice } from "../src/voice/assistant";
 import { VoiceRegistry } from "../src/voice/session";
 import { closeTestDb, createTestDb, type TestDb } from "./utils/db";
-
-// Mock dependencies
-mock.module("@alfred/voice/process/stt", () => ({
-  STTPool: class MockSTTPool {
-    async transcribe(req: any) {
-      return {
-        text: "Hello computer",
-        language: "en",
-        isPartial: req.streaming ? true : false,
-        endOfUtterance: true,
-      };
-    }
-    size = 1;
-    activeCount = 0;
-    getHealth() {
-      return [{ isHealthy: true }];
-    }
-  },
-}));
-
-mock.module("@alfred/voice/process/tts", () => ({
-  TTSPool: class MockTTSPool {
-    async synthesize(req: any, onChunk: any) {
-      if (onChunk && req.streaming) {
-        onChunk({ audioBase64: "chunk1", sampleRate: 24_000 });
-        onChunk({ audioBase64: "chunk2", sampleRate: 24_000 });
-      }
-      return { audioBase64: "full_audio", sampleRate: 24_000 };
-    }
-    size = 1;
-    activeCount = 0;
-    getHealth() {
-      return [{ isHealthy: true }];
-    }
-  },
-}));
+import { createVoiceTestRegistry } from "./utils/voice-fixture";
 
 mock.module("../src/voice/assistant", () => ({
   runAssistantForVoice: mock(async () => ({
@@ -51,14 +14,14 @@ mock.module("../src/voice/assistant", () => ({
 describe("End-to-End Voice Session (S2S)", () => {
   let db: TestDb;
   let registry: VoiceRegistry;
-  let sttPool: STTPool;
-  let ttsPool: TTSPool;
 
   beforeAll(async () => {
     db = await createTestDb();
-    sttPool = new STTPool({ scriptPath: "", modelPath: "" });
-    ttsPool = new TTSPool({ scriptPath: "", modelPath: "" });
-    registry = new VoiceRegistry(sttPool, ttsPool);
+    const setup = createVoiceTestRegistry({
+      transcript: "Hello computer",
+      chunkText: "chunk",
+    });
+    registry = setup.registry;
   });
 
   afterAll(async () => {
@@ -101,13 +64,8 @@ describe("End-to-End Voice Session (S2S)", () => {
     });
 
     expect(audioChunks.length).toBe(2);
-    // Note: "chunk1" in base64 might be slightly different if re-encoded or treated as buffer
-    // Mock sends "chunk1" as audioBase64. session.streamSynthesis converts it to Buffer.
-    // Buffer.from("chunk1", "base64") -> Buffer.
-    // Then we call chunk.toString("base64"). It should match if input was valid base64.
-    // "chunk1" is NOT valid base64 standard (length 6), so Buffer.from might pad it.
-    // "chunkw==" is valid.
-    expect(audioChunks[0]).toBe("chunkw=="); // "chunk1" interpreted as base64
-    expect(audioChunks[1]).toBe("chunkw=="); // "chunk2" similarly
+    const expectedChunk = Buffer.from("chunk").toString("base64");
+    expect(audioChunks[0]).toBe(expectedChunk);
+    expect(audioChunks[1]).toBe(expectedChunk);
   });
 });

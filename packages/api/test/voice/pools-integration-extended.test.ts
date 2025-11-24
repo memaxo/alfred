@@ -38,7 +38,7 @@ describe("Voice Pools Integration (Extended)", () => {
     const originalProvider = process.env.VOICE_PROVIDER;
     const originalUseUv = process.env.VOICE_USE_UV;
 
-    process.env.VOICE_PROVIDER = "local";
+    process.env.VOICE_PROVIDER = "maya1";
     process.env.VOICE_USE_UV = "true";
     process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
     process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";
@@ -58,7 +58,7 @@ describe("Voice Pools Integration (Extended)", () => {
     const originalProvider = process.env.VOICE_PROVIDER;
     const originalUseUv = process.env.VOICE_USE_UV;
 
-    process.env.VOICE_PROVIDER = "local";
+    process.env.VOICE_PROVIDER = "maya1";
     process.env.VOICE_USE_UV = "false";
     process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
     process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";
@@ -80,7 +80,7 @@ describe("Voice Pools Integration (Extended)", () => {
       const originalProvider = process.env.VOICE_PROVIDER;
       const originalUseUv = process.env.VOICE_USE_UV;
 
-      process.env.VOICE_PROVIDER = "local";
+      process.env.VOICE_PROVIDER = "maya1";
       process.env.VOICE_USE_UV = "false";
       process.env.WHISPER_MODEL_PATH = "large-v3-turbo";
       process.env.PIPER_MODEL_PATH = "./packages/voice/models/piper";

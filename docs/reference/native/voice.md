@@ -22,7 +22,7 @@
 - ✅ Background task registration for queue draining (2-minute interval)
 - ✅ Foreground service support for Android (`ensureForegroundService`)
 - ✅ Drive mode screen with "Hold to Talk" interface
-- ✅ Local voice models support (Faster-Whisper + Piper TTS) via `VOICE_PROVIDER=local`
+- ✅ Local voice models support (Faster-Whisper + Maya1 TTS) via `VOICE_PROVIDER=maya1`
 - ⏳ CarPlay integration (plugin exists but disabled)
 - ⏳ Full bidirectional streaming (current implementation supports session management, audio chunk processing requires additional work)
 
@@ -78,7 +78,7 @@
 
 ## Local Models
 
-The voice system supports local models (Faster-Whisper for STT, Maya1 or Supertonic for TTS) when `VOICE_PROVIDER=local` or `VOICE_PROVIDER=supertonic`. See `docs/voice/local-models.md` for setup instructions.
+The voice system supports local models (Faster-Whisper for STT, Maya1 or Supertonic for TTS) when `VOICE_PROVIDER=maya1` or `VOICE_PROVIDER=supertonic`. See `docs/voice/local-models.md` for setup instructions.
 
 Key features:
 - Zero API costs

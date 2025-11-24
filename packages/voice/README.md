@@ -48,10 +48,10 @@ Start the development server (if applicable) or run tests:
 
 ```bash
 # Test TTS (Maya1)
-VOICE_PROVIDER=local bun run scripts/test-tts.ts "Hello world!"
+VOICE_PROVIDER=maya1 bun run scripts/test-tts.ts "Hello world!"
 
 # Test TTS (Supertonic)
-VOICE_PROVIDER=local TTS_PROVIDER=supertonic bun run scripts/test-tts.ts "Hello world!"
+VOICE_PROVIDER=maya1 TTS_PROVIDER=supertonic bun run scripts/test-tts.ts "Hello world!"
 
 # Transcribe an audio file
 packages/voice/scripts/stt_transcribe.py path/to/audio.wav

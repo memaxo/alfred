@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { act, fireEvent, render, waitFor } from "../../test/testing-library";
 import { useMindscapeStore } from "@/store/mindscape";
 
+type Harness = {
+  subscribeImpl: ((options: any) => { unsubscribe: () => void }) | null;
+  subscribe: (options: any) => { unsubscribe: () => void };
+};
+
 type HarnessGlobal = {
-  __droidStreamTestHarness__?: {
-    subscribe: (options: any) => { unsubscribe: () => void };
-  };
+  __droidStreamTestHarness__?: Harness;
 };
 
 const subscribeMock = mock((options: any) => {
@@ -28,6 +31,31 @@ const trpcProxyMock = {
     },
   },
 };
+
+const harness: Harness = {
+  subscribeImpl: null,
+  subscribe(options: any) {
+    const impl = harness.subscribeImpl ?? ((input: any) => subscribeMock(input));
+    return impl(options);
+  },
+};
+
+function setHarnessSubscribe(
+  implementation: (options: any) => { unsubscribe: () => void }
+) {
+  harness.subscribeImpl = implementation;
+}
+
+function resetHarness() {
+  harness.subscribeImpl = null;
+}
+
+function debugLog(...args: unknown[]) {
+  if (process.env.DEBUG_DROID_TEST === "1") {
+    // eslint-disable-next-line no-console
+    console.info("[droid-node-integration]", ...args);
+  }
+}
 
 mock.module("@/lib/token", () => ({
   getToolToken: (...args: unknown[]) => getToolTokenMock(...args),
@@ -70,9 +98,7 @@ describe("DroidNode", () => {
     resumeTriggerMock.mockClear();
     resumeCloseMock.mockClear();
     latestSubscription = null;
-    const harness = {
-      subscribe: (options: any) => subscribeMock(options),
-    };
+    resetHarness();
     (globalThis as HarnessGlobal).__droidStreamTestHarness__ = harness;
     if (typeof window !== "undefined") {
       (window as unknown as HarnessGlobal).__droidStreamTestHarness__ = harness;
@@ -96,6 +122,10 @@ describe("DroidNode", () => {
   });
 
   it("streams output and handles biometric obligations", async () => {
+    setHarnessSubscribe((options: any) => {
+      debugLog("subscription start", options.input);
+      return subscribeMock(options);
+    });
     const nodeId = "droid-test";
     const nodeData = {
       type: "droid" as const,
@@ -150,6 +180,7 @@ describe("DroidNode", () => {
       runId: "run-biometric",
       obligations: ["biometric"],
     });
+    debugLog("obligation received", latestSubscription ? "active" : "missing");
     await waitFor(() => {
       expect(resumeTriggerMock).toHaveBeenCalled();
     });
@@ -162,5 +193,54 @@ describe("DroidNode", () => {
     // Complete
     latestSubscription.onEvent?.({ type: "exit", code: 0 });
     await view.findByText(/Process exited with code 0/i);
+  });
+
+  it("surfaces stream errors and halts further output", async () => {
+    const nodeId = "droid-error";
+    const nodeData = {
+      type: "droid" as const,
+      label: "Droid Exec",
+      prompt: "fail please",
+      status: "idle",
+      auto: "low" as const,
+      out: "text" as const,
+    };
+
+    useMindscapeStore.setState((state) => ({
+      ...state,
+      nodes: [
+        {
+          id: nodeId,
+          type: "droid",
+          position: { x: 0, y: 0 },
+          data: nodeData,
+        },
+      ],
+    }));
+
+    setHarnessSubscribe((options: any) => {
+      setTimeout(() => {
+        options.onEvent?.({ type: "stdout", data: "boot" });
+        options.onError?.(new Error("boom"));
+      }, 0);
+      return subscribeMock(options);
+    });
+
+    render(<DroidNode data={nodeData} id={nodeId} selected={false} />);
+
+    await waitFor(() => {
+      expect((globalThis as any).__droidTestHooks__?.[nodeId]).toBeDefined();
+    });
+
+    await act(async () => {
+      await (globalThis as any).__droidTestHooks__[nodeId].run();
+    });
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain("boot");
+    });
+    await waitFor(() => {
+      expect(document.body.textContent).toContain("Error: boom");
+    });
   });
 });

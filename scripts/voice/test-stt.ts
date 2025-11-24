@@ -13,7 +13,7 @@
  *   bun run scripts/test-stt.ts
  *
  * Environment variables:
- *   VOICE_PROVIDER=local (required)
+ *   VOICE_PROVIDER=maya1 (required)
  *   WHISPER_MODEL_PATH (optional, defaults to nvidia/parakeet_realtime_eou_120m-v1)
  *   VOICE_STT_POOL_SIZE (optional, defaults to 2)
  */
@@ -67,13 +67,13 @@ async function main() {
   console.log("🎤 ALFRED STT Test Script (Parakeet)\n");
 
   // Check environment
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "local";
-  if (voiceProvider !== "local") {
-    console.error("❌ VOICE_PROVIDER must be set to 'local'");
-    console.error("   Set it with: export VOICE_PROVIDER=local");
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  if (voiceProvider !== "maya1") {
+    console.error("❌ VOICE_PROVIDER must be set to 'maya1'");
+    console.error("   Set it with: export VOICE_PROVIDER=maya1");
     process.exit(1);
   }
-  process.env.VOICE_PROVIDER = "local"; // Force it just in case
+  process.env.VOICE_PROVIDER = "maya1"; // Force it just in case
 
   console.log("📋 Configuration:");
   console.log(`   Provider: ${voiceProvider}`);

@@ -7,7 +7,7 @@ This reference documents the backend voice endpoints exposed via the `voiceRoute
 
 ## speechToSpeech mutation
 
-`voice.speechToSpeech` orchestrates STT → assistant → TTS. It is exported as a tRPC mutation and is also reachable over HTTP POST at `/trpc/voice.speechToSpeech`. The server handles provider selection (`VOICE_PROVIDER=local|supertonic`), codec normalization, policy checks, and metrics.
+`voice.speechToSpeech` orchestrates STT → assistant → TTS. It is exported as a tRPC mutation and is also reachable over HTTP POST at `/trpc/voice.speechToSpeech`. The server handles provider selection (`VOICE_PROVIDER=maya1|supertonic`), codec normalization, policy checks, and metrics.
 
 ### Request shape
 

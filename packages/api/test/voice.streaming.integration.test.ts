@@ -50,56 +50,31 @@ mock.module("@alfred/db", () => ({
   workflowRepo: {},
 }));
 
+type VoiceFixtureHandle = Awaited<
+  ReturnType<
+    (typeof import("./utils/voice-fixture"))["installVoiceTestPools"]
+  >
+>;
+
 describe("voice streaming integration", () => {
   let startVoiceStreamingPrototype: any;
   let stopVoiceStreamingPrototype: any;
   let initializeVoicePools: any;
   let shutdownVoicePools: any;
+  let voiceFixture: VoiceFixtureHandle | null = null;
 
   beforeAll(async () => {
     process.env.OPENAI_API_KEY = "dummy"; // Satisfy any other checks
-    process.env.VOICE_PROVIDER = "local";
+    process.env.VOICE_PROVIDER = "maya1";
     process.env.VOICE_STREAMING_PROTO = "1";
     process.env.VOICE_STREAMING_PORT = "8799";
 
-    // Mock the pools to avoid spawning actual processes during tests
-    mock.module("@alfred/voice/process/stt", () => ({
-      STTPool: class {
-        start() {}
-        stop() {}
-        initialize() {
-          return Promise.resolve();
-        }
-        shutdown() {
-          return Promise.resolve();
-        }
-        transcribe() {
-          return Promise.resolve({ text: "mock transcript" });
-        }
-      },
-      ProcessConfig: {} as any,
-    }));
+    const { installVoiceTestPools } = await import("./utils/voice-fixture");
+    voiceFixture = await installVoiceTestPools({
+      transcript: "mock transcript",
+      chunkText: "stream-chunk",
+    });
 
-    mock.module("@alfred/voice/process/tts", () => ({
-      TTSPool: class {
-        start() {}
-        stop() {}
-        initialize() {
-          return Promise.resolve();
-        }
-        shutdown() {
-          return Promise.resolve();
-        }
-        synthesize(req: any, onChunk: any) {
-          if (req.streaming && onChunk) {
-            onChunk({ audioBase64: "dGVzdA==", mimeType: "audio/pcm" });
-          }
-          return Promise.resolve(new Uint8Array());
-        }
-      },
-    }));
-
-    // Dynamic import SUT
     const streaming = await import("../src/voice/streaming");
     startVoiceStreamingPrototype = streaming.startVoiceStreamingPrototype;
     stopVoiceStreamingPrototype = streaming.stopVoiceStreamingPrototype;
@@ -115,6 +90,7 @@ describe("voice streaming integration", () => {
   afterAll(async () => {
     stopVoiceStreamingPrototype();
     await shutdownVoicePools();
+    voiceFixture?.restore();
   });
 
   it("connects and handles start/stop", async () => {

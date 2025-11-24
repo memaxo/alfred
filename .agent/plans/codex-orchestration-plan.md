@@ -69,6 +69,7 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [ ] Write performance tests for decomposition and tracker operations
   - [ ] Validate ExecPlan file creation and persistence
   - [x] Verify knowledge graph integration (execplan nodes/edges) via ExecPlan node/edge persistence in graphstore
+  - [x] Add review fallback/integration coverage (`packages/runtime/test/review.fallback.test.ts`, `review.integration.test.ts`) to exercise scoped commands, fixer retries, and debugger ExecPlan generation (2025-11-24)
 
 - [x] Phase 7: Advanced Execution Environments (Hybrid Tier)
   - [x] Implement `packages/agent/src/orchestrator/tool/worktree.ts` for managing git worktrees with metadata, pruning, and safe-merge previews. (2025-11-24)

@@ -122,9 +122,9 @@ export function startVoiceStreamingPrototype(): void {
   if (server || process.env.VOICE_STREAMING_PROTO !== "1") {
     return;
   }
-  if ((process.env.VOICE_PROVIDER ?? "openai") !== "local") {
+  if ((process.env.VOICE_PROVIDER ?? "maya1") !== "maya1") {
     logger.warn("voice_stream_proto_disabled", {
-      reason: "local_provider_required",
+      reason: "maya1_provider_required",
     });
     return;
   }

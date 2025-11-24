@@ -13,7 +13,7 @@
  *   bun run scripts/test-tts.ts "Hello, this is a test"
  *
  * Environment variables:
- *   VOICE_PROVIDER=local (required)
+ *   VOICE_PROVIDER=maya1 (required)
  *   PIPER_MODEL_PATH (optional, defaults to ./packages/voice/models/piper)
  *   PIPER_VOICE (optional, defaults to en_US-lessac-medium)
  *   VOICE_TTS_POOL_SIZE (optional, defaults to 2)
@@ -36,10 +36,10 @@ async function main() {
   console.log(`Text to synthesize: "${text}"\n`);
 
   // Check environment
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
-  if (voiceProvider !== "local") {
-    console.error("❌ VOICE_PROVIDER must be set to 'local'");
-    console.error("   Set it with: export VOICE_PROVIDER=local");
+  const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
+  if (voiceProvider !== "maya1") {
+    console.error("❌ VOICE_PROVIDER must be set to 'maya1'");
+    console.error("   Set it with: export VOICE_PROVIDER=maya1");
     process.exit(1);
   }
 

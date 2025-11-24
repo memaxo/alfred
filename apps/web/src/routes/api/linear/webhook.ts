@@ -54,6 +54,7 @@ async function postLinearComment(args: {
   issueId: string;
   authz: string;
   body: string;
+  logger: { warn: (msg: string, meta?: unknown) => void };
 }): Promise<void> {
   try {
     await args.commentOnLinearIssue({
@@ -63,7 +64,7 @@ async function postLinearComment(args: {
       body: args.body,
     });
   } catch (error) {
-    console.warn("linear_webhook_comment_failed", {
+    args.logger?.warn?.("linear_webhook_comment_failed", {
       issueId: args.issueId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -244,6 +245,7 @@ async function handleLinearWebhookEvent(args: {
                     startResult?.runId ?? issueId,
                     workflowUrlFor(startResult?.runId ?? null)
                   ),
+                  logger: h.logger,
                 });
               }
             } catch (error) {
@@ -302,6 +304,7 @@ async function handleLinearWebhookEvent(args: {
                 workflowUrlFor(workflow.id),
                 "a user action in Linear"
               ),
+              logger: h.logger,
             });
           }
         } catch (error) {
