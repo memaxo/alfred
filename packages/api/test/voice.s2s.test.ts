@@ -27,13 +27,28 @@ mock.module("node-pty", () => ({
   })),
 }));
 
-process.env.OPENAI_API_KEY = "test-key";
-process.env.VOICE_PROVIDER = "openai";
+const transcribeLocalMock = vi.fn();
+const synthesizeLocalMock = vi.fn();
+
+mock.module("@alfred/api/voice/pools", () => ({
+  getVoicePools: () => ({
+    sttPool: { size: 1, activeCount: 0 } as any,
+    ttsPool: { size: 1, activeCount: 0 } as any,
+    voiceRegistry: { createSession: vi.fn(), removeSession: vi.fn() } as any,
+  }),
+}));
+
+mock.module("@alfred/voice/services/stt", () => ({
+  transcribeLocal: transcribeLocalMock,
+}));
+
+mock.module("@alfred/voice/services/tts", () => ({
+  synthesizeLocal: synthesizeLocalMock,
+}));
 
 const generateTextMock = vi.fn();
 const persistResultMock = vi.fn();
 const prepareMessagesMock = vi.fn();
-const originalFetch = global.fetch;
 
 mock.module("../src/ai/messages", () => ({
   prepareModelMessagesForGenerate: prepareMessagesMock.mockImplementation(
@@ -86,7 +101,8 @@ afterEach(() => {
   generateTextMock.mockReset();
   persistResultMock.mockReset();
   prepareMessagesMock.mockClear();
-  global.fetch = originalFetch;
+  transcribeLocalMock.mockReset();
+  synthesizeLocalMock.mockReset();
 });
 
 afterAll(() => {
@@ -95,23 +111,24 @@ afterAll(() => {
 });
 
 describe("voice.speechToSpeech", () => {
-  it("runs STT → assistant → TTS using OpenAI provider", async () => {
-    const sttResponse = { text: "hello alfred", language: "en" };
+  it("runs STT → assistant → TTS using local provider", async () => {
+    const sttResponse = {
+      text: "hello alfred",
+      language: "en",
+      model: "faster-whisper",
+      provider: "local",
+      durationSeconds: 0.1,
+    };
     const ttsAudio = Buffer.from("tts audio");
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => sttResponse,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => ttsAudio.buffer,
-      });
-
-    global.fetch = fetchMock as unknown as typeof fetch;
-
+    transcribeLocalMock.mockResolvedValue(sttResponse);
+    synthesizeLocalMock.mockResolvedValue({
+      audioBase64: ttsAudio.toString("base64"),
+      mimeType: "audio/mpeg",
+      model: "maya1",
+      provider: "local",
+      durationSeconds: 0.2,
+    });
     generateTextMock.mockResolvedValue({
       text: "hi there",
       toolCalls: [],
@@ -130,7 +147,8 @@ describe("voice.speechToSpeech", () => {
       mimeType: "audio/webm",
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(transcribeLocalMock).toHaveBeenCalledTimes(1);
+    expect(synthesizeLocalMock).toHaveBeenCalledTimes(1);
     expect(generateTextMock).toHaveBeenCalledTimes(1);
     expect(persistResultMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -147,20 +165,23 @@ describe("voice.speechToSpeech", () => {
   });
 
   it("returns session snapshots via voice.sessions", async () => {
-    const sttResponse = { text: "hello again", language: "en" };
+    const sttResponse = {
+      text: "hello again",
+      language: "en",
+      model: "faster-whisper",
+      provider: "local",
+      durationSeconds: 0.1,
+    };
     const ttsAudio = Buffer.from("tts audio again");
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => sttResponse,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => ttsAudio.buffer,
-      });
-    global.fetch = fetchMock as unknown as typeof fetch;
+    transcribeLocalMock.mockResolvedValue(sttResponse);
+    synthesizeLocalMock.mockResolvedValue({
+      audioBase64: ttsAudio.toString("base64"),
+      mimeType: "audio/mpeg",
+      model: "maya1",
+      provider: "local",
+      durationSeconds: 0.2,
+    });
     generateTextMock.mockResolvedValue({
       text: "response text",
       toolCalls: [],

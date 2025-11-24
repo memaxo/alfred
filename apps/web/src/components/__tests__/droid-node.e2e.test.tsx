@@ -1,7 +1,13 @@
 import React from "react";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { act, fireEvent, render, waitFor } from "../../test/testing-library";
 import { useMindscapeStore } from "@/store/mindscape";
+
+type HarnessGlobal = {
+  __droidStreamTestHarness__?: {
+    subscribe: (options: any) => { unsubscribe: () => void };
+  };
+};
 
 const subscribeMock = mock((options: any) => {
   latestSubscription = options;
@@ -13,13 +19,22 @@ let latestSubscription: any = null;
 const getToolTokenMock = mock(() => Promise.resolve("mock-token"));
 const resumeTriggerMock = mock(() => Promise.resolve());
 const resumeCloseMock = mock(() => {});
-
-mock.module("@/lib/droid/stream-client", () => ({
-  subscribeToDroidStream: (options: any) => subscribeMock(options),
-}));
+const trpcProxyMock = {
+  droid: {
+    stream: {
+      subscribe: () => ({
+        subscribe: () => ({ unsubscribe() {} }),
+      }),
+    },
+  },
+};
 
 mock.module("@/lib/token", () => ({
   getToolToken: (...args: unknown[]) => getToolTokenMock(...args),
+}));
+
+mock.module("@/lib/trpc-client", () => ({
+  createBrowserTrpcProxyClient: () => trpcProxyMock,
 }));
 
 mock.module("@/hooks/use-biometric-resume", () => ({
@@ -50,11 +65,18 @@ const { DroidNode } = await import("../mindscape/nodes/droid-node");
 
 describe("DroidNode", () => {
   beforeEach(() => {
-    getToolTokenMock.mockReset();
-    subscribeMock.mockReset();
-    resumeTriggerMock.mockReset();
-    resumeCloseMock.mockReset();
+    getToolTokenMock.mockClear();
+    subscribeMock.mockClear();
+    resumeTriggerMock.mockClear();
+    resumeCloseMock.mockClear();
     latestSubscription = null;
+    const harness = {
+      subscribe: (options: any) => subscribeMock(options),
+    };
+    (globalThis as HarnessGlobal).__droidStreamTestHarness__ = harness;
+    if (typeof window !== "undefined") {
+      (window as unknown as HarnessGlobal).__droidStreamTestHarness__ = harness;
+    }
     useMindscapeStore.setState((state) => ({
       ...state,
       nodes: [],
@@ -64,6 +86,13 @@ describe("DroidNode", () => {
       ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
       contextCache: {},
     }));
+  });
+
+  afterEach(() => {
+    delete (globalThis as HarnessGlobal).__droidStreamTestHarness__;
+    if (typeof window !== "undefined") {
+      delete (window as unknown as HarnessGlobal).__droidStreamTestHarness__;
+    }
   });
 
   it("streams output and handles biometric obligations", async () => {
@@ -128,10 +157,10 @@ describe("DroidNode", () => {
 
     // Resume
     latestSubscription.onResume?.({ runId: "run-biometric" });
-    await view.findByText(/running/i);
+    await view.findByText(/Biometric check satisfied/i);
 
     // Complete
     latestSubscription.onEvent?.({ type: "exit", code: 0 });
-    await view.findByText(/completed/i);
+    await view.findByText(/Process exited with code 0/i);
   });
 });

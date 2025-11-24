@@ -11,7 +11,7 @@ This document describes the current WebSocket prototype, the message contract, a
 - **Protocol**: WebSocket (native Bun implementation via `Bun.serve`).
 - **Endpoint**: `ws://<API_HOST>:<VOICE_STREAMING_PORT|8788>/voice/stream`.
 - **Authentication**: Same as `voice.speechToSpeech`. The WebSocket upgrade reuses the tRPC session cookies, enforces both `voice.stt` and `voice.tts` policies, and rejects unauthenticated/unauthorized callers before the socket opens. Bring a real session cookie (e.g., from the browser) when testing.
-- **Provider requirement**: Local voice provider (`VOICE_PROVIDER=local`). The prototype forwards audio chunks into the existing `VoiceSessionManager`, which in turn talks to the Faster-Whisper + Piper pools.
+- **Provider requirement**: Maya1 voice provider (`VOICE_PROVIDER=maya1`). The prototype forwards audio chunks into the existing `VoiceSessionManager`, which in turn talks to the Faster-Whisper + Piper pools.
 - **Input codec handling**: The server accepts PCM, M4A, WebM, MP3, or Opus chunks. Each chunk is normalized via the ffmpeg helper (`decodeToPCM16`) before the Faster-Whisper pool receives it, so clients can stream whatever their recorder produces.
 - **Output codec negotiation**: Set `codec` in the `start` payload (`pcm|mp3|opus|wav`). The server now re-encodes each TTS chunk via `encodeFromPCM16` so downstream consumers receive the negotiated MIME type, falling back to PCM when the request is unsupported.
 - **Lifecycle**:
@@ -98,14 +98,14 @@ The prototype keeps transcripts in memory via `VoiceSession.getTranscript()`. `p
 
 - Downstream audio is streamed as PCM chunks today. Negotiated MP3/Opus output will require per-chunk transcoding in a later iteration.
 - Audio input must already be PCM; container decode (M4A/WebM) still happens client-side (browser/native can reuse the Milestone 1 converters before pushing PCM frames).
-- Requires `VOICE_PROVIDER=local` so the Faster-Whisper pool is present. The server short-circuits with an error if local pools are unavailable.
+- Requires `VOICE_PROVIDER=maya1` so the Faster-Whisper pool is present. The server short-circuits with an error if the Maya1 pools are unavailable.
 
 ## Client Usage
 
 1. Start the API (or `bun dev`) with:
 
 ```bash
-VOICE_PROVIDER=local \
+VOICE_PROVIDER=maya1 \
 VOICE_STREAMING_PROTO=1 \
 VOICE_STREAMING_PORT=8788 \
 bun dev

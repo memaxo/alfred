@@ -29,6 +29,13 @@ function WorkflowSubscription({
   const clearContextReceipt = useMindscapeStore(
     (state) => state.clearContextReceipt
   );
+  const resolveCurrentMessages = () => {
+    const node = useMindscapeStore
+      .getState()
+      .nodes.find((n) => n.id === nodeId);
+    const nodeMessages = (node?.data as ArtifactData | undefined)?.messages;
+    return Array.isArray(nodeMessages) ? nodeMessages : [];
+  };
 
   const [streamInput, setStreamInput] = useState<StreamInput | null>(null);
   const [status, setStatus] = useState<string>(
@@ -135,13 +142,16 @@ function WorkflowSubscription({
       if (!messages.length) {
         return;
       }
+      const existing = resolveCurrentMessages();
       updateArtifactData(nodeId, {
-        messages: [...((data.messages as any[]) || []), ...messages],
+        messages: [...existing, ...messages],
       });
     },
     onError(err) {
       console.error("Workflow SSE stream error:", err);
       updateArtifactData(nodeId, { status: "failed", error: err.message });
+      clearContextReceipt(nodeId);
+      setStatus("error");
       setStreamInput(null);
     },
   });

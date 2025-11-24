@@ -41,6 +41,9 @@ const emitLinearActivityMock = vi.fn().mockResolvedValue({ ok: true });
 const setLinearDelegateMock = vi.fn().mockResolvedValue(undefined);
 const setLinearStartedMock = vi.fn().mockResolvedValue({ stateId: "started" });
 const setLinearCompletedMock = vi.fn().mockResolvedValue({ stateId: "done" });
+const setLinearCancelledMock = vi
+  .fn()
+  .mockResolvedValue({ stateId: "cancelled" });
 const setLinearSessionExternalUrlMock = vi
   .fn()
   .mockResolvedValue(undefined);
@@ -51,6 +54,7 @@ mock.module("@alfred/agent/integrations/linear", () => ({
   setLinearDelegate: setLinearDelegateMock,
   setLinearStarted: setLinearStartedMock,
   setLinearCompleted: setLinearCompletedMock,
+  setLinearCancelled: setLinearCancelledMock,
   setLinearSessionExternalUrl: setLinearSessionExternalUrlMock,
   commentOnLinearIssue: commentOnLinearIssueMock,
   extractIssueIdFromSession: (id: string) => id,
@@ -134,6 +138,7 @@ afterEach(() => {
   setLinearStartedMock.mockReset();
   setLinearCompletedMock.mockReset();
   setLinearSessionExternalUrlMock.mockReset();
+  setLinearCancelledMock.mockReset();
   commentOnLinearIssueMock.mockReset();
 });
 
@@ -266,6 +271,50 @@ describe("workflow runtime integration", () => {
 
       const call = workflowRuntimeMocks.createRuntime.mock.calls[0][0];
       expect(call.input.linear).toBeUndefined();
+    });
+
+    it("updates Linear state when workflow fails", async () => {
+      const mockRunId = "test-run-id";
+      const mockExecutor = {
+        runId: mockRunId,
+        summary: "test",
+        stream: (async function* () {
+          throw new Error("boom");
+        })(),
+        resume: vi.fn(),
+        cancel: vi.fn(),
+      };
+
+      workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
+      workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
+      workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
+      workflowRepoMocks.updateRun.mockResolvedValue({} as any);
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+
+      const subscription = await caller.workflow.stream({
+        requirement: "test",
+        linear: {
+          sessionId: "linear-session-123",
+          space: "team-space",
+        },
+        authzLinear: "linear-token",
+      });
+
+      await new Promise<void>((resolve) => {
+        subscription.subscribe({
+          next: () => {},
+          error: () => resolve(),
+          complete: () => resolve(),
+        });
+      });
+
+      expect(setLinearCancelledMock).toHaveBeenCalled();
+      expect(commentOnLinearIssueMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining("failed"),
+        })
+      );
     });
   });
 

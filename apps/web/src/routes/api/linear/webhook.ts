@@ -14,6 +14,7 @@ async function getHelpers() {
   const { logger } = await import("@alfred/logger");
   const { RuntimeContext } = await import("@alfred/type/runtime-context");
   const linearWebhooksPkg = (await import("@linear/sdk/webhooks")).default;
+  const linearIntegration = await import("@alfred/agent/integrations/linear");
 
   return {
     appRouter,
@@ -25,7 +26,74 @@ async function getHelpers() {
     logger,
     RuntimeContext,
     linearWebhooksPkg,
+    commentOnLinearIssue: linearIntegration.commentOnLinearIssue,
   };
+}
+
+function workflowUrlFor(runId: string | null): string | null {
+  const base =
+    process.env.PUBLIC_URL ??
+    process.env.VITE_APP_URL ??
+    process.env.APP_URL ??
+    null;
+  if (!runId || !base) {
+    return null;
+  }
+  const normalized = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${normalized}/workflow/${runId}`;
+}
+
+async function postLinearComment(args: {
+  commentOnLinearIssue: (input: {
+    space: string;
+    issueId: string;
+    authz: string;
+    body: string;
+  }) => Promise<void>;
+  space: string;
+  issueId: string;
+  authz: string;
+  body: string;
+}): Promise<void> {
+  try {
+    await args.commentOnLinearIssue({
+      space: args.space,
+      issueId: args.issueId,
+      authz: args.authz,
+      body: args.body,
+    });
+  } catch (error) {
+    console.warn("linear_webhook_comment_failed", {
+      issueId: args.issueId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function buildWebhookStartComment(runId: string | null, workflowUrl: string | null) {
+  const lines = [
+    "Alfred accepted this issue and started an automated workflow.",
+  ];
+  if (workflowUrl) {
+    lines.push(`Track progress: ${workflowUrl}`);
+  } else if (runId) {
+    lines.push(`Run id: ${runId}`);
+  }
+  return lines.join("\n");
+}
+
+function buildWebhookCancelComment(
+  runId: string | null,
+  workflowUrl: string | null,
+  reason: string
+) {
+  const lines = [
+    `Workflow run ${runId ?? "unknown"} was cancelled because Linear moved this issue to ${reason}.`,
+  ];
+  if (workflowUrl) {
+    lines.push(`Historical log: ${workflowUrl}`);
+  }
+  return lines.join("\n");
 }
 
 function getWebhookSecret(): string {
@@ -152,7 +220,7 @@ async function handleLinearWebhookEvent(args: {
               h
             );
             try {
-              await caller.workflow.start({
+              const startResult = await caller.workflow.start({
                 requirement,
                 auto: "low",
                 linear: {
@@ -166,6 +234,18 @@ async function handleLinearWebhookEvent(args: {
                 issueId,
                 workspace,
               });
+              if (authz) {
+                await postLinearComment({
+                  commentOnLinearIssue: h.commentOnLinearIssue,
+                  space: workspace,
+                  issueId,
+                  authz,
+                  body: buildWebhookStartComment(
+                    startResult?.runId ?? issueId,
+                    workflowUrlFor(startResult?.runId ?? null)
+                  ),
+                });
+              }
             } catch (error) {
               h.logger.warn("linear_webhook_workflow_start_failed", {
                 issueId,
@@ -211,6 +291,19 @@ async function handleLinearWebhookEvent(args: {
             runId: workflow.id,
             issueId,
           });
+          if (authz) {
+            await postLinearComment({
+              commentOnLinearIssue: h.commentOnLinearIssue,
+              space: workflow.linearSpace ?? workspace ?? "",
+              issueId,
+              authz,
+              body: buildWebhookCancelComment(
+                workflow.id,
+                workflowUrlFor(workflow.id),
+                "a user action in Linear"
+              ),
+            });
+          }
         } catch (error) {
           h.logger.warn("linear_webhook_workflow_cancel_failed", {
             runId: workflow.id,

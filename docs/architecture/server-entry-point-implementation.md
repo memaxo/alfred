@@ -83,7 +83,7 @@ Updated build script to use the new server entry point.
            ├→ startReminderScheduler() (if SCHED_REMIND=1)
            └→ initApiServices() (packages/api/src/init.ts)
                ├→ startCompressionWorker() (if enabled)
-               └→ initializeVoicePools() (if VOICE_PROVIDER=local)
+               └→ initializeVoicePools() (required for VOICE_PROVIDER=local|supertonic)
 
 2. Request handling
    └→ handler.fetch(request)
@@ -134,7 +134,7 @@ bun build --compile \
 
 **Required for initialization**:
 - `SCHED_REMIND=1` - Enable reminder scheduler
-- `VOICE_PROVIDER=local` - Enable local voice models (requires Python)
+- `VOICE_PROVIDER=local` (or `supertonic`) - Enable on-device voice models (requires Python)
 - `COMPRESSION_ENABLED=true` - Enable compression worker (default: production)
 
 ## Testing
@@ -167,7 +167,7 @@ bun build --compile \
 - [ ] Server starts successfully
 - [ ] Reminder scheduler starts (with `SCHED_REMIND=1`)
 - [ ] Compression worker starts (if enabled)
-- [ ] Voice pools initialize (with `VOICE_PROVIDER=local`)
+- [ ] Voice pools initialize (with `VOICE_PROVIDER=local|supertonic`)
 - [ ] HTTP endpoints work correctly
 - [ ] Graceful shutdown works
 
@@ -198,4 +198,3 @@ bun build --compile \
 - `scripts/build-executable.sh` - Build script (updated)
 - `docs/architecture/server-entry-point-plan.md` - Implementation plan
 - `docs/architecture/deployment-proxmox.md` - Deployment guide
-

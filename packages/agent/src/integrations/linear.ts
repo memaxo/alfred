@@ -12,6 +12,7 @@ export {
   setLinearSessionExternalUrl,
   setLinearStarted,
   setLinearCompleted,
+  setLinearCancelled,
   commentOnLinearIssue,
 } from "../orchestrator/linear";
 

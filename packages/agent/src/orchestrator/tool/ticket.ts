@@ -15,6 +15,7 @@ const ticketInputSchema = z.object({
     "set-delegate",
     "set-started",
     "set-completed",
+    "set-cancelled",
     "activity.thought",
     "activity.action",
     "activity.response",
@@ -176,6 +177,43 @@ async function runSetStarted(client: LinearClient, input: TicketInput) {
   return { ok: true, id: issueId, stateId: targetState.id };
 }
 
+async function runSetCancelled(client: LinearClient, input: TicketInput) {
+  const issueId = ensure(input.issueId, "ticket_issue_required");
+  const issue = await client.issue(issueId);
+  if (!issue) {
+    throw new Error("ticket_issue_not_found");
+  }
+
+  const team = await issue.team;
+  if (!team) {
+    throw new Error("ticket_team_not_found");
+  }
+
+  const statesConnection = await team.states();
+  const states = statesConnection.nodes ?? [];
+
+  const targetState =
+    states.find((state) => state.type === "canceled") ??
+    states.find((state) => state.name.toLowerCase().includes("block")) ??
+    states.find((state) => state.name.toLowerCase().includes("cancel")) ??
+    states.find((state) => state.type === "backlog") ??
+    null;
+
+  if (!targetState) {
+    throw new Error("ticket_cancelled_state_missing");
+  }
+
+  const response = await client.updateIssue(issueId, {
+    stateId: targetState.id,
+  });
+
+  if (!response.success) {
+    throw new Error("ticket_state_update_failed");
+  }
+
+  return { ok: true, id: issueId, stateId: targetState.id };
+}
+
 async function runSetCompleted(client: LinearClient, input: TicketInput) {
   const issueId = ensure(input.issueId, "ticket_issue_required");
   const issue = await client.issue(issueId);
@@ -286,6 +324,8 @@ export const toolTicket = {
         return runDelegate(client, input, installation.appUser);
       case "set-started":
         return runSetStarted(client, input);
+      case "set-cancelled":
+        return runSetCancelled(client, input);
       case "set-completed":
         return runSetCompleted(client, input);
       case "activity.thought":

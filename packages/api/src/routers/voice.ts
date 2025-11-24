@@ -21,12 +21,10 @@ import {
   listVoices,
 } from "@alfred/voice/services/models";
 import {
-  postTranscription,
   type SttInput,
   transcribeLocal,
 } from "@alfred/voice/services/stt";
 import {
-  postSynthesis,
   synthesizeLocal,
   type TtsInput,
 } from "@alfred/voice/services/tts";
@@ -165,13 +163,9 @@ export const voiceRouter: ReturnType<typeof router> = router({
         );
       }
 
-      const provider = getVoiceProvider();
       try {
-        if (provider === "local") {
-          const { sttPool } = getVoicePools();
-          return await transcribeLocal(sttPool, { ...input, language });
-        }
-        return await postTranscription({ ...input, language });
+        const { sttPool } = getVoicePools();
+        return await transcribeLocal(sttPool, { ...input, language });
       } catch (error) {
         throw toTRPCError(error);
       }
@@ -189,15 +183,11 @@ export const voiceRouter: ReturnType<typeof router> = router({
         });
       }
 
-      const provider = getVoiceProvider();
       const voice = await resolveVoicePreference(session.user.id, input.voice);
 
       try {
-        if (provider === "local") {
-          const { ttsPool } = getVoicePools();
-          return await synthesizeLocal(ttsPool, { ...input, voice });
-        }
-        return await postSynthesis({ ...input, voice });
+        const { ttsPool } = getVoicePools();
+        return await synthesizeLocal(ttsPool, { ...input, voice });
       } catch (error) {
         throw toTRPCError(error);
       }
@@ -216,15 +206,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
         });
       }
 
-      // Optional: Allow overriding provider for testing
-      let provider = getVoiceProvider();
-      if (
-        input.surface === "web" &&
-        process.env.NODE_ENV === "test" &&
-        process.env.VOICE_PROVIDER_OVERRIDE
-      ) {
-        provider = process.env.VOICE_PROVIDER_OVERRIDE as any;
-      }
+      const provider = getVoiceProvider();
 
       const s2sTimerStart = performance.now();
 
@@ -262,13 +244,8 @@ export const voiceRouter: ReturnType<typeof router> = router({
           prompt: input.prompt,
         };
 
-        let sttResult;
-        if (provider === "local") {
-          const { sttPool } = getVoicePools();
-          sttResult = await transcribeLocal(sttPool, sttPayload);
-        } else {
-          sttResult = await postTranscription(sttPayload);
-        }
+        const { sttPool, ttsPool } = getVoicePools();
+        const sttResult = await transcribeLocal(sttPool, sttPayload);
 
         const transcriptText = sttResult.text?.trim();
         if (!transcriptText) {
@@ -306,13 +283,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
           model: input.ttsModel,
         };
 
-        let ttsResult;
-        if (provider === "local") {
-          const { ttsPool } = getVoicePools();
-          ttsResult = await synthesizeLocal(ttsPool, ttsPayload);
-        } else {
-          ttsResult = await postSynthesis(ttsPayload);
-        }
+        const ttsResult = await synthesizeLocal(ttsPool, ttsPayload);
 
         const totalSeconds = (performance.now() - s2sTimerStart) / 1000;
         voiceStreamLatencySeconds.observe(
@@ -375,22 +346,13 @@ export const voiceRouter: ReturnType<typeof router> = router({
   previewVoice: authedProcedure
     .input(voicePreviewInput)
     .mutation(async ({ input }) => {
-      const provider = getVoiceProvider();
       try {
-        if (provider === "local") {
-          const { ttsPool } = getVoicePools();
-          return await synthesizeLocal(ttsPool, {
-            text: input.text,
-            voice: input.voice,
-            format: "mp3",
-            model: "piper",
-          });
-        }
-        return await postSynthesis({
+        const { ttsPool } = getVoicePools();
+        return await synthesizeLocal(ttsPool, {
           text: input.text,
           voice: input.voice,
           format: "mp3",
-          model: "gpt-4o-mini-tts",
+          model: "piper",
         });
       } catch (error) {
         throw toTRPCError(error);
@@ -441,17 +403,6 @@ export const voiceRouter: ReturnType<typeof router> = router({
         if (!session) {
           emit.error(
             new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
-          );
-          return () => {};
-        }
-
-        const provider = getVoiceProvider();
-        if (provider !== "local") {
-          emit.error(
-            new TRPCError({
-              code: "NOT_IMPLEMENTED",
-              message: "voice_streaming_requires_local_provider",
-            })
           );
           return () => {};
         }

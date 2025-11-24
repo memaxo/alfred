@@ -1,13 +1,13 @@
-// We use any here to avoid strict type checking during build time for dynamic imports
-// The runtime behavior is safe as we import the actual modules
-// This is a workaround for the strict package boundaries in the monorepo
+export const DEFAULT_STT_MODEL =
+  process.env.VOICE_STT_MODEL ?? "faster-whisper-large-v3-turbo";
+export const DEFAULT_TTS_MODEL =
+  process.env.VOICE_TTS_MODEL ?? "maya1";
+export const DEFAULT_TTS_VOICE =
+  process.env.VOICE_TTS_VOICE ?? "en_US-lessac-medium";
 
-export const DEFAULT_STT_MODEL = "whisper-1";
-export const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
-export const DEFAULT_TTS_VOICE = "alloy";
-
-export function getVoiceProvider(): "openai" | "local" {
-  return (process.env.VOICE_PROVIDER ?? "openai") as "openai" | "local";
+export function getVoiceProvider(): "maya1" | "supertonic" {
+  const raw = (process.env.VOICE_PROVIDER ?? "maya1").toLowerCase();
+  return raw === "supertonic" ? "supertonic" : "maya1";
 }
 
 export async function resolveVoicePreference(
@@ -73,15 +73,4 @@ export async function resolveSttLanguagePreference(
   }
 
   return;
-}
-
-export function requireOpenAIConfig() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("openai_api_key_missing");
-  }
-  const baseUrl = (
-    process.env.OPENAI_BASE_URL ?? "https://api.openai.com"
-  ).replace(/\/+$/, "");
-  return { apiKey, baseUrl };
 }

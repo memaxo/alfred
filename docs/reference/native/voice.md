@@ -11,7 +11,7 @@
 ## Current State
 
 - 📘 Reference guides (must-read):
-  - `docs/voice/s2s.md` – one-stop setup for OpenAI vs local providers plus web/native/CarPlay validation steps.
+  - `docs/voice/s2s.md` – one-stop setup for local/Supertonic providers plus web/native/CarPlay validation steps.
   - `docs/voice/streaming.md` – WebSocket prototype contract for partial transcripts / future streaming.
   - `docs/reference/api/voice.md` – backend mutation contract, curl sample, and test/observability references.
 
@@ -78,7 +78,7 @@
 
 ## Local Models
 
-The voice system supports local models (Faster-Whisper for STT, Piper TTS for TTS) when `VOICE_PROVIDER=local`. See `docs/voice/local-models.md` for setup instructions.
+The voice system supports local models (Faster-Whisper for STT, Maya1 or Supertonic for TTS) when `VOICE_PROVIDER=local` or `VOICE_PROVIDER=supertonic`. See `docs/voice/local-models.md` for setup instructions.
 
 Key features:
 - Zero API costs

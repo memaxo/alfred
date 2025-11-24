@@ -193,10 +193,6 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       return;
     }
 
-    console.log("[droid-node-test] prompt", prompt);
-    if (process.env.NODE_ENV === "test") {
-      console.log("[droid-node-test] clientRef before guard", clientRef.current);
-    }
     if (!clientRef.current) {
       toast.error("TRPC client unavailable");
       return;
@@ -312,7 +308,6 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     }
     globalScope.__droidTestHooks__[id] = {
       run: async () => {
-        console.log("[droid-node-test] run invoked", id);
         await handleRun();
       },
       stop: handleStop,

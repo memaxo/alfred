@@ -59,7 +59,7 @@ packages/voice/scripts/stt_transcribe.py path/to/audio.wav
 
 ### Environment Variables
 
-- `VOICE_PROVIDER`: Set to `local` to enable this package. Default is `openai`.
+- `VOICE_PROVIDER`: Set to `local` (Maya1) or `supertonic` (ONNX). Defaults to `local`.
 - `TTS_PROVIDER`: Set to `supertonic` to use the lightweight model. Default is `maya1`.
 - `VOICE_TTS_POOL_SIZE`: Number of TTS processes (default: 1, due to VRAM usage of Maya1). Ignored for Supertonic (single instance).
 - `VOICE_STT_POOL_SIZE`: Number of STT processes (default: 2).

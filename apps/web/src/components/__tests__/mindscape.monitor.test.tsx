@@ -139,4 +139,75 @@ describe("WorkflowManager context cache events", () => {
       expect(useMindscapeStore.getState().contextCache[nodeId]).toBeUndefined();
     });
   });
+
+  it("appends UI messages and clears context when transport errors occur", async () => {
+    const nodeId = "workflow-node";
+    useMindscapeStore.setState((state) => ({
+      ...state,
+      nodes: [
+        {
+          id: nodeId,
+          type: "workflow",
+          position: { x: 0, y: 0 },
+          data: {
+            type: "workflow",
+            label: "Stream Run",
+            status: "running",
+            requirement: "Check messages",
+            auto: "low",
+            mode: "sequential",
+            messages: [
+              {
+                id: "seed",
+                role: "assistant",
+                parts: [{ type: "text", text: "Seed" }],
+              },
+            ],
+          },
+          selectable: true,
+          draggable: false,
+        } as any,
+      ],
+      contextCache: {
+        [nodeId]: {
+          source: "handoff",
+          updatedAt: Date.now(),
+        },
+      },
+    }));
+
+    render(<WorkflowManager />);
+
+    await waitFor(() => {
+      expect(latestHandlers?.onUiMessages).toBeDefined();
+    });
+
+    act(() => {
+      latestHandlers?.onUiMessages?.(
+        [
+          {
+            id: "msg-new",
+            role: "assistant",
+            parts: [{ type: "text", text: "New" }],
+          } as any,
+        ],
+        { runId: "run-1", eventId: "evt", eventType: "run" }
+      );
+    });
+
+    const nodeAfterMessages = useMindscapeStore
+      .getState()
+      .nodes.find((n) => n.id === nodeId);
+    expect((nodeAfterMessages?.data as any)?.messages).toHaveLength(2);
+
+    act(() => {
+      latestHandlers?.onError?.(new Error("network"));
+    });
+
+    expect(useMindscapeStore.getState().contextCache[nodeId]).toBeUndefined();
+    const nodeAfterError = useMindscapeStore
+      .getState()
+      .nodes.find((n) => n.id === nodeId);
+    expect(nodeAfterError?.data?.status).toBe("failed");
+  });
 });

@@ -6,7 +6,7 @@ import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
 
 // Mock Config
-spyOn(config, "getVoiceProvider").mockReturnValue("local");
+spyOn(config, "getVoiceProvider").mockReturnValue("maya1");
 
 // Mock Policy
 mock.module("@alfred/policy", () => ({
@@ -82,8 +82,6 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
     });
 
     // 3. Execute S2S
-    process.env.VOICE_PROVIDER_OVERRIDE = "local";
-
     const caller = voiceRouter.createCaller({
       session: { user: { id: "test-user" } },
       runtimeContext: new RuntimeContext([
@@ -119,12 +117,8 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
     expect(result.transcript.text).toBe("Synthetic Sine Wave");
     expect(result.audio.format).toBe("mp3"); // Router requested MP3
     // MIME type depends on whether ffmpeg/encoder was used or raw PCM returned.
-    // Since we mocked synthesizeLocal to return raw PCM, but postSynthesis does encode?
-    // Wait, synthesizeLocal calls encodeLocalTtsAudio?
-    // In `voice.ts`: `return await synthesizeLocal(ttsPool, ttsPayload);`
-    // In `services/tts.ts`: `synthesizeLocal` calls `encodeFromPCM16`.
-    // Since `encodeFromPCM16` uses real ffmpeg (and we have it), it should return audio/mpeg.
-    // If test fails, check what mime type is returned.
+    // `synthesizeLocal` encodes PCM to the requested format, so we expect audio/mpeg.
+    // If the MIME ever mismatches, inspect the encode step or pool mock.
     expect(result.audio.mimeType).toBe("audio/mpeg");
 
     // Verify STT input was processed

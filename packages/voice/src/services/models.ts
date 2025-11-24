@@ -1,7 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { logger } from "@alfred/logger";
-import { getVoiceProvider } from "./config";
 
 // Simple in-memory cache for available voices (remote)
 let availableVoiceCache: { data: any[]; timestamp: number } | null = null;
@@ -15,11 +14,6 @@ let voiceListCache: {
 const VOICE_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
 export async function listAvailableModels() {
-  const provider = getVoiceProvider();
-  if (provider !== "local") {
-    return [];
-  }
-
   if (
     availableVoiceCache &&
     Date.now() - availableVoiceCache.timestamp < AVAILABLE_VOICE_CACHE_TTL_MS
@@ -66,11 +60,6 @@ export async function listAvailableModels() {
 }
 
 export async function downloadModel(voiceId: string) {
-  const provider = getVoiceProvider();
-  if (provider !== "local") {
-    throw new Error("voice_provider_not_local");
-  }
-
   try {
     const scriptPath = join(
       process.cwd(),
@@ -119,19 +108,6 @@ export async function downloadModel(voiceId: string) {
 }
 
 export async function listVoices() {
-  const provider = getVoiceProvider();
-
-  if (provider !== "local") {
-    return [
-      { id: "alloy", name: "Alloy" },
-      { id: "echo", name: "Echo" },
-      { id: "fable", name: "Fable" },
-      { id: "onyx", name: "Onyx" },
-      { id: "nova", name: "Nova" },
-      { id: "shimmer", name: "Shimmer" },
-    ];
-  }
-
   if (process.env.TTS_PROVIDER === "supertonic") {
     return [
       { id: "M1", name: "Male 1" },

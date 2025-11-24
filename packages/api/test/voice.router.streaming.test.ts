@@ -20,7 +20,7 @@ mock.module("@alfred/voice/services/config", () => ({
   DEFAULT_STT_MODEL: "parakeet",
   DEFAULT_TTS_MODEL: "maya1",
   DEFAULT_TTS_VOICE: "default",
-  getVoiceProvider: mock(() => "local"),
+  getVoiceProvider: mock(() => "maya1"),
   resolveSttLanguagePreference: mock(async () => "en"),
   resolveVoicePreference: mock(async () => "default"),
 }));
@@ -31,43 +31,6 @@ describe("Voice Router Streaming Integration", () => {
   afterEach(() => {
     process.env = { ...originalEnv };
     mock.restore();
-  });
-
-  it("should error if provider is not local", async () => {
-    // Override provider to openai
-    mock.module("@alfred/voice/services/config", () => ({
-      getVoiceProvider: () => "openai",
-    }));
-
-    const caller = voiceRouter.createCaller({
-      session: { user: { id: "user1" } },
-    } as any);
-
-    // tRPC subscriptions are observables, but testing them directly via createCaller
-    // usually returns the observable.
-    // Note: standard tRPC caller doesn't support subscriptions easily without a client.
-    // However, the router function returns an Observable.
-
-    // We can test the underlying observable logic if we extract it or
-    // manually invoke the resolver. But let's try to call it.
-
-    try {
-      const observable = await caller.stream({ mode: "stream" });
-      // If it returns (it shouldn't for subscription in caller?),
-      // actually createCaller for subscriptions behaves differently.
-      // Let's assume we can't easily test subscription via caller directly without a client proxy.
-      // Instead, let's invoke the resolve function directly?
-      // Or check if it throws immediately.
-
-      // Wait, createCaller docs say subscriptions return the Observable.
-      observable.subscribe({
-        error: (err) => {
-          expect(err.message).toBe("voice_streaming_requires_local_provider");
-        },
-      });
-    } catch (e) {
-      // It might throw if not supported
-    }
   });
 
   // NOTE: Testing tRPC subscriptions via `createCaller` in backend tests is tricky because

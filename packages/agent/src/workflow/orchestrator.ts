@@ -8,6 +8,7 @@ import {
   emitLinearActivity,
   extractIssueIdFromSession,
   setLinearCompleted,
+  setLinearCancelled,
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
@@ -219,6 +220,39 @@ export async function orchestrateWorkflowStream(
     });
   };
 
+  const finalizeLinearFailure = async (args: {
+    runId: string;
+    reason: string;
+    linear: NonNullable<WorkflowInputPayload["linear"]>;
+    authz: string;
+    workflowUrl: string | null;
+  }): Promise<void> => {
+    const { runId, reason, linear, authz, workflowUrl } = args;
+    const issueId = resolveIssueId(linear);
+    if (!issueId) {
+      throw new Error("linear_issue_id_missing");
+    }
+
+    await setLinearCancelled({
+      space: linear.space,
+      issueId,
+      authz,
+    });
+
+    const commentBody = buildLinearFailureComment({
+      runId,
+      reason,
+      workflowUrl,
+    });
+
+    await commentOnLinearIssue({
+      space: linear.space,
+      issueId,
+      authz,
+      body: commentBody,
+    });
+  };
+
   const abortController = new AbortController();
   let cancelled = false;
   let suspended = false;
@@ -258,6 +292,38 @@ export async function orchestrateWorkflowStream(
     const reasonTraces: ReasonTrace[] = [];
     const reviewGate = new ReviewGate();
     let linearIssueUrlFromCreation: string | null = null;
+    let linearFailureNotified = false;
+    let executorRunId: string | null = null;
+
+    if (input.linear?.sessionId) {
+      reviewGate.requireAtLeast(1);
+    }
+
+    const notifyLinearFailure = async (reason: string) => {
+      if (linearFailureNotified) {
+        return;
+      }
+      if (!(input.linear?.sessionId && input.authzLinear)) {
+        return;
+      }
+      linearFailureNotified = true;
+      const resolvedRunId =
+        runId ?? executorRunId ?? input.runId ?? "unassigned";
+      try {
+        await finalizeLinearFailure({
+          runId: resolvedRunId,
+          reason,
+          linear: input.linear,
+          authz: input.authzLinear,
+          workflowUrl: workflowUrlFor(resolvedRunId),
+        });
+      } catch (error) {
+        logger.warn("linear_failure_notification_failed", {
+          runId: resolvedRunId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
 
     const refreshPreferences = (reason: string) =>
       callbacks.triggerPreferenceRefresh(session.user.id, { reason });
@@ -284,6 +350,7 @@ export async function orchestrateWorkflowStream(
           error: error instanceof Error ? error.message : String(error),
         });
       }
+      await notifyLinearFailure("workflow_cancelled");
       if (!timerClosed) {
         recordEvent("cancel");
         closeTimer("cancel");
@@ -396,6 +463,7 @@ export async function orchestrateWorkflowStream(
         history,
         callbacks.context?.runtimeContext
       );
+      executorRunId = executor.runId;
 
       if (input.runId) {
         runId = input.runId;
@@ -744,7 +812,7 @@ export async function orchestrateWorkflowStream(
       if (input.linear?.sessionId && input.authzLinear) {
         await finalizeLinearSuccess({
           runId: runId ?? executor.runId,
-          finalMessage: null,
+          finalMessage: "Workflow completed successfully.",
           reviewChecks: reviewGate.summary(),
           linear: input.linear,
           authz: input.authzLinear,
@@ -758,6 +826,9 @@ export async function orchestrateWorkflowStream(
         await markCancelled();
         return;
       }
+      await notifyLinearFailure(
+        error instanceof Error ? error.message : String(error)
+      );
       recordEvent("error");
       closeTimer("error");
       if (runId) {
@@ -832,5 +903,22 @@ function buildLinearCompletionComment(args: {
     lines.push("Review checks: not required.");
   }
 
+  return lines.join("\n");
+}
+
+function buildLinearFailureComment(args: {
+  runId: string;
+  reason: string;
+  workflowUrl: string | null;
+}): string {
+  const lines: string[] = [`Workflow run ${args.runId} failed.`];
+  if (args.workflowUrl) {
+    lines.push(`Run details: ${args.workflowUrl}`);
+  }
+  const trimmedReason = args.reason?.trim();
+  if (trimmedReason) {
+    lines.push(`Reason: ${trimmedReason}`);
+  }
+  lines.push("Review the run log, address the failure, and re-run when ready.");
   return lines.join("\n");
 }

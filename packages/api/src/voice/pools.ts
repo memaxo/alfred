@@ -29,16 +29,15 @@ export async function initializeVoicePools(): Promise<void> {
     return;
   }
 
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
+  const rawProvider = (process.env.VOICE_PROVIDER ?? "maya1").toLowerCase();
+  const voiceProvider =
+    rawProvider === "supertonic" ? "supertonic" : "maya1";
+  process.env.VOICE_PROVIDER = voiceProvider;
 
-  if (voiceProvider !== "local" && voiceProvider !== "supertonic") {
-    // OpenAI provider - pools not needed
-    return;
-  }
-
-  // If VOICE_PROVIDER is supertonic, force TTS_PROVIDER to supertonic
   if (voiceProvider === "supertonic") {
     process.env.TTS_PROVIDER = "supertonic";
+  } else if (!process.env.TTS_PROVIDER) {
+    process.env.TTS_PROVIDER = "maya1";
   }
 
   const whisperModelPath =

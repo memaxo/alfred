@@ -8,7 +8,7 @@ Ensure the native mobile app's offline/retry queue (`VoiceQueue`) functions corr
 2.  **Test Cases**:
     *   **Offline Queueing**: Simulate network failure/model unavailability and verify requests are persisted to `AsyncStorage`.
     *   **Retry Logic**: Trigger a "reconnect" event and verify queued items are processed in order.
-    *   **Provider Fallback**: (If applicable) Verify that if `local` fails, it doesn't blindly retry against `openai` unless configured, or vice-versa.
+    *   **Provider Fallback**: Ensure retries stay within the configured local stack (`local` or `supertonic`)—no cloud fallback.
     *   **TTL/Expiry**: Verify that stale voice requests (older than 5 mins) are discarded.
 
 ## Outcomes & Retrospective

@@ -10,11 +10,12 @@ export class ReviewGate {
   private readonly checks = new Map<string, ReviewCheckStatus>();
   private planInitialized = false;
   private planRequired = false;
+  private minimumRequired = 0;
 
   applyPlan(plan: { checks?: Array<{ id?: string; type?: string }> }): void {
     const items = Array.isArray(plan.checks) ? plan.checks : [];
     this.planInitialized = true;
-    this.planRequired = items.length > 0;
+    this.planRequired = items.length > 0 || this.minimumRequired > 0;
     for (const item of items) {
       const id = typeof item.id === "string" && item.id.length > 0
         ? item.id
@@ -86,11 +87,32 @@ export class ReviewGate {
     }
   }
 
+  requireAtLeast(count: number): void {
+    if (count <= 0) {
+      return;
+    }
+    this.minimumRequired = Math.max(this.minimumRequired, count);
+    if (!this.planInitialized) {
+      this.planRequired = true;
+    } else if (this.checks.size < this.minimumRequired) {
+      this.planRequired = true;
+    }
+  }
+
   isSatisfied(): boolean {
     if (!this.planRequired) {
       return true;
     }
     if (this.checks.size === 0) {
+      return false;
+    }
+    if (this.minimumRequired > 0 && this.checks.size < this.minimumRequired) {
+      return false;
+    }
+    const passed = Array.from(this.checks.values()).filter(
+      (check) => check.status === "passed"
+    ).length;
+    if (this.minimumRequired > 0 && passed < this.minimumRequired) {
       return false;
     }
     for (const check of this.checks.values()) {

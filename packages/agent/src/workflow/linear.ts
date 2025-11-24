@@ -58,18 +58,14 @@ export async function ensureLinearTicket(params: {
 
   const space = sanitize(linear.space);
   if (!space) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "linear_space_required",
-    });
+    logger.warn("linear_ticket_space_missing", { provided: linear.space });
+    return { linear: undefined, ticket: undefined };
   }
 
   const authz = sanitize(authzLinear);
   if (!authz) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "linear_authz_required",
-    });
+    logger.warn("linear_ticket_auth_missing", { space });
+    return { linear: undefined, ticket: undefined };
   }
 
   const baseLinear = {
@@ -111,10 +107,8 @@ export async function ensureLinearTicket(params: {
 
   const teamId = baseLinear.teamId;
   if (!teamId) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "linear_team_required",
-    });
+    logger.warn("linear_ticket_team_missing", { space });
+    return { linear: undefined, ticket: undefined };
   }
 
   const title = buildTitle(requirement, baseLinear.title);

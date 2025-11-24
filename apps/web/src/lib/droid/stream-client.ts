@@ -32,6 +32,20 @@ export type DroidStreamOptions = {
   onComplete?: () => void;
 };
 
+type DroidStreamTestHarness = {
+  subscribe: (options: DroidStreamOptions) => { unsubscribe: () => void };
+};
+
+function getTestHarness(): DroidStreamTestHarness | null {
+  if (typeof globalThis === "undefined") {
+    return null;
+  }
+  const scope = globalThis as {
+    __droidStreamTestHarness__?: DroidStreamTestHarness;
+  };
+  return scope.__droidStreamTestHarness__ ?? null;
+}
+
 export function subscribeToDroidStream({
   input,
   client,
@@ -41,6 +55,18 @@ export function subscribeToDroidStream({
   onError,
   onComplete,
 }: DroidStreamOptions) {
+  const harness = getTestHarness();
+  if (harness) {
+    return harness.subscribe({
+      input,
+      client,
+      onObligation,
+      onResume,
+      onEvent,
+      onError,
+      onComplete,
+    });
+  }
   const observable = client.droid.stream.subscribe(input);
   return observable.subscribe({
     next(event) {
@@ -70,6 +96,13 @@ export function subscribeToDroidStream({
       onComplete?.();
     },
   } as Subscriber<RawDroidStreamEvent>);
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __droidStreamTestHarness__:
+    | DroidStreamTestHarness
+    | undefined;
 }
 
 function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {

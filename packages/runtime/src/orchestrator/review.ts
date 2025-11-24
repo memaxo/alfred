@@ -77,7 +77,7 @@ async function appendReviewOutcome(
   const before = content.slice(0, idx + marker.length);
   const after = content.slice(idx + marker.length);
   const entry = `\n\n- ${message}\n`;
-  await fs.writeFile(before + entry + after, "utf8");
+  await fs.writeFile(filePath, before + entry + after, "utf8");
 }
 
 async function appendReviewDecision(filePath: string, entry: string) {
@@ -90,7 +90,7 @@ async function appendReviewDecision(filePath: string, entry: string) {
   const before = content.slice(0, idx + marker.length);
   const after = content.slice(idx + marker.length);
   const logEntry = `\n\n- ${entry}\n`;
-  await fs.writeFile(before + logEntry + after, "utf8");
+  await fs.writeFile(filePath, before + logEntry + after, "utf8");
 }
 
 async function createDebuggerExecPlan(
@@ -164,6 +164,20 @@ export async function* runReviewPhase(
     files: mergePlan.expectedFiles ?? [],
     summary: mergePlan.summary,
   });
+
+  if (
+    (!reviewPlan.checks || reviewPlan.checks.length === 0) &&
+    ctx.input.linear?.sessionId
+  ) {
+    reviewPlan.checks = [
+      {
+        id: "linear-default-tests",
+        type: "tests",
+        description:
+          "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
+      },
+    ];
+  }
 
   const reviewExecPlanPath = await ensureReviewExecPlan(runId, reviewPlan);
 

@@ -1,6 +1,6 @@
 # Speech-to-Speech (S2S) Quick Start
 
-This guide explains how to run the end-to-end speech-to-speech pipeline across providers (OpenAI vs local Faster-Whisper/Piper) and across surfaces (web, native Drive Mode, CarPlay). Pair this with `docs/voice/streaming.md` if you need the streaming prototype.
+This guide explains how to run the end-to-end speech-to-speech pipeline across the local model stacks (Maya1 vs Supertonic) and across surfaces (web, native Drive Mode, CarPlay). Pair this with `docs/voice/streaming.md` if you need the streaming prototype.
 
 ## Prerequisites
 
@@ -16,8 +16,7 @@ This guide explains how to run the end-to-end speech-to-speech pipeline across p
 
 | Variable | Description |
 | --- | --- |
-| `VOICE_PROVIDER` | `openai` (default) or `local` |
-| `OPENAI_API_KEY` | Required for OpenAI STT/TTS |
+| `VOICE_PROVIDER` | `maya1` (default) or `supertonic` (lightweight ONNX TTS) |
 | `WHISPER_MODEL_PATH` | Faster-Whisper model path (local) |
 | `PIPER_MODEL_PATH` / `PIPER_VOICE` | Piper model + voice |
 | `VOICE_FFMPEG_PATH` | Optional path override for `ffmpeg` |
@@ -47,9 +46,8 @@ The script downloads `large-v3-turbo` for Faster-Whisper and `en_US-lessac-mediu
 
 ```bash
 cd packages/api
-VOICE_PROVIDER=openai bun dev            # OpenAI path
-VOICE_PROVIDER=local bun dev             # Local path
-VOICE_PROVIDER=local \
+VOICE_PROVIDER=maya1 bun dev
+VOICE_PROVIDER=maya1 \
   VOICE_STREAMING_PROTO=1 \
   VOICE_STREAMING_PORT=8788 \
   bun dev                                # Local + streaming prototype
@@ -123,7 +121,7 @@ You should see `partial_transcript`, `vad_state`, and `final_transcript` events 
 
 - `bun test test/session.core.test.ts` (packages/voice) – shared session core.
 - `bun test test/voice.s2s.test.ts` (packages/api) – S2S mutation.
-- Drive Mode or CarPlay returns a spoken reply with `VOICE_PROVIDER=openai` and `VOICE_PROVIDER=local`.
+- Drive Mode or CarPlay returns a spoken reply with `VOICE_PROVIDER=maya1` (default) and `VOICE_PROVIDER=supertonic` (optional ONNX path).
 - `/voice-s2s` route in the web app records, transcribes, and plays a reply.
 - (Optional) streaming prototype returns `partial_transcript` events while audio chunks are in flight.
 - `bun test packages/api/test/voice.streaming.test.ts` – streaming auth/policy helper.

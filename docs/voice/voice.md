@@ -7,7 +7,7 @@ This reference documents the backend voice endpoints exposed via the `voiceRoute
 
 ## speechToSpeech mutation
 
-`voice.speechToSpeech` orchestrates STT → assistant → TTS. It is exported as a tRPC mutation and is also reachable over HTTP POST at `/trpc/voice.speechToSpeech`. The server handles provider selection (`VOICE_PROVIDER=openai|local`), codec normalization, policy checks, and metrics.
+`voice.speechToSpeech` orchestrates STT → assistant → TTS. It is exported as a tRPC mutation and is also reachable over HTTP POST at `/trpc/voice.speechToSpeech`. The server handles provider selection (`VOICE_PROVIDER=local|supertonic`), codec normalization, policy checks, and metrics.
 
 ### Request shape
 
@@ -16,10 +16,10 @@ This reference documents the backend voice endpoints exposed via the `voiceRoute
 | `audioBase64` | string | Required. Base64 audio payload captured on the client. Containers such as WebM/Opus, MP3, WAV, or PCM are accepted. |
 | `mimeType` | string | Required. Accurate MIME type for the encoded audio (e.g., `audio/webm;codecs=opus`). Used for codec detection before ffmpeg decoding. |
 | `language` | string? | Optional ISO code forwarded to STT. Defaults to `en`. |
-| `prompt` | string? | Optional system hint for STT (passed to Faster-Whisper/OpenAI). |
+| `prompt` | string? | Optional system hint for STT (passed to Faster-Whisper). |
 | `thread` | string? | Optional thread identifier. Defaults to `voice:${userId}` when omitted. |
 | `resource` | string? | Optional resource identifier for policy logging; mirrors `thread` by default. |
-| `ttsVoice` | string? | Optional override for TTS voice (e.g., `alloy`, `M1`). For Supertonic, use `M1`, `M2`, `F1`, `F2`. |
+| `ttsVoice` | string? | Optional override for TTS voice (e.g., `en_US-lessac-medium`, `M1`). For Supertonic, use `M1`, `M2`, `F1`, `F2`. |
 | `ttsFormat` | `"mp3" | "opus" | "wav"`? | Optional output format. If omitted, defaults to `mp3`. |
 | `model` | string? | Optional LLM model override. Uses assistant defaults when unset. |
 
@@ -57,7 +57,7 @@ curl \
   -X POST "http://localhost:3000/trpc/voice.speechToSpeech" \
   -H "Content-Type: application/json" \
   -H "Cookie: <session cookies>" \
-  --data '{"0":{"json":{"audioBase64":"<...>","mimeType":"audio/webm;codecs=opus","thread":"drive-mode","ttsVoice":"alloy"}}}'
+--data '{"0":{"json":{"audioBase64":"<...>","mimeType":"audio/webm;codecs=opus","thread":"drive-mode","ttsVoice":"en_US-lessac-medium"}}}'
 ```
 
 ### Observability
@@ -70,7 +70,7 @@ curl \
 
 | Command | Coverage |
 | --- | --- |
-| `bun test packages/api/test/voice.s2s.test.ts` | Mutation orchestration + error handling (OpenAI-mocked). |
+| `bun test packages/api/test/voice.s2s.test.ts` | Mutation orchestration + error handling (local pools mocked). |
 | `bun test apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx` | Web adapter calling the mutation and auto-playing the response. |
 | `bun test apps/web/src/routes/__tests__/voice-s2s.route.test.tsx` | UI integration around `useVoiceSessionWeb`. |
 | `bun test apps/native/lib/voice/__tests__/queue.test.ts` | Drive Mode queue drain replaying `speechToSpeech` jobs. |
@@ -89,4 +89,3 @@ curl \
 - **Supertonic (Optional):** Set `TTS_PROVIDER=supertonic` for lightweight on-device TTS. Run `bun run download-supertonic` in `packages/voice`.
 - `ffmpeg` available on `$PATH` or via `VOICE_FFMPEG_PATH` for codec conversion.
 - See `docs/voice/s2s.md` for installation details and `docs/reference/native/voice.md` for Drive Mode specifics.
-

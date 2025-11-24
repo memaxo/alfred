@@ -1,6 +1,10 @@
 import { spawn } from "bun";
 import { z } from "zod";
 
+function tmuxDisabled() {
+  return process.env.ORCH_TMUX_DISABLED === "1";
+}
+
 export const sessionInputSchema = z.object({
   action: z.enum(["start", "stop", "list", "peek", "send"]),
   sessionId: z.string().min(1).max(50),
@@ -12,21 +16,53 @@ export const sessionInputSchema = z.object({
 export type SessionToolInput = z.infer<typeof sessionInputSchema>;
 
 async function runTmux(args: string[]) {
-  const tmux = "tmux"; // Assumed available from check
-  const proc = spawn([tmux, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
+  if (tmuxDisabled()) {
+    throw new Error("tmux_disabled");
+  }
+
+  const tmux = "tmux";
+  let proc;
+  try {
+    proc = spawn([tmux, ...args], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+  } catch (error) {
+    throw new Error(
+      `tmux_spawn_failed: ${(error as NodeJS.ErrnoException).message}`
+    );
+  }
+
+  const stdout = proc.stdout
+    ? await new Response(proc.stdout).text()
+    : "";
+  const stderr = proc.stderr
+    ? await new Response(proc.stderr).text()
+    : "";
+
+  const exitCode = await proc.exited.catch((error) => {
+    throw new Error(
+      `tmux_exec_failed: ${(error as NodeJS.ErrnoException).message}`
+    );
   });
 
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-
   if (exitCode !== 0) {
-    throw new Error(`tmux failed: ${stderr || stdout}`);
+    throw new Error(`tmux_failed: ${stderr || stdout || "unknown error"}`);
   }
+
   return stdout.trim();
 }
+
+let runTmuxHandler = runTmux;
+
+export const __sessionInternals = {
+  setRunner(replacement: typeof runTmux) {
+    runTmuxHandler = replacement;
+  },
+  resetRunner() {
+    runTmuxHandler = runTmux;
+  },
+};
 
 export const toolSession = {
   name: "session",
@@ -49,7 +85,7 @@ export const toolSession = {
         // Create detached session
         // -d: detached
         // -s: session name
-        await runTmux(["new-session", "-d", "-s", sessionId, input.command]);
+        await runTmuxHandler(["new-session", "-d", "-s", sessionId, input.command]);
         return {
           ok: true,
           output: `Session ${sessionId} started with: ${input.command}`,
@@ -58,13 +94,17 @@ export const toolSession = {
 
       case "stop": {
         // Kill session
-        await runTmux(["kill-session", "-t", sessionId]);
+        await runTmuxHandler(["kill-session", "-t", sessionId]);
         return { ok: true, output: `Session ${sessionId} stopped` };
       }
 
       case "list": {
         try {
-          const out = await runTmux(["list-sessions", "-F", "#{session_name}"]);
+          const out = await runTmuxHandler([
+            "list-sessions",
+            "-F",
+            "#{session_name}",
+          ]);
           return { ok: true, sessions: out.split("\n").filter(Boolean) };
         } catch (_e) {
           // If no sessions, tmux returns error 1
@@ -77,7 +117,7 @@ export const toolSession = {
         // Capture pane content
         // -p: output to stdout
         // -t: target session
-        const out = await runTmux([
+        const out = await runTmuxHandler([
           "capture-pane",
           "-t",
           sessionId,
@@ -99,7 +139,7 @@ export const toolSession = {
         // Better to be explicit or send "C-m" (Carriage Return)
 
         // Naive implementation: send text then Enter
-        await runTmux(["send-keys", "-t", sessionId, input.text, "C-m"]);
+        await runTmuxHandler(["send-keys", "-t", sessionId, input.text, "C-m"]);
         return { ok: true, output: `Sent input to ${sessionId}` };
       }
 

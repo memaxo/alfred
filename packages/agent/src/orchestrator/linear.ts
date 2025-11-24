@@ -311,6 +311,52 @@ export async function setLinearSessionExternalUrl(
   }
 }
 
+export async function setLinearCancelled(
+  params: LinearSessionParams
+): Promise<{ stateId: string }> {
+  const metrics = getLinearMetrics();
+  metrics.linearSessionOperationsTotal.inc({ operation: "cancelled" });
+  try {
+    const result = await pRetry(
+      async () => {
+        const input = {
+          space: params.space,
+          action: "set-cancelled" as const,
+          issueId: params.issueId,
+          authz: params.authz,
+        };
+
+        return await toolTicket.execute({ input });
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10_000,
+        factor: 2,
+        onFailedAttempt: (error) => {
+          const statusCode = (error as any)?.statusCode;
+          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            return;
+          }
+          throw new AbortError(error);
+        },
+      }
+    );
+    const resolved = result as {
+      ok: boolean;
+      id?: string;
+      stateId?: string;
+    };
+    return { stateId: resolved.stateId ?? "state_unknown" };
+  } catch (error) {
+    logger?.warn?.("linear_cancelled_failed", {
+      issueId: params.issueId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
 export function extractIssueIdFromSession(sessionId: string): string | null {
   if (!sessionId || typeof sessionId !== "string") {
     return null;
