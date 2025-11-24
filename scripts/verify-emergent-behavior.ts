@@ -1,7 +1,6 @@
-import { db } from "@alfred/db";
-import { upsertNodes, findNearestConcept } from "@alfred/db/repo/graph";
-import { embedMany } from "@alfred/rag";
 import { linkEntities } from "@alfred/agent/services/entity-linker";
+import { upsertNodes } from "@alfred/db/repo/graph";
+import { embedMany } from "@alfred/rag";
 
 async function main() {
   console.log("🔍 Verifying Emergent Behavior (Level 4)...");
@@ -10,19 +9,31 @@ async function main() {
     // 1. Setup Data
     const entity = `Verify${Date.now()}`;
     const concept = "Verification";
-    
+
     console.log(`📝 Seeding entity: ${entity} -> ${concept}`);
-    
+
     // Embed
     const embeddings = await embedMany([entity, concept]);
-    
+
     // Insert Nodes
     await upsertNodes([
-        { resource: "test", hash: `h:${entity}`, kind: "fact", label: entity, embedding: embeddings[0] },
-        { resource: "test", hash: `h:${concept}`, kind: "concept", label: concept, embedding: embeddings[1] } // Embedding allows vector match
+      {
+        resource: "test",
+        hash: `h:${entity}`,
+        kind: "fact",
+        label: entity,
+        embedding: embeddings[0],
+      },
+      {
+        resource: "test",
+        hash: `h:${concept}`,
+        kind: "concept",
+        label: concept,
+        embedding: embeddings[1],
+      }, // Embedding allows vector match
     ]);
-    
-    // Note: I'm not creating an edge because findNearestConcept can work via vector similarity 
+
+    // Note: I'm not creating an edge because findNearestConcept can work via vector similarity
     // if I modify the query to search for nearest *vectors* regardless of edges if no edges exist.
     // BUT `findNearestConcept` uses recursive CTE which traverses edges.
     // It finds start node (by label/embedding) then traverses.
@@ -43,23 +54,35 @@ async function main() {
     // "Verification" node is returned as start node.
     // It matches target concept "Verification".
     // So yes, it should work without edges if vector search works!
-    
+
     // 2. Verify Linker
     // Use a known anchor concept to pass the filter in linkEntities
     const anchorConcept = "Coding"; // Must be in ANCHORS list
     const inputEntity = "React"; // "React" -> "Frontend" -> "Coding" is in the graph from seed/tests usually
     // But let's insert explicit nodes to be safe
-    
+
     console.log(`📝 Seeding explicit path: ${entity} -> ${anchorConcept}`);
-    
+
     const anchorEmbedding = await embedMany([anchorConcept]);
-    
+
     // Upsert Anchor Node (must have embedding for vector search to find it as start node if direct match)
     const nodes = await upsertNodes([
-        { resource: "test", hash: `h:${entity}`, kind: "fact", label: entity, embedding: embeddings[0] },
-        { resource: "ontology", hash: `h:${anchorConcept.toLowerCase()}`, kind: "concept", label: anchorConcept, embedding: anchorEmbedding[0] }
+      {
+        resource: "test",
+        hash: `h:${entity}`,
+        kind: "fact",
+        label: entity,
+        embedding: embeddings[0],
+      },
+      {
+        resource: "ontology",
+        hash: `h:${anchorConcept.toLowerCase()}`,
+        kind: "concept",
+        label: anchorConcept,
+        embedding: anchorEmbedding[0],
+      },
     ]);
-    
+
     // Create edge
     // In `linkEntities`, it finds NEAREST CONCEPT.
     // If "Coding" is the nearest concept to "Verify...", it will work.
@@ -67,52 +90,67 @@ async function main() {
     // So we need a path.
     // If we use "React" input, it finds "React" node, then traverses to "Coding".
     // Let's rely on the existing graph if possible, OR insert a path.
-    
+
     // Let's try with "React" -> "Coding" directly.
     const react = "React";
     const reactEmbed = await embedMany([react]);
-    
+
     const nodeMap = await upsertNodes([
-       { resource: "ontology", hash: "h:react", kind: "fact", label: "React", embedding: reactEmbed[0] },
-       { resource: "ontology", hash: "h:coding", kind: "concept", label: "Coding", embedding: anchorEmbedding[0] }
+      {
+        resource: "ontology",
+        hash: "h:react",
+        kind: "fact",
+        label: "React",
+        embedding: reactEmbed[0],
+      },
+      {
+        resource: "ontology",
+        hash: "h:coding",
+        kind: "concept",
+        label: "Coding",
+        embedding: anchorEmbedding[0],
+      },
     ]);
-    
+
     // upsertNodes returns map of hash -> {id, ...}
     // but my mock upsertNodes might return something else?
     // Checking repo signature... `upsertNodes` returns `Map<string, NodeRow>`. Key is `${resource}:${hash}`.
-    
+
     const reactId = nodeMap.get("ontology:h:react")!.id;
     const codingId = nodeMap.get("ontology:h:coding")!.id;
-    
+
     // Create edge: React -> Coding
     // We need to import `upsertEdges`
     const { upsertEdges } = await import("@alfred/db/repo/graph");
-    
-    await upsertEdges([{
+
+    await upsertEdges([
+      {
         resource: "ontology",
         hash: "e:react-coding",
         fromId: reactId,
         toId: codingId,
-        kind: "is_a"
-    }]);
-    
+        kind: "is_a",
+      },
+    ]);
+
     console.log("🔗 Graph path seeded: React -> Coding");
 
-    const result = await linkEntities([{ role: "user", content: `I love React components.` }]);
-    
+    const result = await linkEntities([
+      { role: "user", content: "I love React components." },
+    ]);
+
     console.log("📊 Result:", JSON.stringify(result, null, 2));
-    
+
     if (result.domains.includes("Coding")) {
-        console.log("✅ SUCCESS: Entity linked to Anchor Concept!");
+      console.log("✅ SUCCESS: Entity linked to Anchor Concept!");
     } else {
-        console.error("❌ FAILURE: Failed to link 'React' to 'Coding'.");
-        process.exit(1);
+      console.error("❌ FAILURE: Failed to link 'React' to 'Coding'.");
+      process.exit(1);
     }
-    
+
     // Optional: Check metrics if possible
     // console.log("Checking metrics...");
     // But metrics registry is internal to the process. We can't check it easily from here unless we expose it.
-    
   } catch (e) {
     console.error("❌ FAILURE:", e);
     process.exit(1);

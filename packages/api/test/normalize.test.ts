@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   eventToUiMessages,
   normalizeToUiMessages,
-} from "@alfred/api/src/ai/normalize";
+} from "@alfred/agent";
 
 describe("normalizeToUiMessages (non-stream)", () => {
   it("maps text, tool-calls and tool-results", () => {
@@ -96,6 +96,21 @@ describe("eventToUiMessages (stream)", () => {
         (p: any) => p.type === "data-status" && (p as any).data?.ok === true
       )
     ).toBe(true);
+  });
+
+  it("maps data-cache-handoff to data-cache part", () => {
+    const now = new Date().toISOString();
+    const msgs = eventToUiMessages({
+      type: "data-cache-handoff",
+      receipts: {
+        summary: "Cache hit",
+        created: now,
+        code: [{ id: "code:src/app.ts", kind: "code", score: 0.9 }],
+      },
+    } as any);
+    expect(msgs).toBeTruthy();
+    const parts = msgs?.[0]?.parts ?? [];
+    expect(parts.some((p: any) => p.type === "data-cache")).toBe(true);
   });
 
   it("maps file events to file parts", () => {

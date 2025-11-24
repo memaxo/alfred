@@ -1,9 +1,9 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import { getModelSpec } from "@alfred/agent/models";
 import {
   analyzeContext,
   getPersonaInstruction,
 } from "@alfred/agent/assistant/src/adapter";
+import { getModelSpec } from "@alfred/agent/models";
 import { KnowledgeEngine } from "@alfred/runtime/engines/knowledge";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
@@ -137,9 +137,7 @@ export const assistantRouter: ReturnType<typeof router> = router({
           if (chunks.length > 0) {
             ragContext = `
 <context_documents>
-${chunks
-  .map((c) => `<document>\n${c.content}\n</document>`)
-  .join("\n")}
+${chunks.map((c) => `<document>\n${c.content}\n</document>`).join("\n")}
 </context_documents>
 Use the above context to answer the user's question if relevant.
 `;

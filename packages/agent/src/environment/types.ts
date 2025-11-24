@@ -17,6 +17,7 @@ export type Workspace = {
   readonly id: string;
   readonly kind: "host" | "worktree" | "container";
   readonly root: string; // Absolute path on HOST machine (for file ops)
+  readonly branch?: string | null; // Active git branch when applicable
 
   /**
    * Prepare the environment (e.g. git worktree add, docker run)

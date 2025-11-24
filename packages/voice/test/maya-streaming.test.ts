@@ -1,7 +1,6 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
+import type { Process } from "../src/process/base";
 import { Maya } from "../src/process/maya";
-import { Process } from "../src/process/base";
-import type { IPCResponse } from "../src/process/ipc";
 
 describe("Maya Streaming", () => {
   it("should stream audio chunks when streaming is enabled", async () => {
@@ -16,9 +15,9 @@ describe("Maya Streaming", () => {
             type: "audio",
             payload: {
               audioBase64: "chunk1",
-              sampleRate: 24000,
-              isFinal: false
-            }
+              sampleRate: 24_000,
+              isFinal: false,
+            },
           });
 
           // Emit chunk 2
@@ -27,9 +26,9 @@ describe("Maya Streaming", () => {
             type: "audio",
             payload: {
               audioBase64: "chunk2",
-              sampleRate: 24000,
-              isFinal: false
-            }
+              sampleRate: 24_000,
+              isFinal: false,
+            },
           });
 
           // Final response
@@ -38,21 +37,21 @@ describe("Maya Streaming", () => {
             type: "audio",
             payload: {
               audioBase64: "",
-              sampleRate: 24000,
-              isFinal: true
-            }
+              sampleRate: 24_000,
+              isFinal: true,
+            },
           };
         }
-        
+
         return {
           id: req.id,
           type: "audio",
           payload: {
             audioBase64: "full_audio",
-            sampleRate: 24000
-          }
+            sampleRate: 24_000,
+          },
         };
-      })
+      }),
     } as unknown as Process;
 
     const maya = new Maya(mockProcess);
@@ -61,12 +60,12 @@ describe("Maya Streaming", () => {
     const result = await maya.synthesize(
       {
         text: "Hello world",
-        streaming: true
+        streaming: true,
       },
       (chunk) => {
         chunks.push(chunk.audioBase64);
         expect(chunk.mimeType).toBe("audio/pcm");
-        expect(chunk.sampleRate).toBe(24000);
+        expect(chunk.sampleRate).toBe(24_000);
       }
     );
 
@@ -77,6 +76,6 @@ describe("Maya Streaming", () => {
     // return { audioBase64: payloadData.audioBase64 ... }
     // If the final payload has empty audioBase64 (as simulated), the result will be empty.
     // This is fine for streaming, as the consumer relies on chunks.
-    expect(result.audioBase64).toBe(""); 
+    expect(result.audioBase64).toBe("");
   });
 });

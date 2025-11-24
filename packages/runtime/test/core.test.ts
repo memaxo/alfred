@@ -51,6 +51,15 @@ describe("WorkflowRuntime", () => {
       const stepStarts = events.filter((e) => e.type === "step-start");
       const stepCompletes = events.filter((e) => e.type === "step-complete");
 
+      console.log("stepStarts phases", stepStarts.map((e: any) => e.phase));
+
+      console.log(
+        "act placeholder",
+        events.some(
+          (e) => e.type === "notice" && (e as any).message === "execution_placeholder"
+        )
+      );
+
       expect(stepStarts.length).toBe(4); // scan, plan, act, report
       expect(stepCompletes.length).toBe(4);
 

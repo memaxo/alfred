@@ -5,6 +5,7 @@ import type { Phase, PhaseResult, PipelineState } from "./types";
 export class PipelineRunner {
   private readonly state: PipelineState;
   private readonly phases: Map<string, Phase<any, any>> = new Map();
+  private readonly phaseOrder: string[] = [];
   private readonly MAX_TRANSITIONS = 50; // Safety limit for escalation loops
 
   constructor(initialState: PipelineState) {
@@ -12,8 +13,24 @@ export class PipelineRunner {
   }
 
   register<I, O>(phase: Phase<I, O>): this {
+    if (this.phases.has(phase.id)) {
+      // Replace existing registration while preserving order semantics
+      const existingIndex = this.phaseOrder.indexOf(phase.id);
+      if (existingIndex >= 0) {
+        this.phaseOrder.splice(existingIndex, 1);
+      }
+    }
     this.phases.set(phase.id, phase);
+    this.phaseOrder.push(phase.id);
     return this;
+  }
+
+  private nextPhaseId(currentPhaseId: string): string | null {
+    const idx = this.phaseOrder.indexOf(currentPhaseId);
+    if (idx === -1) {
+      return null;
+    }
+    return this.phaseOrder[idx + 1] ?? null;
   }
 
   /**
@@ -35,6 +52,8 @@ export class PipelineRunner {
       if (!phase) {
         throw new Error(`Phase not found: ${phaseId}`);
       }
+
+      this.state.currentPhaseId = phaseId;
 
       logger.info("pipeline_phase_start", { phaseId });
       yield { type: "step-start", phase: phaseId } as any;
@@ -63,8 +82,12 @@ export class PipelineRunner {
         if (result.status === "success") {
           logger.info("pipeline_phase_success", { phaseId });
           yield { type: "step-complete", phase: phaseId } as any;
-          // Pipeline success (for now, terminate)
-          return;
+          const nextId = this.nextPhaseId(phaseId);
+          if (!nextId) {
+            return;
+          }
+          phaseId = nextId;
+          continue;
         }
         if (result.status === "failure") {
           logger.error("pipeline_phase_failure", {
@@ -83,6 +106,7 @@ export class PipelineRunner {
           if (result.targetPhase) {
             phaseId = result.targetPhase;
             // TODO: Input transformation?
+            this.state.currentPhaseId = phaseId;
           } else {
             throw new Error(
               `Escalation without target from ${phaseId}: ${result.reason}`

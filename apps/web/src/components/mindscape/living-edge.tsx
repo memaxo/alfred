@@ -1,4 +1,4 @@
-import { BaseEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, type EdgeProps, getSmoothStepPath } from "@xyflow/react";
 import { useMindscapeStore } from "@/store/mindscape";
 
 export function LivingEdge({
@@ -22,7 +22,9 @@ export function LivingEdge({
   });
 
   const activeEdges = useMindscapeStore((state) => state.activeEdges);
-  const highlightedEdgeIds = useMindscapeStore((state) => state.highlightedEdgeIds);
+  const highlightedEdgeIds = useMindscapeStore(
+    (state) => state.highlightedEdgeIds
+  );
   const isActive = activeEdges.has(id);
   const isHighlighted = highlightedEdgeIds.has(id);
 
@@ -36,7 +38,7 @@ export function LivingEdge({
     stroke = "#818cf8"; // Indigo-400
     strokeWidth = 1.5;
     // Use existing 'flow' animation but slower for context trace
-    animation = "flow 2s linear infinite"; 
+    animation = "flow 2s linear infinite";
     strokeDasharray = "5 5";
   }
 
@@ -61,17 +63,19 @@ export function LivingEdge({
       {/* Glow effect behind the edge when active or highlighted */}
       {(isActive || isHighlighted) && (
         <BaseEdge
-          path={edgePath}
           markerEnd={markerEnd}
+          path={edgePath}
           style={{
             ...style,
             strokeWidth: isActive ? 6 : 4,
-            stroke: isActive ? "oklch(0.99 0 0 / 0.3)" : "rgba(129, 140, 248, 0.3)", // White glow or Indigo glow
+            stroke: isActive
+              ? "oklch(0.99 0 0 / 0.3)"
+              : "rgba(129, 140, 248, 0.3)", // White glow or Indigo glow
             filter: "blur(4px)",
           }}
         />
       )}
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={edgeStyle} />
+      <BaseEdge markerEnd={markerEnd} path={edgePath} style={edgeStyle} />
     </>
   );
 }

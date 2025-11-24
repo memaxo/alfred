@@ -36,10 +36,7 @@ const mockTtsPool = {
   },
 };
 
-const registry = new VoiceRegistry(
-  mockSttPool as any,
-  mockTtsPool as any
-);
+const registry = new VoiceRegistry(mockSttPool as any, mockTtsPool as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8899;
@@ -98,7 +95,7 @@ describe("Latency Benchmark", () => {
         },
         onError: (err) => {
           console.error("Client error:", err);
-        }
+        },
       }
     );
 

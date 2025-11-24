@@ -124,7 +124,11 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
     return (
       <NodeLODTiny
         color={status === "running" ? "bg-biolum" : "bg-biolum-dim"}
-        shadow={status === "running" ? "shadow-[0_0_8px_rgba(var(--biolum-rgb),1)] animate-pulse" : "shadow-biolum-dim/50"}
+        shadow={
+          status === "running"
+            ? "shadow-[0_0_8px_rgba(var(--biolum-rgb),1)] animate-pulse"
+            : "shadow-biolum-dim/50"
+        }
       />
     );
   }
@@ -133,11 +137,17 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={validatedData.label ?? "Workflow"}
-        icon={status === "running" ? <Workflow className="h-3 w-3 animate-spin" /> : <Workflow className="h-3 w-3" />}
         borderColor="border-biolum/20"
-        textColor="text-biolum"
         hoverColor="hover:border-biolum/40"
+        icon={
+          status === "running" ? (
+            <Workflow className="h-3 w-3 animate-spin" />
+          ) : (
+            <Workflow className="h-3 w-3" />
+          )
+        }
+        label={validatedData.label ?? "Workflow"}
+        textColor="text-biolum"
       />
     );
   }

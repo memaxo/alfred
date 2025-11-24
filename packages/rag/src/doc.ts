@@ -29,7 +29,9 @@ const defaultEmbeddingProvider: EmbeddingProvider = {
 
 let embeddingProvider: EmbeddingProvider = defaultEmbeddingProvider;
 
-export function setEmbeddingProvider(provider?: EmbeddingProvider | null): void {
+export function setEmbeddingProvider(
+  provider?: EmbeddingProvider | null
+): void {
   embeddingProvider = provider ?? defaultEmbeddingProvider;
 }
 

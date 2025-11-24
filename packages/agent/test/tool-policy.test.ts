@@ -1,7 +1,10 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test";
-import * as path from "node:path";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import * as fs from "node:fs";
-import { assertAllowedDirectory, enforcePolicy } from "../src/orchestrator/tool/codex/policy";
+import * as path from "node:path";
+import {
+  assertAllowedDirectory,
+  enforcePolicy,
+} from "../src/orchestrator/tool/codex/policy";
 
 // Mock @alfred/auth/token
 const mockRequireToolScopesAndPolicy = mock();
@@ -15,7 +18,9 @@ describe("Tool Policy & Security", () => {
     const tempDir = path.join(cwd, "tmp-policy-test");
 
     beforeEach(() => {
-      try { fs.mkdirSync(tempDir, { recursive: true }); } catch {}
+      try {
+        fs.mkdirSync(tempDir, { recursive: true });
+      } catch {}
     });
 
     it("allows CWD", () => {
@@ -29,21 +34,27 @@ describe("Tool Policy & Security", () => {
 
     it("throws for path outside allowed prefixes", () => {
       // /tmp is usually not in CWD (on Mac/Linux) unless CWD IS /tmp
-      const outside = "/tmp"; 
+      const outside = "/tmp";
       // Only run if /tmp is actually outside CWD
       if (!outside.startsWith(cwd)) {
-        expect(() => assertAllowedDirectory(outside)).toThrow("codex_invalid_cwd");
+        expect(() => assertAllowedDirectory(outside)).toThrow(
+          "codex_invalid_cwd"
+        );
       }
     });
 
     it("throws for non-existent path", () => {
       const nonExistent = path.join(cwd, "non-existent-folder-12345");
-      expect(() => assertAllowedDirectory(nonExistent)).toThrow("codex_invalid_cwd");
+      expect(() => assertAllowedDirectory(nonExistent)).toThrow(
+        "codex_invalid_cwd"
+      );
     });
-    
+
     it("throws for file path (must be directory)", () => {
-        const file = path.join(cwd, "package.json");
-        expect(() => assertAllowedDirectory(file)).toThrow("codex_invalid_cwd_not_directory");
+      const file = path.join(cwd, "package.json");
+      expect(() => assertAllowedDirectory(file)).toThrow(
+        "codex_invalid_cwd_not_directory"
+      );
     });
   });
 
@@ -59,16 +70,18 @@ describe("Tool Policy & Security", () => {
           sub: "test",
           scopes: ["droid.exec"],
           elevated: false,
-          mfa: "none"
-        }
+          mfa: "none",
+        },
       });
 
-      await expect(enforcePolicy({
-        action: "exec",
-        prompt: "ls",
-        auto: "low",
-        authz: "Bearer valid"
-      } as any)).resolves.toBeUndefined();
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "ls",
+          auto: "low",
+          authz: "Bearer valid",
+        } as any)
+      ).resolves.toBeUndefined();
     });
 
     it("throws if authz is missing", async () => {
@@ -76,12 +89,14 @@ describe("Tool Policy & Security", () => {
         throw new Error("unauthorized");
       });
 
-      await expect(enforcePolicy({
-        action: "exec",
-        prompt: "ls",
-        auto: "low"
-        // no authz
-      } as any)).rejects.toThrow("unauthorized");
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "ls",
+          auto: "low",
+          // no authz
+        } as any)
+      ).rejects.toThrow("unauthorized");
     });
 
     it("throws for high autonomy without elevation/MFA", async () => {
@@ -91,16 +106,18 @@ describe("Tool Policy & Security", () => {
           sub: "test",
           scopes: ["droid.exec"],
           elevated: false,
-          mfa: "none"
-        }
+          mfa: "none",
+        },
       });
 
-      await expect(enforcePolicy({
-        action: "exec",
-        prompt: "rm -rf",
-        auto: "high",
-        authz: "Bearer valid"
-      } as any)).rejects.toThrow("biometric_required");
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "rm -rf",
+          auto: "high",
+          authz: "Bearer valid",
+        } as any)
+      ).rejects.toThrow("biometric_required");
     });
 
     it("passes for high autonomy with elevation and MFA", async () => {
@@ -110,16 +127,18 @@ describe("Tool Policy & Security", () => {
           sub: "test",
           scopes: ["droid.exec"],
           elevated: true,
-          mfa: "passkey"
-        }
+          mfa: "passkey",
+        },
       });
 
-      await expect(enforcePolicy({
-        action: "exec",
-        prompt: "rm -rf",
-        auto: "high",
-        authz: "Bearer valid"
-      } as any)).resolves.toBeUndefined();
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "rm -rf",
+          auto: "high",
+          authz: "Bearer valid",
+        } as any)
+      ).resolves.toBeUndefined();
     });
   });
 });

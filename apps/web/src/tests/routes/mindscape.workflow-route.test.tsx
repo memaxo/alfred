@@ -86,6 +86,7 @@ describe("Mindscape → Workflow navigation", () => {
       focusedNodeId: null,
       ragDocCache: {},
       ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
+      contextCache: {},
     }));
   });
 
@@ -118,6 +119,7 @@ describe("Mindscape → Workflow navigation", () => {
         },
       ],
       focusedNodeId: runtimeNodeId,
+      contextCache: {},
     }));
 
     const handlers: TestTrpcHandlers = {

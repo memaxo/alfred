@@ -4,6 +4,17 @@
 
 When writing complex features or significant refactors, use an ExecPlan (as described in `.agent/PLANS.md`) from design to implementation. Create or refresh the plan before beginning, and maintain it as a living document by updating the `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections so a newcomer can complete the effort unaided.
 
+## Scope Clarity
+
+1. Always state whether a change targets ALFRED itself or the applications ALFRED generates so the two domains stay distinct in docs, plans, and code.
+2. When describing workflows or runtime behavior, separate instructions for building ALFRED from steps ALFRED executes for end users, using explicit labels or sections.
+
+## Workflow Runtime
+
+1. Every workflow pipeline or orchestrator change must include tests that cover normal success, escalation, and MAX_TRANSITIONS safeguards so regressions surface immediately.
+2. Phases that generate ExecPlan metadata must persist the root plan and every subtask skeleton under `.agent/plans/<runId>` before any agent launches.
+3. Runtime components that observe agent progress must append Progress and Decision Log entries directly to the relevant ExecPlan files so humans can resume from the plan alone.
+
 ## Deletion Safeguards
 
 1. **Explicit deletion approval.** Never delete, rename to remove, or otherwise remove repository files, directories, or tracked artifacts unless the user explicitly instructs you to do so in this session. When a task appears to require removing something, pause and ask for confirmation instead. Honor existing untracked files; do not delete them unless the user orders it. Document any user-approved deletions in the final response.

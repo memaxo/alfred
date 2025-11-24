@@ -1,3 +1,4 @@
+import { getAssistantAgentDefaults } from "@alfred/agent";
 import {
   startCompressionWorker,
   stopCompressionWorker,
@@ -7,7 +8,6 @@ import {
   startLearningWorker,
   stopLearningWorker,
 } from "@alfred/agent/orchestrator/learning-worker";
-import { getAssistantAgentDefaults } from "@alfred/agent";
 import { logger } from "@alfred/logger";
 import { resumeInterruptedPlans } from "@alfred/runtime";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";

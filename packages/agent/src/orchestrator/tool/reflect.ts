@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve, join } from "node:path";
 import { exec } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { z } from "zod";
 
 const execAsync = promisify(exec);
 
@@ -52,7 +52,7 @@ async function getTargetFile(domain?: string) {
     if (DOMAIN_MAP[lower]) {
       filename = DOMAIN_MAP[lower];
     } else {
-      // Try to find a matching file by prefix or keyword if needed, 
+      // Try to find a matching file by prefix or keyword if needed,
       // but for now default to 99-learned if no explicit map.
     }
   }
@@ -65,31 +65,32 @@ async function appendRule(filePath: string, rules: string[]) {
   try {
     content = await readFile(filePath, "utf-8");
   } catch {
-    content = `# Learned Rules\n\n`;
+    content = "# Learned Rules\n\n";
   }
 
-  // Simple append for MVP. 
-  // In a real implementation, we might want to parse the markdown 
+  // Simple append for MVP.
+  // In a real implementation, we might want to parse the markdown
   // and insert logically, or use an LLM to merge.
-  const newContent = rules.map(r => `- ${r}`).join("\n");
-  
+  const newContent = rules.map((r) => `- ${r}`).join("\n");
+
   // Ensure we don't duplicate exactly
   if (!content.includes(newContent)) {
     // Add a header if it's a fresh section
     if (!content.includes("## Learned Rules")) {
-       content += `\n\n## Learned Rules\n`;
+      content += "\n\n## Learned Rules\n";
     }
     content += `\n${newContent}`;
     await writeFile(filePath, content, "utf-8");
     return true;
   }
-  
+
   return false;
 }
 
 export const toolReflect = {
   name: "reflect",
-  description: "Reflect on task execution and codify learnings into the project rulebook.",
+  description:
+    "Reflect on task execution and codify learnings into the project rulebook.",
   inputSchema: reflectInputSchema,
   outputSchema: z.object({
     success: z.boolean(),

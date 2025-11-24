@@ -1,5 +1,5 @@
+import { createHash } from "node:crypto";
 import { db } from "@alfred/db";
-import { logger } from "@alfred/logger";
 import {
   archiveNodes,
   deleteArchivedNodes,
@@ -13,9 +13,9 @@ import { workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import { knowledgeHash } from "@alfred/knowledge/hypergraph";
 import { getOntologyKnowledge } from "@alfred/knowledge/ontology";
+import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { createHash } from "node:crypto";
 
 // Mock metrics if package not available (for tests or circular dep avoidance)
 const mockHistogram = { startTimer: () => () => {} };
@@ -34,7 +34,7 @@ const loadMetrics = async () => {
   // might not set it consistently across all environments, or we might WANT to test metrics.
   // Instead, we wrap the import in a try/catch block which is sufficient safety.
   try {
-    // @ts-ignore
+    // @ts-expect-error
     const apiMetrics = await import("@alfred/api/metrics");
     if (apiMetrics.memoryMaintenanceDurationSeconds) {
       metrics = apiMetrics;
@@ -74,16 +74,30 @@ const DEFAULT_CONFIG: LearningWorkerConfig = {
   batchSize: 5,
   // Memory Maintenance
   decayEnabled: process.env.MEMORY_DECAY_ENABLED !== "false",
-  maintenanceIntervalMs: parseInt(process.env.MEMORY_DECAY_INTERVAL_MS || "3600000", 10), // 1 hour
-  decayThresholdMs: parseInt(process.env.MEMORY_DECAY_THRESHOLD_MS || "86400000", 10), // 24 hours
-  decayFactor: parseFloat(process.env.MEMORY_DECAY_FACTOR || "0.95"), // Reduce by 5%
-  pruneConfidence: parseFloat(process.env.MEMORY_PRUNE_CONFIDENCE || "0.2"), // Prune < 20%
-  cleanupAgeMs: parseInt(process.env.MEMORY_CLEANUP_AGE_MS || "2592000000", 10), // 30 days
+  maintenanceIntervalMs: Number.parseInt(
+    process.env.MEMORY_DECAY_INTERVAL_MS || "3600000",
+    10
+  ), // 1 hour
+  decayThresholdMs: Number.parseInt(
+    process.env.MEMORY_DECAY_THRESHOLD_MS || "86400000",
+    10
+  ), // 24 hours
+  decayFactor: Number.parseFloat(process.env.MEMORY_DECAY_FACTOR || "0.95"), // Reduce by 5%
+  pruneConfidence: Number.parseFloat(
+    process.env.MEMORY_PRUNE_CONFIDENCE || "0.2"
+  ), // Prune < 20%
+  cleanupAgeMs: Number.parseInt(
+    process.env.MEMORY_CLEANUP_AGE_MS || "2592000000",
+    10
+  ), // 30 days
   decayLimit: 1000,
   confidenceFloor: 0.01,
   // Episodic Dreaming
   dreamingEnabled: process.env.DREAMING_ENABLED !== "false",
-  dreamingIntervalMs: parseInt(process.env.DREAMING_INTERVAL_MS || "21600000", 10), // 6 hours
+  dreamingIntervalMs: Number.parseInt(
+    process.env.DREAMING_INTERVAL_MS || "21600000",
+    10
+  ), // 6 hours
 };
 
 let learningInterval: NodeJS.Timeout | null = null;
@@ -155,7 +169,7 @@ export function stopLearningWorker() {
 
 async function processDreaming() {
   logger.debug("learning_worker_dreaming_started");
-  
+
   try {
     // 1. Fetch failed runs from last 24 hours
     const failedRuns = await db
@@ -180,13 +194,13 @@ async function processDreaming() {
 
     // 2. Cluster by error message (simple exact match or prefix)
     const clusters = new Map<string, { count: number; sample: string }>();
-    
+
     for (const run of failedRuns) {
       const msg = run.errorMessage || "Unknown error";
-      // Normalize: strip random IDs or timestamps if possible. 
+      // Normalize: strip random IDs or timestamps if possible.
       // For MVP, just use the first 100 chars as a naive cluster key.
       const key = msg.substring(0, 100);
-      
+
       const existing = clusters.get(key) || { count: 0, sample: msg };
       existing.count++;
       clusters.set(key, existing);
@@ -218,7 +232,7 @@ async function processDreaming() {
 
     // 4. Persist Heuristics
     // Generate embeddings for the "rule" so it can be retrieved contextually
-    const embeddings = await embedMany(heuristics.map(h => h.rule));
+    const embeddings = await embedMany(heuristics.map((h) => h.rule));
 
     const nodesToUpsert = heuristics.map((h, i) => ({
       resource: "system",
@@ -236,8 +250,9 @@ async function processDreaming() {
     }));
 
     await upsertNodes(nodesToUpsert);
-    logger.info("learning_worker_dreaming_complete", { created: heuristics.length });
-
+    logger.info("learning_worker_dreaming_complete", {
+      created: heuristics.length,
+    });
   } catch (error) {
     logger.warn("learning_worker_dreaming_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -248,31 +263,43 @@ async function processDreaming() {
 async function processMemoryMaintenance(config: LearningWorkerConfig) {
   logger.debug("learning_worker_maintenance_started");
   const stopTimer = metrics.memoryMaintenanceDurationSeconds.startTimer();
-  
+
   try {
     // 1. Decay Confidence
     // Find nodes that haven't been updated recently
-    const staleNodes = await findNodesForDecay(config.decayThresholdMs, config.decayLimit);
+    const staleNodes = await findNodesForDecay(
+      config.decayThresholdMs,
+      config.decayLimit
+    );
     if (staleNodes.length > 0) {
       const updates = staleNodes.map((node: any) => {
         const props = (node.properties as Record<string, any>) || {};
-        const currentConfidence = typeof props.confidence === 'number' ? props.confidence : 1.0;
+        const currentConfidence =
+          typeof props.confidence === "number" ? props.confidence : 1.0;
         // Apply floor to prevent underflow
-        const newConfidence = Math.max(config.confidenceFloor, currentConfidence * config.decayFactor);
-        
+        const newConfidence = Math.max(
+          config.confidenceFloor,
+          currentConfidence * config.decayFactor
+        );
+
         return {
           id: node.id,
           confidence: newConfidence,
         };
       });
-      
+
       const decayedCount = await updateNodeConfidenceBatch(updates);
       metrics.memoryNodesDecayedTotal.inc(decayedCount);
       logger.info("learning_worker_decayed", { count: decayedCount });
     }
 
     // 2. Prune Low Confidence
-    const lowConfidenceNodes = await findNodesByConfidence(0, config.pruneConfidence, undefined, 100);
+    const lowConfidenceNodes = await findNodesByConfidence(
+      0,
+      config.pruneConfidence,
+      undefined,
+      100
+    );
     if (lowConfidenceNodes.length > 0) {
       const ids = lowConfidenceNodes.map((n: any) => n.id);
       const prunedCount = await archiveNodes(ids, "low_confidence");
@@ -286,7 +313,6 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       metrics.memoryNodesCleanedTotal.inc(deletedCount);
       logger.info("learning_worker_cleanup", { count: deletedCount });
     }
-
   } catch (error) {
     logger.warn("learning_worker_maintenance_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -328,7 +354,7 @@ async function seedOntology() {
       const fromNode = nodeMap.get(`ontology:${fromHash}`);
       const toNode = nodeMap.get(`ontology:${toHash}`);
 
-      if (!fromNode || !toNode) {
+      if (!(fromNode && toNode)) {
         return null;
       }
 
@@ -451,7 +477,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
 
   // Upsert relations (edges)
   const edges = knowledgeEntries.filter((e) => e.data._ === "relation");
-  
+
   const edgesToInsert = edges
     .map((edge) => {
       const rel = edge.data as any;

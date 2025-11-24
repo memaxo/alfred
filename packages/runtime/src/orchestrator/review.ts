@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   buildReviewPlan,
-  // generateReviewExecPlanSkeleton,
+  generateReviewExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/review";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
@@ -10,6 +10,92 @@ import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // 
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
+
+const REVIEW_PLAN_FILE = (runId: string) => `.agent/plans/${runId}/review.md`;
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function ensureReviewExecPlan(
+  runId: string,
+  reviewPlan: ReturnType<typeof buildReviewPlan>
+): Promise<string> {
+  const execPlanPath = REVIEW_PLAN_FILE(runId);
+  const dir = path.dirname(execPlanPath);
+  await fs.mkdir(dir, { recursive: true });
+  try {
+    await fs.access(execPlanPath);
+  } catch {
+    const skeleton = generateReviewExecPlanSkeleton(runId, reviewPlan);
+    await fs.writeFile(execPlanPath, skeleton, "utf8");
+  }
+  return execPlanPath;
+}
+
+async function updateReviewProgress(
+  filePath: string,
+  checkId: string,
+  status: "running" | "passed" | "failed",
+  note: string
+) {
+  const content = await fs.readFile(filePath, "utf8");
+  const pattern = new RegExp(`- \\[[ x]\\] \\[${escapeRegExp(checkId)}\\].*`);
+  const stamp = new Date().toISOString();
+  const label =
+    status === "passed"
+      ? "PASS"
+      : status === "failed"
+        ? "FAIL"
+        : "RUNNING";
+  const mark = status === "passed" ? "x" : " ";
+  const replacement = `- [${mark}] [${checkId}] ${label} (${stamp}) ${note}`.trim();
+
+  let updated = content;
+  if (pattern.test(content)) {
+    updated = content.replace(pattern, replacement);
+  } else {
+    updated = content.replace(
+      /## Progress\s+/, 
+      `## Progress\n\n${replacement}\n\n`
+    );
+  }
+
+  await fs.writeFile(filePath, updated, "utf8");
+}
+
+async function appendReviewOutcome(
+  filePath: string,
+  message: string
+) {
+  const content = await fs.readFile(filePath, "utf8");
+  const marker = "## Outcomes & Retrospective";
+  const idx = content.indexOf(marker);
+  if (idx === -1) {
+    return;
+  }
+  const before = content.slice(0, idx + marker.length);
+  const after = content.slice(idx + marker.length);
+  const entry = `\n\n- ${message}\n`;
+  await fs.writeFile(before + entry + after, "utf8");
+}
+
+function buildTestCommandFromPlan(mergePlan: any): string {
+  const changed = Array.isArray(mergePlan?.changedPackages)
+    ? (mergePlan.changedPackages as string[])
+    : [];
+  const scoped = Array.from(
+    new Set(
+      changed.filter(
+        (pkg) => pkg.startsWith("packages/") || pkg.startsWith("apps/")
+      )
+    )
+  );
+  if (scoped.length === 0) {
+    return "bun test";
+  }
+  return `bun test ${scoped.join(" ")}`;
+}
 
 export async function* runReviewPhase(
   ctx: OrchestratorContext,
@@ -21,6 +107,8 @@ export async function* runReviewPhase(
     files: mergePlan.expectedFiles ?? [],
     summary: mergePlan.summary,
   });
+
+  const reviewExecPlanPath = await ensureReviewExecPlan(runId, reviewPlan);
 
   logger.info("multi_agent_review_plan", {
     runId,
@@ -40,6 +128,7 @@ export async function* runReviewPhase(
       command: string;
       output: string;
       error?: string;
+      checkId?: string;
     }> = [];
     const startedAt = Date.now();
 
@@ -61,28 +150,84 @@ export async function* runReviewPhase(
           continue;
         }
 
+        const attemptIndex = fixAttempts + 1;
+        yield {
+          type: "event",
+          kind: "review-check",
+          data: {
+            id: check.id,
+            type: check.type,
+            status: "running",
+            attempt: attemptIndex,
+          },
+        } as any;
+
         let command = "";
         if (check.type === "static") {
           command = "bun run typecheck";
         } else if (check.type === "lint") {
           command = "bun run lint";
         } else if (check.type === "tests") {
-          command = "bun test";
+          command = buildTestCommandFromPlan(mergePlan);
+        } else if (check.type === "verify" && check.script) {
+          command = `bun ${check.script}`;
         } else if (check.type === "smoke" && projectConfig) {
           // Phase 5: Ephemeral Verification (Smoke)
           yield { type: "notice", message: "running_smoke_test" } as any;
+          await updateReviewProgress(
+            reviewExecPlanPath,
+            check.id,
+            "running",
+            "smoke-test"
+          );
           const result = await smokeTester.verify(workspace, projectConfig);
           if (!result.success) {
             currentRunPassed = false;
             reviewFailures.push({
               command: "smoke-test",
               output: result.message,
+              checkId: check.id,
             });
+            await updateReviewProgress(
+              reviewExecPlanPath,
+              check.id,
+              "failed",
+              result.message
+            );
+            yield {
+              type: "event",
+              kind: "review-check",
+              data: {
+                id: check.id,
+                type: check.type,
+                status: "failed",
+                attempt: attemptIndex,
+                evidence: result.message,
+              },
+            } as any;
+          } else {
+            yield {
+              type: "event",
+              kind: "review-check",
+              data: {
+                id: check.id,
+                type: check.type,
+                status: "passed",
+                attempt: attemptIndex,
+              },
+            } as any;
           }
           continue; // Skip standard runner
         } else {
           continue; // Skip manual/scenario checks for automated runner
         }
+
+        await updateReviewProgress(
+          reviewExecPlanPath,
+          check.id,
+          "running",
+          command
+        );
 
         try {
           yield {
@@ -115,12 +260,48 @@ export async function* runReviewPhase(
             reviewFailures.push({
               command,
               output: `${result.stdout}\n${result.stderr}`.slice(0, 5000),
+              checkId: check.id,
             });
             logger.warn("review_check_failed", {
               runId,
               command,
               exitCode: result.exitCode,
             });
+            await updateReviewProgress(
+              reviewExecPlanPath,
+              check.id,
+              "failed",
+              `exit ${result.exitCode}`
+            );
+            yield {
+              type: "event",
+              kind: "review-check",
+              data: {
+                id: check.id,
+                type: check.type,
+                status: "failed",
+                attempt: attemptIndex,
+                evidence: `${result.stdout}\n${result.stderr}`.slice(0, 1000),
+              },
+            } as any;
+          } else {
+            await updateReviewProgress(
+              reviewExecPlanPath,
+              check.id,
+              "passed",
+              command
+            );
+            yield {
+              type: "event",
+              kind: "review-check",
+              data: {
+                id: check.id,
+                type: check.type,
+                status: "passed",
+                attempt: attemptIndex,
+                durationMs: result.durationMs,
+              },
+            } as any;
           }
         } catch (err) {
           currentRunPassed = false;
@@ -128,12 +309,30 @@ export async function* runReviewPhase(
             command,
             output: "",
             error: String(err),
+            checkId: check.id,
           });
           logger.error("review_command_error", {
             runId,
             command,
             error: String(err),
           });
+          await updateReviewProgress(
+            reviewExecPlanPath,
+            check.id,
+            "failed",
+            String(err)
+          );
+          yield {
+            type: "event",
+            kind: "review-check",
+            data: {
+              id: check.id,
+              type: check.type,
+              status: "failed",
+              attempt: attemptIndex,
+              evidence: String(err),
+            },
+          } as any;
         }
       }
 
@@ -160,9 +359,9 @@ export async function* runReviewPhase(
           const failureDetails = reviewFailures
             .map(
               (f) =>
-                `Command: ${f.command}\nError/Output:\n\`\`\`\n${
-                  f.output || f.error
-                }\n\`\`\``
+                `Check: ${f.checkId ?? "unknown"}\nCommand: ${
+                  f.command
+                }\nError/Output:\n\`\`\`\n${f.output || f.error}\n\`\`\``
             )
             .join("\n\n");
 
@@ -257,6 +456,14 @@ export async function* runReviewPhase(
 
     const finishedAt = Date.now();
     const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+    const attempts = fixAttempts + (reviewPassed ? 1 : 0);
+
+    await appendReviewOutcome(
+      reviewExecPlanPath,
+      reviewPassed
+        ? `Automated checks passed after ${attempts} run(s).`
+        : `Automated checks failed after ${attempts} run(s).`
+    );
 
     yield {
       type: "event",
@@ -265,7 +472,7 @@ export async function* runReviewPhase(
         role: "review_exec",
         status: reviewPassed ? "completed" : "failed",
         durationSeconds,
-        attempts: fixAttempts + (reviewPassed ? 1 : 0), // Count the successful run if passed
+        attempts,
       },
     } as any;
   }

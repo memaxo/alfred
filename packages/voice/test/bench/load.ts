@@ -24,10 +24,7 @@ const mockPools = {
   synthesize: async () => {},
 };
 
-const registry = new VoiceRegistry(
-  mockPools as any,
-  mockPools as any
-);
+const registry = new VoiceRegistry(mockPools as any, mockPools as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8898;

@@ -1,6 +1,7 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { executeActPhase } from "../../phases/act";
+import type { ExecutionContext } from "../../context";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
 
@@ -11,14 +12,25 @@ export class ActPhase implements Phase<RuntimeInput, void> {
 
   async *run(
     input: RuntimeInput,
-    _context: RuntimeContext
+    context: RuntimeContext
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
-      // Safely access authz from context (casted as any because core.ts passes a POJO)
-      const authz = (_context as any).authz;
+      const authz = context.get("authz") as string | undefined;
+      const scanContext = context.get("scanContext") as
+        | ExecutionContext
+        | null
+        | undefined;
 
-      const generator = executeActPhase(input, this.runId, controller.signal, undefined, undefined, authz);
+      const generator = executeActPhase(
+        input,
+        this.runId,
+        controller.signal,
+        undefined,
+        undefined,
+        authz,
+        scanContext ?? undefined
+      );
       let result: { escalated: boolean; reason?: string } | undefined;
 
       // Manually iterate to capture return value

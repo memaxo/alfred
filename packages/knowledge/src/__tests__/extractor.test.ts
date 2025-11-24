@@ -1,6 +1,3 @@
-// import { describe, expect, test } from "bun:test";
-import { extract, extractTemporal } from "../extractor.js";
-
 // Mock bun:test for build compatibility if not running in bun test runner
 // or skip if not needed.
 // Ideally we should exclude tests from build via tsconfig.

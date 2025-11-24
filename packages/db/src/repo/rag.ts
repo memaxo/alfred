@@ -171,14 +171,16 @@ export async function searchChunksHybrid({
 }: HybridSearchOptions): Promise<ChunkSearchResult[]> {
   const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
   const ef = efSearch;
-  
+
   // Boost Query construction:
   // If boostConcepts are present, we construct a combined tsquery using OR (||)
   // We use plainto_tsquery for each concept to handle natural language input safely
   let boostRankExpression = sql`0`;
-  
+
   if (boostConcepts.length > 0) {
-    const conceptQueries = boostConcepts.map(c => sql`plainto_tsquery('english', ${c})`);
+    const conceptQueries = boostConcepts.map(
+      (c) => sql`plainto_tsquery('english', ${c})`
+    );
     const combinedQuery = sql.join(conceptQueries, sql` || `);
     boostRankExpression = sql`(CASE WHEN content_tsvector @@ (${combinedQuery}) THEN 0.2 ELSE 0 END)`;
   }
@@ -257,7 +259,7 @@ export async function searchChunksHybrid({
     `;
 
     const result = await tx.execute(hybridQuery);
-    let hybridResults = (result.rows as ChunkSearchResult[])
+    const hybridResults = (result.rows as ChunkSearchResult[])
       .filter((row) => Number.isFinite(row.score) && row.score >= threshold)
       .slice(0, limit);
 

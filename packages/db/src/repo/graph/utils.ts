@@ -43,7 +43,9 @@ export function uniqSeeds<T extends { resource: string; hash: string }>(
   return list;
 }
 
-export function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+export function parseJsonRecord(
+  value: unknown
+): Record<string, unknown> | null {
   if (!value) {
     return null;
   }

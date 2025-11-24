@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { WorkflowEvent } from "@alfred/type";
+import type { SearchReceipt, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 
 type MessagePart = UIMessage["parts"][number];
@@ -49,6 +49,14 @@ type FileEventPayload = WorkflowEvent & {
   data?: unknown;
   filename?: string;
   name?: string;
+};
+type DataCacheEventPayload = WorkflowEvent & {
+  type: "data-cache-handoff";
+  receipts?: SearchReceipt | SerializedReceipt;
+};
+
+type SerializedReceipt = Omit<SearchReceipt, "created"> & {
+  created: string | Date;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -100,6 +108,12 @@ function isDataStatusEvent(
 
 function isFileEvent(event: WorkflowEvent): event is FileEventPayload {
   return event.type === "file";
+}
+
+function isDataCacheEvent(
+  event: WorkflowEvent
+): event is DataCacheEventPayload {
+  return event.type === "data-cache-handoff";
 }
 
 export type NormalizableGenerate = {
@@ -181,6 +195,10 @@ export function eventToUiMessages(event: WorkflowEvent): UIMessage[] | null {
     return normalizeDataStatusEvent(event);
   }
 
+  if (isDataCacheEvent(event)) {
+    return normalizeDataCacheEvent(event);
+  }
+
   if (isFileEvent(event)) {
     return normalizeFileEvent(event);
   }
@@ -212,9 +230,27 @@ function normalizeReasoningEvent(
 function normalizeDataStatusEvent(event: DataStatusEventPayload): UIMessage[] {
   const part: MessagePart = {
     type: "data-status",
+    data: event.data,
+    transient: Boolean(event.transient),
+  };
+  return [createAssistantMessage([part])];
+}
+
+function normalizeDataCacheEvent(
+  event: DataCacheEventPayload
+): UIMessage[] | null {
+  const receipt = coerceReceipt(event.receipts);
+  if (!receipt) {
+    return null;
+  }
+  const part: MessagePart = {
+    type: "data-cache",
     data: {
-      payload: event.data,
-      transient: Boolean(event.transient),
+      summary: receipt.summary,
+      created: receipt.created.toISOString(),
+      code: receipt.code ?? [],
+      web: receipt.web ?? [],
+      source: "cache-handoff",
     },
   };
   return [createAssistantMessage([part])];
@@ -277,6 +313,36 @@ function collectAssistantParts(event: AssistantEventPayload): MessagePart[] {
   }
 
   return parts;
+}
+
+function coerceReceipt(value: unknown): SearchReceipt | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const receipt = value as Partial<SearchReceipt> & {
+    created?: string | Date;
+    code?: SearchReceipt["code"];
+    web?: SearchReceipt["web"];
+  };
+  const createdRaw = receipt.created;
+  const createdDate =
+    createdRaw instanceof Date
+      ? createdRaw
+      : typeof createdRaw === "string"
+        ? new Date(createdRaw)
+        : new Date();
+  if (Number.isNaN(createdDate.getTime())) {
+    return null;
+  }
+  return {
+    code: Array.isArray(receipt.code) ? receipt.code : [],
+    web: Array.isArray(receipt.web) ? receipt.web : undefined,
+    created: createdDate,
+    summary:
+      typeof receipt.summary === "string"
+        ? receipt.summary
+        : "Context cache handoff",
+  } satisfies SearchReceipt;
 }
 
 function createAssistantMessage(parts: MessagePart[]): UIMessage {

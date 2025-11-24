@@ -1,7 +1,11 @@
-import { useEffect, useRef, useCallback } from "react";
-import type { Node, Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
+import { useEffect, useRef } from "react";
 import type { ArtifactData } from "@/store/mindscape";
-import type { WorkerMessage, PhysicsNode, PhysicsEdge } from "@/workers/physics.worker";
+import type {
+  PhysicsEdge,
+  PhysicsNode,
+  WorkerMessage,
+} from "@/workers/physics.worker";
 
 // Import worker using Vite's syntax
 import PhysicsWorker from "@/workers/physics.worker?worker";
@@ -20,7 +24,9 @@ export function usePhysicsWorker({
   active?: boolean;
 }) {
   const workerRef = useRef<Worker | null>(null);
-  const latestPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const latestPositions = useRef<Map<string, { x: number; y: number }>>(
+    new Map()
+  );
   const rafRef = useRef<number>();
 
   // Initialize Worker
@@ -30,8 +36,11 @@ export function usePhysicsWorker({
 
     worker.onmessage = (e) => {
       if (e.data.type === "TICK") {
-        const updates = e.data.nodes as { id: string; position: { x: number; y: number } }[];
-        updates.forEach(u => {
+        const updates = e.data.nodes as {
+          id: string;
+          position: { x: number; y: number };
+        }[];
+        updates.forEach((u) => {
           latestPositions.current.set(u.id, u.position);
         });
       }
@@ -48,36 +57,36 @@ export function usePhysicsWorker({
   // Sync State to Worker
   useEffect(() => {
     if (!workerRef.current) return;
-    
+
     // Transform nodes to lightweight format
-    const physicsNodes: PhysicsNode[] = nodes.map(n => ({
+    const physicsNodes: PhysicsNode[] = nodes.map((n) => ({
       id: n.id,
       x: n.position.x,
       y: n.position.y,
       type: n.type || "artifact",
       draggable: n.draggable,
-      isDragging: n.dragging
+      isDragging: n.dragging,
     }));
 
-    const physicsEdges: PhysicsEdge[] = edges.map(e => ({
+    const physicsEdges: PhysicsEdge[] = edges.map((e) => ({
       id: e.id,
       source: e.source,
-      target: e.target
+      target: e.target,
     }));
 
     workerRef.current.postMessage({
       type: "UPDATE_NODES",
       nodes: physicsNodes,
-      edges: physicsEdges
+      edges: physicsEdges,
     } satisfies WorkerMessage);
-  }, [nodes.length, edges.length]); 
-  
+  }, [nodes.length, edges.length]);
+
   // Sync Focus
   useEffect(() => {
     if (!workerRef.current) return;
     workerRef.current.postMessage({
       type: "UPDATE_FOCUS",
-      focusId
+      focusId,
     } satisfies WorkerMessage);
   }, [focusId]);
 
@@ -92,9 +101,12 @@ export function usePhysicsWorker({
           const next = prevNodes.map((n) => {
             const pos = latestPositions.current.get(n.id);
             if (!pos) return n;
-            
+
             // Simple threshold to avoid react updates for micro-movements
-            if (Math.abs(n.position.x - pos.x) < 0.5 && Math.abs(n.position.y - pos.y) < 0.5) {
+            if (
+              Math.abs(n.position.x - pos.x) < 0.5 &&
+              Math.abs(n.position.y - pos.y) < 0.5
+            ) {
               return n;
             }
 

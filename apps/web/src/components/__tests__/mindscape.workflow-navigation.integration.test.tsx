@@ -21,6 +21,8 @@ describe("Mindscape workflow CTA integration", () => {
       focusedNodeId: null,
       isSpaceMode: false,
       ragDocCache: {},
+      ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
+      contextCache: {},
     });
   });
 

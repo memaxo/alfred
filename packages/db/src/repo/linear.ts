@@ -62,7 +62,9 @@ export async function upsertLinear(input: {
   return row!;
 }
 
-export async function getLinearByWorkspace(space: string): Promise<LinearInstallation | null> {
+export async function getLinearByWorkspace(
+  space: string
+): Promise<LinearInstallation | null> {
   const rows = await db
     .select()
     .from(linearInstallations)
@@ -72,7 +74,9 @@ export async function getLinearByWorkspace(space: string): Promise<LinearInstall
   return rows[0] ?? null;
 }
 
-export async function getLinearByOAuth(oauthClient: string): Promise<LinearInstallation | null> {
+export async function getLinearByOAuth(
+  oauthClient: string
+): Promise<LinearInstallation | null> {
   const rows = await db
     .select()
     .from(linearInstallations)

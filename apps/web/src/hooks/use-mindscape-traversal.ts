@@ -4,19 +4,21 @@ import { useShallow } from "zustand/react/shallow";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
-type GraphNode = inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["nodes"][number];
+type GraphNode =
+  inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["nodes"][number];
 type GraphEdge = inferRouterOutputs<TRPCAppRouter>["graph"]["getEdges"][number];
 
 export function useMindscapeTraversal() {
-  const { nodes, focusedNodeId, addArtifact, setEdges, edges } = useMindscapeStore(
-    useShallow((state) => ({
-      nodes: state.nodes,
-      focusedNodeId: state.focusedNodeId,
-      addArtifact: state.addArtifact,
-      setEdges: state.setEdges,
-      edges: state.edges,
-    }))
-  );
+  const { nodes, focusedNodeId, addArtifact, setEdges, edges } =
+    useMindscapeStore(
+      useShallow((state) => ({
+        nodes: state.nodes,
+        focusedNodeId: state.focusedNodeId,
+        addArtifact: state.addArtifact,
+        setEdges: state.setEdges,
+        edges: state.edges,
+      }))
+    );
 
   const focusedNode = useMemo(
     () => nodes.find((n) => n.id === focusedNodeId),
@@ -45,7 +47,7 @@ export function useMindscapeTraversal() {
 
   // Merge traversal results into the graph
   useEffect(() => {
-    if (!traversalResult || !focusedDbId) return;
+    if (!(traversalResult && focusedDbId)) return;
 
     // 1. Add Nodes
     traversalResult.nodes.forEach((node: GraphNode, index: number) => {
@@ -61,13 +63,14 @@ export function useMindscapeTraversal() {
       // Spawn new knowledge node
       const flowId = `knowledge-${ref}`;
       const props = (node.properties ?? {}) as Record<string, unknown>;
-      const summary = typeof props.content === "string" ? props.content : undefined;
+      const summary =
+        typeof props.content === "string" ? props.content : undefined;
 
       // Calculate position: radial expansion around focused node
       const angle = (index / traversalResult.nodes.length) * 2 * Math.PI;
       const radius = 250; // Distance from parent
       const parentPos = focusedNode?.position ?? { x: 0, y: 0 };
-      
+
       const x = parentPos.x + radius * Math.cos(angle);
       const y = parentPos.y + radius * Math.sin(angle);
 
@@ -91,32 +94,43 @@ export function useMindscapeTraversal() {
 
     // 2. Add Edges (we need to fetch edges separately or rely on graph.runQuery returning them if modified)
     // Currently graph.runQuery returns nodes and edges.
-    
-    if (traversalResult.edges) {
-       const newEdges = traversalResult.edges.map((edge: any) => {
-          const sourceId = nodes.find(n => n.data?.graph?.dbId === edge.fromId)?.id ?? `knowledge-${edge.fromId}`;
-          const targetId = nodes.find(n => n.data?.graph?.dbId === edge.toId)?.id ?? `knowledge-${edge.toId}`;
-          
-          return {
-             id: edge.id,
-             source: sourceId,
-             target: targetId,
-             data: {
-                kind: edge.kind,
-                fromDbId: edge.fromId,
-                toDbId: edge.toId
-             },
-             style: { stroke: "rgba(255, 255, 255, 0.2)" }
-          };
-       });
-       
-       // Merge edges
-       const edgeMap = new Map(edges.map(e => [e.id, e]));
-       newEdges.forEach((e: any) => edgeMap.set(e.id, e));
-       setEdges(Array.from(edgeMap.values()));
-    }
 
-  }, [traversalResult, focusedDbId, focusedNode, nodes, edges, addArtifact, setEdges]);
+    if (traversalResult.edges) {
+      const newEdges = traversalResult.edges.map((edge: any) => {
+        const sourceId =
+          nodes.find((n) => n.data?.graph?.dbId === edge.fromId)?.id ??
+          `knowledge-${edge.fromId}`;
+        const targetId =
+          nodes.find((n) => n.data?.graph?.dbId === edge.toId)?.id ??
+          `knowledge-${edge.toId}`;
+
+        return {
+          id: edge.id,
+          source: sourceId,
+          target: targetId,
+          data: {
+            kind: edge.kind,
+            fromDbId: edge.fromId,
+            toDbId: edge.toId,
+          },
+          style: { stroke: "rgba(255, 255, 255, 0.2)" },
+        };
+      });
+
+      // Merge edges
+      const edgeMap = new Map(edges.map((e) => [e.id, e]));
+      newEdges.forEach((e: any) => edgeMap.set(e.id, e));
+      setEdges(Array.from(edgeMap.values()));
+    }
+  }, [
+    traversalResult,
+    focusedDbId,
+    focusedNode,
+    nodes,
+    edges,
+    addArtifact,
+    setEdges,
+  ]);
 
   return { isFetching };
 }

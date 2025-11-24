@@ -49,7 +49,7 @@ export class BrainstemSupervisor {
   registerProcess(
     id: string,
     abortController: AbortController,
-    expectedHeartbeatMs = 60000
+    expectedHeartbeatMs = 60_000
   ) {
     this.activeProcess = {
       id,

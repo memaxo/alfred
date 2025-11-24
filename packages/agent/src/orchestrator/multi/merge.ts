@@ -30,9 +30,11 @@ export type AgentOutcome = {
 
 export type MergePlan = {
   summary: string;
-  branches?: string[];
-  expectedFiles?: string[];
-  strategy?: "worktree" | "branch" | "direct";
+  branches: string[];
+  expectedFiles: string[];
+  strategy: "worktree" | "branch" | "direct";
+  targetBranch: string;
+  changedPackages: string[];
 };
 
 function collectFiles(outcomes: AgentOutcome[]): string[] {
@@ -65,25 +67,52 @@ function collectFiles(outcomes: AgentOutcome[]): string[] {
 function collectBranches(outcomes: AgentOutcome[]): string[] {
   const branches = new Set<string>();
   for (const outcome of outcomes) {
-    if (outcome.status === "completed" && outcome.result?.branch) {
-      branches.add(outcome.result.branch);
+    const branch = outcome.result?.branch;
+    if (branch && typeof branch === "string") {
+      branches.add(branch);
     }
   }
   return Array.from(branches).sort();
 }
 
-export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
+function inferPackages(files: string[]): string[] {
+  const packages = new Set<string>();
+  for (const file of files) {
+    if (file.startsWith("packages/")) {
+      const [scope, name] = file.split("/");
+      if (scope && name) {
+        packages.add(`${scope}/${name}`);
+      }
+    } else if (file.startsWith("apps/")) {
+      const [scope, name] = file.split("/");
+      if (scope && name) {
+        packages.add(`${scope}/${name}`);
+      }
+    }
+  }
+  return Array.from(packages).sort();
+}
+
+export function buildMergePlan(
+  subOutcomes: AgentOutcome[],
+  options?: { targetBranch?: string }
+): MergePlan {
   if (subOutcomes.length === 0) {
     return {
       summary: "No agent outcomes to merge.",
       strategy: "direct",
       expectedFiles: [],
       branches: [],
+      targetBranch: options?.targetBranch ?? "dev",
+      changedPackages: [],
     };
   }
 
   const expectedFiles = collectFiles(subOutcomes);
   const branches = collectBranches(subOutcomes);
+  const changedPackages = inferPackages(expectedFiles);
+
+  const targetBranch = options?.targetBranch ?? "dev";
 
   const completed = subOutcomes.filter((o) => o.status === "completed");
   const failed = subOutcomes.filter((o) => o.status === "failed");
@@ -91,7 +120,7 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
 
   const parts: string[] = [];
   parts.push(
-    `Merge results from ${subOutcomes.length} agents (${completed.length} completed, ${failed.length} failed, ${stuck.length} stuck).`
+    `Merge results from ${subOutcomes.length} agents (${completed.length} completed, ${failed.length} failed, ${stuck.length} stuck) targeting '${targetBranch}'.`
   );
 
   let strategy: "worktree" | "branch" | "direct" = "direct";
@@ -107,14 +136,14 @@ export function buildMergePlan(subOutcomes: AgentOutcome[]): MergePlan {
 
   const summary = parts.join(" ");
 
-  const plan: MergePlan = {
+  return {
     summary,
     strategy,
     expectedFiles,
     branches,
+    targetBranch,
+    changedPackages,
   };
-
-  return plan;
 }
 
 export function generateMergeExecPlanSkeleton(
@@ -138,8 +167,10 @@ export function generateMergeExecPlanSkeleton(
   lines.push("");
   lines.push(mergePlan.summary);
   lines.push("");
+  lines.push(`Target branch: ${mergePlan.targetBranch}`);
+  lines.push("");
 
-  if (mergePlan.branches && mergePlan.branches.length > 0) {
+  if (mergePlan.branches.length > 0) {
     lines.push("Branches to merge:");
     for (const branch of mergePlan.branches) {
       lines.push(`- ${branch}`);
@@ -147,10 +178,18 @@ export function generateMergeExecPlanSkeleton(
     lines.push("");
   }
 
-  if (mergePlan.expectedFiles && mergePlan.expectedFiles.length > 0) {
+  if (mergePlan.expectedFiles.length > 0) {
     lines.push("Expected files to inspect (from file events):");
     for (const file of mergePlan.expectedFiles) {
       lines.push(`- ${file}`);
+    }
+    lines.push("");
+  }
+
+  if (mergePlan.changedPackages.length > 0) {
+    lines.push("Packages/apps touched:");
+    for (const pkg of mergePlan.changedPackages) {
+      lines.push(`- ${pkg}`);
     }
     lines.push("");
   }

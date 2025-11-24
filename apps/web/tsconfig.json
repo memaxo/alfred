@@ -4,11 +4,7 @@
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "target": "ES2022",
     "module": "Preserve",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -22,60 +18,27 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@alfred/api/*": [
-        "../../packages/api/src/*"
-      ],
-      "@alfred/auth/*": [
-        "../../packages/auth/src/*"
-      ],
-      "@alfred/db": [
-        "../../packages/db/src/index.ts"
-      ],
-      "@alfred/db/*": [
-        "../../packages/db/src/*"
-      ],
-      "@alfred/metrics/*": [
-        "../../packages/metrics/src/*"
-      ],
-      "@alfred/policy/*": [
-        "../../packages/policy/src/*"
-      ],
-      "@alfred/rag/*": [
-        "../../packages/rag/src/*"
-      ],
-      "@alfred/runtime/*": [
-        "../../packages/runtime/src/*"
-      ],
-      "@alfred/type/*": [
-        "../../packages/type/src/*"
-      ],
-      "@alfred/ui/*": [
-        "../../packages/ui/src/*"
-      ],
-      "@alfred/voice/*": [
-        "../../packages/voice/src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@alfred/api/*": ["../../packages/api/src/*"],
+      "@alfred/auth/*": ["../../packages/auth/src/*"],
+      "@alfred/db": ["../../packages/db/src/index.ts"],
+      "@alfred/db/*": ["../../packages/db/src/*"],
+      "@alfred/metrics/*": ["../../packages/metrics/src/*"],
+      "@alfred/policy/*": ["../../packages/policy/src/*"],
+      "@alfred/rag/*": ["../../packages/rag/src/*"],
+      "@alfred/runtime/*": ["../../packages/runtime/src/*"],
+      "@alfred/type/*": ["../../packages/type/src/*"],
+      "@alfred/ui/*": ["../../packages/ui/src/*"],
+      "@alfred/voice/*": ["../../packages/voice/src/*"]
     },
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "jsx": "react-jsx",
     "declaration": true,
     "skipLibCheck": true,
     "sourceMap": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "vite.config.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".tsbuild"
-  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "exclude": ["node_modules", ".tsbuild"],
   "references": [
     {
       "path": "../../packages/api"

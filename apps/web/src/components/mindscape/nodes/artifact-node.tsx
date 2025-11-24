@@ -1,8 +1,8 @@
 import type { NodeProps } from "@xyflow/react";
-import { Box, Code } from "lucide-react";
+import { Box } from "lucide-react";
 import { CodeBlock } from "@/components/ai-elements/code-block";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function ArtifactNode({ id, data, selected }: NodeProps) {
@@ -20,21 +20,17 @@ export function ArtifactNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={label}
-        icon={<Box className="h-3 w-3" />}
         borderColor="border-amber-500/20"
-        textColor="text-amber-500"
         hoverColor="hover:border-amber-500/40"
+        icon={<Box className="h-3 w-3" />}
+        label={label}
+        textColor="text-amber-500"
       />
     );
   }
 
   return (
-    <MindscapeNode
-      id={id}
-      selected={selected}
-      title={label}
-    >
+    <MindscapeNode id={id} selected={selected} title={label}>
       <div className="p-4">
         <CodeBlock code={JSON.stringify(data, null, 2)} language="json" />
       </div>

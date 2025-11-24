@@ -10,20 +10,23 @@
  * Usage: bun scripts/verify-orchestrator.ts
  */
 
+import * as fs from "node:fs/promises";
+import { issueAccessToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { generateKeyPair, exportPKCS8, exportSPKI } from "jose";
-import { issueAccessToken } from "@alfred/auth/token";
+import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
 
 const VERIFICATION_FILE = `verification-${Date.now()}.txt`;
 const VERIFICATION_CONTENT = "QED";
 
 async function setupAuth() {
   // Generate ephemeral keys for verification if not present
-  if (!process.env.AGENT_ED25519_PRIVATE || !process.env.AGENT_ED25519_PUBLIC_PEM) {
-    const { privateKey, publicKey } = await generateKeyPair("EdDSA", { extractable: true });
+  if (
+    !(process.env.AGENT_ED25519_PRIVATE && process.env.AGENT_ED25519_PUBLIC_PEM)
+  ) {
+    const { privateKey, publicKey } = await generateKeyPair("EdDSA", {
+      extractable: true,
+    });
     process.env.AGENT_ED25519_PRIVATE = await exportPKCS8(privateKey);
     process.env.AGENT_ED25519_PUBLIC_PEM = await exportSPKI(publicKey);
   }
@@ -32,52 +35,60 @@ async function setupAuth() {
   process.env.RUNTIME_DISABLE_CODEX = "1";
 
   // Issue a token with high privileges
-  return issueAccessToken("verify-orchestrator", ["droid.exec"], "alfred:tools", {
-    elevated: true,
-    mfa: "passkey", // Satisfy high autonomy policy
-    ttlSec: 3600
-  });
+  return issueAccessToken(
+    "verify-orchestrator",
+    ["droid.exec"],
+    "alfred:tools",
+    {
+      elevated: true,
+      mfa: "passkey", // Satisfy high autonomy policy
+      ttlSec: 3600,
+    }
+  );
 }
 
 // Mock Language Model to avoid real API calls/timeouts
 const mockModel = {
-  specificationVersion: 'v1',
-  provider: 'mock',
-  modelId: 'mock-model',
-  defaultObjectGenerationMode: 'json',
+  specificationVersion: "v1",
+  provider: "mock",
+  modelId: "mock-model",
+  defaultObjectGenerationMode: "json",
   doStream: async () => {
     return {
       stream: new ReadableStream({
         start(controller) {
           // 1. Text delta
-          controller.enqueue({ type: 'text-delta', textDelta: 'Creating verification file.' });
-          
+          controller.enqueue({
+            type: "text-delta",
+            textDelta: "Creating verification file.",
+          });
+
           // 2. Tool call
           controller.enqueue({
-            type: 'tool-call',
-            toolCallType: 'function',
-            toolCallId: 'call_1',
-            toolName: 'codex',
+            type: "tool-call",
+            toolCallType: "function",
+            toolCallId: "call_1",
+            toolName: "codex",
             args: JSON.stringify({
-              action: 'exec',
+              action: "exec",
               prompt: `echo "${VERIFICATION_CONTENT}" > "${VERIFICATION_FILE}"`,
-              auto: 'high',
-              cw: process.cwd()
-            })
+              auto: "high",
+              cw: process.cwd(),
+            }),
           });
-          
+
           // 3. Finish
           controller.enqueue({
-            type: 'finish',
-            finishReason: 'stop',
-            usage: { promptTokens: 10, completionTokens: 10 }
+            type: "finish",
+            finishReason: "stop",
+            usage: { promptTokens: 10, completionTokens: 10 },
           });
-          
+
           controller.close();
-        }
-      })
+        },
+      }),
     };
-  }
+  },
 };
 
 async function verify() {
@@ -99,7 +110,7 @@ async function verify() {
     authz: `Bearer ${token}`,
   });
 
-  let runId = runtime.runId;
+  const runId = runtime.runId;
   logger.info("verification_run_started", { runId });
 
   try {
@@ -109,8 +120,8 @@ async function verify() {
       } else if (event.type === "notice") {
         console.log(`[Notice]: ${(event as any).message}`);
         if ((event as any).message === "execution_placeholder") {
-            console.log("⚡ Simulating agent execution...");
-            await fs.writeFile(VERIFICATION_FILE, VERIFICATION_CONTENT);
+          console.log("⚡ Simulating agent execution...");
+          await fs.writeFile(VERIFICATION_FILE, VERIFICATION_CONTENT);
         }
       } else if (event.type === "error") {
         console.error(`[Error]: ${(event as any).message}`);
@@ -122,14 +133,17 @@ async function verify() {
       const content = await fs.readFile(VERIFICATION_FILE, "utf8");
       if (content.trim() === VERIFICATION_CONTENT) {
         logger.info("verification_success", { file: VERIFICATION_FILE });
-        console.log("✅ Verification PASSED: File created with correct content.");
+        console.log(
+          "✅ Verification PASSED: File created with correct content."
+        );
       } else {
-        throw new Error(`Content mismatch: expected '${VERIFICATION_CONTENT}', got '${content}'`);
+        throw new Error(
+          `Content mismatch: expected '${VERIFICATION_CONTENT}', got '${content}'`
+        );
       }
     } catch (fsError) {
       throw new Error(`File verification failed: ${fsError}`);
     }
-
   } catch (error) {
     logger.error("verification_failed", {
       error: error instanceof Error ? error.message : String(error),

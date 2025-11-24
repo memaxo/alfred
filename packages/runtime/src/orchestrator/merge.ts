@@ -16,6 +16,45 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
 
+async function runGitCommand(
+  cwd: string,
+  args: string[]
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const proc = Bun.spawn(["git", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
+    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
+    proc.exited,
+  ]);
+
+  return {
+    exitCode,
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+  };
+}
+
+async function resolveTargetBranch(workspace: string): Promise<string> {
+  const forced = process.env.ORCH_TARGET_BRANCH?.trim();
+  if (forced) {
+    return forced;
+  }
+  const res = await runGitCommand(workspace, [
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD",
+  ]);
+  if (res.exitCode === 0 && res.stdout && res.stdout !== "HEAD") {
+    return res.stdout;
+  }
+  return "dev";
+}
+
 export async function* runMergePhase(
   ctx: OrchestratorContext,
   wavesResult: WavesResult
@@ -49,13 +88,16 @@ export async function* runMergePhase(
     }
   }
 
-  const mergePlan = buildMergePlan(mergeOutcomes as any);
+  const targetBranch = await resolveTargetBranch(workspace);
+  const mergePlan = buildMergePlan(mergeOutcomes as any, { targetBranch });
 
   logger.info("multi_agent_merge_plan", {
     runId,
     expectedFiles: mergePlan.expectedFiles ?? [],
     summary: mergePlan.summary,
     branches: mergePlan.branches,
+    targetBranch: mergePlan.targetBranch,
+    changedPackages: mergePlan.changedPackages,
   });
 
   // Phase 9: Automated Merge Execution
@@ -68,18 +110,21 @@ export async function* runMergePhase(
       toolGit,
       {
         write: (chunk: any) => {
-          // Forward git output events
           if (chunk?.type === "stdout" || chunk?.type === "stderr") {
-            // Maybe filter or just log?
+            // passthrough for observability
           }
         },
       },
-      input.linear?.authz
+      {
+        authz: input.linear?.authz,
+        runId,
+      }
     ).catch((err) => {
       logger.error("merge_execution_error", { error: String(err) });
       return {
         status: "failed",
         mergedBranches: [],
+        targetBranch,
         error: String(err),
       } as const;
     });
@@ -91,6 +136,7 @@ export async function* runMergePhase(
         type: "notice",
         message: "merge_execution_conflict",
         branch: mergeResult.conflictBranch,
+        files: mergeResult.conflictFiles,
       } as any;
     } else {
       logger.warn("merge_execution_failed", { error: mergeResult.error });

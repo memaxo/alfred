@@ -20,20 +20,24 @@ type Evidence =
       _: "success";
       task: string;
       duration: number;
+      reliability?: number;
     }
   | {
       _: "failure";
       task: string;
       error: string;
+      reliability?: number;
     }
   | {
       _: "feedback";
       positive: boolean;
       strength: number;
+      reliability?: number;
     }
   | {
       _: "override";
       reason: string;
+      reliability?: number;
     };
 type Constraint =
   | {
@@ -206,7 +210,8 @@ export declare const reflecting: (
 export declare const initialAutonomy: () => AutonomyGradient;
 export declare const updateAutonomy: (
   current: AutonomyGradient,
-  evidence: Evidence
+  evidence: Evidence,
+  physiology?: Physiology
 ) => AutonomyGradient;
 /**
  * Evaluate reasoning quality based on trace characteristics

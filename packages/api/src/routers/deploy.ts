@@ -167,7 +167,8 @@ export const deployRouter: ReturnType<typeof router> = router({
       const domain = deployService.getAppDomain();
       const slug = deployService.slugifyApp(input.app);
       const suffix = randomUUID().slice(0, 6);
-      const host = input.host ?? deployService.buildPreviewHost(slug, suffix, domain);
+      const host =
+        input.host ?? deployService.buildPreviewHost(slug, suffix, domain);
 
       let upstream = input.upstream ?? null;
       let hostPort: number | null = null;
@@ -183,7 +184,10 @@ export const deployRouter: ReturnType<typeof router> = router({
         if (routeRegistered) {
           await deployService.safeRouterRemove(host, input.authz);
         }
-        await deployService.safeStopContainer(containerName ?? containerId, input.authz);
+        await deployService.safeStopContainer(
+          containerName ?? containerId,
+          input.authz
+        );
         if (deploymentId) {
           await deployRepo.setDeploymentStatus(deploymentId, "failed", {
             metadata: {

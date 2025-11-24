@@ -39,6 +39,7 @@ export type ChatProps = {
     part: UIMessage["parts"][number],
     message: UIMessage
   ) => ReactNode | null;
+  renderMessageActions?: (message: UIMessage) => ReactNode | null;
 };
 
 type ToolCallBlock = {
@@ -177,7 +178,8 @@ function renderDefaultMessage(
   renderPart?: (
     part: UIMessage["parts"][number],
     message: UIMessage
-  ) => ReactNode | null
+  ) => ReactNode | null,
+  renderMessageActions?: (message: UIMessage) => ReactNode | null
 ) {
   const structuredParts: ReactNode[] = [];
   if (renderPart) {
@@ -200,6 +202,8 @@ function renderDefaultMessage(
       }
     }
   }
+
+  const actions = renderMessageActions ? renderMessageActions(message) : null;
 
   return (
     <article
@@ -224,6 +228,9 @@ function renderDefaultMessage(
       {structuredParts.length > 0 ? (
         <div className="chat-message__structured">{structuredParts}</div>
       ) : null}
+      {actions ? (
+        <footer className="chat-message__actions">{actions}</footer>
+      ) : null}
       {renderPart ? null : renderToolCalls(block)}
       {renderPart ? null : renderToolResults(block)}
     </article>
@@ -244,6 +251,7 @@ export function Chat({
   voiceLabel = "Voice",
   voiceDisabled = false,
   renderPart,
+  renderMessageActions,
 }: ChatProps) {
   const [range, setRange] = useState<VirtualRange | undefined>(undefined);
 
@@ -296,9 +304,14 @@ export function Chat({
         return itemContent(index, message);
       }
       const block = buildRenderBlock(message, index);
-      return renderDefaultMessage(block, message, renderPart);
+      return renderDefaultMessage(
+        block,
+        message,
+        renderPart,
+        renderMessageActions
+      );
     },
-    [itemContent, renderPart]
+    [itemContent, renderPart, renderMessageActions]
   );
 
   const logContent = useMemo(() => {

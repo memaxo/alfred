@@ -11,6 +11,7 @@ export class VoiceRegistry {
   private readonly ttsPool: TTSPool;
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private readonly logger: VoiceLogger;
+  private lastStatsAt = 0;
 
   constructor(sttPool: STTPool, ttsPool: TTSPool, logger?: VoiceLogger) {
     this.sttPool = sttPool;
@@ -72,24 +73,37 @@ export class VoiceRegistry {
       this.cleanupInterval = null;
     }
 
-    for (const sessionId of this.sessions.keys()) {
+    this.clearSessions();
+  }
+
+  clearSessions(): number {
+    const ids = Array.from(this.sessions.keys());
+    for (const sessionId of ids) {
       this.removeSession(sessionId);
     }
+    return ids.length;
   }
 
   getStats() {
+    const now = Date.now();
+    this.lastStatsAt = now;
     return {
+      generatedAt: now,
       activeSessions: this.sessions.size,
-      sttPool: {
-        size: this.sttPool.size,
-        active: this.sttPool.activeCount,
-        health: this.sttPool.getHealth(),
-      },
-      ttsPool: {
-        size: this.ttsPool.size,
-        active: this.ttsPool.activeCount,
-        health: this.ttsPool.getHealth(),
-      },
+      sttPool: this.describePool(this.sttPool),
+      ttsPool: this.describePool(this.ttsPool),
+    };
+  }
+
+  private describePool(pool: STTPool | TTSPool) {
+    const size = pool.size ?? 0;
+    const active = pool.activeCount ?? 0;
+    const utilization = size === 0 ? 0 : Math.min(1, active / size);
+    return {
+      size,
+      active,
+      utilization,
+      health: pool.getHealth(),
     };
   }
 }

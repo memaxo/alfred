@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-
+import { logger } from "@alfred/metrics";
+import type { WorkflowEvent } from "@alfred/type";
 import {
   emitLinearActivity,
   extractIssueIdFromSession,
@@ -8,8 +9,6 @@ import {
   setLinearSessionExternalUrl,
   setLinearStarted,
 } from "../integrations/linear";
-import { logger } from "@alfred/metrics";
-import type { WorkflowEvent } from "@alfred/type";
 
 // Lazy metrics loader to avoid heavy deps during unit tests
 type RunnerCounters = {
@@ -48,9 +47,10 @@ export type RunPlanInput = {
   repoBase?: string;
   mode?: "sequential" | "parallel";
   linear?: {
-    sessionId: string;
+    sessionId?: string;
     space: string;
     authz: string;
+    issueId?: string;
   };
   context?: {
     enable?: boolean;

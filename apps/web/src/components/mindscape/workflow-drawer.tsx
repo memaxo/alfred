@@ -131,12 +131,24 @@ function WorkflowDrawerBody({
   onNavigateToMindscape,
 }: WorkflowDrawerBodyProps) {
   const queryRunId = drawerOpen && runId ? runId : "";
-  console.log("WorkflowDrawerBody render. queryRunId:", queryRunId, "drawerOpen:", drawerOpen);
+  console.log(
+    "WorkflowDrawerBody render. queryRunId:",
+    queryRunId,
+    "drawerOpen:",
+    drawerOpen
+  );
   const runQuery = trpc.workflow.get.useQuery(
     { runId: queryRunId },
     { enabled: drawerOpen && queryRunId.length > 0 }
   );
-  console.log("runQuery status:", runQuery.status, "data:", runQuery.data, "error:", runQuery.error);
+  console.log(
+    "runQuery status:",
+    runQuery.status,
+    "data:",
+    runQuery.data,
+    "error:",
+    runQuery.error
+  );
 
   const eventsQuery = trpc.workflow.events.useQuery(
     { runId: queryRunId },

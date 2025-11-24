@@ -1,16 +1,5 @@
 import type { NodeProps } from "@xyflow/react";
-import {
-  Brain,
-  Code,
-  Film,
-  Globe,
-  Lock,
-  Music,
-  Network,
-  Newspaper,
-  Share2,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { Brain, Network } from "lucide-react";
 import type { ConceptNodeData } from "@/store/mindscape";
 import { useLOD, useNodeFocus } from "../lod";
 import { getConfidenceStyle } from "../utils";
@@ -18,7 +7,11 @@ import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 // ... existing styles ...
 
-export function ConceptNode({ id, data, selected }: NodeProps<ConceptNodeData>) {
+export function ConceptNode({
+  id,
+  data,
+  selected,
+}: NodeProps<ConceptNodeData>) {
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -27,16 +20,16 @@ export function ConceptNode({ id, data, selected }: NodeProps<ConceptNodeData>) 
     typeof data.confidence === "number"
       ? `${Math.round(data.confidence * 100)}%`
       : null;
-  
+
   const confidenceStyle = getConfidenceStyle(data.confidence, data.archived);
 
   // LOD 0: Tiny
   if (lod === "tiny") {
     return (
-      <NodeLODTiny 
-        color="bg-indigo-500" 
-        shadow="shadow-indigo-500/50" 
-        className={confidenceStyle.container} 
+      <NodeLODTiny
+        className={confidenceStyle.container}
+        color="bg-indigo-500"
+        shadow="shadow-indigo-500/50"
       />
     );
   }
@@ -45,21 +38,19 @@ export function ConceptNode({ id, data, selected }: NodeProps<ConceptNodeData>) 
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={data.label ?? "Concept"}
-        icon={<Network className="h-3 w-3" />}
         borderColor="border-indigo-500/30"
-        textColor="text-indigo-400"
-        hoverColor="hover:border-indigo-500/50"
         className={confidenceStyle.container}
+        hoverColor="hover:border-indigo-500/50"
+        icon={<Network className="h-3 w-3" />}
+        label={data.label ?? "Concept"}
+        textColor="text-indigo-400"
       />
     );
   }
 
   // LOD 2/3: Medium/Full
-  const borderClass = selected
-    ? "border-biolum"
-    : confidenceStyle.border;
-  
+  const borderClass = selected ? "border-biolum" : confidenceStyle.border;
+
   const textClass = selected ? "text-biolum" : confidenceStyle.text;
 
   return (
@@ -80,9 +71,13 @@ export function ConceptNode({ id, data, selected }: NodeProps<ConceptNodeData>) 
             </span>
           )}
           {confidence && (
-            <span className={`font-mono text-[9px] opacity-70 ${
-              (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
-            }`}>{confidence}</span>
+            <span
+              className={`font-mono text-[9px] opacity-70 ${
+                (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
+              }`}
+            >
+              {confidence}
+            </span>
           )}
         </div>
       </div>

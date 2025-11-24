@@ -1,4 +1,4 @@
-import { memoryEdges, memoryNodes } from "../../schema/graph";
+import type { memoryEdges, memoryNodes } from "../../schema/graph";
 
 export type NodeInsert = typeof memoryNodes.$inferInsert;
 export type NodeRow = typeof memoryNodes.$inferSelect;

@@ -1,20 +1,20 @@
-import { spawn } from "bun";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { spawn } from "bun";
 
 const FORBIDDEN_STRINGS = [
   "drizzle-orm",
-  "postgres", 
+  "postgres",
   "googleapis",
   "@alfred/db",
   "openai", // Check for OpenAI SDK leakage
   "process.env.OPENAI_API_KEY", // Check for secret leakage
-  "process.env.DATABASE_URL"
+  "process.env.DATABASE_URL",
 ];
 
 async function verifyBuild() {
   console.log("🔍 Starting Build Verification...");
-  
+
   // 1. Run Build
   console.log("📦 Running 'vite build' in apps/web...");
   const build = spawn(["bun", "run", "build"], {
@@ -32,16 +32,16 @@ async function verifyBuild() {
   // 2. Analyze Bundles
   console.log("🕵️  Analyzing client bundles for forbidden code...");
   const distPath = join(process.cwd(), "apps/web/dist/client/assets");
-  
+
   try {
     const files = await readdir(distPath);
-    const jsFiles = files.filter(f => f.endsWith(".js"));
-    
+    const jsFiles = files.filter((f) => f.endsWith(".js"));
+
     let leaked = false;
 
     for (const file of jsFiles) {
       const content = await readFile(join(distPath, file), "utf-8");
-      
+
       for (const forbidden of FORBIDDEN_STRINGS) {
         const index = content.indexOf(forbidden);
         if (index !== -1) {
@@ -50,15 +50,21 @@ async function verifyBuild() {
           const start = Math.max(0, index - 50);
           const end = Math.min(content.length, index + forbidden.length + 50);
           const context = content.slice(start, end).replace(/\n/g, "\\n");
-          
+
           // Allow list for known false positives
-          const isFalsePositive = 
-            (forbidden === "postgres" && (file.includes("ts-tags") || file.includes("emacs-lisp") || context.includes("sql-comint-postgres"))) ||
-            (forbidden === "googleapis" && context.includes("storage.googleapis.com")) ||
+          const isFalsePositive =
+            (forbidden === "postgres" &&
+              (file.includes("ts-tags") ||
+                file.includes("emacs-lisp") ||
+                context.includes("sql-comint-postgres"))) ||
+            (forbidden === "googleapis" &&
+              context.includes("storage.googleapis.com")) ||
             (forbidden === "openai" && context.includes('["local","openai"]'));
 
           if (!isFalsePositive) {
-            console.error(`❌ FORBIDDEN STRING DETECTED in ${file}: "${forbidden}"`);
+            console.error(
+              `❌ FORBIDDEN STRING DETECTED in ${file}: "${forbidden}"`
+            );
             console.error(`   Context: ...${context}...`);
             leaked = true;
           }
@@ -67,12 +73,13 @@ async function verifyBuild() {
     }
 
     if (leaked) {
-      console.error("🚨 Build verification FAILED: Server code leaked into client bundle.");
+      console.error(
+        "🚨 Build verification FAILED: Server code leaked into client bundle."
+      );
       process.exit(1);
     } else {
       console.log("✅ Build verification PASSED: No server leakage detected.");
     }
-
   } catch (error) {
     console.error("❌ Error analyzing build artifacts:", error);
     process.exit(1);

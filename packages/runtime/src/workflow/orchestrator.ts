@@ -1,4 +1,17 @@
-import { emitLinearActivity } from "@alfred/agent/integrations/linear";
+import { setTimeout as delay } from "node:timers/promises";
+import {
+  commentOnLinearIssue,
+  emitLinearActivity,
+  extractIssueIdFromSession,
+  setLinearCompleted,
+  setLinearDelegate,
+  setLinearSessionExternalUrl,
+  setLinearStarted,
+} from "@alfred/agent/integrations/linear";
+import { recordAudit } from "@alfred/agent/utils/audit";
+import { makeEventId } from "@alfred/agent/utils/event-id";
+import { eventToUiMessages } from "@alfred/agent/utils/normalize";
+import { redactEventData } from "@alfred/agent/utils/redaction";
 import {
   multiAgentAgentDurationSeconds,
   multiAgentErrorsTotal,
@@ -7,12 +20,12 @@ import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
+import { runRegistry } from "@alfred/agent/workflow/registry";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
-import { eventToUiMessages } from "@alfred/agent/utils/normalize";
-import { runRegistry } from "@alfred/agent/workflow/registry";
 import {
   createRequirementMessage,
   createWorkflowExecutor,
@@ -21,14 +34,15 @@ import {
   persistWorkflowMessages,
   shouldUseWorkflowRuntime,
 } from "./executor";
-import { type WorkflowInputPayload } from "@alfred/agent/workflow/schema";
-import { recordAudit } from "@alfred/agent/utils/audit";
-import { makeEventId } from "@alfred/agent/utils/event-id";
-import { redactEventData } from "@alfred/agent/utils/redaction";
+import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
+import { ReviewGate, type ReviewCheckStatus } from "@alfred/agent/workflow/review-gate";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
 
 export type OrchestratorCallbacks = {
-  triggerPreferenceRefresh: (userId: string, payload: { reason: string }) => void;
+  triggerPreferenceRefresh: (
+    userId: string,
+    payload: { reason: string }
+  ) => void;
   ensureObligations?: (ctx: any) => void;
   context?: any;
   emitError: (error: any) => void;
@@ -50,6 +64,151 @@ export async function orchestrateWorkflowStream(
       return () => {};
     }
   }
+
+  const externalUrlBase =
+    process.env.PUBLIC_URL ??
+    process.env.VITE_APP_URL ??
+    process.env.APP_URL ??
+    null;
+
+  const workflowUrlFor = (id: string | null): string | null => {
+    if (!id || !externalUrlBase) {
+      return null;
+    }
+    const normalized = externalUrlBase.endsWith("/")
+      ? externalUrlBase.slice(0, -1)
+      : externalUrlBase;
+    return `${normalized}/workflow/${id}`;
+  };
+
+  const resolveIssueId = (
+    linear: NonNullable<WorkflowInputPayload["linear"]>
+  ): string | null => {
+    if (linear.issueId && linear.issueId.length > 0) {
+      return linear.issueId;
+    }
+    if (linear.sessionId) {
+      return extractIssueIdFromSession(linear.sessionId);
+    }
+    return null;
+  };
+
+  const bootstrapLinearSession = async (args: {
+    runId: string;
+    requirement: string;
+    linear: NonNullable<WorkflowInputPayload["linear"]>;
+    authz: string;
+    workflowUrl: string | null;
+  }): Promise<void> => {
+    const { runId, requirement, linear, authz, workflowUrl } = args;
+    try {
+      const thoughtPromise = emitLinearActivity("thought", {
+        sessionId: linear.sessionId as string,
+        space: linear.space,
+        authz,
+        body: `Starting workflow: ${requirement}`,
+      }).catch((error) => {
+        logger.warn("linear_thought_activity_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { ok: false };
+      });
+
+      await Promise.race([
+        thoughtPromise,
+        delay(9000).then(() => {
+          logger.warn("linear_thought_activity_timeout", { runId });
+          return { ok: false };
+        }),
+      ]);
+
+      const issueId = resolveIssueId(linear);
+      if (!issueId) {
+        logger.warn("linear_issue_id_missing", { runId });
+        return;
+      }
+
+      setLinearDelegate({
+        space: linear.space,
+        issueId,
+        authz,
+      }).catch((error) => {
+        logger.warn("linear_delegate_setup_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+      setLinearStarted({
+        space: linear.space,
+        issueId,
+        authz,
+      }).catch((error) => {
+        logger.warn("linear_started_setup_failed", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+      if (workflowUrl) {
+        setLinearSessionExternalUrl(
+          linear.sessionId as string,
+          linear.space,
+          authz,
+          workflowUrl
+        ).catch((error) => {
+          logger.warn("linear_external_url_setup_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      } else {
+        logger.warn("linear_external_url_setup_missing_base", { runId });
+      }
+    } catch (error) {
+      logger.warn("linear_bootstrap_failed", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const finalizeLinearSuccess = async (args: {
+    runId: string;
+    finalMessage: string | null;
+    reviewChecks: ReviewCheckStatus[];
+    linear: NonNullable<WorkflowInputPayload["linear"]>;
+    authz: string;
+    workflowUrl: string | null;
+  }): Promise<void> => {
+    const { runId, finalMessage, reviewChecks, linear, authz, workflowUrl } =
+      args;
+    const issueId = resolveIssueId(linear);
+    if (!issueId) {
+      throw new Error("linear_issue_id_missing");
+    }
+
+    await setLinearCompleted({
+      space: linear.space,
+      issueId,
+      authz,
+    });
+
+    const commentBody = buildLinearCompletionComment({
+      runId,
+      finalMessage,
+      reviewChecks,
+      workflowUrl,
+    });
+
+    await commentOnLinearIssue({
+      space: linear.space,
+      issueId,
+      authz,
+      body: commentBody,
+    });
+  };
 
   const abortController = new AbortController();
   let cancelled = false;
@@ -88,6 +247,8 @@ export async function orchestrateWorkflowStream(
     let workflowConversationId: string | null = null;
     const useRuntime = shouldUseWorkflowRuntime();
     const reasonTraces: ReasonTrace[] = [];
+    let linearIssueUrlFromCreation: string | null = null;
+    const reviewGate = new ReviewGate();
 
     const refreshPreferences = (reason: string) =>
       callbacks.triggerPreferenceRefresh(session.user.id, { reason });
@@ -189,9 +350,9 @@ export async function orchestrateWorkflowStream(
         typeof payload.text === "string" && payload.text.length > 0
           ? payload.text
           : typeof payload.reasoning === "string" &&
-            payload.reasoning.length > 0
-          ? payload.reasoning
-          : null;
+              payload.reasoning.length > 0
+            ? payload.reasoning
+            : null;
       if (!text) {
         return;
       }
@@ -199,6 +360,18 @@ export async function orchestrateWorkflowStream(
     };
 
     try {
+      if (!input.runId) {
+        const prepared = await ensureLinearTicket({
+          linear: input.linear,
+          authzLinear: input.authzLinear,
+          requirement: input.requirement,
+        });
+        if (prepared.linear) {
+          input.linear = prepared.linear;
+        }
+        linearIssueUrlFromCreation = prepared.ticket?.issueUrl ?? null;
+      }
+
       let history: WorkflowEvent[] | undefined;
       if (input.runId) {
         const events = await workflowRepo.listEvents(input.runId);
@@ -208,11 +381,7 @@ export async function orchestrateWorkflowStream(
         })) as WorkflowEvent[];
       }
 
-      const executor = createWorkflowExecutor(
-        input,
-        abortController,
-        history
-      );
+      const executor = createWorkflowExecutor(input, abortController, history);
 
       if (input.runId) {
         runId = input.runId;
@@ -233,16 +402,29 @@ export async function orchestrateWorkflowStream(
           inputData: storedInput,
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
+          linearIssueId:
+            input.linear?.issueId ?? input.linear?.sessionId ?? null,
+          linearIssueUrl:
+            linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? null,
         });
+
+        if (input.linear?.sessionId && input.authzLinear) {
+          await bootstrapLinearSession({
+            runId,
+            requirement: input.requirement,
+            linear: input.linear,
+            authz: input.authzLinear,
+            workflowUrl: workflowUrlFor(runId),
+          });
+        }
       }
 
       try {
-        const { conversation, created } =
-          await ensureWorkflowConversation({
-            userId: session.user.id,
-            workflowId: runId,
-            title: deriveWorkflowTitle(input.requirement),
-          });
+        const { conversation, created } = await ensureWorkflowConversation({
+          userId: session.user.id,
+          workflowId: runId,
+          title: deriveWorkflowTitle(input.requirement),
+        });
         workflowConversationId = conversation.id;
         if (created) {
           const persisted = await persistWorkflowMessages({
@@ -306,9 +488,7 @@ export async function orchestrateWorkflowStream(
         return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
       };
 
-      const maybeUiMessages = (
-        event: WorkflowEvent
-      ): UIMessage[] | null => {
+      const maybeUiMessages = (event: WorkflowEvent): UIMessage[] | null => {
         const msgs = eventToUiMessages(event);
         return Array.isArray(msgs) && msgs.length > 0 ? msgs : null;
       };
@@ -339,27 +519,18 @@ export async function orchestrateWorkflowStream(
 
             for (const agent of agents) {
               const role =
-                agent.role && agent.role.length > 0
-                  ? agent.role
-                  : "worker";
+                agent.role && agent.role.length > 0 ? agent.role : "worker";
               const rawStatus = agent.status;
               const outcome: "ok" | "error" | "stuck" =
                 rawStatus === "stuck" || agent.stuck
                   ? "stuck"
                   : rawStatus === "failed"
-                  ? "error"
-                  : "ok";
+                    ? "error"
+                    : "ok";
 
               const dur = agent.durationSeconds;
-              if (
-                typeof dur === "number" &&
-                Number.isFinite(dur) &&
-                dur >= 0
-              ) {
-                multiAgentAgentDurationSeconds.observe(
-                  { role, outcome },
-                  dur
-                );
+              if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
+                multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);
               }
 
               if (outcome !== "ok") {
@@ -374,6 +545,16 @@ export async function orchestrateWorkflowStream(
             multiAgentTasksTotal.inc({ status: "merged" });
           } else if (evt.kind === "review-plan") {
             multiAgentTasksTotal.inc({ status: "review" });
+            reviewGate.applyPlan(evt.data ?? {});
+          } else if (evt.kind === "review-check") {
+            reviewGate.recordCheck({
+              id: evt.data?.id,
+              type: evt.data?.type,
+              status: evt.data?.status,
+              attempt: evt.data?.attempt,
+              evidence:
+                evt.data?.output ?? evt.data?.error ?? evt.data?.evidence,
+            });
           } else if (
             evt.kind === "merge-agent-result" ||
             evt.kind === "review-agent-result" ||
@@ -391,30 +572,23 @@ export async function orchestrateWorkflowStream(
               rawStatus === "stuck"
                 ? "stuck"
                 : rawStatus === "failed"
-                ? "error"
-                : "ok";
+                  ? "error"
+                  : "ok";
             const dur = data.durationSeconds;
-            if (
-              typeof dur === "number" &&
-              Number.isFinite(dur) &&
-              dur >= 0
-            ) {
-              multiAgentAgentDurationSeconds.observe(
-                { role, outcome },
-                dur
-              );
+            if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
+              multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);
             }
             if (outcome !== "ok") {
               const kind =
                 evt.kind === "merge-agent-result"
                   ? "merge_failed"
                   : evt.kind === "review-agent-result"
-                  ? "review_failed"
-                  : evt.kind === "conflict-agent-result"
-                  ? "merge_conflict_analysis_failed"
-                  : evt.kind === "conflict-resolution-result"
-                  ? "merge_conflict_resolution_failed"
-                  : "review_exec_failed";
+                    ? "review_failed"
+                    : evt.kind === "conflict-agent-result"
+                      ? "merge_conflict_analysis_failed"
+                      : evt.kind === "conflict-resolution-result"
+                        ? "merge_conflict_resolution_failed"
+                        : "review_exec_failed";
               multiAgentErrorsTotal.inc({ kind });
             }
           }
@@ -456,11 +630,7 @@ export async function orchestrateWorkflowStream(
               eventData: uiMessages,
             });
           }
-          if (
-            workflowConversationId &&
-            uiMessages &&
-            uiMessages.length > 0
-          ) {
+          if (workflowConversationId && uiMessages && uiMessages.length > 0) {
             const persisted = await persistWorkflowMessages({
               userId: session.user.id,
               conversationId: workflowConversationId,
@@ -497,8 +667,7 @@ export async function orchestrateWorkflowStream(
             }).catch((error) => {
               logger.warn("linear_activity_emission_failed", {
                 runId,
-                error:
-                  error instanceof Error ? error.message : String(error),
+                error: error instanceof Error ? error.message : String(error),
               });
             });
           }
@@ -517,9 +686,9 @@ export async function orchestrateWorkflowStream(
             typeof input.cw === "string" && input.cw.length > 0
               ? input.cw
               : typeof input.workspace === "string" &&
-                input.workspace.length > 0
-              ? input.workspace
-              : process.cwd();
+                  input.workspace.length > 0
+                ? input.workspace
+                : process.cwd();
 
           await workflowProvenance({
             resource,
@@ -545,6 +714,22 @@ export async function orchestrateWorkflowStream(
       if (suspended) {
         await markSuspended();
         return;
+      }
+
+      if (finalStatus === "completed") {
+        if (!reviewGate.isSatisfied()) {
+          throw new Error("review_checklist_incomplete");
+        }
+        if (input.linear?.sessionId && input.authzLinear) {
+          await finalizeLinearSuccess({
+            runId: runId ?? executor.runId,
+            finalMessage,
+            reviewChecks: reviewGate.summary(),
+            linear: input.linear,
+            authz: input.authzLinear,
+            workflowUrl: workflowUrlFor(runId ?? executor.runId),
+          });
+        }
       }
 
       await markCompleted();
@@ -597,4 +782,35 @@ export async function orchestrateWorkflowStream(
       closeTimer("cancel");
     }
   };
+}
+
+function buildLinearCompletionComment(args: {
+  runId: string;
+  finalMessage: string | null;
+  reviewChecks: ReviewCheckStatus[];
+  workflowUrl: string | null;
+}): string {
+  const lines: string[] = [
+    `Workflow run ${args.runId} completed successfully.`,
+  ];
+
+  if (args.workflowUrl) {
+    lines.push(`Run details: ${args.workflowUrl}`);
+  }
+
+  if (args.finalMessage && args.finalMessage.trim().length > 0) {
+    lines.push(`Summary: ${args.finalMessage.trim()}`);
+  }
+
+  if (args.reviewChecks.length > 0) {
+    lines.push("Review checks:");
+    for (const check of args.reviewChecks) {
+      const attemptInfo = check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
+      lines.push(`- ${check.type}: ${check.status}${attemptInfo}`);
+    }
+  } else {
+    lines.push("Review checks: not required.");
+  }
+
+  return lines.join("\n");
 }

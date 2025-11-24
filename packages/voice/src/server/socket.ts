@@ -1,10 +1,5 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
-import {
-  voiceSessionJitterMillis,
-  voiceSessionPacketLossTotal,
-  voiceSessionRttMillis,
-} from "../metrics";
 import type {
   VoiceStreamAudioChunkPayload,
   VoiceStreamServerEvent,
@@ -19,6 +14,11 @@ import {
   PCM_MIME_TYPE,
   type TargetFormat,
 } from "../audio/codec";
+import {
+  voiceSessionJitterMillis,
+  voiceSessionPacketLossTotal,
+  voiceSessionRttMillis,
+} from "../metrics";
 import type { VoiceRegistry } from "./registry";
 import type { VoiceSession } from "./session";
 

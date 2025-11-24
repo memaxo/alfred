@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import { runPlanV6 } from "@alfred/agent/workflow/runner";
-import { workflowInput } from "@alfred/agent/workflow/schema";
+import type { workflowInput } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
+import type { z } from "zod";
 
 export function shouldUseWorkflowRuntime(): boolean {
   return process.env.USE_WORKFLOW_RUNTIME === "true";

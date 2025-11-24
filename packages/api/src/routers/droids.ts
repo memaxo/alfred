@@ -1,4 +1,8 @@
+import { randomUUID } from "node:crypto";
+import type { ResumePayload } from "@alfred/agent/workflow/registry";
+import { runRegistry } from "@alfred/agent/workflow/registry";
 import { droidExecRunsTotal } from "@alfred/api/metrics";
+import { getRedis } from "@alfred/auth/redis";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -17,6 +21,176 @@ const droidRunInputSchema = z.object({
 });
 
 type DroidRunInput = z.infer<typeof droidRunInputSchema>;
+type StoredDroidInput = Omit<DroidRunInput, "authz">;
+
+type DroidRunResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+
+type StreamSession = {
+  start: (input: DroidRunInput) => Promise<void>;
+  cancel: () => void;
+};
+
+type PendingResumeEntry =
+  | { type: "run"; input: StoredDroidInput }
+  | { type: "stream"; input: StoredDroidInput; streamSession?: StreamSession };
+
+type ResumeCompletion =
+  | { kind: "run"; result: DroidRunResult }
+  | { kind: "stream"; status: "ready" };
+
+const pendingResumableRuns = new Map<string, PendingResumeEntry>();
+
+const RESUME_RESULT_TTL_SEC = 15 * 60;
+const PENDING_ENTRY_TTL_SEC = 30 * 60;
+const KEY_RESUME_RESULT = (runId: string) => `droid:resume:${runId}:result`;
+const KEY_PENDING_ENTRY = (runId: string) => `droid:pending:${runId}`;
+
+type LocalResultEntry = {
+  payload: ResumeCompletion;
+  expiresAt: number;
+};
+
+type PendingRunRecord = {
+  type: PendingResumeEntry["type"];
+  input: StoredDroidInput;
+  createdAt: number;
+};
+
+type LocalPendingEntry = {
+  record: PendingRunRecord;
+  expiresAt: number;
+};
+
+const localResumeResults = new Map<string, LocalResultEntry>();
+const localPendingRecords = new Map<string, LocalPendingEntry>();
+
+function cloneStoredInput(input: DroidRunInput): StoredDroidInput {
+  return {
+    prompt: input.prompt,
+    auto: input.auto,
+    out: input.out,
+    command: input.command,
+    args: input.args ? [...input.args] : undefined,
+    cw: input.cw,
+  };
+}
+
+function hydrateInput(stored: StoredDroidInput, authz: string): DroidRunInput {
+  return {
+    ...stored,
+    authz,
+    args: stored.args ? [...stored.args] : undefined,
+  };
+}
+
+async function persistPendingRecord(runId: string, record: PendingRunRecord) {
+  const redis = getRedis();
+  const encoded = JSON.stringify(record);
+  if (redis) {
+    try {
+      await (
+        redis.set as unknown as (
+          key: string,
+          value: string,
+          options: { EX: number }
+        ) => Promise<string>
+      )(KEY_PENDING_ENTRY(runId), encoded, { EX: PENDING_ENTRY_TTL_SEC });
+      return;
+    } catch {
+      // fallback
+    }
+  }
+  localPendingRecords.set(runId, {
+    record,
+    expiresAt: Date.now() + PENDING_ENTRY_TTL_SEC * 1000,
+  });
+}
+
+async function removePendingRecord(runId: string) {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.del(KEY_PENDING_ENTRY(runId));
+    } catch {
+      // ignore
+    }
+  }
+  localPendingRecords.delete(runId);
+}
+
+async function loadPendingRecord(runId: string): Promise<PendingRunRecord | null> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const raw = await redis.get(KEY_PENDING_ENTRY(runId));
+      if (raw) {
+        return JSON.parse(raw) as PendingRunRecord;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  const entry = localPendingRecords.get(runId);
+  if (!entry) {
+    return null;
+  }
+  if (entry.expiresAt < Date.now()) {
+    localPendingRecords.delete(runId);
+    return null;
+  }
+  return entry.record;
+}
+
+async function saveResumeResult(runId: string, payload: ResumeCompletion) {
+  const redis = getRedis();
+  const encoded = JSON.stringify(payload);
+  if (redis) {
+    try {
+      await (
+        redis.set as unknown as (
+          key: string,
+          value: string,
+          options: { EX: number }
+        ) => Promise<string>
+      )(KEY_RESUME_RESULT(runId), encoded, { EX: RESUME_RESULT_TTL_SEC });
+      return;
+    } catch {
+      // fallback
+    }
+  }
+  localResumeResults.set(runId, {
+    payload,
+    expiresAt: Date.now() + RESUME_RESULT_TTL_SEC * 1000,
+  });
+}
+
+async function consumeResumeResult(runId: string): Promise<ResumeCompletion | null> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const raw = await redis.get(KEY_RESUME_RESULT(runId));
+      if (raw) {
+        await redis.del(KEY_RESUME_RESULT(runId));
+        return JSON.parse(raw) as ResumeCompletion;
+      }
+    } catch {
+      // ignore and fallback
+    }
+  }
+  const entry = localResumeResults.get(runId);
+  if (!entry) {
+    return null;
+  }
+  localResumeResults.delete(runId);
+  if (entry.expiresAt < Date.now()) {
+    return null;
+  }
+  return entry.payload;
+}
 
 function createScript(prompt: string, out: DroidRunInput["out"]) {
   if (out === "json") {
@@ -39,107 +213,228 @@ function spawnDroidProcess(input: DroidRunInput) {
   });
 }
 
+async function executeDroidRun(input: DroidRunInput): Promise<DroidRunResult> {
+  const proc = spawnDroidProcess(input);
+
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+
+  if (proc.stdout && typeof proc.stdout !== "number") {
+    const reader = proc.stdout.getReader();
+    const decoder = new TextDecoder();
+
+    (async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          stdoutChunks.push(decoder.decode(value));
+        }
+      } catch {
+        // Ignore stream read errors
+      }
+    })();
+  }
+
+  if (proc.stderr && typeof proc.stderr !== "number") {
+    const reader = proc.stderr.getReader();
+    const decoder = new TextDecoder();
+
+    (async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          stderrChunks.push(decoder.decode(value));
+        }
+      } catch {
+        // Ignore stderr read errors
+      }
+    })();
+  }
+
+  const exitCode = await proc.exited;
+  droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
+
+  return {
+    exitCode,
+    stdout: stdoutChunks.join(""),
+    stderr: stderrChunks.join(""),
+  };
+}
+
+async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
+  let pending = pendingResumableRuns.get(runId);
+  if (pending) {
+    return pending;
+  }
+  const record = await loadPendingRecord(runId);
+  if (!record) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "run_not_found_or_expired",
+    });
+  }
+  pending = { type: record.type, input: record.input };
+  pendingResumableRuns.set(runId, pending);
+  return pending;
+}
+
+async function handleResume(runId: string, resumeData: ResumePayload) {
+  if (resumeData.event !== "bio-authz") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "unsupported_resume_event",
+    });
+  }
+
+  const pending = await loadPendingOrFail(runId);
+  const resumedInput = hydrateInput(pending.input, resumeData.authz);
+
+  const { decision } = await requireToolScopesAndPolicy(
+    resumedInput.authz,
+    ["droid.exec"],
+    {
+      action: "droid.exec",
+      resource: buildPolicyResource(resumedInput),
+      context: buildPolicyContext(resumedInput),
+    }
+  );
+
+  const obligations = decision.obligations ?? [];
+  if (obligations.length > 0) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "obligation_required",
+      cause: {
+        reason: "droid_execution",
+        obligations,
+        runId,
+      },
+    });
+  }
+
+  if (pending.type === "run") {
+    const result = await executeDroidRun(resumedInput);
+    await saveResumeResult(runId, { kind: "run", result });
+  } else {
+    const session = pending.streamSession;
+    if (session) {
+      await session.start(resumedInput);
+      await saveResumeResult(runId, { kind: "stream", status: "ready" });
+    } else {
+      await saveResumeResult(runId, { kind: "stream", status: "ready" });
+    }
+  }
+
+  pendingResumableRuns.delete(runId);
+  await removePendingRecord(runId);
+  await runRegistry.unregister(runId);
+}
+
+function buildPolicyResource(input: StoredDroidInput | DroidRunInput) {
+  return {
+    kind: "repo",
+    id: input.cw,
+  } as const;
+}
+
+function buildPolicyContext(input: StoredDroidInput | DroidRunInput) {
+  return { auto: input.auto } as const;
+}
+
+async function registerResumableRun(runId: string, entry: PendingResumeEntry) {
+  pendingResumableRuns.set(runId, entry);
+  await persistPendingRecord(runId, {
+    type: entry.type,
+    input: entry.input,
+    createdAt: Date.now(),
+  });
+  const abortController = new AbortController();
+
+  try {
+    await runRegistry.register(runId, {
+      resume: async ({ resumeData }) => {
+        await handleResume(runId, resumeData);
+      },
+      cancel: async () => {
+        pendingResumableRuns.delete(runId);
+        await removePendingRecord(runId);
+        abortController.abort();
+        entry.streamSession?.cancel();
+      },
+      abortController,
+    });
+  } catch (error) {
+    pendingResumableRuns.delete(runId);
+    await removePendingRecord(runId);
+    throw error;
+  }
+}
+
+async function cancelPendingRun(runId: string) {
+  pendingResumableRuns.delete(runId);
+  await removePendingRecord(runId);
+  try {
+    await runRegistry.unregister(runId);
+  } catch {
+    // ignore
+  }
+}
+
 const droidProcedures = {
   run: authedProcedure
     .use(
       requirePolicy(
         "droid.exec",
         (raw) => {
-          const input = raw as DroidRunInput;
+          const input = (raw ?? {}) as DroidRunInput;
           return {
             kind: "repo",
             id: input.cw,
           };
         },
         (raw) => {
-          const input = raw as DroidRunInput;
+          const input = (raw ?? {}) as DroidRunInput;
           return { auto: input.auto };
         }
       )
     )
     .input(droidRunInputSchema)
-    .mutation(async ({ input }) => {
-      // TODO: Propagate PDP obligations (biometric, approvals) back to the client and support resumable execution.
-      const { claims } = await requireToolScopesAndPolicy(
+    .mutation(async ({ input, ctx }) => {
+      await requireToolScopesAndPolicy(
         input.authz,
         ["droid.exec"],
         {
           action: "droid.exec",
-          resource: {
-            kind: "repo",
-            id: input.cw,
-          },
-          context: {
-            auto: input.auto,
-          },
+          resource: buildPolicyResource(input),
+          context: buildPolicyContext(input),
         }
       );
 
-      if (
-        (input.auto === "medium" || input.auto === "high") &&
-        (!claims.elevated || claims.mfa !== "passkey")
-      ) {
+      const obligations = ctx.policy?.obligations ?? [];
+      if (obligations.length > 0) {
+        const runId = randomUUID();
+        await registerResumableRun(runId, {
+          type: "run",
+          input: cloneStoredInput(input),
+        });
         throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "biometric_required",
+          code: "PRECONDITION_FAILED",
+          message: "obligation_required",
+          cause: {
+            reason: "droid_execution",
+            obligations,
+            runId,
+          },
         });
       }
 
-      const proc = spawnDroidProcess(input);
-
-      const stdoutChunks: string[] = [];
-      const stderrChunks: string[] = [];
-
-      // Handle stdout stream
-      if (proc.stdout && typeof proc.stdout !== "number") {
-        const reader = proc.stdout.getReader();
-        const decoder = new TextDecoder();
-
-        (async () => {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                break;
-              }
-              stdoutChunks.push(decoder.decode(value));
-            }
-          } catch {
-            // Ignore stream read errors
-          }
-        })();
-      }
-
-      // Handle stderr stream
-      if (proc.stderr && typeof proc.stderr !== "number") {
-        const reader = proc.stderr.getReader();
-        const decoder = new TextDecoder();
-
-        (async () => {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                break;
-              }
-              stderrChunks.push(decoder.decode(value));
-            }
-          } catch {
-            // Ignore stderr read errors
-          }
-        })();
-      }
-
-      let exitCode = 0;
-      exitCode = await proc.exited;
-
-      droidExecRunsTotal.labels(input.auto, String(exitCode)).inc();
-
-      return {
-        exitCode,
-        stdout: stdoutChunks.join(""),
-        stderr: stderrChunks.join(""),
-      };
+      return executeDroidRun(input);
     }),
 
   stream: authedProcedure
@@ -147,53 +442,38 @@ const droidProcedures = {
       requirePolicy(
         "droid.exec",
         (raw) => {
-          const input = raw as DroidRunInput;
+          const input = (raw ?? {}) as DroidRunInput;
           return {
             kind: "repo",
             id: input.cw,
           };
         },
         (raw) => {
-          const input = raw as DroidRunInput;
+          const input = (raw ?? {}) as DroidRunInput;
           return { auto: input.auto };
         }
       )
     )
     .input(droidRunInputSchema)
-    .subscription(({ input }) =>
+    .subscription(({ input, ctx }) =>
       observable<{ type: string; data?: string; code?: number }>((emit) => {
         let proc: ReturnType<typeof spawnDroidProcess> | null = null;
+        let closed = false;
+        let runId: string | null = null;
 
-        void (async () => {
-          // TODO: Surface obligations to clients so they can request elevation before opening the stream.
-          const { claims } = await requireToolScopesAndPolicy(
-            input.authz,
-            ["droid.exec"],
-            {
-              action: "droid.exec",
-              resource: {
-                kind: "repo",
-                id: input.cw,
-              },
-              context: {
-                auto: input.auto,
-              },
-            }
-          );
-
-          if (
-            (input.auto === "medium" || input.auto === "high") &&
-            (!claims.elevated || claims.mfa !== "passkey")
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "biometric_required",
-            });
+        const stopProcess = () => {
+          if (proc && !proc.killed) {
+            proc.kill("SIGTERM");
           }
+          proc = null;
+        };
 
-          proc = spawnDroidProcess(input);
+        const startStreaming = async (execInput: DroidRunInput) => {
+          if (closed) {
+            return;
+          }
+          proc = spawnDroidProcess(execInput);
 
-          // Handle stdout stream
           if (proc.stdout && typeof proc.stdout !== "number") {
             const reader = proc.stdout.getReader();
             const decoder = new TextDecoder();
@@ -202,18 +482,19 @@ const droidProcedures = {
               try {
                 while (true) {
                   const { done, value } = await reader.read();
-                  if (done) {
+                  if (done || closed) {
                     break;
                   }
                   emit.next({ type: "stdout", data: decoder.decode(value) });
                 }
               } catch (error) {
-                emit.error(error);
+                if (!closed) {
+                  emit.error(error);
+                }
               }
             })();
           }
 
-          // Handle stderr stream
           if (proc.stderr && typeof proc.stderr !== "number") {
             const reader = proc.stderr.getReader();
             const decoder = new TextDecoder();
@@ -222,38 +503,142 @@ const droidProcedures = {
               try {
                 while (true) {
                   const { done, value } = await reader.read();
-                  if (done) {
+                  if (done || closed) {
                     break;
                   }
                   emit.next({ type: "stderr", data: decoder.decode(value) });
                 }
               } catch (error) {
-                emit.error(error);
+                if (!closed) {
+                  emit.error(error);
+                }
               }
             })();
           }
 
-          // Handle exit
           proc.exited
             .then((code) => {
-              droidExecRunsTotal.labels(input.auto, String(code ?? 0)).inc();
+              if (closed) {
+                return;
+              }
+              droidExecRunsTotal.labels(execInput.auto, String(code ?? 0)).inc();
               emit.next({ type: "exit", code: code ?? 0 });
               emit.complete();
             })
             .catch((error) => {
-              emit.error(error);
+              if (!closed) {
+                emit.error(error);
+              }
             });
+        };
+
+        void (async () => {
+          await requireToolScopesAndPolicy(
+            input.authz,
+            ["droid.exec"],
+            {
+              action: "droid.exec",
+              resource: buildPolicyResource(input),
+              context: buildPolicyContext(input),
+            }
+          );
+
+          const obligations = ctx.policy?.obligations ?? [];
+          if (obligations.length > 0) {
+            runId = randomUUID();
+            const streamSession: StreamSession = {
+              start: async (resumedInput) => {
+                if (closed) {
+                  return;
+                }
+                emit.next({ type: "resume", data: JSON.stringify({ runId }) });
+                await startStreaming(resumedInput);
+              },
+              cancel: () => {
+                stopProcess();
+              },
+            };
+            await registerResumableRun(runId, {
+              type: "stream",
+              input: cloneStoredInput(input),
+              streamSession,
+            });
+            emit.next({
+              type: "obligation",
+              data: JSON.stringify({
+                reason: "droid_execution",
+                obligations,
+                runId,
+              }),
+            });
+            return;
+          }
+
+          await startStreaming(input);
         })().catch((error) => {
-          emit.error(error);
+          if (!closed) {
+            emit.error(error);
+          }
         });
 
         return () => {
-          if (proc && !proc.killed) {
-            proc.kill("SIGTERM");
+          closed = true;
+          stopProcess();
+          if (runId) {
+            void cancelPendingRun(runId);
           }
         };
       })
     ),
+
+  resume: authedProcedure
+    .input(
+      z.object({
+        runId: z.string().uuid(),
+        authz: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const pending = pendingResumableRuns.get(input.runId) ?? (await loadPendingRecord(input.runId));
+      if (!pending) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "run_not_found_or_expired",
+        });
+      }
+
+      try {
+        const delivered = await runRegistry.dispatchResume(input.runId, {
+          event: "bio-authz",
+          authz: input.authz,
+        });
+
+        if (!delivered) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "run_not_found_or_expired",
+          });
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "resume_failed",
+          cause: error,
+        });
+      }
+
+      const completion = await consumeResumeResult(input.runId);
+      if (!completion) {
+        return { success: true };
+      }
+      if (completion.kind === "run") {
+        return { success: true, result: completion.result };
+      }
+      return { success: true, event: completion.status };
+    }),
 };
 
 export const droidsRouter: ReturnType<typeof router> = router(droidProcedures);

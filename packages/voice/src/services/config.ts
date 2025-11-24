@@ -20,7 +20,7 @@ export async function resolveVoicePreference(
   }
 
   try {
-    // @ts-ignore
+    // @ts-expect-error
     const { userRepo } = await import("@alfred/db/repo/user");
     const prefs = await userRepo.getPreferences(userId);
     const voicePref = Array.isArray(prefs)
@@ -32,7 +32,7 @@ export async function resolveVoicePreference(
     }
   } catch (error) {
     try {
-      // @ts-ignore
+      // @ts-expect-error
       const { logger } = await import("@alfred/logger");
       logger.warn("failed_to_resolve_voice_preference", { userId, error });
     } catch {
@@ -52,7 +52,7 @@ export async function resolveSttLanguagePreference(
   }
 
   try {
-    // @ts-ignore
+    // @ts-expect-error
     const { userRepo } = await import("@alfred/db/repo/user");
     const prefs = await userRepo.getPreferences(userId);
     const langPref = Array.isArray(prefs)
@@ -64,7 +64,7 @@ export async function resolveSttLanguagePreference(
     }
   } catch (error) {
     try {
-      // @ts-ignore
+      // @ts-expect-error
       const { logger } = await import("@alfred/logger");
       logger.warn("failed_to_resolve_stt_preference", { userId, error });
     } catch {

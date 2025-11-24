@@ -5,7 +5,7 @@
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-// TODO: [Phase 9] Add proper indexes for policy queries
+// Index coverage: migrations 0041+ provide audit log and approval indexes.
 
 /**
  * Audit logs (policy decisions and enforcement)
@@ -22,10 +22,7 @@ export const auditLogs = pgTable("audit_logs", {
   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 9] Add index on (userId, timestamp) for user audit trail
-// TODO: [Phase 9] Add index on (traceId) for correlated actions
-// TODO: [Phase 9] Add index on (action) for filtering by action type
-// TODO: [Phase 9] Add retention policy (e.g., 90 days)
+// Index coverage: audit_logs_* indexes added in 0041; still need retention policy follow-up.
 
 /**
  * Approvals (manual approval queue for high-risk actions)
@@ -45,6 +42,4 @@ export const approvals = pgTable("approvals", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 9] Add index on (userId, status) for pending approval queries
-// TODO: [Phase 9] Add index on (expiresAt, status) for expiry cleanup
-// TODO: [Phase 9] Add approval notification system
+// Index coverage: approvals_* indexes from 0041; still need notification system.

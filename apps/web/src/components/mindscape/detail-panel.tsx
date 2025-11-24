@@ -3,6 +3,7 @@ import { Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
+import { formatRelativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
   type ArtifactData,
@@ -77,9 +78,15 @@ export function MindscapeDetailPanel({
       };
     })
   );
+  const contextEntry = useMindscapeStore((state) =>
+    focusedNodeId ? state.contextCache[focusedNodeId] : undefined
+  );
 
   const data = nodeData as ArtifactData | undefined;
-  const node = useMemo(() => ({ id: focusedNodeId ?? "", type: nodeType, data }), [focusedNodeId, nodeType, data]);
+  const node = useMemo(
+    () => ({ id: focusedNodeId ?? "", type: nodeType, data }),
+    [focusedNodeId, nodeType, data]
+  );
 
   const graphDbId =
     typeof data?.graph?.dbId === "string" ? data.graph.dbId : undefined;
@@ -140,14 +147,14 @@ export function MindscapeDetailPanel({
 
   const ragDocuments = provenance?.nodes ?? memoizedEntry?.nodes ?? [];
   // Safe check for nodes definition
-  const hasRagDocuments = Array.isArray(ragDocuments) && ragDocuments.length > 0;
+  const hasRagDocuments =
+    Array.isArray(ragDocuments) && ragDocuments.length > 0;
 
   const showLoadingState = Boolean(
     isRuntimeKnowledge &&
       !memoizedEntry &&
       (isDebouncing || (shouldQuery && isLoading))
   );
-
 
   const panelClasses =
     "pointer-events-auto absolute right-4 top-4 z-20 w-80 max-w-sm rounded-3xl border border-white/10 bg-void-surface/80 p-4 text-biolum shadow-2xl backdrop-blur";
@@ -264,6 +271,32 @@ export function MindscapeDetailPanel({
         </section>
       )}
 
+      {contextEntry && (
+        <section className="mt-4 space-y-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-biolum-faint text-xs uppercase tracking-wide">
+                Context Source
+              </p>
+              <p className="font-medium text-biolum text-sm">
+                {contextEntry.source === "handoff" || contextEntry.phase === "cache"
+                  ? "Cache Hit"
+                  : "Fresh Scan"}
+              </p>
+            </div>
+            <span className="text-biolum-faint text-[11px]">
+              {formatRelativeTime(
+                contextEntry.receipt?.created ??
+                  new Date(contextEntry.updatedAt ?? Date.now())
+              )}
+            </span>
+          </div>
+          {contextEntry.receipt?.summary && (
+            <p className="text-biolum text-sm">{contextEntry.receipt.summary}</p>
+          )}
+        </section>
+      )}
+
       {isRuntimeKnowledge && (
         <section className="mt-6">
           <div className="flex items-center gap-2">
@@ -291,9 +324,7 @@ export function MindscapeDetailPanel({
                   Retry
                 </Button>
               </div>
-            ) : !hasRagDocuments ? (
-              <p className="text-biolum-dim">No RAG documents linked.</p>
-            ) : (
+            ) : hasRagDocuments ? (
               <ul className="space-y-2">
                 {ragDocuments.map((doc) => {
                   const ragNode = nodes.find(
@@ -333,6 +364,8 @@ export function MindscapeDetailPanel({
                   );
                 })}
               </ul>
+            ) : (
+              <p className="text-biolum-dim">No RAG documents linked.</p>
             )}
           </div>
         </section>

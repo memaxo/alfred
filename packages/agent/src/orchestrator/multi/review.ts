@@ -1,20 +1,102 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 export type ReviewCheckType =
   | "tests"
   | "lint"
   | "static"
   | "scenario"
-  | "smoke";
+  | "smoke"
+  | "verify";
 
 export type ReviewCheck = {
   id: string;
   description: string;
   type: ReviewCheckType;
+  script?: string;
 };
 
 export type ReviewPlan = {
   summary: string;
   checks: ReviewCheck[];
 };
+
+type VerifyRule = {
+  script: string;
+  description: string;
+  pattern: (file: string) => boolean;
+};
+
+const VERIFY_RULES: VerifyRule[] = [
+  {
+    script: "scripts/verify-orchestrator.ts",
+    description: "Validate orchestrator flows",
+    pattern: (file) =>
+      file.startsWith("packages/agent/") || file.startsWith("packages/runtime/"),
+  },
+  {
+    script: "scripts/verify-resilience.ts",
+    description: "Run resilience checks",
+    pattern: (file) =>
+      file.startsWith("packages/agent/") || file.startsWith("packages/runtime/"),
+  },
+  {
+    script: "scripts/verify-voice-runtime.ts",
+    description: "Exercise voice runtime flows",
+    pattern: (file) => file.includes("voice"),
+  },
+  {
+    script: "scripts/verify-cognitive-pipeline.ts",
+    description: "Verify cognitive pipelines",
+    pattern: (file) =>
+      file.includes("cognitive") || file.startsWith("packages/knowledge/"),
+  },
+  {
+    script: "scripts/verify-cognitive-health.ts",
+    description: "Verify cognition health checks",
+    pattern: (file) =>
+      file.startsWith("packages/cognitive/") || file.includes("learning"),
+  },
+  {
+    script: "scripts/verify-build.ts",
+    description: "Validate bundle/build outputs",
+    pattern: (file) =>
+      file.startsWith("apps/") || file.startsWith("packages/web/"),
+  },
+];
+
+function selectVerifyChecks(files: string[]): ReviewCheck[] {
+  const matches = new Map<string, ReviewCheck>();
+
+  for (const file of files) {
+    for (const rule of VERIFY_RULES) {
+      if (!rule.pattern(file)) {
+        continue;
+      }
+      const scriptPath = path.isAbsolute(rule.script)
+        ? rule.script
+        : path.resolve(process.cwd(), rule.script);
+      if (!existsSync(scriptPath)) {
+        continue;
+      }
+      if (matches.has(scriptPath)) {
+        continue;
+      }
+      matches.set(scriptPath, {
+        id: `verify-${pathToId(rule.script)}`,
+        type: "verify",
+        description: `${rule.description} (${rule.script})`,
+        script: rule.script,
+      });
+    }
+  }
+
+  return Array.from(matches.values()).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function pathToId(script: string) {
+  return script.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 export function buildReviewPlan(mergedHint: {
   files: string[];
@@ -53,6 +135,8 @@ export function buildReviewPlan(mergedHint: {
         "Exercise critical scenarios that touch the changed files to confirm behavior.",
     });
   }
+
+  checks.push(...selectVerifyChecks(uniqueFiles));
 
   const summaryBase =
     mergedHint.summary && mergedHint.summary.trim().length > 0
@@ -112,7 +196,13 @@ export function generateReviewExecPlanSkeleton(
   lines.push("");
   lines.push("## Progress");
   lines.push("");
-  lines.push("- [ ] (pending) Review plan drafted.");
+  if (reviewPlan.checks.length > 0) {
+    for (const check of reviewPlan.checks) {
+      lines.push(`- [ ] [${check.id}] Pending`);
+    }
+  } else {
+    lines.push("- [ ] [plan] Review plan drafted.");
+  }
   lines.push("");
   lines.push("## Surprises & Discoveries");
   lines.push("");

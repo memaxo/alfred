@@ -22,12 +22,14 @@ const sessions = new Map<string, any>();
 async function getPty() {
   try {
     // Dynamically import node-pty only if available
-    // @ts-ignore - optional dependency
+    // @ts-expect-error - optional dependency
     const mod = await import("node-pty");
     return mod.default || mod;
   } catch (error) {
-    logger.warn("terminal_pty_unavailable", { error: error instanceof Error ? error.message : String(error) });
-    return undefined;
+    logger.warn("terminal_pty_unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return;
   }
 }
 

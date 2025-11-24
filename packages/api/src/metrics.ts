@@ -8,7 +8,9 @@ export { metricsRegistry };
 
 const metricsRegistryPatchKey = Symbol.for("alfred.metrics.registry.dedupe");
 
-if (!(globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey]) {
+if (
+  !(globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey]
+) {
   const originalRegisterMetric =
     metricsRegistry.registerMetric.bind(metricsRegistry);
 
@@ -71,26 +73,26 @@ export const policyObligationsTotal = new client.Counter({
 });
 
 export {
-  runRegistryDispatchDurationSeconds,
-  runRegistryEventsTotal,
-  workflowStreamEventsTotal,
-  workflowStreamDurationSeconds,
-  workflowProvenanceDurationSeconds,
-  workflowProvenanceEdgesTotal,
-  runnerStepsTotal,
-  runnerErrorsTotal,
-  replayQueriesTotal,
-  replayQueryDurationSeconds,
-  linearActivityEmissionsTotal,
   linearActivityDurationSeconds,
+  linearActivityEmissionsTotal,
   linearSessionOperationsTotal,
   linearWebhookEventsTotal,
-  linearWebhookWorkflowStartsTotal,
   linearWebhookWorkflowCancelsTotal,
-  multiAgentTasksTotal,
-  multiAgentWavesTotal,
+  linearWebhookWorkflowStartsTotal,
   multiAgentAgentDurationSeconds,
   multiAgentErrorsTotal,
+  multiAgentTasksTotal,
+  multiAgentWavesTotal,
+  replayQueriesTotal,
+  replayQueryDurationSeconds,
+  runnerErrorsTotal,
+  runnerStepsTotal,
+  runRegistryDispatchDurationSeconds,
+  runRegistryEventsTotal,
+  workflowProvenanceDurationSeconds,
+  workflowProvenanceEdgesTotal,
+  workflowStreamDurationSeconds,
+  workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
 
 export const graphQueriesTotal = new client.Counter({
@@ -149,6 +151,19 @@ export const droidExecDurationSeconds = new client.Histogram({
   help: "Duration of droid exec runs in seconds.",
   labelNames: ["auto"] as const,
   buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
+  registers: [metricsRegistry],
+});
+
+export const droidPendingRunsGauge = new client.Gauge({
+  name: "droid_pending_runs",
+  help: "Current count of pending droid executions awaiting obligations.",
+  registers: [metricsRegistry],
+});
+
+export const droidPendingCleanupTotal = new client.Counter({
+  name: "droid_pending_cleanup_total",
+  help: "Count of pending droid runs cleaned up grouped by result.",
+  labelNames: ["result"] as const,
   registers: [metricsRegistry],
 });
 
@@ -417,24 +432,23 @@ export const historySummarizationsTotal = new client.Counter({
 // wired via lazy hooks
 
 export {
-  voiceSttTotal,
-  voiceSttDurationSeconds,
-  voiceTtsTotal,
-  voiceTtsDurationSeconds,
-  voiceStreamEventsTotal,
-  voiceStreamLatencySeconds,
-  voiceQueueDepthCurrent,
-  voiceQueueDrainDurationSeconds,
-  voiceTranscodeDurationSeconds,
-  voiceProcessHealth,
-  voiceSessionPacketLossTotal,
-  voiceSessionJitterMillis,
-  voiceSessionRttMillis,
   recordVoiceStt,
   recordVoiceTts,
   type VoiceMetricStatus,
+  voiceProcessHealth,
+  voiceQueueDepthCurrent,
+  voiceQueueDrainDurationSeconds,
+  voiceSessionJitterMillis,
+  voiceSessionPacketLossTotal,
+  voiceSessionRttMillis,
+  voiceStreamEventsTotal,
+  voiceStreamLatencySeconds,
+  voiceSttDurationSeconds,
+  voiceSttTotal,
+  voiceTranscodeDurationSeconds,
+  voiceTtsDurationSeconds,
+  voiceTtsTotal,
 } from "@alfred/voice/metrics";
-
 
 export const memoryMaintenanceDurationSeconds = new client.Histogram({
   name: "alfred_memory_maintenance_duration_seconds",

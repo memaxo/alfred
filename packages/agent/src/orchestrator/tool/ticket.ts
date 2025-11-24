@@ -14,6 +14,7 @@ const ticketInputSchema = z.object({
     "comment",
     "set-delegate",
     "set-started",
+    "set-completed",
     "activity.thought",
     "activity.action",
     "activity.response",
@@ -175,6 +176,44 @@ async function runSetStarted(client: LinearClient, input: TicketInput) {
   return { ok: true, id: issueId, stateId: targetState.id };
 }
 
+async function runSetCompleted(client: LinearClient, input: TicketInput) {
+  const issueId = ensure(input.issueId, "ticket_issue_required");
+  const issue = await client.issue(issueId);
+  if (!issue) {
+    throw new Error("ticket_issue_not_found");
+  }
+
+  const team = await issue.team;
+  if (!team) {
+    throw new Error("ticket_team_not_found");
+  }
+
+  const statesConnection = await team.states();
+  const states = statesConnection.nodes ?? [];
+
+  const targetState =
+    states.find((state) => state.type === "completed") ??
+    states.find((state) =>
+      state.name.toLowerCase().includes("complete")
+    ) ??
+    states.find((state) => state.name.toLowerCase().includes("done")) ??
+    null;
+
+  if (!targetState) {
+    throw new Error("ticket_completed_state_missing");
+  }
+
+  const response = await client.updateIssue(issueId, {
+    stateId: targetState.id,
+  });
+
+  if (!response.success) {
+    throw new Error("ticket_state_update_failed");
+  }
+
+  return { ok: true, id: issueId, stateId: targetState.id };
+}
+
 function ensureSession(input: TicketInput) {
   return ensure(input.sessionId, "ticket_session_required");
 }
@@ -247,6 +286,8 @@ export const toolTicket = {
         return runDelegate(client, input, installation.appUser);
       case "set-started":
         return runSetStarted(client, input);
+      case "set-completed":
+        return runSetCompleted(client, input);
       case "activity.thought":
         return runAgentActivity(client, input, {
           type: "thought",
@@ -293,21 +334,17 @@ const aiToolTicketBase = {
   description: toolTicket.description,
   parameters: toolTicket.inputSchema,
   inputSchema: toolTicket.inputSchema,
-  execute: async (input: TicketInput) => {
-    return toolTicket.execute({ input });
-  },
+  execute: async (input: TicketInput) => toolTicket.execute({ input }),
 };
 
-export const aiToolTicket = withPolicyApproval(aiToolTicketBase, (input) => {
-  return {
-    action: `ticket.${input.action}`,
-    resource: {
-      kind: "linear",
-      id: input.space,
-    },
-    scopes: ["linear.write"],
-    authz: input.authz,
-  };
-});
+export const aiToolTicket = withPolicyApproval(aiToolTicketBase, (input) => ({
+  action: `ticket.${input.action}`,
+  resource: {
+    kind: "linear",
+    id: input.space,
+  },
+  scopes: ["linear.write"],
+  authz: input.authz,
+}));
 
 export type ToolTicket = typeof toolTicket;

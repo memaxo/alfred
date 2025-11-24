@@ -5,6 +5,7 @@
 
 import {
   boolean,
+  customType,
   integer,
   jsonb,
   pgTable,
@@ -13,7 +14,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-// TODO: [Phase 5] Add proper indexes for performance
+// Index coverage is handled in migrations 0003, 0007, and 0039 for the assistant tables.
+
+const tsvector = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 /**
  * Tasks (work items tracked by Assistant)
@@ -32,8 +39,7 @@ export const tasks: any = pgTable("assistant_tasks", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 5] Add index on (userId, status) for filtering
-// TODO: [Phase 5] Add index on (userId, due) for due date queries
+// Index coverage: assistant_tasks_user_status_idx, assistant_tasks_user_due_idx (0039)
 
 /**
  * Notes (freeform user notes)
@@ -43,13 +49,13 @@ export const notes: any = pgTable("assistant_notes", {
   userId: text("user_id").notNull(),
   title: text("title"),
   content: text("content").notNull(),
+  contentTsvector: tsvector("content_tsvector"),
   tags: jsonb("tags"), // Array of tag strings
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 5] Add full-text search index on content
 // TODO: [Phase 8] Optionally embed notes for semantic search
 
 /**
@@ -68,7 +74,7 @@ export const events: any = pgTable("assistant_events", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 6] Add index on (userId, start) for calendar queries
+// Index coverage: assistant_events_user_id_start_idx (0003)
 
 /**
  * Reminders (time-based notifications)
@@ -86,7 +92,7 @@ export const reminders: any = pgTable("assistant_reminders", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 6] Add index on (userId, due, fired) for scheduler queries
+// Index coverage: assistant_reminders_user_due_fired_idx (0039)
 // TODO: [Phase 6] Add recurring reminder logic in scheduler
 
 /**
@@ -103,7 +109,7 @@ export const bookmarks: any = pgTable("assistant_bookmarks", {
   metadata: jsonb("metadata"),
 });
 
-// TODO: [Phase 5] Add index on (userId, url) for deduplication
+// Index coverage: assistant_bookmarks_user_url_idx (0039)
 
 /**
  * Timers (active countdown timers)
@@ -122,4 +128,4 @@ export const timers: any = pgTable("assistant_timers", {
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 6] Add index on (userId, end, completed) for active timer queries
+// Index coverage: assistant_timers_user_start_idx and assistant_timers_active_idx (0039)

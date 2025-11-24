@@ -1,151 +1,264 @@
-import { existsSync } from "node:fs";
+import * as fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "bun";
 
+export type WorktreeHandle = {
+  path: string;
+  branch: string;
+  baseRef: string;
+};
+
+type GitResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+
+const WORKTREE_ROOT = ".agent/worktrees";
+const META_FILENAME = ".alfred-worktree.json";
+
+function sanitizeSegment(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+function resolveWorktreePath(repoRoot: string, runId: string, agentId: string) {
+  return path.join(
+    repoRoot,
+    WORKTREE_ROOT,
+    sanitizeSegment(runId),
+    sanitizeSegment(agentId)
+  );
+}
+
+function resolveBranchName(runId: string, agentId: string) {
+  return `agent/${sanitizeSegment(runId)}/${sanitizeSegment(agentId)}`;
+}
+
+async function runGit(cwd: string, args: string[]): Promise<GitResult> {
+  const proc = spawn(["git", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
+    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
+    proc.exited,
+  ]);
+
+  return {
+    exitCode,
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+  };
+}
+
+async function pathExists(candidate: string) {
+  try {
+    await fs.stat(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function removeDirSafe(candidate: string) {
+  await fs.rm(candidate, { recursive: true, force: true }).catch(() => {});
+}
+
+async function writeMetadata(dir: string, meta: Record<string, unknown>) {
+  await fs.writeFile(
+    path.join(dir, META_FILENAME),
+    JSON.stringify(meta, null, 2),
+    "utf8"
+  );
+}
+
+async function readMetadata(
+  dir: string
+): Promise<{ branch?: string; baseRef?: string } | null> {
+  try {
+    const raw = await fs.readFile(path.join(dir, META_FILENAME), "utf8");
+    return JSON.parse(raw) as { branch?: string; baseRef?: string };
+  } catch {
+    return null;
+  }
+}
+
+async function collectConflictFiles(cwd: string) {
+  const res = await runGit(cwd, ["diff", "--name-only", "--diff-filter=U"]);
+  if (res.exitCode !== 0) {
+    return [];
+  }
+  return res.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export const worktreeManager = {
   /**
-   * Create a new worktree for an agent.
-   * Uses a detached branch or a new branch off HEAD.
+   * Create a new isolated worktree/branch tuple for the given agent.
    */
   create: async (
     repoRoot: string,
     runId: string,
     agentId: string,
     baseRef = "HEAD"
-  ) => {
-    const worktreePath = path.join(
-      repoRoot,
-      ".agent",
-      "worktrees",
+  ): Promise<WorktreeHandle> => {
+    const branch = resolveBranchName(runId, agentId);
+    const wtPath = resolveWorktreePath(repoRoot, runId, agentId);
+    await fs.mkdir(path.dirname(wtPath), { recursive: true });
+
+    if (await pathExists(wtPath)) {
+      await runGit(repoRoot, ["worktree", "remove", "--force", wtPath]).catch(
+        () => {}
+      );
+      await removeDirSafe(wtPath);
+    }
+
+    await runGit(repoRoot, ["branch", "-D", branch]).catch(() => {});
+
+    const addResult = await runGit(repoRoot, [
+      "worktree",
+      "add",
+      "-b",
+      branch,
+      wtPath,
+      baseRef,
+    ]);
+
+    if (addResult.exitCode !== 0) {
+      throw new Error(
+        `Failed to create worktree ${branch}: ${addResult.stderr || addResult.stdout}`
+      );
+    }
+
+    await writeMetadata(wtPath, {
       runId,
-      agentId
-    );
-    const branchName = `agent/${runId}/${agentId}`;
+      agentId,
+      branch,
+      baseRef,
+      createdAt: new Date().toISOString(),
+    });
 
-    // Ensure .agent/worktrees is ignored or safe
-    // Ideally this should be outside the main tree, but inside .agent is convenient if ignored.
-    // We assume .agent is in .gitignore (it usually is for AI tools).
-
-    if (existsSync(worktreePath)) {
-      return worktreePath;
-    }
-
-    // Create worktree
-    // git worktree add -b <branch> <path> <commit>
-    const proc = spawn(
-      ["git", "worktree", "add", "-b", branchName, worktreePath, baseRef],
-      {
-        cwd: repoRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-      }
-    );
-
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      // Fallback: maybe branch exists? try checkout
-      if (stderr.includes("already exists")) {
-        const proc2 = spawn(
-          ["git", "worktree", "add", worktreePath, branchName],
-          {
-            cwd: repoRoot,
-          }
-        );
-        await proc2.exited;
-        return worktreePath;
-      }
-      throw new Error(`Failed to create worktree: ${stderr}`);
-    }
-
-    return worktreePath;
+    return { path: wtPath, branch, baseRef };
   },
 
   /**
-   * Prune worktrees for a run.
+   * Remove all worktrees for the specified run id.
    */
-  cleanup: async (_repoRoot: string, _runId: string) => {
-    // We can't easily just rm -rf the directory, we should use git worktree remove
-    // But finding them is tricky if we don't track them.
-    // For now, we rely on the path convention.
-    // Actually, pruning usually requires `git worktree prune` after deleting files,
-    // or `git worktree remove <path>`.
-    // Safe implementation: iterate folders in .agent/worktrees/runId and remove them
-    // Note: implementation of proper cleanup loop is deferred to integration.
-    // For MVP, we provide a single remove method
-  },
-
-  remove: async (repoRoot: string, worktreePath: string) => {
-    if (!existsSync(worktreePath)) {
+  cleanup: async (repoRoot: string, runId: string) => {
+    const runDir = path.join(repoRoot, WORKTREE_ROOT, sanitizeSegment(runId));
+    if (!(await pathExists(runDir))) {
       return;
     }
 
-    const proc = spawn(["git", "worktree", "remove", "--force", worktreePath], {
-      cwd: repoRoot,
-      stdout: "ignore",
-      stderr: "pipe",
-    });
+    const entries = await fs.readdir(runDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const fullPath = path.join(runDir, entry.name);
+      await worktreeManager.remove(repoRoot, fullPath).catch(() => {});
+    }
 
-    await proc.exited;
+    await worktreeManager.prune(repoRoot);
+    const residual = await fs.readdir(runDir).catch(() => []);
+    if (residual.length === 0) {
+      await removeDirSafe(runDir);
+    }
   },
 
   /**
-   * Safely merge a branch into the current branch (or base) using server-side merge tree.
-   * Returns the result of the merge attempt.
+   * Remove a single worktree path and delete the associated branch if present.
+   */
+  remove: async (repoRoot: string, worktreePath: string) => {
+    const meta = await readMetadata(worktreePath);
+    await runGit(repoRoot, ["worktree", "remove", "--force", worktreePath]).catch(
+      () => {}
+    );
+    await removeDirSafe(worktreePath);
+
+    if (meta?.branch) {
+      await runGit(repoRoot, ["branch", "-D", meta.branch]).catch(() => {});
+    }
+  },
+
+  /**
+   * Invoke git worktree prune to drop leftover references.
+   */
+  prune: async (repoRoot: string) => {
+    await runGit(repoRoot, ["worktree", "prune", "--expire=now"]).catch(
+      () => {}
+    );
+  },
+
+  /**
+   * Dry-run merge using a detached preview worktree to surface conflicts safely.
    */
   safeMerge: async (
     repoRoot: string,
     targetBranch: string,
-    sourceBranch: string
+    sourceBranch: string,
+    options?: { runId?: string }
   ): Promise<{ success: boolean; conflictFiles: string[] }> => {
-    // First, check for conflicts without touching the working tree
-    // git merge-tree --write-tree <branch1> <branch2>
-    // NOTE: git merge-tree output format varies by git version.
-    // Modern git: prints OID of tree.
-    // If conflicts, it might still print a tree OID but exit non-zero or include conflict markers in the blob.
-    // Better approach for detection: git merge-tree <base> <target> <source> (deprecated style) or just try merge in memory.
+    const previewRoot = path.join(
+      repoRoot,
+      WORKTREE_ROOT,
+      sanitizeSegment(options?.runId ?? "__preview")
+    );
+    const previewId = `preview-${sanitizeSegment(sourceBranch)}-${Date.now()}`;
+    const previewPath = path.join(previewRoot, previewId);
+    await fs.mkdir(path.dirname(previewPath), { recursive: true });
 
-    // Let's use a dry-run merge with --no-commit --no-ff to see if it would fail?
-    // But that requires a checked out tree.
-    // We want to do this from the orchestrator which might not be in the right worktree.
-    // Actually, the orchestrator (host) can run git commands in the repoRoot.
-
-    // Use `git merge-tree` (modern) to inspect conflicts
-    // git merge-tree <branch1> <branch2>
-    const proc = spawn(["git", "merge-tree", targetBranch, sourceBranch], {
-      cwd: repoRoot,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    // merge-tree output contains file content with conflict markers if conflicts exist.
-    // We can scan for conflict markers or check exit code?
-    // Actually, `git merge-tree` exits 0 even with conflicts usually.
-    // But it outputs a tree hash on the first line.
-    // If there are conflicts, the file content in the tree will have <<< >>> markers.
-    // A more robust check is `git merge-base` then `git merge-tree`.
-
-    // Simplified approach:
-    // Just run `git merge --no-commit --no-ff <source>` in the target worktree?
-    // No, we want to avoid dirtying the tree if it fails.
-
-    // Let's rely on `git merge-tree` outputting a list of files with conflicts in the informational section (if any).
-    // Actually, checking for "<<<<<<<" in stdout is a reasonable heuristic for conflict detection in `merge-tree` output.
-    
-    // NOTE: git 2.40+ `git merge-tree --write-tree --name-only` might be better.
-    // Let's stick to a simple heuristic: check if "Conflict" is mentioned in stderr or if markers exist.
-    
-    const hasConflictMarkers = stdout.includes("<<<<<<<");
-    
-    if (hasConflictMarkers) {
-      // Extract conflicting files (rough parsing)
-      // merge-tree doesn't list them nicely in all versions.
-      // Let's return generic "conflict detected" and let the Arbiter inspect.
-      return { success: false, conflictFiles: ["detected_via_merge_tree"] };
+    const resolvedTarget = await runGit(repoRoot, ["rev-parse", targetBranch]);
+    if (resolvedTarget.exitCode !== 0 || !resolvedTarget.stdout) {
+      throw new Error(
+        `Unable to resolve target branch ${targetBranch}: ${resolvedTarget.stderr}`
+      );
     }
 
-    return { success: true, conflictFiles: [] };
+    const addRes = await runGit(repoRoot, [
+      "worktree",
+      "add",
+      "--detach",
+      previewPath,
+      resolvedTarget.stdout,
+    ]);
+    if (addRes.exitCode !== 0) {
+      throw new Error(
+        `Failed to prepare merge preview: ${addRes.stderr || addRes.stdout}`
+      );
+    }
+
+    try {
+      const mergeRes = await runGit(previewPath, [
+        "merge",
+        "--no-commit",
+        "--no-ff",
+        sourceBranch,
+      ]);
+
+      if (mergeRes.exitCode === 0) {
+        await runGit(previewPath, ["reset", "--hard", "HEAD"]);
+        return { success: true, conflictFiles: [] };
+      }
+
+      const conflictFiles = await collectConflictFiles(previewPath);
+      await runGit(previewPath, ["merge", "--abort"]).catch(() =>
+        runGit(previewPath, ["reset", "--hard", "HEAD"])
+      );
+      return { success: false, conflictFiles };
+    } finally {
+      await runGit(repoRoot, [
+        "worktree",
+        "remove",
+        "--force",
+        previewPath,
+      ]).catch(() => {});
+      await removeDirSafe(previewPath);
+    }
   },
 };

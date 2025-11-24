@@ -1,5 +1,5 @@
-import { spawn } from "bun";
 import { logger } from "@alfred/logger";
+import { spawn } from "bun";
 
 export type HardwareCapabilities = {
   gpu: boolean;
@@ -43,12 +43,15 @@ export class HardwareProbe {
     // For Level 5 test, we might start our own server.
     // Let's check if we can spawn python and import torch/whisper
     try {
-        const proc = spawn(["python3", "-c", "import torch; print(torch.cuda.is_available())"], {
-            stdout: "ignore", 
-            stderr: "ignore"
-        });
-        // If python runs, that's a good sign, but actual server check is harder without knowing port.
-        // We'll leave voiceServer as false default, tests can spin it up.
+      const proc = spawn(
+        ["python3", "-c", "import torch; print(torch.cuda.is_available())"],
+        {
+          stdout: "ignore",
+          stderr: "ignore",
+        }
+      );
+      // If python runs, that's a good sign, but actual server check is harder without knowing port.
+      // We'll leave voiceServer as false default, tests can spin it up.
     } catch {}
 
     logger.info("hardware_probe_result", caps);

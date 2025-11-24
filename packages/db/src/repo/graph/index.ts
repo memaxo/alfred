@@ -7,4 +7,3 @@ export * from "./read";
 export * from "./traverse";
 export * from "./types";
 export * from "./write";
-

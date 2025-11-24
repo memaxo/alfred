@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { eventToUiMessages } from "@alfred/api/src/ai/normalize";
+import { eventToUiMessages } from "@alfred/agent";
 
 describe("normalization round-trip", () => {
   it("produces byte-equal UIMessage arrays for replay", () => {

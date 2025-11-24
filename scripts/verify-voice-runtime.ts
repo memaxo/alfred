@@ -5,7 +5,6 @@
  */
 
 import { spawn } from "bun";
-import { join } from "node:path";
 
 async function main() {
   console.log("🔊 Verifying Voice Runtime...");
@@ -16,9 +15,9 @@ async function main() {
     stdout: "inherit",
     stderr: "inherit",
     env: {
-        ...process.env,
-        // Force specific provider if needed, but smoke test has defaults
-    }
+      ...process.env,
+      // Force specific provider if needed, but smoke test has defaults
+    },
   });
 
   const ttsExit = await ttsProc.exited;

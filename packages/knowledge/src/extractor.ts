@@ -60,15 +60,12 @@ const CONFIDENCE_MODIFIERS = {
 /**
  * Extract facts from natural language text
  * Zero allocation design - reuses buffers
- * 
+ *
  * PURE, SYNCHRONOUS, FAST.
  * Removed: Async dependency on Vector Classifier.
  * Removed: Regex Taxonomy dependency.
  */
-export const extract = (
-  text: string,
-  source: string
-): ExtractionResult => {
+export const extract = (text: string, source: string): ExtractionResult => {
   const facts: ExtractedFact[] = [];
   const causality: CausalLink[] = [];
   const entities = new Set<string>();
@@ -256,17 +253,11 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
   }
 
   for (const c of result.causality) {
-    const causeNode = insert(
-      fact(c.cause, c.confidence, "inferred")
-    );
-    const effectNode = insert(
-      fact(c.effect, c.confidence, "inferred")
-    );
+    const causeNode = insert(fact(c.cause, c.confidence, "inferred"));
+    const effectNode = insert(fact(c.effect, c.confidence, "inferred"));
 
     if (causeNode && effectNode) {
-      insert(
-        relation(causeNode, effectNode, "causes", c.confidence)
-      );
+      insert(relation(causeNode, effectNode, "causes", c.confidence));
       insert(
         insight(
           [causeNode, effectNode],

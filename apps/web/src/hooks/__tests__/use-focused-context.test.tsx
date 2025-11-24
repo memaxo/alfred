@@ -1,12 +1,16 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, jest } from "bun:test";
-import { useMindscapeStore } from "@/store/mindscape";
-import { renderHook, waitFor } from "@testing-library/react";
-import { useFocusedContext } from "../use-focused-context";
-import { createTestTrpcClient, createTestQueryClient, type TestTrpcHandlers } from "@/test/render-route";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { trpc } from "@/utils/trpc";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { useMindscapeStore } from "@/store/mindscape";
+import {
+  createTestQueryClient,
+  createTestTrpcClient,
+  type TestTrpcHandlers,
+} from "@/test/render-route";
+import { trpc } from "@/utils/trpc";
+import { useFocusedContext } from "../use-focused-context";
 
 describe("useFocusedContext", () => {
   beforeEach(() => {
@@ -15,6 +19,8 @@ describe("useFocusedContext", () => {
       edges: [],
       focusedNodeId: null,
       ragDocCache: {},
+      ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
+      contextCache: {},
     });
   });
 
@@ -33,9 +39,9 @@ describe("useFocusedContext", () => {
 
   it("returns empty context when nothing is focused", () => {
     const wrapper = createWrapper({
-       queries: {
-        "assistant.getConfig": () => ({ contextWindow: 128000 }),
-       }
+      queries: {
+        "assistant.getConfig": () => ({ contextWindow: 128_000 }),
+      },
     });
     const { result } = renderHook(() => useFocusedContext(), { wrapper });
 
@@ -46,6 +52,7 @@ describe("useFocusedContext", () => {
       isLoading: false,
       isError: false,
       ragDocuments: [],
+      contextSnapshot: null,
     });
   });
 
@@ -54,7 +61,7 @@ describe("useFocusedContext", () => {
     const wrapper = createWrapper({
       queries: {
         "graph.runQuery": runQuerySpy,
-        "assistant.getConfig": () => ({ contextWindow: 128000 }),
+        "assistant.getConfig": () => ({ contextWindow: 128_000 }),
       },
     });
 
@@ -68,17 +75,20 @@ describe("useFocusedContext", () => {
         } as any,
       ],
       focusedNodeId: "note-1",
+      ragDocCache: {},
+      ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
+      contextCache: {},
     });
 
     const { result } = renderHook(() => useFocusedContext(), { wrapper });
 
     await waitFor(() => {
-        expect(result.current.label).toBe("My Note");
+      expect(result.current.label).toBe("My Note");
     });
 
     expect(result.current.content).toBe("Note content");
     expect(result.current.nodeType).toBe("note");
-    
+
     // Should NOT trigger RAG for notes
     expect(runQuerySpy).not.toHaveBeenCalled();
   });
@@ -98,7 +108,7 @@ describe("useFocusedContext", () => {
           kind: "link",
           label: "Dependent Node",
           properties: { relation: "DEPENDS_ON", direction: "outgoing" },
-        }
+        },
       ],
       edges: [],
     }));
@@ -106,7 +116,7 @@ describe("useFocusedContext", () => {
     const wrapper = createWrapper({
       queries: {
         "graph.runQuery": runQuerySpy,
-        "assistant.getConfig": () => ({ contextWindow: 10000 }), // Small window to test budgeting if needed
+        "assistant.getConfig": () => ({ contextWindow: 10_000 }), // Small window to test budgeting if needed
       },
     });
 
@@ -115,10 +125,10 @@ describe("useFocusedContext", () => {
         {
           id: "know-1",
           type: "knowledge",
-          data: { 
-            type: "knowledge", 
-            label: "Quantum Physics", 
-            summary: "Study of small things." 
+          data: {
+            type: "knowledge",
+            label: "Quantum Physics",
+            summary: "Study of small things.",
           },
           position: { x: 0, y: 0 },
         } as any,
@@ -134,35 +144,39 @@ describe("useFocusedContext", () => {
 
     // 2. Should trigger RAG
     await waitFor(() => {
-        expect(runQuerySpy).toHaveBeenCalled();
+      expect(runQuerySpy).toHaveBeenCalled();
     });
 
     // Check payload
     const lastCall = runQuerySpy.mock.calls[0][0] as any;
     expect(lastCall).toMatchObject({
-        kind: "context",
-        nodeId: "know-1",
+      kind: "context",
+      nodeId: "know-1",
     });
     expect(lastCall.text).toContain("Quantum Physics");
 
     // 3. Should eventually update content with merged results
     await waitFor(() => {
-        expect(result.current.content).toContain("[Active RAG Context]");
+      expect(result.current.content).toContain("[Active RAG Context]");
     });
 
     // Check Vector Doc
-    expect(result.current.content).toContain("- [Vector] Related Doc: Relevant info from RAG.");
-    
+    expect(result.current.content).toContain(
+      "- [Vector] Related Doc: Relevant info from RAG."
+    );
+
     // Check Graph Doc
-    expect(result.current.content).toContain("- [Graph] Dependent Node: (Graph Edge) DEPENDS_ON Quantum Physics");
+    expect(result.current.content).toContain(
+      "- [Graph] Dependent Node: (Graph Edge) DEPENDS_ON Quantum Physics"
+    );
 
     // Check ragDocuments structure
     expect(result.current.ragDocuments).toHaveLength(2);
     expect(result.current.ragDocuments).toContainEqual(
-        expect.objectContaining({ label: "Related Doc", source: "vector" })
+      expect.objectContaining({ label: "Related Doc", source: "vector" })
     );
     expect(result.current.ragDocuments).toContainEqual(
-        expect.objectContaining({ label: "Dependent Node", source: "graph" })
+      expect.objectContaining({ label: "Dependent Node", source: "graph" })
     );
   });
 });

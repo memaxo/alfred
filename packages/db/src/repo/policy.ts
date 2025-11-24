@@ -62,7 +62,9 @@ export async function getAuditLogs(
     .offset(offset);
 }
 
-export async function getAuditLogsByTrace(traceId: string): Promise<(typeof auditLogs.$inferSelect)[]> {
+export async function getAuditLogsByTrace(
+  traceId: string
+): Promise<(typeof auditLogs.$inferSelect)[]> {
   return db
     .select()
     .from(auditLogs)
@@ -94,7 +96,9 @@ export async function createApproval(params: {
   return row;
 }
 
-export async function getApproval(approvalId: string): Promise<typeof approvals.$inferSelect | null> {
+export async function getApproval(
+  approvalId: string
+): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .select()
     .from(approvals)
@@ -103,7 +107,9 @@ export async function getApproval(approvalId: string): Promise<typeof approvals.
   return row ?? null;
 }
 
-export async function getPendingApprovals(userId: string): Promise<(typeof approvals.$inferSelect)[]> {
+export async function getPendingApprovals(
+  userId: string
+): Promise<(typeof approvals.$inferSelect)[]> {
   return db
     .select()
     .from(approvals)
@@ -111,7 +117,10 @@ export async function getPendingApprovals(userId: string): Promise<(typeof appro
     .orderBy(asc(approvals.created));
 }
 
-export async function approveApproval(approvalId: string, approvedBy: string): Promise<typeof approvals.$inferSelect | null> {
+export async function approveApproval(
+  approvalId: string,
+  approvedBy: string
+): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .update(approvals)
     .set({ status: "approved", approvedBy, approvedAt: new Date() })
@@ -120,7 +129,10 @@ export async function approveApproval(approvalId: string, approvedBy: string): P
   return row ?? null;
 }
 
-export async function denyApproval(approvalId: string, approvedBy: string): Promise<typeof approvals.$inferSelect | null> {
+export async function denyApproval(
+  approvalId: string,
+  approvedBy: string
+): Promise<typeof approvals.$inferSelect | null> {
   const [row] = await db
     .update(approvals)
     .set({ status: "denied", approvedBy, approvedAt: new Date() })
@@ -129,7 +141,9 @@ export async function denyApproval(approvalId: string, approvedBy: string): Prom
   return row ?? null;
 }
 
-export async function expireApprovals(): Promise<(typeof approvals.$inferSelect)[]> {
+export async function expireApprovals(): Promise<
+  (typeof approvals.$inferSelect)[]
+> {
   return db
     .update(approvals)
     .set({ status: "denied", approvedBy: "system", approvedAt: new Date() })

@@ -1,45 +1,45 @@
-import { describe, it, expect, mock, beforeAll, afterAll } from "bun:test";
-import { createTestDb, closeTestDb, type TestDb } from "./utils/db";
-import { VoiceRegistry, VoiceSession } from "../src/voice/session";
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import { STTPool } from "@alfred/voice/process/stt";
 import { TTSPool } from "@alfred/voice/process/tts";
 import { runAssistantForVoice } from "../src/voice/assistant";
+import { VoiceRegistry } from "../src/voice/session";
+import { closeTestDb, createTestDb, type TestDb } from "./utils/db";
 
 // Mock dependencies
-mock.module("@alfred/voice/process/stt", () => {
-  return {
-    STTPool: class MockSTTPool {
-      async transcribe(req: any) {
-        return {
-          text: "Hello computer",
-          language: "en",
-          isPartial: req.streaming ? true : false,
-          endOfUtterance: true
-        };
-      }
-      size = 1;
-      activeCount = 0;
-      getHealth() { return [{ isHealthy: true }]; }
+mock.module("@alfred/voice/process/stt", () => ({
+  STTPool: class MockSTTPool {
+    async transcribe(req: any) {
+      return {
+        text: "Hello computer",
+        language: "en",
+        isPartial: req.streaming ? true : false,
+        endOfUtterance: true,
+      };
     }
-  };
-});
+    size = 1;
+    activeCount = 0;
+    getHealth() {
+      return [{ isHealthy: true }];
+    }
+  },
+}));
 
-mock.module("@alfred/voice/process/tts", () => {
-  return {
-    TTSPool: class MockTTSPool {
-      async synthesize(req: any, onChunk: any) {
-        if (onChunk && req.streaming) {
-          onChunk({ audioBase64: "chunk1", sampleRate: 24000 });
-          onChunk({ audioBase64: "chunk2", sampleRate: 24000 });
-        }
-        return { audioBase64: "full_audio", sampleRate: 24000 };
+mock.module("@alfred/voice/process/tts", () => ({
+  TTSPool: class MockTTSPool {
+    async synthesize(req: any, onChunk: any) {
+      if (onChunk && req.streaming) {
+        onChunk({ audioBase64: "chunk1", sampleRate: 24_000 });
+        onChunk({ audioBase64: "chunk2", sampleRate: 24_000 });
       }
-      size = 1;
-      activeCount = 0;
-      getHealth() { return [{ isHealthy: true }]; }
+      return { audioBase64: "full_audio", sampleRate: 24_000 };
     }
-  };
-});
+    size = 1;
+    activeCount = 0;
+    getHealth() {
+      return [{ isHealthy: true }];
+    }
+  },
+}));
 
 mock.module("../src/voice/assistant", () => ({
   runAssistantForVoice: mock(async () => ({
@@ -69,26 +69,29 @@ describe("End-to-End Voice Session (S2S)", () => {
   it("should handle full S2S loop: Audio -> STT -> Agent -> TTS -> Audio", async () => {
     const userId = "user_123";
     const sessionId = "session_123";
-    
+
     const session = registry.createSession(userId, sessionId, "en");
     expect(session).toBeDefined();
 
     // 1. Simulate Audio Input (Client -> STT)
     // In a real stream, we'd push chunks. Here we simulate one chunk that triggers transcription.
-    const sttResult = await session.processAudioChunk("base64audio", "audio/webm");
-    
+    const sttResult = await session.processAudioChunk(
+      "base64audio",
+      "audio/webm"
+    );
+
     expect(sttResult).toBeDefined();
     expect(sttResult?.text).toBe("Hello computer");
-    
+
     // 2. Simulate Agent Logic (usually triggered by router after EOU)
     // In the real router (speechToSpeech), it calls runAssistantForVoice.
     // Here we manually invoke the assistant simulation since we are testing the components.
-    
+
     const assistantResult = await runAssistantForVoice({} as any, {
       text: sttResult!.text,
       userId,
     });
-    
+
     expect(assistantResult.text).toContain("Hello human");
 
     // 3. Simulate TTS Output (Agent -> TTS -> Client)

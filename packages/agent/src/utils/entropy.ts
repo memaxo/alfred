@@ -38,7 +38,7 @@ export function levenshteinDistance(a: string, b: string): number {
  * 0.0 = completely different
  */
 export function calculateSimilarity(a: string, b: string): number {
-  if (!a || !b) return 0.0;
+  if (!(a && b)) return 0.0;
   if (a.length === 0 && b.length === 0) return 1.0;
   if (a.length === 0 || b.length === 0) return 0.0;
 
@@ -53,10 +53,15 @@ export function calculateSimilarity(a: string, b: string): number {
  * Good for detecting "same thought, slightly different phrasing"
  */
 export function jaccardSimilarity(a: string, b: string): number {
-  if (!a || !b) return 0.0;
-  
+  if (!(a && b)) return 0.0;
+
   const tokenize = (text: string) =>
-    new Set(text.toLowerCase().split(/\s+/).filter((t) => t.length > 2));
+    new Set(
+      text
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 2)
+    );
 
   const setA = tokenize(a);
   const setB = tokenize(b);

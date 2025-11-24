@@ -83,7 +83,7 @@ export class TTSPool {
 
       // Initialize pool of processes (Maya1)
       for (let i = 0; i < this.poolSize; i++) {
-        // Legacy path replacement logic removed. 
+        // Legacy path replacement logic removed.
         // We now assume scriptPath points to the correct directory or file.
         // If scriptPath is a directory (packages/voice/python/tts), __main__.py is used.
         const processConfig = {
@@ -112,7 +112,7 @@ export class TTSPool {
       // Warmup all processes in parallel
       if (!this.useSupertonic) {
         // Don't await warmup to avoid blocking initialization
-        this.warmup().catch(err => console.warn("TTS Warmup failed:", err));
+        this.warmup().catch((err) => console.warn("TTS Warmup failed:", err));
       }
     } catch (error) {
       // Clean up any started processes
@@ -127,17 +127,19 @@ export class TTSPool {
     const warmupRequest: TTSRequest = {
       text: "Warmup", // Short text
       voice: "default",
-      streaming: false
+      streaming: false,
     };
 
-    await Promise.all(this.processes.map(async (p) => {
+    await Promise.all(
+      this.processes.map(async (p) => {
         try {
-            // Send warmup request but don't use the audio
-            await p.wrapper.synthesize(warmupRequest);
+          // Send warmup request but don't use the audio
+          await p.wrapper.synthesize(warmupRequest);
         } catch (e) {
-            // Ignore warmup errors
+          // Ignore warmup errors
         }
-    }));
+      })
+    );
   }
 
   private getNextAvailable(): {
@@ -179,23 +181,27 @@ export class TTSPool {
         const result = await this.supertonic.synthesize(request.text, {
           speed: 1.05,
           voice: request.voice,
-          onChunk: onChunk ? (rawChunk) => {
-            const float32 = rawChunk.audio;
-            const int16 = new Int16Array(float32.length);
-            for (let i = 0; i < float32.length; i++) {
-              const val = float32[i];
-              if (val !== undefined) {
-                const s = Math.max(-1, Math.min(1, val));
-                int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+          onChunk: onChunk
+            ? (rawChunk) => {
+                const float32 = rawChunk.audio;
+                const int16 = new Int16Array(float32.length);
+                for (let i = 0; i < float32.length; i++) {
+                  const val = float32[i];
+                  if (val !== undefined) {
+                    const s = Math.max(-1, Math.min(1, val));
+                    int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+                  }
+                }
+                const audioBase64 = Buffer.from(int16.buffer).toString(
+                  "base64"
+                );
+                onChunk({
+                  audioBase64,
+                  mimeType: "audio/pcm",
+                  sampleRate: rawChunk.sampleRate,
+                });
               }
-            }
-            const audioBase64 = Buffer.from(int16.buffer).toString("base64");
-            onChunk({
-              audioBase64,
-              mimeType: "audio/pcm",
-              sampleRate: rawChunk.sampleRate,
-            });
-          } : undefined,
+            : undefined,
         });
 
         // Convert Float32Array to Base64 (PCM 16-bit)

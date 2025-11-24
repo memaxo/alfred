@@ -1,3 +1,8 @@
+// Import types lazily or use any if circular deps or type conflicts exist
+// import { type assistantAgent, getModelId } from "@alfred/agent";
+// Using dynamic import or ignoring the type in signature to break cycles if necessary
+import { type assistantAgent, getModelId } from "@alfred/agent";
+import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 import {
   historyContextSelectionDurationSeconds,
   historyContextTierDropsTotal,
@@ -14,11 +19,6 @@ import { logger } from "@alfred/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { consumeStream, generateId, type UIMessage } from "ai";
 import { z } from "zod";
-// Import types lazily or use any if circular deps or type conflicts exist
-// import { type assistantAgent, getModelId } from "@alfred/agent"; 
-// Using dynamic import or ignoring the type in signature to break cycles if necessary
-import { getModelId, type assistantAgent } from "@alfred/agent";
-import { buildPreferenceSystemPrompt } from "@alfred/agent/preference/prompt";
 
 const requestSchema = z
   .object({

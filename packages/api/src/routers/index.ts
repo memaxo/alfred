@@ -4,6 +4,7 @@ import { assistantRouter } from "./assistant";
 import { bookRouter } from "./book";
 import { codexRouter } from "./codex";
 import { codexIntentRouter } from "./codex-intent";
+import { cognitiveRouter } from "./cognitive";
 import { deployRouter } from "./deploy";
 import { droidsRouter } from "./droids";
 import { evalRouter } from "./eval";
@@ -41,6 +42,7 @@ export const appRouter: ReturnType<typeof router> = router({
   book: bookRouter,
   codex: codexRouter,
   codexIntent: codexIntentRouter,
+  cognitive: cognitiveRouter,
   droid: droidsRouter,
   jwks: jwksRouter,
   token: tokenRouter,

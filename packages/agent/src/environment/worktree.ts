@@ -1,12 +1,15 @@
 import path from "node:path";
 import { toolRunner } from "../orchestrator/tool/runner";
-import { worktreeManager } from "../orchestrator/tool/worktree";
+import {
+  type WorktreeHandle,
+  worktreeManager,
+} from "../orchestrator/tool/worktree";
 import type { ProjectConfig } from "../utils/project-detector";
 import type { ExecOptions, ExecResult, Workspace } from "./types";
 
 export class WorktreeWorkspace implements Workspace {
   readonly kind: "worktree" | "container" = "worktree";
-  private _root: string | null = null;
+  private _handle: WorktreeHandle | null = null;
 
   constructor(
     readonly id: string,
@@ -15,14 +18,18 @@ export class WorktreeWorkspace implements Workspace {
   ) {}
 
   get root(): string {
-    if (!this._root) {
+    if (!this._handle) {
       throw new Error("Workspace not initialized");
     }
-    return this._root;
+    return this._handle.path;
+  }
+
+  get branch(): string | null {
+    return this._handle?.branch ?? null;
   }
 
   async initialize(): Promise<void> {
-    this._root = await worktreeManager.create(
+    this._handle = await worktreeManager.create(
       this.repoBase,
       this.runId,
       this.id
@@ -30,9 +37,9 @@ export class WorktreeWorkspace implements Workspace {
   }
 
   async cleanup(): Promise<void> {
-    if (this._root) {
-      await worktreeManager.remove(this.repoBase, this._root);
-      this._root = null;
+    if (this._handle) {
+      await worktreeManager.remove(this.repoBase, this._handle.path);
+      this._handle = null;
     }
   }
 

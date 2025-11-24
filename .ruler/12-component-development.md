@@ -28,3 +28,4 @@
 12. **Reality-driven UI.** Visualizations must derive directly from real system state or events. Never implement "simulation" modes, fake data generators, or mock actions in production components.
 
 13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
+14. **Activation fidelity.** Mindscape activations must use distinct event types (e.g., `context-cache`) so cache hits, workflow steps, and tool actions render as different visual signals.

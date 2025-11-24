@@ -14,7 +14,7 @@ async function getHelpers() {
   const { logger } = await import("@alfred/logger");
   const { RuntimeContext } = await import("@alfred/type/runtime-context");
   const linearWebhooksPkg = (await import("@linear/sdk/webhooks")).default;
-  
+
   return {
     appRouter,
     metrics,
@@ -147,7 +147,10 @@ async function handleLinearWebhookEvent(args: {
             const requirement =
               issue?.description ?? issue?.title ?? "Work on Linear issue";
 
-            const caller = await createWorkflowCaller(`linear-webhook-${issueId}`, h);
+            const caller = await createWorkflowCaller(
+              `linear-webhook-${issueId}`,
+              h
+            );
             try {
               await caller.workflow.start({
                 requirement,
@@ -220,7 +223,10 @@ async function handleLinearWebhookEvent(args: {
   }
 }
 
-async function createWorkflowCaller(requestId: string, h: Awaited<ReturnType<typeof getHelpers>>) {
+async function createWorkflowCaller(
+  requestId: string,
+  h: Awaited<ReturnType<typeof getHelpers>>
+) {
   return h.appRouter.createCaller({
     session: {
       user: {
@@ -261,7 +267,11 @@ export const Route = createFileRoute("/api/linear/webhook")({
           return new Response("missing_secret", { status: 500 });
         }
 
-        const { LinearWebhooks, LINEAR_WEBHOOK_SIGNATURE_HEADER, LINEAR_WEBHOOK_TS_FIELD } = h.linearWebhooksPkg;
+        const {
+          LinearWebhooks,
+          LINEAR_WEBHOOK_SIGNATURE_HEADER,
+          LINEAR_WEBHOOK_TS_FIELD,
+        } = h.linearWebhooksPkg;
         const webhookVerifier = new LinearWebhooks(secret);
         const rawBody = await request.text();
         const signature = request.headers.get(LINEAR_WEBHOOK_SIGNATURE_HEADER);
@@ -318,7 +328,10 @@ export const Route = createFileRoute("/api/linear/webhook")({
         const eventType = extractEventType(payload);
         const action = (payload as { action?: string })?.action ?? "unknown";
         h.metrics.webhookEventsTotal.labels(eventType).inc();
-        h.metrics.linearWebhookEventsTotal.inc({ event_type: eventType, action });
+        h.metrics.linearWebhookEventsTotal.inc({
+          event_type: eventType,
+          action,
+        });
 
         const authz = extractAuthz(payload);
 
@@ -363,7 +376,10 @@ export const Route = createFileRoute("/api/linear/webhook")({
             return new Response("invalid_authz", { status: 401 });
           }
 
-          const caller = await createWorkflowCaller(`linear-webhook-${runId}`, h);
+          const caller = await createWorkflowCaller(
+            `linear-webhook-${runId}`,
+            h
+          );
           try {
             await caller.workflow.resume({
               runId,

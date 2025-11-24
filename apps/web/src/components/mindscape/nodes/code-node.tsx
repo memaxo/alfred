@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { codeNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function CodeNode({ id, data, selected }: NodeProps) {
@@ -69,11 +69,11 @@ export function CodeNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={label}
-        icon={<Code2 className="h-3 w-3" />}
         borderColor="border-yellow-500/20"
-        textColor="text-yellow-500"
         hoverColor="hover:border-yellow-500/40"
+        icon={<Code2 className="h-3 w-3" />}
+        label={label}
+        textColor="text-yellow-500"
       />
     );
   }

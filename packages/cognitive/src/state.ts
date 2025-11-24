@@ -33,10 +33,15 @@ const autonomy = (n: number): Autonomy => {
 
 // Evidence for autonomy decisions
 type Evidence =
-  | { _: "success"; task: string; duration: number }
-  | { _: "failure"; task: string; error: string }
-  | { _: "feedback"; positive: boolean; strength: number }
-  | { _: "override"; reason: string };
+  | { _: "success"; task: string; duration: number; reliability?: number }
+  | { _: "failure"; task: string; error: string; reliability?: number }
+  | {
+      _: "feedback";
+      positive: boolean;
+      strength: number;
+      reliability?: number;
+    }
+  | { _: "override"; reason: string; reliability?: number };
 
 // Constraints on autonomy
 type Constraint =
@@ -92,8 +97,8 @@ export type Criteria = {
 
 // Physiological State (Homeostasis)
 export type Physiology = {
-  energy: number;      // 0..1 (decreases with steps)
-  boredom: number;     // 0..1 (increases with repetition)
+  energy: number; // 0..1 (decreases with steps)
+  boredom: number; // 0..1 (increases with repetition)
   frustration: number; // 0..1 (increases with errors)
 };
 
@@ -253,6 +258,8 @@ export const reflecting = (
 
 // Physiology Logic
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const CONFIDENCE_DECAY_RATE = 0.95; // per day decay multiplier
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export const updatePhysiology = (
   current: Physiology,
@@ -312,7 +319,8 @@ export const updateAutonomy = (
   const [newLevel, newConfidence] = bayesianUpdate(
     prior,
     priorConfidence,
-    evidence
+    evidence,
+    current.lastUpdate
   );
 
   // Physiological Regulation
@@ -348,35 +356,45 @@ const defaultCriteria = (): Criteria => ({
 });
 
 const calculateError = (expected: string, actual: string): number => {
-  // TODO: Implement proper edit distance algorithm
-  // Current implementation is character-by-character comparison
-  // Should use:
-  // - Levenshtein distance for string similarity
-  // - Semantic similarity for meaning comparison
-  // - Structured diff for JSON/object comparison
-  // - Custom metrics for domain-specific errors
   if (expected === actual) {
     return 0;
   }
+  if (expected.length === 0 || actual.length === 0) {
+    return Math.max(expected.length, actual.length) === 0 ? 0 : 1;
+  }
+
   const maxLen = Math.max(expected.length, actual.length);
-  if (maxLen === 0) {
-    return 0;
-  }
+  const [shorter, longer] =
+    expected.length <= actual.length
+      ? [expected, actual]
+      : [actual, expected];
 
-  let distance = 0;
-  for (let i = 0; i < maxLen; i++) {
-    if (expected[i] !== actual[i]) {
-      distance++;
+  let prevRow = Array.from({ length: shorter.length + 1 }, (_, i) => i);
+  let currRow = new Array<number>(shorter.length + 1);
+
+  for (let i = 1; i <= longer.length; i++) {
+    currRow[0] = i;
+    const longChar = longer.charCodeAt(i - 1);
+
+    for (let j = 1; j <= shorter.length; j++) {
+      const cost = longChar === shorter.charCodeAt(j - 1) ? 0 : 1;
+      const insertion = currRow[j - 1] + 1;
+      const deletion = prevRow[j] + 1;
+      const substitution = prevRow[j - 1] + cost;
+      currRow[j] = Math.min(insertion, deletion, substitution);
     }
+
+    [prevRow, currRow] = [currRow, prevRow];
   }
 
-  return distance / maxLen;
+  return prevRow[shorter.length] / maxLen;
 };
 
 const bayesianUpdate = (
   priorLevel: number,
   priorConfidence: number,
-  evidence: Evidence
+  evidence: Evidence,
+  lastUpdate?: Timestamp
 ): [number, number] => {
   // TODO: Implement proper Bayesian inference
   // Current implementation uses fixed deltas
@@ -385,6 +403,18 @@ const bayesianUpdate = (
   // - Consider evidence strength and reliability
   // - Apply conjugate priors for efficiency
   // - Track likelihood ratios
+  const reliability = clamp01(evidence.reliability ?? 1);
+  let decayedConfidence = priorConfidence;
+
+  if (lastUpdate) {
+    const msSinceUpdate = Date.now() - lastUpdate;
+    if (msSinceUpdate > 0) {
+      const daysSinceUpdate = msSinceUpdate / MS_PER_DAY;
+      decayedConfidence *= Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+    }
+  }
+  decayedConfidence = clamp01(decayedConfidence);
+
   let levelDelta = 0;
   let confidenceBoost = 0.05;
 
@@ -407,8 +437,11 @@ const bayesianUpdate = (
       break;
   }
 
-  const newLevel = priorLevel + levelDelta * priorConfidence;
-  const newConfidence = priorConfidence + confidenceBoost;
+  levelDelta *= reliability;
+  confidenceBoost *= reliability;
+
+  const newLevel = priorLevel + levelDelta * decayedConfidence;
+  const newConfidence = decayedConfidence + confidenceBoost;
 
   return [newLevel, newConfidence];
 };

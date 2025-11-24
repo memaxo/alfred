@@ -2,7 +2,12 @@ import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db, isSqliteDriver } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import type { EdgeRow, NodeRow } from "./types";
-import { normalizeEdge, normalizeNode, numberFromProps, stringFromProps } from "./utils";
+import {
+  normalizeEdge,
+  normalizeNode,
+  numberFromProps,
+  stringFromProps,
+} from "./utils";
 
 // Graph Algorithm: Find Nearest Concept (BFS)
 // Optimized to run in SQL for performance

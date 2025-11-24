@@ -89,9 +89,9 @@ export function resolveMayaVoice(input?: string): string {
 
   // Check if input matches a known preset key (case-insensitive)
   const upperInput = input.toUpperCase();
-  // @ts-ignore - Dynamic check
+  // @ts-expect-error - Dynamic check
   if (MAYA_VOICES[upperInput]) {
-    // @ts-ignore
+    // @ts-expect-error
     return MAYA_VOICES[upperInput].description;
   }
 

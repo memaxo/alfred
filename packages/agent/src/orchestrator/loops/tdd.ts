@@ -1,9 +1,9 @@
 import * as fs from "node:fs/promises";
+import { logger } from "@alfred/logger";
+import type { Workspace } from "../../environment/types";
+import type { ProjectConfig } from "../../utils/project-detector";
 import { toolCodex } from "../tool/codex";
 import { toolRunner } from "../tool/runner";
-import type { ProjectConfig } from "../../utils/project-detector";
-import type { Workspace } from "../../environment/types";
-import { logger } from "@alfred/logger";
 
 export type TDDContext = {
   agentId: string;
@@ -24,10 +24,19 @@ export async function runTDDLoop(
   writer?: { write: (chunk: unknown) => Promise<void> }
 ): Promise<void> {
   // void WorkflowEvent;
-  const { agentId, sessionId, workingDirectory, execPlanPath, requirement, auto, model, containerId } = context;
+  const {
+    agentId,
+    sessionId,
+    workingDirectory,
+    execPlanPath,
+    requirement,
+    auto,
+    model,
+    containerId,
+  } = context;
 
   const tddPlanPath = execPlanPath.replace(".md", ".tdd.md");
-  
+
   // Create TDD plan
   await fs.writeFile(
     tddPlanPath,
@@ -82,17 +91,15 @@ export async function runTDDLoop(
       agentId,
     });
     if (writer) {
-        await writer.write({
-            type: "notice",
-            message: "tdd_warning_test_passed_already"
-        });
+      await writer.write({
+        type: "notice",
+        message: "tdd_warning_test_passed_already",
+      });
     }
-  } else {
-    if (writer) {
-        await writer.write({
-            type: "notice",
-            message: "tdd_failure_verified"
-        });
-    }
+  } else if (writer) {
+    await writer.write({
+      type: "notice",
+      message: "tdd_failure_verified",
+    });
   }
 }

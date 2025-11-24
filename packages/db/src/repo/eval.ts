@@ -66,7 +66,10 @@ export async function upsertEvalDef(input: {
   return row!;
 }
 
-export async function listEvalDefs(limit = 50, offset = 0): Promise<(typeof evalDefs.$inferSelect)[]> {
+export async function listEvalDefs(
+  limit = 50,
+  offset = 0
+): Promise<(typeof evalDefs.$inferSelect)[]> {
   return db
     .select()
     .from(evalDefs)
@@ -75,7 +78,9 @@ export async function listEvalDefs(limit = 50, offset = 0): Promise<(typeof eval
     .offset(offset);
 }
 
-export async function getEvalDefBySlug(slug: string): Promise<typeof evalDefs.$inferSelect | null> {
+export async function getEvalDefBySlug(
+  slug: string
+): Promise<typeof evalDefs.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDefs)
@@ -84,7 +89,9 @@ export async function getEvalDefBySlug(slug: string): Promise<typeof evalDefs.$i
   return rows[0] ?? null;
 }
 
-export async function getEvalDefById(id: string): Promise<typeof evalDefs.$inferSelect | null> {
+export async function getEvalDefById(
+  id: string
+): Promise<typeof evalDefs.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDefs)
@@ -111,7 +118,11 @@ export async function createDataset(input: {
   return row!;
 }
 
-export async function listDatasets(defId: string, limit = 50, offset = 0): Promise<(typeof evalDatasets.$inferSelect)[]> {
+export async function listDatasets(
+  defId: string,
+  limit = 50,
+  offset = 0
+): Promise<(typeof evalDatasets.$inferSelect)[]> {
   return db
     .select()
     .from(evalDatasets)
@@ -121,7 +132,9 @@ export async function listDatasets(defId: string, limit = 50, offset = 0): Promi
     .offset(offset);
 }
 
-export async function getDatasetById(id: string): Promise<typeof evalDatasets.$inferSelect | null> {
+export async function getDatasetById(
+  id: string
+): Promise<typeof evalDatasets.$inferSelect | null> {
   const rows = await db
     .select()
     .from(evalDatasets)
@@ -155,7 +168,9 @@ export async function addPoints(
   return inserted;
 }
 
-export async function getPointsForDataset(datasetId: string): Promise<(typeof evalPoints.$inferSelect)[]> {
+export async function getPointsForDataset(
+  datasetId: string
+): Promise<(typeof evalPoints.$inferSelect)[]> {
   return db
     .select()
     .from(evalPoints)
@@ -296,7 +311,16 @@ export async function listRuns(
     .offset(offset);
 }
 
-export async function listRunScores(runId: string, limit = 100, offset = 0): Promise<{ score: typeof evalScores.$inferSelect; point: typeof evalPoints.$inferSelect }[]> {
+export async function listRunScores(
+  runId: string,
+  limit = 100,
+  offset = 0
+): Promise<
+  {
+    score: typeof evalScores.$inferSelect;
+    point: typeof evalPoints.$inferSelect;
+  }[]
+> {
   return db
     .select({
       score: evalScores,
@@ -310,7 +334,15 @@ export async function listRunScores(runId: string, limit = 100, offset = 0): Pro
     .offset(offset);
 }
 
-export async function getRunScoreStats(runId: string): Promise<{ scorer: string | null; count: number; mean: number | null; min: number | null; max: number | null }[]> {
+export async function getRunScoreStats(runId: string): Promise<
+  {
+    scorer: string | null;
+    count: number;
+    mean: number | null;
+    min: number | null;
+    max: number | null;
+  }[]
+> {
   return db
     .select({
       scorer: evalScores.scorer,
@@ -324,7 +356,10 @@ export async function getRunScoreStats(runId: string): Promise<{ scorer: string 
     .groupBy(evalScores.scorer);
 }
 
-export async function verifyRunDataset(runId: string, datasetId: string): Promise<boolean> {
+export async function verifyRunDataset(
+  runId: string,
+  datasetId: string
+): Promise<boolean> {
   const rows = await db
     .select({ id: evalRuns.id })
     .from(evalRuns)

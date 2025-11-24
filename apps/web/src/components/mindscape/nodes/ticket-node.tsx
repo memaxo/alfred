@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ticketNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function TicketNode({ id, data, selected }: NodeProps) {
@@ -89,11 +89,11 @@ export function TicketNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={identifier}
-        icon={<Ticket className="h-3 w-3" />}
         borderColor="border-indigo-500/30"
-        textColor="text-indigo-300"
         hoverColor="hover:border-indigo-500/50"
+        icon={<Ticket className="h-3 w-3" />}
+        label={identifier}
+        textColor="text-indigo-300"
       />
     );
   }

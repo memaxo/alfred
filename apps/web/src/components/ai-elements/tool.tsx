@@ -10,7 +10,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { isValidElement } from "react";
+import { isValidElement, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +18,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
-import { useEffect } from "react";
 
 // Define standard state type internally since AI SDK v6 handles this via hooks
 export type ToolState =
@@ -89,31 +88,31 @@ export const ToolHeader = ({
     // Dispatch mindscape event on state changes
     // Specifically when tool is running (input-available) or awaiting approval
     if (state === "input-available" || state === "approval-requested") {
-        dispatchMindscapeEvent({
-            type: "tool-call",
-            targetId: `tool-${type}`, // Assumes tool nodes are prefixed with "tool-"
-            sourceId: "chat" // Assumes chat node is "chat" (or active chat)
-        });
+      dispatchMindscapeEvent({
+        type: "tool-call",
+        targetId: `tool-${type}`, // Assumes tool nodes are prefixed with "tool-"
+        sourceId: "chat", // Assumes chat node is "chat" (or active chat)
+      });
     }
   }, [state, type]);
 
   return (
-  <CollapsibleTrigger
-    className={cn(
-      "flex w-full items-center justify-between gap-4 p-3",
-      className
-    )}
-    {...props}
-  >
-    <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
-      <span className="font-medium text-sm">
-        {title ?? type.split("-").slice(1).join("-")}
-      </span>
-      {getStatusBadge(state)}
-    </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-  </CollapsibleTrigger>
+    <CollapsibleTrigger
+      className={cn(
+        "flex w-full items-center justify-between gap-4 p-3",
+        className
+      )}
+      {...props}
+    >
+      <div className="flex items-center gap-2">
+        <WrenchIcon className="size-4 text-muted-foreground" />
+        <span className="font-medium text-sm">
+          {title ?? type.split("-").slice(1).join("-")}
+        </span>
+        {getStatusBadge(state)}
+      </div>
+      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    </CollapsibleTrigger>
   );
 };
 

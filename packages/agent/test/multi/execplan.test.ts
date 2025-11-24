@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
+  appendDecisionLogEntry,
+  appendSurpriseEntry,
+  applyProgressUpdate,
   generateSubtaskExecPlanSkeleton,
   interpretExecPlan,
   planProgressUpdate,
@@ -61,6 +64,71 @@ describe("execplan.planProgressUpdate", () => {
       completed: false,
     });
     expect(updated).toBe("- [ ] (2025-01-01) First");
+  });
+});
+
+describe("execplan.applyProgressUpdate", () => {
+  it("injects a new progress line into the markdown section", () => {
+    const md = `# Plan
+
+## Progress
+
+- [ ] Old
+
+## Decision Log
+
+- Pending.
+`;
+    const updated = applyProgressUpdate(md, {
+      timestampIso: "2025-02-01",
+      message: "New work item",
+      completed: false,
+    });
+    expect(updated).toContain("- [ ] Old");
+    expect(updated).toContain("- [ ] (2025-02-01) New work item");
+  });
+});
+
+describe("execplan.appendDecisionLogEntry", () => {
+  it("adds a decision log line with metadata", () => {
+    const md = `# Plan
+
+## Decision Log
+
+- Decision: Existing.
+  Rationale: Testing.
+  Date/Author: Earlier
+`;
+    const updated = appendDecisionLogEntry(md, {
+      decision: "Auto update",
+      rationale: "Runtime captured status",
+      author: "runtime",
+      dateIso: "2025-02-01",
+    });
+    expect(updated).toContain("Decision: Auto update");
+    expect(updated).toContain("Rationale: Runtime captured status");
+    expect(updated).toContain("Date/Author: 2025-02-01 / runtime");
+  });
+});
+
+describe("execplan.appendSurpriseEntry", () => {
+  it("appends an observation block", () => {
+    const md = `# Plan
+
+## Surprises & Discoveries
+
+- Observation: None.
+`;
+    const updated = appendSurpriseEntry(md, {
+      observation: "Agent stuck",
+      evidence: "Tracker flagged no commands for 60s",
+      action: "Escalate",
+      dateIso: "2025-02-01",
+    });
+    expect(updated).toContain("Observation: Agent stuck");
+    expect(updated).toContain("Evidence: Tracker flagged no commands for 60s");
+    expect(updated).toContain("Action: Escalate");
+    expect(updated).toContain("Date: 2025-02-01");
   });
 });
 

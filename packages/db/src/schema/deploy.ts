@@ -12,7 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-// TODO: [Phase 10] Add proper indexes for deployment queries
+// Index coverage: migrations 0042 add deployment query indexes.
 
 /**
  * Deployments (apps deployed by Alfred)
@@ -42,9 +42,7 @@ export const deployments = pgTable("deployments", {
   metadata: jsonb("metadata"), // Arbitrary deployment metadata
 });
 
-// TODO: [Phase 10] Add index on (userId, app, type) for app queries
-// TODO: [Phase 10] Add index on (status) for health monitoring
-// TODO: [Phase 10] Add index on (lastHealthCheck) for stale detection
+// Index coverage: see deployments_* indexes in migration 0042 for these patterns.
 
 // TODO: [Phase 10] Add deploymentLogs table for build/runtime logs
 // export const deploymentLogs = pgTable("deployment_logs", {

@@ -1,13 +1,13 @@
 import "bun";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { ingestCodeFiles } from "../../utils/rag-ingest.js";
 import type {
   ContextBundle,
   ContextFileSlice,
   SearchReceipt,
   SearchReceiptItem,
 } from "@alfred/type";
+import { ingestCodeFiles } from "../../utils/rag-ingest.js";
 import { toolCodex } from "../tool/codex";
 import { toolDroid } from "../tool/droid";
 import { toolWeb } from "../tool/web";
@@ -90,6 +90,18 @@ function serializeReceipt(receipt: SearchReceipt) {
     ...receipt,
     created: receipt.created.toISOString(),
   };
+}
+
+type SerializedReceipt = ReturnType<typeof serializeReceipt>;
+
+async function emitCacheHandoffEvent(
+  writer: Writer,
+  receipts: SerializedReceipt
+) {
+  await writer?.write?.({
+    type: "data-cache-handoff",
+    receipts,
+  });
 }
 
 function serializeBundle(bundle: ContextBundle) {
@@ -299,11 +311,12 @@ export async function gatherCodeContext({
   const cached = contextCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     const cachedReceipt = cloneReceipt(cached.receipt);
-    // TODO: Emit a matching data-cache-handoff event so UI caches can reconcile with the planning stream.
+    const serializedReceipts = serializeReceipt(cachedReceipt);
+    await emitCacheHandoffEvent(writer, serializedReceipts);
     await writer?.write?.({
       type: "context",
       phase: "cache",
-      receipts: serializeReceipt(cachedReceipt),
+      receipts: serializedReceipts,
     });
     return cachedReceipt;
   }
@@ -399,11 +412,12 @@ export async function gatherCodeContext({
     receipt: cloneReceipt(receipt),
   });
 
-  // TODO: Pair this context event with data-cache-handoff containing the same receipt for streaming clients.
+  const serializedReceipts = serializeReceipt(receipt);
+  await emitCacheHandoffEvent(writer, serializedReceipts);
   await writer?.write({
     type: "context",
     phase: "scan",
-    receipts: serializeReceipt(receipt),
+    receipts: serializedReceipts,
   });
 
   return receipt;
@@ -696,3 +710,10 @@ export async function indexCodeEmbeddings({
     throw new Error(`context_code_index_failed:${message}`);
   }
 }
+
+export const __internals = {
+  contextCache,
+  buildCacheKey,
+  normalizeExts,
+  normalizeIgnore,
+};

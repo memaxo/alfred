@@ -1,5 +1,6 @@
 import type { ProjectConfig } from "@alfred/agent/utils/project-detector";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { ExecutionContext } from "../context";
 import { runOrchestrator } from "../orchestrator";
 import type { RuntimeInput } from "../types";
 
@@ -14,7 +15,8 @@ export async function* executeActPhase(
   signal: AbortSignal,
   history?: WorkflowEvent[],
   projectConfig?: ProjectConfig | null,
-  authz?: string
+  authz?: string,
+  cachedContext?: ExecutionContext | null
 ): AsyncGenerator<WorkflowEvent, ActResult, void> {
   yield { type: "notice", message: "execution_started" } as WorkflowEvent;
 
@@ -32,8 +34,17 @@ export async function* executeActPhase(
     return { escalated: false };
   }
 
-  yield* runOrchestrator(input, runId, signal, history, projectConfig, undefined, authz);
-  
+  yield* runOrchestrator(
+    input,
+    runId,
+    signal,
+    history,
+    projectConfig,
+    undefined,
+    authz,
+    cachedContext
+  );
+
   return {
     escalated: false,
     reason: undefined,

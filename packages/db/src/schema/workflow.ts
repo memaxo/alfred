@@ -16,6 +16,8 @@ export const workflowRuns = pgTable("workflow_runs", {
   webhookSecret: text("webhook_secret"), // Secret for webhook verification
   linearSessionId: text("linear_session_id"),
   linearSpace: text("linear_space"),
+  linearIssueId: text("linear_issue_id"),
+  linearIssueUrl: text("linear_issue_url"),
   suspendedAt: timestamp("suspended_at", { withTimezone: true }),
   resumedAt: timestamp("resumed_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),

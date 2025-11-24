@@ -10,42 +10,22 @@ import type {
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
-
-const VERBOSITY_HINTS: Record<ResponseVerbosity, string[]> = {
-  minimal: ["one sentence", "single sentence", "shortest", "tiny"],
-  concise: ["concise", "brief", "short", "too verbose", "trim down"],
-  detailed: ["more detail", "expand", "elaborate", "add detail"],
-  verbose: ["exhaustive", "comprehensive", "long form", "write a lot"],
-};
-
-const TONE_HINTS: Record<ResponseTone, string[]> = {
-  formal: ["formal", "professional", "business"],
-  casual: ["casual", "relaxed", "friendly"],
-  technical: ["technical", "low-level", "use jargon"],
-  friendly: ["friendly", "warm", "approachable"],
-};
-
-const FORMAT_HINTS: Record<ResponseFormat, string[]> = {
-  bullet: ["bullet", "list", "- "],
-  paragraph: ["paragraph", "full sentence"],
-  structured: ["section", "heading", "outline"],
-  narrative: ["story", "narrative", "flowing"],
-};
+import {
+  detectToneSemantic,
+  inferResponsePreferencesSemantic,
+  type PreferenceScores,
+} from "./semantic";
 
 const FORMAT_MATCHERS: Array<{ format: ResponseFormat; matcher: RegExp }> = [
   { format: "bullet", matcher: /(^|\n)(?:[-*]|\d+\.)/ },
   { format: "structured", matcher: /(^|\n)#+\s/m },
 ];
 
-const toneHeuristics = {
-  formal: /\b(regards|sincerely|therefore|henceforth)\b/i,
-  casual: /\b(hey|yo|gonna|wanna|lol)\b/i,
-  technical: /\b(cpu|api|latency|throughput|kernel|schema)\b/i,
-  friendly: /!|\bemojis?\b/i,
-};
+const RESPONSE_SAMPLE_LIMIT = 12;
+const MIN_CONFIDENCE = 0.35;
 
-function calculateConfidence(signals: number, base = 0.5): number {
-  return Math.min(1, base + signals * 0.1);
+function scoreToConfidence(score: number): number {
+  return Math.min(0.99, Math.max(0.5, 0.5 + score * 0.4));
 }
 
 function buildPreferenceDetail(
@@ -70,23 +50,14 @@ function collectUserTexts(messages: UIMessage[]): string[] {
     }
     for (const part of message.parts) {
       if (part.type === "text" && part.text) {
-        texts.push(part.text.toLowerCase());
+        const normalized = part.text.trim();
+        if (normalized.length > 0) {
+          texts.push(normalized);
+        }
       }
     }
   }
   return texts;
-}
-
-function countHints(texts: string[], hints: string[]): number {
-  let count = 0;
-  for (const text of texts) {
-    for (const hint of hints) {
-      if (text.includes(hint)) {
-        count += 1;
-      }
-    }
-  }
-  return count;
 }
 
 function joinText(message: UIMessage): string {

@@ -144,4 +144,3 @@ export class VoiceSession {
     return this.config.userId;
   }
 }
-

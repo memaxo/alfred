@@ -34,10 +34,7 @@ export function MindscapeInitializer() {
   const graphNodeIds = useMemo(() => {
     const derived = nodes
       .map((node) => {
-        if (
-          node.data?.graph?.dbId &&
-          UUID_PATTERN.test(node.data.graph.dbId)
-        ) {
+        if (node.data?.graph?.dbId && UUID_PATTERN.test(node.data.graph.dbId)) {
           return node.data.graph.dbId;
         }
         if (UUID_PATTERN.test(node.id)) {
@@ -249,7 +246,7 @@ export function MindscapeInitializer() {
   );
 
   useEffect(() => {
-    if (!traverseResult || !traverseResult.nodes) {
+    if (!(traverseResult && traverseResult.nodes)) {
       return;
     }
 
@@ -316,7 +313,7 @@ export function MindscapeInitializer() {
   }, [traverseResult, nodeIds, addArtifact, autoLayout]);
 
   useEffect(() => {
-    if (!ragResult || !ragResult.nodes) {
+    if (!(ragResult && ragResult.nodes)) {
       return;
     }
 

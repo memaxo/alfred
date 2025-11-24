@@ -185,11 +185,11 @@ export function NoteNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={parsed.title?.trim() || "Untitled Note"}
-        icon={<FileText className="h-3 w-3" />}
         borderColor="border-yellow-500/20"
-        textColor="text-yellow-500"
         hoverColor="hover:border-yellow-500/40"
+        icon={<FileText className="h-3 w-3" />}
+        label={parsed.title?.trim() || "Untitled Note"}
+        textColor="text-yellow-500"
       />
     );
   }

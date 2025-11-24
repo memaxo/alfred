@@ -15,8 +15,7 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
-// TODO: [Phase 3] Add proper indexes for performance
-// TODO: [Phase 8] Add vector indexes for facts (HNSW)
+// Index coverage: migrations 0040+ handle preferences and facts performance indexes.
 
 // Import embedding dimension from embed package (single source of truth)
 // KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions
@@ -52,7 +51,7 @@ export const preferences = pgTable("user_preferences", {
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 8] Add unique index on (userId, key)
+// Index coverage: user_preferences_user_key_idx (0040)
 
 /**
  * User facts (vectorized for semantic recall)
@@ -69,7 +68,7 @@ export const facts = pgTable("user_facts", {
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
-// TODO: [Phase 8] Add HNSW vector index for facts.embedding
+// Index coverage: user_facts_embedding_hnsw_idx plus category/timestamp indexes (0040)
 
 /**
  * User events (timeline of significant interactions)

@@ -1,4 +1,4 @@
-import { deployments } from "../../schema/deploy";
+import type { deployments } from "../../schema/deploy";
 
 export type DeploymentInsert = typeof deployments.$inferInsert;
 export type DeploymentRecord = typeof deployments.$inferSelect;

@@ -25,6 +25,8 @@ export async function createRun(args: {
   webhookSecret?: string | null;
   linearSessionId?: string;
   linearSpace?: string;
+  linearIssueId?: string;
+  linearIssueUrl?: string;
 }): Promise<typeof workflowRuns.$inferSelect | undefined> {
   const [row] = await db
     .insert(workflowRuns)
@@ -39,6 +41,8 @@ export async function createRun(args: {
       webhookSecret: args.webhookSecret ?? null,
       linearSessionId: args.linearSessionId ?? null,
       linearSpace: args.linearSpace ?? null,
+      linearIssueId: args.linearIssueId ?? null,
+      linearIssueUrl: args.linearIssueUrl ?? null,
     })
     .returning();
   return row;
@@ -55,6 +59,8 @@ export async function updateRun(
     completedAt: Date | null;
     linearSessionId: string | null;
     linearSpace: string | null;
+    linearIssueId: string | null;
+    linearIssueUrl: string | null;
   }>
 ): Promise<typeof workflowRuns.$inferSelect | undefined> {
   const [row] = await db
@@ -102,6 +108,18 @@ export async function updateRun(
               null) as WorkflowRunInsert["linearSpace"],
           }
         : {}),
+      ...(Object.hasOwn(patch, "linearIssueId")
+        ? {
+            linearIssueId: (patch.linearIssueId ??
+              null) as WorkflowRunInsert["linearIssueId"],
+          }
+        : {}),
+      ...(Object.hasOwn(patch, "linearIssueUrl")
+        ? {
+            linearIssueUrl: (patch.linearIssueUrl ??
+              null) as WorkflowRunInsert["linearIssueUrl"],
+          }
+        : {}),
     })
     .where(eq(workflowRuns.id, runId))
     .returning();
@@ -130,7 +148,9 @@ export async function appendEvent(args: {
   return row;
 }
 
-export async function listEvents(runId: string): Promise<(typeof workflowEvents.$inferSelect)[]> {
+export async function listEvents(
+  runId: string
+): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const rows = await db
     .select()
     .from(workflowEvents)
@@ -140,7 +160,10 @@ export async function listEvents(runId: string): Promise<(typeof workflowEvents.
   return rows;
 }
 
-export async function listEventsByType(runId: string, eventType: string): Promise<(typeof workflowEvents.$inferSelect)[]> {
+export async function listEventsByType(
+  runId: string,
+  eventType: string
+): Promise<(typeof workflowEvents.$inferSelect)[]> {
   const rows = await db
     .select()
     .from(workflowEvents)
@@ -181,7 +204,10 @@ export async function listEventsByTypePaged(args: {
   return rows;
 }
 
-export async function countEventsByType(runId: string, eventType: string): Promise<number> {
+export async function countEventsByType(
+  runId: string,
+  eventType: string
+): Promise<number> {
   const rows = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(workflowEvents)
@@ -194,7 +220,9 @@ export async function countEventsByType(runId: string, eventType: string): Promi
   return Number(rows?.[0]?.count ?? 0);
 }
 
-export async function getRun(runId: string): Promise<typeof workflowRuns.$inferSelect | null> {
+export async function getRun(
+  runId: string
+): Promise<typeof workflowRuns.$inferSelect | null> {
   const [row] = await db
     .select()
     .from(workflowRuns)

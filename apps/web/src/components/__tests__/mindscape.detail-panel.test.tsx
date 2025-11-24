@@ -14,6 +14,8 @@ describe("MindscapeDetailPanel workflow navigation", () => {
       edges: [],
       focusedNodeId: null,
       ragDocCache: {},
+      ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
+      contextCache: {},
     });
   });
 

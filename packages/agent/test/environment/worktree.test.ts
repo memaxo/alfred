@@ -4,9 +4,11 @@ import { WorktreeWorkspace } from "../../src/environment/worktree";
 // Mock worktreeManager
 mock.module("../../src/orchestrator/tool/worktree", () => ({
   worktreeManager: {
-    create: mock(
-      async (_repoBase, runId, id) => `/tmp/alfred-test/${runId}/${id}`
-    ),
+    create: mock(async (_repoBase, runId, id) => ({
+      path: `/tmp/alfred-test/${runId}/${id}`,
+      branch: `agent/${runId}/${id}`,
+      baseRef: "HEAD",
+    })),
     remove: mock(async () => {}),
   },
 }));

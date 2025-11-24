@@ -1,19 +1,48 @@
-
-import { Background, BackgroundVariant, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import { createFileRoute } from "@tanstack/react-router";
+import { Background, type Edge, type Node, ReactFlow } from "@xyflow/react";
 import { LivingEdge } from "@/components/mindscape/living-edge";
 import "@xyflow/react/dist/style.css";
 
 // Sample nodes
 const nodes: Node[] = [
-  { id: "source-1", position: { x: 100, y: 100 }, data: { label: "Source" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
-  { id: "target-1", position: { x: 400, y: 100 }, data: { label: "Target (Idle)" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
-  
-  { id: "source-2", position: { x: 100, y: 250 }, data: { label: "Source" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
-  { id: "target-2", position: { x: 400, y: 250 }, data: { label: "Target (Active)" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
+  {
+    id: "source-1",
+    position: { x: 100, y: 100 },
+    data: { label: "Source" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
+  {
+    id: "target-1",
+    position: { x: 400, y: 100 },
+    data: { label: "Target (Idle)" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
 
-  { id: "source-3", position: { x: 100, y: 400 }, data: { label: "Source" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
-  { id: "target-3", position: { x: 400, y: 400 }, data: { label: "Target (RAG)" }, style: { background: "#333", color: "#fff", borderRadius: "12px" } },
+  {
+    id: "source-2",
+    position: { x: 100, y: 250 },
+    data: { label: "Source" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
+  {
+    id: "target-2",
+    position: { x: 400, y: 250 },
+    data: { label: "Target (Active)" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
+
+  {
+    id: "source-3",
+    position: { x: 100, y: 400 },
+    data: { label: "Source" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
+  {
+    id: "target-3",
+    position: { x: 400, y: 400 },
+    data: { label: "Target (RAG)" },
+    style: { background: "#333", color: "#fff", borderRadius: "12px" },
+  },
 ];
 
 // Mock the active state by using the store or just props?
@@ -40,7 +69,7 @@ const edges: Edge[] = [
     target: "target-2",
     type: "living",
     // Manually override style to look active-ish if store fails
-    style: { stroke: "var(--color-biolum)", strokeWidth: 2 }
+    style: { stroke: "var(--color-biolum)", strokeWidth: 2 },
   },
   // 3. RAG Highlight Edge (Green dashed)
   {
@@ -52,7 +81,7 @@ const edges: Edge[] = [
       stroke: "rgba(16, 185, 129, 0.6)",
       strokeDasharray: "4 2",
       strokeWidth: 1.5,
-    }
+    },
   },
 ];
 
@@ -63,20 +92,22 @@ const edgeTypes = {
 function EdgesPreview() {
   return (
     <div className="h-screen w-full bg-void text-biolum">
-      <div className="absolute top-4 left-4 z-10 bg-void-surface/80 p-4 rounded-3xl border border-white/10">
-        <h1 className="font-bold tracking-tighter text-xl mb-2">Living Edge Preview</h1>
-        <p className="text-xs text-biolum-dim">
+      <div className="absolute top-4 left-4 z-10 rounded-3xl border border-white/10 bg-void-surface/80 p-4">
+        <h1 className="mb-2 font-bold text-xl tracking-tighter">
+          Living Edge Preview
+        </h1>
+        <p className="text-biolum-dim text-xs">
           Visual verification of edge states.
-          <br/>
+          <br />
           Note: "Active" pulse requires store integration.
         </p>
       </div>
       <ReactFlow
-        nodes={nodes}
+        colorMode="dark"
         edges={edges}
         edgeTypes={edgeTypes}
-        colorMode="dark"
         fitView
+        nodes={nodes}
       >
         <Background color="#333" gap={20} />
       </ReactFlow>

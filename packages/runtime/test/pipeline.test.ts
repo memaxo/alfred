@@ -41,12 +41,13 @@ describe("PipelineRunner", () => {
       events.push(event);
     }
 
-    expect(events).toHaveLength(2); // start + test
+    expect(events).toHaveLength(3); // start + test + complete
     expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
     expect(events[1]).toEqual({
       type: "test",
       message: "Running phase1 with input",
     });
+    expect(events[2]).toEqual({ type: "step-complete", phase: "phase1" });
 
     expect(state.history).toHaveLength(1);
     expect(state.history[0].result).toBe("success");
@@ -68,15 +69,46 @@ describe("PipelineRunner", () => {
       events.push(event);
     }
 
-    // phase1 (start, test) -> escalate -> phase2 (start, test) -> success
-    expect(events).toHaveLength(4);
-    expect(events[0].type).toBe("step-start");
-    expect(events[2].type).toBe("step-start");
+    // phase1 (start, test, escalate) -> phase2 (start, test, complete)
+    expect(events).toHaveLength(5);
+    expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
+    expect(events[1].type).toBe("test");
+    expect(events[2]).toEqual({ type: "step-start", phase: "phase2" });
+    expect(events[3].type).toBe("test");
+    expect(events[4]).toEqual({ type: "step-complete", phase: "phase2" });
 
     expect(state.history).toHaveLength(2);
     expect(state.history[0].phaseId).toBe("phase1");
     expect(state.history[0].result).toBe("escalate");
     expect(state.history[1].phaseId).toBe("phase2");
     expect(state.history[1].result).toBe("success");
+  });
+
+  it("advances automatically to the next registered phase on success", async () => {
+    const state: PipelineState = {
+      currentPhaseId: "phase1",
+      history: [],
+      context: {} as any,
+    };
+
+    const runner = new PipelineRunner(state);
+    runner.register(new TestPhase("phase1"));
+    runner.register(new TestPhase("phase2"));
+
+    const generator = runner.run("input");
+    const events = [];
+    for await (const event of generator) {
+      events.push(event);
+    }
+
+    expect(events).toHaveLength(6);
+    expect(events[0]).toEqual({ type: "step-start", phase: "phase1" });
+    expect(events[2]).toEqual({ type: "step-complete", phase: "phase1" });
+    expect(events[3]).toEqual({ type: "step-start", phase: "phase2" });
+    expect(events[5]).toEqual({ type: "step-complete", phase: "phase2" });
+
+    expect(state.history).toHaveLength(2);
+    expect(state.history[0].phaseId).toBe("phase1");
+    expect(state.history[1].phaseId).toBe("phase2");
   });
 });

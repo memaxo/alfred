@@ -6,7 +6,7 @@ async function handleRequest(request: Request): Promise<Response> {
 
   const { assistantAgent } = await import(agentPkg);
   const { handleAgentStreamRequest } = await import(agentStreamHandlerPkg);
-  
+
   return handleAgentStreamRequest(request, assistantAgent, "assistant");
 }
 

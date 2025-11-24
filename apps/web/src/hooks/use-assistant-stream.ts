@@ -23,6 +23,7 @@ type UseAssistantStreamOptions = {
   onResponse?: (response: Response) => void;
   initialMessages?: AssistantUIMessage[];
   initialConversationId?: string | null;
+  api?: string;
 };
 
 export type UseAssistantStreamReturn = {
@@ -97,7 +98,13 @@ export function deriveActions(
 export function useAssistantStream(
   options: UseAssistantStreamOptions = {}
 ): UseAssistantStreamReturn {
-  const { onError, initialMessages, initialConversationId, onResponse } =
+  const {
+    onError,
+    initialMessages,
+    initialConversationId,
+    onResponse,
+    api: apiBase = "/api/assistant",
+  } = options;
     options;
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId ?? null
@@ -106,20 +113,8 @@ export function useAssistantStream(
     initialConversationId ?? undefined
   );
   const mountedRef = useRef(true);
-  const transportRef = useRef<DefaultChatTransport<AssistantUIMessage>>();
-
-  useEffect(
-    () => () => {
-      mountedRef.current = false;
-    },
-    []
-  );
-
-  if (!transportRef.current) {
-    const trackedFetch = async (
-      input: Parameters<typeof fetch>[0],
-      init?: Parameters<typeof fetch>[1]
-    ) => {
+  const trackedFetch = useCallback(
+    async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
       const response = await fetch(input, init);
       const headerId = response.headers.get("x-conversation-id");
       if (headerId) {
@@ -132,22 +127,39 @@ export function useAssistantStream(
         onResponse(response);
       }
       return response;
-    };
+    },
+    [onResponse]
+  );
 
-    transportRef.current = new DefaultChatTransport({
-      api: "/api/assistant",
-      fetch: trackedFetch,
-      prepareSendMessagesRequest: ({ body }) => ({
-        body: {
-          ...(body ?? {}),
-          conversationId: conversationIdRef.current,
-        },
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
+
+  useEffect(() => {
+    conversationIdRef.current = initialConversationId ?? undefined;
+    setConversationId(initialConversationId ?? null);
+  }, [apiBase, initialConversationId]);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: apiBase,
+        fetch: trackedFetch,
+        prepareSendMessagesRequest: ({ body }) => ({
+          body: {
+            ...(body ?? {}),
+            conversationId: conversationIdRef.current,
+          },
+        }),
       }),
-    });
-  }
+    [apiBase, trackedFetch]
+  );
 
   const chat = useChat<AssistantUIMessage>({
-    transport: transportRef.current,
+    transport,
     messages: initialMessages ?? [],
     onError,
   });

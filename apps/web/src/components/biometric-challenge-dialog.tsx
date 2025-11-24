@@ -16,17 +16,20 @@ export type BiometricChallengeDialogProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  workflowId?: string;
+  runId?: string;
+  target?: "workflow" | "droid";
 };
 
 export function BiometricChallengeDialog({
   open,
   onClose,
   onSuccess,
-  workflowId,
+  runId,
+  target = "workflow",
 }: BiometricChallengeDialogProps) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const resumeMutation = trpc.workflow.resume.useMutation();
+  const droidResume = trpc.droid.resume.useMutation();
 
   // Auto-trigger passkey flow when dialog opens
   useEffect(() => {
@@ -50,31 +53,31 @@ export function BiometricChallengeDialog({
           autoFill: false,
         });
 
-        if (result.data) {
-          // Passkey sign-in successful - biometric ticket is set automatically via Better Auth hook
-          // Now resume the workflow with bio-authz event
-          if (workflowId) {
-            try {
+        if (result.data && runId) {
+          try {
+            if (target === "workflow") {
               await resumeMutation.mutateAsync({
-                runId: workflowId,
+                runId,
                 event: "bio-authz",
-                authz: "session-ticket", // Server validates requireRecentBiometric
+                authz: "session-ticket",
               });
-              toast.success("Biometric authentication successful");
-              onSuccess();
-              onClose();
-            } catch (resumeError) {
-              const message =
-                resumeError instanceof Error
-                  ? resumeError.message
-                  : "workflow_resume_failed";
-              toast.error(message);
+            } else {
+              await droidResume.mutateAsync({
+                runId,
+                authz: "session-ticket",
+              });
             }
-          } else {
             toast.success("Biometric authentication successful");
             onSuccess();
             onClose();
+          } catch (resumeError) {
+            const message =
+              resumeError instanceof Error
+                ? resumeError.message
+                : "resume_failed";
+            toast.error(message);
           }
+          return;
         }
       } catch (error) {
         // User cancellation is not an error - just close dialog
@@ -99,7 +102,7 @@ export function BiometricChallengeDialog({
     };
 
     void triggerPasskey();
-  }, [open, workflowId, onSuccess, onClose, resumeMutation]);
+  }, [open, runId, onSuccess, onClose, resumeMutation, droidResume, target]);
 
   const handleCancel = () => {
     onClose();
@@ -127,12 +130,12 @@ export function BiometricChallengeDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
-          {workflowId && (
+          {runId && (
             <div className="rounded-xl border border-white/10 bg-void-surface/40 p-4">
               <p className="text-biolum-dim text-sm">
                 <span className="text-biolum-faint">Workflow ID:</span>
                 <br />
-                <span className="font-mono text-biolum">{workflowId}</span>
+                <span className="font-mono text-biolum">{runId}</span>
               </p>
             </div>
           )}

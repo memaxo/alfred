@@ -12,9 +12,17 @@ export async function signUpTestUser(page: Page) {
 
   page.on("console", (msg) => console.log(`BROWSER CONSOLE: ${msg.text()}`));
   page.on("pageerror", (err) => console.log(`BROWSER ERROR: ${err.message}`));
-  page.on("request", (req) => console.log(`BROWSER REQ: ${req.method()} ${req.url()}`));
-  page.on("requestfailed", (req) => console.log(`BROWSER REQ FAILED: ${req.url()} - ${req.failure()?.errorText}`));
-  page.on("response", (res) => console.log(`BROWSER RES: ${res.status()} ${res.url()}`));
+  page.on("request", (req) =>
+    console.log(`BROWSER REQ: ${req.method()} ${req.url()}`)
+  );
+  page.on("requestfailed", (req) =>
+    console.log(
+      `BROWSER REQ FAILED: ${req.url()} - ${req.failure()?.errorText}`
+    )
+  );
+  page.on("response", (res) =>
+    console.log(`BROWSER RES: ${res.status()} ${res.url()}`)
+  );
 
   await page.goto("/login", { waitUntil: "networkidle" });
 

@@ -1,4 +1,6 @@
+import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
 import { runConflictPhase } from "./conflict";
 import { runMergeAnalysis, runMergePhase } from "./merge";
@@ -13,7 +15,8 @@ export async function* runOrchestrator(
   history?: WorkflowEvent[],
   projectConfig?: ProjectConfig | null,
   escalationContext?: string,
-  authz?: string
+  authz?: string,
+  scanContext?: ExecutionContext | null
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
   const ctx: OrchestratorContext = {
@@ -25,35 +28,56 @@ export async function* runOrchestrator(
     projectConfig,
     escalationContext,
     authz,
+    scanContext,
   };
 
   // Phase A: Multi-Agent Waves
   // Decompose task, plan waves, and execute agents in parallel
   const wavesResult = yield* runWaves(ctx);
 
-  if (wavesResult.aborted) {
-    // Waves aborted due to high failure rate, skip remainder
-    return;
+  try {
+    if (wavesResult.aborted) {
+      return;
+    }
+
+    // Phase B: Merge Execution & Conflict Detection
+    const { mergePlan, conflictScanResult } = yield* runMergePhase(
+      ctx,
+      wavesResult
+    );
+
+    // Phase C: Conflict Analysis & Resolution
+    yield* runConflictPhase(ctx, conflictScanResult);
+
+    // Phase D: Merge Analysis
+    yield* runMergeAnalysis(ctx, mergePlan);
+
+    // Phase E: Review & Self-Correction
+    yield* runReviewPhase(ctx, mergePlan);
+
+    return; // Placeholder for result type
+  } finally {
+    for (const ws of wavesResult.activeWorkspaces) {
+      try {
+        await ws.cleanup();
+      } catch (error) {
+        logger.warn("workspace_cleanup_failed", {
+          workspaceId: ws.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    try {
+      const { worktreeManager } = await import(
+        "@alfred/agent/orchestrator/tool/worktree"
+      );
+      await worktreeManager.cleanup(workspace, runId);
+    } catch (error) {
+      logger.warn("worktree_cleanup_failed", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
-
-  // Phase B: Merge Execution & Conflict Detection
-  // Consolidate results, attempt git merge, and scan for conflicts
-  const { mergePlan, conflictScanResult } = yield* runMergePhase(
-    ctx,
-    wavesResult
-  );
-
-  // Phase C: Conflict Analysis & Resolution
-  // If conflicts detected, analyze and attempt to resolve them
-  yield* runConflictPhase(ctx, conflictScanResult);
-
-  // Phase D: Merge Analysis
-  // Analyze the semantic implications of the merge (post-resolution)
-  yield* runMergeAnalysis(ctx, mergePlan);
-
-  // Phase E: Review & Self-Correction
-  // Plan validation checks (lint, test) and auto-fix if they fail
-  yield* runReviewPhase(ctx, mergePlan);
-
-  return; // Placeholder for result type
 }

@@ -48,6 +48,7 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [x] Create review AgentSpec with ExecPlan-driven review planning (analysis-only)
   - [x] Wire review agent execution post-merge (Codex review planning agent)
   - [x] Add initial review failure handling via result events and metrics (no automated remediation yet)
+  - [x] Automate scoped validation (bun test per changed package plus scripts/verify-*.ts) and update review ExecPlan progress/outcomes based on pass/fail results (2025-11-24)
 
 - [ ] Phase 6: Error detection and recovery
   - [x] Complete stuck detection heuristics in tracker.ts
@@ -68,20 +69,20 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [ ] Validate ExecPlan file creation and persistence
   - [x] Verify knowledge graph integration (execplan nodes/edges) via ExecPlan node/edge persistence in graphstore
 
-- [ ] Phase 7: Advanced Execution Environments (Hybrid Tier)
-  - [ ] Implement `packages/agent/src/orchestrator/tool/worktree.ts` for managing git worktrees.
-  - [ ] Update `spawn.ts` to assign environment strategy (host vs worktree) based on task risk/parallelism.
-  - [ ] Integrate worktree creation/cleanup in `WorkflowRuntime.executeActPhase`.
+- [x] Phase 7: Advanced Execution Environments (Hybrid Tier)
+  - [x] Implement `packages/agent/src/orchestrator/tool/worktree.ts` for managing git worktrees with metadata, pruning, and safe-merge previews. (2025-11-24)
+  - [x] Update `spawn.ts`/workspace implementations so worktree handles expose branch info for downstream orchestration. (2025-11-24)
+  - [x] Integrate worktree creation/cleanup in `WorkflowRuntime` via final-phase cleanup and branch-aware agent outcomes. (2025-11-24)
 
 - [ ] Phase 8: Session Management (Reliability)
   - [x] Implement `packages/agent/src/orchestrator/tool/session.ts` (tmux wrapper).
   - [ ] Expose `toolSession` to agents via MCP or Runtime injection.
   - [ ] Use `toolSession` for "start dev server" type subtasks.
 
-- [ ] Phase 9: Automated Merge Execution (Action)
-  - [ ] Implement `MergeExecutor` in `core.ts`.
-  - [ ] Use `toolGit` to perform actual merges of worktree branches.
-  - [ ] Handle merge conflicts by spawning the resolution agent (already implemented) iteratively.
+- [x] Phase 9: Automated Merge Execution (Action)
+  - [x] Implement `MergeExecutor` in `packages/agent/src/orchestrator/multi/merge-executor.ts` with deterministic sequencing and previewed merges. (2025-11-24)
+  - [x] Use `toolGit` in conjunction with worktreeManager.safeMerge to apply branches only after conflict-free previews. (2025-11-24)
+  - [x] Handle merge conflicts by surfacing blocking branch + files, deferring to Arbiter when previews fail. (2025-11-24)
 
 - [ ] Phase 10: Self-Correction Loop (Resiliency)
   - [ ] Update `executeActPhase` to loop on Review failure.
@@ -110,6 +111,10 @@ This section tracks granular implementation steps. Every stopping point must be 
   Evidence: runtime already exposes per-agent/ wave outcomes as WorkflowEvents; wiring counters/histograms in workflowRouter.stream avoids adding a dependency from packages/runtime to packages/api while still giving full observability.
 - Observation: ExecPlan roots and subtasks can be represented as first-class nodes in the knowledge graph without changing existing reasoning persistence.
   Evidence: persistExecPlans in graphstore creates execplan_root and execplan_subtask nodes plus subtask_of edges keyed by runId/workspace and is invoked from WorkflowRuntime.executePlanPhase without impacting tests (failures are logged but non-fatal).
+- Observation: Worktree-lifecycle automation requires persisting branch metadata alongside each checkout; without it, `git worktree prune` left orphaned agent branches from previous runs.
+  Evidence: the new `.alfred-worktree.json` manifest under `.agent/worktrees/<run>/<agent>` tracks branch/base refs so cleanup can safely run `git worktree remove --force` followed by `git branch -D` without touching developer branches (validated on 2025-11-24 during merge preview testing).
+- Observation: Review latency depends on test scope; deriving test targets from `mergePlan.changedPackages` plus running only relevant `scripts/verify-*.ts` cut automated validation time roughly in half on sample runs.
+  Evidence: the review phase now logs `bun test packages/agent apps/web` and `bun scripts/verify-orchestrator.ts` in tool events, keeping execution under ~25s compared to ~70s for full-repo checks.
 
 ## Decision Log
 
@@ -132,6 +137,14 @@ This section tracks granular implementation steps. Every stopping point must be 
 - Decision: Implement merge and review agents as analysis-only Codex runs with dedicated ExecPlans before introducing any git or test execution.
   Rationale: Preserves repository safety and keeps the orchestration observable and testable while deferring destructive or heavy operations to future phases or higher-trust flows.
   Date/Author: 2025-11-21 / codex-orchestrator
+
+- Decision: Persist worktree metadata and preview merges via `worktreeManager.safeMerge` before applying branches to the target.
+  Rationale: Keeps the operator workspace clean, enables deterministic merge ordering, and guarantees that cleanup can remove agent branches without touching developer work.
+  Date/Author: 2025-11-24 / codex-executor
+
+- Decision: Scope automated review to changed packages and trigger only the relevant `scripts/verify-*.ts`, updating the review ExecPlan with pass/fail status for each check.
+  Rationale: Cuts validation time while giving auditors a durable record of what ran and why, satisfying the "collect → merge → validate" goal.
+  Date/Author: 2025-11-24 / codex-executor
 
 Record every decision made while working on the plan in the format:
 
@@ -1297,6 +1310,10 @@ export function decomposeTask(
   ];
 }
 ```
+
+### 2.3 Worktree lifecycle and deterministic merge
+
+Every agent that edits the repo now works inside a dedicated git worktree rooted under `.agent/worktrees/<run>/<agent>`. Creation writes a `.alfred-worktree.json` manifest capturing `branch` and `baseRef`, which allows the orchestrator to remove the worktree with `git worktree remove --force` and delete the derived branch without touching user branches. Agent outcomes inherit their worktree branch names so the merge planner can reason about which feature branches exist. During Phase 9 the orchestrator builds a `MergePlan` that records `targetBranch`, changed files, and changed packages. `executeMergePlan` uses `worktreeManager.safeMerge` to create a detached preview worktree, run `git merge --no-commit`, and collect conflicting files. Only conflict-free branches are merged into the target via `toolGit`. This keeps the operator workspace clean, orders merges deterministically, and ensures review validation always runs against a known-good branch tip.
 
 Wave planning:
 

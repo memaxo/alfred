@@ -1,7 +1,7 @@
-import { toolCodex } from "./tool/codex/index.js";
-import { worktreeManager } from "./tool/worktree.js";
 import { logger } from "@alfred/logger";
 import { sys } from "../utils/process.js";
+import { toolCodex } from "./tool/codex/index.js";
+import { worktreeManager } from "./tool/worktree.js";
 
 export type ConflictResolution =
   | { status: "resolved"; resolvedBranch: string }
@@ -19,30 +19,42 @@ export const conflictArbiter = {
     authz?: string
   ): Promise<ConflictResolution> => {
     const arbiterId = `arbiter-${Date.now().toString(36)}`;
-    logger.info("arbiter_spawned", { runId, arbiterId, targetBranch, sourceBranch });
+    logger.info("arbiter_spawned", {
+      runId,
+      arbiterId,
+      targetBranch,
+      sourceBranch,
+    });
 
     // 1. Create a temporary worktree for resolution (based on target branch)
     // We use the existing targetBranch as base.
-    const worktreePath = await worktreeManager.create(
+    const worktreeHandle = await worktreeManager.create(
       repoRoot,
       runId,
       arbiterId,
       targetBranch
     );
+    const worktreePath = worktreeHandle.path;
 
     try {
       // 2. Attempt the merge to reproduce conflict in the worktree
       // This puts the worktree in a "conflict state" with markers.
-      const mergeProc = sys.spawn(["git", "merge", "--no-commit", "--no-ff", sourceBranch], {
-        cwd: worktreePath,
-      });
+      const mergeProc = sys.spawn(
+        ["git", "merge", "--no-commit", "--no-ff", sourceBranch],
+        {
+          cwd: worktreePath,
+        }
+      );
       await mergeProc.exited;
 
       // 3. Identify conflicting files
-      const statusProc = sys.spawn(["git", "diff", "--name-only", "--diff-filter=U"], {
-        cwd: worktreePath,
-        stdout: "pipe",
-      });
+      const statusProc = sys.spawn(
+        ["git", "diff", "--name-only", "--diff-filter=U"],
+        {
+          cwd: worktreePath,
+          stdout: "pipe",
+        }
+      );
       const conflictedFiles = (await new Response(statusProc.stdout).text())
         .split("\n")
         .map((s) => s.trim())
@@ -51,8 +63,14 @@ export const conflictArbiter = {
       if (conflictedFiles.length === 0) {
         // Weird, no conflicts found? Maybe it was a fast-forward or clean merge?
         // Commit and return.
-        await commitResolution(worktreePath, "Auto-resolved by Arbiter (Clean)");
-        return { status: "resolved", resolvedBranch: `agent/${runId}/${arbiterId}` };
+        await commitResolution(
+          worktreePath,
+          "Auto-resolved by Arbiter (Clean)"
+        );
+        return {
+          status: "resolved",
+          resolvedBranch: worktreeHandle.branch,
+        };
       }
 
       // 4. Spawn Codex as Arbiter
@@ -105,18 +123,26 @@ If you cannot resolve a conflict safely, create a file 'ESCALATION.md' explainin
       const checkExit = await checkProc.exited;
 
       if (checkExit !== 0) {
-        return { status: "failed", reason: "Arbiter failed to remove all conflict markers" };
+        return {
+          status: "failed",
+          reason: "Arbiter failed to remove all conflict markers",
+        };
       }
 
       // 6. Commit
-      await commitResolution(worktreePath, `Arbiter resolved merge of ${sourceBranch}`);
+      await commitResolution(
+        worktreePath,
+        `Arbiter resolved merge of ${sourceBranch}`
+      );
 
       // 7. Return the new branch/commit
       // The worktree is on a branch `agent/${runId}/${arbiterId}` (created by worktreeManager)
       // We just return that branch name.
-      
-      return { status: "resolved", resolvedBranch: `agent/${runId}/${arbiterId}` };
 
+      return {
+        status: "resolved",
+        resolvedBranch: worktreeHandle.branch,
+      };
     } catch (error) {
       logger.error("arbiter_failed", { error: String(error) });
       return { status: "failed", reason: String(error) };

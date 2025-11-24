@@ -1,9 +1,60 @@
+import { worktreeManager } from "../tool/worktree";
+import { sys } from "../../utils/process";
 import type { MergePlan } from "./merge";
+
+type GitResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+
+async function runGitCommand(cwd: string, args: string[]): Promise<GitResult> {
+  const proc = sys.spawn(["git", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
+    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
+    proc.exited,
+  ]);
+
+  return {
+    exitCode,
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+  };
+}
+
+async function detectCurrentBranch(cwd: string) {
+  const res = await runGitCommand(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (res.exitCode === 0 && res.stdout) {
+    return res.stdout === "HEAD" ? "dev" : res.stdout;
+  }
+  return "dev";
+}
+
+async function ensureBranchCheckedOut(cwd: string, branch: string) {
+  const res = await runGitCommand(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (res.exitCode === 0 && res.stdout === branch) {
+    return;
+  }
+  const checkout = await runGitCommand(cwd, ["checkout", branch]);
+  if (checkout.exitCode !== 0) {
+    throw new Error(
+      `Unable to checkout ${branch}: ${checkout.stderr || checkout.stdout}`
+    );
+  }
+}
 
 export type MergeResult = {
   status: "completed" | "conflict" | "failed";
   mergedBranches: string[];
+  targetBranch: string;
   conflictBranch?: string;
+  conflictFiles?: string[];
   error?: string;
 };
 
@@ -16,49 +67,59 @@ export async function executeMergePlan(
   workspace: string,
   git: GitTool,
   writer?: any,
-  authz?: string
+  options?: { authz?: string; runId?: string }
 ): Promise<MergeResult> {
   if (!plan.branches || plan.branches.length === 0) {
-    return { status: "completed", mergedBranches: [] };
+    return {
+      status: "completed",
+      mergedBranches: [],
+      targetBranch: plan.targetBranch ?? (await detectCurrentBranch(workspace)),
+    };
   }
+
+  const targetBranch = plan.targetBranch ?? (await detectCurrentBranch(workspace));
+  await ensureBranchCheckedOut(workspace, targetBranch);
 
   const merged: string[] = [];
 
-  // Assume workspace is already on the target base branch (e.g. main)
-  // or we might need to ensure it?
-  // For now, we assume the orchestrator sets up the workspace state or we just merge into current HEAD.
-
   for (const branch of plan.branches) {
     try {
+      const preview = await worktreeManager.safeMerge(
+        workspace,
+        targetBranch,
+        branch,
+        { runId: options?.runId }
+      );
+      if (!preview.success) {
+        return {
+          status: "conflict",
+          mergedBranches: merged,
+          targetBranch,
+          conflictBranch: branch,
+          conflictFiles: preview.conflictFiles,
+        };
+      }
+
       await git.execute({
         input: {
           action: "merge",
           ref: branch,
           cw: workspace,
-          authz,
+          authz: options?.authz,
         },
         writer,
       });
       merged.push(branch);
     } catch (error: any) {
-      const msg = error?.message ?? String(error);
-      if (msg.includes("git_merge_failed")) {
-        // Conflict detected
-        return {
-          status: "conflict",
-          mergedBranches: merged,
-          conflictBranch: branch,
-          error: msg,
-        };
-      }
       return {
         status: "failed",
         mergedBranches: merged,
+        targetBranch,
         conflictBranch: branch,
-        error: msg,
+        error: error?.message ?? String(error),
       };
     }
   }
 
-  return { status: "completed", mergedBranches: merged };
+  return { status: "completed", mergedBranches: merged, targetBranch };
 }

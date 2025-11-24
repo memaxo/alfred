@@ -1,8 +1,11 @@
-import { extract } from "@alfred/knowledge/extractor";
+import {
+  entityLinkingDurationMs,
+  entityLinkingFallbackTotal,
+} from "@alfred/api/metrics";
 import { findNearestConcept } from "@alfred/db/repo/graph";
-import { embedMany } from "@alfred/rag";
+import { extract } from "@alfred/knowledge/extractor";
 import { ANCHORS } from "@alfred/knowledge/ontology";
-import { entityLinkingDurationMs, entityLinkingFallbackTotal } from "@alfred/api/metrics";
+import { embedMany } from "@alfred/rag";
 
 export interface EntityLinkResult {
   domains: string[];
@@ -19,7 +22,7 @@ export async function linkEntities(
   messages: Array<{ role: string; content: string }>
 ): Promise<EntityLinkResult> {
   const stopTimer = entityLinkingDurationMs.startTimer();
-  
+
   // Aggregate the last 3 user messages to get current context
   const recentUserMessages = messages
     .filter((m) => m.role === "user")

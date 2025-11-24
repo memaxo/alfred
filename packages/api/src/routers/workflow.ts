@@ -1,10 +1,5 @@
-import {
-  configureLinearMetrics,
-} from "@alfred/agent/integrations/linear";
-import {
-  codexLinearIntegrationLatencySeconds,
-  codexSessionContinuityTotal,
-} from "@alfred/api/metrics";
+import { configureLinearMetrics } from "@alfred/agent/integrations/linear";
+import { recordAudit } from "@alfred/agent/utils/audit";
 import {
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,
@@ -13,10 +8,15 @@ import {
   replayQueryDurationSeconds,
 } from "@alfred/agent/workflow/metrics";
 import {
-  orchestrateWorkflowStream,
   type OrchestratorCallbacks,
+  orchestrateWorkflowStream,
 } from "@alfred/agent/workflow/orchestrator";
 import { runRegistry } from "@alfred/agent/workflow/registry";
+import {
+  mapWorkflowResource,
+  mapWorkflowRunResource,
+  workflowInput,
+} from "@alfred/agent/workflow/schema";
 import {
   createRequirementMessage,
   createWorkflowExecutor,
@@ -25,11 +25,11 @@ import {
   ensureWorkflowConversation,
   persistWorkflowMessages,
 } from "@alfred/agent/workflow/services";
+import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
-  mapWorkflowResource,
-  mapWorkflowRunResource,
-  workflowInput,
-} from "@alfred/agent/workflow/schema";
+  codexLinearIntegrationLatencySeconds,
+  codexSessionContinuityTotal,
+} from "@alfred/api/metrics";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
   ReasoningEdgeRecord,
@@ -44,7 +44,6 @@ import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
 import { authedProcedure, rateLimit, router } from "../trpc";
-import { recordAudit } from "@alfred/agent/utils/audit";
 import { toTRPCError } from "../utils/error";
 
 // Feature flag for runtime migration (Phase 3.3)
@@ -105,14 +104,26 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
       try {
         const abortController = new AbortController();
+        const { linear: preparedLinear, ticket } = await ensureLinearTicket({
+          linear: input.linear,
+          authzLinear: input.authzLinear,
+          requirement: input.requirement,
+        });
+        const workflowPayload = {
+          ...input,
+          linear: preparedLinear,
+        } as typeof input;
 
-        const executor = createWorkflowExecutor(input, abortController);
+        const executor = createWorkflowExecutor(workflowPayload, abortController);
 
         const storedInput = {
-          ...(input as any),
+          ...(workflowPayload as any),
           executionId: executor.runId,
           reasoningSince: Date.now(),
         };
+        const linearIssueId =
+          preparedLinear?.issueId ?? preparedLinear?.sessionId ?? null;
+        const linearIssueUrl = ticket?.issueUrl ?? preparedLinear?.issueUrl ?? null;
 
         await workflowRepo.createRun({
           id: executor.runId,
@@ -120,21 +131,25 @@ export const workflowRouter: ReturnType<typeof router> = router({
           workflowId: "plan",
           status: "running",
           inputData: storedInput,
-          linearSessionId: input.linear?.sessionId,
-          linearSpace: input.linear?.space,
+          linearSessionId: preparedLinear?.sessionId,
+          linearSpace: preparedLinear?.space,
+          linearIssueId,
+          linearIssueUrl,
         });
 
         try {
           const { conversation, created } = await ensureWorkflowConversation({
             userId: session.user.id,
             workflowId: executor.runId,
-            title: deriveWorkflowTitle(input.requirement),
+            title: deriveWorkflowTitle(workflowPayload.requirement),
           });
           if (created) {
             const persisted = await persistWorkflowMessages({
               userId: session.user.id,
               conversationId: conversation.id,
-              messages: [createRequirementMessage(input, executor.runId)],
+              messages: [
+                createRequirementMessage(workflowPayload, executor.runId),
+              ],
               persistedKeys: new Set(),
               runId: executor.runId,
               eventType: "workflow.requirement",
@@ -179,8 +194,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
           vcs: null,
           report: null,
           planArtifact: null,
-          ticketId: input.linear?.sessionId ?? null,
-          ticketUrl: null,
+          ticketId: linearIssueId,
+          ticketUrl: linearIssueUrl,
         };
       } catch (error) {
         throw toTRPCError(error, "workflow_start_failed");

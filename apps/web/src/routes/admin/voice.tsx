@@ -1,182 +1,596 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import { createFileRoute } from "@tanstack/react-router";
-import { Activity, RefreshCw, Server, Zap } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  RefreshCw,
+  Server,
+  ShieldAlert,
+  Signal,
+  Zap,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { trpc } from "@/utils/trpc";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+
+const REFRESH_INTERVAL_MS = 3000;
+
+type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
+type VoiceStats = RouterOutputs["admin"]["getVoiceStats"];
+type VoiceTelemetry = NonNullable<VoiceStats["telemetry"]>;
+type PoolStats = NonNullable<VoiceStats["sttPool"]>;
+type PoolProcess = PoolStats["health"][number];
 
 export const Route = createFileRoute("/admin/voice")({
-  component: VoiceAdmin,
+  component: VoiceAdminRoute,
 });
 
-function VoiceAdmin() {
+function VoiceAdminRoute() {
+  return <VoiceAdminView />;
+}
+
+export function VoiceAdminView() {
   const utils = trpc.useUtils();
-  const { data: stats, isLoading } = trpc.admin.getVoiceStats.useQuery(
-    undefined,
-    {
-      refetchInterval: 2000,
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const {
+    data: stats,
+    error,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = trpc.admin.getVoiceStats.useQuery(undefined, {
+    refetchInterval: REFRESH_INTERVAL_MS,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (stats?.generatedAt) {
+      setLastUpdated(new Date(stats.generatedAt));
     }
-  );
+  }, [stats?.generatedAt]);
 
   const restartMutation = trpc.admin.restartVoicePool.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
+      toast.success(
+        result?.pool === "stt"
+          ? "Speech-to-Text pool restarted"
+          : "Text-to-Speech pool restarted"
+      );
       utils.admin.getVoiceStats.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message ?? "Failed to restart pool");
     },
   });
 
+  const clearSessionsMutation = trpc.admin.clearVoiceSessions.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        result?.cleared
+          ? `Cleared ${result.cleared} session${result.cleared === 1 ? "" : "s"}`
+          : "Cleared lingering sessions"
+      );
+      utils.admin.getVoiceStats.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message ?? "Failed to clear sessions");
+    },
+  });
+
+  const biometricRequired = isBiometricError(error);
+
+  if (biometricRequired) {
+    return <BiometricGate onRetry={() => refetch()} />;
+  }
+
+  if (isLoading) {
+    return <VoiceAdminSkeleton />;
+  }
+
+  if (!stats) {
+    return <EmptyState message="No stats available" />;
+  }
+
+  const summaryCards = buildSummaryCards(stats, lastUpdated);
+
   const handleRestart = (pool: "stt" | "tts") => {
-    if (confirm(`Are you sure you want to restart the ${pool.toUpperCase()} pool?`)) {
+    const label = pool === "stt" ? "Speech-to-Text" : "Text-to-Speech";
+    if (
+      window.confirm(
+        `Restart ${label}? Active sessions may experience a brief interruption.`
+      )
+    ) {
       restartMutation.mutate({ pool });
     }
   };
 
-  if (isLoading) {
-    return <div>Loading stats...</div>;
-  }
-
-  if (!stats) {
-    return <div>No stats available</div>;
-  }
+  const handleClearSessions = () => {
+    if (
+      window.confirm(
+        "Clear all active voice sessions? This disconnects any ongoing calls."
+      )
+    ) {
+      clearSessionsMutation.mutate();
+    }
+  };
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard
-          icon={<Activity className="h-5 w-5 text-blue-400" />}
-          label="Active Sessions"
-          value={stats.activeSessions}
-        />
-        <StatCard
-          icon={<Zap className="h-5 w-5 text-yellow-400" />}
-          label="STT Usage"
-          value={`${stats.sttPool?.active ?? 0} / ${stats.sttPool?.size ?? 0}`}
-        />
-        <StatCard
-          icon={<Server className="h-5 w-5 text-green-400" />}
-          label="TTS Usage"
-          value={`${stats.ttsPool?.active ?? 0} / ${stats.ttsPool?.size ?? 0}`}
-        />
+      <div className="flex flex-wrap items-center gap-4">
+        <div>
+          <p className="text-sm text-biolum-dim">Voice infrastructure</p>
+          <h1 className="text-2xl font-semibold text-biolum">
+            Voice Operations Console
+          </h1>
+        </div>
+        {isRefetching && (
+          <Badge variant="outline" className="text-xs">
+            Syncing data...
+          </Badge>
+        )}
+        <div className="flex-1" />
+        <Button onClick={() => refetch()} variant="ghost">
+          Refresh
+        </Button>
+        <Button
+          className="gap-2"
+          disabled={clearSessionsMutation.isPending}
+          onClick={handleClearSessions}
+          variant="outline"
+        >
+          <ShieldAlert className="h-4 w-4" />
+          Clear Sessions
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <PoolStatus
-          title="STT Pool (Speech-to-Text)"
-          pool={stats.sttPool}
+      {stats.message ? (
+        <MessageBanner message={stats.message} />
+      ) : null}
+
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {summaryCards.map((card) => (
+          <Card key={card.label} data-testid="voice-admin-stat">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardDescription>{card.label}</CardDescription>
+                <CardTitle className="text-2xl tracking-tight">
+                  {card.value}
+                </CardTitle>
+              </div>
+              <span className="rounded-full bg-white/5 p-3 text-biolum">
+                {card.icon}
+              </span>
+            </CardHeader>
+            {card.meta && (
+              <CardContent className="text-sm text-biolum-dim">
+                {card.meta}
+              </CardContent>
+            )}
+          </Card>
+        ))}
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <PoolPanel
+          isRestarting={
+            restartMutation.isPending &&
+            restartMutation.variables?.pool === "stt"
+          }
           onRestart={() => handleRestart("stt")}
-          isRestarting={restartMutation.isPending && restartMutation.variables?.pool === "stt"}
+          pool={stats.sttPool}
+          title="Speech-to-Text Pool"
         />
-        <PoolStatus
-          title="TTS Pool (Text-to-Speech)"
-          pool={stats.ttsPool}
+        <PoolPanel
+          isRestarting={
+            restartMutation.isPending &&
+            restartMutation.variables?.pool === "tts"
+          }
           onRestart={() => handleRestart("tts")}
-          isRestarting={restartMutation.isPending && restartMutation.variables?.pool === "tts"}
+          pool={stats.ttsPool}
+          title="Text-to-Speech Pool"
         />
-      </div>
+      </section>
+
+      <LatencyPanel telemetry={stats.telemetry} />
     </div>
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
-      <div className="rounded-full bg-white/5 p-3">{icon}</div>
-      <div>
-        <p className="text-biolum-dim text-sm">{label}</p>
-        <p className="font-bold text-2xl text-biolum">{value}</p>
-      </div>
-    </div>
-  );
+function buildSummaryCards(stats: VoiceStats, lastUpdated: Date | null) {
+  return [
+    {
+      label: "Active Sessions",
+      value: stats.activeSessions ?? 0,
+      icon: <Activity className="h-5 w-5" />,
+      meta: "Live voice sessions",
+    },
+    {
+      label: "STT Utilization",
+      value: formatUsage(stats.sttPool),
+      icon: <Zap className="h-5 w-5" />,
+      meta: stats.sttPool ? `${formatPercent(stats.sttPool.utilization)} used` : "Unavailable",
+    },
+    {
+      label: "TTS Utilization",
+      value: formatUsage(stats.ttsPool),
+      icon: <Server className="h-5 w-5" />,
+      meta: stats.ttsPool ? `${formatPercent(stats.ttsPool.utilization)} used` : "Unavailable",
+    },
+    {
+      label: "Last Updated",
+      value: lastUpdated ? lastUpdated.toLocaleTimeString() : "--",
+      icon: <Clock className="h-5 w-5" />,
+      meta: lastUpdated ? lastUpdated.toLocaleDateString() : "Awaiting telemetry",
+    },
+  ];
 }
 
-function PoolStatus({
+function PoolPanel({
   title,
   pool,
   onRestart,
   isRestarting,
 }: {
   title: string;
-  pool: any;
+  pool: PoolStats | null;
   onRestart: () => void;
   isRestarting: boolean;
 }) {
   if (!pool) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6">
-        <h3 className="mb-4 font-semibold text-lg">{title}</h3>
-        <p className="text-biolum-dim">Pool not initialized (Cloud mode?)</p>
-      </div>
+      <Card className="border-dashed border-white/15 bg-void-surface/40">
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>Pool not initialized (cloud provider).
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
-  return (
-    <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-6 backdrop-blur-xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="font-semibold text-lg">{title}</h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRestart}
-          disabled={isRestarting}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRestarting ? "animate-spin" : ""}`} />
-          Restart Pool
-        </Button>
-      </div>
+  const utilization = Math.round((pool.utilization ?? 0) * 100);
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {pool.health.map((proc: any, i: number) => (
-          <div
-            key={i}
-            className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
-              proc.isHealthy
-                ? "border-green-500/20 bg-green-500/5"
-                : "border-red-500/20 bg-red-500/5"
-            }`}
+  return (
+    <Card className="bg-void-surface/40">
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>
+            {pool.active} active / {pool.size} processes
+          </CardDescription>
+        </div>
+        <Button
+          className="gap-2"
+          disabled={isRestarting}
+          onClick={onRestart}
+          size="sm"
+          variant="secondary"
+        >
+          <RefreshCw className={cn("h-4 w-4", isRestarting && "animate-spin")} />
+          Restart
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <div className="mb-1 flex items-center justify-between text-sm text-biolum-dim">
+            <span>Utilization</span>
+            <span>{utilization}%</span>
+          </div>
+          <Progress value={utilization} />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {pool.health?.map((process, index) => (
+            <ProcessHealthCard key={index} index={index} process={process} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProcessHealthCard({
+  process,
+  index,
+}: {
+  process: PoolProcess;
+  index: number;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border p-4 text-sm transition",
+        process.isHealthy
+          ? "border-emerald-500/30 bg-emerald-500/5"
+          : "border-red-500/30 bg-red-500/5"
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between text-xs font-mono">
+        <span>Process #{index + 1}</span>
+        <span
+          className={cn(
+            "h-2 w-2 rounded-full",
+            process.isHealthy ? "bg-emerald-400" : "bg-red-400"
+          )}
+        />
+      </div>
+      <dl className="space-y-1 text-xs">
+        <div className="flex justify-between">
+          <dt className="text-biolum-dim">Requests</dt>
+          <dd className="font-mono">{process.requestCount ?? 0}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-biolum-dim">Errors</dt>
+          <dd
+            className={cn(
+              "font-mono",
+              process.errorCount ? "text-red-300" : undefined
+            )}
           >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-mono text-xs opacity-70">Process #{i + 1}</span>
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  proc.isHealthy ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-            </div>
-            
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-biolum-dim">Requests</span>
-                <span className="font-mono">{proc.requestCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-biolum-dim">Errors</span>
-                <span className={`font-mono ${proc.errorCount > 0 ? "text-red-400" : ""}`}>
-                  {proc.errorCount}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-biolum-dim">Uptime</span>
-                <span className="font-mono">{formatUptime(proc.uptime)}</span>
-              </div>
+            {process.errorCount ?? 0}
+          </dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-biolum-dim">Uptime</dt>
+          <dd className="font-mono">{formatDuration(process.uptime ?? 0)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-biolum-dim">Last ping</dt>
+          <dd className="font-mono">{formatLastPing(process.lastPing)}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function LatencyPanel({ telemetry }: { telemetry?: VoiceTelemetry | null }) {
+  if (!telemetry) {
+    return (
+      <Card className="border border-dashed border-white/10 bg-void-surface/30">
+        <CardHeader>
+          <CardTitle>Latency & Telemetry</CardTitle>
+          <CardDescription>
+            Telemetry is unavailable. Ensure voice metrics are enabled.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-biolum-dim">
+            <Signal className="h-5 w-5 text-biolum" />
+            <div>
+              <p>No telemetry samples yet.</p>
+              <p className="text-xs">
+                Configure Prometheus scraping for voice metrics or enable local
+                pools to populate real-time charts.
+              </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const telemetryCards = buildTelemetryCards(telemetry);
+
+  return (
+    <Card className="border border-white/10 bg-void-surface/30">
+      <CardHeader>
+        <CardTitle>Latency & Telemetry</CardTitle>
+        <CardDescription>Rolling stats derived from Prometheus samples.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {telemetryCards.map((metric) => (
+            <Card key={metric.label} className="bg-white/5 text-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{metric.label}</CardTitle>
+                <CardDescription>{metric.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-1 font-mono text-xs text-biolum">
+                  <div className="flex justify-between">
+                    <dt>P50</dt>
+                    <dd>{metric.p50}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>P95</dt>
+                    <dd>{metric.p95}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Avg</dt>
+                    <dd>{metric.average}</dd>
+                  </div>
+                  <div className="flex justify-between text-biolum-dim">
+                    <dt>Samples</dt>
+                    <dd>{metric.samples}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BiometricGate({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Card className="border border-yellow-400/30 bg-yellow-500/5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <ShieldAlert className="h-5 w-5" />
+          Biometric verification required
+        </CardTitle>
+        <CardDescription>
+          Re-authenticate with your passkey (Settings → Security) and retry to
+          view voice operations data.
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button onClick={onRetry} variant="secondary">
+          I have re-authenticated
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function MessageBanner({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-biolum">
+      <AlertTriangle className="h-5 w-5" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-3xl border border-dashed border-white/10 bg-void-surface/40 p-10 text-center text-biolum-dim">
+      {message}
+    </div>
+  );
+}
+
+function VoiceAdminSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-12 w-64" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton className="h-32 w-full" key={index} />
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Skeleton className="h-64 w-full" key={index} />
         ))}
       </div>
     </div>
   );
 }
 
-function formatUptime(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m ${s % 60}s`;
-  return `${s}s`;
+function formatUsage(pool: PoolStats | null | undefined) {
+  if (!pool) {
+    return "—";
+  }
+  return `${pool.active ?? 0} / ${pool.size ?? 0}`;
+}
+
+function formatPercent(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "0%";
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatDuration(ms: number) {
+  if (!ms) return "0s";
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  return `${seconds}s`;
+}
+
+function formatLastPing(lastPing: number | null | undefined) {
+  if (!lastPing) return "—";
+  const deltaSeconds = Math.floor((Date.now() - lastPing) / 1000);
+  if (deltaSeconds < 2) return "live";
+  if (deltaSeconds < 60) return `${deltaSeconds}s ago`;
+  const minutes = Math.floor(deltaSeconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+function isBiometricError(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+  const maybe = error as {
+    data?: { code?: string };
+    message?: string;
+    code?: string;
+  };
+  const code = maybe.data?.code ?? maybe.code;
+  if (code === "FORBIDDEN" || code === "UNAUTHORIZED") {
+    return true;
+  }
+  if (typeof maybe.message === "string") {
+    return maybe.message.includes("biometric");
+  }
+  return false;
+}
+
+function buildTelemetryCards(telemetry: VoiceTelemetry) {
+  const format = (summary: HistogramSummary) => ({
+    p50: formatMetricValue(summary.p50, summary.unit),
+    p95: formatMetricValue(summary.p95, summary.unit),
+    average: formatMetricValue(summary.average, summary.unit),
+    samples: summary.count,
+  });
+
+  const cards = [
+    {
+      label: "STT Latency",
+      description: "Speech-to-text inference time",
+      ...format(telemetry.sttLatency),
+    },
+    {
+      label: "TTS Latency",
+      description: "Text-to-speech synthesis time",
+      ...format(telemetry.ttsLatency),
+    },
+    {
+      label: "Round Trip",
+      description: "Client reported RTT",
+      ...format(telemetry.roundTrip),
+    },
+    {
+      label: "Jitter",
+      description: "Session jitter",
+      ...format(telemetry.jitter),
+    },
+    {
+      label: "Packet Loss",
+      description: "Total packets lost",
+      p50: `${telemetry.packetLossTotal ?? 0}`,
+      p95: "—",
+      average: "—",
+      samples: telemetry.packetLossTotal ?? 0,
+    },
+  ];
+
+  return cards;
+}
+
+type HistogramSummary = VoiceTelemetry["sttLatency"];
+
+function formatMetricValue(value: number | null, unit: HistogramSummary["unit"]) {
+  if (value === null || !Number.isFinite(value)) {
+    return "—";
+  }
+  if (unit === "milliseconds") {
+    return `${Math.round(value)} ms`;
+  }
+  if (value >= 1) {
+    return `${value.toFixed(2)} s`;
+  }
+  return `${(value * 1000).toFixed(0)} ms`;
 }

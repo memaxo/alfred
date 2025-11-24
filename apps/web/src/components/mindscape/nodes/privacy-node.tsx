@@ -9,8 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMindscapeStore } from "@/store/mindscape";
 import { privacyNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const factInput = { limit: 12, offset: 0 } as const;
@@ -102,11 +102,11 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Privacy"
-        icon={<ShieldCheck className="h-3 w-3" />}
         borderColor="border-rose-500/30"
-        textColor="text-rose-300"
         hoverColor="hover:border-rose-500/50"
+        icon={<ShieldCheck className="h-3 w-3" />}
+        label="Privacy"
+        textColor="text-rose-300"
       />
     );
   }

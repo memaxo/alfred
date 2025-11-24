@@ -17,9 +17,9 @@ import { WorkflowDetailModal } from "@/components/workflow-detail-modal";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { workflowListNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { useLOD, useNodeFocus } from "../lod";
 import { createSpawnNode } from "../spawn";
 import { MindscapeNode } from "./mindscape-node";
-import { useLOD, useNodeFocus } from "../lod";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const statusOptions = [
@@ -146,11 +146,11 @@ export function WorkflowListNode({
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Workflows"
-        icon={<ListChecks className="h-3 w-3" />}
         borderColor="border-white/10"
-        textColor="text-white"
         hoverColor="hover:border-white/20"
+        icon={<ListChecks className="h-3 w-3" />}
+        label="Workflows"
+        textColor="text-white"
       />
     );
   }

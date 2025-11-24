@@ -56,6 +56,100 @@ export function planProgressUpdate(
   return `${trimmed}\n${line}`;
 }
 
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function updatePlanSection(
+  markdown: string,
+  heading: string,
+  updater: (existing: string) => string
+): string {
+  const pattern = new RegExp(
+    `(## ${escapeRegExp(heading)}\\s*)([\\s\\S]*?)(?=\\n##\\s+|$)`,
+    "m"
+  );
+
+  if (pattern.test(markdown)) {
+    return markdown.replace(
+      pattern,
+      (_match, headingLine: string, body: string) => {
+        const current = body.trim();
+        const next = updater(current).trim();
+        const spacing = next ? `\n${next}\n\n` : "\n\n";
+        return `${headingLine}${spacing}`;
+      }
+    );
+  }
+
+  const next = updater("").trim();
+  const addition =
+    next.length > 0
+      ? `\n## ${heading}\n\n${next}\n\n`
+      : `\n## ${heading}\n\n`;
+  return `${markdown.trimEnd()}\n${addition}`;
+}
+
+export function applyProgressUpdate(
+  markdown: string,
+  update: PlanProgressUpdate
+): string {
+  return updatePlanSection(markdown, "Progress", (existing) =>
+    planProgressUpdate(existing, update)
+  );
+}
+
+export type DecisionLogEntry = {
+  decision: string;
+  rationale?: string;
+  author?: string;
+  dateIso?: string;
+  note?: string;
+};
+
+export function appendDecisionLogEntry(
+  markdown: string,
+  entry: DecisionLogEntry
+): string {
+  const lines = [
+    `- Decision: ${entry.decision}`,
+    entry.rationale ? `  Rationale: ${entry.rationale}` : null,
+    entry.note ? `  Note: ${entry.note}` : null,
+    `  Date/Author: ${entry.dateIso ?? "(pending)"}${entry.author ? ` / ${entry.author}` : ""}`,
+  ].filter(Boolean) as string[];
+
+  const block = lines.join("\n");
+  return updatePlanSection(markdown, "Decision Log", (existing) => {
+    const trimmed = existing.trim();
+    return trimmed ? `${trimmed}\n${block}` : block;
+  });
+}
+
+export type SurpriseEntry = {
+  observation: string;
+  evidence?: string;
+  action?: string;
+  dateIso?: string;
+};
+
+export function appendSurpriseEntry(
+  markdown: string,
+  entry: SurpriseEntry
+): string {
+  const lines = [
+    `- Observation: ${entry.observation}`,
+    entry.evidence ? `  Evidence: ${entry.evidence}` : null,
+    entry.action ? `  Action: ${entry.action}` : null,
+    entry.dateIso ? `  Date: ${entry.dateIso}` : null,
+  ].filter(Boolean) as string[];
+
+  const block = lines.join("\n");
+  return updatePlanSection(markdown, "Surprises & Discoveries", (existing) => {
+    const trimmed = existing.trim();
+    return trimmed ? `${trimmed}\n${block}` : block;
+  });
+}
+
 function stableRunId(runId: string): string {
   return runId.trim();
 }

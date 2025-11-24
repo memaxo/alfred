@@ -39,7 +39,9 @@ export async function saveSnapshot(
   });
 }
 
-export async function getLatestSnapshot(streamId: string): Promise<typeof cognitiveSnapshots.$inferSelect | undefined> {
+export async function getLatestSnapshot(
+  streamId: string
+): Promise<typeof cognitiveSnapshots.$inferSelect | undefined> {
   const [snapshot] = await db
     .select()
     .from(cognitiveSnapshots)
@@ -49,7 +51,10 @@ export async function getLatestSnapshot(streamId: string): Promise<typeof cognit
   return snapshot;
 }
 
-export async function getEventsSince(streamId: string, since: Date): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
+export async function getEventsSince(
+  streamId: string,
+  since: Date
+): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
   return db
     .select()
     .from(cognitiveEvents)
@@ -66,7 +71,9 @@ export async function getEventsSince(streamId: string, since: Date): Promise<(ty
  * Load all events for a stream to rebuild state
  * In a production system, this would combine snapshot + subsequent events
  */
-export async function getAllEvents(streamId: string): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
+export async function getAllEvents(
+  streamId: string
+): Promise<(typeof cognitiveEvents.$inferSelect)[]> {
   return db
     .select()
     .from(cognitiveEvents)
@@ -78,7 +85,9 @@ export async function getAllEvents(streamId: string): Promise<(typeof cognitiveE
  * Find streams that were in the middle of execution
  * Returns the latest snapshot for streams in 'executing' state
  */
-export async function findActivePlans(): Promise<(typeof cognitiveSnapshots.$inferSelect)[]> {
+export async function findActivePlans(): Promise<
+  (typeof cognitiveSnapshots.$inferSelect)[]
+> {
   // Get the latest snapshot for each stream
   // distinctOn is available in drizzle-orm/pg-core
   const snapshots = await db

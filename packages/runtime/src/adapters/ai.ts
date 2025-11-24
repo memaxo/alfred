@@ -68,14 +68,14 @@ export class AISDKAdapter {
     options: StreamOptions
   ): AsyncGenerator<WorkflowEvent, void, void> {
     const modelId = this.getModelId(options.model);
-    
+
     // Acquire concurrency semaphore and rate limit token
     await llmConcurrency.acquire();
     const tokenAcquired = await llmRateLimit.waitFor();
-    
+
     if (!tokenAcquired) {
-        llmConcurrency.release();
-        throw new Error("LLM rate limit exceeded (timeout)");
+      llmConcurrency.release();
+      throw new Error("LLM rate limit exceeded (timeout)");
     }
 
     const startTime = Date.now();
@@ -189,7 +189,7 @@ export class AISDKAdapter {
 
       throw error;
     } finally {
-        llmConcurrency.release();
+      llmConcurrency.release();
     }
   }
 

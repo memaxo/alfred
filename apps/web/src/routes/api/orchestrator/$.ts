@@ -6,7 +6,7 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
 
   const { getOrchestratorAgentDefaults } = await import(agentPkg);
   const { handleStreamRequest } = await import(streamHandlerPkg);
-  
+
   return handleStreamRequest(
     request,
     getOrchestratorAgentDefaults,

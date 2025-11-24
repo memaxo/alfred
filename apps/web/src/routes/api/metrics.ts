@@ -5,8 +5,9 @@ export const Route = createFileRoute("/api/metrics")({
     handlers: {
       GET: async () => {
         const metricsPkg = "@alfred/api/metrics";
-        const { getMetricsSnapshot, metricsContentType } =
-          await import(metricsPkg);
+        const { getMetricsSnapshot, metricsContentType } = await import(
+          metricsPkg
+        );
 
         const body = await getMetricsSnapshot();
         return new Response(body, {

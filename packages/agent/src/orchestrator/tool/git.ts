@@ -538,9 +538,7 @@ const aiToolGitBase = {
   description: toolGit.description,
   parameters: toolGit.inputSchema,
   inputSchema: toolGit.inputSchema,
-  execute: async (input: GitInput) => {
-    return toolGit.execute({ input });
-  },
+  execute: async (input: GitInput) => toolGit.execute({ input }),
 };
 
 export const aiToolGit = withPolicyApproval(aiToolGitBase, (input) => {

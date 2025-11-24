@@ -10,8 +10,8 @@ import { getToolToken } from "@/lib/token";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { deploymentNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const DEFAULT_DOMAIN_FALLBACK = "alfred.local";
@@ -259,11 +259,11 @@ export function DeploymentNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Deployments"
-        icon={<ServerCog className="h-3 w-3" />}
         borderColor="border-white/10"
-        textColor="text-white"
         hoverColor="hover:border-white/20"
+        icon={<ServerCog className="h-3 w-3" />}
+        label="Deployments"
+        textColor="text-white"
       />
     );
   }

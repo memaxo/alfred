@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
-import { CognitiveVCR, type Interaction } from "../../src/cognitive/vcr";
+import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { CognitiveVCR, type Interaction } from "../../src/cognitive/vcr";
 
 describe("Cognitive VCR", () => {
   const TEST_CASSETTE = "unit-test-cassette";
@@ -19,12 +19,12 @@ describe("Cognitive VCR", () => {
 
   it("records interactions", async () => {
     const vcr = new CognitiveVCR(TEST_CASSETTE, "record");
-    
+
     const interaction: Interaction = {
       id: "1",
       timestamp: Date.now(),
       input: { messages: [{ role: "user", content: "hello" }] },
-      output: { text: "hi there" }
+      output: { text: "hi there" },
     };
 
     vcr.record(interaction);
@@ -39,7 +39,7 @@ describe("Cognitive VCR", () => {
     await vcr.load();
 
     const match = vcr.findMatch({
-      messages: [{ role: "user", content: "hello" }]
+      messages: [{ role: "user", content: "hello" }],
     });
 
     expect(match).toBeDefined();
@@ -51,7 +51,7 @@ describe("Cognitive VCR", () => {
     await vcr.load();
 
     const match = vcr.findMatch({
-      messages: [{ role: "user", content: "unknown" }]
+      messages: [{ role: "user", content: "unknown" }],
     });
 
     expect(match).toBeUndefined();

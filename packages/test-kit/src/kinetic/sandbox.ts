@@ -9,7 +9,7 @@ export type SandboxOptions = {
 
 /**
  * Kinetic Layer Sandbox
- * 
+ *
  * Uses direct `docker` CLI calls via Bun.spawn for reliability and performance.
  * Avoids testcontainers library issues with stream handling.
  */
@@ -27,16 +27,22 @@ export class DockerSandbox {
     logger.info("sandbox_start", { image: this.image });
 
     // Start detached container
-    const proc = spawn([
-      "docker", "run", 
-      "--rm", // Cleanup on stop
-      "-d",   // Detached
-      this.image,
-      "tail", "-f", "/dev/null"
-    ], {
-      stdout: "pipe",
-      stderr: "pipe"
-    });
+    const proc = spawn(
+      [
+        "docker",
+        "run",
+        "--rm", // Cleanup on stop
+        "-d", // Detached
+        this.image,
+        "tail",
+        "-f",
+        "/dev/null",
+      ],
+      {
+        stdout: "pipe",
+        stderr: "pipe",
+      }
+    );
 
     const output = await new Response(proc.stdout).text();
     const error = await new Response(proc.stderr).text();
@@ -60,18 +66,16 @@ export class DockerSandbox {
     }
   }
 
-  async exec(command: string[]): Promise<{ exitCode: number; output: string; error: string }> {
+  async exec(
+    command: string[]
+  ): Promise<{ exitCode: number; output: string; error: string }> {
     if (!this.containerId) throw new Error("Sandbox not started");
 
     logger.info("sandbox_exec", { command });
-    
-    const proc = spawn([
-      "docker", "exec",
-      this.containerId,
-      ...command
-    ], {
+
+    const proc = spawn(["docker", "exec", this.containerId, ...command], {
       stdout: "pipe",
-      stderr: "pipe"
+      stderr: "pipe",
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -79,28 +83,28 @@ export class DockerSandbox {
     const exitCode = await proc.exited;
 
     logger.info("sandbox_exec_done", { exitCode });
-    
+
     return {
       exitCode,
       output: stdout,
-      error: stderr
+      error: stderr,
     };
   }
 
   // Helper to write file content
   async writeFile(path: string, content: string): Promise<void> {
     if (!this.containerId) throw new Error("Sandbox not started");
-    
+
     // Use printf for safer writing than echo
     const safeContent = content.replace(/'/g, "'\\''");
     await this.exec(["sh", "-c", `printf '%s' '${safeContent}' > "${path}"`]);
   }
-  
+
   async readFile(path: string): Promise<string> {
     if (!this.containerId) throw new Error("Sandbox not started");
     const result = await this.exec(["cat", path]);
     if (result.exitCode !== 0) {
-        throw new Error(`Failed to read file ${path}: ${result.error}`);
+      throw new Error(`Failed to read file ${path}: ${result.error}`);
     }
     return result.output;
   }

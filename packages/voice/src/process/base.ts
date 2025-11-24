@@ -35,7 +35,9 @@ export class Process {
 
   constructor(config: ProcessConfig) {
     this.config = config;
-    this.ipc = new Bridge({ requestTimeout: config.requestTimeoutMs ?? 10_000 });
+    this.ipc = new Bridge({
+      requestTimeout: config.requestTimeoutMs ?? 10_000,
+    });
   }
 
   async start(): Promise<void> {
@@ -367,10 +369,12 @@ except ImportError as e:
     });
   }
 
-  private async waitForReady(timeoutMs: number = 300_000): Promise<void> {
+  private async waitForReady(timeoutMs = 300_000): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error(`Process failed to become ready within ${timeoutMs}ms`));
+        reject(
+          new Error(`Process failed to become ready within ${timeoutMs}ms`)
+        );
       }, timeoutMs);
 
       const checkReady = (response: IPCResponse) => {

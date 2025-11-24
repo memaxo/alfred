@@ -1,5 +1,3 @@
-import { useMindscapeStore } from "@/store/mindscape";
-
 // Define default usage map
 const DEFAULT_USAGE: Record<string, number> = {};
 
@@ -11,7 +9,7 @@ export function useCommandUsage() {
   // We could integrate this into Zustand, but for simplicity, direct localStorage is fine for now.
   // Or better, let's add it to the mindscape store?
   // For now, let's just use localStorage to avoid modifying the store schema too much if not needed.
-  
+
   const getUsage = (): Record<string, number> => {
     if (typeof window === "undefined") return DEFAULT_USAGE;
     try {

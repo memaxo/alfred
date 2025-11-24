@@ -83,18 +83,20 @@ export function TodoNode({ id, data, selected }: NodeProps) {
 
   // LOD 0: Tiny
   if (lod === "tiny") {
-    return <NodeLODTiny color="bg-emerald-500" shadow="shadow-emerald-500/50" />;
+    return (
+      <NodeLODTiny color="bg-emerald-500" shadow="shadow-emerald-500/50" />
+    );
   }
 
   // LOD 1: Small
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Todos"
-        icon={<CheckSquare className="h-3 w-3" />}
         borderColor="border-emerald-500/20"
-        textColor="text-emerald-500"
         hoverColor="hover:border-emerald-500/40"
+        icon={<CheckSquare className="h-3 w-3" />}
+        label="Todos"
+        textColor="text-emerald-500"
       />
     );
   }

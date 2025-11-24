@@ -57,7 +57,7 @@ function calculateEvidence(event) {
  * Pure State Transition Function
  * (Should eventually move to @alfred/cognitive/logic if complex)
  */
-import { cognitivePhysiologyGauge, cognitiveEntropyEventsTotal, } from "@alfred/api/metrics";
+import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/api/metrics";
 // ...
 function applyTransition(state, auto, event) {
     // Update Physiology based on event
@@ -109,7 +109,10 @@ function applyTransition(state, auto, event) {
                 // Thinking complete -> Executing or Reflecting?
                 // For now, LLM "Thinking" usually results in an execution plan or response
                 // We treat the LLM response as an "execution" of a response plan
-                return [reflecting(event.outcome, "unknown", "unknown", nextPhysiology), auto];
+                return [
+                    reflecting(event.outcome, "unknown", "unknown", nextPhysiology),
+                    auto,
+                ];
             }
             break;
         case "reflecting":

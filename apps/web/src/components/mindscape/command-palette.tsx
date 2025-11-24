@@ -1,21 +1,6 @@
 import type { Node } from "@xyflow/react";
-import {
-  AlarmClock,
-  BookMarked,
-  BrainCircuit,
-  ListChecks,
-  MessageSquare,
-  Network,
-  PlugZap,
-  Rows3,
-  ServerCog,
-  ShieldCheck,
-  SlidersHorizontal,
-  StickyNote,
-  UserRound,
-} from "lucide-react";
 import type { ReactNode } from "react";
-import { memo, useEffect, useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   CommandDialog,
@@ -40,7 +25,7 @@ const createActions: Array<{
   icon: ReactNode;
   aliases?: string[];
 }> = [
-// ... (createActions items)
+  // ... (createActions items)
 ];
 
 // ... (PaletteInput component)
@@ -70,7 +55,8 @@ export function MindscapeCommandPalette({
   const { getUsage, recordUsage } = useCommandUsage();
 
   const focusedNode = useMemo(
-    () => (focusedNodeId ? currentNodes.find((n) => n.id === focusedNodeId) : null),
+    () =>
+      focusedNodeId ? currentNodes.find((n) => n.id === focusedNodeId) : null,
     [focusedNodeId, currentNodes]
   );
 
@@ -94,14 +80,18 @@ export function MindscapeCommandPalette({
     for (const action of contextActions) {
       const score = usage[action.label] || 0;
       trie.insert(action.label, action.label, score);
-      action.aliases?.forEach((alias) => trie.insert(alias, action.label, score));
+      action.aliases?.forEach((alias) =>
+        trie.insert(alias, action.label, score)
+      );
     }
 
     // 2. Index Create Actions
     for (const action of createActions) {
       const score = usage[action.label] || 0;
       trie.insert(action.label, action.label, score);
-      action.aliases?.forEach((alias) => trie.insert(alias, action.label, score));
+      action.aliases?.forEach((alias) =>
+        trie.insert(alias, action.label, score)
+      );
     }
 
     return trie;
@@ -145,7 +135,7 @@ export function MindscapeCommandPalette({
   const handleSpawn = (type: MindscapeSpawnType) => {
     const action = createActions.find((a) => a.type === type);
     if (action) {
-        recordUsage(action.label);
+      recordUsage(action.label);
     }
     const id = onSpawn(type);
     if (id) {
@@ -164,10 +154,10 @@ export function MindscapeCommandPalette({
     if (!focusedNode) {
       return;
     }
-    
+
     const action = contextActions.find((a) => a.id === actionId);
     if (action) {
-        recordUsage(action.label);
+      recordUsage(action.label);
     }
 
     switch (actionId) {
@@ -218,16 +208,16 @@ export function MindscapeCommandPalette({
             type: "default",
             data: { kind: "relates_to" },
           };
-          
+
           const exists = edges.some(
             (e) =>
               (e.source === chatNodeId && e.target === focusedNode.id) ||
               (e.source === focusedNode.id && e.target === chatNodeId)
           );
-          
+
           if (!exists) {
-             setEdges([...edges, newEdge]);
-             toast.success(`Linked Chat to ${focusedNode.data.label}`);
+            setEdges([...edges, newEdge]);
+            toast.success(`Linked Chat to ${focusedNode.data.label}`);
           }
         }
 
@@ -245,14 +235,14 @@ export function MindscapeCommandPalette({
   return (
     <CommandDialog onOpenChange={setOpen} open={open}>
       <CommandInput
-        value={inputValue}
+        onValueChange={setInputValue}
         placeholder={
           focusedNode
             ? `Command ${focusedNode.data.label}...`
             : "Create or jump to a node"
         }
-        onValueChange={setInputValue}
         suggestion={suggestion}
+        value={inputValue}
       />
       <CommandList>
         <CommandEmpty>No matching commands</CommandEmpty>

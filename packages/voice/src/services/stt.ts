@@ -2,7 +2,6 @@ import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
 import { logger } from "@alfred/logger";
 import { markVoice } from "@alfred/metrics/performance";
-import type { STTPool } from "../process/stt";
 import {
   decodeToPCM16,
   inferExtension,
@@ -11,6 +10,7 @@ import {
   sanitizeBase64,
 } from "../audio/codec";
 import { recordVoiceStt, voiceStreamLatencySeconds } from "../metrics";
+import type { STTPool } from "../process/stt";
 import { requireOpenAIConfig } from "./config";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MiB cap

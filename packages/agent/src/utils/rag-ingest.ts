@@ -1,16 +1,11 @@
 import { ragRepo } from "@alfred/db";
 import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
 import {
-  EMBEDDING_DIM,
-  chunk,
-  embed,
-  embedMany,
-} from "@alfred/rag";
-import {
   extract,
   type KnowledgeEntry,
   toKnowledge,
 } from "@alfred/knowledge/extractor";
+import { chunk, EMBEDDING_DIM, embed, embedMany } from "@alfred/rag";
 
 /**
  * RAG Ingestion Utility

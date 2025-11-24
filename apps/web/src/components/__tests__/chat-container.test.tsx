@@ -1,5 +1,5 @@
 import "@/test/dom";
-import { describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import type { AssistantUIMessage } from "@alfred/agent";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import type { FormEvent, ReactNode } from "react";
@@ -12,6 +12,33 @@ mock.module("@alfred/voice/audio", () => ({
   arrayBufferToBase64: vi.fn(() => ""),
 }));
 
+mock.module("@/hooks/use-focused-context", () => ({
+  useFocusedContext: () => ({
+    label: null,
+    isError: false,
+    isLoading: false,
+    ragDocuments: [],
+    content: null,
+    nodeType: null,
+  }),
+}));
+
+const submitFeedbackMock = vi.fn();
+const resetFeedbackMock = vi.fn();
+mock.module("@/hooks/use-cognitive-feedback", () => ({
+  useCognitiveFeedback: () => ({
+    submit: submitFeedbackMock,
+    status: "idle",
+    error: null,
+    reset: resetFeedbackMock,
+  }),
+}));
+
+afterEach(() => {
+  submitFeedbackMock.mockReset();
+  resetFeedbackMock.mockReset();
+});
+
 mock.module("@alfred/ui", () => ({
   Chat: ({
     messages,
@@ -19,6 +46,7 @@ mock.module("@alfred/ui", () => ({
     placeholder = "Ask Alfred how to help…",
     disabled,
     renderPart,
+    renderMessageActions,
   }: {
     messages: AssistantUIMessage[];
     onSend: (text: string) => void;
@@ -28,6 +56,7 @@ mock.module("@alfred/ui", () => ({
       part: AssistantUIMessage["parts"][number],
       message: AssistantUIMessage
     ) => ReactNode | null;
+    renderMessageActions?: (message: AssistantUIMessage) => ReactNode | null;
   }) => {
     const [value, setValue] = reactUseState("");
 
@@ -71,6 +100,11 @@ mock.module("@alfred/ui", () => ({
                 }
                 return null;
               })}
+              {renderMessageActions ? (
+                <div data-testid="mock-chat-actions">
+                  {renderMessageActions(message)}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>

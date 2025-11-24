@@ -14,7 +14,7 @@ describe("Rate Limiting Utils", () => {
       const bucket = new TokenBucket(1, 10); // 1 capacity, 10/sec refill
       expect(bucket.consume(1)).toBe(true);
       expect(bucket.consume(1)).toBe(false);
-      
+
       await new Promise((r) => setTimeout(r, 150)); // Wait > 0.1s
       expect(bucket.consume(1)).toBe(true);
     });

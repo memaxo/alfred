@@ -1,8 +1,4 @@
 import { logger } from "@alfred/logger";
-import {
-  // workflowProvenanceDurationSeconds,
-  // workflowProvenanceEdgesTotal,
-} from "../metrics";
 
 export type ReasonTrace = {
   text: string;

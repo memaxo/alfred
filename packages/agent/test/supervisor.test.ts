@@ -1,6 +1,6 @@
-import { describe, expect, it, test } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { BrainstemSupervisor } from "../src/orchestrator/loops/supervisor";
-import { detectLoop, calculateSimilarity } from "../src/utils/entropy";
+import { calculateSimilarity, detectLoop } from "../src/utils/entropy";
 
 describe("Brainstem Supervisor", () => {
   describe("Entropy Utils", () => {
@@ -26,11 +26,7 @@ describe("Brainstem Supervisor", () => {
     });
 
     it("detects ping-pong loops (A-B-A)", () => {
-      const window = [
-        "Check status",
-        "Status is pending",
-        "Check status",
-      ];
+      const window = ["Check status", "Status is pending", "Check status"];
       expect(detectLoop(window)).toBe(true);
     });
 
@@ -47,34 +43,37 @@ describe("Brainstem Supervisor", () => {
   describe("Supervisor Class", () => {
     it("triggers interrupt on loop", () => {
       const supervisor = new BrainstemSupervisor();
-      
+
       supervisor.observe({ type: "thought", content: "Thinking about X" });
       supervisor.observe({ type: "thought", content: "Checking Y" });
-      
-      const result = supervisor.observe({ type: "thought", content: "Thinking about X" });
+
+      const result = supervisor.observe({
+        type: "thought",
+        content: "Thinking about X",
+      });
       expect(result.interrupt).toBe(true);
       if (result.interrupt) {
-          expect(result.reason).toBe("boredom_loop_detected");
+        expect(result.reason).toBe("boredom_loop_detected");
       }
     });
 
     it("manages process heartbeats", async () => {
       const supervisor = new BrainstemSupervisor();
       const abortController = new AbortController();
-      
+
       supervisor.registerProcess("proc-1", abortController, 100); // 100ms timeout
-      
+
       // Should be fine initially
       let check = supervisor.checkPhysiology();
       expect(check.interrupt).toBe(false);
-      
+
       // Wait > 100ms
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       check = supervisor.checkPhysiology();
       expect(check.interrupt).toBe(true);
       if (check.interrupt) {
-          expect(check.reason).toContain("process_heartbeat_failed");
+        expect(check.reason).toContain("process_heartbeat_failed");
       }
       expect(abortController.signal.aborted).toBe(true);
     });
@@ -82,16 +81,16 @@ describe("Brainstem Supervisor", () => {
     it("resets heartbeat on activity", async () => {
       const supervisor = new BrainstemSupervisor();
       const abortController = new AbortController();
-      
+
       supervisor.registerProcess("proc-1", abortController, 200);
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
       supervisor.heartbeat();
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Total 200ms passed, but heartbeat reset at 100ms.
       // Silence duration is only 100ms.
-      
+
       const check = supervisor.checkPhysiology();
       expect(check.interrupt).toBe(false);
     });

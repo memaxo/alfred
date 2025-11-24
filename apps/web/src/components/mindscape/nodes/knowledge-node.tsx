@@ -1,10 +1,9 @@
 import type { NodeProps } from "@xyflow/react";
-import { Play, Sparkles, Brain, Code, Film, Globe, Lock, Music, Network, Newspaper, Share2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { Brain, Play, Sparkles } from "lucide-react";
 import type { KnowledgeNodeData } from "@/store/mindscape";
 import { useMindscapeStore } from "@/store/mindscape";
-import { createSpawnNode } from "../spawn";
 import { useLOD, useNodeFocus } from "../lod";
+import { createSpawnNode } from "../spawn";
 import { getConfidenceStyle } from "../utils";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
@@ -24,7 +23,7 @@ export function KnowledgeNode({
     typeof data.confidence === "number"
       ? `${Math.round(data.confidence * 100)}%`
       : null;
-  
+
   const confidenceStyle = getConfidenceStyle(data.confidence, data.archived);
 
   const handleLaunchWorkflow = () => {
@@ -64,9 +63,9 @@ export function KnowledgeNode({
   if (lod === "tiny") {
     return (
       <NodeLODTiny
+        className={confidenceStyle.container}
         color={isRag ? "bg-emerald-500" : "bg-blue-500"}
         shadow={isRag ? "shadow-emerald-500/50" : "shadow-blue-500/50"}
-        className={confidenceStyle.container}
       />
     );
   }
@@ -75,12 +74,20 @@ export function KnowledgeNode({
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={data.label ?? "Knowledge"}
-        icon={isRag ? <Sparkles className="h-3 w-3" /> : <Brain className="h-3 w-3" />}
         borderColor={isRag ? "border-emerald-500/30" : "border-blue-500/30"}
-        textColor={isRag ? "text-emerald-400" : "text-blue-400"}
-        hoverColor={isRag ? "hover:border-emerald-500/50" : "hover:border-blue-500/50"}
         className={confidenceStyle.container}
+        hoverColor={
+          isRag ? "hover:border-emerald-500/50" : "hover:border-blue-500/50"
+        }
+        icon={
+          isRag ? (
+            <Sparkles className="h-3 w-3" />
+          ) : (
+            <Brain className="h-3 w-3" />
+          )
+        }
+        label={data.label ?? "Knowledge"}
+        textColor={isRag ? "text-emerald-400" : "text-blue-400"}
       />
     );
   }
@@ -92,7 +99,11 @@ export function KnowledgeNode({
       ? "border-biolum"
       : confidenceStyle.border;
 
-  const textClass = isRag ? "text-emerald-50" : selected ? "text-biolum" : confidenceStyle.text;
+  const textClass = isRag
+    ? "text-emerald-50"
+    : selected
+      ? "text-biolum"
+      : confidenceStyle.text;
 
   return (
     <div
@@ -117,9 +128,11 @@ export function KnowledgeNode({
             </span>
           )}
           {confidence && (
-            <span className={`rounded bg-white/10 px-2 py-0.5 text-[10px] ${
-              (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
-            }`}>
+            <span
+              className={`rounded bg-white/10 px-2 py-0.5 text-[10px] ${
+                (data.confidence ?? 1) < 0.5 ? "text-red-200" : ""
+              }`}
+            >
               {confidence}
             </span>
           )}

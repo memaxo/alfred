@@ -8,7 +8,10 @@ const RAG_DOC_ID = "doc-drawer-1";
 const trpcResponse = (json: unknown) =>
   JSON.stringify([{ result: { data: json } }]);
 
-async function handleTrpcRequest(route: Route, mocks: Record<string, () => unknown>) {
+async function handleTrpcRequest(
+  route: Route,
+  mocks: Record<string, () => unknown>
+) {
   const url = new URL(route.request().url());
   const path = url.pathname.split("/api/trpc/")[1];
   if (!path) return route.continue();
@@ -90,7 +93,9 @@ test.describe("Mindscape workflow drawer loop", () => {
       "assistant.getConfig": () => ({}),
     };
 
-    await page.route("**/api/trpc/*", (route) => handleTrpcRequest(route, mocks));
+    await page.route("**/api/trpc/*", (route) =>
+      handleTrpcRequest(route, mocks)
+    );
   });
 
   test("inspect → drawer → full view parity", async ({ page }) => {
@@ -141,21 +146,22 @@ test.describe("Mindscape workflow drawer loop", () => {
 
     // Wait for drawer to open (header visible)
     await expect(page.getByText("Workflow run")).toBeVisible();
-    
+
     // TODO: Debug why content loading (trpc query) stalls in test environment
     // await expect(page.getByText("Workflow Details")).toBeVisible();
-    
+
     // Click "Open full view" button in the header
     // Use evaluate to debug if element exists
-    const buttonExists = await page.evaluate(() => {
-        return !!document.querySelector('[data-testid="mindscape-drawer-open-full"]');
-    });
-    if (!buttonExists) {
-        console.log("Button not found in DOM");
-        // Try to log body
-        // console.log(document.body.innerHTML);
+    const buttonExists = await page.evaluate(
+      () =>
+        !!document.querySelector('[data-testid="mindscape-drawer-open-full"]')
+    );
+    if (buttonExists) {
+      console.log("Button found in DOM");
     } else {
-        console.log("Button found in DOM");
+      console.log("Button not found in DOM");
+      // Try to log body
+      // console.log(document.body.innerHTML);
     }
 
     await page.getByTestId("mindscape-drawer-open-full").click({ force: true });

@@ -1,16 +1,18 @@
 import {
-  emitLinearActivity as originalEmitLinearActivity,
   type LinearActivityParams,
   type LinearActivityType,
+  emitLinearActivity as originalEmitLinearActivity,
 } from "../orchestrator/linear";
 
 export {
+  extractIssueIdFromSession,
   type LinearActivityParams,
   type LinearActivityType,
   setLinearDelegate,
-  setLinearStarted,
   setLinearSessionExternalUrl,
-  extractIssueIdFromSession,
+  setLinearStarted,
+  setLinearCompleted,
+  commentOnLinearIssue,
 } from "../orchestrator/linear";
 
 export { configureLinearMetrics } from "../orchestrator/linearmetrics";
@@ -21,4 +23,3 @@ export async function emitLinearActivity(
 ): Promise<{ ok: boolean; id?: string }> {
   return originalEmitLinearActivity(type, params);
 }
-

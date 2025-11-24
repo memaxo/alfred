@@ -8,8 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMindscapeStore } from "@/store/mindscape";
 import { bookmarkNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const BOOKMARK_LIST_KEY = { limit: 50, offset: 0 } as const;
@@ -105,11 +105,11 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Bookmarks"
-        icon={<BookMarked className="h-3 w-3" />}
         borderColor="border-cyan-500/20"
-        textColor="text-cyan-500"
         hoverColor="hover:border-cyan-500/40"
+        icon={<BookMarked className="h-3 w-3" />}
+        label="Bookmarks"
+        textColor="text-cyan-500"
       />
     );
   }
@@ -218,7 +218,6 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
     </MindscapeNode>
   );
 }
-
 
 function parseTags(tags: string): string[] | undefined {
   if (!tags.trim()) {

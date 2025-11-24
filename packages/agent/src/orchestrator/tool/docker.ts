@@ -715,9 +715,7 @@ const aiToolDockerBase = {
   description: toolDocker.description,
   parameters: toolDocker.inputSchema,
   inputSchema: toolDocker.inputSchema,
-  execute: async (input: DockerInput) => {
-    return toolDocker.execute({ input });
-  },
+  execute: async (input: DockerInput) => toolDocker.execute({ input }),
 };
 
 export const aiToolDocker = withPolicyApproval(aiToolDockerBase, (input) => {

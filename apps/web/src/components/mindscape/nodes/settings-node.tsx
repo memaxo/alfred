@@ -14,8 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMindscapeStore } from "@/store/mindscape";
 import { settingsNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const listInput = { limit: 100, offset: 0 } as const;
@@ -136,11 +136,11 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Settings"
-        icon={<Settings2 className="h-3 w-3" />}
         borderColor="border-slate-500/30"
-        textColor="text-slate-300"
         hoverColor="hover:border-slate-500/50"
+        icon={<Settings2 className="h-3 w-3" />}
+        label="Settings"
+        textColor="text-slate-300"
       />
     );
   }

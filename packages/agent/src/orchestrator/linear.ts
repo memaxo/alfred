@@ -178,6 +178,96 @@ export async function setLinearStarted(
   }
 }
 
+export async function setLinearCompleted(
+  params: LinearSessionParams
+): Promise<{ stateId: string }> {
+  const metrics = getLinearMetrics();
+  metrics.linearSessionOperationsTotal.inc({ operation: "completed" });
+  try {
+    const result = await pRetry(
+      async () => {
+        const input = {
+          space: params.space,
+          action: "set-completed" as const,
+          issueId: params.issueId,
+          authz: params.authz,
+        };
+
+        return await toolTicket.execute({ input });
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10_000,
+        factor: 2,
+        onFailedAttempt: (error) => {
+          const statusCode = (error as any)?.statusCode;
+          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            return;
+          }
+          throw new AbortError(error);
+        },
+      }
+    );
+    const resolved = result as {
+      ok: boolean;
+      id?: string;
+      stateId?: string;
+    };
+    return { stateId: resolved.stateId ?? "state_unknown" };
+  } catch (error) {
+    logger?.warn?.("linear_completed_failed", {
+      issueId: params.issueId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+export async function commentOnLinearIssue(params: {
+  space: string;
+  issueId: string;
+  authz: string;
+  body: string;
+}): Promise<void> {
+  const metrics = getLinearMetrics();
+  metrics.linearSessionOperationsTotal.inc({ operation: "comment" });
+  try {
+    await pRetry(
+      async () => {
+        const input = {
+          space: params.space,
+          action: "comment" as const,
+          issueId: params.issueId,
+          description: params.body,
+          authz: params.authz,
+        };
+
+        await toolTicket.execute({ input });
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10_000,
+        factor: 2,
+        onFailedAttempt: (error) => {
+          const statusCode = (error as any)?.statusCode;
+          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            return;
+          }
+          throw new AbortError(error);
+        },
+      }
+    );
+  } catch (error) {
+    logger?.warn?.("linear_comment_failed", {
+      issueId: params.issueId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
 export async function setLinearSessionExternalUrl(
   sessionId: string,
   space: string,

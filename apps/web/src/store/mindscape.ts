@@ -9,6 +9,7 @@ import {
   type OnEdgesChange,
   type OnNodesChange,
 } from "@xyflow/react";
+import type { SearchReceipt } from "@alfred/type";
 import type { z } from "zod";
 import { create } from "zustand";
 import { getLayoutedElements, getSemanticLayoutedElements } from "@/lib/layout";
@@ -159,6 +160,13 @@ type CachedRagDocEntry = {
   cachedAt: number;
 };
 
+type ContextCacheEntry = {
+  receipt?: SearchReceipt;
+  phase?: "cache" | "scan" | "web" | "bundle";
+  source?: "cache" | "handoff" | "scan";
+  updatedAt: number;
+};
+
 const resolvePositiveNumber = (value: string | undefined, fallback: number) => {
   const parsed = Number.parseInt(value ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -190,6 +198,7 @@ type MindscapeState = {
     misses: number;
     evictions: number;
   };
+  contextCache: Record<string, ContextCacheEntry>;
 
   // React Flow actions
   onNodesChange: OnNodesChange;
@@ -210,12 +219,22 @@ type MindscapeState = {
   setEdges: (edges: Edge[]) => void;
   setHighlightedEdges: (edgeIds: string[]) => void;
   triggerEdgeActivity: (edgeId: string, durationMs?: number) => void;
-  triggerNodeActivity: (nodeId: string, type: "input" | "output" | "processing") => void;
+  triggerNodeActivity: (
+    nodeId: string,
+    type: "input" | "output" | "processing"
+  ) => void;
   autoLayout: () => void;
   cacheRagDoc: (dbId: string, data: KnowledgeNodeData) => void;
   evictRagDoc: (dbId: string) => void;
   recordRagDocCacheHit: () => void;
   recordRagDocCacheMiss: () => void;
+  recordContextReceipt: (
+    nodeId: string,
+    entry: Partial<Omit<ContextCacheEntry, "updatedAt">> & {
+      receipt?: SearchReceipt;
+    }
+  ) => void;
+  clearContextReceipt: (nodeId: string) => void;
 };
 
 import { persist } from "zustand/middleware";
@@ -236,6 +255,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         misses: 0,
         evictions: 0,
       },
+      contextCache: {},
 
       onNodesChange: (changes) => {
         set({
@@ -324,15 +344,20 @@ export const useMindscapeStore = create<MindscapeState>()(
             typeof nodesOrUpdater === "function"
               ? nodesOrUpdater(state.nodes)
               : nodesOrUpdater;
-          console.log("setNodes count:", newNodes.length, "first:", newNodes[0]?.id);
+          console.log(
+            "setNodes count:",
+            newNodes.length,
+            "first:",
+            newNodes[0]?.id
+          );
           return { nodes: newNodes };
         });
       },
       setEdges: (edges) => {
         set((state) => {
           if (edges.length === state.edges.length) {
-             const allMatch = edges.every((e, i) => e.id === state.edges[i]?.id);
-             if (allMatch) return state;
+            const allMatch = edges.every((e, i) => e.id === state.edges[i]?.id);
+            if (allMatch) return state;
           }
           return { edges };
         });
@@ -471,6 +496,34 @@ export const useMindscapeStore = create<MindscapeState>()(
         }));
         queueRagCacheMetric("miss");
       },
+      recordContextReceipt: (nodeId, entry) => {
+        if (!nodeId) {
+          return;
+        }
+        set((state) => ({
+          contextCache: {
+            ...state.contextCache,
+            [nodeId]: {
+              ...(state.contextCache[nodeId] ?? {}),
+              ...entry,
+              updatedAt: Date.now(),
+            },
+          },
+        }));
+      },
+      clearContextReceipt: (nodeId) => {
+        if (!nodeId) {
+          return;
+        }
+        set((state) => {
+          if (!state.contextCache[nodeId]) {
+            return state;
+          }
+          const next = { ...state.contextCache };
+          delete next[nodeId];
+          return { contextCache: next } as Partial<MindscapeState>;
+        });
+      },
     }),
     {
       name: "mindscape-storage",
@@ -481,6 +534,7 @@ export const useMindscapeStore = create<MindscapeState>()(
         focusedNodeId: state.focusedNodeId,
         ragDocCache: state.ragDocCache,
         ragDocCacheStats: state.ragDocCacheStats,
+        contextCache: state.contextCache,
       }),
     }
   )

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test, jest } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import {
   startLearningWorker,
@@ -94,11 +94,11 @@ mock.module("@alfred/db", () => ({
 mock.module("@alfred/db/repo/graph/index", () => ({
   upsertNodes: async () => new Map([["user:hash-123", { id: "node-1" }]]),
   upsertEdges: async () => {},
-  
+
   // Decay mocks
-  findNodesForDecay: async () => {
-    return [{ id: "node-decay-1", properties: { confidence: 1.0 } }];
-  },
+  findNodesForDecay: async () => [
+    { id: "node-decay-1", properties: { confidence: 1.0 } },
+  ],
   updateNodeConfidenceBatch: async (updates: any[]) => {
     decayCalled = true;
     decayedNodes = updates;
@@ -109,7 +109,7 @@ mock.module("@alfred/db/repo/graph/index", () => ({
   findNodesByConfidence: async (min: number, max: number) => {
     // Only return nodes if we are testing pruning (max < 1.0)
     if (max < 0.5) {
-       return [{ id: "node-prune-1", properties: { confidence: 0.1 } }];
+      return [{ id: "node-prune-1", properties: { confidence: 0.1 } }];
     }
     return [];
   },
@@ -153,8 +153,8 @@ describe("Learning Worker Integration", () => {
 
   test("worker runs maintenance cycle and triggers decay", async () => {
     // Short interval, maintenance interval = 0 to force run
-    startLearningWorker({ 
-      intervalMs: 50, 
+    startLearningWorker({
+      intervalMs: 50,
       batchSize: 1,
       maintenanceIntervalMs: 0, // Force immediate maintenance
       decayFactor: 0.9,
@@ -169,10 +169,10 @@ describe("Learning Worker Integration", () => {
   });
 
   test("worker triggers pruning for low confidence nodes", async () => {
-    startLearningWorker({ 
-      intervalMs: 50, 
+    startLearningWorker({
+      intervalMs: 50,
       maintenanceIntervalMs: 0,
-      pruneConfidence: 0.2 
+      pruneConfidence: 0.2,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -182,9 +182,9 @@ describe("Learning Worker Integration", () => {
   });
 
   test("worker triggers cleanup for archived nodes", async () => {
-    startLearningWorker({ 
-      intervalMs: 50, 
-      maintenanceIntervalMs: 0 
+    startLearningWorker({
+      intervalMs: 50,
+      maintenanceIntervalMs: 0,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -193,9 +193,9 @@ describe("Learning Worker Integration", () => {
   });
 
   test("worker does not trigger maintenance if interval has not passed", async () => {
-    startLearningWorker({ 
-      intervalMs: 50, 
-      maintenanceIntervalMs: 10000 // Long interval
+    startLearningWorker({
+      intervalMs: 50,
+      maintenanceIntervalMs: 10_000, // Long interval
     });
 
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -206,12 +206,12 @@ describe("Learning Worker Integration", () => {
   });
 
   test("worker concurrency: runs processing and maintenance", async () => {
-    // This test is tricky to check exact concurrency without internal spies, 
+    // This test is tricky to check exact concurrency without internal spies,
     // but we can verify that both happen eventually in the same run loop
-    startLearningWorker({ 
-      intervalMs: 50, 
+    startLearningWorker({
+      intervalMs: 50,
       batchSize: 1,
-      maintenanceIntervalMs: 0 
+      maintenanceIntervalMs: 0,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 150));

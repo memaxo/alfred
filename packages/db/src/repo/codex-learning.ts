@@ -1,6 +1,6 @@
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../client.js";
 import { memoryEdges, memoryNodes } from "../schema/graph.js";
-import { and, desc, eq, inArray } from "drizzle-orm";
 
 // type NodeRow = typeof memoryNodes.$inferSelect;
 // type EdgeRow = typeof memoryEdges.$inferSelect;
@@ -147,29 +147,32 @@ export async function findHeuristics(
   // Find heuristic nodes.
   // Ideally, we'd use vector search here (embedding match on requirement).
   // For this MVP, we'll match keywords in the label/rule against the requirement.
-  
+
   const heuristics = await db
     .select()
     .from(memoryNodes)
     .where(eq(memoryNodes.kind, "heuristic"))
     .orderBy(desc(memoryNodes.created)) // Newest first
-    .limit(limit * 5); 
+    .limit(limit * 5);
 
-  const results: Array<{ rule: string; confidence: number; score: number }> = [];
+  const results: Array<{ rule: string; confidence: number; score: number }> =
+    [];
 
   const reqLower = requirement.toLowerCase();
-  const keywords = reqLower.split(/\s+/).filter(w => w.length > 3);
+  const keywords = reqLower.split(/\s+/).filter((w) => w.length > 3);
 
   for (const node of heuristics) {
-    const props = node.properties as Record<string, any> || {};
-    const rule = typeof props.rule === 'string' ? props.rule : node.label;
-    const confidence = typeof props.confidence === 'number' ? props.confidence : 0.5;
-    const context = typeof props.context === 'string' ? props.context.toLowerCase() : "";
+    const props = (node.properties as Record<string, any>) || {};
+    const rule = typeof props.rule === "string" ? props.rule : node.label;
+    const confidence =
+      typeof props.confidence === "number" ? props.confidence : 0.5;
+    const context =
+      typeof props.context === "string" ? props.context.toLowerCase() : "";
 
-    // Scoring: 
+    // Scoring:
     // 1. Match context (if heuristic has a 'context' field like 'python', 'db', etc.)
     // 2. Match keywords in the rule itself
-    
+
     let matches = 0;
     for (const k of keywords) {
       if (rule.toLowerCase().includes(k) || context.includes(k)) {
@@ -178,8 +181,9 @@ export async function findHeuristics(
     }
 
     const score = matches / Math.max(1, keywords.length);
-    
-    if (score > 0.1) { // Threshold
+
+    if (score > 0.1) {
+      // Threshold
       results.push({ rule, confidence, score });
     }
   }
@@ -187,7 +191,7 @@ export async function findHeuristics(
   return results
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(r => ({ rule: r.rule, confidence: r.confidence }));
+    .map((r) => ({ rule: r.rule, confidence: r.confidence }));
 }
 
 /**
@@ -210,7 +214,7 @@ export async function buildCodexLearningContext(
 
   // 1. Inject Heuristics (Intuitions) - High Priority
   if (heuristics.length > 0) {
-    const rules = heuristics.map(h => `- ${h.rule}`).join("\n");
+    const rules = heuristics.map((h) => `- ${h.rule}`).join("\n");
     const section = `[Intuition / Heuristics]
 Based on past failures, keep these rules in mind:
 ${rules}`;

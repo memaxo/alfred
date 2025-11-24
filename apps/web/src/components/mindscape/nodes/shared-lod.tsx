@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 type NodeLODTinyProps = {
@@ -9,8 +8,12 @@ type NodeLODTinyProps = {
 
 export function NodeLODTiny({ color, shadow, className }: NodeLODTinyProps) {
   return (
-    <div className={`flex h-3 w-3 items-center justify-center rounded-full backdrop-blur-sm bg-opacity-40 ${color} ${className ?? ""}`}>
-      <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] bg-opacity-100 ${color} ${shadow}`} />
+    <div
+      className={`flex h-3 w-3 items-center justify-center rounded-full bg-opacity-40 backdrop-blur-sm ${color} ${className ?? ""}`}
+    >
+      <div
+        className={`h-1.5 w-1.5 rounded-full bg-opacity-100 shadow-[0_0_8px_rgba(0,0,0,0.5)] ${color} ${shadow}`}
+      />
     </div>
   );
 }
@@ -24,11 +27,22 @@ type NodeLODSmallProps = {
   className?: string;
 };
 
-export function NodeLODSmall({ label, icon, borderColor, textColor, hoverColor, className }: NodeLODSmallProps) {
+export function NodeLODSmall({
+  label,
+  icon,
+  borderColor,
+  textColor,
+  hoverColor,
+  className,
+}: NodeLODSmallProps) {
   return (
-    <div className={`flex items-center gap-2 rounded-full border bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors ${borderColor} ${hoverColor ?? ""} ${className ?? ""}`}>
+    <div
+      className={`flex items-center gap-2 rounded-full border bg-void-surface/40 px-3 py-1 backdrop-blur-md transition-colors ${borderColor} ${hoverColor ?? ""} ${className ?? ""}`}
+    >
       <span className={textColor}>{icon}</span>
-      <span className={`max-w-[120px] truncate font-medium text-[10px] tracking-tight ${textColor.replace("400", "300")}`}>
+      <span
+        className={`max-w-[120px] truncate font-medium text-[10px] tracking-tight ${textColor.replace("400", "300")}`}
+      >
         {label}
       </span>
     </div>

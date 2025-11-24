@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createVoiceSession } from "@alfred/voice/session";
 import type {
   SpeechToSpeechRequest,
   SpeechToSpeechResponse,
   VoiceClient,
   VoiceSessionDescriptor,
-  VoiceSessionSurface,
 } from "@alfred/voice/types";
-import { createClientOnlyFn } from "@tanstack/react-start";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { trpc } from "@/utils/trpc";
 import { useVoiceAudio } from "./use-voice-audio";
 import { useVoiceProtocol } from "./use-voice-protocol";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 
 type SpeechOverrides = Partial<
   Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
@@ -28,21 +26,24 @@ export function useVoiceSessionWeb() {
   // --- State ---
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastResponse, setLastResponse] = useState<SpeechToSpeechResponse | null>(null);
+  const [lastResponse, setLastResponse] =
+    useState<SpeechToSpeechResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(null);
-  
+  const [sessionInfo, setSessionInfo] = useState<VoiceSessionDescriptor | null>(
+    null
+  );
+
   // We use a ref for session ID to maintain identity across re-renders without triggering effects
   // Initial ID is generated client-side
   const sessionIdRef = useRef<string>(
-    typeof crypto !== "undefined" && crypto.randomUUID 
-      ? crypto.randomUUID() 
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
       : `voice-${Date.now()}`
   );
 
   // --- Sub-Hooks ---
   const audio = useVoiceAudio();
-  
+
   const protocol = useVoiceProtocol(sessionIdRef, {
     onAudioChunk: async (chunk) => {
       // Decode if needed? Protocol delivers Base64.
@@ -53,17 +54,17 @@ export function useVoiceSessionWeb() {
       const { pcm16Base64ToFloat32 } = await import("@alfred/voice/audio");
       const floatData = pcm16Base64ToFloat32(chunk.audioBase64);
       audio.playAudio(floatData);
-      
+
       // Visualize TTS Output
       dispatchMindscapeEvent({
-          type: "voice-output",
-          sourceId: "voice-session",
-          targetId: "user"
+        type: "voice-output",
+        sourceId: "voice-session",
+        targetId: "user",
       });
     },
     onInterrupt: () => {
       audio.clearAudio();
-    }
+    },
   });
 
   // --- Telemetry State ---
@@ -82,16 +83,22 @@ export function useVoiceSessionWeb() {
   });
 
   // --- Preferences & Session Sync ---
-  const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, { staleTime: 60_000 });
-  const { data: sessionData, refetch: refetchSessions } = trpc.voice.sessions.useQuery(undefined, {
-    staleTime: 5000,
-    refetchOnWindowFocus: false,
+  const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, {
+    staleTime: 60_000,
   });
+  const { data: sessionData, refetch: refetchSessions } =
+    trpc.voice.sessions.useQuery(undefined, {
+      staleTime: 5000,
+      refetchOnWindowFocus: false,
+    });
 
-  const syncSessionInfo = useCallback((snapshot: VoiceSessionDescriptor | null) => {
-    if (snapshot?.id) sessionIdRef.current = snapshot.id;
-    setSessionInfo(snapshot);
-  }, []);
+  const syncSessionInfo = useCallback(
+    (snapshot: VoiceSessionDescriptor | null) => {
+      if (snapshot?.id) sessionIdRef.current = snapshot.id;
+      setSessionInfo(snapshot);
+    },
+    []
+  );
 
   useEffect(() => {
     if (sessionData && sessionData.length > 0) syncSessionInfo(sessionData[0]);
@@ -99,90 +106,109 @@ export function useVoiceSessionWeb() {
 
   // --- Actions ---
 
-  const startStreaming = useCallback(async (options?: { vadThreshold?: number; maxUtteranceMs?: number }) => {
-    if (!protocol.supported) throw new Error("voice_streaming_unavailable");
+  const startStreaming = useCallback(
+    async (options?: { vadThreshold?: number; maxUtteranceMs?: number }) => {
+      if (!protocol.supported) throw new Error("voice_streaming_unavailable");
 
-    // Resolve Codec
-    const sessionCodec = sessionInfo?.codec?.output;
-    const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")?.value as string;
-    const codec = (prefsCodec || sessionCodec || "mp3") as any;
+      // Resolve Codec
+      const sessionCodec = sessionInfo?.codec?.output;
+      const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")
+        ?.value as string;
+      const codec = (prefsCodec || sessionCodec || "mp3") as any;
 
-    const client = await protocol.connect({
-      surface: "web",
-      codec,
-      vadThreshold: options?.vadThreshold,
-      maxUtteranceMs: options?.maxUtteranceMs,
-    });
+      const client = await protocol.connect({
+        surface: "web",
+        codec,
+        vadThreshold: options?.vadThreshold,
+        maxUtteranceMs: options?.maxUtteranceMs,
+      });
 
-    // Start Audio Capture
-    await audio.startCapture(
-      client,
-      () => {
-        // Speech Start (Barge-in handled in useVoiceAudio + protocol interrupt)
-        dispatchMindscapeEvent({
+      // Start Audio Capture
+      await audio.startCapture(
+        client,
+        () => {
+          // Speech Start (Barge-in handled in useVoiceAudio + protocol interrupt)
+          dispatchMindscapeEvent({
             type: "voice-input",
             sourceId: "user", // Assumes UserNode is "user"
-            targetId: "voice-session" // Assumes VoiceSessionNode is "voice-session" (if exists) or pulsing "user" output
-        });
-      },
-      () => {
-        // Speech End
+            targetId: "voice-session", // Assumes VoiceSessionNode is "voice-session" (if exists) or pulsing "user" output
+          });
+        },
+        () => {
+          // Speech End
+        }
+      );
+
+      // Start Telemetry
+      if (telemetryRef.current.interval)
+        clearInterval(telemetryRef.current.interval);
+      telemetryRef.current.interval = setInterval(() => {
+        const { jitterBuffer, packetLoss } = telemetryRef.current;
+        if (jitterBuffer.length === 0 && packetLoss === 0) return;
+
+        const avgJitter =
+          jitterBuffer.length > 0
+            ? jitterBuffer.reduce((a, b) => a + b, 0) / jitterBuffer.length
+            : 0;
+
+        client.sendTelemetry?.({ packetLoss, jitter: avgJitter, rtt: 0 }); // RTT TODO
+
+        telemetryRef.current.jitterBuffer = [];
+        telemetryRef.current.packetLoss = 0;
+      }, TELEMETRY_INTERVAL_MS);
+    },
+    [protocol, audio, sessionInfo, prefs]
+  );
+
+  const stopStreaming = useCallback(
+    async (reason?: "manual" | "silence" | "timeout") => {
+      if (telemetryRef.current.interval) {
+        clearInterval(telemetryRef.current.interval);
+        telemetryRef.current.interval = null;
       }
-    );
-
-    // Start Telemetry
-    if (telemetryRef.current.interval) clearInterval(telemetryRef.current.interval);
-    telemetryRef.current.interval = setInterval(() => {
-      const { jitterBuffer, packetLoss } = telemetryRef.current;
-      if (jitterBuffer.length === 0 && packetLoss === 0) return;
-      
-      const avgJitter = jitterBuffer.length > 0 
-        ? jitterBuffer.reduce((a, b) => a + b, 0) / jitterBuffer.length 
-        : 0;
-        
-      client.sendTelemetry?.({ packetLoss, jitter: avgJitter, rtt: 0 }); // RTT TODO
-      
-      telemetryRef.current.jitterBuffer = [];
-      telemetryRef.current.packetLoss = 0;
-    }, TELEMETRY_INTERVAL_MS);
-
-  }, [protocol, audio, sessionInfo, prefs]);
-
-  const stopStreaming = useCallback(async (reason?: "manual" | "silence" | "timeout") => {
-    if (telemetryRef.current.interval) {
-      clearInterval(telemetryRef.current.interval);
-      telemetryRef.current.interval = null;
-    }
-    audio.stopCapture();
-    await protocol.disconnect(reason);
-  }, [audio, protocol]);
+      audio.stopCapture();
+      await protocol.disconnect(reason);
+    },
+    [audio, protocol]
+  );
 
   // Legacy REST Actions (VoiceSession)
-  const voiceClient = useMemo<VoiceClient>(() => ({
-    sttTranscribe: (input) => sttMutation.mutateAsync(input),
-    ttsSynthesize: (input) => ttsMutation.mutateAsync(input),
-    speechToSpeech: (input) => s2sMutation.mutateAsync(input),
-  }), [s2sMutation, sttMutation, ttsMutation]);
+  const voiceClient = useMemo<VoiceClient>(
+    () => ({
+      sttTranscribe: (input) => sttMutation.mutateAsync(input),
+      ttsSynthesize: (input) => ttsMutation.mutateAsync(input),
+      speechToSpeech: (input) => s2sMutation.mutateAsync(input),
+    }),
+    [s2sMutation, sttMutation, ttsMutation]
+  );
 
   // Adapter for legacy createVoiceSession (mostly for REST fallback)
-  const adapter = useMemo(() => ({
-    configureSession: async () => {},
-    startCapture: async () => {}, // No-op for REST
-    stopCapture: async () => null,
-    play: async () => {},
-    stopAudio: () => audio.clearAudio(),
-  }), [audio]);
+  const adapter = useMemo(
+    () => ({
+      configureSession: async () => {},
+      startCapture: async () => {}, // No-op for REST
+      stopCapture: async () => null,
+      play: async () => {},
+      stopAudio: () => audio.clearAudio(),
+    }),
+    [audio]
+  );
 
-  const session = useMemo(() => createVoiceSession(adapter, voiceClient), [adapter, voiceClient]);
+  const session = useMemo(
+    () => createVoiceSession(adapter, voiceClient),
+    [adapter, voiceClient]
+  );
 
   // Cleanup
-  useEffect(() => {
-    return () => {
-      if (telemetryRef.current.interval) clearInterval(telemetryRef.current.interval);
+  useEffect(
+    () => () => {
+      if (telemetryRef.current.interval)
+        clearInterval(telemetryRef.current.interval);
       audio.stopCapture();
       protocol.disconnect("manual");
-    };
-  }, [audio, protocol]);
+    },
+    [audio, protocol]
+  );
 
   return {
     state: session.state, // Legacy state (mostly idle for streaming)
@@ -201,8 +227,8 @@ export function useVoiceSessionWeb() {
     },
     session: sessionInfo,
     refreshSession: async () => {
-        const res = await refetchSessions();
-        return res.data?.[0] || null;
+      const res = await refetchSessions();
+      return res.data?.[0] || null;
     },
     stream: {
       supported: protocol.supported,
@@ -212,11 +238,12 @@ export function useVoiceSessionWeb() {
       vadConfidence: protocol.state.vadConfidence,
       autoStopReason: protocol.state.autoStopReason,
       error: protocol.state.error,
-      isActive: protocol.state.status !== "idle" && protocol.state.status !== "error",
+      isActive:
+        protocol.state.status !== "idle" && protocol.state.status !== "error",
       sessionId: protocol.state.sessionId,
       analyser: audio.analyser,
       start: startStreaming,
       stop: stopStreaming,
-    }
+    },
   };
 }

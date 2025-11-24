@@ -19,4 +19,4 @@ export * from "./metrics";
 export type { CodexSessionState } from "./orchestrator/codex-session";
 export { sessionManager } from "./orchestrator/codex-session";
 export type { AlfredCodexEvent } from "./orchestrator/tool/codex";
-export { normalizeToUiMessages, eventToUiMessages } from "./utils/normalize";
+export { eventToUiMessages, normalizeToUiMessages } from "./utils/normalize";

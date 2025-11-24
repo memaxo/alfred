@@ -20,6 +20,9 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
+import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
+import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import {
   type ArtifactData,
   type KnowledgeNodeData,
@@ -28,12 +31,10 @@ import {
   useMindscapeStore,
 } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
-import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
-import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
-import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { MindscapeCommandPalette } from "./command-palette";
 import { MindscapeDetailPanel } from "./detail-panel";
 import { MindscapeInitializer } from "./initializer";
+import { LivingEdge } from "./living-edge";
 import { WorkflowManager } from "./monitor";
 import { ArtifactNode } from "./nodes/artifact-node";
 import { BookmarkNode } from "./nodes/bookmark-node";
@@ -64,7 +65,6 @@ import {
   singletonSpawnTypes,
 } from "./spawn";
 import { MindscapeWorkflowDrawer } from "./workflow-drawer";
-import { LivingEdge } from "./living-edge";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
@@ -272,9 +272,10 @@ function MindscapeCanvasInner({
       ? Math.round((ragDocCacheStats.hits / ragDocCacheLookupCount) * 100)
       : 0;
 
-  const { visibleNodes, visibleEdges } = useMemo(() => {
-    return { visibleNodes: nodes, visibleEdges: edges };
-  }, [nodes, edges]);
+  const { visibleNodes, visibleEdges } = useMemo(
+    () => ({ visibleNodes: nodes, visibleEdges: edges }),
+    [nodes, edges]
+  );
 
   // Initialize with Orb if empty
   useEffect(() => {

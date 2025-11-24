@@ -1,6 +1,5 @@
-import { describe, it, expect, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import { STTPool, type STTRequest } from "../src/process/stt";
-import { Process } from "../src/process/base";
 
 // Mock the entire Process module
 mock.module("../src/process/base", () => {
@@ -12,17 +11,17 @@ mock.module("../src/process/base", () => {
       async start() {}
       async sendRequest(req: any) {
         if (req.payload.streaming) {
-            // For verification of interface only - STT streaming is usually via VAD chunking
-            // which sends separate requests for each chunk, OR a single long-running request.
-            // The current STT implementation seems to be request-response (transcribe a chunk).
-            // True streaming (websocket style) isn't implemented in the pool yet, it relies on client chunking.
-            return {
-                type: "transcript",
-                payload: {
-                    text: "streaming result",
-                    isPartial: true
-                }
-            };
+          // For verification of interface only - STT streaming is usually via VAD chunking
+          // which sends separate requests for each chunk, OR a single long-running request.
+          // The current STT implementation seems to be request-response (transcribe a chunk).
+          // True streaming (websocket style) isn't implemented in the pool yet, it relies on client chunking.
+          return {
+            type: "transcript",
+            payload: {
+              text: "streaming result",
+              isPartial: true,
+            },
+          };
         }
         return {
           type: "transcript",
@@ -33,7 +32,9 @@ mock.module("../src/process/base", () => {
         };
       }
       async shutdown() {}
-      getHealth() { return { isHealthy: true }; }
+      getHealth() {
+        return { isHealthy: true };
+      }
     },
   };
 });
@@ -46,7 +47,7 @@ describe("STT Streaming Verification", () => {
     const request: STTRequest = {
       audioBase64: "test",
       mimeType: "audio/pcm",
-      streaming: true
+      streaming: true,
     };
 
     const result = await pool.transcribe(request);

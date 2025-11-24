@@ -1,6 +1,7 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { executePlanPhase } from "../../phases/plan";
+import type { ExecutionContext } from "../../context";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
 
@@ -11,7 +12,7 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
 
   async *run(
     input: RuntimeInput,
-    _context: RuntimeContext
+    context: RuntimeContext
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       // Wrap existing executePlanPhase
@@ -24,8 +25,17 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
 
       // Let's just use a new controller for the phase for now
       const controller = new AbortController();
+      const cachedContext = context.get("scanContext") as
+        | ExecutionContext
+        | null
+        | undefined;
 
-      const generator = executePlanPhase(input, this.runId, controller.signal);
+      const generator = executePlanPhase(
+        input,
+        this.runId,
+        controller.signal,
+        cachedContext ?? undefined
+      );
 
       for await (const event of generator) {
         yield event;

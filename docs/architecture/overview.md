@@ -242,6 +242,14 @@ Mindscape and graph APIs consume the resulting graph:
 - Runtime reasoning appears as `reasoning` nodes under per-workspace resources.
 - Provenance edges appear as `kind="explains"` edges from `rag_document` → `reasoning`, rendered in Mindscape as green, dashed edges and traversable via `graph.runQuery` or the `graph.explainedBy` helper.
 
+### RuntimeContext Keys
+
+`RuntimeContext` is the shared scratchpad passed between pipeline phases and orchestrator layers. Core keys today:
+
+- `authz` – bearer token propagated from API so downstream tools can authenticate.
+- `signal` – workflow-level `AbortSignal` for cooperative cancellation.
+- `scanContext` – the `ExecutionContext` returned by the scan phase (receipts, bundle, RAG metadata). Plan, act, and orchestrator phases must read this key before rebuilding context; if populated, they reuse it and emit notices (`plan_using_cached_context`, `waves_using_cached_context`) so operators can confirm cache hits.
+
 ### 2. API ↔ Runtime
 
 API routers are thin wrappers:

@@ -82,7 +82,7 @@ export class KnowledgeEngine {
       // We fetch more candidates if reranking is enabled to allow re-ordering
       // Default limit * 3 for candidate generation
       const candidateLimit = useReranking ? topK * 3 : topK;
-      
+
       let results = await searchChunksHybrid({
         embedding,
         query,
@@ -103,7 +103,7 @@ export class KnowledgeEngine {
             topN: topK,
             model: "rerank-v3.5",
           });
-          
+
           const rerankScoreMap = new Map(
             rerankResults.map((item) => [item.id, item.score])
           );
@@ -114,15 +114,15 @@ export class KnowledgeEngine {
             const finalScore = row.score * 0.7 + rerankScore * 0.3;
             return { ...row, score: finalScore };
           });
-          
+
           // Sort by new score
           results.sort((a, b) => b.score - a.score);
-          
+
           // Limit to topK
           results = results.slice(0, topK);
         } catch (error) {
-           // Continue without reranking on error
-           results = results.slice(0, topK);
+          // Continue without reranking on error
+          results = results.slice(0, topK);
         }
       }
 

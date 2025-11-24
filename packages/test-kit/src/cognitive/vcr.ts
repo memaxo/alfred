@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { logger } from "@alfred/logger";
@@ -27,7 +26,10 @@ export class CognitiveVCR {
   private interactions: Interaction[] = [];
   private mode: "record" | "replay" | "passthrough";
 
-  constructor(cassetteName: string, mode?: "record" | "replay" | "passthrough") {
+  constructor(
+    cassetteName: string,
+    mode?: "record" | "replay" | "passthrough"
+  ) {
     this.cassettePath = path.join(
       process.cwd(),
       "packages/test-kit/cassettes",
@@ -72,7 +74,7 @@ export class CognitiveVCR {
   findMatch(input: Interaction["input"]): Interaction | undefined {
     // Simple exact match on system prompt + last user message content for V1
     const lastUserMsg = input.messages[input.messages.length - 1];
-    
+
     return this.interactions.find((i) => {
       const iLast = i.input.messages[i.input.messages.length - 1];
       return (
@@ -91,13 +93,16 @@ export class CognitiveVCR {
   }
 }
 
-export function wrapModelWithVCR(model: LanguageModel, vcr: CognitiveVCR): LanguageModel {
+export function wrapModelWithVCR(
+  model: LanguageModel,
+  vcr: CognitiveVCR
+): LanguageModel {
   // Proxy the model to intercept doGenerate / doStream
   // This requires deeper integration with AI SDK internals or wrapping the call site.
   // For Level 5, we might wrap the `AIAdapter` instead of the `LanguageModel` directly
   // since `LanguageModel` is an interface, not a class we can easily extend without internal logic.
-  
+
   // Placeholder: In a real implementation, we would return a Proxy that traps calls.
   // For now, we will expose VCR helper methods to be used manually in the Adapter.
-  return model; 
+  return model;
 }

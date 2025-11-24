@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ExecutionPlan } from "@alfred/cognitive/schemas";
 
 // Mock Agent Defaults
@@ -27,6 +27,11 @@ mock.module("@alfred/db", () => ({
     saveSnapshot: mock(async () => {}),
   },
 }));
+
+beforeEach(() => {
+  process.env.RUNTIME_DISABLE_SAFETY_EMBED = "1";
+  delete process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL;
+});
 
 // Dynamic import to allow mocks to apply
 // import { PlanRunner } from "../src/loops/plan-runner";
@@ -91,14 +96,20 @@ describe("PlanRunner", () => {
           err.name = "SuspendedError";
           throw err;
         }),
-      }
+      },
     };
-    
+
     const { PlanRunner } = await import("../src/loops/plan-runner");
     const runner = new PlanRunner(streamId, suspendTools);
     const plan: ExecutionPlan = {
       steps: [
-        { action: "suspend-tool", params: {}, description: "Suspending", timeout: 1000, retryable: false },
+        {
+          action: "suspend-tool",
+          params: {},
+          description: "Suspending",
+          timeout: 1000,
+          retryable: false,
+        },
       ],
       goal: "suspend",
       duration: 0,
@@ -108,5 +119,28 @@ describe("PlanRunner", () => {
     // Should not throw
     await runner.executePlan(plan);
     expect(suspendTools["suspend-tool"].execute).toHaveBeenCalled();
+  });
+
+  it("blocks execution when autonomy is insufficient for assessed risk", async () => {
+    process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = "high";
+
+    const { PlanRunner } = await import("../src/loops/plan-runner");
+    const runner = new PlanRunner(streamId, mockTools);
+    const plan: ExecutionPlan = {
+      steps: [
+        {
+          action: "test-tool",
+          params: { value: "foo" },
+          description: "Testing",
+          timeout: 1000,
+          retryable: false,
+        },
+      ],
+      goal: "test",
+      duration: 0,
+      confidence: 1,
+    };
+    await expect(runner.executePlan(plan)).rejects.toThrow(/Execution gated/);
+    delete process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL;
   });
 });

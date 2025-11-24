@@ -8,7 +8,7 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
   const { getAssistantAgentDefaults } = await import(agentPkg);
   const { analyzeContext, getPersonaInstruction } = await import(adapterPkg);
   const { handleStreamRequest } = await import(streamHandlerPkg);
-  
+
   return handleStreamRequest(
     request,
     getAssistantAgentDefaults,

@@ -1,8 +1,12 @@
 import path from "node:path";
+import {
+  DEFAULT_ALLOW_PREFIXES,
+  isWithinBase,
+} from "../../../security/filesystem.js";
 import { withPolicyApproval } from "../approval.js";
 import {
-  codexInputSchema,
   type CodexToolInput,
+  codexInputSchema,
   toolOutputSchema,
 } from "./definition.js";
 import { executeWithSdk } from "./exec.js";
@@ -12,15 +16,14 @@ import {
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
-import { DEFAULT_ALLOW_PREFIXES, isWithinBase } from "../../../security/filesystem.js";
 
 export type {
   AlfredCodexEvent,
-  CodexExecuteArgs,
-  CodexToolInput,
   CodexArtifactSummary,
   CodexBackend,
   CodexErrorStage,
+  CodexExecuteArgs,
+  CodexToolInput,
   SandboxConfig,
   ToolWriter,
 } from "./definition.js";
@@ -50,25 +53,21 @@ const aiToolCodexBase = {
   description: toolCodex.description,
   parameters: toolCodex.inputSchema,
   inputSchema: toolCodex.inputSchema,
-  execute: async (input: CodexToolInput) => {
-    return toolCodex.execute({ input });
-  },
+  execute: async (input: CodexToolInput) => toolCodex.execute({ input }),
 };
 
-export const aiToolCodex = withPolicyApproval(aiToolCodexBase, (input) => {
-  return {
-    action: "droid.exec",
-    resource: {
-      kind: "repo",
-      id: input.cw ? path.resolve(input.cw) : "cwd",
-    },
-    scopes: ["droid.exec"],
-    authz: input.authz,
-    context: {
-      auto: input.auto,
-    },
-  };
-});
+export const aiToolCodex = withPolicyApproval(aiToolCodexBase, (input) => ({
+  action: "droid.exec",
+  resource: {
+    kind: "repo",
+    id: input.cw ? path.resolve(input.cw) : "cwd",
+  },
+  scopes: ["droid.exec"],
+  authz: input.authz,
+  context: {
+    auto: input.auto,
+  },
+}));
 
 export type ToolCodex = typeof toolCodex;
 

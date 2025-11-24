@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 // import type { LanguageModel } from "ai";
 import {
   runtimeExecutionDurationSeconds,
@@ -159,15 +160,22 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       checkTimeout();
 
       // Initialize Pipeline
+      const pipelineContextEntries: [string, unknown][] = [["ai", null]];
+      if (this.signal) {
+        pipelineContextEntries.push(["signal", this.signal]);
+      }
+      if (this.authz) {
+        pipelineContextEntries.push(["authz", this.authz]);
+      }
+
+      const pipelineContext = new RuntimeContext<Record<string, unknown>>(
+        pipelineContextEntries
+      );
+
       const pipelineState: PipelineState = {
         currentPhaseId: "scan",
         history: [],
-        context: {
-          // Minimal context for now
-          ai: null as any, // Pipeline doesn't depend on AI adapter yet
-          signal: this.signal,
-          authz: this.authz,
-        } as any,
+        context: pipelineContext,
       };
 
       const runner = new PipelineRunner(pipelineState)

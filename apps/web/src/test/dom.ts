@@ -213,9 +213,9 @@ console.warn = (...args) => {
   const msg = args[0];
   if (typeof msg === "string") {
     if (msg.includes("THREE.WebGLRenderer")) return;
-    if (msg.includes("The pseudo class \":first-child\" is potentially unsafe"))
+    if (msg.includes('The pseudo class ":first-child" is potentially unsafe'))
       return;
-    if (msg.includes("The pseudo class \":nth-child\" is potentially unsafe"))
+    if (msg.includes('The pseudo class ":nth-child" is potentially unsafe'))
       return;
   }
   originalConsoleWarn(...args);
@@ -223,8 +223,7 @@ console.warn = (...args) => {
 
 console.error = (...args) => {
   const msg = args[0];
-  if (typeof msg === "string") {
-    if (msg.includes("Error creating WebGL context")) return;
-  }
+  if (typeof msg === "string" && msg.includes("Error creating WebGL context"))
+    return;
   originalConsoleError(...args);
 };

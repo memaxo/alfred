@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClientOnlyFn } from "@tanstack/react-start";
-import { EnergyVAD } from "@/lib/voice/vad";
 import type { VoiceStreamClient } from "@alfred/voice/stream";
+import { createClientOnlyFn } from "@tanstack/react-start";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { EnergyVAD } from "@/lib/voice/vad";
 
 const getMediaStream = createClientOnlyFn(async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -53,63 +53,66 @@ export function useVoiceAudio() {
     }
   }, [ensureContext]);
 
-  const startCapture = useCallback(async (
-    client: VoiceStreamClient,
-    onSpeechStart: () => void,
-    onSpeechEnd: () => void
-  ) => {
-    const stream = await getMediaStream();
-    const { ctx, worklet } = await ensureWorklet();
+  const startCapture = useCallback(
+    async (
+      client: VoiceStreamClient,
+      onSpeechStart: () => void,
+      onSpeechEnd: () => void
+    ) => {
+      const stream = await getMediaStream();
+      const { ctx, worklet } = await ensureWorklet();
 
-    // VAD Setup
-    const vad = new EnergyVAD();
-    vad.start(stream);
-    vadRef.current = vad;
-    setAnalyser(vad.getAnalyser());
+      // VAD Setup
+      const vad = new EnergyVAD();
+      vad.start(stream);
+      vadRef.current = vad;
+      setAnalyser(vad.getAnalyser());
 
-    vad.on("speech_start", () => {
-      worklet.port.postMessage({ type: "clear" });
-      onSpeechStart();
-    });
+      vad.on("speech_start", () => {
+        worklet.port.postMessage({ type: "clear" });
+        onSpeechStart();
+      });
 
-    vad.on("speech_end", onSpeechEnd);
+      vad.on("speech_end", onSpeechEnd);
 
-    // Audio Graph
-    const source = ctx.createMediaStreamSource(stream);
-    streamRef.current = stream;
-    source.connect(worklet);
+      // Audio Graph
+      const source = ctx.createMediaStreamSource(stream);
+      streamRef.current = stream;
+      source.connect(worklet);
 
-    // Processor Message Handler
-    worklet.port.onmessage = async (event) => {
-      const { type, buffer } = event.data;
-      if (type === "audio_data" && buffer) {
-        try {
-          // Downsample Float32(CtxRate) -> Int16(16kHz)
-          const ratio = ctx.sampleRate / 16000;
-          const newLength = Math.floor(buffer.length / ratio);
-          const int16 = new Int16Array(newLength);
-          
-          for (let i = 0; i < newLength; i++) {
-            const idx = Math.floor(i * ratio);
-            const val = buffer[idx];
-            const s = Math.max(-1, Math.min(1, val));
-            int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      // Processor Message Handler
+      worklet.port.onmessage = async (event) => {
+        const { type, buffer } = event.data;
+        if (type === "audio_data" && buffer) {
+          try {
+            // Downsample Float32(CtxRate) -> Int16(16kHz)
+            const ratio = ctx.sampleRate / 16_000;
+            const newLength = Math.floor(buffer.length / ratio);
+            const int16 = new Int16Array(newLength);
+
+            for (let i = 0; i < newLength; i++) {
+              const idx = Math.floor(i * ratio);
+              const val = buffer[idx];
+              const s = Math.max(-1, Math.min(1, val));
+              int16[i] = s < 0 ? s * 0x80_00 : s * 0x7f_ff;
+            }
+
+            await client.sendAudioChunk({
+              audio: int16.buffer,
+              mimeType: "audio/raw;codec=pcm_s16le;rate=16000",
+            });
+          } catch (err) {
+            // ignore chunk errors
           }
-          
-          await client.sendAudioChunk({
-            audio: int16.buffer,
-            mimeType: "audio/raw;codec=pcm_s16le;rate=16000",
-          });
-        } catch (err) {
-          // ignore chunk errors
         }
-      }
-    };
-  }, [ensureWorklet]);
+      };
+    },
+    [ensureWorklet]
+  );
 
   const stopCapture = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     if (vadRef.current) {
@@ -118,27 +121,33 @@ export function useVoiceAudio() {
     }
     if (workletNodeRef.current) {
       workletNodeRef.current.disconnect();
-      workletNodeRef.current = null; 
-      // Note: We destroy worklet to stop processing events. 
+      workletNodeRef.current = null;
+      // Note: We destroy worklet to stop processing events.
       // Re-creating it is cheap enough for session granularity.
     }
   }, []);
 
-  const playAudio = useCallback(async (floatData: Float32Array) => {
-    const { worklet } = await ensureWorklet();
-    worklet.port.postMessage({ type: "write", payload: floatData }, [floatData.buffer]);
-  }, [ensureWorklet]);
+  const playAudio = useCallback(
+    async (floatData: Float32Array) => {
+      const { worklet } = await ensureWorklet();
+      worklet.port.postMessage({ type: "write", payload: floatData }, [
+        floatData.buffer,
+      ]);
+    },
+    [ensureWorklet]
+  );
 
   const clearAudio = useCallback(() => {
     workletNodeRef.current?.port.postMessage({ type: "clear" });
   }, []);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       stopCapture();
       audioContextRef.current?.close().catch(() => {});
-    };
-  }, [stopCapture]);
+    },
+    [stopCapture]
+  );
 
   return {
     startCapture,

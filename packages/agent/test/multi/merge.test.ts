@@ -27,6 +27,7 @@ describe("buildMergePlan", () => {
     const plan = buildMergePlan([]);
     expect(plan.strategy).toBe("direct");
     expect(plan.expectedFiles).toEqual([]);
+    expect(plan.targetBranch).toBe("dev");
     expect(plan.summary).toContain("No agent outcomes");
   });
 
@@ -35,8 +36,8 @@ describe("buildMergePlan", () => {
       makeOutcome({
         result: {
           summary: "a",
-          artifacts: [{ path: "src/a.ts", kind: "file" }],
-          changes: ["src/b.ts"],
+          artifacts: [{ path: "packages/agent/src/a.ts", kind: "file" }],
+          changes: ["packages/agent/src/b.ts"],
           notes: [],
         },
       }),
@@ -45,16 +46,22 @@ describe("buildMergePlan", () => {
         subTaskId: "T2" as any,
         result: {
           summary: "b",
-          artifacts: [{ path: "src/a.ts", kind: "file" }],
-          changes: ["src/c.ts"],
+          artifacts: [{ path: "packages/agent/src/a.ts", kind: "file" }],
+          changes: ["apps/web/src/c.tsx"],
           notes: [],
         },
       }),
     ];
 
-    const plan = buildMergePlan(outcomes);
-    expect(plan.expectedFiles).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
+    const plan = buildMergePlan(outcomes, { targetBranch: "main" });
+    expect(plan.expectedFiles).toEqual([
+      "apps/web/src/c.tsx",
+      "packages/agent/src/a.ts",
+      "packages/agent/src/b.ts",
+    ]);
     expect(plan.summary).toContain("Merge results from 2 agents");
+    expect(plan.targetBranch).toBe("main");
+    expect(plan.changedPackages).toEqual(["apps/web", "packages/agent"]);
   });
 
   it("notes when agents failed or stuck", () => {
@@ -70,6 +77,25 @@ describe("buildMergePlan", () => {
     expect(plan.summary).toContain("1 failed");
     expect(plan.summary).toContain("1 stuck");
   });
+
+  it("infers changed packages", () => {
+    const outcomes: AgentOutcome[] = [
+      makeOutcome({
+        result: {
+          summary: "a",
+          artifacts: [],
+          changes: ["packages/api/src/router.ts", "apps/web/src/app.tsx"],
+          notes: [],
+        },
+      }),
+    ];
+
+    const plan = buildMergePlan(outcomes);
+    expect(plan.changedPackages).toEqual([
+      "apps/web",
+      "packages/api",
+    ]);
+  });
 });
 
 describe("generateMergeExecPlanSkeleton", () => {
@@ -82,6 +108,9 @@ describe("generateMergeExecPlanSkeleton", () => {
       summary: "Merging 2 files",
       expectedFiles: ["a.ts", "b.ts"],
       strategy: "direct",
+      branches: [],
+      targetBranch: "dev",
+      changedPackages: ["packages/api"],
     };
     const md = generateMergeExecPlanSkeleton("run-abc", plan);
 
@@ -89,6 +118,8 @@ describe("generateMergeExecPlanSkeleton", () => {
     expect(md).toContain("Merging 2 files");
     expect(md).toContain("- a.ts");
     expect(md).toContain("- b.ts");
+    expect(md).toContain("Target branch: dev");
+    expect(md).toContain("packages/api");
     expect(md).toContain("## Plan");
     expect(md).toContain("- [ ] (pending) Merge analysis started.");
   });

@@ -1,15 +1,31 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { persistExecPlans } from "@alfred/agent/assistant/graphstore";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../context";
+import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
+
+async function ensureExecPlanFile(filePath: string, content: string) {
+  try {
+    await fs.access(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, content, "utf8");
+  }
+}
 
 export async function* executePlanPhase(
   input: RuntimeInput,
   runId: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  prebuiltContext?: ExecutionContext | null
 ): AsyncGenerator<WorkflowEvent, void, void> {
   yield { type: "notice", message: "planning_started" } as WorkflowEvent;
 
@@ -17,21 +33,30 @@ export async function* executePlanPhase(
     throw new DOMException("Phase aborted", "AbortError");
   }
 
-  const builder = new ContextBuilder();
   const workspace = input.workspace ?? process.cwd();
 
-  const context = await builder.build({
-    requirement: input.requirement,
-    workspace,
-    repoBase: input.repoBase,
-    web: input.context?.web,
-    topK: input.context?.topK,
-    maxTokens: input.context?.maxTokens,
-    exts: input.context?.exts,
-    ignore: input.context?.ignore,
-    seeds: input.context?.seeds,
-    authz: undefined,
-  });
+  const reusedContext = Boolean(prebuiltContext);
+  const context =
+    prebuiltContext ??
+    (await new ContextBuilder().build({
+      requirement: input.requirement,
+      workspace,
+      repoBase: input.repoBase,
+      web: input.context?.web,
+      topK: input.context?.topK,
+      maxTokens: input.context?.maxTokens,
+      exts: input.context?.exts,
+      ignore: input.context?.ignore,
+      seeds: input.context?.seeds,
+      authz: undefined,
+    }));
+
+  if (reusedContext) {
+    yield {
+      type: "notice",
+      message: "plan_using_cached_context",
+    } as WorkflowEvent;
+  }
 
   const subTasks = decomposeTask(input.requirement, {
     requirement: input.requirement,
@@ -89,6 +114,38 @@ export async function* executePlanPhase(
   } as any;
 
   yield execplanPayload;
+
+  // Materialise ExecPlan files on disk for downstream agents.
+  const rootPlanAbsolutePath = path.resolve(workspace, execplanRootPath);
+  try {
+    await ensureExecPlanFile(rootPlanAbsolutePath, rootPlan);
+  } catch (error) {
+    logger.warn("execplan_root_write_failed", {
+      runId,
+      path: rootPlanAbsolutePath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  await Promise.all(
+    subTasks.map(async (task) => {
+      const relativePath = `.agent/plans/${runId}/${task.id}.md`;
+      const absolutePath = path.resolve(workspace, relativePath);
+      try {
+        await ensureExecPlanFile(
+          absolutePath,
+          generateSubtaskExecPlanSkeleton(task, runId)
+        );
+      } catch (error) {
+        logger.warn("execplan_subtask_write_failed", {
+          runId,
+          subTaskId: task.id,
+          path: absolutePath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })
+  );
 
   // Surface trimmed context details for provenance and UX
   const bundleFiles =

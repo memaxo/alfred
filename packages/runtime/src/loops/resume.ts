@@ -41,23 +41,27 @@ export async function resumeInterruptedPlans(tools: Record<string, any>) {
         // Dead Letter Queue Check
         const retryCount = (state as any).retryCount ?? 0;
         if (retryCount > 3) {
-          logger.error("plan_dead_letter_queue", { 
-            streamId, 
-            stepIndex, 
-            retryCount, 
-            reason: "Max retries exceeded" 
+          logger.error("plan_dead_letter_queue", {
+            streamId,
+            stepIndex,
+            retryCount,
+            reason: "Max retries exceeded",
           });
           // Mark as terminal failure in DB to prevent infinite loop
           // In a real implementation we would update the snapshot state to 'failed'
           continue;
         }
 
-        logger.info("resume_plan_execution", { streamId, stepIndex, retryCount });
+        logger.info("resume_plan_execution", {
+          streamId,
+          stepIndex,
+          retryCount,
+        });
 
         // Increment retry count for next crash
         // We should persist this increment immediately, but PlanRunner checkpoints anyway.
         // Ideally, we pass this to PlanRunner to persist in the next snapshot.
-        
+
         const runner = new PlanRunner(streamId, tools);
 
         // Run in background

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import {
-  updatePhysiology,
-  updateAutonomy,
   initialAutonomy,
   type Physiology,
+  updateAutonomy,
+  updatePhysiology,
 } from "../src/state";
 
 describe("Cognitive Physiology", () => {
@@ -31,21 +31,29 @@ describe("Cognitive Physiology", () => {
 
   it("regulates autonomy based on physiology", () => {
     const auto = initialAutonomy(); // level 0.3
-    
+
     // Normal update
-    const next = updateAutonomy(auto, { _: "success", task: "test", duration: 100 });
+    const next = updateAutonomy(auto, {
+      _: "success",
+      task: "test",
+      duration: 100,
+    });
     // Success increases level slightly
     expect(next.level).toBeGreaterThan(0.3);
 
     // High Frustration Scenario
-    const frustratedPhy: Physiology = { energy: 0.5, boredom: 0, frustration: 0.8 };
+    const frustratedPhy: Physiology = {
+      energy: 0.5,
+      boredom: 0,
+      frustration: 0.8,
+    };
     const constrained = updateAutonomy(
       auto,
       { _: "failure", task: "test", error: "oops" },
       frustratedPhy
     );
-    
+
     // Should be significantly lower due to frustration penalty (0.5x multiplier)
-    expect(constrained.level).toBeLessThan(0.2); 
+    expect(constrained.level).toBeLessThan(0.2);
   });
 });

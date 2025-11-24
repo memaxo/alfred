@@ -329,16 +329,16 @@ export const toolDroid = {
     };
 
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-    
+
     // Combined Timer Loop (Timeout + Heartbeat)
     const timer = setInterval(() => {
       const now = Date.now();
-      
+
       // Check Hard Timeout
       // Note: We use a separate setNodeTimeout for the hard limit usually, but we can do it here or keep the original.
-      // The original used setNodeTimeout. Let's keep the original structure for hard timeout if possible, 
+      // The original used setNodeTimeout. Let's keep the original structure for hard timeout if possible,
       // but implementing a periodic check is cleaner for heartbeat.
-      
+
       // Check Heartbeat
       if (now - lastActivity > HEARTBEAT_TIMEOUT_MS) {
         heartbeatKilled = true;

@@ -1,10 +1,10 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -15,10 +15,10 @@ const serverOnlyRegex = [
 ];
 const serverOnlyPackages = ["@alfred/agent", "@alfred/policy", "@alfred/db"];
 const serverOnlyDeps = [
-  "bun", 
+  "bun",
   "bun:sqlite",
   "node:stream",
-  "node:fs", 
+  "node:fs",
   "node:path",
   "node:util",
   "node:crypto",

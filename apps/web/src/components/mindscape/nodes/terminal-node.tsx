@@ -6,8 +6,8 @@ import type { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function TerminalNode({ id, selected }: NodeProps) {
@@ -135,21 +135,21 @@ export function TerminalNode({ id, selected }: NodeProps) {
       // Ideally we'd use a cancellation token or AbortController but for now we check refs
       // However, term and fitAddon are local vars inside initTerminal scope or accessible via refs?
       // We used terminalRef.current.
-      
+
       // We can't easily remove the resize listener if we defined it inside initTerminal.
       // We should define handleResize outside or store it in a ref.
       // But since we are refactoring for SSR safety, let's keep it simple and assume cleanup runs on unmount.
-      
+
       // Actually, if we use async init, the cleanup function returned by useEffect runs synchronously on unmount.
       // If init is still pending, we might have issues.
-      
+
       // For now, I'll just fix the SSR crash by using dynamic imports.
       // The cleanup logic needs to be robust.
-      
+
       if (terminalRef.current) {
-         // Dispose logic
-         terminalRef.current.dispose();
-         terminalRef.current = null;
+        // Dispose logic
+        terminalRef.current.dispose();
+        terminalRef.current = null;
       }
       // We can't removeEventListener because handleResize is scoped to initTerminal.
       // Use a ref for the resize handler?
@@ -170,11 +170,11 @@ export function TerminalNode({ id, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Terminal"
-        icon={<TerminalSquare className="h-3 w-3" />}
         borderColor="border-zinc-500/20"
-        textColor="text-zinc-500"
         hoverColor="hover:border-zinc-500/40"
+        icon={<TerminalSquare className="h-3 w-3" />}
+        label="Terminal"
+        textColor="text-zinc-500"
       />
     );
   }

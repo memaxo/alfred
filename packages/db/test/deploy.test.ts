@@ -14,9 +14,7 @@ async function resetDeployTables() {
   if (!db) {
     return;
   }
-  await db.execute(
-    sql`TRUNCATE deployments RESTART IDENTITY CASCADE`
-  );
+  await db.execute(sql`TRUNCATE deployments RESTART IDENTITY CASCADE`);
 }
 
 describeFn("deployRepo", () => {
@@ -84,10 +82,18 @@ describeFn("deployRepo", () => {
 
     expect(preview.id).not.toBe(production.id);
 
-    const latestPreview = await deployRepo.getDeploymentByApp(TEST_USER, "test-app", "preview");
+    const latestPreview = await deployRepo.getDeploymentByApp(
+      TEST_USER,
+      "test-app",
+      "preview"
+    );
     expect(latestPreview?.id).toBe(preview.id);
 
-    const latestProd = await deployRepo.getDeploymentByApp(TEST_USER, "test-app", "production");
+    const latestProd = await deployRepo.getDeploymentByApp(
+      TEST_USER,
+      "test-app",
+      "production"
+    );
     expect(latestProd?.id).toBe(production.id);
   });
 
@@ -120,13 +126,19 @@ describeFn("deployRepo", () => {
     const userApps = await deployRepo.listDeployments({ userId: TEST_USER });
     expect(userApps.length).toBe(3);
 
-    const app1 = await deployRepo.listDeployments({ userId: TEST_USER, app: "app-1" });
+    const app1 = await deployRepo.listDeployments({
+      userId: TEST_USER,
+      app: "app-1",
+    });
     expect(app1.length).toBe(2);
 
-    const running = await deployRepo.listDeployments({ userId: TEST_USER, status: "running" });
+    const running = await deployRepo.listDeployments({
+      userId: TEST_USER,
+      status: "running",
+    });
     expect(running.length).toBe(2);
-    expect(running.some(d => d.app === "app-1")).toBe(true);
-    expect(running.some(d => d.app === "app-2")).toBe(true);
+    expect(running.some((d) => d.app === "app-1")).toBe(true);
+    expect(running.some((d) => d.app === "app-2")).toBe(true);
   });
 
   it("updates deployment status and sets timestamps", async () => {
@@ -140,14 +152,21 @@ describeFn("deployRepo", () => {
     expect(deployment.deployed).toBeNull();
     expect(deployment.stopped).toBeNull();
 
-    const running = await deployRepo.setDeploymentStatus(deployment.id, "running", {
-      url: "https://app.test",
-    });
+    const running = await deployRepo.setDeploymentStatus(
+      deployment.id,
+      "running",
+      {
+        url: "https://app.test",
+      }
+    );
     expect(running?.status).toBe("running");
     expect(running?.deployed).toBeDefined();
     expect(running?.url).toBe("https://app.test");
 
-    const stopped = await deployRepo.setDeploymentStatus(deployment.id, "stopped");
+    const stopped = await deployRepo.setDeploymentStatus(
+      deployment.id,
+      "stopped"
+    );
     expect(stopped?.status).toBe("stopped");
     expect(stopped?.stopped).toBeDefined();
   });
@@ -163,21 +182,28 @@ describeFn("deployRepo", () => {
     expect(deployment.lastHealthCheck).toBeNull();
     expect(deployment.healthStatus).toBeNull();
 
-    const healthy = await deployRepo.recordHealthCheck(deployment.id, "healthy", {
-      healthUrl: "http://health.check",
-    });
+    const healthy = await deployRepo.recordHealthCheck(
+      deployment.id,
+      "healthy",
+      {
+        healthUrl: "http://health.check",
+      }
+    );
     expect(healthy?.healthStatus).toBe("healthy");
     expect(healthy?.healthUrl).toBe("http://health.check");
     expect(healthy?.lastHealthCheck).toBeDefined();
 
-    const unhealthy = await deployRepo.recordHealthCheck(deployment.id, "unhealthy");
+    const unhealthy = await deployRepo.recordHealthCheck(
+      deployment.id,
+      "unhealthy"
+    );
     expect(unhealthy?.healthStatus).toBe("unhealthy");
-    // Should preserve existing healthUrl if not provided, or update? 
+    // Should preserve existing healthUrl if not provided, or update?
     // Implementation `sanitize` filters undefined, so it should preserve if passed empty object?
-    // Actually recordHealthCheck implementation explicitly accepts `{ healthUrl }`. 
+    // Actually recordHealthCheck implementation explicitly accepts `{ healthUrl }`.
     // If passed as undefined in optional arg, it won't be in patch.
     // Let's check behavior.
-    expect(unhealthy?.healthUrl).toBe("http://health.check"); 
+    expect(unhealthy?.healthUrl).toBe("http://health.check");
   });
 
   it("identifies stale deployments", async () => {
@@ -221,7 +247,7 @@ describeFn("deployRepo", () => {
     const staleThreshold = new Date(now.getTime() - 1000 * 60 * 5); // 5 mins ago
     const staleList = await deployRepo.getStaleDeployments(staleThreshold);
 
-    const ids = staleList.map(d => d.id);
+    const ids = staleList.map((d) => d.id);
     expect(ids).toContain(noHealth.id);
     expect(ids).toContain(oldHealth.id); // Depending on precision, this should match
     expect(ids).not.toContain(fresh.id);

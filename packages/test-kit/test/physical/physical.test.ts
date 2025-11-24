@@ -12,12 +12,12 @@ describe("Physical Layer (Hardware & Signal)", () => {
 
   it("generates synthetic sine wave", () => {
     const duration = 100; // 100ms
-    const rate = 16000;
+    const rate = 16_000;
     const buffer = SyntheticSignal.sine(440, duration, rate);
-    
+
     // 16000 samples/sec * 0.1 sec * 2 bytes/sample = 3200 bytes
     expect(buffer.byteLength).toBe(3200);
-    
+
     // First sample (t=0) should be 0
     expect(buffer.readInt16LE(0)).toBe(0);
   });

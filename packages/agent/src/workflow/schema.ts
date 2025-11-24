@@ -40,7 +40,11 @@ export const workflowInput = z.object({
     .object({
       space: z.string().min(1),
       teamId: z.string().optional(),
-      sessionId: z.string().min(1),
+      sessionId: z.string().min(1).optional(),
+      issueId: z.string().min(1).optional(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      issueUrl: z.string().url().optional(),
     })
     .optional(),
   context: z

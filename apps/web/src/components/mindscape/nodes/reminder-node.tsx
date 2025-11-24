@@ -208,11 +208,11 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label={parsed.title?.trim() || "Reminder"}
-        icon={<Bell className="h-3 w-3" />}
         borderColor="border-blue-500/20"
-        textColor="text-blue-500"
         hoverColor="hover:border-blue-500/40"
+        icon={<Bell className="h-3 w-3" />}
+        label={parsed.title?.trim() || "Reminder"}
+        textColor="text-blue-500"
       />
     );
   }

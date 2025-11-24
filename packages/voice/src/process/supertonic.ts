@@ -111,7 +111,7 @@ class TextToSpeech {
 
     const textIds0 = textIds[0];
     if (!textIds0) throw new Error("textIds[0] missing");
-    
+
     const textIdsFlat = new BigInt64Array(textIds.flat().map((x) => BigInt(x)));
     const textIdsShape = [bsz, textIds0.length];
     const textIdsTensor = new ort.Tensor("int64", textIdsFlat, textIdsShape);
@@ -376,7 +376,7 @@ class TextToSpeech {
             if (dimRow) {
               const val = dimRow[t];
               if (val !== undefined) {
-                 dimRow[t] = val * maskVal;
+                dimRow[t] = val * maskVal;
               }
             }
           }
@@ -607,7 +607,7 @@ export class SupertonicTTS {
       }
     }
 
-    if (!this.currentStyle || !this.textToSpeech) {
+    if (!(this.currentStyle && this.textToSpeech)) {
       throw new Error("No voice style loaded or textToSpeech not initialized");
     }
 

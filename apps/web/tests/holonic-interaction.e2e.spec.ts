@@ -3,18 +3,20 @@ import { expect, test } from "@playwright/test";
 test.describe("Holonic Interactions", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/mindscape");
-    
+
     // Check if loader is present
     const loader = page.locator(".animate-spin"); // Assuming loader has this class or similar
     if (await loader.isVisible()) {
       console.log("Loader visible, waiting for hydration...");
     }
-    
+
     // Wait for hydration - check for React Flow renderer
     // We check for react-flow__renderer because it's part of the core React Flow DOM structure.
     // This element is present once the Mindscape component has mounted and React Flow has initialized.
-    await expect(page.locator(".react-flow__renderer")).toBeVisible({ timeout: 60000 });
-    
+    await expect(page.locator(".react-flow__renderer")).toBeVisible({
+      timeout: 60_000,
+    });
+
     // Wait for singularity node to ensure graph is populated
     // We use a more specific selector or a waitForTimeout if selectors are unstable during animation.
     await page.waitForTimeout(3000);
@@ -30,17 +32,19 @@ test.describe("Holonic Interactions", () => {
     await page.waitForTimeout(500);
 
     // Type "sing" -> expect ghost text for "Singularity"
-    // Note: Ghost text is visually rendered as a span behind input. 
+    // Note: Ghost text is visually rendered as a span behind input.
     // We can check if the span with text "Singularity" exists.
     await input.fill("sing");
-    
+
     // The ghost text logic renders the full suggestion.
     // "sing" matches "Singularity" (label).
     // NOTE: Ghost text rendering might be delayed or slightly different in implementation.
     // If this fails, we might need to relax the check or debug the specific ghost text component.
     // For now, let's try to just check if "Singularity" appears anywhere in the palette (e.g. in the list)
     // which confirms the search is working.
-    await expect(page.getByRole("option", { name: "Singularity" })).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: "Singularity" })
+    ).toBeVisible();
 
     // Tab Completion
     // If ghost text logic is active, Tab should complete it.
@@ -64,8 +68,8 @@ test.describe("Holonic Interactions", () => {
     // Playwright mouse wheel: deltaY positive is scrolling down (zooming out usually?)
     // React Flow default: scroll zooms.
     await page.mouse.wheel(0, 1000);
-    
-    // Wait for transition. 
+
+    // Wait for transition.
     // In Tiny LOD, nodes might change class or content.
     // Node 'singularity' might become a simple dot.
     // We added specific LOD logic to 'OrbNode' etc.
@@ -73,7 +77,7 @@ test.describe("Holonic Interactions", () => {
     // Actually OrbNode in Tiny mode is just a div with class rounded-full.
     // Best way: check for class change or style change?
     // Or just check that it's still in the DOM but "smaller".
-    
+
     // For now, just verifying the app doesn't crash on zoom
     await expect(page.locator(".react-flow__renderer")).toBeVisible();
   });
@@ -83,14 +87,14 @@ test.describe("Holonic Interactions", () => {
     await page.keyboard.press("Meta+k");
     await page.getByPlaceholder("Create or jump to a node").fill("Test Note");
     await page.keyboard.press("Enter"); // Assuming this creates or jumps to existing "Test Note" in Lite Mode
-    
+
     // Wait for note to appear (Lite Mode has "Test Note" hardcoded as "test-node-1")
-    const note = page.getByText("Test Note").first(); 
+    const note = page.getByText("Test Note").first();
     await expect(note).toBeVisible();
-    
+
     // Click to focus
     await note.click();
-    
+
     // Assert Focus effects
     // 1. Centered (hard to test coords)
     // 2. Class change (z-index boost, scale)

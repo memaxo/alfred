@@ -1,6 +1,7 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import { executeScanPhase } from "../../phases/scan";
+import type { ExecutionContext } from "../../context";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
 
@@ -11,14 +12,25 @@ export class ScanPhase implements Phase<RuntimeInput, void> {
 
   async *run(
     input: RuntimeInput,
-    _context: RuntimeContext
+    context: RuntimeContext
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
       const generator = executeScanPhase(input, this.runId, controller.signal);
 
-      for await (const event of generator) {
-        yield event;
+      let scanContext: ExecutionContext | null | undefined;
+      const iter = generator[Symbol.asyncIterator]();
+      while (true) {
+        const next = await iter.next();
+        if (next.done) {
+          scanContext = next.value ?? null;
+          break;
+        }
+        yield next.value;
+      }
+
+      if (scanContext) {
+        context.set("scanContext", scanContext);
       }
 
       return { status: "success", data: undefined };

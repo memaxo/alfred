@@ -1,24 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { logger } from "@alfred/logger";
+import { markVoice } from "@alfred/metrics/performance";
+import type { VoiceStreamEvent } from "@alfred/type/voice";
 import {
   voiceStreamEventsTotal,
   voiceStreamLatencySeconds,
 } from "@alfred/voice/metrics";
-import {
-  downloadModel,
-  listAvailableModels,
-  listVoices,
-} from "@alfred/voice/services/models";
-import {
-  postTranscription,
-  transcribeLocal,
-  type SttInput,
-} from "@alfred/voice/services/stt";
-import {
-  postSynthesis,
-  synthesizeLocal,
-  type TtsInput,
-} from "@alfred/voice/services/tts";
 import {
   DEFAULT_STT_MODEL,
   DEFAULT_TTS_MODEL,
@@ -27,9 +15,21 @@ import {
   resolveSttLanguagePreference,
   resolveVoicePreference,
 } from "@alfred/voice/services/config";
-import { logger } from "@alfred/logger";
-import { markVoice } from "@alfred/metrics/performance";
-import type { VoiceStreamEvent } from "@alfred/type/voice";
+import {
+  downloadModel,
+  listAvailableModels,
+  listVoices,
+} from "@alfred/voice/services/models";
+import {
+  postTranscription,
+  type SttInput,
+  transcribeLocal,
+} from "@alfred/voice/services/stt";
+import {
+  postSynthesis,
+  synthesizeLocal,
+  type TtsInput,
+} from "@alfred/voice/services/tts";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
@@ -136,7 +136,10 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
-function toTRPCError(error: unknown, code: TRPCError["code"] = "INTERNAL_SERVER_ERROR") {
+function toTRPCError(
+  error: unknown,
+  code: TRPCError["code"] = "INTERNAL_SERVER_ERROR"
+) {
   if (error instanceof TRPCError) {
     return error;
   }
@@ -212,13 +215,17 @@ export const voiceRouter: ReturnType<typeof router> = router({
           message: "session_required",
         });
       }
-      
-        // Optional: Allow overriding provider for testing
-        let provider = getVoiceProvider();
-        if (input.surface === "web" && process.env.NODE_ENV === "test" && process.env.VOICE_PROVIDER_OVERRIDE) {
-            provider = process.env.VOICE_PROVIDER_OVERRIDE as any;
-        }
-        
+
+      // Optional: Allow overriding provider for testing
+      let provider = getVoiceProvider();
+      if (
+        input.surface === "web" &&
+        process.env.NODE_ENV === "test" &&
+        process.env.VOICE_PROVIDER_OVERRIDE
+      ) {
+        provider = process.env.VOICE_PROVIDER_OVERRIDE as any;
+      }
+
       const s2sTimerStart = performance.now();
 
       const claimedSession = await claimVoiceSession({
@@ -254,7 +261,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
           language: sttLanguage,
           prompt: input.prompt,
         };
-        
+
         let sttResult;
         if (provider === "local") {
           const { sttPool } = getVoicePools();
@@ -298,7 +305,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
           format: input.ttsFormat,
           model: input.ttsModel,
         };
-        
+
         let ttsResult;
         if (provider === "local") {
           const { ttsPool } = getVoicePools();
@@ -351,9 +358,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
       }
     }),
 
-  listAvailableModels: authedProcedure.query(async () => {
-    return listAvailableModels();
-  }),
+  listAvailableModels: authedProcedure.query(async () => listAvailableModels()),
 
   downloadModel: authedProcedure
     .input(voiceDownloadInput)
@@ -365,9 +370,7 @@ export const voiceRouter: ReturnType<typeof router> = router({
       }
     }),
 
-  listVoices: authedProcedure.query(async () => {
-    return listVoices();
-  }),
+  listVoices: authedProcedure.query(async () => listVoices()),
 
   previewVoice: authedProcedure
     .input(voicePreviewInput)
@@ -432,8 +435,8 @@ export const voiceRouter: ReturnType<typeof router> = router({
 
   stream: authedProcedure
     .input(voiceStreamInput)
-    .subscription(({ input, ctx }) => {
-      return observable<VoiceStreamEvent>((emit) => {
+    .subscription(({ input, ctx }) =>
+      observable<VoiceStreamEvent>((emit) => {
         const session = ctx.session;
         if (!session) {
           emit.error(
@@ -504,6 +507,6 @@ export const voiceRouter: ReturnType<typeof router> = router({
           );
           return () => {};
         }
-      });
-    }),
+      })
+    ),
 });

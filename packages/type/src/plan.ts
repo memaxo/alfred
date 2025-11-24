@@ -318,8 +318,7 @@ export type WorkflowEvent =
   | (WorkflowEventBase & { type: "notice"; message: string })
   | (WorkflowEventBase & {
       type: "data-cache-handoff";
-      key: readonly unknown[];
-      value: unknown;
+      receipts?: SearchReceipt;
     })
   | (WorkflowEventBase & {
       type: "context";

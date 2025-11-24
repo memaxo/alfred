@@ -8,8 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMindscapeStore } from "@/store/mindscape";
 import { timerNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function TimerNode({ id, data, selected }: NodeProps) {
@@ -122,11 +122,11 @@ export function TimerNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Timers"
-        icon={<AlarmClock className="h-3 w-3" />}
         borderColor="border-purple-500/20"
-        textColor="text-purple-500"
         hoverColor="hover:border-purple-500/40"
+        icon={<AlarmClock className="h-3 w-3" />}
+        label="Timers"
+        textColor="text-purple-500"
       />
     );
   }

@@ -10,8 +10,8 @@ type UseChatLogicProps = {
   initialConversationId?: string | null;
 };
 
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { useFocusedContext } from "@/hooks/use-focused-context";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 
 export function useChatLogic({
   initialAgent = "assistant",
@@ -23,6 +23,8 @@ export function useChatLogic({
     "assistant" | "orchestrator"
   >(initialAgent);
   const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
+  const apiBase =
+    currentAgent === "assistant" ? "/api/assistant" : "/api/orchestrator";
 
   const {
     messages,
@@ -34,6 +36,7 @@ export function useChatLogic({
     hydrate,
     addToolResult,
   } = useAssistantStream({
+    api: apiBase,
     onError: (_err) => {
       // Error is already displayed in the error state
       // Additional logging handled by error boundaries
@@ -46,7 +49,7 @@ export function useChatLogic({
           if (data && Array.isArray(data.paths)) {
             const paths = data.paths as string[][];
             const state = useMindscapeStore.getState();
-            
+
             // Helper to resolve DB ID to UI Node ID
             const resolveId = (dbId: string) => {
               const node = state.nodes.find(
@@ -59,27 +62,33 @@ export function useChatLogic({
             paths.forEach((path, pathIndex) => {
               // Stagger paths slightly if multiple
               const pathDelay = pathIndex * 200;
-              
+
               path.forEach((nodeId, i) => {
                 const uiId = resolveId(nodeId);
                 if (!uiId) return;
 
                 // Pulse the node
-                setTimeout(() => {
-                  state.triggerNodeActivity(uiId, "processing");
-                }, pathDelay + i * 150);
+                setTimeout(
+                  () => {
+                    state.triggerNodeActivity(uiId, "processing");
+                  },
+                  pathDelay + i * 150
+                );
 
                 // If there is a next node, pulse the edge
                 if (i < path.length - 1) {
                   const nextUiId = resolveId(path[i + 1]);
                   if (nextUiId) {
-                    setTimeout(() => {
-                      dispatchMindscapeEvent({
-                        type: "rag-retrieval",
-                        sourceId: uiId,
-                        targetId: nextUiId,
-                      });
-                    }, pathDelay + i * 150);
+                    setTimeout(
+                      () => {
+                        dispatchMindscapeEvent({
+                          type: "rag-retrieval",
+                          sourceId: uiId,
+                          targetId: nextUiId,
+                        });
+                      },
+                      pathDelay + i * 150
+                    );
                   }
                 }
               });
@@ -123,7 +132,7 @@ export function useChatLogic({
       if (currentAgent !== "assistant") {
         return;
       }
-      
+
       // Inject context if available
       if (focused.content) {
         const contextBlock = `\n\n[System: User is focusing on ${focused.nodeType} "${focused.label}"]\nContext:\n${focused.content}`;

@@ -12,8 +12,8 @@ import { authClient } from "@/lib/auth-client";
 import { useMindscapeStore } from "@/store/mindscape";
 import { profileNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 type ProfileRow = inferRouterOutputs<TRPCAppRouter>["profile"]["get"];
@@ -243,11 +243,11 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Profile"
-        icon={<UserCircle2 className="h-3 w-3" />}
         borderColor="border-indigo-500/30"
-        textColor="text-indigo-300"
         hoverColor="hover:border-indigo-500/50"
+        icon={<UserCircle2 className="h-3 w-3" />}
+        label="Profile"
+        textColor="text-indigo-300"
       />
     );
   }

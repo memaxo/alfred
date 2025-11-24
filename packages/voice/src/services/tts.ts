@@ -2,9 +2,9 @@ import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
 import { logger } from "@alfred/logger";
 import { markVoice } from "@alfred/metrics/performance";
-import type { TTSPool } from "../process/tts";
 import { encodeFromPCM16, sanitizeBase64 } from "../audio/codec";
 import { recordVoiceTts, voiceStreamLatencySeconds } from "../metrics";
+import type { TTSPool } from "../process/tts";
 import { requireOpenAIConfig } from "./config";
 
 export type TtsInput = {
@@ -155,9 +155,7 @@ export async function postSynthesis(input: TtsInput) {
       durationSeconds,
     });
     const errorPayload = await safeReadError(response);
-    throw new Error(
-      `openai_synthesis_failed: ${JSON.stringify(errorPayload)}`
-    );
+    throw new Error(`openai_synthesis_failed: ${JSON.stringify(errorPayload)}`);
   }
 
   const audioBuffer = await response.arrayBuffer();

@@ -1,4 +1,5 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
 
 export type ProjectType = "node" | "rust" | "python" | "go" | "unknown";
@@ -20,4 +21,5 @@ export type OrchestratorContext = {
   projectConfig?: ProjectConfig | null;
   escalationContext?: string; // Reason for previous escalation
   authz?: string;
+  scanContext?: ExecutionContext | null;
 };

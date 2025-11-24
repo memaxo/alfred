@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useMindscapeStore } from "@/store/mindscape";
 import { integrationsNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { MindscapeNode } from "./mindscape-node";
 import { useLOD, useNodeFocus } from "../lod";
+import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function IntegrationsNode({ id, data, selected }: NodeProps) {
@@ -61,11 +61,11 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
   if (lod === "small") {
     return (
       <NodeLODSmall
-        label="Integrations"
-        icon={<PlugZap className="h-3 w-3" />}
         borderColor="border-cyan-500/30"
-        textColor="text-cyan-300"
         hoverColor="hover:border-cyan-500/50"
+        icon={<PlugZap className="h-3 w-3" />}
+        label="Integrations"
+        textColor="text-cyan-300"
       />
     );
   }

@@ -1,69 +1,71 @@
-import type { CognitiveState, Decision, Plan } from "@alfred/cognitive/state";
+import type { CognitiveState, Decision } from "@alfred/cognitive/state";
 import { deciding } from "@alfred/cognitive/state";
 
-// Simple risk assessment
-// In future, this could use an LLM classifier
-export function assessRisk(plan: Plan): "low" | "medium" | "high" {
-  const highRiskKeywords = ["delete", "remove", "destroy", "purchase", "pay"];
-  const mediumRiskKeywords = ["update", "modify", "change", "send", "email"];
+export type RiskLevel = "low" | "medium" | "high";
 
-  let maxRisk = 0; // 0=low, 1=medium, 2=high
+export type RiskAssessment = {
+  level: RiskLevel;
+  score?: number;
+  anchors?: string[];
+};
 
-  for (const step of plan.steps) {
-    const action = step.action.toLowerCase();
-    const description = JSON.stringify(step.params).toLowerCase();
+const AUTONOMY_THRESHOLDS: Record<RiskLevel, number> = {
+  low: 0.3,
+  medium: 0.7,
+  high: 0.95,
+};
 
-    if (
-      highRiskKeywords.some(
-        (k) => action.includes(k) || description.includes(k)
-      )
-    ) {
-      return "high";
-    }
+const DEFAULT_ASSESSMENT: RiskAssessment = { level: "low", score: 0 };
 
-    if (
-      mediumRiskKeywords.some(
-        (k) => action.includes(k) || description.includes(k)
-      )
-    ) {
-      maxRisk = Math.max(maxRisk, 1);
-    }
-  }
+export function requiredAutonomyForRisk(
+  assessmentOrLevel: RiskAssessment | RiskLevel = DEFAULT_ASSESSMENT
+): number {
+  const level =
+    typeof assessmentOrLevel === "string"
+      ? assessmentOrLevel
+      : assessmentOrLevel.level;
+  return AUTONOMY_THRESHOLDS[level] ?? AUTONOMY_THRESHOLDS.low;
+}
 
-  return maxRisk === 1 ? "medium" : "low";
+export function shouldGateExecution(
+  autonomyLevel: number,
+  assessment: RiskAssessment = DEFAULT_ASSESSMENT
+): { gated: boolean; required: number; level: RiskLevel } {
+  const required = requiredAutonomyForRisk(assessment);
+  const gated = autonomyLevel < required;
+  return {
+    gated,
+    required,
+    level: assessment.level ?? "low",
+  };
 }
 
 export function gateExecution(
   state: CognitiveState,
-  autonomyLevel: number
+  autonomyLevel: number,
+  assessment: RiskAssessment = DEFAULT_ASSESSMENT
 ): CognitiveState {
   if (state._ !== "executing") {
     return state;
   }
 
-  const risk = assessRisk(state.plan);
-  let requiredAutonomy = 0.3; // Low risk
-
-  if (risk === "medium") {
-    requiredAutonomy = 0.7;
-  }
-  if (risk === "high") {
-    requiredAutonomy = 0.95;
+  const gate = shouldGateExecution(autonomyLevel, assessment);
+  if (!gate.gated) {
+    return state;
   }
 
-  if (autonomyLevel < requiredAutonomy) {
-    // Transition to deciding (gated)
-    const decision: Decision = {
-      id: `gate-${Date.now()}`,
-      description: `Approval required for ${risk} risk action: ${state.plan.steps[0]?.action}`,
-      score: 0.5,
-      plan: state.plan,
-      risks: [{ type: "external_effect", severity: risk }],
-      autonomy: requiredAutonomy as any,
-    };
+  const score = assessment.score ?? 0.5;
+  const firstAction = state.plan.steps[0]?.action ?? "unknown";
+  const anchors = assessment.anchors?.join(", ") ?? gate.level;
 
-    return deciding([decision]);
-  }
+  const decision: Decision = {
+    id: `gate-${Date.now()}`,
+    description: `Approval required for ${gate.level} risk action (${anchors}): ${firstAction}`,
+    score,
+    plan: state.plan,
+    risks: [{ type: "external_effect", severity: gate.level }],
+    autonomy: gate.required as any,
+  };
 
-  return state;
+  return deciding([decision]);
 }
