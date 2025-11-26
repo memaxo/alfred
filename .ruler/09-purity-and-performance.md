@@ -8,6 +8,11 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 1. **Pure by default.** Functions that transform data must be pure (no side effects, deterministic outputs). Side effects belong at boundaries (routers, schedulers, DB repos). If a function reads from or writes to external state, it belongs in a boundary layer, not a core transformation.
 
+   **Layer map (pure → impure):**
+   - Pure: `packages/cognitive/`, `packages/knowledge/src/graph/`, flow functions, state transitions, validators, normalizers
+   - Boundary: `packages/api/src/routers/`, `packages/db/src/repos/`, schedulers, CLI entry points
+   - Never mix: A single function must not both transform data AND perform I/O
+
 2. **Performance budgets.** Hot-path functions must declare and meet budgets:
    - `<100 µs`: State transitions, normalizations, pure transforms
    - `<1 ms`: Graph lookups, redaction, validation
@@ -21,7 +26,11 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. If a function needs external services, it belongs in a boundary layer. Pure functions take data, return data.
 
+   **Clarification:** This bans DI containers and `{ db, logger, cache, ... }` parameter objects—not callbacks. Passing a function as a parameter (e.g., `onComplete`) is fine when the caller controls when effects happen.
+
 5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns unless abstraction reduces complexity. If you can't name the abstraction in one word, it's premature.
+
+   **AI anti-patterns to avoid:** `ServiceManager`, `HandlerFactory`, `ProviderRegistry`, `AbstractBaseProcessor`, `ConfigurableMiddlewareChain`. These add indirection without value. Write the direct implementation first; extract only when duplication exceeds the 80% threshold (rule 12).
 
 6. **Defaults over configuration.** Hardcode sensible defaults (timeouts, limits, retries). Only expose configuration when the default fails in practice. Single-user apps don't need feature flags for core functionality.
 
