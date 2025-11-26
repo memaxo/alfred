@@ -35,6 +35,69 @@ Memory confidence is exposed to the Policy Decision Point (PDP) via the `context
 
 See `docs/guides/policy-confidence.md` for rule examples.
 
+## Observability (Metrics)
+
+Prometheus metrics exposed on `/api/metrics`:
+
+- `memoryMaintenanceDurationSeconds` - Histogram of maintenance run time
+- `memoryNodesDecayedTotal` - Counter of decayed nodes
+- `memoryNodesPrunedTotal` - Counter of pruned nodes
+- `memoryNodesCleanedTotal` - Counter of permanently deleted nodes
+
+**Location:** `packages/api/src/metrics.ts` (lazy-loaded to avoid circular dependencies)
+
+**Usage:** Monitor memory maintenance performance and identify decay/pruning patterns.
+
+## Safety Rails
+
+To prevent accidental massive data loss during decay cycles:
+
+1. **Decay Limit**: Maximum nodes decayed per cycle (default: 1000)
+   - Prevents runaway decay operations
+   - Configurable via `decayLimit` in learning worker config
+
+2. **Confidence Floor**: Minimum confidence threshold (default: 0.01)
+   - Ensures confidence never drops below floor unless pruned
+   - Applied during decay processing
+
+3. **Circuit Breaker**: Implicit via try/catch error handling
+   - Maintenance failures don't crash the API server
+   - Errors logged with structured context
+
+**Implementation:** `packages/agent/src/orchestrator/learning-worker.ts` lines 96-97
+
+## Performance Optimization
+
+### Current Implementation
+
+Memory maintenance uses `Promise.all` loops for bulk updates:
+- `updateNodeConfidenceBatch` processes nodes in parallel
+- Multiple DB roundtrips per batch
+
+### Optimization Pattern
+
+For better performance, prefer single SQL `UPDATE ... FROM (VALUES ...)` statement:
+
+```typescript
+// ✅ OPTIMIZED: Single SQL statement (pending implementation)
+await db.update(memoryNodes)
+  .set({ confidence: sql`excluded.confidence` })
+  .from(sql`(VALUES ${sql.join(
+    updates.map(u => sql`(${u.id}, ${u.confidence})`),
+    sql`, `
+  )}) AS excluded(id, confidence)`)
+  .where(sql`memory_nodes.id = excluded.id`);
+
+// ⚠️ CURRENT: Promise.all loop (many roundtrips)
+await Promise.all(
+  updates.map(u => updateNodeConfidence(u.id, u.confidence))
+);
+```
+
+**Status:** Optimization pending. Current implementation functional but can be improved.
+
+**Reference:** `.ruler/19-drizzle-patterns.md` rule 10
+
 ## Configuration
 The memory system is tunable via environment variables to support different "memory profiles" (e.g., photographic memory vs. fleeting attention).
 

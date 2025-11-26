@@ -1,0 +1,246 @@
+# Developer Onboarding Guide
+
+**Owner:** Infrastructure  
+**Last Updated:** 2025-11-26
+
+## Purpose
+
+This guide helps new developers get started with ALFRED quickly. It covers environment setup, common workflows, verification patterns, and ExecPlan maintenance.
+
+## Quick Start
+
+### Prerequisites
+
+- Bun 1.2+ installed
+- Node.js 20+ (for tooling compatibility)
+- PostgreSQL 16 with pgvector extension
+- (Optional) Redis for biometric cache
+
+### Initial Setup
+
+1. **Clone and install:**
+   ```bash
+   git clone <repo-url>
+   cd alfred
+   bun install
+   ```
+
+2. **Configure environment:**
+   ```bash
+   cp config/env.example .env
+   # Edit .env with your settings
+   ```
+
+3. **Start database:**
+   ```bash
+   bun run db:start       # Starts Postgres with pgvector
+   bun run db:migrate     # Applies migrations
+   ```
+
+4. **Start development server:**
+   ```bash
+   bun run dev            # Starts web app + API
+   ```
+
+5. **Verify setup:**
+   - Web: `http://localhost:3000`
+   - API: `http://localhost:3000/api`
+   - Metrics: `http://localhost:3000/api/metrics`
+   - Health: `http://localhost:3000/healthz`
+
+## Common Development Workflows
+
+### Running Tests
+
+```bash
+# All tests
+bun run test
+
+# Specific package
+bun run --filter @alfred/<package> test
+
+# Integration tests (requires Postgres)
+bun run test:integration
+
+# SQLite fallback (fast, no DB required)
+bun run test:sqlite
+```
+
+### Type Checking
+
+```bash
+# Solution-style typecheck across all packages
+bun run typecheck
+
+# Specific package
+cd packages/<package>
+bun run typecheck
+```
+
+### Database Operations
+
+```bash
+# Start Postgres
+bun run db:start
+
+# Apply migrations
+bun run db:migrate
+
+# Open Drizzle Studio
+bun run db:studio
+
+# Stop Postgres
+bun run db:stop
+```
+
+### Code Quality
+
+```bash
+# Lint and format (Biome)
+bun run check
+
+# Apply fixes automatically
+bun run check --write
+```
+
+## Understanding the Codebase
+
+### Architecture Layers
+
+1. **UI Layer** (`apps/web`, `apps/native`) - User interfaces
+2. **API Layer** (`packages/api`) - tRPC routers, context, middleware
+3. **Runtime Layer** (`packages/runtime`) - Orchestrates domain packages
+4. **Domain Packages** (`packages/cognitive`, `packages/knowledge`, etc.) - Pure logic
+5. **Infrastructure** (`packages/db`, `packages/auth`, `packages/policy`) - I/O boundaries
+
+### Key Concepts
+
+- **Pure Functions**: Core logic is pure (no side effects)
+- **Boundaries**: Routers/repos handle I/O (DB, HTTP, side effects)
+- **Event Sourcing**: Cognitive state is event-sourced
+- **Performance Budgets**: Hot paths must meet budgets (<100µs transitions, <1ms queries)
+
+### Data Flow
+
+```
+User Request → tRPC Router → WorkflowRuntime → AI SDK → Tools → Events
+```
+
+### Cognitive Loop Integration
+
+Voice/chat inputs feed into `runCognitiveLoop` which:
+1. Loads state from events/snapshots
+2. Applies pure state transitions
+3. Emits effects (generate_response, etc.)
+4. Persists events
+
+## Verification Patterns
+
+### Verifying ExecPlan Completion
+
+When verifying if an ExecPlan is complete:
+
+1. **Search for implementation:**
+   ```bash
+   # Find files
+   fd "pattern" packages/
+   
+   # Search codebase
+   rg "functionName" packages/
+   
+   # Semantic search
+   codebase_search "What does X do?" target_directories: ["packages/"]
+   ```
+
+2. **Check specific files:**
+   - Look for function implementations
+   - Verify integration points
+   - Check test coverage
+
+3. **Update ExecPlan:**
+   - Mark completed items in `Progress` section
+   - Add evidence (file paths, line numbers) to `Outcomes & Retrospective`
+   - Update status at top of file
+
+4. **Sync Linear:**
+   - Update corresponding Linear issue status
+   - Add implementation evidence to description
+   - Mark as "Done" if complete
+
+### Common Search Patterns
+
+```bash
+# Find function definitions
+rg "export (function|const|class) functionName"
+
+# Find usages
+rg "functionName\("
+
+# Find imports
+rg "from.*package.*functionName"
+
+# Find tests
+fd "*test.ts" packages/
+rg "describe.*featureName"
+```
+
+## ExecPlan Maintenance
+
+### Creating ExecPlans
+
+1. Use `.agent/PLANS.md` template
+2. Place in `docs/execplans/` for cross-cutting efforts
+3. Include: Purpose, Plan, Progress, Surprises, Decision Log, Outcomes
+
+### Updating ExecPlans
+
+1. **After each subtask:**
+   - Update `Progress` section
+   - Add to `Surprises & Discoveries` if unexpected
+   - Log decisions in `Decision Log`
+
+2. **On completion:**
+   - Mark all items complete in `Progress`
+   - Fill `Outcomes & Retrospective`
+   - Update status at top
+
+3. **Sync with Linear:**
+   - Create Linear issue in "ExecPlans Tracking" project
+   - Link to ExecPlan file
+   - Update status when ExecPlan status changes
+
+### Verification Workflow
+
+See `docs/guides/verification-patterns.md` for detailed verification workflow.
+
+## Troubleshooting
+
+### Common Issues
+
+**Database connection errors:**
+- Verify Postgres is running: `bun run db:start`
+- Check `DATABASE_URL` in `.env`
+- Try: `bun run db:migrate`
+
+**Build failures:**
+- Run `bun run verify-build` to check for server code leakage
+- Check `apps/web/vite.config.ts` for `ssr.external` entries
+
+**Type errors:**
+- Run `bun run typecheck` to see all errors
+- Check `tsconfig.base.json` for path aliases
+
+**Test failures:**
+- Check if `DATABASE_URL` is set (for Postgres tests)
+- Verify `RUN_DB_TESTS=1` for DB suites
+- Use `bun run test:sqlite` for fast SQLite fallback
+
+See `docs/guides/troubleshooting.md` for more detailed troubleshooting.
+
+## Next Steps
+
+- Read [Architecture Overview](../architecture/overview.md)
+- Review [Development Rules](../../.ruler/)
+- Check [PRD](../alfred-prd.md) for feature status
+- Explore [ExecPlans](../execplans/) for implementation details
+

@@ -1,6 +1,6 @@
 # ExecPlan: Brainstem Supervisor (Entropy & Heartbeats)
 
-**Status**: Proposed
+**Status**: ✅ Complete
 **Goal**: Prevent infinite loops and zombie processes by monitoring Semantic Entropy and Process Heartbeats.
 
 ## Core Concept
@@ -33,13 +33,15 @@ When a monitor triggers, we must inject a signal into the cognitive loop.
 
 ## Implementation Steps
 
-1.  **Entropy Utility**: Create `packages/agent/src/utils/entropy.ts` with string similarity functions.
-2.  **Stream Wrapper**: Update `tool/runner.ts` to pipe streams through a `HeartbeatTransform` (or similar logic).
-3.  **Supervisor Loop**: In `packages/agent/src/orchestrator/loops/`, create a `Supervisor` class that holds the state of active monitors.
-4.  **Integration**:
-    - In `runWaves`, instantiate the Supervisor.
-    - Pass `abortController` to Supervisor.
-    - If Supervisor triggers, `abort()` the current tool and push a system message to the chat context.
+1.  ✅ **Entropy Utility**: Create `packages/agent/src/utils/entropy.ts` with string similarity functions (`detectLoop`, `jaccardSimilarity`).
+2.  ✅ **Supervisor Loop**: In `packages/agent/src/orchestrator/loops/`, create a `Supervisor` class (`BrainstemSupervisor`) that holds the state of active monitors.
+3.  ✅ **Integration**: Integrated into `WorkflowRuntime` (`packages/runtime/src/core.ts`):
+    - Supervisor instantiated in runtime constructor
+    - `observe()` method called for thought events
+    - `checkPhysiology()` method called periodically for heartbeat monitoring
+    - `registerProcess()` for active process tracking
+    - Interrupt handling via `abortController`
+4.  ✅ **Tests**: `packages/agent/test/supervisor.test.ts` exists and passes.
 
 ## Benefits
 - **Robustness**: No more infinite loops costing tokens.

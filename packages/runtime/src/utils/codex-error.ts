@@ -1,14 +1,25 @@
-const CODEX_ERROR_MESSAGES: Record<string, string> = {
-  codex_timeout_requires_elevation:
-    "Codex timeout above 10 minutes requires biometric elevation. Provide a passkey token or lower the requested timeout.",
-  codex_timeout_exceeds_limit:
-    "Codex cannot run longer than 30 minutes. Reduce the timeout to stay within the limit.",
+const CODEX_ERROR_MESSAGES: Record<
+  string,
+  { message: string; needsElevation?: boolean; limitExceeded?: boolean }
+> = {
+  codex_timeout_requires_elevation: {
+    message:
+      "Codex timeout above 10 minutes requires biometric elevation. Provide a passkey token or lower the requested timeout.",
+    needsElevation: true,
+  },
+  codex_timeout_exceeds_limit: {
+    message:
+      "Codex cannot run longer than 30 minutes. Reduce the timeout to stay within the limit.",
+    limitExceeded: true,
+  },
 };
 
 export type CodexRuntimeErrorInfo = {
   code: string | null;
   rawMessage: string;
   userMessage: string;
+  needsElevation: boolean;
+  limitExceeded: boolean;
 };
 
 export function formatCodexRuntimeError(error: unknown): CodexRuntimeErrorInfo {
@@ -19,11 +30,14 @@ export function formatCodexRuntimeError(error: unknown): CodexRuntimeErrorInfo {
         ? error
         : "codex_unknown_error";
 
-  if (CODEX_ERROR_MESSAGES[rawMessage]) {
+  const mapped = CODEX_ERROR_MESSAGES[rawMessage];
+  if (mapped) {
     return {
       code: rawMessage,
       rawMessage,
-      userMessage: CODEX_ERROR_MESSAGES[rawMessage],
+      userMessage: mapped.message,
+      needsElevation: Boolean(mapped.needsElevation),
+      limitExceeded: Boolean(mapped.limitExceeded),
     };
   }
 
@@ -31,5 +45,7 @@ export function formatCodexRuntimeError(error: unknown): CodexRuntimeErrorInfo {
     code: null,
     rawMessage,
     userMessage: rawMessage,
+    needsElevation: false,
+    limitExceeded: false,
   };
 }

@@ -32,6 +32,8 @@ Measure everything, log selectively, expose metrics consistently. Observability 
 
 6. **Lazy loading.** Dynamically import metric definitions in consumers (`await import(...)`) if circular dependencies arise. Use `process.env` or `try/catch` guards when loading metrics in workers/tests.
 
+7. **Metrics location.** Define metrics in `packages/api/src/metrics.ts` to avoid circular dependencies. Domain-specific metrics can live in package-local files (e.g., `packages/voice/src/metrics.ts`) but must be exported for registration in the main entry point.
+
 ## Metrics Naming
 
 - Counters: `*_total` suffix

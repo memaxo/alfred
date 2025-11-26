@@ -106,11 +106,19 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-        const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+        const {
+          userMessage,
+          rawMessage,
+          code,
+          needsElevation,
+          limitExceeded,
+        } = formatCodexRuntimeError(error);
         logger.warn("conflict_agent_execution_failed", {
           runId,
           error: rawMessage,
           code,
+          needsElevation,
+          limitExceeded,
         });
         conflictEvents.push({
           type: "notice",
@@ -130,11 +138,19 @@ export async function* runConflictPhase(
         } as any;
       }
     } catch (error) {
-      const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+      const {
+        userMessage,
+        rawMessage,
+        code,
+        needsElevation,
+        limitExceeded,
+      } = formatCodexRuntimeError(error);
       logger.warn("conflict_agent_initialisation_failed", {
         runId,
         error: rawMessage,
         code,
+        needsElevation,
+        limitExceeded,
       });
       yield { type: "notice", message: userMessage } as any;
     }
@@ -231,11 +247,19 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-        const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+        const {
+          userMessage,
+          rawMessage,
+          code,
+          needsElevation,
+          limitExceeded,
+        } = formatCodexRuntimeError(error);
         logger.warn("conflict_resolution_failed", {
           runId,
           error: rawMessage,
           code,
+          needsElevation,
+          limitExceeded,
         });
         events.push({
           type: "notice",

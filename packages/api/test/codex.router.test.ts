@@ -29,6 +29,13 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
+mock.module("@alfred/agent/src/metrics", () => ({
+  recordCodexExecRun: vi.fn(),
+  recordCodexError: vi.fn(),
+  recordCodexWriterError: vi.fn(),
+  recordCodexSessionViolation: vi.fn(),
+}));
+
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {

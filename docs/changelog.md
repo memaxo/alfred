@@ -1,5 +1,20 @@
 # Documentation Changelog
 
+## 2025-11-26 — Documentation Expansion and Guides
+
+- Created comprehensive developer guides:
+  - `docs/guides/developer-onboarding.md` - Quick start, environment setup, common workflows
+  - `docs/guides/cognitive-architecture.md` - End-to-end cognitive loop explanation
+  - `docs/guides/linear-integration.md` - Linear OAuth/webhook setup and usage
+  - `docs/guides/verification-patterns.md` - ExecPlan verification workflow
+  - `docs/guides/common-patterns.md` - Code patterns and anti-patterns
+  - `docs/guides/troubleshooting.md` - Common issues and solutions
+- Added ExecPlan verification rules (`.ruler/32-execplan-verification.md`)
+- Enhanced Drizzle patterns with bulk update optimization guidance
+- Updated observability rules with metrics location guidance
+- Updated testing rules with build verification CI guidance
+- Updated documentation rules with ExecPlan status sync guidance
+
 ## 2025-11-21 — Documentation Cleanup and Canonicalization
 
 - Established documentation rules in `.ruler/06-documentation.md` for doc types, naming, structure, ownership, and lifecycle.

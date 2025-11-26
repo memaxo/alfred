@@ -194,21 +194,21 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 5. **Fire-and-forget embedding**: Note mutations don't wait for embedding (performance over consistency)
 6. **Selective CI coverage**: Embedding suites require `RUN_EMBED_MODEL_TESTS=1`, keeping default CI runs fast while allowing full model validation when needed
 
-#### 4.2 Preference-Driven Adaptation
+#### 4.2 Preference-Driven Adaptation ✅ (COMPLETE)
 
-- [ ] Create preference inference from past interactions
-- [ ] Implement response style adaptation (verbosity, tone)
-- [ ] Add domain-specific preference learning (Proxmox configs, Git workflows)
-- [ ] Wire preferences into AI SDK system prompts
-- [ ] Add preference update API based on feedback
+- [x] Create preference inference from past interactions (`packages/api/src/scheduler/preference-inference.ts`, `packages/agent/src/preference/inference.ts`)
+- [x] Implement response style adaptation (verbosity, tone) (`packages/agent/src/preference/inference.ts`)
+- [x] Add domain-specific preference learning (Proxmox configs, Git workflows) (`packages/agent/src/preference/inference.ts` - `inferDomainPreferences`)
+- [x] Wire preferences into AI SDK system prompts (`apps/web/src/lib/api/stream-handler.ts` - `buildPreferenceSystemPrompt`)
+- [x] Add preference update API based on feedback (`packages/api/src/routers/preference.ts` - `inferFromCorrection`)
 
-#### 4.3 Complete Personal Assistant Tools
+#### 4.3 Complete Personal Assistant Tools ⚠️ (PARTIALLY COMPLETE)
 
-- [ ] Implement `focus.ts` tool with drive mode integration
-- [ ] Implement `web.ts` tool for research (capped, read-only)
-- [ ] Implement `home.ts` tool for Home Assistant integration
-- [ ] Wire focus mode to response templates and policy
-- [ ] Add tool usage tracking to learning system
+- [x] Implement `focus.ts` tool with drive mode integration (`packages/agent/assistant/src/tool/focus.ts`, `apps/web/src/routes/drive.tsx`, `apps/native/app/(drawer)/(tabs)/drive.tsx`)
+- [ ] Implement `web.ts` tool for research (capped, read-only) - **NOT FOUND** (file doesn't exist)
+- [ ] Implement `home.ts` tool for Home Assistant integration - **SKELETON ONLY** (`packages/agent/assistant/src/tool/home.ts` throws `"home_tool_not_implemented"`)
+- [x] Wire focus mode to response templates and policy (`packages/api/src/voice/assistant.ts` line 118-124)
+- [x] Add tool usage tracking to learning system (`packages/runtime/src/engines/learning.ts`, `packages/agent/src/orchestrator/learning-worker.ts`)
 
 ### Phase 5 — Workflow Capabilities (Week 9-11)
 
@@ -223,14 +223,14 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 
 **Status**: Fully implemented in `packages/agent/src/orchestrator/linear.ts`, integrated with runtime via `packages/api/src/routers/workflow.ts`. Ready for manual end-to-end validation.
 
-#### 5.2 Suspend/Resume for Biometric Obligations
+#### 5.2 Suspend/Resume for Biometric Obligations ✅ (COMPLETE)
 
-- [ ] Implement workflow suspension on PDP `requireBio` obligation
-- [ ] Create resume endpoint in workflow router
-- [ ] Add biometric challenge UI flow
-- [ ] Implement workflow state persistence for suspension
-- [ ] Add resume with elevated token verification
-- [ ] Test end-to-end suspend/resume flow
+- [x] Implement workflow suspension on PDP `requireBio` obligation (`packages/api/src/workflow/suspension.ts`)
+- [x] Create resume endpoint in workflow router (`packages/api/src/routers/workflow.ts` line 320-350)
+- [x] Add biometric challenge UI flow (`apps/web/src/components/biometric-challenge-dialog.tsx`)
+- [x] Implement workflow state persistence for suspension (`packages/api/src/workflow/suspension.ts`, `packages/db/src/repos/workflow.ts`)
+- [x] Add resume with elevated token verification (`packages/api/src/routers/workflow.ts` line 336-339)
+- [ ] Test end-to-end suspend/resume flow - **Infrastructure exists, needs manual validation**
 
 #### 5.3 Tool Chaining & Dependencies
 
@@ -242,13 +242,13 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 
 ### Phase 6 — User Interface (Week 12-14)
 
-#### 6.1 Chat Interface ✅ (COMPLETE)
+#### 6.1 Chat Interface ⚠️ (MOSTLY COMPLETE)
 
 - [x] Complete chat component with agent switcher (Assistant/Orchestrator)
 - [x] Implement streaming message rendering
 - [x] Add cache handoff visualization
-- [ ] Implement message history with infinite scroll
-- [ ] Add message editing and regeneration
+- [ ] Implement message history with infinite scroll - **Uses Virtuoso but no infinite scroll pagination found**
+- [ ] Add message editing and regeneration - **NOT IMPLEMENTED**
 - [x] Wire to both assistant and orchestrator routers
 - [x] **Symbiotic Mindscape Integration** (New)
   - [x] Implement infinite canvas UI with React Flow
@@ -256,30 +256,30 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
   - [x] Implement `Cmd+M` toggle for seamless transition
   - [x] Integrate "Signal in the Void" design system
 
-#### 6.2 Management Panes ✅ (PARTIALLY COMPLETE)
+#### 6.2 Management Panes ⚠️ (PARTIALLY COMPLETE)
 
 - [x] Complete Notes pane with CRUD operations (`apps/web/src/routes/note.tsx`)
 - [x] Complete Reminders pane with live updates (`apps/web/src/routes/remind.tsx`)
-- [ ] Complete Timers pane with controls
-- [ ] Complete Bookmarks pane with organization
+- [ ] Complete Timers pane with controls - **Router exists** (`packages/api/src/routers/timer.ts`) **but no UI route found**
+- [ ] Complete Bookmarks pane with organization - **Router exists** (`packages/api/src/routers/book.ts`) **but no UI route found**
 - [ ] Add pane state persistence
 
-#### 6.3 Settings & Configuration ✅ (PARTIALLY COMPLETE)
+#### 6.3 Settings & Configuration ✅ (MOSTLY COMPLETE)
 
 - [x] Profile management page (`apps/web/src/routes/profile.tsx`)
 - [x] Preferences page (remember/correct) (`apps/web/src/routes/preferences.tsx`)
 - [x] Privacy controls page (forget/export) (`apps/web/src/routes/privacy.tsx`)
-- [ ] Autonomy level controls with visualizations
-- [ ] Linear connection management UI
+- [x] Autonomy level controls with visualizations (`apps/web/src/components/autonomy-slider.tsx`)
+- [x] Linear connection management UI (`apps/web/src/components/mindscape/nodes/integrations-node.tsx`)
 - [ ] Tool authorization management
 
-#### 6.4 Workflow Monitoring ✅ (PARTIALLY COMPLETE)
+#### 6.4 Workflow Monitoring ⚠️ (MOSTLY COMPLETE)
 
 - [x] Workflow run viewer with real-time streaming (`apps/web/src/routes/orchestrator/run.tsx`)
-- [ ] Workflow history with filtering
-- [ ] Tool execution visualization
-- [ ] Performance metrics dashboard
-- [ ] Error analysis and debugging UI
+- [x] Workflow history with filtering (`packages/api/src/routers/workflow.ts` line 519 `listRuns`, `apps/web/src/components/mindscape/nodes/workflow-list-node.tsx`)
+- [x] Tool execution visualization (`apps/web/src/components/mindscape/nodes/workflow-node.tsx`)
+- [ ] Performance metrics dashboard - **Metrics exist** (`packages/api/src/metrics.ts`) **but no dashboard UI found**
+- [x] Error analysis and debugging UI (`apps/web/src/components/mindscape/workflow-drawer.tsx` - error tab)
 
 ### Phase 7 — Voice & Mobile (Week 15-16)
 
@@ -301,11 +301,11 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Wire voice to assistant router (Drive Mode/CarPlay/web all call `voice.speechToSpeech`)
 - [x] Prototype low-latency streaming via Bun WebSocket server (`packages/api/src/voice/streaming.ts`, gated by `VOICE_STREAMING_PROTO=1`)
 
-#### 7.2 Mobile-Optimized UI ✅ (PARTIALLY COMPLETE)
+#### 7.2 Mobile-Optimized UI ⚠️ (PARTIALLY COMPLETE)
 
 - [x] Complete React Native app setup (`apps/native/`)
 - [x] Drive Mode hooked up to unified S2S API with offline queue retries (including new `kind: "s2s"` payload + AsyncStorage tests)
-- [ ] Implement mobile chat interface
+- [ ] Implement mobile chat interface - **Only placeholder exists** (`apps/native/app/(drawer)/(tabs)/index.tsx` shows "Tab One")
 - [x] Add drive mode with large controls
 - [x] Implement voice-first interaction flow
 - [x] Add offline queue for requests (AsyncStorage-backed queue with exponential backoff; see `docs/voice/s2s.md`)
@@ -322,7 +322,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Create comprehensive integration test suite (`packages/api/test/`, `packages/runtime/test/`)
 - [x] Add nightly Postgres workflow (`.github/workflows/postgres-nightly.yml`) running embed E2E, hypergraph smoke, and the workflow capture integration against a real database to keep production-only paths covered
 - [x] Add cross-platform voice test coverage: web hook (`apps/web/src/hooks/__tests__/use-voice-session-web.test.tsx`), web route (`apps/web/src/routes/__tests__/voice-s2s.route.test.tsx`), and native queue (`apps/native/lib/voice/__tests__/queue.test.ts`)
-- [ ] Add load testing for concurrent workflows
+- [ ] Add load testing for concurrent workflows - **No load testing scripts found** (`scripts/` directory)
 
 ### Phase 9 — Deployment & Operations (Week 19-20)
 

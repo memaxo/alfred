@@ -1,6 +1,6 @@
 # ExecPlan: Arbiter Conflict Resolution
 
-**Status**: Proposed
+**Status**: ✅ Complete
 **Goal**: Handle multi-agent write conflicts gracefully using an Optimistic Concurrency + Arbitration model.
 
 ## Core Concept
@@ -30,12 +30,14 @@ If a conflict is detected:
 
 ## Implementation Steps
 
-1.  **Merge Logic**: Update `worktreeManager` to try a dry-run merge first.
-2.  **Arbiter Prompt**: Create a specific system prompt for conflict resolution (highly logical, zero creativity).
-3.  **Recovery Flow**: In `waves.ts`, wrap the "Merge" phase in a try-catch.
-    - Catch `MergeConflict`.
-    - Call `resolveConflict(conflictData)`.
-    - Retry Merge.
+1.  ✅ **Merge Logic**: Conflict detection via `git merge --no-commit --no-ff` and conflict marker scanning (`packages/runtime/src/orchestrator/merge.ts`).
+2.  ✅ **Arbiter Prompt**: System prompt for conflict resolution implemented (`packages/runtime/src/orchestrator/conflict.ts` lines 193-200).
+3.  ✅ **Recovery Flow**: In `waves.ts`, conflict resolution integrated (`packages/runtime/src/orchestrator/waves.ts` lines 839-876):
+    - Conflict detection via `mergeCheck`
+    - Calls `conflictArbiter.resolve()` with Codex agent
+    - Applies resolution and completes merge
+4.  ✅ **Arbiter Implementation**: `conflictArbiter.resolve()` implemented (`packages/runtime/src/orchestrator/conflict.ts`).
+5.  ✅ **Integration**: `runConflictPhase` implemented and integrated into orchestrator flow (`packages/runtime/src/orchestrator/index.ts` line 50).
 
 ## Benefits
 - **Parallelism**: Allows aggressive parallelization of agents without fear of collision.

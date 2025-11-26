@@ -1,6 +1,6 @@
 # ALFRED Architecture Overview
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-11-26
 
 ## System Vision
 
@@ -74,16 +74,22 @@ This is the **integration layer** that makes all other packages work together.
 ### Domain Packages
 
 **`packages/cognitive/`** - Cognitive state management
-- State machine (idle, thinking, deciding, acting, learning, reflecting)
-- Transitions based on events
-- Attention and focus tracking
-- Cognitive load management
+- Event-sourced state machine (idle, thinking, deciding, acting, learning, reflecting)
+- Pure state transitions (<100µs budget)
+- Physiology system (energy, boredom, frustration) regulating autonomy
+- Autonomy gradient (Bayesian Beta prior) for autonomous decision-making
+- Brainstem supervisor (entropy detection, heartbeat monitoring)
+- Event persistence (`cognitive_events`, `cognitive_snapshots` tables)
+- Runtime loop integration (`runCognitiveLoop`) for voice/chat inputs
 
 **`packages/knowledge/`** - Hypergraph memory
 - Facts, relations, insights, patterns
 - HAMT/interval/B-tree indices
 - Semantic queries
 - Pattern recognition
+- Active recall reinforcement (touch nodes on retrieval)
+- Memory decay with safety rails (decay limit, confidence floor)
+- Prometheus metrics for observability
 
 **`packages/learning/`** - Self-supervision and improvement
 - Outcome recording (prediction vs. actual)
@@ -141,13 +147,46 @@ This is the **integration layer** that makes all other packages work together.
 ### API Layer
 
 **`packages/api/`** - HTTP/tRPC and streaming surface
-- Router definitions for all domains (assistant, orchestrator, workflow, voice, graph, etc.)
+- Router definitions for all domains (assistant, orchestrator, workflow, voice, graph, cognitive, etc.)
 - Context creation (session + runtime metadata)
 - Policy enforcement middleware and autonomy band checks
 - Minimal operational guards appropriate for single-user deployment
 - Error handling, normalization, and metrics emission
+- Voice admin dashboard (`/admin/voice`) with pool management and telemetry
+- Cognitive feedback endpoints for learning loop
+
+## Cognitive Architecture
+
+### Event-Sourced State Machine
+
+ALFRED's cognitive system uses an event-sourced state machine:
+
+1. **Event Persistence**: All cognitive state changes are driven by events (`input`, `timeout`, `feedback`, `interrupt`, `outcome`) stored in `cognitive_events` table
+2. **State Hydration**: State reconstructed from snapshots + event replay
+3. **Pure Transitions**: State transitions are pure functions (`applyTransition`) meeting <100µs budget
+4. **Physiology Regulation**: Energy/boredom/frustration metrics regulate autonomy levels
+5. **Autonomy Gradient**: Bayesian Beta prior tracks success/failure history for autonomous decisions
+6. **Brainstem Supervisor**: Monitors entropy (loop detection) and heartbeats (zombie processes)
+
+**Integration**: Voice/chat inputs feed into `runCognitiveLoop` which applies transitions, persists events, and emits effects (generate_response, execute_plan, log_reflection).
+
+**See:** `docs/guides/cognitive-architecture.md` for detailed explanation
 
 ## Data Flow
+
+### Cognitive Loop Flow
+
+```
+Voice/Chat Input
+    ↓
+runCognitiveLoop(ctx, streamId, event)
+    ├→ Load state (snapshot + events)
+    ├→ Apply pure transition (State + Event → New State)
+    ├→ Update physiology/autonomy
+    ├→ Persist event
+    └→ Compute effects
+        └→ Handle effects (generate_response, etc.)
+```
 
 ### Workflow Execution Flow
 
@@ -346,6 +385,20 @@ Higher autonomy requires:
 - MFA via passkey (`mfa: "passkey"`)
 - Recent biometric (TTL ≤ 2 minutes)
 
+## Voice System
+
+### Architecture
+
+- **Binary Transport**: Audio chunks sent as binary WebSocket frames (not Base64 JSON)
+- **Registry Pattern**: All sessions managed via `VoiceRegistry` (no direct `VoiceSession` instantiation)
+- **Process Isolation**: STT/TTS models run in persistent Python subprocesses (`STTPool`, `TTSPool`)
+- **VAD-Driven Control**: Server-side VAD detects speech, triggers auto-stop
+- **Barge-In Interruptibility**: User can interrupt TTS playback by speaking
+- **Mindscape Visualization**: Voice state visualized in OrbNode component with VAD levels
+- **Admin Dashboard**: `/admin/voice` route with pool management, session stats, telemetry
+
+**See:** `docs/architecture/voice.md` for detailed voice architecture
+
 ## Observability
 
 ### Metrics (Prometheus)
@@ -355,6 +408,10 @@ Higher autonomy requires:
 - Tool calls (counts, durations, success rates)
 - Policy decisions (allow, deny, obligation)
 - Learning events (patterns extracted, mistakes recorded)
+- Cognitive metrics (physiology gauges, entropy events, autonomy updates)
+- Memory metrics (decay/prune/clean counts, maintenance duration)
+- Voice metrics (session duration, packet loss, jitter, RTT, VAD levels)
+- Linear metrics (activity emissions, webhook events, session operations)
 - System health (DB connections, memory, CPU)
 
 ### Logging (Structured JSON)

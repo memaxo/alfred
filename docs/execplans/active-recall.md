@@ -6,33 +6,46 @@ Implement "Active Recall" to strengthen memory nodes when they are successfully 
 ## Plan
 
 ### 1. Touch Mechanism
-- [ ] **Repository Update**: Add `touchNodes(nodeIds: string[])` to `packages/db/src/repo/graph.ts`.
-    - This function should set `updated_at = NOW()` and increment `confidence` by a small factor (e.g., +0.05, capped at 1.0).
-    - Use a batched update query for performance.
+- [x] **Repository Update**: Add `touchNodes(nodeIds: string[])` to `packages/db/src/repo/graph/write.ts` (lines 311-340).
+    - ✅ Function sets `updated = NOW()` and increments `confidence` by `0.05` (capped at 1.0).
+    - ✅ Uses batched update query for performance.
 
 ### 2. Retrieval Integration
-- [ ] **Graph Router**: Update `packages/api/src/routers/graph.ts` in the `runQuery` procedure.
-    - When `input.kind === "semantic"` or "traverse" returns nodes, queue them for a "touch" operation.
-    - **Optimization**: Do not await the touch operation (fire-and-forget) to avoid latency on the read path.
+- [x] **Graph Router**: Update `packages/api/src/routers/graph.ts` in the `runQuery` procedure (lines 435-448).
+    - ✅ When query returns nodes, extracts `dbId` from node IDs.
+    - ✅ **Fire-and-forget**: Uses `void touchNodes(...).catch(...)` to avoid latency on read path.
 
 ### 3. RAG Integration
-- [ ] **RAG Retrieval**: Update `packages/rag/src/doc.ts` -> `retrieve`.
-    - When chunks are retrieved, identify their source memory nodes (if mapped).
-    - Queue these nodes for reinforcement.
+- [x] **RAG Retrieval**: Update `packages/rag/src/doc.ts` -> `retrieve` (lines 176-202).
+    - ✅ When chunks are retrieved, extracts `documentId` from metadata.
+    - ✅ Calls `touchNodes` with document IDs (fire-and-forget).
 
 ### 4. Feedback Loop (Optional/Advanced)
-- [ ] **Outcome-Based Reinforcement**: Only reinforce if the user provides positive feedback or the workflow succeeds. (For MVP, we will reinforce on *retrieval*, assuming relevance).
+- [ ] **Outcome-Based Reinforcement**: Only reinforce if the user provides positive feedback or the workflow succeeds. (For MVP, we reinforce on *retrieval*, assuming relevance).
 
 ## Progress
-- [ ] Touch Mechanism
-- [ ] Retrieval Integration
-- [ ] RAG Integration
+- [x] Touch Mechanism ✅
+- [x] Retrieval Integration ✅
+- [x] RAG Integration ✅
 
 ## Surprises & Discoveries
-*(To be filled during execution)*
+
+- Implementation uses fire-and-forget pattern (`void touchNodes(...).catch(...)`) to avoid latency on read path.
+- Both graph queries and RAG retrieval trigger reinforcement.
+- Confidence boost is `0.05` per retrieval, capped at `1.0`.
+- `updated` timestamp reset prevents decay timer from expiring.
 
 ## Decision Log
-*(To be filled during execution)*
+
+- **Fire-and-forget**: Decided to use `void` pattern to avoid blocking read operations.
+- **Confidence boost**: `0.05` per retrieval provides meaningful reinforcement without over-boosting.
+- **Both paths**: Graph queries and RAG retrieval both trigger reinforcement for comprehensive coverage.
 
 ## Outcomes & Retrospective
-*(To be filled upon completion)*
+
+**Status**: ✅ Complete (except outcome-based reinforcement)
+
+- Core Active Recall mechanism fully implemented and integrated.
+- Works seamlessly with both graph queries and RAG retrieval.
+- Fire-and-forget pattern ensures zero latency impact on read operations.
+- Outcome-based reinforcement (feedback-driven) remains optional/future enhancement.

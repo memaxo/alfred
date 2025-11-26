@@ -16,13 +16,16 @@ ALFRED is a secure, AI SDK v6-powered automation assistant that helps you manage
 
 ### Key Features
 
-- **AI SDK v6 Workflows**: Streaming execution with tool chaining and durable state
-- **Local-First Architecture**: Local embeddings (KaLM-Embedding-Gemma3-12B), local voice models, zero-cost privacy
-- **Knowledge Graph**: Hypergraph memory with semantic search and pattern recognition
-- **Learning System**: Self-supervision from outcomes, preference inference, mistake analysis
-- **Security**: Policy engine with biometric elevation for high-risk operations
-- **Observability**: Prometheus metrics, distributed tracing, structured logging
+- **AI SDK v6 Workflows**: Streaming execution with tool chaining, durable state, suspend/resume, and conflict resolution
+- **Cognitive Architecture**: Event-sourced state machine with physiology (energy/boredom/frustration), autonomy gradient, and brainstem supervisor
+- **Local-First Architecture**: Local embeddings (KaLM-Embedding-Gemma3-12B), local voice models (NeMo STT, Maya1/Piper TTS), zero-cost privacy
+- **Knowledge Graph**: Hypergraph memory with active recall reinforcement, semantic search, and pattern recognition
+- **Learning System**: Self-supervision from outcomes, preference inference, mistake analysis, memory decay
+- **Voice System**: Real-time bidirectional streaming, VAD-driven interruptibility (barge-in), Mindscape visualization, admin dashboard
+- **Security**: Policy engine with biometric elevation for high-risk operations, token scopes, audit logging
+- **Observability**: Prometheus metrics, structured logging, build verification, memory maintenance telemetry
 - **Multi-Client**: Web (TanStack Start) and Native (React Native/Expo) apps
+- **Linear Integration**: First-class Linear agent with Agent Activities, 10-second acknowledgment, webhook handling
 
 ## Technical Overview
 
@@ -117,10 +120,11 @@ packages/
 - Caching: Redis (optional, for run registry)
 
 **AI/ML:**
-- AI SDK v6 (workflow streaming, tool calling)
+- AI SDK v6 (workflow streaming, tool calling, structured outputs)
 - Models: OpenAI, Google, Cohere (configurable)
-- Embeddings: Local KaLM-Embedding-Gemma3-12B (1024 dims via MRL)
-- Voice: Faster-Whisper (STT), Piper TTS (local), or OpenAI APIs
+- Embeddings: Local KaLM-Embedding-Gemma3-12B (1024 dims via MRL truncation)
+- Voice: NeMo STT (local), Maya1/Piper TTS (local), or OpenAI APIs
+- Cognitive: Event-sourced state machine with pure transitions
 
 **Infrastructure:**
 - Observability: Prometheus metrics, structured logging
@@ -194,6 +198,7 @@ bun run dev:web
 **Streaming endpoints (AI SDK v6 SSE):**
 - `POST /api/assistant` – streams `UIMessage` parts using `streamText` and assistant tools
 - `POST /api/orchestrator` – streams `UIMessage` parts using `streamText` and orchestrator tools
+- `WS /voice/stream` – bidirectional binary WebSocket for voice (STT/TTS streaming)
 
 **Workflow router (tRPC):**
 - `workflow.start` – initializes a durable workflow run and returns `{ runId, summary }`
@@ -201,9 +206,19 @@ bun run dev:web
 - `workflow.resume` – delivers authorization events to the active run via the run registry
 - `workflow.get` / `workflow.events` – hydrate run metadata and persisted events for replay
 
+**Admin router (tRPC, biometric-protected):**
+- `admin.getVoiceStats` – real-time voice pool health and telemetry
+- `admin.restartVoicePool` – restart STT/TTS pools
+- `admin.clearVoiceSessions` – clear active voice sessions
+
+**Cognitive router (tRPC):**
+- `cognitive.feedback` – submit feedback for autonomy learning
+- `cognitive.state` – get current cognitive state
+
 **Health checks:**
 - `/healthz` – basic liveness probe
 - `/healthz/deps` – Postgres/Redis readiness probes
+- `/api/metrics` – Prometheus metrics endpoint
 
 ## Available Scripts
 
@@ -268,12 +283,39 @@ Prometheus metrics are served from `/api/metrics` (content type `text/plain; ver
 - `laminar_eval_datapoints_total{status}`, `laminar_eval_errors_total{stage}`
 - `workflow_stream_events_total{event}`, `workflow_stream_duration_seconds{status}`
 - `run_registry_events_total{event,backend,outcome}`, `run_registry_dispatch_duration_seconds{backend,outcome}`
+- `memory_maintenance_duration_seconds`, `memory_nodes_decayed_total`, `memory_nodes_pruned_total`, `memory_nodes_cleaned_total`
+- `linear_activity_emissions_total{type,status}`, `linear_activity_duration_seconds{type}`
+- `voice_stt_duration_seconds`, `voice_tts_duration_seconds`, `voice_session_rtt_millis`, `voice_session_jitter_millis`, `voice_session_packet_loss_total`
 
 Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, etc.).
+
+## Implementation Status
+
+### ✅ Complete Features
+
+- **Cognitive Architecture**: Physiology system, autonomy gradient, brainstem supervisor, event-sourced runtime loop
+- **Voice System**: Barge-in interruptibility, Mindscape visualization, admin dashboard, telemetry
+- **Knowledge Graph**: Active recall reinforcement, memory decay, entity linking, hybrid retrieval
+- **Workflow Orchestration**: Multi-agent waves, conflict resolution (Arbiter), suspend/resume, Linear integration
+- **Memory System**: Decay throttling, confidence floor, Prometheus metrics, safety rails
+- **SSR Hardening**: Build verification script, variable-based dynamic imports, browser-only library isolation
+
+### ⚠️ Mostly Complete
+
+- **Cognitive Architecture Maturity**: Structured planning implemented, step_complete events pending
+- **Memory System Hardening**: Bulk update optimization pending (still uses Promise.all loop)
+- **SSR Hardening**: API route audit pending (build verification complete)
+
+### 🚧 In Progress / Partial
+
+- **Home Assistant Integration**: Backend skeleton exists, full implementation pending
+- **Timer/Bookmark UI**: Backend complete, UI routes missing
+- **Chat History**: Infinite scroll pending
 
 ## Known Limitations
 
 - Workflow run resumes require sticky routing unless `RUN_REGISTRY_BACKEND=redis` is configured alongside `REDIS_URL`; ensure consistent routing when scaling the API horizontally.
+- Some ExecPlans marked "Proposed" are actually complete or mostly complete (see `docs/execplans/` for details).
 
 ## For New Developers
 
@@ -290,14 +332,18 @@ Integrate the endpoint with your scraping pipeline (Prometheus, Grafana Agent, e
 2. **Follow the data flow**: User request → tRPC router → WorkflowRuntime → AI SDK → Tools → Events
 3. **Domain packages are pure**: `cognitive/`, `knowledge/`, `learning/` contain pure logic without side effects
 4. **Boundaries handle I/O**: `api/`, `db/`, `auth/` handle persistence, HTTP, and side effects
+5. **Cognitive loop**: Voice/chat inputs feed into `runCognitiveLoop` which applies pure state transitions and emits effects
+6. **Event sourcing**: Cognitive state is event-sourced (`cognitive_events` table) with periodic snapshots for fast hydration
 
 ### Development Guidelines
 
 - **Naming**: Single-word files/directories (see `.ruler/01-naming-conventions.md`)
-- **Performance**: Hot paths must meet budgets (<100µs transitions, <1ms queries, <10ms RAG)
+- **Performance**: Hot paths must meet budgets (<100µs transitions, <1ms queries, <10ms RAG, <100ms plan generation)
 - **Purity**: Core logic is pure functions; side effects belong at boundaries
-- **Type Safety**: End-to-end TypeScript, no `any` types
-- **Testing**: Vitest for all packages, integration tests for routers
+- **Type Safety**: End-to-end TypeScript, no `any` types (except JSONB `as any` pattern)
+- **Testing**: Vitest for all packages, integration tests for routers, Playwright E2E for UI flows
+- **Dynamic Imports**: Server-only packages must use variable-based dynamic imports in API routes (prevents Vite bundling)
+- **ExecPlans**: Significant features use ExecPlans (see `docs/execplans/`) - update progress as work proceeds
 
 ## Branching Strategy
 

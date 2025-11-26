@@ -656,11 +656,18 @@ export async function* runReviewPhase(
             },
           } as any;
         } catch (error) {
-          const { userMessage, rawMessage, code } =
-            formatCodexRuntimeError(error);
+          const {
+            userMessage,
+            rawMessage,
+            code,
+            needsElevation,
+            limitExceeded,
+          } = formatCodexRuntimeError(error);
           logger.error("fixer_agent_failed", {
             error: rawMessage,
             code,
+            needsElevation,
+            limitExceeded,
           });
           yield { type: "notice", message: userMessage } as any;
           // If fixer crashes, we probably can't recover, but let the loop increment and maybe retry or fail.

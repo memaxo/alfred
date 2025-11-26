@@ -1,10 +1,39 @@
-# Learnings
+# ExecPlan: SSR Hardening Plan
+
+**Owner:** Infrastructure
+**Status:** Mostly Complete ⚠️ (Build verification done; API route audit pending)
+
+## Purpose
+
+Harden SSR build process to prevent server-only code leakage into client bundles. Address Vite static analysis issues and browser-incompatible library imports.
+
+## Learnings
 
 1. **Client Bundle Leakage**: Server-only packages (like `@alfred/db`) were leaking into the client bundle because API routes were importing them at the top level. Even if used only in `server` handlers, Vite's static analysis attempts to bundle them.
 2. **Vite Static Analysis**: Standard `await import("@alfred/db")` is not sufficient to prevent bundling. Vite statically analyzes string literals in dynamic imports.
 3. **Browser-Incompatible Libraries**: `xterm.js` accesses `document` immediately upon import, causing SSR crashes if not strictly isolated.
 
-# Proposed Rules
+## Progress
+
+- [x] Build verification script created (`scripts/verify-build.ts`)
+- [ ] Audit API routes for top-level server package imports
+- [ ] Refactor to variable-based dynamic imports
+- [ ] Add automated Playwright smoke tests against production build
+- [x] Update `.ruler/21-tanstack-start.md` with new rules (rules 21-22 added)
+
+## Implementation
+
+- ✅ `scripts/verify-build.ts` exists and checks for forbidden strings in client bundles
+- ✅ Rules documented in `.ruler/21-tanstack-start.md` (variable-based dynamic imports, browser-only libraries)
+- ⚠️ API route audit pending (systematic scan needed)
+
+## Remaining Work
+
+- [ ] Audit `apps/web/src/routes/api` for top-level server package imports
+- [ ] Refactor to variable-based dynamic imports
+- [ ] Add Playwright smoke tests against production build
+
+## Rules
 
 ## .ruler/21-tanstack-start.md (Additions)
 

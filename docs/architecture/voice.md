@@ -70,10 +70,71 @@ Environment variables control the behavior:
 - `VOICE_STT_POOL_SIZE`: Number of concurrent STT processes (default: 2).
 - `VOICE_TTS_POOL_SIZE`: Number of concurrent TTS processes (default: 1).
 
+## Barge-In Interruptibility
+
+Users can interrupt TTS playback by speaking:
+
+1. **VAD Detection**: Server-side VAD detects speech activity during TTS playback
+2. **Interrupt Event**: Server emits `voice_interrupt` event to client
+3. **Client Handling**: Client stops TTS playback and switches to STT input
+4. **State Management**: `ttsInProgress` flag tracks TTS state for interrupt detection
+
+**Implementation:** `packages/voice/src/server/socket.ts` - VAD monitoring during TTS
+
+**Client Integration:** `packages/voice/src/stream.ts` handles `interrupt` events (lines 376-378)
+
+## Mindscape Visualization
+
+Voice state is visualized in the Mindscape UI:
+
+- **OrbNode Component**: Displays voice session state (`apps/web/src/components/mindscape/nodes/orb-node.tsx`)
+- **VAD Levels**: Real-time VAD confidence visualized
+- **Voice Visualizer Store**: Zustand store (`apps/web/src/store/voice-visualizer.ts`) tracks:
+  - VAD levels
+  - Speech detection state
+  - Session metadata
+
+**Integration:** OrbNode subscribes to `useVoiceVisualizerStore()` for real-time updates
+
+## Admin Dashboard
+
+Voice admin dashboard at `/admin/voice` (`apps/web/src/routes/admin/voice.tsx`):
+
+**Features:**
+- **Pool Management**: Restart STT/TTS pools (`restartVoicePool`)
+- **Session Management**: Clear active sessions (`clearVoiceSessions`)
+- **Statistics**: View voice stats (`getVoiceStats`)
+- **Telemetry**: View aggregated telemetry (`collectVoiceTelemetry`)
+
+**API Endpoints:**
+- `POST /api/admin/voice/restart-pool` - Restart STT or TTS pool
+- `POST /api/admin/voice/clear-sessions` - Clear all active sessions
+- `GET /api/admin/voice/stats` - Get voice statistics
+
+**Access:** Requires admin authentication
+
 ## Telemetry
 
-Metrics are collected for:
-- **Latency**: RTT, Jitter, Processing Time.
-- **Quality**: Packet Loss.
-- **Utilization**: Pool Saturation, Session Counts.
-- **Errors**: Process Crashes, Transport Failures.
+### Prometheus Metrics
+
+Metrics exposed on `/api/metrics`:
+
+- `voiceSessionDurationSeconds` - Histogram of session durations
+- `voicePacketLossTotal` - Counter of lost packets
+- `voiceJitterSeconds` - Histogram of jitter measurements
+- `voiceRttSeconds` - Histogram of round-trip time
+- `voiceVadLevel` - Gauge of current VAD confidence
+- `voicePoolSize` - Gauge of pool size (STT/TTS)
+- `voicePoolUtilization` - Gauge of pool utilization percentage
+- `voiceProcessCrashesTotal` - Counter of process crashes
+
+**Location:** `packages/api/src/voice/telemetry.ts`
+
+### Telemetry Collection
+
+`collectVoiceTelemetry()` aggregates telemetry from active sessions:
+- Packet loss, jitter, RTT per session
+- Pool utilization and saturation
+- Process health and crash counts
+
+**Usage:** Admin dashboard and monitoring systems

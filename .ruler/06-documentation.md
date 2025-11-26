@@ -15,3 +15,5 @@
 13. **Changelogs.** For large changes or major doc reorganisations, summarise impact in `docs/changelog.md` (create once ready). Mention migrations, env changes, and user-facing effects.
 14. **Ruler sync.** After editing documentation rules, run `bun run ruler:apply` to regenerate agent instructions before committing.
 15. **Concise updates.** Prefer short, focused documentation updates and small rule additions over long summary documents; avoid generating large narrative reports of changes.
+
+16. **ExecPlan status sync.** When verifying implementation status, systematically check the codebase and update ExecPlan status immediately. Also sync corresponding Linear issues. See `.ruler/32-execplan-verification.md` for detailed guidance.

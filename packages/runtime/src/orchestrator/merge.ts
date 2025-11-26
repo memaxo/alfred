@@ -278,11 +278,19 @@ export async function* runMergeAnalysis(
     } catch (error) {
       const finishedAt = Date.now();
       const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-      const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+      const {
+        userMessage,
+        rawMessage,
+        code,
+        needsElevation,
+        limitExceeded,
+      } = formatCodexRuntimeError(error);
       logger.warn("merge_agent_execution_failed", {
         runId,
         error: rawMessage,
         code,
+        needsElevation,
+        limitExceeded,
       });
       mergeEvents.push({
         type: "notice",
@@ -302,11 +310,19 @@ export async function* runMergeAnalysis(
       } as any;
     }
   } catch (error) {
-    const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+    const {
+      userMessage,
+      rawMessage,
+      code,
+      needsElevation,
+      limitExceeded,
+    } = formatCodexRuntimeError(error);
     logger.warn("merge_agent_initialisation_failed", {
       runId,
       error: rawMessage,
       code,
+      needsElevation,
+      limitExceeded,
     });
     yield {
       type: "notice",

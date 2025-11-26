@@ -1,6 +1,6 @@
 # ExecPlan: Cognitive Physiology (Energy, Boredom, Frustration)
 
-**Status**: Proposed
+**Status**: ✅ Complete
 **Goal**: Augment the Cognitive State with physiological metrics to regulate autonomy and strategy naturally.
 
 ## Core Concept
@@ -37,10 +37,13 @@ The `AutonomyGradient` calculation must input `Physiology`.
 
 ## Implementation Steps
 
-1.  **Type Definition**: Add `Physiology` to `CognitiveState` in `@alfred/cognitive`.
-2.  **Logic Implementation**: Implement `updatePhysiology(current, event)` pure function.
-3.  **Integration**: In `CognitiveEngine`, track physiology alongside state transitions.
-4.  **UI Visualization**: Update the "Mindscape" or "Brain" UI to visualize these bars (Health/Mana style).
+1.  ✅ **Type Definition**: Add `Physiology` to `CognitiveState` in `@alfred/cognitive` (`packages/cognitive/src/state.ts` lines 120-124).
+2.  ✅ **Logic Implementation**: Implement `updatePhysiology(current, event)` pure function (`packages/cognitive/src/state.ts` lines 305-350).
+3.  ✅ **Integration**: In `CognitiveEngine`, track physiology alongside state transitions (`packages/runtime/src/loops/cognitive.ts`).
+4.  ✅ **Metrics**: Exposed via `cognitivePhysiologyGauge` Prometheus metrics.
+5.  ✅ **Autonomy Regulation**: `meetsConstraints` uses physiology to block actions (`packages/cognitive/src/state.ts` lines 629-677).
+6.  ✅ **Tests**: `packages/cognitive/test/physiology.test.ts` exists and passes.
+7.  [ ] **UI Visualization**: Update the "Mindscape" or "Brain" UI to visualize these bars (Health/Mana style) - Pending.
 
 ## Benefits
 - **Self-Healing**: High frustration naturally stops the agent from digging a deeper hole.

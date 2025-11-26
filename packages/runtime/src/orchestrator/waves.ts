@@ -5,8 +5,8 @@ import type { Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
-  applyProgressUpdate,
   appendDecisionLogEntry,
+  applyProgressUpdate,
   generateSubtaskExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/execplan";
 import {
@@ -24,12 +24,11 @@ import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 // import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
-import { ContextBuilder } from "../context";
 import type { ExecutionContext } from "../context";
+import { ContextBuilder } from "../context";
 import type { OrchestratorContext } from "./types";
 
-const ENABLE_WORKSPACE_SESSIONS =
-  process.env.ORCH_ENABLE_SESSIONS !== "0";
+const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
 export type WavesResult = {
   trackerState: TrackerState;
@@ -164,7 +163,7 @@ export async function* runWaves(
   );
   const cachedExecutionContext: ExecutionContext | null = hasEscalationContext
     ? null
-    : scanContext ?? null;
+    : (scanContext ?? null);
 
   const effectiveRequirement = hasEscalationContext
     ? `${input.requirement}\n\nESCALATION CONTEXT: ${escalationContext}`
