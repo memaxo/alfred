@@ -29,11 +29,11 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
 
-5. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
+4. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
 
-6. **Resilience & DLQ.** Persistent workflows must implement Dead Letter Queues (max retry limits) to prevent infinite resume loops.
+5. **Resilience & DLQ.** Persistent workflows must implement Dead Letter Queues (max retry limits) to prevent infinite resume loops.
 
-7. **Runtime tests via fixture.** Router or integration tests that exercise the workflow runtime must spin up the real engine through `@alfred/test-kit/workflow/runtime-fixture`, using its Linear stub, metrics hooks, and review-gate toggle to drive success/error/cancel flows; do not mock `@alfred/runtime`, workflow metrics, or Linear helpers inline.
+6. **Runtime tests via fixture.** Router or integration tests that exercise the workflow runtime must spin up the real engine through `@alfred/test-kit/workflow/runtime-fixture`, using its Linear stub, metrics hooks, and review-gate toggle to drive success/error/cancel flows; do not mock `@alfred/runtime`, workflow metrics, or Linear helpers inline.
 
 ## Workflow Status Lifecycle
 

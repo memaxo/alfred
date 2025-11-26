@@ -4,6 +4,8 @@
 
 When writing complex features or significant refactors, use an ExecPlan (as described in `.agent/PLANS.md`) from design to implementation. Create or refresh the plan before beginning, and maintain it as a living document by updating the `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections so a newcomer can complete the effort unaided.
 
+**Update cadence:** After completing each subtask or encountering a surprise, append to the relevant ExecPlan section immediately—before moving to the next subtask. Don't batch updates for the end.
+
 ## Scope Clarity
 
 1. Always state whether a change targets ALFRED itself or the applications ALFRED generates so the two domains stay distinct in docs, plans, and code.
@@ -43,6 +45,8 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 4. **Remove redundancy.** If a concept appears in multiple files, consolidate it. Cross-reference only when necessary.
 
+5. **Exception: critical patterns.** Short inline code snippets (≤5 lines) are allowed when the pattern is error-prone and the snippet prevents common mistakes. Use sparingly.
+
 ## Code Search Tools
 
 1. **Primary search.** Use `rg` as the default tool for searching across the codebase; fall back to `grep` only when `rg` is unavailable or unsuitable.
@@ -53,9 +57,11 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 ## Agent Collaboration
 
-1. **Autonomous execution.** Agents should act autonomously to implement changes end-to-end, using plans and local validation instead of deferring work back to the user.
+1. **Autonomous execution.** Execute tasks end-to-end (implement → test → fix → commit) without pausing for status updates or confirmations. See `.ruler/31-agent-autonomy.md` for full guidance.
 
-2. **Shared branches.** Assume the git working tree may be dirty because multiple agents or humans are working concurrently; do not rely on a clean branch or force-reset shared state.
+2. **Shared branches.** The git worktree will be dirty from concurrent agents. Ignore files outside your task scope; only stop for direct conflicts with files you're editing.
+
+3. **No confirmation loops.** If the user says "go" or "continue," execute all remaining steps. Never echo back recommendations the user already accepted.
 
 ## Database Operations
 

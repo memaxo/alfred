@@ -38,4 +38,4 @@
     ```
 12. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
 13. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
-15. **Bulk updates.** Prefer batch updates with `Promise.all` + chunks (size 10-50) over `db.transaction` or sequential loops for high-volume writes. Use `UPDATE ... FROM (VALUES ...)` for massive updates if possible.
+14. **Bulk updates.** Prefer batch updates with `Promise.all` + chunks (size 10-50) over `db.transaction` or sequential loops for high-volume writes. Use `UPDATE ... FROM (VALUES ...)` for massive updates if possible.
