@@ -143,20 +143,49 @@ describe("/api/workflow/stream integration", () => {
     expect(payload.error).toBe("session_required");
   });
 
-  it("emits error event when policy obligations require biometrics", async () => {
-    const policySpy = vi
-      .spyOn(workflowAccess, "enforceWorkflowPlanPolicy")
-      .mockResolvedValueOnce({ obligations: ["requireBio"] });
+  it("emits obligation event when policy requires biometrics", async () => {
+    const policySpy = vi.spyOn(workflowAccess, "enforceWorkflowPlanPolicy");
+    policySpy.mockResolvedValueOnce({
+      obligations: [
+        {
+          type: "biometric",
+          reason: "biometric_required",
+          metadata: { code: "requireBio" },
+        },
+      ],
+    });
 
     const response = await harness.invoke(handleWorkflowStreamRequest, {
       ...minimalInput,
       auto: "medium",
     });
     expect(response.status).toBe(200);
-    const events = await collectSseEvents(response);
-    const errorEvent = events.find((evt) => evt.name === "error");
-    expect(errorEvent?.data?.message).toBe("biometric_required");
 
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let obligationFound = false;
+
+    while (!obligationFound && reader) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      buffer = drainEvents(buffer, (evt) => {
+        if (
+          evt.name === "workflow-event" &&
+          evt.data?.type === "obligation"
+        ) {
+          obligationFound = true;
+          expect(evt.data.obligations?.[0]?.type).toBe("biometric");
+        }
+      });
+    }
+
+    expect(obligationFound).toBe(true);
+    await reader?.cancel();
     policySpy.mockRestore();
   });
 });

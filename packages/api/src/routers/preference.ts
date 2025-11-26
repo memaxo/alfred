@@ -18,6 +18,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Context } from "../context";
+import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
@@ -33,11 +34,10 @@ function mapPreferenceResource(
 }
 
 function ensureObligations(ctx: Context) {
-  if (ctx.policy?.obligations?.length) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "policy_obligation_unfulfilled",
-      cause: ctx.policy.obligations,
+  const obligations = ctx.policy?.obligations ?? [];
+  if (obligations.length > 0) {
+    throw new PolicyObligationError("preference.write", obligations, {
+      reason: "preference_write",
     });
   }
 }

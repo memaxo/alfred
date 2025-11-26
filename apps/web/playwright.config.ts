@@ -3,6 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.MINDSCAPE_PORT ?? 3100);
 const HOST = process.env.MINDSCAPE_HOST ?? "127.0.0.1";
 const BASE_URL = process.env.MINDSCAPE_BASE_URL ?? `http://${HOST}:${PORT}`;
+const shouldStartWebServer =
+  process.env.PLAYWRIGHT_SKIP_WEB_SERVER !== "1" &&
+  process.env.CI !== "workflow-test";
 
 export default defineConfig({
   testDir: "./tests",
@@ -20,23 +23,25 @@ export default defineConfig({
     screenshot: "only-on-failure",
     viewport: { width: 1440, height: 900 },
   },
-  webServer: [
-    {
-      command: `bun run dev:test -- --host=${HOST} --port=${PORT}`,
-      url: BASE_URL,
-      reuseExistingServer: !process.env.CI,
-      stdout: "pipe",
-      stderr: "pipe",
-      env: {
-        MINDSCAPE_TEST: "1",
-        VITE_TEST_MODE: "true",
-        PLAYWRIGHT_REAL_AUTH: process.env.PLAYWRIGHT_REAL_AUTH ?? "0",
-        VITE_PLAYWRIGHT_REAL_AUTH:
-          process.env.PLAYWRIGHT_REAL_AUTH === "1" ? "1" : "0",
-        NODE_ENV: process.env.NODE_ENV ?? "test",
-      },
-    },
-  ],
+  webServer: shouldStartWebServer
+    ? [
+        {
+          command: `bun run dev:test -- --host=${HOST} --port=${PORT}`,
+          url: BASE_URL,
+          reuseExistingServer: !process.env.CI,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            MINDSCAPE_TEST: "1",
+            VITE_TEST_MODE: "true",
+            PLAYWRIGHT_REAL_AUTH: process.env.PLAYWRIGHT_REAL_AUTH ?? "0",
+            VITE_PLAYWRIGHT_REAL_AUTH:
+              process.env.PLAYWRIGHT_REAL_AUTH === "1" ? "1" : "0",
+            NODE_ENV: process.env.NODE_ENV ?? "test",
+          },
+        },
+      ]
+    : [],
   projects: [
     {
       name: "smoke",

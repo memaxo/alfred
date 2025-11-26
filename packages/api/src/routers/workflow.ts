@@ -36,16 +36,26 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import type { WorkflowEvent } from "@alfred/type";
+import { randomUUID } from "node:crypto";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
 import { enforceWorkflowPlanPolicy } from "../workflow/access";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
+
+const requiresBiometric = (obligations: Obligation[]): boolean =>
+  obligations.some(
+    (obligation) =>
+      obligation.type === "biometric" ||
+      (typeof obligation.metadata?.code === "string" &&
+        obligation.metadata.code === "requireBio")
+  );
 
 // Feature flag for runtime migration (Phase 3.3)
 configureLinearMetrics({
@@ -100,7 +110,13 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
       // Enforce obligations for medium/high autonomy workflows
       if (input.auto === "medium" || input.auto === "high") {
-        ensureObligations(ctx);
+        const obligations = ctx.policy?.obligations ?? [];
+        if (obligations.length > 0 && requiresBiometric(obligations)) {
+          throw new PolicyObligationError("workflow.plan", obligations, {
+            reason: "workflow_autonomy",
+            auto: input.auto,
+          });
+        }
       }
 
       try {
@@ -209,6 +225,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
+    .use(rateLimit)
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
       observable<WorkflowEvent>((emit) => {
@@ -221,6 +238,144 @@ export const workflowRouter: ReturnType<typeof router> = router({
         }
 
         let cleanup: (() => void) | undefined;
+        let suspensionCleanup: (() => Promise<void> | void) | undefined;
+
+        const startWorkflow = async (options: {
+          obligations: Obligation[];
+          runId?: string;
+        }) => {
+          const callbacks: OrchestratorCallbacks = {
+            triggerPreferenceRefresh,
+            ensureObligations,
+            context: { ...ctx, policy: { obligations: options.obligations } },
+            emitError: (error) => {
+              emit.error(toTRPCError(error));
+            },
+            emitNext: (event) => emit.next(event),
+            emitComplete: () => emit.complete(),
+          };
+
+          const payload = options.runId ? { ...input, runId: options.runId } : input;
+          cleanup = await orchestrateWorkflowStream(payload, session, callbacks);
+        };
+
+        const handleSuspension = async (initialObligations: Obligation[]) => {
+          const runId = randomUUID();
+          const storedInput = {
+            ...(input as any),
+            executionId: runId,
+            reasoningSince: Date.now(),
+          };
+
+          await workflowRepo.createRun({
+            id: runId,
+            userId: session.user.id,
+            workflowId: "plan",
+            status: "suspended",
+            inputData: storedInput,
+          });
+          await workflowRepo.updateRun(runId, { suspendedAt: new Date() });
+          await workflowRepo.appendEvent({
+            runId,
+            eventType: "suspend",
+            eventData: {
+              reason: "policy_obligation",
+              obligations: initialObligations,
+            },
+          });
+
+          await recordAudit({
+            userId: session.user.id,
+            action: "workflow.stream.suspend",
+            resource: { kind: "workflow", id: runId },
+            decision: "allow",
+            context: { auto: input.auto, mode: input.mode, obligations: initialObligations },
+          });
+
+          emit.next({
+            type: "obligation",
+            runId,
+            obligations: initialObligations,
+          } as WorkflowEvent);
+
+          const abortController = new AbortController();
+
+          const disposeSuspension = async () => {
+            await runRegistry.unregister(runId).catch(() => {});
+            abortController.abort();
+            await workflowRepo.updateRun(runId, {
+              status: "cancelled",
+              completedAt: new Date(),
+            });
+          };
+
+          suspensionCleanup = disposeSuspension;
+
+          await runRegistry.register(runId, {
+            resume: async ({ resumeData }) => {
+              try {
+                if (resumeData.event !== "bio-authz") {
+                  throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "unsupported_resume_event",
+                  });
+                }
+
+                const { obligations: refreshed } =
+                  await enforceWorkflowPlanPolicy({
+                    session,
+                    input,
+                  });
+
+                if (refreshed.length > 0) {
+                  emit.next({
+                    type: "obligation",
+                    runId,
+                    obligations: refreshed,
+                  } as WorkflowEvent);
+                  await workflowRepo.appendEvent({
+                    runId,
+                    eventType: "suspend",
+                    eventData: {
+                      reason: "policy_obligation",
+                      obligations: refreshed,
+                    },
+                  });
+                  return;
+                }
+
+                await runRegistry.unregister(runId).catch(() => {});
+                suspensionCleanup = undefined;
+
+                await workflowRepo.updateRun(runId, {
+                  status: "running",
+                  suspendedAt: null,
+                  resumedAt: new Date(),
+                });
+
+                await recordAudit({
+                  userId: session.user.id,
+                  action: "workflow.stream.resume",
+                  resource: { kind: "workflow", id: runId },
+                  decision: "allow",
+                  context: { event: resumeData.event },
+                });
+
+                await startWorkflow({ obligations: [], runId });
+              } catch (error) {
+                emit.error(toTRPCError(error));
+              }
+            },
+            cancel: async () => {
+              abortController.abort();
+              await workflowRepo.updateRun(runId, {
+                status: "cancelled",
+                completedAt: new Date(),
+              });
+            },
+            abortController,
+          });
+        };
 
         const startStream = async () => {
           try {
@@ -229,18 +384,12 @@ export const workflowRouter: ReturnType<typeof router> = router({
               input,
             });
 
-            const callbacks: OrchestratorCallbacks = {
-              triggerPreferenceRefresh,
-              ensureObligations,
-              context: { ...ctx, policy: { obligations } },
-              emitError: (error) => {
-                emit.error(toTRPCError(error));
-              },
-              emitNext: (event) => emit.next(event),
-              emitComplete: () => emit.complete(),
-            };
+            if (obligations.length > 0) {
+              await handleSuspension(obligations);
+              return;
+            }
 
-            cleanup = await orchestrateWorkflowStream(input, session, callbacks);
+            await startWorkflow({ obligations });
           } catch (error) {
             emit.error(toTRPCError(error));
           }
@@ -250,6 +399,11 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         return () => {
           cleanup?.();
+          const dispose = suspensionCleanup;
+          suspensionCleanup = undefined;
+          if (dispose) {
+            void dispose();
+          }
         };
       })
     ),

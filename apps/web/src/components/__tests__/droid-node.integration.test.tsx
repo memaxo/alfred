@@ -178,7 +178,13 @@ describe("DroidNode", () => {
     // Obligation arrives
     latestSubscription.onObligation?.({
       runId: "run-biometric",
-      obligations: ["biometric"],
+      obligations: [
+        {
+          type: "biometric",
+          reason: "biometric_required",
+          metadata: { code: "requireBio" },
+        },
+      ],
     });
     debugLog("obligation received", latestSubscription ? "active" : "missing");
     await waitFor(() => {

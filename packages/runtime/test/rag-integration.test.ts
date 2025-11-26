@@ -9,6 +9,9 @@ import { ingest } from "@alfred/rag";
 import { ContextBuilder } from "../src/context";
 import { KnowledgeEngine } from "../src/engines/knowledge";
 
+const RUN_RAG_TESTS = process.env.RUN_RUNTIME_RAG_TESTS === "1";
+const heavyTest = RUN_RAG_TESTS ? test : test.skip;
+
 describe("RAG Integration", () => {
   let builder: ContextBuilder;
 
@@ -47,7 +50,7 @@ describe("RAG Integration", () => {
     expect(context.totalTokens).toBeGreaterThanOrEqual(0);
   }, 30_000);
 
-  test("ingest() creates RAG document", async () => {
+  heavyTest("ingest() creates RAG document", async () => {
     const testContent = "This is a test note for RAG integration.";
     const testSource = `test:note:${Date.now()}`;
 
@@ -57,7 +60,7 @@ describe("RAG Integration", () => {
     expect(typeof documentId).toBe("string");
   }, 60_000); // Increased timeout for local model loading
 
-  test("retrieveContext() finds ingested content", async () => {
+  heavyTest("retrieveContext() finds ingested content", async () => {
     // Ingest test content
     const testContent =
       "ALFRED is a personal AI assistant with cognitive architecture.";

@@ -141,7 +141,13 @@ test.describe("Mindscape droid biometric resume", () => {
       const scope = window as unknown as HarnessWindow;
       scope.__droidStreamTestHarness__?.obligation({
         runId: id,
-        obligations: ["biometric"],
+        obligations: [
+          {
+            type: "biometric",
+            reason: "biometric_required",
+            metadata: { code: "requireBio" },
+          },
+        ],
       });
     }, { id: runId });
 

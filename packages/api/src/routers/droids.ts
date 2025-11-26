@@ -307,14 +307,9 @@ async function handleResume(runId: string, resumeData: ResumePayload) {
 
   const obligations = decision.obligations ?? [];
   if (obligations.length > 0) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "obligation_required",
-      cause: {
-        reason: "droid_execution",
-        obligations,
-        runId,
-      },
+    throw new PolicyObligationError("droid.exec", obligations, {
+      reason: "droid_execution",
+      runId,
     });
   }
 
@@ -423,14 +418,9 @@ const droidProcedures = {
           type: "run",
           input: cloneStoredInput(input),
         });
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "obligation_required",
-          cause: {
-            reason: "droid_execution",
-            obligations,
-            runId,
-          },
+        throw new PolicyObligationError("droid.exec", obligations, {
+          reason: "droid_execution",
+          runId,
         });
       }
 

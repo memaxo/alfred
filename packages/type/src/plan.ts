@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import type { Obligation } from "./policy";
 
 // TODO: [Phase 4] Refine schemas based on actual Orchestrator workflow requirements
 
@@ -316,6 +317,11 @@ export type WorkflowEvent =
   | (WorkflowEventBase & { type: "stderr"; text: string })
   | (WorkflowEventBase & { type: "droid"; chunk: unknown })
   | (WorkflowEventBase & { type: "notice"; message: string })
+  | (WorkflowEventBase & {
+      type: "obligation";
+      runId: string;
+      obligations: Obligation[];
+    })
   | (WorkflowEventBase & {
       type: "data-cache-handoff";
       receipts?: SearchReceipt;

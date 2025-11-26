@@ -13,6 +13,7 @@ import {
   it,
   mock,
 } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import {
   createWorkflowCaller,
   type WorkflowTestUser,
@@ -31,7 +32,7 @@ mock.module("@alfred/db/repo/policy", () => ({
 }));
 
 mock.module("@alfred/policy", () => ({
-  evaluate: async () => ({ allow: true, obligations: [] as string[] }),
+  evaluate: async () => ({ allow: true, obligations: [] as Obligation[] }),
   registerCacheObs: () => {},
 }));
 

@@ -154,6 +154,9 @@ export class AISDKAdapter {
       });
 
       for await (const event of result.fullStream) {
+        if (!event) {
+          continue;
+        }
         const sdkEvent = event as AISDKStreamEvent;
         // Track event types
         if (typeof sdkEvent.type === "string") {
@@ -216,7 +219,7 @@ export class AISDKAdapter {
    *
    * Uses correct AI SDK v6 property names from audit.
    */
-  private mapEvent(sdkEvent: AISDKStreamEvent): WorkflowEvent | null {
+  public mapEvent(sdkEvent: AISDKStreamEvent): WorkflowEvent | null {
     if (isTextDeltaEvent(sdkEvent)) {
       return {
         type: "text-delta",

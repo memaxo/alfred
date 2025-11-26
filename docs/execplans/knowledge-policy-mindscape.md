@@ -22,7 +22,7 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
     - [x] Define `Obligation` type in `@alfred/type` (if missing) or `@alfred/auth`.
     - [x] Update `requirePolicy` middleware to detect missing obligations.
     - [x] Create `TRPCError` subclass or metadata pattern for `OBLIGATION_REQUIRED`.
-    - [ ] Implement the "pause/resume" pattern in `packages/api/src/routers/deploy.ts` as the reference implementation.
+    - [x] Implement the "pause/resume" pattern in `packages/api/src/routers/deploy.ts` **and** `packages/api/src/routers/workflow.ts`, plus propagate structured obligation events through the SSE transport and Mindscape UI.
 - [ ] **Part 3: Mindscape Visualization**
     - [ ] Create `ConceptNode` component in `apps/web`.
     - [ ] Create `RelationEdge` component (if standard edges aren't enough).
@@ -31,11 +31,13 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
 
 ## Surprises & Discoveries
 
-*(Populate during execution)*
+-   **Memory backend quirk**: `MemoryRunRegistry.unregister` is synchronous, so chaining `.catch()` explodes in Bun. We now wrap unregister calls in try/catch everywhere we reuse the pattern.
+-   **SSE parity**: The TanStack SSE route needed the same obligation-handling semantics as the TRPC router; otherwise Mindscape could never resume a cautious execution. Implementing the shared helper exposed test gaps that are now covered.
 
 ## Decision Log
 
-*(Populate during execution)*
+-   2025-11-26 — `requirePolicy` now accepts `handleObligations: "passThrough"`, allowing routers (deploy, cognitive, workflow, SSE route) to control whether obligations short-circuit or emit structured payloads.
+-   2025-11-26 — Mindscape listens for `workflow-event` `type: "obligation"` and surfaces the biometric dialog, reusing the shared `useBiometricResume` hook.
 
 ## Outcomes & Retrospective
 

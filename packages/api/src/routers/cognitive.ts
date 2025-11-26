@@ -38,7 +38,11 @@ const buildContext = (raw: unknown, ctx: Context) => {
 
 export const cognitiveRouter = router({
   feedback: authedProcedure
-    .use(requirePolicy("cognitive.feedback", mapResource, buildContext))
+    .use(
+      requirePolicy("cognitive.feedback", mapResource, buildContext, {
+        handleObligations: "passThrough",
+      })
+    )
     .input(feedbackInput)
     .mutation(async ({ ctx, input }) => {
       const event: Event = {

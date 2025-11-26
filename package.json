@@ -49,7 +49,7 @@
     "db:down": "turbo -F @alfred/db db:down",
     "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
     "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",
-    "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts packages/api/test/workflow.capture.integration.test.ts",
+    "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts packages/api/test/workflow.capture.integration.test.ts packages/agent/test/multi/*.test.ts packages/agent/test/multi-agent.integration.test.ts",
     "test:workflow-integration": "bun test packages/api/test/utils/workflow-server.test.ts packages/api/test/workflow.stream.integration.test.ts apps/web/src/routes/api/__tests__/workflow.stream.integration.test.ts",
     "smoke:hypergraph": "bun scripts/smoke-hypergraph.ts",
     "smoke:stt": "bun scripts/voice/test-stt.ts",

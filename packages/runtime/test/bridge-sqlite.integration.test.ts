@@ -23,7 +23,10 @@ type BridgeModule = typeof import("../src/engines/bridge");
 type DbModule = typeof import("@alfred/db");
 type GraphSchemaModule = typeof import("@alfred/db/schema/graph");
 
-describe("RuntimeKnowledgeBridge sqlite integration", () => {
+const RUN_DB_TESTS = process.env.RUN_RUNTIME_DB_TESTS === "1";
+const describeDb = RUN_DB_TESTS ? describe : describe.skip;
+
+describeDb("RuntimeKnowledgeBridge sqlite integration", () => {
   let RuntimeKnowledgeBridge: BridgeModule["RuntimeKnowledgeBridge"] | null =
     null;
   let db: DbModule["db"] | null = null;

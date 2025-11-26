@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import { deployRouter } from "../src/routers/deploy";
@@ -55,16 +56,21 @@ mock.module("@alfred/agent/orchestrator/tool/router", () => ({
 mock.module("@alfred/policy", () => ({
   evaluate: mock(async () => ({
     allow: true,
-    obligations: [],
+    obligations: [] as Obligation[],
   })),
 }));
 
 describe("Deploy Router Policy Enforcement", () => {
   test("promote throws PRECONDITION_FAILED when obligations exist", async () => {
     // Force evaluate to return obligations for this test
+    const biometricObligation: Obligation = {
+      type: "biometric",
+      reason: "biometric_required",
+      metadata: { code: "requireBio" },
+    };
     (evaluate as any).mockResolvedValueOnce({
       allow: true,
-      obligations: ["biometric"],
+      obligations: [biometricObligation],
     });
 
     const caller = deployRouter.createCaller({
@@ -84,14 +90,19 @@ describe("Deploy Router Policy Enforcement", () => {
       expect(trpcError.code).toBe("PRECONDITION_FAILED");
       expect(trpcError.message).toBe("obligation_required");
       const cause = trpcError.cause as any;
-      expect(cause.obligations).toEqual(["biometric"]);
+      expect(cause.obligations).toEqual([biometricObligation]);
     }
   });
 
   test("remove throws PRECONDITION_FAILED when obligations exist", async () => {
+    const approvalObligation: Obligation = {
+      type: "confirmation",
+      reason: "manual_approval",
+      metadata: { code: "approval" },
+    };
     (evaluate as any).mockResolvedValueOnce({
       allow: true,
-      obligations: ["approval"],
+      obligations: [approvalObligation],
     });
 
     const caller = deployRouter.createCaller({
@@ -110,7 +121,7 @@ describe("Deploy Router Policy Enforcement", () => {
       expect(trpcError.code).toBe("PRECONDITION_FAILED");
       expect(trpcError.message).toBe("obligation_required");
       const cause = trpcError.cause as any;
-      expect(cause.obligations).toEqual(["approval"]);
+      expect(cause.obligations).toEqual([approvalObligation]);
     }
   });
 });

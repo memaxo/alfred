@@ -5,7 +5,12 @@
  * Provides pure policy decisions without side effects
  */
 
-import { type Decision, type EvaluateInput, evaluate } from "@alfred/policy";
+import {
+  type Decision,
+  type EvaluateInput,
+  type Obligation,
+  evaluate,
+} from "@alfred/policy";
 
 /**
  * PolicyEngine provides policy evaluation operations
@@ -38,7 +43,7 @@ export class PolicyEngine {
    *
    * Returns empty array if denied or no obligations
    */
-  async getObligations(input: EvaluateInput): Promise<string[]> {
+  async getObligations(input: EvaluateInput): Promise<Obligation[]> {
     const decision = await evaluate(input);
     if (!decision.allow) {
       return [];

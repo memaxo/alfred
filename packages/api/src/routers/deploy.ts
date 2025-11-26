@@ -310,7 +310,11 @@ export const deployRouter: ReturnType<typeof router> = router({
     }),
 
   promote: authedProcedure
-    .use(requirePolicy("deploy.promote", mapPromoteResource))
+    .use(
+      requirePolicy("deploy.promote", mapPromoteResource, undefined, {
+        handleObligations: "passThrough",
+      })
+    )
     .input(promoteInput)
     .mutation(async ({ ctx, input }) => {
       // Handle policy obligations (e.g., biometric elevation)
@@ -536,7 +540,11 @@ export const deployRouter: ReturnType<typeof router> = router({
     ),
 
   remove: authedProcedure
-    .use(requirePolicy("deploy.remove", mapRemoveResource))
+    .use(
+      requirePolicy("deploy.remove", mapRemoveResource, undefined, {
+        handleObligations: "passThrough",
+      })
+    )
     .input(removeInput)
     .mutation(async ({ ctx, input }) => {
       // Handle policy obligations

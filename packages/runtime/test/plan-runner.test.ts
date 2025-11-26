@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ExecutionPlan } from "@alfred/cognitive/schemas";
 
 // Mock Agent Defaults
@@ -142,5 +142,9 @@ describe("PlanRunner", () => {
     };
     await expect(runner.executePlan(plan)).rejects.toThrow(/Execution gated/);
     delete process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL;
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });

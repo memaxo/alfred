@@ -84,7 +84,7 @@ async function evaluateVoicePolicy(
   policyDecisionsTotal.labels(action, decision.allow ? "allow" : "deny").inc();
   if (decision.obligations && decision.obligations.length > 0) {
     for (const obligation of decision.obligations) {
-      policyObligationsTotal.labels(action, String(obligation)).inc();
+      policyObligationsTotal.labels(action, obligation.type).inc();
     }
   }
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import { setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 import { metricsStub } from "./utils/mock-metrics";
@@ -25,7 +26,10 @@ mock.module("@alfred/db/repo/policy", () => ({
 }));
 
 beforeAll(() => {
-  evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+  evaluateMock.mockResolvedValue({
+    allow: true,
+    obligations: [] as Obligation[],
+  });
   runCognitiveLoopMock.mockResolvedValue({
     _: "reflecting",
     outcome: { _: "success", result: null, duration: 0 },
@@ -38,14 +42,22 @@ beforeAll(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
-  evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+  evaluateMock.mockResolvedValue({
+    allow: true,
+    obligations: [] as Obligation[],
+  });
 });
 
 describe("cognitive router", () => {
   it("submits feedback events and returns policy obligations", async () => {
+    const mfaObligation: Obligation = {
+      type: "mfa",
+      reason: "mfa_required",
+      metadata: { code: "mfa_required" },
+    };
     evaluateMock.mockResolvedValueOnce({
       allow: true,
-      obligations: ["mfa_required"],
+      obligations: [mfaObligation],
     });
 
     const state = {
@@ -78,7 +90,7 @@ describe("cognitive router", () => {
       actual: "target",
     });
     expect(response.state).toBe(state);
-    expect(response.obligations).toEqual(["mfa_required"]);
+    expect(response.obligations).toEqual([mfaObligation]);
     expect(
       metricsStub.cognitiveFeedbackSubmissionsTotal.labels
     ).toHaveBeenCalledWith("chat");
@@ -87,7 +99,7 @@ describe("cognitive router", () => {
   it("denies feedback when policy evaluation rejects", async () => {
     evaluateMock.mockResolvedValueOnce({
       allow: false,
-      obligations: [],
+      obligations: [] as Obligation[],
       reason: "forbidden",
     });
 

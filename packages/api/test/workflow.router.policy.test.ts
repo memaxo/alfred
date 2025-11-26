@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 import "./utils/mock-metrics";
 import { toObservable } from "./utils/stream";
@@ -41,6 +42,12 @@ mock.module("@alfred/api/workflow/runner", () => ({
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
+const bioObligation: Obligation = {
+  type: "biometric",
+  reason: "biometric_required",
+  metadata: { code: "requireBio" },
+};
+
 beforeAll(async () => {
   caller = await createTestCaller({
     roles: ["user"],
@@ -56,7 +63,7 @@ describe("workflow router policy obligations", () => {
   it("rejects medium autonomy when biometric obligation present", async () => {
     evaluateMock.mockResolvedValue({
       allow: true,
-      obligations: ["requireBio"],
+      obligations: [bioObligation],
     });
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
@@ -68,13 +75,13 @@ describe("workflow router policy obligations", () => {
 
     await expect(
       caller.workflow.start({ requirement: "do X", auto: "medium" })
-    ).rejects.toThrow(/biometric_required/i);
+    ).rejects.toThrow(/obligation_required/i);
   });
 
   it("rejects stream when biometric obligation present (PRECONDITION_FAILED)", async () => {
     evaluateMock.mockResolvedValue({
       allow: true,
-      obligations: ["requireBio"],
+      obligations: [bioObligation],
     });
     runPlanV6Mock.mockReturnValue({
       runId: "run-1",
@@ -87,15 +94,20 @@ describe("workflow router policy obligations", () => {
     const sub: any = toObservable(
       caller.workflow.stream({ requirement: "do X", auto: "medium" })
     );
-    await new Promise<void>((resolve) => {
-      sub.subscribe({
-        next: () => resolve(),
-        error: (err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          expect(msg).toMatch(/biometric_required/i);
-          resolve();
+    await new Promise<void>((resolve, reject) => {
+      const dispose = sub.subscribe({
+        next: (event: WorkflowEvent) => {
+          try {
+            expect(event.type).toBe("obligation");
+            expect(event.obligations).toEqual([bioObligation]);
+            dispose();
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
         },
-        complete: () => resolve(),
+        error: reject,
+        complete: resolve,
       });
     });
   });

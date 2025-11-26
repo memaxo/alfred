@@ -1,35 +1,28 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   ContextBundle,
   SearchReceipt,
   WorkflowEvent,
 } from "@alfred/type/plan";
+import { ContextBuilder } from "../../src/context";
 import type { ExecutionContext } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
 
 const buildMock = mock<(input: unknown) => Promise<ExecutionContext>>();
-
-mock.module("../../src/context", () => ({
-  ContextBuilder: class {
-    build = buildMock;
-  },
-}));
+const originalPlanBuild = ContextBuilder.prototype.build;
+ContextBuilder.prototype.build = function (input: unknown) {
+  return buildMock(input);
+};
 
 const persistExecPlansMock = mock(async () => {});
 mock.module("@alfred/agent/assistant/graphstore", () => ({
   persistExecPlans: persistExecPlansMock,
 }));
 
-const streamMock = mock(() => (async function* () {
-  yield { type: "text-delta", delta: "Plan step" } as WorkflowEvent;
+const streamMock = mock(async function* () {
+  yield { type: "text-delta", id: "delta-1", delta: "Plan step" } as WorkflowEvent;
   yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-})());
-
-mock.module("../../src/adapters/ai", () => ({
-  AISDKAdapter: class {
-    stream = streamMock;
-  },
-}));
+});
 
 mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
   decomposeTask: () => [
@@ -43,6 +36,9 @@ mock.module("@alfred/agent/orchestrator/multi/execplan", () => ({
 }));
 
 const { RuntimeContext } = await import("@alfred/type/runtime-context");
+const { AISDKAdapter } = await import("../../src/adapters/ai");
+const originalPlanStream = AISDKAdapter.prototype.stream;
+AISDKAdapter.prototype.stream = streamMock;
 const { executePlanPhase } = await import("../../src/phases/plan");
 const { ScanPhase } = await import("../../src/pipeline/phases/scan");
 const { PlanPhase } = await import("../../src/pipeline/phases/plan");
@@ -116,6 +112,9 @@ async function drain(
 }
 
 describe("executePlanPhase", () => {
+  beforeEach(() => {
+    streamMock.mockClear();
+  });
   it("uses prebuilt context when provided", async () => {
     const prebuilt = createExecutionContext();
     buildMock.mockReset();
@@ -175,5 +174,11 @@ describe("executePlanPhase", () => {
 
     await drainPhase(planPhase);
     expect(buildMock).toHaveBeenCalledTimes(1);
+  });
+
+  afterAll(() => {
+    ContextBuilder.prototype.build = originalPlanBuild;
+    AISDKAdapter.prototype.stream = originalPlanStream;
+    mock.restore();
   });
 });

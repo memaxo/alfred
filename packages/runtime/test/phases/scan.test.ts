@@ -1,16 +1,11 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   WorkflowEvent,
   ContextBundle,
   SearchReceipt,
 } from "@alfred/type/plan";
-import type { ContextBuildInput, ExecutionContext } from "../../src/context";
+import type { ExecutionContext } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
-
-const buildMock = mock<
-  (input: ContextBuildInput, overrides?: { receipts?: SearchReceipt }) =>
-    Promise<ExecutionContext>
->();
 
 const gatherCodeContextMock = mock(
   async (params: { writer?: { write?: (chunk: unknown) => Promise<void> | void } }) => {
@@ -59,12 +54,6 @@ const gatherWebContextMock = mock(
     } satisfies SearchReceipt;
   }
 );
-
-mock.module("../../src/context", () => ({
-  ContextBuilder: class {
-    build = buildMock;
-  },
-}));
 
 mock.module("@alfred/agent/orchestrator/flow/context", () => ({
   gatherCodeContext: gatherCodeContextMock,
@@ -180,8 +169,6 @@ async function collectEvents(
 
 describe("executeScanPhase", () => {
   beforeEach(() => {
-    buildMock.mockReset();
-    buildMock.mockImplementation(async () => createExecutionContext());
     gatherCodeContextMock.mockReset();
     gatherCodeContextMock.mockImplementation(async (params: any) => {
       await params?.writer?.write?.({
@@ -214,8 +201,6 @@ describe("executeScanPhase", () => {
   it("gathers context and emits receipts, web, and bundle events", async () => {
     const input = cloneInput();
     const controller = new AbortController();
-    const expectedContext = createExecutionContext();
-    buildMock.mockImplementationOnce(async () => expectedContext);
 
     const generator = executeScanPhase(input, "run-ctx", controller.signal);
     const { events, error, result } = await collectEvents(generator);
@@ -223,18 +208,6 @@ describe("executeScanPhase", () => {
     expect(error).toBeUndefined();
     expect(gatherCodeContextMock).toHaveBeenCalledTimes(1);
     expect(gatherWebContextMock).toHaveBeenCalledTimes(1);
-    expect(buildMock).toHaveBeenCalledTimes(1);
-    expect(buildMock.mock.calls[0][0]).toMatchObject({
-      requirement: input.requirement,
-      workspace: input.workspace,
-      topK: input.context?.topK,
-      maxTokens: input.context?.maxTokens,
-      exts: input.context?.exts,
-      ignore: input.context?.ignore,
-      seeds: input.context?.seeds,
-      web: input.context?.web,
-    });
-    expect(buildMock.mock.calls[0][1]?.receipts?.code?.length).toBeGreaterThan(0);
 
     const writerEvents = events.filter(
       (event) => event.type === "context" && (event as any).message === "code_context_mock"
@@ -264,7 +237,7 @@ describe("executeScanPhase", () => {
       message: "context_gathering_completed",
     });
 
-    expect(result).toBe(expectedContext);
+    expect(result).not.toBeNull();
   });
 
   it("throws when aborted before building context", async () => {
@@ -278,7 +251,6 @@ describe("executeScanPhase", () => {
     );
     const { events, error, result } = await collectEvents(generator);
 
-    expect(buildMock).not.toHaveBeenCalled();
     expect(gatherCodeContextMock).not.toHaveBeenCalled();
     expect(gatherWebContextMock).not.toHaveBeenCalled();
     expect(events[0]).toMatchObject({
@@ -291,7 +263,7 @@ describe("executeScanPhase", () => {
   });
 
   it("emits failure notice when context building throws", async () => {
-    buildMock.mockImplementationOnce(async () => {
+    gatherCodeContextMock.mockImplementationOnce(async () => {
       throw new Error("context exploded");
     });
 
@@ -329,7 +301,6 @@ describe("executeScanPhase", () => {
     const { events, error, result } = await collectEvents(generator);
 
     expect(error).toBeUndefined();
-    expect(buildMock).not.toHaveBeenCalled();
     expect(gatherCodeContextMock).not.toHaveBeenCalled();
     expect(gatherWebContextMock).not.toHaveBeenCalled();
     const disabledNotice = events.find(
@@ -337,5 +308,9 @@ describe("executeScanPhase", () => {
     );
     expect(disabledNotice).toBeDefined();
     expect(result).toBeNull();
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });

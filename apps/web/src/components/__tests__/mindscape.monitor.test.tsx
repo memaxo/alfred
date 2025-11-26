@@ -9,6 +9,12 @@ const tokenMock = vi.fn();
 const dispatchMindscapeEventMock = vi.fn();
 let latestHandlers: UseWorkflowSseStreamOptions | null = null;
 let useWorkflowSseStreamSpy: ReturnType<typeof vi.spyOn> | null = null;
+const resumeMock = {
+  isOpen: false,
+  pendingRunId: null as string | null,
+  trigger: vi.fn(),
+  close: vi.fn(),
+};
 
 mock.module("@/lib/token", () => ({
   getToolToken: tokenMock,
@@ -16,6 +22,14 @@ mock.module("@/lib/token", () => ({
 
 mock.module("@/hooks/use-mindscape-activations", () => ({
   dispatchMindscapeEvent: dispatchMindscapeEventMock,
+}));
+
+mock.module("@/hooks/use-biometric-resume", () => ({
+  useBiometricResume: () => resumeMock,
+}));
+
+mock.module("@/components/biometric-challenge-dialog", () => ({
+  BiometricChallengeDialog: () => null,
 }));
 
 import { WorkflowManager } from "@/components/mindscape/monitor";
@@ -41,6 +55,10 @@ describe("WorkflowManager context cache events", () => {
     tokenMock.mockReset();
     dispatchMindscapeEventMock.mockReset();
     tokenMock.mockResolvedValue("test-token");
+    resumeMock.isOpen = false;
+    resumeMock.pendingRunId = null;
+    resumeMock.trigger.mockReset();
+    resumeMock.close.mockReset();
     useMindscapeStore.setState({
       nodes: [],
       edges: [],

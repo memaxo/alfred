@@ -255,6 +255,9 @@ jobs:
             bunx turbo run test
           fi
 
+      - name: Voice queue + registry tests
+        run: bun test apps/native/tests/voice-queue.test.ts packages/voice/test/e2e/session.test.ts
+
       - name: Verify tmux sessions (default)
         run: bun scripts/verify-sessions.ts
         continue-on-error: true
@@ -300,6 +303,10 @@ jobs:
         run: |
           cd apps/web
           bun run test:e2e:auto
+
+      - name: Voice streaming session spec (serverless harness)
+        run: |
+          PLAYWRIGHT_SKIP_WEB_SERVER=1 bunx playwright test apps/web/tests/voice-session.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
 
   migrate-dryrun:
     name: DB Dry Run

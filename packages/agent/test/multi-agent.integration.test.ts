@@ -6,9 +6,9 @@ import {
   it,
   mock,
 } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ContextBundle } from "@alfred/type/plan";
@@ -47,7 +47,47 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
+const mergeExecutorMock = mock(async () => ({
+  status: "completed" as const,
+  mergedBranches: ["agent/run"],
+  targetBranch: "main",
+}));
+
+mock.module("@alfred/agent/orchestrator/multi/merge-executor", () => ({
+  executeMergePlan: mergeExecutorMock,
+}));
+
+const toolRunnerExecute = mock(async () => ({
+  stdout: "ok",
+  stderr: "",
+  exitCode: 0,
+  durationMs: 10,
+}));
+
+mock.module("@alfred/agent/orchestrator/tool/runner", () => ({
+  toolRunner: {
+    execute: toolRunnerExecute,
+  },
+}));
+
+const smokeVerifyMock = mock(async () => ({
+  success: true,
+  message: "ok",
+}));
+
+mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
+  smokeTester: {
+    verify: smokeVerifyMock,
+  },
+}));
+
 const { runWaves } = await import("../../runtime/src/orchestrator/waves.ts");
+const { runMergePhase, runMergeAnalysis } = await import(
+  "../../runtime/src/orchestrator/merge.ts"
+);
+const { runReviewPhase } = await import(
+  "../../runtime/src/orchestrator/review.ts"
+);
 const { decomposeTask } = await import(
   "@alfred/agent/orchestrator/multi/decompose"
 );
@@ -74,6 +114,9 @@ const tempDirs: string[] = [];
 
 beforeEach(() => {
   agentScripts.clear();
+  mergeExecutorMock.mockClear();
+  toolRunnerExecute.mockClear();
+  smokeVerifyMock.mockClear();
 });
 
 afterEach(async () => {
@@ -154,6 +197,91 @@ describe("multi-agent orchestrator integration", () => {
         wave_0: { status: "completed" },
         wave_1: { status: "completed" },
       });
+    });
+  });
+
+  it("executes merge and review phases end-to-end", async () => {
+    await withWorkflowRuntime(async () => {
+      const prevTarget = process.env.ORCH_TARGET_BRANCH;
+      process.env.ORCH_TARGET_BRANCH = "main";
+      try {
+        const workspace = await createWorkspace();
+        const requirement = "Validate merge and review";
+        const bundle = makeBundle([
+          "packages/runtime/src/orchestrator/waves.ts",
+          "packages/runtime/src/orchestrator/merge.ts",
+          "apps/web/src/app/page.tsx",
+        ]);
+
+        const initialTasks = tasksFor(bundle, requirement);
+        const scripts: Record<string, AgentEventDef[]> = {};
+        for (const task of initialTasks) {
+          scripts[task.id] = [
+            { kind: "thought", text: task.title },
+            { kind: "command", command: "bun fmt", status: "completed" },
+            { kind: "artifact", path: `${task.id}/result.ts` },
+          ];
+        }
+
+        const scenario = await runScenario({
+          requirement,
+          workspace,
+          bundle,
+          scripts,
+          auto: "low",
+        });
+
+        await materializeAgentFiles(workspace, scenario.result.agentFileHints);
+
+        const mergeDrain = await drainGenerator(
+          runMergePhase(scenario.ctx, scenario.result)
+        );
+        expect(mergeDrain.value.mergePlan.expectedFiles.length).toBeGreaterThan(0);
+
+        await drainGenerator(runMergeAnalysis(scenario.ctx, mergeDrain.value.mergePlan));
+        const mergePlanPath = resolve(
+          `.agent/plans/${scenario.runId}/merge.md`
+        );
+        const mergePlanContent = await readFile(mergePlanPath, "utf8");
+        expect(mergePlanContent).toContain("# Merge ExecPlan");
+
+        const reviewDir = resolve(`.agent/plans/${scenario.runId}`);
+        await mkdir(reviewDir, { recursive: true });
+        const reviewSeedPath = join(reviewDir, "review.md");
+        await writeFile(
+          reviewSeedPath,
+          [
+            "# Seed Review Plan",
+            "",
+            "## Progress",
+            "",
+            "## Outcomes & Retrospective",
+            "",
+          ].join("\n")
+        );
+
+        try {
+          await drainGenerator(
+            runReviewPhase(scenario.ctx, mergeDrain.value.mergePlan)
+          );
+          const reviewPlanPath = resolve(
+            `.agent/plans/${scenario.runId}/review.md`
+          );
+          const reviewContent = await readFile(reviewPlanPath, "utf8");
+          expect(reviewContent.length).toBeGreaterThan(0);
+        } finally {
+          await rm(reviewDir, {
+            recursive: true,
+            force: true,
+          });
+        }
+      } finally {
+        if (prevTarget === undefined) {
+          delete process.env.ORCH_TARGET_BRANCH;
+        } else {
+          process.env.ORCH_TARGET_BRANCH = prevTarget;
+        }
+      }
     });
   });
 
@@ -265,6 +393,7 @@ async function runScenario(options: {
   workspace: string;
   bundle: ContextBundle;
   scripts: Record<string, AgentEventDef[]>;
+  auto?: "read" | "low" | "medium" | "high";
 }) {
   const runId = randomUUID();
   const tasks = tasksFor(options.bundle, options.requirement);
@@ -273,7 +402,7 @@ async function runScenario(options: {
   const ctx: OrchestratorContext = {
     input: {
       requirement: options.requirement,
-      auto: "low",
+      auto: options.auto ?? "low",
       workspace: options.workspace,
     },
     runId,
@@ -300,7 +429,33 @@ async function runScenario(options: {
     events.push(next.value as WorkflowEvent);
   }
 
-  return { events, result, runId, tasks };
+  return { events, result, runId, tasks, ctx };
+}
+
+async function drainGenerator<T>(
+  generator: AsyncGenerator<WorkflowEvent, T, void>
+): Promise<{ events: WorkflowEvent[]; value: T }>
+{  const events: WorkflowEvent[] = [];
+  while (true) {
+    const next = await generator.next();
+    if (next.done) {
+      return { events, value: next.value };
+    }
+    events.push(next.value as WorkflowEvent);
+  }
+}
+
+async function materializeAgentFiles(
+  workspace: string,
+  agentFileHints: Map<string, Set<string>>
+) {
+  for (const files of agentFileHints.values()) {
+    for (const file of files) {
+      const fullPath = resolve(workspace, file);
+      await mkdir(dirname(fullPath), { recursive: true });
+      await writeFile(fullPath, "// stub");
+    }
+  }
 }
 
 async function createWorkspace() {

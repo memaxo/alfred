@@ -10,6 +10,12 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { runPlanV6 } from "./runner";
 
+const policyObligationSchema = z.object({
+  type: z.string().min(1),
+  reason: z.string().min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const workflowInput = z.object({
   runId: z.string().optional(), // Added for recovery/join
   requirement: z.string().min(1),
@@ -69,7 +75,7 @@ export const workflowInput = z.object({
     })
     .optional(),
   userId: z.string().min(1).optional(),
-  policyObligations: z.array(z.string()).optional(),
+  policyObligations: z.array(policyObligationSchema).optional(),
 });
 
 export type WorkflowInputPayload = z.infer<typeof workflowInput>;

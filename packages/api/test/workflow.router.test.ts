@@ -8,7 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { WorkflowEvent } from "@alfred/type";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { dbModuleStub } from "./utils/mock-db-client";
@@ -58,6 +58,13 @@ mock.module("@alfred/agent/workflow/linear", () => ({
   }),
 }));
 
+const enforceWorkflowPlanPolicyMock = vi
+  .fn()
+  .mockResolvedValue({ obligations: [] });
+mock.module("../src/workflow/access", () => ({
+  enforceWorkflowPlanPolicy: enforceWorkflowPlanPolicyMock,
+}));
+
 setupTestEnv();
 mockPolicyAudit();
 
@@ -98,6 +105,12 @@ const { createTestCaller } = await import("./utils/trpc");
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
+const biometricObligation: Obligation = {
+  type: "biometric",
+  reason: "biometric_required",
+  metadata: { code: "requireBio" },
+};
+
 beforeAll(async () => {
   caller = await createTestCaller({
     scopes: ["workflow.plan", "workflow.stream", "workflow.resume"],
@@ -129,6 +142,8 @@ afterEach(() => {
   createMessageMock.mockReset();
   resetAgentMocks();
   triggerPreferenceRefreshMock.mockReset();
+  enforceWorkflowPlanPolicyMock.mockReset();
+  enforceWorkflowPlanPolicyMock.mockResolvedValue({ obligations: [] });
 });
 
 /**
@@ -413,6 +428,127 @@ describe("workflow router", () => {
         refreshReasons.filter((reason) => reason === "workflow_requirement")
       ).toHaveLength(1);
       expect(refreshReasons.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("suspends and resumes when biometric obligations are required", async () => {
+      const resumedRunId = "resume-run-id";
+      enforceWorkflowPlanPolicyMock
+        .mockResolvedValueOnce({ obligations: [biometricObligation] })
+        .mockResolvedValueOnce({ obligations: [] });
+
+      const runEvents: WorkflowEvent[] = [
+        { type: "run", id: resumedRunId } as WorkflowEvent,
+        { type: "progress", pct: 100, message: "done" } as WorkflowEvent,
+      ];
+
+      workflowRunnerMocks.runPlanV6.mockReturnValue({
+        runId: resumedRunId,
+        summary: "resumed",
+        stream: (async function* () {
+          for (const event of runEvents) {
+            yield event;
+          }
+        })(),
+        resume: vi.fn().mockResolvedValue(undefined),
+        cancel: vi.fn(),
+      });
+
+      workflowRepoMocks.createRun.mockResolvedValue({
+        id: resumedRunId,
+        status: "suspended",
+      } as any);
+
+      runRegistryMocks.register.mockResolvedValue(undefined);
+      runRegistryMocks.unregister.mockResolvedValue(undefined);
+      runRegistryMocks.dispatchResume.mockImplementation(
+        async (runId, payload) => {
+          const registration = runRegistryMocks.register.mock.calls.find(
+            ([registeredId]) => registeredId === runId
+          );
+          if (!registration) {
+            return false;
+          }
+          await registration[1].resume({ resumeData: payload });
+          return true;
+        }
+      );
+
+      const observable = toObservable(
+        await caller.workflow.stream({
+          requirement: "secure task",
+          auto: "medium",
+        })
+      );
+
+      const receivedEvents: WorkflowEvent[] = [];
+      let resolveObligation: ((runId: string) => void) | undefined;
+      const obligationPromise = new Promise<string>((resolve) => {
+        resolveObligation = resolve;
+      });
+      let resolveComplete: (() => void) | undefined;
+      let rejectComplete: ((error: unknown) => void) | undefined;
+      const completionPromise = new Promise<void>((resolve, reject) => {
+        resolveComplete = resolve;
+        rejectComplete = reject;
+      });
+
+      const subscriptionHandle = observable.subscribe({
+        next: (event: WorkflowEvent) => {
+          receivedEvents.push(event);
+          if (event.type === "obligation" && resolveObligation) {
+            resolveObligation(event.runId);
+            resolveObligation = undefined;
+          }
+          if (event.type === "progress" && (event.pct ?? 0) === 100) {
+            stop?.();
+            resolveComplete?.();
+          }
+        },
+        error: (error) => {
+          stop?.();
+          rejectComplete?.(error);
+        },
+      });
+      const stop = typeof subscriptionHandle === "function"
+        ? subscriptionHandle
+        : typeof subscriptionHandle?.unsubscribe === "function"
+          ? () => subscriptionHandle.unsubscribe()
+          : undefined;
+
+      const suspendedRunId = await obligationPromise;
+      expect(receivedEvents[0]?.type).toBe("obligation");
+      expect((receivedEvents[0] as any).obligations).toEqual([
+        biometricObligation,
+      ]);
+
+      await caller.workflow.resume({
+        runId: suspendedRunId,
+        event: "bio-authz",
+        authz: "token-123",
+      });
+
+      await completionPromise;
+
+      const progressEvent = receivedEvents.find(
+        (event) => event.type === "progress" && (event as any).message === "done"
+      );
+      expect(progressEvent).toBeDefined();
+
+      const createRunCall = workflowRepoMocks.createRun.mock.calls[0]?.[0];
+      expect(createRunCall).toMatchObject({ status: "suspended" });
+
+      const suspendEventCall = workflowRepoMocks.appendEvent.mock.calls.find(
+        ([payload]) => (payload as any).eventType === "suspend"
+      );
+      expect(suspendEventCall).toBeDefined();
+
+      const resumeUpdate = workflowRepoMocks.updateRun.mock.calls.find(
+        ([id, patch]) => id === suspendedRunId && patch.status === "running"
+      );
+      expect(resumeUpdate).toBeTruthy();
+
+      expect(enforceWorkflowPlanPolicyMock).toHaveBeenCalledTimes(2);
+      expect(runRegistryMocks.dispatchResume).toHaveBeenCalledTimes(1);
     });
 
     it("persists tool-call and tool-result metadata", async () => {

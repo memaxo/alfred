@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 
 // Mock Env
 process.env.OPENAI_API_KEY = "mock-key";
@@ -91,5 +91,9 @@ describe("Cognitive Loop", () => {
     );
 
     expect(state).toBeDefined();
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });

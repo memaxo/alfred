@@ -5,6 +5,8 @@ import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { useWorkflowSseStream, type WorkflowStreamInput } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
+import { BiometricChallengeDialog } from "@/components/biometric-challenge-dialog";
+import { useBiometricResume } from "@/hooks/use-biometric-resume";
 
 type StreamInput = WorkflowStreamInput & {
   context: {
@@ -42,6 +44,9 @@ function WorkflowSubscription({
     (data.status as string) || "pending"
   );
   const processedEvents = useRef(new Set<string>());
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
+
+  const resume = useBiometricResume({ runId: pendingRunId, target: "workflow" });
 
   // Prepare stream input
   useEffect(() => {
@@ -94,6 +99,16 @@ function WorkflowSubscription({
       }
       processedEvents.current.add(evtId);
 
+      if (event.type === "obligation") {
+        setStatus("suspended");
+        setPendingRunId(event.runId);
+        updateArtifactData(nodeId, {
+          status: "suspended",
+          pendingRunId: event.runId,
+        });
+        return;
+      }
+
       if (event.type === "data-cache-handoff") {
         recordContextReceipt(nodeId, {
           source: "handoff",
@@ -125,10 +140,14 @@ function WorkflowSubscription({
           runId: (event as any).id,
         });
         setStatus("running");
+        setPendingRunId(null);
+        resume.close();
       } else if (event.type === "complete") {
         updateArtifactData(nodeId, { status: "completed" });
         clearContextReceipt(nodeId);
         setStreamInput(null);
+        setPendingRunId(null);
+        resume.close();
       } else if (event.type === "error") {
         updateArtifactData(nodeId, {
           status: "failed",
@@ -136,6 +155,8 @@ function WorkflowSubscription({
         });
         clearContextReceipt(nodeId);
         setStreamInput(null);
+        setPendingRunId(null);
+        resume.close();
       }
     },
     onUiMessages(messages) {
@@ -153,10 +174,26 @@ function WorkflowSubscription({
       clearContextReceipt(nodeId);
       setStatus("error");
       setStreamInput(null);
+      setPendingRunId(null);
+      resume.close();
     },
   });
 
-  return null;
+  return (
+    <BiometricChallengeDialog
+      mode="inline"
+      onClose={() => {
+        resume.close();
+        setPendingRunId(null);
+      }}
+      onSuccess={() => {
+        setStatus("running");
+      }}
+      open={resume.isOpen}
+      runId={resume.pendingRunId ?? undefined}
+      target="workflow"
+    />
+  );
 }
 
 export function WorkflowManager() {

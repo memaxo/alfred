@@ -20,7 +20,7 @@ mock.module("@alfred/api/metrics", () => ({
   rateLimitHitsTotal: { inc: rateLimitInc },
 }));
 
-import type { WorkflowEvent } from "@alfred/type";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";
 
@@ -64,7 +64,10 @@ afterEach(() => {
 
 describe("workflow.stream rate limit", () => {
   it("enforces per-minute limit for subscription", async () => {
-    evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
+    evaluateMock.mockResolvedValue({
+      allow: true,
+      obligations: [] as Obligation[],
+    });
     const mockRunId = "rate-run";
     const mkStream = async function* () {
       yield { type: "run", id: mockRunId } as WorkflowEvent;

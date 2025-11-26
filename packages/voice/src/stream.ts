@@ -53,6 +53,10 @@ const SESSION_START_TIMEOUT_MS = 10_000;
 const isReactNative =
   typeof navigator !== "undefined" &&
   (navigator as any).product === "ReactNative";
+const isNodeEnvironment =
+  typeof window === "undefined" &&
+  typeof process !== "undefined" &&
+  !!process.versions?.node;
 
 function createSocket(
   url: string,
@@ -60,9 +64,19 @@ function createSocket(
   headers?: Record<string, string>
 ): WebSocket {
   const Impl: any = WebSocket;
-  if (isReactNative && headers && Object.keys(headers).length > 0) {
+  const hasHeaders = headers && Object.keys(headers).length > 0;
+
+  if (isNodeEnvironment && hasHeaders) {
+    return new Impl(url, {
+      headers,
+      protocol: Array.isArray(protocols) ? protocols.join(",") : protocols,
+    });
+  }
+
+  if (isReactNative && hasHeaders) {
     return new Impl(url, protocols, { headers });
   }
+
   return new Impl(url, protocols);
 }
 

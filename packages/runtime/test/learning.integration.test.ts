@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 
 const persistCalls: Array<{ resource: string; size: number }> = [];
@@ -40,5 +40,9 @@ describe("LearningEngine → RuntimeKnowledgeBridge integration", () => {
     }
     expect(call.resource).toBe(`runtime:${runId}`);
     expect(call.size).toBeGreaterThan(0);
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });

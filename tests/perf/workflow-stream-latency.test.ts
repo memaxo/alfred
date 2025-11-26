@@ -15,21 +15,32 @@ import { toObservable } from "../../packages/api/test/utils/stream";
 import { WorkflowTestHarness } from "../../packages/api/test/utils/workflow-server";
 import { createWorkflowCaller } from "../../packages/api/test/utils/workflow-caller";
 
-const orchestrateWorkflowStreamMock = vi.fn();
-mock.module("@alfred/agent/workflow/orchestrator", () => ({
-  orchestrateWorkflowStream: orchestrateWorkflowStreamMock,
-}));
+const useRealLatencyMode = process.env.WORKFLOW_LATENCY_MODE === "real";
+if (useRealLatencyMode) {
+  console.info("[latency] real mode enabled - using live orchestrator");
+}
 
-const enforceWorkflowPlanPolicyMock = vi
-  .fn()
-  .mockResolvedValue({ obligations: [] as string[] });
-mock.module("@alfred/api/workflow/access", () => ({
-  enforceWorkflowPlanPolicy: enforceWorkflowPlanPolicyMock,
-}));
+const orchestrateWorkflowStreamMock = useRealLatencyMode ? null : vi.fn();
+if (orchestrateWorkflowStreamMock) {
+  mock.module("@alfred/agent/workflow/orchestrator", () => ({
+    orchestrateWorkflowStream: orchestrateWorkflowStreamMock,
+  }));
+}
 
-mock.module("@alfred/api/preference/refresh", () => ({
-  triggerPreferenceRefresh: vi.fn(),
-}));
+const enforceWorkflowPlanPolicyMock = useRealLatencyMode
+  ? null
+  : vi.fn().mockResolvedValue({ obligations: [] as string[] });
+if (enforceWorkflowPlanPolicyMock) {
+  mock.module("@alfred/api/workflow/access", () => ({
+    enforceWorkflowPlanPolicy: enforceWorkflowPlanPolicyMock,
+  }));
+}
+
+if (!useRealLatencyMode) {
+  mock.module("@alfred/api/preference/refresh", () => ({
+    triggerPreferenceRefresh: vi.fn(),
+  }));
+}
 
 const { handleWorkflowStreamRequest } = await import(
   "../../apps/web/src/routes/api/workflow/stream"
@@ -45,8 +56,8 @@ const decoder = new TextDecoder();
 
 describe("workflow stream latency", () => {
   afterEach(() => {
-    orchestrateWorkflowStreamMock.mockReset();
-    enforceWorkflowPlanPolicyMock.mockClear();
+    orchestrateWorkflowStreamMock?.mockReset?.();
+    enforceWorkflowPlanPolicyMock?.mockClear?.();
   });
 
   it("emits the first SSE workflow event under 100ms", async () => {
@@ -88,6 +99,9 @@ describe("workflow stream latency", () => {
 });
 
 function mockImmediateWorkflow(delayMs = 5) {
+  if (useRealLatencyMode || !orchestrateWorkflowStreamMock) {
+    return;
+  }
   orchestrateWorkflowStreamMock.mockImplementation(
     async (_input, _session, callbacks) => {
       setTimeout(() => {

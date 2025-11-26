@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import type { Obligation } from "@alfred/type";
+import type { Obligation } from "@alfred/type";
 
 const getSessionMock = vi.fn().mockResolvedValue({ user: { id: "user-1" } });
 mock.module("@alfred/auth", () => ({
@@ -11,7 +13,7 @@ mock.module("@alfred/auth", () => ({
 
 const enforceWorkflowPlanPolicyMock = vi
   .fn()
-  .mockResolvedValue({ obligations: [] as string[] });
+  .mockResolvedValue({ obligations: [] as Obligation[] });
 mock.module("@alfred/api/workflow/access", () => ({
   enforceWorkflowPlanPolicy: enforceWorkflowPlanPolicyMock,
 }));
@@ -19,6 +21,26 @@ mock.module("@alfred/api/workflow/access", () => ({
 const orchestrateWorkflowStreamMock = vi.fn();
 mock.module("@alfred/agent/workflow/orchestrator", () => ({
   orchestrateWorkflowStream: orchestrateWorkflowStreamMock,
+}));
+
+const workflowRepoMock = {
+  createRun: vi.fn().mockResolvedValue(undefined),
+  updateRun: vi.fn().mockResolvedValue(undefined),
+  appendEvent: vi.fn().mockResolvedValue(undefined),
+};
+mock.module("@alfred/db/repo/workflow", () => workflowRepoMock);
+
+const runRegistryMocks = {
+  register: vi.fn().mockResolvedValue(undefined),
+  unregister: vi.fn().mockResolvedValue(undefined),
+};
+mock.module("@alfred/agent/workflow/registry", () => ({
+  runRegistry: runRegistryMocks,
+}));
+
+const recordAuditMock = vi.fn().mockResolvedValue(undefined);
+mock.module("@alfred/agent/utils/audit", () => ({
+  recordAudit: recordAuditMock,
 }));
 
 mock.module("@alfred/api/preference/refresh", () => ({
@@ -53,6 +75,12 @@ describe("/api/workflow/stream SSE route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enforceWorkflowPlanPolicyMock.mockResolvedValue({ obligations: [] });
+    runRegistryMocks.register.mockResolvedValue(undefined);
+    runRegistryMocks.unregister.mockResolvedValue(undefined);
+    workflowRepoMock.createRun.mockResolvedValue(undefined);
+    workflowRepoMock.updateRun.mockResolvedValue(undefined);
+    workflowRepoMock.appendEvent.mockResolvedValue(undefined);
+    recordAuditMock.mockResolvedValue(undefined);
     orchestrateWorkflowStreamMock.mockImplementation((_input, _session, callbacks) => {
       callbacks.emitNext({ type: "run", eventId: "evt-run" } as any);
       callbacks.emitUiMessages?.(
@@ -127,4 +155,87 @@ describe("/api/workflow/stream SSE route", () => {
     expect(payload.error).toBe("access_denied");
     expect(orchestrateWorkflowStreamMock).not.toHaveBeenCalled();
   });
+
+  it("emits obligation event when policy requires biometric elevation", async () => {
+    const biometric: Obligation = {
+      type: "biometric",
+      reason: "biometric_required",
+      metadata: { code: "requireBio" },
+    };
+    enforceWorkflowPlanPolicyMock.mockResolvedValueOnce({
+      obligations: [biometric],
+    });
+
+    const response = await handleWorkflowStreamRequest(
+      createRequest({ ...basePayload, auto: "high" })
+    );
+
+    expect(response.status).toBe(200);
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let obligationFound = false;
+    while (!obligationFound && reader) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      buffer = drain(buffer, (evt) => {
+        if (
+          evt.name === "workflow-event" &&
+          evt.data?.type === "obligation"
+        ) {
+          obligationFound = true;
+        }
+      });
+    }
+
+    expect(obligationFound).toBe(true);
+    await reader?.cancel();
+    expect(orchestrateWorkflowStreamMock).not.toHaveBeenCalled();
+    expect(workflowRepoMock.createRun).toHaveBeenCalled();
+    expect(runRegistryMocks.register).toHaveBeenCalled();
+  });
 });
+
+function drain(
+  buffer: string,
+  push: (evt: { name: string; data: any }) => void
+): string {
+  while (true) {
+    const idx = buffer.indexOf("\n\n");
+    if (idx === -1) {
+      break;
+    }
+    const raw = buffer.slice(0, idx);
+    buffer = buffer.slice(idx + 2);
+    const evt = parse(raw);
+    if (evt) {
+      push(evt);
+    }
+  }
+  return buffer;
+}
+
+function parse(raw: string): { name: string; data: any } | null {
+  let name = "message";
+  let data = "";
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event:")) {
+      name = line.slice("event:".length).trim();
+    } else if (line.startsWith("data:")) {
+      const chunk = line.slice("data:".length);
+      data = data.length ? `${data}\n${chunk}` : chunk;
+    }
+  }
+  if (!data) {
+    return null;
+  }
+  try {
+    return { name, data: JSON.parse(data) };
+  } catch {
+    return null;
+  }
+}

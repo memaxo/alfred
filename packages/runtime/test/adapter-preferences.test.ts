@@ -2,8 +2,8 @@ import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 
 const streamTextMock = vi.fn(() => ({
   fullStream: (async function* () {
-    yield;
-    return;
+    yield { type: "text-delta", id: "delta-1", delta: "Hello" };
+    yield { type: "finish", finishReason: "stop" };
   })(),
 }));
 
@@ -66,7 +66,7 @@ mock.module("../src/metrics", () => ({
 }));
 
 mock.module("@alfred/logger", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 const { AISDKAdapter } = await import("../src/adapters/ai");

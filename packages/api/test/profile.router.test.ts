@@ -123,7 +123,13 @@ describe("profile router", () => {
       const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
       evaluateMock.mockResolvedValueOnce({
         allow: true,
-        obligations: ["biometric_required"],
+        obligations: [
+          {
+            type: "biometric",
+            reason: "biometric_required",
+            metadata: { code: "requireBio" },
+          },
+        ],
       });
 
       await expect(

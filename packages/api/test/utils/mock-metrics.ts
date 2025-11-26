@@ -1,4 +1,5 @@
 import { mock, vi } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -49,7 +50,7 @@ mock.module("@alfred/api/src/metrics", () => ({
 // Policy hooks used by metrics: provide default no-op implementations.
 const defaultPolicyEvaluate = vi
   .fn()
-  .mockResolvedValue({ allow: true, obligations: [] as string[] });
+  .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
 const defaultRegisterCacheObs = vi.fn();
 
 export const policyStub = {

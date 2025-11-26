@@ -1,20 +1,29 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { ContextBuilder } from "../src/context";
 import { runWaves } from "../src/orchestrator/waves";
 
-// Mock dependencies
-mock.module("../src/context", () => ({
-  ContextBuilder: class {
-    build() {
-      return Promise.resolve({ bundle: {} });
-    }
-  },
-}));
+const originalContextBuild = ContextBuilder.prototype.build;
+ContextBuilder.prototype.build = async function () {
+  return { bundle: {} } as any;
+};
 
 mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
   decomposeTask: () => [
-    { id: "task1", requirement: "task1 req" },
-    { id: "task2", requirement: "task2 req" },
+    {
+      id: "task1",
+      requirement: "task1 req",
+      acceptance: [],
+      filesHint: [],
+      title: "Task 1",
+    },
+    {
+      id: "task2",
+      requirement: "task2 req",
+      acceptance: [],
+      filesHint: [],
+      title: "Task 2",
+    },
   ],
 }));
 
@@ -136,5 +145,10 @@ describe("Orchestrator Hydration", () => {
       (e) => e.type === "notice" && e.message === "wave_wave_0_start"
     );
     expect(startEvent).toBeDefined();
+  });
+
+  afterAll(() => {
+    ContextBuilder.prototype.build = originalContextBuild;
+    mock.restore();
   });
 });

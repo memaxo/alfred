@@ -13,13 +13,18 @@ import { EMBEDDING_DIM } from "@alfred/embed";
 const createDocumentMock = vi.fn();
 const addChunksMock = vi.fn();
 const searchChunksMock = vi.fn();
+const upsertNodesMock = vi.fn();
+const upsertEdgesMock = vi.fn();
 
-mock.module("@alfred/db", () => ({
-  ragRepo: {
-    createDocument: createDocumentMock,
-    addChunks: addChunksMock,
-    searchChunks: searchChunksMock,
-  },
+mock.module("@alfred/db/repo/rag", () => ({
+  createDocument: createDocumentMock,
+  addChunks: addChunksMock,
+  searchChunks: searchChunksMock,
+}));
+
+mock.module("@alfred/db/repo/graph/index", () => ({
+  upsertNodes: upsertNodesMock,
+  upsertEdges: upsertEdgesMock,
 }));
 
 let doc: typeof import("../src/doc");
@@ -41,6 +46,8 @@ beforeEach(() => {
   createDocumentMock.mockReset();
   addChunksMock.mockReset();
   searchChunksMock.mockReset();
+  upsertNodesMock.mockReset();
+  upsertEdgesMock.mockReset();
   providerMocks = makeEmbeddingProvider();
   doc.setEmbeddingProvider(providerMocks);
 });
@@ -125,6 +132,46 @@ describe("RAG doc functions", () => {
       await expect(doc.ingest("test", " ")).rejects.toThrow(
         "rag_empty_content"
       );
+    });
+
+    it("persists relation edges when graph enrichment enabled", async () => {
+      const originalDb = process.env.DATABASE_URL;
+      const originalFlag = process.env.RAG_ENRICH_GRAPH;
+      process.env.DATABASE_URL = "postgres://example";
+      process.env.RAG_ENRICH_GRAPH = "1";
+
+      const mockDoc = { id: "doc-rel", source: "edge-source", title: "Edge" };
+      createDocumentMock.mockResolvedValue(mockDoc);
+      addChunksMock.mockResolvedValue([]);
+      upsertNodesMock.mockImplementation(async (seeds: any[]) => {
+        const map = new Map<string, { id: string; resource: string; hash: string }>();
+        seeds.forEach((seed: any, index: number) => {
+          map.set(`${seed.resource}:${seed.hash}`, {
+            id: `node-${index}`,
+            resource: seed.resource,
+            hash: seed.hash,
+          });
+        });
+        return map;
+      });
+      upsertEdgesMock.mockResolvedValue(undefined);
+
+      try {
+        await doc.ingest("edge-source", "Elon Musk founded SpaceX in 2002.");
+      } finally {
+        process.env.DATABASE_URL = originalDb;
+        if (originalFlag === undefined) {
+          delete process.env.RAG_ENRICH_GRAPH;
+        } else {
+          process.env.RAG_ENRICH_GRAPH = originalFlag;
+        }
+      }
+
+      const edgeCalls = upsertEdgesMock.mock.calls;
+      expect(edgeCalls.length).toBeGreaterThan(0);
+      const edges = edgeCalls[edgeCalls.length - 1]?.[0] ?? [];
+      expect(Array.isArray(edges)).toBe(true);
+      expect(edges.length).toBeGreaterThan(0);
     });
   });
 

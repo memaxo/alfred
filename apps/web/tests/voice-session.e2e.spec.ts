@@ -8,7 +8,7 @@ import type { VoiceSession } from "@alfred/voice/server/session";
 import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { VoiceStreamClient } from "@alfred/voice/stream";
 import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
-import { createVoiceFixture } from "@alfred/test-kit/voice/runtime-fixture";
+import { createVoiceFixture } from "../../../packages/test-kit/src/voice/registry";
 
 // Playwright (Node) does not provide a global WebSocket implementation.
 // VoiceStreamClient expects one, so we install the ws implementation globally.
@@ -20,6 +20,7 @@ const STREAM_PATH = "/voice/stream";
 const STREAM_URL = `ws://127.0.0.1:${STREAM_PORT}${STREAM_PATH}`;
 const AUTH_TOKEN = "Bearer voice-e2e-mock";
 const SESSION_TIMEOUT_MS = 1500;
+const DEBUG_VOICE = process.env.DEBUG_VOICE_E2E === "1";
 
 type ServerStats = {
   started: number;
@@ -121,6 +122,9 @@ class MockVoiceStreamingServer {
     if (!this.registry) {
       this.registry = await this.fixturePromise;
     }
+    if (DEBUG_VOICE) {
+      console.log("[mock-voice] registry ready");
+    }
   }
 
   private listen() {
@@ -146,9 +150,12 @@ class MockVoiceStreamingServer {
       closed: false,
     };
     this.connections.set(ws, state);
+    if (DEBUG_VOICE) {
+      console.log("[mock-voice] connection established", state.connectionId);
+    }
     this.send(ws, { type: "ready", sessionId: null });
-    ws.on("message", (data) => {
-      void this.handleMessage(ws, data);
+    ws.on("message", (data, isBinary) => {
+      void this.handleMessage(ws, data, Boolean(isBinary));
     });
     ws.once("close", () => {
       this.cleanup(ws);
@@ -156,21 +163,34 @@ class MockVoiceStreamingServer {
     this.armTimeout(ws);
   }
 
-  private async handleMessage(ws: WebSocket, data: WebSocket.RawData) {
+  private async handleMessage(
+    ws: WebSocket,
+    data: WebSocket.RawData,
+    isBinary: boolean
+  ) {
     const state = this.connections.get(ws);
     if (!state || state.closed) {
       return;
     }
     this.armTimeout(ws);
 
-    if (typeof data !== "string") {
+    if (
+      isBinary &&
+      (data instanceof Buffer ||
+        data instanceof Uint8Array ||
+        data instanceof ArrayBuffer)
+    ) {
       await this.handleBinary(ws, data);
       return;
     }
 
     let payload: Record<string, unknown>;
     try {
-      payload = JSON.parse(data);
+      const text =
+        typeof data === "string"
+          ? data
+          : Buffer.from(data as Buffer | Uint8Array).toString("utf8");
+      payload = JSON.parse(text);
     } catch {
       this.emitError(ws, "invalid_json", true);
       return;
@@ -213,6 +233,9 @@ class MockVoiceStreamingServer {
       sessionId,
       (payload.language as string | undefined) ?? "en"
     );
+    if (DEBUG_VOICE) {
+      console.log("[mock-voice] start session", sessionId);
+    }
 
     this.stats.started += 1;
     this.sendStatus(ws, "recording");
@@ -237,6 +260,13 @@ class MockVoiceStreamingServer {
   }
 
   private async handleBinary(ws: WebSocket, chunk: WebSocket.RawData) {
+    const state = this.connections.get(ws);
+    if (!state?.voiceSession) {
+      if (DEBUG_VOICE) {
+        console.log("[mock-voice] ignore binary before start");
+      }
+      return;
+    }
     const payload = {
       type: "audio_chunk",
       mimeType: "audio/pcm",
@@ -252,6 +282,9 @@ class MockVoiceStreamingServer {
   ) {
     const state = this.connections.get(ws);
     if (!state?.voiceSession || !state.sessionId) {
+      if (DEBUG_VOICE) {
+        console.log("[mock-voice] chunk before start");
+      }
       this.emitError(ws, "session_not_started", false);
       return;
     }
@@ -515,10 +548,12 @@ test.describe("Voice Session E2E", () => {
   test("handles server-side errors and surfaces them to the client", async () => {
     const log = createVoiceEventLog();
     const client = createVoiceClient(log);
-    await client.startSession({
-      sessionId: `codec-error-${Date.now()}`,
-      codec: "wav", // Triggers simulated error branch
-    });
+    await expect(
+      client.startSession({
+        sessionId: `codec-error-${Date.now()}`,
+        codec: "wav", // Triggers simulated error branch
+      })
+    ).rejects.toThrow("codec_not_supported");
     await expect.poll(() => log.errors[0], { timeout: 2000 }).toBe(
       "codec_not_supported"
     );

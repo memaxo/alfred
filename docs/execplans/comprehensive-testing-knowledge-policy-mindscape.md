@@ -18,7 +18,7 @@ This plan outlines the manual and automated testing strategy for the recently im
 **Goal**: Verify that API routers correctly throw `PRECONDITION_FAILED` when obligations are unmet.
 **Test File**: `packages/api/test/deploy.policy.test.ts`
 **Steps**:
-1.  Mock the TRPC context to include a policy obligation (e.g., `{ obligations: ["biometric"] }`).
+1.  Mock the TRPC context to include a policy obligation (e.g., `{ obligations: [{ type: "biometric", reason: "biometric_required" }] }`).
 2.  Call `deployRouter.promote`.
 3.  Expect `TRPCError` with code `PRECONDITION_FAILED` and `cause.obligations` matching the mock.
 4.  Mock a context *without* obligations and verify success (or different error if upstream fails).

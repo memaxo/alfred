@@ -22,12 +22,32 @@ The script runs:
 1. `packages/api/test/utils/workflow-server.test.ts` – harness sanity checks.
 2. `packages/api/test/workflow.stream.integration.test.ts` – TRPC streaming scenarios.
 3. `apps/web/src/routes/api/__tests__/workflow.stream.integration.test.ts` – SSE scenarios.
+4. `tests/perf/workflow-stream-latency.test.ts` – deterministic latency measurements for both transports (<100 ms budget).
 
 All tests run against the sqlite fallback (`DATABASE_URL=sqlite::memory:`) so no Postgres service is required.
 
 ## CI Integration
 
 The root `ci` script now invokes `bun run test:workflow-integration` after the existing integration suite. Failing workflows immediately surface in CI when either transport regresses.
+
+### Latency Verification Modes
+
+- **Default (mocked) mode**: `bun test tests/perf/workflow-stream-latency.test.ts` keeps the orchestrator mocked so latency noise stays under 10 ms in CI. This is the mode wired into `test:workflow-integration`.
+- **Real staging mode**: `bun run test:workflow-latency:real` (sets `WORKFLOW_LATENCY_MODE=real`) disables the mocks, so the harness talks to the real orchestrator, DB, and SSE/TRPC surfaces. Run this inside staging with production-like env vars (`DATABASE_URL`, `OPENAI_API_KEY`, etc.) to capture the numbers we publish before launch.
+
+The test logs both SSE and TRPC latencies (`[latency] transport=... first_event_ms=...`). Keep a short history of these values in the ExecPlan or release notes so regressions are obvious.
+
+## Policy & Rate-Limit Enforcement
+
+Both transports **must** call `enforceWorkflowPlanPolicy` from `@alfred/api/workflow/access` before invoking `orchestrateWorkflowStream`. The helper:
+
+1. Consumes the shared route rate limit bucket via `consumeRouteRateLimit`.
+2. Evaluates the `workflow.plan` policy and records an audit log.
+3. Returns any obligations (e.g., `requireBio`) that the transport must pass through `callbacks.context.policy.obligations` so `ensureObligations` can enforce biometric escalation inside the orchestrator.
+
+When obligations exist, **SSE now emits** `event: workflow-event` payloads of the shape `{ type: "obligation", runId, obligations }` and registers the run with the shared `runRegistry`. Mindscape pauses the stream, prompts for biometric verification, and resumes the run by calling `workflow.resume` once the client delivers the new token.
+
+New transports (CLI, mobile, etc.) should import the same helper rather than re-implementing rate-limit or policy logic. This keeps TRPC, SSE, and future flows perfectly aligned.
 
 ## Troubleshooting
 

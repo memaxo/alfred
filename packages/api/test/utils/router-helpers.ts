@@ -4,6 +4,7 @@
  */
 
 import { mock, vi } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import type { TRPCError } from "@trpc/server";
 
 /**
@@ -16,7 +17,7 @@ export function mockPolicyAudit() {
   mock.module("@alfred/policy", () => ({
     evaluate: vi
       .fn()
-      .mockResolvedValue({ allow: true, obligations: [] as string[] }),
+      .mockResolvedValue({ allow: true, obligations: [] as Obligation[] }),
     registerCacheObs: vi.fn(),
   }));
 }
@@ -29,9 +30,9 @@ export function mockWorkflowRepo() {
   const updateRunMock = vi.fn();
   const appendEventMock = vi.fn();
   const getRunMock = vi.fn();
-  const listEventsMock = vi.fn();
-  const listEventsByTypeMock = vi.fn();
-  const listEventsByTypePagedMock = vi.fn();
+  const listEventsMock = vi.fn().mockResolvedValue([]);
+  const listEventsByTypeMock = vi.fn().mockResolvedValue([]);
+  const listEventsByTypePagedMock = vi.fn().mockResolvedValue([]);
   const countEventsByTypeMock = vi.fn();
 
   mock.module("@alfred/db/repo/workflow", () => ({

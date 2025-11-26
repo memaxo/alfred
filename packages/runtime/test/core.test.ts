@@ -2,11 +2,31 @@
  * WorkflowRuntime core tests
  */
 
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
-import { createRuntime } from "../src/core";
+const { AISDKAdapter } = await import("../src/adapters/ai");
+const originalStream = AISDKAdapter.prototype.stream;
+
+// Stub AISDKAdapter.stream to avoid network calls during unit tests
+AISDKAdapter.prototype.stream = async function* () {
+  yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+};
+
+const originalDisableCodex = process.env.RUNTIME_DISABLE_CODEX;
+process.env.RUNTIME_DISABLE_CODEX = "1";
+
+const { createRuntime } = await import("../src/core");
 import type { RuntimeInput } from "../src/types";
+
+afterAll(() => {
+  AISDKAdapter.prototype.stream = originalStream;
+  if (originalDisableCodex === undefined) {
+    delete process.env.RUNTIME_DISABLE_CODEX;
+  } else {
+    process.env.RUNTIME_DISABLE_CODEX = originalDisableCodex;
+  }
+});
 
 describe("WorkflowRuntime", () => {
   let mockModel: LanguageModel;
