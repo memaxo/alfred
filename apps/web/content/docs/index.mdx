@@ -1,0 +1,97 @@
+---
+title: ALFRED Documentation
+description: Personal AI assistant for deep single-user personalization
+---
+
+# Welcome to ALFRED
+
+**ALFRED** is a personal AI assistant designed for deep single-user personalization. Unlike multi-tenant SaaS products, ALFRED learns your specific workflows, preferences, and infrastructure to become increasingly valuable over time.
+
+## Quick Links
+
+**New to ALFRED?**
+- [Getting Started](./getting-started) - Get up and running in 5 minutes
+- [Developer Onboarding](./guides/developer-onboarding) - Setup and development guide
+- [FAQ](./faq) - Common questions answered
+
+**Common Tasks**
+- [Troubleshooting](./guides/troubleshooting) - Fix common issues
+- [Common Patterns](./guides/common-patterns) - Code patterns and examples
+- [Performance Optimization](./guides/performance-optimization) - Speed up your workflows
+
+**Understanding ALFRED**
+- [Architecture Overview](./architecture/overview) - How ALFRED works
+- [Workflow Orchestration](./guides/workflow-orchestration) - Multi-step task execution
+- [Learning System](./guides/learning-system) - How ALFRED improves over time
+
+## What is ALFRED?
+
+ALFRED is a secure, AI SDK v6-powered automation assistant that helps you manage projects, automate infrastructure, and boost productivity. It's built as a **personal assistant**—meaning it's designed for a single user, enabling aggressive personalization and learning without multi-tenancy complexity.
+
+### Core Use Cases
+
+- **Workflow Automation**: Execute multi-step workflows with AI SDK v6 (e.g., "deploy this app to staging", "create a Linear issue and assign it")
+- **Personal Productivity**: Notes, reminders, timers, and bookmarks with semantic search
+- **Infrastructure Management**: Proxmox VM operations, Docker deployments, Git workflows
+- **Project Management**: Linear integration for issue tracking and automation
+- **Voice Interaction**: Speech-to-speech with local models (Faster-Whisper STT, Piper TTS)
+
+### Key Features
+
+- **AI SDK v6 Workflows**: Streaming execution with tool chaining, durable state, suspend/resume, and conflict resolution
+- **Cognitive Architecture**: Event-sourced state machine with physiology (energy/boredom/frustration), autonomy gradient, and brainstem supervisor
+- **Local-First Architecture**: Local embeddings (KaLM-Embedding-Gemma3-12B), local voice models (NeMo STT, Maya1/Piper TTS), zero-cost privacy
+- **Knowledge Graph**: Hypergraph memory with active recall reinforcement, semantic search, and pattern recognition
+- **Learning System**: Self-supervision from outcomes, preference inference, mistake analysis, memory decay
+- **Voice System**: Real-time bidirectional streaming, VAD-driven interruptibility (barge-in), Mindscape visualization, admin dashboard
+- **Security**: Policy engine with biometric elevation for high-risk operations, token scopes, audit logging
+- **Observability**: Prometheus metrics, structured logging, build verification, memory maintenance telemetry
+- **Multi-Client**: Web (TanStack Start) and Native (React Native/Expo) apps
+- **Linear Integration**: First-class Linear agent with Agent Activities, 10-second acknowledgment, webhook handling
+
+## Documentation Sections
+
+### Architecture
+
+Learn about ALFRED's system design and architectural decisions:
+
+- [Architecture Overview](./architecture/overview) - System vision, core principles, and architectural layers
+- [Cognitive Runtime](./architecture/cognitive-runtime) - Event-sourced state machine and voice integration
+- [Memory System](./architecture/memory-system) - Learning worker, knowledge graph, and forgetting curve
+- [Knowledge Hypergraph](./architecture/hypergraph) - System anatomy, persistence flow, and Mindscape integration
+
+### Guides
+
+Step-by-step guides for understanding and using ALFRED:
+
+- [Developer Onboarding](./guides/developer-onboarding) - Get started with ALFRED development and setup
+- [Workflow Orchestration](./guides/workflow-orchestration) - Multi-agent workflows with phases, waves, and suspend/resume
+- [Learning System](./guides/learning-system) - Self-supervision, pattern extraction, and continuous improvement
+- [Integration Patterns](./guides/integration-patterns) - How ALFRED's systems compose and work together
+- [Cognitive State Machine](./guides/cognitive-state-machine) - Event sourcing, physiology, and Bayesian autonomy
+
+## Quick Start
+
+1. **Install prerequisites:** Bun 1.2+, PostgreSQL 16, Node.js 20+
+2. **Clone and install:** `git clone <repo> && cd alfred && bun install`
+3. **Configure:** `cp config/env.example .env` and edit settings
+4. **Start database:** `bun run db:start && bun run db:migrate`
+5. **Start server:** `bun run dev`
+6. **Open:** `http://localhost:3000`
+
+See [Getting Started](./getting-started) for detailed instructions.
+
+## Technical Overview
+
+ALFRED is built as a monorepo using **Bun + Turborepo** with a layered architecture:
+
+- **Runtime Layer**: Orchestrates domain packages into cohesive execution
+- **Domain Packages**: Cognitive state, knowledge graph, learning system, RAG
+- **Tool Packages**: AI SDK v6 tool definitions (assistant & orchestrator tools)
+- **API Layer**: tRPC routers with Better Auth session context
+- **Infrastructure**: Drizzle ORM, PostgreSQL + pgvector, Redis (optional)
+
+## Contributing
+
+ALFRED is a personal project, but contributions and feedback are welcome. See the repository for contribution guidelines.
+

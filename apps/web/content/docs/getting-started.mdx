@@ -1,0 +1,104 @@
+---
+title: Getting Started
+description: Quick start guide for new users - get ALFRED running in minutes
+---
+
+# Getting Started with ALFRED
+
+Welcome! This guide will help you get ALFRED up and running quickly.
+
+## Quick Start (5 minutes)
+
+### Step 1: Install Prerequisites
+
+- **Bun 1.2+** - [Install Bun](https://bun.sh)
+- **PostgreSQL 16** with pgvector extension
+- **Node.js 20+** (for tooling compatibility)
+
+### Step 2: Clone and Install
+
+\`\`\`bash
+git clone <repo-url>
+cd alfred
+bun install
+\`\`\`
+
+### Step 3: Configure Environment
+
+\`\`\`bash
+cp config/env.example .env
+# Edit .env with your settings
+\`\`\`
+
+**Minimum required settings:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `BETTER_AUTH_SECRET` - Generate with `bun scripts/gen-keys.ts`
+
+### Step 4: Start Database
+
+\`\`\`bash
+bun run db:start       # Starts Postgres with pgvector
+bun run db:migrate     # Applies migrations
+\`\`\`
+
+### Step 5: Start Development Server
+
+\`\`\`bash
+bun run dev            # Starts web app + API
+\`\`\`
+
+### Step 6: Open Your Browser
+
+Visit `http://localhost:3000` and you're ready to go!
+
+## First Steps
+
+### 1. Create Your Account
+
+Sign up with email or passkey authentication.
+
+### 2. Try Your First Workflow
+
+Ask ALFRED to help with a simple task:
+- "Create a note about my project ideas"
+- "Set a reminder for tomorrow at 2pm"
+- "What's the weather today?"
+
+### 3. Explore the Interface
+
+- **Chat** - Main interaction interface
+- **Mindscape** - Visual knowledge graph
+- **Settings** - Configure preferences and autonomy
+
+## Common First Tasks
+
+### Create a Note
+
+\`\`\`
+"Create a note titled 'Project Ideas' with content about my startup ideas"
+\`\`\`
+
+### Set a Reminder
+
+\`\`\`
+"Remind me to review the PR tomorrow at 3pm"
+\`\`\`
+
+### Ask a Question
+
+\`\`\`
+"What did I learn about TypeScript last week?"
+\`\`\`
+
+## What's Next?
+
+- [Developer Onboarding](./guides/developer-onboarding) - Deep dive into development
+- [Architecture Overview](./architecture/overview) - Understand how ALFRED works
+- [Troubleshooting](./guides/troubleshooting) - Fix common issues
+
+## Need Help?
+
+- Check the [Troubleshooting Guide](./guides/troubleshooting)
+- Review [Common Patterns](./guides/common-patterns)
+- See [FAQ](./faq) for frequently asked questions
+

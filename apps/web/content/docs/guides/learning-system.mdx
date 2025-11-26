@@ -1,0 +1,99 @@
+---
+title: Learning System
+description: Self-supervision, pattern extraction, mistake analysis, and continuous improvement
+---
+
+# Learning System
+
+**Owner:** Learning  
+**Last Updated:** 2025-11-26
+
+## Purpose
+
+This guide explains ALFRED's self-supervision and improvement mechanisms—how the assistant learns from outcomes, extracts patterns from successful workflows, analyzes mistakes, and continuously improves its behavior through feedback loops.
+
+---
+
+A truly intelligent assistant must improve over time. Unlike static tools that behave identically regardless of experience, ALFRED learns from every interaction—successes reinforce effective patterns, failures inform future caution, and user feedback shapes preferences. This learning capacity transforms ALFRED from a sophisticated language model into a system that genuinely adapts to its user.
+
+The learning system closes the loop between action and improvement. Every workflow produces outcomes; every outcome becomes training data. ALFRED compares what it expected against what actually happened, extracts insights from the delta, and incorporates those insights into future behavior. This continuous improvement cycle means that today's ALFRED is always less capable than tomorrow's.
+
+## Core Concepts
+
+Self-supervision drives ALFRED's learning without requiring explicit labels or human annotation. The system generates its own training signal by comparing predictions against outcomes. When ALFRED plans a workflow, it implicitly predicts the result; when the workflow completes, it can compare that prediction against reality. The prediction error becomes a learning signal that updates future behavior.
+
+This self-supervised approach scales naturally with usage. Every workflow provides learning opportunities regardless of whether the user provides feedback. More usage means more learning data, which means faster improvement. The system doesn't plateau waiting for manual annotation—it continuously extracts value from its own operation.
+
+Outcome recording captures the essential comparison: what was expected versus what actually happened. Expectations might be explicit (ALFRED predicted the test would pass) or implicit (ALFRED chose a tool sequence expecting it to accomplish the goal). Outcomes are concrete: the test passed or failed, the deployment succeeded or rolled back, the user accepted or rejected the result.
+
+Pattern extraction identifies recurring success factors. When similar tasks consistently succeed with particular tool sequences, those sequences become patterns worth reusing. The learning system abstracts over individual successes to identify general strategies that transfer across tasks. These patterns feed into the knowledge graph as first-class entities that inform future planning.
+
+## Architecture
+
+The learning system operates through several interconnected components. The supervision loop monitors workflow outcomes and generates learning events. The mistake ledger tracks errors for pattern analysis. The preference inferencer detects implicit user preferences from behavior. All components feed their outputs into the knowledge graph, where learning becomes actionable knowledge.
+
+The supervision loop activates at workflow completion. It receives the workflow's initial requirement, the execution trace (what tools were called, what results were produced), and the final outcome. From these inputs, it computes prediction error—the distance between what ALFRED intended and what occurred. Non-zero error triggers learning: insights are generated and persisted.
+
+Insights from supervision carry confidence scores derived from prediction error. Low error (close match between expected and actual) produces high-confidence insights—strong evidence that a particular approach works. High error produces lower-confidence insights—tentative hypotheses about what went wrong that require additional evidence before influencing behavior.
+
+The mistake ledger provides structured error analysis. Rather than treating failures as atomic events, the ledger categorizes mistakes by cause, effect, and domain. These categories enable pattern detection across failures: if multiple distinct failures share a common cause, that cause is likely a systemic issue worth addressing. The ledger output is aggregated insights that highlight focus areas for improvement.
+
+## Feedback Integration
+
+User feedback provides explicit training signals that complement self-supervision. While self-supervision captures operational correctness (did the workflow complete successfully?), feedback captures user satisfaction (did the result meet the user's actual needs?). These are distinct signals: a workflow can complete successfully but produce an unwanted result, or fail technically while partially accomplishing the user's goal.
+
+Feedback arrives as structured comparisons: expected versus actual outcomes with optional explanatory context. The system doesn't require detailed feedback—even simple thumbs up/down provides useful signal. But richer feedback (explaining why the result was unsatisfactory) produces more precise learning.
+
+Feedback strength weights learning updates. Emphatic feedback ("this is exactly what I needed" or "this completely missed the point") produces larger updates than neutral acknowledgment. This weighting ensures that memorable experiences—both positive and negative—have proportionate impact on future behavior.
+
+The feedback loop connects to the autonomy gradient. Positive feedback increases ALFRED's confidence in similar situations, potentially raising autonomy levels. Negative feedback decreases confidence, making ALFRED more cautious. This connection ensures that learning manifests in observable behavior changes, not just internal metrics.
+
+## Preference Inference
+
+Users express preferences through behavior, not just explicit feedback. Choosing option A over option B, editing generated text before acceptance, or interrupting workflows early all communicate preferences implicitly. The preference inferencer detects these signals and translates them into explicit preference records.
+
+Behavioral signals include tool preferences (which tools users invoke directly vs. which they let ALFRED choose), style preferences (how users edit generated content), and workflow preferences (when users interrupt vs. let workflows complete). Each signal is individually weak, but patterns across many signals reveal stable preferences.
+
+Preferences feed back into context building. When ALFRED prepares to generate content, it queries learned preferences for the current domain and user. These preferences influence prompt construction, tool selection, and output formatting. The result is increasingly personalized behavior that aligns with user expectations.
+
+The inference system maintains uncertainty estimates. New users have broad preference distributions—ALFRED doesn't assume much. As behavioral evidence accumulates, distributions narrow around detected preferences. This uncertainty tracking prevents premature commitment to inferred preferences that might be noise.
+
+## The Learning Loop
+
+Learning manifests through a continuous cycle: execute, compare, extract, integrate, improve. Each iteration strengthens ALFRED's understanding of what works, what fails, and what the user values. The loop operates automatically without requiring user intervention, though feedback accelerates improvement.
+
+Execution produces outcomes and traces. Every workflow generates data regardless of success or failure. Successful workflows demonstrate effective approaches; failed workflows reveal constraints and edge cases. Both are valuable learning material.
+
+Comparison generates prediction error. The expected outcome (implicit in ALFRED's planning) is compared against the actual outcome. The delta between these—whether small adjustments or complete misses—quantifies how much learning is needed.
+
+Extraction produces structured insights. Raw prediction errors are analyzed to identify causes, contributing factors, and potential improvements. These insights are not just "something went wrong" but specific hypotheses about what could be different.
+
+Integration persists insights to the knowledge graph. Insights become first-class knowledge nodes with confidence scores, timestamps, and provenance. They connect to related concepts, enabling rich retrieval during future context building.
+
+Improvement manifests in changed behavior. The next similar task benefits from new insights during planning. Tool selections change, risk assessments adjust, and generated content reflects learned preferences. The loop closes as improved execution produces new outcomes for the next iteration.
+
+## Design Decisions
+
+Self-supervision was chosen over supervised learning because labels are expensive and scarce. Requiring human annotation for every learning opportunity would create a bottleneck that limits improvement rate. Self-supervision extracts learning signal from every workflow, scaling improvement with usage rather than annotation capacity.
+
+The mistake ledger separates error recording from error analysis. This separation enables batch analysis that detects patterns invisible in individual errors. It also provides an audit trail for debugging—when ALFRED makes a surprising decision, operators can examine the mistake history that influenced it.
+
+Preference inference operates implicitly to minimize user burden. Users shouldn't need to explicitly configure ALFRED's behavior—their natural usage patterns reveal preferences. This implicit approach aligns with ALFRED's role as a personal assistant that adapts to its user rather than requiring adaptation from them.
+
+## Integration Points
+
+The cognitive loop provides outcomes for supervision. When workflows complete, the reflection state captures expected versus actual outcomes. These reflections become supervision events that drive learning.
+
+The knowledge graph stores learning outputs. Insights and patterns from the learning system are persisted as knowledge nodes, enabling semantic queries during context building. A question about what ALFRED has learned becomes a graph query.
+
+The autonomy gradient consumes feedback signals. Positive feedback updates the autonomy prior toward higher confidence; negative feedback updates toward lower confidence. This connection ensures that learning has behavioral consequences.
+
+Context building queries learned knowledge. Before generating responses or planning workflows, ALFRED retrieves relevant patterns, recent insights, and user preferences. This retrieved knowledge shapes behavior in ways that reflect accumulated learning.
+
+## Related Documentation
+
+- [Architecture Overview](../architecture/overview) — System-wide architecture context
+- [Cognitive State Machine](cognitive-state-machine) — How reflection produces learning inputs
+- [Knowledge Hypergraph](knowledge-hypergraph) — Where learning outputs are stored
+- [Integration Patterns](integration-patterns) — How learning composes with other systems
+

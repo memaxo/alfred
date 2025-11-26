@@ -1,0 +1,101 @@
+---
+title: Workflow Orchestration
+description: Multi-agent workflow system with phases, waves, and suspend/resume capabilities
+---
+
+# Workflow Orchestration
+
+**Owner:** Runtime  
+**Last Updated:** 2025-11-26
+
+## Purpose
+
+This guide explains ALFRED's multi-agent workflow system—how complex tasks are decomposed into phases, executed across parallel agent waves, and coordinated through durable state management with suspend/resume capabilities.
+
+---
+
+Real-world tasks rarely fit neatly into single-shot completions. Deploying an application involves code review, testing, environment configuration, and rollout coordination. Debugging a production issue requires log analysis, hypothesis formation, testing, and verification. These workflows span multiple steps, may require human approval at key checkpoints, and must survive interruptions without losing progress.
+
+ALFRED's workflow orchestration system addresses these challenges through a pipeline architecture that decomposes tasks into phases, executes work across parallel agent waves, and maintains durable state that persists through failures and interruptions. The system is designed for reliability first: a workflow that suspends for biometric approval and resumes hours later should behave identically to one that completes in seconds.
+
+## Core Concepts
+
+Workflows in ALFRED are durable, resumable processes that yield events as they execute. Unlike ephemeral function calls, workflows persist their state to the database at each significant step. This persistence enables recovery from crashes—if the server restarts mid-workflow, the workflow can resume from its last checkpoint rather than starting over. It also enables pause/resume semantics where workflows can wait indefinitely for external conditions (like biometric approval) before continuing.
+
+The workflow lifecycle follows a clear state machine. Workflows begin in `running` state, emit events as they progress, and eventually reach a terminal state: `completed` for successful execution, `failed` for errors, `cancelled` for user-initiated termination, or `suspended` for workflows awaiting external input. Suspended workflows can be `resumed` with a payload that provides the awaited input, returning them to `running` state to continue execution.
+
+Each workflow consists of four primary phases that execute in sequence: scan, plan, act, and report. The scan phase gathers context—reading files, querying the knowledge graph, and building an execution context that subsequent phases consume. The plan phase analyzes the requirement and produces an execution plan with concrete steps. The act phase executes the plan, potentially spawning multiple agents working in parallel. The report phase summarizes outcomes and records learnings for future improvement.
+
+## Architecture
+
+The workflow runtime is implemented as an AsyncGenerator that yields WorkflowEvents as execution proceeds. This streaming architecture provides natural backpressure—consumers can process events at their own pace without overwhelming buffers. It also enables real-time progress updates: each event surfaces immediately to connected clients, providing visibility into long-running operations.
+
+The pipeline runner orchestrates phase execution, managing transitions between phases and propagating context. Each phase receives the accumulated context from previous phases and can augment it with new information. This context threading ensures that later phases benefit from earlier analysis without requiring explicit parameter passing.
+
+Phase implementations are modular and replaceable. The scan phase might use different strategies for different task types—code analysis for development tasks, log parsing for debugging, document retrieval for research. The plan phase might employ different planning models based on task complexity. This modularity enables domain-specific optimization without disrupting the overall orchestration framework.
+
+State persistence occurs at phase boundaries and within long-running phases. The runtime writes checkpoint events to the database, recording enough information to resume from that point. Checkpoint granularity balances recovery precision against storage overhead—more frequent checkpoints enable finer-grained recovery but consume more database space.
+
+## Multi-Agent Waves
+
+Complex tasks often benefit from parallel execution. Analyzing multiple files, querying multiple data sources, or validating multiple hypotheses can proceed concurrently, reducing total execution time. ALFRED's wave system provides structured parallelism for agent execution within the act phase.
+
+Waves are groups of agent tasks that execute in parallel. Each wave completes before the next begins, providing natural synchronization points where results can be aggregated and decisions made. This staged parallelism is safer than unconstrained concurrency—if one agent in a wave fails, the wave can be retried or the workflow can be adjusted before proceeding.
+
+The wave scheduler assigns tasks to agents based on capability matching and load balancing. Some tasks require specific tools or domain expertise; the scheduler routes them to appropriate agents. Load balancing distributes work evenly, preventing any single agent from becoming a bottleneck while others idle.
+
+Conflict detection operates across agents within a wave. When multiple agents modify overlapping resources—editing the same file, for example—the system detects the conflict before committing changes. Conflicts trigger an arbitration process where an arbiter agent examines the competing changes and produces a merged result that preserves intent from all parties.
+
+## Suspend and Resume
+
+Certain operations require human intervention that cannot be automated. Deploying to production might require biometric verification. Deleting data might require explicit approval. These operations cannot proceed until the human acts, but the workflow shouldn't fail or restart—it should wait.
+
+The suspend mechanism allows workflows to pause execution and persist enough state to resume later. When a workflow encounters an obligation it cannot satisfy (like biometric approval), it emits a suspension event, writes its state to the database, and yields control. The workflow remains in `suspended` state indefinitely, consuming no compute resources.
+
+Resume is triggered when the obligation is satisfied. The user completes biometric authentication, the approval arrives, or the external condition is met. The resume handler loads the suspended workflow's state, validates the resume payload against the expected obligation, and restarts execution from the suspension point.
+
+This pattern decouples workflow logic from human response time. A workflow might suspend at 2 PM, the user might approve at 6 PM, and execution continues seamlessly. The workflow's logic doesn't change based on how long it waited—the resume payload provides the same information whether approval took seconds or hours.
+
+## Linear Integration
+
+ALFRED integrates deeply with Linear for task management, using Linear Agent Activities to provide real-time visibility into workflow progress. When ALFRED works on a Linear ticket, activities appear in the ticket's activity feed, showing what ALFRED is thinking, planning, and executing.
+
+The integration follows strict timing requirements. Linear expects an initial acknowledgment within 10 seconds of receiving a task—ALFRED must emit a `thought` activity within this window to confirm it's actively working. Subsequent activities can arrive at any pace, but that initial acknowledgment is critical for user confidence.
+
+Activities are fire-and-forget operations that never block workflow execution. If the Linear API is slow or unavailable, activities are logged but execution continues. Workflow reliability takes precedence over activity delivery—a successful workflow with missing activities is preferable to a failed workflow that exhausted retries on activity calls.
+
+Session management persists Linear context across workflow lifecycle. The `linearSessionId` and `linearSpace` are stored with the workflow run, enabling resume operations to continue emitting activities to the correct ticket. This persistence ensures that suspended workflows remain properly associated with their Linear tickets.
+
+## Event Streaming
+
+Workflow execution produces a stream of typed events that flow to connected clients. These events provide real-time visibility into execution progress, enabling UIs to display meaningful status updates rather than spinning indicators.
+
+Event types include `run` (workflow started), `progress` (percentage complete with message), `reasoning` (model's thought process), `tool-call` (tool invocation), `tool-result` (tool output), `notice` (informational message), and `error` (failure information). Each event carries metadata sufficient to render meaningful UI—progress events include percentage and message, tool events include the tool name and arguments.
+
+The streaming architecture uses AsyncGenerators throughout the stack. The runtime yields events, the API layer forwards them over HTTP streams, and the client processes them incrementally. This end-to-end streaming eliminates buffering delays, ensuring events appear in the UI within milliseconds of generation.
+
+Backpressure propagates naturally through the generator chain. If the network connection slows, the generator pauses, which pauses the runtime, which pauses execution. This implicit flow control prevents buffer exhaustion without requiring explicit rate limiting or queuing.
+
+## Design Decisions
+
+The four-phase pipeline (scan, plan, act, report) was chosen to provide clear separation of concerns while maintaining flexibility. Each phase has a distinct responsibility and can be optimized independently. The phases also provide natural checkpointing boundaries—if the act phase fails, the scan and plan results are already persisted and needn't be repeated.
+
+Waves provide structured parallelism that's safer than unconstrained concurrency. By requiring waves to complete before proceeding, the system creates synchronization points where conflicts can be detected and resolved. This staged approach trades some parallelism for predictability—a worthwhile tradeoff for workflows that modify shared state.
+
+Suspend/resume was implemented as an explicit pattern rather than relying on database transactions or distributed locks. This makes workflow state visible and debuggable: an operator can inspect a suspended workflow, understand why it's waiting, and manually resolve issues if needed. The explicit state also enables long-duration suspensions that would exhaust connection pools or lock timeouts in transaction-based approaches.
+
+## Integration Points
+
+The API layer exposes workflow operations through tRPC routers. Clients can start workflows, query status, resume suspended workflows, and cancel running workflows. The routers handle authentication, validate inputs, and delegate to the runtime for actual execution.
+
+The cognitive loop receives workflow events and updates cognitive state accordingly. Successful workflows reinforce autonomy; failed workflows trigger reflection and potential learning. This bidirectional integration ensures that workflow outcomes influence future behavior.
+
+The knowledge graph records workflow patterns and outcomes. Successful tool sequences become patterns that inform future planning. Errors and their resolutions become insights that prevent repeat failures. This continuous learning means workflows improve over time as ALFRED accumulates experience.
+
+## Related Documentation
+
+- [Architecture Overview](../architecture/overview) — System-wide architecture context
+- [Cognitive State Machine](cognitive-state-machine) — How workflows influence cognitive state
+- [Security and Autonomy](security-and-autonomy) — Policy enforcement and biometric obligations
+- [Linear Integration Guide](linear-integration) — Detailed Linear Agent Activities patterns
+

@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
+import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import Header from "../components/header";
@@ -65,18 +66,20 @@ function RootDocument() {
   }, [location.pathname, router]);
 
   return (
-    <html className="dark antialiased" lang="en">
+    <html className="dark antialiased" lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          {isFetching ? <Loader /> : <Outlet />}
-        </div>
-        <Toaster richColors />
-        <TanStackRouterDevtools position="bottom-left" />
-        <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+        <RootProvider>
+          <div className="grid h-svh grid-rows-[auto_1fr]">
+            <Header />
+            {isFetching ? <Loader /> : <Outlet />}
+          </div>
+          <Toaster richColors />
+          <TanStackRouterDevtools position="bottom-left" />
+          <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+        </RootProvider>
         <Scripts />
       </body>
     </html>

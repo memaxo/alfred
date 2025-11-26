@@ -1,0 +1,114 @@
+---
+title: Integration Patterns
+description: How ALFRED's systems compose, communicate, and work together
+---
+
+# Integration Patterns
+
+**Owner:** Runtime  
+**Last Updated:** 2025-11-26
+
+## Purpose
+
+This guide explains how ALFRED's systems integrate and compose—the architectural patterns that enable cognitive state, knowledge graph, learning, and workflow orchestration to work together as a coherent intelligence system.
+
+---
+
+Individual components—no matter how sophisticated—don't constitute intelligence. A brilliant knowledge graph without query access is useless. A powerful workflow engine without context is blind. A learning system without feedback loops stagnates. ALFRED's value emerges from the integration of its components: the patterns by which they compose, communicate, and reinforce each other.
+
+These integration patterns follow a consistent philosophy: pure functions at the core, side effects at boundaries, events for communication, and context for composition. This architecture enables testing in isolation, reasoning about behavior, and evolving components without breaking the whole. Understanding these patterns is essential for extending ALFRED or debugging unexpected behavior.
+
+## Core Concepts
+
+Pure function boundaries separate computation from effects. The cognitive state machine, knowledge graph operations, and learning algorithms are implemented as pure functions: given the same inputs, they always produce the same outputs without side effects. Side effects—database writes, network calls, user notifications—happen only at boundary layers that orchestrate pure functions.
+
+This separation provides multiple benefits. Pure functions are trivially testable: no mocking, no setup, just input and expected output. Pure functions are deterministic: bugs reproduce reliably because behavior doesn't depend on external state. Pure functions compose cleanly: the output of one becomes the input to another without coordination concerns.
+
+Event-driven communication decouples components. Rather than direct function calls between components, ALFRED uses events that flow through well-defined channels. The cognitive loop emits events that the learning system consumes. Workflows emit events that the UI renders. This decoupling enables components to evolve independently: a change to event emission doesn't require changes to event consumption as long as the event shape remains compatible.
+
+Context threading passes accumulated state through processing pipelines. Rather than maintaining global state or relying on dependency injection, ALFRED builds context objects that flow through functions. Each stage reads what it needs from context and augments context with its outputs. This explicit threading makes data flow visible and debuggable.
+
+## The Context Building Pattern
+
+Before executing any workflow, ALFRED builds context that informs the execution. This context building is itself a composition of queries across multiple components, assembling a comprehensive picture of relevant knowledge, preferences, and constraints.
+
+The process begins with user preferences: verbosity settings, autonomy level, tool preferences, and interaction style. These preferences shape how ALFRED communicates and what actions it's willing to take. Preferences are queried from the database and cached for the session.
+
+Next, relevant memories are retrieved from the knowledge graph. Given the current requirement, ALFRED queries for related facts, past outcomes with similar tasks, and patterns that might apply. This semantic retrieval uses the hybrid search described in the knowledge hypergraph guide, combining vector similarity with structural traversal.
+
+Cognitive state contributes attention and load metrics. If ALFRED is already thinking about related topics, that context is available. If cognitive load is high (physiology showing exhaustion), that influences execution strategy. The current autonomy level determines what actions are permissible without approval.
+
+Finally, learned patterns from the learning system are incorporated. What tool sequences have succeeded with similar tasks? What mistakes should be avoided? What user preferences have been inferred from behavior? These patterns don't replace explicit knowledge but augment it with experiential wisdom.
+
+The composed context object flows into workflow execution, where it influences prompt construction, tool selection, risk assessment, and output formatting. Every aspect of execution benefits from this rich context.
+
+## The Cognitive Loop Integration
+
+The cognitive loop serves as the integration point between user interaction and ALFRED's internal state. Every input—whether text chat, voice command, or system event—flows through the cognitive loop, which updates state and produces effects for execution.
+
+Input events arrive with content and source metadata. Voice transcripts carry different context than typed messages; system timeouts carry urgency that user input lacks. The event type influences how the cognitive loop processes the input and what state transitions it triggers.
+
+State transitions are computed by pure transition functions. The current state plus incoming event produces a new state plus effects. These transitions update physiology metrics (energy depletes with processing), may update autonomy (on feedback events), and determine what cognitive state ALFRED enters (thinking, deciding, executing, reflecting).
+
+Effects are pure data structures describing actions to take. A "generate response" effect describes what to generate but doesn't perform generation. An "execute plan" effect describes the plan but doesn't execute it. This separation keeps the transition function pure while enabling the orchestrator to perform side effects safely.
+
+The orchestrator executes effects after the transition completes. It might invoke the workflow runtime for plan execution, call the assistant for response generation, or update the knowledge graph with reflection outcomes. Effects execute in order, with failures captured and fed back as events for the next loop iteration.
+
+## Knowledge and Learning Integration
+
+The knowledge graph and learning system form a tight feedback loop. Knowledge provides context for execution; execution produces outcomes for learning; learning extracts insights that become knowledge. This cycle means that every interaction contributes to ALFRED's growing intelligence.
+
+During context building, the knowledge graph provides facts and patterns relevant to the current task. These retrieved nodes inform tool selection, risk assessment, and prompt construction. The system essentially "remembers" its past experiences with similar tasks.
+
+After execution, outcomes feed into the learning system. The supervision loop compares expected against actual results, computing prediction error. Non-trivial errors generate insights—hypotheses about what could be different—that are persisted to the knowledge graph.
+
+The mistake ledger aggregates errors by category, enabling pattern detection across individual failures. When multiple failures share a cause, that pattern becomes an insight with higher confidence than any single failure would produce. These aggregated patterns become anti-patterns that influence future planning.
+
+User feedback provides explicit training signal that complements automatic supervision. Positive feedback reinforces patterns; negative feedback marks mistakes. Feedback strength weights the learning updates, ensuring that emphatic feedback has proportionate impact.
+
+## Workflow and Policy Integration
+
+Workflow execution operates within policy constraints enforced at multiple levels. Before execution begins, coarse-grained policy checks verify that the user can initiate workflows and that the requested operation type is permitted. During execution, fine-grained checks gate specific tool invocations.
+
+The policy check flow queries the PDP with the current context. The PDP returns a decision: allow, deny, or allow with obligations. Denials abort the operation with clear messaging. Obligations—most commonly biometric verification—trigger workflow suspension.
+
+Suspended workflows persist their state and yield control. The suspension event flows to the client, which prompts the user to satisfy the obligation. After satisfaction (biometric verified, approval granted), a resume event re-enters the workflow at the suspension point.
+
+This pattern enables workflows to span asynchronous human interactions without blocking resources. A workflow that requires approval at step 5 can complete steps 1-4, suspend awaiting approval, resume when approval arrives, and complete steps 6-10. The workflow logic doesn't change based on how long approval takes.
+
+## Event Streaming Integration
+
+Workflow events flow through the system to connected clients, providing real-time visibility into execution. The streaming architecture uses AsyncGenerators that yield events as execution proceeds, enabling natural backpressure and incremental rendering.
+
+At the runtime level, the workflow executor yields WorkflowEvents for each significant step. Progress events mark completion percentage. Reasoning events expose the model's thought process. Tool events show invocations and results. Error events surface failures.
+
+At the API level, tRPC routers consume the generator and forward events over HTTP streams. The streaming transport preserves event ordering and handles connection management. Clients reconnect transparently after network interruptions, resuming from the last received event.
+
+At the UI level, React components consume the event stream and update state incrementally. Progress bars advance, reasoning traces appear, tool calls render—all in real time as events arrive. This end-to-end streaming creates the illusion of watching ALFRED think.
+
+## Design Decisions
+
+Pure functions at the core enable testing and reasoning that would be impossible with pervasive side effects. The cost is explicit effect handling at boundaries, but this cost is worth the reliability and debuggability benefits.
+
+Event-driven communication was chosen over direct calls because it enables evolution without coordination. When components communicate through stable event shapes, internal implementation can change freely. This decoupling is essential for a system that will continue evolving.
+
+Context threading rather than dependency injection makes data flow explicit. Reading code reveals what context is available; there's no hidden state injected through framework magic. This explicitness aids debugging and onboarding.
+
+AsyncGenerator streaming provides natural backpressure without explicit rate limiting. If consumers slow down, the generator pauses, which pauses the producer. This implicit flow control prevents buffer exhaustion and memory leaks.
+
+## Integration Points Summary
+
+The runtime layer orchestrates integration across all components. It queries cognitive state for attention and autonomy, queries the knowledge graph for relevant context, invokes the learning system for outcome recording, and enforces policy through the PDP. The runtime doesn't implement business logic—it composes other components' logic into coherent workflows.
+
+The API layer provides the external interface. It authenticates requests, validates inputs, and delegates to the runtime. After execution, it normalizes outputs and streams them to clients. The API layer handles HTTP concerns so the runtime can focus on domain logic.
+
+The UI layer consumes events and renders state. It doesn't contain intelligence—it reflects the intelligence produced by backend systems. This separation enables multiple frontends (web, native, voice) to share the same backend logic.
+
+## Related Documentation
+
+- [Architecture Overview](../architecture/overview) — System-wide architecture context
+- [Cognitive State Machine](cognitive-state-machine) — Cognitive loop details
+- [Knowledge Hypergraph](knowledge-hypergraph) — Knowledge system details
+- [Workflow Orchestration](workflow-orchestration) — Workflow execution details
+- [Learning System](learning-system) — Learning integration details
+

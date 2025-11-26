@@ -1,0 +1,178 @@
+---
+title: Architecture Overview
+description: System vision, core principles, and architectural layers of ALFRED
+---
+
+# ALFRED Architecture Overview
+
+**Last Updated**: 2025-11-26
+
+## System Vision
+
+ALFRED is a **personal AI assistant** designed for deep single-user personalization across multiple domains. Unlike multi-tenant SaaS products, ALFRED prioritizes learning the user's specific infrastructure, preferences, and workflows to become increasingly valuable over time.
+
+## Core Principles
+
+### 1. Integration Over Isolation
+Packages are well-separated but must compose seamlessly. The architecture favors clean interfaces between packages while ensuring they work together as a cohesive intelligence system.
+
+### 2. Learning Over Static Behavior
+ALFRED improves through continuous feedback loops. Every interaction informs future behavior through:
+- Pattern extraction from successful outcomes
+- Mistake analysis and correction
+- Preference inference from behavior
+- Domain-specific knowledge accumulation
+
+### 3. Context-Aware Execution
+Every action considers:
+- User preferences (response style, tool choices)
+- Past outcomes (what worked, what didn't)
+- Domain knowledge (infrastructure topology, code patterns)
+- Cognitive state (attention, focus, overload)
+
+### 4. Safe Autonomy
+Security boundaries with biometric elevation for high-risk operations. The policy engine enforces graduated autonomy levels with appropriate safeguards, enforced consistently across runtime, API routers, and tools.
+
+## Architecture Layers
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────┐
+│                    User Interface Layer                      │
+│  apps/web (TanStack Start) | apps/native (React Native)    │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│                    API Layer (tRPC)                          │
+│  packages/api - Routers, Context, Middleware, Metrics       │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│              Runtime Integration Layer                      │
+│  packages/runtime - Composes all domain packages            │
+│  - CoreRuntime: Context building, outcome recording         │
+│  - WorkflowRuntime: AI SDK streaming, tool execution        │
+│  - Domain Runtimes: Specialized contexts (Proxmox, Git)     │
+└─────────┬───────────────────┬───────────────────┬───────────┘
+          │                   │                   │
+┌─────────┴──────────┐ ┌─────┴──────┐ ┌──────────┴──────────┐
+│  Cognitive Layer   │ │ Knowledge │ │   Learning Layer   │
+│  State Machine      │ │  Graph    │ │  Self-Supervision  │
+│  Autonomy Gradient  │ │  RAG      │ │  Preference Inf.  │
+└─────────┬──────────┘ └─────┬──────┘ └──────────┬──────────┘
+          │                   │                   │
+┌─────────┴───────────────────┴───────────────────┴───────────┐
+│                    Infrastructure Layer                     │
+│  packages/db (Drizzle + Postgres + pgvector)              │
+│  packages/auth (Better Auth + Ed25519 tokens)              │
+│  packages/policy (PDP with biometric elevation)            │
+└─────────────────────────────────────────────────────────────┘
+\`\`\`
+
+## Package Structure
+
+The monorepo is organized into focused packages:
+
+### Core Domain Packages
+
+- **`packages/cognitive`**: Event-sourced state machine, physiology tracking, autonomy gradient
+- **`packages/knowledge`**: Hypergraph memory, semantic search, pattern recognition
+- **`packages/learning`**: Self-supervision, preference inference, mistake analysis
+- **`packages/rag`**: Document ingestion, chunking, embedding, retrieval
+
+### Runtime & Integration
+
+- **`packages/runtime`**: Composes domain packages into executable workflows
+  - `CoreRuntime`: Base context building and outcome recording
+  - `WorkflowRuntime`: AI SDK v6 streaming, tool orchestration
+  - Domain-specific runtimes (Proxmox, Git, Linear)
+
+### Infrastructure
+
+- **`packages/db`**: Drizzle ORM schemas, migrations, repositories
+- **`packages/auth`**: Better Auth configuration, biometric tickets, tool tokens
+- **`packages/policy`**: Policy Decision Point (PDP), audit logging
+- **`packages/api`**: tRPC routers, context, middleware, metrics
+
+### Client Applications
+
+- **`apps/web`**: TanStack Start web app with SSR
+- **`apps/native`**: React Native/Expo mobile app
+
+### Supporting Packages
+
+- **`packages/type`**: Shared TypeScript types and DTOs
+- **`packages/embed`**: Embedding model integration (KaLM-Embedding-Gemma3-12B)
+- **`packages/voice`**: Speech-to-speech with local models (NeMo STT, Maya1/Piper TTS)
+- **`packages/agent`**: Tool definitions for assistant and orchestrator agents
+- **`packages/metrics`**: Prometheus metrics, performance instrumentation
+- **`packages/logger`**: Structured logging
+
+## Data Flow
+
+1. **User Input** → Web/Native client
+2. **tRPC Router** → Validates request, checks auth, applies policy
+3. **Runtime** → Builds context (knowledge graph, preferences, cognitive state)
+4. **AI SDK v6** → Streams tool calls and responses
+5. **Tool Execution** → Domain-specific actions (Proxmox, Git, Linear, etc.)
+6. **Outcome Recording** → Updates knowledge graph, learning system, cognitive state
+7. **Response Streaming** → Real-time updates to client
+
+## Key Design Decisions
+
+### Event Sourcing for Cognitive State
+
+The cognitive state machine uses event sourcing to maintain a complete audit trail. This enables:
+- Deterministic replay of conversations
+- Debugging by examining event sequences
+- Learning from historical decisions
+
+### Hypergraph Memory
+
+Knowledge is stored as a hypergraph (nodes + edges) rather than a simple vector database. This enables:
+- Relationship-aware retrieval
+- Pattern recognition across domains
+- Emergent intelligence from graph topology
+
+### Local-First Architecture
+
+Core models (embeddings, voice) run locally to ensure:
+- Zero-cost privacy
+- No external API dependencies
+- Fast, offline-capable operations
+
+### Single-User Design
+
+ALFRED is designed for a single user, enabling:
+- Aggressive personalization
+- No multi-tenancy complexity
+- Direct infrastructure access
+
+## Performance Targets
+
+- **State Transitions**: <100 µs
+- **Graph Lookups**: <1 ms
+- **Fact Extraction**: <10 ms
+- **Plan Generation**: <100 ms
+- **UI Render Cycles**: <16 ms (60fps)
+
+## Security Model
+
+- **Biometric Elevation**: High-risk operations require fresh biometric ticket (≤2 min TTL)
+- **Token Scopes**: Tool tokens expire in 5 minutes with specific scopes
+- **Policy Engine**: PDP evaluates every action, returns obligations (e.g., `requireBio`)
+- **Audit Logging**: All policy decisions and sensitive actions are logged
+
+## Observability
+
+- **Prometheus Metrics**: Performance, cognitive state, workflow execution
+- **Structured Logging**: JSON logs with context (runId, eventType, error)
+- **Build Verification**: Scans client bundles for server code leakage
+- **Memory Telemetry**: Tracks knowledge graph growth, decay, and usage
+
+## Future Considerations
+
+- **Multi-Agent Coordination**: Support for multiple concurrent agents with conflict resolution
+- **Distributed Execution**: Scale workflows across multiple nodes
+- **Advanced Learning**: Reinforcement learning from user feedback
+- **Extended Voice Capabilities**: Multi-modal interactions, emotion detection
+

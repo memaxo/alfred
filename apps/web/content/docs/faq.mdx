@@ -1,0 +1,128 @@
+---
+title: Frequently Asked Questions
+description: Common questions and answers about ALFRED
+---
+
+# Frequently Asked Questions
+
+## General Questions
+
+### What is ALFRED?
+
+ALFRED is a personal AI assistant designed for deep single-user personalization. Unlike multi-tenant SaaS products, ALFRED learns your specific workflows, preferences, and infrastructure to become increasingly valuable over time.
+
+### Is ALFRED free?
+
+ALFRED is open-source and free to use. You'll need to provide your own:
+- PostgreSQL database
+- AI model API keys (OpenAI, Google, etc.)
+- Optional: Redis for caching
+
+### Can I use ALFRED without coding?
+
+Yes! ALFRED is designed to be used through natural language. However, setting it up requires some technical knowledge (installing dependencies, configuring databases).
+
+## Setup & Installation
+
+### Why do I need PostgreSQL?
+
+ALFRED stores all data (notes, reminders, knowledge graph, workflows) in PostgreSQL. The pgvector extension enables semantic search capabilities.
+
+### Can I use SQLite instead?
+
+For development and testing, yes. Production requires PostgreSQL for performance and features like vector search.
+
+### How do I generate API keys?
+
+Run `bun scripts/gen-keys.ts` to generate required secrets like `BETTER_AUTH_SECRET`.
+
+## Features
+
+### How does the knowledge graph work?
+
+ALFRED builds a hypergraph of facts, relationships, and patterns from your interactions. This enables semantic search and pattern recognition. See [Knowledge Hypergraph](./architecture/hypergraph) for details.
+
+### What is the cognitive state machine?
+
+ALFRED maintains an event-sourced state machine that tracks its "cognitive state" (idle, thinking, deciding, executing, reflecting). This enables learning and adaptation. See [Cognitive State Machine](./guides/cognitive-state-machine) for details.
+
+### How does ALFRED learn?
+
+ALFRED uses self-supervision to learn from outcomes. Every workflow produces outcomes that become training data. See [Learning System](./guides/learning-system) for details.
+
+## Troubleshooting
+
+### Database connection errors
+
+1. Verify Postgres is running: `bun run db:start`
+2. Check `DATABASE_URL` in `.env`
+3. Try: `bun run db:migrate`
+
+### Build failures
+
+Run `bun run verify-build` to check for server code leakage. Ensure server-only packages are in `apps/web/vite.config.ts` `ssr.external` array.
+
+### Type errors
+
+Run `bun run typecheck` to see all errors. Check `tsconfig.base.json` for path aliases.
+
+## Development
+
+### How do I add a new tool?
+
+1. Define the tool in `packages/agent/src/orchestrator/tool/`
+2. Register it in the tool registry
+3. Add policy rules if needed
+4. Test with a workflow
+
+See [Common Patterns](./guides/common-patterns) for examples.
+
+### How do I debug a workflow?
+
+1. Check workflow status: `GET /api/workflow/{runId}`
+2. Review events: Workflow events are streamed in real-time
+3. Check logs: Structured logs include `runId` for correlation
+4. Use Mindscape: Visualize workflow execution
+
+### How do I test my changes?
+
+\`\`\`bash
+# All tests
+bun run test
+
+# Specific package
+bun run --filter @alfred/<package> test
+
+# Integration tests
+bun run test:integration
+\`\`\`
+
+## Security
+
+### How does biometric elevation work?
+
+High-risk operations require a fresh biometric ticket (≤2 min TTL). The policy engine enforces this automatically. See [Security and Autonomy](./guides/security-and-autonomy) for details.
+
+### What are autonomy levels?
+
+ALFRED uses graduated autonomy levels (0.0-1.0) that determine what actions can be taken without approval. Higher autonomy requires biometric elevation. See [Security and Autonomy](./guides/security-and-autonomy) for details.
+
+## Performance
+
+### Why is my workflow slow?
+
+- Check cognitive state (high load slows execution)
+- Review knowledge graph size (large graphs slow queries)
+- Check database performance (indexes, connection pool)
+- See [Performance Optimization](./guides/performance-optimization) for details
+
+### How do I optimize queries?
+
+All queries must complete in <10ms (p99). Use indexes, batch operations, and avoid N+1 queries. See [Performance Optimization](./guides/performance-optimization) for details.
+
+## Still Have Questions?
+
+- Check the [Troubleshooting Guide](./guides/troubleshooting)
+- Review [Common Patterns](./guides/common-patterns)
+- See [Architecture Overview](./architecture/overview) for system design
+
