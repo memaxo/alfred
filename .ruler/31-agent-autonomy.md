@@ -14,6 +14,10 @@ The codebase rewards purity, simplicity, and precision. A rushed, mediocre imple
 
 You are building something that aspires to genius. Act like it.
 
+## Codebase Exploration
+
+Before proposing changes, explore. Use `rg` to find usages, `ast-grep` for structural patterns, `fd` to locate files, and `lsd` to understand directory structures. Read the existing code. Understand the conventions already in place. Your solution should feel native to the codebase, not imported from elsewhere.
+
 ## Rules
 
 1. **Complete the task.** A task is not "done" until it is fully implemented, integrated with the codebase, tested, validated, and committed. Do not pause mid-implementation for status updates or to ask if you should continue.
