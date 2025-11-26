@@ -223,6 +223,14 @@ export const codexErrorsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const codexSessionValidationDurationSeconds = new client.Histogram({
+  name: "codex_session_validation_duration_seconds",
+  help: "Duration spent validating whether a Codex session can resume.",
+  labelNames: ["outcome"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
 export const codexSessionContinuityTotal = new client.Counter({
   name: "codex_session_continuity_total",
   help: "Count of Codex session continuity events (resume success/failure).",
@@ -242,6 +250,27 @@ export const codexLinearIntegrationLatencySeconds = new client.Histogram({
   help: "Latency from Codex event emission to Linear activity creation.",
   labelNames: ["event_type"] as const,
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+  registers: [metricsRegistry],
+});
+
+export const codexLinearActivitiesEmittedTotal = new client.Counter({
+  name: "codex_linear_activities_emitted_total",
+  help: "Count of Codex-originated Linear activities grouped by type and mode.",
+  labelNames: ["type", "mode"] as const,
+  registers: [metricsRegistry],
+});
+
+export const codexLinearActivitiesDroppedTotal = new client.Counter({
+  name: "codex_linear_activities_dropped_total",
+  help: "Count of Codex events dropped due to rate limiting grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const codexLinearActivityBatchesTotal = new client.Counter({
+  name: "codex_linear_activity_batches_total",
+  help: "Count of Codex Linear batch processing outcomes grouped by status.",
+  labelNames: ["status"] as const,
   registers: [metricsRegistry],
 });
 
@@ -370,6 +399,15 @@ export const assistantEscalationsTotal = new client.Counter({
   name: "assistant_escalations_total",
   help: "Count of assistant escalations grouped by kind.",
   labelNames: ["kind"] as const,
+  registers: [metricsRegistry],
+});
+
+// wired via lazy hooks
+
+export const policyCheckFailuresTotal = new client.Counter({
+  name: "policy_check_failures_total",
+  help: "Count of tool policy enforcement failures grouped by tool.",
+  labelNames: ["tool"] as const,
   registers: [metricsRegistry],
 });
 
@@ -574,6 +612,12 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       agent.registerCodexExecCounter?.(codexExecRunsTotal);
       agent.registerCodexExecHistogram?.(codexExecDurationSeconds);
       agent.registerCodexErrorCounter?.(codexErrorsTotal as any);
+      agent.registerCodexSessionValidationHistogram?.({
+        startTimer: () => {
+          const done = codexSessionValidationDurationSeconds.startTimer();
+          return ({ outcome }) => done({ outcome });
+        },
+      } as any);
       agent.registerEvalRunsCounter?.(evalRunsTotal);
       agent.registerEvalDurationHistogram?.(evalDurationSeconds);
       agent.registerEvalScoreCounter?.(evalScoresTotal);
@@ -587,6 +631,7 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       agent.registerCompressionNodeCounter?.(compressionNodesUpdatedTotal);
       agent.registerAssistantToolCounter?.(assistantToolCallsTotal);
       agent.registerAssistantEscalationCounter?.(assistantEscalationsTotal);
+      agent.registerPolicyCheckFailureCounter?.(policyCheckFailuresTotal);
       agent.registerMemoryUpdatesCounter?.(memoryUpdatesTotal);
       agent.registerMemoryForgetsCounter?.(memoryForgetsTotal);
     } catch (error) {

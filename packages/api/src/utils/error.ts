@@ -20,6 +20,12 @@ export function toTRPCError(
   if (message === "biometric_required") {
     return new TRPCError({ code: "PRECONDITION_FAILED", message });
   }
+  if (message === "codex_timeout_requires_elevation") {
+    return new TRPCError({ code: "PRECONDITION_FAILED", message });
+  }
+  if (message === "codex_timeout_exceeds_limit") {
+    return new TRPCError({ code: "BAD_REQUEST", message });
+  }
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message,

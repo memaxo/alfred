@@ -1,9 +1,4 @@
-import {
-  accessSync,
-  constants as fsConstants,
-  realpathSync,
-  statSync,
-} from "node:fs";
+import { accessSync, constants as fsConstants } from "node:fs";
 import path from "node:path";
 import {
   clearTimeout as clearNodeTimeout,
@@ -11,6 +6,11 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import {
+  DEFAULT_ALLOW_PREFIXES,
+  DirectoryAccessError,
+  openDirectorySecure,
+} from "../../security/filesystem.js";
 import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -18,68 +18,24 @@ const DEFAULT_TIMEOUT_SEC = 15 * 60;
 const MIN_TIMEOUT_SEC = 10;
 const MAX_TIMEOUT_SEC = 2 * 60 * 60;
 
-const DEFAULT_ALLOW_PREFIXES = (() => {
-  const base = realpathSync(process.cwd());
-  const raw = process.env.ORCH_ALLOW_CWD_PREFIXES;
-  const extras =
-    raw && raw.trim().length > 0
-      ? raw
-          .split(path.delimiter)
-          .map((entry) => entry.trim())
-          .filter(Boolean)
-      : [];
-
-  const prefixes = new Set<string>([base]);
-
-  for (const entry of extras) {
-    try {
-      const absolute = path.isAbsolute(entry)
-        ? entry
-        : path.resolve(base, entry);
-      prefixes.add(realpathSync(absolute));
-    } catch {
-      // Ignore invalid entries so that a bad env var does not break execution.
-    }
-  }
-
-  return Array.from(prefixes);
-})();
-
-function safeRealpath(p: string) {
-  try {
-    return realpathSync(p);
-  } catch {
-    return null;
-  }
-}
-
-function isWithinBase(base: string, target: string) {
-  const baseReal = safeRealpath(base);
-  const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) {
-    return false;
-  }
-  const relative = path.relative(baseReal, targetReal);
-  return (
-    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
-  );
-}
-
 function assertAllowedDirectory(candidate: string) {
-  const real = safeRealpath(candidate);
-  if (!real) {
-    throw new Error("git_invalid_cwd");
-  }
-  for (const prefix of DEFAULT_ALLOW_PREFIXES) {
-    if (isWithinBase(prefix, real)) {
-      const stats = statSync(real);
-      if (!stats.isDirectory()) {
-        throw new Error("git_invalid_cwd_not_directory");
-      }
-      return real;
+  let handle;
+  try {
+    handle = openDirectorySecure(candidate, {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+    });
+    return handle.path;
+  } catch (error) {
+    if (
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory"
+    ) {
+      throw new Error("git_invalid_cwd_not_directory");
     }
+    throw new Error("git_invalid_cwd");
+  } finally {
+    handle?.close();
   }
-  throw new Error("git_invalid_cwd");
 }
 
 function resolveExecutable(command: string) {

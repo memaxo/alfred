@@ -28,6 +28,9 @@ import {
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
   codexLinearIntegrationLatencySeconds,
+  codexLinearActivitiesDroppedTotal,
+  codexLinearActivitiesEmittedTotal,
+  codexLinearActivityBatchesTotal,
   codexSessionContinuityTotal,
 } from "@alfred/api/metrics";
 import * as workflowRepo from "@alfred/db/repo/workflow";
@@ -74,8 +77,10 @@ configureLinearMetrics({
       "@alfred/agent/orchestrator/codex-session"
     );
     configureCodexLinearMetrics({
-      startTimer: (labels: { event_type: string }) =>
-        codexLinearIntegrationLatencySeconds.startTimer(labels),
+      histogram: codexLinearIntegrationLatencySeconds,
+      activitiesEmitted: codexLinearActivitiesEmittedTotal,
+      activitiesDropped: codexLinearActivitiesDroppedTotal,
+      activityBatches: codexLinearActivityBatchesTotal,
     });
     sessionManager.configureContinuityMetrics((status) => {
       codexSessionContinuityTotal.inc({ status });

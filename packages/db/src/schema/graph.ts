@@ -5,6 +5,7 @@
 
 import { EMBEDDING_DIM } from "@alfred/embed";
 import {
+  boolean,
   customType,
   jsonb,
   pgTable,
@@ -33,6 +34,7 @@ export const memoryNodes = pgTable("memory_nodes", {
   resource: text("resource").notNull(), // Scope identifier (thread/resource)
   hash: text("hash").notNull(), // Content-addressed identifier
   properties: jsonb("properties"), // Arbitrary node properties
+  sanitized: boolean("sanitized").notNull().default(false),
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   labelTsvector: tsvector("label_tsvector"),

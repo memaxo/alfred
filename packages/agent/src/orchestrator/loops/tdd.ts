@@ -4,6 +4,7 @@ import type { Workspace } from "../../environment/types";
 import type { ProjectConfig } from "../../utils/project-detector";
 import { toolCodex } from "../tool/codex";
 import { toolRunner } from "../tool/runner";
+import { openDirectorySecure } from "../../security/filesystem.js";
 
 export type TDDContext = {
   agentId: string;
@@ -35,71 +36,77 @@ export async function runTDDLoop(
     containerId,
   } = context;
 
-  const tddPlanPath = execPlanPath.replace(".md", ".tdd.md");
+  const cwdHandle = openDirectorySecure(workingDirectory);
+  const resolvedWorkingDirectory = cwdHandle.path;
+  try {
+    const tddPlanPath = execPlanPath.replace(".md", ".tdd.md");
 
-  // Create TDD plan
-  await fs.writeFile(
-    tddPlanPath,
-    `# TDD Plan for ${agentId}\n\nGoal: Write a failing reproduction test for the following requirement:\n\n${requirement}`,
-    "utf8"
-  );
-
-  const tddPrompt = [
-    "You are a Test Engineer (TDD).",
-    `ExecPlan path: ${tddPlanPath}`,
-    "Goal: Write a REPRODUCTION TEST case that fails for the current requirement.",
-    "1. Analyze the requirement.",
-    "2. Create a new test file (e.g. in tests/ or __tests__) that asserts the desired behavior.",
-    "3. Do NOT implement the feature yet. The test MUST FAIL.",
-  ].join("\n");
-
-  // Run TDD Agent
-  await toolCodex.execute({
-    input: {
-      action: "exec",
-      prompt: tddPrompt,
-      out: "text",
-      auto,
-      cw: workingDirectory,
-      sessionId: `${sessionId}:tdd`, // Separate session
-      containerId,
-      model,
-      context: context.context,
-    },
-    writer: writer as any,
-  });
-
-  // Verify Test Fails
-  let testExitCode: number;
-
-  if (workspaceEnv) {
-    const res = await workspaceEnv.exec("test", {}, projectConfig);
-    testExitCode = res.exitCode;
-  } else {
-    const res = await toolRunner.execute(
-      "test",
-      workingDirectory,
-      60_000,
-      projectConfig
+    // Create TDD plan
+    await fs.writeFile(
+      tddPlanPath,
+      `# TDD Plan for ${agentId}\n\nGoal: Write a failing reproduction test for the following requirement:\n\n${requirement}`,
+      "utf8"
     );
-    testExitCode = res.exitCode;
-  }
 
-  if (testExitCode === 0) {
-    // Test passed unexpectedly!
-    logger.warn("tdd_test_passed_unexpectedly", {
-      agentId,
+    const tddPrompt = [
+      "You are a Test Engineer (TDD).",
+      `ExecPlan path: ${tddPlanPath}`,
+      "Goal: Write a REPRODUCTION TEST case that fails for the current requirement.",
+      "1. Analyze the requirement.",
+      "2. Create a new test file (e.g. in tests/ or __tests__) that asserts the desired behavior.",
+      "3. Do NOT implement the feature yet. The test MUST FAIL.",
+    ].join("\n");
+
+    // Run TDD Agent
+    await toolCodex.execute({
+      input: {
+        action: "exec",
+        prompt: tddPrompt,
+        out: "text",
+        auto,
+        cw: resolvedWorkingDirectory,
+        sessionId: `${sessionId}:tdd`, // Separate session
+        containerId,
+        model,
+        context: context.context,
+      },
+      writer: writer as any,
     });
-    if (writer) {
+
+    // Verify Test Fails
+    let testExitCode: number;
+
+    if (workspaceEnv) {
+      const res = await workspaceEnv.exec("test", {}, projectConfig);
+      testExitCode = res.exitCode;
+    } else {
+      const res = await toolRunner.execute(
+        "test",
+        resolvedWorkingDirectory,
+        60_000,
+        projectConfig
+      );
+      testExitCode = res.exitCode;
+    }
+
+    if (testExitCode === 0) {
+      // Test passed unexpectedly!
+      logger.warn("tdd_test_passed_unexpectedly", {
+        agentId,
+      });
+      if (writer) {
+        await writer.write({
+          type: "notice",
+          message: "tdd_warning_test_passed_already",
+        });
+      }
+    } else if (writer) {
       await writer.write({
         type: "notice",
-        message: "tdd_warning_test_passed_already",
+        message: "tdd_failure_verified",
       });
     }
-  } else if (writer) {
-    await writer.write({
-      type: "notice",
-      message: "tdd_failure_verified",
-    });
+  } finally {
+    cwdHandle.close();
   }
 }

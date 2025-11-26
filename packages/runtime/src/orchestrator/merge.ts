@@ -15,6 +15,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
+import { formatCodexRuntimeError } from "../utils/codex-error";
 
 async function runGitCommand(
   cwd: string,
@@ -277,10 +278,16 @@ export async function* runMergeAnalysis(
     } catch (error) {
       const finishedAt = Date.now();
       const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+      const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
       logger.warn("merge_agent_execution_failed", {
         runId,
-        error: error instanceof Error ? error.message : String(error),
+        error: rawMessage,
+        code,
       });
+      mergeEvents.push({
+        type: "notice",
+        message: userMessage,
+      } as any);
       for (const ev of mergeEvents) {
         yield ev;
       }
@@ -295,9 +302,15 @@ export async function* runMergeAnalysis(
       } as any;
     }
   } catch (error) {
+    const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
     logger.warn("merge_agent_initialisation_failed", {
       runId,
-      error: error instanceof Error ? error.message : String(error),
+      error: rawMessage,
+      code,
     });
+    yield {
+      type: "notice",
+      message: userMessage,
+    } as any;
   }
 }

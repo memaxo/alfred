@@ -1,10 +1,37 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import * as fs from "node:fs";
+import os from "node:os";
 import * as path from "node:path";
 import {
-  assertAllowedDirectory,
+  assertAllowedDirectory as assertCodexAllowedDirectory,
   enforcePolicy,
 } from "../src/orchestrator/tool/codex/policy";
+import {
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+} from "../src/orchestrator/tool/codex/definition";
+import { __internals as gitInternals } from "../src/orchestrator/tool/git";
+import { __internals as droidInternals } from "../src/orchestrator/tool/droid";
+import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
+
+const { assertAllowedDirectory: assertGitAllowedDirectory } = gitInternals;
+const { assertAllowedDirectory: assertDroidAllowedDirectory } = droidInternals;
+const { assertAllowedDirectory: assertDockerAllowedDirectory } =
+  dockerInternals;
+
+const TMP_ROOT = path.join(process.cwd(), "tmp-policy-test");
+
+function ensureWorkspaceSandbox(name: string) {
+  const target = path.join(TMP_ROOT, name);
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(target, { recursive: true });
+  return target;
+}
+
+function makeExternalDir(prefix: string) {
+  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+}
 
 // Mock @alfred/auth/token
 const mockRequireToolScopesAndPolicy = mock();
@@ -24,12 +51,16 @@ describe("Tool Policy & Security", () => {
     });
 
     it("allows CWD", () => {
-      expect(assertAllowedDirectory(cwd)).toBe(cwd);
+      const handle = assertCodexAllowedDirectory(cwd);
+      expect(handle.path).toBe(cwd);
+      handle.close();
     });
 
     it("allows subdirectory of CWD", () => {
       const sub = path.join(cwd, "packages");
-      expect(assertAllowedDirectory(sub)).toBe(sub);
+      const handle = assertCodexAllowedDirectory(sub);
+      expect(handle.path).toBe(sub);
+      handle.close();
     });
 
     it("throws for path outside allowed prefixes", () => {
@@ -37,7 +68,7 @@ describe("Tool Policy & Security", () => {
       const outside = "/tmp";
       // Only run if /tmp is actually outside CWD
       if (!outside.startsWith(cwd)) {
-        expect(() => assertAllowedDirectory(outside)).toThrow(
+        expect(() => assertCodexAllowedDirectory(outside)).toThrow(
           "codex_invalid_cwd"
         );
       }
@@ -45,16 +76,112 @@ describe("Tool Policy & Security", () => {
 
     it("throws for non-existent path", () => {
       const nonExistent = path.join(cwd, "non-existent-folder-12345");
-      expect(() => assertAllowedDirectory(nonExistent)).toThrow(
+      expect(() => assertCodexAllowedDirectory(nonExistent)).toThrow(
         "codex_invalid_cwd"
       );
     });
 
     it("throws for file path (must be directory)", () => {
       const file = path.join(cwd, "package.json");
-      expect(() => assertAllowedDirectory(file)).toThrow(
+      expect(() => assertCodexAllowedDirectory(file)).toThrow(
         "codex_invalid_cwd_not_directory"
       );
+    });
+  });
+
+  describe("git assertAllowedDirectory", () => {
+    it("rejects direct symlink escapes", () => {
+      const sandbox = ensureWorkspaceSandbox("git-direct");
+      const outside = makeExternalDir("git-outside-");
+      const link = path.join(sandbox, "link");
+      fs.symlinkSync(outside, link);
+
+      expect(() => assertGitAllowedDirectory(link)).toThrow(
+        "git_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+
+    it("rejects directories swapped for symlinks post-validation", () => {
+      const sandbox = ensureWorkspaceSandbox("git-swap");
+      const target = path.join(sandbox, "subdir");
+      fs.mkdirSync(target, { recursive: true });
+      expect(assertGitAllowedDirectory(target)).toBe(target);
+
+      fs.rmSync(target, { recursive: true, force: true });
+      const outside = makeExternalDir("git-swap-out-");
+      fs.symlinkSync(outside, target);
+
+      expect(() => assertGitAllowedDirectory(target)).toThrow(
+        "git_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+  });
+
+  describe("droid assertAllowedDirectory", () => {
+    it("blocks symlink escapes", () => {
+      const sandbox = ensureWorkspaceSandbox("droid-direct");
+      const outside = makeExternalDir("droid-outside-");
+      const link = path.join(sandbox, "link");
+      fs.symlinkSync(outside, link);
+
+      expect(() => assertDroidAllowedDirectory(link)).toThrow(
+        "droid_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+
+    it("detects swaps after initial access", () => {
+      const sandbox = ensureWorkspaceSandbox("droid-swap");
+      const target = path.join(sandbox, "workspace");
+      fs.mkdirSync(target, { recursive: true });
+      expect(assertDroidAllowedDirectory(target)).toBe(target);
+
+      fs.rmSync(target, { recursive: true, force: true });
+      const outside = makeExternalDir("droid-swap-out-");
+      fs.symlinkSync(outside, target);
+
+      expect(() => assertDroidAllowedDirectory(target)).toThrow(
+        "droid_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+  });
+
+  describe("docker assertAllowedDirectory", () => {
+    it("blocks direct symlink attempts", () => {
+      const sandbox = ensureWorkspaceSandbox("docker-direct");
+      const outside = makeExternalDir("docker-outside-");
+      const link = path.join(sandbox, "link");
+      fs.symlinkSync(outside, link);
+
+      expect(() => assertDockerAllowedDirectory(link)).toThrow(
+        "docker_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+
+    it("detects symlink swaps", () => {
+      const sandbox = ensureWorkspaceSandbox("docker-swap");
+      const target = path.join(sandbox, "context");
+      fs.mkdirSync(target, { recursive: true });
+      expect(assertDockerAllowedDirectory(target)).toBe(target);
+
+      fs.rmSync(target, { recursive: true, force: true });
+      const outside = makeExternalDir("docker-swap-out-");
+      fs.symlinkSync(outside, target);
+
+      expect(() => assertDockerAllowedDirectory(target)).toThrow(
+        "docker_invalid_cwd"
+      );
+
+      fs.rmSync(outside, { recursive: true, force: true });
     });
   });
 
@@ -80,6 +207,7 @@ describe("Tool Policy & Security", () => {
           prompt: "ls",
           auto: "low",
           authz: "Bearer valid",
+          timeoutSec: MIN_TIMEOUT_SEC,
         } as any)
       ).resolves.toBeUndefined();
     });
@@ -139,6 +267,72 @@ describe("Tool Policy & Security", () => {
           authz: "Bearer valid",
         } as any)
       ).resolves.toBeUndefined();
+    });
+
+    it("allows timeout up to threshold without elevation", async () => {
+      mockRequireToolScopesAndPolicy.mockResolvedValue({
+        decision: { allow: true },
+        claims: {
+          sub: "test",
+          scopes: ["droid.exec"],
+          elevated: false,
+          mfa: "none",
+        },
+      });
+
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "sleep",
+          auto: "low",
+          authz: "Bearer valid",
+          timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC,
+        } as any)
+      ).resolves.toBeUndefined();
+    });
+
+    it("requires elevation for timeout above threshold", async () => {
+      mockRequireToolScopesAndPolicy.mockResolvedValue({
+        decision: { allow: true },
+        claims: {
+          sub: "test",
+          scopes: ["droid.exec"],
+          elevated: false,
+          mfa: "none",
+        },
+      });
+
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "sleep",
+          auto: "low",
+          authz: "Bearer valid",
+          timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC + 1,
+        } as any)
+      ).rejects.toThrow("codex_timeout_requires_elevation");
+    });
+
+    it("rejects timeouts above maximum limit regardless of elevation", async () => {
+      mockRequireToolScopesAndPolicy.mockResolvedValue({
+        decision: { allow: true },
+        claims: {
+          sub: "test",
+          scopes: ["droid.exec"],
+          elevated: true,
+          mfa: "passkey",
+        },
+      });
+
+      await expect(
+        enforcePolicy({
+          action: "exec",
+          prompt: "sleep",
+          auto: "low",
+          authz: "Bearer valid",
+          timeoutSec: MAX_TIMEOUT_SEC + 1,
+        } as any)
+      ).rejects.toThrow("codex_timeout_exceeds_limit");
     });
   });
 });

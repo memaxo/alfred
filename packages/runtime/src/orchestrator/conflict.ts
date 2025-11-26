@@ -5,6 +5,7 @@ import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
+import { formatCodexRuntimeError } from "../utils/codex-error";
 
 export async function* runConflictPhase(
   ctx: OrchestratorContext,
@@ -105,10 +106,16 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+        const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
         logger.warn("conflict_agent_execution_failed", {
           runId,
-          error: error instanceof Error ? error.message : String(error),
+          error: rawMessage,
+          code,
         });
+        conflictEvents.push({
+          type: "notice",
+          message: userMessage,
+        } as any);
         for (const ev of conflictEvents) {
           yield ev;
         }
@@ -123,10 +130,13 @@ export async function* runConflictPhase(
         } as any;
       }
     } catch (error) {
+      const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
       logger.warn("conflict_agent_initialisation_failed", {
         runId,
-        error: error instanceof Error ? error.message : String(error),
+        error: rawMessage,
+        code,
       });
+      yield { type: "notice", message: userMessage } as any;
     }
 
     // Phase C: Conflict Resolution Agent
@@ -221,10 +231,16 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+        const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
         logger.warn("conflict_resolution_failed", {
           runId,
-          error: error instanceof Error ? error.message : String(error),
+          error: rawMessage,
+          code,
         });
+        events.push({
+          type: "notice",
+          message: userMessage,
+        } as any);
 
         yield {
           type: "event",

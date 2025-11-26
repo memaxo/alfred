@@ -20,9 +20,16 @@ import {
 import {
   recordCodexError,
   recordCodexExecRun,
+  recordCodexWriterError,
   startCodexExecTimer,
+  startCodexSessionValidationTimer,
 } from "../../../metrics.js";
-import { sessionManager } from "../../codex-session.js";
+import { logger } from "@alfred/logger";
+import {
+  assessSessionResumeEligibility,
+  sessionManager,
+} from "../../codex-session.js";
+import type { CodexSessionState } from "../../codex-session.js";
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
@@ -33,6 +40,8 @@ import {
   OUTPUT_CAP_BYTES,
   type SandboxConfig,
   type ToolWriter,
+  parseThreadEvent,
+  validateOutputSchema,
 } from "./definition.js";
 import {
   assertAllowedDirectory,
@@ -40,6 +49,131 @@ import {
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
+import { truncateToBytes } from "./truncate.js";
+
+type WriterPayload = { [key: string]: unknown };
+type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
+
+const WRITER_FAILURE_WARN_THRESHOLD = 10;
+const WRITER_CONSECUTIVE_FAILURE_ABORT_THRESHOLD = 5;
+const WRITER_WARNING_INTERVAL_MS = 5_000;
+
+const DISCONNECT_ERROR_NAMES = new Set(["AbortError", "DOMException"]);
+const DISCONNECT_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "EPIPE",
+  "ERR_STREAM_DESTROYED",
+]);
+const DISCONNECT_ERROR_PATTERNS = [
+  "client disconnected",
+  "connection reset",
+  "socket hang up",
+  "stream is closed",
+  "websocket is not open",
+  "cannot write to closed stream",
+];
+
+function isDisconnectError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  if (error instanceof Error) {
+    if (DISCONNECT_ERROR_NAMES.has(error.name)) {
+      return true;
+    }
+    const message = error.message?.toLowerCase?.() ?? "";
+    if (message) {
+      return DISCONNECT_ERROR_PATTERNS.some((pattern) =>
+        message.includes(pattern)
+      );
+    }
+  }
+
+  const code = (error as { code?: string }).code;
+  if (code && DISCONNECT_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const cause = (error as { cause?: unknown }).cause;
+  if (cause) {
+    return isDisconnectError(cause);
+  }
+
+  return false;
+}
+
+function createSafeWriter(
+  writer: ToolWriter,
+  abortExecution: () => void
+): SafeWriter {
+  let totalFailures = 0;
+  let consecutiveFailures = 0;
+  let writerHealthy = true;
+  let warnedAboutDisconnect = false;
+  let lastDisconnectWarnAt = -Infinity;
+  let lastWriteWarnAt = -Infinity;
+
+  return async (payload, context) => {
+    if (!writerHealthy || !writer?.write) {
+      return;
+    }
+
+    try {
+      await Promise.resolve(writer.write(payload));
+      consecutiveFailures = 0;
+    } catch (error) {
+      consecutiveFailures += 1;
+      totalFailures += 1;
+      const isDisconnect = isDisconnectError(error);
+      const errorType = isDisconnect ? "disconnect" : "write_failure";
+      recordCodexWriterError(errorType);
+
+      const logContext = {
+        context,
+        totalFailures,
+        consecutiveFailures,
+      };
+
+      const now = Date.now();
+      const shouldLog =
+        now -
+          (isDisconnect ? lastDisconnectWarnAt : lastWriteWarnAt) >=
+        WRITER_WARNING_INTERVAL_MS;
+
+      if (isDisconnect && shouldLog) {
+        lastDisconnectWarnAt = now;
+        logger.debug(
+          { ...logContext, err: error },
+          "Codex writer disconnect"
+        );
+      } else if (!isDisconnect && shouldLog) {
+        lastWriteWarnAt = now;
+        logger.warn({ ...logContext, err: error }, "Codex writer write error");
+      }
+
+      if (totalFailures > WRITER_FAILURE_WARN_THRESHOLD && !warnedAboutDisconnect) {
+        warnedAboutDisconnect = true;
+        logger.warn(
+          { totalFailures },
+          "Codex writer failures exceed threshold; client may be disconnected"
+        );
+      }
+
+      if (
+        consecutiveFailures >= WRITER_CONSECUTIVE_FAILURE_ABORT_THRESHOLD &&
+        writerHealthy
+      ) {
+        writerHealthy = false;
+        logger.warn(
+          { consecutiveFailures },
+          "Codex writer unhealthy; aborting Codex execution"
+        );
+        abortExecution();
+      }
+    }
+  };
+}
 
 function createStageRecorder() {
   const recorded = new Set<CodexErrorStage>();
@@ -48,6 +182,31 @@ function createStageRecorder() {
       recorded.add(stage);
       recordCodexError(stage);
     }
+  };
+}
+
+function linkExternalAbortSignal(
+  controller: AbortController,
+  external?: AbortSignal,
+  onExternalAbort?: () => void
+): () => void {
+  if (!external) {
+    return () => {};
+  }
+
+  const handleAbort = () => {
+    onExternalAbort?.();
+    controller.abort();
+  };
+
+  if (external.aborted) {
+    handleAbort();
+    return () => {};
+  }
+
+  external.addEventListener("abort", handleAbort, { once: true });
+  return () => {
+    external.removeEventListener("abort", handleAbort);
   };
 }
 
@@ -63,13 +222,73 @@ type ReasoningAccumulator = {
   truncated: boolean;
 };
 
+function appendReasoningTrace(
+  acc: ReasoningAccumulator,
+  text: string,
+  timestamp: number = Date.now()
+) {
+  const reasoningText = text?.trim();
+  if (!reasoningText) {
+    return;
+  }
+
+  const byteLength = Buffer.byteLength(reasoningText);
+  if (acc.truncated) {
+    acc.storedBytes += byteLength;
+    return;
+  }
+
+  const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
+  if (remaining <= 0) {
+    acc.truncated = true;
+    return;
+  }
+
+  const storedText =
+    byteLength <= remaining
+      ? reasoningText
+      : truncateToBytes(reasoningText, remaining);
+  const storedBytes =
+    byteLength <= remaining
+      ? byteLength
+      : Buffer.byteLength(storedText);
+
+  if (storedText) {
+    acc.traces.push({
+      text: storedText,
+      timestamp,
+    });
+  }
+
+  if (storedBytes > 0) {
+    acc.storedBytes += storedBytes;
+  }
+
+  if (byteLength > remaining) {
+    acc.truncated = true;
+  }
+}
+
+function formatArtifactReasoning(
+  artifactSummaries: CodexArtifactSummary[]
+): string {
+  const details = artifactSummaries
+    .map((artifact) => {
+      const kind = artifact.kind || "file";
+      const path = artifact.path || "(unknown)";
+      return `- ${kind} ${path}`;
+    })
+    .join("\n");
+  return `artifacts_collected (${artifactSummaries.length}):\n${details}`;
+}
+
 function appendFinal(acc: FinalAccumulator, chunk: string) {
   if (!chunk) {
     return;
   }
-  const buffer = Buffer.from(chunk);
+  const byteLength = Buffer.byteLength(chunk);
   if (acc.truncated) {
-    acc.storedBytes += buffer.byteLength;
+    acc.storedBytes += byteLength;
     return;
   }
   const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
@@ -77,27 +296,34 @@ function appendFinal(acc: FinalAccumulator, chunk: string) {
     acc.truncated = true;
     return;
   }
-  if (buffer.byteLength <= remaining) {
+  if (byteLength <= remaining) {
     acc.chunks.push(chunk);
-    acc.storedBytes += buffer.byteLength;
+    acc.storedBytes += byteLength;
     return;
   }
-  acc.chunks.push(buffer.subarray(0, remaining).toString());
-  acc.storedBytes += remaining;
+  const truncated = truncateToBytes(chunk, remaining);
+  if (truncated) {
+    acc.chunks.push(truncated);
+    acc.storedBytes += Buffer.byteLength(truncated);
+  }
   acc.truncated = true;
 }
 
-function normaliseEvent(
-  payload: unknown
-): { type?: string; [key: string]: unknown } | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
+function normaliseEvent(payload: unknown): ThreadEvent | null {
+  if (typeof payload === "string") {
+    try {
+      const parsedPayload = JSON.parse(payload);
+      return parseThreadEvent(parsedPayload);
+    } catch (error) {
+      logger.warn("codex_event_json_parse_failed", {
+        sample:
+          payload.length > 200 ? `${payload.slice(0, 200)}...` : payload,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
   }
-  const maybeEvent = (payload as { event?: unknown }).event;
-  if (maybeEvent && typeof maybeEvent === "object") {
-    return maybeEvent as { type?: string };
-  }
-  return payload as { type?: string };
+  return parseThreadEvent(payload);
 }
 
 function extractAgentMessage(item: unknown): string | null {
@@ -189,17 +415,12 @@ function extractReasoning(item: unknown): string | null {
   return null;
 }
 
-function emitAlfredEvents(
-  writer: ToolWriter,
-  events: AlfredCodexEvent[]
-): void {
-  if (!writer || events.length === 0) {
+function emitAlfredEvents(writeFn: SafeWriter, events: AlfredCodexEvent[]): void {
+  if (events.length === 0) {
     return;
   }
   for (const event of events) {
-    void Promise.resolve(writer.write?.({ type: "codex_event", event })).catch(
-      () => {}
-    );
+    void writeFn({ type: "codex_event", event }, "codex_event");
   }
 }
 
@@ -221,7 +442,7 @@ function buildThreadOptions(
   return options;
 }
 
-function buildTurnOptions(
+export function buildTurnOptions(
   input: CodexToolInput,
   signal: AbortSignal
 ): TurnOptions {
@@ -230,6 +451,9 @@ function buildTurnOptions(
   };
 
   if (input.outputSchema) {
+    if (!validateOutputSchema(input.outputSchema)) {
+      throw new Error("invalid_output_schema");
+    }
     options.outputSchema = input.outputSchema;
   }
 
@@ -253,10 +477,78 @@ function createCodexClient(env: Record<string, string>): Codex {
   return new Codex(options);
 }
 
-export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
-  const resolvedCw = input.cw
-    ? assertAllowedDirectory(input.cw)
-    : process.cwd();
+type ThreadValidator = (threadId: string) => Promise<boolean>;
+
+function resolveThreadValidator(codex: Codex): ThreadValidator | undefined {
+  const maybeValidate = (codex as Codex & {
+    validateThread?: (id: string) => Promise<boolean> | boolean;
+  }).validateThread;
+
+  if (typeof maybeValidate !== "function") {
+    return undefined;
+  }
+
+  return async (threadId: string) => {
+    try {
+      const result = await maybeValidate.call(codex, threadId);
+      return result !== false;
+    } catch (error) {
+      console.warn("codex_thread_validation_failed", {
+        threadId,
+        error,
+      });
+      return false;
+    }
+  };
+}
+
+type AllowedDirectoryHandle = ReturnType<typeof assertAllowedDirectory>;
+
+function ensureDirectoryHandle(
+  handle: AllowedDirectoryHandle | string
+): AllowedDirectoryHandle {
+  if (
+    handle &&
+    typeof handle === "object" &&
+    typeof (handle as AllowedDirectoryHandle).path === "string" &&
+    typeof (handle as AllowedDirectoryHandle).close === "function"
+  ) {
+    return handle as AllowedDirectoryHandle;
+  }
+
+  const derivedPath =
+    typeof handle === "string"
+      ? handle
+      : (handle as { path?: unknown })?.path;
+
+  return {
+    fd: -1,
+    path: typeof derivedPath === "string" ? derivedPath : process.cwd(),
+    close: () => {},
+  } as AllowedDirectoryHandle;
+}
+
+export async function executeWithSdk({
+  input,
+  writer,
+  signal,
+}: CodexExecuteArgs) {
+  const rawHandle = assertAllowedDirectory(input.cw ?? process.cwd());
+  const cwdHandle = ensureDirectoryHandle(rawHandle);
+  try {
+    return await runCodexWithSdk({ input, writer, signal, cwdHandle });
+  } finally {
+    cwdHandle.close();
+  }
+}
+
+async function runCodexWithSdk({
+  input,
+  writer,
+  signal,
+  cwdHandle,
+}: CodexExecuteArgs & { cwdHandle: AllowedDirectoryHandle }) {
+  const resolvedCw = cwdHandle.path;
   const sandbox = mapAutoToCodex(input.auto);
   const env = pickEnvCodex(input.env);
 
@@ -264,18 +556,28 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
   const recordStage = createStageRecorder();
 
   const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-  const abortController = new AbortController();
+  const timeoutController = new AbortController();
+  let abortedByExternalSignal = false;
+  const unlinkExternalAbort = linkExternalAbortSignal(
+    timeoutController,
+    signal,
+    () => {
+      abortedByExternalSignal = true;
+    }
+  );
+  const safeWriter = createSafeWriter(writer, () => timeoutController.abort());
   let didTimeout = false;
   const timer = setNodeTimeout(() => {
     didTimeout = true;
     recordStage("timeout");
-    abortController.abort();
-    void Promise.resolve(
-      writer?.write?.({
+    timeoutController.abort();
+    void safeWriter(
+      {
         type: "notice",
         message: "codex_exec_timeout",
-      })
-    ).catch(() => {});
+      },
+      "codex_exec_timeout_notice"
+    );
   }, timeoutSec * 1000);
 
   const finalAccumulator: FinalAccumulator = {
@@ -295,21 +597,61 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
 
   const codex = createCodexClient(env);
   const threadOptions = buildThreadOptions(input, resolvedCw, sandbox);
+  const threadValidator = resolveThreadValidator(codex);
 
   const sessionId = input.sessionId?.trim();
-  const existingSession = sessionId
-    ? await sessionManager.getSession(sessionId)
-    : undefined;
+  const sessionOwnerId = input.userId?.trim();
+  let existingSession: CodexSessionState | undefined;
+  if (sessionId) {
+    if (!sessionOwnerId) {
+      throw new Error("codex_session_user_required");
+    }
+    existingSession = await sessionManager.getSession(
+      sessionId,
+      sessionOwnerId
+    );
+  } else {
+    existingSession = undefined;
+  }
 
   let thread: Thread;
-  if (existingSession?.threadId) {
-    thread = codex.resumeThread(existingSession.threadId, threadOptions);
+  const stopSessionValidationTimer = startCodexSessionValidationTimer();
+  const resumeAssessment = await assessSessionResumeEligibility({
+    session: existingSession,
+    workingDirectory: resolvedCw,
+    validateThread: threadValidator,
+  });
+  stopSessionValidationTimer({
+    outcome: resumeAssessment.canResume
+      ? "resume"
+      : resumeAssessment.reason ?? "unknown",
+  });
+
+  if (resumeAssessment.canResume) {
+    thread = codex.resumeThread(
+      resumeAssessment.session.threadId,
+      threadOptions
+    );
   } else {
+    if (existingSession?.threadId) {
+      void safeWriter(
+        {
+          type: "notice",
+          message: "codex_session_thread_reset",
+          reason: resumeAssessment.reason,
+        },
+        "codex_session_thread_reset"
+      );
+    }
     thread = codex.startThread(threadOptions);
   }
 
   try {
-    const turnOptions = buildTurnOptions(input, abortController.signal);
+    if (timeoutController.signal.aborted && abortedByExternalSignal) {
+      throw new Error("codex_exec_aborted");
+    }
+
+    const turnOptions = buildTurnOptions(input, timeoutController.signal);
 
     // Inject Linear context if provided
     let enrichedPrompt = input.prompt;
@@ -345,47 +687,59 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
           break;
         }
         case "turn.started": {
-          void Promise.resolve(
-            writer?.write?.({
+          void safeWriter(
+            {
               type: "notice",
               message: "codex_turn_started",
-            })
-          ).catch(() => {});
+            },
+            "codex_turn_started_notice"
+          );
           break;
         }
         case "turn.completed": {
           const usage = event.usage;
-          void Promise.resolve(
-            writer?.write?.({
+          void safeWriter(
+            {
               type: "notice",
               message: "codex_turn_completed",
               usage,
-            })
-          ).catch(() => {});
+            },
+            "codex_turn_completed_notice"
+          );
           break;
         }
         case "turn.failed": {
+          const detail = event.error?.message ?? "codex_turn_failed";
           if (!runtimeFailure) {
-            const detail = event.error?.message ?? "codex_turn_failed";
             runtimeFailure = new Error(`codex_exec_failed:${detail}`);
             recordStage("runtime");
           }
-          const errorText = event.error?.message ?? "Codex turn failed.";
-          void Promise.resolve(
-            writer?.write?.({ type: "stderr", text: errorText })
-          ).catch(() => {});
+          logger.error("codex_turn_failed", {
+            detail,
+            threadId: thread.id ?? threadIdFromEvents,
+            stage: "turn.failed",
+          });
+          void safeWriter(
+            { type: "stderr", text: "Codex turn failed." },
+            "codex_turn_failed"
+          );
           break;
         }
         case "error": {
+          const detail = event.message ?? "codex_stream_error";
           if (!runtimeFailure) {
-            const message = event.message ?? "codex_stream_error";
-            runtimeFailure = new Error(message);
+            runtimeFailure = new Error(`codex_exec_failed:${detail}`);
             recordStage("runtime");
           }
-          const message = event.message ?? "Codex reported an error.";
-          void Promise.resolve(
-            writer?.write?.({ type: "stderr", text: message })
-          ).catch(() => {});
+          logger.error("codex_stream_error", {
+            detail,
+            threadId: thread.id ?? threadIdFromEvents,
+            stage: "stream.error",
+          });
+          void safeWriter(
+            { type: "stderr", text: "Codex reported an error." },
+            "codex_stream_error"
+          );
           break;
         }
         case "item.completed": {
@@ -393,48 +747,29 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
           const alfredEvents: AlfredCodexEvent[] = [];
 
           if (item.type === "reasoning") {
-            const reasoningText = item.text.trim();
+            const reasoningText = extractReasoning(item);
             if (reasoningText) {
-              const byteLength = Buffer.from(reasoningText).byteLength;
-
-              if (reasoningAccumulator.truncated) {
-                reasoningAccumulator.storedBytes += byteLength;
-              } else {
-                const remaining =
-                  OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
-                if (remaining > 0) {
-                  reasoningAccumulator.traces.push({
-                    text:
-                      byteLength <= remaining
-                        ? reasoningText
-                        : reasoningText.substring(0, remaining),
-                    timestamp: Date.now(),
-                  });
-                  reasoningAccumulator.storedBytes += Math.min(
-                    byteLength,
-                    remaining
-                  );
-                  if (byteLength > remaining) {
-                    reasoningAccumulator.truncated = true;
-                  }
-                } else {
-                  reasoningAccumulator.truncated = true;
-                }
-              }
+              const timestamp = Date.now();
+              appendReasoningTrace(
+                reasoningAccumulator,
+                reasoningText,
+                timestamp
+              );
 
               if (input.out === "debug") {
-                void Promise.resolve(
-                  writer?.write?.({
+                void safeWriter(
+                  {
                     type: "reasoning",
                     text: reasoningText,
-                  })
-                ).catch(() => {});
+                  },
+                  "codex_reasoning"
+                );
               }
 
               alfredEvents.push({
                 type: "thought",
                 content: reasoningText,
-                timestamp: Date.now(),
+                timestamp,
               });
             }
           } else if (item.type === "command_execution") {
@@ -453,9 +788,10 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
             });
 
             if (output) {
-              void Promise.resolve(
-                writer?.write?.({ type: "stdout", text: output })
-              ).catch(() => {});
+              void safeWriter(
+                { type: "stdout", text: output },
+                "codex_command_output"
+              );
               alfredEvents.push({
                 type: "output",
                 content: output,
@@ -465,9 +801,10 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
             const text = item.text;
             if (text) {
               appendFinal(finalAccumulator, text);
-              void Promise.resolve(
-                writer?.write?.({ type: "stdout", text })
-              ).catch(() => {});
+              void safeWriter(
+                { type: "stdout", text },
+                "codex_agent_message"
+              );
               alfredEvents.push({
                 type: "output",
                 content: text,
@@ -491,7 +828,7 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
             }
           }
 
-          emitAlfredEvents(writer, alfredEvents);
+          emitAlfredEvents(safeWriter, alfredEvents);
 
           // Emit to Linear if context available
           if (input.context && alfredEvents.length > 0) {
@@ -509,18 +846,20 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
           break;
         }
       }
-    }
+  }
   } catch (error) {
-    clearNodeTimeout(timer);
-    stopTimer();
     if (didTimeout) {
       throw new Error("codex_exec_timeout");
     }
-    if (!runtimeFailure) {
+    if (timeoutController.signal.aborted && abortedByExternalSignal) {
+      throw new Error("codex_exec_aborted");
+    }
+    if (!runtimeFailure && !timeoutController.signal.aborted) {
       recordStage("spawn");
     }
     throw error;
   } finally {
+    unlinkExternalAbort();
     clearNodeTimeout(timer);
     stopTimer();
   }
@@ -538,9 +877,17 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
   }
 
   if (finalAccumulator.truncated) {
-    void Promise.resolve(
-      writer?.write?.({ type: "notice", message: "output_truncated" })
-    ).catch(() => {});
+    void safeWriter(
+      { type: "notice", message: "output_truncated" },
+      "codex_output_truncated"
+    );
+  }
+
+  if (artifacts.length > 0) {
+    appendReasoningTrace(
+      reasoningAccumulator,
+      formatArtifactReasoning(artifacts)
+    );
   }
 
   const resource = resolvedCw;
@@ -565,12 +912,20 @@ export async function executeWithSdk({ input, writer }: CodexExecuteArgs) {
   }).catch((_err) => {});
 
   if (sessionId && threadId && !existingSession) {
-    await sessionManager.createSession(sessionId, threadId);
+    if (!sessionOwnerId) {
+      throw new Error("codex_session_user_required");
+    }
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      resolvedCw,
+      sessionOwnerId
+    );
   }
 
   return {
     result: resultText,
-    artifacts: [],
+    artifacts: artifacts.length > 0 ? artifacts : undefined,
     reasoning:
       reasoningAccumulator.traces.length > 0
         ? reasoningAccumulator.traces

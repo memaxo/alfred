@@ -1,7 +1,15 @@
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import {
+  requireToolScopesAndPolicy,
+  type TokenClaims,
+} from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import {
+  buildCodexErrorResponse,
+  formatCodexErrorMessage,
+} from "./codex";
 import { authedProcedure, router } from "../trpc";
 
 /**
@@ -11,7 +19,7 @@ import { authedProcedure, router } from "../trpc";
 
 const codexIntentInputSchema = z.object({
   intent: z.string().min(1).max(500),
-  auto: z.enum(["read", "low", "medium", "high"]).default("high"),
+  auto: z.enum(["read", "low", "medium", "high"]).default("read"),
   authz: z.string().optional(),
   sessionId: z.string().min(1).max(255).optional(),
   cw: z.string().optional(),
@@ -60,7 +68,67 @@ function intentToPrompt(intent: string): string {
 const codexIntentProcedures = {
   run: authedProcedure
     .input(codexIntentInputSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      const requiresElevatedAutonomy =
+        input.auto === "medium" || input.auto === "high";
+
+      if (requiresElevatedAutonomy && !input.authz) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "authz_required_for_elevated_autonomy",
+        });
+      }
+
+      if (requiresElevatedAutonomy) {
+        let tokenClaims: TokenClaims;
+        try {
+          const tokenResult = await requireToolScopesAndPolicy(
+            input.authz,
+            ["droid.exec"],
+            {
+              action: "droid.exec",
+              resource: {
+                kind: "repo",
+                id: input.cw ?? "cwd",
+              },
+              context: {
+                auto: input.auto,
+              },
+            }
+          );
+          tokenClaims = tokenResult.claims;
+        } catch (error) {
+          if (error instanceof Error && error.message === "unauthorized") {
+            throw new TRPCError({
+              code: "UNAUTHORIZED",
+              message: "authz_invalid",
+            });
+          }
+
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              error instanceof Error
+                ? error.message
+                : "authz_validation_failed",
+          });
+        }
+
+        if (!tokenClaims.elevated || tokenClaims.mfa !== "passkey") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "biometric_required",
+          });
+        }
+      }
+
       const prompt = intentToPrompt(input.intent);
 
       try {
@@ -77,6 +145,7 @@ const codexIntentProcedures = {
             authz: input.authz,
             sessionId: input.sessionId,
             context: input.context,
+            userId,
           },
           writer: {
             write: (chunk: unknown) => {
@@ -101,15 +170,12 @@ const codexIntentProcedures = {
           eventCount: events.length,
         };
       } catch (error) {
-        if (error instanceof Error && error.message === "biometric_required") {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message: "biometric_required",
-          });
-        }
+        const { sanitized, correlationId, trpcCode, cause } =
+          buildCodexErrorResponse(error, "codex_intent_run_failed");
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : String(error),
+          code: trpcCode,
+          message: formatCodexErrorMessage(sanitized, correlationId),
+          cause,
         });
       }
     }),

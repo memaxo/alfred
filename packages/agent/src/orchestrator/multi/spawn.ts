@@ -1,4 +1,5 @@
 import type { SubTask, SubTaskId } from "./decompose";
+import { openDirectorySecure } from "../../security/filesystem.js";
 import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
@@ -87,7 +88,9 @@ export function buildAgentSpec(
   // Or we assume the runtime will mutate it.
   // Let's keep cwd as repo root, and let environment flag dictate behavior in core.ts.
 
-  const workingDirectory = cwd;
+  const dirHandle = openDirectorySecure(cwd);
+  const workingDirectory = dirHandle.path;
+  dirHandle.close();
   const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;
 
   // Phase 8: Escalation Signal

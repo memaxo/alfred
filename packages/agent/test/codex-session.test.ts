@@ -1,47 +1,199 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { sessionManager } from "../src/orchestrator/codex-session";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import type { CodexSessionState } from "../src/orchestrator/codex-session";
+
+type RepoRecord = {
+  sessionId: string;
+  userId: string;
+  threadId: string;
+  workingDirectory: string;
+  status: "active" | "completed" | "failed";
+  linearIssueId: string | null;
+  createdAt: Date;
+  lastAccessedAt: Date;
+  expiresAt: Date;
+};
+
+const repoStore = new Map<string, RepoRecord>();
+
+function cloneRecord(record: RepoRecord): RepoRecord {
+  return {
+    ...record,
+    createdAt: new Date(record.createdAt),
+    lastAccessedAt: new Date(record.lastAccessedAt),
+    expiresAt: new Date(record.expiresAt),
+  };
+}
+
+const createSessionRepoMock = vi.fn(async (record: any) => {
+  const stored: RepoRecord = {
+    sessionId: record.sessionId,
+    userId: record.userId,
+    threadId: record.threadId,
+    workingDirectory: record.workingDirectory,
+    status: record.status,
+    linearIssueId: record.linearIssueId ?? null,
+    createdAt: new Date(record.createdAt),
+    lastAccessedAt: new Date(record.lastAccessedAt),
+    expiresAt: new Date(record.expiresAt),
+  };
+  repoStore.set(stored.sessionId, stored);
+  return cloneRecord(stored);
+});
+
+const getSessionRepoMock = vi.fn(async (sessionId: string, userId: string) => {
+  const stored = repoStore.get(sessionId);
+  if (!stored || stored.userId !== userId) {
+    return null;
+  }
+  return cloneRecord(stored);
+});
+
+const updateSessionRepoMock = vi.fn(async (sessionId: string, patch: Record<string, unknown>) => {
+  const stored = repoStore.get(sessionId);
+  if (!stored) {
+    return null;
+  }
+  const next: RepoRecord = {
+    ...stored,
+    threadId: (patch.threadId as string | undefined) ?? stored.threadId,
+    status: (patch.status as RepoRecord["status"] | undefined) ?? stored.status,
+    linearIssueId:
+      (patch.linearIssueId as string | null | undefined) ?? stored.linearIssueId,
+    workingDirectory:
+      (patch.workingDirectory as string | undefined) ?? stored.workingDirectory,
+    lastAccessedAt: patch.lastAccessedAt
+      ? new Date(patch.lastAccessedAt as Date)
+      : stored.lastAccessedAt,
+    expiresAt: patch.expiresAt
+      ? new Date(patch.expiresAt as Date)
+      : stored.expiresAt,
+  };
+  repoStore.set(sessionId, next);
+  return cloneRecord(next);
+});
+
+const deleteSessionRepoMock = vi.fn(async (sessionId: string) => {
+  repoStore.delete(sessionId);
+});
+
+const cleanupExpiredSessionsRepoMock = vi.fn(async () => {
+  const now = Date.now();
+  let deleted = 0;
+  for (const [sessionId, record] of repoStore.entries()) {
+    if (record.expiresAt.getTime() <= now) {
+      repoStore.delete(sessionId);
+      deleted += 1;
+    }
+  }
+  return deleted;
+});
+
+mock.module("@alfred/db/repo/codex-session", () => ({
+  createSession: createSessionRepoMock,
+  getSession: getSessionRepoMock,
+  updateSession: updateSessionRepoMock,
+  deleteSession: deleteSessionRepoMock,
+  cleanupExpiredSessions: cleanupExpiredSessionsRepoMock,
+}));
+
+let CodexSessionManagerClass:
+  | typeof import("../src/orchestrator/codex-session").CodexSessionManager
+  | null = null;
+let sessionManager: import("../src/orchestrator/codex-session").CodexSessionManager;
+let assessSessionResumeEligibility:
+  | typeof import("../src/orchestrator/codex-session").assessSessionResumeEligibility
+  | null = null;
+
+beforeAll(async () => {
+  const mod = await import("../src/orchestrator/codex-session");
+  CodexSessionManagerClass = mod.CodexSessionManager;
+  assessSessionResumeEligibility = mod.assessSessionResumeEligibility;
+  sessionManager = new CodexSessionManagerClass();
+});
+
+beforeEach(() => {
+  if (!CodexSessionManagerClass) {
+    throw new Error("CodexSessionManagerClass not loaded");
+  }
+  repoStore.clear();
+  createSessionRepoMock.mockClear();
+  getSessionRepoMock.mockClear();
+  updateSessionRepoMock.mockClear();
+  deleteSessionRepoMock.mockClear();
+  cleanupExpiredSessionsRepoMock.mockClear();
+  sessionManager = new CodexSessionManagerClass();
+  sessionManager.configureContinuityMetrics(() => {});
+});
+
+afterEach(() => {
+  sessionManager.configureContinuityMetrics(() => {});
+});
+
+function getAssessSessionResumeEligibility() {
+  if (!assessSessionResumeEligibility) {
+    throw new Error("assessSessionResumeEligibility not loaded");
+  }
+  return assessSessionResumeEligibility;
+}
 
 describe("CodexSessionManager", () => {
   const sessionId = "test-session-1";
   const threadId = "thread-123";
+  const workingDirectory = "/tmp/project";
+  const userId = "user-123";
+  const otherUserId = "user-456";
 
-  beforeEach(() => {
-    // Clean up any existing sessions
-    sessionManager.terminateSession(sessionId);
-  });
-
-  afterEach(() => {
-    sessionManager.terminateSession(sessionId);
-  });
-
-  it("creates a new session with active status", () => {
-    const session = sessionManager.createSession(sessionId, threadId);
+  it("creates a new session with active status", async () => {
+    const session = await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
     expect(session.sessionId).toBe(sessionId);
     expect(session.threadId).toBe(threadId);
+    expect(session.userId).toBe(userId);
+    expect(session.workingDirectory).toBe(workingDirectory);
     expect(session.status).toBe("active");
-    expect(session.createdAt).toBeGreaterThan(0);
-    expect(session.lastAccessedAt).toBe(session.createdAt);
   });
 
-  it("retrieves an existing session and updates lastAccessedAt", () => {
-    const created = sessionManager.createSession(sessionId, threadId);
+  it("retrieves an existing session and updates lastAccessedAt", async () => {
+    const created = await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
     const createdAt = created.lastAccessedAt;
 
-    // Small delay to ensure timestamp difference
-    const retrieved = sessionManager.getSession(sessionId);
+    const retrieved = await sessionManager.getSession(sessionId, userId);
     expect(retrieved).toBeDefined();
     expect(retrieved?.sessionId).toBe(sessionId);
     expect(retrieved?.lastAccessedAt).toBeGreaterThanOrEqual(createdAt);
   });
 
-  it("returns undefined for non-existent session", () => {
-    const result = sessionManager.getSession("nonexistent");
+  it("returns undefined for non-existent session", async () => {
+    const result = await sessionManager.getSession("nonexistent", userId);
     expect(result).toBeUndefined();
   });
 
-  it("updates session status and thread", () => {
-    sessionManager.createSession(sessionId, threadId);
-    const updated = sessionManager.updateSession(sessionId, {
+  it("updates session status and thread", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+    const updated = await sessionManager.updateSession(sessionId, {
       status: "completed",
       threadId: "thread-456",
     });
@@ -49,18 +201,193 @@ describe("CodexSessionManager", () => {
     expect(updated?.threadId).toBe("thread-456");
   });
 
-  it("terminates a session successfully", () => {
-    sessionManager.createSession(sessionId, threadId);
-    sessionManager.terminateSession(sessionId);
-    const retrieved = sessionManager.getSession(sessionId);
+  it("terminates a session successfully", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+    await sessionManager.terminateSession(sessionId);
+    const retrieved = await sessionManager.getSession(sessionId, userId);
     expect(retrieved).toBeUndefined();
   });
 
-  it("handles linearIssueId in session state", () => {
-    sessionManager.createSession(sessionId, threadId);
-    const updated = sessionManager.updateSession(sessionId, {
+  it("handles linearIssueId in session state", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+    const updated = await sessionManager.updateSession(sessionId, {
       linearIssueId: "ISS-123",
     });
     expect(updated?.linearIssueId).toBe("ISS-123");
+  });
+
+  it("requires a userId when creating a session", async () => {
+    await expect(
+      sessionManager.createSession(sessionId, threadId, workingDirectory, "")
+    ).rejects.toThrow("codex_session_user_required");
+  });
+
+  it("prevents different users from accessing each other's sessions", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+    const tracker = vi.fn();
+    sessionManager.configureContinuityMetrics(tracker);
+    const result = await sessionManager.getSession(sessionId, otherUserId);
+    expect(result).toBeUndefined();
+    expect(tracker).toHaveBeenCalledWith("failure");
+  });
+
+  it("records failures for session ID enumeration attempts", async () => {
+    const tracker = vi.fn();
+    sessionManager.configureContinuityMetrics(tracker);
+
+    await sessionManager.getSession("unknown-session-a", userId);
+    await sessionManager.getSession("unknown-session-b", userId);
+
+    expect(tracker).toHaveBeenCalledTimes(2);
+    expect(tracker).toHaveBeenNthCalledWith(1, "failure");
+    expect(tracker).toHaveBeenNthCalledWith(2, "failure");
+  });
+
+  it("keeps sessions isolated under concurrent access", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+    const timestamps: number[] = [];
+
+    await Promise.all(
+      Array.from({ length: 5 }, (_, idx) =>
+        new Promise<void>((resolve, reject) => {
+          setTimeout(() => {
+            sessionManager
+              .getSession(sessionId, userId)
+              .then((session) => {
+                expect(session).toBeDefined();
+                timestamps.push(session!.lastAccessedAt);
+                resolve();
+              })
+              .catch(reject);
+          }, idx * 5);
+        })
+      )
+    );
+
+    expect(timestamps.length).toBe(5);
+    for (let i = 1; i < timestamps.length; i += 1) {
+      expect(timestamps[i]).toBeGreaterThanOrEqual(timestamps[i - 1]!);
+    }
+  });
+
+  describe("assessSessionResumeEligibility", () => {
+    it("allows resume when working directories match", async () => {
+      const session = await sessionManager.createSession(
+        sessionId,
+        threadId,
+        workingDirectory,
+        userId
+      );
+
+      const result = await getAssessSessionResumeEligibility()({
+        session,
+        workingDirectory,
+      });
+
+      expect(result.canResume).toBe(true);
+      expect(result.session.threadId).toBe(threadId);
+    });
+
+    it("prevents resume when working directories mismatch", async () => {
+      const logger = mock(() => {});
+      const session = await sessionManager.createSession(
+        sessionId,
+        threadId,
+        workingDirectory,
+        userId
+      );
+
+      const result = await getAssessSessionResumeEligibility()({
+        session,
+        workingDirectory: "/tmp/other",
+        logWarning: (event, context) => logger(event, context),
+      });
+
+      expect(result.canResume).toBe(false);
+      expect(result.reason).toBe("directory-mismatch");
+      expect(logger).toHaveBeenCalledWith(
+        "codex_session_directory_mismatch",
+        expect.objectContaining({
+          sessionId,
+          stored: workingDirectory,
+          requested: "/tmp/other",
+        })
+      );
+    });
+
+    it("logs warning when legacy session lacks working directory", async () => {
+      const logger = mock(() => {});
+      const legacySession: CodexSessionState = {
+        sessionId,
+        userId,
+        threadId,
+        workingDirectory: undefined as unknown as string,
+        status: "active",
+        linearIssueId: undefined,
+        createdAt: Date.now(),
+        lastAccessedAt: Date.now(),
+        expiresAt: Date.now() + 1000,
+      };
+
+      const result = await getAssessSessionResumeEligibility()({
+        session: legacySession,
+        workingDirectory,
+        logWarning: (event, context) => logger(event, context),
+      });
+
+      expect(result.canResume).toBe(false);
+      expect(result.reason).toBe("missing-working-directory");
+      expect(logger).toHaveBeenCalledWith(
+        "codex_session_missing_directory",
+        expect.objectContaining({ sessionId })
+      );
+    });
+
+    it("logs warning when validateThread reports invalid thread", async () => {
+      const logger = mock(() => {});
+      const session = await sessionManager.createSession(
+        sessionId,
+        threadId,
+        workingDirectory,
+        userId
+      );
+
+      const result = await getAssessSessionResumeEligibility()({
+        session,
+        workingDirectory,
+        validateThread: async () => false,
+        logWarning: (event, context) => logger(event, context),
+      });
+
+      expect(result.canResume).toBe(false);
+      expect(result.reason).toBe("thread-invalid");
+      expect(logger).toHaveBeenCalledWith(
+        "codex_session_thread_invalid",
+        expect.objectContaining({
+          sessionId,
+          threadId,
+        })
+      );
+    });
   });
 });

@@ -105,6 +105,17 @@ const thread = codex.resumeThread(savedThreadId);
 await thread.run("Implement the fix");
 ```
 
+### Session lifecycle and directory binding
+
+ALFRED binds every `sessionId` to both the initiating user and the working directory that was active when the session started. When you pass `sessionId` and `userId` into the Codex tool:
+
+- The orchestrator only resumes a thread if the stored `workingDirectory` matches the current resolved directory.
+- Legacy sessions without a recorded directory or missing threads are treated as invalid and force a new thread.
+- When the SDK exposes `validateThread()`, ALFRED will additionally confirm the underlying Codex thread still exists before resuming.
+- If any validation fails, Codex emits a `codex_session_thread_reset` notice describing the reason (e.g., `directory-mismatch` or `thread-invalid`) and starts a fresh thread instead of resuming.
+
+To avoid unexpected resets, always send the same absolute working directory and user identifier that were used when the session was created.
+
 ### Working directory controls
 
 Codex runs in the current working directory by default. To avoid unrecoverable errors, Codex requires the working directory to be a Git repository. You can skip the Git repository check by passing the `skipGitRepoCheck` option when creating a thread.

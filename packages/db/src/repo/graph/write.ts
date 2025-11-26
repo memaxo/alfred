@@ -1,6 +1,7 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
+import { sanitizeContextText, sanitizeGraphValue } from "../sanitize";
 import { getNode } from "./read";
 import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
 import { sanitize, uniqSeeds } from "./utils";
@@ -12,14 +13,21 @@ export async function createNode(
   label: string,
   properties?: unknown
 ): Promise<NodeRow> {
+  const safeLabel = sanitizeContextText(label);
+  const safeProps =
+    properties === undefined || properties === null
+      ? null
+      : sanitizeGraphValue(properties);
+
   const [row] = await db
     .insert(memoryNodes)
     .values({
       resource,
       hash,
       kind,
-      label,
-      properties: properties ?? null,
+      label: safeLabel,
+      properties: safeProps,
+      sanitized: true,
     })
     .returning();
 
@@ -35,6 +43,19 @@ export async function updateNode(
   updates: Partial<NodeInsert>
 ): Promise<NodeRow | null> {
   const payload = sanitize<NodeInsert>(updates);
+  if (typeof payload.label === "string") {
+    payload.label = sanitizeContextText(payload.label);
+  }
+  if (payload.properties !== undefined && payload.properties !== null) {
+    payload.properties = sanitizeGraphValue(payload.properties);
+  }
+  if (
+    payload.label !== undefined ||
+    payload.properties !== undefined ||
+    payload.embedding !== undefined
+  ) {
+    payload.sanitized = true;
+  }
   if (Object.keys(payload).length === 0) {
     return getNode(nodeId);
   }
@@ -72,9 +93,13 @@ export async function upsertNodes(
     resource: seed.resource,
     hash: seed.hash,
     kind: seed.kind,
-    label: seed.label,
-    properties: seed.properties ?? null,
+    label: sanitizeContextText(seed.label),
+    properties:
+      seed.properties === undefined || seed.properties === null
+        ? null
+        : sanitizeGraphValue(seed.properties),
     embedding: seed.embedding ?? null,
+    sanitized: true,
   }));
   // console.log("DEBUG: Upserting values", values[0]);
 
@@ -87,6 +112,7 @@ export async function upsertNodes(
         label: sql`excluded.label`,
         properties: sql`excluded.properties`,
         embedding: sql`excluded.embedding`,
+        sanitized: sql`excluded.sanitized`,
         updated: sql`NOW()`,
       },
     })

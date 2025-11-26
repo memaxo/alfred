@@ -17,6 +17,7 @@ export {
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
 export * as codexLearningRepo from "./repo/codex-learning";
+export * as codexSessionRepo from "./repo/codex-session";
 export * as cognitiveRepo from "./repo/cognitive";
 export * as conversationRepo from "./repo/conversation";
 export * as deployRepo from "./repo/deploy";
@@ -31,6 +32,7 @@ export * as workflowRepo from "./repo/workflow";
 export * as assistantSchema from "./schema/assistant";
 export * from "./schema/cognitive";
 export * as conversationSchema from "./schema/conversation";
+export * as codexSchema from "./schema/codex";
 export * as deploySchema from "./schema/deploy";
 export * as evalSchema from "./schema/eval";
 export * as graphSchema from "./schema/graph";

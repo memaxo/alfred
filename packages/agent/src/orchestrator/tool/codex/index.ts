@@ -7,9 +7,10 @@ import { withPolicyApproval } from "../approval.js";
 import {
   type CodexToolInput,
   codexInputSchema,
+  validateOutputSchema,
   toolOutputSchema,
 } from "./definition.js";
-import { executeWithSdk } from "./exec.js";
+import { executeWithSdk, buildTurnOptions } from "./exec.js";
 import {
   enforcePolicy,
   mapAutoToCodex,
@@ -38,13 +39,15 @@ export const toolCodex = {
   execute: async ({
     input,
     writer,
+    signal,
   }: {
     input: CodexToolInput;
     writer?: { write: (chunk: unknown) => Promise<void> | void };
+    signal?: AbortSignal;
   }) => {
     await enforcePolicy(input);
     // Simplify: Always use SDK backend as CLI is legacy
-    return executeWithSdk({ input, writer });
+    return executeWithSdk({ input, writer, signal });
   },
 };
 
@@ -77,4 +80,6 @@ export const __internals = {
   pickEnvCodex,
   resolveExecutable,
   mapAutoToCodex,
+  validateOutputSchema,
+  buildTurnOptions,
 };

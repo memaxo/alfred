@@ -16,6 +16,7 @@ import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // 
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { OrchestratorContext } from "./types";
+import { formatCodexRuntimeError } from "../utils/codex-error";
 
 const REVIEW_PLAN_FILE = (runId: string) => `.agent/plans/${runId}/review.md`;
 function reviewSessionsEnabled() {
@@ -655,7 +656,13 @@ export async function* runReviewPhase(
             },
           } as any;
         } catch (error) {
-          logger.error("fixer_agent_failed", { error: String(error) });
+          const { userMessage, rawMessage, code } =
+            formatCodexRuntimeError(error);
+          logger.error("fixer_agent_failed", {
+            error: rawMessage,
+            code,
+          });
+          yield { type: "notice", message: userMessage } as any;
           // If fixer crashes, we probably can't recover, but let the loop increment and maybe retry or fail.
         }
 

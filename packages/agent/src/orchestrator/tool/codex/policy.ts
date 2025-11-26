@@ -1,12 +1,18 @@
-import { accessSync, constants as fsConstants, statSync } from "node:fs";
+import { accessSync, constants as fsConstants, lstatSync } from "node:fs";
 import path from "node:path";
+import { logger } from "@alfred/metrics";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import {
   DEFAULT_ALLOW_PREFIXES,
-  isWithinBase,
-  safeRealpath,
+  DirectoryAccessError,
+  DirectoryHandle,
+  openDirectorySecure,
 } from "../../../security/filesystem.js";
 import {
+  CODEX_ENV_ALLOWLIST,
+  DEFAULT_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
   type CodexToolInput,
   MCP_ENV_ALLOWLIST,
   type SandboxConfig,
@@ -21,21 +27,37 @@ export const WRITE_SANDBOX: SandboxConfig = {
   approval: "on-request",
 };
 
-export function assertAllowedDirectory(candidate: string) {
-  const resolved = safeRealpath(candidate);
-  if (!resolved) {
-    throw new Error("codex_invalid_cwd");
-  }
-  for (const prefix of DEFAULT_ALLOW_PREFIXES) {
-    if (isWithinBase(prefix, resolved)) {
-      const stats = statSync(resolved);
-      if (!stats.isDirectory()) {
+type DirectoryAssertOptions = {
+  noFollowSymlinks?: boolean;
+};
+
+export function assertAllowedDirectory(
+  candidate: string,
+  options?: DirectoryAssertOptions
+): DirectoryHandle {
+  try {
+    return openDirectorySecure(candidate, {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+      noFollowSymlinks: options?.noFollowSymlinks ?? true,
+    });
+  } catch (error) {
+    const isDirectoryError =
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory";
+    const isFsNotDir =
+      (error as NodeJS.ErrnoException | undefined)?.code === "ENOTDIR";
+    if (isDirectoryError || isFsNotDir) {
+      throw new Error("codex_invalid_cwd_not_directory");
+    }
+    try {
+      if (lstatSync(candidate).isFile()) {
         throw new Error("codex_invalid_cwd_not_directory");
       }
-      return resolved;
+    } catch {
+      // ignore classification errors
     }
+    throw new Error("codex_invalid_cwd");
   }
-  throw new Error("codex_invalid_cwd");
 }
 
 export function mapAutoToCodex(auto: CodexToolInput["auto"]): SandboxConfig {
@@ -48,8 +70,11 @@ export function pickEnvCodex(custom: Record<string, string> | undefined) {
     PATH: process.env.PATH ?? "",
   };
 
-  if (process.env.CODEX_API_KEY) {
-    safeEnv.CODEX_API_KEY = process.env.CODEX_API_KEY;
+  for (const key of CODEX_ENV_ALLOWLIST) {
+    const value = process.env[key];
+    if (typeof value === "string" && value.length > 0) {
+      safeEnv[key] = value;
+    }
   }
 
   for (const name of MCP_ENV_ALLOWLIST) {
@@ -67,6 +92,8 @@ export function pickEnvCodex(custom: Record<string, string> | undefined) {
     return safeEnv;
   }
 
+  const blockedCodexKeys: string[] = [];
+
   for (const [key, value] of Object.entries(custom)) {
     if (!key || typeof value !== "string") {
       continue;
@@ -75,7 +102,11 @@ export function pickEnvCodex(custom: Record<string, string> | undefined) {
       continue;
     }
     if (key.startsWith("CODEX_")) {
-      safeEnv[key] = value;
+      if (CODEX_ENV_ALLOWLIST.has(key)) {
+        safeEnv[key] = value;
+      } else {
+        blockedCodexKeys.push(key);
+      }
       continue;
     }
     if (MCP_ENV_ALLOWLIST.has(key)) {
@@ -85,6 +116,13 @@ export function pickEnvCodex(custom: Record<string, string> | undefined) {
     if (allowOpenAI && key === "OPENAI_API_KEY") {
       safeEnv.OPENAI_API_KEY = value;
     }
+  }
+
+  if (blockedCodexKeys.length > 0) {
+    logger.warn("codex_env_blocked", {
+      count: blockedCodexKeys.length,
+      keys: blockedCodexKeys,
+    });
   }
 
   return safeEnv;
@@ -129,10 +167,27 @@ export async function enforcePolicy(input: CodexToolInput) {
     }
   );
 
-  if (
-    (input.auto === "medium" || input.auto === "high") &&
-    (!claims.elevated || claims.mfa !== "passkey")
-  ) {
+  if (input.userId && input.userId !== claims.sub) {
+    throw new Error("codex_session_user_mismatch");
+  }
+
+  input.userId = claims.sub;
+
+  const hasElevation = Boolean(claims.elevated && claims.mfa === "passkey");
+  const requestedTimeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
+
+  if (requestedTimeoutSec > MAX_TIMEOUT_SEC) {
+    throw new Error("codex_timeout_exceeds_limit");
+  }
+
+  if ((input.auto === "medium" || input.auto === "high") && !hasElevation) {
     throw new Error("biometric_required");
+  }
+
+  if (
+    requestedTimeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC &&
+    !hasElevation
+  ) {
+    throw new Error("codex_timeout_requires_elevation");
   }
 }

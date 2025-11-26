@@ -30,11 +30,17 @@ type CompressionHistogram = {
   startTimer: () => (labels: { outcome: string }) => void;
 };
 
+type SessionValidationHistogram = {
+  startTimer: () => (labels: { outcome: string }) => void;
+};
+
 let droidExecCounter: CounterLike | null = null;
 let droidExecDurationHistogram: HistogramLike | null = null;
 let codexExecCounter: CounterLike | null = null;
 let codexExecDurationHistogram: HistogramLike | null = null;
 let codexErrorCounter: SingleLabelCounter | null = null;
+let codexWriterErrorCounter: SingleLabelCounter | null = null;
+let codexSessionViolationCounter: SingleLabelCounter | null = null;
 let evalRunsCounter: EvalRunCounter | null = null;
 let evalRunDurationHistogram: EvalRunHistogram | null = null;
 let evalScoreCounter: SingleLabelCounter | null = null;
@@ -43,11 +49,13 @@ let laminarDatapointCounter: SingleLabelCounter | null = null;
 let laminarErrorCounter: SingleLabelCounter | null = null;
 let assistantToolCounter: SingleLabelCounter | null = null;
 let assistantEscalationCounter: SingleLabelCounter | null = null;
+let policyCheckFailureCounter: SingleLabelCounter | null = null;
 let memoryUpdatesCounter: DualLabelCounter | null = null;
 let memoryForgetsCounter: SingleLabelCounter | null = null;
 let compressionCycleHistogram: CompressionHistogram | null = null;
 let compressionCycleCounter: SingleLabelCounter | null = null;
 let compressionNodeCounter: SingleLabelCounter | null = null;
+let codexSessionValidationHistogram: SessionValidationHistogram | null = null;
 
 export function registerDroidExecCounter(counter: CounterLike) {
   droidExecCounter = counter;
@@ -87,6 +95,37 @@ export function registerCodexErrorCounter(counter: SingleLabelCounter) {
 
 export function recordCodexError(stage: string) {
   codexErrorCounter?.labels(stage).inc();
+}
+
+export function registerCodexWriterErrorCounter(counter: SingleLabelCounter) {
+  codexWriterErrorCounter = counter;
+}
+
+export function recordCodexWriterError(errorType: string) {
+  codexWriterErrorCounter?.labels(errorType).inc();
+}
+
+export function registerCodexSessionViolationCounter(
+  counter: SingleLabelCounter
+) {
+  codexSessionViolationCounter = counter;
+}
+
+export function recordCodexSessionViolation(reason: string) {
+  codexSessionViolationCounter?.labels(reason).inc();
+}
+
+export function registerCodexSessionValidationHistogram(
+  histogram: SessionValidationHistogram
+) {
+  codexSessionValidationHistogram = histogram;
+}
+
+export function startCodexSessionValidationTimer() {
+  return (
+    codexSessionValidationHistogram?.startTimer() ??
+    ((_: { outcome: string }) => {})
+  );
 }
 
 export function registerEvalRunsCounter(counter: EvalRunCounter) {
@@ -153,6 +192,16 @@ export function registerAssistantEscalationCounter(
 
 export function recordAssistantEscalation(kind: string) {
   assistantEscalationCounter?.labels(kind).inc();
+}
+
+export function registerPolicyCheckFailureCounter(
+  counter: SingleLabelCounter
+) {
+  policyCheckFailureCounter = counter;
+}
+
+export function recordPolicyCheckFailure(tool: string) {
+  policyCheckFailureCounter?.labels(tool).inc();
 }
 
 export function registerMemoryUpdatesCounter(counter: DualLabelCounter) {

@@ -8,6 +8,7 @@ const statements = [
     kind TEXT NOT NULL,
     label TEXT NOT NULL,
     properties TEXT,
+    sanitized INTEGER NOT NULL DEFAULT 0,
     label_tsvector TEXT,
     embedding BLOB,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -16,6 +17,7 @@ const statements = [
   );`,
   "ALTER TABLE memory_nodes ADD COLUMN label_tsvector TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
+  "ALTER TABLE memory_nodes ADD COLUMN sanitized INTEGER DEFAULT 0;",
   `CREATE TABLE IF NOT EXISTS memory_edges (
     id TEXT PRIMARY KEY,
     resource TEXT NOT NULL,
@@ -170,6 +172,22 @@ const statements = [
     tags TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );`,
+  `CREATE TABLE IF NOT EXISTS codex_sessions (
+    id TEXT PRIMARY KEY,
+    session_id TEXT UNIQUE NOT NULL,
+    thread_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    working_directory TEXT NOT NULL,
+    status TEXT NOT NULL,
+    linear_issue_id TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_accessed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT NOT NULL
+  );`,
+  `CREATE INDEX IF NOT EXISTS codex_sessions_user_idx
+    ON codex_sessions(user_id);`,
+  `CREATE INDEX IF NOT EXISTS codex_sessions_expires_idx
+    ON codex_sessions(expires_at);`,
 ];
 
 export function ensureSqliteTestSchema(db: Database): void {

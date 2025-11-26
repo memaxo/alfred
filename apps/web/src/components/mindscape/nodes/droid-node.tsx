@@ -20,6 +20,7 @@ import { getToolToken } from "@/lib/token";
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 import { useMindscapeStore } from "@/store/mindscape";
 import { droidNodeDataSchema } from "@/store/mindscape.schemas";
+import { formatCodexErrorMessage } from "@/lib/codex-errors";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
@@ -243,10 +244,11 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         },
         onError: (error) => {
           setStatus("failed");
-          setLastError(error.message);
+          const userMessage = formatCodexErrorMessage(error.message);
+          setLastError(userMessage);
           appendLog({
             channel: "system",
-            text: `Error: ${error.message}`,
+            text: `Error: ${userMessage}`,
             at: new Date().toISOString(),
           });
           resume.close();
@@ -257,8 +259,9 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       });
       subscriptionRef.current = subscription;
     } catch (error) {
-      const message =
+      const rawMessage =
         error instanceof Error ? error.message : "Failed to start droid";
+      const message = formatCodexErrorMessage(rawMessage);
       setLastError(message);
       setStatus("failed");
       appendLog({

@@ -1,5 +1,8 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { logger } from "@alfred/logger";
 import type { Tool } from "ai";
+
+import { recordPolicyCheckFailure } from "../../metrics";
 
 /**
  * Wraps a tool with AI SDK v6 'needsApproval' logic based on ALFRED policy.
@@ -18,8 +21,12 @@ export function withPolicyApproval<TInput, TOutput>(
   }
 ): Tool<TInput, TOutput> {
   const needsApproval = async (input: TInput) => {
+    type PolicyContext = ReturnType<typeof policyCheck>;
+    let policyContext: PolicyContext | null = null;
+
     try {
       const check = policyCheck(input);
+      policyContext = check;
       const authz = check.authz;
 
       if (!authz) {
@@ -47,11 +54,17 @@ export function withPolicyApproval<TInput, TOutput>(
 
       return false;
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: Log error without breaking flow
-      console.warn("policy_check_failed_in_approval", {
-        tool: tool.description,
+      const descriptor = (tool as { name?: string }).name ?? tool.description;
+      const toolName = descriptor ?? "unknown_tool";
+
+      logger.warn("policy_check_failed_in_approval", {
+        tool: toolName,
+        action: policyContext?.action ?? "unknown_action",
+        resource: policyContext?.resource ?? null,
         error: error instanceof Error ? error.message : String(error),
       });
+      recordPolicyCheckFailure(toolName);
+      // Security: fail closed by requiring human approval when policy enforcement errors, so unverified actions never auto-run.
       return true;
     }
   };

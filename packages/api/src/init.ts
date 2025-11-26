@@ -5,6 +5,10 @@ import {
 } from "@alfred/agent/orchestrator/compression-worker";
 import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
 import {
+  startCodexSessionCleanupWorker,
+  stopCodexSessionCleanupWorker,
+} from "@alfred/agent/orchestrator/codex-session";
+import {
   startLearningWorker,
   stopLearningWorker,
 } from "@alfred/agent/orchestrator/learning-worker";
@@ -52,6 +56,15 @@ export function initApiServices(): void {
     });
   }
 
+  startCodexSessionCleanupWorker();
+  logger.info("codex_session_cleanup_worker_started", {
+    intervalMs:
+      Number.parseInt(
+        process.env.CODEX_SESSION_CLEANUP_INTERVAL_MS ?? "",
+        10
+      ) || undefined,
+  });
+
   // Resume interrupted plans from DB (background)
   resumeInterruptedPlans(getAssistantAgentDefaults().tools).catch((error) => {
     logger.error("resume_plans_init_failed", {
@@ -86,6 +99,7 @@ export function shutdownApiServices(): void {
   try {
     stopCompressionWorker();
     stopLearningWorker();
+    stopCodexSessionCleanupWorker();
     logger.info("compression_worker_stopped");
   } catch (error) {
     logger.error("compression_worker_stop_failed", {

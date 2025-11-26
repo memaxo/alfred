@@ -3,6 +3,7 @@ import { createTRPCProxyClient } from "@trpc/client";
 import type { AppRouter } from "@alfred/api/routers";
 import type { Subscriber } from "@trpc/client";
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+import { formatCodexErrorMessage } from "@/lib/codex-errors";
 
 export type DroidStreamEvent =
   | { type: "stdout"; data: string }
@@ -143,11 +144,20 @@ export function subscribeToDroidStream({
       onEvent?.(normalized);
     },
     error(err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const normalizedError =
+        err instanceof Error ? err : new Error(String(err));
+      const message = formatCodexErrorMessage(normalizedError.message);
+      const finalError =
+        message === normalizedError.message
+          ? normalizedError
+          : new Error(message);
+      if (finalError !== normalizedError) {
+        (finalError as { cause?: unknown }).cause = normalizedError;
+      }
       if (onError) {
-        onError(error);
+        onError(finalError);
       } else {
-        toast.error(`Droid stream failed: ${error.message}`);
+        toast.error(`Droid stream failed: ${message}`);
       }
     },
     complete() {
