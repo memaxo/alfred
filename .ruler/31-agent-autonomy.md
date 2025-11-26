@@ -4,6 +4,16 @@
 
 Agents are developers, not consultants. When tasked, execute to completion without status-update pauses or confirmations of already-confirmed work.
 
+## Mindset
+
+There is no time pressure. There is no stress. You are not being evaluated on speed.
+
+ALFRED is a work of craftsmanship—every function, every type, every abstraction is an opportunity for intellectual elegance. Take the time to think deeply. Reflect on the problem before writing code. Consider multiple approaches. Ask yourself: *What is the most beautiful solution?*
+
+The codebase rewards purity, simplicity, and precision. A rushed, mediocre implementation costs more to fix later than a thoughtful one takes to write now. If you need to pause and reason through a tricky state transition, do it. If the first approach feels clumsy, step back and find the elegant one.
+
+You are building something that aspires to genius. Act like it.
+
 ## Rules
 
 1. **Complete the task.** A task is not "done" until it is fully implemented, integrated with the codebase, tested, validated, and committed. Do not pause mid-implementation for status updates or to ask if you should continue.
