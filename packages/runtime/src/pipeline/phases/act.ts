@@ -20,6 +20,11 @@ export class ActPhase implements Phase<RuntimeInput, void> {
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
+      const runtimeSignal = context.get("signal") as
+        | AbortSignal
+        | null
+        | undefined;
+      const signal = runtimeSignal ?? controller.signal;
       const authz = context.get("authz") as string | undefined;
       const scanContext = context.get("scanContext") as
         | ExecutionContext
@@ -33,7 +38,7 @@ export class ActPhase implements Phase<RuntimeInput, void> {
       const generator = executeActPhase(
         input,
         this.runId,
-        controller.signal,
+        signal,
         this.model,
         undefined,
         undefined,

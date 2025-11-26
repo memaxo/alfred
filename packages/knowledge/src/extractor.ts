@@ -11,6 +11,47 @@ import {
 } from "./hypergraph.js";
 
 type ChronoResult = ReturnType<typeof chrono.parse>[number];
+type BaseView = ReturnType<typeof nlp>;
+type TextView = BaseView & {
+  sentences(): TextView;
+  people(): TextView;
+  places(): TextView;
+  organizations(): TextView;
+  match(match: string): TextView;
+  nouns(): TextView;
+  verbs(): TextView;
+  numbers(): TextView;
+  questions(): TextView;
+  has(match: string): boolean;
+  clone(): TextView;
+  toPositive(): TextView;
+  text(): string;
+  out(mode: "array"): string[];
+  json(): unknown[];
+  normalize(options?: { whitespace?: boolean; case?: boolean }): TextView;
+};
+
+const asTextView = (view: BaseView): TextView => view as unknown as TextView;
+
+type TermJson = {
+  text?: string;
+  tags?: string[];
+  index?: [number, number];
+};
+
+type SentenceJson = {
+  text?: string;
+  terms?: TermJson[];
+};
+
+type VerbJson = {
+  terms?: TermJson[];
+  verb?: {
+    infinitive?: string;
+    root?: string;
+  };
+  text?: string;
+};
 
 export type EntityKind = "person" | "place" | "organization" | "unknown";
 
@@ -131,6 +172,7 @@ const ANTONYM_PAIRS: Array<[string, string]> = [
   ["include", "exclude"],
   ["legal", "illegal"],
   ["light", "heavy"],
+  ["online", "offline"],
   ["open", "closed"],
   ["optimistic", "pessimistic"],
   ["pass", "fail"],
@@ -199,7 +241,10 @@ const cleanText = (value: string): string =>
   value.replace(/\s+/g, " ").replace(/[^\w\s'-]/g, "").trim();
 
 const canonicalize = (value: string): string =>
-  nlp(value).normalize({ whitespace: true, case: true }).text().toLowerCase();
+  (nlp(value) as TextView)
+    .normalize({ whitespace: true, case: true })
+    .text()
+    .toLowerCase();
 
 const getSentenceBoundary = (
   text: string,
@@ -217,7 +262,7 @@ const getSentenceBoundary = (
   return text.slice(start, end + 1).trim();
 };
 
-const computeSentenceConfidence = (sentenceDoc: nlp.Document): number => {
+const computeSentenceConfidence = (sentenceDoc: TextView): number => {
   let confidence = 0.8;
 
   if (sentenceDoc.has("#Modal")) {
@@ -256,17 +301,26 @@ type MentionTerm = {
   tags?: string[];
 };
 
-const toMention = (terms: MentionTerm[]): EntityMention | null => {
-  if (terms.length === 0) {
+type MaybeMentionTerm = {
+  text?: string;
+  index?: [number, number];
+  tags?: string[];
+};
+
+const toMention = (terms: MaybeMentionTerm[]): EntityMention | null => {
+  const filtered = terms.filter(
+    (term): term is MentionTerm => typeof term.text === "string" && term.text.length > 0
+  );
+  if (filtered.length === 0) {
     return null;
   }
-  const first = terms[0];
-  const last = terms[terms.length - 1];
+  const first = filtered[0];
+  const last = filtered[filtered.length - 1];
   const sentence = first.index?.[0] ?? 0;
   const start = first.index?.[1] ?? 0;
   const end = last.index?.[1] ?? start;
   return {
-    text: cleanText(terms.map((term) => term.text).join(" ")),
+    text: cleanText(filtered.map((term) => term.text).join(" ")),
     sentence,
     start,
     end,
@@ -387,11 +441,11 @@ const upsertEntity = (
 };
 
 export const extractEntities = (text: string): Entity[] => {
-  const doc = nlp(text);
+  const doc = asTextView(nlp(text));
   const entityMap = new Map<string, Entity>();
 
   const register = (
-    view: nlp.View,
+    view: BaseView,
     kind: EntityKind,
     confidence: number,
     opts?: { isPronoun?: boolean; allowMerge?: boolean }
@@ -401,7 +455,7 @@ export const extractEntities = (text: string): Entity[] => {
       if (!label) {
         return;
       }
-      const mention = toMention((entry.terms ?? []) as MentionTerm[]) ?? null;
+      const mention = toMention(entry.terms ?? []) ?? null;
       upsertEntity(entityMap, kind, label, mention, confidence, opts);
     });
   };
@@ -418,7 +472,7 @@ export const extractEntities = (text: string): Entity[] => {
       if (!label) {
         return;
       }
-      const mention = toMention((entry.terms ?? []) as MentionTerm[]) ?? null;
+      const mention = toMention(entry.terms ?? []) ?? null;
       upsertEntity(entityMap, "person", label, mention, 0.6, {
         isPronoun: true,
         allowMerge: false,
@@ -433,7 +487,7 @@ export const extractEntities = (text: string): Entity[] => {
       if (!label) {
         return;
       }
-      const mention = toMention((noun.terms ?? []) as MentionTerm[]) ?? null;
+      const mention = toMention(noun.terms ?? []) ?? null;
       const tags = new Set<string>();
       for (const term of noun.terms ?? []) {
         for (const tag of term.tags ?? []) {
@@ -513,31 +567,36 @@ export const extractRelations = (
     return [];
   }
 
-  const doc = nlp(text);
-  const sentences = doc.sentences();
-  const sentencesJson = doc.sentences().json();
+  const doc = asTextView(nlp(text));
+  const sentencesView = asTextView(doc.sentences() as BaseView);
+  const sentencesJson = (doc.sentences().json() as SentenceJson[]) ?? [];
   const mentionIndex = buildMentionIndex(entities);
   const relations: RelationTriple[] = [];
 
-  sentences.forEach((sentence, sentenceIndex) => {
+  let sentenceIndex = -1;
+  sentencesView.forEach((sentenceBase: BaseView) => {
+    const sentence = asTextView(sentenceBase);
+    sentenceIndex += 1;
     const mentionList = mentionIndex.get(sentenceIndex) ?? [];
     let carrySubject: MentionRecord | null = null;
-    const sentenceTerms = sentencesJson[sentenceIndex]?.terms ?? [];
+    const sentenceTerms = (sentencesJson[sentenceIndex]?.terms ??
+      []) as TermJson[];
 
     const intermediateTerms = (start: number, end: number) =>
-      sentenceTerms.filter((term: any) => {
+      sentenceTerms.filter((term: TermJson) => {
         const idx = term.index?.[1];
         return typeof idx === "number" && idx > start && idx < end;
       });
 
     const adjoinsPreposition = (record: MentionRecord) => {
       const previous = sentenceTerms.find(
-        (term: any) => term.index?.[1] === record.start - 1
+        (term: TermJson) => term.index?.[1] === record.start - 1
       );
       return Boolean(previous && previous.tags?.includes("Preposition"));
     };
 
-    sentence.verbs().json().forEach((verb: any) => {
+    const verbs = sentence.verbs().json() as VerbJson[];
+    verbs.forEach((verb) => {
       const verbTerm = verb.terms?.[0];
       if (!verbTerm || typeof verbTerm.index?.[1] !== "number") {
         return;
@@ -548,7 +607,7 @@ export const extractRelations = (
         ([] as Array<{ record: MentionRecord; distance: number }>);
       subjects = subjects.filter(({ record }) => {
         const between = intermediateTerms(record.end, pivot);
-        const hasConjunction = between.some((term: any) =>
+        const hasConjunction = between.some((term) =>
           term.tags?.includes("Conjunction")
         );
         if (hasConjunction && carrySubject) {
@@ -605,7 +664,7 @@ export const extractRelations = (
   return Array.from(deduped.values());
 };
 
-const tokensFromDoc = (doc: nlp.Document): Set<string> => {
+const tokensFromDoc = (doc: TextView): Set<string> => {
   return new Set(
     doc
       .text()
@@ -615,7 +674,7 @@ const tokensFromDoc = (doc: nlp.Document): Set<string> => {
   );
 };
 
-const nounSet = (doc: nlp.Document): Set<string> =>
+const nounSet = (doc: TextView): Set<string> =>
   new Set(
     doc
       .nouns()
@@ -628,8 +687,8 @@ export const detectContradiction = (
   first: string,
   second: string
 ): Contradiction | null => {
-  const docA = nlp(first);
-  const docB = nlp(second);
+  const docA = asTextView(nlp(first));
+  const docB = asTextView(nlp(second));
   const overlap = [...nounSet(docA)].filter((noun) => nounSet(docB).has(noun));
   const focus = overlap[0];
 
@@ -637,8 +696,18 @@ export const detectContradiction = (
   const negativeB = docB.has("#Negative");
 
   if (negativeA !== negativeB) {
-    const normalizedA = docA.clone().sentences().toPositive().text().trim();
-    const normalizedB = docB.clone().sentences().toPositive().text().trim();
+    const normalizedA = asTextView(
+      asTextView(docA.clone()).sentences() as BaseView
+    )
+      .toPositive()
+      .text()
+      .trim();
+    const normalizedB = asTextView(
+      asTextView(docB.clone()).sentences() as BaseView
+    )
+      .toPositive()
+      .text()
+      .trim();
     if (normalizedA && normalizedA === normalizedB) {
       return {
         pair: [first, second],
@@ -725,16 +794,16 @@ export const extract = (text: string, source: string): ExtractionResult => {
   const entitySet = new Set(entityDetails.map((entity) => entity.label));
   const temporal = extractTemporal(trimmed);
 
-  const doc = nlp(trimmed);
-  const sentences = doc.sentences().json();
+  const doc = asTextView(nlp(trimmed));
+  const sentences = (doc.sentences().json() as SentenceJson[]) ?? [];
   const facts: ExtractedFact[] = [];
 
   sentences.forEach((sentence, index) => {
-    const content = sentence.text.trim();
+    const content = sentence.text?.trim() ?? "";
     if (!content) {
       return;
     }
-    const sentenceDoc = nlp(sentence.text);
+    const sentenceDoc = asTextView(nlp(sentence.text ?? ""));
     const sentenceEntities = entityDetails
       .filter((entity) =>
         entity.mentions.some((mention) => mention.sentence === index)
@@ -896,42 +965,107 @@ export const inferPattern = (
     return null;
   }
 
-  // TODO: Implement proper pattern mining
-  // Current approach just finds common tokens
-  // Should:
-  // - Use sequence pattern mining (PrefixSpan, GSP)
-  // - Extract structural patterns (syntax trees)
-  // - Learn regular expressions from examples
-  // - Apply template induction
-  const tokenCounts = new Map<string, number>();
-  let totalExamples = 0;
+  const tokenized = examples.map(tokenizeExample);
+  const template = findCommonTemplate(tokenized, minSupport);
 
-  for (const example of examples) {
-    const tokens = new Set(example.toLowerCase().split(/\s+/));
-    totalExamples++;
-    for (const token of tokens) {
-      tokenCounts.set(token, (tokenCounts.get(token) || 0) + 1);
-    }
-  }
-
-  // Find tokens that appear in most examples
-  const commonTokens: string[] = [];
-  for (const [token, count] of tokenCounts.entries()) {
-    const support = count / totalExamples;
-    if (support >= minSupport && token.length > 2) {
-      commonTokens.push(token);
-    }
-  }
-
-  if (commonTokens.length === 0) {
+  if (!template) {
     return null;
   }
 
-  // Generate pattern rule
-  const rule = `Common pattern: ${commonTokens.join(", ")}`;
-  const accuracy = commonTokens.length / Math.max(tokenCounts.size, 1);
+  const matches = tokenized.filter((tokens) => matchesTemplate(tokens, template));
+  const accuracy = matches.length / examples.length;
 
-  return pattern([], rule, accuracy);
+  if (accuracy < minSupport) {
+    return null;
+  }
+
+  return pattern([], templateToRule(template), accuracy);
+};
+
+const tokenizeExample = (input: string): string[] =>
+  input
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+const findCommonTemplate = (
+  tokenized: string[][],
+  agreement = 0.7
+): (string | null)[] | null => {
+  if (tokenized.length === 0) {
+    return null;
+  }
+
+  const maxLen = Math.max(...tokenized.map((tokens) => tokens.length));
+  const template: (string | null)[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    const counts = new Map<string, number>();
+
+    for (const tokens of tokenized) {
+      const token = tokens[i];
+      if (!token) {
+        continue;
+      }
+      counts.set(token, (counts.get(token) || 0) + 1);
+    }
+
+    let best: string | null = null;
+    let bestCount = 0;
+    for (const [token, count] of counts.entries()) {
+      if (count > bestCount) {
+        best = token;
+        bestCount = count;
+      }
+    }
+
+    if (best && bestCount / tokenized.length >= agreement) {
+      template.push(best);
+    } else {
+      template.push(null);
+    }
+  }
+
+  return template.some((token) => token !== null) ? template : null;
+};
+
+const matchesTemplate = (tokens: string[], template: (string | null)[]): boolean => {
+  for (let i = 0; i < template.length; i++) {
+    const expected = template[i];
+    if (expected === null) {
+      continue;
+    }
+    if (tokens[i] !== expected) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const templateToRule = (template: (string | null)[]): string =>
+  template.map((token) => token ?? "*").join(" ");
+
+const hasRelativeDateFormatTag = (result: ChronoResult): boolean => {
+  const { tags } = result;
+  if (!tags) {
+    return false;
+  }
+  if (tags instanceof Set) {
+    return tags.has("RelativeDateFormatParser");
+  }
+  if (typeof tags === "function") {
+    const resolved = tags();
+    return resolved instanceof Set
+      ? resolved.has("RelativeDateFormatParser")
+      : false;
+  }
+  if (typeof tags === "object") {
+    return Boolean(
+      (tags as Record<string, unknown>).RelativeDateFormatParser
+    );
+  }
+  return false;
 };
 
 const temporalPrecision = (
@@ -963,7 +1097,7 @@ const temporalConfidence = (result: ChronoResult): number => {
   if (result.start?.isCertain("hour")) {
     confidence += 0.05;
   }
-  if (result.tags?.RelativeDateFormatParser) {
+  if (hasRelativeDateFormatTag(result)) {
     confidence -= 0.05;
   }
   if (result.text.match(/^\d{4}$/)) {

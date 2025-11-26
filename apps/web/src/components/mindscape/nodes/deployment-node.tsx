@@ -7,6 +7,7 @@ import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getToolToken } from "@/lib/token";
+import { withObligationRetry } from "@/lib/obligation-retry";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { deploymentNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
@@ -227,11 +228,13 @@ export function DeploymentNode({ id, data, selected }: NodeProps) {
     }
     try {
       const token = await getToolToken(["deploy.write", "router.write"], "low");
-      await removeMutation.mutateAsync({
-        app,
-        preview,
-        authz: `Bearer ${token}`,
-      });
+      await withObligationRetry(() =>
+        removeMutation.mutateAsync({
+          app,
+          preview,
+          authz: `Bearer ${token}`,
+        })
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to remove deployment";
@@ -426,12 +429,14 @@ export function DeploymentNode({ id, data, selected }: NodeProps) {
               ["deploy.write", "router.write"],
               "low"
             );
-            await promoteMutation.mutateAsync({
-              app: promoteState.app,
-              upstream,
-              host,
-              authz: `Bearer ${token}`,
-            });
+            await withObligationRetry(() =>
+              promoteMutation.mutateAsync({
+                app: promoteState.app,
+                upstream,
+                host,
+                authz: `Bearer ${token}`,
+              })
+            );
             setPromoteState(null);
           } catch (error) {
             const message =

@@ -12,7 +12,7 @@ import {
 } from "../src/state";
 import { applyTransition } from "../src/transition";
 
-const auto = initialAutonomy();
+const auto = initialAutonomy(Date.now());
 
 const inputEvent = (content: string): Event =>
   ({
@@ -57,7 +57,7 @@ const apply = (
 
 describe("applyTransition", () => {
   it("moves idle -> thinking on input events", () => {
-    const start = idle();
+    const start = idle(Date.now());
     const result = apply(start, inputEvent("Plan lunch"));
 
     expect(result.state._).toBe("thinking");
@@ -69,7 +69,7 @@ describe("applyTransition", () => {
   });
 
   it("moves thinking -> reflecting on completion", () => {
-    const start = thinking("Plan lunch");
+    const start = thinking(Date.now(), "Plan lunch");
     const result = apply(start, completeEvent(successOutcome));
 
     expect(result.state._).toBe("reflecting");
@@ -89,7 +89,7 @@ describe("applyTransition", () => {
   });
 
   it("marks entropy-high interrupts by increasing boredom", () => {
-    const start = thinking("loop");
+    const start = thinking(Date.now(), "loop");
     const result = apply(start, interruptEvent("loop detected"));
 
     expect(result.state._).toBe("thinking");
@@ -99,7 +99,7 @@ describe("applyTransition", () => {
   });
 
   it("penalizes failed completion outcomes via physiology", () => {
-    const start = thinking("Plan lunch");
+    const start = thinking(Date.now(), "Plan lunch");
     const result = apply(start, completeEvent(failureOutcome));
 
     expect(result.state._).toBe("reflecting");

@@ -1,3 +1,5 @@
+import { performance } from "node:perf_hooks";
+
 import {
   idle,
   reflecting,
@@ -10,6 +12,7 @@ import type {
   Event,
   Physiology,
 } from "./state";
+import { cognitiveTransitionDuration } from "./metrics";
 
 const entropyKeywords = ["loop", "boredom"];
 
@@ -48,36 +51,81 @@ export const applyTransition = (
   autonomy: AutonomyGradient,
   event: Event
 ): TransitionResult => {
-  const nextPhysiology = applyPhysiologyEvent(state.physiology, event);
+  const start = performance.now();
+  let result: TransitionResult | undefined;
 
-  switch (state._) {
-    case "idle":
-      if (event._ === "input") {
-        return {
-          state: thinking(event.content, 1, undefined, nextPhysiology),
+  try {
+    const eventTimestamp =
+      event._ === "timeout"
+        ? event.deadline
+        : "ts" in event
+          ? event.ts
+          : Date.now();
+    const nextPhysiology = applyPhysiologyEvent(state.physiology, event);
+
+    switch (state._) {
+      case "idle":
+        if (event._ === "input") {
+          result = {
+            state: thinking(
+              eventTimestamp,
+              event.content,
+              1,
+              undefined,
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        }
+        break;
+
+      case "thinking":
+        if (event._ === "complete") {
+          result = {
+            state: reflecting(
+              event.outcome,
+              "unknown",
+              "unknown",
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        }
+        break;
+
+      case "reflecting":
+        result = {
+          state: idle(eventTimestamp, nextPhysiology),
           autonomy,
         };
-      }
-      break;
+        break;
+    }
 
-    case "thinking":
-      if (event._ === "complete") {
-        return {
-          state: reflecting(event.outcome, "unknown", "unknown", nextPhysiology),
-          autonomy,
-        };
-      }
-      break;
-
-    case "reflecting":
-      return {
-        state: idle(nextPhysiology),
+    if (!result) {
+      result = {
+        state: { ...state, physiology: nextPhysiology },
         autonomy,
       };
-  }
+    }
 
-  return {
-    state: { ...state, physiology: nextPhysiology },
-    autonomy,
-  };
+    return result;
+  } finally {
+    const durationMs = performance.now() - start;
+    const toState = result?.state._ ?? state._;
+
+    cognitiveTransitionDuration.observe(
+      {
+        from_state: state._,
+        to_state: toState,
+        event_type: event._,
+      },
+      durationMs / 1000
+    );
+
+    if (durationMs > 0.1) {
+      console.warn(
+        `cognitive_budget_exceeded: transition took ${durationMs.toFixed(4)}ms`
+      );
+    }
+  }
 };

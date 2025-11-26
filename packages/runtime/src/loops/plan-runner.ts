@@ -24,7 +24,7 @@ export class PlanRunner {
     const lastEventId =
       latestSnapshot?.lastEventId || "00000000-0000-0000-0000-000000000000";
     const currentAutonomy =
-      (latestSnapshot?.state as any)?.auto || initialAutonomy();
+      (latestSnapshot?.state as any)?.auto || initialAutonomy(Date.now());
     const retryCount = ((latestSnapshot?.state as any)?.retryCount ?? 0) + 1;
 
     await this.enforceSafetyGate(plan, currentAutonomy);
@@ -37,7 +37,7 @@ export class PlanRunner {
 
       // Checkpoint execution state
       try {
-        const state = executing(plan as any, currentAutonomy);
+        const state = executing(Date.now(), plan as any, currentAutonomy);
         (state as any).step = i;
         (state as any).retryCount = retryCount; // Persist retry count
 

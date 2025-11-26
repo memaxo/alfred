@@ -132,15 +132,18 @@ export function mockWorkflowRunner() {
 export function mockWorkflowRuntime() {
   const createRuntimeMock = vi.fn();
   const runCognitiveLoopMock = vi.fn();
+  const runAssistantGenerationMock = vi.fn();
 
   mock.module("@alfred/runtime", () => ({
     createRuntime: createRuntimeMock,
     runCognitiveLoop: runCognitiveLoopMock,
+    runAssistantGeneration: runAssistantGenerationMock,
   }));
 
   return {
     createRuntime: createRuntimeMock,
     runCognitiveLoop: runCognitiveLoopMock,
+    runAssistantGeneration: runAssistantGenerationMock,
   };
 }
 

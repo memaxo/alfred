@@ -7,12 +7,14 @@ import { metricsStub } from "./utils/mock-metrics";
 setupTestEnv();
 
 const runCognitiveLoopMock = vi.fn();
+const runAssistantGenerationMock = vi.fn();
 const createRuntimeMock = vi.fn();
 const evaluateMock = vi.fn();
 const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
 
 mock.module("@alfred/runtime", () => ({
   runCognitiveLoop: runCognitiveLoopMock,
+  runAssistantGeneration: runAssistantGenerationMock,
   createRuntime: createRuntimeMock,
 }));
 
@@ -31,12 +33,15 @@ beforeAll(() => {
     obligations: [] as Obligation[],
   });
   runCognitiveLoopMock.mockResolvedValue({
-    _: "reflecting",
-    outcome: { _: "success", result: null, duration: 0 },
-    expected: "target",
-    actual: "target",
-    error: 0,
-    physiology: { energy: 1, boredom: 0, frustration: 0 },
+    state: {
+      _: "reflecting",
+      outcome: { _: "success", result: null, duration: 0 },
+      expected: "target",
+      actual: "target",
+      error: 0,
+      physiology: { energy: 1, boredom: 0, frustration: 0 },
+    },
+    effects: [],
   });
 });
 
@@ -68,7 +73,7 @@ describe("cognitive router", () => {
       error: 0,
       physiology: { energy: 1, boredom: 0, frustration: 0 },
     };
-    runCognitiveLoopMock.mockResolvedValueOnce(state);
+    runCognitiveLoopMock.mockResolvedValueOnce({ state, effects: [] });
 
     const caller = await createTestCaller({
       scopes: ["cognitive.write"],
@@ -94,6 +99,51 @@ describe("cognitive router", () => {
     expect(
       metricsStub.cognitiveFeedbackSubmissionsTotal.labels
     ).toHaveBeenCalledWith("chat");
+  });
+
+  it("executes cognitive effects via assistant generation", async () => {
+    const caller = await createTestCaller({
+      scopes: ["cognitive.write"],
+    });
+
+    runCognitiveLoopMock.mockResolvedValueOnce({
+      state: {
+        _: "thinking",
+        about: "Follow up",
+        physiology: { energy: 1, boredom: 0, frustration: 0 },
+      } as any,
+      effects: [{ type: "generate_response", input: "Follow up" }],
+    });
+
+    runCognitiveLoopMock.mockResolvedValueOnce({
+      state: {
+        _: "reflecting",
+        outcome: { _: "success", result: null, duration: 0 },
+        physiology: { energy: 1, boredom: 0, frustration: 0 },
+      } as any,
+      effects: [],
+    });
+
+    runAssistantGenerationMock.mockResolvedValueOnce({
+      _: "success",
+      result: { text: "ok" },
+      duration: 10,
+    });
+
+    await caller.cognitive.feedback({
+      streamId: "effect-stream",
+      expected: "Follow up",
+      actual: "Follow up",
+      surface: "chat",
+    });
+
+    expect(runAssistantGenerationMock).toHaveBeenCalledTimes(1);
+    const effectCall = runAssistantGenerationMock.mock.calls[0];
+    expect(effectCall?.[1]).toBe("effect-stream");
+    expect(effectCall?.[2]).toBe("Follow up");
+    expect(runCognitiveLoopMock).toHaveBeenCalledTimes(2);
+    const completionEvent = runCognitiveLoopMock.mock.calls[1]?.[2];
+    expect(completionEvent._).toBe("complete");
   });
 
   it("denies feedback when policy evaluation rejects", async () => {

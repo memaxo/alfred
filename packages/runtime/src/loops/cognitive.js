@@ -4,7 +4,7 @@ import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/api/metrics";
 // Temporary: Autonomy Logic (to be expanded)
-const AUTONOMY = initialAutonomy();
+const createInitialAutonomy = () => initialAutonomy(Date.now());
 /**
  * The Cognitive Runtime Loop
  *
@@ -12,13 +12,13 @@ const AUTONOMY = initialAutonomy();
  * 1. Load state (Snapshot + Events)
  * 2. Apply pure transition (State + Event -> New State)
  * 3. Persist Event & Snapshot
- * 4. Execute Side Effects (LLM calls, Tools)
+ * 4. Return Side Effects for the caller to execute safely
  */
-export async function runCognitiveLoop(ctx, streamId, incomingEvent) {
+export async function runCognitiveLoop(_ctx, streamId, incomingEvent) {
     // 1. Hydrate State (Simplified: Replay all events for now)
     const events = await cognitiveRepo.getAllEvents(streamId);
-    let state = idle();
-    let autonomy = AUTONOMY;
+    let state = idle(Date.now());
+    let autonomy = createInitialAutonomy();
     // Replay history
     for (const record of events) {
         const historicalEvent = record.payload;
@@ -37,18 +37,15 @@ export async function runCognitiveLoop(ctx, streamId, incomingEvent) {
     // Update Autonomy if needed (e.g. on feedback)
     if (incomingEvent._ === "feedback") {
         const evidence = calculateEvidence(incomingEvent);
-        autonomy = updateAutonomy(newAutonomy, evidence, newState.physiology);
+        autonomy = updateAutonomy(Date.now(), newAutonomy, evidence, newState.physiology);
     }
     else {
         autonomy = newAutonomy;
     }
     // 3. Persist
     await cognitiveRepo.appendEvent(streamId, incomingEvent._, incomingEvent);
-    // 4. Execute Side Effects (Async)
-    // We return the new state immediately, but trigger the "Brain" to process it
-    // In a real system, this might be a background job
-    void processEffects(ctx, streamId, newState, autonomy);
-    return newState;
+    const effects = computeEffects(newState);
+    return { state: newState, effects };
 }
 function calculateEvidence(event) {
     // Simple heuristic: if expected === actual, it's positive.
@@ -84,23 +81,24 @@ const maybeRecordEntropyEvent = (event) => {
         }
     }
 };
-/**
- * Side Effect Processor ("The Brain")
- * Interprets the state and calls AI/Tools
- */
-async function processEffects(ctx, streamId, state, _autonomy) {
+export function computeEffects(state) {
+    const effects = [];
     if (state._ === "thinking") {
-        // The "Thinking" state currently maps to generating an Assistant response
-        // In the full architecture, this would generate a Plan
-        await runAssistantGeneration(ctx, streamId, state.about);
+        effects.push({ type: "generate_response", input: state.about });
     }
+    return effects;
 }
-async function runAssistantGeneration(ctx, streamId, input) {
-    // Requires AI Adapter to be present in context
+export async function runAssistantGeneration(ctx, _streamId, input) {
     if (!ctx.ai) {
-        return;
+        const outcome = {
+            _: "failure",
+            error: "ai_adapter_missing",
+            recoverable: true,
+        };
+        return outcome;
     }
     const defaults = getAssistantAgentDefaults();
+    const startedAt = Date.now();
     // Simulate a message from the user (TODO: Use for context building)
     // const _newMessage: UIMessage = {
     //   id: `cog-${Date.now()}`,
@@ -121,30 +119,22 @@ async function runAssistantGeneration(ctx, streamId, input) {
             system: defaults.instructions,
             tools: defaults.tools,
         });
-        const sanitized = { text: result.text }; // Simplified sanitization
+        const sanitized = { text: result.text };
+        const duration = Date.now() - startedAt;
         const outcome = {
             _: "success",
             result: sanitized,
-            duration: 0, // TODO: Measure
+            duration,
         };
-        // Feed success back into the loop
-        await runCognitiveLoop(ctx, streamId, {
-            _: "complete",
-            outcome,
-            ts: Date.now(),
-        });
+        return outcome;
     }
     catch (error) {
         const outcome = {
             _: "failure",
-            error: error.message,
+            error: error?.message ?? "assistant_generation_failed",
             recoverable: true,
         };
-        await runCognitiveLoop(ctx, streamId, {
-            _: "complete",
-            outcome,
-            ts: Date.now(),
-        });
+        return outcome;
     }
 }
 //# sourceMappingURL=cognitive.js.map

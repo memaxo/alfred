@@ -29,8 +29,11 @@ mock.module("../src/ai/generate", () => ({
 }));
 
 // Mock Runtime Loop to verify calls
-const mockLoop = mock(async () => ({ _: "thinking" }));
-mock.module("@alfred/runtime/src/loops/cognitive", () => ({
+const mockLoop = mock(async () => ({
+  state: { _: "thinking", physiology: { energy: 1, boredom: 0, frustration: 0 } },
+  effects: [],
+}));
+mock.module("@alfred/runtime", () => ({
   runCognitiveLoop: mockLoop,
 }));
 
@@ -43,6 +46,15 @@ describe("Voice -> Cognitive Integration", () => {
       text: "Hello cognitive world",
       userId: "user-123",
     };
+
+    mockLoop.mockResolvedValueOnce({
+      state: { _: "thinking" },
+      effects: [{ type: "generate_response", input: "Hello cognitive world" }],
+    });
+    mockLoop.mockResolvedValueOnce({
+      state: { _: "reflecting" },
+      effects: [],
+    });
 
     await runAssistantForVoice(ctx as any, input);
 

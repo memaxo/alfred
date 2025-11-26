@@ -3,6 +3,7 @@
  */
 
 import type {
+  KnowledgeConfidence,
   KnowledgeFact,
   KnowledgeInsight,
   KnowledgeRelation,
@@ -47,10 +48,19 @@ export type CaptureResult = {
   ambiguities: string[];
 };
 
+export type SynthesisContradiction = {
+  newFact: string;
+  existingFact: string;
+  reason: "negation" | "antonym" | "numeric";
+  focus?: string;
+  confidence: KnowledgeConfidence;
+  pair: [string, string];
+};
+
 export type SynthesisResult = {
   insights: KnowledgeInsight[];
   relations: KnowledgeRelation[];
-  contradictions: string[];
+  contradictions: SynthesisContradiction[];
 };
 
 export type ExecutionStep = {

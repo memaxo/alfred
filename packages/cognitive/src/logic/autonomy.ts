@@ -1,5 +1,5 @@
 import type { CognitiveState, Decision } from "@alfred/cognitive/state";
-import { deciding } from "@alfred/cognitive/state";
+import { autonomy as toAutonomy, deciding } from "@alfred/cognitive/state";
 
 export type RiskLevel = "low" | "medium" | "high";
 
@@ -64,8 +64,8 @@ export function gateExecution(
     score,
     plan: state.plan,
     risks: [{ type: "external_effect", severity: gate.level }],
-    autonomy: gate.required as any,
+    autonomy: toAutonomy(gate.required),
   };
 
-  return deciding([decision]);
+  return deciding(Date.now(), [decision]);
 }

@@ -2,13 +2,18 @@ import { toast } from "sonner";
 import { createTRPCProxyClient } from "@trpc/client";
 import type { AppRouter } from "@alfred/api/routers";
 import type { Subscriber } from "@trpc/client";
-import type { Obligation } from "@alfred/type";
+import type { Obligation, ObligationResumeEvent } from "@alfred/type";
 
 export type DroidStreamEvent =
   | { type: "stdout"; data: string }
   | { type: "stderr"; data: string }
   | { type: "exit"; code: number }
-  | { type: "obligation"; runId: string; obligations: Obligation[] }
+  | {
+      type: "obligation";
+      runId: string;
+      obligations: Obligation[];
+      resumeEvents?: ObligationResumeEvent[];
+    }
   | { type: "resume"; runId: string };
 
 type RawDroidStreamEvent =
@@ -26,7 +31,11 @@ export type DroidStreamOptions = {
     out?: "text" | "json" | "debug";
   };
   client: ReturnType<typeof createTRPCProxyClient<AppRouter>>;
-  onObligation?: (payload: { runId: string; obligations: Obligation[] }) => void;
+  onObligation?: (payload: {
+    runId: string;
+    obligations: Obligation[];
+    resumeEvents?: ObligationResumeEvent[];
+  }) => void;
   onResume?: (payload: { runId: string }) => void;
   onEvent?: (event: DroidStreamEvent) => void;
   onError?: (error: Error) => void;
@@ -72,6 +81,24 @@ function normalizeObligations(value: unknown): Obligation[] {
     }
     if (typeof entry === "string") {
       result.push({ type: entry, reason: entry, metadata: { code: entry } });
+    }
+  }
+  return result;
+}
+
+function normalizeResumeEvents(value: unknown): ObligationResumeEvent[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const allowed: ObligationResumeEvent[] = [
+    "bio-authz",
+    "mfa-authz",
+    "human-authz",
+  ];
+  const result: ObligationResumeEvent[] = [];
+  for (const entry of value) {
+    if (typeof entry === "string" && allowed.includes(entry as ObligationResumeEvent)) {
+      result.push(entry as ObligationResumeEvent);
     }
   }
   return result;
@@ -153,7 +180,8 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
         return null;
       }
       const obligations = normalizeObligations(parsed.obligations);
-      return { type: "obligation", runId, obligations };
+      const resumeEvents = normalizeResumeEvents(parsed.resumeEvents);
+      return { type: "obligation", runId, obligations, resumeEvents };
     } catch (error) {
       console.error("Failed to parse obligation payload", error);
       return null;

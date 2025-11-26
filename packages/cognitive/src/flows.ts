@@ -1,11 +1,13 @@
-import type { Hypergraph } from "@alfred/knowledge";
-import { extractReasoning } from "@alfred/knowledge/extractor";
+import type { Hypergraph, NodeId } from "@alfred/knowledge";
+import { detectContradiction, extractReasoning } from "@alfred/knowledge/extractor";
+import { embed } from "@alfred/rag";
 import type {
   CaptureResult,
   CognitiveConfidence,
   ExecutionPlan,
   ExecutionResult,
   ReflectionResult,
+  SynthesisContradiction,
   SynthesisResult,
 } from "@alfred/type/cognitive";
 import type {
@@ -22,6 +24,148 @@ const cognitiveConfidence = (value: number) =>
   clamp(value) as CognitiveConfidence;
 const knowledgeConfidence = (value: number) =>
   clamp(value) as KnowledgeConfidence;
+
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.7;
+const MIN_LEXICAL_SIMILARITY = 0.3;
+const MAX_LEXICAL_RELATIONS = 3;
+
+const STOP_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "for",
+  "nor",
+  "to",
+  "of",
+  "in",
+  "on",
+  "at",
+  "by",
+  "with",
+  "about",
+  "from",
+]);
+
+const relationKey = (from: string, to: string, kind: string) =>
+  `${from}:${to}:${kind}`;
+
+const makeInsightId = () =>
+  `insight-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
+
+const tokenize = (text: string): string[] =>
+  text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 0 && !STOP_WORDS.has(token));
+
+const lexicalSimilarity = (a: string, b: string): number => {
+  const tokensA = new Set(tokenize(a));
+  const tokensB = new Set(tokenize(b));
+  if (tokensA.size === 0 || tokensB.size === 0) {
+    return 0;
+  }
+  let overlap = 0;
+  for (const token of tokensA) {
+    if (tokensB.has(token)) {
+      overlap++;
+    }
+  }
+  const maxSize = Math.max(tokensA.size, tokensB.size);
+  return overlap / maxSize;
+};
+
+const cosineSimilarity = (
+  a: Float32Array,
+  b: Float32Array
+): number => {
+  const length = Math.min(a.length, b.length);
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < length; i++) {
+    const va = a[i] ?? 0;
+    const vb = b[i] ?? 0;
+    dot += va * vb;
+    normA += va * va;
+    normB += vb * vb;
+  }
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+};
+
+const embedFact = async (content: string): Promise<Float32Array | null> => {
+  const normalized = content.trim();
+  if (!normalized) {
+    return null;
+  }
+  try {
+    const vector = await embed(normalized);
+    if (!Array.isArray(vector) || vector.length === 0) {
+      return null;
+    }
+    return Float32Array.from(vector);
+  } catch {
+    return null;
+  }
+};
+
+type EntityCluster = {
+  label: string;
+  facts: KnowledgeFact[];
+};
+
+const extractEntityMentions = (fact: KnowledgeFact): string[] => {
+  const mentions = new Set<string>();
+  for (const tag of fact.tags ?? []) {
+    const cleaned = tag.trim();
+    if (cleaned.length > 2 && !STOP_WORDS.has(cleaned.toLowerCase())) {
+      mentions.add(cleaned);
+    }
+  }
+  const pattern = /\b([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*)\b/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(fact.content)) !== null) {
+    const mention = match[1]?.trim();
+    if (!mention) {
+      continue;
+    }
+    const normalized = mention.toLowerCase();
+    if (mention.length > 2 && !STOP_WORDS.has(normalized)) {
+      mentions.add(mention);
+    }
+  }
+  return Array.from(mentions);
+};
+
+const groupByEntity = (
+  facts: KnowledgeFact[]
+): Map<string, EntityCluster> => {
+  const clusters = new Map<string, EntityCluster>();
+  for (const fact of facts) {
+    for (const mention of extractEntityMentions(fact)) {
+      const key = mention.toLowerCase();
+      if (STOP_WORDS.has(key)) {
+        continue;
+      }
+      const cluster = clusters.get(key);
+      if (cluster) {
+        if (!cluster.facts.includes(fact)) {
+          cluster.facts.push(fact);
+        }
+      } else {
+        clusters.set(key, { label: mention, facts: [fact] });
+      }
+    }
+  }
+  return clusters;
+};
 
 function makeFact(content: string, source?: string): KnowledgeFact {
   return {
@@ -64,30 +208,138 @@ export function capture(
   };
 }
 
-export function synthesize(
+export async function synthesize(
   facts: KnowledgeFact[],
   graph: Hypergraph
-): SynthesisResult {
+): Promise<SynthesisResult> {
   const insights: KnowledgeInsight[] = [];
   const relations: KnowledgeRelation[] = [];
+  const contradictions: SynthesisContradiction[] = [];
+
+  if (facts.length === 0) {
+    return { insights, relations, contradictions };
+  }
+
+  const graphFacts: Array<[
+    NodeId,
+    { _: "fact"; content: string }
+  ]> = [];
+  for (const [nodeId, knowledge] of graph.entries()) {
+    if (knowledge._ === "fact") {
+      graphFacts.push([nodeId, knowledge]);
+    }
+  }
+
+  const hasEmbeddings =
+    typeof graph.embeddingCount === "function" &&
+    graph.embeddingCount() > 0;
+  const embeddingEntries: Array<[NodeId, Float32Array]> = hasEmbeddings
+    ? Array.from(graph.embeddingEntries())
+    : [];
+
+  const relationKeys = new Set<string>();
+  const contradictionKeys = new Set<string>();
 
   for (const fact of facts) {
-    const neighbours = graph.search(fact.content);
-    if (neighbours.length > 0) {
-      relations.push({
-        id: `rel-${fact.id}`,
-        from: fact.id,
-        to: neighbours[0] ?? fact.id,
-        kind: "similar",
-        weight: 0.5,
+    for (const [nodeId, knowledge] of graphFacts) {
+      const contradiction = detectContradiction(
+        fact.content,
+        knowledge.content
+      );
+      if (!contradiction) {
+        continue;
+      }
+      const key = `${fact.id}:${nodeId}:${contradiction.reason}`;
+      if (contradictionKeys.has(key)) {
+        continue;
+      }
+      contradictionKeys.add(key);
+      contradictions.push({
+        newFact: fact.id,
+        existingFact: nodeId,
+        reason: contradiction.reason,
+        focus: contradiction.focus,
+        pair: contradiction.pair,
+        confidence: knowledgeConfidence(contradiction.confidence),
       });
     }
+
+    if (hasEmbeddings) {
+      const embedding = await embedFact(fact.content);
+      if (embedding) {
+        for (const [nodeId, nodeEmbedding] of embeddingEntries) {
+          const similarity = cosineSimilarity(embedding, nodeEmbedding);
+          if (similarity <= SEMANTIC_SIMILARITY_THRESHOLD) {
+            continue;
+          }
+          const key = relationKey(
+            fact.id,
+            nodeId,
+            "semantically_similar"
+          );
+          if (relationKeys.has(key)) {
+            continue;
+          }
+          relationKeys.add(key);
+          relations.push({
+            id: `rel-${fact.id}-${nodeId}`,
+            from: fact.id,
+            to: nodeId,
+            kind: "semantically_similar",
+            weight: Number(similarity.toFixed(4)),
+            metadata: { similarity },
+          });
+        }
+      }
+    }
+
+    const lexicalMatches = graph
+      .search(fact.content)
+      .slice(0, MAX_LEXICAL_RELATIONS);
+    for (const nodeId of lexicalMatches) {
+      const knowledge = graph.get(nodeId);
+      if (!knowledge || knowledge._ !== "fact") {
+        continue;
+      }
+      const similarity = lexicalSimilarity(fact.content, knowledge.content);
+      if (similarity < MIN_LEXICAL_SIMILARITY) {
+        continue;
+      }
+      const key = relationKey(fact.id, nodeId, "lexical_match");
+      if (relationKeys.has(key)) {
+        continue;
+      }
+      relationKeys.add(key);
+      relations.push({
+        id: `rel-${fact.id}-${nodeId}`,
+        from: fact.id,
+        to: nodeId,
+        kind: "lexical_match",
+        weight: Number(similarity.toFixed(4)),
+      });
+    }
+  }
+
+  const entityClusters = groupByEntity(facts);
+  for (const { label, facts: relatedFacts } of entityClusters.values()) {
+    if (relatedFacts.length < 3) {
+      continue;
+    }
+    const derived = relatedFacts.map((fact) => fact.id);
+    const confidenceValue = 0.7 + Math.min(0.2, 0.05 * (relatedFacts.length - 3));
+    insights.push({
+      id: makeInsightId(),
+      derived,
+      conclusion: `Multiple facts about ${label}`,
+      confidence: knowledgeConfidence(confidenceValue),
+      rationale: `Aggregated from ${relatedFacts.length} facts about ${label}.`,
+    });
   }
 
   return {
     insights,
     relations,
-    contradictions: [],
+    contradictions,
   };
 }
 

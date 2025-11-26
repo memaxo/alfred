@@ -20,7 +20,7 @@ const subscribeMock = mock((options: any) => {
 });
 let latestSubscription: any = null;
 const getToolTokenMock = mock(() => Promise.resolve("mock-token"));
-const resumeTriggerMock = mock(() => Promise.resolve());
+const resumePromptMock = mock(() => {});
 const resumeCloseMock = mock(() => {});
 const trpcProxyMock = {
   droid: {
@@ -66,16 +66,17 @@ mock.module("@/lib/trpc-client", () => ({
 }));
 
 mock.module("@/hooks/use-biometric-resume", () => ({
-  useBiometricResume: () => ({
+  useObligationResume: () => ({
     isOpen: false,
-    pendingRunId: null,
-    trigger: resumeTriggerMock,
+    pending: null,
+    target: "droid",
+    prompt: resumePromptMock,
     close: resumeCloseMock,
   }),
 }));
 
 mock.module("@/components/biometric-challenge-dialog", () => ({
-  BiometricChallengeDialog: () => null,
+  ObligationChallengeDialog: () => null,
 }));
 
 mock.module("@/components/mindscape/nodes/mindscape-node", () => ({
@@ -95,7 +96,7 @@ describe("DroidNode", () => {
   beforeEach(() => {
     getToolTokenMock.mockClear();
     subscribeMock.mockClear();
-    resumeTriggerMock.mockClear();
+    resumePromptMock.mockClear();
     resumeCloseMock.mockClear();
     latestSubscription = null;
     resetHarness();
@@ -188,7 +189,7 @@ describe("DroidNode", () => {
     });
     debugLog("obligation received", latestSubscription ? "active" : "missing");
     await waitFor(() => {
-      expect(resumeTriggerMock).toHaveBeenCalled();
+      expect(resumePromptMock).toHaveBeenCalled();
     });
     await view.findByText(/Awaiting biometric/i);
 

@@ -19,16 +19,12 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
     context: RuntimeContext
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
-      // Wrap existing executePlanPhase
-      // Note: executePlanPhase needs an abort signal, which we don't have in RuntimeContext yet?
-      // PipelineRunner should probably manage the signal for the phase.
-      // For now, we'll pass a dummy or create one.
-      // Ideally RuntimeContext has the signal.
-      // But RuntimeContext type in @alfred/type/runtime-context is minimal.
-      // We are using the one from core.ts 'RuntimeState'? No.
-
-      // Let's just use a new controller for the phase for now
       const controller = new AbortController();
+      const runtimeSignal = context.get("signal") as
+        | AbortSignal
+        | null
+        | undefined;
+      const signal = runtimeSignal ?? controller.signal;
       const cachedContext = context.get("scanContext") as
         | ExecutionContext
         | null
@@ -37,7 +33,7 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
       const generator = executePlanPhase(
         input,
         this.runId,
-        controller.signal,
+        signal,
         this.model,
         cachedContext ?? undefined
       );

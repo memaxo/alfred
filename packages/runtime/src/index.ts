@@ -6,7 +6,15 @@
  */
 
 export { createRuntime, WorkflowRuntime } from "./core";
-export { runCognitiveLoop } from "./loops/cognitive";
+export {
+  runCognitiveLoop,
+  computeEffects,
+  runAssistantGeneration,
+} from "./loops/cognitive";
+export type {
+  CognitiveEffect,
+  CognitiveLoopResult,
+} from "./loops/cognitive";
 export { resumeInterruptedPlans } from "./loops/resume";
 // Export metrics for observability
 export {

@@ -7,6 +7,9 @@ import type { UIMessage } from "@alfred/type/stream";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { sanitizeResult } from "../utils/generate";
+import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
+import type { Event, Outcome } from "@alfred/cognitive/state";
+import { logger } from "@alfred/logger";
 
 export type VoiceAssistantInput = {
   text: string;
@@ -169,35 +172,27 @@ export async function runAssistantForVoice(
 
   // Cognitive Integration: Feed input into the loop
   try {
-    // Dynamic import to avoid build-time circular dependencies if possible,
-    // though we are in API package now. Runtime depends on API, so API importing Runtime
-    // is the circular dependency we are trying to fix.
-    // Wait, runCognitiveLoop IS in runtime.
-    // The plan was to inject the adapter INTO the loop.
-    // But here we are calling the loop.
-    // So we still need to import it.
-    // Using dynamic import or moving loop logic might be needed if static import fails.
     const { runCognitiveLoop } = await import("@alfred/runtime");
-
-    await runCognitiveLoop(ctx, threadId, {
+    const result = await runCognitiveLoop(ctx, threadId, {
       _: "input",
       content: input.text,
       source: "user",
       ts: Date.now() as any,
     });
 
-    const outcome = {
-      _: "success",
-      result: sanitized,
-      duration: durationSeconds * 1000,
-    } as const;
-
-    await runCognitiveLoop(ctx, threadId, {
-      _: "complete",
-      outcome,
-      ts: Date.now() as any,
+    await handleVoiceCognitiveEffects({
+      runtimeCtx: ctx,
+      runLoop: runCognitiveLoop,
+      streamId: threadId,
+      effects: result.effects,
+      sanitized,
+      durationSeconds,
     });
-  } catch (_e) {}
+  } catch (error) {
+    logger.error("voice_cognitive_integration_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   return {
     text: sanitized.text ?? "",
@@ -205,4 +200,58 @@ export async function runAssistantForVoice(
     raw: sanitized,
     durationSeconds,
   };
+}
+
+type RunLoopFn = (
+  ctx: RuntimeContext,
+  streamId: string,
+  event: Event
+) => Promise<CognitiveLoopResult>;
+
+type VoiceEffectParams = {
+  runtimeCtx: RuntimeContext;
+  runLoop: RunLoopFn;
+  streamId: string;
+  effects: CognitiveEffect[];
+  sanitized: ReturnType<typeof sanitizeResult>;
+  durationSeconds: number;
+};
+
+async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
+  if (!params.effects.length) {
+    return;
+  }
+  const queue: CognitiveEffect[] = [...params.effects];
+  while (queue.length) {
+    const effect = queue.shift()!;
+    try {
+      switch (effect.type) {
+        case "generate_response": {
+          const outcome: Outcome = {
+            _: "success",
+            result: params.sanitized,
+            duration: Math.round(params.durationSeconds * 1000),
+          };
+          const followUp = await params.runLoop(params.runtimeCtx, params.streamId, {
+            _: "complete",
+            outcome,
+            ts: Date.now() as any,
+          });
+          queue.push(...followUp.effects);
+          break;
+        }
+        default:
+          logger.warn("voice_cognitive_effect_unhandled", {
+            streamId: params.streamId,
+            effect,
+          });
+      }
+    } catch (error) {
+      logger.error("voice_cognitive_effect_failed", {
+        streamId: params.streamId,
+        effect,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }

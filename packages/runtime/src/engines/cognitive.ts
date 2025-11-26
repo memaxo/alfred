@@ -30,35 +30,35 @@ export class CognitiveEngine {
    * Transition to idle state
    */
   idle(): CognitiveState {
-    return idle();
+    return idle(Date.now());
   }
 
   /**
    * Transition to capturing state (understanding input)
    */
   capture(input: string, conf = 0.8): CognitiveState {
-    return capturing(input, conf);
+    return capturing(Date.now(), input, conf);
   }
 
   /**
    * Transition to thinking state (exploring options)
    */
   think(about: string, depth = 1, traces?: string[]): CognitiveState {
-    return thinking(about, depth, traces);
+    return thinking(Date.now(), about, depth, traces);
   }
 
   /**
    * Transition to deciding state (choosing option)
    */
   decide(options: Decision[], criteria?: any): CognitiveState {
-    return deciding(options, criteria);
+    return deciding(Date.now(), options, criteria);
   }
 
   /**
    * Transition to executing state (running plan)
    */
   execute(plan: Plan, auto: AutonomyGradient): CognitiveState {
-    return executing(plan, auto);
+    return executing(Date.now(), plan, auto);
   }
 
   /**

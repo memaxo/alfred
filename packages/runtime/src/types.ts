@@ -14,7 +14,12 @@ import { z } from "zod";
  * Resume payload for in-flight authorization
  */
 export type ResumePayload = {
-  event: "deploy-authz" | "linear-authz" | "bio-authz";
+  event:
+    | "deploy-authz"
+    | "linear-authz"
+    | "bio-authz"
+    | "mfa-authz"
+    | "human-authz";
   authz: string;
 };
 
@@ -87,6 +92,12 @@ export type RuntimeOptions = {
 
   /** Authorization token for tool execution */
   authz?: string;
+
+  /** Expected heartbeat frequency for supervisor interrupts (default: 60s) */
+  supervisorHeartbeatMs?: number;
+
+  /** Polling interval for supervisor physiology checks (default: 1s) */
+  supervisorCheckIntervalMs?: number;
 };
 
 /**
@@ -193,6 +204,16 @@ export const runtimeOptionsSchema = z.object({
   runId: z.string().uuid().optional(),
   history: z.array(z.custom<WorkflowEvent>()).optional(),
   authz: z.string().optional(),
+  supervisorHeartbeatMs: z
+    .number()
+    .int()
+    .min(100, "Supervisor heartbeat must be at least 100ms")
+    .optional(),
+  supervisorCheckIntervalMs: z
+    .number()
+    .int()
+    .min(10, "Supervisor check interval must be at least 10ms")
+    .optional(),
 });
 
 /**

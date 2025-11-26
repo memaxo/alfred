@@ -34,14 +34,27 @@ export type Knowledge =
   | { _: "pattern"; examples: NodeId[]; rule: string; accuracy: number };
 
 // Brand constructors with validation
-const nodeId = (s: string): NodeId => s as NodeId;
+const nodeId = (s: string): NodeId => {
+  if (s.length === 0) {
+    throw new Error("NodeId cannot be empty");
+  }
+  return s as NodeId;
+};
 export const toConfidence = (n: number): Confidence => {
   if (n < 0 || n > 1) {
     throw new Error("Invalid confidence");
   }
   return n as Confidence;
 };
-export const timestamp = (n: number): Timestamp => n as Timestamp;
+export const timestamp = (n: number): Timestamp => {
+  if (!Number.isFinite(n)) {
+    throw new Error("Timestamp must be a finite number");
+  }
+  if (n < 0) {
+    throw new Error("Timestamp cannot be negative");
+  }
+  return n as Timestamp;
+};
 
 export const nodeFromHash = (hash: string): NodeId => nodeId(hash);
 

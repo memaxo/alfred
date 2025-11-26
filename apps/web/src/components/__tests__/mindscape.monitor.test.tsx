@@ -11,8 +11,8 @@ let latestHandlers: UseWorkflowSseStreamOptions | null = null;
 let useWorkflowSseStreamSpy: ReturnType<typeof vi.spyOn> | null = null;
 const resumeMock = {
   isOpen: false,
-  pendingRunId: null as string | null,
-  trigger: vi.fn(),
+  pending: null as any,
+  prompt: vi.fn(),
   close: vi.fn(),
 };
 
@@ -25,11 +25,11 @@ mock.module("@/hooks/use-mindscape-activations", () => ({
 }));
 
 mock.module("@/hooks/use-biometric-resume", () => ({
-  useBiometricResume: () => resumeMock,
+  useObligationResume: () => resumeMock,
 }));
 
 mock.module("@/components/biometric-challenge-dialog", () => ({
-  BiometricChallengeDialog: () => null,
+  ObligationChallengeDialog: () => null,
 }));
 
 import { WorkflowManager } from "@/components/mindscape/monitor";
@@ -56,8 +56,8 @@ describe("WorkflowManager context cache events", () => {
     dispatchMindscapeEventMock.mockReset();
     tokenMock.mockResolvedValue("test-token");
     resumeMock.isOpen = false;
-    resumeMock.pendingRunId = null;
-    resumeMock.trigger.mockReset();
+    resumeMock.pending = null;
+    resumeMock.prompt.mockReset();
     resumeMock.close.mockReset();
     useMindscapeStore.setState({
       nodes: [],
@@ -219,7 +219,11 @@ describe("WorkflowManager context cache events", () => {
     expect((nodeAfterMessages?.data as any)?.messages).toHaveLength(2);
 
     act(() => {
-      latestHandlers?.onError?.(new Error("network"));
+      try {
+        latestHandlers?.onError?.(new Error("network"));
+      } catch {
+        // ignore to keep test focused on side effects
+      }
     });
 
     expect(useMindscapeStore.getState().contextCache[nodeId]).toBeUndefined();

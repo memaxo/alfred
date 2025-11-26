@@ -3,7 +3,7 @@ import { Bot, PauseCircle, Play, ShieldAlert, Terminal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
-import { BiometricChallengeDialog } from "@/components/biometric-challenge-dialog";
+import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useBiometricResume } from "@/hooks/use-biometric-resume";
+import { useObligationResume } from "@/hooks/use-biometric-resume";
 import { subscribeToDroidStream, type DroidStreamEvent } from "@/lib/droid/stream-client";
 import { getToolToken } from "@/lib/token";
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
@@ -91,9 +91,6 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   const [activeRunId, setActiveRunId] = useState<string | null>(
     initial.lastRunId ?? null
   );
-  const [pendingResumeRunId, setPendingResumeRunId] = useState<string | null>(
-    null
-  );
 
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
@@ -123,8 +120,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     }
   }
 
-  const resume = useBiometricResume({
-    runId: pendingResumeRunId,
+  const resume = useObligationResume({
     target: "droid",
   });
 
@@ -181,10 +177,11 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         });
         setStatus(event.code === 0 ? "completed" : "failed");
         setActiveRunId(null);
-        setPendingResumeRunId(null);
+        resume.close();
+        return;
       }
     },
-    [appendLog]
+    [appendLog, resume]
   );
 
   const handleRun = useCallback(async () => {
@@ -202,7 +199,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     setStatus("running");
     setLastError("");
     setActiveRunId(null);
-    setPendingResumeRunId(null);
+    resume.close();
     appendLog({
       channel: "system",
       text: `▶︎ ${prompt.trim()}`,
@@ -224,13 +221,16 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         onObligation: (payload) => {
           setStatus("suspended");
           setActiveRunId(payload.runId);
-          setPendingResumeRunId(payload.runId);
           appendLog({
             channel: "system",
             text: "Biometric elevation required",
             at: new Date().toISOString(),
           });
-          void resume.trigger();
+          resume.prompt({
+            runId: payload.runId,
+            obligations: payload.obligations,
+            resumeEvents: payload.resumeEvents ?? [],
+          });
         },
         onResume: () => {
           appendLog({
@@ -239,7 +239,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
             at: new Date().toISOString(),
           });
           setStatus("running");
-          setPendingResumeRunId(null);
+          resume.close();
         },
         onError: (error) => {
           setStatus("failed");
@@ -249,9 +249,10 @@ export function DroidNode({ id, data, selected }: NodeProps) {
             text: `Error: ${error.message}`,
             at: new Date().toISOString(),
           });
+          resume.close();
         },
         onComplete: () => {
-          setPendingResumeRunId(null);
+          resume.close();
         },
       });
       subscriptionRef.current = subscription;
@@ -273,13 +274,13 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     stopStream();
     setStatus("idle");
     setActiveRunId(null);
-    setPendingResumeRunId(null);
+    resume.close();
     appendLog({
       channel: "system",
       text: "Stopped",
       at: new Date().toISOString(),
     });
-  }, [appendLog, stopStream]);
+  }, [appendLog, resume, stopStream]);
 
   const statusBadge = useMemo(() => {
     switch (status) {
@@ -445,17 +446,16 @@ export function DroidNode({ id, data, selected }: NodeProps) {
           )}
         </div>
       </MindscapeNode>
-      <BiometricChallengeDialog
+      <ObligationChallengeDialog
         mode="external"
         onClose={() => {
           resume.close();
-          setPendingResumeRunId(null);
         }}
         onSuccess={() => {
           setStatus("running");
         }}
         open={resume.isOpen}
-        runId={resume.pendingRunId ?? undefined}
+        state={resume.pending}
         target="droid"
       />
     </>

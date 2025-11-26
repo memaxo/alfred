@@ -14,6 +14,11 @@ export class ReportPhase implements Phase<RuntimeInput, void> {
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
+      const runtimeSignal = context.get("signal") as
+        | AbortSignal
+        | null
+        | undefined;
+      const signal = runtimeSignal ?? controller.signal;
       const events = (context.get("eventLog") as WorkflowEvent[] | undefined) ?? [];
       const scanContext = context.get("scanContext") as
         | ExecutionContext
@@ -22,7 +27,7 @@ export class ReportPhase implements Phase<RuntimeInput, void> {
       const planSummary = context.get("planSummary") as string | null | undefined;
       const startedAt = context.get("runStartedAt") as number | undefined;
 
-      const generator = executeReportPhase(input, controller.signal, {
+      const generator = executeReportPhase(input, signal, {
         events,
         scanContext,
         planSummary,

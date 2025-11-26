@@ -8,6 +8,15 @@ import {
   extractTemporal,
   toKnowledge,
 } from "../extractor";
+import type { KnowledgeEntry } from "../extractor";
+import type { Knowledge } from "../hypergraph";
+
+type RelationEntry = KnowledgeEntry & {
+  data: Extract<Knowledge, { _: "relation" }>;
+};
+
+const isRelationEntry = (entry: KnowledgeEntry): entry is RelationEntry =>
+  entry.data._ === "relation";
 
 describe("extractEntities", () => {
   test("detects people, organizations, and places", () => {
@@ -102,7 +111,7 @@ describe("toKnowledge", () => {
     const extraction = extract("Elon Musk founded SpaceX in 2002.", "unit");
     const knowledge = toKnowledge(extraction);
 
-    const relationEntry = knowledge.find((entry) => entry.data._ === "relation");
+    const relationEntry = knowledge.find(isRelationEntry);
     expect(relationEntry).toBeDefined();
     expect(typeof relationEntry?.data.from).toBe("string");
     expect(typeof relationEntry?.data.to).toBe("string");

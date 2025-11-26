@@ -57,4 +57,12 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 12. **Code duplication threshold.** When two or more functions or files share >80% identical code, extract shared logic into a reusable function or utility. Duplication above this threshold indicates missing abstraction and increases maintenance burden. Measure duplication by comparing line counts and structure similarity.
 
+13. **Hot modules are real.** Files ending in `.hot.ts` must contain a production-ready fast path; delete or rename any placeholder instead of shipping a stub.
 
+14. **Instrument cognitive hot paths.** `applyTransition`, `updatePhysiology`, `updateAutonomy`, and `calculateError` must wrap their core logic with `performance.now()` timers, record Prometheus histograms, and emit `cognitive_budget_exceeded` warnings whenever they exceed their microsecond budgets.
+
+15. **Expose metrics.** Export cognitive metric registries (e.g., `cognitiveMetricsRegistry`) from package entrypoints and ensure the global metrics server registers them for scraping.
+
+16. **Budget tests.** Every new or modified hot path ships a deterministic warmup-based test that fails when the measured average runtime exceeds the documented budget.
+17. **Timestamp injection.** Cognitive state factories and transition helpers must receive timestamps (and other time inputs) from their callers—never call `Date.now()` or similar inside the pure constructors.
+18. **Explicit autonomy inputs.** Autonomy helpers (`initialAutonomy`, `updateAutonomy`, constraint checks) must expose timestamp, evidence, and physiology arguments so tests can supply deterministic values; no hidden global reads.

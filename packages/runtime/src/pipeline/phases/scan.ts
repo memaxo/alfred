@@ -16,11 +16,16 @@ export class ScanPhase implements Phase<RuntimeInput, void> {
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
+      const runtimeSignal = context.get("signal") as
+        | AbortSignal
+        | null
+        | undefined;
+      const signal = runtimeSignal ?? controller.signal;
       const authz = context.get("authz") as string | undefined;
       const generator = executeScanPhase(
         input,
         this.runId,
-        controller.signal,
+        signal,
         authz
       );
 

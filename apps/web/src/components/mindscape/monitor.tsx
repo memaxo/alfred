@@ -5,8 +5,8 @@ import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { useWorkflowSseStream, type WorkflowStreamInput } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
-import { BiometricChallengeDialog } from "@/components/biometric-challenge-dialog";
-import { useBiometricResume } from "@/hooks/use-biometric-resume";
+import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
+import { useObligationResume } from "@/hooks/use-biometric-resume";
 
 type StreamInput = WorkflowStreamInput & {
   context: {
@@ -44,9 +44,7 @@ function WorkflowSubscription({
     (data.status as string) || "pending"
   );
   const processedEvents = useRef(new Set<string>());
-  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
-
-  const resume = useBiometricResume({ runId: pendingRunId, target: "workflow" });
+  const resume = useObligationResume({ target: "workflow" });
 
   // Prepare stream input
   useEffect(() => {
@@ -101,7 +99,11 @@ function WorkflowSubscription({
 
       if (event.type === "obligation") {
         setStatus("suspended");
-        setPendingRunId(event.runId);
+        resume.prompt({
+          runId: event.runId,
+          obligations: event.obligations,
+          resumeEvents: event.resumeEvents ?? [],
+        });
         updateArtifactData(nodeId, {
           status: "suspended",
           pendingRunId: event.runId,
@@ -140,13 +142,11 @@ function WorkflowSubscription({
           runId: (event as any).id,
         });
         setStatus("running");
-        setPendingRunId(null);
         resume.close();
       } else if (event.type === "complete") {
         updateArtifactData(nodeId, { status: "completed" });
         clearContextReceipt(nodeId);
         setStreamInput(null);
-        setPendingRunId(null);
         resume.close();
       } else if (event.type === "error") {
         updateArtifactData(nodeId, {
@@ -155,7 +155,6 @@ function WorkflowSubscription({
         });
         clearContextReceipt(nodeId);
         setStreamInput(null);
-        setPendingRunId(null);
         resume.close();
       }
     },
@@ -174,23 +173,21 @@ function WorkflowSubscription({
       clearContextReceipt(nodeId);
       setStatus("error");
       setStreamInput(null);
-      setPendingRunId(null);
       resume.close();
     },
   });
 
   return (
-    <BiometricChallengeDialog
+    <ObligationChallengeDialog
       mode="inline"
       onClose={() => {
         resume.close();
-        setPendingRunId(null);
       }}
       onSuccess={() => {
         setStatus("running");
       }}
       open={resume.isOpen}
-      runId={resume.pendingRunId ?? undefined}
+      state={resume.pending}
       target="workflow"
     />
   );

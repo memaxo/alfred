@@ -30,7 +30,10 @@
     "typecheck": "tsc -b --pretty false",
     "test": "bun test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@alfred/rag": "workspace:*",
+    "prom-client": "^15.1.3"
+  },
   "devDependencies": {
     "@types/node": "*",
     "typescript": "*"

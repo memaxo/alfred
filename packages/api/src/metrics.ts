@@ -78,6 +78,28 @@ export const policyObligationsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const workflowObligationSuspensionsTotal = new client.Counter({
+  name: "workflow_obligation_suspensions_total",
+  help: "Count of workflow suspensions grouped by transport, result, and obligation type.",
+  labelNames: ["transport", "result", "obligation"] as const,
+  registers: [metricsRegistry],
+});
+
+export const workflowObligationDurationSeconds = new client.Histogram({
+  name: "workflow_obligation_duration_seconds",
+  help: "Duration of workflow suspensions grouped by transport and result.",
+  labelNames: ["transport", "result"] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
+  registers: [metricsRegistry],
+});
+
+export const workflowSuspensionCleanupTotal = new client.Counter({
+  name: "workflow_suspension_cleanup_total",
+  help: "Count of workflow suspensions cleaned up grouped by result.",
+  labelNames: ["result"] as const,
+  registers: [metricsRegistry],
+});
+
 export {
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,

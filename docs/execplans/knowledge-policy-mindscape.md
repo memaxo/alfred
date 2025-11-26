@@ -23,6 +23,8 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
     - [x] Update `requirePolicy` middleware to detect missing obligations.
     - [x] Create `TRPCError` subclass or metadata pattern for `OBLIGATION_REQUIRED`.
     - [x] Implement the "pause/resume" pattern in `packages/api/src/routers/deploy.ts` **and** `packages/api/src/routers/workflow.ts`, plus propagate structured obligation events through the SSE transport and Mindscape UI.
+    - [x] Share a `createWorkflowSuspension` helper (metrics + timeout) across TRPC + SSE routes and emit `resumeEvents` metadata so clients know which `workflow.resume` event to deliver.
+    - [x] Add workflow suspension cleanup worker + Mindscape obligation dialog that surfaces reason/metadata and new `withObligationRetry` client helper for TRPC flows.
 - [ ] **Part 3: Mindscape Visualization**
     - [ ] Create `ConceptNode` component in `apps/web`.
     - [ ] Create `RelationEdge` component (if standard edges aren't enough).
@@ -33,11 +35,14 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
 
 -   **Memory backend quirk**: `MemoryRunRegistry.unregister` is synchronous, so chaining `.catch()` explodes in Bun. We now wrap unregister calls in try/catch everywhere we reuse the pattern.
 -   **SSE parity**: The TanStack SSE route needed the same obligation-handling semantics as the TRPC router; otherwise Mindscape could never resume a cautious execution. Implementing the shared helper exposed test gaps that are now covered.
+-   **TanStack start + route test collision**: Running Playwright against the dev server trips the route generator on files under `apps/web/src/routes/api/__tests__`. Until we move those tests elsewhere or add an ignore glob, e2e runs must mock the workflow stream via the global harness instead of hitting those files directly.
 
 ## Decision Log
 
 -   2025-11-26 — `requirePolicy` now accepts `handleObligations: "passThrough"`, allowing routers (deploy, cognitive, workflow, SSE route) to control whether obligations short-circuit or emit structured payloads.
--   2025-11-26 — Mindscape listens for `workflow-event` `type: "obligation"` and surfaces the biometric dialog, reusing the shared `useBiometricResume` hook.
+-   2025-11-26 — Mindscape listens for `workflow-event` `type: "obligation"` and surfaces the biometric dialog, reusing the shared `useObligationResume` hook.
+-   2025-11-27 — Suspensions are centralized via `createWorkflowSuspension` so every transport emits `{ obligations, resumeEvents }`, records metrics, and auto-cancels stale runs after the timeout worker fires.
+-   2025-11-27 — Clients now use `withObligationRetry` + the enriched dialog (reason + metadata) so PRECONDITION failures automatically trigger elevation before retrying critical TRPC mutations.
 
 ## Outcomes & Retrospective
 

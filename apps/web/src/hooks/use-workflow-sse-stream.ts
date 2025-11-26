@@ -37,6 +37,35 @@ type ParsedEvent = {
   data: string;
 };
 
+type WorkflowStreamHarness = {
+  subscribe: (options: {
+    input: WorkflowStreamInput;
+    onWorkflowEvent?: (event: WorkflowEvent) => void;
+    onUiMessages?: (
+      messages: UIMessage[],
+      meta: { runId: string; eventId: string; eventType: string }
+    ) => void;
+    onError?: (error: Error) => void;
+  }) => { close: () => void } | void;
+};
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __workflowStreamTestHarness__:
+    | WorkflowStreamHarness
+    | undefined;
+}
+
+function getWorkflowStreamHarness(): WorkflowStreamHarness | null {
+  if (typeof globalThis === "undefined") {
+    return null;
+  }
+  const scope = globalThis as {
+    __workflowStreamTestHarness__?: WorkflowStreamHarness;
+  };
+  return scope.__workflowStreamTestHarness__ ?? null;
+}
+
 const decoder = new TextDecoder();
 
 export function useWorkflowSseStream(
@@ -71,6 +100,30 @@ export function useWorkflowSseStream(
 
     let isCancelled = false;
     const controller = new AbortController();
+
+    const harness = getWorkflowStreamHarness();
+    if (harness) {
+      setStatus("open");
+      setError(null);
+      const subscription = harness.subscribe({
+        input,
+        onWorkflowEvent: (event) => {
+          workflowEventRef.current?.(event);
+        },
+        onUiMessages: (messages, meta) => {
+          uiMessagesRef.current?.(messages, meta);
+        },
+        onError: (err) => {
+          const wrapped = err instanceof Error ? err : new Error(String(err));
+          setError(wrapped);
+          setStatus("error");
+          errorRef.current?.(wrapped);
+        },
+      });
+      return () => {
+        subscription?.close?.();
+      };
+    }
 
     async function connect() {
       setStatus("connecting");

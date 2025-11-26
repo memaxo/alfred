@@ -9,3 +9,7 @@
 4. **Entity Linking.** Graph entry points must support fuzzy matching (substring, case-insensitive). Never rely on exact string matching to bridge unstructured text to structured nodes.
 
 5. **Synchronous Extraction.** Keep knowledge extraction pipelines synchronous and heuristic-based (NLP) in the hot path. Defer embeddings and LLM-based synthesis to background workers.
+
+6. **Test every hot query.** Knowledge hot-path queries require Bun/sqlite regression tests that seed deterministic `memory_nodes`, clean up after each run, and assert ordering.
+
+7. **Scoped reflections first.** Reflection fetchers must try user-scoped and `runtime:<id>` resources before falling back to global nodes so Mindscape never shows an empty list by default.

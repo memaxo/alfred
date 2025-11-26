@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
-import type { Obligation } from "@alfred/type";
 
 const getSessionMock = vi.fn().mockResolvedValue({ user: { id: "user-1" } });
 mock.module("@alfred/auth", () => ({
@@ -196,7 +195,11 @@ describe("/api/workflow/stream SSE route", () => {
     await reader?.cancel();
     expect(orchestrateWorkflowStreamMock).not.toHaveBeenCalled();
     expect(workflowRepoMock.createRun).toHaveBeenCalled();
-    expect(runRegistryMocks.register).toHaveBeenCalled();
+    expect(recordAuditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "workflow.stream.suspend",
+      })
+    );
   });
 });
 

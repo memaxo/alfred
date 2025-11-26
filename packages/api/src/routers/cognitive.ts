@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { runCognitiveLoop } from "@alfred/runtime";
+import {
+  runAssistantGeneration,
+  runCognitiveLoop,
+} from "@alfred/runtime";
+import type { CognitiveEffect } from "@alfred/runtime";
 import type { Event } from "@alfred/cognitive/state";
 import { authedProcedure, router } from "../trpc";
 import { requirePolicy } from "../gate";
 import type { Context } from "../context";
 import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
+import { logger } from "@alfred/logger";
 
 const feedbackInput = z.object({
   streamId: z.string().min(1),
@@ -52,10 +57,16 @@ export const cognitiveRouter = router({
         ts: (input.ts ?? Date.now()) as any,
       };
 
-      const state = await runCognitiveLoop(
+      const { state, effects } = await runCognitiveLoop(
         ctx.runtimeContext,
         input.streamId,
         event
+      );
+
+      await handleCognitiveEffects(
+        ctx.runtimeContext,
+        input.streamId,
+        effects
       );
 
       const surface = input.surface ?? "chat";
@@ -67,3 +78,57 @@ export const cognitiveRouter = router({
       };
     }),
 });
+
+async function handleCognitiveEffects(
+  runtimeCtx: Context["runtimeContext"],
+  streamId: string,
+  initialEffects: CognitiveEffect[]
+) {
+  if (!initialEffects.length) {
+    return;
+  }
+
+  const queue: CognitiveEffect[] = [...initialEffects];
+
+  while (queue.length) {
+    const effect = queue.shift()!;
+    try {
+      switch (effect.type) {
+        case "generate_response": {
+          const outcome = await runAssistantGeneration(
+            runtimeCtx,
+            streamId,
+            effect.input
+          );
+          const followUp = await runCognitiveLoop(runtimeCtx, streamId, {
+            _: "complete",
+            outcome,
+            ts: Date.now() as any,
+          });
+          queue.push(...followUp.effects);
+          break;
+        }
+        case "execute_plan":
+        case "log_reflection":
+          logger.warn("cognitive_effect_unhandled", {
+            streamId,
+            effect,
+          });
+          break;
+        default: {
+          const exhaustive: never = effect;
+          logger.warn("cognitive_effect_unknown", {
+            streamId,
+            effect: exhaustive,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error("cognitive_effect_failed", {
+        streamId,
+        effect,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}

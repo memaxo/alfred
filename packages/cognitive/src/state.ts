@@ -3,6 +3,14 @@
  * Pure algebraic data types with zero runtime overhead
  */
 
+import { performance } from "node:perf_hooks";
+
+import {
+  cognitiveAutonomyUpdateDuration,
+  cognitiveErrorCalculationDuration,
+  cognitivePhysiologyUpdateDuration,
+} from "./metrics";
+
 // Core types
 type Timestamp = number & { readonly _: unique symbol };
 type Confidence = number & {
@@ -17,14 +25,22 @@ type Autonomy = number & {
 };
 
 // Brand constructors
-const timestamp = (n: number): Timestamp => n as Timestamp;
+export const timestamp = (n: number): Timestamp => {
+  if (!Number.isFinite(n)) {
+    throw new Error("Timestamp must be a finite number");
+  }
+  if (n < 0) {
+    throw new Error("Timestamp cannot be negative");
+  }
+  return n as Timestamp;
+};
 const confidence = (n: number): Confidence => {
   if (n < 0 || n > 1) {
     throw new Error("Invalid confidence");
   }
   return n as Confidence;
 };
-const autonomy = (n: number): Autonomy => {
+export const autonomy = (n: number): Autonomy => {
   if (n < 0 || n > 1) {
     throw new Error("Invalid autonomy");
   }
@@ -49,6 +65,11 @@ type Constraint =
   | { _: "scope"; allowed: string[]; forbidden: string[] }
   | { _: "confidence"; minimum: Confidence }
   | { _: "approval"; required: boolean };
+
+type BetaPrior = {
+  alpha: number;
+  beta: number;
+};
 
 // Decision options for deciding state
 export type Decision = {
@@ -157,6 +178,7 @@ export type CognitiveState =
 export type AutonomyGradient = {
   level: Autonomy;
   confidence: Confidence;
+  prior: BetaPrior;
   evidence: Evidence[];
   constraints: Constraint[];
   lastUpdate: Timestamp;
@@ -183,13 +205,14 @@ const defaultPhysiology = (): Physiology => ({
 });
 
 // State factories
-export const idle = (phy?: Physiology): CognitiveState => ({
+export const idle = (now: number, phy?: Physiology): CognitiveState => ({
   _: "idle",
-  since: timestamp(Date.now()),
+  since: timestamp(now),
   physiology: phy ?? defaultPhysiology(),
 });
 
 export const capturing = (
+  now: number,
   input: string,
   conf: number,
   phy?: Physiology
@@ -197,11 +220,12 @@ export const capturing = (
   _: "capturing",
   input,
   confidence: confidence(conf),
-  started: timestamp(Date.now()),
+  started: timestamp(now),
   physiology: phy ?? defaultPhysiology(),
 });
 
 export const thinking = (
+  now: number,
   about: string,
   depth = 1,
   traces?: string[],
@@ -212,11 +236,12 @@ export const thinking = (
   depth: traces ? Math.max(depth, traces.length) : depth,
   paths: [],
   reasoningTraces: traces,
-  started: timestamp(Date.now()),
+  started: timestamp(now),
   physiology: phy ?? defaultPhysiology(),
 });
 
 export const deciding = (
+  now: number,
   options: Decision[],
   criteria?: Criteria,
   phy?: Physiology
@@ -225,11 +250,12 @@ export const deciding = (
   options,
   criteria: criteria || defaultCriteria(),
   weights: [0.4, 0.3, 0.2, 0.1], // safety, speed, accuracy, cost
-  deadline: timestamp(Date.now() + 5000), // 5s decision timeout
+  deadline: timestamp(now + 5000), // 5s decision timeout
   physiology: phy ?? defaultPhysiology(),
 });
 
 export const executing = (
+  now: number,
   plan: Plan,
   auto: AutonomyGradient,
   phy?: Physiology
@@ -238,7 +264,7 @@ export const executing = (
   plan,
   step: 0,
   auto,
-  started: timestamp(Date.now()),
+  started: timestamp(now),
   physiology: phy ?? defaultPhysiology(),
 });
 
@@ -260,92 +286,169 @@ export const reflecting = (
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const CONFIDENCE_DECAY_RATE = 0.95; // per day decay multiplier
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const DEFAULT_BETA_PRIOR: BetaPrior = Object.freeze({ alpha: 2, beta: 5 });
+var betaMode = ({ alpha, beta }: BetaPrior): number => {
+  if (alpha <= 1 || beta <= 1) {
+    return alpha / (alpha + beta);
+  }
+  return (alpha - 1) / (alpha + beta - 2);
+};
+
+var betaVariance = ({ alpha, beta }: BetaPrior): number => {
+  const sum = alpha + beta;
+  if (sum <= 0) {
+    return 0;
+  }
+  return (alpha * beta) / (sum * sum * (sum + 1));
+};
 
 export const updatePhysiology = (
   current: Physiology,
   event: "step" | "success" | "error" | "entropy_high" | "entropy_low"
 ): Physiology => {
-  let { energy, boredom, frustration } = current;
+  const start = performance.now();
+  try {
+    let { energy, boredom, frustration } = current;
 
-  switch (event) {
-    case "step":
-      energy -= 0.01;
-      break;
-    case "success":
-      frustration *= 0.5;
-      energy += 0.05;
-      boredom *= 0.9;
-      break;
-    case "error":
-      frustration += 0.2;
-      energy -= 0.05;
-      break;
-    case "entropy_high": // Repetitive loop
-      boredom += 0.3;
-      break;
-    case "entropy_low": // Novelty
-      boredom *= 0.8;
-      break;
+    switch (event) {
+      case "step":
+        energy -= 0.01;
+        break;
+      case "success":
+        frustration *= 0.5;
+        energy += 0.05;
+        boredom *= 0.9;
+        break;
+      case "error":
+        frustration += 0.2;
+        energy -= 0.05;
+        break;
+      case "entropy_high": // Repetitive loop
+        boredom += 0.3;
+        break;
+      case "entropy_low": // Novelty
+        boredom *= 0.8;
+        break;
+    }
+
+    return {
+      energy: clamp01(energy),
+      boredom: clamp01(boredom),
+      frustration: clamp01(frustration),
+    };
+  } finally {
+    const durationMs = performance.now() - start;
+    cognitivePhysiologyUpdateDuration.observe(durationMs / 1000);
+    if (durationMs > 0.01) {
+      console.warn(
+        `cognitive_budget_exceeded: physiology update took ${durationMs.toFixed(
+          4
+        )}ms`
+      );
+    }
   }
-
-  return {
-    energy: clamp01(energy),
-    boredom: clamp01(boredom),
-    frustration: clamp01(frustration),
-  };
 };
 
 // Autonomy gradient management
-export const initialAutonomy = (): AutonomyGradient => ({
-  level: autonomy(0.3), // Start conservative
-  confidence: confidence(0.5),
-  evidence: [],
-  constraints: [
-    { _: "approval", required: true },
-    { _: "confidence", minimum: confidence(0.7) },
-  ],
-  lastUpdate: timestamp(Date.now()),
-});
+export const initialAutonomy = (now: number): AutonomyGradient => {
+  const prior = { ...DEFAULT_BETA_PRIOR };
+  const levelEstimate = clamp01(betaMode(prior));
+  const confidenceEstimate = clamp01(1 - betaVariance(prior));
 
-export const updateAutonomy = (
+  return {
+    level: autonomy(levelEstimate),
+    confidence: confidence(confidenceEstimate),
+    prior,
+    evidence: [],
+    constraints: [
+      { _: "approval", required: true },
+      { _: "confidence", minimum: confidence(0.7) },
+    ],
+    lastUpdate: timestamp(now),
+  };
+};
+
+export function updateAutonomy(
+  now: number,
   current: AutonomyGradient,
   evidence: Evidence,
   physiology?: Physiology
-): AutonomyGradient => {
-  const prior = current.level;
-  const priorConfidence = current.confidence;
+): AutonomyGradient {
+  const start = performance.now();
 
-  // Bayesian update based on evidence
-  const [newLevel, newConfidence] = bayesianUpdate(
-    prior,
-    priorConfidence,
-    evidence,
-    current.lastUpdate
-  );
+  try {
+    const reliability = clamp01(evidence.reliability ?? 1);
+    if (reliability === 0) {
+      return current;
+    }
 
-  // Physiological Regulation
-  let regulatedLevel = newLevel;
-  if (physiology) {
-    // High frustration forces autonomy drop (stop digging)
-    if (physiology.frustration > 0.7) {
-      regulatedLevel *= 0.5;
+    const normalizedEvidence: Evidence =
+      reliability === (evidence.reliability ?? 1)
+        ? evidence
+        : { ...evidence, reliability };
+
+    const prior = current.prior || { ...DEFAULT_BETA_PRIOR };
+    const update = bayesianUpdate(
+      now,
+      prior,
+      normalizedEvidence,
+      current.lastUpdate
+    );
+
+    let regulatedLevel = update.level;
+    const currentLevel = Number(current.level);
+    const evidenceType = normalizedEvidence._;
+    const isFeedback = evidenceType === "feedback";
+    const isPositiveSignal =
+      evidenceType === "success" ||
+      (isFeedback && normalizedEvidence.positive === true);
+    const isNegativeSignal =
+      evidenceType === "failure" ||
+      evidenceType === "override" ||
+      (isFeedback && normalizedEvidence.positive === false);
+
+    if (physiology) {
+      if (physiology.frustration > 0.7) {
+        regulatedLevel *= 0.5;
+      }
+      if (physiology.energy < 0.2) {
+        regulatedLevel *= 0.8;
+      }
     }
-    // Low energy reduces risky behavior
-    if (physiology.energy < 0.2) {
-      regulatedLevel *= 0.8;
+
+    if (isPositiveSignal) {
+      regulatedLevel = Math.max(regulatedLevel, currentLevel);
+    } else if (isNegativeSignal) {
+      regulatedLevel = Math.min(regulatedLevel, currentLevel);
     }
-    // Boredom increases temperature (exploration) but not necessarily autonomy
-    // (Handled in sampling logic, not permission logic)
+
+    let adjustedConfidence = update.confidence;
+    const timeSinceUpdate = now - current.lastUpdate;
+    if (Number.isFinite(timeSinceUpdate) && timeSinceUpdate > 0) {
+      const daysSinceUpdate = timeSinceUpdate / MS_PER_DAY;
+      adjustedConfidence *= Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+    }
+
+    return {
+      level: autonomy(Math.max(0, Math.min(1, regulatedLevel))),
+      confidence: confidence(Math.max(0, Math.min(1, adjustedConfidence))),
+      prior: update.posterior,
+      evidence: [...current.evidence.slice(-9), normalizedEvidence],
+      constraints: current.constraints,
+      lastUpdate: timestamp(now),
+    };
+  } finally {
+    const durationMs = performance.now() - start;
+    cognitiveAutonomyUpdateDuration.observe(durationMs / 1000);
+    if (durationMs > 0.05) {
+      console.warn(
+        `cognitive_budget_exceeded: autonomy update took ${durationMs.toFixed(
+          4
+        )}ms`
+      );
+    }
   }
-
-  return {
-    level: autonomy(Math.max(0, Math.min(1, regulatedLevel))),
-    confidence: confidence(Math.max(0, Math.min(1, newConfidence))),
-    evidence: [...current.evidence.slice(-9), evidence], // Keep last 10
-    constraints: current.constraints,
-    lastUpdate: timestamp(Date.now()),
-  };
-};
+}
 
 // Helpers
 const defaultCriteria = (): Criteria => ({
@@ -355,95 +458,128 @@ const defaultCriteria = (): Criteria => ({
   cost: 0.5,
 });
 
-const calculateError = (expected: string, actual: string): number => {
-  if (expected === actual) {
-    return 0;
-  }
-  if (expected.length === 0 || actual.length === 0) {
-    return Math.max(expected.length, actual.length) === 0 ? 0 : 1;
-  }
-
-  const maxLen = Math.max(expected.length, actual.length);
-  const [shorter, longer] =
-    expected.length <= actual.length
-      ? [expected, actual]
-      : [actual, expected];
-
-  let prevRow = Array.from({ length: shorter.length + 1 }, (_, i) => i);
-  let currRow = new Array<number>(shorter.length + 1);
-
-  for (let i = 1; i <= longer.length; i++) {
-    currRow[0] = i;
-    const longChar = longer.charCodeAt(i - 1);
-
-    for (let j = 1; j <= shorter.length; j++) {
-      const cost = longChar === shorter.charCodeAt(j - 1) ? 0 : 1;
-      const insertion = currRow[j - 1] + 1;
-      const deletion = prevRow[j] + 1;
-      const substitution = prevRow[j - 1] + cost;
-      currRow[j] = Math.min(insertion, deletion, substitution);
+export const calculateError = (
+  expected: string,
+  actual: string
+): number => {
+  const start = performance.now();
+  try {
+    if (expected === actual) {
+      return 0;
+    }
+    if (expected.length === 0 || actual.length === 0) {
+      return Math.max(expected.length, actual.length) === 0 ? 0 : 1;
     }
 
-    [prevRow, currRow] = [currRow, prevRow];
+    const maxLen = Math.max(expected.length, actual.length);
+    const [shorter, longer] =
+      expected.length <= actual.length
+        ? [expected, actual]
+        : [actual, expected];
+
+    let prevRow = Array.from({ length: shorter.length + 1 }, (_, i) => i);
+    let currRow = new Array<number>(shorter.length + 1);
+
+    for (let i = 1; i <= longer.length; i++) {
+      currRow[0] = i;
+      const longChar = longer.charCodeAt(i - 1);
+
+      for (let j = 1; j <= shorter.length; j++) {
+        const cost = longChar === shorter.charCodeAt(j - 1) ? 0 : 1;
+        const insertion = currRow[j - 1]! + 1;
+        const deletion = prevRow[j]! + 1;
+        const substitution = prevRow[j - 1]! + cost;
+        currRow[j] = Math.min(insertion, deletion, substitution);
+      }
+
+      [prevRow, currRow] = [currRow, prevRow];
+    }
+
+    return prevRow[shorter.length]! / maxLen;
+  } finally {
+    const durationMs = performance.now() - start;
+    cognitiveErrorCalculationDuration.observe(durationMs / 1000);
+    if (durationMs > 0.1) {
+      console.warn(
+        `cognitive_budget_exceeded: error calculation took ${durationMs.toFixed(
+          4
+        )}ms`
+      );
+    }
+  }
+};
+
+const overrideWeight = 1.5;
+
+const decayPriorTowardBaseline = (
+  now: number,
+  lastUpdate: Timestamp | undefined,
+  prior: BetaPrior
+): BetaPrior => {
+  if (lastUpdate === undefined) {
+    return { ...prior };
   }
 
-  return prevRow[shorter.length] / maxLen;
+  const msSinceUpdate = now - lastUpdate;
+  if (!Number.isFinite(msSinceUpdate) || msSinceUpdate <= 0) {
+    return { ...prior };
+  }
+
+  const daysSinceUpdate = msSinceUpdate / MS_PER_DAY;
+  const decayFactor = Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+
+  return {
+    alpha:
+      DEFAULT_BETA_PRIOR.alpha +
+      (prior.alpha - DEFAULT_BETA_PRIOR.alpha) * decayFactor,
+    beta:
+      DEFAULT_BETA_PRIOR.beta +
+      (prior.beta - DEFAULT_BETA_PRIOR.beta) * decayFactor,
+  };
 };
 
 const bayesianUpdate = (
-  priorLevel: number,
-  priorConfidence: number,
+  now: number,
+  prior: BetaPrior,
   evidence: Evidence,
   lastUpdate?: Timestamp
-): [number, number] => {
-  // TODO: Implement proper Bayesian inference
-  // Current implementation uses fixed deltas
-  // Should:
-  // - Use Beta distribution for probability updates
-  // - Consider evidence strength and reliability
-  // - Apply conjugate priors for efficiency
-  // - Track likelihood ratios
+): { level: number; confidence: number; posterior: BetaPrior } => {
+  const decayed = decayPriorTowardBaseline(now, lastUpdate, prior);
   const reliability = clamp01(evidence.reliability ?? 1);
-  let decayedConfidence = priorConfidence;
 
-  if (lastUpdate) {
-    const msSinceUpdate = Date.now() - lastUpdate;
-    if (msSinceUpdate > 0) {
-      const daysSinceUpdate = msSinceUpdate / MS_PER_DAY;
-      decayedConfidence *= Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+  const posterior: BetaPrior = { ...decayed };
+
+  if (reliability > 0) {
+    switch (evidence._) {
+      case "success":
+        posterior.alpha += reliability;
+        break;
+      case "failure":
+        posterior.beta += reliability;
+        break;
+      case "feedback": {
+        const magnitude = clamp01(evidence.strength) * reliability;
+        if (evidence.positive) {
+          posterior.alpha += magnitude;
+        } else {
+          posterior.beta += magnitude;
+        }
+        break;
+      }
+      case "override":
+        posterior.beta += reliability * overrideWeight;
+        break;
     }
   }
-  decayedConfidence = clamp01(decayedConfidence);
 
-  let levelDelta = 0;
-  let confidenceBoost = 0.05;
+  const mode = betaMode(posterior);
+  const variance = betaVariance(posterior);
 
-  switch (evidence._) {
-    case "success":
-      levelDelta = 0.05; // Increase autonomy on success
-      confidenceBoost = 0.1;
-      break;
-    case "failure":
-      levelDelta = -0.1; // Decrease on failure
-      confidenceBoost = -0.05;
-      break;
-    case "feedback":
-      levelDelta = evidence.positive ? 0.03 : -0.03;
-      levelDelta *= evidence.strength;
-      break;
-    case "override":
-      levelDelta = -0.15; // Strong decrease on override
-      confidenceBoost = -0.1;
-      break;
-  }
-
-  levelDelta *= reliability;
-  confidenceBoost *= reliability;
-
-  const newLevel = priorLevel + levelDelta * decayedConfidence;
-  const newConfidence = decayedConfidence + confidenceBoost;
-
-  return [newLevel, newConfidence];
+  return {
+    level: clamp01(mode),
+    confidence: clamp01(1 - variance),
+    posterior,
+  };
 };
 
 /**
@@ -492,39 +628,52 @@ export const evaluateReasoningQuality = (
 // Constraint checking
 export const meetsConstraints = (
   auto: AutonomyGradient,
-  action: string
-): boolean => {
+  action: string,
+  physiology?: Physiology
+): { allowed: boolean; reason?: string } => {
+  if (physiology) {
+    if (physiology.frustration > 0.85) {
+      return { allowed: false, reason: "frustration_threshold_exceeded" };
+    }
+    if (physiology.energy < 0.1) {
+      return { allowed: false, reason: "energy_depleted" };
+    }
+    if (physiology.boredom > 0.9) {
+      return { allowed: false, reason: "boredom_loop_detected" };
+    }
+  }
+
   for (const constraint of auto.constraints) {
     switch (constraint._) {
       case "temporal":
         if (Date.now() > constraint.until) {
-          return false;
+          return { allowed: false, reason: "temporal_constraint_expired" };
         }
         break;
       case "scope":
         if (constraint.forbidden.includes(action)) {
-          return false;
+          return { allowed: false, reason: "action_forbidden" };
         }
         if (
           constraint.allowed.length > 0 &&
           !constraint.allowed.includes(action)
         ) {
-          return false;
+          return { allowed: false, reason: "action_not_allowed" };
         }
         break;
       case "confidence":
         if (auto.confidence < constraint.minimum) {
-          return false;
+          return { allowed: false, reason: "confidence_below_minimum" };
         }
         break;
       case "approval":
         if (constraint.required && auto.level < 0.5) {
-          return false;
+          return { allowed: false, reason: "approval_required" };
         }
         break;
     }
   }
-  return true;
+  return { allowed: true };
 };
 
 // State predicates

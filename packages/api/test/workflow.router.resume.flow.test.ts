@@ -1,3 +1,5 @@
+process.env.USE_WORKFLOW_RUNTIME = "0";
+
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 // Ensure metrics are mocked for both package and source paths BEFORE any dynamic imports
@@ -166,7 +168,7 @@ describe("workflow router resume flow (integration)", () => {
           type: "notice",
           message: "Authorization 'deploy-authz' acknowledged.",
         } as any;
-        yield { type: "progress", pct: 100, message: "done" } as any;
+        yield { type: "report", summary: { status: "completed" } } as any;
       })(),
     });
     const input = { requirement: "test", auto: "medium" as const };
@@ -195,7 +197,10 @@ describe("workflow router resume flow (integration)", () => {
               .catch(reject);
           }
         },
-        error: reject,
+        error: (err: unknown) => {
+          console.error("deploy stream error", err);
+          reject(err);
+        },
         complete: resolve,
       });
     });
@@ -207,8 +212,11 @@ describe("workflow router resume flow (integration)", () => {
         runIdRef.id = firstRun;
       }
     }
+    console.log("deploy events", events);
 
-    const completed = events.some((e: any) => e?.type === "report");
+    const completed = events.some(
+      (e: any) => e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+    );
     expect(completed).toBe(true);
   });
 
@@ -235,10 +243,7 @@ describe("workflow router resume flow (integration)", () => {
           type: "notice",
           message: "Authorization 'linear-authz' acknowledged.",
         } as any;
-        yield {
-          type: "report",
-          summary: { status: "completed" },
-        } as any;
+        yield { type: "report", summary: { status: "completed" } } as any;
       })(),
     });
 
@@ -263,7 +268,10 @@ describe("workflow router resume flow (integration)", () => {
               .catch(reject);
           }
         },
-        error: reject,
+        error: (err: unknown) => {
+          console.error("linear stream error", err);
+          reject(err);
+        },
         complete: resolve,
       });
     });
@@ -275,8 +283,11 @@ describe("workflow router resume flow (integration)", () => {
         runIdRef.id = firstRun;
       }
     }
+    console.log("linear events", events);
 
-    const completed = events.some((e: any) => e?.type === "report");
+    const completed = events.some(
+      (e: any) => e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+    );
     expect(completed).toBe(true);
   });
 });

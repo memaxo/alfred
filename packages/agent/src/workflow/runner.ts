@@ -74,7 +74,12 @@ const stringify = (value: unknown): string | undefined => {
 };
 
 export type ResumePayload = {
-  event: "deploy-authz" | "linear-authz" | "bio-authz";
+  event:
+    | "deploy-authz"
+    | "linear-authz"
+    | "bio-authz"
+    | "mfa-authz"
+    | "human-authz";
   authz: string;
 };
 

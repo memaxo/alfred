@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { resolveObligationResumeEvents } from "@alfred/type";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import { runRegistry } from "@alfred/agent/workflow/registry";
 import { droidExecRunsTotal } from "@alfred/api/metrics";
@@ -285,7 +286,10 @@ async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
 }
 
 async function handleResume(runId: string, resumeData: ResumePayload) {
-  if (resumeData.event !== "bio-authz") {
+  if (
+    resumeData.event !== "bio-authz" &&
+    resumeData.event !== "mfa-authz"
+  ) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "unsupported_resume_event",
@@ -559,6 +563,7 @@ const droidProcedures = {
                 reason: "droid_execution",
                 obligations,
                 runId,
+                resumeEvents: resolveObligationResumeEvents(obligations),
               }),
             });
             return;

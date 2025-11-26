@@ -28,7 +28,7 @@ describe("Cognitive Loop", () => {
       ts: Date.now() as any,
     };
 
-    const state = await runCognitiveLoop(
+    const { state, effects } = await runCognitiveLoop(
       ctx as any,
       "test-stream-1",
       inputEvent
@@ -37,6 +37,9 @@ describe("Cognitive Loop", () => {
     expect(state._).toBe("thinking");
     // @ts-expect-error
     expect(state.about).toBe("Hello world");
+    expect(effects).toEqual([
+      { type: "generate_response", input: "Hello world" },
+    ]);
   });
 
   it("transitions from thinking to reflecting on complete", async () => {
@@ -64,7 +67,7 @@ describe("Cognitive Loop", () => {
       ts: Date.now() as any,
     };
 
-    const state = await runCognitiveLoop(
+    const { state } = await runCognitiveLoop(
       ctx as any,
       "test-stream-2",
       completeEvent
@@ -84,7 +87,7 @@ describe("Cognitive Loop", () => {
       ts: Date.now() as any,
     };
 
-    const state = await runCognitiveLoop(
+    const { state } = await runCognitiveLoop(
       ctx as any,
       "test-stream-3",
       feedbackEvent

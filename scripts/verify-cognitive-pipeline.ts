@@ -9,9 +9,13 @@
  */
 
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { runCognitiveLoop } from "@alfred/runtime";
+import {
+  runAssistantGeneration,
+  runCognitiveLoop,
+} from "@alfred/runtime";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
+import type { CognitiveEffect } from "@alfred/runtime";
 
 const STREAM_ID = `verify-cognitive-${Date.now()}`;
 
@@ -32,10 +36,6 @@ const mockAiAdapter = {
   },
 };
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function verify() {
   logger.info("cognitive_verify_start", { streamId: STREAM_ID });
 
@@ -54,10 +54,8 @@ async function verify() {
     ts: Date.now() as any,
   };
 
-  await runCognitiveLoop(ctx, STREAM_ID, inputEvent);
-
-  // Allow asynchronous completion generation to run
-  await delay(200);
+  const initialResult = await runCognitiveLoop(ctx, STREAM_ID, inputEvent);
+  await processEffects(ctx, STREAM_ID, initialResult.effects);
 
   const feedbackEvent = {
     _: "feedback" as const,
@@ -66,8 +64,8 @@ async function verify() {
     ts: Date.now() as any,
   };
 
-  await runCognitiveLoop(ctx, STREAM_ID, feedbackEvent);
-  await delay(50);
+  const feedbackResult = await runCognitiveLoop(ctx, STREAM_ID, feedbackEvent);
+  await processEffects(ctx, STREAM_ID, feedbackResult.effects);
 
   const events = await cognitiveRepo.getAllEvents(STREAM_ID);
   const eventSummary = events.map((event) => event.type);
@@ -84,6 +82,47 @@ async function verify() {
     events: eventSummary,
   });
   console.log("✅ Cognitive pipeline verification passed.");
+}
+
+async function processEffects(
+  ctx: RuntimeContext,
+  streamId: string,
+  effects: CognitiveEffect[]
+) {
+  if (!effects.length) {
+    return;
+  }
+
+  const queue: CognitiveEffect[] = [...effects];
+  while (queue.length) {
+    const effect = queue.shift()!;
+    try {
+      switch (effect.type) {
+        case "generate_response": {
+          const outcome = await runAssistantGeneration(ctx, streamId, effect.input);
+          const { effects: followUp } = await runCognitiveLoop(ctx, streamId, {
+            _: "complete",
+            outcome,
+            ts: Date.now() as any,
+          });
+          queue.push(...followUp);
+          break;
+        }
+        default:
+          logger.warn("verify_cognitive_effect_unhandled", {
+            streamId,
+            effect,
+          });
+      }
+    } catch (error) {
+      logger.error("verify_cognitive_effect_failed", {
+        streamId,
+        effect,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
 }
 
 async function main() {

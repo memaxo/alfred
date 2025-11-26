@@ -329,6 +329,25 @@ export async function getToolCalls(
   });
 }
 
+export async function listSuspendedRunsBefore(
+  cutoff: Date,
+  limit = 100
+): Promise<WorkflowRun[]> {
+  const rows = await db
+    .select()
+    .from(workflowRuns)
+    .where(
+      and(
+        eq(workflowRuns.status, "suspended"),
+        lt(workflowRuns.suspendedAt, cutoff)
+      )
+    )
+    .orderBy(workflowRuns.suspendedAt)
+    .limit(Math.max(1, Math.min(limit, 500)));
+
+  return rows;
+}
+
 /**
  * Prunes old workflow data based on retention policy.
  * Should be called by a scheduler gated behind env flag per .ruler/02-architecture.md

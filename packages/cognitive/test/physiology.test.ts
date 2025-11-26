@@ -30,10 +30,11 @@ describe("Cognitive Physiology", () => {
   });
 
   it("regulates autonomy based on physiology", () => {
-    const auto = initialAutonomy(); // level 0.3
+    const now = Date.now();
+    const auto = initialAutonomy(now); // level 0.3
 
     // Normal update
-    const next = updateAutonomy(auto, {
+    const next = updateAutonomy(now, auto, {
       _: "success",
       task: "test",
       duration: 100,
@@ -48,6 +49,7 @@ describe("Cognitive Physiology", () => {
       frustration: 0.8,
     };
     const constrained = updateAutonomy(
+      now,
       auto,
       { _: "failure", task: "test", error: "oops" },
       frustratedPhy

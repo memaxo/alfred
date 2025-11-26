@@ -36,7 +36,6 @@ import type {
   ReasoningNodeRecord,
 } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";
-import { randomUUID } from "node:crypto";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -46,6 +45,7 @@ import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
 import { enforceWorkflowPlanPolicy } from "../workflow/access";
+import { createWorkflowSuspension } from "../workflow/suspension";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 
@@ -238,7 +238,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
         }
 
         let cleanup: (() => void) | undefined;
-        let suspensionCleanup: (() => Promise<void> | void) | undefined;
 
         const startWorkflow = async (options: {
           obligations: Obligation[];
@@ -259,123 +258,32 @@ export const workflowRouter: ReturnType<typeof router> = router({
           cleanup = await orchestrateWorkflowStream(payload, session, callbacks);
         };
 
-        const handleSuspension = async (initialObligations: Obligation[]) => {
-          const runId = randomUUID();
-          const storedInput = {
-            ...(input as any),
-            executionId: runId,
-            reasoningSince: Date.now(),
-          };
-
-          await workflowRepo.createRun({
-            id: runId,
-            userId: session.user.id,
-            workflowId: "plan",
-            status: "suspended",
-            inputData: storedInput,
-          });
-          await workflowRepo.updateRun(runId, { suspendedAt: new Date() });
-          await workflowRepo.appendEvent({
-            runId,
-            eventType: "suspend",
-            eventData: {
-              reason: "policy_obligation",
-              obligations: initialObligations,
-            },
-          });
-
-          await recordAudit({
-            userId: session.user.id,
-            action: "workflow.stream.suspend",
-            resource: { kind: "workflow", id: runId },
-            decision: "allow",
-            context: { auto: input.auto, mode: input.mode, obligations: initialObligations },
-          });
-
-          emit.next({
-            type: "obligation",
-            runId,
-            obligations: initialObligations,
-          } as WorkflowEvent);
-
-          const abortController = new AbortController();
-
-          const disposeSuspension = async () => {
-            await runRegistry.unregister(runId).catch(() => {});
-            abortController.abort();
-            await workflowRepo.updateRun(runId, {
-              status: "cancelled",
-              completedAt: new Date(),
+        const suspension = createWorkflowSuspension({
+          sessionUserId: session.user.id,
+          input,
+          transport: "trpc",
+          auditContext: { auto: input.auto, mode: input.mode },
+          emitObligation: async ({ runId, obligations, resumeEvents }) => {
+            emit.next({
+              type: "obligation",
+              runId,
+              obligations,
+              resumeEvents,
+            } as WorkflowEvent);
+          },
+          policyCheck: async () => {
+            const { obligations } = await enforceWorkflowPlanPolicy({
+              session,
+              input,
             });
-          };
-
-          suspensionCleanup = disposeSuspension;
-
-          await runRegistry.register(runId, {
-            resume: async ({ resumeData }) => {
-              try {
-                if (resumeData.event !== "bio-authz") {
-                  throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "unsupported_resume_event",
-                  });
-                }
-
-                const { obligations: refreshed } =
-                  await enforceWorkflowPlanPolicy({
-                    session,
-                    input,
-                  });
-
-                if (refreshed.length > 0) {
-                  emit.next({
-                    type: "obligation",
-                    runId,
-                    obligations: refreshed,
-                  } as WorkflowEvent);
-                  await workflowRepo.appendEvent({
-                    runId,
-                    eventType: "suspend",
-                    eventData: {
-                      reason: "policy_obligation",
-                      obligations: refreshed,
-                    },
-                  });
-                  return;
-                }
-
-                await runRegistry.unregister(runId).catch(() => {});
-                suspensionCleanup = undefined;
-
-                await workflowRepo.updateRun(runId, {
-                  status: "running",
-                  suspendedAt: null,
-                  resumedAt: new Date(),
-                });
-
-                await recordAudit({
-                  userId: session.user.id,
-                  action: "workflow.stream.resume",
-                  resource: { kind: "workflow", id: runId },
-                  decision: "allow",
-                  context: { event: resumeData.event },
-                });
-
-                await startWorkflow({ obligations: [], runId });
-              } catch (error) {
-                emit.error(toTRPCError(error));
-              }
-            },
-            cancel: async () => {
-              abortController.abort();
-              await workflowRepo.updateRun(runId, {
-                status: "cancelled",
-                completedAt: new Date(),
-              });
-            },
-            abortController,
-          });
-        };
+            return obligations;
+          },
+          startWorkflow: ({ runId, obligations }) =>
+            startWorkflow({ runId, obligations }),
+          onError: (error, _info) => {
+            emit.error(toTRPCError(error));
+          },
+        });
 
         const startStream = async () => {
           try {
@@ -385,7 +293,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
             });
 
             if (obligations.length > 0) {
-              await handleSuspension(obligations);
+              await suspension.suspend(obligations);
               return;
             }
 
@@ -399,11 +307,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
 
         return () => {
           cleanup?.();
-          const dispose = suspensionCleanup;
-          suspensionCleanup = undefined;
-          if (dispose) {
-            void dispose();
-          }
+          void suspension.dispose();
         };
       })
     ),
@@ -413,7 +317,13 @@ export const workflowRouter: ReturnType<typeof router> = router({
     .input(
       z.object({
         runId: z.string().min(1),
-        event: z.enum(["deploy-authz", "linear-authz", "bio-authz"]),
+        event: z.enum([
+          "deploy-authz",
+          "linear-authz",
+          "bio-authz",
+          "mfa-authz",
+          "human-authz",
+        ]),
         authz: z.string().min(1),
       })
     )

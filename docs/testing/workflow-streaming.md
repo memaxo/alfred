@@ -45,7 +45,7 @@ Both transports **must** call `enforceWorkflowPlanPolicy` from `@alfred/api/work
 2. Evaluates the `workflow.plan` policy and records an audit log.
 3. Returns any obligations (e.g., `requireBio`) that the transport must pass through `callbacks.context.policy.obligations` so `ensureObligations` can enforce biometric escalation inside the orchestrator.
 
-When obligations exist, **SSE now emits** `event: workflow-event` payloads of the shape `{ type: "obligation", runId, obligations }` and registers the run with the shared `runRegistry`. Mindscape pauses the stream, prompts for biometric verification, and resumes the run by calling `workflow.resume` once the client delivers the new token.
+When obligations exist, the transports invoke the shared `createWorkflowSuspension` helper. It persists the suspended run, emits a `workflow-event` payload shaped like `{ type: "obligation", runId, obligations, resumeEvents }`, and registers the run with `runRegistry`. Mindscape pauses the stream, surfaces the enriched dialog (`reason`, `metadata`, `resumeEvents`), and resumes the run by calling `workflow.resume` with whichever event (`bio-authz`, `mfa-authz`, `human-authz`) the helper advertised after the client satisfies the obligation.
 
 New transports (CLI, mobile, etc.) should import the same helper rather than re-implementing rate-limit or policy logic. This keeps TRPC, SSE, and future flows perfectly aligned.
 

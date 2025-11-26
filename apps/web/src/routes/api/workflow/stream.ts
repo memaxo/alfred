@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
@@ -8,12 +7,10 @@ import {
 } from "@alfred/agent/workflow/orchestrator";
 import { workflowInput } from "@alfred/agent/workflow/schema";
 import { ensureObligations } from "@alfred/agent/workflow/services";
-import { recordAudit } from "@alfred/agent/utils/audit";
-import { runRegistry } from "@alfred/agent/workflow/registry";
 import { enforceWorkflowPlanPolicy } from "@alfred/api/workflow/access";
+import { createWorkflowSuspension } from "@alfred/api/workflow/suspension";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { auth } from "@alfred/auth";
-import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 
 type WorkflowSseMeta = {
@@ -113,11 +110,11 @@ export async function handleWorkflowStreamRequest(
   }
 
   let cleanup: (() => void) | undefined;
-  let suspensionCleanup: (() => Promise<void> | void) | undefined;
+  let suspensionHandle: ReturnType<typeof createWorkflowSuspension> | null = null;
 
+  let closed = false;
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      let closed = false;
       const send = (bytes: Uint8Array) => {
         if (!closed) {
           controller.enqueue(bytes);
@@ -183,142 +180,54 @@ export async function handleWorkflowStreamRequest(
         );
       };
 
-      const handleSuspension = async (current: Obligation[]) => {
-        const runId = randomUUID();
-        const storedInput = {
-          ...(parsedInput as any),
-          executionId: runId,
-          reasoningSince: Date.now(),
-        };
-
-        await workflowRepo.createRun({
-          id: runId,
-          userId: session.user.id,
-          workflowId: "plan",
-          status: "suspended",
-          inputData: storedInput,
-        });
-        await workflowRepo.updateRun(runId, { suspendedAt: new Date() });
-        await workflowRepo.appendEvent({
-          runId,
-          eventType: "suspend",
-          eventData: {
-            reason: "policy_obligation",
-            obligations: current,
-          },
-        });
-
-        await recordAudit({
-          userId: session.user.id,
-          action: "workflow.stream.suspend",
-          resource: { kind: "workflow", id: runId },
-          decision: "allow",
-          context: { auto: parsedInput.auto, obligations: current },
-        });
-        triggerPreferenceRefresh(session.user.id, {
-          reason: "workflow_stream_suspended",
-        });
-
-        sendWorkflowEvent({
-          type: "obligation",
-          runId,
-          obligations: current,
-        } as WorkflowEvent);
-
-        const abortController = new AbortController();
-        suspensionCleanup = async () => {
-          try {
-            await runRegistry.unregister(runId);
-          } catch (error) {
-            logger.warn("workflow_sse_unregister_failed", {
-              runId,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
-          abortController.abort();
-        };
-
-        await runRegistry.register(runId, {
-          resume: async ({ resumeData }) => {
-            try {
-              if (resumeData.event !== "bio-authz") {
-                throw new Error("unsupported_resume_event");
-              }
-
-              const refreshed = await enforceWorkflowPlanPolicy({
-                session,
-                input: parsedInput,
-              });
-
-              if (refreshed.obligations.length > 0) {
-                sendWorkflowEvent({
-                  type: "obligation",
-                  runId,
-                  obligations: refreshed.obligations,
-                } as WorkflowEvent);
-                await workflowRepo.appendEvent({
-                  runId,
-                  eventType: "suspend",
-                  eventData: {
-                    reason: "policy_obligation",
-                    obligations: refreshed.obligations,
-                  },
-                });
-                return;
-              }
-
-              try {
-                await runRegistry.unregister(runId);
-              } catch (error) {
-                logger.warn("workflow_sse_unregister_failed", {
-                  runId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-              suspensionCleanup = undefined;
-
-              await workflowRepo.updateRun(runId, {
-                status: "running",
-                suspendedAt: null,
-                resumedAt: new Date(),
-              });
-              await recordAudit({
-                userId: session.user.id,
-                action: "workflow.stream.resume",
-                resource: { kind: "workflow", id: runId },
-                decision: "allow",
-                context: { event: resumeData.event },
-              });
-              triggerPreferenceRefresh(session.user.id, {
-                reason: "workflow_stream_resumed",
-              });
-
-              await startWorkflow({ runId, obligations: [] });
-            } catch (error) {
-              logger.error("workflow_resume_failed", {
-                runId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              send(formatEvent("error", formatError(error)));
-              cleanup?.();
-              close();
-            }
-          },
-          cancel: async () => {
-            abortController.abort();
-            await workflowRepo.updateRun(runId, {
-              status: "cancelled",
-              completedAt: new Date(),
-            });
-          },
-          abortController,
-        });
-      };
+      suspensionHandle = createWorkflowSuspension({
+        sessionUserId: session.user.id,
+        input: parsedInput,
+        transport: "sse",
+        auditContext: { auto: parsedInput.auto, mode: parsedInput.mode },
+        emitObligation: async ({ runId, obligations, resumeEvents }) => {
+          sendWorkflowEvent({
+            type: "obligation",
+            runId,
+            obligations,
+            resumeEvents,
+          } as WorkflowEvent);
+        },
+        policyCheck: async () => {
+          const refreshed = await enforceWorkflowPlanPolicy({
+            session,
+            input: parsedInput,
+          });
+          return refreshed.obligations;
+        },
+        startWorkflow: ({ runId, obligations }) =>
+          startWorkflow({ runId, obligations }),
+        onError: (error, { runId }) => {
+          logger.error("workflow_resume_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          send(formatEvent("error", formatError(error)));
+          cleanup?.();
+          close();
+        },
+        onSuspended: async () => {
+          triggerPreferenceRefresh(session.user.id, {
+            reason: "workflow_stream_suspended",
+          });
+        },
+        onResumed: async () => {
+          triggerPreferenceRefresh(session.user.id, {
+            reason: "workflow_stream_resumed",
+          });
+        },
+      });
+      const suspension = suspensionHandle;
 
       const kickoff = async () => {
         try {
           if (obligations.length > 0) {
-            await handleSuspension(obligations);
+            await suspension?.suspend(obligations);
           } else {
             await startWorkflow({ obligations: [] });
           }
@@ -336,23 +245,16 @@ export async function handleWorkflowStreamRequest(
 
       request.signal.addEventListener("abort", () => {
         cleanup?.();
-        const dispose = suspensionCleanup;
-        suspensionCleanup = undefined;
-        if (dispose) {
-          void dispose();
-        }
+        void suspensionHandle?.dispose();
         close();
       });
 
       send(encoder.encode(`: workflow-stream\n\n`));
     },
     cancel() {
+      closed = true;
       cleanup?.();
-      const dispose = suspensionCleanup;
-      suspensionCleanup = undefined;
-      if (dispose) {
-        void dispose();
-      }
+      void suspensionHandle?.dispose();
       // cleanup will be handled by orchestrator emitComplete or abort handler
     },
   });

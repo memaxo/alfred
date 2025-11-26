@@ -187,28 +187,41 @@ export type Event =
       outcome: Outcome;
       ts: Timestamp;
     };
-export declare const idle: () => CognitiveState;
-export declare const capturing: (input: string, conf: number) => CognitiveState;
+export declare const idle: (now: number, phy?: Physiology) => CognitiveState;
+export declare const capturing: (
+  now: number,
+  input: string,
+  conf: number,
+  phy?: Physiology
+) => CognitiveState;
 export declare const thinking: (
+  now: number,
   about: string,
   depth?: number,
-  traces?: string[]
+  traces?: string[],
+  phy?: Physiology
 ) => CognitiveState;
 export declare const deciding: (
+  now: number,
   options: Decision[],
-  criteria?: Criteria
+  criteria?: Criteria,
+  phy?: Physiology
 ) => CognitiveState;
 export declare const executing: (
+  now: number,
   plan: Plan,
-  auto: AutonomyGradient
+  auto: AutonomyGradient,
+  phy?: Physiology
 ) => CognitiveState;
 export declare const reflecting: (
   outcome: Outcome,
   expected: string,
-  actual: string
+  actual: string,
+  phy?: Physiology
 ) => CognitiveState;
-export declare const initialAutonomy: () => AutonomyGradient;
+export declare const initialAutonomy: (now: number) => AutonomyGradient;
 export declare const updateAutonomy: (
+  now: number,
   current: AutonomyGradient,
   evidence: Evidence,
   physiology?: Physiology

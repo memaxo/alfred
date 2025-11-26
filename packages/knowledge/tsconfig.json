@@ -3,7 +3,7 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-    "types": ["node", "bun"],
+    "types": ["bun", "node"],
     "moduleResolution": "bundler",
     "module": "ESNext",
     "target": "ES2022",
@@ -18,5 +18,6 @@
     "declarationMap": true
   },
   "include": ["src/**/*"],
+  "files": ["../../node_modules/bun-types/test.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
