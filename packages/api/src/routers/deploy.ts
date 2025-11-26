@@ -5,6 +5,7 @@ import { deployRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
+import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { deployService, type ProbeResult } from "../services/deploy";
 import { authedProcedure, router } from "../trpc";
@@ -315,16 +316,8 @@ export const deployRouter: ReturnType<typeof router> = router({
       // Handle policy obligations (e.g., biometric elevation)
       const obligations = ctx.policy?.obligations;
       if (obligations && obligations.length > 0) {
-        // If the PDP returns obligations, it means the current session context
-        // (even if valid) requires additional proof for this specific action.
-        // We throw a specialized error that the client recognizes to trigger elevation.
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "obligation_required",
-          cause: {
-            reason: "deployment_promotion",
-            obligations,
-          },
+        throw new PolicyObligationError("deploy.promote", obligations, {
+          reason: "deployment_promotion",
         });
       }
 
@@ -549,13 +542,8 @@ export const deployRouter: ReturnType<typeof router> = router({
       // Handle policy obligations
       const obligations = ctx.policy?.obligations;
       if (obligations && obligations.length > 0) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "obligation_required",
-          cause: {
-            reason: "deployment_remove",
-            obligations,
-          },
+        throw new PolicyObligationError("deploy.remove", obligations, {
+          reason: "deployment_remove",
         });
       }
 

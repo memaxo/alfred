@@ -1,5 +1,6 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { LanguageModel } from "ai";
 import { executeActPhase } from "../../phases/act";
 import type { ExecutionContext } from "../../context";
 import type { RuntimeInput } from "../../types";
@@ -8,7 +9,10 @@ import type { Phase, PhaseResult } from "../types";
 export class ActPhase implements Phase<RuntimeInput, void> {
   readonly id = "act";
 
-  constructor(private readonly runId: string) {}
+  constructor(
+    private readonly runId: string,
+    private readonly model: LanguageModel
+  ) {}
 
   async *run(
     input: RuntimeInput,
@@ -21,15 +25,21 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         | ExecutionContext
         | null
         | undefined;
+      const planSummary = context.get("planSummary") as
+        | string
+        | null
+        | undefined;
 
       const generator = executeActPhase(
         input,
         this.runId,
         controller.signal,
+        this.model,
         undefined,
         undefined,
         authz,
-        scanContext ?? undefined
+        scanContext ?? undefined,
+        planSummary ?? undefined
       );
       let result: { escalated: boolean; reason?: string } | undefined;
 

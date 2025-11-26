@@ -8,6 +8,7 @@ import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "./context";
 import { t } from "./trpc";
+import { PolicyObligationError } from "./errors";
 import {
   getSessionUser,
   getSessionUserId,
@@ -22,6 +23,15 @@ type MapResourceFn = (
 ) => PolicyResource;
 type BuildContextFn = (input: unknown, ctx: Context) => Record<string, unknown>;
 
+type PolicyEnforcementOptions = {
+  /**
+   * Determines how the middleware reacts when obligations are present.
+   * "error" (default) throws PRECONDITION_FAILED immediately.
+   * "passThrough" leaves handling to downstream code (ctx.policy.obligations).
+   */
+  handleObligations?: "error" | "passThrough";
+};
+
 function defaultResource(
   path: string | undefined,
   action: string
@@ -35,7 +45,8 @@ function defaultResource(
 export function requirePolicy(
   action: string,
   mapResource?: MapResourceFn,
-  buildContext?: BuildContextFn
+  buildContext?: BuildContextFn,
+  options?: PolicyEnforcementOptions
 ) {
   return t.middleware(async ({ ctx, input, path, next }) => {
     const sessionUser = getSessionUser(ctx.session);
@@ -58,6 +69,8 @@ export function requirePolicy(
     };
 
     const decision = await evaluate(evaluation);
+    const obligations = decision.obligations ?? [];
+    const obligationHandling = options?.handleObligations ?? "error";
 
     await policyRepo.createAuditLog({
       userId: subjectId,
@@ -65,15 +78,15 @@ export function requirePolicy(
       resource,
       decision: decision.allow ? "allow" : "deny",
       traceId: null,
-      obligations: decision.obligations,
+      obligations,
       context: policyContext,
     });
 
     const decisionLabel = decision.allow ? "allow" : "deny";
     policyDecisionsTotal.labels(action, decisionLabel).inc();
-    if (decision.obligations && decision.obligations.length > 0) {
-      for (const obligation of decision.obligations) {
-        policyObligationsTotal.labels(action, obligation).inc();
+    if (obligations.length > 0) {
+      for (const obligation of obligations) {
+        policyObligationsTotal.labels(action, obligation.type).inc();
       }
     }
 
@@ -84,12 +97,20 @@ export function requirePolicy(
       });
     }
 
+    const nextCtx: Context = {
+      ...ctx,
+      policy: {
+        obligations,
+      },
+    };
+
+    if (obligations.length > 0 && obligationHandling === "error") {
+      throw new PolicyObligationError(action, obligations);
+    }
+
     return next({
       ctx: {
-        ...ctx,
-        policy: {
-          obligations: decision.obligations,
-        },
+        ...nextCtx,
       },
     });
   });

@@ -43,6 +43,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
+import { enforceWorkflowPlanPolicy } from "../workflow/access";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
 
@@ -208,8 +209,6 @@ export const workflowRouter: ReturnType<typeof router> = router({
     }),
 
   stream: authedProcedure
-    .use(rateLimit)
-    .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))
     .input(workflowInput)
     .subscription(({ input, ctx }) =>
       observable<WorkflowEvent>((emit) => {
@@ -221,26 +220,33 @@ export const workflowRouter: ReturnType<typeof router> = router({
           return () => {};
         }
 
-        const callbacks: OrchestratorCallbacks = {
-          triggerPreferenceRefresh,
-          ensureObligations,
-          context: ctx,
-          emitError: (error) => {
+        let cleanup: (() => void) | undefined;
+
+        const startStream = async () => {
+          try {
+            const { obligations } = await enforceWorkflowPlanPolicy({
+              session,
+              input,
+            });
+
+            const callbacks: OrchestratorCallbacks = {
+              triggerPreferenceRefresh,
+              ensureObligations,
+              context: { ...ctx, policy: { obligations } },
+              emitError: (error) => {
+                emit.error(toTRPCError(error));
+              },
+              emitNext: (event) => emit.next(event),
+              emitComplete: () => emit.complete(),
+            };
+
+            cleanup = await orchestrateWorkflowStream(input, session, callbacks);
+          } catch (error) {
             emit.error(toTRPCError(error));
-          },
-          emitNext: (event) => emit.next(event),
-          emitComplete: () => emit.complete(),
+          }
         };
 
-        // orchestrateWorkflowStream returns a cleanup function
-        let cleanup: (() => void) | undefined;
-        orchestrateWorkflowStream(input, session, callbacks)
-          .then((c) => {
-            cleanup = c;
-          })
-          .catch((error) => {
-            emit.error(toTRPCError(error));
-          });
+        void startStream();
 
         return () => {
           cleanup?.();

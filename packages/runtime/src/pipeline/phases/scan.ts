@@ -16,7 +16,13 @@ export class ScanPhase implements Phase<RuntimeInput, void> {
   ): AsyncGenerator<WorkflowEvent, PhaseResult<void>, void> {
     try {
       const controller = new AbortController();
-      const generator = executeScanPhase(input, this.runId, controller.signal);
+      const authz = context.get("authz") as string | undefined;
+      const generator = executeScanPhase(
+        input,
+        this.runId,
+        controller.signal,
+        authz
+      );
 
       let scanContext: ExecutionContext | null | undefined;
       const iter = generator[Symbol.asyncIterator]();

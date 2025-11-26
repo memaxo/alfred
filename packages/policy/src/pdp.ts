@@ -1,6 +1,11 @@
 import { loadPolicy } from "./load";
 import { ruleMatches } from "./rule";
-import type { Decision, EvaluateInput, PolicyRule } from "./types";
+import type {
+  Decision,
+  EvaluateInput,
+  Obligation,
+  PolicyRule,
+} from "./types";
 
 const CACHE_TTL_MS = 30_000;
 
@@ -26,16 +31,22 @@ function computeCacheKey(input: EvaluateInput): string {
   return [rolesKey, input.action, resourceKey, contextKey].join("|");
 }
 
-function aggregateObligations(rules: PolicyRule[]): string[] {
-  const set = new Set<string>();
+function aggregateObligations(rules: PolicyRule[]): Obligation[] {
+  const map = new Map<string, Obligation>();
   for (const rule of rules) {
-    if (rule.obligations) {
-      for (const obligation of rule.obligations) {
-        set.add(obligation);
+    if (!rule.obligations) {
+      continue;
+    }
+    for (const obligation of rule.obligations) {
+      const metaKey = JSON.stringify(obligation.metadata ?? null);
+      const key = `${obligation.type}:${obligation.reason}:${metaKey}`;
+      if (map.has(key)) {
+        continue;
       }
+      map.set(key, obligation);
     }
   }
-  return Array.from(set);
+  return Array.from(map.values());
 }
 
 export async function evaluate(input: EvaluateInput): Promise<Decision> {

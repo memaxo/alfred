@@ -19,3 +19,5 @@ export * from "./stream";
 export * from "./stream.zod";
 // Voice streaming types
 export * from "./voice";
+// Policy + auth shared types
+export * from "./policy";

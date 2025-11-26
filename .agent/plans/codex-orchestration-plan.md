@@ -64,10 +64,10 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [x] Verify metrics increment at correct points in execution (router-level tests)
 
 - [ ] Testing and validation
-  - [ ] Write unit tests for all pure functions (decompose, spawn, merge, review, tracker, execplan)
-  - [ ] Write integration tests for workflow runtime with multi-agent
-  - [ ] Write performance tests for decomposition and tracker operations
-  - [ ] Validate ExecPlan file creation and persistence
+  - [x] Write unit tests for all pure functions (decompose, spawn, merge, review, tracker, execplan) (2025-11-26)
+  - [x] Write integration tests for workflow runtime with multi-agent (2025-11-26)
+  - [x] Write performance tests for decomposition and tracker operations (2025-11-26)
+  - [x] Validate ExecPlan file creation and persistence (2025-11-26)
   - [x] Verify knowledge graph integration (execplan nodes/edges) via ExecPlan node/edge persistence in graphstore
   - [x] Add review fallback/integration coverage (`packages/runtime/test/review.fallback.test.ts`, `review.integration.test.ts`) to exercise scoped commands, fixer retries, and debugger ExecPlan generation (2025-11-24)
   - [x] Cover tmux workspace sessions via `packages/runtime/test/workspace.sessions.integration.test.ts`, leak detection helpers, and verify-sessions/check-tmux-leaks/`tests/sessions-container.ts` automation (2025-11-24)
@@ -87,10 +87,10 @@ This section tracks granular implementation steps. Every stopping point must be 
   - [x] Use `toolGit` in conjunction with worktreeManager.safeMerge to apply branches only after conflict-free previews. (2025-11-24)
   - [x] Handle merge conflicts by surfacing blocking branch + files, deferring to Arbiter when previews fail. (2025-11-24)
 
-- [ ] Phase 10: Self-Correction Loop (Resiliency)
-  - [ ] Update `executeActPhase` to loop on Review failure.
-  - [ ] Spawn a "Fixer" agent with the error output and relevant files.
-  - [ ] Limit retries (e.g., 3 attempts) before escalating to human.
+- [x] Phase 10: Self-Correction Loop (Resiliency)
+  - [x] Update `executeActPhase` to loop on Review failure. (2025-11-26)
+  - [x] Spawn a "Fixer" agent with the error output and relevant files. (2025-11-26)
+  - [x] Limit retries (e.g., 3 attempts) before escalating to human. (2025-11-26)
 
 - [ ] Phase 11: Tier 3 Execution (Docker/Ephemeral)
   - [ ] Implement `toolDocker` environment strategy in `spawn.ts`.
@@ -118,6 +118,8 @@ This section tracks granular implementation steps. Every stopping point must be 
   Evidence: the new `.alfred-worktree.json` manifest under `.agent/worktrees/<run>/<agent>` tracks branch/base refs so cleanup can safely run `git worktree remove --force` followed by `git branch -D` without touching developer branches (validated on 2025-11-24 during merge preview testing).
 - Observation: Review latency depends on test scope; deriving test targets from `mergePlan.changedPackages` plus running only relevant `scripts/verify-*.ts` cut automated validation time roughly in half on sample runs.
   Evidence: the review phase now logs `bun test packages/agent apps/web` and `bun scripts/verify-orchestrator.ts` in tool events, keeping execution under ~25s compared to ~70s for full-repo checks.
+- Observation: `planWaves` intentionally mutates dependency sets as waves complete, so the public `dependsOn` metadata is often empty; verifying ordering via `wave_*` events is the reliable integration signal.
+  Evidence: new multi-agent integration tests assert ordering through emitted `wave_wave_1_start` notices instead of relying on `dependsOn`, preventing false regressions during tracker refactors (2025-11-26).
 
 ## Decision Log
 
@@ -156,6 +158,14 @@ This section tracks granular implementation steps. Every stopping point must be 
 - Decision: When automated review retries are exhausted, create a dedicated debugger ExecPlan and log the hand-off in review.md so humans (or a future debugger agent) have clear ownership.
   Rationale: Prevents silent failures in Phase 5 by surfacing who owns the next action and capturing the failing command transcripts for manual follow-up.
   Date/Author: 2025-11-24 / codex-executor
+
+- Decision: Implemented Fixer self-correction loop with bounded retries and explicit `review-escalated` events so humans receive error context when automation is exhausted.
+  Rationale: Ensures automated remediation is attempted up to three times, captures error/focus files for Fixer agents, and records a durable escalation signal for follow-up.
+  Date/Author: 2025-11-26 / codex-executor
+
+- Decision: Cemented multi-agent unit, integration, and performance tests (including ExecPlan persistence checks) to guard regressions in decomposition, spawn, tracker, and wave orchestration.
+  Rationale: The orchestrator now evolves quickly; executable tests keep decomposition heuristics, tracker heuristics, and runtime wiring deterministic while exercising the same runtime fixture as production.
+  Date/Author: 2025-11-26 / codex-orchestrator
 
 Record every decision made while working on the plan in the format:
 

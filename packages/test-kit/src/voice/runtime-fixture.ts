@@ -91,6 +91,27 @@ export function createVoiceTestRegistry(options?: VoiceTestOptions) {
   return { registry, sttPool, ttsPool };
 }
 
+export type VoiceFixtureHandle = {
+  registry: VoiceRegistry;
+  sttPool: STTPool;
+  ttsPool: TTSPool;
+  restore(): void;
+};
+
+export async function createVoiceFixture(
+  options?: VoiceTestOptions
+): Promise<VoiceFixtureHandle> {
+  const { registry, sttPool, ttsPool } = createVoiceTestRegistry(options);
+  return {
+    registry,
+    sttPool: sttPool as unknown as STTPool,
+    ttsPool: ttsPool as unknown as TTSPool,
+    restore() {
+      registry.shutdown();
+    },
+  };
+}
+
 export async function installVoiceTestPools(options?: VoiceTestOptions) {
   const poolsModule = await import("@alfred/api/voice/pools");
   const { registry, sttPool, ttsPool } = createVoiceTestRegistry(options);

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import type { SubTask } from "./decompose";
 
 export type ReviewCheckType =
   | "tests"
@@ -64,6 +65,145 @@ const VERIFY_RULES: VerifyRule[] = [
       file.startsWith("apps/") || file.startsWith("packages/web/"),
   },
 ];
+
+export type ReviewFailureDetail = {
+  command?: string;
+  output?: string;
+  error?: string;
+  checkId?: string;
+};
+
+const DEFAULT_FIXER_ACCEPTANCE = [
+  "All automated review checks pass without intervention.",
+  "Relevant fixes are recorded in the ExecPlan Progress log.",
+  "Decision Log captures root cause and remediation notes.",
+];
+
+function padAttempt(attempt: number): string {
+  return attempt < 10 ? `0${attempt}` : `${attempt}`;
+}
+
+export function buildFixerSubTask(args: {
+  attempt: number;
+  summary?: string;
+  relevantFiles?: string[];
+}): SubTask {
+  const attemptLabel = padAttempt(args.attempt);
+  const hints = Array.isArray(args.relevantFiles)
+    ? Array.from(new Set(args.relevantFiles)).slice(0, 25)
+    : [];
+
+  return {
+    id: `fixer${attemptLabel}`,
+    title: `Fix review failures (${attemptLabel})`,
+    requirement:
+      args.summary?.trim().length
+        ? args.summary.trim()
+        : "Resolve the automated review failures and document the fix.",
+    deps: [],
+    priority: 5,
+    acceptance: DEFAULT_FIXER_ACCEPTANCE,
+    filesHint: hints,
+  };
+}
+
+export function formatReviewFailureDetails(
+  failures: ReviewFailureDetail[]
+): string {
+  if (!failures || failures.length === 0) {
+    return "No command output or errors were captured.";
+  }
+
+  return failures
+    .map((failure, index) => {
+      const lines: string[] = [];
+      lines.push(
+        `### Failure ${index + 1}${
+          failure.checkId ? ` (${failure.checkId})` : ""
+        }`
+      );
+      if (failure.command) {
+        lines.push(`Command: ${failure.command}`);
+      }
+      const detail = failure.output || failure.error;
+      if (detail) {
+        lines.push("", "```", detail.trim(), "```");
+      } else {
+        lines.push("", "(No output captured)");
+      }
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+export function generateFixerExecPlanSkeleton(args: {
+  runId: string;
+  attempt: number;
+  failures: ReviewFailureDetail[];
+  relevantFiles?: string[];
+}): string {
+  const { runId, attempt, failures, relevantFiles } = args;
+  const attemptLabel = padAttempt(attempt);
+  const lines: string[] = [];
+
+  lines.push(`# Fixer ExecPlan (Attempt ${attemptLabel})`);
+  lines.push("");
+  lines.push("## Purpose");
+  lines.push("");
+  lines.push(
+    "Diagnose and fix the issues uncovered during the automated review phase."
+  );
+  lines.push("");
+  lines.push("## Context");
+  lines.push("");
+  lines.push(
+    `Run ${runId} failed automated review checks. Attempt ${attemptLabel} should apply fixes and verify them.`
+  );
+  lines.push("");
+
+  if (relevantFiles?.length) {
+    lines.push("Focus files:");
+    for (const file of Array.from(new Set(relevantFiles)).slice(0, 25)) {
+      lines.push(`- ${file}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("Failed checks:");
+  lines.push("");
+  lines.push(formatReviewFailureDetails(failures));
+  lines.push("");
+  lines.push("## Plan");
+  lines.push("");
+  lines.push("- Analyse the captured failures and identify the root cause.");
+  lines.push("- Apply targeted fixes with minimal surface area.");
+  lines.push("- Re-run the failing commands locally before exiting.");
+  lines.push(
+    "- Update this ExecPlan's Progress and Decision Log with findings."
+  );
+  lines.push(
+    "- Use the session tool (session.start/peek/send/stop) for long-running commands."
+  );
+  lines.push("");
+  lines.push("## Progress");
+  lines.push("");
+  lines.push("- [ ] Fix applied and review re-run.");
+  lines.push("");
+  lines.push("## Surprises & Discoveries");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+  lines.push("## Decision Log");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+  lines.push("## Outcomes & Retrospective");
+  lines.push("");
+  lines.push("- Pending.");
+  lines.push("");
+
+  return lines.join("\n");
+}
 
 function selectVerifyChecks(files: string[]): ReviewCheck[] {
   const matches = new Map<string, ReviewCheck>();

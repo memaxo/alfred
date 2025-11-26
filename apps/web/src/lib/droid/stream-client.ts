@@ -2,12 +2,13 @@ import { toast } from "sonner";
 import { createTRPCProxyClient } from "@trpc/client";
 import type { AppRouter } from "@alfred/api/routers";
 import type { Subscriber } from "@trpc/client";
+import type { Obligation } from "@alfred/type";
 
 export type DroidStreamEvent =
   | { type: "stdout"; data: string }
   | { type: "stderr"; data: string }
   | { type: "exit"; code: number }
-  | { type: "obligation"; runId: string; obligations: string[] }
+  | { type: "obligation"; runId: string; obligations: Obligation[] }
   | { type: "resume"; runId: string };
 
 type RawDroidStreamEvent =
@@ -25,7 +26,7 @@ export type DroidStreamOptions = {
     out?: "text" | "json" | "debug";
   };
   client: ReturnType<typeof createTRPCProxyClient<AppRouter>>;
-  onObligation?: (payload: { runId: string; obligations: string[] }) => void;
+  onObligation?: (payload: { runId: string; obligations: Obligation[] }) => void;
   onResume?: (payload: { runId: string }) => void;
   onEvent?: (event: DroidStreamEvent) => void;
   onError?: (error: Error) => void;
@@ -44,6 +45,36 @@ function getTestHarness(): DroidStreamTestHarness | null {
     __droidStreamTestHarness__?: DroidStreamTestHarness;
   };
   return scope.__droidStreamTestHarness__ ?? null;
+}
+
+function normalizeObligations(value: unknown): Obligation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const result: Obligation[] = [];
+  for (const entry of value) {
+    if (
+      entry &&
+      typeof entry === "object" &&
+      typeof (entry as { type?: unknown }).type === "string" &&
+      typeof (entry as { reason?: unknown }).reason === "string"
+    ) {
+      const metadata = (entry as { metadata?: unknown }).metadata;
+      result.push({
+        type: (entry as { type: string }).type,
+        reason: (entry as { reason: string }).reason,
+        metadata:
+          metadata && typeof metadata === "object"
+            ? (metadata as Record<string, unknown>)
+            : undefined,
+      });
+      continue;
+    }
+    if (typeof entry === "string") {
+      result.push({ type: entry, reason: entry, metadata: { code: entry } });
+    }
+  }
+  return result;
 }
 
 export function subscribeToDroidStream({
@@ -121,9 +152,7 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
       if (!runId) {
         return null;
       }
-      const obligations = Array.isArray(parsed.obligations)
-        ? parsed.obligations.map(String)
-        : [];
+      const obligations = normalizeObligations(parsed.obligations);
       return { type: "obligation", runId, obligations };
     } catch (error) {
       console.error("Failed to parse obligation payload", error);

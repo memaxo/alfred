@@ -5,6 +5,9 @@ import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import type { UIMessage } from "@alfred/type/stream";
+import type { LanguageModel } from "ai";
+import { AISDKAdapter } from "../adapters/ai";
 import { ContextBuilder } from "../context";
 import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
@@ -21,12 +24,87 @@ async function ensureExecPlanFile(filePath: string, content: string) {
   }
 }
 
+const PLAN_SYSTEM_PROMPT = [
+  "You are Alfred's orchestration planner.",
+  "Break the requirement into concrete, auditable steps that downstream agents can execute.",
+  "Reference repository paths and acceptance criteria precisely.",
+  "Prefer deterministic work sequences (scan → modify → test → review).",
+  "List risks, unknowns, and required tools before execution.",
+].join("\n");
+
+const MAX_CONTEXT_FILES = 8;
+const MAX_RECEIPTS = 5;
+
+function formatContextPreview(context: ExecutionContext): string {
+  const files = context.bundle?.files ?? [];
+  const fileLines = files.slice(0, MAX_CONTEXT_FILES).map((file) => {
+    return `- ${file.path}:${file.startLine}-${file.endLine}`;
+  });
+
+  const receiptLines = (context.receipts.code ?? [])
+    .slice(0, MAX_RECEIPTS)
+    .map((item) => `- ${item.path ?? item.id} (score ${(item.score * 100).toFixed(0)}%)`);
+
+  const webLines = (context.receipts.web ?? [])
+    .slice(0, 3)
+    .map((item) => `- ${item.title ?? item.url ?? item.id}`);
+
+  const sections = [] as string[];
+  if (fileLines.length > 0) {
+    sections.push(["Top Context Files:", ...fileLines].join("\n"));
+  }
+  if (receiptLines.length > 0) {
+    sections.push(["Highest Scoring Matches:", ...receiptLines].join("\n"));
+  }
+  if (webLines.length > 0) {
+    sections.push(["Relevant Web Sources:", ...webLines].join("\n"));
+  }
+
+  return sections.join("\n\n");
+}
+
+function buildPlanMessages(
+  runId: string,
+  input: RuntimeInput,
+  context: ExecutionContext,
+  subTasks: ReturnType<typeof decomposeTask>
+): UIMessage[] {
+  const contextPreview = formatContextPreview(context);
+  const subTaskPreview = subTasks
+    .slice(0, 6)
+    .map((task, index) => `  ${index + 1}. ${task.id}: ${task.requirement}`)
+    .join("\n");
+
+  const messageParts = [
+    `Requirement:\n${input.requirement}`,
+    `Auto Level: ${input.auto}`,
+  ];
+
+  if (contextPreview) {
+    messageParts.push(contextPreview);
+  }
+
+  if (subTasks.length > 0) {
+    messageParts.push(`Proposed subtask seeds:\n${subTaskPreview}`);
+  }
+
+  const text = messageParts.join("\n\n");
+  return [
+    {
+      id: `user-plan-${runId}-${Date.now().toString(36)}`,
+      role: "user",
+      content: [{ type: "text", text }],
+    },
+  ] satisfies UIMessage[];
+}
+
 export async function* executePlanPhase(
   input: RuntimeInput,
   runId: string,
   signal: AbortSignal,
+  model: LanguageModel,
   prebuiltContext?: ExecutionContext | null
-): AsyncGenerator<WorkflowEvent, void, void> {
+): AsyncGenerator<WorkflowEvent, string | null, void> {
   yield { type: "notice", message: "planning_started" } as WorkflowEvent;
 
   if (signal.aborted) {
@@ -186,5 +264,53 @@ export async function* executePlanPhase(
     });
   }
 
+  const aiAdapter = new AISDKAdapter({ runId });
+  const planningMessages = buildPlanMessages(runId, input, context, subTasks);
+  let planSummary = "";
+
+  try {
+    yield { type: "notice", message: "planning_llm_stream_started" } as any;
+
+    for await (const event of aiAdapter.stream({
+      model,
+      messages: planningMessages,
+      abortSignal: signal,
+      system: PLAN_SYSTEM_PROMPT,
+      temperature: 0.2,
+    })) {
+      if (event.type === "text-delta" && typeof (event as any).delta === "string") {
+        planSummary += (event as any).delta;
+      }
+
+      const enriched = {
+        ...(event as WorkflowEvent),
+        phase: (event as any).phase ?? "plan",
+      } as WorkflowEvent;
+      yield enriched;
+    }
+  } catch (error) {
+    logger.error("runtime_plan_ai_failed", {
+      runId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    yield {
+      type: "notice",
+      message: "planning_stream_failed",
+      error: error instanceof Error ? error.message : String(error),
+    } as WorkflowEvent;
+    throw error;
+  }
+
+  const trimmedPlanSummary = planSummary.trim();
+  if (trimmedPlanSummary.length > 0) {
+    yield {
+      type: "event",
+      kind: "plan-summary",
+      data: { text: trimmedPlanSummary },
+    } as any;
+  }
+
   yield { type: "notice", message: "planning_completed" } as any;
+  return trimmedPlanSummary || null;
 }

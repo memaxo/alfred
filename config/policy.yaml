@@ -176,7 +176,10 @@ rules:
         field: auto
         in: ["medium", "high"]
     obligations:
-      - requireBio
+      - type: biometric
+        reason: workflow_autonomy_passkey
+        metadata:
+          code: requireBio
 
   - id: workflow-plan-owner
     actions: ["workflow.plan"]
@@ -192,14 +195,20 @@ rules:
         field: auto
         in: ["medium", "high"]
     obligations:
-      - requireBio
+      - type: biometric
+        reason: workflow_autonomy_passkey
+        metadata:
+          code: requireBio
 
   - id: token-elevate-owner
     actions: ["token.elevate"]
     roles: ["owner"]
     effect: "allow"
     obligations:
-      - audit
+      - type: confirmation
+        reason: audit_required
+        metadata:
+          code: audit
 
   - id: home-control-owner
     actions: ["home.control"]
@@ -214,15 +223,24 @@ rules:
       - field: "entity"
         in: ["lock", "garage", "alarm"]
     obligations:
-      - requireBio
+      - type: biometric
+        reason: secure_home_control
+        metadata:
+          code: requireBio
 
   - id: deploy-promote-owner
     actions: ["deploy.promote"]
     roles: ["owner"]
     effect: "allow"
     obligations:
-      - requireBio
-      - requireManual
+      - type: biometric
+        reason: deploy_promotion_passkey
+        metadata:
+          code: requireBio
+      - type: confirmation
+        reason: deploy_manual_confirmation
+        metadata:
+          code: requireManual
 
   - id: deploy-preview-owner
     actions: ["deploy.preview"]
@@ -249,7 +267,10 @@ rules:
     roles: ["owner"]
     effect: "allow"
     obligations:
-      - requireBio
+      - type: biometric
+        reason: proxmox_admin_passkey
+        metadata:
+          code: requireBio
 
   - id: eval-define-owner
     actions: ["eval.define"]

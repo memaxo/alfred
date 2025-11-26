@@ -12,16 +12,16 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
 
 ## Progress
 
-- [ ] **Part 1: Knowledge Extraction**
-    - [ ] Install `compromise` in `@alfred/knowledge`.
-    - [ ] Implement `extractEntities` using `compromise` (People, Places, Organizations).
-    - [ ] Implement `extractRelations` using sentence structure analysis.
-    - [ ] Implement `detectContradiction` using antonym dictionaries and negation analysis.
-    - [ ] Implement `extractTemporal` using `chrono-node` (if permissible) or robust regex expansion.
+- [x] **Part 1: Knowledge Extraction**
+    - [x] Install `compromise` in `@alfred/knowledge`.
+    - [x] Implement `extractEntities` using `compromise` (People, Places, Organizations).
+    - [x] Implement `extractRelations` using sentence structure analysis.
+    - [x] Implement `detectContradiction` using antonym dictionaries and negation analysis.
+    - [x] Implement `extractTemporal` using `chrono-node` (if permissible) or robust regex expansion.
 - [ ] **Part 2: Policy Enforcement**
-    - [ ] Define `Obligation` type in `@alfred/type` (if missing) or `@alfred/auth`.
-    - [ ] Update `requirePolicy` middleware to detect missing obligations.
-    - [ ] Create `TRPCError` subclass or metadata pattern for `OBLIGATION_REQUIRED`.
+    - [x] Define `Obligation` type in `@alfred/type` (if missing) or `@alfred/auth`.
+    - [x] Update `requirePolicy` middleware to detect missing obligations.
+    - [x] Create `TRPCError` subclass or metadata pattern for `OBLIGATION_REQUIRED`.
     - [ ] Implement the "pause/resume" pattern in `packages/api/src/routers/deploy.ts` as the reference implementation.
 - [ ] **Part 3: Mindscape Visualization**
     - [ ] Create `ConceptNode` component in `apps/web`.

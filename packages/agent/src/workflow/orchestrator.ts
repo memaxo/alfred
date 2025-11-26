@@ -39,6 +39,21 @@ import {
 import { ReviewGate, type ReviewCheckStatus } from "./review-gate";
 import { ensureLinearTicket } from "./linear";
 
+type ReviewEscalationSummary = {
+  reason?: string;
+  attempts?: number;
+  fixerAttempts?: number;
+  plan?: string;
+  failures?: Array<{
+    command?: string;
+    output?: string;
+    error?: string;
+    checkId?: string;
+  }>;
+  relevantFiles?: string[];
+  summary?: string;
+};
+
 export type OrchestratorCallbacks = {
   triggerPreferenceRefresh: (
     userId: string,
@@ -291,6 +306,8 @@ export async function orchestrateWorkflowStream(
     const useRuntime = shouldUseWorkflowRuntime();
     const reasonTraces: ReasonTrace[] = [];
     const reviewGate = new ReviewGate();
+    let reviewEscalation: ReviewEscalationSummary | null = null;
+    let reviewEscalationMetricRecorded = false;
     let linearIssueUrlFromCreation: string | null = null;
     let linearFailureNotified = false;
     let executorRunId: string | null = null;
@@ -672,6 +689,23 @@ export async function orchestrateWorkflowStream(
                         : "review_exec_failed";
               multiAgentErrorsTotal.inc({ kind });
             }
+          } else if (evt.kind === "review-escalated") {
+            reviewEscalation = {
+              reason: evt.data?.reason,
+              attempts: evt.data?.attempts,
+              fixerAttempts: evt.data?.fixerAttempts,
+              plan: evt.data?.plan,
+              failures: evt.data?.failures,
+              relevantFiles: evt.data?.relevantFiles,
+              summary: evt.data?.summary,
+            };
+            if (!reviewEscalationMetricRecorded) {
+              const metricKind = formatEscalationMetricKind(
+                evt.data?.reason
+              );
+              multiAgentErrorsTotal.inc({ kind: metricKind });
+              reviewEscalationMetricRecorded = true;
+            }
           }
         } catch {
           // Metrics must never break streaming; ignore metric errors.
@@ -807,7 +841,11 @@ export async function orchestrateWorkflowStream(
       }
 
       if (!reviewGate.isSatisfied()) {
-        throw new Error("review_checklist_incomplete");
+        const reason =
+          reviewEscalation?.reason && reviewEscalationMetricRecorded
+            ? `review_escalation_required:${reviewEscalation.reason}`
+            : "review_checklist_incomplete";
+        throw new Error(reason);
       }
       if (input.linear?.sessionId && input.authzLinear) {
         await finalizeLinearSuccess({
@@ -921,4 +959,15 @@ function buildLinearFailureComment(args: {
   }
   lines.push("Review the run log, address the failure, and re-run when ready.");
   return lines.join("\n");
+}
+
+function formatEscalationMetricKind(reason?: string): string {
+  if (!reason) {
+    return "review_escalated";
+  }
+  const slug = reason
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return slug.length > 0 ? `review_${slug}` : "review_escalated";
 }

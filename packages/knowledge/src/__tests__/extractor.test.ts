@@ -1,29 +1,117 @@
-// Mock bun:test for build compatibility if not running in bun test runner
-// or skip if not needed.
-// Ideally we should exclude tests from build via tsconfig.
-// But for now, let's just comment out the bun:test import and mock the globals if needed
-// OR better: ensure tsconfig excludes tests.
+import { describe, expect, test } from "bun:test";
 
-// For now, I will just update the test to be ignored by build if possible,
-// or simply comment it out if it's causing build failure.
-// Actually, I'll just use a cleaner way to import bun:test or rely on tsconfig.json exclusion.
-// Since I can't easily edit tsconfig right now, I will comment out the test file content temporarily
-// to unblock the build, as I verified it passes in runtime.
+import {
+  detectContradiction,
+  extract,
+  extractEntities,
+  extractRelations,
+  extractTemporal,
+  toKnowledge,
+} from "../extractor";
 
-/*
-describe("Knowledge Extractor", () => {
-  test("extract entities using compromise", async () => {
-    const text = "Elon Musk founded SpaceX in 2002.";
-    const result = await extract(text, "test-source");
+describe("extractEntities", () => {
+  test("detects people, organizations, and places", () => {
+    const text =
+      "Elon Musk founded SpaceX in Hawthorne, California with support from NASA.";
+    const entities = extractEntities(text);
+    const labels = entities.map((entity) => entity.label);
 
-    expect(result.facts.length).toBeGreaterThan(0);
-    const fact = result.facts[0];
-    expect(fact.content).toContain("Elon Musk founded SpaceX");
+    expect(labels).toContain("Elon Musk");
+    expect(labels).toContain("SpaceX");
+    expect(labels.some((label) => label.includes("Hawthorne"))).toBe(true);
 
-    // compromise usually identifies Elon Musk as Person and SpaceX as Organization
-    expect(result.entities.has("Elon Musk")).toBe(true);
-    expect(result.entities.has("SpaceX")).toBe(true);
+    const elon = entities.find((entity) => entity.label === "Elon Musk");
+    expect(elon?.kind).toBe("person");
+    const spacex = entities.find((entity) => entity.label === "SpaceX");
+    expect(spacex?.kind).toBe("organization");
   });
-  // ... other tests
 });
-*/
+
+describe("extractRelations", () => {
+  test("derives subject-verb-object relations", () => {
+    const text = "John works at Microsoft and leads Azure.";
+    const entities = extractEntities(text);
+    const relations = extractRelations(text, entities);
+
+    expect(relations.length).toBeGreaterThanOrEqual(2);
+    expect(
+      relations.some(
+        (relation) =>
+          relation.source === "John" &&
+          relation.relation === "work" &&
+          relation.target === "Microsoft"
+      )
+    ).toBe(true);
+    expect(
+      relations.some(
+        (relation) =>
+          relation.source === "John" &&
+          relation.relation === "lead" &&
+          relation.target === "Azure"
+      )
+    ).toBe(true);
+  });
+});
+
+describe("detectContradiction", () => {
+  test("detects explicit negation", () => {
+    const contradiction = detectContradiction(
+      "The launch is safe.",
+      "The launch is not safe."
+    );
+
+    expect(contradiction).not.toBeNull();
+    expect(contradiction?.reason).toBe("negation");
+  });
+
+  test("detects antonym-based contradiction", () => {
+    const contradiction = detectContradiction(
+      "The forecast is bright.",
+      "The forecast is dark."
+    );
+
+    expect(contradiction).not.toBeNull();
+    expect(contradiction?.reason).toBe("antonym");
+  });
+});
+
+describe("extractTemporal", () => {
+  test("captures absolute dates and recurring intervals", () => {
+    const text =
+      "Kickoff is on January 15, 2024 at 3pm, and the team meets every Monday morning.";
+    const temporal = extractTemporal(text);
+
+    expect(temporal.length).toBeGreaterThanOrEqual(2);
+    expect(
+      temporal.some(
+        (expr) =>
+          expr.type === "instant" &&
+          expr.normalized.start?.startsWith("2024-01-15")
+      )
+    ).toBe(true);
+    expect(
+      temporal.some(
+        (expr) => expr.type === "recurring" && expr.recurrence?.includes("monday")
+      )
+    ).toBe(true);
+  });
+});
+
+describe("toKnowledge", () => {
+  test("emits relation edges between extracted entities", () => {
+    const extraction = extract("Elon Musk founded SpaceX in 2002.", "unit");
+    const knowledge = toKnowledge(extraction);
+
+    const relationEntry = knowledge.find((entry) => entry.data._ === "relation");
+    expect(relationEntry).toBeDefined();
+    expect(typeof relationEntry?.data.from).toBe("string");
+    expect(typeof relationEntry?.data.to).toBe("string");
+
+    const entityFacts = knowledge.filter(
+      (entry) =>
+        entry.data._ === "fact" &&
+        entry.data.content.startsWith("[entity:")
+    );
+    expect(entityFacts.length).toBeGreaterThanOrEqual(2);
+  });
+});

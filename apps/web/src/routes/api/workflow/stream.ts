@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { WorkflowEvent } from "@alfred/type";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   orchestrateWorkflowStream,
@@ -92,7 +92,7 @@ export async function handleWorkflowStreamRequest(
     });
   }
 
-  let obligations: string[] = [];
+  let obligations: Obligation[] = [];
   try {
     const result = await enforceWorkflowPlanPolicy({
       request,

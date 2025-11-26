@@ -3,8 +3,16 @@ import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import YAML from "yaml";
 import { z } from "zod";
-import type { PolicyDocument } from "./types";
+import type { Obligation, PolicyDocument } from "./types";
 import { DEFAULT_POLICY_PATH } from "./types";
+
+const obligationObjectSchema = z.object({
+  type: z.string().min(1),
+  reason: z.string().min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const obligationSchema = z.union([obligationObjectSchema, z.string().min(1)]);
 
 const policyConditionSchema = z.object({
   source: z.enum(["context"]).optional().default("context"),
@@ -32,7 +40,7 @@ const policyRuleSchema = z.object({
     })
     .optional(),
   conditions: z.array(policyConditionSchema).optional(),
-  obligations: z.array(z.string()).optional(),
+  obligations: z.array(obligationSchema).optional(),
   description: z.string().optional(),
   priority: z.number().optional(),
 });
@@ -59,6 +67,74 @@ function dedupe(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
+const legacyObligationPresets: Record<string, Obligation> = {
+  requireBio: {
+    type: "biometric",
+    reason: "biometric_verification",
+    metadata: { code: "requireBio", level: "passkey" },
+  },
+  requireManual: {
+    type: "confirmation",
+    reason: "manual_confirmation",
+    metadata: { code: "requireManual" },
+  },
+  audit: {
+    type: "confirmation",
+    reason: "audit_acknowledgement",
+    metadata: { code: "audit" },
+  },
+};
+
+type RawObligation = z.infer<typeof obligationSchema>;
+
+function normalizeObligation(raw: RawObligation): Obligation {
+  if (typeof raw === "string") {
+    const preset = legacyObligationPresets[raw];
+    if (preset) {
+      return { ...preset };
+    }
+    return {
+      type: raw,
+      reason: raw,
+      metadata: { code: raw },
+    };
+  }
+  return {
+    type: raw.type,
+    reason: raw.reason,
+    metadata: raw.metadata ?? null,
+  };
+}
+
+function stableSerialize(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>).sort(
+    ([a], [b]) => (a > b ? 1 : a < b ? -1 : 0)
+  );
+  return `{${entries
+    .map(([key, val]) => `${JSON.stringify(key)}:${stableSerialize(val)}`)
+    .join(",")}}`;
+}
+
+function dedupeObligations(values: Obligation[]): Obligation[] {
+  const seen = new Set<string>();
+  const result: Obligation[] = [];
+  for (const obligation of values) {
+    const key = `${obligation.type}:${obligation.reason}:${stableSerialize(obligation.metadata ?? null)}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(obligation);
+  }
+  return result;
+}
+
 export async function loadPolicy(
   path: string = DEFAULT_POLICY_PATH
 ): Promise<PolicyDocument> {
@@ -81,10 +157,15 @@ export async function loadPolicy(
 
   const doc: PolicyDocument = {
     roles,
-    rules: parsed.rules.map((rule) => ({
-      ...rule,
-      obligations: rule.obligations ? dedupe(rule.obligations) : undefined,
-    })),
+    rules: parsed.rules.map((rule) => {
+      const obligations = rule.obligations
+        ? dedupeObligations(rule.obligations.map((obligation) => normalizeObligation(obligation)))
+        : undefined;
+      return {
+        ...rule,
+        obligations,
+      };
+    }),
     scopes: dedupe(parsed.scopes),
   };
 

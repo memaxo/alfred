@@ -2,6 +2,7 @@ import { recordMemoryUpdate } from "@alfred/agent";
 import { userRepo } from "@alfred/db";
 import { profileUpdateSchema } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+import type { Context } from "../context";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
@@ -16,7 +17,7 @@ function mapProfileResource(
   };
 }
 
-function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
+function ensureObligations(ctx: Context) {
   if (ctx.policy?.obligations?.length) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",

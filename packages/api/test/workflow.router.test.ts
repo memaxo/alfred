@@ -41,6 +41,7 @@ mock.module("@alfred/agent/orchestrator/linear", () => ({
   setLinearDelegate: vi.fn().mockResolvedValue(undefined),
   setLinearStarted: vi.fn().mockResolvedValue({ stateId: "started" }),
   setLinearCompleted: vi.fn().mockResolvedValue({ stateId: "done" }),
+  setLinearCancelled: vi.fn().mockResolvedValue({ stateId: "cancelled" }),
   setLinearSessionExternalUrl: vi.fn().mockResolvedValue(undefined),
   commentOnLinearIssue: vi.fn().mockResolvedValue(undefined),
   extractIssueIdFromSession: (id: string) => id,

@@ -1,3 +1,4 @@
+import { gatherCodeContext, gatherWebContext } from "@alfred/agent/orchestrator/flow/context";
 import { logger } from "@alfred/logger";
 import type {
   ContextBundle,
@@ -42,15 +43,43 @@ function emitBundleEvent(bundle: ContextBundle | null): WorkflowEvent | null {
   } as WorkflowEvent;
 }
 
+function normalizeWriterChunk(chunk: unknown): WorkflowEvent | null {
+  if (!chunk || typeof chunk !== "object") {
+    return null;
+  }
+  const maybe = chunk as Record<string, unknown>;
+  if (typeof maybe.type !== "string") {
+    return null;
+  }
+  return { ...maybe } as WorkflowEvent;
+}
+
+function drainWriterEvents(queue: WorkflowEvent[]): WorkflowEvent[] {
+  if (queue.length === 0) {
+    return [];
+  }
+  return queue.splice(0, queue.length);
+}
+
 export async function* executeScanPhase(
   input: RuntimeInput,
   runId: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  authz?: string
 ): AsyncGenerator<WorkflowEvent, ExecutionContext | null, void> {
   const contextEnabled = input.context?.enable ?? true;
   const workspace = input.workspace ?? process.cwd();
   const contextOptions = input.context ?? {};
   const builder = new ContextBuilder();
+  const writerEvents: WorkflowEvent[] = [];
+  const writer = {
+    write: async (chunk: unknown) => {
+      const event = normalizeWriterChunk(chunk);
+      if (event) {
+        writerEvents.push(event);
+      }
+    },
+  };
 
   yield {
     type: "context",
@@ -73,20 +102,68 @@ export async function* executeScanPhase(
   }
 
   try {
-    const context = await builder.build({
+    const codeReceipt = await gatherCodeContext({
       requirement: input.requirement,
-      workspace,
-      repoBase: input.repoBase,
-      web: contextOptions.web,
-      topK: contextOptions.topK,
-      maxTokens: contextOptions.maxTokens,
+      cw: workspace,
       exts: contextOptions.exts,
       ignore: contextOptions.ignore,
-      seeds: contextOptions.seeds,
-      authz: undefined,
+      topK: contextOptions.topK,
+      authz,
+      writer,
     });
 
     assertNotAborted(signal);
+    for (const event of drainWriterEvents(writerEvents)) {
+      yield event;
+    }
+
+    const webReceipt = contextOptions.web
+      ? await gatherWebContext({
+          requirement: input.requirement,
+          authz,
+          writer,
+          topK: contextOptions.topK,
+        })
+      : null;
+
+    assertNotAborted(signal);
+    for (const event of drainWriterEvents(writerEvents)) {
+      yield event;
+    }
+
+    const receipts: SearchReceipt = {
+      code: codeReceipt.code,
+      web: webReceipt?.web,
+      created: new Date(),
+      summary: [codeReceipt.summary, webReceipt?.summary]
+        .filter(Boolean)
+        .join(" | ")
+        .slice(0, 500),
+    };
+
+    const context = await builder.build(
+      {
+        requirement: input.requirement,
+        workspace,
+        repoBase: input.repoBase,
+        web: contextOptions.web,
+        topK: contextOptions.topK,
+        maxTokens: contextOptions.maxTokens,
+        exts: contextOptions.exts,
+        ignore: contextOptions.ignore,
+        seeds: contextOptions.seeds,
+        authz,
+      },
+      {
+        receipts,
+        writer,
+      }
+    );
+
+    assertNotAborted(signal);
+    for (const event of drainWriterEvents(writerEvents)) {
+      yield event;
+    }
 
     yield {
       type: "context",

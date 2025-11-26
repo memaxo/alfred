@@ -15,6 +15,7 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@alfred/type": "workspace:*",
     "yaml": "^2.6.1",
     "zod": "^3.23.8"
   },

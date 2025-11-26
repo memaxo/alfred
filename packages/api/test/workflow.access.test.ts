@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import type { Obligation } from "@alfred/type";
 
 const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
 mock.module("@alfred/db/repo/policy", () => ({
@@ -24,7 +25,7 @@ mock.module("../src/metrics", () => ({
 
 const evaluateMock = vi
   .fn()
-  .mockResolvedValue({ allow: true, obligations: [] as string[] });
+  .mockResolvedValue({ allow: true, obligations: [] as Obligation[] });
 
 mock.module("@alfred/policy", () => ({
   evaluate: evaluateMock,
@@ -57,11 +58,17 @@ describe("enforceWorkflowPlanPolicy", () => {
     expect(evaluateMock).not.toHaveBeenCalled();
   });
 
+  const bioObligation: Obligation = {
+    type: "biometric",
+    reason: "biometric_required",
+    metadata: { code: "requireBio" },
+  };
+
   it("propagates policy denials with status 403", async () => {
     evaluateMock.mockResolvedValueOnce({
       allow: false,
       reason: "policy_denied",
-      obligations: ["requireBio"],
+      obligations: [bioObligation],
     });
 
     await expect(
@@ -77,7 +84,7 @@ describe("enforceWorkflowPlanPolicy", () => {
   it("returns obligations and consumes the shared rate limit when allowed", async () => {
     evaluateMock.mockResolvedValueOnce({
       allow: true,
-      obligations: ["requireBio"],
+      obligations: [bioObligation],
     });
 
     const result = await enforceWorkflowPlanPolicy({
@@ -85,7 +92,7 @@ describe("enforceWorkflowPlanPolicy", () => {
       input: baseInput,
     });
 
-    expect(result).toEqual({ obligations: ["requireBio"] });
+    expect(result).toEqual({ obligations: [bioObligation] });
     expect(consumeRouteRateLimitMock).toHaveBeenCalledWith(
       "user-1",
       "workflow.stream",

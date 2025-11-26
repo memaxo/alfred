@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import type { Obligation } from "@alfred/type";
 import {
   DEFAULT_WORKFLOW_TEST_USER,
   createWorkflowCaller,
@@ -94,12 +95,12 @@ async function resetWorkflowRecords() {
 
 export type WorkflowHarnessOptions = {
   user?: Partial<WorkflowTestUser>;
-  obligations?: string[];
+  obligations?: Obligation[];
 };
 
 export class WorkflowTestHarness {
   readonly user: WorkflowTestUser;
-  readonly obligations: string[];
+  readonly obligations: Obligation[];
   private readonly session: AuthSession;
   private readonly sessionHeader: string;
 

@@ -17,6 +17,7 @@ import {
 } from "@alfred/type/preference";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import type { Context } from "../context";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
@@ -31,7 +32,7 @@ function mapPreferenceResource(
   };
 }
 
-function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
+function ensureObligations(ctx: Context) {
   if (ctx.policy?.obligations?.length) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",

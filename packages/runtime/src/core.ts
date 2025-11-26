@@ -9,8 +9,7 @@ import { randomUUID } from "node:crypto";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-import { RuntimeContext } from "@alfred/type/runtime-context";
-// import type { LanguageModel } from "ai";
+import type { LanguageModel } from "ai";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
@@ -49,7 +48,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   }
 
   private readonly _input: RuntimeInput;
-  // private readonly _model: LanguageModel; // Reserved
+  private readonly model: LanguageModel;
   // private readonly stepTimeoutMs: number; // Reserved
   private readonly workflowTimeoutMs: number;
   private readonly workflowStartTime: number;
@@ -68,7 +67,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     // Store for Phase 3.3+ when integrating context builder and AI SDK
     this._input = validated.input;
     this.authz = validated.authz;
-    // this._model = validated.model;
+    this.model = validated.model;
 
     this.signal = validated.signal;
     // this.stepTimeoutMs = validated.stepTimeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
@@ -95,11 +94,22 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       this.runtimeContext = new RuntimeContext<Record<string, unknown>>([
         ["ai", null],
         ["scanContext", null],
+        ["planSummary", null],
+        ["eventLog", []],
       ]);
     }
 
     if (!this.runtimeContext.has("ai")) {
       this.runtimeContext.set("ai", null);
+    }
+    if (!this.runtimeContext.has("scanContext")) {
+      this.runtimeContext.set("scanContext", null);
+    }
+    if (!this.runtimeContext.has("planSummary")) {
+      this.runtimeContext.set("planSummary", null);
+    }
+    if (!this.runtimeContext.has("eventLog")) {
+      this.runtimeContext.set("eventLog", [] as WorkflowEvent[]);
     }
 
     if (this.signal) {
@@ -111,6 +121,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     if (this.authz) {
       this.runtimeContext.set("authz", this.authz);
     }
+
+    this.runtimeContext.set("aiModel", this.model);
+    this.runtimeContext.set("runStartedAt", this.workflowStartTime);
 
     // Setup cancellation listener
     if (this.signal) {
@@ -134,6 +147,21 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       auto: this._input.auto ?? "low",
     });
 
+    const eventLog =
+      (this.runtimeContext.get("eventLog") as WorkflowEvent[] | undefined) ??
+      [];
+    if (!this.runtimeContext.has("eventLog")) {
+      this.runtimeContext.set("eventLog", eventLog);
+    }
+
+    const recordEvent = (event: WorkflowEvent) => {
+      try {
+        eventLog.push(event);
+      } catch {
+        // Swallow logging issues to avoid breaking streaming
+      }
+    };
+
     runtimeExecutionsTotal.inc({
       auto: this._input.auto ?? "low",
       status: "started",
@@ -148,19 +176,29 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     try {
       // Emit run start event
-      yield { type: "run", id: this.runId } as WorkflowEvent;
-      yield {
+      const runEvent = { type: "run", id: this.runId } as WorkflowEvent;
+      recordEvent(runEvent);
+      yield runEvent;
+      const initEvent = {
         type: "progress",
         pct: 0,
         message: "initializing",
       } as WorkflowEvent;
+      recordEvent(initEvent);
+      yield initEvent;
 
       // Check for cancellation
       if (this.state.cancelled) {
-        yield {
+        const cancelledStartEvent = {
           type: "notice",
           message: "workflow_cancelled_before_start",
         } as WorkflowEvent;
+        recordEvent(cancelledStartEvent);
+        yield cancelledStartEvent;
+        recordEvent({
+          type: "notice",
+          message: "workflow_cancelled_before_start",
+        } as WorkflowEvent);
         this.state.finalStatus = "cancelled";
 
         runtimeExecutionsTotal.inc({
@@ -194,16 +232,18 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
       const runner = new PipelineRunner(pipelineState)
         .register(new ScanPhase(this.runId))
-        .register(new PlanPhase(this.runId))
-        .register(new ActPhase(this.runId))
+        .register(new PlanPhase(this.runId, this.model))
+        .register(new ActPhase(this.runId, this.model))
         .register(new ReportPhase());
 
       const checkCancelled = function* (this: WorkflowRuntime) {
         if (this.state.cancelled) {
-          yield {
+          const cancelledEvent = {
             type: "notice",
             message: "workflow_cancelled_during_execution",
           } as WorkflowEvent;
+          recordEvent(cancelledEvent);
+          yield cancelledEvent;
           this.state.finalStatus = "cancelled";
           runtimeExecutionsTotal.inc({
             auto: this._input.auto ?? "low",
@@ -230,14 +270,17 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         if (next.done) {
           break;
         }
+        recordEvent(next.value as WorkflowEvent);
         yield next.value;
 
         if (this.state.cancelled) {
           await pipelineIterator.return?.();
-          yield {
+          const cancelledEvent = {
             type: "notice",
             message: "workflow_cancelled_during_execution",
           } as WorkflowEvent;
+          recordEvent(cancelledEvent);
+          yield cancelledEvent;
           this.state.finalStatus = "cancelled";
           runtimeExecutionsTotal.inc({
             auto: this._input.auto ?? "low",
@@ -254,11 +297,13 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
       // Workflow completed successfully
       this.state.finalStatus = "completed";
-      yield {
+      const completionEvent = {
         type: "progress",
         pct: 100,
         message: "completed",
       } as WorkflowEvent;
+      recordEvent(completionEvent);
+      yield completionEvent;
 
       runtimeExecutionsTotal.inc({
         auto: this._input.auto ?? "low",
@@ -275,10 +320,12 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       this.state.finalMessage =
         error instanceof Error ? error.message : String(error);
 
-      yield {
+      const errorEvent = {
         type: "error",
         message: this.state.finalMessage,
       } as WorkflowEvent;
+      recordEvent(errorEvent);
+      yield errorEvent;
 
       runtimeExecutionsTotal.inc({
         auto: this._input.auto ?? "low",

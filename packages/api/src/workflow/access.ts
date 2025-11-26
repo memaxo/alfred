@@ -3,6 +3,7 @@ import {
   mapWorkflowResource,
   type WorkflowInputPayload,
 } from "@alfred/agent/workflow/schema";
+import type { Obligation } from "@alfred/type";
 import * as policyRepo from "@alfred/db/repo/policy";
 import { evaluate } from "@alfred/policy";
 import {
@@ -26,7 +27,7 @@ type EnforceArgs = {
 };
 
 type EnforcementResult = {
-  obligations: string[];
+  obligations: Obligation[];
 };
 
 export async function enforceWorkflowPlanPolicy({
@@ -71,7 +72,7 @@ export async function enforceWorkflowPlanPolicy({
   policyDecisionsTotal.labels("workflow.plan", decision.allow ? "allow" : "deny").inc();
   if (decision.obligations && decision.obligations.length > 0) {
     for (const obligation of decision.obligations) {
-      policyObligationsTotal.labels("workflow.plan", obligation).inc();
+      policyObligationsTotal.labels("workflow.plan", obligation.type).inc();
     }
   }
 

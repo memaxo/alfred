@@ -26,6 +26,10 @@ import {
 /**
  * Context build input
  */
+type ContextWriter = {
+  write: (chunk: unknown) => Promise<void> | void;
+};
+
 export type ContextBuildInput = {
   requirement: string;
   workspace?: string;
@@ -86,7 +90,13 @@ export class ContextBuilder {
    * Returns cached context if valid, otherwise gathers fresh context.
    * Implements LRU eviction and periodic cleanup.
    */
-  async build(input: ContextBuildInput): Promise<ExecutionContext> {
+  async build(
+    input: ContextBuildInput,
+    overrides?: {
+      receipts?: SearchReceipt;
+      writer?: ContextWriter;
+    }
+  ): Promise<ExecutionContext> {
     const startTime = Date.now();
     const cacheKey = this.computeKey(input);
     const cached = this.cache.get(cacheKey);
@@ -134,36 +144,48 @@ export class ContextBuilder {
       // Build fresh context
       const resolvedWorkspace = input.workspace ?? process.cwd();
 
-      // Gather code context
-      const codeReceipt = await gatherCodeContext({
-        requirement: input.requirement,
-        cw: resolvedWorkspace,
-        exts: input.exts,
-        ignore: input.ignore,
-        topK: input.topK ?? DEFAULT_TOP_K,
-        authz: input.authz,
-      });
+      let receipts: SearchReceipt | null = overrides?.receipts ?? null;
 
-      // Gather web context if requested
-      const webReceipt = input.web
-        ? await gatherWebContext({
-            requirement: input.requirement,
-            authz: input.authz,
-          })
-        : null;
+      if (!receipts) {
+        const codeReceipt = await gatherCodeContext({
+          requirement: input.requirement,
+          cw: resolvedWorkspace,
+          exts: input.exts,
+          ignore: input.ignore,
+          topK: input.topK ?? DEFAULT_TOP_K,
+          authz: input.authz,
+        });
 
-      // Combine receipts
-      const receipts: SearchReceipt = {
-        code: codeReceipt.code,
-        web: webReceipt?.web,
-        created: new Date(),
-      };
+        const webReceipt = input.web
+          ? await gatherWebContext({
+              requirement: input.requirement,
+              authz: input.authz,
+            })
+          : null;
+
+        receipts = {
+          code: codeReceipt.code,
+          web: webReceipt?.web,
+          created: new Date(),
+          summary: [codeReceipt.summary, webReceipt?.summary]
+            .filter(Boolean)
+            .join(" | ")
+            .slice(0, 500),
+        } as SearchReceipt;
+      }
+
+      if (!receipts) {
+        throw new Error("context_receipts_unavailable");
+      }
+
+      const resolvedReceipts = receipts;
 
       // Build context bundle
       const bundle = await buildContextBundle({
         cw: resolvedWorkspace,
-        receipts,
+        receipts: resolvedReceipts,
         maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
+        writer: overrides?.writer,
       });
 
       // Retrieve RAG chunks for semantic context (disabled in tests to avoid heavy dependencies)
@@ -238,7 +260,7 @@ export class ContextBuilder {
 
       const context: ExecutionContext = {
         requirement: input.requirement,
-        receipts,
+        receipts: resolvedReceipts,
         bundle,
         totalTokens,
         ragChunks,

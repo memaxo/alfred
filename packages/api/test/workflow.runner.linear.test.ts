@@ -29,7 +29,10 @@ mock.module("@alfred/agent/orchestrator/linear", () => ({
   emitLinearActivity: emitLinearActivityStub,
   setLinearDelegate: delegateMock,
   setLinearStarted: startedMock,
+  setLinearCompleted: vi.fn(),
+  setLinearCancelled: vi.fn(),
   setLinearSessionExternalUrl: externalUrlMock,
+  commentOnLinearIssue: vi.fn(),
   extractIssueIdFromSession: (sessionId: string) => sessionId,
 }));
 

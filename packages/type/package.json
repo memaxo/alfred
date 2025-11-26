@@ -50,6 +50,10 @@
     "./knowledge": {
       "types": "./dist/knowledge.d.ts",
       "default": "./src/knowledge.ts"
+    },
+    "./policy": {
+      "types": "./dist/policy.d.ts",
+      "default": "./src/policy.ts"
     }
   },
   "scripts": {

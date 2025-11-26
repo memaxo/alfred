@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   ContextBundle,
   SearchReceipt,
@@ -18,6 +18,17 @@ mock.module("../../src/context", () => ({
 const persistExecPlansMock = mock(async () => {});
 mock.module("@alfred/agent/assistant/graphstore", () => ({
   persistExecPlans: persistExecPlansMock,
+}));
+
+const streamMock = mock(() => (async function* () {
+  yield { type: "text-delta", delta: "Plan step" } as WorkflowEvent;
+  yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+})());
+
+mock.module("../../src/adapters/ai", () => ({
+  AISDKAdapter: class {
+    stream = streamMock;
+  },
 }));
 
 mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
@@ -41,6 +52,16 @@ const baseInput: RuntimeInput = {
   auto: "low",
   workspace: "/tmp/runtime",
 };
+
+beforeEach(() => {
+  streamMock.mockReset();
+  streamMock.mockImplementation(() =>
+    (async function* () {
+      yield { type: "text-delta", delta: "Plan step" } as WorkflowEvent;
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    })()
+  );
+});
 
 function createExecutionContext(): ExecutionContext {
   const receipts: SearchReceipt = {
@@ -77,12 +98,21 @@ function createExecutionContext(): ExecutionContext {
   } as ExecutionContext;
 }
 
-async function drain(generator: AsyncGenerator<WorkflowEvent, void, void>) {
+async function drain(
+  generator: AsyncGenerator<WorkflowEvent, string | null, void>
+) {
   const events: WorkflowEvent[] = [];
-  for await (const event of generator) {
-    events.push(event);
+  let summary: string | null | undefined;
+  const iter = generator[Symbol.asyncIterator]();
+  while (true) {
+    const next = await iter.next();
+    if (next.done) {
+      summary = next.value ?? null;
+      break;
+    }
+    events.push(next.value);
   }
-  return events;
+  return { events, summary };
 }
 
 describe("executePlanPhase", () => {
@@ -94,12 +124,14 @@ describe("executePlanPhase", () => {
       baseInput,
       "run-prebuilt",
       new AbortController().signal,
+      "test-model" as any,
       prebuilt
     );
 
-    await drain(generator);
+    const { summary } = await drain(generator);
 
     expect(buildMock).not.toHaveBeenCalled();
+    expect(summary).toBe("Plan step");
   });
 
   it("builds context when not provided", async () => {
@@ -110,12 +142,14 @@ describe("executePlanPhase", () => {
     const generator = executePlanPhase(
       baseInput,
       "run-build",
-      new AbortController().signal
+      new AbortController().signal,
+      "test-model" as any
     );
 
-    await drain(generator);
+    const { summary } = await drain(generator);
 
     expect(buildMock).toHaveBeenCalledTimes(1);
+    expect(summary).toBe("Plan step");
   });
 
   it("pipeline scan→plan path reuses cached context", async () => {
@@ -127,7 +161,7 @@ describe("executePlanPhase", () => {
     const runtimeContext = new RuntimeContext([["scanContext", null]]);
 
     const scanPhase = new ScanPhase("run-pipeline");
-    const planPhase = new PlanPhase("run-pipeline");
+    const planPhase = new PlanPhase("run-pipeline", "test-model" as any);
 
     const drainPhase = async (phase: any) => {
       const generator = phase.run(input, runtimeContext as any);

@@ -14,3 +14,12 @@ export * from "./query.js";
 export * from "./reasoning/causality.js";
 export * from "./reasoning/decisions.js";
 export * from "./reasoning/alternatives.js";
+
+export type {
+  Contradiction,
+  Entity,
+  EntityKind,
+  EntityMention,
+  RelationTriple,
+  TemporalExpression,
+} from "./extractor.js";

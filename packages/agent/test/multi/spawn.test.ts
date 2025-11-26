@@ -1,6 +1,10 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
-import { planWaves } from "@alfred/agent/orchestrator/multi/spawn";
+import {
+  __internals,
+  buildAgentSpec,
+  planWaves,
+} from "@alfred/agent/orchestrator/multi/spawn";
 
 const makeTask = (id: string, deps: string[] = [], priority = 1): SubTask => ({
   id,
@@ -12,24 +16,61 @@ const makeTask = (id: string, deps: string[] = [], priority = 1): SubTask => ({
   filesHint: [],
 });
 
+const originalUseContainers = process.env.ORCH_USE_CONTAINERS;
+
+afterEach(() => {
+  if (originalUseContainers === undefined) {
+    delete process.env.ORCH_USE_CONTAINERS;
+    return;
+  }
+  process.env.ORCH_USE_CONTAINERS = originalUseContainers;
+});
+
+describe("buildAgentSpec", () => {
+  it("derives exec plan path and context metadata", () => {
+    const spec = buildAgentSpec(makeTask("sub-1"), "run-123", "/repo", {
+      auto: "medium",
+      linear: {
+        issueId: "ISS-1",
+        sessionId: "LIN-1",
+        space: "focus",
+        authz: "token",
+      },
+    });
+
+    expect(spec.agentId).toBe("run-123:sub-1");
+    expect(spec.execPlanPath).toBe(".agent/plans/run-123/sub-1.md");
+    expect(spec.auto).toBe("medium");
+    expect(spec.context.relevantFiles).toEqual([]);
+    expect(spec.context.linearSessionId).toBe("LIN-1");
+    expect(spec.context.linearSpace).toBe("focus");
+    expect(spec.environment).toBe("host");
+  });
+
+  it("uses worktrees when parallelism exceeds one", () => {
+    const spec = buildAgentSpec(makeTask("sub-2"), "run-456", "/repo", {
+      maxParallel: 4,
+    });
+    expect(spec.environment).toBe("worktree");
+  });
+
+  it("switches to containers when ORCH_USE_CONTAINERS=1", () => {
+    process.env.ORCH_USE_CONTAINERS = "1";
+    const spec = buildAgentSpec(makeTask("sub-3"), "run-789", "/repo");
+    expect(spec.environment).toBe("container");
+  });
+});
+
 describe("planWaves", () => {
   it("returns empty array for no subtasks", () => {
     expect(planWaves([])).toEqual([]);
   });
 
-  it("creates single wave when no deps", () => {
-    const tasks: SubTask[] = [makeTask("a"), makeTask("b"), makeTask("c")];
-    const waves = planWaves(tasks, { maxParallel: 2 });
-    expect(waves.length).toBeGreaterThanOrEqual(1);
-    const allAgents = waves.flatMap((w) => w.agents);
-    expect(new Set(allAgents)).toEqual(new Set(["a", "b", "c"]));
-  });
-
-  it("respects simple linear dependencies", () => {
+  it("creates waves respecting dependency order", () => {
     const tasks: SubTask[] = [
-      makeTask("a", [], 1),
-      makeTask("b", ["a"], 0.9),
-      makeTask("c", ["b"], 0.8),
+      makeTask("backend"),
+      makeTask("frontend", ["backend"], 0.9),
+      makeTask("tests", ["frontend"], 0.8),
     ];
     const waves = planWaves(tasks, { maxParallel: 2 });
 
@@ -40,10 +81,11 @@ describe("planWaves", () => {
       }
     });
 
-    expect((waveOrder.get("a") ?? 0) <= (waveOrder.get("b") ?? 0)).toBe(true);
+    expect((waveOrder.get("backend") ?? 0) <= (waveOrder.get("frontend") ?? 0)).toBe(true);
+    expect((waveOrder.get("frontend") ?? 0) <= (waveOrder.get("tests") ?? 0)).toBe(true);
   });
 
-  it("enforces maxParallel per wave", () => {
+  it("caps agents per wave according to maxParallel", () => {
     const tasks: SubTask[] = [
       makeTask("a"),
       makeTask("b"),
@@ -61,5 +103,25 @@ describe("planWaves", () => {
     const waves = planWaves(tasks, { maxParallel: 2 });
     const allAgents = waves.flatMap((w) => w.agents);
     expect(new Set(allAgents)).toEqual(new Set(["a", "b"]));
+  });
+
+});
+
+describe("spawn internals", () => {
+  it("builds dependency graphs and in-degree maps", () => {
+    const { buildDepGraph, computeInDegree } = __internals;
+    const tasks = [
+      makeTask("a", ["b", "c"]),
+      makeTask("b", []),
+      makeTask("c", ["b"]),
+    ];
+
+    const graph = buildDepGraph(tasks);
+    expect(graph.get("a")).toEqual(new Set(["b", "c"]));
+    expect(graph.get("c")).toEqual(new Set(["b"]));
+
+    const degrees = computeInDegree(graph);
+    expect(degrees.get("a")).toBe(2);
+    expect(degrees.get("b")).toBe(0);
   });
 });

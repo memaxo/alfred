@@ -48,6 +48,9 @@ mock.module("@alfred/agent/orchestrator/linear", () => ({
   setLinearDelegate: () => {},
   setLinearSessionExternalUrl: () => {},
   setLinearStarted: () => {},
+  setLinearCompleted: () => {},
+  setLinearCancelled: () => {},
+  commentOnLinearIssue: () => {},
   extractIssueIdFromSession: () => null,
 }));
 

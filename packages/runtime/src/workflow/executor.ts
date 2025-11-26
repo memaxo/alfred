@@ -5,7 +5,7 @@ import type { workflowInput } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
-import type { WorkflowEvent } from "@alfred/type";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
@@ -99,16 +99,26 @@ export function coerceRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
-export function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
-  if (ctx.policy?.obligations?.length) {
-    const obligations = ctx.policy.obligations;
-    if (obligations.includes("requireBio")) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "biometric_required",
-        cause: obligations,
-      });
-    }
+function requiresBiometric(obligations: Obligation[] | undefined): boolean {
+  if (!obligations || obligations.length === 0) {
+    return false;
+  }
+  return obligations.some(
+    (obligation) =>
+      obligation.type === "biometric" ||
+      (typeof obligation.metadata?.code === "string" &&
+        obligation.metadata.code === "requireBio")
+  );
+}
+
+export function ensureObligations(ctx: { policy?: { obligations: Obligation[] } }) {
+  const obligations = ctx.policy?.obligations ?? [];
+  if (requiresBiometric(obligations)) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "biometric_required",
+      cause: obligations,
+    });
   }
 }
 

@@ -1,4 +1,6 @@
-export type Obligation = string;
+import type { Obligation as SharedObligation } from "@alfred/type";
+
+export type Obligation = SharedObligation;
 
 export type PolicyRole = {
   scopes: string[];

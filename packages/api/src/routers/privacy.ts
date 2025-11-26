@@ -6,6 +6,7 @@ import {
   privacyFactQuerySchema,
 } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+import type { Context } from "../context";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
@@ -20,7 +21,7 @@ function mapPrivacyResource(
   };
 }
 
-function ensureObligations(ctx: { policy?: { obligations: string[] } }) {
+function ensureObligations(ctx: Context) {
   if (ctx.policy?.obligations?.length) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",

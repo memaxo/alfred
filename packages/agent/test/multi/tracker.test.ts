@@ -1,7 +1,8 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
 import type { TrackerState } from "@alfred/agent/orchestrator/multi/tracker";
 import {
+  __internals,
   detectNeedsGuidance,
   detectStuck,
   updateTracker,
@@ -69,6 +70,20 @@ describe("tracker.updateTracker", () => {
 
     const agent = next.agents["agent-3" as AgentId];
     expect(agent.filesChanged).toContain("src/app.ts");
+  });
+
+  it("updates notice timestamps without altering original state", () => {
+    const state = emptyState();
+    const next = updateTracker(state, {
+      type: "notice",
+      agentId: "agent-4" as AgentId,
+      message: "ping",
+      ts: 123,
+    });
+
+    expect(next).not.toBe(state);
+    expect(next.agents["agent-4" as AgentId]?.lastEventTs).toBe(123);
+    expect(state.agents["agent-4" as AgentId]).toBeUndefined();
   });
 });
 
@@ -176,5 +191,22 @@ describe("tracker.detectNeedsGuidance", () => {
     ]);
 
     expect(needs).toBe(true);
+  });
+});
+
+describe("tracker internals", () => {
+  it("normalises missing timestamps to Date.now", () => {
+    const nowSpy = spyOn(Date, "now").mockReturnValue(999);
+    const { normaliseTime } = __internals;
+    expect(normaliseTime(undefined)).toBe(999);
+    nowSpy.mockRestore();
+  });
+
+  it("ensures ensureAgent preserves latest timestamps", () => {
+    const { ensureAgent } = __internals;
+    const state = emptyState();
+    ensureAgent(state, "agent-10" as AgentId, "task" as any, 10);
+    ensureAgent(state, "agent-10" as AgentId, "task" as any, 20);
+    expect(state.agents["agent-10" as AgentId]?.lastEventTs).toBe(20);
   });
 });

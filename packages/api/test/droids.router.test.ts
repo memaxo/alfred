@@ -8,6 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { metricsStub } from "./utils/mock-metrics";
 import {
@@ -48,6 +49,14 @@ const dispatchResumeMock = vi.fn(async (runId, payload) => {
   await handle.resume({ resumeData: payload });
   return true;
 });
+
+const BIOMETRIC_OBLIGATION: Obligation[] = [
+  {
+    type: "biometric",
+    reason: "biometric_required",
+    metadata: { code: "requireBio" },
+  },
+];
 
 mock.module("@alfred/auth/token", () => ({
   requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
@@ -118,7 +127,7 @@ describe("droids router", () => {
       const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
       evaluateMock.mockResolvedValueOnce({
         allow: true,
-        obligations: ["requireBio"],
+        obligations: BIOMETRIC_OBLIGATION,
       });
 
       await caller
@@ -135,7 +144,7 @@ describe("droids router", () => {
           expect(error.message).toBe("obligation_required");
           expect(error.cause).toMatchObject({
             reason: "droid_execution",
-            obligations: ["requireBio"],
+            obligations: BIOMETRIC_OBLIGATION,
           });
           expect(typeof (error.cause as { runId?: string })?.runId).toBe(
             "string"
@@ -180,7 +189,7 @@ describe("droids router", () => {
       const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
       evaluateMock.mockResolvedValueOnce({
         allow: true,
-        obligations: ["requireBio"],
+        obligations: BIOMETRIC_OBLIGATION,
       });
 
       const subscription = toObservable(
@@ -201,11 +210,11 @@ describe("droids router", () => {
               }
               const payload = JSON.parse(event.data ?? "{}") as {
                 reason: string;
-                obligations: string[];
+                obligations: Obligation[];
                 runId: string;
               };
               expect(payload.reason).toBe("droid_execution");
-              expect(payload.obligations).toEqual(["requireBio"]);
+              expect(payload.obligations).toEqual(BIOMETRIC_OBLIGATION);
               expect(typeof payload.runId).toBe("string");
               expect(registerMock).toHaveBeenCalledWith(
                 payload.runId,
@@ -227,7 +236,7 @@ describe("droids router", () => {
       const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
       evaluateMock.mockResolvedValueOnce({
         allow: true,
-        obligations: ["requireBio"],
+        obligations: BIOMETRIC_OBLIGATION,
       });
 
       const subscription = toObservable(
@@ -295,7 +304,7 @@ describe("droids router", () => {
       const evaluateMock = policyModule.evaluate as ReturnType<typeof vi.fn>;
       evaluateMock.mockResolvedValueOnce({
         allow: true,
-        obligations: ["requireBio"],
+        obligations: BIOMETRIC_OBLIGATION,
       });
 
       let capturedRunId: string | undefined;

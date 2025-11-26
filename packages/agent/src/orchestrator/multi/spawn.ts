@@ -1,4 +1,5 @@
 import type { SubTask, SubTaskId } from "./decompose";
+import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
 
@@ -117,6 +118,34 @@ export function buildAgentSpec(
     // But AgentSpec doesn't have it.
     // I should update runWaves to include this instruction.
   };
+}
+
+export function buildFixerAgentSpec(args: {
+  runId: string;
+  cwd: string;
+  attempt: number;
+  summary?: string;
+  relevantFiles?: string[];
+  auto?: "read" | "low" | "medium" | "high";
+  linear?: {
+    issueId?: string;
+    sessionId?: string;
+    space?: string;
+    authz?: string;
+  };
+}): AgentSpec {
+  const subTask = buildFixerSubTask({
+    attempt: args.attempt,
+    summary: args.summary,
+    relevantFiles: args.relevantFiles,
+  });
+
+  const effectiveAuto = args.auto && args.auto !== "read" ? args.auto : "medium";
+
+  return buildAgentSpec(subTask, args.runId, args.cwd, {
+    auto: effectiveAuto,
+    linear: args.linear,
+  });
 }
 
 export function planWaves(

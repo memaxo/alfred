@@ -7,12 +7,68 @@ import type {
 import type { ContextBuildInput, ExecutionContext } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
 
-const buildMock = mock<(input: ContextBuildInput) => Promise<ExecutionContext>>();
+const buildMock = mock<
+  (input: ContextBuildInput, overrides?: { receipts?: SearchReceipt }) =>
+    Promise<ExecutionContext>
+>();
+
+const gatherCodeContextMock = mock(
+  async (params: { writer?: { write?: (chunk: unknown) => Promise<void> | void } }) => {
+    await params.writer?.write?.({
+      type: "context",
+      phase: "scan",
+      message: "code_context_mock",
+    });
+    return {
+      code: [
+        {
+          id: "code:src/index.ts",
+          kind: "code",
+          path: "src/index.ts",
+          score: 0.92,
+          reason: "Matches requirement",
+        },
+      ],
+      created: new Date(),
+      summary: "code summary",
+    } satisfies SearchReceipt;
+  }
+);
+
+const gatherWebContextMock = mock(
+  async (params: { writer?: { write?: (chunk: unknown) => Promise<void> | void } }) => {
+    await params.writer?.write?.({
+      type: "context",
+      phase: "web",
+      message: "web_context_mock",
+    });
+    return {
+      code: [],
+      web: [
+        {
+          id: "web:https://example.com",
+          kind: "web",
+          url: "https://example.com",
+          title: "Example",
+          score: 0.75,
+          snippet: "Example snippet",
+        },
+      ],
+      created: new Date(),
+      summary: "web summary",
+    } satisfies SearchReceipt;
+  }
+);
 
 mock.module("../../src/context", () => ({
   ContextBuilder: class {
     build = buildMock;
   },
+}));
+
+mock.module("@alfred/agent/orchestrator/flow/context", () => ({
+  gatherCodeContext: gatherCodeContextMock,
+  gatherWebContext: gatherWebContextMock,
 }));
 
 const { executeScanPhase } = await import("../../src/phases/scan");
@@ -126,6 +182,33 @@ describe("executeScanPhase", () => {
   beforeEach(() => {
     buildMock.mockReset();
     buildMock.mockImplementation(async () => createExecutionContext());
+    gatherCodeContextMock.mockReset();
+    gatherCodeContextMock.mockImplementation(async (params: any) => {
+      await params?.writer?.write?.({
+        type: "context",
+        phase: "scan",
+        message: "code_context_mock",
+      });
+      return {
+        code: createExecutionContext().receipts.code,
+        created: new Date(),
+        summary: "code summary",
+      } satisfies SearchReceipt;
+    });
+    gatherWebContextMock.mockReset();
+    gatherWebContextMock.mockImplementation(async (params: any) => {
+      await params?.writer?.write?.({
+        type: "context",
+        phase: "web",
+        message: "web_context_mock",
+      });
+      return {
+        code: [],
+        web: createExecutionContext().receipts.web,
+        created: new Date(),
+        summary: "web summary",
+      } satisfies SearchReceipt;
+    });
   });
 
   it("gathers context and emits receipts, web, and bundle events", async () => {
@@ -138,6 +221,8 @@ describe("executeScanPhase", () => {
     const { events, error, result } = await collectEvents(generator);
 
     expect(error).toBeUndefined();
+    expect(gatherCodeContextMock).toHaveBeenCalledTimes(1);
+    expect(gatherWebContextMock).toHaveBeenCalledTimes(1);
     expect(buildMock).toHaveBeenCalledTimes(1);
     expect(buildMock.mock.calls[0][0]).toMatchObject({
       requirement: input.requirement,
@@ -149,6 +234,12 @@ describe("executeScanPhase", () => {
       seeds: input.context?.seeds,
       web: input.context?.web,
     });
+    expect(buildMock.mock.calls[0][1]?.receipts?.code?.length).toBeGreaterThan(0);
+
+    const writerEvents = events.filter(
+      (event) => event.type === "context" && (event as any).message === "code_context_mock"
+    );
+    expect(writerEvents.length).toBeGreaterThan(0);
 
     const scanEvents = events.filter(
       (event) => event.type === "context" && (event as any).phase === "scan"
@@ -188,6 +279,8 @@ describe("executeScanPhase", () => {
     const { events, error, result } = await collectEvents(generator);
 
     expect(buildMock).not.toHaveBeenCalled();
+    expect(gatherCodeContextMock).not.toHaveBeenCalled();
+    expect(gatherWebContextMock).not.toHaveBeenCalled();
     expect(events[0]).toMatchObject({
       type: "context",
       phase: "scan",
@@ -217,6 +310,7 @@ describe("executeScanPhase", () => {
     expect((failureEvent as any).error).toBe("context exploded");
     expect(error).toBeInstanceOf(Error);
     expect(result).toBeUndefined();
+    expect(gatherCodeContextMock).toHaveBeenCalledTimes(1);
   });
 
   it("skips gathering when context is disabled", async () => {
@@ -236,6 +330,8 @@ describe("executeScanPhase", () => {
 
     expect(error).toBeUndefined();
     expect(buildMock).not.toHaveBeenCalled();
+    expect(gatherCodeContextMock).not.toHaveBeenCalled();
+    expect(gatherWebContextMock).not.toHaveBeenCalled();
     const disabledNotice = events.find(
       (event) => event.type === "notice" && (event as any).message === "context_gathering_disabled"
     );

@@ -10,23 +10,212 @@ import {
   relation,
 } from "./hypergraph.js";
 
-// Extraction types
+type ChronoResult = ReturnType<typeof chrono.parse>[number];
+
+export type EntityKind = "person" | "place" | "organization" | "unknown";
+
+export type EntityMention = {
+  text: string;
+  sentence: number;
+  start: number;
+  end: number;
+};
+
+export type Entity = {
+  label: string;
+  canonical: string;
+  kind: EntityKind;
+  confidence: number;
+  mentions: EntityMention[];
+  isPronoun?: boolean;
+};
+
+export type RelationTriple = {
+  source: string;
+  relation: string;
+  target: string;
+  sentence: number;
+  evidence: string;
+  confidence: number;
+};
+
+export type Contradiction = {
+  pair: [string, string];
+  reason: "negation" | "antonym" | "numeric";
+  focus?: string;
+  confidence: number;
+};
+
+export type TemporalPrecision = "year" | "month" | "day" | "time";
+
+export type TemporalExpression = {
+  raw: string;
+  type: "instant" | "range" | "recurring";
+  normalized: {
+    start?: string;
+    end?: string;
+  };
+  context: string;
+  precision?: TemporalPrecision;
+  recurrence?: string;
+  confidence: number;
+};
+
 type ExtractedFact = {
   content: string;
   confidence: number;
   source: string;
   entities: string[];
-  relations: [string, string, string][]; // [from, relation, to]
+  relations: RelationTriple[];
 };
 
-type ExtractionResult = {
+export type ExtractionResult = {
   facts: ExtractedFact[];
   entities: Set<string>;
-  contradictions: [string, string][];
+  entityDetails: Entity[];
+  relations: RelationTriple[];
+  contradictions: Contradiction[];
+  temporal: TemporalExpression[];
 };
+
+const PERSON_TITLES = [
+  "mr",
+  "mrs",
+  "ms",
+  "dr",
+  "professor",
+  "president",
+  "sir",
+  "madam",
+];
+
+const ORG_KEYWORDS = [
+  "inc",
+  "corp",
+  "labs",
+  "university",
+  "college",
+  "group",
+  "team",
+  "company",
+  "committee",
+  "department",
+  "agency",
+  "association",
+  "foundation",
+  "studio",
+];
+
+const ANTONYM_PAIRS: Array<[string, string]> = [
+  ["allow", "forbid"],
+  ["accept", "reject"],
+  ["add", "remove"],
+  ["agree", "disagree"],
+  ["approve", "deny"],
+  ["arrive", "leave"],
+  ["asleep", "awake"],
+  ["attack", "defend"],
+  ["begin", "end"],
+  ["buy", "sell"],
+  ["cold", "hot"],
+  ["create", "destroy"],
+  ["dark", "bright"],
+  ["decrease", "increase"],
+  ["deficit", "surplus"],
+  ["expand", "shrink"],
+  ["fail", "succeed"],
+  ["fast", "slow"],
+  ["gain", "lose"],
+  ["give", "take"],
+  ["hire", "fire"],
+  ["include", "exclude"],
+  ["legal", "illegal"],
+  ["light", "heavy"],
+  ["open", "closed"],
+  ["optimistic", "pessimistic"],
+  ["pass", "fail"],
+  ["positive", "negative"],
+  ["raise", "lower"],
+  ["safe", "dangerous"],
+  ["strong", "weak"],
+  ["support", "oppose"],
+  ["win", "lose"],
+];
+
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "in",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "this",
+  "to",
+  "with",
+]);
+
+const RECURRENCE_REGEX =
+  /\bevery\s+(?<interval>(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekday|weekend|week|month|quarter|year)(?:\s+(?:morning|afternoon|evening))?)/gi;
+
+const PLACE_TAGS = new Set([
+  "Place",
+  "City",
+  "Country",
+  "Region",
+  "Address",
+  "Continent",
+]);
+
+const ORG_TAGS = new Set(["Organization", "Company", "Corporation"]);
+
+const antonymMap = new Map<string, Set<string>>();
+for (const [a, b] of ANTONYM_PAIRS) {
+  if (!antonymMap.has(a)) {
+    antonymMap.set(a, new Set());
+  }
+  if (!antonymMap.has(b)) {
+    antonymMap.set(b, new Set());
+  }
+  antonymMap.get(a)!.add(b);
+  antonymMap.get(b)!.add(a);
+}
 
 const clampConfidence = (value: number): number =>
   Math.min(0.98, Math.max(0.2, Number(value.toFixed(2))));
+
+const cleanText = (value: string): string =>
+  value.replace(/\s+/g, " ").replace(/[^\w\s'-]/g, "").trim();
+
+const canonicalize = (value: string): string =>
+  nlp(value).normalize({ whitespace: true, case: true }).text().toLowerCase();
+
+const getSentenceBoundary = (
+  text: string,
+  index: number,
+  length: number
+): string => {
+  let start = index;
+  while (start > 0 && !/[.!?]/.test(text[start - 1] ?? "")) {
+    start--;
+  }
+  let end = index + length;
+  while (end < text.length && !/[.!?]/.test(text[end] ?? "")) {
+    end++;
+  }
+  return text.slice(start, end + 1).trim();
+};
 
 const computeSentenceConfidence = (sentenceDoc: nlp.Document): number => {
   let confidence = 0.8;
@@ -61,6 +250,455 @@ const computeSentenceConfidence = (sentenceDoc: nlp.Document): number => {
   return clampConfidence(confidence);
 };
 
+type MentionTerm = {
+  text: string;
+  index?: [number, number];
+  tags?: string[];
+};
+
+const toMention = (terms: MentionTerm[]): EntityMention | null => {
+  if (terms.length === 0) {
+    return null;
+  }
+  const first = terms[0];
+  const last = terms[terms.length - 1];
+  const sentence = first.index?.[0] ?? 0;
+  const start = first.index?.[1] ?? 0;
+  const end = last.index?.[1] ?? start;
+  return {
+    text: cleanText(terms.map((term) => term.text).join(" ")),
+    sentence,
+    start,
+    end,
+  };
+};
+
+const looksLikeTitleCase = (label: string): boolean => {
+  const tokens = label.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) {
+    return false;
+  }
+  let titled = 0;
+  for (const token of tokens) {
+    if (/^[A-Z][\w'-]+$/.test(token)) {
+      titled++;
+    }
+  }
+  return titled / tokens.length >= 0.8;
+};
+
+const pickEntityKind = (
+  label: string,
+  tags: Set<string>,
+  inferred: EntityKind
+): EntityKind => {
+  if (tags.has("Person") || tags.has("FirstName") || tags.has("LastName")) {
+    return "person";
+  }
+  for (const tag of tags) {
+    if (PLACE_TAGS.has(tag)) {
+      return "place";
+    }
+    if (ORG_TAGS.has(tag)) {
+      return "organization";
+    }
+  }
+  if (inferred !== "unknown") {
+    return inferred;
+  }
+
+  const lower = label.toLowerCase();
+  if (ORG_KEYWORDS.some((kw) => lower.includes(kw))) {
+    return "organization";
+  }
+  const condensed = label.replace(/[^A-Za-z]/g, "");
+  if (/[A-Z]{2,}/.test(condensed) || /[A-Z][a-z]+[A-Z]/.test(label)) {
+    return "organization";
+  }
+  if (looksLikeTitleCase(label) && label.split(" ").length <= 4) {
+    return "person";
+  }
+  return "unknown";
+};
+
+const upsertEntity = (
+  map: Map<string, Entity>,
+  kind: EntityKind,
+  label: string,
+  mention: EntityMention | null,
+  confidence: number,
+  opts: { isPronoun?: boolean; allowMerge?: boolean } = {}
+): void => {
+  if (!label) {
+    return;
+  }
+
+  const canonical = canonicalize(label);
+  let key = canonical;
+
+  if (opts.allowMerge !== false) {
+    for (const existing of map.values()) {
+      if (existing.kind !== kind) {
+        continue;
+      }
+      if (
+        existing.canonical === canonical ||
+        existing.canonical.includes(canonical) ||
+        canonical.includes(existing.canonical)
+      ) {
+        key = existing.canonical;
+        break;
+      }
+    }
+  }
+
+  const existing = map.get(key);
+  if (!existing) {
+    map.set(key, {
+      label,
+      canonical: key,
+      kind,
+      confidence: clampConfidence(confidence),
+      mentions: mention ? [mention] : [],
+      isPronoun: opts.isPronoun,
+    });
+    return;
+  }
+
+  if (!opts.isPronoun && existing.isPronoun) {
+    existing.isPronoun = false;
+    existing.label = label;
+  }
+
+  if (existing.kind === "unknown" && kind !== "unknown") {
+    existing.kind = kind;
+  }
+
+  if (mention) {
+    existing.mentions.push(mention);
+  }
+  if (label.length > existing.label.length && !opts.isPronoun) {
+    existing.label = label;
+  }
+
+  existing.confidence = clampConfidence(
+    Math.max(existing.confidence, confidence)
+  );
+};
+
+export const extractEntities = (text: string): Entity[] => {
+  const doc = nlp(text);
+  const entityMap = new Map<string, Entity>();
+
+  const register = (
+    view: nlp.View,
+    kind: EntityKind,
+    confidence: number,
+    opts?: { isPronoun?: boolean; allowMerge?: boolean }
+  ) => {
+    view.json().forEach((entry: any) => {
+      const label = cleanText(entry.text ?? "");
+      if (!label) {
+        return;
+      }
+      const mention = toMention((entry.terms ?? []) as MentionTerm[]) ?? null;
+      upsertEntity(entityMap, kind, label, mention, confidence, opts);
+    });
+  };
+
+  register(doc.people(), "person", 0.92);
+  register(doc.places(), "place", 0.87);
+  register(doc.organizations(), "organization", 0.85);
+
+  doc
+    .match("#Pronoun")
+    .json()
+    .forEach((entry: any) => {
+      const label = cleanText(entry.text ?? "");
+      if (!label) {
+        return;
+      }
+      const mention = toMention((entry.terms ?? []) as MentionTerm[]) ?? null;
+      upsertEntity(entityMap, "person", label, mention, 0.6, {
+        isPronoun: true,
+        allowMerge: false,
+      });
+    });
+
+  doc
+    .nouns()
+    .json()
+    .forEach((noun: any) => {
+      const label = cleanText(noun.text ?? "");
+      if (!label) {
+        return;
+      }
+      const mention = toMention((noun.terms ?? []) as MentionTerm[]) ?? null;
+      const tags = new Set<string>();
+      for (const term of noun.terms ?? []) {
+        for (const tag of term.tags ?? []) {
+          tags.add(tag);
+        }
+      }
+      const inferred: EntityKind = PERSON_TITLES.some((title) =>
+        label.toLowerCase().startsWith(`${title} `)
+      )
+        ? "person"
+        : "unknown";
+      const kind = pickEntityKind(label, tags, inferred);
+      const baseConfidence =
+        kind === "person"
+          ? 0.8
+          : kind === "organization"
+            ? 0.78
+            : kind === "place"
+              ? 0.76
+              : 0.65;
+      upsertEntity(entityMap, kind, label, mention, baseConfidence);
+    });
+
+  const entities = Array.from(entityMap.values());
+  entities.forEach((entity) =>
+    entity.mentions.sort(
+      (a, b) => a.sentence - b.sentence || a.start - b.start
+    )
+  );
+
+  return entities.sort((a, b) => b.confidence - a.confidence);
+};
+
+type MentionRecord = EntityMention & { entity: Entity };
+
+const buildMentionIndex = (entities: Entity[]): Map<number, MentionRecord[]> => {
+  const index = new Map<number, MentionRecord[]>();
+  for (const entity of entities) {
+    for (const mention of entity.mentions) {
+      const list = index.get(mention.sentence) ?? [];
+      list.push({ ...mention, entity });
+      index.set(mention.sentence, list);
+    }
+  }
+  for (const mentions of index.values()) {
+    mentions.sort((a, b) => a.start - b.start);
+  }
+  return index;
+};
+
+const nearestMentions = (
+  mentions: MentionRecord[],
+  pivot: number,
+  direction: "left" | "right",
+  limit: number
+): Array<{ record: MentionRecord; distance: number }> => {
+  const filtered = mentions
+    .map((record) => {
+      const distance =
+        direction === "left" ? pivot - record.end : record.start - pivot;
+      return { record, distance };
+    })
+    .filter(({ distance }) =>
+      direction === "left" ? distance >= 0 : distance > 0
+    )
+    .filter(({ distance }) => distance <= 6)
+    .sort((a, b) => a.distance - b.distance);
+  return filtered.slice(0, limit);
+};
+
+export const extractRelations = (
+  text: string,
+  existingEntities?: Entity[]
+): RelationTriple[] => {
+  const entities = existingEntities ?? extractEntities(text);
+  if (entities.length === 0) {
+    return [];
+  }
+
+  const doc = nlp(text);
+  const sentences = doc.sentences();
+  const sentencesJson = doc.sentences().json();
+  const mentionIndex = buildMentionIndex(entities);
+  const relations: RelationTriple[] = [];
+
+  sentences.forEach((sentence, sentenceIndex) => {
+    const mentionList = mentionIndex.get(sentenceIndex) ?? [];
+    let carrySubject: MentionRecord | null = null;
+    const sentenceTerms = sentencesJson[sentenceIndex]?.terms ?? [];
+
+    const intermediateTerms = (start: number, end: number) =>
+      sentenceTerms.filter((term: any) => {
+        const idx = term.index?.[1];
+        return typeof idx === "number" && idx > start && idx < end;
+      });
+
+    const adjoinsPreposition = (record: MentionRecord) => {
+      const previous = sentenceTerms.find(
+        (term: any) => term.index?.[1] === record.start - 1
+      );
+      return Boolean(previous && previous.tags?.includes("Preposition"));
+    };
+
+    sentence.verbs().json().forEach((verb: any) => {
+      const verbTerm = verb.terms?.[0];
+      if (!verbTerm || typeof verbTerm.index?.[1] !== "number") {
+        return;
+      }
+      const pivot = verbTerm.index[1];
+      let subjects =
+        nearestMentions(mentionList, pivot, "left", 2) ??
+        ([] as Array<{ record: MentionRecord; distance: number }>);
+      subjects = subjects.filter(({ record }) => {
+        const between = intermediateTerms(record.end, pivot);
+        const hasConjunction = between.some((term: any) =>
+          term.tags?.includes("Conjunction")
+        );
+        if (hasConjunction && carrySubject) {
+          return false;
+        }
+        if (adjoinsPreposition(record) && carrySubject) {
+          return false;
+        }
+        return true;
+      });
+      if (subjects.length === 0 && carrySubject) {
+        subjects.push({ record: carrySubject, distance: 0 });
+      }
+      const objects = nearestMentions(mentionList, pivot, "right", 3);
+
+      if (subjects.length === 0 || objects.length === 0) {
+        return;
+      }
+
+      const relationLabel =
+        verb.verb?.infinitive ?? verb.verb?.root ?? verb.text ?? "related";
+
+      subjects.forEach(({ record: subjectRecord }) => {
+        const subjectName = subjectRecord.entity.label;
+        carrySubject = subjectRecord;
+
+        objects.forEach(({ record: objectRecord, distance }) => {
+          const targetName = objectRecord.entity.label;
+          if (!targetName || targetName === subjectName) {
+            return;
+          }
+          const confidenceAdjustment = distance > 3 ? 0.05 : 0;
+          relations.push({
+            source: subjectName,
+            relation: relationLabel,
+            target: targetName,
+            sentence: sentenceIndex,
+            evidence: sentence.text(),
+            confidence: clampConfidence(0.75 - confidenceAdjustment),
+          });
+        });
+      });
+    });
+  });
+
+  const deduped = new Map<string, RelationTriple>();
+  for (const rel of relations) {
+    const key = `${rel.source}|${rel.relation}|${rel.target}|${rel.sentence}`;
+    if (!deduped.has(key)) {
+      deduped.set(key, rel);
+    }
+  }
+
+  return Array.from(deduped.values());
+};
+
+const tokensFromDoc = (doc: nlp.Document): Set<string> => {
+  return new Set(
+    doc
+      .text()
+      .toLowerCase()
+      .split(/[^a-z0-9%-]+/)
+      .filter((token) => token.length > 2 && !STOPWORDS.has(token))
+  );
+};
+
+const nounSet = (doc: nlp.Document): Set<string> =>
+  new Set(
+    doc
+      .nouns()
+      .out("array")
+      .map((n: string) => canonicalize(n))
+      .filter(Boolean)
+  );
+
+export const detectContradiction = (
+  first: string,
+  second: string
+): Contradiction | null => {
+  const docA = nlp(first);
+  const docB = nlp(second);
+  const overlap = [...nounSet(docA)].filter((noun) => nounSet(docB).has(noun));
+  const focus = overlap[0];
+
+  const negativeA = docA.has("#Negative");
+  const negativeB = docB.has("#Negative");
+
+  if (negativeA !== negativeB) {
+    const normalizedA = docA.clone().sentences().toPositive().text().trim();
+    const normalizedB = docB.clone().sentences().toPositive().text().trim();
+    if (normalizedA && normalizedA === normalizedB) {
+      return {
+        pair: [first, second],
+        reason: "negation",
+        focus: focus ?? normalizedA.split(" ")[0],
+        confidence: clampConfidence(0.92),
+      };
+    }
+  }
+
+  const tokensA = tokensFromDoc(docA);
+  const tokensB = tokensFromDoc(docB);
+  for (const token of tokensA) {
+    const antonyms = antonymMap.get(token);
+    if (!antonyms) {
+      continue;
+    }
+    for (const antonym of antonyms) {
+      if (tokensB.has(antonym) && (focus || overlap.length > 0)) {
+        return {
+          pair: [first, second],
+          reason: "antonym",
+          focus: focus ?? token,
+          confidence: clampConfidence(0.78),
+        };
+      }
+    }
+  }
+
+  const numbersA = docA.numbers().json();
+  const numbersB = docB.numbers().json();
+  if (numbersA.length > 0 && numbersB.length > 0 && (focus || overlap.length)) {
+    const valueA = Number(numbersA[0]?.number ?? numbersA[0]?.text);
+    const valueB = Number(numbersB[0]?.number ?? numbersB[0]?.text);
+    if (
+      Number.isFinite(valueA) &&
+      Number.isFinite(valueB) &&
+      valueA !== valueB
+    ) {
+      return {
+        pair: [first, second],
+        reason: "numeric",
+        focus: focus ?? numbersA[0]?.text ?? undefined,
+        confidence: clampConfidence(0.74),
+      };
+    }
+  }
+
+  if (negativeA !== negativeB && overlap.length > 0) {
+    return {
+      pair: [first, second],
+      reason: "negation",
+      focus,
+      confidence: clampConfidence(0.8),
+    };
+  }
+
+  return null;
+};
+
 /**
  * Extract facts from natural language text
  * Zero allocation design - reuses buffers
@@ -70,123 +708,80 @@ const computeSentenceConfidence = (sentenceDoc: nlp.Document): number => {
  * Removed: Regex Taxonomy dependency.
  */
 export const extract = (text: string, source: string): ExtractionResult => {
-  const facts: ExtractedFact[] = [];
-  const entities = new Set<string>();
-  const contradictions: [string, string][] = [];
-
-  const doc = nlp(text);
-  const sentences = doc.sentences().out("array");
-
-  for (const sentence of sentences) {
-    const sDoc = nlp(sentence);
-    const trimmed = sentence.trim();
-    if (trimmed.length === 0) {
-      continue;
-    }
-
-    // Extract entities using compromise
-    const sentenceEntities: string[] = [];
-    const people = sDoc.people().out("array");
-    const places = sDoc.places().out("array");
-    const orgs = sDoc.organizations().out("array");
-    const topicEntities = sDoc.topics().out("array"); // Fallback for other proper nouns
-    const nouns = sDoc.nouns().out("array"); // Catch-all for capitalized terms
-
-    const allEntities = [
-      ...new Set([...people, ...places, ...orgs, ...topicEntities, ...nouns]),
-    ];
-
-    for (const entity of allEntities) {
-      // Simple heuristic: only keep entities that look like proper nouns (capitalized)
-      // unless they were explicitly detected as people/places/orgs
-      const isExplicit =
-        people.includes(entity) ||
-        places.includes(entity) ||
-        orgs.includes(entity);
-      const isCapitalized = /^[A-Z]/.test(entity);
-
-      if (isExplicit || isCapitalized) {
-        // Strip trailing punctuation (.,!?)
-        const cleanEntity = entity.replace(/[.,!?]+$/, "");
-        if (cleanEntity.length > 0) {
-          entities.add(cleanEntity);
-          sentenceEntities.push(cleanEntity);
-        }
-      }
-    }
-
-    const confidence = computeSentenceConfidence(sDoc);
-
-    // Extract relations
-    // Simple heuristic: if we have Subject + Verb + Object structure
-    // compromise allows finding this somewhat
-    const relations: [string, string, string][] = [];
-
-    // 1. Pairwise co-occurrence (fallback)
-    if (sentenceEntities.length >= 2) {
-      for (let i = 0; i < sentenceEntities.length - 1; i++) {
-        for (let j = i + 1; j < sentenceEntities.length; j++) {
-          const e1 = sentenceEntities[i];
-          const e2 = sentenceEntities[j];
-          if (e1 && e2) {
-            relations.push([e1, "related_to", e2]);
-          }
-        }
-      }
-    }
-
-    // 2. Verb-based extraction (Subject -> Verb -> Object)
-    // This is a simplification; improving it requires a full dependency parser
-    // or a dedicated relation extraction model.
-    // We can use compromise's .verbs() to get the action.
-    const verbs = sDoc.verbs().out("array");
-    if (verbs.length > 0 && sentenceEntities.length >= 2) {
-      // Try to find entities before and after the main verb
-      const mainVerb = verbs[0];
-      // Check if mainVerb is defined before splitting
-      if (mainVerb) {
-        const parts = sentence.split(mainVerb);
-        if (parts.length === 2) {
-          const before = parts[0];
-          const after = parts[1];
-
-          // Add null checks for before/after
-          if (before && after) {
-            const subject = sentenceEntities.find((e) => before.includes(e));
-            const object = sentenceEntities.find((e) => after.includes(e));
-
-            if (subject && object) {
-              // More specific relation found
-              relations.push([subject, mainVerb, object]);
-            }
-          }
-        }
-      }
-    }
-
-    // Create fact
-    facts.push({
-      content: trimmed,
-      confidence,
-      source,
-      entities: sentenceEntities,
-      relations,
-    });
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return {
+      facts: [],
+      entities: new Set(),
+      entityDetails: [],
+      relations: [],
+      contradictions: [],
+      temporal: [],
+    };
   }
 
-  // Detect contradictions (using compromise for negation check)
+  const entityDetails = extractEntities(trimmed);
+  const relations = extractRelations(trimmed, entityDetails);
+  const entitySet = new Set(entityDetails.map((entity) => entity.label));
+  const temporal = extractTemporal(trimmed);
+
+  const doc = nlp(trimmed);
+  const sentences = doc.sentences().json();
+  const facts: ExtractedFact[] = [];
+
+  sentences.forEach((sentence, index) => {
+    const content = sentence.text.trim();
+    if (!content) {
+      return;
+    }
+    const sentenceDoc = nlp(sentence.text);
+    const sentenceEntities = entityDetails
+      .filter((entity) =>
+        entity.mentions.some((mention) => mention.sentence === index)
+      )
+      .map((entity) => entity.label);
+    const sentenceRelations = relations.filter(
+      (relation) => relation.sentence === index
+    );
+
+    facts.push({
+      content,
+      confidence: computeSentenceConfidence(sentenceDoc),
+      source,
+      entities: [...new Set(sentenceEntities)],
+      relations: sentenceRelations,
+    });
+  });
+
+  const contradictions: Contradiction[] = [];
+  const seen = new Set<string>();
   for (let i = 0; i < facts.length; i++) {
     for (let j = i + 1; j < facts.length; j++) {
-      // Add non-null assertions or checks for facts[i] and facts[j]
-      const factI = facts[i];
-      const factJ = facts[j];
-      if (factI && factJ && detectContradiction(factI.content, factJ.content)) {
-        contradictions.push([factI.content, factJ.content]);
+      const factA = facts[i];
+      const factB = facts[j];
+      if (!factA || !factB) {
+        continue;
+      }
+      const key = [factA.content, factB.content].sort().join("::");
+      if (seen.has(key)) {
+        continue;
+      }
+      const contradiction = detectContradiction(factA.content, factB.content);
+      if (contradiction) {
+        seen.add(key);
+        contradictions.push(contradiction);
       }
     }
   }
 
-  return { facts, entities, contradictions };
+  return {
+    facts,
+    entities: entitySet,
+    entityDetails,
+    relations,
+    contradictions,
+    temporal,
+  };
 };
 
 /**
@@ -200,6 +795,17 @@ export type KnowledgeEntry = {
 export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
   const list: KnowledgeEntry[] = [];
   const seen = new Set<string>();
+  const entityNodes = new Map<string, ReturnType<typeof nodeFromHash>>();
+  const entitySources = new Map<string, string>();
+  const defaultSource = result.facts[0]?.source ?? "extraction";
+
+  for (const fact of result.facts) {
+    for (const label of fact.entities) {
+      if (!entitySources.has(label)) {
+        entitySources.set(label, fact.source);
+      }
+    }
+  }
 
   const insert = (item: Knowledge) => {
     const hash = knowledgeHash(item);
@@ -210,107 +816,73 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
     return nodeFromHash(hash); // Returns NodeId which is a string
   };
 
-  // Collect all entities to tag properties (simple domain detection logic placeholder)
-  // In future, we can use graph feedback to tag these nodes with domains
-  // const allEntities = Array.from(result.entities);
-
   for (const f of result.facts) {
-    // Enriched fact with entities as metadata/properties?
-    // Currently Hypergraph 'Fact' is pure content string.
-    // We rely on Relation nodes to link them.
     insert(fact(f.content, f.confidence, f.source));
   }
 
+  const ensureEntityNode = (
+    label: string,
+    kind: EntityKind,
+    confidence: number,
+    sourceHint?: string
+  ): ReturnType<typeof nodeFromHash> | null => {
+    if (!label || label.length < 2) {
+      return null;
+    }
+    const lower = label.toLowerCase();
+    if (STOPWORDS.has(lower)) {
+      return null;
+    }
+    const key = canonicalize(label);
+    const existing = entityNodes.get(key);
+    if (existing) {
+      return existing;
+    }
+    const source = `${sourceHint ?? entitySources.get(label) ?? defaultSource}:entity`;
+    const node = insert(
+      fact(`[entity:${kind}] ${label}`, clampConfidence(confidence), source)
+    );
+    entityNodes.set(key, node);
+    return node;
+  };
+
+  const resolveEntityNode = (label: string): ReturnType<typeof nodeFromHash> | null => {
+    const key = canonicalize(label);
+    const direct = entityNodes.get(key);
+    if (direct) {
+      return direct;
+    }
+    return null;
+  };
+
+  for (const entity of result.entityDetails ?? []) {
+    if (entity.isPronoun) {
+      continue;
+    }
+    ensureEntityNode(
+      entity.label,
+      entity.kind,
+      entity.confidence,
+      entitySources.get(entity.label)
+    );
+  }
+
+  for (const rel of result.relations ?? []) {
+    const fromNode =
+      resolveEntityNode(rel.source) ??
+      ensureEntityNode(rel.source, "unknown", rel.confidence, defaultSource);
+    const toNode =
+      resolveEntityNode(rel.target) ??
+      ensureEntityNode(rel.target, "unknown", rel.confidence, defaultSource);
+
+    if (!(fromNode && toNode)) {
+      continue;
+    }
+
+    insert(relation(fromNode, toNode, rel.relation, clampConfidence(rel.confidence)));
+  }
+
   return list;
-};
-
-/**
- * TODO: Implement robust contradiction detection
- * Current implementation only checks for simple negation
- * Missing:
- * - Semantic contradictions (hot vs cold)
- * - Numerical contradictions (10% vs 90%)
- * - Temporal contradictions (before vs after)
- * - Logical contradictions (all vs none)
- * Consider using textual entailment models
- */
-const detectContradiction = (s1: string, s2: string): boolean => {
-  const doc1 = nlp(s1);
-  const doc2 = nlp(s2);
-
-  // Check for explicit negation in one but not the other
-  const hasNegation1 = doc1.has("#Negative");
-  const hasNegation2 = doc2.has("#Negative");
-
-  if (hasNegation1 === hasNegation2) {
-    return false;
-  }
-
-  // Normalize to compare core content
-  // This is basic; essentially "I like pizza" vs "I do not like pizza"
-  // We strip the negative and compare
-  // compromise allows toggling negation
-
-  if (hasNegation1) {
-    // remove negation from s1 and see if it roughly matches s2
-    // This is tricky to do reliably without changing meaning,
-    // but we can try to match verbs/nouns
-    const verbs1 = doc1.verbs().toPositive().out("array");
-    const verbs2 = doc2.verbs().out("array");
-
-    // If main verbs match after removing negation
-    const intersection = verbs1.filter((v: string) => verbs2.includes(v));
-    if (intersection.length > 0) {
-      // Check if subjects/objects overlap significantly
-      const nouns1 = doc1.nouns().out("array");
-      const nouns2 = doc2.nouns().out("array");
-      const nounIntersection = nouns1.filter((n: string) => nouns2.includes(n));
-      if (nounIntersection.length >= 2) {
-        return true; // Subject + Object match
-      }
-    }
-  }
-
-  if (hasNegation2) {
-    const verbs1 = doc1.verbs().out("array");
-    const verbs2 = doc2.verbs().toPositive().out("array");
-
-    const intersection = verbs1.filter((v: string) => verbs2.includes(v));
-    if (intersection.length > 0) {
-      const nouns1 = doc1.nouns().out("array");
-      const nouns2 = doc2.nouns().out("array");
-      const nounIntersection = nouns1.filter((n: string) => nouns2.includes(n));
-      if (nounIntersection.length >= 2) {
-        return true;
-      }
-    }
-  }
-
-  // Fallback to simple keyword negation check if structure fails
-  const negations = ["not", "no", "never", "none", "neither"];
-  const s1Lower = s1.toLowerCase();
-  const s2Lower = s2.toLowerCase();
-
-  for (const negation of negations) {
-    if (s1Lower.includes(negation) && !s2Lower.includes(negation)) {
-      const s2Terms = s2Lower.split(/\s+/);
-      for (const term of s2Terms) {
-        if (term.length > 3 && s1Lower.includes(`${negation} ${term}`)) {
-          return true;
-        }
-      }
-    }
-    if (s2Lower.includes(negation) && !s1Lower.includes(negation)) {
-      const s1Terms = s1Lower.split(/\s+/);
-      for (const term of s1Terms) {
-        if (term.length > 3 && s2Lower.includes(`${negation} ${term}`)) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
 };
 
 /**
@@ -362,71 +934,126 @@ export const inferPattern = (
   return pattern([], rule, accuracy);
 };
 
+const temporalPrecision = (
+  components?: ChronoResult["start"]
+): TemporalPrecision | undefined => {
+  if (!components) {
+    return undefined;
+  }
+  if (components.isCertain("hour")) {
+    return "time";
+  }
+  if (components.isCertain("day")) {
+    return "day";
+  }
+  if (components.isCertain("month")) {
+    return "month";
+  }
+  if (components.isCertain("year")) {
+    return "year";
+  }
+  return undefined;
+};
+
+const temporalConfidence = (result: ChronoResult): number => {
+  let confidence = 0.72;
+  if (result.start?.isCertain("day")) {
+    confidence += 0.08;
+  }
+  if (result.start?.isCertain("hour")) {
+    confidence += 0.05;
+  }
+  if (result.tags?.RelativeDateFormatParser) {
+    confidence -= 0.05;
+  }
+  if (result.text.match(/^\d{4}$/)) {
+    confidence -= 0.05;
+  }
+  return clampConfidence(confidence);
+};
+
 /**
  * Extract temporal facts (dates, durations, sequences)
  */
-export const extractTemporal = (
-  text: string
-): Array<{ time: Date; fact: string }> => {
-  const temporal: Array<{ time: Date; fact: string }> = [];
+export const extractTemporal = (text: string): TemporalExpression[] => {
+  const expressions: TemporalExpression[] = [];
+  const seen = new Set<string>();
 
-  // Use chrono-node for parsing
+  const pushExpression = (expr: TemporalExpression) => {
+    const key = `${expr.type}:${expr.raw}:${expr.normalized.start ?? ""}:${
+      expr.normalized.end ?? ""
+    }:${expr.context}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    expressions.push(expr);
+  };
+
   const parsed = chrono.parse(text);
-
   for (const result of parsed) {
-    const date = result.start.date();
-    const textMatch = result.text;
-
-    // Find context (sentence)
-    // Simple heuristic: expand around the match until punctuation
-    const index = result.index;
-    let start = index;
-    while (start > 0 && !/[.!?]/.test(text[start - 1] || "")) {
-      start--;
-    }
-    let end = index + textMatch.length;
-    while (end < text.length && !/[.!?]/.test(text[end] || "")) {
-      end++;
-    }
-
-    const sentence = text.substring(start, end + 1).trim();
-    temporal.push({ time: date, fact: sentence });
+    const start = result.start?.date();
+    const end = result.end?.date();
+    pushExpression({
+      raw: result.text,
+      type: result.end ? "range" : "instant",
+      normalized: {
+        start: start?.toISOString(),
+        end: end?.toISOString(),
+      },
+      context: getSentenceBoundary(text, result.index ?? 0, result.text.length),
+      precision: temporalPrecision(result.start),
+      confidence: temporalConfidence(result),
+    });
   }
 
-  // Fallback to regex if chrono misses (though chrono is quite good)
-  // Keeping existing regex logic as backup or for specific formats not covered
-  if (temporal.length === 0) {
-    const datePatterns = [
-      /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,
-      /(\d{4}-\d{2}-\d{2})/g,
-      /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi,
-    ];
-
-    for (const pattern of datePatterns) {
-      const matches = text.matchAll(pattern);
-      for (const match of matches) {
-        try {
-          // Avoid duplicates if chrono already found it (heuristic check)
-          // But here we are in the fallback block
-          const date = new Date(match[0]);
-          if (!Number.isNaN(date.getTime())) {
-            // Find sentence containing this date
-            const sentences = text.split(/[.!?]+/);
-            for (const sentence of sentences) {
-              if (sentence.includes(match[0])) {
-                temporal.push({ time: date, fact: sentence.trim() });
-                break;
-              }
-            }
-          }
-        } catch {
-          // Invalid date, skip
-        }
-      }
+  const rangeRegex =
+    /\b(?:from|between)\s+([^,.;]+?)\s+(?:to|and)\s+([^,.;]+?)(?=[,.;!?]|$)/gi;
+  let rangeMatch: RegExpExecArray | null;
+  while ((rangeMatch = rangeRegex.exec(text)) !== null) {
+    const raw = rangeMatch[0];
+    const start = chrono.parseDate(rangeMatch[1]);
+    const end = chrono.parseDate(rangeMatch[2]);
+    if (!start || !end) {
+      continue;
     }
+    pushExpression({
+      raw,
+      type: "range",
+      normalized: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      context: getSentenceBoundary(
+        text,
+        rangeMatch.index ?? 0,
+        raw.length
+      ),
+      precision: "day",
+      confidence: clampConfidence(0.74),
+    });
   }
 
-  return temporal;
+  let recurrenceMatch: RegExpExecArray | null;
+  while ((recurrenceMatch = RECURRENCE_REGEX.exec(text)) !== null) {
+    const raw = recurrenceMatch[0];
+    const interval = recurrenceMatch.groups?.interval?.toLowerCase();
+    pushExpression({
+      raw,
+      type: "recurring",
+      normalized: {},
+      context: getSentenceBoundary(
+        text,
+        recurrenceMatch.index ?? 0,
+        raw.length
+      ),
+      precision: "time",
+      recurrence: interval,
+      confidence: clampConfidence(0.6),
+    });
+  }
+
+  return expressions;
 };
 
 /**

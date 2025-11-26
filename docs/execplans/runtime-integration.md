@@ -107,6 +107,12 @@ Document unexpected behaviors, bugs, optimizations, or insights discovered durin
   **Resolution:** Updated AISDKAdapter.mapEvent() to use correct AI SDK v6 property names before implementation
   **Date:** 2025-11-16
 
+- **Observation:** Phase TODOs (real context gatherers, AISDK plan/act streaming, workflow report) remained unimplemented, so runtime emitted placeholders.
+  **Evidence:** `docs/execplans/runtime/runtime-integration-code-review.md` flagged missing integrations at `packages/runtime/src/core.ts` lines 190-225.
+  **Impact:** Router rollout would have produced empty scan data, no tool execution, and no execution summary, masking regressions.
+  **Resolution:** Wired scan phase to `@alfred/agent` gatherers with auth propagation, enabled AISDK-based planning and tool execution via `buildTools()`, added report aggregation, and expanded phase tests to lock behavior.
+  **Date:** 2025-11-26
+
 ---
 
 ## Decision Log

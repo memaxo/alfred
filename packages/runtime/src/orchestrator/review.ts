@@ -3,7 +3,11 @@ import * as path from "node:path";
 import {
   buildReviewPlan,
   generateReviewExecPlanSkeleton,
+  generateFixerExecPlanSkeleton,
+  formatReviewFailureDetails,
+  type ReviewFailureDetail,
 } from "@alfred/agent/orchestrator/multi/review";
+import { buildFixerAgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
@@ -264,6 +268,16 @@ export async function* runReviewPhase(
     summary: mergePlan.summary,
   });
 
+  const reviewFocusFiles = Array.isArray(mergePlan?.expectedFiles)
+    ? Array.from(
+        new Set(
+          (mergePlan.expectedFiles as string[]).filter(
+            (file): file is string => typeof file === "string" && file.length > 0
+          )
+        )
+      ).slice(0, 50)
+    : [];
+
   const sessionController = reviewSessionsEnabled()
     ? createSessionController(runId, workspace)
     : null;
@@ -299,12 +313,7 @@ export async function* runReviewPhase(
     const MAX_FIX_ATTEMPTS = 3;
     let fixAttempts = 0;
     let reviewPassed = false;
-    let reviewFailures: Array<{
-      command: string;
-      output: string;
-      error?: string;
-      checkId?: string;
-    }> = [];
+    let reviewFailures: ReviewFailureDetail[] = [];
     const startedAt = Date.now();
 
     while (fixAttempts <= MAX_FIX_ATTEMPTS && !reviewPassed) {
@@ -523,52 +532,41 @@ export async function* runReviewPhase(
       ) {
         yield { type: "notice", message: "self_correction_started" } as any;
 
-        const fixerExecPlanPath = `.agent/plans/${runId}/fixer-${
-          fixAttempts + 1
-        }.md`;
-
         try {
-          const dir = path.dirname(fixerExecPlanPath);
-          await fs.mkdir(dir, { recursive: true });
+          const fixerSpec = buildFixerAgentSpec({
+            runId,
+            cwd: workspace,
+            attempt: fixAttempts + 1,
+            summary: reviewPlan.summary,
+            relevantFiles: reviewFocusFiles,
+            auto: input.auto,
+            linear: input.linear
+              ? {
+                  issueId: undefined,
+                  sessionId: input.linear.sessionId,
+                  space: input.linear.space,
+                  authz: input.linear.authz,
+                }
+              : undefined,
+          });
 
-          const failureDetails = reviewFailures
-            .map(
-              (f) =>
-                `Check: ${f.checkId ?? "unknown"}\nCommand: ${
-                  f.command
-                }\nError/Output:\n\`\`\`\n${
-                  f.output || f.error || "<no output captured>"
-                }\n\`\`\``
-            )
-            .join("\n\n");
+          const fixerExecPlanPath = path.resolve(
+            workspace,
+            fixerSpec.execPlanPath
+          );
+          await fs.mkdir(path.dirname(fixerExecPlanPath), { recursive: true });
 
-          const skeleton = [
-            `# Fixer ExecPlan (Attempt ${fixAttempts + 1})`,
-            "",
-            "## Purpose",
-            "Fix the errors detected during the review phase.",
-            "",
-            "## Context",
-            "The following checks failed:",
-            failureDetails,
-            "",
-            "## Plan",
-            "- Analyze the error output.",
-            "- Locate the source files causing the error.",
-            "- Apply fixes.",
-            "- Verify the fix (the review phase will re-run automatically).",
-            "- Use the 'session' tool if you need a persistent dev server (session.start/peek/send/stop).",
-            "",
-            "## Progress",
-            "- [ ] (pending) Fix applied.",
-          ].join("\n");
+          const fixerPlan = generateFixerExecPlanSkeleton({
+            runId,
+            attempt: fixAttempts + 1,
+            failures: reviewFailures,
+            relevantFiles: reviewFocusFiles,
+          });
+          await fs.writeFile(fixerExecPlanPath, fixerPlan, "utf8");
 
-          await fs.writeFile(fixerExecPlanPath, skeleton, "utf8");
-
-          const fixerAuto = input.auto === "read" ? "medium" : input.auto;
-          const prompt = [
+          const promptLines = [
             "You are a Self-Correction 'Fixer' Agent.",
-            `ExecPlan path: ${fixerExecPlanPath}`,
+            `ExecPlan path: ${fixerSpec.execPlanPath}`,
             "Your goal is to FIX the code so that the review checks pass.",
             "1. Read the error context in the plan.",
             "2. Edit the code to resolve the errors.",
@@ -577,7 +575,21 @@ export async function* runReviewPhase(
             "   - session.start <session_id> <command> to launch a dev server or watcher.",
             "   - session.peek <session_id> to read output, session.send to send commands, session.stop to end it.",
             "5. Do not break existing functionality.",
-          ].join("\n");
+          ];
+
+          if (fixerSpec.context.relevantFiles?.length) {
+            promptLines.push("", "Relevant files to inspect:");
+            for (const file of fixerSpec.context.relevantFiles.slice(0, 10)) {
+              promptLines.push(`- ${file}`);
+            }
+          }
+
+          const failureDetails = formatReviewFailureDetails(reviewFailures);
+          if (failureDetails.trim().length > 0) {
+            promptLines.push("", "Failure details:", failureDetails);
+          }
+
+          const prompt = promptLines.join("\n");
 
           const fixerEvents: WorkflowEvent[] = [];
           const writer = {
@@ -606,18 +618,23 @@ export async function* runReviewPhase(
               );
             }
 
-            // Run the Fixer
             await toolCodex.execute({
               input: {
                 action: "exec",
                 prompt,
                 out: "text",
-                auto: fixerAuto,
-                cw: workspace,
-                sessionId: `${runId}:fixer-${fixAttempts}`,
-                model: undefined,
-                profile: undefined,
-                context: {},
+                auto: fixerSpec.auto,
+                cw: fixerSpec.workingDirectory,
+                sessionId: fixerSpec.sessionId,
+                model: fixerSpec.model,
+                profile: fixerSpec.profile,
+                context: {
+                  linearSessionId: fixerSpec.context.linearSessionId,
+                  linearSpace: fixerSpec.context.linearSpace,
+                  linearAuthz: fixerSpec.context.linearAuthz,
+                  linearIssueId: fixerSpec.context.linearIssueId,
+                  relevantFiles: fixerSpec.context.relevantFiles,
+                },
               },
               writer,
             });
@@ -684,6 +701,20 @@ export async function* runReviewPhase(
         data: {
           plan: fallbackPlanPath,
           attempts,
+        },
+      } as any;
+
+      yield {
+        type: "event",
+        kind: "review-escalated",
+        data: {
+          reason: "fixer_exhausted",
+          attempts,
+          fixerAttempts: fixAttempts,
+          plan: fallbackPlanPath,
+          failures: reviewFailures,
+          relevantFiles: reviewFocusFiles,
+          summary: formatReviewFailureDetails(reviewFailures),
         },
       } as any;
     }

@@ -96,6 +96,38 @@ describe("buildMergePlan", () => {
       "packages/api",
     ]);
   });
+
+  it("switches to branch strategy when agent branches exist", () => {
+    const outcomes: AgentOutcome[] = [
+      makeOutcome({
+        result: {
+          summary: "feature",
+          artifacts: [],
+          changes: ["packages/runtime/src/orchestrator.ts"],
+          notes: [],
+          branch: "agent/run-1/task-a",
+        },
+      }),
+      makeOutcome({
+        agentId: "agent-2" as any,
+        result: {
+          summary: "feat2",
+          artifacts: [],
+          changes: ["apps/web/src/app.tsx"],
+          notes: [],
+          branch: "agent/run-1/task-b",
+        },
+      }),
+    ];
+
+    const plan = buildMergePlan(outcomes);
+    expect(plan.strategy).toBe("branch");
+    expect(plan.branches).toEqual([
+      "agent/run-1/task-a",
+      "agent/run-1/task-b",
+    ]);
+    expect(plan.summary).toContain("Merging 2 feature branches");
+  });
 });
 
 describe("generateMergeExecPlanSkeleton", () => {
@@ -122,5 +154,19 @@ describe("generateMergeExecPlanSkeleton", () => {
     expect(md).toContain("packages/api");
     expect(md).toContain("## Plan");
     expect(md).toContain("- [ ] (pending) Merge analysis started.");
+  });
+
+  it("lists branches when branch strategy is selected", () => {
+    const plan = {
+      summary: "Branch merge",
+      expectedFiles: [],
+      strategy: "branch" as const,
+      branches: ["agent/run-1/task-a"],
+      targetBranch: "main",
+      changedPackages: [],
+    };
+    const md = generateMergeExecPlanSkeleton("run-xyz", plan);
+    expect(md).toContain("Branches to merge:");
+    expect(md).toContain("- agent/run-1/task-a");
   });
 });

@@ -1,5 +1,6 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { LanguageModel } from "ai";
 import { executePlanPhase } from "../../phases/plan";
 import type { ExecutionContext } from "../../context";
 import type { RuntimeInput } from "../../types";
@@ -8,7 +9,10 @@ import type { Phase, PhaseResult } from "../types";
 export class PlanPhase implements Phase<RuntimeInput, void> {
   readonly id = "plan";
 
-  constructor(private readonly runId: string) {}
+  constructor(
+    private readonly runId: string,
+    private readonly model: LanguageModel
+  ) {}
 
   async *run(
     input: RuntimeInput,
@@ -34,11 +38,23 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         input,
         this.runId,
         controller.signal,
+        this.model,
         cachedContext ?? undefined
       );
 
-      for await (const event of generator) {
-        yield event;
+      let planSummary: string | null | undefined;
+      const iter = generator[Symbol.asyncIterator]();
+      while (true) {
+        const next = await iter.next();
+        if (next.done) {
+          planSummary = next.value ?? null;
+          break;
+        }
+        yield next.value;
+      }
+
+      if (planSummary) {
+        context.set("planSummary", planSummary);
       }
 
       return { status: "success", data: undefined };

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { auth } from "@alfred/auth";
+import type { Obligation } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { getSessionUser } from "./utils/session";
 
@@ -32,7 +33,7 @@ export type Context = {
   runtime: RuntimeMetadata;
   runtimeContext: RuntimeContext;
   policy?: {
-    obligations: string[];
+    obligations: Obligation[];
   };
 };
 

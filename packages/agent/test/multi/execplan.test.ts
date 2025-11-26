@@ -87,6 +87,17 @@ describe("execplan.applyProgressUpdate", () => {
     expect(updated).toContain("- [ ] Old");
     expect(updated).toContain("- [ ] (2025-02-01) New work item");
   });
+
+  it("creates a new progress section when missing", () => {
+    const md = "# Plan";
+    const updated = applyProgressUpdate(md, {
+      timestampIso: "2025-03-01",
+      message: "Bootstrapped",
+      completed: false,
+    });
+    expect(updated).toContain("## Progress");
+    expect(updated).toContain("Bootstrapped");
+  });
 });
 
 describe("execplan.appendDecisionLogEntry", () => {
@@ -109,6 +120,15 @@ describe("execplan.appendDecisionLogEntry", () => {
     expect(updated).toContain("Rationale: Runtime captured status");
     expect(updated).toContain("Date/Author: 2025-02-01 / runtime");
   });
+
+  it("creates a new decision section when missing", () => {
+    const updated = appendDecisionLogEntry("# Plan", {
+      decision: "Start",
+      rationale: "initial",
+    });
+    expect(updated).toContain("## Decision Log");
+    expect(updated).toContain("Decision: Start");
+  });
 });
 
 describe("execplan.appendSurpriseEntry", () => {
@@ -129,6 +149,14 @@ describe("execplan.appendSurpriseEntry", () => {
     expect(updated).toContain("Evidence: Tracker flagged no commands for 60s");
     expect(updated).toContain("Action: Escalate");
     expect(updated).toContain("Date: 2025-02-01");
+  });
+
+  it("creates surprises section when missing", () => {
+    const updated = appendSurpriseEntry("# Plan", {
+      observation: "None",
+    });
+    expect(updated).toContain("## Surprises & Discoveries");
+    expect(updated).toContain("Observation: None");
   });
 });
 
@@ -153,5 +181,20 @@ describe("execplan.generateSubtaskExecPlanSkeleton", () => {
     expect(md).toContain("- src/index.ts");
     expect(md).toContain("## Progress");
     expect(md).toContain("- [ ] (pending) Initialised ExecPlan skeleton.");
+  });
+
+  it("fills acceptance and file hints when missing", () => {
+    const task: SubTask = {
+      id: "T2",
+      title: "Task 2",
+      requirement: "",
+      deps: [],
+      priority: 0.5,
+      acceptance: [],
+      filesHint: [],
+    };
+    const md = generateSubtaskExecPlanSkeleton(task, "run-555");
+    expect(md).toContain("Changes implemented and tests passing.");
+    expect(md).toContain("See repository root for relevant files.");
   });
 });
