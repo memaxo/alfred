@@ -28,10 +28,17 @@ mock.module("@alfred/db/repo/workflow", () => ({
 
 mock.module("@alfred/db/repo/graph", () => ({
   getReasoningChain: getReasoningChainMock,
+  findNearestConcept: vi.fn().mockResolvedValue(null),
+  upsertNodes: vi.fn(),
+  upsertEdges: vi.fn(),
+  touchNodes: vi.fn(),
 }));
 
 mock.module("@alfred/knowledge/query", () => ({
   reconstructReasoningChain: reconstructReasoningChainMock,
+  execute: vi.fn(),
+  parse: vi.fn(),
+  semanticQuery: vi.fn(),
 }));
 
 mock.module("@alfred/policy", () => ({

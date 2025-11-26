@@ -3,7 +3,7 @@
  * Node and edge operations for knowledge graph
  */
 
-export * from "./read";
-export * from "./traverse";
-export * from "./types";
-export * from "./write";
+export * from "./read.js";
+export * from "./traverse.js";
+export * from "./types.js";
+export * from "./write.js";

@@ -59,9 +59,11 @@ let toObservable: typeof import("./utils/stream")["toObservable"];
 // Mock graph dependency pulled transitively during router import
 mock.module("@alfred/db/repo/graph", () => ({
   getGraphClient: vi.fn().mockReturnValue({}),
+  findNearestConcept: vi.fn().mockResolvedValue(null),
   upsertNodes: vi.fn().mockResolvedValue(new Map()),
   upsertEdges: vi.fn().mockResolvedValue(undefined),
   getReasoningChain: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+  touchNodes: vi.fn(),
 }));
 // Mock policy evaluate to allow with no obligations
 const evaluateMock = vi.fn();
@@ -206,9 +208,7 @@ describe("workflow router resume flow (integration)", () => {
       }
     }
 
-    const completed = events.some(
-      (e: any) => e?.type === "progress" && e?.pct === 100
-    );
+    const completed = events.some((e: any) => e?.type === "report");
     expect(completed).toBe(true);
   });
 
@@ -235,7 +235,10 @@ describe("workflow router resume flow (integration)", () => {
           type: "notice",
           message: "Authorization 'linear-authz' acknowledged.",
         } as any;
-        yield { type: "progress", pct: 100, message: "done" } as any;
+        yield {
+          type: "report",
+          summary: { status: "completed" },
+        } as any;
       })(),
     });
 
@@ -273,9 +276,7 @@ describe("workflow router resume flow (integration)", () => {
       }
     }
 
-    const completed = events.some(
-      (e: any) => e?.type === "progress" && e?.pct === 100
-    );
+    const completed = events.some((e: any) => e?.type === "report");
     expect(completed).toBe(true);
   });
 });
