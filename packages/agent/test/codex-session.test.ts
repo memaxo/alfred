@@ -57,6 +57,11 @@ const getSessionRepoMock = vi.fn(async (sessionId: string, userId: string) => {
   return cloneRecord(stored);
 });
 
+const getSessionByIdRepoMock = vi.fn(async (sessionId: string) => {
+  const stored = repoStore.get(sessionId);
+  return stored ? cloneRecord(stored) : null;
+});
+
 const updateSessionRepoMock = vi.fn(async (sessionId: string, patch: Record<string, unknown>) => {
   const stored = repoStore.get(sessionId);
   if (!stored) {
@@ -100,9 +105,16 @@ const cleanupExpiredSessionsRepoMock = vi.fn(async () => {
 mock.module("@alfred/db/repo/codex-session", () => ({
   createSession: createSessionRepoMock,
   getSession: getSessionRepoMock,
+  getSessionById: getSessionByIdRepoMock,
   updateSession: updateSessionRepoMock,
   deleteSession: deleteSessionRepoMock,
   cleanupExpiredSessions: cleanupExpiredSessionsRepoMock,
+}));
+
+const recordCodexSessionViolationMock = vi.fn();
+
+mock.module("../src/metrics.js", () => ({
+  recordCodexSessionViolation: recordCodexSessionViolationMock,
 }));
 
 let CodexSessionManagerClass:
@@ -127,9 +139,11 @@ beforeEach(() => {
   repoStore.clear();
   createSessionRepoMock.mockClear();
   getSessionRepoMock.mockClear();
+  getSessionByIdRepoMock.mockClear();
   updateSessionRepoMock.mockClear();
   deleteSessionRepoMock.mockClear();
   cleanupExpiredSessionsRepoMock.mockClear();
+  recordCodexSessionViolationMock.mockClear();
   sessionManager = new CodexSessionManagerClass();
   sessionManager.configureContinuityMetrics(() => {});
 });
@@ -184,6 +198,27 @@ describe("CodexSessionManager", () => {
   it("returns undefined for non-existent session", async () => {
     const result = await sessionManager.getSession("nonexistent", userId);
     expect(result).toBeUndefined();
+  });
+
+  it("hydrates sessions from persistent storage when cache is cold", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+
+    if (!CodexSessionManagerClass) {
+      throw new Error("CodexSessionManagerClass not loaded");
+    }
+    const freshManager = new CodexSessionManagerClass();
+    freshManager.configureContinuityMetrics(() => {});
+
+    const hydrated = await freshManager.getSession(sessionId, userId);
+    expect(hydrated).toBeDefined();
+    expect(hydrated?.sessionId).toBe(sessionId);
+    expect(getSessionRepoMock).toHaveBeenCalledTimes(1);
+    expect(updateSessionRepoMock).toHaveBeenCalled();
   });
 
   it("updates session status and thread", async () => {
@@ -241,8 +276,9 @@ describe("CodexSessionManager", () => {
     );
     const tracker = vi.fn();
     sessionManager.configureContinuityMetrics(tracker);
-    const result = await sessionManager.getSession(sessionId, otherUserId);
-    expect(result).toBeUndefined();
+    await expect(
+      sessionManager.getSession(sessionId, otherUserId)
+    ).rejects.toThrow("codex_session_forbidden");
     expect(tracker).toHaveBeenCalledWith("failure");
   });
 
@@ -256,6 +292,29 @@ describe("CodexSessionManager", () => {
     expect(tracker).toHaveBeenCalledTimes(2);
     expect(tracker).toHaveBeenNthCalledWith(1, "failure");
     expect(tracker).toHaveBeenNthCalledWith(2, "failure");
+  });
+
+  it("records repository user mismatches as violations", async () => {
+    await sessionManager.createSession(
+      sessionId,
+      threadId,
+      workingDirectory,
+      userId
+    );
+
+    if (!CodexSessionManagerClass) {
+      throw new Error("CodexSessionManagerClass not loaded");
+    }
+    const freshManager = new CodexSessionManagerClass();
+    freshManager.configureContinuityMetrics(() => {});
+
+    await expect(
+      freshManager.getSession(sessionId, otherUserId)
+    ).rejects.toThrow("codex_session_forbidden");
+    expect(recordCodexSessionViolationMock).toHaveBeenCalledWith(
+      "user_mismatch_repo"
+    );
+    expect(getSessionByIdRepoMock).toHaveBeenCalledWith(sessionId);
   });
 
   it("keeps sessions isolated under concurrent access", async () => {

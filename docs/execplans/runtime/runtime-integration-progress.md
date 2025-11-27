@@ -98,6 +98,14 @@ Total: 42 tests pass, 3 skipped, 0 fail
 
 ## Remaining Work
 
+### 2025-11-27 Update — Phase Timeout Enforcement (ALF-14)
+
+- Added per-phase timeout guards inside `PipelineRunner` (default budgets: scan 60s, plan 120s, act 5m, report 60s) with a dedicated `PhaseTimeoutError`.
+- Phase execution now races the generator loop against the timeout promise so hung phases no longer block the workflow despite the global 30-minute timer.
+- Timeout metadata is logged via `pipeline_execution_error` and appended to `PipelineState.history` for resumability telemetry.
+- Coverage added via `packages/runtime/test/pipeline/phase-timeout.test.ts`, proving both timeout and happy-path behavior.
+- Follow-up: emit Prometheus metrics for per-phase durations as part of Phase 3.4 (Performance).
+
 ### Phase 3.3: Router Integration (READY FOR IMPLEMENTATION)
 
 **Prerequisites:** ✅ All met (runtime core and adapters complete)
@@ -321,4 +329,3 @@ for await (const event of runtime.stream) {
 - Migration path documented
 
 **Next Action:** Proceed with Phase 3.3 router integration using the runtime package.
-

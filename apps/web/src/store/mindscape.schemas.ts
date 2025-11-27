@@ -167,6 +167,7 @@ export const droidNodeDataSchema = baseArtifactDataSchema.extend({
     .optional(),
   lastRunId: z.string().uuid().optional(),
   error: z.string().optional(),
+  timeoutSec: z.number().optional(),
 });
 
 /**

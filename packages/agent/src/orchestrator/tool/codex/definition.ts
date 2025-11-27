@@ -23,6 +23,12 @@ import type {
   TodoListItem,
 } from "@openai/codex-sdk";
 import { z } from "zod";
+import {
+  DEFAULT_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+} from "./constants.js";
 
 const MAX_SCHEMA_DEPTH = 10;
 const MAX_SCHEMA_PROPERTIES = 100;
@@ -161,10 +167,6 @@ export function validateOutputSchema(schema: unknown): boolean {
 }
 
 export const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
-export const MIN_TIMEOUT_SEC = 30;
-export const ELEVATED_TIMEOUT_THRESHOLD_SEC = 10 * 60;
-export const DEFAULT_TIMEOUT_SEC = ELEVATED_TIMEOUT_THRESHOLD_SEC;
-export const MAX_TIMEOUT_SEC = 30 * 60;
 
 export const MCP_ENV_ALLOWLIST = new Set([
   "CONTEXT7_API_KEY",
@@ -556,3 +558,10 @@ export type SandboxConfig = {
 export type CodexBackend = "cli" | "sdk";
 
 export type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";
+
+export {
+  MIN_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  DEFAULT_TIMEOUT_SEC,
+  MAX_TIMEOUT_SEC,
+} from "./constants.js";

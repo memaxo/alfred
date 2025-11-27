@@ -16,6 +16,7 @@ export type TDDContext = {
   model?: any;
   containerId?: string;
   context?: any;
+  userId?: string;
 };
 
 export async function runTDDLoop(
@@ -68,10 +69,11 @@ export async function runTDDLoop(
         sessionId: `${sessionId}:tdd`, // Separate session
         containerId,
         model,
-        context: context.context,
-      },
-      writer: writer as any,
-    });
+      context: context.context,
+      userId: context.userId,
+    },
+    writer: writer as any,
+  });
 
     // Verify Test Fails
     let testExitCode: number;

@@ -312,7 +312,26 @@ export async function* runReviewPhase(
     // If checks are planned, execute them using toolRunner
     if (reviewPlan.checks && reviewPlan.checks.length > 0) {
     const MAX_FIX_ATTEMPTS = 3;
+    
+    // Load persisted fixAttempts from workflow stateData
     let fixAttempts = 0;
+    try {
+      const dbPkg = "@alfred/db";
+      const { workflowRepo } = await import(`${dbPkg}/repo/workflow`);
+      const workflowRun = await workflowRepo.getRun(runId);
+      if (workflowRun?.stateData && typeof workflowRun.stateData === "object") {
+        const stateData = workflowRun.stateData as Record<string, unknown>;
+        if (typeof stateData.fixAttempts === "number") {
+          fixAttempts = stateData.fixAttempts;
+        }
+      }
+    } catch (error) {
+      logger.warn("failed_to_load_fix_attempts", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Default to 0 if load fails
+    }
     let reviewPassed = false;
     let reviewFailures: ReviewFailureDetail[] = [];
     const startedAt = Date.now();
@@ -674,6 +693,30 @@ export async function* runReviewPhase(
         }
 
         fixAttempts++;
+        
+        // Persist fixAttempts to workflow stateData
+        try {
+          const dbPkg = "@alfred/db";
+          const { workflowRepo } = await import(`${dbPkg}/repo/workflow`);
+          const workflowRun = await workflowRepo.getRun(runId);
+          const existingStateData =
+            workflowRun?.stateData && typeof workflowRun.stateData === "object"
+              ? (workflowRun.stateData as Record<string, unknown>)
+              : {};
+          await workflowRepo.updateRun(runId, {
+            stateData: {
+              ...existingStateData,
+              fixAttempts,
+              lastFixAttemptAt: Date.now(),
+            },
+          });
+        } catch (error) {
+          logger.warn("failed_to_persist_fix_attempts", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Continue even if persistence fails
+        }
       } else {
         break; // No more retries or read-only mode
       }

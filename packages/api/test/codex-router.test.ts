@@ -15,6 +15,7 @@ import {
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
+import { router } from "../src/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -25,6 +26,10 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   toolCodex: {
     execute: toolCodexExecuteMock,
   },
+}));
+
+mock.module("../src/routers/droids", () => ({
+  droidsRouter: router({}),
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -108,6 +113,47 @@ describe("codex router", () => {
     expect(errorMessage).toContain("timed out");
   });
 
+  it("emits codex_session_forbidden when a second user reuses a session via stream", async () => {
+    const owner = await createTestCaller({ userId: "stream-owner" });
+    const intruder = await createTestCaller({ userId: "stream-intruder" });
+    const sessionId = "session-stream-guard";
+
+    toolCodexExecuteMock.mockResolvedValueOnce({ result: "", artifacts: [] });
+    await owner.codex.run({ prompt: "prime", sessionId });
+
+    toolCodexExecuteMock.mockRejectedValueOnce(
+      new Error("codex_session_forbidden")
+    );
+
+    const streamResult = await intruder.codex.stream({
+      prompt: "reuse",
+      sessionId,
+    });
+    const observable = toObservable(streamResult);
+    const events: Array<{ type: string; message?: string }> = [];
+
+    await new Promise<void>((resolve) => {
+      const subscription = observable.subscribe({
+        next: (event) => {
+          events.push(event as any);
+          if (event.type === "error") {
+            subscription.unsubscribe();
+            resolve();
+          }
+        },
+        error: () => resolve(),
+        complete: () => resolve(),
+      });
+    });
+
+    const errorEvent = events.find((event) => event.type === "error");
+    expect(errorEvent?.message).toContain("codex_session_forbidden");
+    expect(toolCodexExecuteMock).toHaveBeenCalledTimes(2);
+    expect(toolCodexExecuteMock.mock.calls[1]?.[0]?.input?.userId).toBe(
+      "stream-intruder"
+    );
+  });
+
   it("completes streams and supports cleanup", async () => {
     toolCodexExecuteMock.mockImplementation(async ({ writer }) => {
       await writer?.write({ type: "stdout", text: "hi" });
@@ -169,5 +215,30 @@ describe("codex router", () => {
       })
     ).rejects.toThrow();
     expect(toolCodexExecuteMock).not.toHaveBeenCalled();
+  });
+
+  it("surface codex_session_forbidden when a different user reuses a run session", async () => {
+    const owner = await createTestCaller({ userId: "run-owner" });
+    const intruder = await createTestCaller({ userId: "run-intruder" });
+    const sessionId = "session-run-guard";
+
+    toolCodexExecuteMock.mockResolvedValueOnce({ result: "", artifacts: [] });
+    await owner.codex.run({ prompt: "prime", sessionId });
+
+    toolCodexExecuteMock.mockRejectedValueOnce(
+      new Error("codex_session_forbidden")
+    );
+
+    await expect(
+      intruder.codex.run({ prompt: "reuse", sessionId })
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: expect.stringContaining("codex_session_forbidden"),
+    });
+
+    expect(toolCodexExecuteMock).toHaveBeenCalledTimes(2);
+    expect(toolCodexExecuteMock.mock.calls[1]?.[0]?.input?.userId).toBe(
+      "run-intruder"
+    );
   });
 });

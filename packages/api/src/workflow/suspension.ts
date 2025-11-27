@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 
+import { type ResumePayload } from "@alfred/agent/workflow/registry";
 import {
-  runRegistry,
-  type ResumePayload,
-} from "@alfred/agent/workflow/registry";
+  registerRunHandle,
+  unregisterRunHandle,
+} from "@alfred/agent/workflow/session-recovery";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { recordAudit } from "@alfred/agent/utils/audit";
 import { logger } from "@alfred/logger";
@@ -161,7 +162,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
     state.status = "completed";
     current = null;
     try {
-      await runRegistry.unregister(state.runId);
+      await unregisterRunHandle(state.runId);
     } catch (error) {
       logger.warn("workflow_suspension_unregister_failed", {
         runId: state.runId,
@@ -252,7 +253,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
       }, timeoutMs);
     }
 
-    await runRegistry.register(runId, {
+    await registerRunHandle(runId, {
       resume: async ({ resumeData }) => {
         if (!current || current.runId !== runId) {
           return;
@@ -283,7 +284,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
           }
 
           try {
-            await runRegistry.unregister(runId);
+            await unregisterRunHandle(runId);
           } catch (error) {
             logger.warn("workflow_suspension_unregister_failed", {
               runId,

@@ -1,17 +1,19 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
 import {
+  startCodexSessionCleanupWorker,
+  stopCodexSessionCleanupWorker,
+} from "@alfred/agent/orchestrator/codex-session";
+import {
   startCompressionWorker,
   stopCompressionWorker,
 } from "@alfred/agent/orchestrator/compression-worker";
 import { compressionWorkerOverrides } from "@alfred/agent/orchestrator/config";
 import {
-  startCodexSessionCleanupWorker,
-  stopCodexSessionCleanupWorker,
-} from "@alfred/agent/orchestrator/codex-session";
-import {
   startLearningWorker,
   stopLearningWorker,
 } from "@alfred/agent/orchestrator/learning-worker";
+import { flushPreviewCleanupBacklog } from "@alfred/agent/orchestrator/tool/worktree";
+import { rehydrateSuspendedRuns } from "@alfred/agent/workflow/session-recovery";
 import { logger } from "@alfred/logger";
 import { resumeInterruptedPlans } from "@alfred/runtime";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
@@ -21,6 +23,7 @@ import {
 } from "./voice/streaming";
 
 let initialized = false;
+let worktreeCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Initialize all API services
@@ -72,6 +75,52 @@ export function initApiServices(): void {
     });
   });
 
+  rehydrateSuspendedRuns().catch((error) => {
+    logger.error("workflow_rehydrate_start_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
+  const cleanupIntervalMs =
+    Number.parseInt(
+      process.env.WORKTREE_PREVIEW_CLEANUP_INTERVAL_MS ?? "",
+      10
+    ) || 5 * 60 * 1000;
+  const cleanupRoot =
+    process.env.WORKTREE_PREVIEW_CLEANUP_ROOT ?? process.cwd();
+
+  flushPreviewCleanupBacklog(cleanupRoot)
+    .then((count) => {
+      if (count > 0) {
+        logger.info("worktree_preview_cleanup_startup", { cleaned: count });
+      }
+    })
+    .catch((error) => {
+      logger.warn("worktree_preview_cleanup_startup_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+  worktreeCleanupInterval = setInterval(() => {
+    flushPreviewCleanupBacklog(cleanupRoot)
+      .then((count) => {
+        if (count > 0) {
+          logger.info("worktree_preview_cleanup_interval", {
+            cleaned: count,
+          });
+        }
+      })
+      .catch((error) => {
+        logger.warn("worktree_preview_cleanup_interval_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, cleanupIntervalMs);
+  logger.info("worktree_preview_cleanup_interval_started", {
+    cleanupIntervalMs,
+    cleanupRoot,
+  });
+
   // Initialize voice pools (Maya1 or Supertonic)
   const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
@@ -116,6 +165,12 @@ export function shutdownApiServices(): void {
       });
     });
     stopVoiceStreamingPrototype();
+  }
+
+  if (worktreeCleanupInterval) {
+    clearInterval(worktreeCleanupInterval);
+    worktreeCleanupInterval = null;
+    logger.info("worktree_preview_cleanup_interval_stopped");
   }
 
   initialized = false;

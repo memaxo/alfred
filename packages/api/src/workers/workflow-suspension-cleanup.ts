@@ -1,4 +1,4 @@
-import { runRegistry } from "@alfred/agent/workflow/registry";
+import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { workflowSuspensionCleanupTotal } from "../metrics";
@@ -20,7 +20,7 @@ export async function cleanupSuspendedWorkflows(now: number = Date.now()) {
 
     for (const run of runs) {
       try {
-        await runRegistry.unregister(run.id).catch(() => {});
+        await unregisterRunHandle(run.id).catch(() => {});
         await workflowRepo.updateRun(run.id, {
           status: "cancelled",
           completedAt: new Date(),

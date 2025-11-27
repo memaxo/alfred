@@ -30,8 +30,8 @@ describe("graphstore integration (sqlite)", () => {
   });
 
   afterEach(async () => {
-    await db.delete(memoryEdges).execute();
-    await db.delete(memoryNodes).execute();
+    await runMutation(db.delete(memoryEdges));
+    await runMutation(db.delete(memoryNodes));
   });
 
   it("persists nodes and relations via persistKnowledge", async () => {
@@ -45,14 +45,18 @@ describe("graphstore integration (sqlite)", () => {
 
     await persistKnowledge(resource, entries);
 
-    const nodes = await db
-      .select({ id: memoryNodes.id })
-      .from(memoryNodes)
-      .where(eq(memoryNodes.resource, resource));
-    const edges = await db
-      .select({ id: memoryEdges.id })
-      .from(memoryEdges)
-      .where(eq(memoryEdges.resource, resource));
+    const nodes = await fetchRows(
+      db
+        .select({ id: memoryNodes.id })
+        .from(memoryNodes)
+        .where(eq(memoryNodes.resource, resource))
+    );
+    const edges = await fetchRows(
+      db
+        .select({ id: memoryEdges.id })
+        .from(memoryEdges)
+        .where(eq(memoryEdges.resource, resource))
+    );
 
     expect(nodes).toHaveLength(factCount);
     expect(edges).toHaveLength(relationCount);
@@ -83,14 +87,40 @@ function buildGraph() {
 
 async function countGraphRows(resource: string) {
   const [nodes, edges] = await Promise.all([
-    db
-      .select({ id: memoryNodes.id })
-      .from(memoryNodes)
-      .where(eq(memoryNodes.resource, resource)),
-    db
-      .select({ id: memoryEdges.id })
-      .from(memoryEdges)
-      .where(eq(memoryEdges.resource, resource)),
+    fetchRows(
+      db
+        .select({ id: memoryNodes.id })
+        .from(memoryNodes)
+        .where(eq(memoryNodes.resource, resource))
+    ),
+    fetchRows(
+      db
+        .select({ id: memoryEdges.id })
+        .from(memoryEdges)
+        .where(eq(memoryEdges.resource, resource))
+    ),
   ]);
   return { nodes: nodes.length, edges: edges.length };
+}
+
+async function fetchRows<T>(query: Promise<T> | { all?: () => T }): Promise<T> {
+  if (typeof (query as Promise<T>).then === "function") {
+    return query as Promise<T>;
+  }
+  if (typeof (query as { all?: () => T }).all === "function") {
+    return (query as { all: () => T }).all();
+  }
+  throw new Error("Unsupported driver: select builder missing .then/.all");
+}
+
+async function runMutation(query: Promise<unknown> | { run?: () => unknown }) {
+  if (typeof (query as Promise<unknown>).then === "function") {
+    await query;
+    return;
+  }
+  if (typeof (query as { run?: () => unknown }).run === "function") {
+    await (query as { run: () => unknown }).run();
+    return;
+  }
+  throw new Error("Unsupported driver: mutation builder missing .then/.run");
 }

@@ -34,6 +34,7 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         | string
         | null
         | undefined;
+      const userId = context.get("userId") as string | undefined;
 
       const generator = executeActPhase(
         input,
@@ -44,7 +45,8 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         undefined,
         authz,
         scanContext ?? undefined,
-        planSummary ?? undefined
+        planSummary ?? undefined,
+        userId
       );
       let result: { escalated: boolean; reason?: string } | undefined;
 

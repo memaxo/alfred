@@ -22,4 +22,5 @@ export type OrchestratorContext = {
   escalationContext?: string; // Reason for previous escalation
   authz?: string;
   scanContext?: ExecutionContext | null;
+  userId?: string;
 };

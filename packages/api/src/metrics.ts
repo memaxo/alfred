@@ -231,6 +231,12 @@ export const codexSessionValidationDurationSeconds = new client.Histogram({
   registers: [metricsRegistry],
 });
 
+export const codexSessionValidationTimeoutTotal = new client.Counter({
+  name: "codex_session_validation_timeout_total",
+  help: "Count of Codex session validation timeouts.",
+  registers: [metricsRegistry],
+});
+
 export const codexSessionContinuityTotal = new client.Counter({
   name: "codex_session_continuity_total",
   help: "Count of Codex session continuity events (resume success/failure).",

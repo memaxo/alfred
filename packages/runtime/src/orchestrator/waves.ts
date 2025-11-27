@@ -27,6 +27,7 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import { ContextBuilder } from "../context";
 import type { OrchestratorContext } from "./types";
+import { formatCodexRuntimeError } from "../utils/codex-error";
 
 const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
@@ -126,6 +127,7 @@ export async function* runWaves(
     escalationContext,
     authz,
     scanContext,
+    userId,
   } = ctx;
   void runTDDLoop;
 
@@ -189,6 +191,7 @@ export async function* runWaves(
       ignore: input.context?.ignore,
       seeds: input.context?.seeds,
       authz: undefined,
+      userId,
     });
   }
 
@@ -559,6 +562,7 @@ export async function* runWaves(
             model: spec.model,
             containerId,
             context: spec.context,
+            userId,
           },
           projectConfig,
           workspaceEnv,
@@ -600,6 +604,7 @@ export async function* runWaves(
               linearIssueId: spec.context.linearIssueId,
               relevantFiles: spec.context.relevantFiles,
             },
+            userId,
           },
           writer,
         });
@@ -614,14 +619,54 @@ export async function* runWaves(
             type: "notice",
             message: `agent_interrupted: ${String(error)}`,
           } as any);
-          // Treat as a failure but don't crash the whole orchestrator
-          // We will rely on the outcome push below to record status
-          // But we need to ensure 'agentOutcomes' gets an entry.
-          // Actually, if we catch here, we proceed to 'finishedAt'.
-          // We should probably restore checkpoint too if interrupted?
+          
+          // Always restore checkpoint on interrupt
+          if (workspaceEnv) {
+            try {
+              await workspaceEnv.restore("pre-agent");
+            } catch (restoreErr) {
+              logger.error("restore_failed_on_interrupt", {
+                agentId: spec.agentId,
+                error: String(restoreErr),
+              });
+            }
+          }
+          
+          // Mark agent as interrupted
+          const interruptFinishedAt = Date.now();
+          const interruptDurationSeconds = Math.max(0, (interruptFinishedAt - startedAt) / 1000);
+          agentOutcomes.push({
+            agentId: spec.agentId,
+            stuck: false,
+            status: "interrupted",
+            durationSeconds: interruptDurationSeconds,
+            role: "codex",
+          });
+          
+          // Break agent loop if signal aborted
+          if (ctx.signal.aborted) {
+            break;
+          }
+          
+          // Skip normal completion flow for interrupted agents
+          continue;
         }
 
-        // Restore on crash or interrupt
+        // Restore on crash (non-interrupt errors)
+        const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+          formatCodexRuntimeError(error);
+        bufferedEvents.push({
+          type: "notice",
+          message: userMessage,
+        } as any);
+        logger.error("codex_agent_failed", {
+          agentId: spec.agentId,
+          error: rawMessage,
+          code,
+          needsElevation,
+          limitExceeded,
+        });
+
         if (workspaceEnv) {
           logger.warn("agent_crashed_restoring_checkpoint", {
             agentId: spec.agentId,
@@ -636,9 +681,8 @@ export async function* runWaves(
           }
         }
 
-        if (!String(error).includes("codex_exec_interrupted")) {
-          throw error;
-        }
+        // Re-throw non-interrupt errors
+        throw error;
       }
 
       const finishedAt = Date.now();
@@ -844,7 +888,8 @@ export async function* runWaves(
               runId,
               targetBranch,
               sourceBranch,
-              authz
+              authz,
+              userId
             );
 
             if (resolution.status === "resolved") {

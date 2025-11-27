@@ -16,6 +16,16 @@ Linear Agent Activities enable ALFRED to function as a first-class Linear agent 
 
 5. **Error handling.** Linear API errors must be logged with structured logging, non-fatal (don't throw), tracked via metrics, and never expose internal details to Linear UI.
 
+6. **Cycles and sprint planning.** Use 2-week cycles for sprint planning. Assign high-priority issues to current cycle. Track velocity via cycle completion rate.
+
+7. **Issue estimates.** Add story point estimates to all issues. Use Fibonacci scale (1, 2, 3, 5, 8, 13). Most features: 2-5 points (30-90 minutes per agent cycle, 1-3 cycles per feature). Complex features: 8 points. Use estimates for capacity planning.
+
+8. **Dependency tracking.** Use "blocks" relations for dependent issues (e.g., ALF-128 blocks ALF-126). Use "relates to" for contextual links. Link dependencies before starting work to prevent blocked progress.
+
+9. **Issue assignment.** Assign issues to team members for clear ownership. Use assignees for workload visibility and filtering.
+
+10. **Due dates.** Set due dates for urgent/high-priority issues. Align with cycle end dates for sprint work.
+
 ## Implementation Reference
 
 - Linear helper module: `packages/agent/src/orchestrator/linear.ts`

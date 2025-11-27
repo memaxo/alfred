@@ -54,3 +54,11 @@ If a conflict is detected:
     - Agent B adds function `bar()` at bottom of file.
     - Run Arbiter.
     - Verify both `foo()` and `bar()` exist in final file.
+
+### 2025-11-27 Update — Preview Worktree Cleanup (ALF-16)
+
+- `worktreeManager.safeMerge` now registers preview cleanup intents before `git worktree add` runs, so any failure (rev-parse, add, merge) triggers retryable cleanup via a shared tracker.
+- Added `flushPreviewCleanupBacklog()` to prune leaked preview directories (tracked tickets plus filesystem scans under `.agent/worktrees/**/preview-*`)—invoked on demand and before each new preview merge.
+- Cleanup attempts now retry (git remove + `fs.rm`) with jitter and log `preview_worktree_cleanup_pending` when multiple passes fail so operators can diagnose stubborn worktrees.
+- Coverage: `packages/agent/test/orchestrator/tool/worktree-cleanup.test.ts` validates both failure cleanup and orphan scans.
+- `initApiServices()` now invokes `flushPreviewCleanupBacklog()` at startup and on a recurring interval (configurable via `WORKTREE_PREVIEW_CLEANUP_INTERVAL_MS`) so leaked previews disappear even if no merges run for a while.

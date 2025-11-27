@@ -13,6 +13,10 @@ import {
 } from "@alfred/agent/workflow/orchestrator";
 import { runRegistry } from "@alfred/agent/workflow/registry";
 import {
+  registerRunHandle,
+  StreamNotAttachedError,
+} from "@alfred/agent/workflow/session-recovery";
+import {
   mapWorkflowResource,
   mapWorkflowRunResource,
   workflowInput,
@@ -203,7 +207,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           context: { auto: input.auto, mode: input.mode },
         });
 
-        await runRegistry.register(executor.runId, {
+        await registerRunHandle(executor.runId, {
           resume: async ({ resumeData }) => {
             await executor.resume(resumeData);
           },
@@ -333,13 +337,23 @@ export const workflowRouter: ReturnType<typeof router> = router({
       })
     )
     .mutation(async ({ input }) => {
-      const delivered = await runRegistry.dispatchResume(input.runId, {
-        event: input.event,
-        authz: input.authz,
-      });
+      try {
+        const delivered = await runRegistry.dispatchResume(input.runId, {
+          event: input.event,
+          authz: input.authz,
+        });
 
-      if (!delivered) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+        if (!delivered) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+        }
+      } catch (error) {
+        if (error instanceof StreamNotAttachedError) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "stream_not_attached",
+          });
+        }
+        throw toTRPCError(error);
       }
       await recordAudit({
         userId: null,

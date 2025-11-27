@@ -22,11 +22,13 @@ export class ScanPhase implements Phase<RuntimeInput, void> {
         | undefined;
       const signal = runtimeSignal ?? controller.signal;
       const authz = context.get("authz") as string | undefined;
+      const userId = context.get("userId") as string | undefined;
       const generator = executeScanPhase(
         input,
         this.runId,
         signal,
-        authz
+        authz,
+        userId
       );
 
       let scanContext: ExecutionContext | null | undefined;

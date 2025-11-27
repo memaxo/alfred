@@ -5,6 +5,7 @@ import { logger } from "@alfred/logger";
 import pRetry, { AbortError } from "p-retry";
 
 import { getLinearMetrics } from "./linearmetrics";
+import { linearRateLimiter } from "./linear-rate-limiter";
 import { toolTicket } from "./tool/ticket";
 
 export type LinearActivityType = "thought" | "action" | "response" | "error";
@@ -36,6 +37,7 @@ export async function emitLinearActivity(
   try {
     const result = await pRetry(
       async () => {
+        await linearRateLimiter.throttle(type);
         const action = `activity.${type}` as
           | "activity.thought"
           | "activity.action"
@@ -62,7 +64,7 @@ export async function emitLinearActivity(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             logger?.warn?.("linear_activity_retry", {
@@ -71,6 +73,10 @@ export async function emitLinearActivity(
               attempt: error.attemptNumber,
               retriesLeft: error.retriesLeft,
             });
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -92,6 +98,28 @@ export async function emitLinearActivity(
   }
 }
 
+function resolveRetryAfterMs(error: unknown): number | undefined {
+  const candidate =
+    (error as any)?.retryAfterMs ??
+    (error as any)?.retryAfter ??
+    (error as any)?.headers?.["retry-after"] ??
+    (error as any)?.response?.headers?.get?.("retry-after") ??
+    (error as any)?.response?.headers?.["retry-after"];
+
+  if (typeof candidate === "number" && Number.isFinite(candidate)) {
+    return candidate >= 1000 ? candidate : candidate * 1000;
+  }
+
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    const parsed = Number.parseInt(candidate.trim(), 10);
+    if (!Number.isNaN(parsed)) {
+      return parsed >= 1000 ? parsed : parsed * 1000;
+    }
+  }
+
+  return undefined;
+}
+
 export async function setLinearDelegate(
   params: LinearSessionParams
 ): Promise<void> {
@@ -100,6 +128,9 @@ export async function setLinearDelegate(
   try {
     await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space: params.space,
           action: "set-delegate" as const,
@@ -115,9 +146,13 @@ export async function setLinearDelegate(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -140,6 +175,9 @@ export async function setLinearStarted(
   try {
     const result = await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space: params.space,
           action: "set-started" as const,
@@ -154,9 +192,13 @@ export async function setLinearStarted(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -186,6 +228,9 @@ export async function setLinearCompleted(
   try {
     const result = await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space: params.space,
           action: "set-completed" as const,
@@ -200,9 +245,13 @@ export async function setLinearCompleted(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -235,6 +284,9 @@ export async function commentOnLinearIssue(params: {
   try {
     await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space: params.space,
           action: "comment" as const,
@@ -250,9 +302,13 @@ export async function commentOnLinearIssue(params: {
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -279,6 +335,9 @@ export async function setLinearSessionExternalUrl(
   try {
     await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space,
           action: "session.external-url" as const,
@@ -294,9 +353,13 @@ export async function setLinearSessionExternalUrl(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);
@@ -319,6 +382,9 @@ export async function setLinearCancelled(
   try {
     const result = await pRetry(
       async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
         const input = {
           space: params.space,
           action: "set-cancelled" as const,
@@ -333,9 +399,13 @@ export async function setLinearCancelled(
         minTimeout: 1000,
         maxTimeout: 10_000,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: async (error) => {
           const statusCode = (error as any)?.statusCode;
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
             return;
           }
           throw new AbortError(error);

@@ -285,6 +285,7 @@ export async function gatherCodeContext({
   authz,
   executor,
   profile,
+  userId,
 }: {
   requirement: string;
   cw: string;
@@ -295,6 +296,7 @@ export async function gatherCodeContext({
   authz: string | undefined;
   executor?: ExecutorName;
   profile?: string;
+  userId?: string;
 }): Promise<SearchReceipt> {
   const resolvedCw = path.resolve(cw);
   const extSet = normalizeExts(exts);
@@ -338,6 +340,7 @@ export async function gatherCodeContext({
           cw: resolvedCw,
           authz,
           profile,
+          userId,
         },
         writer,
       });

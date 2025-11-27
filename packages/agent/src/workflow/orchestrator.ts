@@ -26,7 +26,10 @@ import {
   workflowStreamEventsTotal,
 } from "./metrics";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
-import { runRegistry } from "./registry";
+import {
+  registerRunHandle,
+  unregisterRunHandle,
+} from "./session-recovery";
 import {
   createRequirementMessage,
   createWorkflowExecutor,
@@ -299,6 +302,15 @@ export async function orchestrateWorkflowStream(
     callbacks.emitNext(event);
   };
 
+  const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  const globalTimeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      cancelled = true;
+      abortController.abort();
+      reject(new Error("workflow_global_timeout"));
+    }, GLOBAL_TIMEOUT_MS);
+  });
+
   const asyncTask = (async () => {
     let runId: string | null = null;
     const persistedMessageKeys = new Set<string>();
@@ -307,6 +319,27 @@ export async function orchestrateWorkflowStream(
     const reasonTraces: ReasonTrace[] = [];
     const reviewGate = new ReviewGate();
     let reviewEscalation: ReviewEscalationSummary | null = null;
+    
+    // Restore ReviewGate state from workflow stateData if resuming
+    if (input.runId) {
+      try {
+        const workflowRun = await workflowRepo.getRun(input.runId);
+        if (workflowRun?.stateData && typeof workflowRun.stateData === "object") {
+          const stateData = workflowRun.stateData as Record<string, unknown>;
+          if (stateData.reviewGate && typeof stateData.reviewGate === "object") {
+            reviewGate.restore(stateData.reviewGate as Parameters<typeof reviewGate.restore>[0]);
+          }
+          if (stateData.reviewEscalation) {
+            reviewEscalation = stateData.reviewEscalation as ReviewEscalationSummary | null;
+          }
+        }
+      } catch (error) {
+        logger.warn("failed_to_restore_review_gate", {
+          runId: input.runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     let reviewEscalationMetricRecorded = false;
     let linearIssueUrlFromCreation: string | null = null;
     let linearFailureNotified = false;
@@ -378,6 +411,28 @@ export async function orchestrateWorkflowStream(
     const markSuspended = async () => {
       if (!runId) {
         return;
+      }
+      
+      // Persist ReviewGate state before suspension
+      try {
+        const workflowRun = await workflowRepo.getRun(runId);
+        const existingStateData =
+          workflowRun?.stateData && typeof workflowRun.stateData === "object"
+            ? (workflowRun.stateData as Record<string, unknown>)
+            : {};
+        await workflowRepo.updateRun(runId, {
+          stateData: {
+            ...existingStateData,
+            reviewGate: reviewGate.serialize(),
+            reviewEscalation,
+          },
+        });
+      } catch (error) {
+        logger.warn("failed_to_persist_review_gate", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Continue with suspension even if persistence fails
       }
       try {
         await workflowRepo.updateRun(runId, {
@@ -545,7 +600,7 @@ export async function orchestrateWorkflowStream(
         });
       }
 
-      await runRegistry.register(runId, {
+      await registerRunHandle(runId, {
         resume: async ({ resumeData }) => {
           if (cancelled) {
             return;
@@ -890,7 +945,7 @@ export async function orchestrateWorkflowStream(
     } finally {
       try {
         if (runId) {
-          await runRegistry.unregister(runId);
+          await unregisterRunHandle(runId);
         }
       } catch (error) {
         logger.warn("workflow_unregister_failed", {
@@ -901,7 +956,30 @@ export async function orchestrateWorkflowStream(
     }
   })();
 
-  asyncTask.catch((error) => callbacks.emitError(error));
+  Promise.race([asyncTask, globalTimeoutPromise]).catch((error) => {
+    if (error instanceof Error && error.message === "workflow_global_timeout") {
+      logger.error("workflow_global_timeout", { runId: runId ?? "unknown" });
+      recordEvent("error");
+      closeTimer("error");
+      const resolvedRunId = runId;
+      if (resolvedRunId) {
+        workflowRepo
+          .updateRun(resolvedRunId, {
+            status: "failed",
+            errorMessage: "workflow_global_timeout",
+          })
+          .catch((updateError) => {
+            logger.warn("workflow_timeout_update_failed", {
+              runId: resolvedRunId,
+              error: updateError instanceof Error ? updateError.message : String(updateError),
+            });
+          });
+      }
+      callbacks.emitError(error);
+    } else {
+      callbacks.emitError(error);
+    }
+  });
 
   return () => {
     cancelled = true;

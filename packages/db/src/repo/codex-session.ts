@@ -35,6 +35,17 @@ export async function createSession(
   return row;
 }
 
+export async function getSessionById(
+  sessionId: string
+): Promise<CodexSession | null> {
+  const [row] = await db
+    .select()
+    .from(codexSessions)
+    .where(eq(codexSessions.sessionId, sessionId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function updateSession(
   sessionId: string,
   patch: Partial<Omit<NewCodexSession, "sessionId" | "id">>

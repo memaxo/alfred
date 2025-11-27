@@ -16,7 +16,8 @@ export async function* runOrchestrator(
   projectConfig?: ProjectConfig | null,
   escalationContext?: string,
   authz?: string,
-  scanContext?: ExecutionContext | null
+  scanContext?: ExecutionContext | null,
+  userId?: string
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
   const ctx: OrchestratorContext = {
@@ -29,6 +30,7 @@ export async function* runOrchestrator(
     escalationContext,
     authz,
     scanContext,
+    userId,
   };
 
   // Phase A: Multi-Agent Waves
@@ -36,7 +38,14 @@ export async function* runOrchestrator(
   const wavesResult = yield* runWaves(ctx);
 
   try {
-    if (wavesResult.aborted) {
+    if (wavesResult.aborted || wavesResult.escalated) {
+      if (wavesResult.escalated) {
+        yield {
+          type: "notice",
+          message: "workflow_escalated",
+          reason: wavesResult.escalationReason,
+        } as WorkflowEvent;
+      }
       return;
     }
 

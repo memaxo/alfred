@@ -11,7 +11,7 @@ export async function* runConflictPhase(
   ctx: OrchestratorContext,
   conflictScanResult: any
 ): AsyncGenerator<WorkflowEvent, void, void> {
-  const { input, runId, workspace } = ctx;
+  const { input, runId, workspace, userId } = ctx;
 
   if (conflictScanResult && conflictScanResult.totalMarkers > 0) {
     yield {
@@ -83,6 +83,7 @@ export async function* runConflictPhase(
             model: undefined,
             profile: undefined,
             context: {},
+            userId,
           },
           writer,
         });
@@ -224,6 +225,7 @@ export async function* runConflictPhase(
             model: undefined,
             profile: undefined,
             context: {},
+            userId,
           },
           writer,
         });

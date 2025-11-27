@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workflowEvents, workflowRuns } from "../schema/workflow";
 
@@ -400,4 +400,25 @@ export async function pruneOldRuns(
       runsResult.length + failedResult.length + cancelledResult.length,
     deletedEvents: eventsResult.rowCount ?? 0,
   };
+}
+
+export async function listRunsByStatuses(
+  statuses: WorkflowStatus[],
+  options?: { limit?: number; order?: "asc" | "desc" }
+): Promise<WorkflowRun[]> {
+  if (statuses.length === 0) {
+    return [];
+  }
+
+  const limit = Math.max(1, Math.min(options?.limit ?? 200, 1000));
+  const order = options?.order === "asc" ? "asc" : "desc";
+
+  const rows = await db
+    .select()
+    .from(workflowRuns)
+    .where(inArray(workflowRuns.status, statuses))
+    .orderBy(order === "desc" ? desc(workflowRuns.created) : workflowRuns.created)
+    .limit(limit);
+
+  return rows;
 }

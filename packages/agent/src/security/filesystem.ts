@@ -7,6 +7,7 @@ import {
   realpathSync,
 } from "node:fs";
 import path from "node:path";
+import { directoryFdPath, ensureFdInheritable } from "./fd.js";
 
 export type PathResolutionOptions = {
   noFollowSymlinks?: boolean;
@@ -177,4 +178,10 @@ export function openDirectorySecure(
     closeSync(fd);
     throw error;
   }
+}
+
+export function prepareCwdFromHandle(handle: DirectoryHandle): string {
+  ensureFdInheritable(handle.fd);
+  const fdPath = directoryFdPath(handle.fd);
+  return fdPath ?? handle.path;
 }

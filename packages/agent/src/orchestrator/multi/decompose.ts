@@ -1,5 +1,21 @@
 import type { ContextBundle } from "@alfred/type/plan";
+import { logger } from "@alfred/logger";
 import { decomposeSemantically } from "../reasoning/decompose-semantic";
+
+const MAX_SUBTASKS = Number.parseInt(
+  process.env.MAX_SUBTASKS ?? "10",
+  10
+) || 10;
+
+function getDecompositionTruncatedMetric() {
+  try {
+    // Lazy import to avoid circular dependencies
+    const metrics = require("@alfred/api/metrics");
+    return metrics.decompositionTruncatedTotal;
+  } catch {
+    return null;
+  }
+}
 
 export type SubTaskId = string;
 
@@ -82,6 +98,29 @@ function uniq(items: string[]): string[] {
   return out;
 }
 
+function truncateSubtasksIfNeeded(
+  tasks: SubTask[],
+  reason: "semantic" | "bucket"
+): SubTask[] {
+  if (tasks.length <= MAX_SUBTASKS) {
+    return tasks;
+  }
+
+  const originalCount = tasks.length;
+  const truncated = tasks.slice(0, MAX_SUBTASKS);
+
+  logger.warn("decomposition_truncated", {
+    originalCount,
+    truncatedCount: MAX_SUBTASKS,
+    reason,
+  });
+
+  const metric = getDecompositionTruncatedMetric();
+  metric?.inc({ reason });
+
+  return truncated;
+}
+
 export function decomposeTask(
   requirement: string,
   context: DecomposeContext
@@ -118,7 +157,7 @@ export function decomposeTask(
         context.bundle
       );
       if (semanticTasks.length > 0) {
-        return semanticTasks;
+        return truncateSubtasksIfNeeded(semanticTasks, "semantic");
       }
     } catch (_e) {
       // Fallback to legacy bucket heuristic if semantic fails
@@ -275,7 +314,7 @@ export function decomposeTask(
 
   result.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
 
-  return result;
+  return truncateSubtasksIfNeeded(result, "bucket");
 }
 
 export const __internals = {

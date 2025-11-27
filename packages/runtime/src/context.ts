@@ -41,6 +41,7 @@ export type ContextBuildInput = {
   ignore?: string[];
   seeds?: string[];
   authz?: string;
+  userId?: string;
 };
 
 /**
@@ -154,6 +155,7 @@ export class ContextBuilder {
           ignore: input.ignore,
           topK: input.topK ?? DEFAULT_TOP_K,
           authz: input.authz,
+          userId: input.userId,
         });
 
         const webReceipt = input.web

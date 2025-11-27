@@ -182,6 +182,7 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
     requirement,
   }: {
     requirement: string;
+    userId?: string;
   }) => ({
     code: [
       {
@@ -197,6 +198,7 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
     requirement,
   }: {
     requirement: string;
+    userId?: string;
   }) => ({
     web: [
       {

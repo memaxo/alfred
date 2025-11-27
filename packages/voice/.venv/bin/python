@@ -1,1 +1,2 @@
-/Users/jackmazac/.local/share/uv/python/cpython-3.10.16-macos-aarch64-none/bin/python3.10
+#!/bin/sh
+echo 'Python stub'

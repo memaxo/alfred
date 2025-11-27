@@ -2,13 +2,28 @@ import { randomUUID } from "node:crypto";
 import { resolveObligationResumeEvents } from "@alfred/type";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import { runRegistry } from "@alfred/agent/workflow/registry";
+import {
+  registerRunHandle,
+  unregisterRunHandle,
+  StreamNotAttachedError,
+} from "@alfred/agent/workflow/session-recovery";
 import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { getRedis } from "@alfred/auth/redis";
-import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import {
+  requireToolScopesAndPolicy,
+  type TokenClaims,
+} from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
+import {
+  DEFAULT_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+} from "@alfred/agent/orchestrator/tool/codex/constants";
 import { requirePolicy } from "../gate";
+import { PolicyObligationError } from "../errors";
 import { authedProcedure, router } from "../trpc";
 
 const droidRunInputSchema = z.object({
@@ -19,6 +34,12 @@ const droidRunInputSchema = z.object({
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   cw: z.string().optional(),
+  timeoutSec: z
+    .number()
+    .int()
+    .min(MIN_TIMEOUT_SEC)
+    .max(MAX_TIMEOUT_SEC, { message: "codex_timeout_exceeds_limit" })
+    .optional(),
 });
 
 type DroidRunInput = z.infer<typeof droidRunInputSchema>;
@@ -69,6 +90,31 @@ type LocalPendingEntry = {
 const localResumeResults = new Map<string, LocalResultEntry>();
 const localPendingRecords = new Map<string, LocalPendingEntry>();
 
+function normalizeTimeout(timeoutSec?: number): number {
+  if (typeof timeoutSec !== "number" || Number.isNaN(timeoutSec)) {
+    return DEFAULT_TIMEOUT_SEC;
+  }
+  return Math.min(Math.max(timeoutSec, MIN_TIMEOUT_SEC), MAX_TIMEOUT_SEC);
+}
+
+function ensureTimeoutAuthorization(timeoutSec: number, claims?: TokenClaims) {
+  if (timeoutSec > MAX_TIMEOUT_SEC) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "codex_timeout_exceeds_limit",
+    });
+  }
+  if (
+    timeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC &&
+    (!claims?.elevated || claims?.mfa !== "passkey")
+  ) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "codex_timeout_requires_elevation",
+    });
+  }
+}
+
 function cloneStoredInput(input: DroidRunInput): StoredDroidInput {
   return {
     prompt: input.prompt,
@@ -77,6 +123,7 @@ function cloneStoredInput(input: DroidRunInput): StoredDroidInput {
     command: input.command,
     args: input.args ? [...input.args] : undefined,
     cw: input.cw,
+    timeoutSec: normalizeTimeout(input.timeoutSec),
   };
 }
 
@@ -85,6 +132,7 @@ function hydrateInput(stored: StoredDroidInput, authz: string): DroidRunInput {
     ...stored,
     authz,
     args: stored.args ? [...stored.args] : undefined,
+    timeoutSec: stored.timeoutSec,
   };
 }
 
@@ -299,7 +347,7 @@ async function handleResume(runId: string, resumeData: ResumePayload) {
   const pending = await loadPendingOrFail(runId);
   const resumedInput = hydrateInput(pending.input, resumeData.authz);
 
-  const { decision } = await requireToolScopesAndPolicy(
+  const { decision, claims } = await requireToolScopesAndPolicy(
     resumedInput.authz,
     ["droid.exec"],
     {
@@ -307,6 +355,11 @@ async function handleResume(runId: string, resumeData: ResumePayload) {
       resource: buildPolicyResource(resumedInput),
       context: buildPolicyContext(resumedInput),
     }
+  );
+
+  ensureTimeoutAuthorization(
+    resumedInput.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    claims
   );
 
   const obligations = decision.obligations ?? [];
@@ -332,7 +385,7 @@ async function handleResume(runId: string, resumeData: ResumePayload) {
 
   pendingResumableRuns.delete(runId);
   await removePendingRecord(runId);
-  await runRegistry.unregister(runId);
+  await unregisterRunHandle(runId);
 }
 
 function buildPolicyResource(input: StoredDroidInput | DroidRunInput) {
@@ -356,7 +409,7 @@ async function registerResumableRun(runId: string, entry: PendingResumeEntry) {
   const abortController = new AbortController();
 
   try {
-    await runRegistry.register(runId, {
+    await registerRunHandle(runId, {
       resume: async ({ resumeData }) => {
         await handleResume(runId, resumeData);
       },
@@ -379,7 +432,7 @@ async function cancelPendingRun(runId: string) {
   pendingResumableRuns.delete(runId);
   await removePendingRecord(runId);
   try {
-    await runRegistry.unregister(runId);
+    await unregisterRunHandle(runId);
   } catch {
     // ignore
   }
@@ -400,27 +453,37 @@ const droidProcedures = {
         (raw) => {
           const input = (raw ?? {}) as DroidRunInput;
           return { auto: input.auto };
-        }
+        },
+        { handleObligations: "passThrough" }
       )
     )
     .input(droidRunInputSchema)
     .mutation(async ({ input, ctx }) => {
-      await requireToolScopesAndPolicy(
-        input.authz,
+      const normalizedInput: DroidRunInput = {
+        ...input,
+        timeoutSec: normalizeTimeout(input.timeoutSec),
+      };
+      const { decision, claims } = await requireToolScopesAndPolicy(
+        normalizedInput.authz,
         ["droid.exec"],
         {
           action: "droid.exec",
-          resource: buildPolicyResource(input),
-          context: buildPolicyContext(input),
+          resource: buildPolicyResource(normalizedInput),
+          context: buildPolicyContext(normalizedInput),
         }
       );
 
-      const obligations = ctx.policy?.obligations ?? [];
+      ensureTimeoutAuthorization(
+        normalizedInput.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+        claims
+      );
+
+      const obligations = ctx.policy?.obligations ?? decision.obligations ?? [];
       if (obligations.length > 0) {
         const runId = randomUUID();
         await registerResumableRun(runId, {
           type: "run",
-          input: cloneStoredInput(input),
+          input: cloneStoredInput(normalizedInput),
         });
         throw new PolicyObligationError("droid.exec", obligations, {
           reason: "droid_execution",
@@ -428,7 +491,7 @@ const droidProcedures = {
         });
       }
 
-      return executeDroidRun(input);
+      return executeDroidRun(normalizedInput);
     }),
 
   stream: authedProcedure
@@ -445,12 +508,17 @@ const droidProcedures = {
         (raw) => {
           const input = (raw ?? {}) as DroidRunInput;
           return { auto: input.auto };
-        }
+        },
+        { handleObligations: "passThrough" }
       )
     )
     .input(droidRunInputSchema)
     .subscription(({ input, ctx }) =>
       observable<{ type: string; data?: string; code?: number }>((emit) => {
+        const normalizedInput: DroidRunInput = {
+          ...input,
+          timeoutSec: normalizeTimeout(input.timeoutSec),
+        };
         let proc: ReturnType<typeof spawnDroidProcess> | null = null;
         let closed = false;
         let runId: string | null = null;
@@ -527,17 +595,22 @@ const droidProcedures = {
         };
 
         void (async () => {
-          await requireToolScopesAndPolicy(
-            input.authz,
+          const { decision, claims } = await requireToolScopesAndPolicy(
+            normalizedInput.authz,
             ["droid.exec"],
             {
               action: "droid.exec",
-              resource: buildPolicyResource(input),
-              context: buildPolicyContext(input),
+              resource: buildPolicyResource(normalizedInput),
+              context: buildPolicyContext(normalizedInput),
             }
           );
 
-          const obligations = ctx.policy?.obligations ?? [];
+          ensureTimeoutAuthorization(
+            normalizedInput.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+            claims
+          );
+
+          const obligations = ctx.policy?.obligations ?? decision.obligations ?? [];
           if (obligations.length > 0) {
             runId = randomUUID();
             const streamSession: StreamSession = {
@@ -554,7 +627,7 @@ const droidProcedures = {
             };
             await registerResumableRun(runId, {
               type: "stream",
-              input: cloneStoredInput(input),
+              input: cloneStoredInput(normalizedInput),
               streamSession,
             });
             emit.next({
@@ -569,7 +642,7 @@ const droidProcedures = {
             return;
           }
 
-          await startStreaming(input);
+          await startStreaming(normalizedInput);
         })().catch((error) => {
           if (!closed) {
             emit.error(error);
@@ -617,6 +690,12 @@ const droidProcedures = {
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof StreamNotAttachedError) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "stream_not_attached",
+          });
         }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

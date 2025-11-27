@@ -92,8 +92,21 @@ describe("codex-stream", () => {
     it("uses provided message ID", () => {
       const events: AlfredCodexEvent[] = [{ type: "output", content: "test" }];
 
-      const message = codexEventsToUiMessage(events, "custom-id");
+      const message = codexEventsToUiMessage(events, { messageId: "custom-id" });
       expect(message?.id).toBe("custom-id");
+    });
+
+    it("appends notices as text parts", () => {
+      const events: AlfredCodexEvent[] = [{ type: "output", content: "result" }];
+      const message = codexEventsToUiMessage(events, {
+        notices: [
+          { code: "limit_exceeded", message: "Timeout capped", correlationId: "abc" },
+        ],
+      });
+      expect(message?.parts.at(-1)).toEqual({
+        type: "text",
+        text: "[limit_exceeded] Timeout capped (ref=abc)",
+      });
     });
   });
 });

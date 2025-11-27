@@ -1,8 +1,11 @@
 import { Buffer } from "node:buffer";
+import { promises as fs } from "node:fs";
 import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
+import os from "node:os";
+import path from "node:path";
 import {
   type ApprovalMode,
   Codex,
@@ -57,6 +60,7 @@ type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
 const WRITER_FAILURE_WARN_THRESHOLD = 10;
 const WRITER_CONSECUTIVE_FAILURE_ABORT_THRESHOLD = 5;
 const WRITER_WARNING_INTERVAL_MS = 5_000;
+const THREAD_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 const DISCONNECT_ERROR_NAMES = new Set(["AbortError", "DOMException"]);
 const DISCONNECT_ERROR_CODES = new Set([
@@ -484,19 +488,69 @@ function resolveThreadValidator(codex: Codex): ThreadValidator | undefined {
     validateThread?: (id: string) => Promise<boolean> | boolean;
   }).validateThread;
 
-  if (typeof maybeValidate !== "function") {
+  if (typeof maybeValidate === "function") {
+    return async (threadId: string) => {
+      try {
+        const result = await maybeValidate.call(codex, threadId);
+        return result !== false;
+      } catch (error) {
+        logger.warn(
+          { threadId, err: error instanceof Error ? error.message : String(error) },
+          "codex_thread_validation_failed"
+        );
+        return false;
+      }
+    };
+  }
+
+  return createFilesystemThreadValidator();
+}
+
+function resolveCodexSessionsDir(): string | null {
+  const explicit = process.env.CODEX_HOME?.trim();
+  if (explicit) {
+    return path.join(path.resolve(explicit), "sessions");
+  }
+  const home = os.homedir();
+  if (!home) {
+    return null;
+  }
+  return path.join(home, ".codex", "sessions");
+}
+
+function createFilesystemThreadValidator(
+  codexHomeOverride?: string
+): ThreadValidator | undefined {
+  const sessionsDir = codexHomeOverride
+    ? path.join(path.resolve(codexHomeOverride), "sessions")
+    : resolveCodexSessionsDir();
+
+  if (!sessionsDir) {
     return undefined;
   }
 
   return async (threadId: string) => {
+    if (!THREAD_ID_PATTERN.test(threadId)) {
+      return false;
+    }
+
+    const filePath = path.join(sessionsDir, `${threadId}.json`);
     try {
-      const result = await maybeValidate.call(codex, threadId);
-      return result !== false;
+      await fs.access(filePath);
+      return true;
     } catch (error) {
-      console.warn("codex_thread_validation_failed", {
-        threadId,
-        error,
-      });
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT") {
+        return false;
+      }
+      logger.warn(
+        {
+          threadId,
+          path: filePath,
+          err: error instanceof Error ? error.message : String(error),
+        },
+        "codex_thread_validation_fs_error"
+      );
       return false;
     }
   };
@@ -616,11 +670,39 @@ async function runCodexWithSdk({
 
   let thread: Thread;
   const stopSessionValidationTimer = startCodexSessionValidationTimer();
-  const resumeAssessment = await assessSessionResumeEligibility({
+  
+  const SESSION_VALIDATION_TIMEOUT_MS = 5_000;
+  const validationPromise = assessSessionResumeEligibility({
     session: existingSession,
     workingDirectory: resolvedCw,
     validateThread: threadValidator,
   });
+  
+  const timeoutPromise = new Promise<{
+    canResume: false;
+    reason: "timeout";
+  }>((resolve) => {
+    setNodeTimeout(() => {
+      resolve({ canResume: false, reason: "timeout" });
+    }, SESSION_VALIDATION_TIMEOUT_MS);
+  });
+  
+  const resumeAssessment = await Promise.race([
+    validationPromise,
+    timeoutPromise,
+  ]);
+  
+  if (resumeAssessment.reason === "timeout") {
+    logger.warn("codex_session_validation_timeout", {
+      sessionId: existingSession?.sessionId,
+      workingDirectory: resolvedCw,
+    });
+    const codexSessionValidationTimeoutTotal = (
+      await import("@alfred/api/metrics")
+    ).codexSessionValidationTimeoutTotal;
+    codexSessionValidationTimeoutTotal.inc();
+  }
+  
   stopSessionValidationTimer({
     outcome: resumeAssessment.canResume
       ? "resume"
@@ -932,3 +1014,9 @@ async function runCodexWithSdk({
         : undefined,
   };
 }
+
+export const __internals = {
+  resolveThreadValidator,
+  createFilesystemThreadValidatorForTests: (codexHome: string) =>
+    createFilesystemThreadValidator(codexHome),
+};

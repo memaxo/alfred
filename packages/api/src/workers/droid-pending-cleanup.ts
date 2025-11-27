@@ -1,4 +1,4 @@
-import { runRegistry } from "@alfred/agent/workflow/registry";
+import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import { getRedis } from "@alfred/auth/redis";
 import { logger } from "@alfred/logger";
 import {
@@ -74,7 +74,7 @@ export async function cleanupDroidPendingRuns(now: number = Date.now()) {
       const ageMs = now - createdAt;
       if (ageMs > MAX_AGE_MS) {
         await redis.del(key);
-        await runRegistry.unregister(runId);
+        await unregisterRunHandle(runId);
         droidPendingCleanupTotal.inc({ result: "stale" });
       }
     } catch (error) {

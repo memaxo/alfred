@@ -9,6 +9,7 @@ export type DroidStreamEvent =
   | { type: "stdout"; data: string }
   | { type: "stderr"; data: string }
   | { type: "exit"; code: number }
+  | { type: "notice"; message: string }
   | {
       type: "obligation";
       runId: string;
@@ -21,6 +22,7 @@ type RawDroidStreamEvent =
   | { type: "stdout"; data?: string }
   | { type: "stderr"; data?: string }
   | { type: "exit"; code?: number }
+  | { type: "notice"; data?: string }
   | { type: "obligation"; data?: string }
   | { type: "resume"; data?: string };
 
@@ -30,6 +32,7 @@ export type DroidStreamOptions = {
     auto: "read" | "low" | "medium" | "high";
     authz: string;
     out?: "text" | "json" | "debug";
+    timeoutSec?: number;
   };
   client: ReturnType<typeof createTRPCProxyClient<AppRouter>>;
   onObligation?: (payload: {
@@ -180,6 +183,17 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
 
   if (event.type === "exit") {
     return { type: "exit", code: Number(event.code ?? 0) };
+  }
+
+  if (event.type === "notice") {
+    const payload = event as { message?: string; data?: string };
+    const message =
+      typeof payload.message === "string"
+        ? payload.message
+        : typeof payload.data === "string"
+          ? payload.data
+          : "";
+    return { type: "notice", message };
   }
 
   if (event.type === "obligation") {

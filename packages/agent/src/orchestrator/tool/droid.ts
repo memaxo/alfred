@@ -10,8 +10,10 @@ import { recordDroidExecRun, startDroidExecTimer } from "../../metrics";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
+  DirectoryHandle,
   isWithinBase,
   openDirectorySecure,
+  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -36,6 +38,22 @@ function assertAllowedDirectory(candidate: string) {
     throw new Error("droid_invalid_cwd");
   } finally {
     handle?.close();
+  }
+}
+
+function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
+  try {
+    return openDirectorySecure(candidate ?? process.cwd(), {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+    });
+  } catch (error) {
+    if (
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory"
+    ) {
+      throw new Error("droid_invalid_cwd_not_directory");
+    }
+    throw new Error("droid_invalid_cwd");
   }
 }
 
@@ -261,18 +279,19 @@ export const toolDroid = {
   execute: async ({ input, writer }: DroidExecuteArgs) => {
     await enforcePolicy(input);
 
-    const cwd = input.cw ? assertAllowedDirectory(input.cw) : process.cwd();
-    const flags = buildFlags(input);
-    const command = process.env.DROID_BIN?.trim() || "droid";
-    const executable = resolveExecutable(command);
+    const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
+    try {
+      const flags = buildFlags(input);
+      const command = process.env.DROID_BIN?.trim() || "droid";
+      const executable = resolveExecutable(command);
 
-    const proc = Bun.spawn([executable, ...flags], {
-      cwd,
-      env: pickEnv(input.env),
-      stdout: "pipe",
-      stderr: "pipe",
-      stdin: "ignore",
-    });
+      const proc = Bun.spawn([executable, ...flags], {
+        cwd: prepareCwdFromHandle(cwdHandle),
+        env: pickEnv(input.env),
+        stdout: "pipe",
+        stderr: "pipe",
+        stdin: "ignore",
+      });
 
     const stopDurationTimer = startDroidExecTimer(input.auto);
 
@@ -355,16 +374,19 @@ export const toolDroid = {
       throw new Error(`droid_exec_failed:${exitCode}`);
     }
 
-    if (accumulator.truncated) {
-      void Promise.resolve(
-        writer?.write?.({ type: "notice", message: "output_truncated" })
-      ).catch(() => {});
-    }
+      if (accumulator.truncated) {
+        void Promise.resolve(
+          writer?.write?.({ type: "notice", message: "output_truncated" })
+        ).catch(() => {});
+      }
 
-    return {
-      result: accumulator.stdout.trim(),
-      artifacts: [],
-    };
+      return {
+        result: accumulator.stdout.trim(),
+        artifacts: [],
+      };
+    } finally {
+      cwdHandle.close();
+    }
   },
 };
 

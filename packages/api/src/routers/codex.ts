@@ -48,6 +48,7 @@ export type SanitizedCodexError = {
     | "timeout"
     | "elevation_required"
     | "limit_exceeded"
+    | "forbidden"
     | "internal_error";
   message: string;
 };
@@ -69,6 +70,12 @@ export function sanitizeCodexError(error: Error): SanitizedCodexError {
     return {
       code: "elevation_required",
       message: "Additional authentication required",
+    };
+  }
+  if (message === "codex_session_forbidden") {
+    return {
+      code: "forbidden",
+      message: "codex_session_forbidden",
     };
   }
   if (message === "codex_timeout_requires_elevation") {
@@ -112,7 +119,9 @@ export function buildCodexErrorResponse(
       ? "PRECONDITION_FAILED"
       : sanitized.code === "limit_exceeded"
         ? "BAD_REQUEST"
-        : "INTERNAL_SERVER_ERROR";
+        : sanitized.code === "forbidden"
+          ? "FORBIDDEN"
+          : "INTERNAL_SERVER_ERROR";
   return { sanitized, correlationId, trpcCode, cause: normalized };
 }
 

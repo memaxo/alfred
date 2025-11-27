@@ -1,6 +1,8 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { spawn } from "bun";
+import { logger } from "@alfred/logger";
 
 export type WorktreeHandle = {
   path: string;
@@ -95,6 +97,117 @@ async function collectConflictFiles(cwd: string) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+type PreviewCleanupTicket = {
+  repoRoot: string;
+  path: string;
+  attempts: number;
+  registeredAt: number;
+};
+
+const previewCleanupBacklog = new Map<string, PreviewCleanupTicket>();
+
+function ticketKey(repoRoot: string, previewPath: string): string {
+  return `${repoRoot}::${previewPath}`;
+}
+
+function registerPreviewCleanup(
+  repoRoot: string,
+  previewPath: string
+): PreviewCleanupTicket {
+  const ticket: PreviewCleanupTicket = {
+    repoRoot,
+    path: previewPath,
+    attempts: 0,
+    registeredAt: Date.now(),
+  };
+  previewCleanupBacklog.set(ticketKey(repoRoot, previewPath), ticket);
+  return ticket;
+}
+
+async function settlePreviewCleanup(
+  ticket: PreviewCleanupTicket,
+  context: string
+): Promise<void> {
+  const success = await cleanupPreviewPath(ticket.repoRoot, ticket.path);
+  if (success) {
+    previewCleanupBacklog.delete(ticketKey(ticket.repoRoot, ticket.path));
+    return;
+  }
+  ticket.attempts += 1;
+  previewCleanupBacklog.set(ticketKey(ticket.repoRoot, ticket.path), ticket);
+  logger?.warn?.("preview_worktree_cleanup_pending", {
+    path: ticket.path,
+    attempts: ticket.attempts,
+    context,
+  });
+}
+
+async function cleanupPreviewPath(
+  repoRoot: string,
+  previewPath: string
+): Promise<boolean> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await runGit(repoRoot, ["worktree", "remove", "--force", previewPath]).catch(
+      () => {}
+    );
+    await removeDirSafe(previewPath);
+    if (!(await pathExists(previewPath))) {
+      return true;
+    }
+    await sleep(100 * (attempt + 1));
+  }
+  return !(await pathExists(previewPath));
+}
+
+export async function flushPreviewCleanupBacklog(
+  repoRoot?: string
+): Promise<number> {
+  let cleaned = 0;
+  for (const ticket of [...previewCleanupBacklog.values()]) {
+    if (repoRoot && ticket.repoRoot !== repoRoot) {
+      continue;
+    }
+    if (await cleanupPreviewPath(ticket.repoRoot, ticket.path)) {
+      previewCleanupBacklog.delete(ticketKey(ticket.repoRoot, ticket.path));
+      cleaned += 1;
+    }
+  }
+  if (repoRoot) {
+    cleaned += await cleanupFilesystemPreviews(repoRoot);
+  }
+  return cleaned;
+}
+
+async function cleanupFilesystemPreviews(repoRoot: string): Promise<number> {
+  const root = path.join(repoRoot, WORKTREE_ROOT);
+  if (!(await pathExists(root))) {
+    return 0;
+  }
+  let cleaned = 0;
+  const runDirs = await fs
+    .readdir(root, { withFileTypes: true })
+    .catch(() => []);
+  for (const runDir of runDirs) {
+    if (!runDir.isDirectory()) {
+      continue;
+    }
+    const runPath = path.join(root, runDir.name);
+    const previews = await fs
+      .readdir(runPath, { withFileTypes: true })
+      .catch(() => []);
+    for (const entry of previews) {
+      if (!entry.isDirectory() || !entry.name.startsWith("preview-")) {
+        continue;
+      }
+      const previewPath = path.join(runPath, entry.name);
+      if (await cleanupPreviewPath(repoRoot, previewPath)) {
+        cleaned += 1;
+      }
+    }
+  }
+  return cleaned;
 }
 
 export const worktreeManager = {
@@ -204,6 +317,7 @@ export const worktreeManager = {
     sourceBranch: string,
     options?: { runId?: string }
   ): Promise<{ success: boolean; conflictFiles: string[] }> => {
+    await flushPreviewCleanupBacklog(repoRoot);
     const previewRoot = path.join(
       repoRoot,
       WORKTREE_ROOT,
@@ -212,28 +326,31 @@ export const worktreeManager = {
     const previewId = `preview-${sanitizeSegment(sourceBranch)}-${Date.now()}`;
     const previewPath = path.join(previewRoot, previewId);
     await fs.mkdir(path.dirname(previewPath), { recursive: true });
-
-    const resolvedTarget = await runGit(repoRoot, ["rev-parse", targetBranch]);
-    if (resolvedTarget.exitCode !== 0 || !resolvedTarget.stdout) {
-      throw new Error(
-        `Unable to resolve target branch ${targetBranch}: ${resolvedTarget.stderr}`
-      );
-    }
-
-    const addRes = await runGit(repoRoot, [
-      "worktree",
-      "add",
-      "--detach",
-      previewPath,
-      resolvedTarget.stdout,
-    ]);
-    if (addRes.exitCode !== 0) {
-      throw new Error(
-        `Failed to prepare merge preview: ${addRes.stderr || addRes.stdout}`
-      );
-    }
+    const cleanupTicket = registerPreviewCleanup(repoRoot, previewPath);
 
     try {
+      await cleanupPreviewPath(repoRoot, previewPath);
+
+      const resolvedTarget = await runGit(repoRoot, ["rev-parse", targetBranch]);
+      if (resolvedTarget.exitCode !== 0 || !resolvedTarget.stdout) {
+        throw new Error(
+          `Unable to resolve target branch ${targetBranch}: ${resolvedTarget.stderr}`
+        );
+      }
+
+      const addRes = await runGit(repoRoot, [
+        "worktree",
+        "add",
+        "--detach",
+        previewPath,
+        resolvedTarget.stdout,
+      ]);
+      if (addRes.exitCode !== 0) {
+        throw new Error(
+          `Failed to prepare merge preview: ${addRes.stderr || addRes.stdout}`
+        );
+      }
+
       const mergeRes = await runGit(previewPath, [
         "merge",
         "--no-commit",
@@ -252,13 +369,7 @@ export const worktreeManager = {
       );
       return { success: false, conflictFiles };
     } finally {
-      await runGit(repoRoot, [
-        "worktree",
-        "remove",
-        "--force",
-        previewPath,
-      ]).catch(() => {});
-      await removeDirSafe(previewPath);
+      await settlePreviewCleanup(cleanupTicket, "safe_merge_finalize");
     }
   },
 };

@@ -15,6 +15,7 @@ import { logger } from "@alfred/logger";
 import { spawn } from "bun";
 // import { createRuntime } from "@alfred/runtime"; // Not needed if we test toolCodex directly
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
+import { formatCodexRuntimeError } from "../packages/runtime/src/utils/codex-error";
 
 // Mock sys.spawn to simulate Codex output
 const originalSpawn = sys.spawn;
@@ -106,7 +107,12 @@ async function verifyLoopDetection() {
     ) {
       console.log("✅ Loop detection PASSED: Caught interrupt.");
     } else {
-      console.error(`❌ Loop detection FAILED: Unexpected error: ${error}`);
+      const { userMessage, rawMessage, code } = formatCodexRuntimeError(error);
+      console.error(`❌ Loop detection FAILED: ${userMessage}`);
+      logger.error("verify_resilience_unexpected_error", {
+        error: rawMessage,
+        code,
+      });
       // Check stack trace to see if it was the OpenAI check
       if (String(error).includes("openai_api_key_missing")) {
         console.log("⚠️ Skipped: Environment missing API key for imports.");

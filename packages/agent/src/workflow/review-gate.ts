@@ -126,4 +126,35 @@ export class ReviewGate {
   summary(): ReviewCheckStatus[] {
     return Array.from(this.checks.values());
   }
+
+  serialize(): {
+    checks: ReviewCheckStatus[];
+    planInitialized: boolean;
+    planRequired: boolean;
+    minimumRequired: number;
+  } {
+    return {
+      checks: Array.from(this.checks.values()),
+      planInitialized: this.planInitialized,
+      planRequired: this.planRequired,
+      minimumRequired: this.minimumRequired,
+    };
+  }
+
+  restore(data: {
+    checks?: ReviewCheckStatus[];
+    planInitialized?: boolean;
+    planRequired?: boolean;
+    minimumRequired?: number;
+  }): void {
+    this.checks.clear();
+    if (Array.isArray(data.checks)) {
+      for (const check of data.checks) {
+        this.checks.set(check.id, check);
+      }
+    }
+    this.planInitialized = data.planInitialized ?? false;
+    this.planRequired = data.planRequired ?? false;
+    this.minimumRequired = data.minimumRequired ?? 0;
+  }
 }

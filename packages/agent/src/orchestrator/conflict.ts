@@ -16,7 +16,8 @@ export const conflictArbiter = {
     runId: string,
     targetBranch: string,
     sourceBranch: string,
-    authz?: string
+    authz?: string,
+    userId?: string
   ): Promise<ConflictResolution> => {
     const arbiterId = `arbiter-${Date.now().toString(36)}`;
     logger.info("arbiter_spawned", {
@@ -106,6 +107,7 @@ If you cannot resolve a conflict safely, create a file 'ESCALATION.md' explainin
           sessionId: `session-${arbiterId}`,
           authz,
           out: "text",
+          userId,
         },
         writer,
       });

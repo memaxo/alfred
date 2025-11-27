@@ -10,6 +10,10 @@ import {
 } from "bun:test";
 import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+import {
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+} from "@alfred/agent/orchestrator/tool/codex/definition";
 import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
@@ -57,6 +61,12 @@ const BIOMETRIC_OBLIGATION: Obligation[] = [
     metadata: { code: "requireBio" },
   },
 ];
+
+mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
+  toolCodex: {
+    execute: vi.fn(),
+  },
+}));
 
 mock.module("@alfred/auth/token", () => ({
   requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
@@ -143,17 +153,41 @@ describe("droids router", () => {
           expect(error).toBeInstanceOf(TRPCError);
           expect(error.message).toBe("obligation_required");
           expect(error.cause).toMatchObject({
-            reason: "droid_execution",
+            action: "droid.exec",
             obligations: BIOMETRIC_OBLIGATION,
           });
-          expect(typeof (error.cause as { runId?: string })?.runId).toBe(
-            "string"
-          );
-          expect(registerMock).toHaveBeenCalledWith(
-            (error.cause as { runId?: string }).runId,
-            expect.objectContaining({ resume: expect.any(Function) })
-          );
+          expect(registerMock).toHaveBeenCalled();
         });
+    });
+
+    it("requires elevation for timeout above threshold", async () => {
+      requireToolScopesAndPolicyMock.mockResolvedValueOnce({
+        claims: { elevated: false, mfa: "none" },
+        decision: { obligations: [] },
+      });
+
+      await expect(
+        caller.droid.run({
+          prompt: "long task",
+          auto: "low",
+          authz: "token",
+          timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC + 60,
+        })
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        message: "codex_timeout_requires_elevation",
+      });
+    });
+
+    it("rejects timeouts above maximum", async () => {
+      await expect(
+        caller.droid.run({
+          prompt: "too long",
+          auto: "low",
+          authz: "token",
+          timeoutSec: MAX_TIMEOUT_SEC + 60,
+        })
+      ).rejects.toThrow(/codex_timeout_exceeds_limit/);
     });
   });
 
@@ -307,18 +341,15 @@ describe("droids router", () => {
         obligations: BIOMETRIC_OBLIGATION,
       });
 
-      let capturedRunId: string | undefined;
-
       await caller
         .droid.run({
           prompt: "test",
           auto: "medium",
           authz: "token",
         })
-        .catch((error) => {
-          capturedRunId = (error.cause as { runId?: string })?.runId;
-        });
+        .catch(() => {});
 
+      const capturedRunId = Array.from(runHandlers.keys())[0];
       expect(capturedRunId).toBeDefined();
       requireToolScopesAndPolicyMock.mockResolvedValueOnce({
         claims: {

@@ -5,6 +5,7 @@
     "ignoreUnknown": false,
     "includes": [
       "**",
+      "!tmp-policy-test/**",
       "!**/.next",
       "!**/dist",
       "!**/.turbo",

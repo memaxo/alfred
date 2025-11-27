@@ -9,7 +9,9 @@ import { z } from "zod";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
+  DirectoryHandle,
   openDirectorySecure,
+  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
 import { withPolicyApproval } from "./approval.js";
 
@@ -35,6 +37,22 @@ function assertAllowedDirectory(candidate: string) {
     throw new Error("git_invalid_cwd");
   } finally {
     handle?.close();
+  }
+}
+
+function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
+  try {
+    return openDirectorySecure(candidate ?? process.cwd(), {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+    });
+  } catch (error) {
+    if (
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory"
+    ) {
+      throw new Error("git_invalid_cwd_not_directory");
+    }
+    throw new Error("git_invalid_cwd");
   }
 }
 
@@ -113,7 +131,7 @@ async function enforcePolicy(input: GitInput, cwd: string) {
     action: `git.${input.action}`,
     resource: {
       kind: "repo",
-      id: cwd,
+      id: cwdHandle,
     },
   });
 
@@ -126,19 +144,19 @@ async function enforcePolicy(input: GitInput, cwd: string) {
 }
 
 async function runGit({
-  cwd,
+  cwdHandle,
   args,
   writer,
   timeoutSec,
 }: {
-  cwd: string;
+  cwdHandle: DirectoryHandle;
   args: string[];
   writer: ToolWriter;
   timeoutSec: number;
 }) {
   const command = resolveExecutable("git");
   const proc = Bun.spawn([command, ...args], {
-    cwd,
+    cwd: prepareCwdFromHandle(cwdHandle),
     env: {
       PATH: process.env.PATH ?? "",
     },
@@ -272,16 +290,18 @@ export const toolGit = {
     input: GitInput;
     writer?: ToolWriter;
   }) => {
-    const cwd = input.cw ? assertAllowedDirectory(input.cw) : process.cwd();
-    await enforcePolicy(input, cwd);
+    const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
+    const cwdPath = cwdHandle.path;
+    await enforcePolicy(input, cwdPath);
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
 
-    switch (input.action) {
+    try {
+      switch (input.action) {
       case "branch.create": {
         const name = ensure(input.name, "git_branch_name_required");
         const base = input.base ?? "HEAD";
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["branch", name, base],
           writer,
           timeoutSec,
@@ -296,7 +316,7 @@ export const toolGit = {
         const name = ensure(input.name, "git_branch_name_required");
         const base = ensure(input.base, "git_branch_base_required");
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["branch", "-f", name, base],
           writer,
           timeoutSec,
@@ -310,7 +330,7 @@ export const toolGit = {
       case "branch.delete": {
         const name = ensure(input.name, "git_branch_name_required");
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["branch", "-D", name],
           writer,
           timeoutSec,
@@ -328,7 +348,7 @@ export const toolGit = {
           "git_worktree_ref_required"
         );
         const args = ["worktree", "add", wtPath, ref];
-        const { exitCode } = await runGit({ cwd, args, writer, timeoutSec });
+        const { exitCode } = await runGit({ cwdHandle, args, writer, timeoutSec });
         if (exitCode !== 0) {
           throw new Error("git_worktree_add_failed");
         }
@@ -338,7 +358,7 @@ export const toolGit = {
       case "worktree.remove": {
         const wtPath = ensure(input.path, "git_worktree_path_required");
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["worktree", "remove", wtPath],
           writer,
           timeoutSec,
@@ -353,7 +373,7 @@ export const toolGit = {
         const message = ensure(input.message, "git_commit_message_required");
 
         const status = await runGit({
-          cwd,
+          cwdHandle,
           args: ["status", "--porcelain"],
           writer,
           timeoutSec,
@@ -368,7 +388,7 @@ export const toolGit = {
         }
 
         const add = await runGit({
-          cwd,
+          cwdHandle,
           args: ["add", "-A"],
           writer,
           timeoutSec,
@@ -378,7 +398,7 @@ export const toolGit = {
         }
 
         const commit = await runGit({
-          cwd,
+          cwdHandle,
           args: ["commit", "-m", message],
           writer,
           timeoutSec,
@@ -394,7 +414,7 @@ export const toolGit = {
         const remote = input.remote ?? "origin";
         const ref = ensure(input.ref ?? input.name, "git_push_ref_required");
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["push", remote, ref],
           writer,
           timeoutSec,
@@ -412,7 +432,7 @@ export const toolGit = {
           args.push("--no-ff");
         }
         args.push(ref);
-        const { exitCode } = await runGit({ cwd, args, writer, timeoutSec });
+        const { exitCode } = await runGit({ cwdHandle, args, writer, timeoutSec });
         if (exitCode !== 0) {
           throw new Error("git_merge_failed");
         }
@@ -421,7 +441,7 @@ export const toolGit = {
 
       case "status": {
         const { exitCode, stdout } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["status", "--porcelain=v2"],
           writer,
           timeoutSec,
@@ -438,7 +458,7 @@ export const toolGit = {
           args.push(`${input.ref}..HEAD`);
         }
         const { exitCode, stdout } = await runGit({
-          cwd,
+          cwdHandle,
           args,
           writer,
           timeoutSec,
@@ -458,7 +478,7 @@ export const toolGit = {
             ? input.remote
             : "origin";
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["fetch", remote, "--prune", "--tags"],
           writer,
           timeoutSec,
@@ -472,7 +492,7 @@ export const toolGit = {
       case "reset.hard": {
         const ref = ensure(input.ref ?? input.base, "git_reset_ref_required");
         const { exitCode } = await runGit({
-          cwd,
+          cwdHandle,
           args: ["reset", "--hard", ref],
           writer,
           timeoutSec,
@@ -485,6 +505,9 @@ export const toolGit = {
 
       default:
         throw new Error("git_action_not_supported");
+    }
+    } finally {
+      cwdHandle.close();
     }
   },
 };

@@ -98,6 +98,7 @@ describe("executeActPhase", () => {
       undefined,
       sampleContext,
       "Summary",
+      undefined,
       createDeps()
     );
 
@@ -120,6 +121,7 @@ describe("executeActPhase", () => {
       undefined,
       null,
       null,
+      undefined,
       createDeps()
     );
 
@@ -137,6 +139,7 @@ describe("executeActPhase", () => {
       "run-placeholder",
       new AbortController().signal,
       "test-model",
+      undefined,
       undefined,
       undefined,
       undefined,

@@ -1,5 +1,5 @@
 import type { NodeProps } from "@xyflow/react";
-import { Bot, PauseCircle, Play, ShieldAlert, Terminal } from "lucide-react";
+import { Bot, Clock, PauseCircle, Play, ShieldAlert, Terminal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
@@ -21,11 +21,17 @@ import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 import { useMindscapeStore } from "@/store/mindscape";
 import { droidNodeDataSchema } from "@/store/mindscape.schemas";
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
+import {
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+  TIMEOUT_MINUTES_OPTIONS,
+} from "@/lib/codex-constants";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 const MAX_LOG_ENTRIES = 400;
+const TIMEOUT_THRESHOLD_MINUTES = ELEVATED_TIMEOUT_THRESHOLD_SEC / 60;
 
 type AutoLevel = "read" | "low" | "medium" | "high";
 type OutFormat = "text" | "json" | "debug";
@@ -67,6 +73,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         log: [] as LogEntry[],
         error: undefined,
         lastRunId: undefined,
+        timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC,
       };
 
   const allowedAutoValues: AutoLevel[] = ["read", "low", "medium", "high"];
@@ -92,6 +99,19 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   const [activeRunId, setActiveRunId] = useState<string | null>(
     initial.lastRunId ?? null
   );
+  const computedMinutes = Math.floor(
+    ((initial.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC) as number) / 60
+  );
+  const fallbackMinutes = Math.max(
+    computedMinutes,
+    TIMEOUT_MINUTES_OPTIONS[0]
+  );
+  const initialTimeoutMinutes =
+    TIMEOUT_MINUTES_OPTIONS.find((minutes) => minutes >= fallbackMinutes) ??
+    TIMEOUT_MINUTES_OPTIONS[TIMEOUT_MINUTES_OPTIONS.length - 1];
+  const [timeoutMinutes, setTimeoutMinutes] = useState<number>(initialTimeoutMinutes);
+  const timeoutSec = timeoutMinutes * 60;
+  const requiresElevation = timeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC;
 
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
@@ -156,8 +176,9 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       log,
       error: lastError || undefined,
       lastRunId: activeRunId ?? undefined,
+      timeoutSec,
     });
-  }, [id, prompt, auto, out, status, log, lastError, activeRunId, updateArtifactData]);
+  }, [id, prompt, auto, out, status, log, lastError, activeRunId, timeoutSec, updateArtifactData]);
 
   const handleStreamEvent = useCallback(
     (event: DroidStreamEvent) => {
@@ -179,6 +200,15 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         setStatus(event.code === 0 ? "completed" : "failed");
         setActiveRunId(null);
         resume.close();
+        return;
+      }
+
+      if (event.type === "notice") {
+        appendLog({
+          channel: "system",
+          text: event.message,
+          at: new Date().toISOString(),
+        });
         return;
       }
     },
@@ -208,7 +238,9 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     });
 
     try {
-      const token = await getToolToken(["droid.exec"], auto);
+      const token = await getToolToken(["droid.exec"], auto, {
+        forceElevated: requiresElevation,
+      });
       const authz = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
       const subscription = subscribeToDroidStream({
         client: clientRef.current,
@@ -217,6 +249,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
           auto,
           authz,
           out,
+          timeoutSec,
         },
         onEvent: handleStreamEvent,
         onObligation: (payload) => {
@@ -271,7 +304,17 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       });
       toast.error(message);
     }
-  }, [appendLog, auto, handleStreamEvent, out, prompt, resume, stopStream]);
+  }, [
+    appendLog,
+    auto,
+    handleStreamEvent,
+    out,
+    prompt,
+    requiresElevation,
+    resume,
+    stopStream,
+    timeoutSec,
+  ]);
 
   const handleStop = useCallback(() => {
     stopStream();
@@ -413,6 +456,36 @@ export function DroidNode({ id, data, selected }: NodeProps) {
               )}
             </Button>
           </div>
+          <div className="flex items-center gap-3 text-xs text-biolum-faint">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-biolum" />
+              <span>Timeout</span>
+            </div>
+            <Select
+              onValueChange={(value) => setTimeoutMinutes(Number(value))}
+              value={String(timeoutMinutes)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Timeout" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEOUT_MINUTES_OPTIONS.map((minutes) => (
+                  <SelectItem key={minutes} value={String(minutes)}>
+                    {minutes} min
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-biolum">
+              {(timeoutSec / 60).toFixed(0)} min max runtime
+            </span>
+          </div>
+          {requiresElevation && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+              <ShieldAlert className="h-3 w-3" />
+              Timeouts above {TIMEOUT_THRESHOLD_MINUTES} min require passkey confirmation.
+            </div>
+          )}
           <div className="rounded-lg border border-white/10 bg-black/40">
             <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2 text-xs text-biolum-faint">
               <Terminal className="h-3 w-3" /> Live Stream

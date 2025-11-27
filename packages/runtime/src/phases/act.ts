@@ -94,6 +94,7 @@ export async function* executeActPhase(
   authz?: string,
   cachedContext?: ExecutionContext | null,
   planSummary?: string | null,
+  userId?: string,
   deps?: ActPhaseDeps
 ): AsyncGenerator<WorkflowEvent, ActResult, void> {
   yield { type: "notice", message: "execution_started" } as WorkflowEvent;
@@ -129,7 +130,8 @@ export async function* executeActPhase(
       projectConfig,
       undefined,
       authz,
-      cachedContext ?? undefined
+      cachedContext ?? undefined,
+      userId
     );
 
     return {

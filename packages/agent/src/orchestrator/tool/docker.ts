@@ -9,7 +9,9 @@ import { z } from "zod";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
+  DirectoryHandle,
   openDirectorySecure,
+  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
 import { withPolicyApproval } from "./approval.js";
 
@@ -125,11 +127,32 @@ function ensure(value: string | undefined, error: string) {
   return value;
 }
 
-function resolveCwd(candidate: string | undefined) {
-  if (!candidate) {
-    return process.cwd();
+function acquireCwdHandle(candidate: string | undefined): DirectoryHandle {
+  try {
+    return openDirectorySecure(candidate ?? process.cwd(), {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+    });
+  } catch (error) {
+    if (
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory"
+    ) {
+      throw new Error("docker_invalid_cwd_not_directory");
+    }
+    throw new Error("docker_invalid_cwd");
   }
-  return assertAllowedDirectory(candidate);
+}
+
+async function withCwdHandle<T>(
+  candidate: string | undefined,
+  fn: (handle: DirectoryHandle, cwd: string) => Promise<T>
+): Promise<T> {
+  const handle = acquireCwdHandle(candidate);
+  try {
+    return await fn(handle, handle.path);
+  } finally {
+    handle.close();
+  }
 }
 
 function resolveDirectory(base: string, target: string) {
@@ -148,18 +171,18 @@ function resolveSubpath(base: string, target: string) {
 
 async function runDocker({
   args,
-  cwd,
+  cwdHandle,
   writer,
   timeoutSec,
 }: {
   args: string[];
-  cwd: string;
+  cwdHandle: DirectoryHandle;
   writer: ToolWriter;
   timeoutSec: number;
 }) {
   const command = resolveExecutable(process.env.DOCKER_BIN ?? "docker");
   const proc = Bun.spawn([command, ...args], {
-    cwd,
+    cwd: prepareCwdFromHandle(cwdHandle),
     env: {
       PATH: process.env.PATH ?? "",
     },
@@ -314,32 +337,33 @@ function parseInspectPorts(raw: unknown, containerPort?: number) {
 }
 
 async function executeBuild(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const contextPath = resolveDirectory(
-    cwd,
-    ensure(input.context, "docker_context_required")
-  );
-  const args = ["build", "-t", ensure(input.tag, "docker_tag_required")];
+  return withCwdHandle(input.cw, async (cwdHandle, cwd) => {
+    const contextPath = resolveDirectory(
+      cwd,
+      ensure(input.context, "docker_context_required")
+    );
+    const args = ["build", "-t", ensure(input.tag, "docker_tag_required")];
 
-  if (input.dockerfile) {
-    const dockerfilePath = resolveSubpath(cwd, input.dockerfile);
-    args.push("-f", dockerfilePath);
-  }
+    if (input.dockerfile) {
+      const dockerfilePath = resolveSubpath(cwd, input.dockerfile);
+      args.push("-f", dockerfilePath);
+    }
 
-  args.push(contextPath);
+    args.push(contextPath);
 
-  const result = await runDocker({
-    args,
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    const result = await runDocker({
+      args,
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_build_failed");
+    }
+
+    return { ok: true as const };
   });
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_build_failed");
-  }
-
-  return { ok: true as const };
 }
 
 async function executeRun(input: DockerInput, writer: ToolWriter) {

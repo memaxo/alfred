@@ -1406,6 +1406,13 @@ Setting delegate, state, and external URL are not critical for workflow executio
 
 The tradeoff is that session initialization might fail silently. We mitigate this by logging warnings so operators can detect and investigate failures.
 
+### 2025-11-27 Update — Activity Rate Limiter (ALF-15)
+
+- Implemented `packages/agent/src/orchestrator/linear-rate-limiter.ts` to cap Linear activity emissions at ~55 req/min with a 30-second cooldown for `action` events while honoring the 9-second startup buffer outlined above.
+- All Linear helpers—including delegate/state transitions, comments, external URLs, and cancellation—now route through the same limiter (with the startup buffer disabled for post-start operations) so non-activity calls can’t starve activity bandwidth.
+- `emitLinearActivity` throttles every attempt (including retries) and reacts to HTTP 429s by invoking `handle429` so retries respect Linear’s back-pressure rather than hammering the API; the session helpers now do the same.
+- Added targeted coverage in `packages/agent/test/orchestrator/linear-rate-limiter.test.ts` to prove global windowing, action spacing, Retry-After handling, and startup-buffer overrides.
+
 **Alternative design: Separate Linear service**
 
 An alternative architecture would be to create a separate `@alfred/linear` package that handles all Linear integration. Benefits:

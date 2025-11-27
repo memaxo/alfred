@@ -1,5 +1,6 @@
 [features]
 web_search_request = true
+rmcp_client = true  # Enable OAuth support for streamable HTTP MCP servers
 
 [mcp_servers.context7]
 command = "npx"
@@ -16,3 +17,11 @@ args = [
   "mcp-remote@latest",
   "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
 ]
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+# OAuth login (recommended): codex mcp login linear
+# Bearer token fallback: set LINEAR_MCP_TOKEN env var (format: "Bearer lin_api_...")
+bearer_token_env_var = "LINEAR_MCP_TOKEN"
+startup_timeout_sec = 20
+tool_timeout_sec = 60

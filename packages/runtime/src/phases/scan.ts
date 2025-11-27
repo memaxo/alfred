@@ -65,7 +65,8 @@ export async function* executeScanPhase(
   input: RuntimeInput,
   runId: string,
   signal: AbortSignal,
-  authz?: string
+  authz?: string,
+  userId?: string
 ): AsyncGenerator<WorkflowEvent, ExecutionContext | null, void> {
   const contextEnabled = input.context?.enable ?? true;
   const workspace = input.workspace ?? process.cwd();
@@ -110,6 +111,7 @@ export async function* executeScanPhase(
       topK: contextOptions.topK,
       authz,
       writer,
+      userId,
     });
 
     assertNotAborted(signal);
@@ -153,6 +155,7 @@ export async function* executeScanPhase(
         ignore: contextOptions.ignore,
         seeds: contextOptions.seeds,
         authz,
+        userId,
       },
       {
         receipts,

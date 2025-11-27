@@ -6,6 +6,7 @@ import {
   createSession as createSessionRepo,
   deleteSession as deleteSessionRepo,
   getSession as getSessionRepo,
+  getSessionById as getSessionByIdRepo,
   updateSession as updateSessionRepo,
   type CodexSession,
   type NewCodexSession,
@@ -118,6 +119,12 @@ export class CodexSessionManager {
 
     const record = await getSessionRepo(sessionId, userId);
     if (!record) {
+      const sessionForAnotherUser = await getSessionByIdRepo(sessionId);
+      if (sessionForAnotherUser && sessionForAnotherUser.userId !== userId) {
+        recordCodexSessionViolation("user_mismatch_repo");
+        this.trackContinuity?.("failure");
+        throw new Error("codex_session_forbidden");
+      }
       this.trackContinuity?.("failure");
       return undefined;
     }

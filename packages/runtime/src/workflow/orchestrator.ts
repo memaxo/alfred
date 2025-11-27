@@ -21,7 +21,10 @@ import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
-import { runRegistry } from "@alfred/agent/workflow/registry";
+import {
+  registerRunHandle,
+  unregisterRunHandle,
+} from "@alfred/agent/workflow/session-recovery";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
@@ -529,7 +532,7 @@ export async function orchestrateWorkflowStream(
         });
       }
 
-      await runRegistry.register(runId, {
+      await registerRunHandle(runId, {
         resume: async ({ resumeData }) => {
           if (cancelled) {
             return;
@@ -853,7 +856,7 @@ export async function orchestrateWorkflowStream(
     } finally {
       try {
         if (runId) {
-          await runRegistry.unregister(runId);
+          await unregisterRunHandle(runId);
         }
       } catch (error) {
         logger.warn("workflow_unregister_failed", {
