@@ -25,7 +25,7 @@ export type CodexRuntimeErrorInfo = {
 export function formatCodexRuntimeError(error: unknown): CodexRuntimeErrorInfo {
   const rawMessage =
     error instanceof Error
-      ? error.message ?? "codex_unknown_error"
+      ? (error.message ?? "codex_unknown_error")
       : typeof error === "string"
         ? error
         : "codex_unknown_error";

@@ -81,8 +81,12 @@ describe("planWaves", () => {
       }
     });
 
-    expect((waveOrder.get("backend") ?? 0) <= (waveOrder.get("frontend") ?? 0)).toBe(true);
-    expect((waveOrder.get("frontend") ?? 0) <= (waveOrder.get("tests") ?? 0)).toBe(true);
+    expect(
+      (waveOrder.get("backend") ?? 0) <= (waveOrder.get("frontend") ?? 0)
+    ).toBe(true);
+    expect(
+      (waveOrder.get("frontend") ?? 0) <= (waveOrder.get("tests") ?? 0)
+    ).toBe(true);
   });
 
   it("caps agents per wave according to maxParallel", () => {
@@ -104,7 +108,6 @@ describe("planWaves", () => {
     const allAgents = waves.flatMap((w) => w.agents);
     expect(new Set(allAgents)).toEqual(new Set(["a", "b"]));
   });
-
 });
 
 describe("spawn internals", () => {

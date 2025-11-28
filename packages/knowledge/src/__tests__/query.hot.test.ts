@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await db.delete(memoryNodes).run();
+  await db.delete(memoryNodes);
 });
 
 afterAll(() => {
@@ -70,21 +70,18 @@ describe("fast_getReflections", () => {
 
   it("sanitizes malformed confidence and derived fields", async () => {
     const resource = `resource-${randomUUID()}`;
-    await db
-      .insert(memoryNodes)
-      .values({
-        id: randomUUID(),
-        resource,
-        hash: `${resource}:sanitized`,
-        kind: "insight",
-        label: "sanitized",
-        properties: {
-          // Mixed data that should be filtered/clamped
-          derived: ["valid", 42, null],
-          confidence: 1.7,
-        },
-      })
-      .run();
+    await db.insert(memoryNodes).values({
+      id: randomUUID(),
+      resource,
+      hash: `${resource}:sanitized`,
+      kind: "insight",
+      label: "sanitized",
+      properties: {
+        // Mixed data that should be filtered/clamped
+        derived: ["valid", 42, null],
+        confidence: 1.7,
+      },
+    });
 
     const reflections = await fast_getReflections(resource);
     expect(reflections).toHaveLength(1);
@@ -100,19 +97,16 @@ async function insertReflection(options: {
   derived?: string[];
   confidence?: number;
 }) {
-  await db
-    .insert(memoryNodes)
-    .values({
-      id: randomUUID(),
-      resource: options.resource,
-      hash: `${options.resource}:${options.label}:${Date.now()}`,
-      kind: "insight",
-      label: options.label,
-      created: options.createdAt,
-      properties: {
-        derived: options.derived,
-        confidence: options.confidence,
-      },
-    })
-    .run();
+  await db.insert(memoryNodes).values({
+    id: randomUUID(),
+    resource: options.resource,
+    hash: `${options.resource}:${options.label}:${Date.now()}`,
+    kind: "insight",
+    label: options.label,
+    created: options.createdAt,
+    properties: {
+      derived: options.derived,
+      confidence: options.confidence,
+    },
+  });
 }

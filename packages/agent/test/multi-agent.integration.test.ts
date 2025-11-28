@@ -1,20 +1,12 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-} from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
-import type { WorkflowEvent } from "@alfred/type/plan";
-import type { ContextBundle } from "@alfred/type/plan";
-import type { OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { OrchestratorContext } from "@alfred/runtime/src/orchestrator/types";
 import { withWorkflowRuntime } from "@alfred/test-kit/workflow/runtime-fixture";
+import type { ContextBundle, WorkflowEvent } from "@alfred/type/plan";
 
 const agentScripts = new Map<string, WriterChunk[]>();
 
@@ -94,7 +86,11 @@ const { decomposeTask } = await import(
 
 type AgentEventDef =
   | { kind: "thought"; text: string }
-  | { kind: "command"; command: string; status?: "running" | "completed" | "failed" }
+  | {
+      kind: "command";
+      command: string;
+      status?: "running" | "completed" | "failed";
+    }
   | { kind: "artifact"; path: string };
 
 type WriterChunk = {
@@ -122,7 +118,9 @@ beforeEach(() => {
 afterEach(async () => {
   agentScripts.clear();
   const dirs = tempDirs.splice(0, tempDirs.length);
-  await Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.all(
+    dirs.map((dir) => rm(dir, { recursive: true, force: true }))
+  );
 });
 
 describe("multi-agent orchestrator integration", () => {
@@ -149,10 +147,15 @@ describe("multi-agent orchestrator integration", () => {
       expect(events.some((evt) => evt.kind === "wave-result")).toBe(true);
       expect(result.aborted).toBe(false);
       expect(result.allAgentOutcomes).toHaveLength(1);
-      expect(result.agentFileHints.get(`${runId}:${tasks[0]?.id}`)?.has("src/cli.ts")).toBe(true);
+      expect(
+        result.agentFileHints.get(`${runId}:${tasks[0]?.id}`)?.has("src/cli.ts")
+      ).toBe(true);
 
       const rootPlan = resolve(workspace, `.agent/plans/${runId}.root.md`);
-      const subPlan = resolve(workspace, `.agent/plans/${runId}/${tasks[0]?.id}.md`);
+      const subPlan = resolve(
+        workspace,
+        `.agent/plans/${runId}/${tasks[0]?.id}.md`
+      );
       const rootContent = await readFile(rootPlan, "utf8");
       expect(rootContent).toContain("Wave wave_0 started");
       await readFile(subPlan, "utf8");
@@ -186,7 +189,9 @@ describe("multi-agent orchestrator integration", () => {
         scripts,
       });
 
-      const wavePlanEvents = events.filter((evt) => evt.kind === "data-wave-plan");
+      const wavePlanEvents = events.filter(
+        (evt) => evt.kind === "data-wave-plan"
+      );
       expect(wavePlanEvents.length).toBeGreaterThan(1);
       expect(
         events.some(
@@ -236,9 +241,13 @@ describe("multi-agent orchestrator integration", () => {
         const mergeDrain = await drainGenerator(
           runMergePhase(scenario.ctx, scenario.result)
         );
-        expect(mergeDrain.value.mergePlan.expectedFiles.length).toBeGreaterThan(0);
+        expect(mergeDrain.value.mergePlan.expectedFiles.length).toBeGreaterThan(
+          0
+        );
 
-        await drainGenerator(runMergeAnalysis(scenario.ctx, mergeDrain.value.mergePlan));
+        await drainGenerator(
+          runMergeAnalysis(scenario.ctx, mergeDrain.value.mergePlan)
+        );
         const mergePlanPath = resolve(
           `.agent/plans/${scenario.runId}/merge.md`
         );
@@ -376,11 +385,18 @@ function toChunks(defs: AgentEventDef[]): WriterChunk[] {
   });
 }
 
-function registerScripts(runId: string, subTasks: SubTask[], scripts: Record<string, AgentEventDef[]>) {
+function registerScripts(
+  runId: string,
+  subTasks: SubTask[],
+  scripts: Record<string, AgentEventDef[]>
+) {
   agentScripts.clear();
   for (const task of subTasks) {
     const defs = scripts[task.id];
-    agentScripts.set(`${runId}:${task.id}`, defs ? toChunks(defs) : defaultScript());
+    agentScripts.set(
+      `${runId}:${task.id}`,
+      defs ? toChunks(defs) : defaultScript()
+    );
   }
 }
 
@@ -434,8 +450,8 @@ async function runScenario(options: {
 
 async function drainGenerator<T>(
   generator: AsyncGenerator<WorkflowEvent, T, void>
-): Promise<{ events: WorkflowEvent[]; value: T }>
-{  const events: WorkflowEvent[] = [];
+): Promise<{ events: WorkflowEvent[]; value: T }> {
+  const events: WorkflowEvent[] = [];
   while (true) {
     const next = await generator.next();
     if (next.done) {

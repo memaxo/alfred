@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-
+import type { KnowledgeEntry } from "../extractor";
 import {
   detectContradiction,
   extract,
@@ -8,7 +8,6 @@ import {
   extractTemporal,
   toKnowledge,
 } from "../extractor";
-import type { KnowledgeEntry } from "../extractor";
 import type { Knowledge } from "../hypergraph";
 
 type RelationEntry = KnowledgeEntry & {
@@ -100,7 +99,8 @@ describe("extractTemporal", () => {
     ).toBe(true);
     expect(
       temporal.some(
-        (expr) => expr.type === "recurring" && expr.recurrence?.includes("monday")
+        (expr) =>
+          expr.type === "recurring" && expr.recurrence?.includes("monday")
       )
     ).toBe(true);
   });
@@ -118,8 +118,7 @@ describe("toKnowledge", () => {
 
     const entityFacts = knowledge.filter(
       (entry) =>
-        entry.data._ === "fact" &&
-        entry.data.content.startsWith("[entity:")
+        entry.data._ === "fact" && entry.data.content.startsWith("[entity:")
     );
     expect(entityFacts.length).toBeGreaterThanOrEqual(2);
   });

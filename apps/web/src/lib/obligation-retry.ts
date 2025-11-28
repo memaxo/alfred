@@ -1,5 +1,5 @@
-import { TRPCClientError } from "@trpc/client";
 import type { Obligation } from "@alfred/type";
+import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
@@ -8,7 +8,8 @@ function isTestRuntime() {
     return true;
   }
   if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> }).env;
+    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
+      .env;
     if (env?.VITE_TEST_MODE === "true") {
       return true;
     }

@@ -1,6 +1,12 @@
-import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
+ function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }import { sql } from "drizzle-orm";
+import { drizzle, } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
+
+
+
+
+
+
 /**
  * Creates an isolated test database connection.
  * Reusable across packages for consistent test setup.
@@ -10,17 +16,20 @@ export async function createTestDb() {
   if (!url) {
     throw new Error("DATABASE_URL is not set for tests");
   }
+
   const client = new Client({ connectionString: url });
   await client.connect();
   const db = drizzle(client);
   return { client, db };
 }
+
 /**
  * Closes test database connection.
  */
 export async function closeTestDb(testDb) {
   await testDb.client.end();
 }
+
 /**
  * Truncates all tables in the test database for isolation.
  * Use in beforeEach/afterEach to reset state between tests.
@@ -42,8 +51,10 @@ export async function truncateTables(db) {
     "memory_nodes",
     "memory_edges",
   ];
+
   await db.execute(sql.raw(`TRUNCATE TABLE ${tables.join(", ")} CASCADE`));
 }
+
 /**
  * Test database fixtures for consistent test data
  */
@@ -59,6 +70,7 @@ export const dbFixtures = {
     `);
     return userId;
   },
+
   /**
    * Creates a test RAG document with chunks
    */
@@ -72,10 +84,12 @@ export const dbFixtures = {
       VALUES (${source}, ${`Doc ${source}`})
       RETURNING id
     `);
-    const docId = docResult.rows[0]?.id;
+    const docId = _optionalChain([docResult, 'access', _2 => _2.rows, 'access', _3 => _3[0], 'optionalAccess', _4 => _4.id]) ;
+
     if (!docId) {
       throw new Error("Failed to create test document");
     }
+
     await db.execute(sql`
       INSERT INTO rag_chunks (document_id, content, order_index, embedding)
       VALUES (
@@ -85,18 +99,23 @@ export const dbFixtures = {
         ${JSON.stringify(Array.from({ length: 1536 }, (_, i) => (i === 0 ? 0.5 : 0)))}
       )
     `);
+
     return docId;
   },
+
   /**
    * Creates a test assistant thread
    */
-  async createThread(db, userId = "test-user", agent = "assistant") {
+  async createThread(
+    db,
+    userId = "test-user",
+    agent = "assistant"
+  ) {
     const threadResult = await db.execute(sql`
       INSERT INTO assistant_threads (user_id, agent)
       VALUES (${userId}, ${agent})
       RETURNING id
     `);
-    return threadResult.rows[0]?.id;
+    return _optionalChain([threadResult, 'access', _5 => _5.rows, 'access', _6 => _6[0], 'optionalAccess', _7 => _7.id]) ;
   },
 };
-//# sourceMappingURL=db.js.map

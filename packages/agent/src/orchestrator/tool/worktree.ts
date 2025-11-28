@@ -1,8 +1,8 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { spawn } from "bun";
 import { logger } from "@alfred/logger";
+import { spawn } from "bun";
 
 export type WorktreeHandle = {
   path: string;
@@ -149,9 +149,12 @@ async function cleanupPreviewPath(
   previewPath: string
 ): Promise<boolean> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await runGit(repoRoot, ["worktree", "remove", "--force", previewPath]).catch(
-      () => {}
-    );
+    await runGit(repoRoot, [
+      "worktree",
+      "remove",
+      "--force",
+      previewPath,
+    ]).catch(() => {});
     await removeDirSafe(previewPath);
     if (!(await pathExists(previewPath))) {
       return true;
@@ -198,7 +201,7 @@ async function cleanupFilesystemPreviews(repoRoot: string): Promise<number> {
       .readdir(runPath, { withFileTypes: true })
       .catch(() => []);
     for (const entry of previews) {
-      if (!entry.isDirectory() || !entry.name.startsWith("preview-")) {
+      if (!(entry.isDirectory() && entry.name.startsWith("preview-"))) {
         continue;
       }
       const previewPath = path.join(runPath, entry.name);
@@ -289,9 +292,12 @@ export const worktreeManager = {
    */
   remove: async (repoRoot: string, worktreePath: string) => {
     const meta = await readMetadata(worktreePath);
-    await runGit(repoRoot, ["worktree", "remove", "--force", worktreePath]).catch(
-      () => {}
-    );
+    await runGit(repoRoot, [
+      "worktree",
+      "remove",
+      "--force",
+      worktreePath,
+    ]).catch(() => {});
     await removeDirSafe(worktreePath);
 
     if (meta?.branch) {
@@ -331,7 +337,10 @@ export const worktreeManager = {
     try {
       await cleanupPreviewPath(repoRoot, previewPath);
 
-      const resolvedTarget = await runGit(repoRoot, ["rev-parse", targetBranch]);
+      const resolvedTarget = await runGit(repoRoot, [
+        "rev-parse",
+        targetBranch,
+      ]);
       if (resolvedTarget.exitCode !== 0 || !resolvedTarget.stdout) {
         throw new Error(
           `Unable to resolve target branch ${targetBranch}: ${resolvedTarget.stderr}`

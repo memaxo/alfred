@@ -91,10 +91,7 @@ describe("buildMergePlan", () => {
     ];
 
     const plan = buildMergePlan(outcomes);
-    expect(plan.changedPackages).toEqual([
-      "apps/web",
-      "packages/api",
-    ]);
+    expect(plan.changedPackages).toEqual(["apps/web", "packages/api"]);
   });
 
   it("switches to branch strategy when agent branches exist", () => {
@@ -122,10 +119,7 @@ describe("buildMergePlan", () => {
 
     const plan = buildMergePlan(outcomes);
     expect(plan.strategy).toBe("branch");
-    expect(plan.branches).toEqual([
-      "agent/run-1/task-a",
-      "agent/run-1/task-b",
-    ]);
+    expect(plan.branches).toEqual(["agent/run-1/task-a", "agent/run-1/task-b"]);
     expect(plan.summary).toContain("Merging 2 feature branches");
   });
 });

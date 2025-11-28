@@ -3,16 +3,17 @@ import {
   commentOnLinearIssue,
   emitLinearActivity,
   extractIssueIdFromSession,
+  setLinearCancelled,
   setLinearCompleted,
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
-  setLinearCancelled,
 } from "@alfred/agent/integrations/linear";
 import { recordAudit } from "@alfred/agent/utils/audit";
 import { makeEventId } from "@alfred/agent/utils/event-id";
 import { eventToUiMessages } from "@alfred/agent/utils/normalize";
 import { redactEventData } from "@alfred/agent/utils/redaction";
+import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
   multiAgentAgentDurationSeconds,
   multiAgentErrorsTotal,
@@ -22,10 +23,14 @@ import {
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
 import {
+  type ReviewCheckStatus,
+  ReviewGate,
+} from "@alfred/agent/workflow/review-gate";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import {
   registerRunHandle,
   unregisterRunHandle,
 } from "@alfred/agent/workflow/session-recovery";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
@@ -38,8 +43,6 @@ import {
   persistWorkflowMessages,
   shouldUseWorkflowRuntime,
 } from "./executor";
-import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
-import { ReviewGate, type ReviewCheckStatus } from "@alfred/agent/workflow/review-gate";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
 
 export type OrchestratorCallbacks = {
@@ -85,7 +88,7 @@ export async function orchestrateWorkflowStream(
     null;
 
   const workflowUrlFor = (id: string | null): string | null => {
-    if (!id || !externalUrlBase) {
+    if (!(id && externalUrlBase)) {
       return null;
     }
     const normalized = externalUrlBase.endsWith("/")
@@ -900,7 +903,8 @@ function buildLinearCompletionComment(args: {
   if (args.reviewChecks.length > 0) {
     lines.push("Review checks:");
     for (const check of args.reviewChecks) {
-      const attemptInfo = check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
+      const attemptInfo =
+        check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
       lines.push(`- ${check.type}: ${check.status}${attemptInfo}`);
     }
   } else {

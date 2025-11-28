@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { runReviewPhase } from "../src/orchestrator/review";
-import type { OrchestratorContext } from "../src/orchestrator/types";
-import { preparePlanDir, cleanupPlanDir, mockRunner } from "./utils/review-helpers";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
+import { runReviewPhase } from "../src/orchestrator/review";
+import type { OrchestratorContext } from "../src/orchestrator/types";
+import {
+  cleanupPlanDir,
+  mockRunner,
+  preparePlanDir,
+} from "./utils/review-helpers";
 
 describe("review integration happy path", () => {
   let restoreRunner: (() => void) | undefined;
@@ -41,7 +45,7 @@ describe("review integration happy path", () => {
       };
     });
 
-    toolCodex.execute = async () => undefined;
+    toolCodex.execute = async () => {};
     smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {

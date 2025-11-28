@@ -1,8 +1,8 @@
 import "@/test/reset-mocks";
 import "@/test/dom";
-import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
+import { renderHook, waitFor } from "@testing-library/react";
 import { useWorkflowSseStream } from "../use-workflow-sse-stream";
 
 const realFetch = global.fetch;

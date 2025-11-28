@@ -27,16 +27,27 @@ const streamMock = () => {
   streamCallCount += 1;
   return (async function* () {
     yield { type: "text-delta", delta: "Work" } as WorkflowEvent;
-    yield { type: "tool-call", toolName: "echo", toolCallId: "1", input: { msg: "hi" } } as any;
-    yield { type: "tool-result", toolName: "echo", toolCallId: "1", output: { msg: "hi" } } as any;
+    yield {
+      type: "tool-call",
+      toolName: "echo",
+      toolCallId: "1",
+      input: { msg: "hi" },
+    } as any;
+    yield {
+      type: "tool-result",
+      toolName: "echo",
+      toolCallId: "1",
+      output: { msg: "hi" },
+    } as any;
   })();
 };
 
 function createDeps() {
   return {
-    createAiAdapter: () => ({
-      stream: (..._args: unknown[]) => streamMock(),
-    }) as any,
+    createAiAdapter: () =>
+      ({
+        stream: (..._args: unknown[]) => streamMock(),
+      }) as any,
     buildToolset: buildToolsMock,
     runOrchestratorFn: runOrchestratorMock as any,
   };
@@ -45,7 +56,11 @@ function createDeps() {
 const { executeActPhase } = await import("../../src/phases/act");
 
 async function drain(
-  generator: AsyncGenerator<WorkflowEvent, { escalated: boolean; reason?: string }, void>
+  generator: AsyncGenerator<
+    WorkflowEvent,
+    { escalated: boolean; reason?: string },
+    void
+  >
 ) {
   const events: WorkflowEvent[] = [];
   const iter = generator[Symbol.asyncIterator]();
@@ -76,7 +91,11 @@ const sampleContext: ExecutionContext = {
 const originalEnv = { ...process.env };
 
 beforeEach(() => {
-  process.env = { ...originalEnv, NODE_ENV: "test", RUNTIME_TEST_ORCHESTRATION: "1" };
+  process.env = {
+    ...originalEnv,
+    NODE_ENV: "test",
+    RUNTIME_TEST_ORCHESTRATION: "1",
+  };
   buildToolsMock.mockReset();
   streamCallCount = 0;
   orchestratorCallCount = 0;
@@ -149,6 +168,12 @@ describe("executeActPhase", () => {
     );
 
     const { events } = await drain(generator);
-    expect(events.find((event) => event.type === "notice" && (event as any).message === "execution_placeholder")).toBeDefined();
+    expect(
+      events.find(
+        (event) =>
+          event.type === "notice" &&
+          (event as any).message === "execution_placeholder"
+      )
+    ).toBeDefined();
   });
 });

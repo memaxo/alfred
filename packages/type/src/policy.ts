@@ -21,14 +21,12 @@ export type Obligation = {
 
 export type ObligationResumeEvent = "bio-authz" | "mfa-authz" | "human-authz";
 
-const defaultResumeEventByType: Record<
-  ObligationKind,
-  ObligationResumeEvent
-> = {
-  biometric: "bio-authz",
-  mfa: "mfa-authz",
-  confirmation: "human-authz",
-};
+const defaultResumeEventByType: Record<ObligationKind, ObligationResumeEvent> =
+  {
+    biometric: "bio-authz",
+    mfa: "mfa-authz",
+    confirmation: "human-authz",
+  };
 
 const allowedResumeEvents = new Set<ObligationResumeEvent>([
   "bio-authz",
@@ -53,8 +51,7 @@ export function resolveObligationResumeEvents(
   for (const obligation of obligations) {
     const defaultEvent =
       defaultResumeEventByType[obligation.type] ?? "human-authz";
-    const override =
-      (obligation.metadata?.resumeEvent as unknown) ?? undefined;
+    const override = (obligation.metadata?.resumeEvent as unknown) ?? undefined;
     events.add(coerceResumeEvent(override, defaultEvent));
   }
   if (events.size === 0) {

@@ -6,13 +6,13 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
-  DirectoryHandle,
   openDirectorySecure,
-  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -181,8 +181,10 @@ async function runDocker({
   timeoutSec: number;
 }) {
   const command = resolveExecutable(process.env.DOCKER_BIN ?? "docker");
-  const proc = Bun.spawn([command, ...args], {
-    cwd: prepareCwdFromHandle(cwdHandle),
+  const proc = spawnWithSecureCwd({
+    cwdHandle,
+    cmd: command,
+    args,
     env: {
       PATH: process.env.PATH ?? "",
     },
@@ -367,214 +369,220 @@ async function executeBuild(input: DockerInput, writer: ToolWriter) {
 }
 
 async function executeRun(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const tag = ensure(input.tag, "docker_tag_required");
-  const name = ensure(input.name, "docker_name_required");
-  const containerPort = input.containerPort ?? 3000;
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const tag = ensure(input.tag, "docker_tag_required");
+    const name = ensure(input.name, "docker_name_required");
+    const containerPort = input.containerPort ?? 3000;
 
-  const args = ["run", "-d", "--name", name, "--restart", "unless-stopped"];
+    const args = ["run", "-d", "--name", name, "--restart", "unless-stopped"];
 
-  if (input.hostPort) {
-    args.push("-p", `${input.hostPort}:${containerPort}`);
-  } else {
-    args.push("-P");
-  }
-
-  if (input.network) {
-    args.push("--network", input.network);
-  }
-
-  if (input.env) {
-    for (const [key, value] of Object.entries(input.env)) {
-      args.push("-e", `${key}=${value}`);
+    if (input.hostPort) {
+      args.push("-p", `${input.hostPort}:${containerPort}`);
+    } else {
+      args.push("-P");
     }
-  }
 
-  if (input.volumes) {
-    for (const vol of input.volumes) {
-      args.push("-v", vol);
+    if (input.network) {
+      args.push("--network", input.network);
     }
-  }
 
-  if (input.resources) {
-    if (input.resources.cpus) {
-      args.push("--cpus", String(input.resources.cpus));
+    if (input.env) {
+      for (const [key, value] of Object.entries(input.env)) {
+        args.push("-e", `${key}=${value}`);
+      }
     }
-    if (input.resources.memory) {
-      args.push("--memory", input.resources.memory);
+
+    if (input.volumes) {
+      for (const vol of input.volumes) {
+        args.push("-v", vol);
+      }
     }
-  }
 
-  args.push(tag);
+    if (input.resources) {
+      if (input.resources.cpus) {
+        args.push("--cpus", String(input.resources.cpus));
+      }
+      if (input.resources.memory) {
+        args.push("--memory", input.resources.memory);
+      }
+    }
 
-  const result = await runDocker({
-    args,
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    args.push(tag);
+
+    const result = await runDocker({
+      args,
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_run_failed");
+    }
+
+    const containerId = result.stdout.split(/\s+/u).filter(Boolean)[0] ?? name;
+
+    const inspect = await executeInspect(
+      { ...input, action: "inspect", name, containerPort },
+      writer
+    );
+
+    const mapped = inspect.details?.ports ?? [];
+    const selected = input.hostPort
+      ? (mapped.find((entry) => entry.host === input.hostPort) ?? mapped[0])
+      : mapped[0];
+
+    return {
+      ok: true as const,
+      details: {
+        name,
+        containerId,
+        containerPort,
+        hostPort: selected?.host ?? input.hostPort ?? null,
+        ports: mapped,
+      },
+    };
   });
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_run_failed");
-  }
-
-  const containerId = result.stdout.split(/\s+/u).filter(Boolean)[0] ?? name;
-
-  const inspect = await executeInspect(
-    { ...input, action: "inspect", name, containerPort },
-    writer
-  );
-
-  const mapped = inspect.details?.ports ?? [];
-  const selected = input.hostPort
-    ? (mapped.find((entry) => entry.host === input.hostPort) ?? mapped[0])
-    : mapped[0];
-
-  return {
-    ok: true as const,
-    details: {
-      name,
-      containerId,
-      containerPort,
-      hostPort: selected?.host ?? input.hostPort ?? null,
-      ports: mapped,
-    },
-  };
 }
 
 async function executeStop(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const name = ensure(input.name, "docker_name_required");
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
 
-  const result = await runDocker({
-    args: ["stop", name],
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    const result = await runDocker({
+      args: ["stop", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_stop_failed");
+    }
+
+    return { ok: true as const };
   });
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_stop_failed");
-  }
-
-  return { ok: true as const };
 }
 
 async function executeRemove(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const name = ensure(input.name, "docker_name_required");
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
 
-  const result = await runDocker({
-    args: ["rm", "-f", name],
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    const result = await runDocker({
+      args: ["rm", "-f", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_remove_failed");
+    }
+
+    return { ok: true as const };
   });
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_remove_failed");
-  }
-
-  return { ok: true as const };
 }
 
 async function executeInspect(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const name = ensure(input.name, "docker_name_required");
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
 
-  const result = await runDocker({
-    args: ["inspect", name],
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    const result = await runDocker({
+      args: ["inspect", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_inspect_failed");
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(result.stdout || "[]");
+    } catch {
+      parsed = [];
+    }
+
+    const ports = parseInspectPorts(parsed, input.containerPort);
+
+    return {
+      ok: true as const,
+      details: { ports },
+    };
   });
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_inspect_failed");
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(result.stdout || "[]");
-  } catch {
-    parsed = [];
-  }
-
-  const ports = parseInspectPorts(parsed, input.containerPort);
-
-  return {
-    ok: true as const,
-    details: { ports },
-  };
 }
 
 async function executeLogs(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const name = ensure(input.name, "docker_name_required");
-  const args = ["logs"];
-  if (input.follow) {
-    args.push("-f");
-  }
-  if (typeof input.tail === "number") {
-    args.push("--tail", String(input.tail));
-  }
-  args.push(name);
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
+    const args = ["logs"];
+    if (input.follow) {
+      args.push("-f");
+    }
+    if (typeof input.tail === "number") {
+      args.push("--tail", String(input.tail));
+    }
+    args.push(name);
 
-  const result = await runDocker({
-    args,
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
-  });
+    const result = await runDocker({
+      args,
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
 
-  if (result.truncated) {
-    await Promise.resolve(
-      writer?.write?.({
-        type: "notice",
-        message: "docker_logs_truncated",
+    if (result.truncated) {
+      await Promise.resolve(
+        writer?.write?.({
+          type: "notice",
+          message: "docker_logs_truncated",
+          name,
+          tail: input.tail,
+        })
+      ).catch(() => {});
+    }
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_logs_failed");
+    }
+
+    return {
+      ok: true as const,
+      details: {
         name,
-        tail: input.tail,
-      })
-    ).catch(() => {});
-  }
-
-  if (result.exitCode !== 0) {
-    throw new Error("docker_logs_failed");
-  }
-
-  return {
-    ok: true as const,
-    details: {
-      name,
-      exitCode: result.exitCode,
-      text: result.stdout,
-      error: result.stderr || undefined,
-      truncated: result.truncated,
-    },
-  };
+        exitCode: result.exitCode,
+        text: result.stdout,
+        error: result.stderr || undefined,
+        truncated: result.truncated,
+      },
+    };
+  });
 }
 
 async function executeWait(input: DockerInput, writer: ToolWriter) {
-  const cwd = resolveCwd(input.cw);
-  const name = ensure(input.name, "docker_name_required");
-  const result = await runDocker({
-    args: ["wait", name],
-    cwd,
-    writer,
-    timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
+    const result = await runDocker({
+      args: ["wait", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+    if (result.exitCode !== 0) {
+      throw new Error("docker_wait_failed");
+    }
+    const parsed = Number.parseInt(result.stdout.trim(), 10);
+    const containerExitCode = Number.isNaN(parsed) ? null : parsed;
+    return {
+      ok: true as const,
+      details: {
+        name,
+        exitCode: containerExitCode ?? undefined,
+      },
+    };
   });
-  if (result.exitCode !== 0) {
-    throw new Error("docker_wait_failed");
-  }
-  const parsed = Number.parseInt(result.stdout.trim(), 10);
-  const containerExitCode = Number.isNaN(parsed) ? null : parsed;
-  return {
-    ok: true as const,
-    details: {
-      name,
-      exitCode: containerExitCode ?? undefined,
-    },
-  };
 }
 
 async function executeProbe(input: DockerInput, writer: ToolWriter) {
@@ -714,4 +722,5 @@ export type ToolDocker = typeof toolDocker;
 
 export const __internals = {
   assertAllowedDirectory,
+  runDocker,
 };

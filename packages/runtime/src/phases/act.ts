@@ -1,5 +1,5 @@
-import { buildTools } from "@alfred/agent/v6";
 import type { ProjectConfig } from "@alfred/agent/utils/project-detector";
+import { buildTools } from "@alfred/agent/v6";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
@@ -55,7 +55,7 @@ function buildActMessages(
     {
       id: `user-act-${runId}-${Date.now().toString(36)}`,
       role: "user",
-      content: [{ type: "text", text }],
+      parts: [{ type: "text", text }],
     },
   ];
 }
@@ -108,7 +108,6 @@ export async function* executeActPhase(
   const buildToolset = deps?.buildToolset ?? buildTools;
   const orchestratorRunner = deps?.runOrchestratorFn ?? runOrchestrator;
 
-
   const disableAgents =
     (process.env.NODE_ENV === "test" &&
       process.env.RUNTIME_TEST_ORCHESTRATION !== "1") ||
@@ -141,11 +140,22 @@ export async function* executeActPhase(
   }
 
   const aiAdapter = createAiAdapter(runId);
-  const tools = attachAuthzToTools(buildToolset(), authz) as Record<string, Tool>;
-  const actMessages = buildActMessages(runId, input, cachedContext, planSummary);
+  const tools = attachAuthzToTools(buildToolset(), authz) as Record<
+    string,
+    Tool
+  >;
+  const actMessages = buildActMessages(
+    runId,
+    input,
+    cachedContext,
+    planSummary
+  );
 
   try {
-    yield { type: "notice", message: "execution_llm_stream_started" } as WorkflowEvent;
+    yield {
+      type: "notice",
+      message: "execution_llm_stream_started",
+    } as WorkflowEvent;
     for await (const event of aiAdapter.stream({
       model,
       tools,

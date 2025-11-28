@@ -6,11 +6,8 @@ import {
 } from "@alfred/auth/token";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import {
-  buildCodexErrorResponse,
-  formatCodexErrorMessage,
-} from "./codex";
 import { authedProcedure, router } from "../trpc";
+import { buildCodexErrorResponse, formatCodexErrorMessage } from "./codex";
 
 /**
  * Intent-based Codex API for mobile/simplified clients

@@ -1,8 +1,8 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
-import { executePlanPhase } from "../../phases/plan";
 import type { ExecutionContext } from "../../context";
+import { executePlanPhase } from "../../phases/plan";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
 

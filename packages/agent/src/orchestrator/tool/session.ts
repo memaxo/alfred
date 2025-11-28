@@ -33,12 +33,8 @@ async function runTmux(args: string[]) {
     );
   }
 
-  const stdout = proc.stdout
-    ? await new Response(proc.stdout).text()
-    : "";
-  const stderr = proc.stderr
-    ? await new Response(proc.stderr).text()
-    : "";
+  const stdout = proc.stdout ? await new Response(proc.stdout).text() : "";
+  const stderr = proc.stderr ? await new Response(proc.stderr).text() : "";
 
   const exitCode = await proc.exited.catch((error) => {
     throw new Error(
@@ -85,7 +81,13 @@ export const toolSession = {
         // Create detached session
         // -d: detached
         // -s: session name
-        await runTmuxHandler(["new-session", "-d", "-s", sessionId, input.command]);
+        await runTmuxHandler([
+          "new-session",
+          "-d",
+          "-s",
+          sessionId,
+          input.command,
+        ]);
         return {
           ok: true,
           output: `Session ${sessionId} started with: ${input.command}`,

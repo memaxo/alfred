@@ -30,9 +30,13 @@ mock.module("../../../src/orchestrator/tool/droid.js", createDroidModule);
 mock.module("../../../src/orchestrator/tool/codex.ts", createCodexModule);
 mock.module("../../../src/orchestrator/tool/codex.js", createCodexModule);
 
-import { gatherCodeContext, __internals } from "../../../src/orchestrator/flow/context";
+import {
+  __internals,
+  gatherCodeContext,
+} from "../../../src/orchestrator/flow/context";
 
-const { contextCache, buildCacheKey, normalizeExts, normalizeIgnore } = __internals;
+const { contextCache, buildCacheKey, normalizeExts, normalizeIgnore } =
+  __internals;
 
 describe("gatherCodeContext cache handoff", () => {
   const cw = process.cwd();
@@ -104,9 +108,7 @@ describe("gatherCodeContext cache handoff", () => {
   it("emits handoff events before context events for fresh scans", async () => {
     droidExecuteMock.mockResolvedValueOnce({
       result: JSON.stringify({
-        files: [
-          { path: "src/context.ts", score: 0.95, reason: "updated" },
-        ],
+        files: [{ path: "src/context.ts", score: 0.95, reason: "updated" }],
       }),
     });
 

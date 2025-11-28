@@ -105,7 +105,7 @@ export function useAssistantStream(
     onResponse,
     api: apiBase = "/api/assistant",
   } = options;
-    options;
+  options;
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId ?? null
   );
@@ -114,7 +114,10 @@ export function useAssistantStream(
   );
   const mountedRef = useRef(true);
   const trackedFetch = useCallback(
-    async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1]
+    ) => {
       const response = await fetch(input, init);
       const headerId = response.headers.get("x-conversation-id");
       if (headerId) {

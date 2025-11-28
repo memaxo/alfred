@@ -1,11 +1,9 @@
-import type { ContextBundle } from "@alfred/type/plan";
 import { logger } from "@alfred/logger";
+import type { ContextBundle } from "@alfred/type/plan";
 import { decomposeSemantically } from "../reasoning/decompose-semantic";
 
-const MAX_SUBTASKS = Number.parseInt(
-  process.env.MAX_SUBTASKS ?? "10",
-  10
-) || 10;
+const MAX_SUBTASKS =
+  Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;
 
 function getDecompositionTruncatedMetric() {
   try {

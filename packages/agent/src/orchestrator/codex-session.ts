@@ -1,16 +1,16 @@
-import { LRUCache } from "lru-cache";
-import { logger } from "@alfred/logger";
-import { recordCodexSessionViolation } from "../metrics.js";
 import {
+  type CodexSession,
   cleanupExpiredSessions as cleanupExpiredSessionsRepo,
   createSession as createSessionRepo,
   deleteSession as deleteSessionRepo,
-  getSession as getSessionRepo,
   getSessionById as getSessionByIdRepo,
-  updateSession as updateSessionRepo,
-  type CodexSession,
+  getSession as getSessionRepo,
   type NewCodexSession,
+  updateSession as updateSessionRepo,
 } from "@alfred/db/repo/codex-session";
+import { logger } from "@alfred/logger";
+import { LRUCache } from "lru-cache";
+import { recordCodexSessionViolation } from "../metrics.js";
 
 export type CodexSessionState = {
   sessionId: string;
@@ -126,14 +126,14 @@ export class CodexSessionManager {
         throw new Error("codex_session_forbidden");
       }
       this.trackContinuity?.("failure");
-      return undefined;
+      return;
     }
 
     const state = toState(record);
     if (isExpired(state)) {
       await deleteSessionRepo(sessionId);
       this.trackContinuity?.("failure");
-      return undefined;
+      return;
     }
 
     this.trackContinuity?.("success");
@@ -145,7 +145,10 @@ export class CodexSessionManager {
     threadId: string,
     workingDirectory: string,
     userId: string,
-    options: { status?: CodexSessionState["status"]; linearIssueId?: string } = {}
+    options: {
+      status?: CodexSessionState["status"];
+      linearIssueId?: string;
+    } = {}
   ): Promise<CodexSessionState> {
     if (!userId) {
       recordCodexSessionViolation("missing_user");
@@ -207,7 +210,7 @@ export class CodexSessionManager {
 
     if (!updated) {
       this.sessions.delete(sessionId);
-      return undefined;
+      return;
     }
 
     const state = toState(updated);
@@ -220,7 +223,9 @@ export class CodexSessionManager {
     await deleteSessionRepo(sessionId);
   }
 
-  private async refreshAccess(state: CodexSessionState): Promise<CodexSessionState> {
+  private async refreshAccess(
+    state: CodexSessionState
+  ): Promise<CodexSessionState> {
     const now = Date.now();
     const refreshed: CodexSessionState = {
       ...state,
@@ -284,7 +289,8 @@ export type SessionResumeAssessment =
         | "missing-thread"
         | "missing-working-directory"
         | "directory-mismatch"
-        | "thread-invalid";
+        | "thread-invalid"
+        | "timeout";
     };
 
 type WarningLogger = (event: string, context: Record<string, unknown>) => void;

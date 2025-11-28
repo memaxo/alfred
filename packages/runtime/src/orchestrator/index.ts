@@ -38,12 +38,22 @@ export async function* runOrchestrator(
   const wavesResult = yield* runWaves(ctx);
 
   try {
-    if (wavesResult.aborted || wavesResult.escalated) {
+    if (
+      wavesResult.aborted ||
+      wavesResult.escalated ||
+      wavesResult.interrupted
+    ) {
       if (wavesResult.escalated) {
         yield {
           type: "notice",
           message: "workflow_escalated",
           reason: wavesResult.escalationReason,
+        } as WorkflowEvent;
+      }
+      if (wavesResult.interrupted) {
+        yield {
+          type: "notice",
+          message: "workflow_interrupted",
         } as WorkflowEvent;
       }
       return;

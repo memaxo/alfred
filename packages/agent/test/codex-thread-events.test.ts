@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const warnSpy = vi.fn();
 

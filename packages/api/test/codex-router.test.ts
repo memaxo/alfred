@@ -8,14 +8,14 @@ import {
   mock,
   vi,
 } from "bun:test";
+import { router } from "../src/trpc";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
-import { router } from "../src/trpc";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -188,9 +188,7 @@ describe("codex router", () => {
   });
 
   it("rejects empty prompts", async () => {
-    await expect(
-      caller.codex.run({ prompt: "" } as any)
-    ).rejects.toThrow();
+    await expect(caller.codex.run({ prompt: "" } as any)).rejects.toThrow();
     expect(toolCodexExecuteMock).not.toHaveBeenCalled();
   });
 

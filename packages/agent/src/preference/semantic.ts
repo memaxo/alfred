@@ -98,6 +98,7 @@ function averageVectors(vectors: number[][]): Float32Array | null {
   }
   const acc = new Array<number>(length).fill(0);
   for (const vector of vectors) {
+    if (!vector) continue;
     for (let i = 0; i < length; i += 1) {
       acc[i] += vector[i] ?? 0;
     }
@@ -140,7 +141,9 @@ async function getPreferenceCentroids(): Promise<PreferenceCentroids> {
           T,
           string[],
         ][]) {
-          const vectors = samples.map(() => embeddings[cursor++]!).filter(Boolean);
+          const vectors = samples
+            .map(() => embeddings[cursor++]!)
+            .filter(Boolean);
           const centroid = averageVectors(vectors);
           if (centroid) {
             target.set(label, centroid);

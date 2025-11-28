@@ -3,9 +3,8 @@
 
 import { logger } from "@alfred/logger";
 import pRetry, { AbortError } from "p-retry";
-
-import { getLinearMetrics } from "./linearmetrics";
 import { linearRateLimiter } from "./linear-rate-limiter";
+import { getLinearMetrics } from "./linearmetrics";
 import { toolTicket } from "./tool/ticket";
 
 export type LinearActivityType = "thought" | "action" | "response" | "error";
@@ -117,7 +116,7 @@ function resolveRetryAfterMs(error: unknown): number | undefined {
     }
   }
 
-  return undefined;
+  return;
 }
 
 export async function setLinearDelegate(

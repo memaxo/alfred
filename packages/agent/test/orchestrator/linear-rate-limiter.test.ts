@@ -62,22 +62,22 @@ describe("LinearRateLimiter", () => {
       maxRequestsPerMinute: 1,
     });
 
-    await limiter.handle429(5_000);
-    expect(waits.at(-1)).toBe(5_000);
+    await limiter.handle429(5000);
+    expect(waits.at(-1)).toBe(5000);
 
-    currentTime = 6_000;
+    currentTime = 6000;
     await expect(limiter.throttle("thought")).resolves.toBeUndefined();
   });
 
   it("skips startup buffer when disabled for session operations", async () => {
-    let currentTime = 0;
+    const currentTime = 0;
     let waitCalled = false;
     const limiter = new LinearRateLimiter({
       now: () => currentTime,
       sleep: async () => {
         waitCalled = true;
       },
-      startupBufferMs: 9_000,
+      startupBufferMs: 9000,
     });
 
     await limiter.throttle("session", { requireStartupBuffer: false });

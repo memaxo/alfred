@@ -1,16 +1,13 @@
-import type { auth } from "@alfred/auth";
 import {
   mapWorkflowResource,
   type WorkflowInputPayload,
 } from "@alfred/agent/workflow/schema";
-import type { Obligation } from "@alfred/type";
+import { consumeRouteRateLimit } from "@alfred/api/trpc";
+import type { auth } from "@alfred/auth";
 import * as policyRepo from "@alfred/db/repo/policy";
 import { evaluate } from "@alfred/policy";
-import {
-  policyDecisionsTotal,
-  policyObligationsTotal,
-} from "../metrics";
-import { consumeRouteRateLimit } from "@alfred/api/trpc";
+import type { Obligation } from "@alfred/type";
+import { policyDecisionsTotal, policyObligationsTotal } from "../metrics";
 import {
   getSessionUser,
   getSessionUserId,
@@ -43,7 +40,11 @@ export async function enforceWorkflowPlanPolicy({
   const user = getSessionUser(session);
   const subjectId = getSessionUserId(user);
 
-  await consumeRouteRateLimit(session.user.id, "workflow.stream", "subscription");
+  await consumeRouteRateLimit(
+    session.user.id,
+    "workflow.stream",
+    "subscription"
+  );
 
   const resource = mapWorkflowResource(input);
   const evaluation = {
@@ -69,7 +70,9 @@ export async function enforceWorkflowPlanPolicy({
     context: {},
   });
 
-  policyDecisionsTotal.labels("workflow.plan", decision.allow ? "allow" : "deny").inc();
+  policyDecisionsTotal
+    .labels("workflow.plan", decision.allow ? "allow" : "deny")
+    .inc();
   if (decision.obligations && decision.obligations.length > 0) {
     for (const obligation of decision.obligations) {
       policyObligationsTotal.labels("workflow.plan", obligation.type).inc();

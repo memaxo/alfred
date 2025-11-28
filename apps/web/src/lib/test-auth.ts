@@ -97,12 +97,13 @@ function getEnv(key: string) {
       return env[viteKey];
     }
   }
-  return undefined;
+  return;
 }
 
 function isTestModeEnabled() {
   const explicit = getEnv("VITE_TEST_MODE") ?? getEnv("TEST_MODE");
-  const realAuth = getEnv("PLAYWRIGHT_REAL_AUTH") ?? getEnv("VITE_PLAYWRIGHT_REAL_AUTH");
+  const realAuth =
+    getEnv("PLAYWRIGHT_REAL_AUTH") ?? getEnv("VITE_PLAYWRIGHT_REAL_AUTH");
   if (realAuth === "1") {
     return false;
   }
@@ -219,15 +220,15 @@ function resolveUrl(target: RequestInfo | URL): URL | null {
 
 export function createTestModeFetch(): typeof fetch | undefined {
   if (!isTestModeEnabled()) {
-    return undefined;
+    return;
   }
   if (!fallbackFetch) {
-    return undefined;
+    return;
   }
   return (input: RequestInfo | URL, init?: RequestInit) => {
     const serialized = getSerializedTestSession();
     const url = resolveUrl(input);
-    if (!serialized || !url || !shouldAttachHeader(url)) {
+    if (!(serialized && url && shouldAttachHeader(url))) {
       return fallbackFetch(input as RequestInfo, init);
     }
     if (input instanceof Request) {
@@ -312,7 +313,11 @@ export function installTestAuthClient<T>(client: T): T {
         return { data: session };
       },
     },
-    signOut: async ({ fetchOptions }: { fetchOptions?: { onSuccess?: () => void } } = {}) => {
+    signOut: async ({
+      fetchOptions,
+    }: {
+      fetchOptions?: { onSuccess?: () => void };
+    } = {}) => {
       clearTestSession();
       fetchOptions?.onSuccess?.();
       return { data: null };

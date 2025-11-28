@@ -62,10 +62,10 @@ describe("runCognitiveLoop integration", () => {
     await resetCognitiveTables();
   });
 
-afterAll(async () => {
-  await resetCognitiveTables();
-  process.env.DATABASE_URL = originalDatabaseUrl;
-});
+  afterAll(async () => {
+    await resetCognitiveTables();
+    process.env.DATABASE_URL = originalDatabaseUrl;
+  });
 
   it("persists input events and transitions idle -> thinking", async () => {
     const streamId = stream("input");

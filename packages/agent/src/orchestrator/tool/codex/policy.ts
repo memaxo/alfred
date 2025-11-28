@@ -1,19 +1,19 @@
 import { accessSync, constants as fsConstants, lstatSync } from "node:fs";
 import path from "node:path";
-import { logger } from "@alfred/metrics";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
+import { logger } from "@alfred/metrics";
+import type { DirectoryHandle } from "../../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
-  DirectoryHandle,
   openDirectorySecure,
 } from "../../../security/filesystem.js";
 import {
   CODEX_ENV_ALLOWLIST,
+  type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
-  type CodexToolInput,
   MCP_ENV_ALLOWLIST,
   type SandboxConfig,
 } from "./definition.js";
@@ -42,8 +42,7 @@ export function assertAllowedDirectory(
     });
   } catch (error) {
     const isDirectoryError =
-      error instanceof DirectoryAccessError &&
-      error.code === "not_directory";
+      error instanceof DirectoryAccessError && error.code === "not_directory";
     const isFsNotDir =
       (error as NodeJS.ErrnoException | undefined)?.code === "ENOTDIR";
     if (isDirectoryError || isFsNotDir) {
@@ -184,10 +183,7 @@ export async function enforcePolicy(input: CodexToolInput) {
     throw new Error("biometric_required");
   }
 
-  if (
-    requestedTimeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC &&
-    !hasElevation
-  ) {
+  if (requestedTimeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC && !hasElevation) {
     throw new Error("codex_timeout_requires_elevation");
   }
 }

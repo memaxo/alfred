@@ -1,7 +1,6 @@
 {
   "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
     "outDir": "./dist",
     "types": ["bun", "node"],
     "moduleResolution": "bundler",

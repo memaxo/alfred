@@ -1,7 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import { performance } from "node:perf_hooks";
-
-import { applyTransition } from "../src/transition";
 import {
   calculateError,
   idle,
@@ -9,6 +7,7 @@ import {
   updateAutonomy,
   updatePhysiology,
 } from "../src/state";
+import { applyTransition } from "../src/transition";
 
 const measureAverageMs = (
   run: () => void,

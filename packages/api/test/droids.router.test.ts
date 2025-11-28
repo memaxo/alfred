@@ -8,20 +8,20 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { Obligation } from "@alfred/type";
-import { TRPCError } from "@trpc/server";
 import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
+import type { Obligation } from "@alfred/type";
+import { TRPCError } from "@trpc/server";
 import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
+import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -32,10 +32,15 @@ const droidExecRunsTotalMock = {
     inc: vi.fn(),
   }),
 };
-const runHandlers = new Map<string, {
-  resume: (args: { resumeData: { event: string; authz: string } }) => Promise<void>;
-  cancel: () => Promise<void>;
-}>();
+const runHandlers = new Map<
+  string,
+  {
+    resume: (args: {
+      resumeData: { event: string; authz: string };
+    }) => Promise<void>;
+    cancel: () => Promise<void>;
+  }
+>();
 
 const registerMock = vi.fn(async (runId, handle) => {
   runHandlers.set(runId, handle);
@@ -140,8 +145,8 @@ describe("droids router", () => {
         obligations: BIOMETRIC_OBLIGATION,
       });
 
-      await caller
-        .droid.run({
+      await caller.droid
+        .run({
           prompt: "test",
           auto: "medium",
           authz: "token",
@@ -341,8 +346,8 @@ describe("droids router", () => {
         obligations: BIOMETRIC_OBLIGATION,
       });
 
-      await caller
-        .droid.run({
+      await caller.droid
+        .run({
           prompt: "test",
           auto: "medium",
           authz: "token",

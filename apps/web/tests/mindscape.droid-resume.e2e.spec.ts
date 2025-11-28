@@ -29,9 +29,7 @@ test.describe("Mindscape droid biometric resume", () => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(
-          sessionUser
-            ? { data: { user: sessionUser } }
-            : { data: null }
+          sessionUser ? { data: { user: sessionUser } } : { data: null }
         ),
       });
     });
@@ -116,12 +114,12 @@ test.describe("Mindscape droid biometric resume", () => {
     await droidNode.getByTestId("droid-run-button").click();
 
     await expect
-      .poll(async () => {
-        return page.evaluate(() => {
+      .poll(async () =>
+        page.evaluate(() => {
           const scope = window as unknown as HarnessWindow;
           return Boolean(scope.__droidStreamTestHarness__?.active);
-        });
-      })
+        })
+      )
       .toBeTruthy();
 
     await page.evaluate(() => {
@@ -137,27 +135,33 @@ test.describe("Mindscape droid biometric resume", () => {
       response.url().includes("/api/trpc/droid.resume")
     );
 
-    await page.evaluate(({ id }) => {
-      const scope = window as unknown as HarnessWindow;
-      scope.__droidStreamTestHarness__?.obligation({
-        runId: id,
-        obligations: [
-          {
-            type: "biometric",
-            reason: "biometric_required",
-            metadata: { code: "requireBio" },
-          },
-        ],
-      });
-    }, { id: runId });
+    await page.evaluate(
+      ({ id }) => {
+        const scope = window as unknown as HarnessWindow;
+        scope.__droidStreamTestHarness__?.obligation({
+          runId: id,
+          obligations: [
+            {
+              type: "biometric",
+              reason: "biometric_required",
+              metadata: { code: "requireBio" },
+            },
+          ],
+        });
+      },
+      { id: runId }
+    );
 
     await expect(droidNode.getByText(/Awaiting biometric/i)).toBeVisible();
     await resumeResponse;
 
-    await page.evaluate(({ id }) => {
-      const scope = window as unknown as HarnessWindow;
-      scope.__droidStreamTestHarness__?.resume({ runId: id });
-    }, { id: runId });
+    await page.evaluate(
+      ({ id }) => {
+        const scope = window as unknown as HarnessWindow;
+        scope.__droidStreamTestHarness__?.resume({ runId: id });
+      },
+      { id: runId }
+    );
 
     await expect(droidNode.getByText(/running/i)).toBeVisible();
 

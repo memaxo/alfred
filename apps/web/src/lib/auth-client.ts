@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { createTestModeFetch, installTestAuthClient } from "@/lib/test-auth";
+
 const customFetchImpl = createTestModeFetch();
 
 export const authClient = installTestAuthClient(

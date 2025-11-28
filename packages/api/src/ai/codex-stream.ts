@@ -69,7 +69,9 @@ export function codexEventsToUiMessage(
   if (options?.notices) {
     for (const notice of options.notices) {
       const label = notice.code ? notice.code : "notice";
-      const reference = notice.correlationId ? ` (ref=${notice.correlationId})` : "";
+      const reference = notice.correlationId
+        ? ` (ref=${notice.correlationId})`
+        : "";
       parts.push({
         type: "text",
         text: `[${label}] ${notice.message}${reference}`,

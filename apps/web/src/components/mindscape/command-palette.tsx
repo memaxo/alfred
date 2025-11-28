@@ -208,7 +208,9 @@ export function MindscapeCommandPalette({
 
   // Calculate text completion suggestion (O(K))
   const suggestion = useMemo(() => {
-    if (!inputValue) return;
+    if (!inputValue) {
+      return;
+    }
     const match = commandTrie.findCompletion(inputValue);
     return match ? match.value : undefined;
   }, [inputValue, commandTrie]);
@@ -304,7 +306,9 @@ export function MindscapeCommandPalette({
         if (!chatNodeId) {
           chatNodeId = onSpawn("chat");
         }
-        if (!chatNodeId) return;
+        if (!chatNodeId) {
+          return;
+        }
 
         // 2. Connect chat node to current node (if different)
         if (focusedNode.id !== chatNodeId) {

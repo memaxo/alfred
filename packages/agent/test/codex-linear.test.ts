@@ -28,6 +28,7 @@ const activitiesEmittedStub = { inc: vi.fn() };
 const activitiesDroppedStub = { inc: vi.fn() };
 const activityBatchesStub = { inc: vi.fn() };
 
+import { logger } from "@alfred/metrics";
 import type { AlfredCodexEvent } from "../src/orchestrator/tool/codex";
 import {
   configureCodexLinearMetrics,
@@ -37,7 +38,6 @@ import {
   resetCodexLinearLimiter,
   setCodexLinearTimingConfig,
 } from "../src/orchestrator/tool/codex-linear";
-import { logger } from "@alfred/metrics";
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -58,7 +58,7 @@ describe("codex-linear", () => {
       activitiesDropped: activitiesDroppedStub,
       activityBatches: activityBatchesStub,
     });
-    setCodexLinearTimingConfig({ batchWindowMs: 5, windowMs: 1_000 });
+    setCodexLinearTimingConfig({ batchWindowMs: 5, windowMs: 1000 });
   });
 
   afterEach(() => {
@@ -140,7 +140,9 @@ describe("codex-linear", () => {
       const payload = emitLinearActivityMock.mock.calls[0]?.[1];
       expect(payload?.title).toContain("thought");
       expect(payload?.body).toContain("2 thoughts");
-      expect(activityBatchesStub.inc).toHaveBeenCalledWith({ status: "batched" });
+      expect(activityBatchesStub.inc).toHaveBeenCalledWith({
+        status: "batched",
+      });
       expect(activitiesEmittedStub.inc).toHaveBeenCalledWith({
         type: "thought",
         mode: "batch",

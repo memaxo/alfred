@@ -231,9 +231,7 @@ async function runSetCompleted(client: LinearClient, input: TicketInput) {
 
   const targetState =
     states.find((state) => state.type === "completed") ??
-    states.find((state) =>
-      state.name.toLowerCase().includes("complete")
-    ) ??
+    states.find((state) => state.name.toLowerCase().includes("complete")) ??
     states.find((state) => state.name.toLowerCase().includes("done")) ??
     null;
 

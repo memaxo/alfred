@@ -4,8 +4,8 @@ import { generateConflictExecPlanSkeleton } from "@alfred/agent/orchestrator/mul
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
-import type { OrchestratorContext } from "./types";
 import { formatCodexRuntimeError } from "../utils/codex-error";
+import type { OrchestratorContext } from "./types";
 
 export async function* runConflictPhase(
   ctx: OrchestratorContext,
@@ -107,13 +107,8 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-        const {
-          userMessage,
-          rawMessage,
-          code,
-          needsElevation,
-          limitExceeded,
-        } = formatCodexRuntimeError(error);
+        const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+          formatCodexRuntimeError(error);
         logger.warn("conflict_agent_execution_failed", {
           runId,
           error: rawMessage,
@@ -139,13 +134,8 @@ export async function* runConflictPhase(
         } as any;
       }
     } catch (error) {
-      const {
-        userMessage,
-        rawMessage,
-        code,
-        needsElevation,
-        limitExceeded,
-      } = formatCodexRuntimeError(error);
+      const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+        formatCodexRuntimeError(error);
       logger.warn("conflict_agent_initialisation_failed", {
         runId,
         error: rawMessage,
@@ -249,13 +239,8 @@ export async function* runConflictPhase(
       } catch (error) {
         const finishedAt = Date.now();
         const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-        const {
-          userMessage,
-          rawMessage,
-          code,
-          needsElevation,
-          limitExceeded,
-        } = formatCodexRuntimeError(error);
+        const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+          formatCodexRuntimeError(error);
         logger.warn("conflict_resolution_failed", {
           runId,
           error: rawMessage,

@@ -30,8 +30,7 @@ export async function initializeVoicePools(): Promise<void> {
   }
 
   const rawProvider = (process.env.VOICE_PROVIDER ?? "maya1").toLowerCase();
-  const voiceProvider =
-    rawProvider === "supertonic" ? "supertonic" : "maya1";
+  const voiceProvider = rawProvider === "supertonic" ? "supertonic" : "maya1";
   process.env.VOICE_PROVIDER = voiceProvider;
 
   if (voiceProvider === "supertonic") {

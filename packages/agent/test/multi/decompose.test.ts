@@ -66,7 +66,9 @@ describe("decomposeTask", () => {
 
     // Frontend should depend on backend when both exist.
     expect(frontend.deps).toContain(backend.id);
-    expect(tests.deps).toEqual(expect.arrayContaining([backend.id, frontend.id]));
+    expect(tests.deps).toEqual(
+      expect.arrayContaining([backend.id, frontend.id])
+    );
   });
 
   it("produces deterministic ids for identical input", () => {

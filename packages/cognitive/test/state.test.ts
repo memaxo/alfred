@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   initialAutonomy,
   meetsConstraints,
+  type Physiology,
   timestamp,
   updateAutonomy,
-  type Physiology,
 } from "../src/state";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -28,9 +28,7 @@ describe("Autonomy Bayesian updates", () => {
       reliability: 0.2,
     });
 
-    expect(strong.level - base.level).toBeGreaterThan(
-      weak.level - base.level
-    );
+    expect(strong.level - base.level).toBeGreaterThan(weak.level - base.level);
   });
 
   it("defaults reliability to 1 when omitted", () => {
@@ -91,8 +89,8 @@ describe("Autonomy Bayesian updates", () => {
     const base = initialAutonomy(start);
     const evidence = { _: "success", task: "task", duration: 10 } as const;
 
-    const afterFirst = updateAutonomy(start + 1_000, base, evidence);
-    const immediate = updateAutonomy(start + 2_000, afterFirst, evidence);
+    const afterFirst = updateAutonomy(start + 1000, base, evidence);
+    const immediate = updateAutonomy(start + 2000, afterFirst, evidence);
     const decayed = updateAutonomy(start + 30 * DAY_MS, afterFirst, evidence);
 
     expect(immediate.confidence - decayed.confidence).toBeGreaterThan(1e-4);

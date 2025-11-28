@@ -19,12 +19,20 @@ async function primeBrowserSession(page: Page, session: TestSession) {
   await page.context().setExtraHTTPHeaders({
     [TEST_SESSION_HEADER]: serialized,
   });
-  await page.addInitScript(({ session: initSession }) => {
-    (window as typeof window & {
-      __TEST_SESSION__?: { data: TestSession };
-    }).__TEST_SESSION__ = { data: initSession };
-    window.sessionStorage?.setItem("alfred:test-session", JSON.stringify(initSession));
-  }, { session });
+  await page.addInitScript(
+    ({ session: initSession }) => {
+      (
+        window as typeof window & {
+          __TEST_SESSION__?: { data: TestSession };
+        }
+      ).__TEST_SESSION__ = { data: initSession };
+      window.sessionStorage?.setItem(
+        "alfred:test-session",
+        JSON.stringify(initSession)
+      );
+    },
+    { session }
+  );
 }
 
 async function legacySignUp(page: Page) {

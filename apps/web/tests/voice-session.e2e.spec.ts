@@ -1,13 +1,13 @@
-import { expect, test } from "@playwright/test";
-import { createServer, type IncomingMessage } from "node:http";
-import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
 import { Buffer } from "node:buffer";
-import WebSocket, { WebSocketServer } from "ws";
-import type { VoiceSession } from "@alfred/voice/server/session";
+import { randomUUID } from "node:crypto";
+import { createServer, type IncomingMessage } from "node:http";
+import { setTimeout as delay } from "node:timers/promises";
 import type { VoiceStreamCodec } from "@alfred/type/voice";
-import { VoiceStreamClient } from "@alfred/voice/stream";
+import type { VoiceSession } from "@alfred/voice/server/session";
 import type { VoiceStreamClientHandlers } from "@alfred/voice/stream";
+import { VoiceStreamClient } from "@alfred/voice/stream";
+import { expect, test } from "@playwright/test";
+import WebSocket, { WebSocketServer } from "ws";
 import { createVoiceFixture } from "../../../packages/test-kit/src/voice/registry";
 
 // Playwright (Node) does not provide a global WebSocket implementation.
@@ -52,7 +52,8 @@ class MockVoiceStreamingServer {
     chunkText: "synthetic-chunk",
     streamingChunks: 3,
   });
-  private registry: Awaited<ReturnType<typeof createVoiceFixture>> | null = null;
+  private registry: Awaited<ReturnType<typeof createVoiceFixture>> | null =
+    null;
   private readonly connections = new Map<WebSocket, ConnectionState>();
   private readonly stats: ServerStats = {
     started: 0,
@@ -64,7 +65,7 @@ class MockVoiceStreamingServer {
 
   constructor(private readonly port: number) {
     this.server.on("upgrade", async (req, socket, head) => {
-      const url = new URL(req.url ?? "", `http://localhost`);
+      const url = new URL(req.url ?? "", "http://localhost");
       if (url.pathname !== STREAM_PATH) {
         socket.destroy();
         return;
@@ -214,7 +215,7 @@ class MockVoiceStreamingServer {
   private async handleStart(ws: WebSocket, payload: Record<string, unknown>) {
     const state = this.connections.get(ws);
     const registry = this.registry;
-    if (!state || !registry) return;
+    if (!(state && registry)) return;
 
     const requestedCodec = (payload.codec as VoiceStreamCodec) ?? "pcm";
     state.codec = requestedCodec;
@@ -225,8 +226,7 @@ class MockVoiceStreamingServer {
       return;
     }
 
-    const sessionId =
-      (payload.sessionId as string | undefined) ?? randomUUID();
+    const sessionId = (payload.sessionId as string | undefined) ?? randomUUID();
     state.sessionId = sessionId;
     state.voiceSession = registry.registry.createSession(
       state.userId,
@@ -281,7 +281,7 @@ class MockVoiceStreamingServer {
     payload: Record<string, unknown>
   ) {
     const state = this.connections.get(ws);
-    if (!state?.voiceSession || !state.sessionId) {
+    if (!(state?.voiceSession && state.sessionId)) {
       if (DEBUG_VOICE) {
         console.log("[mock-voice] chunk before start");
       }
@@ -294,7 +294,8 @@ class MockVoiceStreamingServer {
       typeof payload.audioBase64 === "string"
         ? payload.audioBase64
         : Buffer.from(
-            (payload.audio as Buffer | ArrayBuffer | Uint8Array) ?? new Uint8Array()
+            (payload.audio as Buffer | ArrayBuffer | Uint8Array) ??
+              new Uint8Array()
           ).toString("base64");
 
     if (!audioBase64) {
@@ -321,7 +322,7 @@ class MockVoiceStreamingServer {
 
   private async handleStop(ws: WebSocket, reason: string) {
     const state = this.connections.get(ws);
-    if (!state?.voiceSession || !state.sessionId) {
+    if (!(state?.voiceSession && state.sessionId)) {
       this.emitError(ws, "session_not_started", false);
       return;
     }
@@ -534,9 +535,11 @@ test.describe("Voice Session E2E", () => {
     });
     await client.stop("manual");
 
-    await expect.poll(() => log.finalTranscripts.length, {
-      timeout: 2000,
-    }).toBeGreaterThan(0);
+    await expect
+      .poll(() => log.finalTranscripts.length, {
+        timeout: 2000,
+      })
+      .toBeGreaterThan(0);
     expect(log.ttsChunks).toBeGreaterThan(0);
     expect(log.assistantMessages[0]).toContain("Responding to");
     expect(log.statuses.includes("recording")).toBeTruthy();
@@ -554,9 +557,9 @@ test.describe("Voice Session E2E", () => {
         codec: "wav", // Triggers simulated error branch
       })
     ).rejects.toThrow("codec_not_supported");
-    await expect.poll(() => log.errors[0], { timeout: 2000 }).toBe(
-      "codec_not_supported"
-    );
+    await expect
+      .poll(() => log.errors[0], { timeout: 2000 })
+      .toBe("codec_not_supported");
     await client.close();
   });
 
@@ -570,9 +573,9 @@ test.describe("Voice Session E2E", () => {
     await delay(SESSION_TIMEOUT_MS + 200);
     expect(log.errors).toContain("session_timeout");
     await client.close();
-    await expect.poll(() => server.getStats().cleaned).toBeGreaterThan(
-      baseline
-    );
+    await expect
+      .poll(() => server.getStats().cleaned)
+      .toBeGreaterThan(baseline);
   });
 
   test("supports multiple concurrent sessions", async () => {

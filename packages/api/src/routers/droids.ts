@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { resolveObligationResumeEvents } from "@alfred/type";
+import {
+  DEFAULT_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+} from "@alfred/agent/orchestrator/tool/codex/constants";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import { runRegistry } from "@alfred/agent/workflow/registry";
 import {
   registerRunHandle,
-  unregisterRunHandle,
   StreamNotAttachedError,
+  unregisterRunHandle,
 } from "@alfred/agent/workflow/session-recovery";
 import { droidExecRunsTotal } from "@alfred/api/metrics";
 import { getRedis } from "@alfred/auth/redis";
@@ -13,17 +18,12 @@ import {
   requireToolScopesAndPolicy,
   type TokenClaims,
 } from "@alfred/auth/token";
+import { resolveObligationResumeEvents } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import z from "zod";
-import {
-  DEFAULT_TIMEOUT_SEC,
-  ELEVATED_TIMEOUT_THRESHOLD_SEC,
-  MAX_TIMEOUT_SEC,
-  MIN_TIMEOUT_SEC,
-} from "@alfred/agent/orchestrator/tool/codex/constants";
-import { requirePolicy } from "../gate";
 import { PolicyObligationError } from "../errors";
+import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
 const droidRunInputSchema = z.object({
@@ -171,7 +171,9 @@ async function removePendingRecord(runId: string) {
   localPendingRecords.delete(runId);
 }
 
-async function loadPendingRecord(runId: string): Promise<PendingRunRecord | null> {
+async function loadPendingRecord(
+  runId: string
+): Promise<PendingRunRecord | null> {
   const redis = getRedis();
   if (redis) {
     try {
@@ -217,7 +219,9 @@ async function saveResumeResult(runId: string, payload: ResumeCompletion) {
   });
 }
 
-async function consumeResumeResult(runId: string): Promise<ResumeCompletion | null> {
+async function consumeResumeResult(
+  runId: string
+): Promise<ResumeCompletion | null> {
   const redis = getRedis();
   if (redis) {
     try {
@@ -334,10 +338,7 @@ async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
 }
 
 async function handleResume(runId: string, resumeData: ResumePayload) {
-  if (
-    resumeData.event !== "bio-authz" &&
-    resumeData.event !== "mfa-authz"
-  ) {
+  if (resumeData.event !== "bio-authz" && resumeData.event !== "mfa-authz") {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "unsupported_resume_event",
@@ -583,7 +584,9 @@ const droidProcedures = {
               if (closed) {
                 return;
               }
-              droidExecRunsTotal.labels(execInput.auto, String(code ?? 0)).inc();
+              droidExecRunsTotal
+                .labels(execInput.auto, String(code ?? 0))
+                .inc();
               emit.next({ type: "exit", code: code ?? 0 });
               emit.complete();
             })
@@ -610,7 +613,8 @@ const droidProcedures = {
             claims
           );
 
-          const obligations = ctx.policy?.obligations ?? decision.obligations ?? [];
+          const obligations =
+            ctx.policy?.obligations ?? decision.obligations ?? [];
           if (obligations.length > 0) {
             runId = randomUUID();
             const streamSession: StreamSession = {
@@ -667,7 +671,9 @@ const droidProcedures = {
       })
     )
     .mutation(async ({ input }) => {
-      const pending = pendingResumableRuns.get(input.runId) ?? (await loadPendingRecord(input.runId));
+      const pending =
+        pendingResumableRuns.get(input.runId) ??
+        (await loadPendingRecord(input.runId));
       if (!pending) {
         throw new TRPCError({
           code: "NOT_FOUND",

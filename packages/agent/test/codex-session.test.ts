@@ -62,29 +62,34 @@ const getSessionByIdRepoMock = vi.fn(async (sessionId: string) => {
   return stored ? cloneRecord(stored) : null;
 });
 
-const updateSessionRepoMock = vi.fn(async (sessionId: string, patch: Record<string, unknown>) => {
-  const stored = repoStore.get(sessionId);
-  if (!stored) {
-    return null;
+const updateSessionRepoMock = vi.fn(
+  async (sessionId: string, patch: Record<string, unknown>) => {
+    const stored = repoStore.get(sessionId);
+    if (!stored) {
+      return null;
+    }
+    const next: RepoRecord = {
+      ...stored,
+      threadId: (patch.threadId as string | undefined) ?? stored.threadId,
+      status:
+        (patch.status as RepoRecord["status"] | undefined) ?? stored.status,
+      linearIssueId:
+        (patch.linearIssueId as string | null | undefined) ??
+        stored.linearIssueId,
+      workingDirectory:
+        (patch.workingDirectory as string | undefined) ??
+        stored.workingDirectory,
+      lastAccessedAt: patch.lastAccessedAt
+        ? new Date(patch.lastAccessedAt as Date)
+        : stored.lastAccessedAt,
+      expiresAt: patch.expiresAt
+        ? new Date(patch.expiresAt as Date)
+        : stored.expiresAt,
+    };
+    repoStore.set(sessionId, next);
+    return cloneRecord(next);
   }
-  const next: RepoRecord = {
-    ...stored,
-    threadId: (patch.threadId as string | undefined) ?? stored.threadId,
-    status: (patch.status as RepoRecord["status"] | undefined) ?? stored.status,
-    linearIssueId:
-      (patch.linearIssueId as string | null | undefined) ?? stored.linearIssueId,
-    workingDirectory:
-      (patch.workingDirectory as string | undefined) ?? stored.workingDirectory,
-    lastAccessedAt: patch.lastAccessedAt
-      ? new Date(patch.lastAccessedAt as Date)
-      : stored.lastAccessedAt,
-    expiresAt: patch.expiresAt
-      ? new Date(patch.expiresAt as Date)
-      : stored.expiresAt,
-  };
-  repoStore.set(sessionId, next);
-  return cloneRecord(next);
-});
+);
 
 const deleteSessionRepoMock = vi.fn(async (sessionId: string) => {
   repoStore.delete(sessionId);
@@ -327,19 +332,21 @@ describe("CodexSessionManager", () => {
     const timestamps: number[] = [];
 
     await Promise.all(
-      Array.from({ length: 5 }, (_, idx) =>
-        new Promise<void>((resolve, reject) => {
-          setTimeout(() => {
-            sessionManager
-              .getSession(sessionId, userId)
-              .then((session) => {
-                expect(session).toBeDefined();
-                timestamps.push(session!.lastAccessedAt);
-                resolve();
-              })
-              .catch(reject);
-          }, idx * 5);
-        })
+      Array.from(
+        { length: 5 },
+        (_, idx) =>
+          new Promise<void>((resolve, reject) => {
+            setTimeout(() => {
+              sessionManager
+                .getSession(sessionId, userId)
+                .then((session) => {
+                  expect(session).toBeDefined();
+                  timestamps.push(session!.lastAccessedAt);
+                  resolve();
+                })
+                .catch(reject);
+            }, idx * 5);
+          })
       )
     );
 

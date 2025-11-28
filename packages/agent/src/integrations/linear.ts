@@ -5,15 +5,15 @@ import {
 } from "../orchestrator/linear";
 
 export {
+  commentOnLinearIssue,
   extractIssueIdFromSession,
   type LinearActivityParams,
   type LinearActivityType,
+  setLinearCancelled,
+  setLinearCompleted,
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
-  setLinearCompleted,
-  setLinearCancelled,
-  commentOnLinearIssue,
 } from "../orchestrator/linear";
 
 export { configureLinearMetrics } from "../orchestrator/linearmetrics";

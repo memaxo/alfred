@@ -417,7 +417,9 @@ export async function listRunsByStatuses(
     .select()
     .from(workflowRuns)
     .where(inArray(workflowRuns.status, statuses))
-    .orderBy(order === "desc" ? desc(workflowRuns.created) : workflowRuns.created)
+    .orderBy(
+      order === "desc" ? desc(workflowRuns.created) : workflowRuns.created
+    )
     .limit(limit);
 
   return rows;

@@ -1,7 +1,6 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, it, mock } from "bun:test";
 import { STTPool } from "@alfred/voice/process/stt";
 import { TTSPool } from "@alfred/voice/process/tts";
-import { voiceRouter } from "../src/routers/voice";
 import { VoiceRegistry } from "../src/voice/session";
 
 // Mock dependencies

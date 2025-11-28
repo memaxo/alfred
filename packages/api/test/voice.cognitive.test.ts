@@ -30,7 +30,10 @@ mock.module("../src/ai/generate", () => ({
 
 // Mock Runtime Loop to verify calls
 const mockLoop = mock(async () => ({
-  state: { _: "thinking", physiology: { energy: 1, boredom: 0, frustration: 0 } },
+  state: {
+    _: "thinking",
+    physiology: { energy: 1, boredom: 0, frustration: 0 },
+  },
   effects: [],
 }));
 mock.module("@alfred/runtime", () => ({

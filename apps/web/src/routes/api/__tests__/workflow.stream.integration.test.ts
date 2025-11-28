@@ -3,12 +3,12 @@ process.env.OPENAI_API_KEY ??= "test-key";
 process.env.DISABLE_TRPC_METRICS = "1";
 
 import {
+  afterAll,
+  beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
-  beforeAll,
-  afterAll,
-  beforeEach,
   vi,
 } from "bun:test";
 
@@ -52,10 +52,7 @@ async function collectSseEvents(response: Response): Promise<ParsedEvent[]> {
   return events;
 }
 
-function drainEvents(
-  buffer: string,
-  push: (evt: ParsedEvent) => void
-): string {
+function drainEvents(buffer: string, push: (evt: ParsedEvent) => void): string {
   while (true) {
     const idx = buffer.indexOf("\n\n");
     if (idx === -1) {
@@ -174,10 +171,7 @@ describe("/api/workflow/stream integration", () => {
       }
       buffer += decoder.decode(value, { stream: true });
       buffer = drainEvents(buffer, (evt) => {
-        if (
-          evt.name === "workflow-event" &&
-          evt.data?.type === "obligation"
-        ) {
+        if (evt.name === "workflow-event" && evt.data?.type === "obligation") {
           obligationFound = true;
           expect(evt.data.obligations?.[0]?.type).toBe("biometric");
         }

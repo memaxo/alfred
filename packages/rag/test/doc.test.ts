@@ -144,7 +144,10 @@ describe("RAG doc functions", () => {
       createDocumentMock.mockResolvedValue(mockDoc);
       addChunksMock.mockResolvedValue([]);
       upsertNodesMock.mockImplementation(async (seeds: any[]) => {
-        const map = new Map<string, { id: string; resource: string; hash: string }>();
+        const map = new Map<
+          string,
+          { id: string; resource: string; hash: string }
+        >();
         seeds.forEach((seed: any, index: number) => {
           map.set(`${seed.resource}:${seed.hash}`, {
             id: `node-${index}`,

@@ -1,4 +1,3 @@
-import type client from "prom-client";
 import {
   voiceSessionJitterMillis,
   voiceSessionPacketLossTotal,
@@ -6,6 +5,7 @@ import {
   voiceSttDurationSeconds,
   voiceTtsDurationSeconds,
 } from "@alfred/voice/metrics";
+import type client from "prom-client";
 
 export type HistogramSummary = {
   count: number;
@@ -60,7 +60,10 @@ async function summarizeHistogram(
     const { metricName, value: sampleValue, labels } = value;
     if (metricName?.endsWith("_bucket")) {
       const rawLe = labels?.le ?? "Infinity";
-      const le = rawLe === "+Inf" || rawLe === "Infinity" ? Infinity : Number(rawLe);
+      const le =
+        rawLe === "+Inf" || rawLe === "Infinity"
+          ? Number.POSITIVE_INFINITY
+          : Number(rawLe);
       buckets.set(le, (buckets.get(le) ?? 0) + (sampleValue ?? 0));
     } else if (metricName?.endsWith("_count")) {
       totalCount += sampleValue ?? 0;
@@ -81,7 +84,7 @@ async function summarizeHistogram(
 }
 
 function computeAverage(sum: number, count: number): number | null {
-  if (!count || !Number.isFinite(sum)) {
+  if (!(count && Number.isFinite(sum))) {
     return null;
   }
   return sum / count;
@@ -92,7 +95,7 @@ function computePercentile(
   totalCount: number,
   percentile: number
 ): number | null {
-  if (!totalCount || !buckets.length) {
+  if (!(totalCount && buckets.length)) {
     return null;
   }
   const target = totalCount * percentile;

@@ -1,11 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 type ThreadEvent = { type: string; [key: string]: unknown };
 
@@ -56,7 +49,10 @@ mock.module("../src/orchestrator/codex-session.js", () => ({
 const definitionModule = await import(
   "../src/orchestrator/tool/codex/definition.ts"
 );
-mock.module("../src/orchestrator/tool/codex/definition.js", () => definitionModule);
+mock.module(
+  "../src/orchestrator/tool/codex/definition.js",
+  () => definitionModule
+);
 
 mock.module("@openai/codex-sdk", () => {
   class MockThread {
@@ -96,7 +92,7 @@ beforeEach(() => {
     reason: "missing-session",
   });
   getSessionMock.mockReset();
-  getSessionMock.mockImplementation(() => undefined);
+  getSessionMock.mockImplementation(() => {});
   createSessionMock.mockReset();
   createSessionMock.mockImplementation(() => {});
 });

@@ -8,22 +8,28 @@ These changes target ALFRED itself. We need SQLite graph traversal so local dev 
 
 ## Progress
 
-- [ ] (2025-11-27T19:00:00Z) Add SQLite fallback logic for `findNearestConcept` including vector decoding helpers and BFS traversal tests.
-- [ ] (2025-11-27T19:00:00Z) Land `tools:sync-js` (sucrase-based) plus CI + pre-commit wiring and updated dependency list.
-- [ ] (2025-11-27T19:00:00Z) Introduce Codex SDK stub loader and adapt `executeWithSdk` to await it.
-- [ ] (2025-11-27T19:00:00Z) Enhance `linkEntities` heuristics + tests to short-circuit embeddings and expand emergent-behavior fixtures for Politics/News/AI personas.
-- [ ] (2025-11-27T19:00:00Z) Document JS artifact workflow in `packages/agent/README.md` and note new script usage.
+- [x] (2025-11-27T19:28:00Z) Add SQLite fallback logic for `findNearestConcept`, wire up BFS helpers, and land `graph.traverse.sqlite.test.ts` (passes under `DATABASE_URL=sqlite::memory:`).
+- [x] (2025-11-27T19:40:00Z) Land `tools:sync-js` (sucrase-based) plus CI + pre-commit wiring, updated dependencies, and verified via `bun run tools:sync-js`.
+- [x] (2025-11-27T20:05:00Z) Introduce Codex SDK stub loader, adapt `executeWithSdk` to await it, and verify via `bun test packages/agent/test/codex-*.test.ts`.
+- [x] (2025-11-27T20:20:00Z) Enhance `linkEntities` heuristics/tests to short-circuit embeddings and extend emergent-behavior fixtures plus persona assertions for Politics/News/AI.
+- [x] (2025-11-27T20:30:00Z) Document the JS artifact workflow in `packages/agent/README.md`, clarifying `bun run tools:sync-js` usage.
 
 ## Surprises & Discoveries
 
-- Observation: _Pending_.
-  Evidence: _Pending_.
+- Observation: `.agent/plans/*/` is ignored by `.gitignore`, so new ExecPlan directories must be force-added.
+  Evidence: `git check-ignore -v .agent/plans/d271a37d-771e-454a-ad0e-ee955ef0a3d5/plan.md` pointed to the ignore rule until `git add -f` was used.
 
 ## Decision Log
 
 - Decision: _Pending_.
   Rationale: _Pending_.
   Date/Author: _Pending_.
+- Decision: Force-add the new ExecPlan under `.agent/plans/<runId>` while keeping the existing ignore rules intact.
+  Rationale: `.agent/plans/*/` ignores nested folders, so `git add -f` is required to persist the mandated plan structure without broadening ignore scope.
+  Date/Author: 2025-11-27 / Codex
+- Decision: Load `@openai/codex-sdk` lazily with a stub fallback so missing SDKs no longer break imports or spam `metrics_agent_hooks_disabled`.
+  Rationale: Tests and API metrics import `@alfred/agent` even when the SDK isn't installed; a cached loader with a minimal `Codex` shim keeps behavior deterministic without forcing the real dependency.
+  Date/Author: 2025-11-27 / Codex
 
 ## Outcomes & Retrospective
 

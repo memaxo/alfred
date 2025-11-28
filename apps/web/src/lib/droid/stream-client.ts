@@ -1,8 +1,7 @@
-import { toast } from "sonner";
-import { createTRPCProxyClient } from "@trpc/client";
 import type { AppRouter } from "@alfred/api/routers";
-import type { Subscriber } from "@trpc/client";
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+import type { createTRPCProxyClient, Subscriber } from "@trpc/client";
+import { toast } from "sonner";
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
 
 export type DroidStreamEvent =
@@ -101,7 +100,10 @@ function normalizeResumeEvents(value: unknown): ObligationResumeEvent[] {
   ];
   const result: ObligationResumeEvent[] = [];
   for (const entry of value) {
-    if (typeof entry === "string" && allowed.includes(entry as ObligationResumeEvent)) {
+    if (
+      typeof entry === "string" &&
+      allowed.includes(entry as ObligationResumeEvent)
+    ) {
       result.push(entry as ObligationResumeEvent);
     }
   }
@@ -171,9 +173,7 @@ export function subscribeToDroidStream({
 
 declare global {
   // eslint-disable-next-line no-var
-  var __droidStreamTestHarness__:
-    | DroidStreamTestHarness
-    | undefined;
+  var __droidStreamTestHarness__: DroidStreamTestHarness | undefined;
 }
 
 function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {

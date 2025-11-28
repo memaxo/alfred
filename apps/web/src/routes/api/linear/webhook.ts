@@ -36,7 +36,7 @@ function workflowUrlFor(runId: string | null): string | null {
     process.env.VITE_APP_URL ??
     process.env.APP_URL ??
     null;
-  if (!runId || !base) {
+  if (!(runId && base)) {
     return null;
   }
   const normalized = base.endsWith("/") ? base.slice(0, -1) : base;
@@ -71,7 +71,10 @@ async function postLinearComment(args: {
   }
 }
 
-function buildWebhookStartComment(runId: string | null, workflowUrl: string | null) {
+function buildWebhookStartComment(
+  runId: string | null,
+  workflowUrl: string | null
+) {
   const lines = [
     "Alfred accepted this issue and started an automated workflow.",
   ];

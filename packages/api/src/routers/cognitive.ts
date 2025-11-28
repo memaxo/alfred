@@ -1,15 +1,12 @@
-import { z } from "zod";
-import {
-  runAssistantGeneration,
-  runCognitiveLoop,
-} from "@alfred/runtime";
-import type { CognitiveEffect } from "@alfred/runtime";
 import type { Event } from "@alfred/cognitive/state";
-import { authedProcedure, router } from "../trpc";
-import { requirePolicy } from "../gate";
-import type { Context } from "../context";
-import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
 import { logger } from "@alfred/logger";
+import type { CognitiveEffect } from "@alfred/runtime";
+import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
+import { z } from "zod";
+import type { Context } from "../context";
+import { requirePolicy } from "../gate";
+import { cognitiveFeedbackSubmissionsTotal } from "../metrics";
+import { authedProcedure, router } from "../trpc";
 
 const feedbackInput = z.object({
   streamId: z.string().min(1),
@@ -63,11 +60,7 @@ export const cognitiveRouter = router({
         event
       );
 
-      await handleCognitiveEffects(
-        ctx.runtimeContext,
-        input.streamId,
-        effects
-      );
+      await handleCognitiveEffects(ctx.runtimeContext, input.streamId, effects);
 
       const surface = input.surface ?? "chat";
       cognitiveFeedbackSubmissionsTotal.labels(surface).inc();

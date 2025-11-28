@@ -1,5 +1,5 @@
-import type { SubTask, SubTaskId } from "./decompose";
 import { openDirectorySecure } from "../../security/filesystem.js";
+import type { SubTask, SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
@@ -143,7 +143,8 @@ export function buildFixerAgentSpec(args: {
     relevantFiles: args.relevantFiles,
   });
 
-  const effectiveAuto = args.auto && args.auto !== "read" ? args.auto : "medium";
+  const effectiveAuto =
+    args.auto && args.auto !== "read" ? args.auto : "medium";
 
   return buildAgentSpec(subTask, args.runId, args.cwd, {
     auto: effectiveAuto,

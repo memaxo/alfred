@@ -11,7 +11,9 @@ export const fineTuneBackendSchema = z.enum(["mlx", "unsloth"]);
 
 export type FineTuneBackend = z.infer<typeof fineTuneBackendSchema>;
 
-export const quantizationSchema = z.enum(["none", "q4", "q8", "fp16", "bf16"]).default("none");
+export const quantizationSchema = z
+  .enum(["none", "q4", "q8", "fp16", "bf16"])
+  .default("none");
 
 export type QuantizationMode = z.infer<typeof quantizationSchema>;
 
@@ -21,14 +23,17 @@ export const modelConfigSchema = z
     baseModelPath: optionalString,
     modelType: optionalString,
     quantization: quantizationSchema,
-    dtype: z.enum(["float32", "float16", "bfloat16", "int8", "int4"]).optional(),
+    dtype: z
+      .enum(["float32", "float16", "bfloat16", "int8", "int4"])
+      .optional(),
   })
   .superRefine((value, ctx) => {
-    if (!value.baseModelId && !value.baseModelPath) {
+    if (!(value.baseModelId || value.baseModelPath)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["baseModelId"],
-        message: "Provide either baseModelId (HuggingFace) or baseModelPath (local).",
+        message:
+          "Provide either baseModelId (HuggingFace) or baseModelPath (local).",
       });
     }
   });
@@ -47,14 +52,16 @@ export const datasetConfigSchema = z
     shuffleSeed: z.number().int().min(0).default(0),
   })
   .superRefine((value, ctx) => {
-    if (value.trainRatio !== undefined && value.evalRatio !== undefined) {
-      if (value.trainRatio + value.evalRatio > 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["trainRatio"],
-          message: "trainRatio + evalRatio must be <= 1.",
-        });
-      }
+    if (
+      value.trainRatio !== undefined &&
+      value.evalRatio !== undefined &&
+      value.trainRatio + value.evalRatio > 1
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["trainRatio"],
+        message: "trainRatio + evalRatio must be <= 1.",
+      });
     }
   });
 
@@ -89,7 +96,9 @@ export const loraConfigSchema = z.object({
   rank: z.number().int().positive().default(8),
   alpha: z.number().positive().default(16),
   dropout: z.number().min(0).max(1).default(0),
-  targetModules: z.array(z.string().trim().min(1)).default(["q_proj", "v_proj"]),
+  targetModules: z
+    .array(z.string().trim().min(1))
+    .default(["q_proj", "v_proj"]),
   layers: z.number().int().positive().optional(),
 });
 
@@ -126,7 +135,8 @@ export const fineTuneConfigSchema = z.object({
 
 export type FineTuneConfig = z.infer<typeof fineTuneConfigSchema>;
 
-export const parseFineTuneConfig = (input: unknown): FineTuneConfig => fineTuneConfigSchema.parse(input);
+export const parseFineTuneConfig = (input: unknown): FineTuneConfig =>
+  fineTuneConfigSchema.parse(input);
 
 export type RunPathOptions = {
   runsRoot?: string;
@@ -144,7 +154,7 @@ export type FineTuneRunPaths = {
 
 export const createRunPaths = (
   config: FineTuneConfig,
-  options: RunPathOptions = {},
+  options: RunPathOptions = {}
 ): FineTuneRunPaths => {
   const runId = options.runId ?? config.output.runName ?? randomUUID();
   const runsRoot = options.runsRoot ?? DEFAULT_RUNS_ROOT;
@@ -167,4 +177,3 @@ export const defaults = {
   template: DEFAULT_TEMPLATE,
   runsRoot: DEFAULT_RUNS_ROOT,
 };
-

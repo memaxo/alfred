@@ -11,7 +11,7 @@ async function getFreePort(startPort = 3100, endPort = 3200): Promise<number> {
       });
       server.stop();
       return port;
-    } catch (err) {}
+    } catch (_err) {}
   }
   throw new Error(`No free ports found between ${startPort} and ${endPort}`);
 }

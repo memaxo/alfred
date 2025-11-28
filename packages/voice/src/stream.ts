@@ -54,7 +54,8 @@ const isReactNative =
   typeof navigator !== "undefined" &&
   (navigator as any).product === "ReactNative";
 const isNodeEnvironment =
-  typeof window === "undefined" &&
+  typeof globalThis !== "undefined" &&
+  !("window" in globalThis) &&
   typeof process !== "undefined" &&
   !!process.versions?.node;
 

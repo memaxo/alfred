@@ -13,15 +13,12 @@ import {
 } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 
-const [
-  { WorkflowTestHarness },
-  { toObservable },
-  { createWorkflowCaller },
-] = await Promise.all([
-  import("./utils/workflow-server"),
-  import("./utils/stream"),
-  import("./utils/workflow-caller"),
-]);
+const [{ WorkflowTestHarness }, { toObservable }, { createWorkflowCaller }] =
+  await Promise.all([
+    import("./utils/workflow-server"),
+    import("./utils/stream"),
+    import("./utils/workflow-caller"),
+  ]);
 
 const minimalInput = {
   requirement: "TRPC workflow integration",

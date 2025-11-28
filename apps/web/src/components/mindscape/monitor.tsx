@@ -1,12 +1,15 @@
 import type { WorkflowEvent } from "@alfred/type";
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
-import { useWorkflowSseStream, type WorkflowStreamInput } from "@/hooks/use-workflow-sse-stream";
-import { getToolToken } from "@/lib/token";
-import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
 import { useObligationResume } from "@/hooks/use-biometric-resume";
+import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
+import {
+  useWorkflowSseStream,
+  type WorkflowStreamInput,
+} from "@/hooks/use-workflow-sse-stream";
+import { getToolToken } from "@/lib/token";
+import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 
 type StreamInput = WorkflowStreamInput & {
   context: {

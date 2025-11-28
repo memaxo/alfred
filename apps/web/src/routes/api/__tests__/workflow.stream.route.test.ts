@@ -80,26 +80,28 @@ describe("/api/workflow/stream SSE route", () => {
     workflowRepoMock.updateRun.mockResolvedValue(undefined);
     workflowRepoMock.appendEvent.mockResolvedValue(undefined);
     recordAuditMock.mockResolvedValue(undefined);
-    orchestrateWorkflowStreamMock.mockImplementation((_input, _session, callbacks) => {
-      callbacks.emitNext({ type: "run", eventId: "evt-run" } as any);
-      callbacks.emitUiMessages?.(
-        [
+    orchestrateWorkflowStreamMock.mockImplementation(
+      (_input, _session, callbacks) => {
+        callbacks.emitNext({ type: "run", eventId: "evt-run" } as any);
+        callbacks.emitUiMessages?.(
+          [
+            {
+              id: "msg-1",
+              role: "assistant",
+              parts: [{ type: "text", text: "Hello" }],
+            },
+          ],
           {
-            id: "msg-1",
-            role: "assistant",
-            parts: [{ type: "text", text: "Hello" }],
-          },
-        ],
-        {
-          runId: "run-123",
-          eventId: "evt-run",
-          eventType: "run",
-          originalEvent: { type: "run" } as any,
-        }
-      );
-      callbacks.emitComplete();
-      return Promise.resolve(() => {});
-    });
+            runId: "run-123",
+            eventId: "evt-run",
+            eventType: "run",
+            originalEvent: { type: "run" } as any,
+          }
+        );
+        callbacks.emitComplete();
+        return Promise.resolve(() => {});
+      }
+    );
   });
 
   it("streams workflow and ui-message events", async () => {
@@ -112,9 +114,9 @@ describe("/api/workflow/stream SSE route", () => {
 
     const text = await response.text();
     expect(text).toContain("event: workflow-event");
-    expect(text).toContain("\"eventId\":\"evt-run\"");
+    expect(text).toContain('"eventId":"evt-run"');
     expect(text).toContain("event: ui-message");
-    expect(text).toContain("\"runId\":\"run-123\"");
+    expect(text).toContain('"runId":"run-123"');
     expect(text).toContain("event: complete");
 
     expect(enforceWorkflowPlanPolicyMock).toHaveBeenCalledWith(
@@ -182,10 +184,7 @@ describe("/api/workflow/stream SSE route", () => {
       }
       buffer += decoder.decode(value, { stream: true });
       buffer = drain(buffer, (evt) => {
-        if (
-          evt.name === "workflow-event" &&
-          evt.data?.type === "obligation"
-        ) {
+        if (evt.name === "workflow-event" && evt.data?.type === "obligation") {
           obligationFound = true;
         }
       });

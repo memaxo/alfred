@@ -6,13 +6,13 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
-  DirectoryHandle,
   openDirectorySecure,
-  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval } from "./approval.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
@@ -131,7 +131,7 @@ async function enforcePolicy(input: GitInput, cwd: string) {
     action: `git.${input.action}`,
     resource: {
       kind: "repo",
-      id: cwdHandle,
+      id: cwd,
     },
   });
 
@@ -155,8 +155,10 @@ async function runGit({
   timeoutSec: number;
 }) {
   const command = resolveExecutable("git");
-  const proc = Bun.spawn([command, ...args], {
-    cwd: prepareCwdFromHandle(cwdHandle),
+  const proc = spawnWithSecureCwd({
+    cwdHandle,
+    cmd: command,
+    args,
     env: {
       PATH: process.env.PATH ?? "",
     },
@@ -291,221 +293,234 @@ export const toolGit = {
     writer?: ToolWriter;
   }) => {
     const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
-    const cwdPath = cwdHandle.path;
-    await enforcePolicy(input, cwdPath);
-    const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-
     try {
+      const cwdPath = cwdHandle.path;
+      await enforcePolicy(input, cwdPath);
+      const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
+
       switch (input.action) {
-      case "branch.create": {
-        const name = ensure(input.name, "git_branch_name_required");
-        const base = input.base ?? "HEAD";
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["branch", name, base],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_branch_create_failed");
+        case "branch.create": {
+          const name = ensure(input.name, "git_branch_name_required");
+          const base = input.base ?? "HEAD";
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["branch", name, base],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_branch_create_failed");
+          }
+          return { ok: true };
         }
-        return { ok: true };
+
+        case "branch.update": {
+          const name = ensure(input.name, "git_branch_name_required");
+          const base = ensure(input.base, "git_branch_base_required");
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["branch", "-f", name, base],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_branch_update_failed");
+          }
+          return { ok: true };
+        }
+
+        case "branch.delete": {
+          const name = ensure(input.name, "git_branch_name_required");
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["branch", "-D", name],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_branch_delete_failed");
+          }
+          return { ok: true };
+        }
+
+        case "worktree.add": {
+          const wtPath = ensure(input.path, "git_worktree_path_required");
+          const ref = ensure(
+            input.ref ?? input.name,
+            "git_worktree_ref_required"
+          );
+          const args = ["worktree", "add", wtPath, ref];
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args,
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_worktree_add_failed");
+          }
+          return { ok: true, details: { path: wtPath, ref } };
+        }
+
+        case "worktree.remove": {
+          const wtPath = ensure(input.path, "git_worktree_path_required");
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["worktree", "remove", wtPath],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_worktree_remove_failed");
+          }
+          return { ok: true };
+        }
+
+        case "commit": {
+          const message = ensure(input.message, "git_commit_message_required");
+
+          const status = await runGit({
+            cwdHandle,
+            args: ["status", "--porcelain"],
+            writer,
+            timeoutSec,
+          });
+
+          if (status.exitCode !== 0) {
+            throw new Error("git_status_failed");
+          }
+
+          if (!status.stdout) {
+            return {
+              ok: true,
+              details: { skipped: true, reason: "clean_tree" },
+            };
+          }
+
+          const add = await runGit({
+            cwdHandle,
+            args: ["add", "-A"],
+            writer,
+            timeoutSec,
+          });
+          if (add.exitCode !== 0) {
+            throw new Error("git_add_failed");
+          }
+
+          const commit = await runGit({
+            cwdHandle,
+            args: ["commit", "-m", message],
+            writer,
+            timeoutSec,
+          });
+          if (commit.exitCode !== 0) {
+            throw new Error("git_commit_failed");
+          }
+
+          return { ok: true, details: { stdout: commit.stdout } };
+        }
+
+        case "push": {
+          const remote = input.remote ?? "origin";
+          const ref = ensure(input.ref ?? input.name, "git_push_ref_required");
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["push", remote, ref],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_push_failed");
+          }
+          return { ok: true };
+        }
+
+        case "merge": {
+          const ref = ensure(input.ref ?? input.name, "git_merge_ref_required");
+          const args = ["merge"];
+          if (input.noFF !== false) {
+            args.push("--no-ff");
+          }
+          args.push(ref);
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args,
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_merge_failed");
+          }
+          return { ok: true };
+        }
+
+        case "status": {
+          const { exitCode, stdout } = await runGit({
+            cwdHandle,
+            args: ["status", "--porcelain=v2"],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_status_failed");
+          }
+          return { ok: true, details: { status: stdout } };
+        }
+
+        case "diff": {
+          const args = ["diff", "--name-only"];
+          if (input.ref) {
+            args.push(`${input.ref}..HEAD`);
+          }
+          const { exitCode, stdout } = await runGit({
+            cwdHandle,
+            args,
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_diff_failed");
+          }
+          return {
+            ok: true,
+            details: { files: stdout.split(/\r?\n/).filter(Boolean) },
+          };
+        }
+
+        case "fetch": {
+          const remote =
+            input.remote && input.remote.trim().length > 0
+              ? input.remote
+              : "origin";
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["fetch", remote, "--prune", "--tags"],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_fetch_failed");
+          }
+          return { ok: true };
+        }
+
+        case "reset.hard": {
+          const ref = ensure(input.ref ?? input.base, "git_reset_ref_required");
+          const { exitCode } = await runGit({
+            cwdHandle,
+            args: ["reset", "--hard", ref],
+            writer,
+            timeoutSec,
+          });
+          if (exitCode !== 0) {
+            throw new Error("git_reset_failed");
+          }
+          return { ok: true };
+        }
+
+        default:
+          throw new Error("git_action_not_supported");
       }
-
-      case "branch.update": {
-        const name = ensure(input.name, "git_branch_name_required");
-        const base = ensure(input.base, "git_branch_base_required");
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["branch", "-f", name, base],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_branch_update_failed");
-        }
-        return { ok: true };
-      }
-
-      case "branch.delete": {
-        const name = ensure(input.name, "git_branch_name_required");
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["branch", "-D", name],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_branch_delete_failed");
-        }
-        return { ok: true };
-      }
-
-      case "worktree.add": {
-        const wtPath = ensure(input.path, "git_worktree_path_required");
-        const ref = ensure(
-          input.ref ?? input.name,
-          "git_worktree_ref_required"
-        );
-        const args = ["worktree", "add", wtPath, ref];
-        const { exitCode } = await runGit({ cwdHandle, args, writer, timeoutSec });
-        if (exitCode !== 0) {
-          throw new Error("git_worktree_add_failed");
-        }
-        return { ok: true, details: { path: wtPath, ref } };
-      }
-
-      case "worktree.remove": {
-        const wtPath = ensure(input.path, "git_worktree_path_required");
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["worktree", "remove", wtPath],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_worktree_remove_failed");
-        }
-        return { ok: true };
-      }
-
-      case "commit": {
-        const message = ensure(input.message, "git_commit_message_required");
-
-        const status = await runGit({
-          cwdHandle,
-          args: ["status", "--porcelain"],
-          writer,
-          timeoutSec,
-        });
-
-        if (status.exitCode !== 0) {
-          throw new Error("git_status_failed");
-        }
-
-        if (!status.stdout) {
-          return { ok: true, details: { skipped: true, reason: "clean_tree" } };
-        }
-
-        const add = await runGit({
-          cwdHandle,
-          args: ["add", "-A"],
-          writer,
-          timeoutSec,
-        });
-        if (add.exitCode !== 0) {
-          throw new Error("git_add_failed");
-        }
-
-        const commit = await runGit({
-          cwdHandle,
-          args: ["commit", "-m", message],
-          writer,
-          timeoutSec,
-        });
-        if (commit.exitCode !== 0) {
-          throw new Error("git_commit_failed");
-        }
-
-        return { ok: true, details: { stdout: commit.stdout } };
-      }
-
-      case "push": {
-        const remote = input.remote ?? "origin";
-        const ref = ensure(input.ref ?? input.name, "git_push_ref_required");
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["push", remote, ref],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_push_failed");
-        }
-        return { ok: true };
-      }
-
-      case "merge": {
-        const ref = ensure(input.ref ?? input.name, "git_merge_ref_required");
-        const args = ["merge"];
-        if (input.noFF !== false) {
-          args.push("--no-ff");
-        }
-        args.push(ref);
-        const { exitCode } = await runGit({ cwdHandle, args, writer, timeoutSec });
-        if (exitCode !== 0) {
-          throw new Error("git_merge_failed");
-        }
-        return { ok: true };
-      }
-
-      case "status": {
-        const { exitCode, stdout } = await runGit({
-          cwdHandle,
-          args: ["status", "--porcelain=v2"],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_status_failed");
-        }
-        return { ok: true, details: { status: stdout } };
-      }
-
-      case "diff": {
-        const args = ["diff", "--name-only"];
-        if (input.ref) {
-          args.push(`${input.ref}..HEAD`);
-        }
-        const { exitCode, stdout } = await runGit({
-          cwdHandle,
-          args,
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_diff_failed");
-        }
-        return {
-          ok: true,
-          details: { files: stdout.split(/\r?\n/).filter(Boolean) },
-        };
-      }
-
-      case "fetch": {
-        const remote =
-          input.remote && input.remote.trim().length > 0
-            ? input.remote
-            : "origin";
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["fetch", remote, "--prune", "--tags"],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_fetch_failed");
-        }
-        return { ok: true };
-      }
-
-      case "reset.hard": {
-        const ref = ensure(input.ref ?? input.base, "git_reset_ref_required");
-        const { exitCode } = await runGit({
-          cwdHandle,
-          args: ["reset", "--hard", ref],
-          writer,
-          timeoutSec,
-        });
-        if (exitCode !== 0) {
-          throw new Error("git_reset_failed");
-        }
-        return { ok: true };
-      }
-
-      default:
-        throw new Error("git_action_not_supported");
-    }
     } finally {
       cwdHandle.close();
     }

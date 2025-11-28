@@ -1,6 +1,6 @@
+import { mock, vi } from "bun:test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { mock, vi } from "bun:test";
 import { z } from "zod";
 
 type WorkflowRunRecord = {
@@ -93,7 +93,10 @@ const createWorkflowMetric = () => ({
 
 export const workflowMetricsStub = Object.fromEntries(
   workflowMetricNames.map((name) => [name, createWorkflowMetric()])
-) as Record<(typeof workflowMetricNames)[number], ReturnType<typeof createWorkflowMetric>>;
+) as Record<
+  (typeof workflowMetricNames)[number],
+  ReturnType<typeof createWorkflowMetric>
+>;
 
 function sortByTimestampDesc(list: WorkflowEventRecord[]) {
   return [...list].sort(
@@ -124,7 +127,11 @@ export const aiStreamTextMock = vi.fn(() => {
   }
   return {
     fullStream: (async function* () {
-      yield { type: "text-delta", id: `delta-${randomUUID()}`, delta: "Working..." };
+      yield {
+        type: "text-delta",
+        id: `delta-${randomUUID()}`,
+        delta: "Working...",
+      };
       yield {
         type: "finish",
         finishReason: "stop",
@@ -236,11 +243,7 @@ mock.module("@alfred/rag", () => ({
     [0.1, 0.2, 0.3],
     [0.2, 0.1, 0.4],
   ],
-  rerank: async ({
-    documents,
-  }: {
-    documents: { id?: string }[];
-  }) =>
+  rerank: async ({ documents }: { documents: { id?: string }[] }) =>
     documents.map((doc, idx) => ({
       id: doc.id ?? `doc-${idx}`,
       score: 0.5,
@@ -284,7 +287,7 @@ export function setReviewGateFailureMode(shouldFail: boolean) {
 }
 
 mock.module("@alfred/runtime/orchestrator/review", () => ({
-  runReviewPhase: async function* () {
+  async *runReviewPhase() {
     yield {
       type: "notice",
       message: "review_phase_skipped",
@@ -297,7 +300,7 @@ const runtimeReviewPath = path.resolve(
   "packages/runtime/src/orchestrator/review.ts"
 );
 mock.module(runtimeReviewPath, () => ({
-  runReviewPhase: async function* () {
+  async *runReviewPhase() {
     yield {
       type: "notice",
       message: "review_phase_skipped",
@@ -331,7 +334,7 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
     updateRun: vi.fn(async (runId: string, patch: Record<string, unknown>) => {
       const current = runs.get(runId);
       if (!current) {
-        return undefined;
+        return;
       }
       const updated: WorkflowRunRecord = {
         ...current,
@@ -343,7 +346,9 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
           ? { errorMessage: (patch.errorMessage ?? null) as string | null }
           : {}),
         ...(Object.hasOwn(patch, "linearSessionId")
-          ? { linearSessionId: (patch.linearSessionId ?? null) as string | null }
+          ? {
+              linearSessionId: (patch.linearSessionId ?? null) as string | null,
+            }
           : {}),
         ...(Object.hasOwn(patch, "linearSpace")
           ? { linearSpace: (patch.linearSpace ?? null) as string | null }
@@ -402,10 +407,11 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
         return ordered.slice(page * pageSize, page * pageSize + pageSize);
       }
     ),
-    countEventsByType: vi.fn(async (runId: string, eventType: string) =>
-      events.filter(
-        (evt) => evt.runId === runId && evt.eventType === eventType
-      ).length
+    countEventsByType: vi.fn(
+      async (runId: string, eventType: string) =>
+        events.filter(
+          (evt) => evt.runId === runId && evt.eventType === eventType
+        ).length
     ),
   };
 
@@ -435,10 +441,7 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
       });
       const action = String(payload.action ?? "activity");
       const id =
-        payload.issueId ??
-        payload.sessionId ??
-        payload.teamId ??
-        randomUUID();
+        payload.issueId ?? payload.sessionId ?? payload.teamId ?? randomUUID();
       const body: Record<string, unknown> = {
         ok: true,
         id,

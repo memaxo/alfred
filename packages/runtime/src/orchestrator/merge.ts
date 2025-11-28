@@ -13,9 +13,9 @@ import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
+import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
-import { formatCodexRuntimeError } from "../utils/codex-error";
 
 async function runGitCommand(
   cwd: string,
@@ -278,13 +278,8 @@ export async function* runMergeAnalysis(
     } catch (error) {
       const finishedAt = Date.now();
       const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-      const {
-        userMessage,
-        rawMessage,
-        code,
-        needsElevation,
-        limitExceeded,
-      } = formatCodexRuntimeError(error);
+      const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+        formatCodexRuntimeError(error);
       logger.warn("merge_agent_execution_failed", {
         runId,
         error: rawMessage,
@@ -310,13 +305,8 @@ export async function* runMergeAnalysis(
       } as any;
     }
   } catch (error) {
-    const {
-      userMessage,
-      rawMessage,
-      code,
-      needsElevation,
-      limitExceeded,
-    } = formatCodexRuntimeError(error);
+    const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+      formatCodexRuntimeError(error);
     logger.warn("merge_agent_initialisation_failed", {
       runId,
       error: rawMessage,

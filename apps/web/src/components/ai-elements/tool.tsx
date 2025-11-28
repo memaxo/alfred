@@ -150,7 +150,9 @@ export type ToolActionsProps = {
 };
 
 export const ToolActions = ({ state, onApprove, onDeny }: ToolActionsProps) => {
-  if (state !== "approval-requested") return null;
+  if (state !== "approval-requested") {
+    return null;
+  }
 
   return (
     <div className="flex gap-2 border-t bg-muted/20 p-3">

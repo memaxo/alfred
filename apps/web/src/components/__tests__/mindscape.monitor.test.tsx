@@ -1,9 +1,18 @@
 import "@/test/reset-mocks";
 import "@/test/dom";
-import { act, render, waitFor } from "@testing-library/react";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
+import { act, render, waitFor } from "@testing-library/react";
 import type { UseWorkflowSseStreamOptions } from "@/hooks/use-workflow-sse-stream";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const tokenMock = vi.fn();
 const dispatchMindscapeEventMock = vi.fn();

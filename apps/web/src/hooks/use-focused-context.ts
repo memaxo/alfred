@@ -216,8 +216,7 @@ export function useFocusedContext(): FocusedContext {
         }
       : null;
 
-    if (!localContext.label)
-      return { ...localContext, contextSnapshot };
+    if (!localContext.label) return { ...localContext, contextSnapshot };
 
     let combinedContent = localContext.content || "";
     const ragDocuments: Array<{

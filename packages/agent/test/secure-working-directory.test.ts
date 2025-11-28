@@ -1,0 +1,188 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
+import { toolDroid } from "../src/orchestrator/tool/droid";
+import { __internals as gitInternals } from "../src/orchestrator/tool/git";
+import * as filesystem from "../src/security/filesystem";
+import { openDirectorySecure } from "../src/security/filesystem";
+
+const mockRequireToolScopesAndPolicy = mock();
+mock.module("@alfred/auth/token", () => ({
+  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
+}));
+
+beforeEach(() => {
+  mockRequireToolScopesAndPolicy.mockReset();
+  mockRequireToolScopesAndPolicy.mockResolvedValue({
+    decision: { allow: true },
+    claims: { elevated: true, mfa: "passkey" },
+  });
+  process.env.ORCH_SECURE_SPAWN_WRAPPER = process.execPath;
+});
+
+afterEach(() => {
+  delete process.env.DROID_BIN;
+  delete process.env.DOCKER_BIN;
+  delete process.env.ORCH_SECURE_SPAWN_WRAPPER;
+});
+
+function createWorkspaceFixture(prefix: string) {
+  const repoTmp = path.join(process.cwd(), "tmp");
+  mkdirSync(repoTmp, { recursive: true });
+  const base = mkdtempSync(path.join(repoTmp, prefix));
+  const workspace = path.join(base, "workspace");
+  mkdirSync(workspace, { recursive: true });
+  const outside = mkdtempSync(path.join(os.tmpdir(), `${prefix}outside-`));
+  return { base, workspace, outside };
+}
+
+function replaceWithSymlink(workspace: string, outside: string) {
+  const backup = `${workspace}-real`;
+  renameSync(workspace, backup);
+  symlinkSync(outside, workspace);
+  return backup;
+}
+
+function cleanupPaths(...paths: string[]) {
+  for (const target of paths) {
+    rmSync(target, { recursive: true, force: true });
+  }
+}
+
+describe("secure working directory handles", () => {
+  it("keeps git commands pinned after symlink swap", async () => {
+    const { base, workspace, outside } = createWorkspaceFixture("git-secure-");
+    const handle = openDirectorySecure(workspace);
+    const backup = replaceWithSymlink(workspace, outside);
+
+    const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => ({
+      stdout: null,
+      stderr: null,
+      stdin: null,
+      exited: Promise.resolve(0),
+      kill: () => {},
+    }));
+
+    try {
+      await gitInternals.runGit({
+        cwdHandle: handle,
+        args: ["status"],
+        writer: undefined as any,
+        timeoutSec: 5,
+      });
+
+      const spawnArgs = spawnSpy.mock.calls[0]?.[0];
+      const spawnOptions = spawnSpy.mock.calls[0]?.[1];
+      expect(spawnArgs?.[0]).toBe(process.execPath);
+      expect(spawnOptions?.cwd).toBeUndefined();
+      expect(spawnOptions?.env?.ALFRED_CWD_FD).toBe(String(handle.fd));
+    } finally {
+      spawnSpy.mockRestore();
+      handle.close();
+      cleanupPaths(workspace, backup, outside, base);
+    }
+  });
+
+  it("prevents droid commands from escaping via swapped symlink", async () => {
+    const { base, workspace, outside } =
+      createWorkspaceFixture("droid-secure-");
+    process.env.DROID_BIN = process.execPath;
+
+    const originalOpen = filesystem.openDirectorySecure;
+    let swapped = false;
+    const spy = vi
+      .spyOn(filesystem, "openDirectorySecure")
+      .mockImplementation((candidate, options) => {
+        const handle = originalOpen(candidate, options);
+        if (!swapped && path.resolve(candidate) === path.resolve(workspace)) {
+          replaceWithSymlink(workspace, outside);
+          swapped = true;
+        }
+        return handle;
+      });
+
+    const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => ({
+      stdout: null,
+      stderr: null,
+      stdin: null,
+      exited: Promise.resolve(0),
+      kill: () => {},
+    }));
+
+    try {
+      await toolDroid.execute({
+        input: {
+          action: "exec",
+          prompt: "pwd",
+          out: "text",
+          auto: "read",
+          cw: workspace,
+          timeoutSec: 120,
+          authz: "token",
+        },
+      });
+
+      const spawnArgs = spawnSpy.mock.calls[0]?.[0];
+      const spawnOptions = spawnSpy.mock.calls[0]?.[1];
+      expect(spawnArgs?.[0]).toBe(process.execPath);
+      expect(spawnOptions?.cwd).toBeUndefined();
+      expect(spawnOptions?.env?.ALFRED_CWD_FD).toMatch(/^[0-9]+$/);
+    } finally {
+      spy.mockRestore();
+      spawnSpy.mockRestore();
+      cleanupPaths(workspace, `${workspace}-real`, outside, base);
+    }
+  });
+
+  it("keeps docker commands pinned to original directory", async () => {
+    const { base, workspace, outside } =
+      createWorkspaceFixture("docker-secure-");
+    process.env.DOCKER_BIN = process.execPath;
+
+    const handle = openDirectorySecure(workspace);
+    const backup = replaceWithSymlink(workspace, outside);
+
+    const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => ({
+      stdout: null,
+      stderr: null,
+      stdin: null,
+      exited: Promise.resolve(0),
+      kill: () => {},
+    }));
+
+    try {
+      await dockerInternals.runDocker({
+        args: ["ps"],
+        cwdHandle: handle,
+        writer: undefined as any,
+        timeoutSec: 5,
+      });
+
+      const spawnArgs = spawnSpy.mock.calls[0]?.[0];
+      const spawnOptions = spawnSpy.mock.calls[0]?.[1];
+      expect(spawnArgs?.[0]).toBe(process.execPath);
+      expect(spawnOptions?.cwd).toBeUndefined();
+      expect(spawnOptions?.env?.ALFRED_CWD_FD).toBe(String(handle.fd));
+    } finally {
+      spawnSpy.mockRestore();
+      handle.close();
+      cleanupPaths(workspace, backup, outside, base);
+    }
+  });
+});

@@ -1,14 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
-  WorkflowEvent,
   ContextBundle,
   SearchReceipt,
+  WorkflowEvent,
 } from "@alfred/type/plan";
 import type { ExecutionContext } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
 
 const gatherCodeContextMock = mock(
-  async (params: { writer?: { write?: (chunk: unknown) => Promise<void> | void } }) => {
+  async (params: {
+    writer?: { write?: (chunk: unknown) => Promise<void> | void };
+  }) => {
     await params.writer?.write?.({
       type: "context",
       phase: "scan",
@@ -31,7 +33,9 @@ const gatherCodeContextMock = mock(
 );
 
 const gatherWebContextMock = mock(
-  async (params: { writer?: { write?: (chunk: unknown) => Promise<void> | void } }) => {
+  async (params: {
+    writer?: { write?: (chunk: unknown) => Promise<void> | void };
+  }) => {
     await params.writer?.write?.({
       type: "context",
       phase: "web",
@@ -70,7 +74,7 @@ const baseInput: RuntimeInput = {
   context: {
     web: true,
     topK: 5,
-    maxTokens: 24000,
+    maxTokens: 24_000,
     exts: [".ts"],
     ignore: ["dist"],
     seeds: ["packages/runtime/src"],
@@ -120,7 +124,7 @@ function createExecutionContext(
   };
 
   const bundle: ContextBundle = {
-    maxTokens: 24000,
+    maxTokens: 24_000,
     estimatedTokens: 512,
     files: [
       {
@@ -210,7 +214,9 @@ describe("executeScanPhase", () => {
     expect(gatherWebContextMock).toHaveBeenCalledTimes(1);
 
     const writerEvents = events.filter(
-      (event) => event.type === "context" && (event as any).message === "code_context_mock"
+      (event) =>
+        event.type === "context" &&
+        (event as any).message === "code_context_mock"
     );
     expect(writerEvents.length).toBeGreaterThan(0);
 
@@ -218,9 +224,9 @@ describe("executeScanPhase", () => {
       (event) => event.type === "context" && (event as any).phase === "scan"
     );
     expect(scanEvents.length).toBeGreaterThanOrEqual(2);
-    expect(
-      scanEvents.some((event) => Boolean((event as any).receipts))
-    ).toBe(true);
+    expect(scanEvents.some((event) => Boolean((event as any).receipts))).toBe(
+      true
+    );
 
     const webEvent = events.find(
       (event) => event.type === "context" && (event as any).phase === "web"
@@ -275,7 +281,9 @@ describe("executeScanPhase", () => {
     const { events, error, result } = await collectEvents(generator);
 
     const failureEvent = events.find(
-      (event) => event.type === "notice" && (event as any).message === "context_gathering_failed"
+      (event) =>
+        event.type === "notice" &&
+        (event as any).message === "context_gathering_failed"
     );
 
     expect(failureEvent).toBeDefined();
@@ -304,7 +312,9 @@ describe("executeScanPhase", () => {
     expect(gatherCodeContextMock).not.toHaveBeenCalled();
     expect(gatherWebContextMock).not.toHaveBeenCalled();
     const disabledNotice = events.find(
-      (event) => event.type === "notice" && (event as any).message === "context_gathering_disabled"
+      (event) =>
+        event.type === "notice" &&
+        (event as any).message === "context_gathering_disabled"
     );
     expect(disabledNotice).toBeDefined();
     expect(result).toBeNull();

@@ -12,7 +12,7 @@ function resolveTestMode(request: Request) {
   const metaEnv =
     typeof import.meta !== "undefined"
       ? ((import.meta as ImportMeta & { env?: Record<string, string> }).env ??
-          {})
+        {})
       : {};
   if (metaEnv?.VITE_TEST_MODE === "true") {
     return true;

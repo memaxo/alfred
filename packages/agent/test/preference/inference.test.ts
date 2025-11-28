@@ -5,6 +5,7 @@ import type {
   ToolCallHistory,
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
+
 const inferResponsePreferencesSemanticMock = mock(async () => ({
   verbosity: [
     { label: "concise" as ResponseVerbosity, score: 0.62 },

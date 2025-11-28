@@ -6,7 +6,7 @@
  */
 
 import type { WorkflowEvent } from "@alfred/type/plan";
-import { RuntimeContext } from "@alfred/type/runtime-context";
+import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
 import { z } from "zod";
 

@@ -70,7 +70,9 @@ export function ContextLens({
 
   // Sort documents to show Graph edges first
   const sortedDocs = [...ragDocuments].sort((a, b) => {
-    if (a.source === b.source) return 0;
+    if (a.source === b.source) {
+      return 0;
+    }
     return a.source === "graph" ? -1 : 1;
   });
 
@@ -122,7 +124,7 @@ export function ContextLens({
                     ? "Cache Hit"
                     : "Fresh Scan"}
                 </span>
-                <span className="text-white/60 text-[10px]">
+                <span className="text-[10px] text-white/60">
                   {formatRelativeTime(contextSnapshot.timestamp)}
                 </span>
               </div>

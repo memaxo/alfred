@@ -1,7 +1,7 @@
 process.env.DATABASE_URL = "sqlite::memory:";
 
-import { randomUUID } from "node:crypto";
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { randomUUID } from "node:crypto";
 
 let WorkflowTestHarness: typeof import("./workflow-server").WorkflowTestHarness;
 let auth: typeof import("@alfred/auth").auth;

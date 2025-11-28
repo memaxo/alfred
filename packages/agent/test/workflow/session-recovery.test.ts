@@ -85,7 +85,9 @@ describe("workflow session recovery", () => {
     const registeredHandle = runRegistryMocks.register.mock.calls[1]?.[1];
     expect(registeredHandle).toBe(delegateHandle);
 
-    await registeredHandle.resume({ resumeData: { event: "bio-authz", authz: "token" } });
+    await registeredHandle.resume({
+      resumeData: { event: "bio-authz", authz: "token" },
+    });
     expect(delegateHandle.resume).toHaveBeenCalledTimes(1);
   });
 });

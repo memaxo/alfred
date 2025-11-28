@@ -1,4 +1,8 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
+import {
+  cognitiveEntropyEventsTotal,
+  cognitivePhysiologyGauge,
+} from "@alfred/api/metrics";
 import type {
   CognitiveState,
   Event,
@@ -10,10 +14,6 @@ import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
-import {
-  cognitiveEntropyEventsTotal,
-  cognitivePhysiologyGauge,
-} from "@alfred/api/metrics";
 
 // Temporary: Autonomy Logic (to be expanded)
 const createInitialAutonomy = () => initialAutonomy(Date.now());
@@ -67,7 +67,12 @@ export async function runCognitiveLoop(
   // Update Autonomy if needed (e.g. on feedback)
   if (incomingEvent._ === "feedback") {
     const evidence = calculateEvidence(incomingEvent);
-    autonomy = updateAutonomy(Date.now(), newAutonomy, evidence, newState.physiology);
+    autonomy = updateAutonomy(
+      Date.now(),
+      newAutonomy,
+      evidence,
+      newState.physiology
+    );
   } else {
     autonomy = newAutonomy;
   }

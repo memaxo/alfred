@@ -84,9 +84,7 @@ function updatePlanSection(
 
   const next = updater("").trim();
   const addition =
-    next.length > 0
-      ? `\n## ${heading}\n\n${next}\n\n`
-      : `\n## ${heading}\n\n`;
+    next.length > 0 ? `\n## ${heading}\n\n${next}\n\n` : `\n## ${heading}\n\n`;
   return `${markdown.trimEnd()}\n${addition}`;
 }
 

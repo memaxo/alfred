@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { sys } from "../src/utils/process"; // Import sys to spy on it
 
 // Mock dependencies
-const mockWorktreeCreate = mock(async (_repo, runId: string, agentId: string) => ({
-  path: `/tmp/mock-worktree/${runId}/${agentId}`,
-  branch: `agent/${runId}/${agentId}`,
-  baseRef: "HEAD",
-}));
+const mockWorktreeCreate = mock(
+  async (_repo, runId: string, agentId: string) => ({
+    path: `/tmp/mock-worktree/${runId}/${agentId}`,
+    branch: `agent/${runId}/${agentId}`,
+    baseRef: "HEAD",
+  })
+);
 const mockWorktreeRemove = mock(async () => {});
 const mockCodexExecute = mock(async () => ({ result: "done", artifacts: [] }));
 

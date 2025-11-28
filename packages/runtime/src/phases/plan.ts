@@ -8,8 +8,8 @@ import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel } from "ai";
 import { AISDKAdapter } from "../adapters/ai";
-import { ContextBuilder } from "../context";
 import type { ExecutionContext } from "../context";
+import { ContextBuilder } from "../context";
 import type { RuntimeInput } from "../types";
 
 async function ensureExecPlanFile(filePath: string, content: string) {
@@ -37,13 +37,16 @@ const MAX_RECEIPTS = 5;
 
 function formatContextPreview(context: ExecutionContext): string {
   const files = context.bundle?.files ?? [];
-  const fileLines = files.slice(0, MAX_CONTEXT_FILES).map((file) => {
-    return `- ${file.path}:${file.startLine}-${file.endLine}`;
-  });
+  const fileLines = files
+    .slice(0, MAX_CONTEXT_FILES)
+    .map((file) => `- ${file.path}:${file.startLine}-${file.endLine}`);
 
   const receiptLines = (context.receipts.code ?? [])
     .slice(0, MAX_RECEIPTS)
-    .map((item) => `- ${item.path ?? item.id} (score ${(item.score * 100).toFixed(0)}%)`);
+    .map(
+      (item) =>
+        `- ${item.path ?? item.id} (score ${(item.score * 100).toFixed(0)}%)`
+    );
 
   const webLines = (context.receipts.web ?? [])
     .slice(0, 3)
@@ -93,7 +96,7 @@ function buildPlanMessages(
     {
       id: `user-plan-${runId}-${Date.now().toString(36)}`,
       role: "user",
-      content: [{ type: "text", text }],
+      parts: [{ type: "text", text }],
     },
   ] satisfies UIMessage[];
 }
@@ -278,7 +281,10 @@ export async function* executePlanPhase(
       system: PLAN_SYSTEM_PROMPT,
       temperature: 0.2,
     })) {
-      if (event.type === "text-delta" && typeof (event as any).delta === "string") {
+      if (
+        event.type === "text-delta" &&
+        typeof (event as any).delta === "string"
+      ) {
         planSummary += (event as any).delta;
       }
 

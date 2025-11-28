@@ -215,7 +215,8 @@ describe("workflow router resume flow (integration)", () => {
     console.log("deploy events", events);
 
     const completed = events.some(
-      (e: any) => e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+      (e: any) =>
+        e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
     );
     expect(completed).toBe(true);
   });
@@ -286,7 +287,8 @@ describe("workflow router resume flow (integration)", () => {
     console.log("linear events", events);
 
     const completed = events.some(
-      (e: any) => e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
+      (e: any) =>
+        e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
     );
     expect(completed).toBe(true);
   });

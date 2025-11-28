@@ -167,9 +167,7 @@ test.describe("Mindscape workflow drawer loop", () => {
     await page
       .getByTestId("mindscape-drawer-feedback-positive")
       .click({ force: true });
-    await expect
-      .poll(() => feedbackCalled, { timeout: 2000 })
-      .toBeTruthy();
+    await expect.poll(() => feedbackCalled, { timeout: 2000 }).toBeTruthy();
 
     // Click "Open full view" button in the header
     // Use evaluate to debug if element exists

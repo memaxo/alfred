@@ -1,5 +1,6 @@
 import { configureLinearMetrics } from "@alfred/agent/integrations/linear";
 import { recordAudit } from "@alfred/agent/utils/audit";
+import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
   linearActivityDurationSeconds,
   linearActivityEmissionsTotal,
@@ -13,10 +14,6 @@ import {
 } from "@alfred/agent/workflow/orchestrator";
 import { runRegistry } from "@alfred/agent/workflow/registry";
 import {
-  registerRunHandle,
-  StreamNotAttachedError,
-} from "@alfred/agent/workflow/session-recovery";
-import {
   mapWorkflowResource,
   mapWorkflowRunResource,
   workflowInput,
@@ -29,12 +26,15 @@ import {
   ensureWorkflowConversation,
   persistWorkflowMessages,
 } from "@alfred/agent/workflow/services";
-import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
-  codexLinearIntegrationLatencySeconds,
+  registerRunHandle,
+  StreamNotAttachedError,
+} from "@alfred/agent/workflow/session-recovery";
+import {
   codexLinearActivitiesDroppedTotal,
   codexLinearActivitiesEmittedTotal,
   codexLinearActivityBatchesTotal,
+  codexLinearIntegrationLatencySeconds,
   codexSessionContinuityTotal,
 } from "@alfred/api/metrics";
 import * as workflowRepo from "@alfred/db/repo/workflow";
@@ -51,10 +51,10 @@ import { z } from "zod";
 import { PolicyObligationError } from "../errors";
 import { requirePolicy } from "../gate";
 import { triggerPreferenceRefresh } from "../preference/refresh";
-import { enforceWorkflowPlanPolicy } from "../workflow/access";
-import { createWorkflowSuspension } from "../workflow/suspension";
 import { authedProcedure, rateLimit, router } from "../trpc";
 import { toTRPCError } from "../utils/error";
+import { enforceWorkflowPlanPolicy } from "../workflow/access";
+import { createWorkflowSuspension } from "../workflow/suspension";
 
 const requiresBiometric = (obligations: Obligation[]): boolean =>
   obligations.some(
@@ -154,7 +154,8 @@ export const workflowRouter: ReturnType<typeof router> = router({
         };
         const linearIssueId =
           preparedLinear?.issueId ?? preparedLinear?.sessionId ?? null;
-        const linearIssueUrl = ticket?.issueUrl ?? preparedLinear?.issueUrl ?? null;
+        const linearIssueUrl =
+          ticket?.issueUrl ?? preparedLinear?.issueUrl ?? null;
 
         await workflowRepo.createRun({
           id: executor.runId,
@@ -263,8 +264,14 @@ export const workflowRouter: ReturnType<typeof router> = router({
             emitComplete: () => emit.complete(),
           };
 
-          const payload = options.runId ? { ...input, runId: options.runId } : input;
-          cleanup = await orchestrateWorkflowStream(payload, session, callbacks);
+          const payload = options.runId
+            ? { ...input, runId: options.runId }
+            : input;
+          cleanup = await orchestrateWorkflowStream(
+            payload,
+            session,
+            callbacks
+          );
         };
 
         const suspension = createWorkflowSuspension({

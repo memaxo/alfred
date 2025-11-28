@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import { cleanupDroidPendingRuns } from "../src/workers/droid-pending-cleanup";
 
 const unregisterMock = vi.fn();
@@ -28,9 +36,9 @@ describe("droid pending cleanup", () => {
     delMock.mockReset();
   });
 
-afterEach(() => {
-  // no-op
-});
+  afterEach(() => {
+    // no-op
+  });
 
   it("removes stale runs and unregisters", async () => {
     const now = Date.now();

@@ -1,22 +1,14 @@
+import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  MAX_TIMEOUT_SEC,
+} from "@alfred/agent/orchestrator/tool/codex/definition";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
-import {
-  ELEVATED_TIMEOUT_THRESHOLD_SEC,
-  MAX_TIMEOUT_SEC,
-} from "@alfred/agent/orchestrator/tool/codex/definition";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -109,9 +101,9 @@ describe("codex router run", () => {
     await caller.codex.run({ prompt: "short task" });
 
     expect(toolCodexExecuteMock).toHaveBeenCalledTimes(1);
-    expect(
-      toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec
-    ).toBe(ELEVATED_TIMEOUT_THRESHOLD_SEC);
+    expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec).toBe(
+      ELEVATED_TIMEOUT_THRESHOLD_SEC
+    );
   });
 
   it("accepts explicit timeout at the threshold", async () => {
@@ -122,9 +114,9 @@ describe("codex router run", () => {
       timeoutSec: ELEVATED_TIMEOUT_THRESHOLD_SEC,
     });
 
-    expect(
-      toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec
-    ).toBe(ELEVATED_TIMEOUT_THRESHOLD_SEC);
+    expect(toolCodexExecuteMock.mock.calls[0]?.[0]?.input?.timeoutSec).toBe(
+      ELEVATED_TIMEOUT_THRESHOLD_SEC
+    );
   });
 
   it("returns PRECONDITION_FAILED when Codex requires elevation for timeout", async () => {

@@ -99,7 +99,7 @@ describe("connectWithRetry", () => {
     await connectWithRetry(transientClient as any, {
       maxRetries: 5,
       initialDelay: 100,
-      maxDelay: 5_000,
+      maxDelay: 5000,
       sleep: async (ms) => {
         delays.push(ms);
       },
@@ -224,7 +224,7 @@ describe("createPgClient", () => {
       retry: {
         enabled: true,
         maxRetries: 3,
-      sleep: async () => {},
+        sleep: async () => {},
       },
     });
 

@@ -9,11 +9,7 @@ export type CognitiveFeedbackInput = {
   surface?: FeedbackSurface;
 };
 
-export type CognitiveFeedbackStatus =
-  | "idle"
-  | "pending"
-  | "success"
-  | "error";
+export type CognitiveFeedbackStatus = "idle" | "pending" | "success" | "error";
 
 const encodeInput = (payload: CognitiveFeedbackInput) =>
   encodeURIComponent(JSON.stringify({ 0: { json: payload } }));
@@ -64,9 +60,7 @@ export function useCognitiveFeedback() {
       return data;
     } catch (cause) {
       const err =
-        cause instanceof Error
-          ? cause
-          : new Error("feedback_request_failed");
+        cause instanceof Error ? cause : new Error("feedback_request_failed");
       setStatus("error");
       setError(err);
       throw err;

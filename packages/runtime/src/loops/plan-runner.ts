@@ -1,9 +1,9 @@
 import type { ExecutionPlan, ExecutionStep } from "@alfred/cognitive";
-import { executing, initialAutonomy } from "@alfred/cognitive/state";
+import type { RiskAssessment } from "@alfred/cognitive/logic/autonomy";
 import { shouldGateExecution } from "@alfred/cognitive/logic/autonomy";
+import { executing, initialAutonomy } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
-import type { RiskAssessment } from "@alfred/cognitive/logic/autonomy";
 import { classifyPlanRisk } from "../engines/safety";
 
 export type StepResult = {

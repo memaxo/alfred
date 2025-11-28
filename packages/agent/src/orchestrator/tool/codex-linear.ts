@@ -5,7 +5,7 @@ import type { AlfredCodexEvent, CodexToolInput } from "./codex";
 const MAX_ACTIVITIES_PER_MINUTE = 10;
 const WINDOW_MS = 60_000;
 const MAX_ACTIVITIES_PER_EXECUTION = 50;
-const BATCH_WINDOW_MS = 2_000;
+const BATCH_WINDOW_MS = 2000;
 
 const timingConfig = {
   batchWindowMs: BATCH_WINDOW_MS,
@@ -66,7 +66,7 @@ export function configureCodexLinearMetrics(
       : undefined);
 
   metricsBag = {
-    histogram,
+    histogram: histogram || undefined,
     activitiesEmitted:
       "activitiesEmitted" in config ? config.activitiesEmitted : undefined,
     activitiesDropped:
@@ -169,10 +169,7 @@ function getSessionState(
 ): SessionLimiterState {
   const existing = sessionStates.get(sessionId);
   if (existing) {
-    if (
-      existing.context.space !== space ||
-      existing.context.authz !== authz
-    ) {
+    if (existing.context.space !== space || existing.context.authz !== authz) {
       existing.context = { sessionId, space, authz };
     }
     return existing;
@@ -273,6 +270,9 @@ function buildGroups(queue: PendingEvent[]): EventGroup[] {
 
 function buildActivityFromGroup(group: EventGroup): FinalActivityDraft {
   const [first] = group.events;
+  if (!first) {
+    throw new Error("EventGroup must have at least one event");
+  }
   if (group.events.length === 1) {
     return {
       eventTypeLabel: group.eventType,
@@ -302,11 +302,15 @@ function buildSummaryBody(
 ): string {
   switch (eventType) {
     case "thought": {
-      const last = events[events.length - 1].raw as Extract<
+      const last = events[events.length - 1];
+      if (!last) {
+        return `${events.length} thoughts captured`;
+      }
+      const lastRaw = last.raw as Extract<
         AlfredCodexEvent,
         { type: "thought" }
       >;
-      return `${events.length} thoughts captured in the last ${timingConfig.batchWindowMs / 1000}s.\nLatest: ${truncate(last.content)}`;
+      return `${events.length} thoughts captured in the last ${timingConfig.batchWindowMs / 1000}s.\nLatest: ${truncate(lastRaw.content)}`;
     }
     case "command": {
       const statusCounts = events.reduce<Record<string, number>>(
@@ -355,7 +359,7 @@ function buildSummaryBody(
 }
 
 async function tryEmitActivity(
-  sessionId: string,
+  _sessionId: string,
   state: SessionLimiterState,
   draft: FinalActivityDraft
 ): Promise<{ emitted: boolean; reason?: RateLimitReason }> {
@@ -443,14 +447,13 @@ function accumulateRateLimited(
   group: EventGroup,
   reason: RateLimitReason
 ): void {
-  const aggregate =
-    state.rateLimited ?? {
-      total: 0,
-      types: {},
-      reasons: { window: 0, total: 0 },
-      since: Date.now(),
-      lastAt: Date.now(),
-    };
+  const aggregate = state.rateLimited ?? {
+    total: 0,
+    types: {},
+    reasons: { window: 0, total: 0 },
+    since: Date.now(),
+    lastAt: Date.now(),
+  };
   aggregate.total += group.events.length;
   aggregate.types[group.eventType] =
     (aggregate.types[group.eventType] ?? 0) + group.events.length;
@@ -465,7 +468,8 @@ function scheduleRateLimitedFlush(
   state: SessionLimiterState
 ): void {
   const now = Date.now();
-  const delay = Math.max(0, state.windowStart + timingConfig.windowMs - now) + 5;
+  const delay =
+    Math.max(0, state.windowStart + timingConfig.windowMs - now) + 5;
   scheduleRateLimitRetry(sessionId, state, delay);
 }
 
@@ -557,9 +561,7 @@ function cleanupState(sessionId: string, state: SessionLimiterState): void {
   }
 }
 
-function convertEventToPending(
-  event: AlfredCodexEvent
-): PendingEvent | null {
+function convertEventToPending(event: AlfredCodexEvent): PendingEvent | null {
   switch (event.type) {
     case "thought":
       return {

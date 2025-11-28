@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { inferRouterOutputs } from "@trpc/server";
 import { createFileRoute } from "@tanstack/react-router";
+import type { inferRouterOutputs } from "@trpc/server";
 import {
   Activity,
   AlertTriangle,
@@ -11,9 +10,10 @@ import {
   Signal,
   Zap,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -132,13 +132,13 @@ export function VoiceAdminView() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-4">
         <div>
-          <p className="text-sm text-biolum-dim">Voice infrastructure</p>
-          <h1 className="text-2xl font-semibold text-biolum">
+          <p className="text-biolum-dim text-sm">Voice infrastructure</p>
+          <h1 className="font-semibold text-2xl text-biolum">
             Voice Operations Console
           </h1>
         </div>
         {isRefetching && (
-          <Badge variant="outline" className="text-xs">
+          <Badge className="text-xs" variant="outline">
             Syncing data...
           </Badge>
         )}
@@ -157,13 +157,11 @@ export function VoiceAdminView() {
         </Button>
       </div>
 
-      {stats.message ? (
-        <MessageBanner message={stats.message} />
-      ) : null}
+      {stats.message ? <MessageBanner message={stats.message} /> : null}
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.label} data-testid="voice-admin-stat">
+          <Card data-testid="voice-admin-stat" key={card.label}>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardDescription>{card.label}</CardDescription>
@@ -176,7 +174,7 @@ export function VoiceAdminView() {
               </span>
             </CardHeader>
             {card.meta && (
-              <CardContent className="text-sm text-biolum-dim">
+              <CardContent className="text-biolum-dim text-sm">
                 {card.meta}
               </CardContent>
             )}
@@ -222,19 +220,25 @@ function buildSummaryCards(stats: VoiceStats, lastUpdated: Date | null) {
       label: "STT Utilization",
       value: formatUsage(stats.sttPool),
       icon: <Zap className="h-5 w-5" />,
-      meta: stats.sttPool ? `${formatPercent(stats.sttPool.utilization)} used` : "Unavailable",
+      meta: stats.sttPool
+        ? `${formatPercent(stats.sttPool.utilization)} used`
+        : "Unavailable",
     },
     {
       label: "TTS Utilization",
       value: formatUsage(stats.ttsPool),
       icon: <Server className="h-5 w-5" />,
-      meta: stats.ttsPool ? `${formatPercent(stats.ttsPool.utilization)} used` : "Unavailable",
+      meta: stats.ttsPool
+        ? `${formatPercent(stats.ttsPool.utilization)} used`
+        : "Unavailable",
     },
     {
       label: "Last Updated",
       value: lastUpdated ? lastUpdated.toLocaleTimeString() : "--",
       icon: <Clock className="h-5 w-5" />,
-      meta: lastUpdated ? lastUpdated.toLocaleDateString() : "Awaiting telemetry",
+      meta: lastUpdated
+        ? lastUpdated.toLocaleDateString()
+        : "Awaiting telemetry",
     },
   ];
 }
@@ -252,10 +256,11 @@ function PoolPanel({
 }) {
   if (!pool) {
     return (
-      <Card className="border-dashed border-white/15 bg-void-surface/40">
+      <Card className="border-white/15 border-dashed bg-void-surface/40">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
-          <CardDescription>Pool not initialized (cloud provider).
+          <CardDescription>
+            Pool not initialized (cloud provider).
           </CardDescription>
         </CardHeader>
       </Card>
@@ -280,13 +285,15 @@ function PoolPanel({
           size="sm"
           variant="secondary"
         >
-          <RefreshCw className={cn("h-4 w-4", isRestarting && "animate-spin")} />
+          <RefreshCw
+            className={cn("h-4 w-4", isRestarting && "animate-spin")}
+          />
           Restart
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <div className="mb-1 flex items-center justify-between text-sm text-biolum-dim">
+          <div className="mb-1 flex items-center justify-between text-biolum-dim text-sm">
             <span>Utilization</span>
             <span>{utilization}%</span>
           </div>
@@ -295,7 +302,7 @@ function PoolPanel({
 
         <div className="grid gap-3 md:grid-cols-2">
           {pool.health?.map((process, index) => (
-            <ProcessHealthCard key={index} index={index} process={process} />
+            <ProcessHealthCard index={index} key={index} process={process} />
           ))}
         </div>
       </CardContent>
@@ -319,7 +326,7 @@ function ProcessHealthCard({
           : "border-red-500/30 bg-red-500/5"
       )}
     >
-      <div className="mb-2 flex items-center justify-between text-xs font-mono">
+      <div className="mb-2 flex items-center justify-between font-mono text-xs">
         <span>Process #{index + 1}</span>
         <span
           className={cn(
@@ -360,7 +367,7 @@ function ProcessHealthCard({
 function LatencyPanel({ telemetry }: { telemetry?: VoiceTelemetry | null }) {
   if (!telemetry) {
     return (
-      <Card className="border border-dashed border-white/10 bg-void-surface/30">
+      <Card className="border border-white/10 border-dashed bg-void-surface/30">
         <CardHeader>
           <CardTitle>Latency & Telemetry</CardTitle>
           <CardDescription>
@@ -368,7 +375,7 @@ function LatencyPanel({ telemetry }: { telemetry?: VoiceTelemetry | null }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-biolum-dim">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-biolum-dim text-sm">
             <Signal className="h-5 w-5 text-biolum" />
             <div>
               <p>No telemetry samples yet.</p>
@@ -389,18 +396,20 @@ function LatencyPanel({ telemetry }: { telemetry?: VoiceTelemetry | null }) {
     <Card className="border border-white/10 bg-void-surface/30">
       <CardHeader>
         <CardTitle>Latency & Telemetry</CardTitle>
-        <CardDescription>Rolling stats derived from Prometheus samples.</CardDescription>
+        <CardDescription>
+          Rolling stats derived from Prometheus samples.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {telemetryCards.map((metric) => (
-            <Card key={metric.label} className="bg-white/5 text-sm">
+            <Card className="bg-white/5 text-sm" key={metric.label}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{metric.label}</CardTitle>
                 <CardDescription>{metric.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <dl className="space-y-1 font-mono text-xs text-biolum">
+                <dl className="space-y-1 font-mono text-biolum text-xs">
                   <div className="flex justify-between">
                     <dt>P50</dt>
                     <dd>{metric.p50}</dd>
@@ -451,7 +460,7 @@ function BiometricGate({ onRetry }: { onRetry: () => void }) {
 
 function MessageBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-biolum">
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-biolum text-sm">
       <AlertTriangle className="h-5 w-5" />
       <span>{message}</span>
     </div>
@@ -460,7 +469,7 @@ function MessageBanner({ message }: { message: string }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-3xl border border-dashed border-white/10 bg-void-surface/40 p-10 text-center text-biolum-dim">
+    <div className="rounded-3xl border border-white/10 border-dashed bg-void-surface/40 p-10 text-center text-biolum-dim">
       {message}
     </div>
   );
@@ -582,7 +591,10 @@ function buildTelemetryCards(telemetry: VoiceTelemetry) {
 
 type HistogramSummary = VoiceTelemetry["sttLatency"];
 
-function formatMetricValue(value: number | null, unit: HistogramSummary["unit"]) {
+function formatMetricValue(
+  value: number | null,
+  unit: HistogramSummary["unit"]
+) {
   if (value === null || !Number.isFinite(value)) {
     return "—";
   }

@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { runReviewPhase } from "../src/orchestrator/review";
-import type { OrchestratorContext } from "../src/orchestrator/types";
-import { preparePlanDir, cleanupPlanDir, mockRunner } from "./utils/review-helpers";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
+import { runReviewPhase } from "../src/orchestrator/review";
+import type { OrchestratorContext } from "../src/orchestrator/types";
+import {
+  cleanupPlanDir,
+  mockRunner,
+  preparePlanDir,
+} from "./utils/review-helpers";
 
 describe("review fallback integration", () => {
   let restoreRunner: (() => void) | undefined;
@@ -42,7 +46,7 @@ describe("review fallback integration", () => {
     });
 
     const originalCodex = toolCodex.execute;
-    toolCodex.execute = async () => undefined;
+    toolCodex.execute = async () => {};
     restoreCodex = () => {
       toolCodex.execute = originalCodex;
     };
@@ -107,8 +111,8 @@ describe("review fallback integration", () => {
     expect(
       events.some((event) => event?.message === "review_fallback_triggered")
     ).toBe(true);
-    expect(
-      events.some((event) => event?.kind === "review-fallback")
-    ).toBe(true);
+    expect(events.some((event) => event?.kind === "review-fallback")).toBe(
+      true
+    );
   });
 });

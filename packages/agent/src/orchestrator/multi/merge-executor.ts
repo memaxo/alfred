@@ -1,5 +1,5 @@
-import { worktreeManager } from "../tool/worktree";
 import { sys } from "../../utils/process";
+import { worktreeManager } from "../tool/worktree";
 import type { MergePlan } from "./merge";
 
 type GitResult = {
@@ -77,7 +77,8 @@ export async function executeMergePlan(
     };
   }
 
-  const targetBranch = plan.targetBranch ?? (await detectCurrentBranch(workspace));
+  const targetBranch =
+    plan.targetBranch ?? (await detectCurrentBranch(workspace));
   await ensureBranchCheckedOut(workspace, targetBranch);
 
   const merged: string[] = [];

@@ -1,15 +1,15 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
+import type { Event, Outcome } from "@alfred/cognitive/state";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import * as userRepo from "@alfred/db/repo/user";
 import { buildHistoryContext } from "@alfred/history/history-context";
+import { logger } from "@alfred/logger";
+import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { sanitizeResult } from "../utils/generate";
-import type { CognitiveEffect, CognitiveLoopResult } from "@alfred/runtime";
-import type { Event, Outcome } from "@alfred/cognitive/state";
-import { logger } from "@alfred/logger";
 
 export type VoiceAssistantInput = {
   text: string;
@@ -232,11 +232,15 @@ async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
             result: params.sanitized,
             duration: Math.round(params.durationSeconds * 1000),
           };
-          const followUp = await params.runLoop(params.runtimeCtx, params.streamId, {
-            _: "complete",
-            outcome,
-            ts: Date.now() as any,
-          });
+          const followUp = await params.runLoop(
+            params.runtimeCtx,
+            params.streamId,
+            {
+              _: "complete",
+              outcome,
+              ts: Date.now() as any,
+            }
+          );
           queue.push(...followUp.effects);
           break;
         }

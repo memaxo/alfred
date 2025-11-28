@@ -8,9 +8,9 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { createBrowserTrpcClient } from "@/lib/trpc-client";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
-import { createBrowserTrpcClient } from "@/lib/trpc-client";
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({

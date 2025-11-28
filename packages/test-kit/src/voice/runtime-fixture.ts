@@ -2,7 +2,9 @@ import { vi } from "bun:test";
 import type { STTPool } from "@alfred/voice/process/stt";
 import type { TTSPool } from "@alfred/voice/process/tts";
 import { createVoiceTestRegistry } from "./registry";
-export { createVoiceTestRegistry, createVoiceFixture } from "./registry";
+
+export { createVoiceFixture, createVoiceTestRegistry } from "./registry";
+
 import type { VoiceTestOptions } from "./registry";
 
 export async function installVoiceTestPools(options?: VoiceTestOptions) {

@@ -17,17 +17,19 @@ export class ReviewGate {
     this.planInitialized = true;
     this.planRequired = items.length > 0 || this.minimumRequired > 0;
     for (const item of items) {
-      const id = typeof item.id === "string" && item.id.length > 0
-        ? item.id
-        : typeof item.type === "string" && item.type.length > 0
-          ? item.type
-          : undefined;
+      const id =
+        typeof item.id === "string" && item.id.length > 0
+          ? item.id
+          : typeof item.type === "string" && item.type.length > 0
+            ? item.type
+            : undefined;
       if (!id) {
         continue;
       }
-      const type = typeof item.type === "string" && item.type.length > 0
-        ? item.type
-        : "check";
+      const type =
+        typeof item.type === "string" && item.type.length > 0
+          ? item.type
+          : "check";
       if (this.checks.has(id)) {
         continue;
       }
@@ -47,17 +49,19 @@ export class ReviewGate {
     attempt?: number;
     evidence?: string;
   }): void {
-    const id = typeof result.id === "string" && result.id.length > 0
-      ? result.id
-      : typeof result.type === "string" && result.type.length > 0
-        ? result.type
-        : undefined;
+    const id =
+      typeof result.id === "string" && result.id.length > 0
+        ? result.id
+        : typeof result.type === "string" && result.type.length > 0
+          ? result.type
+          : undefined;
     if (!id) {
       return;
     }
-    const type = typeof result.type === "string" && result.type.length > 0
-      ? result.type
-      : "check";
+    const type =
+      typeof result.type === "string" && result.type.length > 0
+        ? result.type
+        : "check";
     const normalizedStatus =
       result.status === "passed"
         ? "passed"

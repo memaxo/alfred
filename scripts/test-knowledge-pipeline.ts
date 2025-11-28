@@ -1,14 +1,13 @@
 import { extract, toKnowledge } from "../packages/knowledge/src/extractor.js";
+import { deriveAlternativeFacts } from "../packages/knowledge/src/reasoning/alternatives.js";
 import { deriveCausalityFromText } from "../packages/knowledge/src/reasoning/causality.js";
 import { deriveDecisionFacts } from "../packages/knowledge/src/reasoning/decisions.js";
-import { deriveAlternativeFacts } from "../packages/knowledge/src/reasoning/alternatives.js";
 
 async function main() {
   console.log("--- Knowledge Extraction Pipeline Test ---");
 
   const input =
-    "Elon Musk founded SpaceX in 2002. The rocket launch failed because the engine overheated."
-      + " The team must choose between refactoring and rewriting.";
+    "Elon Musk founded SpaceX in 2002. The rocket launch failed because the engine overheated. The team must choose between refactoring and rewriting.";
   console.log(`Input Text: "${input}"\n`);
 
   console.log("1. Extracting facts and relations...");
@@ -22,7 +21,9 @@ async function main() {
     }
   });
 
-  console.log("\n2. Deriving semantic reasoning (causal/decision/alternative)...");
+  console.log(
+    "\n2. Deriving semantic reasoning (causal/decision/alternative)..."
+  );
   const [causal, decisions, alternatives] = await Promise.all([
     deriveCausalityFromText(input),
     deriveDecisionFacts(input),

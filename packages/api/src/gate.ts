@@ -7,8 +7,8 @@ import type { EvaluateInput, PolicyResource } from "@alfred/policy";
 import { evaluate } from "@alfred/policy";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "./context";
-import { t } from "./trpc";
 import { PolicyObligationError } from "./errors";
+import { t } from "./trpc";
 import {
   getSessionUser,
   getSessionUserId,

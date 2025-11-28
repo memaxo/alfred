@@ -33,13 +33,15 @@ const VERIFY_RULES: VerifyRule[] = [
     script: "scripts/verify-orchestrator.ts",
     description: "Validate orchestrator flows",
     pattern: (file) =>
-      file.startsWith("packages/agent/") || file.startsWith("packages/runtime/"),
+      file.startsWith("packages/agent/") ||
+      file.startsWith("packages/runtime/"),
   },
   {
     script: "scripts/verify-resilience.ts",
     description: "Run resilience checks",
     pattern: (file) =>
-      file.startsWith("packages/agent/") || file.startsWith("packages/runtime/"),
+      file.startsWith("packages/agent/") ||
+      file.startsWith("packages/runtime/"),
   },
   {
     script: "scripts/verify-voice-runtime.ts",
@@ -96,10 +98,9 @@ export function buildFixerSubTask(args: {
   return {
     id: `fixer${attemptLabel}`,
     title: `Fix review failures (${attemptLabel})`,
-    requirement:
-      args.summary?.trim().length
-        ? args.summary.trim()
-        : "Resolve the automated review failures and document the fix.",
+    requirement: args.summary?.trim().length
+      ? args.summary.trim()
+      : "Resolve the automated review failures and document the fix.",
     deps: [],
     priority: 5,
     acceptance: DEFAULT_FIXER_ACCEPTANCE,

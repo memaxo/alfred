@@ -1,7 +1,7 @@
-import { Shield, Fingerprint } from "lucide-react";
+import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+import { Fingerprint, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { Obligation, ObligationResumeEvent } from "@alfred/type";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +33,8 @@ function isTestRuntime() {
     return true;
   }
   if (typeof import.meta !== "undefined") {
-    const env = (import.meta as ImportMeta & { env?: Record<string, string> }).env;
+    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
+      .env;
     if (env?.VITE_TEST_MODE === "true") {
       return true;
     }
@@ -182,8 +183,7 @@ export function ObligationChallengeDialog({
       onSuccess();
       onClose();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "resume_failed";
+      const message = error instanceof Error ? error.message : "resume_failed";
       toast.error(message);
     } finally {
       setIsAuthenticating(false);
@@ -227,18 +227,18 @@ export function ObligationChallengeDialog({
 
           {primary && (
             <div className="rounded-xl border border-white/10 bg-void-surface/40 p-4">
-              <p className="text-sm text-biolum">
+              <p className="text-biolum text-sm">
                 {primary.reason || "High-risk action detected"}
               </p>
-              <p className="mt-1 text-xs uppercase tracking-wide text-biolum-faint">
+              <p className="mt-1 text-biolum-faint text-xs uppercase tracking-wide">
                 Obligation: {primary.type}
               </p>
               {metadataRows.length > 0 && (
-                <ul className="mt-3 space-y-1 text-xs text-biolum-dim">
+                <ul className="mt-3 space-y-1 text-biolum-dim text-xs">
                   {metadataRows.map(({ key, value }) => (
-                    <li key={key} className="flex justify-between gap-2">
+                    <li className="flex justify-between gap-2" key={key}>
                       <span className="text-biolum-faint">{key}</span>
-                      <span className="font-mono text-right text-biolum">
+                      <span className="text-right font-mono text-biolum">
                         {value}
                       </span>
                     </li>
@@ -265,7 +265,7 @@ export function ObligationChallengeDialog({
               >
                 Cancel
               </Button>
-              <p className="text-center text-xs text-biolum-faint">
+              <p className="text-center text-biolum-faint text-xs">
                 Confirm you reviewed the requirement before resuming.
               </p>
             </div>

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Obligation } from "@alfred/type";
 import { evaluate } from "@alfred/policy";
+import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { deployRouter } from "../src/routers/deploy";
 

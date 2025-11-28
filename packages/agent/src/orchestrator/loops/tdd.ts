@@ -1,10 +1,10 @@
 import * as fs from "node:fs/promises";
 import { logger } from "@alfred/logger";
 import type { Workspace } from "../../environment/types";
+import { openDirectorySecure } from "../../security/filesystem.js";
 import type { ProjectConfig } from "../../utils/project-detector";
 import { toolCodex } from "../tool/codex";
 import { toolRunner } from "../tool/runner";
-import { openDirectorySecure } from "../../security/filesystem.js";
 
 export type TDDContext = {
   agentId: string;
@@ -69,11 +69,11 @@ export async function runTDDLoop(
         sessionId: `${sessionId}:tdd`, // Separate session
         containerId,
         model,
-      context: context.context,
-      userId: context.userId,
-    },
-    writer: writer as any,
-  });
+        context: context.context,
+        userId: context.userId,
+      },
+      writer: writer as any,
+    });
 
     // Verify Test Fails
     let testExitCode: number;
@@ -84,7 +84,7 @@ export async function runTDDLoop(
     } else {
       const res = await toolRunner.execute(
         "test",
-        resolvedWorkingDirectory,
+        cwdHandle,
         60_000,
         projectConfig
       );

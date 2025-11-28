@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
@@ -21,15 +22,25 @@ import {
 } from "@alfred/agent/orchestrator/multi/tracker";
 // import { BrainstemSupervisor } from "../../loops/supervisor.js";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { openDirectorySecure } from "@alfred/agent/security/filesystem";
 // import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import { ContextBuilder } from "../context";
-import type { OrchestratorContext } from "./types";
 import { formatCodexRuntimeError } from "../utils/codex-error";
+import type { OrchestratorContext } from "./types";
 
 const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
+
+function normalizeWorkingDirectory(candidate: string, workspaceRoot: string) {
+  const handle = openDirectorySecure(candidate, {
+    allowedPrefixes: [workspaceRoot],
+  });
+  const normalized = handle.path;
+  handle.close();
+  return normalized;
+}
 
 export type WavesResult = {
   trackerState: TrackerState;
@@ -37,6 +48,7 @@ export type WavesResult = {
   agentFileHints: Map<string, Set<string>>;
   activeWorkspaces: Workspace[];
   aborted: boolean;
+  interrupted?: boolean;
   escalated?: boolean;
   escalationReason?: string;
 };
@@ -159,6 +171,7 @@ export async function* runWaves(
     workspace,
     `.agent/plans/${runId}.root.md`
   );
+  const workspaceRoot = realpathSync(workspace);
 
   const hasEscalationContext = Boolean(
     escalationContext && escalationContext.trim().length > 0
@@ -212,6 +225,7 @@ export async function* runWaves(
       agentFileHints,
       activeWorkspaces,
       aborted: false,
+      interrupted: false,
     };
   }
 
@@ -241,6 +255,7 @@ export async function* runWaves(
   } | null = null;
 
   let escalationTrigger: { reason: string } | null = null;
+  let hasInterruptedAgents = false;
 
   const allAgentOutcomes: any[] = [];
 
@@ -325,6 +340,10 @@ export async function* runWaves(
     }> = [];
 
     for (const spec of agentSpecs) {
+      spec.workingDirectory = normalizeWorkingDirectory(
+        spec.workingDirectory,
+        workspaceRoot
+      );
       if (signal.aborted) {
         throw new DOMException("Phase aborted", "AbortError");
       }
@@ -354,7 +373,10 @@ export async function* runWaves(
 
           await workspaceEnv.initialize();
           activeWorkspaces.push(workspaceEnv);
-          spec.workingDirectory = workspaceEnv.root;
+          spec.workingDirectory = normalizeWorkingDirectory(
+            workspaceEnv.root,
+            workspaceRoot
+          );
 
           logger.info("workspace_created", {
             runId,
@@ -619,7 +641,7 @@ export async function* runWaves(
             type: "notice",
             message: `agent_interrupted: ${String(error)}`,
           } as any);
-          
+
           // Always restore checkpoint on interrupt
           if (workspaceEnv) {
             try {
@@ -631,10 +653,13 @@ export async function* runWaves(
               });
             }
           }
-          
+
           // Mark agent as interrupted
           const interruptFinishedAt = Date.now();
-          const interruptDurationSeconds = Math.max(0, (interruptFinishedAt - startedAt) / 1000);
+          const interruptDurationSeconds = Math.max(
+            0,
+            (interruptFinishedAt - startedAt) / 1000
+          );
           agentOutcomes.push({
             agentId: spec.agentId,
             stuck: false,
@@ -642,12 +667,14 @@ export async function* runWaves(
             durationSeconds: interruptDurationSeconds,
             role: "codex",
           });
-          
+
+          hasInterruptedAgents = true;
+
           // Break agent loop if signal aborted
           if (ctx.signal.aborted) {
             break;
           }
-          
+
           // Skip normal completion flow for interrupted agents
           continue;
         }
@@ -963,6 +990,7 @@ export async function* runWaves(
     agentFileHints,
     activeWorkspaces,
     aborted: !!abortedWave,
+    interrupted: hasInterruptedAgents,
     escalated: !!escalationTrigger,
     escalationReason: escalationTrigger?.reason,
   };

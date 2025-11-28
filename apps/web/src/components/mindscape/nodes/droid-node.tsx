@@ -1,7 +1,14 @@
 import type { NodeProps } from "@xyflow/react";
-import { Bot, Clock, PauseCircle, Play, ShieldAlert, Terminal } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bot,
+  Clock,
+  PauseCircle,
+  Play,
+  ShieldAlert,
+  Terminal,
+} from "lucide-react";
 import { nanoid } from "nanoid";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
 import { Button } from "@/components/ui/button";
@@ -15,17 +22,19 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useObligationResume } from "@/hooks/use-biometric-resume";
-import { subscribeToDroidStream, type DroidStreamEvent } from "@/lib/droid/stream-client";
+import {
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
+  TIMEOUT_MINUTES_OPTIONS,
+} from "@/lib/codex-constants";
+import { formatCodexErrorMessage } from "@/lib/codex-errors";
+import {
+  type DroidStreamEvent,
+  subscribeToDroidStream,
+} from "@/lib/droid/stream-client";
 import { getToolToken } from "@/lib/token";
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 import { useMindscapeStore } from "@/store/mindscape";
 import { droidNodeDataSchema } from "@/store/mindscape.schemas";
-import { formatCodexErrorMessage } from "@/lib/codex-errors";
-import {
-  ELEVATED_TIMEOUT_THRESHOLD_SEC,
-  MAX_TIMEOUT_SEC,
-  TIMEOUT_MINUTES_OPTIONS,
-} from "@/lib/codex-constants";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
@@ -77,12 +86,14 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       };
 
   const allowedAutoValues: AutoLevel[] = ["read", "low", "medium", "high"];
-  const initialAuto: AutoLevel = allowedAutoValues.includes(initial.auto as AutoLevel)
+  const initialAuto: AutoLevel = allowedAutoValues.includes(
+    initial.auto as AutoLevel
+  )
     ? (initial.auto as AutoLevel)
     : "low";
-  const initialOut: OutFormat = (["text", "json", "debug"] as OutFormat[]).includes(
-    initial.out as OutFormat
-  )
+  const initialOut: OutFormat = (
+    ["text", "json", "debug"] as OutFormat[]
+  ).includes(initial.out as OutFormat)
     ? (initial.out as OutFormat)
     : "text";
 
@@ -102,14 +113,13 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   const computedMinutes = Math.floor(
     ((initial.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC) as number) / 60
   );
-  const fallbackMinutes = Math.max(
-    computedMinutes,
-    TIMEOUT_MINUTES_OPTIONS[0]
-  );
+  const fallbackMinutes = Math.max(computedMinutes, TIMEOUT_MINUTES_OPTIONS[0]);
   const initialTimeoutMinutes =
     TIMEOUT_MINUTES_OPTIONS.find((minutes) => minutes >= fallbackMinutes) ??
     TIMEOUT_MINUTES_OPTIONS[TIMEOUT_MINUTES_OPTIONS.length - 1];
-  const [timeoutMinutes, setTimeoutMinutes] = useState<number>(initialTimeoutMinutes);
+  const [timeoutMinutes, setTimeoutMinutes] = useState<number>(
+    initialTimeoutMinutes
+  );
   const timeoutSec = timeoutMinutes * 60;
   const requiresElevation = timeoutSec > ELEVATED_TIMEOUT_THRESHOLD_SEC;
 
@@ -117,12 +127,12 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     (state) => state.updateArtifactData
   );
 
-  const subscriptionRef = useRef<ReturnType<typeof subscribeToDroidStream> | null>(
-    null
-  );
-  const clientRef = useRef<ReturnType<typeof createBrowserTrpcProxyClient> | null>(
-    null
-  );
+  const subscriptionRef = useRef<ReturnType<
+    typeof subscribeToDroidStream
+  > | null>(null);
+  const clientRef = useRef<ReturnType<
+    typeof createBrowserTrpcProxyClient
+  > | null>(null);
 
   if (!clientRef.current) {
     try {
@@ -160,11 +170,12 @@ export function DroidNode({ id, data, selected }: NodeProps) {
     subscriptionRef.current = null;
   }, []);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       stopStream();
-    };
-  }, [stopStream]);
+    },
+    [stopStream]
+  );
 
   useEffect(() => {
     updateArtifactData(id, {
@@ -178,7 +189,18 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       lastRunId: activeRunId ?? undefined,
       timeoutSec,
     });
-  }, [id, prompt, auto, out, status, log, lastError, activeRunId, timeoutSec, updateArtifactData]);
+  }, [
+    id,
+    prompt,
+    auto,
+    out,
+    status,
+    log,
+    lastError,
+    activeRunId,
+    timeoutSec,
+    updateArtifactData,
+  ]);
 
   const handleStreamEvent = useCallback(
     (event: DroidStreamEvent) => {
@@ -348,7 +370,10 @@ export function DroidNode({ id, data, selected }: NodeProps) {
       return;
     }
     const globalScope = globalThis as unknown as {
-      __droidTestHooks__?: Record<string, { run: () => Promise<void>; stop: () => void }>;
+      __droidTestHooks__?: Record<
+        string,
+        { run: () => Promise<void>; stop: () => void }
+      >;
     };
     if (!globalScope.__droidTestHooks__) {
       globalScope.__droidTestHooks__ = {};
@@ -396,7 +421,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
               {status}
             </span>
             {activeRunId && (
-              <span className="text-biolum-faint font-mono text-[10px]">
+              <span className="font-mono text-[10px] text-biolum-faint">
                 {activeRunId.slice(0, 8)}
               </span>
             )}
@@ -415,7 +440,10 @@ export function DroidNode({ id, data, selected }: NodeProps) {
             value={prompt}
           />
           <div className="flex items-center gap-3">
-            <Select onValueChange={(value) => setAuto(value as AutoLevel)} value={auto}>
+            <Select
+              onValueChange={(value) => setAuto(value as AutoLevel)}
+              value={auto}
+            >
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Autonomy" />
               </SelectTrigger>
@@ -427,7 +455,10 @@ export function DroidNode({ id, data, selected }: NodeProps) {
                 ))}
               </SelectContent>
             </Select>
-            <Select onValueChange={(value) => setOut(value as OutFormat)} value={out}>
+            <Select
+              onValueChange={(value) => setOut(value as OutFormat)}
+              value={out}
+            >
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Output" />
               </SelectTrigger>
@@ -440,8 +471,8 @@ export function DroidNode({ id, data, selected }: NodeProps) {
               </SelectContent>
             </Select>
             <Button
-              data-testid="droid-run-button"
               className="flex-1"
+              data-testid="droid-run-button"
               onClick={status === "running" ? handleStop : handleRun}
               variant={status === "running" ? "secondary" : "default"}
             >
@@ -456,7 +487,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
               )}
             </Button>
           </div>
-          <div className="flex items-center gap-3 text-xs text-biolum-faint">
+          <div className="flex items-center gap-3 text-biolum-faint text-xs">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-biolum" />
               <span>Timeout</span>
@@ -481,13 +512,14 @@ export function DroidNode({ id, data, selected }: NodeProps) {
             </span>
           </div>
           {requiresElevation && (
-            <div className="flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+            <div className="flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-200 text-xs">
               <ShieldAlert className="h-3 w-3" />
-              Timeouts above {TIMEOUT_THRESHOLD_MINUTES} min require passkey confirmation.
+              Timeouts above {TIMEOUT_THRESHOLD_MINUTES} min require passkey
+              confirmation.
             </div>
           )}
           <div className="rounded-lg border border-white/10 bg-black/40">
-            <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2 text-xs text-biolum-faint">
+            <div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 text-biolum-faint text-xs">
               <Terminal className="h-3 w-3" /> Live Stream
               {status === "suspended" && (
                 <span className="ml-auto flex items-center gap-1 text-amber-300">
@@ -517,9 +549,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
               </div>
             </ScrollArea>
           </div>
-          {lastError && (
-            <p className="text-sm text-red-400">{lastError}</p>
-          )}
+          {lastError && <p className="text-red-400 text-sm">{lastError}</p>}
         </div>
       </MindscapeNode>
       <ObligationChallengeDialog

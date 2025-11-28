@@ -1,10 +1,10 @@
 import { describe, expect, it, mock } from "bun:test";
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { empty, fact as graphFact } from "@alfred/knowledge";
 import type {
   KnowledgeConfidence,
   KnowledgeFact,
 } from "@alfred/type/knowledge";
-import { EMBEDDING_DIM } from "@alfred/embed";
 
 const toConfidence = (value: number) => value as KnowledgeConfidence;
 
@@ -87,16 +87,12 @@ describe("synthesize", () => {
 
     const graph = empty();
     const facts = [
-      makeFactInput(
-        "insight-1",
-        "Orion team shipped the planning dashboard.",
-        ["Orion"]
-      ),
-      makeFactInput(
-        "insight-2",
-        "Orion reduced latency by twenty percent.",
-        ["Orion"]
-      ),
+      makeFactInput("insight-1", "Orion team shipped the planning dashboard.", [
+        "Orion",
+      ]),
+      makeFactInput("insight-2", "Orion reduced latency by twenty percent.", [
+        "Orion",
+      ]),
       makeFactInput(
         "insight-3",
         "Orion onboarded three engineers this quarter.",

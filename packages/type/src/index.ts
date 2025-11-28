@@ -13,11 +13,11 @@ export * from "./knowledge";
 export * from "./personal";
 // Plan types
 export * from "./plan";
+// Policy + auth shared types
+export * from "./policy";
 export { RuntimeContext } from "./runtime-context";
 // Streaming and UI message types
 export * from "./stream";
 export * from "./stream.zod";
 // Voice streaming types
 export * from "./voice";
-// Policy + auth shared types
-export * from "./policy";

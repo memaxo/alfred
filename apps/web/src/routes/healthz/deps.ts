@@ -11,14 +11,15 @@ export const Route = createFileRoute("/healthz/deps")({
 
         try {
           await db.execute(sql`select 1`);
-          const redis = getRedis();
-          if (redis) {
-            await redis.ping();
-          }
+          const { isRedisHealthy } = await import("@alfred/auth/redis");
+          const redisHealthy = await isRedisHealthy();
 
           healthChecksTotal.labels("deps", "ok").inc();
 
-          return Response.json({ ok: true });
+          return Response.json({
+            ok: true,
+            redis: redisHealthy ? "ok" : "unavailable",
+          });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "deps_failed";

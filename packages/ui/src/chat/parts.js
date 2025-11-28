@@ -1,58 +1,115 @@
-export function isTextPart(part) {
+ function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }
+
+export function isTextPart(
+  part
+) {
   if (part.type !== "text") {
     return false;
   }
   return typeof part.text === "string";
 }
-export function isReasoningPart(part) {
+
+export function isReasoningPart(
+  part
+) {
   if (part.type !== "reasoning") {
     return false;
   }
-  return typeof part.text === "string";
+  return typeof (part ).text === "string";
 }
-export function isToolCallPart(part) {
+
+export function isToolCallPart(
+  part
+)
+
+
+
+
+ {
   return part.type === "tool-call";
 }
-export function isToolResultPart(part) {
+
+export function isToolResultPart(
+  part
+)
+
+
+
+
+
+
+ {
   return part.type === "tool-result";
 }
-export function isFilePart(part) {
+
+export function isFilePart(
+  part
+) {
   if (part.type !== "file") {
     return false;
   }
-  const filePart = part;
+  const filePart = part ;
   return (
     typeof filePart.mediaType === "string" && typeof filePart.url === "string"
   );
 }
-export function isDataPart(part) {
+
+export function isDataPart(
+  part
+) {
   return typeof part.type === "string" && part.type.startsWith("data-");
 }
-export function isDataCachePart(part) {
+
+export function isDataCachePart(
+  part
+)
+
+
+
+ {
   return part.type === "data-cache";
 }
-export function isDataStatusPart(part) {
+
+export function isDataStatusPart(
+  part
+)
+
+
+ {
   return part.type === "data-status";
 }
-export function isDataPartNamed(part, name) {
+
+export function isDataPartNamed(
+  part,
+  name
+)
+
+
+
+ {
   return part.type === `data-${name}`;
 }
-export function extractStructuredData(part) {
+
+export function extractStructuredData(
+  part
+) {
   if (isDataPart(part)) {
-    const dataPart = part;
+    const dataPart = part ;
     return dataPart.data;
   }
   if (isToolResultPart(part)) {
-    return part.output;
+    return part.result;
   }
   return null;
 }
+
 function extractMetadata(message) {
   if (!message.metadata || typeof message.metadata !== "object") {
     return {};
   }
-  return message.metadata;
+  return message.metadata ;
 }
+
 export function getAgentLabel(message) {
   const metadata = extractMetadata(message);
   const agent = typeof metadata.agent === "string" ? metadata.agent : null;
@@ -70,16 +127,21 @@ export function getAgentLabel(message) {
       return String(message.role);
   }
 }
+
 export function getTimestamp(message) {
   const metadata = extractMetadata(message);
-  const source = metadata.completeAt ?? metadata.createdAt ?? metadata.created;
+  const source = (_nullishCoalesce(_nullishCoalesce(metadata.completeAt, () => (
+    metadata.createdAt)), () => (
+    metadata.created))) ;
+
   if (!source) {
     return null;
   }
+
   const date = source instanceof Date ? source : new Date(source);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
+
   return date;
 }
-//# sourceMappingURL=parts.js.map

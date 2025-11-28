@@ -194,9 +194,7 @@ export function recordAssistantEscalation(kind: string) {
   assistantEscalationCounter?.labels(kind).inc();
 }
 
-export function registerPolicyCheckFailureCounter(
-  counter: SingleLabelCounter
-) {
+export function registerPolicyCheckFailureCounter(counter: SingleLabelCounter) {
   policyCheckFailureCounter = counter;
 }
 

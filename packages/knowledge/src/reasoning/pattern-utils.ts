@@ -4,11 +4,13 @@ import { PATTERN_ANCHORS } from "../ontology";
 
 export type ReasoningPattern = "causal" | "decision" | "alternative";
 
-const anchorByPattern = new Map<ReasoningPattern, (typeof PATTERN_ANCHORS)[number]>(
-  PATTERN_ANCHORS.map((anchor) => [anchor.pattern, anchor]) as Array<[
-    ReasoningPattern,
-    (typeof PATTERN_ANCHORS)[number],
-  ]>
+const anchorByPattern = new Map<
+  ReasoningPattern,
+  (typeof PATTERN_ANCHORS)[number]
+>(
+  PATTERN_ANCHORS.map((anchor) => [anchor.pattern, anchor]) as Array<
+    [ReasoningPattern, (typeof PATTERN_ANCHORS)[number]]
+  >
 );
 
 const centroidCache = new Map<ReasoningPattern, Promise<Float32Array>>();

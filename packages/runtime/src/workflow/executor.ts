@@ -111,7 +111,9 @@ function requiresBiometric(obligations: Obligation[] | undefined): boolean {
   );
 }
 
-export function ensureObligations(ctx: { policy?: { obligations: Obligation[] } }) {
+export function ensureObligations(ctx: {
+  policy?: { obligations: Obligation[] };
+}) {
   const obligations = ctx.policy?.obligations ?? [];
   if (requiresBiometric(obligations)) {
     throw new TRPCError({

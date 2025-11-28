@@ -8,8 +8,8 @@
 import {
   type Decision,
   type EvaluateInput,
-  type Obligation,
   evaluate,
+  type Obligation,
 } from "@alfred/policy";
 
 /**

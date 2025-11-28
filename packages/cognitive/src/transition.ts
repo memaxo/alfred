@@ -1,18 +1,12 @@
 import { performance } from "node:perf_hooks";
-
-import {
-  idle,
-  reflecting,
-  thinking,
-  updatePhysiology,
-} from "./state";
+import { cognitiveTransitionDuration } from "./metrics";
 import type {
   AutonomyGradient,
   CognitiveState,
   Event,
   Physiology,
 } from "./state";
-import { cognitiveTransitionDuration } from "./metrics";
+import { idle, reflecting, thinking, updatePhysiology } from "./state";
 
 const entropyKeywords = ["loop", "boredom"];
 

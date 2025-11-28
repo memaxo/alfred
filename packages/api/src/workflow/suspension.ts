@@ -1,18 +1,14 @@
 import { randomUUID } from "node:crypto";
-
-import { type ResumePayload } from "@alfred/agent/workflow/registry";
+import { recordAudit } from "@alfred/agent/utils/audit";
+import type { ResumePayload } from "@alfred/agent/workflow/registry";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   registerRunHandle,
   unregisterRunHandle,
 } from "@alfred/agent/workflow/session-recovery";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
-import { recordAudit } from "@alfred/agent/utils/audit";
-import { logger } from "@alfred/logger";
 import * as workflowRepo from "@alfred/db/repo/workflow";
-import type {
-  Obligation,
-  ObligationResumeEvent,
-} from "@alfred/type";
+import { logger } from "@alfred/logger";
+import type { Obligation } from "@alfred/type";
 import { resolveObligationResumeEvents } from "@alfred/type";
 import {
   workflowObligationDurationSeconds,
@@ -43,10 +39,11 @@ type SuspensionOptions = {
     obligations: Obligation[];
   }) => Promise<void>;
   onError: (error: unknown, info: { runId: string }) => void;
-  resolveResumeEvents?: (
+  resolveResumeEvents?: (obligations: Obligation[]) => ResumePayload["event"][];
+  onSuspended?: (
+    runId: string,
     obligations: Obligation[]
-  ) => ResumePayload["event"][];
-  onSuspended?: (runId: string, obligations: Obligation[]) => void | Promise<void>;
+  ) => void | Promise<void>;
   onResumed?: (runId: string) => void | Promise<void>;
   onCancelled?: (runId: string) => void | Promise<void>;
 };
@@ -73,14 +70,13 @@ function computeResumeEvents(
       return Array.from(new Set(resolved));
     }
   }
-  const defaults = resolveObligationResumeEvents(obligations) as ResumePayload["event"][];
+  const defaults = resolveObligationResumeEvents(
+    obligations
+  ) as ResumePayload["event"][];
   return defaults.length > 0 ? defaults : ["human-authz"];
 }
 
-function recordSuspensionStart(
-  transport: string,
-  obligations: Obligation[]
-) {
+function recordSuspensionStart(transport: string, obligations: Obligation[]) {
   for (const obligation of obligations) {
     workflowObligationSuspensionsTotal
       .labels(transport, "suspended", obligation.type ?? "unknown")
@@ -95,8 +91,12 @@ function recordSuspensionOutcome(
   obligationType: string
 ) {
   const durationSeconds = Math.max(Date.now() - startedAt, 0) / 1000;
-  workflowObligationDurationSeconds.labels(transport, result).observe(durationSeconds);
-  workflowObligationSuspensionsTotal.labels(transport, result, obligationType).inc();
+  workflowObligationDurationSeconds
+    .labels(transport, result)
+    .observe(durationSeconds);
+  workflowObligationSuspensionsTotal
+    .labels(transport, result, obligationType)
+    .inc();
 }
 
 async function appendObligationEvent(runId: string, obligations: Obligation[]) {
@@ -259,10 +259,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
           return;
         }
         if (!current.resumeEvents.includes(resumeData.event)) {
-          options.onError(
-            new Error("unsupported_resume_event"),
-            { runId }
-          );
+          options.onError(new Error("unsupported_resume_event"), { runId });
           return;
         }
         try {

@@ -11,8 +11,9 @@ type SessionRecord = {
 };
 
 async function ensureRecentBiometric(session: unknown): Promise<void> {
-  const sessionRecord = (session as { session?: SessionRecord } | null | undefined)
-    ?.session;
+  const sessionRecord = (
+    session as { session?: SessionRecord } | null | undefined
+  )?.session;
   const sessionId = sessionRecord?.id ?? sessionRecord?.token;
   if (!sessionId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -22,8 +23,7 @@ async function ensureRecentBiometric(session: unknown): Promise<void> {
   } catch (error) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message:
-        error instanceof Error ? error.message : "biometric_required",
+      message: error instanceof Error ? error.message : "biometric_required",
     });
   }
 }

@@ -38,7 +38,9 @@ const runRegistryMocks = {
   unregister: vi.fn().mockResolvedValue(undefined),
 };
 
-mock.module("../../src/workflow/registry", () => ({ runRegistry: runRegistryMocks }));
+mock.module("../../src/workflow/registry", () => ({
+  runRegistry: runRegistryMocks,
+}));
 
 const createWorkflowExecutorMock = vi.fn();
 const ensureWorkflowConversationMock = vi
@@ -60,7 +62,9 @@ mock.module("../../src/workflow/services", () => ({
 }));
 
 mock.module("../../src/workflow/linear", () => ({
-  ensureLinearTicket: vi.fn().mockResolvedValue({ linear: undefined, ticket: null }),
+  ensureLinearTicket: vi
+    .fn()
+    .mockResolvedValue({ linear: undefined, ticket: null }),
 }));
 
 mock.module("../../src/integrations/linear", () => ({
@@ -82,9 +86,9 @@ mock.module("../../src/utils/event-id", () => ({
   makeEventId: vi.fn().mockImplementation(({ type }) => `${type}-id`),
 }));
 
-const eventToUiMessagesMock = vi.fn<[
-  WorkflowEvent
-], WorkflowEvent[] | null>(() => null);
+const eventToUiMessagesMock = vi.fn<[WorkflowEvent], WorkflowEvent[] | null>(
+  () => null
+);
 
 mock.module("../../src/utils/normalize", () => ({
   eventToUiMessages: eventToUiMessagesMock,
@@ -115,7 +119,9 @@ mock.module("../../src/workflow/review-gate", () => ({
   },
 }));
 
-const { orchestrateWorkflowStream } = await import("../../src/workflow/orchestrator");
+const { orchestrateWorkflowStream } = await import(
+  "../../src/workflow/orchestrator"
+);
 
 describe("workflow orchestrator self-correction", () => {
   beforeEach(() => {
@@ -183,7 +189,9 @@ describe("workflow orchestrator self-correction", () => {
     );
     expect(fixerEvent).toBeTruthy();
     expect(metricsMock.multiAgentErrorsTotal.inc).not.toHaveBeenCalledWith(
-      expect.objectContaining({ kind: expect.stringContaining("review_escalated") })
+      expect.objectContaining({
+        kind: expect.stringContaining("review_escalated"),
+      })
     );
     expect(emitError).not.toHaveBeenCalled();
   });
@@ -286,7 +294,9 @@ describe("workflow orchestrator self-correction", () => {
 
     expect(emitError).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining("review_escalation_required:fixer_exhausted"),
+        message: expect.stringContaining(
+          "review_escalation_required:fixer_exhausted"
+        ),
       })
     );
     const escalatedEvent = emitNext.mock.calls.find(
@@ -301,9 +311,7 @@ describe("workflow orchestrator self-correction", () => {
       attempts: 3,
       fixerAttempts: 2,
       plan: ".agent/plans/run/review-debugger.md",
-      failures: [
-        { command: "bun test", output: "fail", checkId: "tests" },
-      ],
+      failures: [{ command: "bun test", output: "fail", checkId: "tests" }],
       relevantFiles: ["packages/agent/src/foo.ts"],
       summary: "details",
     };
@@ -312,7 +320,11 @@ describe("workflow orchestrator self-correction", () => {
       summary: "fail",
       stream: (async function* () {
         yield { type: "run", id: "run-meta" } as WorkflowEvent;
-        yield { type: "event", kind: "review-escalated", data: escalationPayload } as WorkflowEvent;
+        yield {
+          type: "event",
+          kind: "review-escalated",
+          data: escalationPayload,
+        } as WorkflowEvent;
       })(),
       resume: vi.fn(),
       cancel: vi.fn(),

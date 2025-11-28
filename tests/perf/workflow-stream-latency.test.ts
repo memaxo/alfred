@@ -1,19 +1,12 @@
 process.env.OPENAI_API_KEY ??= "test-key";
 process.env.DISABLE_TRPC_METRICS = "1";
 
-import {
-  afterEach,
-  describe,
-  expect,
-  it,
-  mock,
-  vi,
-} from "bun:test";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import { performance } from "node:perf_hooks";
 import type { WorkflowEvent } from "@alfred/type";
 import { toObservable } from "../../packages/api/test/utils/stream";
-import { WorkflowTestHarness } from "../../packages/api/test/utils/workflow-server";
 import { createWorkflowCaller } from "../../packages/api/test/utils/workflow-caller";
+import { WorkflowTestHarness } from "../../packages/api/test/utils/workflow-server";
 
 const useRealLatencyMode = process.env.WORKFLOW_LATENCY_MODE === "real";
 if (useRealLatencyMode) {
@@ -65,7 +58,10 @@ describe("workflow stream latency", () => {
     const harness = new WorkflowTestHarness();
 
     const startedAt = performance.now();
-    const response = await harness.invoke(handleWorkflowStreamRequest, baseInput);
+    const response = await harness.invoke(
+      handleWorkflowStreamRequest,
+      baseInput
+    );
     const latency = await readFirstWorkflowEventLatency(response, startedAt);
 
     console.info(

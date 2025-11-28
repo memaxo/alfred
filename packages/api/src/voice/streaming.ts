@@ -11,7 +11,16 @@ import {
   VoiceSocketHandler,
 } from "@alfred/voice/server/socket";
 import { createContext } from "../context";
-import { policyDecisionsTotal, policyObligationsTotal } from "../metrics";
+import {
+  policyDecisionsTotal,
+  policyObligationsTotal,
+  voiceWebSocketBackpressureEventsTotal,
+  voiceWebSocketConnectionRejectedTotal,
+  voiceWebSocketConnectionsCurrent,
+  voiceWebSocketPingTimeoutTotal,
+  voiceWebSocketUpgradeDurationSeconds,
+  voiceWebSocketUpgradeRateLimitHitsTotal,
+} from "../metrics";
 import {
   getSessionUser,
   getSessionUserId,
@@ -31,10 +40,48 @@ import {
 const DEFAULT_PORT = 8788;
 const INACTIVITY_TIMEOUT_MS = 30_000;
 const CLEANUP_INTERVAL_MS = 10_000;
+const MAX_CONCURRENT_CONNECTIONS = 100;
+const MAX_CONNECTIONS_PER_MINUTE_PER_IP = 10;
+const MAX_CONNECTIONS_PER_MINUTE_PER_USER = 5;
+const PING_INTERVAL_MS = 30_000;
+const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
 const activeSockets = new Set<any>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+type RateLimitBucket = { count: number; resetAt: number };
+const ipRateLimitBuckets = new Map<string, RateLimitBucket>();
+const userRateLimitBuckets = new Map<string, RateLimitBucket>();
+
+function checkRateLimit(
+  identifier: string,
+  buckets: Map<string, RateLimitBucket>,
+  maxPerMinute: number
+): boolean {
+  const now = Date.now();
+  const bucket = buckets.get(identifier);
+
+  if (!bucket || now > bucket.resetAt) {
+    buckets.set(identifier, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+
+  if (bucket.count >= maxPerMinute) {
+    return false;
+  }
+
+  bucket.count++;
+  return true;
+}
+
+function getClientIP(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() ?? "unknown";
+  }
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
 
 const STREAM_RESOURCE: PolicyResource = {
   kind: "voice.model",
@@ -97,6 +144,21 @@ async function evaluateVoicePolicy(
 }
 
 export async function authorizeVoiceStreamRequest(req: Request) {
+  const upgradeStart = performance.now();
+
+  // Rate limiting by IP
+  const clientIP = getClientIP(req);
+  if (
+    !checkRateLimit(
+      clientIP,
+      ipRateLimitBuckets,
+      MAX_CONNECTIONS_PER_MINUTE_PER_IP
+    )
+  ) {
+    voiceWebSocketUpgradeRateLimitHitsTotal.labels("ip").inc();
+    throw new VoiceStreamAuthError("rate_limit_exceeded", 429);
+  }
+
   let session: any | null = null;
   try {
     session = await auth.api.getSession({ headers: req.headers });
@@ -110,9 +172,26 @@ export async function authorizeVoiceStreamRequest(req: Request) {
   if (!sessionUser?.id) {
     throw new VoiceStreamAuthError("session_required", 401);
   }
+
+  // Rate limiting by userId
+  if (
+    !checkRateLimit(
+      sessionUser.id,
+      userRateLimitBuckets,
+      MAX_CONNECTIONS_PER_MINUTE_PER_USER
+    )
+  ) {
+    voiceWebSocketUpgradeRateLimitHitsTotal.labels("user").inc();
+    throw new VoiceStreamAuthError("rate_limit_exceeded", 429);
+  }
+
   for (const action of REQUIRED_ACTIONS) {
     await evaluateVoicePolicy(session, action, STREAM_RESOURCE);
   }
+
+  const upgradeDuration = (performance.now() - upgradeStart) / 1000;
+  voiceWebSocketUpgradeDurationSeconds.observe(upgradeDuration);
+
   return {
     userId: sessionUser.id,
   };
@@ -132,6 +211,9 @@ export function startVoiceStreamingPrototype(): void {
   const { voiceRegistry } = getVoicePools();
 
   const handler = new VoiceSocketHandler(voiceRegistry, {
+    onSendError: (reason) => {
+      voiceWebSocketSendFailuresTotal.labels(reason).inc();
+    },
     onSessionStart: async (userId, sessionId, config) => {
       const session = await claimVoiceSession({
         userId,
@@ -192,6 +274,15 @@ export function startVoiceStreamingPrototype(): void {
     async fetch(req, server) {
       const url = new URL(req.url);
       if (url.pathname === "/voice/stream") {
+        // Check connection limit before upgrade
+        if (activeSockets.size >= MAX_CONCURRENT_CONNECTIONS) {
+          voiceWebSocketConnectionRejectedTotal.labels("max_connections").inc();
+          return new Response("service_unavailable", {
+            status: 503,
+            headers: { "Retry-After": "60" },
+          });
+        }
+
         try {
           const [authz, ctx] = await Promise.all([
             authorizeVoiceStreamRequest(req),
@@ -202,6 +293,7 @@ export function startVoiceStreamingPrototype(): void {
               userId: authz.userId,
               runtime: ctx.runtimeContext,
               lastActivity: Date.now(),
+              pingSentAt: null as number | null,
             },
           });
           if (!upgraded) {
@@ -214,7 +306,14 @@ export function startVoiceStreamingPrototype(): void {
               status: error.status,
               message: error.message,
             });
-            return new Response(error.message, { status: error.status });
+            const headers: Record<string, string> = {};
+            if (error.status === 429) {
+              headers["Retry-After"] = "60";
+            }
+            return new Response(error.message, {
+              status: error.status,
+              headers,
+            });
           }
           logger.error("voice_stream_proto_upgrade_failed", {
             error: error instanceof Error ? error.message : String(error),
@@ -225,25 +324,50 @@ export function startVoiceStreamingPrototype(): void {
       return new Response("voice streaming prototype", { status: 200 });
     },
     websocket: {
+      maxPayloadLength: 64 * 1024, // 64KB
+      backpressureLimit: 1024 * 1024, // 1MB
+      closeOnBackpressureLimit: false,
+      sendPings: true,
       open(ws) {
         // Init default data
         if (!ws.data.surface) {
           ws.data.surface = "stream";
         }
         ws.data.lastActivity = Date.now();
+        ws.data.pingSentAt = Date.now();
         activeSockets.add(ws);
+        voiceWebSocketConnectionsCurrent.set(activeSockets.size);
 
         // Send ready
         try {
           ws.send(JSON.stringify({ type: "ready", sessionId: null }));
-        } catch {}
+        } catch (error) {
+          logger.error("voice_stream_proto_send_failed", {
+            sessionId: null,
+            eventType: "ready",
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       },
       async message(ws, message) {
         ws.data.lastActivity = Date.now();
         await handler.handleMessage(ws, message);
       },
+      drain(ws) {
+        voiceWebSocketBackpressureEventsTotal.inc();
+        logger.debug("voice_stream_proto_backpressure", {
+          sessionId: ws.data.sessionId,
+        });
+      },
+      ping(ws, data) {
+        ws.data.pingSentAt = Date.now();
+      },
+      pong(ws, data) {
+        ws.data.lastActivity = Date.now();
+      },
       close(ws) {
         activeSockets.delete(ws);
+        voiceWebSocketConnectionsCurrent.set(activeSockets.size);
         if (ws.data.sessionId) {
           voiceRegistry.removeSession(ws.data.sessionId);
         }
@@ -254,12 +378,29 @@ export function startVoiceStreamingPrototype(): void {
   cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const ws of activeSockets) {
+      // Check ping timeout
+      if (ws.data.pingSentAt && now - ws.data.pingSentAt > PING_TIMEOUT_MS) {
+        voiceWebSocketPingTimeoutTotal.inc();
+        logger.info("voice_stream_proto_ping_timeout", {
+          sessionId: ws.data.sessionId,
+        });
+        ws.close(1000, "ping_timeout");
+        activeSockets.delete(ws);
+        voiceWebSocketConnectionsCurrent.set(activeSockets.size);
+        if (ws.data.sessionId) {
+          voiceRegistry.removeSession(ws.data.sessionId);
+        }
+        continue;
+      }
+
+      // Check inactivity timeout
       if (now - ws.data.lastActivity > INACTIVITY_TIMEOUT_MS) {
         logger.info("voice_stream_proto_timeout", {
           sessionId: ws.data.sessionId,
         });
         ws.close(1000, "inactivity_timeout");
         activeSockets.delete(ws);
+        voiceWebSocketConnectionsCurrent.set(activeSockets.size);
         if (ws.data.sessionId) {
           voiceRegistry.removeSession(ws.data.sessionId);
         }
@@ -289,4 +430,8 @@ export function stopVoiceStreamingPrototype(): void {
   }
   server = null;
   activeSockets.clear();
+  voiceWebSocketConnectionsCurrent.set(0);
+  // Clear rate limit buckets
+  ipRateLimitBuckets.clear();
+  userRateLimitBuckets.clear();
 }

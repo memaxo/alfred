@@ -1,4 +1,11 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
 

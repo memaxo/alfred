@@ -1,5 +1,5 @@
 import type { CognitiveState, Decision } from "@alfred/cognitive/state";
-import { autonomy as toAutonomy, deciding } from "@alfred/cognitive/state";
+import { deciding, autonomy as toAutonomy } from "@alfred/cognitive/state";
 
 export type RiskLevel = "low" | "medium" | "high";
 

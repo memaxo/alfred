@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
 
 import {
-  idle,
-  initialAutonomy,
-  reflecting,
-  thinking,
   type AutonomyGradient,
   type CognitiveState,
   type Event,
+  idle,
+  initialAutonomy,
   type Outcome,
+  reflecting,
+  thinking,
 } from "../src/state";
 import { applyTransition } from "../src/transition";
 
@@ -61,10 +61,12 @@ describe("applyTransition", () => {
     const result = apply(start, inputEvent("Plan lunch"));
 
     expect(result.state._).toBe("thinking");
-    expect((result.state as Extract<CognitiveState, { _: "thinking" }>).about).toBe(
-      "Plan lunch"
+    expect(
+      (result.state as Extract<CognitiveState, { _: "thinking" }>).about
+    ).toBe("Plan lunch");
+    expect(result.state.physiology.energy).toBeLessThan(
+      start.physiology.energy
     );
-    expect(result.state.physiology.energy).toBeLessThan(start.physiology.energy);
     expect(result.autonomy).toBe(auto);
   });
 

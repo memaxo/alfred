@@ -1,6 +1,3 @@
-import Ajv from "ajv";
-import Ajv2019 from "ajv/dist/2019";
-import Ajv2020 from "ajv/dist/2020";
 import { logger } from "@alfred/logger";
 import type {
   AgentMessageItem,
@@ -16,19 +13,17 @@ import type {
   ThreadEvent,
   ThreadItem,
   ThreadStartedEvent,
+  TodoListItem,
   TurnCompletedEvent,
   TurnFailedEvent,
   TurnStartedEvent,
   WebSearchItem,
-  TodoListItem,
 } from "@openai/codex-sdk";
+import Ajv from "ajv";
+import Ajv2019 from "ajv/dist/2019";
+import Ajv2020 from "ajv/dist/2020";
 import { z } from "zod";
-import {
-  DEFAULT_TIMEOUT_SEC,
-  ELEVATED_TIMEOUT_THRESHOLD_SEC,
-  MAX_TIMEOUT_SEC,
-  MIN_TIMEOUT_SEC,
-} from "./constants.js";
+import { MAX_TIMEOUT_SEC, MIN_TIMEOUT_SEC } from "./constants.js";
 
 const MAX_SCHEMA_DEPTH = 10;
 const MAX_SCHEMA_PROPERTIES = 100;
@@ -74,7 +69,12 @@ function exceedsComplexityLimits(schema: Record<string, unknown>): boolean {
   };
 
   function inspect(node: unknown, depth: number, flags: ComplexityState): void {
-    if (flags.tooDeep || flags.tooManyProps || flags.externalRef || flags.invalidNode) {
+    if (
+      flags.tooDeep ||
+      flags.tooManyProps ||
+      flags.externalRef ||
+      flags.invalidNode
+    ) {
       return;
     }
 
@@ -95,7 +95,12 @@ function exceedsComplexityLimits(schema: Record<string, unknown>): boolean {
     if (Array.isArray(node)) {
       for (const item of node) {
         inspect(item, depth + 1, flags);
-        if (flags.tooDeep || flags.tooManyProps || flags.externalRef || flags.invalidNode) {
+        if (
+          flags.tooDeep ||
+          flags.tooManyProps ||
+          flags.externalRef ||
+          flags.invalidNode
+        ) {
           return;
         }
       }
@@ -123,14 +128,24 @@ function exceedsComplexityLimits(schema: Record<string, unknown>): boolean {
         }
       }
       inspect(value, depth + 1, flags);
-      if (flags.tooDeep || flags.tooManyProps || flags.externalRef || flags.invalidNode) {
+      if (
+        flags.tooDeep ||
+        flags.tooManyProps ||
+        flags.externalRef ||
+        flags.invalidNode
+      ) {
         return;
       }
     }
   }
 
   inspect(schema, 1, state);
-  return state.tooDeep || state.tooManyProps || state.externalRef || state.invalidNode;
+  return (
+    state.tooDeep ||
+    state.tooManyProps ||
+    state.externalRef ||
+    state.invalidNode
+  );
 }
 
 function isStructurallyValidSchema(schema: Record<string, unknown>): boolean {
@@ -214,7 +229,9 @@ export const codexInputSchema = z.object({
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
   containerId: z.string().optional(), // Phase 11: Docker support
-  outputSchema: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
+  outputSchema: z
+    .union([z.boolean(), z.record(z.string(), z.unknown())])
+    .optional(),
   context: z
     .object({
       linearIssueId: z.string().optional(),
@@ -317,7 +334,9 @@ const normalizeAggregatedOutput = (
   value: string | string[] | undefined
 ): string => {
   if (Array.isArray(value)) {
-    return value.filter((part): part is string => typeof part === "string").join("\n");
+    return value
+      .filter((part): part is string => typeof part === "string")
+      .join("\n");
   }
   return typeof value === "string" ? value : "";
 };
@@ -395,8 +414,8 @@ const errorItemSchema: z.ZodType<ErrorItem> = z
   })
   .passthrough();
 
-const threadItemSchema: z.ZodType<ThreadItem> = z.discriminatedUnion("type", [
-  reasoningItemSchema,
+const threadItemSchema = z.discriminatedUnion("type", [
+  reasoningItemSchema as z.ZodType<ReasoningItem> & z.ZodDiscriminatedUnionOption<"type">,
   agentMessageItemSchema,
   commandExecutionItemSchema,
   fileChangeItemSchema,
@@ -404,7 +423,7 @@ const threadItemSchema: z.ZodType<ThreadItem> = z.discriminatedUnion("type", [
   webSearchItemSchema,
   todoListItemSchema,
   errorItemSchema,
-]);
+]) as z.ZodType<ThreadItem>;
 
 export const threadStartedEventSchema: z.ZodType<ThreadStartedEvent> = z
   .object({
@@ -560,8 +579,8 @@ export type CodexBackend = "cli" | "sdk";
 export type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";
 
 export {
-  MIN_TIMEOUT_SEC,
-  ELEVATED_TIMEOUT_THRESHOLD_SEC,
   DEFAULT_TIMEOUT_SEC,
+  ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
 } from "./constants.js";

@@ -1,11 +1,11 @@
 import { describe, expect, it, mock } from "bun:test";
-import { assessSessionResumeEligibility } from "../../../src/orchestrator/codex-session";
 import type { CodexSessionState } from "../../../src/orchestrator/codex-session";
+import { assessSessionResumeEligibility } from "../../../src/orchestrator/codex-session";
 
 describe("Codex session validation timeout", () => {
   it("returns timeout result when validation exceeds 5 seconds", async () => {
     const slowValidator = mock(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      await new Promise((resolve) => setTimeout(resolve, 6000));
       return true;
     });
 
@@ -16,11 +16,11 @@ describe("Codex session validation timeout", () => {
       workingDirectory: "/test/dir",
       createdAt: Date.now(),
       lastAccessedAt: Date.now(),
-      expiresAt: Date.now() + 3600000,
+      expiresAt: Date.now() + 3_600_000,
       status: "active",
     };
 
-    const SESSION_VALIDATION_TIMEOUT_MS = 5_000;
+    const SESSION_VALIDATION_TIMEOUT_MS = 5000;
     const validationPromise = assessSessionResumeEligibility({
       session,
       workingDirectory: "/test/dir",
@@ -55,11 +55,11 @@ describe("Codex session validation timeout", () => {
       workingDirectory: "/test/dir",
       createdAt: Date.now(),
       lastAccessedAt: Date.now(),
-      expiresAt: Date.now() + 3600000,
+      expiresAt: Date.now() + 3_600_000,
       status: "active",
     };
 
-    const SESSION_VALIDATION_TIMEOUT_MS = 5_000;
+    const SESSION_VALIDATION_TIMEOUT_MS = 5000;
     const validationPromise = assessSessionResumeEligibility({
       session,
       workingDirectory: "/test/dir",
@@ -83,4 +83,3 @@ describe("Codex session validation timeout", () => {
     }
   });
 });
-

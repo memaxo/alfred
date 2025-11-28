@@ -1,13 +1,12 @@
 import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import { getRedis } from "@alfred/auth/redis";
 import { logger } from "@alfred/logger";
-import {
-  droidPendingCleanupTotal,
-  droidPendingRunsGauge,
-} from "../metrics";
+import { droidPendingCleanupTotal, droidPendingRunsGauge } from "../metrics";
 
 const KEY_PREFIX = "droid:pending:";
-const MAX_AGE_MS = Number(process.env.DROID_PENDING_MAX_AGE_MS ?? 30 * 60 * 1000);
+const MAX_AGE_MS = Number(
+  process.env.DROID_PENDING_MAX_AGE_MS ?? 30 * 60 * 1000
+);
 const SCAN_COUNT = Number(process.env.DROID_PENDING_SCAN_COUNT ?? 200);
 
 type PendingRunRecord = {

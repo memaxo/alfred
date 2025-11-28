@@ -30,6 +30,7 @@ export class BTreeIndex<K = string, V = NodeId> {
     }
     this.maxKeys = this.order - 1;
     this.minKeys = Math.ceil(this.order / 2) - 1;
+    // minKeys is reserved for future use in node splitting logic
     this.root = new BTreeNode<K, V>(true);
   }
 

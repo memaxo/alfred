@@ -7,8 +7,8 @@ import {
   commentOnLinearIssue,
   emitLinearActivity,
   extractIssueIdFromSession,
-  setLinearCompleted,
   setLinearCancelled,
+  setLinearCompleted,
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
@@ -17,6 +17,7 @@ import { recordAudit } from "../utils/audit";
 import { makeEventId } from "../utils/event-id";
 import { eventToUiMessages } from "../utils/normalize";
 import { redactEventData } from "../utils/redaction";
+import { ensureLinearTicket } from "./linear";
 import {
   multiAgentAgentDurationSeconds,
   multiAgentErrorsTotal,
@@ -26,10 +27,7 @@ import {
   workflowStreamEventsTotal,
 } from "./metrics";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
-import {
-  registerRunHandle,
-  unregisterRunHandle,
-} from "./session-recovery";
+import { type ReviewCheckStatus, ReviewGate } from "./review-gate";
 import {
   createRequirementMessage,
   createWorkflowExecutor,
@@ -39,8 +37,7 @@ import {
   shouldUseWorkflowRuntime,
   type WorkflowInputPayload,
 } from "./services";
-import { ReviewGate, type ReviewCheckStatus } from "./review-gate";
-import { ensureLinearTicket } from "./linear";
+import { registerRunHandle, unregisterRunHandle } from "./session-recovery";
 
 type ReviewEscalationSummary = {
   reason?: string;
@@ -100,7 +97,7 @@ export async function orchestrateWorkflowStream(
     null;
 
   const workflowUrlFor = (id: string | null): string | null => {
-    if (!id || !externalUrlBase) {
+    if (!(id && externalUrlBase)) {
       return null;
     }
     const normalized = externalUrlBase.endsWith("/")
@@ -319,18 +316,27 @@ export async function orchestrateWorkflowStream(
     const reasonTraces: ReasonTrace[] = [];
     const reviewGate = new ReviewGate();
     let reviewEscalation: ReviewEscalationSummary | null = null;
-    
+
     // Restore ReviewGate state from workflow stateData if resuming
     if (input.runId) {
       try {
         const workflowRun = await workflowRepo.getRun(input.runId);
-        if (workflowRun?.stateData && typeof workflowRun.stateData === "object") {
+        if (
+          workflowRun?.stateData &&
+          typeof workflowRun.stateData === "object"
+        ) {
           const stateData = workflowRun.stateData as Record<string, unknown>;
-          if (stateData.reviewGate && typeof stateData.reviewGate === "object") {
-            reviewGate.restore(stateData.reviewGate as Parameters<typeof reviewGate.restore>[0]);
+          if (
+            stateData.reviewGate &&
+            typeof stateData.reviewGate === "object"
+          ) {
+            reviewGate.restore(
+              stateData.reviewGate as Parameters<typeof reviewGate.restore>[0]
+            );
           }
           if (stateData.reviewEscalation) {
-            reviewEscalation = stateData.reviewEscalation as ReviewEscalationSummary | null;
+            reviewEscalation =
+              stateData.reviewEscalation as ReviewEscalationSummary | null;
           }
         }
       } catch (error) {
@@ -412,7 +418,7 @@ export async function orchestrateWorkflowStream(
       if (!runId) {
         return;
       }
-      
+
       // Persist ReviewGate state before suspension
       try {
         const workflowRun = await workflowRepo.getRun(runId);
@@ -755,9 +761,7 @@ export async function orchestrateWorkflowStream(
               summary: evt.data?.summary,
             };
             if (!reviewEscalationMetricRecorded) {
-              const metricKind = formatEscalationMetricKind(
-                evt.data?.reason
-              );
+              const metricKind = formatEscalationMetricKind(evt.data?.reason);
               multiAgentErrorsTotal.inc({ kind: metricKind });
               reviewEscalationMetricRecorded = true;
             }
@@ -971,7 +975,10 @@ export async function orchestrateWorkflowStream(
           .catch((updateError) => {
             logger.warn("workflow_timeout_update_failed", {
               runId: resolvedRunId,
-              error: updateError instanceof Error ? updateError.message : String(updateError),
+              error:
+                updateError instanceof Error
+                  ? updateError.message
+                  : String(updateError),
             });
           });
       }
@@ -1012,7 +1019,8 @@ function buildLinearCompletionComment(args: {
   if (args.reviewChecks.length > 0) {
     lines.push("Review checks:");
     for (const check of args.reviewChecks) {
-      const attemptInfo = check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
+      const attemptInfo =
+        check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
       lines.push(`- ${check.type}: ${check.status}${attemptInfo}`);
     }
   } else {

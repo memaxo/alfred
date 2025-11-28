@@ -2,6 +2,19 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { logger } from "@alfred/logger";
 import type { LinearActivityType } from "./linear";
 
+function getLinearRateLimitMetrics() {
+  try {
+    const metrics = require("@alfred/api/metrics");
+    return {
+      rateLimitTotal: metrics.linearRateLimitTotal,
+      rateLimitWaitSeconds: metrics.linearRateLimitWaitSeconds,
+      retryAfterTotal: metrics.linearRateLimitRetryAfterTotal,
+    };
+  } catch {
+    return null;
+  }
+}
+
 const WINDOW_MS = 60_000;
 const DEFAULT_MAX_REQUESTS_PER_MINUTE = 55; // Keep headroom under Linear's 60/min cap
 const DEFAULT_ACTION_COOLDOWN_MS = 30_000;
@@ -67,9 +80,17 @@ export class LinearRateLimiter {
       retryAfterMs,
     });
 
+    const metrics = getLinearRateLimitMetrics();
+    metrics?.rateLimitTotal.inc({ reason: "retry_after" });
+    if (retryAfterMs) {
+      metrics?.retryAfterTotal.inc();
+    }
+
+    const waitTimer = metrics?.rateLimitWaitSeconds.startTimer();
     this.windowStart = this.nowFn();
     this.requestCount = this.maxRequestsPerMinute;
     await this.sleepFn(waitMs);
+    waitTimer?.();
     this.windowStart = this.nowFn();
     this.requestCount = 0;
   }
@@ -125,7 +146,11 @@ export class LinearRateLimiter {
 
     const waitMs = Math.max(WINDOW_MS - (now - this.windowStart), 0);
     if (waitMs > 0) {
+      const metrics = getLinearRateLimitMetrics();
+      metrics?.rateLimitTotal.inc({ reason: "window" });
+      const waitTimer = metrics?.rateLimitWaitSeconds.startTimer();
       await this.sleepFn(waitMs);
+      waitTimer?.();
     }
     this.windowStart = this.nowFn();
     this.requestCount = 0;
@@ -140,7 +165,11 @@ export class LinearRateLimiter {
       return;
     }
     const waitMs = this.actionCooldownMs - elapsed;
+    const metrics = getLinearRateLimitMetrics();
+    metrics?.rateLimitTotal.inc({ reason: "action_cooldown" });
+    const waitTimer = metrics?.rateLimitWaitSeconds.startTimer();
     await this.sleepFn(waitMs);
+    waitTimer?.();
   }
 }
 

@@ -1,3 +1,4 @@
+import type { SearchReceipt } from "@alfred/type";
 import {
   addEdge,
   applyEdgeChanges,
@@ -9,7 +10,6 @@ import {
   type OnEdgesChange,
   type OnNodesChange,
 } from "@xyflow/react";
-import type { SearchReceipt } from "@alfred/type";
 import type { z } from "zod";
 import { create } from "zustand";
 import { getLayoutedElements, getSemanticLayoutedElements } from "@/lib/layout";

@@ -2,8 +2,8 @@ import { and, eq, lte } from "drizzle-orm";
 
 import { db } from "../client.js";
 import {
-  codexSessions,
   type CodexSessionRow,
+  codexSessions,
   type NewCodexSessionRow,
 } from "../schema/codex.js";
 
@@ -18,7 +18,10 @@ export async function getSession(
     .select()
     .from(codexSessions)
     .where(
-      and(eq(codexSessions.sessionId, sessionId), eq(codexSessions.userId, userId))
+      and(
+        eq(codexSessions.sessionId, sessionId),
+        eq(codexSessions.userId, userId)
+      )
     )
     .limit(1);
 

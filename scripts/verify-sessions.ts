@@ -22,10 +22,7 @@ function parseMode(): Mode {
     if (arg === "--fail" || arg === "--mode=fail") {
       return "fail";
     }
-    if (
-      arg === "--session-crash" ||
-      arg === "--mode=session-crash"
-    ) {
+    if (arg === "--session-crash" || arg === "--mode=session-crash") {
       return "session-crash";
     }
   }
@@ -80,7 +77,7 @@ async function runDefaultScenario() {
       },
     });
 
-    if (!peek.output || !peek.output.includes(marker)) {
+    if (!(peek.output && peek.output.includes(marker))) {
       throw new Error("marker not found in tmux session output");
     }
 
@@ -103,13 +100,17 @@ async function runDefaultScenario() {
 }
 
 async function runFailScenario() {
-  console.log("[verify-sessions] --fail mode enabled; simulating missing tmux.");
+  console.log(
+    "[verify-sessions] --fail mode enabled; simulating missing tmux."
+  );
   if (await tmuxAvailable("__verify_sessions_missing_tmux__")) {
     console.warn(
       "[verify-sessions] Unexpected tmux availability while simulating failure."
     );
   }
-  console.log("[verify-sessions] tmux not found; skipping session verification.");
+  console.log(
+    "[verify-sessions] tmux not found; skipping session verification."
+  );
 }
 
 async function killTmuxServer() {

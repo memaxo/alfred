@@ -1,7 +1,7 @@
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
-import type { WorkflowInputPayload } from "./schema";
 import { toolTicket } from "../orchestrator/tool/ticket";
+import type { WorkflowInputPayload } from "./schema";
 
 const MAX_LINEAR_TITLE = 240;
 
@@ -14,7 +14,7 @@ export type LinearTicketLink = {
 
 function sanitize(value: string | undefined | null): string | undefined {
   if (!value) {
-    return undefined;
+    return;
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;

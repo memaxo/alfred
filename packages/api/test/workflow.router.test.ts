@@ -509,11 +509,12 @@ describe("workflow router", () => {
           rejectComplete?.(error);
         },
       });
-      const stop = typeof subscriptionHandle === "function"
-        ? subscriptionHandle
-        : typeof subscriptionHandle?.unsubscribe === "function"
-          ? () => subscriptionHandle.unsubscribe()
-          : undefined;
+      const stop =
+        typeof subscriptionHandle === "function"
+          ? subscriptionHandle
+          : typeof subscriptionHandle?.unsubscribe === "function"
+            ? () => subscriptionHandle.unsubscribe()
+            : undefined;
 
       const suspendedRunId = await obligationPromise;
       expect(receivedEvents[0]?.type).toBe("obligation");
@@ -530,7 +531,8 @@ describe("workflow router", () => {
       await completionPromise;
 
       const progressEvent = receivedEvents.find(
-        (event) => event.type === "progress" && (event as any).message === "done"
+        (event) =>
+          event.type === "progress" && (event as any).message === "done"
       );
       expect(progressEvent).toBeDefined();
 

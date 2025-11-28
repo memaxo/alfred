@@ -4,9 +4,9 @@ import {
   createTRPCProxyClient,
   httpBatchLink,
   splitLink,
-  unstable_httpSubscriptionLink,
   type TRPCClient,
   type TRPCLink,
+  unstable_httpSubscriptionLink,
 } from "@trpc/client";
 
 // Shared link factory so both React Query hooks and imperative proxy clients

@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
+import { metricsStub } from "./utils/mock-metrics";
 import { setupTestEnv } from "./utils/router-helpers";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
-import { metricsStub } from "./utils/mock-metrics";
 
 setupTestEnv();
 

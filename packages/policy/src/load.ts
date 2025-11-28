@@ -159,7 +159,11 @@ export async function loadPolicy(
     roles,
     rules: parsed.rules.map((rule) => {
       const obligations = rule.obligations
-        ? dedupeObligations(rule.obligations.map((obligation) => normalizeObligation(obligation)))
+        ? dedupeObligations(
+            rule.obligations.map((obligation) =>
+              normalizeObligation(obligation)
+            )
+          )
         : undefined;
       return {
         ...rule,

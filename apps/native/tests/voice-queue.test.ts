@@ -224,9 +224,9 @@ describe("native voice queue + playback", () => {
     expect(deleteAsyncMock).toHaveBeenCalledTimes(2);
     expect(createAsyncMock).toHaveBeenCalledTimes(2);
     expect(playbackLog).toContainEqual(expect.stringContaining("play:"));
-    expect(playbackLog.filter((event) => event.startsWith("play:"))).toHaveLength(
-      2
-    );
+    expect(
+      playbackLog.filter((event) => event.startsWith("play:"))
+    ).toHaveLength(2);
   });
 
   it("configures native audio session before playback starts", async () => {
@@ -234,12 +234,9 @@ describe("native voice queue + playback", () => {
       Buffer.from("clip-three").toString("base64"),
       "audio/mpeg"
     );
-    expect(configModule.configureAudioSession).toBe(
-      configureAudioSessionMock
-    );
-    expect(configureAudioSessionMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      { background: true }
-    );
+    expect(configModule.configureAudioSession).toBe(configureAudioSessionMock);
+    expect(configureAudioSessionMock).toHaveBeenCalledWith(expect.any(Object), {
+      background: true,
+    });
   });
 });

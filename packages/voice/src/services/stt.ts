@@ -1,9 +1,7 @@
-import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
 import { markVoice } from "@alfred/metrics/performance";
 import {
   decodeToPCM16,
-  inferExtension,
   isLikelyPCM,
   PCM_MIME_TYPE,
   sanitizeBase64,

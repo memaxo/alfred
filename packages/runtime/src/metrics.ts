@@ -148,11 +148,10 @@ export const runtimeSafetyAssessmentTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
-export const runtimeSafetyClassificationDurationSeconds =
-  new client.Histogram({
-    name: "runtime_safety_classification_duration_seconds",
-    help: "Duration of safety risk classification operations",
-    labelNames: ["mode"] as const,
-    buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25],
-    registers: [metricsRegistry],
-  });
+export const runtimeSafetyClassificationDurationSeconds = new client.Histogram({
+  name: "runtime_safety_classification_duration_seconds",
+  help: "Duration of safety risk classification operations",
+  labelNames: ["mode"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25],
+  registers: [metricsRegistry],
+});

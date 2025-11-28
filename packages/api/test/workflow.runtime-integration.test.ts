@@ -11,12 +11,12 @@ import {
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { WorkflowEvent } from "@alfred/type";
 import {
   installWorkflowRuntimeFixture,
   type WorkflowRuntimeFixtureHandle,
   workflowMetricsStub,
 } from "@alfred/test-kit/workflow/runtime-fixture";
+import type { WorkflowEvent } from "@alfred/type";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
 setupTestEnv();
@@ -37,9 +37,16 @@ describe("workflow runtime integration (minimal-mock)", () => {
     workflowFixture = await installWorkflowRuntimeFixture();
     ({ createTestCaller } = await import("./utils/trpc"));
     caller = await createTestCaller({
-      scopes: ["workflow.plan", "workflow.stream", "workflow.resume", "workflow.read"],
+      scopes: [
+        "workflow.plan",
+        "workflow.stream",
+        "workflow.resume",
+        "workflow.read",
+      ],
     });
-    ({ WorkflowRuntime: WorkflowRuntimeClass } = await import("@alfred/runtime"));
+    ({ WorkflowRuntime: WorkflowRuntimeClass } = await import(
+      "@alfred/runtime"
+    ));
   });
 
   afterAll(async () => {
@@ -98,15 +105,20 @@ describe("workflow runtime integration (minimal-mock)", () => {
       workflowMetricsStub.workflowStreamDurationSeconds.startTimer
     ).toHaveBeenCalled();
     const stopTimerMock =
-      workflowMetricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(-1)
-        ?.value;
+      workflowMetricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(
+        -1
+      )?.value;
     expect(stopTimerMock).toBeDefined();
     expect(stopTimerMock).toHaveBeenCalledWith({ status: "ok" });
 
-    expect(workflowMetricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+    expect(
+      workflowMetricsStub.workflowStreamEventsTotal.inc
+    ).toHaveBeenCalledWith({
       event: "run",
     });
-    expect(workflowMetricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+    expect(
+      workflowMetricsStub.workflowStreamEventsTotal.inc
+    ).toHaveBeenCalledWith({
       event: "complete",
     });
   });
@@ -120,10 +132,13 @@ describe("workflow runtime integration (minimal-mock)", () => {
     ).rejects.toThrow("review_checklist_incomplete");
 
     const stopTimerMock =
-      workflowMetricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(-1)
-        ?.value;
+      workflowMetricsStub.workflowStreamDurationSeconds.startTimer.mock.results.at(
+        -1
+      )?.value;
     expect(stopTimerMock).toHaveBeenCalledWith({ status: "error" });
-    expect(workflowMetricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+    expect(
+      workflowMetricsStub.workflowStreamEventsTotal.inc
+    ).toHaveBeenCalledWith({
       event: "error",
     });
   });
@@ -166,7 +181,9 @@ describe("workflow runtime integration (minimal-mock)", () => {
       });
     });
 
-    expect(workflowMetricsStub.workflowStreamEventsTotal.inc).toHaveBeenCalledWith({
+    expect(
+      workflowMetricsStub.workflowStreamEventsTotal.inc
+    ).toHaveBeenCalledWith({
       event: "cancel",
     });
   });
@@ -189,16 +206,18 @@ describe("workflow runtime integration (minimal-mock)", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  async function streamWorkflow(options: {
-    requirement?: string;
-    auto?: "read" | "low" | "medium" | "high";
-    linear?: {
-      sessionId: string;
-      space: string;
-      teamId?: string;
-    };
-    workspace?: string;
-  } = {}) {
+  async function streamWorkflow(
+    options: {
+      requirement?: string;
+      auto?: "read" | "low" | "medium" | "high";
+      linear?: {
+        sessionId: string;
+        space: string;
+        teamId?: string;
+      };
+      workspace?: string;
+    } = {}
+  ) {
     const workspace = options.workspace ?? (await createWorkspaceDir());
     const auto = options.auto ?? "low";
     const subscription = await caller.workflow.stream({

@@ -39,7 +39,9 @@ mock.module("./services", () => ({
 }));
 
 mock.module("./linear", () => ({
-  ensureLinearTicket: vi.fn().mockResolvedValue({ linear: undefined, ticket: null }),
+  ensureLinearTicket: vi
+    .fn()
+    .mockResolvedValue({ linear: undefined, ticket: null }),
 }));
 
 mock.module("../integrations/linear", () => ({
@@ -59,9 +61,7 @@ mock.module("../utils/audit", () => ({ recordAudit: recordAuditMock }));
 const makeEventIdMock = vi.fn().mockImplementation(({ type }) => `${type}-id`);
 mock.module("../utils/event-id", () => ({ makeEventId: makeEventIdMock }));
 
-const eventToUiMessagesMock = vi.fn<[
-  WorkflowEvent
-], UIMessage[] | null>(() => [
+const eventToUiMessagesMock = vi.fn<[WorkflowEvent], UIMessage[] | null>(() => [
   {
     id: "msg-1",
     role: "assistant",

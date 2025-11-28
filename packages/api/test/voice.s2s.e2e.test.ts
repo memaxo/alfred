@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
-import { runAssistantForVoice } from "../src/voice/assistant";
-import { VoiceRegistry } from "../src/voice/session";
 import { createVoiceTestRegistry } from "@alfred/test-kit/voice/runtime-fixture";
+import { runAssistantForVoice } from "../src/voice/assistant";
+import type { VoiceRegistry } from "../src/voice/session";
 
 mock.module("../src/voice/assistant", () => ({
   runAssistantForVoice: mock(async () => ({

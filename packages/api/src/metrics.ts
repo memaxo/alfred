@@ -123,6 +123,33 @@ export {
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
 
+export const decompositionTruncatedTotal = new client.Counter({
+  name: "decomposition_truncated_total",
+  help: "Count of task decomposition truncations grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const linearRateLimitTotal = new client.Counter({
+  name: "linear_rate_limit_total",
+  help: "Total Linear rate limit hits grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const linearRateLimitWaitSeconds = new client.Histogram({
+  name: "linear_rate_limit_wait_seconds",
+  help: "Time spent waiting due to Linear rate limiting in seconds.",
+  buckets: [0.1, 0.5, 1, 5, 10, 30],
+  registers: [metricsRegistry],
+});
+
+export const linearRateLimitRetryAfterTotal = new client.Counter({
+  name: "linear_rate_limit_retry_after_total",
+  help: "Count of times Retry-After header was honored for Linear rate limiting.",
+  registers: [metricsRegistry],
+});
+
 export const graphQueriesTotal = new client.Counter({
   name: "graph_queries_total",
   help: "Count of graph queries grouped by kind and resource.",
@@ -270,6 +297,73 @@ export const codexLinearActivitiesDroppedTotal = new client.Counter({
   name: "codex_linear_activities_dropped_total",
   help: "Count of Codex events dropped due to rate limiting grouped by reason.",
   labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketConnectionsCurrent = new client.Gauge({
+  name: "voice_websocket_connections_current",
+  help: "Current active WebSocket connections for voice streaming.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketSendFailuresTotal = new client.Counter({
+  name: "voice_websocket_send_failures_total",
+  help: "Total WebSocket send failures grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketUpgradeRateLimitHitsTotal = new client.Counter({
+  name: "voice_websocket_upgrade_rate_limit_hits_total",
+  help: "Count of WebSocket upgrade requests rejected due to rate limiting.",
+  labelNames: ["type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketConnectionRejectedTotal = new client.Counter({
+  name: "voice_websocket_connection_rejected_total",
+  help: "Count of WebSocket connections rejected due to limits.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketMessageLatencySeconds = new client.Histogram({
+  name: "voice_websocket_message_latency_seconds",
+  help: "Latency of WebSocket message processing in seconds.",
+  labelNames: ["message_type"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketBinaryChunkSizeBytes = new client.Histogram({
+  name: "voice_websocket_binary_chunk_size_bytes",
+  help: "Size of binary audio chunks received via WebSocket.",
+  buckets: [256, 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65_536],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketUpgradeDurationSeconds = new client.Histogram({
+  name: "voice_websocket_upgrade_duration_seconds",
+  help: "Duration of WebSocket upgrade process in seconds.",
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketBackpressureEventsTotal = new client.Counter({
+  name: "voice_websocket_backpressure_events_total",
+  help: "Count of backpressure events on WebSocket connections.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketPingTimeoutTotal = new client.Counter({
+  name: "voice_websocket_ping_timeout_total",
+  help: "Count of WebSocket connections closed due to ping timeout.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketPayloadTooLargeTotal = new client.Counter({
+  name: "voice_websocket_payload_too_large_total",
+  help: "Count of WebSocket messages rejected due to payload size limit.",
   registers: [metricsRegistry],
 });
 
@@ -472,6 +566,31 @@ export const preferencePromptFailuresTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const redisConnectionStatus = new client.Gauge({
+  name: "redis_connection_status",
+  help: "Redis connection status (0=disconnected, 1=connected).",
+  registers: [metricsRegistry],
+});
+
+export const redisConnectionErrorsTotal = new client.Counter({
+  name: "redis_connection_errors_total",
+  help: "Count of Redis connection errors.",
+  registers: [metricsRegistry],
+});
+
+export const redisReconnectionAttemptsTotal = new client.Counter({
+  name: "redis_reconnection_attempts_total",
+  help: "Count of Redis reconnection attempts.",
+  registers: [metricsRegistry],
+});
+
+export const redisCommandsTotal = new client.Counter({
+  name: "redis_commands_total",
+  help: "Count of Redis commands executed grouped by operation.",
+  labelNames: ["operation"] as const,
+  registers: [metricsRegistry],
+});
+
 export const historyContextTokensTotal = new client.Counter({
   name: "history_context_tokens_total",
   help: "Total tokens considered by history selection grouped by source, model, and action.",
@@ -621,7 +740,7 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       agent.registerCodexSessionValidationHistogram?.({
         startTimer: () => {
           const done = codexSessionValidationDurationSeconds.startTimer();
-          return ({ outcome }) => done({ outcome });
+          return ({ outcome }: { outcome: string }) => done({ outcome });
         },
       } as any);
       agent.registerEvalRunsCounter?.(evalRunsTotal);

@@ -30,7 +30,9 @@ export type CognitiveFeedbackDialogProps = {
   status: CognitiveFeedbackStatus;
   error?: Error | null;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: FormValues & { surface?: CognitiveFeedbackDraft["surface"] }) => Promise<void> | void;
+  onSubmit: (
+    values: FormValues & { surface?: CognitiveFeedbackDraft["surface"] }
+  ) => Promise<void> | void;
 };
 
 export function CognitiveFeedbackDialog({
@@ -56,11 +58,11 @@ export function CognitiveFeedbackDialog({
     if (!draft || status === "pending") {
       return;
     }
-      await onSubmit({
-        expected: expected.trim() || draft.expected,
-        actual: actual.trim(),
-        surface: draft.surface,
-      });
+    await onSubmit({
+      expected: expected.trim() || draft.expected,
+      actual: actual.trim(),
+      surface: draft.surface,
+    });
   };
 
   const intentLabel =
@@ -70,9 +72,7 @@ export function CognitiveFeedbackDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-lg rounded-3xl border border-white/5 bg-void-surface/90 text-biolum shadow-lg backdrop-blur">
         <DialogHeader>
-          <DialogTitle className="tracking-tight">
-            Share Feedback
-          </DialogTitle>
+          <DialogTitle className="tracking-tight">Share Feedback</DialogTitle>
           <DialogDescription className="text-biolum-dim">
             Let Alfred know whether the response met your expectations.
           </DialogDescription>
@@ -85,7 +85,7 @@ export function CognitiveFeedbackDialog({
               void handleSubmit();
             }}
           >
-            <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-xs uppercase tracking-[0.2em] text-biolum-dim">
+            <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-biolum-dim text-xs uppercase tracking-[0.2em]">
               {intentLabel}
             </div>
             <div className="space-y-2">
@@ -106,7 +106,7 @@ export function CognitiveFeedbackDialog({
               />
             </div>
             {error ? (
-              <p className="text-sm text-destructive">
+              <p className="text-destructive text-sm">
                 {error.message ?? "Failed to submit feedback"}
               </p>
             ) : null}

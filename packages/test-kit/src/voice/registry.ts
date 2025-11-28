@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
-import { VoiceRegistry } from "@alfred/voice/server/registry";
 import type { STTPool } from "@alfred/voice/process/stt";
 import type { TTSPool } from "@alfred/voice/process/tts";
+import { VoiceRegistry } from "@alfred/voice/server/registry";
 
 export type VoiceTestOptions = {
   transcript?: string;
@@ -45,9 +45,9 @@ class DeterministicTTSPool {
   private readonly chunk: { audioBase64: string; mimeType: string };
 
   constructor(
-    chunkText: string = "test-chunk",
-    chunkMimeType: string = "audio/pcm",
-    streamingChunks: number = 2
+    chunkText = "test-chunk",
+    chunkMimeType = "audio/pcm",
+    streamingChunks = 2
   ) {
     this.chunk = {
       audioBase64: Buffer.from(chunkText).toString("base64"),

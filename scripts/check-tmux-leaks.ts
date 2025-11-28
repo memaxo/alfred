@@ -98,9 +98,9 @@ export async function checkTmuxLeaks(
 
   if (leaks.length > 0) {
     throw new Error(
-      `tmux_session_leak_detected: ${leaks.map((entry) => `"${entry}"`).join(
-        ", "
-      )}`
+      `tmux_session_leak_detected: ${leaks
+        .map((entry) => `"${entry}"`)
+        .join(", ")}`
     );
   }
 

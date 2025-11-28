@@ -1,12 +1,15 @@
-import { gatherCodeContext, gatherWebContext } from "@alfred/agent/orchestrator/flow/context";
+import {
+  gatherCodeContext,
+  gatherWebContext,
+} from "@alfred/agent/orchestrator/flow/context";
 import { logger } from "@alfred/logger";
 import type {
   ContextBundle,
   SearchReceipt,
   WorkflowEvent,
 } from "@alfred/type/plan";
-import { ContextBuilder } from "../context";
 import type { ExecutionContext } from "../context";
+import { ContextBuilder } from "../context";
 import type { RuntimeInput } from "../types";
 
 function assertNotAborted(signal: AbortSignal): void {

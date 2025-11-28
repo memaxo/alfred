@@ -8,14 +8,11 @@
  * Usage: bun scripts/verify-cognitive-pipeline.ts
  */
 
-import { RuntimeContext } from "@alfred/type/runtime-context";
-import {
-  runAssistantGeneration,
-  runCognitiveLoop,
-} from "@alfred/runtime";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import type { CognitiveEffect } from "@alfred/runtime";
+import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 
 const STREAM_ID = `verify-cognitive-${Date.now()}`;
 
@@ -71,7 +68,7 @@ async function verify() {
   const eventSummary = events.map((event) => event.type);
   const hasComplete = eventSummary.includes("complete");
   const hasFeedback = eventSummary.includes("feedback");
-  if (!hasComplete || !hasFeedback) {
+  if (!(hasComplete && hasFeedback)) {
     throw new Error(
       `Missing expected events (complete=${hasComplete}, feedback=${hasFeedback})`
     );
@@ -99,7 +96,11 @@ async function processEffects(
     try {
       switch (effect.type) {
         case "generate_response": {
-          const outcome = await runAssistantGeneration(ctx, streamId, effect.input);
+          const outcome = await runAssistantGeneration(
+            ctx,
+            streamId,
+            effect.input
+          );
           const { effects: followUp } = await runCognitiveLoop(ctx, streamId, {
             _: "complete",
             outcome,

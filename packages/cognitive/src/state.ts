@@ -426,7 +426,7 @@ export function updateAutonomy(
     const timeSinceUpdate = now - current.lastUpdate;
     if (Number.isFinite(timeSinceUpdate) && timeSinceUpdate > 0) {
       const daysSinceUpdate = timeSinceUpdate / MS_PER_DAY;
-      adjustedConfidence *= Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+      adjustedConfidence *= CONFIDENCE_DECAY_RATE ** daysSinceUpdate;
     }
 
     return {
@@ -458,10 +458,7 @@ const defaultCriteria = (): Criteria => ({
   cost: 0.5,
 });
 
-export const calculateError = (
-  expected: string,
-  actual: string
-): number => {
+export const calculateError = (expected: string, actual: string): number => {
   const start = performance.now();
   try {
     if (expected === actual) {
@@ -526,7 +523,7 @@ const decayPriorTowardBaseline = (
   }
 
   const daysSinceUpdate = msSinceUpdate / MS_PER_DAY;
-  const decayFactor = Math.pow(CONFIDENCE_DECAY_RATE, daysSinceUpdate);
+  const decayFactor = CONFIDENCE_DECAY_RATE ** daysSinceUpdate;
 
   return {
     alpha:

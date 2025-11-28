@@ -4,9 +4,7 @@ import { ContextBuilder } from "../src/context";
 import { runWaves } from "../src/orchestrator/waves";
 
 const originalContextBuild = ContextBuilder.prototype.build;
-ContextBuilder.prototype.build = async function () {
-  return { bundle: {} } as any;
-};
+ContextBuilder.prototype.build = async () => ({ bundle: {} }) as any;
 
 mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
   decomposeTask: () => [

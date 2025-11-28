@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import type { Obligation } from "@alfred/type";
 import {
-  DEFAULT_WORKFLOW_TEST_USER,
   createWorkflowCaller,
+  DEFAULT_WORKFLOW_TEST_USER,
   type WorkflowTestUser,
 } from "./workflow-caller";
 
@@ -55,9 +55,9 @@ function encodeSession(session: AuthSession): string {
 function installSessionPatch() {
   if (sessionPatchState.count === 0) {
     const authApi = auth.api as {
-      getSession: (params: Parameters<
-        (typeof auth)["api"]["getSession"]
-      >[0]) => ReturnType<(typeof auth)["api"]["getSession"]>;
+      getSession: (
+        params: Parameters<(typeof auth)["api"]["getSession"]>[0]
+      ) => ReturnType<(typeof auth)["api"]["getSession"]>;
     };
     const originalGetSession = authApi.getSession.bind(auth.api);
     const patchedGetSession = async (
@@ -122,10 +122,7 @@ export class WorkflowTestHarness {
     return headers;
   }
 
-  request(
-    input: WorkflowInputPayload,
-    headers?: HeadersInit
-  ): Request {
+  request(input: WorkflowInputPayload, headers?: HeadersInit): Request {
     return new Request("http://localhost/api/workflow/stream", {
       method: "POST",
       headers: this.headers(headers),

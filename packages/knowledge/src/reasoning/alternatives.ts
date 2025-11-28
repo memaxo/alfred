@@ -1,12 +1,12 @@
 import nlp from "compromise";
+import type { KnowledgeEntry } from "../extractor";
 import {
   fact,
+  type Knowledge,
   knowledgeHash,
   nodeFromHash,
   relation,
-  type Knowledge,
 } from "../hypergraph";
-import type { KnowledgeEntry } from "../extractor";
 import {
   cosine,
   embedTextSamples,
@@ -44,7 +44,9 @@ export async function deriveAlternativeFacts(
   }
 
   const embeddings = await embedTextSamples(
-    candidates.map((candidate) => `${candidate.optionA} || ${candidate.optionB}`)
+    candidates.map(
+      (candidate) => `${candidate.optionA} || ${candidate.optionB}`
+    )
   );
 
   if (embeddings.length === 0) {

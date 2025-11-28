@@ -1,18 +1,18 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { DocsLayout } from "fumadocs-ui/layouts/docs";
-import { createServerFn } from "@tanstack/react-start";
-import { source } from "@/lib/source";
-import type * as PageTree from "fumadocs-core/page-tree";
-import { useMemo } from "react";
 import browserCollections from "fumadocs-mdx:collections/browser";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import type * as PageTree from "fumadocs-core/page-tree";
+import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import defaultMdxComponents from "fumadocs-ui/mdx";
 import {
   DocsBody,
   DocsDescription,
   DocsPage,
   DocsTitle,
 } from "fumadocs-ui/page";
-import defaultMdxComponents from "fumadocs-ui/mdx";
+import { useMemo } from "react";
 import { baseOptions } from "@/lib/layout.shared";
+import { source } from "@/lib/source";
 
 export const Route = createFileRoute("/docs/$")({
   component: Page,
@@ -63,7 +63,7 @@ function Page() {
   const Content = clientLoader.getComponent(data.path);
   const tree = useMemo(
     () => transformPageTree(data.tree as PageTree.Folder),
-    [data.tree],
+    [data.tree]
   );
 
   return (
@@ -105,4 +105,3 @@ function transformPageTree(root: PageTree.Root): PageTree.Root {
     fallback: root.fallback ? transformPageTree(root.fallback) : undefined,
   };
 }
-

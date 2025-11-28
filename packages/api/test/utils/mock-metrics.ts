@@ -1,7 +1,7 @@
 import { mock, vi } from "bun:test";
-import type { Obligation } from "@alfred/type";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Obligation } from "@alfred/type";
 
 const createMetricStub = () => ({
   inc: vi.fn(),

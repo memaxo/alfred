@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { accessSync, constants as fsConstants } from "node:fs";
 import path from "node:path";
 import {
@@ -6,20 +7,128 @@ import {
 } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import { persistReasoning } from "../../../assistant/src/graphstore.js";
 import { recordDroidExecRun, startDroidExecTimer } from "../../metrics";
+import type { DirectoryHandle } from "../../security/filesystem.js";
 import {
   DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
-  DirectoryHandle,
   isWithinBase,
   openDirectorySecure,
-  prepareCwdFromHandle,
 } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
+import { truncateToBytes } from "../tool/codex/truncate.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 30 * 60;
 const MIN_TIMEOUT_SEC = 30;
 const MAX_TIMEOUT_SEC = 2 * 60 * 60;
+
+type ReasoningAccumulator = {
+  traces: Array<{ text: string; timestamp: number }>;
+  storedBytes: number;
+  truncated: boolean;
+};
+
+function appendReasoningTrace(
+  acc: ReasoningAccumulator,
+  text: string,
+  timestamp: number = Date.now()
+) {
+  const reasoningText = text?.trim();
+  if (!reasoningText) {
+    return;
+  }
+
+  const byteLength = Buffer.byteLength(reasoningText);
+  if (acc.truncated) {
+    acc.storedBytes += byteLength;
+    return;
+  }
+
+  const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
+  if (remaining <= 0) {
+    acc.truncated = true;
+    return;
+  }
+
+  const storedText =
+    byteLength <= remaining
+      ? reasoningText
+      : truncateToBytes(reasoningText, remaining);
+  const storedBytes =
+    byteLength <= remaining ? byteLength : Buffer.byteLength(storedText);
+
+  if (storedText) {
+    acc.traces.push({
+      text: storedText,
+      timestamp,
+    });
+  }
+
+  if (storedBytes > 0) {
+    acc.storedBytes += storedBytes;
+  }
+
+  if (byteLength > remaining) {
+    acc.truncated = true;
+  }
+}
+
+function extractDroidReasoning(chunk: unknown): string | null {
+  if (!chunk || typeof chunk !== "object") {
+    return null;
+  }
+
+  const event = chunk as {
+    type?: unknown;
+    role?: unknown;
+    text?: unknown;
+    finalText?: unknown;
+  };
+
+  // Check for message type with assistant role
+  if (event.type === "message" && event.role === "assistant") {
+    const text = event.text;
+    if (typeof text === "string" && text.trim()) {
+      // Heuristic: detect reasoning patterns in assistant messages
+      const normalized = text.toLowerCase();
+      const reasoningMarkers = [
+        "i'll",
+        "let me",
+        "first,",
+        "planning to",
+        "i need to",
+        "i should",
+        "analyzing",
+        "checking",
+        "considering",
+        "thinking",
+      ];
+
+      // Extract reasoning if message contains planning/analysis language
+      // or appears before tool calls (indicates planning)
+      const hasReasoningMarker = reasoningMarkers.some((marker) =>
+        normalized.includes(marker)
+      );
+
+      if (hasReasoningMarker) {
+        return text.trim();
+      }
+    }
+  }
+
+  // Check for completion event finalText (summary reasoning)
+  if (event.type === "completion" && typeof event.finalText === "string") {
+    const finalText = event.finalText.trim();
+    if (finalText.length > 0) {
+      // Include completion summary as reasoning trace
+      return finalText;
+    }
+  }
+
+  return null;
+}
 
 function assertAllowedDirectory(candidate: string) {
   let handle;
@@ -82,6 +191,14 @@ const toolOutputSchema = z.object({
       z.object({
         path: z.string(),
         kind: z.string(),
+      })
+    )
+    .optional(),
+  reasoning: z
+    .array(
+      z.object({
+        text: z.string(),
+        timestamp: z.number(),
       })
     )
     .optional(),
@@ -188,7 +305,8 @@ function streamStdout(
   input: DroidToolInput,
   writer: ToolWriter,
   accumulator: { stdout: string; capturedBytes: number; truncated: boolean },
-  onActivity: () => void
+  onActivity: () => void,
+  reasoningAccumulator: ReasoningAccumulator
 ) {
   if (!proc.stdout || typeof proc.stdout === "number") {
     return;
@@ -223,6 +341,23 @@ function streamStdout(
           for (const line of lines) {
             try {
               const parsed = JSON.parse(line);
+              
+              // Extract reasoning from message chunks
+              const reasoningText = extractDroidReasoning(parsed);
+              if (reasoningText) {
+                const timestamp = Date.now();
+                appendReasoningTrace(reasoningAccumulator, reasoningText, timestamp);
+                
+                // Emit thought event for streaming
+                void Promise.resolve(
+                  writer?.write?.({
+                    type: "thought",
+                    content: reasoningText,
+                    timestamp,
+                  })
+                ).catch(() => {});
+              }
+              
               void Promise.resolve(
                 writer?.write?.({ type: "droid", chunk: parsed })
               ).catch(() => {});
@@ -285,94 +420,102 @@ export const toolDroid = {
       const command = process.env.DROID_BIN?.trim() || "droid";
       const executable = resolveExecutable(command);
 
-      const proc = Bun.spawn([executable, ...flags], {
-        cwd: prepareCwdFromHandle(cwdHandle),
+      const proc = spawnWithSecureCwd({
+        cwdHandle,
+        cmd: executable,
+        args: flags,
         env: pickEnv(input.env),
         stdout: "pipe",
         stderr: "pipe",
         stdin: "ignore",
       });
 
-    const stopDurationTimer = startDroidExecTimer(input.auto);
+      const stopDurationTimer = startDroidExecTimer(input.auto);
 
-    // Heartbeat State
-    let lastActivity = Date.now();
-    const HEARTBEAT_TIMEOUT_MS = 60_000;
-    let heartbeatKilled = false;
+      // Heartbeat State
+      let lastActivity = Date.now();
+      const HEARTBEAT_TIMEOUT_MS = 60_000;
+      let heartbeatKilled = false;
 
-    const onActivity = () => {
-      lastActivity = Date.now();
-    };
+      const onActivity = () => {
+        lastActivity = Date.now();
+      };
 
-    const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
+      const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
 
-    // Combined Timer Loop (Timeout + Heartbeat)
-    const timer = setInterval(() => {
-      const now = Date.now();
+      // Combined Timer Loop (Timeout + Heartbeat)
+      const timer = setInterval(() => {
+        const now = Date.now();
 
-      // Check Hard Timeout
-      // Note: We use a separate setNodeTimeout for the hard limit usually, but we can do it here or keep the original.
-      // The original used setNodeTimeout. Let's keep the original structure for hard timeout if possible,
-      // but implementing a periodic check is cleaner for heartbeat.
+        // Check Hard Timeout
+        // Note: We use a separate setNodeTimeout for the hard limit usually, but we can do it here or keep the original.
+        // The original used setNodeTimeout. Let's keep the original structure for hard timeout if possible,
+        // but implementing a periodic check is cleaner for heartbeat.
 
-      // Check Heartbeat
-      if (now - lastActivity > HEARTBEAT_TIMEOUT_MS) {
-        heartbeatKilled = true;
+        // Check Heartbeat
+        if (now - lastActivity > HEARTBEAT_TIMEOUT_MS) {
+          heartbeatKilled = true;
+          try {
+            proc.kill("SIGKILL");
+          } catch {
+            // noop
+          }
+        }
+      }, 1000);
+
+      // Original Hard Timeout
+      const hardTimeoutTimer = setNodeTimeout(() => {
         try {
           proc.kill("SIGKILL");
         } catch {
           // noop
         }
-      }
-    }, 1000);
+        void Promise.resolve(
+          writer?.write?.({
+            type: "notice",
+            message: "droid_exec_timeout",
+          })
+        ).catch(() => {});
+      }, timeoutSec * 1000);
 
-    // Original Hard Timeout
-    const hardTimeoutTimer = setNodeTimeout(() => {
+      const accumulator = {
+        stdout: "",
+        capturedBytes: 0,
+        truncated: false,
+      };
+
+      const reasoningAccumulator: ReasoningAccumulator = {
+        traces: [],
+        storedBytes: 0,
+        truncated: false,
+      };
+
+      streamStdout(proc, input, writer, accumulator, onActivity, reasoningAccumulator);
+      streamStderr(proc, writer);
+
+      let exitCode = 0;
       try {
-        proc.kill("SIGKILL");
-      } catch {
-        // noop
+        exitCode = await proc.exited;
+      } catch (error) {
+        clearNodeTimeout(hardTimeoutTimer);
+        clearInterval(timer);
+        stopDurationTimer();
+        throw error;
+      } finally {
+        clearNodeTimeout(hardTimeoutTimer);
+        clearInterval(timer);
+        stopDurationTimer();
       }
-      void Promise.resolve(
-        writer?.write?.({
-          type: "notice",
-          message: "droid_exec_timeout",
-        })
-      ).catch(() => {});
-    }, timeoutSec * 1000);
 
-    const accumulator = {
-      stdout: "",
-      capturedBytes: 0,
-      truncated: false,
-    };
+      if (heartbeatKilled) {
+        throw new Error("droid_exec_heartbeat_timeout");
+      }
 
-    streamStdout(proc, input, writer, accumulator, onActivity);
-    streamStderr(proc, writer);
+      recordDroidExecRun(input.auto, exitCode);
 
-    let exitCode = 0;
-    try {
-      exitCode = await proc.exited;
-    } catch (error) {
-      clearNodeTimeout(hardTimeoutTimer);
-      clearInterval(timer);
-      stopDurationTimer();
-      throw error;
-    } finally {
-      clearNodeTimeout(hardTimeoutTimer);
-      clearInterval(timer);
-      stopDurationTimer();
-    }
-
-    if (heartbeatKilled) {
-      throw new Error("droid_exec_heartbeat_timeout");
-    }
-
-    recordDroidExecRun(input.auto, exitCode);
-
-    if (exitCode !== 0) {
-      throw new Error(`droid_exec_failed:${exitCode}`);
-    }
+      if (exitCode !== 0) {
+        throw new Error(`droid_exec_failed:${exitCode}`);
+      }
 
       if (accumulator.truncated) {
         void Promise.resolve(
@@ -380,9 +523,25 @@ export const toolDroid = {
         ).catch(() => {});
       }
 
+      // Persist reasoning traces to knowledge graph
+      const resource = input.cw ? path.resolve(input.cw) : process.cwd();
+      const executionId = resource;
+      if (reasoningAccumulator.traces.length > 0) {
+        persistReasoning(resource, reasoningAccumulator.traces, {
+          executionId,
+          auto: input.auto,
+        }).catch((_err) => {
+          // Non-fatal: reasoning persistence failure shouldn't break execution
+        });
+      }
+
       return {
         result: accumulator.stdout.trim(),
         artifacts: [],
+        reasoning:
+          reasoningAccumulator.traces.length > 0
+            ? reasoningAccumulator.traces
+            : undefined,
       };
     } finally {
       cwdHandle.close();
@@ -398,4 +557,6 @@ export const __internals = {
   isWithinBase,
   pickEnv,
   resolveExecutable,
+  appendReasoningTrace,
+  extractDroidReasoning,
 };

@@ -7,29 +7,20 @@
  * Usage: bun scripts/verify-cognitive-health.ts
  */
 
-import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
-  runAssistantGeneration,
-  runCognitiveLoop,
-} from "@alfred/runtime";
-import type { CognitiveEffect } from "@alfred/runtime";
-import {
-  cognitiveEntropyEventsTotal,
   cognitiveFeedbackSubmissionsTotal,
-  cognitivePhysiologyGauge,
   metricsRegistry,
 } from "@alfred/api/metrics";
+import type { CognitiveEffect } from "@alfred/runtime";
+import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 
 process.env.OPENAI_API_KEY ??= "dummy";
 process.env.DATABASE_URL ??= "sqlite::memory:";
 process.env.BUN_TEST ??= "1";
 
 const mockAiAdapter = {
-  async generateText({
-    messages,
-  }: {
-    messages: Array<{ content?: string }>;
-  }) {
+  async generateText({ messages }: { messages: Array<{ content?: string }> }) {
     const content = messages[messages.length - 1]?.content ?? "unknown";
     return {
       text: `Mock cognitive response: ${content}`,

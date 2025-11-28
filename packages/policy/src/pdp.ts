@@ -1,11 +1,6 @@
 import { loadPolicy } from "./load";
 import { ruleMatches } from "./rule";
-import type {
-  Decision,
-  EvaluateInput,
-  Obligation,
-  PolicyRule,
-} from "./types";
+import type { Decision, EvaluateInput, Obligation, PolicyRule } from "./types";
 
 const CACHE_TTL_MS = 30_000;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { PipelineRunner, PhaseTimeoutError } from "../../src/pipeline/runner";
+import { PhaseTimeoutError, PipelineRunner } from "../../src/pipeline/runner";
 import type { Phase, PipelineState } from "../../src/pipeline/types";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../../src/context";
-import type { RuntimeInput } from "../../src/types";
 import { executeReportPhase } from "../../src/phases/report";
+import type { RuntimeInput } from "../../src/types";
 
 const input: RuntimeInput = {
   requirement: "Summarize work",
@@ -63,11 +63,9 @@ describe("executeReportPhase", () => {
   it("throws when aborted", async () => {
     const controller = new AbortController();
     controller.abort();
-    const generator = executeReportPhase(
-      input,
-      controller.signal,
-      { events: [] }
-    );
+    const generator = executeReportPhase(input, controller.signal, {
+      events: [],
+    });
 
     const first = await generator.next();
     expect(first.value).toMatchObject({

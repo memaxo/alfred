@@ -1,6 +1,6 @@
 import nlp from "compromise";
-import { fact, knowledgeHash, type Knowledge } from "../hypergraph";
 import type { KnowledgeEntry } from "../extractor";
+import { fact, type Knowledge, knowledgeHash } from "../hypergraph";
 import {
   cosine,
   embedTextSamples,
@@ -48,9 +48,7 @@ export async function deriveDecisionFacts(
     }
 
     const confidence = scoreToConfidence(similarity);
-    insert(
-      fact(`Decision: ${sentence.trim()}`, confidence, "inferred")
-    );
+    insert(fact(`Decision: ${sentence.trim()}`, confidence, "inferred"));
   });
 
   return entries;

@@ -1,13 +1,13 @@
 import nlp from "compromise";
+import type { KnowledgeEntry } from "../extractor";
 import {
   fact,
   insight,
+  type Knowledge,
   knowledgeHash,
   nodeFromHash,
   relation,
-  type Knowledge,
 } from "../hypergraph";
-import type { KnowledgeEntry } from "../extractor";
 import {
   cosine,
   embedTextSamples,
@@ -22,8 +22,8 @@ export async function deriveCausalityFromText(
 ): Promise<KnowledgeEntry[]> {
   const doc = nlp(text);
   const sentences = doc.sentences().out("array");
-  const candidates: Array<{ cause: string; effect: string; evidence: string }>
-    = [];
+  const candidates: Array<{ cause: string; effect: string; evidence: string }> =
+    [];
 
   for (const sentence of sentences) {
     const clauseDoc = nlp(sentence);
@@ -35,7 +35,7 @@ export async function deriveCausalityFromText(
     for (let i = 0; i < clauses.length - 1; i += 1) {
       const cause = clauses[i]?.trim();
       const effect = clauses[i + 1]?.trim();
-      if (!cause || !effect) {
+      if (!(cause && effect)) {
         continue;
       }
       candidates.push({ cause, effect, evidence: sentence });

@@ -3,17 +3,17 @@ import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
 import {
-  assertAllowedDirectory as assertCodexAllowedDirectory,
-  enforcePolicy,
-} from "../src/orchestrator/tool/codex/policy";
-import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
 } from "../src/orchestrator/tool/codex/definition";
-import { __internals as gitInternals } from "../src/orchestrator/tool/git";
-import { __internals as droidInternals } from "../src/orchestrator/tool/droid";
+import {
+  assertAllowedDirectory as assertCodexAllowedDirectory,
+  enforcePolicy,
+} from "../src/orchestrator/tool/codex/policy";
 import { __internals as dockerInternals } from "../src/orchestrator/tool/docker";
+import { __internals as droidInternals } from "../src/orchestrator/tool/droid";
+import { __internals as gitInternals } from "../src/orchestrator/tool/git";
 
 const { assertAllowedDirectory: assertGitAllowedDirectory } = gitInternals;
 const { assertAllowedDirectory: assertDroidAllowedDirectory } = droidInternals;
@@ -96,9 +96,7 @@ describe("Tool Policy & Security", () => {
       const link = path.join(sandbox, "link");
       fs.symlinkSync(outside, link);
 
-      expect(() => assertGitAllowedDirectory(link)).toThrow(
-        "git_invalid_cwd"
-      );
+      expect(() => assertGitAllowedDirectory(link)).toThrow("git_invalid_cwd");
 
       fs.rmSync(outside, { recursive: true, force: true });
     });

@@ -1,4 +1,45 @@
+
+
+
+
+
+
+
+
+
 /**
- * Alfred streaming domain types unified on AI SDK v6 primitives.
+ * AI SDK v6 UI message type used across UI and persistence layers.
  */
-export {};
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

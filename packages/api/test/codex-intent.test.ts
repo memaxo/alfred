@@ -8,13 +8,13 @@ import {
   mock,
   vi,
 } from "bun:test";
+import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
 import {
   mockPolicyAudit,
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
-import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -33,7 +33,10 @@ let issueAccessTokenImpl:
   | null = null;
 
 async function ensureSigningKeys() {
-  if (process.env.AGENT_ED25519_PRIVATE && process.env.AGENT_ED25519_PUBLIC_PEM) {
+  if (
+    process.env.AGENT_ED25519_PRIVATE &&
+    process.env.AGENT_ED25519_PUBLIC_PEM
+  ) {
     return;
   }
   const { privateKey, publicKey } = await generateKeyPair("EdDSA", {
@@ -51,9 +54,8 @@ async function issueAuthToken(options?: {
   sub?: string;
 }) {
   if (!issueAccessTokenImpl) {
-    issueAccessTokenImpl = (
-      await import("@alfred/auth/token")
-    ).issueAccessToken;
+    issueAccessTokenImpl = (await import("@alfred/auth/token"))
+      .issueAccessToken;
   }
 
   return issueAccessTokenImpl(
@@ -175,7 +177,7 @@ describe("codex-intent router", () => {
         ttlSec: 1,
       });
 
-      nowSpy.mockImplementation(() => base + 3_000);
+      nowSpy.mockImplementation(() => base + 3000);
 
       await expect(
         caller.codexIntent.run({

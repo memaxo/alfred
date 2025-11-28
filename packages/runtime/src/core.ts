@@ -27,7 +27,7 @@ import {
 // const DEFAULT_STEP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_WORKFLOW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const DEFAULT_SUPERVISOR_HEARTBEAT_MS = 60_000; // 60 seconds
-const DEFAULT_SUPERVISOR_CHECK_INTERVAL_MS = 1_000; // 1 second
+const DEFAULT_SUPERVISOR_CHECK_INTERVAL_MS = 1000; // 1 second
 
 import { ActPhase } from "./pipeline/phases/act";
 import { PlanPhase } from "./pipeline/phases/plan";
@@ -106,7 +106,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     const providedContext = validated.runtimeContext;
     if (providedContext) {
-      this.runtimeContext = providedContext as RuntimeContext<Record<string, unknown>>;
+      this.runtimeContext = providedContext as RuntimeContext<
+        Record<string, unknown>
+      >;
     } else {
       this.runtimeContext = new RuntimeContext<Record<string, unknown>>([
         ["ai", null],
@@ -345,9 +347,10 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           error.message.startsWith("workflow_interrupted:")) ||
         (typeof error === "string" &&
           error.startsWith("workflow_interrupted:"));
-      const reportedError = supervisorReason && !isAlreadySupervisorError
-        ? new Error(`workflow_interrupted:${supervisorReason}`)
-        : error;
+      const reportedError =
+        supervisorReason && !isAlreadySupervisorError
+          ? new Error(`workflow_interrupted:${supervisorReason}`)
+          : error;
 
       this.state.finalStatus = "failed";
       this.state.finalMessage =

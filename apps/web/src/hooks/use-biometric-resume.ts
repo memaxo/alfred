@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
+import { useCallback, useState } from "react";
 
 export type ResumeTarget = "workflow" | "droid";
 
@@ -20,7 +20,11 @@ export function useObligationResume({ target }: UseObligationResumeArgs) {
   const [pending, setPending] = useState<PendingState | null>(null);
 
   const prompt = useCallback(
-    (payload: { runId: string; obligations: Obligation[]; resumeEvents?: ObligationResumeEvent[] }) => {
+    (payload: {
+      runId: string;
+      obligations: Obligation[];
+      resumeEvents?: ObligationResumeEvent[];
+    }) => {
       setPending({
         runId: payload.runId,
         obligations: payload.obligations,

@@ -14,8 +14,11 @@ declare module "bun" {
     constructor(url?: string, options?: Record<string, unknown>);
     connect(): Promise<void>;
     close(): void;
+    connected: boolean;
+    bufferedAmount: number;
     onconnect: (() => void) | null;
     onclose: ((error?: Error) => void) | null;
+    onerror: ((error: Error) => void) | null;
     get(key: string): Promise<string | null>;
     set(
       key: string,
@@ -25,6 +28,7 @@ declare module "bun" {
     del(key: string): Promise<number>;
     expire(key: string, seconds: number): Promise<boolean>;
     ttl(key: string): Promise<number>;
+    ping(): Promise<string>;
     publish(channel: string, message: string): Promise<number>;
     subscribe(
       channels: string[] | string,
@@ -36,6 +40,13 @@ declare module "bun" {
     punsubscribe(pattern: string, listener: RedisPubSubListener): Promise<void>;
     send(command: string, args: readonly string[]): Promise<unknown>;
     duplicate(): Promise<RedisClient>;
+    scan(
+      cursor: string,
+      options?: { MATCH?: string; COUNT?: number }
+    ): Promise<[string, string[]]>;
+    sadd(key: string, ...members: string[]): Promise<number>;
+    srem(key: string, ...members: string[]): Promise<number>;
+    smembers(key: string): Promise<string[]>;
   }
 
   export const redis: RedisClient;

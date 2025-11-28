@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 import { auth } from "@alfred/auth";
 import type { Obligation } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
@@ -98,7 +98,7 @@ function parseTestSession(headers: Headers): AuthSession | null {
     if (!parsed || typeof parsed !== "object") {
       return null;
     }
-    if (!parsed.user || !parsed.session) {
+    if (!(parsed.user && parsed.session)) {
       return null;
     }
     return parsed;

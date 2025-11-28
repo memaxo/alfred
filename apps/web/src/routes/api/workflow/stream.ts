@@ -1,17 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
-import type { Obligation, WorkflowEvent } from "@alfred/type";
-import type { UIMessage } from "@alfred/type/stream";
 import {
-  orchestrateWorkflowStream,
   type OrchestratorCallbacks,
+  orchestrateWorkflowStream,
 } from "@alfred/agent/workflow/orchestrator";
 import { workflowInput } from "@alfred/agent/workflow/schema";
 import { ensureObligations } from "@alfred/agent/workflow/services";
+import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { enforceWorkflowPlanPolicy } from "@alfred/api/workflow/access";
 import { createWorkflowSuspension } from "@alfred/api/workflow/suspension";
-import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { auth } from "@alfred/auth";
 import { logger } from "@alfred/logger";
+import type { Obligation, WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
+import { createFileRoute } from "@tanstack/react-router";
 
 type WorkflowSseMeta = {
   messages: UIMessage[];
@@ -67,7 +67,10 @@ export async function handleWorkflowStreamRequest(
     const parsed = workflowInput.safeParse(body);
     if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: "invalid_request", issues: parsed.error.issues }),
+        JSON.stringify({
+          error: "invalid_request",
+          issues: parsed.error.issues,
+        }),
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
@@ -103,14 +106,21 @@ export async function handleWorkflowStreamRequest(
     obligations = result.obligations;
   } catch (error) {
     const status = deriveStatus(error, 403);
-    return new Response(JSON.stringify({ error: "access_denied", detail: formatError(error).message }), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "access_denied",
+        detail: formatError(error).message,
+      }),
+      {
+        status,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 
   let cleanup: (() => void) | undefined;
-  let suspensionHandle: ReturnType<typeof createWorkflowSuspension> | null = null;
+  let suspensionHandle: ReturnType<typeof createWorkflowSuspension> | null =
+    null;
 
   let closed = false;
   const stream = new ReadableStream<Uint8Array>({
@@ -249,7 +259,7 @@ export async function handleWorkflowStreamRequest(
         close();
       });
 
-      send(encoder.encode(`: workflow-stream\n\n`));
+      send(encoder.encode(": workflow-stream\n\n"));
     },
     cancel() {
       closed = true;

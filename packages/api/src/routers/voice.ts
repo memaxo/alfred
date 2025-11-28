@@ -20,14 +20,8 @@ import {
   listAvailableModels,
   listVoices,
 } from "@alfred/voice/services/models";
-import {
-  type SttInput,
-  transcribeLocal,
-} from "@alfred/voice/services/stt";
-import {
-  synthesizeLocal,
-  type TtsInput,
-} from "@alfred/voice/services/tts";
+import { type SttInput, transcribeLocal } from "@alfred/voice/services/stt";
+import { synthesizeLocal, type TtsInput } from "@alfred/voice/services/tts";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";

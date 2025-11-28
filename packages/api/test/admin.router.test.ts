@@ -24,7 +24,13 @@ const getVoicePoolsMock = vi.fn();
 const telemetrySnapshot = {
   sttLatency: { average: 0.4, p50: 0.3, p95: 0.8, count: 2, unit: "seconds" },
   ttsLatency: { average: 0.5, p50: 0.4, p95: 0.9, count: 2, unit: "seconds" },
-  roundTrip: { average: 120, p50: 100, p95: 200, count: 4, unit: "milliseconds" },
+  roundTrip: {
+    average: 120,
+    p50: 100,
+    p95: 200,
+    count: 4,
+    unit: "milliseconds",
+  },
   jitter: { average: 10, p50: 8, p95: 20, count: 4, unit: "milliseconds" },
   packetLossTotal: 0,
 };

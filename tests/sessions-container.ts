@@ -4,10 +4,7 @@ import path from "node:path";
 import { spawn } from "bun";
 import { ContainerWorkspace } from "../packages/agent/src/environment/container";
 
-async function runCommand(
-  args: string[],
-  options: { cwd?: string } = {}
-) {
+async function runCommand(args: string[], options: { cwd?: string } = {}) {
   const proc = spawn(args, {
     cwd: options.cwd ?? process.cwd(),
     stdout: "pipe",
@@ -117,19 +114,16 @@ async function run() {
       "kill-session",
       "-t",
       sessionName,
-    ]);
-
-    console.log("[sessions-container] tmux verified inside container workspace.");
+      ]);
   } finally {
     await workspace
       .cleanup()
-      .catch((error) =>
-        console.warn("[sessions-container] workspace cleanup failed:", error)
-      );
+      .catch(() => {
+        // Ignore cleanup errors
+      });
   }
 }
 
-await run().catch((error) => {
-  console.error("[sessions-container] FAILURE:", error);
-  process.exitCode = 1;
-});
+  await run().catch(() => {
+    process.exitCode = 1;
+  });

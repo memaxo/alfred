@@ -87,7 +87,7 @@ export async function createWorkflowCaller(
       : {
           user: resolvedUser,
           session: { id: `sess-${runtime.requestId}` },
-    };
+        };
 
   return router.createCaller({
     session,

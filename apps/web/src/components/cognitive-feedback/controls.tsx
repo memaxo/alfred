@@ -14,16 +14,12 @@ export function CognitiveFeedbackControls({
   onNegative,
   testIdPrefix,
 }: CognitiveFeedbackControlsProps) {
-  const positiveId = testIdPrefix
-    ? `${testIdPrefix}-positive`
-    : undefined;
-  const negativeId = testIdPrefix
-    ? `${testIdPrefix}-negative`
-    : undefined;
+  const positiveId = testIdPrefix ? `${testIdPrefix}-positive` : undefined;
+  const negativeId = testIdPrefix ? `${testIdPrefix}-negative` : undefined;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <span className="uppercase tracking-[0.2em] text-[0.65rem]">
+    <div className="flex items-center gap-2 text-muted-foreground text-xs">
+      <span className="text-[0.65rem] uppercase tracking-[0.2em]">
         Feedback
       </span>
       <Button

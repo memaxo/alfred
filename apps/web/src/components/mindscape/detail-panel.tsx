@@ -2,15 +2,14 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { Loader2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  CognitiveFeedbackControls,
-} from "@/components/cognitive-feedback/controls";
+import { useShallow } from "zustand/react/shallow";
+import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
 } from "@/components/cognitive-feedback/dialog";
-import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
+import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { formatRelativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
@@ -18,7 +17,6 @@ import {
   type KnowledgeNodeData,
   useMindscapeStore,
 } from "@/store/mindscape";
-import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
@@ -225,7 +223,7 @@ export function MindscapeDetailPanel({
     actual: string;
     surface?: string;
   }) => {
-    if (!feedbackDraft || !focusedNodeId) {
+    if (!(feedbackDraft && focusedNodeId)) {
       return;
     }
     try {
@@ -241,9 +239,7 @@ export function MindscapeDetailPanel({
       resetFeedback();
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to submit feedback.";
+        error instanceof Error ? error.message : "Failed to submit feedback.";
       toast.error(message);
     }
   };
@@ -280,15 +276,15 @@ export function MindscapeDetailPanel({
               {getNodeLabel(node)}
             </h2>
           </div>
-        <button
-          aria-label="Close inspector"
-          className="rounded-full border border-transparent p-1 text-biolum-faint transition hover:border-white/10 hover:text-biolum"
-          onClick={() => focusNode(null)}
-          type="button"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+          <button
+            aria-label="Close inspector"
+            className="rounded-full border border-transparent p-1 text-biolum-faint transition hover:border-white/10 hover:text-biolum"
+            onClick={() => focusNode(null)}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         {canSubmitFeedback ? (
           <div className="mt-4 flex items-center justify-between gap-2">
@@ -299,7 +295,7 @@ export function MindscapeDetailPanel({
               testIdPrefix="mindscape-detail-feedback"
             />
             {lastFeedback ? (
-              <span className="text-[10px] uppercase tracking-wide text-biolum-faint">
+              <span className="text-[10px] text-biolum-faint uppercase tracking-wide">
                 {lastFeedback.intent === "positive"
                   ? "Marked accurate"
                   : "Needs revision"}
@@ -310,181 +306,187 @@ export function MindscapeDetailPanel({
           </div>
         ) : null}
 
-      <dl className="mt-4 space-y-2 text-biolum-faint text-xs">
-        {isKnowledgeData(data) && (
-          <div className="flex items-center justify-between">
-            <dt>Source</dt>
-            <dd className="text-biolum">{data.source ?? "runtime"}</dd>
-          </div>
-        )}
-        {graphDbId && (
-          <div className="flex items-center justify-between">
-            <dt>Graph ID</dt>
-            <dd className="font-mono text-[11px] text-biolum">
-              {graphDbId.slice(0, 8)}…
-            </dd>
-          </div>
-        )}
-        {data?.graph?.hgHash && (
-          <div className="flex items-center justify-between">
-            <dt>Hypergraph Hash</dt>
-            <dd className="font-mono text-[11px] text-biolum">
-              {data.graph.hgHash.slice(0, 8)}…
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      {runId && (
-        <section className="mt-6 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-biolum-faint text-xs uppercase tracking-wide">
-                Workflow Run
-              </p>
-              <p className="font-medium text-biolum text-sm">
-                {runId.slice(0, 12)}…
-              </p>
+        <dl className="mt-4 space-y-2 text-biolum-faint text-xs">
+          {isKnowledgeData(data) && (
+            <div className="flex items-center justify-between">
+              <dt>Source</dt>
+              <dd className="text-biolum">{data.source ?? "runtime"}</dd>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <Button
-                className="h-7 px-3 text-xs"
-                data-testid="mindscape-workflow-link"
-                onClick={() => {
-                  if (onWorkflowInspect) {
-                    onWorkflowInspect(runId);
-                    return;
-                  }
-                  if (onWorkflowNavigate) {
-                    onWorkflowNavigate(runId);
-                    return;
-                  }
-                  if (typeof window !== "undefined") {
-                    window.location.assign(`/workflow/${runId}`);
-                  }
-                }}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                Inspect Workflow
-              </Button>
-              {onWorkflowNavigate && (
-                <Button
-                  className="h-6 px-2 text-[11px]"
-                  data-testid="mindscape-workflow-open-full"
-                  onClick={() => onWorkflowNavigate(runId)}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  Open full run
-                </Button>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {contextEntry && (
-        <section className="mt-4 space-y-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-biolum-faint text-xs uppercase tracking-wide">
-                Context Source
-              </p>
-              <p className="font-medium text-biolum text-sm">
-                {contextEntry.source === "handoff" || contextEntry.phase === "cache"
-                  ? "Cache Hit"
-                  : "Fresh Scan"}
-              </p>
-            </div>
-            <span className="text-biolum-faint text-[11px]">
-              {formatRelativeTime(
-                contextEntry.receipt?.created ??
-                  new Date(contextEntry.updatedAt ?? Date.now())
-              )}
-            </span>
-          </div>
-          {contextEntry.receipt?.summary && (
-            <p className="text-biolum text-sm">{contextEntry.receipt.summary}</p>
           )}
-        </section>
-      )}
+          {graphDbId && (
+            <div className="flex items-center justify-between">
+              <dt>Graph ID</dt>
+              <dd className="font-mono text-[11px] text-biolum">
+                {graphDbId.slice(0, 8)}…
+              </dd>
+            </div>
+          )}
+          {data?.graph?.hgHash && (
+            <div className="flex items-center justify-between">
+              <dt>Hypergraph Hash</dt>
+              <dd className="font-mono text-[11px] text-biolum">
+                {data.graph.hgHash.slice(0, 8)}…
+              </dd>
+            </div>
+          )}
+        </dl>
 
-      {isRuntimeKnowledge && (
-        <section className="mt-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-emerald-300" />
-            <h3 className="font-semibold text-sm tracking-tight">Provenance</h3>
-          </div>
-          <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
-            {showLoadingState ? (
-              <p className="flex items-center gap-2 text-biolum-dim text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading provenance…
-              </p>
-            ) : isError ? (
-              <div className="space-y-2 text-sm">
-                <p className="text-red-300">
-                  Failed to load provenance: {error?.message ?? "Unknown error"}
+        {runId && (
+          <section className="mt-6 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-biolum-faint text-xs uppercase tracking-wide">
+                  Workflow Run
                 </p>
+                <p className="font-medium text-biolum text-sm">
+                  {runId.slice(0, 12)}…
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
                 <Button
                   className="h-7 px-3 text-xs"
-                  onClick={() => void refetch()}
+                  data-testid="mindscape-workflow-link"
+                  onClick={() => {
+                    if (onWorkflowInspect) {
+                      onWorkflowInspect(runId);
+                      return;
+                    }
+                    if (onWorkflowNavigate) {
+                      onWorkflowNavigate(runId);
+                      return;
+                    }
+                    if (typeof window !== "undefined") {
+                      window.location.assign(`/workflow/${runId}`);
+                    }
+                  }}
                   size="sm"
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                 >
-                  Retry
+                  Inspect Workflow
                 </Button>
+                {onWorkflowNavigate && (
+                  <Button
+                    className="h-6 px-2 text-[11px]"
+                    data-testid="mindscape-workflow-open-full"
+                    onClick={() => onWorkflowNavigate(runId)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Open full run
+                  </Button>
+                )}
               </div>
-            ) : hasRagDocuments ? (
-              <ul className="space-y-2">
-                {ragDocuments.map((doc) => {
-                  const ragNode = nodes.find(
-                    (candidate) => candidate.data?.graph?.dbId === doc.id
-                  );
-                  return (
-                    <li
-                      className="rounded-xl border border-emerald-500/20 bg-emerald-600/5 p-2 text-emerald-100"
-                      key={doc.id}
-                    >
-                      <p className="font-medium text-sm">
-                        {getDocTitle(doc) ?? "RAG document"}
-                      </p>
-                      <p className="mt-1 text-emerald-200/70 text-xs">
-                        {doc.id.slice(0, 8)}…
-                      </p>
-                      <Button
-                        className={cn(
-                          "mt-2 h-6 px-2 text-[11px]",
-                          ragNode
-                            ? "text-emerald-200 hover:text-emerald-100"
-                            : "text-biolum-faint hover:text-biolum-faint"
-                        )}
-                        disabled={!ragNode}
-                        onClick={() => {
-                          if (ragNode) {
-                            focusNode(ragNode.id);
-                          }
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        {ragNode ? "Focus document" : "Not on canvas"}
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-biolum-dim">No RAG documents linked.</p>
+            </div>
+          </section>
+        )}
+
+        {contextEntry && (
+          <section className="mt-4 space-y-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-biolum-faint text-xs uppercase tracking-wide">
+                  Context Source
+                </p>
+                <p className="font-medium text-biolum text-sm">
+                  {contextEntry.source === "handoff" ||
+                  contextEntry.phase === "cache"
+                    ? "Cache Hit"
+                    : "Fresh Scan"}
+                </p>
+              </div>
+              <span className="text-[11px] text-biolum-faint">
+                {formatRelativeTime(
+                  contextEntry.receipt?.created ??
+                    new Date(contextEntry.updatedAt ?? Date.now())
+                )}
+              </span>
+            </div>
+            {contextEntry.receipt?.summary && (
+              <p className="text-biolum text-sm">
+                {contextEntry.receipt.summary}
+              </p>
             )}
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+
+        {isRuntimeKnowledge && (
+          <section className="mt-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-300" />
+              <h3 className="font-semibold text-sm tracking-tight">
+                Provenance
+              </h3>
+            </div>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
+              {showLoadingState ? (
+                <p className="flex items-center gap-2 text-biolum-dim text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading provenance…
+                </p>
+              ) : isError ? (
+                <div className="space-y-2 text-sm">
+                  <p className="text-red-300">
+                    Failed to load provenance:{" "}
+                    {error?.message ?? "Unknown error"}
+                  </p>
+                  <Button
+                    className="h-7 px-3 text-xs"
+                    onClick={() => void refetch()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : hasRagDocuments ? (
+                <ul className="space-y-2">
+                  {ragDocuments.map((doc) => {
+                    const ragNode = nodes.find(
+                      (candidate) => candidate.data?.graph?.dbId === doc.id
+                    );
+                    return (
+                      <li
+                        className="rounded-xl border border-emerald-500/20 bg-emerald-600/5 p-2 text-emerald-100"
+                        key={doc.id}
+                      >
+                        <p className="font-medium text-sm">
+                          {getDocTitle(doc) ?? "RAG document"}
+                        </p>
+                        <p className="mt-1 text-emerald-200/70 text-xs">
+                          {doc.id.slice(0, 8)}…
+                        </p>
+                        <Button
+                          className={cn(
+                            "mt-2 h-6 px-2 text-[11px]",
+                            ragNode
+                              ? "text-emerald-200 hover:text-emerald-100"
+                              : "text-biolum-faint hover:text-biolum-faint"
+                          )}
+                          disabled={!ragNode}
+                          onClick={() => {
+                            if (ragNode) {
+                              focusNode(ragNode.id);
+                            }
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {ragNode ? "Focus document" : "Not on canvas"}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-biolum-dim">No RAG documents linked.</p>
+              )}
+            </div>
+          </section>
+        )}
       </aside>
       <CognitiveFeedbackDialog
         draft={feedbackDraft}

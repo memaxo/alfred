@@ -9,8 +9,8 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useEffect } from "react";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
+import { useEffect } from "react";
 import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import Header from "../components/header";

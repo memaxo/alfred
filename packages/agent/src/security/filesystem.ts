@@ -7,7 +7,7 @@ import {
   realpathSync,
 } from "node:fs";
 import path from "node:path";
-import { directoryFdPath, ensureFdInheritable } from "./fd.js";
+import { directoryFdPath, ensureFdInheritable, pathFromFd } from "./fd.js";
 
 export type PathResolutionOptions = {
   noFollowSymlinks?: boolean;
@@ -180,8 +180,17 @@ export function openDirectorySecure(
   }
 }
 
+/**
+ * NOTE: This helper only exists for logging and diagnostics.
+ * Do not pass its return value to Bun.spawn for security-sensitive code paths.
+ * Use spawnWithSecureCwd so the validated fd stays authoritative.
+ */
 export function prepareCwdFromHandle(handle: DirectoryHandle): string {
   ensureFdInheritable(handle.fd);
+  const derived = pathFromFd(handle.fd);
+  if (derived) {
+    return derived;
+  }
   const fdPath = directoryFdPath(handle.fd);
   return fdPath ?? handle.path;
 }

@@ -92,13 +92,12 @@ mock.module("@alfred/agent/orchestrator/tool/worktree", () => ({
 const { runWaves } = await import("../src/orchestrator/waves");
 
 const originalExecutionContextBuild = ContextBuilder.prototype.build;
-ContextBuilder.prototype.build = async function () {
-  return {
+ContextBuilder.prototype.build = async () =>
+  ({
     bundle: null,
     receipts: {},
     totalTokens: 0,
-  } as any;
-};
+  }) as any;
 
 const tempDirs: string[] = [];
 
@@ -145,13 +144,16 @@ describe("runWaves execution", () => {
 
     expect(result.aborted).toBe(false);
     expect(codexExecute).toHaveBeenCalledTimes(1);
-    const prompt = (codexExecute.mock.calls[0]?.[0]?.input?.prompt ?? "") as string;
+    const prompt = (codexExecute.mock.calls[0]?.[0]?.input?.prompt ??
+      "") as string;
     expect(prompt).toContain(".agent/plans/run-1/task-main.md");
     const hints = result.agentFileHints as Map<string, Set<string>>;
     expect(hints.get("run-1:task-main")?.has("src/task.ts")).toBe(true);
     expect(
       events.some(
-        (event) => (event as any).kind === "wave-result" && (event as any).data?.waveId === "wave_0"
+        (event) =>
+          (event as any).kind === "wave-result" &&
+          (event as any).data?.waveId === "wave_0"
       )
     ).toBe(true);
 

@@ -7,10 +7,10 @@ import { withPolicyApproval } from "../approval.js";
 import {
   type CodexToolInput,
   codexInputSchema,
-  validateOutputSchema,
   toolOutputSchema,
+  validateOutputSchema,
 } from "./definition.js";
-import { executeWithSdk, buildTurnOptions } from "./exec.js";
+import { buildTurnOptions, executeWithSdk } from "./exec.js";
 import {
   enforcePolicy,
   mapAutoToCodex,

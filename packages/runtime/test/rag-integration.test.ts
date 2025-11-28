@@ -50,43 +50,51 @@ describe("RAG Integration", () => {
     expect(context.totalTokens).toBeGreaterThanOrEqual(0);
   }, 30_000);
 
-  heavyTest("ingest() creates RAG document", async () => {
-    const testContent = "This is a test note for RAG integration.";
-    const testSource = `test:note:${Date.now()}`;
+  heavyTest(
+    "ingest() creates RAG document",
+    async () => {
+      const testContent = "This is a test note for RAG integration.";
+      const testSource = `test:note:${Date.now()}`;
 
-    // Ingest should complete without errors
-    const documentId = await ingest(testSource, testContent);
-    expect(documentId).toBeTruthy();
-    expect(typeof documentId).toBe("string");
-  }, 60_000); // Increased timeout for local model loading
+      // Ingest should complete without errors
+      const documentId = await ingest(testSource, testContent);
+      expect(documentId).toBeTruthy();
+      expect(typeof documentId).toBe("string");
+    },
+    60_000
+  ); // Increased timeout for local model loading
 
-  heavyTest("retrieveContext() finds ingested content", async () => {
-    // Ingest test content
-    const testContent =
-      "ALFRED is a personal AI assistant with cognitive architecture.";
-    const testSource = `test:search:${Date.now()}`;
-    await ingest(testSource, testContent);
+  heavyTest(
+    "retrieveContext() finds ingested content",
+    async () => {
+      // Ingest test content
+      const testContent =
+        "ALFRED is a personal AI assistant with cognitive architecture.";
+      const testSource = `test:search:${Date.now()}`;
+      await ingest(testSource, testContent);
 
-    // Wait a moment for indexing (in production, this happens asynchronously)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait a moment for indexing (in production, this happens asynchronously)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Retrieve with related query
-    const engine = new KnowledgeEngine();
-    const chunks = await engine.retrieveContext("cognitive architecture", {
-      useHybrid: true,
-      topK: 5,
-      threshold: 0.5, // Lower threshold for test
-    });
+      // Retrieve with related query
+      const engine = new KnowledgeEngine();
+      const chunks = await engine.retrieveContext("cognitive architecture", {
+        useHybrid: true,
+        topK: 5,
+        threshold: 0.5, // Lower threshold for test
+      });
 
-    // Should find at least one chunk (may find more if other content exists)
-    expect(Array.isArray(chunks)).toBe(true);
+      // Should find at least one chunk (may find more if other content exists)
+      expect(Array.isArray(chunks)).toBe(true);
 
-    // Verify chunk structure
-    if (chunks.length > 0) {
-      const chunk = chunks[0];
-      expect(chunk).toHaveProperty("content");
-      expect(chunk).toHaveProperty("metadata");
-      expect(typeof chunk.content).toBe("string");
-    }
-  }, 90_000); // Increased timeout for local model loading
+      // Verify chunk structure
+      if (chunks.length > 0) {
+        const chunk = chunks[0];
+        expect(chunk).toHaveProperty("content");
+        expect(chunk).toHaveProperty("metadata");
+        expect(typeof chunk.content).toBe("string");
+      }
+    },
+    90_000
+  ); // Increased timeout for local model loading
 });

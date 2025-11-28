@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer";
 import { performance } from "node:perf_hooks";
 import { markVoice } from "@alfred/metrics/performance";
 import { encodeFromPCM16, sanitizeBase64 } from "../audio/codec";

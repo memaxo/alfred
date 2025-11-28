@@ -139,10 +139,10 @@ export function ChatNode({ id, data, selected }: NodeProps) {
         focused.label &&
         (focused.ragDocuments.length > 0 || focused.isLoading) && (
           <ContextLens
+            contextSnapshot={focused.contextSnapshot}
             isError={focused.isError}
             isLoading={focused.isLoading}
             label={focused.label}
-            contextSnapshot={focused.contextSnapshot}
             ragDocuments={focused.ragDocuments}
           />
         )

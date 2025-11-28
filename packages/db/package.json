@@ -7,8 +7,8 @@
   "exports": {
     ".": {
       "browser": {
-        "default": "./dist/src/browser.js",
-        "import": "./dist/src/browser.js"
+        "default": "./dist/browser.js",
+        "import": "./dist/browser.js"
       },
       "bun": "./src/index.ts",
       "default": "./dist/index.js",
@@ -17,37 +17,37 @@
     },
     "./*": {
       "bun": "./src/*.ts",
-      "default": "./dist/src/*.js",
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts"
+      "default": "./dist/*.js",
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
     },
     "./browser": {
-      "default": "./dist/src/browser.js",
-      "import": "./dist/src/browser.js",
-      "types": "./dist/src/browser.d.ts"
+      "default": "./dist/browser.js",
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
     },
     "./client": {
-      "default": "./dist/src/client.js",
-      "import": "./dist/src/client.js",
-      "types": "./dist/src/client.d.ts"
+      "default": "./dist/client.js",
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
     },
     "./repo/deploy": {
       "bun": "./src/repo/deploy/index.ts",
-      "default": "./dist/src/repo/deploy/index.js",
-      "import": "./dist/src/repo/deploy/index.js",
-      "types": "./dist/src/repo/deploy/index.d.ts"
+      "default": "./dist/repo/deploy/index.js",
+      "import": "./dist/repo/deploy/index.js",
+      "types": "./dist/repo/deploy/index.d.ts"
     },
     "./repo/graph": {
       "bun": "./src/repo/graph/index.ts",
-      "default": "./dist/src/repo/graph/index.js",
-      "import": "./dist/src/repo/graph/index.js",
-      "types": "./dist/src/repo/graph/index.d.ts"
+      "default": "./dist/repo/graph/index.js",
+      "import": "./dist/repo/graph/index.js",
+      "types": "./dist/repo/graph/index.d.ts"
     },
     "./testing": {
       "bun": "./src/testing.ts",
-      "default": "./dist/src/testing.js",
-      "import": "./dist/src/testing.js",
-      "types": "./dist/src/testing.d.ts"
+      "default": "./dist/testing.js",
+      "import": "./dist/testing.js",
+      "types": "./dist/testing.d.ts"
     }
   },
   "scripts": {

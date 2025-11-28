@@ -1,5 +1,8 @@
 import type { Hypergraph, NodeId } from "@alfred/knowledge";
-import { detectContradiction, extractReasoning } from "@alfred/knowledge/extractor";
+import {
+  detectContradiction,
+  extractReasoning,
+} from "@alfred/knowledge/extractor";
 import { embed } from "@alfred/rag";
 import type {
   CaptureResult,
@@ -79,10 +82,7 @@ const lexicalSimilarity = (a: string, b: string): number => {
   return overlap / maxSize;
 };
 
-const cosineSimilarity = (
-  a: Float32Array,
-  b: Float32Array
-): number => {
+const cosineSimilarity = (a: Float32Array, b: Float32Array): number => {
   const length = Math.min(a.length, b.length);
   let dot = 0;
   let normA = 0;
@@ -144,9 +144,7 @@ const extractEntityMentions = (fact: KnowledgeFact): string[] => {
   return Array.from(mentions);
 };
 
-const groupByEntity = (
-  facts: KnowledgeFact[]
-): Map<string, EntityCluster> => {
+const groupByEntity = (facts: KnowledgeFact[]): Map<string, EntityCluster> => {
   const clusters = new Map<string, EntityCluster>();
   for (const fact of facts) {
     for (const mention of extractEntityMentions(fact)) {
@@ -220,10 +218,7 @@ export async function synthesize(
     return { insights, relations, contradictions };
   }
 
-  const graphFacts: Array<[
-    NodeId,
-    { _: "fact"; content: string }
-  ]> = [];
+  const graphFacts: Array<[NodeId, { _: "fact"; content: string }]> = [];
   for (const [nodeId, knowledge] of graph.entries()) {
     if (knowledge._ === "fact") {
       graphFacts.push([nodeId, knowledge]);
@@ -231,8 +226,7 @@ export async function synthesize(
   }
 
   const hasEmbeddings =
-    typeof graph.embeddingCount === "function" &&
-    graph.embeddingCount() > 0;
+    typeof graph.embeddingCount === "function" && graph.embeddingCount() > 0;
   const embeddingEntries: Array<[NodeId, Float32Array]> = hasEmbeddings
     ? Array.from(graph.embeddingEntries())
     : [];
@@ -272,11 +266,7 @@ export async function synthesize(
           if (similarity <= SEMANTIC_SIMILARITY_THRESHOLD) {
             continue;
           }
-          const key = relationKey(
-            fact.id,
-            nodeId,
-            "semantically_similar"
-          );
+          const key = relationKey(fact.id, nodeId, "semantically_similar");
           if (relationKeys.has(key)) {
             continue;
           }
@@ -326,7 +316,8 @@ export async function synthesize(
       continue;
     }
     const derived = relatedFacts.map((fact) => fact.id);
-    const confidenceValue = 0.7 + Math.min(0.2, 0.05 * (relatedFacts.length - 3));
+    const confidenceValue =
+      0.7 + Math.min(0.2, 0.05 * (relatedFacts.length - 3));
     insights.push({
       id: makeInsightId(),
       derived,

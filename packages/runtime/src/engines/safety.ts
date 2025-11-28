@@ -1,10 +1,10 @@
-import { logger } from "@alfred/logger";
-import type { ExecutionPlan } from "@alfred/cognitive/schemas";
 import type {
   RiskAssessment,
   RiskLevel,
 } from "@alfred/cognitive/logic/autonomy";
+import type { ExecutionPlan } from "@alfred/cognitive/schemas";
 import { RISK_ANCHORS } from "@alfred/knowledge/ontology";
+import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import {
   runtimeSafetyAssessmentTotal,
@@ -147,8 +147,9 @@ export async function classifyPlanRisk(
   plan: PlanLike,
   options: { maxSteps?: number } = {}
 ): Promise<RiskAssessment> {
-  const forcedLevel = process.env
-    .RUNTIME_FORCE_PLAN_RISK_LEVEL as RiskLevel | undefined;
+  const forcedLevel = process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL as
+    | RiskLevel
+    | undefined;
   if (forcedLevel && FALLBACK_SCORES[forcedLevel] !== undefined) {
     runtimeSafetyClassificationDurationSeconds.observe({ mode: "forced" }, 0);
     runtimeSafetyAssessmentTotal.inc({

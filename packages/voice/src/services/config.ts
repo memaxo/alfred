@@ -1,7 +1,6 @@
 export const DEFAULT_STT_MODEL =
   process.env.VOICE_STT_MODEL ?? "faster-whisper-large-v3-turbo";
-export const DEFAULT_TTS_MODEL =
-  process.env.VOICE_TTS_MODEL ?? "maya1";
+export const DEFAULT_TTS_MODEL = process.env.VOICE_TTS_MODEL ?? "maya1";
 export const DEFAULT_TTS_VOICE =
   process.env.VOICE_TTS_VOICE ?? "en_US-lessac-medium";
 

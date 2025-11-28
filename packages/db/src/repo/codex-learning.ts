@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { metricsRegistry } from "@alfred/metrics/registry";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import client from "prom-client";
 import { db } from "../client.js";
 import { memoryEdges, memoryNodes } from "../schema/graph.js";
@@ -8,9 +8,7 @@ import { sanitizeContextText } from "./sanitize.js";
 
 export { sanitizeContextText } from "./sanitize.js";
 
-const ensureHistogram = (
-  config: client.HistogramConfiguration<string>
-) => {
+const ensureHistogram = (config: client.HistogramConfiguration<string>) => {
   const existing = metricsRegistry.getSingleMetric(config.name);
   if (existing) {
     return existing as client.Histogram<string>;

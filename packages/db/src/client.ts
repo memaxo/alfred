@@ -144,11 +144,7 @@ function createSqliteDrizzle(connectionString: string) {
   return drizzleSqlite(sqlite);
 }
 
-const AUTH_ERROR_PATTERNS = [
-  "password",
-  "authentication",
-  "permission denied",
-];
+const AUTH_ERROR_PATTERNS = ["password", "authentication", "permission denied"];
 
 function isAuthError(error: Error): boolean {
   const message = error.message?.toLowerCase() ?? "";
@@ -172,7 +168,7 @@ export async function connectWithRetry(
 ): Promise<void> {
   const maxRetries = Math.max(1, options.maxRetries ?? 5);
   let delay = options.initialDelay ?? 100;
-  const maxDelay = options.maxDelay ?? 5_000;
+  const maxDelay = options.maxDelay ?? 5000;
   const sleep = options.sleep ?? wait;
   let lastError: Error | null = null;
 
@@ -233,7 +229,7 @@ export function createPgClient(
     connectWithRetry(client, {
       maxRetries,
       initialDelay: retry?.initialDelay ?? 100,
-      maxDelay: retry?.maxDelay ?? 5_000,
+      maxDelay: retry?.maxDelay ?? 5000,
       sleep: retry?.sleep,
     }).catch((error) => {
       logger.error("db_client_connection_failed_after_retries", {

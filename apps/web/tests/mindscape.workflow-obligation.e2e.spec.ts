@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import type { WorkflowEvent } from "@alfred/type";
+import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
 
 type WorkflowHarnessWindow = Window & {
@@ -52,15 +52,19 @@ test.describe("Mindscape workflow obligation flow", () => {
     });
   });
 
-  test("suspends on obligations and auto-resumes after biometric", async ({ page }) => {
+  test("suspends on obligations and auto-resumes after biometric", async ({
+    page,
+  }) => {
     await signUpTestUser(page);
 
     await page.evaluate(() => {
-      const store = (window as unknown as WorkflowHarnessWindow & {
-        __MINDSCAPE_STORE__?: {
-          setState: (updater: (state: any) => any) => void;
-        };
-      }).__MINDSCAPE_STORE__;
+      const store = (
+        window as unknown as WorkflowHarnessWindow & {
+          __MINDSCAPE_STORE__?: {
+            setState: (updater: (state: any) => any) => void;
+          };
+        }
+      ).__MINDSCAPE_STORE__;
       if (!store) {
         throw new Error("Mindscape store unavailable");
       }
@@ -83,18 +87,21 @@ test.describe("Mindscape workflow obligation flow", () => {
         };
         return {
           ...state,
-          nodes: [...state.nodes.filter((n: any) => n.id !== workflowNode.id), workflowNode],
+          nodes: [
+            ...state.nodes.filter((n: any) => n.id !== workflowNode.id),
+            workflowNode,
+          ],
         };
       });
     });
 
     await expect
-      .poll(async () => {
-        return page.evaluate(() => {
+      .poll(async () =>
+        page.evaluate(() => {
           const scope = window as WorkflowHarnessWindow;
           return Boolean(scope.__workflowStreamTestHarness__?.latestOptions);
-        });
-      })
+        })
+      )
       .toBeTruthy();
 
     const runId = "run-workflow-playwright";

@@ -294,15 +294,51 @@ export class RedisRunRegistry implements RunRegistry {
   }
 
   private async initialize(): Promise<void> {
-    await this.cmd.connect();
-    await this.sub.connect();
-    await this.sub.subscribe(CH_INST(this.instanceId), (raw, _channel) => {
-      void this.handleMessage(raw);
-    });
+    try {
+      await this.cmd.connect();
+      if (!this.cmd.connected) {
+        throw new Error("Command client not connected after connect()");
+      }
+    } catch (error) {
+      logger.error("run_registry_cmd_connect_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+
+    try {
+      await this.sub.connect();
+      if (!this.sub.connected) {
+        throw new Error("Subscription client not connected after connect()");
+      }
+    } catch (error) {
+      logger.error("run_registry_sub_connect_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+
+    try {
+      await this.sub.subscribe(CH_INST(this.instanceId), (raw, _channel) => {
+        void this.handleMessage(raw);
+      });
+    } catch (error) {
+      logger.error("run_registry_subscribe_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        instanceId: this.instanceId,
+      });
+      throw error;
+    }
   }
 
   private async ensureReady() {
     await this.ready;
+    if (!this.cmd.connected) {
+      throw new Error("Redis command client not connected");
+    }
+    if (!this.sub.connected) {
+      throw new Error("Redis subscription client not connected");
+    }
   }
 
   private ensureHeartbeat() {

@@ -228,11 +228,11 @@ function normalizeReasoningEvent(
 }
 
 function normalizeDataStatusEvent(event: DataStatusEventPayload): UIMessage[] {
-  const part: MessagePart = {
+  const part = {
     type: "data-status",
     data: event.data,
     transient: Boolean(event.transient),
-  };
+  } as MessagePart;
   return [createAssistantMessage([part])];
 }
 
@@ -358,8 +358,8 @@ function createToolCallPart(call: ToolCallShape): MessagePart {
     type: "tool-call",
     toolName: inferToolName(call),
     toolCallId: inferToolCallId(call),
-    args: getToolInput(call) ?? {},
-  };
+    input: getToolInput(call) ?? {},
+  } as unknown as MessagePart;
 }
 
 function createToolResultPart(result: ToolResultShape): MessagePart {
@@ -367,8 +367,8 @@ function createToolResultPart(result: ToolResultShape): MessagePart {
     type: "tool-result",
     toolName: inferToolName(result),
     toolCallId: inferToolCallId(result),
-    result: getToolOutput(result),
-  };
+    output: getToolOutput(result),
+  } as unknown as MessagePart;
 }
 
 function inferToolCallId(data: { toolCallId?: string; id?: string }): string {

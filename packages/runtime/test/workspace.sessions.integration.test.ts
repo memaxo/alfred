@@ -1,4 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { WorkspaceFactory } from "@alfred/agent/environment/factory";
+import type { Workspace } from "@alfred/agent/environment/types";
+import { WorktreeWorkspace } from "@alfred/agent/environment/worktree";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { toolSession } from "@alfred/agent/orchestrator/tool/session";
+import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
+import {
+  checkTmuxLeaks,
+  __internals as leakInternals,
+} from "../../../scripts/check-tmux-leaks.ts";
 import { runReviewPhase } from "../src/orchestrator/review";
 import type { OrchestratorContext } from "../src/orchestrator/types";
 import {
@@ -6,16 +16,6 @@ import {
   mockRunner,
   preparePlanDir,
 } from "./utils/review-helpers";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
-import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
-import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import type { Workspace } from "@alfred/agent/environment/types";
-import { WorktreeWorkspace } from "@alfred/agent/environment/worktree";
-import { toolSession } from "@alfred/agent/orchestrator/tool/session";
-import {
-  checkTmuxLeaks,
-  __internals as leakInternals,
-} from "../../../scripts/check-tmux-leaks.ts";
 
 describe("workspace session coverage", () => {
   const originalWorkspaceCreate = WorkspaceFactory.create;
@@ -134,25 +134,25 @@ describe("workspace session coverage", () => {
     const runId = `concurrent-${Date.now().toString(36)}`;
     const sessionTracker = new Set<string>();
 
-    toolSession.execute = mock(async ({
-      input,
-    }: Parameters<typeof toolSession.execute>[0]) => {
-      switch (input.action) {
-        case "start": {
-          sessionTracker.add(input.sessionId);
-          return { ok: true, output: "started" };
+    toolSession.execute = mock(
+      async ({ input }: Parameters<typeof toolSession.execute>[0]) => {
+        switch (input.action) {
+          case "start": {
+            sessionTracker.add(input.sessionId);
+            return { ok: true, output: "started" };
+          }
+          case "stop": {
+            sessionTracker.delete(input.sessionId);
+            return { ok: true, output: "stopped" };
+          }
+          case "list": {
+            return { ok: true, sessions: Array.from(sessionTracker) };
+          }
+          default:
+            return { ok: true };
         }
-        case "stop": {
-          sessionTracker.delete(input.sessionId);
-          return { ok: true, output: "stopped" };
-        }
-        case "list": {
-          return { ok: true, sessions: Array.from(sessionTracker) };
-        }
-        default:
-          return { ok: true };
       }
-    });
+    );
 
     leakInternals.setListHandler(async () => Array.from(sessionTracker));
 

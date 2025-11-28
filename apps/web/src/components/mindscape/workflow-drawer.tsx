@@ -3,9 +3,7 @@
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  CognitiveFeedbackControls,
-} from "@/components/cognitive-feedback/controls";
+import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
@@ -13,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
-import { formatRelativeTime } from "@/lib/time";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
+import { formatRelativeTime } from "@/lib/time";
 import { useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 
@@ -187,9 +185,7 @@ function WorkflowDrawerBody({
     return runId ?? "";
   }, [runId, runQuery.data]);
 
-  const recordFeedback = useMindscapeStore(
-    (state) => state.recordFeedback
-  );
+  const recordFeedback = useMindscapeStore((state) => state.recordFeedback);
   const workflowFeedback = useMindscapeStore((state) =>
     runId ? state.feedbackByNode[runId] : undefined
   );
@@ -231,7 +227,7 @@ function WorkflowDrawerBody({
     actual: string;
     surface?: string;
   }) => {
-    if (!feedbackDraft || !runId) {
+    if (!(feedbackDraft && runId)) {
       return;
     }
     try {
@@ -247,9 +243,7 @@ function WorkflowDrawerBody({
       resetFeedback();
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to submit feedback.";
+        error instanceof Error ? error.message : "Failed to submit feedback.";
       toast.error(message);
     }
   };

@@ -4,15 +4,13 @@ import type {
   SearchReceipt,
   WorkflowEvent,
 } from "@alfred/type/plan";
-import { ContextBuilder } from "../../src/context";
 import type { ExecutionContext } from "../../src/context";
+import { ContextBuilder } from "../../src/context";
 import type { RuntimeInput } from "../../src/types";
 
 const buildMock = mock<(input: unknown) => Promise<ExecutionContext>>();
 const originalPlanBuild = ContextBuilder.prototype.build;
-ContextBuilder.prototype.build = function (input: unknown) {
-  return buildMock(input);
-};
+ContextBuilder.prototype.build = (input: unknown) => buildMock(input);
 
 const persistExecPlansMock = mock(async () => {});
 mock.module("@alfred/agent/assistant/graphstore", () => ({
@@ -20,7 +18,11 @@ mock.module("@alfred/agent/assistant/graphstore", () => ({
 }));
 
 const streamMock = mock(async function* () {
-  yield { type: "text-delta", id: "delta-1", delta: "Plan step" } as WorkflowEvent;
+  yield {
+    type: "text-delta",
+    id: "delta-1",
+    delta: "Plan step",
+  } as WorkflowEvent;
   yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
 });
 
@@ -73,7 +75,7 @@ function createExecutionContext(): ExecutionContext {
   } as SearchReceipt;
 
   const bundle: ContextBundle = {
-    maxTokens: 24000,
+    maxTokens: 24_000,
     estimatedTokens: 120,
     files: [
       {

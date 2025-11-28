@@ -1,4 +1,6 @@
 import { spawn } from "bun";
+import type { DirectoryHandle } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import type { ProjectConfig } from "../../utils/project-detector";
 
 export type RunnerOutput = {
@@ -13,11 +15,12 @@ const DEFAULT_HEARTBEAT_MS = 60_000; // 60s default silence limit
 export const toolRunner = {
   execute: async (
     command: string,
-    cwd: string,
+    cwd: string | DirectoryHandle,
     timeoutMs = 60_000,
     projectConfig?: ProjectConfig
   ): Promise<RunnerOutput> => {
     const start = Date.now();
+    const dirHandle = typeof cwd === "string" ? null : cwd;
 
     // Abstract command handling
     let finalCommand = command;
@@ -40,12 +43,24 @@ export const toolRunner = {
       throw new Error("Empty command");
     }
 
-    const proc = spawn([cmd, ...args], {
-      cwd,
-      stdout: "pipe",
-      stderr: "pipe",
-      env: { ...process.env, CI: "true" },
-    });
+    const env = { ...process.env, CI: "true" };
+
+    const proc =
+      dirHandle === null
+        ? spawn([cmd, ...args], {
+            cwd: cwd as string,
+            stdout: "pipe",
+            stderr: "pipe",
+            env,
+          })
+        : spawnWithSecureCwd({
+            cwdHandle: dirHandle,
+            cmd,
+            args,
+            env,
+            stdout: "pipe",
+            stderr: "pipe",
+          });
 
     // Heartbeat & Timeout State
     let lastActivity = Date.now();
@@ -92,8 +107,8 @@ export const toolRunner = {
 
     try {
       await Promise.all([
-        readStream(proc.stdout, stdoutChunks),
-        readStream(proc.stderr, stderrChunks),
+        readStream(proc.stdout ?? null, stdoutChunks),
+        readStream(proc.stderr ?? null, stderrChunks),
         proc.exited,
       ]);
 

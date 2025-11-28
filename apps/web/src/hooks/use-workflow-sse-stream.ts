@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
+import { useEffect, useRef, useState } from "react";
 
 export type WorkflowStreamInput = {
   requirement: string;
@@ -51,9 +51,7 @@ type WorkflowStreamHarness = {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __workflowStreamTestHarness__:
-    | WorkflowStreamHarness
-    | undefined;
+  var __workflowStreamTestHarness__: WorkflowStreamHarness | undefined;
 }
 
 function getWorkflowStreamHarness(): WorkflowStreamHarness | null {
@@ -138,7 +136,7 @@ export function useWorkflowSseStream(
           signal: controller.signal,
         });
 
-        if (!response.ok || !response.body) {
+        if (!(response.ok && response.body)) {
           throw new Error(`workflow_stream_http_${response.status}`);
         }
 
@@ -251,7 +249,7 @@ function parseEvent(raw: string): ParsedEvent | null {
       data = data.length ? `${data}\n${chunk}` : chunk;
     }
   }
-  if (!eventName && !data) {
+  if (!(eventName || data)) {
     return null;
   }
   return { event: eventName, data: data.trim() };

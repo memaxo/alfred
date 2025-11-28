@@ -1,7 +1,7 @@
-import React from "react";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { act, fireEvent, render, waitFor } from "../../test/testing-library";
+import type React from "react";
 import { useMindscapeStore } from "@/store/mindscape";
+import { act, render, waitFor } from "../../test/testing-library";
 
 type Harness = {
   subscribeImpl: ((options: any) => { unsubscribe: () => void }) | null;
@@ -35,7 +35,8 @@ const trpcProxyMock = {
 const harness: Harness = {
   subscribeImpl: null,
   subscribe(options: any) {
-    const impl = harness.subscribeImpl ?? ((input: any) => subscribeMock(input));
+    const impl =
+      harness.subscribeImpl ?? ((input: any) => subscribeMock(input));
     return impl(options);
   },
 };
@@ -116,9 +117,9 @@ describe("DroidNode", () => {
   });
 
   afterEach(() => {
-    delete (globalThis as HarnessGlobal).__droidStreamTestHarness__;
+    (globalThis as HarnessGlobal).__droidStreamTestHarness__ = undefined;
     if (typeof window !== "undefined") {
-      delete (window as unknown as HarnessGlobal).__droidStreamTestHarness__;
+      (window as unknown as HarnessGlobal).__droidStreamTestHarness__ = undefined;
     }
   });
 

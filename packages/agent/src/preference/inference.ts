@@ -5,7 +5,6 @@ import type {
   PreferenceKey,
   PreferenceSource,
   ResponseFormat,
-  ResponseTone,
   ResponseVerbosity,
   ToolCallHistory,
 } from "@alfred/type/preference";

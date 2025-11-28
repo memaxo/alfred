@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import {
+  alfredCodexEventSchema,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
-  alfredCodexEventSchema,
 } from "@alfred/agent/orchestrator/tool/codex/definition";
+import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -105,7 +105,9 @@ export function buildCodexErrorResponse(
   scope: string
 ): CodexErrorHandlingResult {
   const normalized =
-    error instanceof Error ? error : new Error(String(error ?? "unknown_error"));
+    error instanceof Error
+      ? error
+      : new Error(String(error ?? "unknown_error"));
   const sanitized = sanitizeCodexError(normalized);
   const correlationId = randomUUID();
   logger.error(scope, {
@@ -214,8 +216,7 @@ function createCodexStreamObservable({
 }) {
   return observable<CodexStreamEvent>((emit) => {
     const abortController = new AbortController();
-    const effectiveTimeoutSec =
-      timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
+    const effectiveTimeoutSec = timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
 
     void (async () => {
       try {
@@ -315,10 +316,12 @@ const codexProcedures = {
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
-      const timeoutSec =
-        input.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
+      const timeoutSec = input.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
       const chunks: string[] = [];
       const events: AlfredCodexEvent[] = [];
 
@@ -387,8 +390,7 @@ const codexProcedures = {
         });
       }
 
-      const timeoutSec =
-        input.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
+      const timeoutSec = input.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
       return createCodexStreamObservable({ input, timeoutSec, userId });
     }),
 };

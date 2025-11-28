@@ -4,6 +4,7 @@ import {
 } from "@alfred/api/metrics";
 import { findNearestConcept } from "@alfred/db/repo/graph";
 import { extract } from "@alfred/knowledge/extractor";
+import { classifyDomain } from "@alfred/knowledge/lexicon/domains";
 import { ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
@@ -20,37 +21,14 @@ export type EntityLinkResult = {
   paths: string[][];
 };
 
-const ENTITY_HEURISTICS = new Map<string, string>([
-  ["react", "Coding"],
-  ["python", "Coding"],
-  ["typescript", "Coding"],
-  ["javascript", "Coding"],
-  ["docker", "Coding"],
-  ["nextjs", "Coding"],
-  ["kali", "Security"],
-  ["security", "Security"],
-  ["xss", "Security"],
-  ["owasp", "Security"],
-  ["llm", "AI"],
-  ["ai", "AI"],
-  ["gpt", "AI"],
-  ["transformer", "AI"],
-  ["politics", "Politics"],
-  ["congress", "Politics"],
-  ["senate", "Politics"],
-  ["election", "Politics"],
-  ["news", "News"],
-  ["headline", "News"],
-  ["reuters", "News"],
-  ["bloomberg", "News"],
-]);
-
 function normalizeEntity(entity: string): string {
   return entity.trim().toLowerCase();
 }
 
 function shouldSkipEmbedding(entity: string): boolean {
-  return ENTITY_HEURISTICS.has(normalizeEntity(entity));
+  // Skip embedding if domain classification already detected it
+  const domains = classifyDomain(entity);
+  return domains.length > 0;
 }
 
 /**
@@ -101,10 +79,13 @@ export async function linkEntities(
     return { domains: [], paths: [] };
   }
 
-  // 2. Query the Graph for connection to Anchor Concepts
+  // 2. Use domain classification for fast detection
+  const classifiedDomains = classifyDomain(recentUserMessages);
+  const detectedConcepts = new Set<string>(classifiedDomains);
+
+  // 3. Query the Graph for connection to Anchor Concepts
   // We check the first 5 entities to keep latency low
   const candidates = Array.from(entities).slice(0, 5);
-  const detectedConcepts = new Set<string>();
   const detectedPaths: string[][] = [];
   const targetConcepts = Object.keys(ANCHORS);
 

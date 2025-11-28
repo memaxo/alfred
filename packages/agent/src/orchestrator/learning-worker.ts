@@ -11,18 +11,18 @@ import {
 } from "@alfred/db/repo/graph/index";
 import { workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
-import { deriveCausalityFromText } from "@alfred/knowledge/reasoning/causality";
-import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
-import { deriveAlternativeFacts } from "@alfred/knowledge/reasoning/alternatives";
 import { knowledgeHash } from "@alfred/knowledge/hypergraph";
 import { getOntologyKnowledge } from "@alfred/knowledge/ontology";
+import { deriveAlternativeFacts } from "@alfred/knowledge/reasoning/alternatives";
+import { deriveCausalityFromText } from "@alfred/knowledge/reasoning/causality";
+import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 // Mock metrics if package not available (for tests or circular dep avoidance)
 const mockHistogram = { startTimer: () => () => {} };
-const mockCounter = { inc: () => {} };
+const mockCounter = { inc: (_value?: number) => {} };
 
 let metrics = {
   memoryMaintenanceDurationSeconds: mockHistogram,
@@ -37,7 +37,6 @@ const loadMetrics = async () => {
   // might not set it consistently across all environments, or we might WANT to test metrics.
   // Instead, we wrap the import in a try/catch block which is sufficient safety.
   try {
-    // @ts-expect-error
     const apiMetrics = await import("@alfred/api/metrics");
     if (apiMetrics.memoryMaintenanceDurationSeconds) {
       metrics = apiMetrics;
@@ -64,6 +63,7 @@ export type LearningWorkerConfig = {
   decayThresholdMs: number;
   decayFactor: number;
   pruneConfidence: number;
+  cleanupAgeMs: number;
   decayLimit: number;
   confidenceFloor: number;
   // Episodic Dreaming
@@ -434,13 +434,12 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   const extraction = extract(textToAnalyze, `run:${run.id}`);
   const knowledgeEntries = toKnowledge(extraction);
 
-  const [causalEntries, decisionEntries, alternativeEntries] = await Promise.all(
-    [
+  const [causalEntries, decisionEntries, alternativeEntries] =
+    await Promise.all([
       deriveCausalityFromText(textToAnalyze),
       deriveDecisionFacts(textToAnalyze),
       deriveAlternativeFacts(textToAnalyze),
-    ]
-  );
+    ]);
 
   const knowledgeMap = new Map(
     knowledgeEntries.map((entry) => [entry.hash, entry])

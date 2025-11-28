@@ -15,6 +15,30 @@
       "types": "./dist/extractor.d.ts",
       "default": "./src/extractor.ts"
     },
+    "./lexicon": {
+      "types": "./dist/lexicon/index.d.ts",
+      "default": "./src/lexicon/index.ts"
+    },
+    "./lexicon/titles": {
+      "types": "./dist/lexicon/titles.d.ts",
+      "default": "./src/lexicon/titles.ts"
+    },
+    "./lexicon/antonyms": {
+      "types": "./dist/lexicon/antonyms.d.ts",
+      "default": "./src/lexicon/antonyms.ts"
+    },
+    "./lexicon/code": {
+      "types": "./dist/lexicon/code.d.ts",
+      "default": "./src/lexicon/code.ts"
+    },
+    "./lexicon/domains": {
+      "types": "./dist/lexicon/domains.d.ts",
+      "default": "./src/lexicon/domains.ts"
+    },
+    "./extract/entities": {
+      "types": "./dist/extract/entities.d.ts",
+      "default": "./src/extract/entities.ts"
+    },
     "./hypergraph": {
       "types": "./dist/hypergraph.d.ts",
       "default": "./src/hypergraph.ts"

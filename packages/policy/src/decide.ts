@@ -9,7 +9,10 @@ function obligationKey(obligation: Obligation): string {
   return `${obligation.type}:${obligation.reason}:${JSON.stringify(meta)}`;
 }
 
-function addObligation(target: Map<string, Obligation>, obligation: Obligation) {
+function addObligation(
+  target: Map<string, Obligation>,
+  obligation: Obligation
+) {
   const key = obligationKey(obligation);
   if (!target.has(key)) {
     target.set(key, obligation);

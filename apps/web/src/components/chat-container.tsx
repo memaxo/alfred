@@ -15,9 +15,7 @@ import { Chat } from "@alfred/ui";
 import { useCallback, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
-import {
-  CognitiveFeedbackControls,
-} from "@/components/cognitive-feedback/controls";
+import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
@@ -135,9 +133,7 @@ export function ChatContainer({
         resetFeedback();
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to submit feedback.";
+          error instanceof Error ? error.message : "Failed to submit feedback.";
         toast.error(message);
       }
     },
@@ -160,10 +156,10 @@ export function ChatContainer({
           <div className="flex items-center gap-4">
             {focused.label && (
               <ContextLens
+                contextSnapshot={focused.contextSnapshot}
                 isError={focused.isError}
                 isLoading={focused.isLoading}
                 label={focused.label}
-                contextSnapshot={focused.contextSnapshot}
                 ragDocuments={focused.ragDocuments}
               />
             )}
@@ -197,8 +193,8 @@ export function ChatContainer({
                       : "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
-                renderPart={partRenderer}
                 renderMessageActions={renderMessageActions}
+                renderPart={partRenderer}
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
@@ -253,8 +249,8 @@ const getStreamId = (message: AssistantUIMessage): string | undefined => {
   return typeof message.id === "string" ? message.id : undefined;
 };
 
-const getMessageText = (message: AssistantUIMessage): string => {
-  return message.parts
+const getMessageText = (message: AssistantUIMessage): string =>
+  message.parts
     .map((part) => {
       if (part.type === "text") {
         return part.text;
@@ -264,4 +260,3 @@ const getMessageText = (message: AssistantUIMessage): string => {
     .filter((text): text is string => typeof text === "string")
     .join("\n")
     .trim();
-};

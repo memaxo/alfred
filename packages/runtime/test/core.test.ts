@@ -5,6 +5,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
+
 const { AISDKAdapter } = await import("../src/adapters/ai");
 const originalStream = AISDKAdapter.prototype.stream;
 
@@ -17,6 +18,7 @@ const originalDisableCodex = process.env.RUNTIME_DISABLE_CODEX;
 process.env.RUNTIME_DISABLE_CODEX = "1";
 
 const { createRuntime } = await import("../src/core");
+
 import type { RuntimeInput } from "../src/types";
 
 afterAll(() => {

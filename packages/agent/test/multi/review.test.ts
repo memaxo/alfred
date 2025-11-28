@@ -83,7 +83,9 @@ describe("buildReviewPlan", () => {
 
   it("only adds scenario checks when files are present", () => {
     const planWithoutFiles = buildReviewPlan({ files: [] });
-    expect(planWithoutFiles.checks.some((c) => c.id === "scenario")).toBe(false);
+    expect(planWithoutFiles.checks.some((c) => c.id === "scenario")).toBe(
+      false
+    );
 
     const planWithFiles = buildReviewPlan({ files: ["src/app.ts"] });
     expect(planWithFiles.checks.some((c) => c.id === "scenario")).toBe(true);
