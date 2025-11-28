@@ -4,15 +4,49 @@ const graphFixture = new Map<
   string,
   { concept: string; path: string[]; depth: number }
 >([
-  ["react", { concept: "Coding", path: ["React", "Frontend", "Coding"], depth: 2 }],
+  [
+    "react",
+    { concept: "Coding", path: ["React", "Frontend", "Coding"], depth: 2 },
+  ],
   ["python", { concept: "Coding", path: ["Python", "Coding"], depth: 1 }],
   ["kali", { concept: "Security", path: ["Kali", "Security"], depth: 1 }],
   ["transformer", { concept: "AI", path: ["Transformer", "AI"], depth: 1 }],
-  ["deepc", { concept: "Coding", path: ["DeepC", "DeepD", "Coding"], depth: 2 }],
+  ["gpt", { concept: "AI", path: ["GPT", "AI"], depth: 1 }],
+  [
+    "deepc",
+    { concept: "Coding", path: ["DeepC", "DeepD", "Coding"], depth: 2 },
+  ],
   ["deepd", { concept: "Coding", path: ["DeepD", "Coding"], depth: 1 }],
-  ["deepb", { concept: "Coding", path: ["DeepB", "DeepC", "DeepD", "Coding"], depth: 3 }],
-  ["deepa", { concept: "Coding", path: ["DeepA", "DeepB", "DeepC", "DeepD", "Coding"], depth: 4 }],
-  ["hooks", { concept: "Coding", path: ["Hooks", "React", "Coding"], depth: 2 }],
+  [
+    "deepb",
+    {
+      concept: "Coding",
+      path: ["DeepB", "DeepC", "DeepD", "Coding"],
+      depth: 3,
+    },
+  ],
+  [
+    "deepa",
+    {
+      concept: "Coding",
+      path: ["DeepA", "DeepB", "DeepC", "DeepD", "Coding"],
+      depth: 4,
+    },
+  ],
+  [
+    "hooks",
+    { concept: "Coding", path: ["Hooks", "React", "Coding"], depth: 2 },
+  ],
+  ["senate", { concept: "Politics", path: ["Senate", "Politics"], depth: 1 }],
+  [
+    "election",
+    { concept: "Politics", path: ["Election", "Politics"], depth: 1 },
+  ],
+  [
+    "headline",
+    { concept: "News", path: ["Headline", "News"], depth: 1 },
+  ],
+  ["reuters", { concept: "News", path: ["Reuters", "News"], depth: 1 }],
 ]);
 
 const findNearestConceptMock = mock(
@@ -20,7 +54,11 @@ const findNearestConceptMock = mock(
     label: string | undefined,
     targetConcepts: string[],
     maxDepth = 3
-  ): Promise<{ concept: string; path: string[]; node: { label: string } } | null> => {
+  ): Promise<{
+    concept: string;
+    path: string[];
+    node: { label: string };
+  } | null> => {
     if (!label) {
       return null;
     }
@@ -55,9 +93,7 @@ mock.module("@alfred/rag", () => ({
   embedMany: embedManyMock,
 }));
 
-const { getPersonaInstruction } = await import(
-  "../src/assistant/src/adapter"
-);
+const { getPersonaInstruction } = await import("../src/assistant/src/adapter");
 const { linkEntities } = await import("../src/services/entity-linker");
 
 describe("Emergent Behavior & Entity Linking", () => {
@@ -65,7 +101,6 @@ describe("Emergent Behavior & Entity Linking", () => {
     findNearestConceptMock.mockClear();
     embedManyMock.mockClear();
   });
-
 
   it("should link 'React' to 'Coding'", async () => {
     const result = await linkEntities([
@@ -117,6 +152,24 @@ describe("Emergent Behavior & Entity Linking", () => {
     const instruction = getPersonaInstruction(["Coding"]);
     expect(instruction).toBeDefined();
     expect(instruction).toContain("Senior Software Engineer");
+  });
+
+  it("should generate persona for AI", () => {
+    const instruction = getPersonaInstruction(["AI"]);
+    expect(instruction).toBeDefined();
+    expect(instruction).toContain("AI Research Scientist");
+  });
+
+  it("should generate persona for Politics", () => {
+    const instruction = getPersonaInstruction(["Politics"]);
+    expect(instruction).toBeDefined();
+    expect(instruction).toContain("Political Analyst");
+  });
+
+  it("should generate persona for News", () => {
+    const instruction = getPersonaInstruction(["News"]);
+    expect(instruction).toBeDefined();
+    expect(instruction).toContain("News Curator");
   });
 
   it("should merge personas for Coding and Security", () => {
@@ -182,6 +235,12 @@ describe("Emergent Behavior & Entity Linking", () => {
     expect(result.domains).toContain("Coding");
   });
 
+  it("skips embeddings for obvious anchors", async () => {
+    embedManyMock.mockClear();
+    await linkEntities([{ role: "user", content: "React" }]);
+    expect(embedManyMock).not.toHaveBeenCalled();
+  });
+
   it("should handle no user messages", async () => {
     const result = await linkEntities([{ role: "system", content: "hi" }]);
     expect(result.domains).toHaveLength(0);
@@ -208,10 +267,10 @@ function buildDeterministicVector(label: string): number[] {
 }
 
 function lookupFixtureEntry(label: string | undefined) {
-  if (!label) return undefined;
+  if (!label) return;
   const normalized = normalizeLabel(label);
   if (!normalized) {
-    return undefined;
+    return;
   }
   const direct = graphFixture.get(normalized);
   if (direct) {
@@ -222,7 +281,7 @@ function lookupFixtureEntry(label: string | undefined) {
       return entry;
     }
   }
-  return undefined;
+  return;
 }
 
 function normalizeLabel(label: string): string {

@@ -1,20 +1,21 @@
 import { Buffer } from "node:buffer";
 import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import os from "node:os";
-import path from "node:path";
-import {
-  type ApprovalMode,
-  Codex,
-  type SandboxMode,
-  type Thread,
-  type ThreadEvent,
-  type ThreadItem,
-  type ThreadOptions,
-  type TurnOptions,
+import { logger } from "@alfred/logger";
+import type {
+  ApprovalMode,
+  SandboxMode,
+  Thread,
+  ThreadEvent,
+  ThreadItem,
+  ThreadOptions,
+  TurnOptions,
+  Codex as CodexInstance,
 } from "@openai/codex-sdk";
 import {
   persistCodexExecution,
@@ -27,12 +28,11 @@ import {
   startCodexExecTimer,
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
-import { logger } from "@alfred/logger";
+import type { CodexSessionState } from "../../codex-session.js";
 import {
   assessSessionResumeEligibility,
   sessionManager,
 } from "../../codex-session.js";
-import type { CodexSessionState } from "../../codex-session.js";
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
@@ -41,9 +41,9 @@ import {
   type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
   OUTPUT_CAP_BYTES,
+  parseThreadEvent,
   type SandboxConfig,
   type ToolWriter,
-  parseThreadEvent,
   validateOutputSchema,
 } from "./definition.js";
 import {
@@ -52,6 +52,7 @@ import {
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
+import { loadCodexSdk } from "./sdk.js";
 import { truncateToBytes } from "./truncate.js";
 
 type WriterPayload = { [key: string]: unknown };
@@ -59,7 +60,7 @@ type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
 
 const WRITER_FAILURE_WARN_THRESHOLD = 10;
 const WRITER_CONSECUTIVE_FAILURE_ABORT_THRESHOLD = 5;
-const WRITER_WARNING_INTERVAL_MS = 5_000;
+const WRITER_WARNING_INTERVAL_MS = 5000;
 const THREAD_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 const DISCONNECT_ERROR_NAMES = new Set(["AbortError", "DOMException"]);
@@ -115,11 +116,11 @@ function createSafeWriter(
   let consecutiveFailures = 0;
   let writerHealthy = true;
   let warnedAboutDisconnect = false;
-  let lastDisconnectWarnAt = -Infinity;
-  let lastWriteWarnAt = -Infinity;
+  let lastDisconnectWarnAt = Number.NEGATIVE_INFINITY;
+  let lastWriteWarnAt = Number.NEGATIVE_INFINITY;
 
   return async (payload, context) => {
-    if (!writerHealthy || !writer?.write) {
+    if (!(writerHealthy && writer?.write)) {
       return;
     }
 
@@ -141,26 +142,25 @@ function createSafeWriter(
 
       const now = Date.now();
       const shouldLog =
-        now -
-          (isDisconnect ? lastDisconnectWarnAt : lastWriteWarnAt) >=
+        now - (isDisconnect ? lastDisconnectWarnAt : lastWriteWarnAt) >=
         WRITER_WARNING_INTERVAL_MS;
 
       if (isDisconnect && shouldLog) {
         lastDisconnectWarnAt = now;
-        logger.debug(
-          { ...logContext, err: error },
-          "Codex writer disconnect"
-        );
+        logger.debug("Codex writer disconnect", { ...logContext, err: error });
       } else if (!isDisconnect && shouldLog) {
         lastWriteWarnAt = now;
-        logger.warn({ ...logContext, err: error }, "Codex writer write error");
+        logger.warn("Codex writer write error", { ...logContext, err: error });
       }
 
-      if (totalFailures > WRITER_FAILURE_WARN_THRESHOLD && !warnedAboutDisconnect) {
+      if (
+        totalFailures > WRITER_FAILURE_WARN_THRESHOLD &&
+        !warnedAboutDisconnect
+      ) {
         warnedAboutDisconnect = true;
         logger.warn(
-          { totalFailures },
-          "Codex writer failures exceed threshold; client may be disconnected"
+          "Codex writer failures exceed threshold; client may be disconnected",
+          { totalFailures }
         );
       }
 
@@ -169,10 +169,9 @@ function createSafeWriter(
         writerHealthy
       ) {
         writerHealthy = false;
-        logger.warn(
-          { consecutiveFailures },
-          "Codex writer unhealthy; aborting Codex execution"
-        );
+        logger.warn("Codex writer unhealthy; aborting Codex execution", {
+          consecutiveFailures,
+        });
         abortExecution();
       }
     }
@@ -253,9 +252,7 @@ function appendReasoningTrace(
       ? reasoningText
       : truncateToBytes(reasoningText, remaining);
   const storedBytes =
-    byteLength <= remaining
-      ? byteLength
-      : Buffer.byteLength(storedText);
+    byteLength <= remaining ? byteLength : Buffer.byteLength(storedText);
 
   if (storedText) {
     acc.traces.push({
@@ -313,80 +310,7 @@ function appendFinal(acc: FinalAccumulator, chunk: string) {
   acc.truncated = true;
 }
 
-function normaliseEvent(payload: unknown): ThreadEvent | null {
-  if (typeof payload === "string") {
-    try {
-      const parsedPayload = JSON.parse(payload);
-      return parseThreadEvent(parsedPayload);
-    } catch (error) {
-      logger.warn("codex_event_json_parse_failed", {
-        sample:
-          payload.length > 200 ? `${payload.slice(0, 200)}...` : payload,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  }
-  return parseThreadEvent(payload);
-}
-
-function extractAgentMessage(item: unknown): string | null {
-  if (!item || typeof item !== "object") {
-    return null;
-  }
-  const candidate = item as {
-    text?: unknown;
-    content?: unknown;
-    output?: unknown;
-  };
-
-  if (typeof candidate.text === "string") {
-    return candidate.text;
-  }
-
-  if (Array.isArray(candidate.content)) {
-    const parts = candidate.content
-      .flatMap((entry) => {
-        if (typeof entry === "string") {
-          return entry;
-        }
-        if (!entry || typeof entry !== "object") {
-          return [];
-        }
-        const text = (entry as { text?: unknown }).text;
-        return typeof text === "string" ? text : [];
-      })
-      .filter((part): part is string => typeof part === "string");
-    if (parts.length > 0) {
-      return parts.join("\n");
-    }
-  }
-
-  if (candidate.output && typeof candidate.output === "object") {
-    const maybeText = (candidate.output as { text?: unknown }).text;
-    if (typeof maybeText === "string") {
-      return maybeText;
-    }
-  }
-
-  return null;
-}
-
-function extractAggregatedOutput(item: unknown): string | null {
-  if (!item || typeof item !== "object") {
-    return null;
-  }
-  const value = (item as { aggregated_output?: unknown }).aggregated_output;
-  if (typeof value === "string") {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value
-      .filter((part): part is string => typeof part === "string")
-      .join("\n");
-  }
-  return null;
-}
+// Removed unused helper functions: _normaliseEvent, _extractAgentMessage, _extractAggregatedOutput
 
 function extractReasoning(item: unknown): string | null {
   if (!item || typeof item !== "object") {
@@ -419,7 +343,10 @@ function extractReasoning(item: unknown): string | null {
   return null;
 }
 
-function emitAlfredEvents(writeFn: SafeWriter, events: AlfredCodexEvent[]): void {
+function emitAlfredEvents(
+  writeFn: SafeWriter,
+  events: AlfredCodexEvent[]
+): void {
   if (events.length === 0) {
     return;
   }
@@ -464,7 +391,9 @@ export function buildTurnOptions(
   return options;
 }
 
-function createCodexClient(env: Record<string, string>): Codex {
+async function createCodexClient(
+  env: Record<string, string>
+): Promise<CodexInstance> {
   const options: {
     env: Record<string, string>;
     codexPathOverride?: string;
@@ -478,15 +407,20 @@ function createCodexClient(env: Record<string, string>): Codex {
     options.codexPathOverride = resolved;
   }
 
+  const { Codex } = await loadCodexSdk();
   return new Codex(options);
 }
 
 type ThreadValidator = (threadId: string) => Promise<boolean>;
 
-function resolveThreadValidator(codex: Codex): ThreadValidator | undefined {
-  const maybeValidate = (codex as Codex & {
-    validateThread?: (id: string) => Promise<boolean> | boolean;
-  }).validateThread;
+function resolveThreadValidator(
+  codex: CodexInstance
+): ThreadValidator | undefined {
+  const maybeValidate = (
+    codex as CodexInstance & {
+      validateThread?: (id: string) => Promise<boolean> | boolean;
+    }
+  ).validateThread;
 
   if (typeof maybeValidate === "function") {
     return async (threadId: string) => {
@@ -494,10 +428,10 @@ function resolveThreadValidator(codex: Codex): ThreadValidator | undefined {
         const result = await maybeValidate.call(codex, threadId);
         return result !== false;
       } catch (error) {
-        logger.warn(
-          { threadId, err: error instanceof Error ? error.message : String(error) },
-          "codex_thread_validation_failed"
-        );
+        logger.warn("codex_thread_validation_failed", {
+          threadId,
+          err: error instanceof Error ? error.message : String(error),
+        });
         return false;
       }
     };
@@ -526,7 +460,7 @@ function createFilesystemThreadValidator(
     : resolveCodexSessionsDir();
 
   if (!sessionsDir) {
-    return undefined;
+    return;
   }
 
   return async (threadId: string) => {
@@ -543,14 +477,11 @@ function createFilesystemThreadValidator(
       if (code === "ENOENT") {
         return false;
       }
-      logger.warn(
-        {
-          threadId,
-          path: filePath,
-          err: error instanceof Error ? error.message : String(error),
-        },
-        "codex_thread_validation_fs_error"
-      );
+      logger.warn("codex_thread_validation_fs_error", {
+        threadId,
+        path: filePath,
+        err: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   };
@@ -571,9 +502,7 @@ function ensureDirectoryHandle(
   }
 
   const derivedPath =
-    typeof handle === "string"
-      ? handle
-      : (handle as { path?: unknown })?.path;
+    typeof handle === "string" ? handle : (handle as { path?: unknown })?.path;
 
   return {
     fd: -1,
@@ -649,7 +578,7 @@ async function runCodexWithSdk({
   let threadIdFromEvents: string | undefined;
   const artifacts: CodexArtifactSummary[] = [];
 
-  const codex = createCodexClient(env);
+  const codex = await createCodexClient(env);
   const threadOptions = buildThreadOptions(input, resolvedCw, sandbox);
   const threadValidator = resolveThreadValidator(codex);
 
@@ -670,43 +599,58 @@ async function runCodexWithSdk({
 
   let thread: Thread;
   const stopSessionValidationTimer = startCodexSessionValidationTimer();
-  
-  const SESSION_VALIDATION_TIMEOUT_MS = 5_000;
+
+  const SESSION_VALIDATION_TIMEOUT_MS = 5000;
   const validationPromise = assessSessionResumeEligibility({
     session: existingSession,
     workingDirectory: resolvedCw,
     validateThread: threadValidator,
   });
-  
+
+  let timeoutHandle: NodeJS.Timeout | null = null;
   const timeoutPromise = new Promise<{
     canResume: false;
     reason: "timeout";
   }>((resolve) => {
-    setNodeTimeout(() => {
+    timeoutHandle = setNodeTimeout(() => {
       resolve({ canResume: false, reason: "timeout" });
     }, SESSION_VALIDATION_TIMEOUT_MS);
   });
-  
-  const resumeAssessment = await Promise.race([
-    validationPromise,
-    timeoutPromise,
-  ]);
-  
-  if (resumeAssessment.reason === "timeout") {
+
+  let resumeAssessment:
+    | Awaited<typeof validationPromise>
+    | {
+        canResume: false;
+        reason: "timeout";
+      };
+
+  try {
+    resumeAssessment = await Promise.race([validationPromise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearNodeTimeout(timeoutHandle);
+    }
+  }
+
+  if (!resumeAssessment.canResume && resumeAssessment.reason === "timeout") {
     logger.warn("codex_session_validation_timeout", {
       sessionId: existingSession?.sessionId,
       workingDirectory: resolvedCw,
     });
-    const codexSessionValidationTimeoutTotal = (
-      await import("@alfred/api/metrics")
-    ).codexSessionValidationTimeoutTotal;
-    codexSessionValidationTimeoutTotal.inc();
+    try {
+      const { codexSessionValidationTimeoutTotal } = await import(
+        "@alfred/api/metrics"
+      );
+      codexSessionValidationTimeoutTotal.inc();
+    } catch {
+      // Metrics not available
+    }
   }
-  
+
   stopSessionValidationTimer({
     outcome: resumeAssessment.canResume
       ? "resume"
-      : resumeAssessment.reason ?? "unknown",
+      : (resumeAssessment.reason ?? "unknown"),
   });
 
   if (resumeAssessment.canResume) {
@@ -883,10 +827,7 @@ async function runCodexWithSdk({
             const text = item.text;
             if (text) {
               appendFinal(finalAccumulator, text);
-              void safeWriter(
-                { type: "stdout", text },
-                "codex_agent_message"
-              );
+              void safeWriter({ type: "stdout", text }, "codex_agent_message");
               alfredEvents.push({
                 type: "output",
                 content: text,
@@ -928,7 +869,7 @@ async function runCodexWithSdk({
           break;
         }
       }
-  }
+    }
   } catch (error) {
     if (didTimeout) {
       throw new Error("codex_exec_timeout");
@@ -936,7 +877,7 @@ async function runCodexWithSdk({
     if (timeoutController.signal.aborted && abortedByExternalSignal) {
       throw new Error("codex_exec_aborted");
     }
-    if (!runtimeFailure && !timeoutController.signal.aborted) {
+    if (!(runtimeFailure || timeoutController.signal.aborted)) {
       recordStage("spawn");
     }
     throw error;

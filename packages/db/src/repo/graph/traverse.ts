@@ -19,6 +19,17 @@ export async function findNearestConcept(
   embedding?: number[],
   matchThreshold = 0.5 // Cosine distance threshold (lower is better)
 ): Promise<{ concept: string; path: string[]; node: NodeRow } | null> {
+  if (isSqliteDriver()) {
+    return findNearestConceptSqlite({
+      startNodeLabel,
+      targetConcepts,
+      maxDepth,
+      resource,
+      embedding,
+      matchThreshold,
+    });
+  }
+
   // Normalize concepts to lower case for matching
   const targets = targetConcepts.map((c) => c.toLowerCase());
   const start = startNodeLabel || ""; // Handle undefined startNodeLabel
@@ -102,6 +113,278 @@ export async function findNearestConcept(
     | undefined;
 
   return row ? { node: row, concept: row.label, path: row.path } : null;
+}
+
+type SqliteTraversalInput = {
+  startNodeLabel?: string;
+  targetConcepts: string[];
+  maxDepth: number;
+  resource?: string;
+  embedding?: number[];
+  matchThreshold: number;
+};
+
+async function findNearestConceptSqlite({
+  startNodeLabel,
+  targetConcepts,
+  maxDepth,
+  resource,
+  embedding,
+  matchThreshold,
+}: SqliteTraversalInput): Promise<
+  { concept: string; path: string[]; node: NodeRow } | null
+> {
+  const normalizedTargets = new Set(
+    targetConcepts.map((concept) => concept.toLowerCase())
+  );
+  const context = await loadGraphContext(resource);
+  const startNode = embedding
+    ? selectStartNodeByEmbedding(context.nodes, embedding, matchThreshold)
+    : selectStartNodeByLabel(context.nodes, startNodeLabel);
+
+  if (!startNode) {
+    return null;
+  }
+
+  const normalizedStart = (startNodeLabel ?? "").trim().toLowerCase();
+  const queue: Array<{ node: NodeRow; path: string[]; depth: number }> = [
+    { node: startNode, path: [startNode.id], depth: 0 },
+  ];
+  const visited = new Set<string>([startNode.id]);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) {
+      break;
+    }
+
+    const label = (current.node.label ?? "").toLowerCase();
+    const isTarget = normalizedTargets.has(label);
+    const isStartLabel = normalizedStart.length > 0 && label === normalizedStart;
+
+    if (isTarget && (current.depth > 0 || !isStartLabel)) {
+      return {
+        concept: current.node.label,
+        path: current.path,
+        node: current.node,
+      };
+    }
+
+    if (current.depth >= maxDepth) {
+      continue;
+    }
+
+    const neighbors = context.adjacency.get(current.node.id);
+    if (!neighbors) {
+      continue;
+    }
+
+    for (const neighborId of neighbors) {
+      if (visited.has(neighborId)) {
+        continue;
+      }
+
+      const neighbor = context.nodes.get(neighborId);
+      if (!neighbor) {
+        continue;
+      }
+
+      visited.add(neighborId);
+      queue.push({
+        node: neighbor,
+        depth: current.depth + 1,
+        path: [...current.path, neighborId],
+      });
+    }
+  }
+
+  return null;
+}
+
+async function loadGraphContext(resource?: string): Promise<{
+  nodes: Map<string, NodeRow>;
+  adjacency: Map<string, Set<string>>;
+}> {
+  const nodeQuery = resource
+    ? db.select().from(memoryNodes).where(eq(memoryNodes.resource, resource))
+    : db.select().from(memoryNodes);
+  const nodes = await nodeQuery;
+  const nodeMap = new Map<string, NodeRow>();
+  for (const node of nodes) {
+    nodeMap.set(node.id, node);
+  }
+
+  const edgeQuery = resource
+    ? db.select().from(memoryEdges).where(eq(memoryEdges.resource, resource))
+    : db.select().from(memoryEdges);
+  const edges = await edgeQuery;
+  const adjacency = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    addNeighbor(adjacency, edge.fromId, edge.toId);
+    addNeighbor(adjacency, edge.toId, edge.fromId);
+  }
+
+  return { nodes: nodeMap, adjacency };
+}
+
+function addNeighbor(
+  adjacency: Map<string, Set<string>>,
+  source: string,
+  target: string
+): void {
+  if (!source || !target) {
+    return;
+  }
+  const neighbors = adjacency.get(source);
+  if (neighbors) {
+    neighbors.add(target);
+    return;
+  }
+  adjacency.set(source, new Set([target]));
+}
+
+function selectStartNodeByLabel(
+  nodes: Map<string, NodeRow>,
+  label?: string
+): NodeRow | null {
+  if (!label) {
+    return null;
+  }
+
+  const normalized = label.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  for (const node of nodes.values()) {
+    if ((node.label ?? "").toLowerCase() === normalized) {
+      return node;
+    }
+  }
+
+  if (normalized.length <= 3) {
+    return null;
+  }
+
+  for (const node of nodes.values()) {
+    const candidate = (node.label ?? "").toLowerCase();
+    if (candidate.includes(normalized)) {
+      return node;
+    }
+    if (normalized.includes(candidate) && candidate.length > 0) {
+      return node;
+    }
+  }
+
+  return null;
+}
+
+function selectStartNodeByEmbedding(
+  nodes: Map<string, NodeRow>,
+  embedding: number[] | undefined,
+  matchThreshold: number
+): NodeRow | null {
+  if (!embedding || embedding.length === 0) {
+    return null;
+  }
+
+  let best: { node: NodeRow; distance: number } | null = null;
+  for (const node of nodes.values()) {
+    const candidateEmbedding = normalizeEmbedding(node.embedding);
+    if (!candidateEmbedding) {
+      continue;
+    }
+    const distance = cosineDistance(embedding, candidateEmbedding);
+    if (!Number.isFinite(distance)) {
+      continue;
+    }
+    if (!best || distance < best.distance) {
+      best = { node, distance };
+    }
+  }
+
+  if (!best || best.distance >= matchThreshold) {
+    return null;
+  }
+
+  return best.node;
+}
+
+function normalizeEmbedding(value: unknown): number[] | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    const nums = value
+      .map((entry) => Number(entry))
+      .filter((entry) => Number.isFinite(entry));
+    return nums.length > 0 ? nums : null;
+  }
+
+  if (value instanceof Uint8Array) {
+    if (value.byteLength % 4 !== 0) {
+      return null;
+    }
+    const view = new DataView(
+      value.buffer,
+      value.byteOffset,
+      value.byteLength
+    );
+    const result: number[] = [];
+    for (let offset = 0; offset < view.byteLength; offset += 4) {
+      result.push(view.getFloat32(offset, true));
+    }
+    return result.length > 0 ? result : null;
+  }
+
+  if (value instanceof ArrayBuffer) {
+    const arr = Array.from(new Float32Array(value));
+    return arr.length > 0 ? arr : null;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        const nums = parsed
+          .map((entry) => Number(entry))
+          .filter((entry) => Number.isFinite(entry));
+        return nums.length > 0 ? nums : null;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function cosineDistance(a: number[], b: number[]): number {
+  const length = Math.min(a.length, b.length);
+  if (length === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < length; i++) {
+    const av = a[i];
+    const bv = b[i];
+    if (av !== undefined && bv !== undefined) {
+      dot += av * bv;
+      normA += av * av;
+      normB += bv * bv;
+    }
+  }
+
+  if (normA === 0 || normB === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const similarity = dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  return 1 - similarity;
 }
 
 export async function findPath(

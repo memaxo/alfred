@@ -5,11 +5,52 @@ import {
 import { findNearestConcept } from "@alfred/db/repo/graph";
 import { extract } from "@alfred/knowledge/extractor";
 import { ANCHORS } from "@alfred/knowledge/ontology";
+import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 
-export interface EntityLinkResult {
+// Type for findNearestConcept result (defined locally to work around stale dist types)
+type ConceptResult = {
+  concept: string;
+  path: string[];
+  node: { id: string; label: string };
+} | null;
+
+export type EntityLinkResult = {
   domains: string[];
   paths: string[][];
+};
+
+const ENTITY_HEURISTICS = new Map<string, string>([
+  ["react", "Coding"],
+  ["python", "Coding"],
+  ["typescript", "Coding"],
+  ["javascript", "Coding"],
+  ["docker", "Coding"],
+  ["nextjs", "Coding"],
+  ["kali", "Security"],
+  ["security", "Security"],
+  ["xss", "Security"],
+  ["owasp", "Security"],
+  ["llm", "AI"],
+  ["ai", "AI"],
+  ["gpt", "AI"],
+  ["transformer", "AI"],
+  ["politics", "Politics"],
+  ["congress", "Politics"],
+  ["senate", "Politics"],
+  ["election", "Politics"],
+  ["news", "News"],
+  ["headline", "News"],
+  ["reuters", "News"],
+  ["bloomberg", "News"],
+]);
+
+function normalizeEntity(entity: string): string {
+  return entity.trim().toLowerCase();
+}
+
+function shouldSkipEmbedding(entity: string): boolean {
+  return ENTITY_HEURISTICS.has(normalizeEntity(entity));
 }
 
 /**
@@ -68,36 +109,54 @@ export async function linkEntities(
   const targetConcepts = Object.keys(ANCHORS);
 
   // Generate embeddings for vector-native entity linking
-  let embeddings: number[][] = [];
-  try {
-    embeddings = await embedMany(candidates);
-  } catch (e) {
-    console.warn("Failed to generate embeddings for entity linking", e);
-    entityLinkingFallbackTotal.inc();
-    // Fallback to empty embeddings (will use string match)
-    embeddings = new Array(candidates.length).fill(undefined);
+  const embeddings: Array<number[] | undefined> = new Array(candidates.length).fill(
+    undefined
+  );
+  const embeddingTargets = candidates
+    .map((entity, index) => ({ entity, index }))
+    .filter(({ entity }) => !shouldSkipEmbedding(entity));
+
+  if (embeddingTargets.length > 0) {
+    try {
+      const vectors = await embedMany(
+        embeddingTargets.map((target) => target.entity)
+      );
+      for (let i = 0; i < vectors.length; i++) {
+        const target = embeddingTargets[i];
+        if (target) {
+          embeddings[target.index] = vectors[i];
+        }
+      }
+    } catch (e) {
+      logger.warn("Failed to generate embeddings for entity linking", {
+        error: e,
+      });
+      entityLinkingFallbackTotal.inc();
+    }
   }
 
   // Parallelize graph queries
   await Promise.all(
     candidates.map(async (entity, i) => {
       try {
-        const result = await findNearestConcept(
+        // Cast needed due to stale dist types - rebuild @alfred/db to fix
+        const result = (await findNearestConcept(
           entity,
           targetConcepts,
           3,
           "ontology",
-          embeddings[i]
-        );
+          embeddings[i],
+          0.5
+        )) as ConceptResult;
 
         // Normalization: Map "Coding" -> "Coding" (case match)
-        if (result && result.node) {
+        if (result?.node) {
           const nodeLabel = result.node.label || result.concept;
           detectedConcepts.add(nodeLabel);
           detectedPaths.push(result.path);
         }
       } catch (e) {
-        console.error("ADAPTER GRAPH QUERY ERROR:", e);
+        logger.error("ADAPTER GRAPH QUERY ERROR", { error: e });
         // Ignore graph query errors (fail open)
       }
     })
