@@ -73,3 +73,4 @@ packages/voice/.venv/
 /packages/db/AGENTS.md.bak
 # END Ruler Generated Files
 .env
+core

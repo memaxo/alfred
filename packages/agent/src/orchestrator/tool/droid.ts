@@ -1,84 +1,24 @@
-import {
-  accessSync,
-  constants as fsConstants,
-  realpathSync,
-  statSync,
-} from "node:fs";
 import path from "node:path";
-import {
-  clearTimeout as clearNodeTimeout,
-  setTimeout as setNodeTimeout,
-} from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import { recordDroidExecRun, startDroidExecTimer } from "../../metrics";
+import {
+  assertAllowedDirectory,
+  createTimeout,
+  DEFAULT_ALLOW_PREFIXES,
+  DEFAULT_TIMEOUT_SEC,
+  isWithinBase,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+  OUTPUT_CAP_BYTES,
+  recordToolExecution,
+  resolveExecutable,
+  startToolTimer,
+  streamStderr,
+  type ToolWriter,
+} from "./shared";
 
-const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
-const DEFAULT_TIMEOUT_SEC = 30 * 60;
-const MIN_TIMEOUT_SEC = 30;
-const MAX_TIMEOUT_SEC = 2 * 60 * 60;
-
-const DEFAULT_ALLOW_PREFIXES = (() => {
-  const base = realpathSync(process.cwd());
-  const raw = process.env.ORCH_ALLOW_CWD_PREFIXES;
-  const extras =
-    raw && raw.trim().length > 0
-      ? raw
-          .split(path.delimiter)
-          .map((entry) => entry.trim())
-          .filter(Boolean)
-      : [];
-
-  const prefixes = new Set<string>([base]);
-
-  for (const entry of extras) {
-    try {
-      const absolute = path.isAbsolute(entry)
-        ? entry
-        : path.resolve(base, entry);
-      prefixes.add(realpathSync(absolute));
-    } catch {
-      // Ignore invalid entries so that a bad env var does not break execution.
-    }
-  }
-
-  return Array.from(prefixes);
-})();
-
-function safeRealpath(p: string) {
-  try {
-    return realpathSync(p);
-  } catch {
-    return null;
-  }
-}
-
-function isWithinBase(base: string, target: string) {
-  const baseReal = safeRealpath(base);
-  const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
-  const relative = path.relative(baseReal, targetReal);
-  return (
-    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
-  );
-}
-
-function assertAllowedDirectory(candidate: string) {
-  const real = safeRealpath(candidate);
-  if (!real) {
-    throw new Error("droid_invalid_cwd");
-  }
-  for (const prefix of DEFAULT_ALLOW_PREFIXES) {
-    if (isWithinBase(prefix, real)) {
-      const stats = statSync(real);
-      if (!stats.isDirectory()) {
-        throw new Error("droid_invalid_cwd_not_directory");
-      }
-      return real;
-    }
-  }
-  throw new Error("droid_invalid_cwd");
-}
+// Regex for splitting lines - declared at module level for performance
+const LINE_SPLIT_REGEX = /\r?\n/;
 
 const droidInputSchema = z.object({
   prompt: z.string().min(1),
@@ -110,14 +50,10 @@ const toolOutputSchema = z.object({
     .optional(),
 });
 
-type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
-
-export interface DroidExecuteArgs {
+export type DroidExecuteArgs = {
   input: DroidToolInput;
   writer?: ToolWriter;
-}
+};
 
 function buildFlags(input: DroidToolInput) {
   const flags = ["exec", "-o", input.out];
@@ -146,36 +82,18 @@ function pickEnv(custom: Record<string, string> | undefined) {
   }
 
   for (const [key, value] of Object.entries(custom)) {
-    if (!key || typeof value !== "string") continue;
-    if (key === "PATH") continue;
+    if (!key || typeof value !== "string") {
+      continue;
+    }
+    if (key === "PATH") {
+      continue;
+    }
     if (key.startsWith("DROID_")) {
       safeEnv[key] = value;
     }
   }
 
   return safeEnv;
-}
-
-function resolveExecutable(command: string) {
-  if (path.isAbsolute(command)) {
-    accessSync(command, fsConstants.X_OK);
-    return command;
-  }
-
-  const pathEntries = (process.env.PATH ?? "")
-    .split(path.delimiter)
-    .filter(Boolean);
-  for (const entry of pathEntries) {
-    const candidate = path.join(entry, command);
-    try {
-      accessSync(candidate, fsConstants.X_OK);
-      return candidate;
-    } catch {
-      // continue
-    }
-  }
-
-  throw new Error("droid_binary_not_found");
 }
 
 async function enforcePolicy(input: DroidToolInput) {
@@ -208,16 +126,21 @@ function streamStdout(
   writer: ToolWriter,
   accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
 ) {
-  if (!proc.stdout || typeof proc.stdout === "number") return;
+  if (!proc.stdout || typeof proc.stdout === "number") {
+    return;
+  }
 
   const reader = proc.stdout.getReader();
   const decoder = new TextDecoder();
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: stream processing requires nested logic
   (async () => {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         const text = decoder.decode(value);
         accumulator.capturedBytes += Buffer.byteLength(text);
@@ -231,49 +154,32 @@ function streamStdout(
         }
 
         if (input.out === "debug") {
-          const lines = text.split(/\r?\n/).filter(Boolean);
+          const lines = text.split(LINE_SPLIT_REGEX).filter(Boolean);
           for (const line of lines) {
             try {
               const parsed = JSON.parse(line);
+              // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
               void Promise.resolve(
                 writer?.write?.({ type: "droid", chunk: parsed })
+                // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
               ).catch(() => {});
             } catch {
+              // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
               void Promise.resolve(
                 writer?.write?.({ type: "stdout", text: line })
+                // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
               ).catch(() => {});
             }
           }
         } else {
-          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
-            () => {}
-          );
+          // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
+          void Promise.resolve(writer?.write?.({ type: "stdout", text }))
+            // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
+            .catch(() => {});
         }
       }
     } catch {
       // Ignore stream read errors
-    }
-  })();
-}
-
-function streamStderr(proc: ReturnType<typeof Bun.spawn>, writer: ToolWriter) {
-  if (!proc.stderr || typeof proc.stderr === "number") return;
-
-  const reader = proc.stderr.getReader();
-  const decoder = new TextDecoder();
-
-  (async () => {
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        void Promise.resolve(
-          writer?.write?.({ type: "stderr", text: decoder.decode(value) })
-        ).catch(() => {});
-      }
-    } catch {
-      // Ignore stderr read errors
     }
   })();
 }
@@ -287,10 +193,12 @@ export const toolDroid = {
   execute: async ({ input, writer }: DroidExecuteArgs) => {
     await enforcePolicy(input);
 
-    const cwd = input.cw ? assertAllowedDirectory(input.cw) : process.cwd();
+    const cwd = input.cw
+      ? assertAllowedDirectory(input.cw, "droid")
+      : process.cwd();
     const flags = buildFlags(input);
     const command = process.env.DROID_BIN?.trim() || "droid";
-    const executable = resolveExecutable(command);
+    const executable = resolveExecutable(command, "droid");
 
     const proc = Bun.spawn([executable, ...flags], {
       cwd,
@@ -300,22 +208,14 @@ export const toolDroid = {
       stdin: "ignore",
     });
 
-    const stopDurationTimer = startDroidExecTimer(input.auto);
-
+    const stopDurationTimer = startToolTimer("droid", input.auto);
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-    const timer = setNodeTimeout(() => {
-      try {
-        proc.kill("SIGKILL");
-      } catch {
-        // noop
-      }
-      void Promise.resolve(
-        writer?.write?.({
-          type: "notice",
-          message: "droid_exec_timeout",
-        })
-      ).catch(() => {});
-    }, timeoutSec * 1000);
+    const timeoutCtx = createTimeout(
+      proc,
+      timeoutSec,
+      writer,
+      "droid_exec_timeout"
+    );
 
     const accumulator = {
       stdout: "",
@@ -330,23 +230,29 @@ export const toolDroid = {
     try {
       exitCode = await proc.exited;
     } catch (error) {
-      clearNodeTimeout(timer);
+      timeoutCtx.clear();
       stopDurationTimer();
       throw error;
     } finally {
-      clearNodeTimeout(timer);
+      timeoutCtx.clear();
       stopDurationTimer();
     }
 
-    recordDroidExecRun(input.auto, exitCode);
+    recordToolExecution("droid", input.auto, exitCode);
+
+    if (timeoutCtx.didTimeout) {
+      throw new Error("droid_exec_timeout");
+    }
 
     if (exitCode !== 0) {
       throw new Error(`droid_exec_failed:${exitCode}`);
     }
 
     if (accumulator.truncated) {
+      // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
       void Promise.resolve(
         writer?.write?.({ type: "notice", message: "output_truncated" })
+        // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
       ).catch(() => {});
     }
 
@@ -363,5 +269,5 @@ export const __internals = {
   DEFAULT_ALLOW_PREFIXES,
   isWithinBase,
   pickEnv,
-  resolveExecutable,
+  resolveExecutable: (cmd: string) => resolveExecutable(cmd, "droid"),
 };

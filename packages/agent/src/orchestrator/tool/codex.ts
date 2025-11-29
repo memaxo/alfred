@@ -1,54 +1,30 @@
-import {
-  accessSync,
-  constants as fsConstants,
-  realpathSync,
-  statSync,
-} from "node:fs";
 import path from "node:path";
-import {
-  clearTimeout as clearNodeTimeout,
-  setTimeout as setNodeTimeout,
-} from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-import { persistReasoning } from "../../../assistant/src/graphstore";
 import {
-  recordCodexError,
-  recordCodexExecRun,
-  startCodexExecTimer,
-} from "../../metrics";
-
-const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
-const DEFAULT_TIMEOUT_SEC = 30 * 60;
-const MIN_TIMEOUT_SEC = 30;
-const MAX_TIMEOUT_SEC = 2 * 60 * 60;
-
-const DEFAULT_ALLOW_PREFIXES = (() => {
-  const base = realpathSync(process.cwd());
-  const raw = process.env.ORCH_ALLOW_CWD_PREFIXES;
-  const extras =
-    raw && raw.trim().length > 0
-      ? raw
-          .split(path.delimiter)
-          .map((entry) => entry.trim())
-          .filter(Boolean)
-      : [];
-
-  const prefixes = new Set<string>([base]);
-
-  for (const entry of extras) {
-    try {
-      const absolute = path.isAbsolute(entry)
-        ? entry
-        : path.resolve(base, entry);
-      prefixes.add(realpathSync(absolute));
-    } catch {
-      // Ignore invalid entries so that a malformed env var does not break execution.
-    }
-  }
-
-  return Array.from(prefixes);
-})();
+  appendOutput,
+  appendReasoningTrace,
+  assertAllowedDirectory,
+  createOutputAccumulator,
+  createReasoningAccumulator,
+  createStageRecorder,
+  createTimeout,
+  DEFAULT_ALLOW_PREFIXES,
+  DEFAULT_TIMEOUT_SEC,
+  extractReasoningText,
+  isWithinBase,
+  MAX_TIMEOUT_SEC,
+  MIN_TIMEOUT_SEC,
+  OUTPUT_CAP_BYTES,
+  type OutputAccumulator,
+  persistReasoning,
+  type ReasoningAccumulator,
+  recordToolExecution,
+  resolveExecutable,
+  startToolTimer,
+  streamStderr,
+  type ToolWriter,
+} from "./shared";
 
 const MCP_ENV_ALLOWLIST = new Set([
   "CONTEXT7_API_KEY",
@@ -66,41 +42,6 @@ const MCP_ENV_ALLOWLIST = new Set([
   "PLAYWRIGHT_HEADLESS",
   "MCP_AUTH_TOKEN",
 ]);
-
-function safeRealpath(candidate: string) {
-  try {
-    return realpathSync(candidate);
-  } catch {
-    return null;
-  }
-}
-
-function isWithinBase(base: string, target: string) {
-  const baseReal = safeRealpath(base);
-  const targetReal = safeRealpath(target);
-  if (!(baseReal && targetReal)) return false;
-  const relative = path.relative(baseReal, targetReal);
-  return (
-    relative === "" || !(relative.startsWith("..") || path.isAbsolute(relative))
-  );
-}
-
-function assertAllowedDirectory(candidate: string) {
-  const resolved = safeRealpath(candidate);
-  if (!resolved) {
-    throw new Error("codex_invalid_cwd");
-  }
-  for (const prefix of DEFAULT_ALLOW_PREFIXES) {
-    if (isWithinBase(prefix, resolved)) {
-      const stats = statSync(resolved);
-      if (!stats.isDirectory()) {
-        throw new Error("codex_invalid_cwd_not_directory");
-      }
-      return resolved;
-    }
-  }
-  throw new Error("codex_invalid_cwd");
-}
 
 const codexInputSchema = z.object({
   action: z.literal("exec"),
@@ -142,14 +83,10 @@ const toolOutputSchema = z.object({
     .optional(),
 });
 
-type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
-
-export interface CodexExecuteArgs {
+export type CodexExecuteArgs = {
   input: CodexToolInput;
   writer?: ToolWriter;
-}
+};
 
 type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";
@@ -195,8 +132,12 @@ function pickEnvCodex(custom: Record<string, string> | undefined) {
   }
 
   for (const [key, value] of Object.entries(custom)) {
-    if (!key || typeof value !== "string") continue;
-    if (key === "PATH") continue;
+    if (!key || typeof value !== "string") {
+      continue;
+    }
+    if (key === "PATH") {
+      continue;
+    }
     if (key.startsWith("CODEX_")) {
       safeEnv[key] = value;
       continue;
@@ -211,28 +152,6 @@ function pickEnvCodex(custom: Record<string, string> | undefined) {
   }
 
   return safeEnv;
-}
-
-function resolveExecutable(command: string) {
-  if (path.isAbsolute(command)) {
-    accessSync(command, fsConstants.X_OK);
-    return command;
-  }
-
-  const pathEntries = (process.env.PATH ?? "")
-    .split(path.delimiter)
-    .filter(Boolean);
-  for (const entry of pathEntries) {
-    const candidate = path.join(entry, command);
-    try {
-      accessSync(candidate, fsConstants.X_OK);
-      return candidate;
-    } catch {
-      // continue searching
-    }
-  }
-
-  throw new Error("codex_binary_not_found");
 }
 
 async function enforcePolicy(input: CodexToolInput) {
@@ -259,52 +178,6 @@ async function enforcePolicy(input: CodexToolInput) {
   }
 }
 
-type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";
-
-function createStageRecorder() {
-  const recorded = new Set<CodexErrorStage>();
-  return (stage: CodexErrorStage) => {
-    if (!recorded.has(stage)) {
-      recorded.add(stage);
-      recordCodexError(stage);
-    }
-  };
-}
-
-type FinalAccumulator = {
-  chunks: string[];
-  storedBytes: number;
-  truncated: boolean;
-};
-
-type ReasoningAccumulator = {
-  traces: Array<{ text: string; timestamp: number }>;
-  storedBytes: number;
-  truncated: boolean;
-};
-
-function appendFinal(acc: FinalAccumulator, chunk: string) {
-  if (!chunk) return;
-  const buffer = Buffer.from(chunk);
-  if (acc.truncated) {
-    acc.storedBytes += buffer.byteLength;
-    return;
-  }
-  const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
-  if (remaining <= 0) {
-    acc.truncated = true;
-    return;
-  }
-  if (buffer.byteLength <= remaining) {
-    acc.chunks.push(chunk);
-    acc.storedBytes += buffer.byteLength;
-    return;
-  }
-  acc.chunks.push(buffer.subarray(0, remaining).toString());
-  acc.storedBytes += remaining;
-  acc.truncated = true;
-}
-
 function normaliseEvent(
   payload: unknown
 ): { type?: string; [key: string]: unknown } | null {
@@ -319,7 +192,9 @@ function normaliseEvent(
 }
 
 function extractAgentMessage(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
   const candidate = item as {
     text?: unknown;
     content?: unknown;
@@ -333,8 +208,12 @@ function extractAgentMessage(item: unknown): string | null {
   if (Array.isArray(candidate.content)) {
     const parts = candidate.content
       .flatMap((entry) => {
-        if (typeof entry === "string") return entry;
-        if (!entry || typeof entry !== "object") return [];
+        if (typeof entry === "string") {
+          return entry;
+        }
+        if (!entry || typeof entry !== "object") {
+          return [];
+        }
         const text = (entry as { text?: unknown }).text;
         return typeof text === "string" ? text : [];
       })
@@ -355,7 +234,9 @@ function extractAgentMessage(item: unknown): string | null {
 }
 
 function extractAggregatedOutput(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
+  if (!item || typeof item !== "object") {
+    return null;
+  }
   const value = (item as { aggregated_output?: unknown }).aggregated_output;
   if (typeof value === "string") {
     return value;
@@ -368,31 +249,6 @@ function extractAggregatedOutput(item: unknown): string | null {
   return null;
 }
 
-function extractReasoning(item: unknown): string | null {
-  if (!item || typeof item !== "object") return null;
-  const candidate = item as { text?: unknown; content?: unknown };
-
-  if (typeof candidate.text === "string") {
-    return candidate.text.trim();
-  }
-
-  if (Array.isArray(candidate.content)) {
-    const parts = candidate.content
-      .flatMap((entry) => {
-        if (typeof entry === "string") return entry;
-        if (!entry || typeof entry !== "object") return [];
-        const text = (entry as { text?: unknown }).text;
-        return typeof text === "string" ? text : [];
-      })
-      .filter((part): part is string => typeof part === "string");
-    if (parts.length > 0) {
-      return parts.join("\n").trim();
-    }
-  }
-
-  return null;
-}
-
 export const toolCodex = {
   name: "codex",
   description: "Run the OpenAI Codex CLI in sandboxed, non-interactive mode.",
@@ -402,16 +258,17 @@ export const toolCodex = {
     await enforcePolicy(input);
 
     const resolvedCw = input.cw
-      ? assertAllowedDirectory(input.cw)
+      ? assertAllowedDirectory(input.cw, "codex")
       : process.cwd();
     const sandbox = mapAutoToCodex(input.auto);
 
     const command = process.env.CODEX_BIN?.trim() || "codex";
     let executable: string;
+    const recordStage = createStageRecorder("codex");
     try {
-      executable = resolveExecutable(command);
+      executable = resolveExecutable(command, "codex");
     } catch (error) {
-      recordCodexError("spawn");
+      recordStage("spawn");
       throw error;
     }
 
@@ -450,37 +307,18 @@ export const toolCodex = {
       stdin: "ignore",
     });
 
-    const stopTimer = startCodexExecTimer(input.auto);
-    const recordStage = createStageRecorder();
-
+    const stopTimer = startToolTimer("codex", input.auto);
     const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
-    let didTimeout = false;
-    const timer = setNodeTimeout(() => {
-      didTimeout = true;
-      recordStage("timeout");
-      try {
-        proc.kill("SIGKILL");
-      } catch {
-        // ignore errors when killing the process
-      }
-      void Promise.resolve(
-        writer?.write?.({
-          type: "notice",
-          message: "codex_exec_timeout",
-        })
-      ).catch(() => {});
-    }, timeoutSec * 1000);
+    const timeoutCtx = createTimeout(
+      proc,
+      timeoutSec,
+      writer,
+      "codex_exec_timeout"
+    );
 
-    const finalAccumulator: FinalAccumulator = {
-      chunks: [],
-      storedBytes: 0,
-      truncated: false,
-    };
-    const reasoningAccumulator: ReasoningAccumulator = {
-      traces: [],
-      storedBytes: 0,
-      truncated: false,
-    };
+    const finalAccumulator: OutputAccumulator = createOutputAccumulator();
+    const reasoningAccumulator: ReasoningAccumulator =
+      createReasoningAccumulator();
     let parseFailure: Error | null = null;
     let runtimeFailure: Error | null = null;
 
@@ -495,7 +333,9 @@ export const toolCodex = {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              break;
+            }
 
             stdoutBuffer += decoder.decode(value, { stream: true });
 
@@ -595,35 +435,14 @@ export const toolCodex = {
                     const itemType = (item as { type?: string } | undefined)
                       ?.type;
                     if (itemType === "reasoning") {
-                      const reasoningText = extractReasoning(item);
+                      const reasoningText = extractReasoningText(item);
                       if (reasoningText) {
-                        const byteLength =
-                          Buffer.from(reasoningText).byteLength;
-
-                        if (reasoningAccumulator.truncated) {
-                          reasoningAccumulator.storedBytes += byteLength;
-                        } else {
-                          const remaining =
-                            OUTPUT_CAP_BYTES - reasoningAccumulator.storedBytes;
-                          if (remaining > 0) {
-                            reasoningAccumulator.traces.push({
-                              text:
-                                byteLength <= remaining
-                                  ? reasoningText
-                                  : reasoningText.substring(0, remaining),
-                              timestamp: Date.now(),
-                            });
-                            reasoningAccumulator.storedBytes += Math.min(
-                              byteLength,
-                              remaining
-                            );
-                            if (byteLength > remaining) {
-                              reasoningAccumulator.truncated = true;
-                            }
-                          } else {
-                            reasoningAccumulator.truncated = true;
-                          }
-                        }
+                        appendReasoningTrace(
+                          reasoningAccumulator,
+                          reasoningText,
+                          Date.now(),
+                          OUTPUT_CAP_BYTES
+                        );
 
                         if (input.out === "debug") {
                           void Promise.resolve(
@@ -644,7 +463,7 @@ export const toolCodex = {
                     } else if (itemType === "agent_message") {
                       const text = extractAgentMessage(item);
                       if (text) {
-                        appendFinal(finalAccumulator, text);
+                        appendOutput(finalAccumulator, text);
                         void Promise.resolve(
                           writer?.write?.({ type: "stdout", text })
                         ).catch(() => {});
@@ -662,7 +481,7 @@ export const toolCodex = {
               newlineIndex = stdoutBuffer.indexOf("\n");
             }
           }
-        } catch (error) {
+        } catch (_error) {
           if (!parseFailure) {
             parseFailure = new Error("codex_stream_read_failed");
             recordStage("parse");
@@ -671,26 +490,8 @@ export const toolCodex = {
       })();
     }
 
-    // Handle stderr stream
-    if (proc.stderr && typeof proc.stderr !== "number") {
-      const reader = proc.stderr.getReader();
-      const decoder = new TextDecoder();
-
-      (async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            void Promise.resolve(
-              writer?.write?.({ type: "stderr", text: decoder.decode(value) })
-            ).catch(() => {});
-          }
-        } catch {
-          // Ignore stderr read errors
-        }
-      })();
-    }
+    // Handle stderr stream using shared utility
+    streamStderr(proc, writer);
 
     // Handle exit and errors
     let exitCode = 0;
@@ -698,17 +499,18 @@ export const toolCodex = {
       exitCode = await proc.exited;
     } catch (error) {
       recordStage("spawn");
-      clearNodeTimeout(timer);
+      timeoutCtx.clear();
       stopTimer();
       throw error;
     } finally {
-      clearNodeTimeout(timer);
+      timeoutCtx.clear();
       stopTimer();
     }
 
-    recordCodexExecRun(input.auto, exitCode);
+    recordToolExecution("codex", input.auto, exitCode);
 
-    if (didTimeout) {
+    if (timeoutCtx.didTimeout) {
+      recordStage("timeout");
       throw new Error("codex_exec_timeout");
     }
 
@@ -735,9 +537,7 @@ export const toolCodex = {
       const resource = resolvedCw;
       persistReasoning(resource, reasoningAccumulator.traces, {
         auto: input.auto,
-      }).catch((err) => {
-        console.error("Failed to persist reasoning", err);
-      });
+      }).catch((_err) => {});
     }
 
     return {
@@ -757,6 +557,6 @@ export const __internals = {
   DEFAULT_ALLOW_PREFIXES,
   isWithinBase,
   pickEnvCodex,
-  resolveExecutable,
+  resolveExecutable: (cmd: string) => resolveExecutable(cmd, "codex"),
   mapAutoToCodex,
 };
