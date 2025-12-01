@@ -20,4 +20,4 @@ enabled = true
 output_path = "AGENTS.md"
 
 [gitignore]
-enabled = true
+enabled = false

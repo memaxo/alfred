@@ -60,17 +60,5 @@ packages/embed/.venv/
 # Voice models (large files)
 packages/voice/.venv/
 
-# START Ruler Generated Files
-/AGENTS.md
-/AGENTS.md.bak
-/apps/native/AGENTS.md
-/apps/native/AGENTS.md.bak
-/apps/web/AGENTS.md
-/apps/web/AGENTS.md.bak
-/packages/api/AGENTS.md
-/packages/api/AGENTS.md.bak
-/packages/db/AGENTS.md
-/packages/db/AGENTS.md.bak
-# END Ruler Generated Files
 .env
 core
