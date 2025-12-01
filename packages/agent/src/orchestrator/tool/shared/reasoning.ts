@@ -49,7 +49,8 @@ export function appendReasoningTrace(
   }
 
   const timestamp = ts ?? Date.now();
-  const byteLength = Buffer.from(text).byteLength;
+  const buffer = Buffer.from(text);
+  const byteLength = buffer.byteLength;
 
   if (acc.truncated) {
     acc.storedBytes += byteLength;
@@ -66,12 +67,19 @@ export function appendReasoningTrace(
     acc.traces.push({ text, timestamp });
     acc.storedBytes += byteLength;
   } else {
-    // Truncate text to fit within remaining bytes
-    acc.traces.push({
-      text: text.substring(0, remaining),
-      timestamp,
-    });
-    acc.storedBytes += remaining;
+    const { text: truncatedText, usedBytes } = trimBufferToUtf8Boundary(
+      buffer,
+      remaining
+    );
+
+    if (truncatedText) {
+      acc.traces.push({
+        text: truncatedText,
+        timestamp,
+      });
+    }
+
+    acc.storedBytes += usedBytes;
     acc.truncated = true;
   }
 }
@@ -139,7 +147,31 @@ export async function persistReasoning(
       "../../../../assistant/src/graphstore"
     );
     await graphPersist(resource, traces, ctx);
-  } catch (_err) {
-    // Silently ignore errors - reasoning persistence is best-effort
+  } catch (error) {
+    console.error("[agent] Failed to persist reasoning traces", error);
   }
+}
+
+function trimBufferToUtf8Boundary(
+  buffer: Buffer,
+  maxBytes: number
+): { text: string; usedBytes: number } {
+  if (buffer.byteLength <= maxBytes) {
+    return { text: buffer.toString("utf8"), usedBytes: buffer.byteLength };
+  }
+
+  let end = Math.min(maxBytes, buffer.byteLength);
+
+  while (end > 0) {
+    try {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(
+        buffer.subarray(0, end)
+      );
+      return { text, usedBytes: end };
+    } catch {
+      end -= 1;
+    }
+  }
+
+  return { text: "", usedBytes: maxBytes };
 }
