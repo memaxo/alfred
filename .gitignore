@@ -43,16 +43,12 @@ lerna-debug.log*
 # Testing
 coverage
 .nyc_output
-playwright-report
-test-results
-.playwright
 
 # Misc
 *.tgz
 .cache
 tmp
 temp
-docker/**/data/
 
 # Workflow DevKit docs (kept locally but not tracked)
 docs/use-workflow/
@@ -63,9 +59,6 @@ packages/embed/.venv/
 
 # Voice models (large files)
 packages/voice/.venv/
-
-# Tune fine-tune virtualenv
-packages/tune/.venv/
 
 # START Ruler Generated Files
 /AGENTS.md
@@ -80,76 +73,4 @@ packages/tune/.venv/
 /packages/db/AGENTS.md.bak
 # END Ruler Generated Files
 .env
-
-# Git Worktrees
-.worktrees/
-worktrees/
-
-# Generated TypeScript declaration files and maps
-*.d.ts.map
-**/*.d.ts.map
-*.js.map
-**/*.js.map
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-
-# Test output files
-verification-*.txt
-
-# Agent plan directories (keep .md files)
-.agent/plans/*/
-!.agent/plans/*.md
-
-# Generated JavaScript files in src (but keep source .js files)
-# Note: This pattern is conservative - only ignore .js files that have corresponding .ts files
-packages/db/src/**/*.js
-packages/db/src/**/*.d.ts
-packages/embed/src/**/*.js
-packages/embed/src/**/*.d.ts
-packages/metrics/src/**/*.js
-packages/metrics/src/**/*.d.ts
-packages/runtime/src/**/*.js
-packages/runtime/src/**/*.d.ts
-packages/knowledge/src/**/*.js
-packages/knowledge/src/**/*.d.ts
-packages/db/src/sqlite/*.js
-packages/db/src/sqlite/*.d.ts
-packages/agent/src/**/*.js
-packages/agent/src/**/*.d.ts
-packages/agent/**/src/**/*.js
-packages/agent/**/src/**/*.d.ts
-packages/api/src/**/*.js
-packages/api/src/**/*.d.ts
-packages/auth/src/**/*.js
-packages/auth/src/**/*.d.ts
-packages/cognitive/src/**/*.js
-packages/cognitive/src/**/*.d.ts
-packages/learning/src/**/*.js
-packages/learning/src/**/*.d.ts
-packages/type/src/**/*.js
-packages/type/src/**/*.d.ts
-packages/voice/src/**/*.js
-packages/voice/src/**/*.d.ts
-
-# Voice model directories (large files)
-packages/voice/models/
-
-# Transient documentation and report files
-*_ANALYSIS_REPORT.md
-*_STEPS.md
-*_ARCHITECTURE.md
-*_COVERAGE_REPORT.md
-
-# Test import and temporary test files
-test-import.ts
-tmp-*-check.test.ts
-tmp-*.test.ts
-
-# Generated public assets (keep intentional ones, ignore generated)
-apps/web/public/*.js
-!apps/web/public/*.min.js
+core
