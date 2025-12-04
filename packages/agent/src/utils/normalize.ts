@@ -398,6 +398,7 @@ function getToolInput(shape: ToolCallShape | ToolResultShape): unknown {
   if (shape.input !== undefined) {
     return shape.input;
   }
+  return undefined;
 }
 
 function getToolOutput(shape: ToolResultShape): unknown {
@@ -407,6 +408,7 @@ function getToolOutput(shape: ToolResultShape): unknown {
   if (shape.output !== undefined) {
     return shape.output;
   }
+  return undefined;
 }
 
 function coerceNonEmptyString(value?: string | null): string | null {

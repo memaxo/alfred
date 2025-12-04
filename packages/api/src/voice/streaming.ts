@@ -44,7 +44,6 @@ const CLEANUP_INTERVAL_MS = 10_000;
 const MAX_CONCURRENT_CONNECTIONS = 100;
 const MAX_CONNECTIONS_PER_MINUTE_PER_IP = 10;
 const MAX_CONNECTIONS_PER_MINUTE_PER_USER = 5;
-const _PING_INTERVAL_MS = 30_000; // Reserved for future ping implementation
 const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;

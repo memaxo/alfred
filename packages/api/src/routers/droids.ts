@@ -321,9 +321,9 @@ async function executeDroidRun(input: DroidRunInput): Promise<DroidRunResult> {
 }
 
 async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
-  let pending = pendingResumableRuns.get(runId);
-  if (pending) {
-    return pending;
+  const existing = pendingResumableRuns.get(runId);
+  if (existing) {
+    return existing;
   }
   const record = await loadPendingRecord(runId);
   if (!record) {
@@ -332,7 +332,7 @@ async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
       message: "run_not_found_or_expired",
     });
   }
-  pending = { type: record.type, input: record.input };
+  const pending: PendingResumeEntry = { type: record.type, input: record.input };
   pendingResumableRuns.set(runId, pending);
   return pending;
 }

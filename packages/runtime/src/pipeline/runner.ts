@@ -160,7 +160,7 @@ export class PipelineRunner {
           }
         }
       } catch (error) {
-        await iter.return?.().catch(() => {});
+        await iter.return?.(undefined).catch(() => {});
         this.state.history.push({
           phaseId,
           result: "failure",

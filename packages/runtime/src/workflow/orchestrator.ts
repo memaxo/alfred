@@ -491,9 +491,9 @@ export async function orchestrateWorkflowStream(
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
           linearIssueId:
-            input.linear?.issueId ?? input.linear?.sessionId ?? null,
+            input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
           linearIssueUrl:
-            linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? null,
+            linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
         });
 
         if (input.linear?.sessionId && input.authzLinear) {

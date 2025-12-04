@@ -2,7 +2,7 @@ import type {
   RiskAssessment,
   RiskLevel,
 } from "@alfred/cognitive/logic/autonomy";
-import type { ExecutionPlan } from "@alfred/cognitive/schemas";
+import type { ExecutionPlan } from "@alfred/cognitive";
 import { RISK_ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
@@ -65,7 +65,8 @@ function averageVectors(vectors: number[][]): Float32Array | null {
   const accumulator = new Array<number>(length).fill(0);
   for (const vector of vectors) {
     for (let i = 0; i < length; i += 1) {
-      accumulator[i] += vector[i] ?? 0;
+      const current = accumulator[i] ?? 0;
+      accumulator[i] = current + (vector[i] ?? 0);
     }
   }
   const averaged = accumulator.map((value) => value / vectors.length);
@@ -182,7 +183,7 @@ export async function classifyPlanRisk(
       return DEFAULT_ASSESSMENT;
     }
 
-    const stepTexts = steps.map((step, index) => describeStep(step, index));
+    const stepTexts = steps.map((step: StepLike, index: number) => describeStep(step, index));
     let stepEmbeddings: number[][] = [];
     try {
       stepEmbeddings = await embedMany(stepTexts);

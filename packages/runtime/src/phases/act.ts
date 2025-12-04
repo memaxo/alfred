@@ -69,6 +69,10 @@ function attachAuthzToTools(
   }
   const wrapped: Record<string, Tool> = {};
   for (const [name, definition] of Object.entries(tools)) {
+    if (!definition.execute) {
+      wrapped[name] = definition;
+      continue;
+    }
     const originalExecute = definition.execute.bind(definition);
     wrapped[name] = {
       ...definition,

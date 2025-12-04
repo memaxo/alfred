@@ -304,7 +304,7 @@ export function runPlanV6(
           });
         });
 
-        if (externalUrlBase) {
+        if (externalUrlBase && linear.sessionId) {
           const normalizedBase = externalUrlBase.endsWith("/")
             ? externalUrlBase.slice(0, -1)
             : externalUrlBase;
@@ -320,7 +320,7 @@ export function runPlanV6(
               error: error instanceof Error ? error.message : String(error),
             });
           });
-        } else {
+        } else if (!externalUrlBase) {
           logger.warn("linear_external_url_setup_missing_base", { runId });
         }
       }
