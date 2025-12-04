@@ -1,6 +1,5 @@
 import { logger } from "@alfred/logger";
 import type {
-  Codex as CodexInstance,
   ThreadEvent,
   ThreadOptions,
   TurnOptions,
@@ -47,7 +46,7 @@ function shouldForceStub(): boolean {
 function createStubModule(reason: string): CodexModule {
   if (!stubLogged) {
     stubLogged = true;
-    logger.warn({ reason }, "codex_sdk_stub_activated");
+    logger.warn("codex_sdk_stub_activated", { reason });
   }
 
   class StubThread {
@@ -59,18 +58,19 @@ function createStubModule(reason: string): CodexModule {
 
     async runStreamed(prompt: string, _options: TurnOptions) {
       const events: ThreadEvent[] = [
-        { type: "thread.started", thread_id: this.id },
-        { type: "turn.started", thread_id: this.id },
+        { type: "thread.started", thread_id: this.id } as ThreadEvent,
+        { type: "turn.started" } as ThreadEvent,
         {
           type: "item.completed",
           item: {
+            id: `stub-${Date.now()}`,
             type: "agent_message",
             text: `codex_sdk_stub:${prompt.slice(0, 64)}`,
           },
         },
         {
           type: "turn.completed",
-          usage: { input_tokens: 0, output_tokens: 0 },
+          usage: { input_tokens: 0, output_tokens: 0, cached_input_tokens: 0 },
         },
       ];
 

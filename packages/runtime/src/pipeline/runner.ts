@@ -160,7 +160,10 @@ export class PipelineRunner {
           }
         }
       } catch (error) {
-        await iter.return?.(undefined).catch(() => {});
+        await iter.return?.({
+          status: "failure",
+          error: error instanceof Error ? error : new Error(String(error)),
+        }).catch(() => {});
         this.state.history.push({
           phaseId,
           result: "failure",

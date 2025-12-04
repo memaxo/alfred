@@ -228,6 +228,7 @@ export const codexInputSchema = z.object({
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
   sessionId: z.string().min(1).max(255).optional(),
+  userId: z.string().optional(), // Injected server-side identity for session binding
   containerId: z.string().optional(), // Phase 11: Docker support
   outputSchema: z
     .union([z.boolean(), z.record(z.string(), z.unknown())])
@@ -244,10 +245,7 @@ export const codexInputSchema = z.object({
     .optional(),
 });
 
-export type CodexToolInput = z.infer<typeof codexInputSchema> & {
-  /** Injected server-side identity for session binding */
-  userId?: string;
-};
+export type CodexToolInput = z.infer<typeof codexInputSchema>;
 
 export const toolOutputSchema = z.object({
   result: z.string(),
@@ -415,15 +413,15 @@ const errorItemSchema: z.ZodType<ErrorItem> = z
   .passthrough();
 
 const threadItemSchema = z.discriminatedUnion("type", [
-  reasoningItemSchema as z.ZodType<ReasoningItem> & z.ZodDiscriminatedUnionOption<"type">,
-  agentMessageItemSchema,
-  commandExecutionItemSchema,
-  fileChangeItemSchema,
-  mcpToolCallItemSchema,
-  webSearchItemSchema,
-  todoListItemSchema,
-  errorItemSchema,
-]) as z.ZodType<ThreadItem>;
+  reasoningItemSchema as z.ZodTypeAny,
+  agentMessageItemSchema as z.ZodTypeAny,
+  commandExecutionItemSchema as z.ZodTypeAny,
+  fileChangeItemSchema as z.ZodTypeAny,
+  mcpToolCallItemSchema as z.ZodTypeAny,
+  webSearchItemSchema as z.ZodTypeAny,
+  todoListItemSchema as z.ZodTypeAny,
+  errorItemSchema as z.ZodTypeAny,
+] as const) as unknown as z.ZodType<ThreadItem>;
 
 export const threadStartedEventSchema: z.ZodType<ThreadStartedEvent> = z
   .object({
