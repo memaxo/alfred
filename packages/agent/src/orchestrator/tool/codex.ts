@@ -62,6 +62,16 @@ const codexInputSchema = z.object({
   sessionId: z.string().min(1).max(255).optional(),
   userId: z.string().optional(),
   containerId: z.string().optional(),
+  context: z
+    .object({
+      linearIssueId: z.string().optional(),
+      linearSessionId: z.string().optional(),
+      linearSpace: z.string().optional(),
+      linearAuthz: z.string().optional(),
+      relevantFiles: z.array(z.string()).optional(),
+      confidence: z.number().min(0).max(1).optional(),
+    })
+    .optional(),
 });
 
 export type CodexToolInput = z.infer<typeof codexInputSchema>;
