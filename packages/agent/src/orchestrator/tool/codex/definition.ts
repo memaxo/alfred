@@ -412,16 +412,16 @@ const errorItemSchema: z.ZodType<ErrorItem> = z
   })
   .passthrough();
 
-const threadItemSchema = z.discriminatedUnion("type", [
-  reasoningItemSchema as z.ZodTypeAny,
-  agentMessageItemSchema as z.ZodTypeAny,
-  commandExecutionItemSchema as z.ZodTypeAny,
-  fileChangeItemSchema as z.ZodTypeAny,
-  mcpToolCallItemSchema as z.ZodTypeAny,
-  webSearchItemSchema as z.ZodTypeAny,
-  todoListItemSchema as z.ZodTypeAny,
-  errorItemSchema as z.ZodTypeAny,
-] as const) as unknown as z.ZodType<ThreadItem>;
+const threadItemSchema = z.union([
+  reasoningItemSchema,
+  agentMessageItemSchema,
+  commandExecutionItemSchema,
+  fileChangeItemSchema,
+  mcpToolCallItemSchema,
+  webSearchItemSchema,
+  todoListItemSchema,
+  errorItemSchema,
+]) as z.ZodType<ThreadItem>;
 
 export const threadStartedEventSchema: z.ZodType<ThreadStartedEvent> = z
   .object({

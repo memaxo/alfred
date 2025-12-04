@@ -59,6 +59,9 @@ const codexInputSchema = z.object({
     .max(MAX_TIMEOUT_SEC)
     .optional(),
   env: z.record(z.string(), z.string()).optional(),
+  sessionId: z.string().min(1).max(255).optional(),
+  userId: z.string().optional(),
+  containerId: z.string().optional(),
 });
 
 export type CodexToolInput = z.infer<typeof codexInputSchema>;
