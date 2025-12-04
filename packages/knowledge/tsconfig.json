@@ -14,9 +14,10 @@
     "noFallthroughCasesInSwitch": true,
     "composite": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": false
   },
   "include": ["src/**/*"],
   "files": ["../../node_modules/bun-types/test.d.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../db" }, { "path": "../type" }]
 }

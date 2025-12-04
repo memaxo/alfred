@@ -3,9 +3,10 @@ import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import { mdx } from "fumadocs-mdx/vite";
+import mdx from "fumadocs-mdx/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import * as fumadocsConfig from "./fumadocs.config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -51,17 +52,72 @@ const serverOnlyDeps = [
   "onnxruntime-node",
 ];
 
-const tanstackHeadScriptsStub = {
-  name: "tanstack-head-scripts-stub",
+/**
+ * FIX: Provide fallback for fumadocs virtual modules in SSR
+ * fumadocs-mdx uses virtual modules (fumadocs-mdx:collections/*) that may not resolve in SSR.
+ * This plugin redirects them to the generated .source/ files.
+ */
+const fumadocsVirtualPlugin = {
+  name: "fumadocs-virtual-fallback",
   resolveId(id: string) {
-    if (id === "tanstack-start-injected-head-scripts:v") {
-      return id;
+    if (id === "fumadocs-mdx:collections/browser") {
+      return resolve(__dirname, ".source/browser.ts");
     }
+    if (id === "fumadocs-mdx:collections/server") {
+      return resolve(__dirname, ".source/server.ts");
+    }
+    return;
   },
-  load(id: string) {
-    if (id === "tanstack-start-injected-head-scripts:v") {
-      return "export const scripts = [];";
+};
+
+/**
+ * FIX: Transform fumadocs-ui useEffectEvent imports
+ * fumadocs-ui@16.x imports useEffectEvent from 'react' which doesn't exist in React 19.1.0 stable.
+ * This plugin transforms those imports to use @radix-ui/react-use-effect-event's polyfill instead.
+ */
+const useEffectEventShimPlugin = {
+  name: "useEffectEvent-shim",
+  transform(code: string, id: string) {
+    // Only transform fumadocs files that import useEffectEvent from react
+    if (!(id.includes("fumadocs") && code.includes("useEffectEvent"))) {
+      return;
     }
+
+    // Check if this file imports useEffectEvent from react
+    const hasDirectReactImport =
+      /import\s*\{[^}]*useEffectEvent[^}]*\}\s*from\s*['"]react['"]/.test(code);
+    if (!hasDirectReactImport) {
+      return;
+    }
+
+    let transformed = code;
+
+    // Remove useEffectEvent from the react import
+    transformed = transformed.replace(
+      /import\s*\{([^}]*)\}\s*from\s*['"]react['"]/g,
+      (_match, imports) => {
+        const importList = imports
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter((s: string) => s && s !== "useEffectEvent");
+        if (importList.length === 0) {
+          return "";
+        }
+        return `import { ${importList.join(", ")} } from 'react'`;
+      }
+    );
+
+    // Add the useEffectEvent import from radix-ui at the top
+    if (transformed.includes("'use client'")) {
+      transformed = transformed.replace(
+        "'use client';",
+        "'use client';\nimport { useEffectEvent } from '@radix-ui/react-use-effect-event';"
+      );
+    } else {
+      transformed = `import { useEffectEvent } from '@radix-ui/react-use-effect-event';\n${transformed}`;
+    }
+
+    return { code: transformed, map: null };
   },
 };
 
@@ -72,12 +128,14 @@ export default defineConfig({
       "@alfred/agent/preference/prompt",
       "@alfred/policy",
       "@alfred/db",
+      "fumadocs-mdx:collections/browser",
+      "fumadocs-mdx:collections/server",
       ...serverOnlyDeps,
     ],
   },
   ssr: {
     external: [...serverOnlyDeps, ...serverOnlyPackages, ...serverOnlyRegex],
-    noExternal: [],
+    noExternal: [/^fumadocs-mdx:collections\/.*/, "fumadocs-mdx"],
     resolve: {
       alias: {
         "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
@@ -96,10 +154,11 @@ export default defineConfig({
     },
   },
   plugins: [
+    fumadocsVirtualPlugin,
+    useEffectEventShimPlugin,
     tsconfigPaths(),
     tailwindcss(),
-    mdx(),
-    // tanstackHeadScriptsStub, // Removed to potentially fix preamble injection
+    mdx(fumadocsConfig),
     tanstackStart({
       prerender: {
         enabled: false,

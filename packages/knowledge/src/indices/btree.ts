@@ -19,7 +19,6 @@ const defaultCompare = (a: unknown, b: unknown): number => {
 export class BTreeIndex<K = string, V = NodeId> {
   private root: BTreeNode<K, V>;
   private readonly maxKeys: number;
-  private readonly minKeys: number;
 
   constructor(
     readonly order = 64,
@@ -29,8 +28,8 @@ export class BTreeIndex<K = string, V = NodeId> {
       throw new Error("btree_order_invalid");
     }
     this.maxKeys = this.order - 1;
-    this.minKeys = Math.ceil(this.order / 2) - 1;
-    // minKeys is reserved for future use in node splitting logic
+    // minKeys calculation reserved for future use in node splitting logic
+    // const minKeys = Math.ceil(this.order / 2) - 1;
     this.root = new BTreeNode<K, V>(true);
   }
 

@@ -1,6 +1,6 @@
 import { logger } from "@alfred/metrics";
 import { emitLinearActivity, type LinearActivityType } from "../linear";
-import type { AlfredCodexEvent, CodexToolInput } from "./codex";
+import type { AlfredCodexEvent, CodexToolInput } from "./codex/index";
 
 const MAX_ACTIVITIES_PER_MINUTE = 10;
 const WINDOW_MS = 60_000;

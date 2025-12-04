@@ -21,7 +21,6 @@
     { "path": "../knowledge" },
     { "path": "../learning" },
     { "path": "../policy" },
-    { "path": "../agent" },
     { "path": "../history" },
     { "path": "../db" },
     { "path": "../metrics" }

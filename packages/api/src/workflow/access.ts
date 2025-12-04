@@ -33,7 +33,7 @@ export async function enforceWorkflowPlanPolicy({
 }: EnforceArgs): Promise<EnforcementResult> {
   if (!session?.user?.id) {
     const error = new Error("session_required");
-    (error as Record<string, unknown>).statusCode = 401;
+    (error as unknown as Record<string, unknown>).statusCode = 401;
     throw error;
   }
 
@@ -81,7 +81,7 @@ export async function enforceWorkflowPlanPolicy({
 
   if (!decision.allow) {
     const error = new Error(decision.reason ?? "access_denied");
-    (error as Record<string, unknown>).statusCode = 403;
+    (error as unknown as Record<string, unknown>).statusCode = 403;
     throw error;
   }
 

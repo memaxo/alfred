@@ -31,6 +31,7 @@
     "ruler:verify": "bunx @intellectronica/ruler@latest apply --no-gitignore --nested && git diff --exit-code",
     "setup": "bun install && turbo run setup",
     "verify:build": "bun scripts/verify-build.ts",
+    "preflight": "bun scripts/preflight.ts",
     "ci": "bun run tools:sync-js:check && turbo run typecheck && bun run test:sqlite && bun run test:postgres && bun run test:integration && bun run test:workflow-integration && bun run smoke:hypergraph",
     "dev": "turbo dev",
     "build": "turbo build",

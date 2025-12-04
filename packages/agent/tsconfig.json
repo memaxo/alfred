@@ -2,9 +2,9 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "declarationMap": true,
+    "declarationMap": false,
     "outDir": "dist",
-    "sourceMap": true
+    "sourceMap": false
   },
   "exclude": ["dist", "**/*.test.ts"],
   "extends": "../../tsconfig.base.json",
@@ -18,6 +18,8 @@
     { "path": "../learning" },
     { "path": "../metrics" },
     { "path": "../db" },
-    { "path": "../rag" }
+    { "path": "../rag" },
+    { "path": "../voice" },
+    { "path": "../history" }
   ]
 }

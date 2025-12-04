@@ -9,13 +9,13 @@ import {
 import { logger } from "@alfred/logger";
 import type {
   ApprovalMode,
+  Codex as CodexInstance,
   SandboxMode,
   Thread,
   ThreadEvent,
   ThreadItem,
   ThreadOptions,
   TurnOptions,
-  Codex as CodexInstance,
 } from "@openai/codex-sdk";
 import {
   persistCodexExecution,
@@ -41,7 +41,6 @@ import {
   type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
   OUTPUT_CAP_BYTES,
-  parseThreadEvent,
   type SandboxConfig,
   type ToolWriter,
   validateOutputSchema,

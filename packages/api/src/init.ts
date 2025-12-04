@@ -16,6 +16,7 @@ import { flushPreviewCleanupBacklog } from "@alfred/agent/orchestrator/tool/work
 import { rehydrateSuspendedRuns } from "@alfred/agent/workflow/session-recovery";
 import { logger } from "@alfred/logger";
 import { resumeInterruptedPlans } from "@alfred/runtime";
+import { isDbAvailable, isUvAvailable } from "./utils/service-availability";
 import { initializeVoicePools, shutdownVoicePools } from "./voice/pools";
 import {
   startVoiceStreamingPrototype,
@@ -30,6 +31,9 @@ let worktreeCleanupInterval: ReturnType<typeof setInterval> | null = null;
  * - Compression worker (if enabled)
  * - Voice pools (if using local models)
  * - Resume interrupted plans
+ *
+ * All services are initialized with graceful degradation - if DB or UV
+ * is unavailable, the service is skipped with a warning instead of crashing.
  */
 export function initApiServices(): void {
   if (initialized) {
@@ -59,27 +63,48 @@ export function initApiServices(): void {
     });
   }
 
-  startCodexSessionCleanupWorker();
-  logger.info("codex_session_cleanup_worker_started", {
-    intervalMs:
-      Number.parseInt(
-        process.env.CODEX_SESSION_CLEANUP_INTERVAL_MS ?? "",
-        10
-      ) || undefined,
-  });
+  // FIX: Only start DB-dependent workers if DB is available
+  // Check DB availability before starting DB-dependent services
+  isDbAvailable()
+    .then((dbOk) => {
+      if (!dbOk) {
+        logger.warn("db_unavailable_skipping_services", {
+          message:
+            "Database unavailable - skipping codex cleanup, plan resume, and workflow rehydration. Start database with 'bun run db:start' and restart.",
+        });
+        return;
+      }
 
-  // Resume interrupted plans from DB (background)
-  resumeInterruptedPlans(getAssistantAgentDefaults().tools).catch((error) => {
-    logger.error("resume_plans_init_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  });
+      // Start codex session cleanup worker
+      startCodexSessionCleanupWorker();
+      logger.info("codex_session_cleanup_worker_started", {
+        intervalMs:
+          Number.parseInt(
+            process.env.CODEX_SESSION_CLEANUP_INTERVAL_MS ?? "",
+            10
+          ) || undefined,
+      });
 
-  rehydrateSuspendedRuns().catch((error) => {
-    logger.error("workflow_rehydrate_start_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      // Resume interrupted plans from DB (background)
+      resumeInterruptedPlans(getAssistantAgentDefaults().tools).catch(
+        (error) => {
+          logger.error("resume_interrupted_plans_error", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      );
+
+      rehydrateSuspendedRuns().catch((error) => {
+        logger.error("workflow_rehydrate_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    })
+    .catch((error) => {
+      logger.warn("db_availability_check_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
-  });
 
   const cleanupIntervalMs =
     Number.parseInt(
@@ -121,18 +146,27 @@ export function initApiServices(): void {
     cleanupRoot,
   });
 
+  // FIX: Check UV availability before initializing voice pools
   // Initialize voice pools (Maya1 or Supertonic)
   const voiceProvider = process.env.VOICE_PROVIDER ?? "maya1";
   if (voiceProvider === "maya1" || voiceProvider === "supertonic") {
-    initializeVoicePools()
-      .then(() => {
-        startVoiceStreamingPrototype();
-      })
-      .catch((error) => {
-        logger.error("voice_pools_init_failed", {
-          error: error instanceof Error ? error.message : String(error),
+    // Check if UV is available before trying to initialize voice pools
+    if (isUvAvailable()) {
+      initializeVoicePools()
+        .then(() => {
+          startVoiceStreamingPrototype();
+        })
+        .catch((error) => {
+          logger.error("voice_pools_init_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
+    } else {
+      logger.warn("voice_pools_skipped_uv_missing", {
+        message:
+          "UV package manager not found - skipping voice pool initialization. Install UV with: curl -LsSf https://astral.sh/uv/install.sh | sh",
       });
+    }
   }
 }
 

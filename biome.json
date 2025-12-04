@@ -96,12 +96,12 @@
         "noBitwiseOperators": "off",
         "noControlCharactersInRegex": "off",
         "noEmptyBlockStatements": "off",
-        "noEvolvingTypes": "off",
-        "noExplicitAny": "off",
-        "noImplicitAnyLet": "off",
+        "noEvolvingTypes": "warn",
+        "noExplicitAny": "warn",
+        "noImplicitAnyLet": "warn",
         "noMisplacedAssertion": "off",
         "noPrototypeBuiltins": "off",
-        "useAwait": "off",
+        "useAwait": "warn",
         "useIterableCallbackReturn": "off"
       }
     }

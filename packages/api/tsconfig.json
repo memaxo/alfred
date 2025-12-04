@@ -2,8 +2,8 @@
   "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declarationMap": false,
+    "sourceMap": false,
     "outDir": "dist",
     "composite": true
   },
@@ -16,6 +16,7 @@
     { "path": "../agent" },
     { "path": "../history" },
     { "path": "../metrics" },
-    { "path": "../runtime" }
+    { "path": "../runtime" },
+    { "path": "../voice" }
   ]
 }

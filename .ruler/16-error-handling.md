@@ -28,6 +28,19 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 
 8. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
 
+9. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
+   - Database unavailable: Return empty/null data instead of crashing
+   - External services down: Skip optional features, log warnings
+   - Use `isDbConnectionError()` type guard to classify DB errors
+   - Wrap route handlers with try-catch for graceful degradation
+   - Never throw unhandled errors during SSR (crashes entire page render)
+
+10. **Graceful degradation.** When external dependencies are unavailable:
+    - Check availability before initializing services (`isDbAvailable()`, `isUvAvailable()`)
+    - Skip non-critical services with warnings instead of errors
+    - Return sensible defaults (null session, empty arrays, empty state)
+    - Log warnings for observability but don't crash the app
+
 ## Error Codes
 
 - `UNAUTHORIZED` - Authentication required
@@ -38,5 +51,46 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 - `INTERNAL_SERVER_ERROR` - Unexpected server error
 - `TIMEOUT` - Operation timed out
 - `CONFLICT` - Resource conflict
+
+## SSR-Specific Error Handling
+
+### Database Unavailable During SSR
+
+```typescript
+// ✅ GOOD: Graceful fallback
+async function safeAuthHandler(request: Request): Promise<Response> {
+  try {
+    return await auth.handler(request);
+  } catch (error) {
+    if (isDbConnectionError(error)) {
+      return Response.json({ session: null, user: null }, { status: 200 });
+    }
+    throw error;
+  }
+}
+
+// ❌ BAD: Crashes SSR
+async function unsafeHandler(request: Request): Promise<Response> {
+  return await auth.handler(request); // Throws if DB unavailable
+}
+```
+
+### Service Initialization
+
+```typescript
+// ✅ GOOD: Check availability before starting
+isDbAvailable().then((dbOk) => {
+  if (!dbOk) {
+    logger.warn("db_unavailable_skipping_services");
+    return;
+  }
+  startCodexSessionCleanupWorker();
+});
+
+// ❌ BAD: Crashes on startup
+startCodexSessionCleanupWorker(); // Fails if DB unavailable
+```
+
+See `.ruler/graceful-degradation.md` for detailed patterns.
 
 

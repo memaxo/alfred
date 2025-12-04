@@ -48,31 +48,46 @@ const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
   return {};
 };
 
+// Tools can be built at module load (no API key required)
 const assistantTools = buildAssistantTools();
 const orchestratorTools = buildTools();
 
 const assistantStopWhen = stepCountIs(ASSISTANT_MAX_STEPS);
 const orchestratorStopWhen = stepCountIs(ORCHESTRATOR_MAX_STEPS);
 
-const assistantConfig: ToolLoopAgentSettings<never, AssistantTools> = {
-  model: getOpenAI().chat(getModelId()),
-  tools: assistantTools,
-  instructions: assistantInstructions,
-  stopWhen: assistantStopWhen,
-  prepareStep: assistantPrepareStep,
-};
+// Lazy-initialized agent singletons
+let cachedAssistantAgent: ToolLoopAgent<AssistantTools> | null = null;
+let cachedOrchestratorAgent: ToolLoopAgent<OrchestratorTools> | null = null;
 
-const orchestratorConfig: ToolLoopAgentSettings<never, OrchestratorTools> = {
-  model: getOpenAI().chat(getModelId()),
-  tools: orchestratorTools,
-  instructions: orchestratorInstructions,
-  stopWhen: orchestratorStopWhen,
-  prepareStep: orchestratorPrepareStep,
-};
-
-function createAssistantDefaults() {
+function createAssistantConfig(): ToolLoopAgentSettings<never, AssistantTools> {
   return {
     model: getOpenAI().chat(getModelId()),
+    tools: assistantTools,
+    instructions: assistantInstructions,
+    stopWhen: assistantStopWhen,
+    prepareStep: assistantPrepareStep,
+  };
+}
+
+function createOrchestratorConfig(): ToolLoopAgentSettings<
+  never,
+  OrchestratorTools
+> {
+  return {
+    model: getOpenAI().chat(getModelId()),
+    tools: orchestratorTools,
+    instructions: orchestratorInstructions,
+    stopWhen: orchestratorStopWhen,
+    prepareStep: orchestratorPrepareStep,
+  };
+}
+
+// Lazy defaults - model is a getter to defer OpenAI client initialization
+function createAssistantDefaults() {
+  return {
+    get model() {
+      return getOpenAI().chat(getModelId());
+    },
     tools: assistantTools,
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
@@ -82,7 +97,9 @@ function createAssistantDefaults() {
 
 function createOrchestratorDefaults() {
   return {
-    model: getOpenAI().chat(getModelId()),
+    get model() {
+      return getOpenAI().chat(getModelId());
+    },
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,
@@ -90,8 +107,47 @@ function createOrchestratorDefaults() {
   } as const;
 }
 
-export const assistantAgent = new ToolLoopAgent(assistantConfig);
-export const orchestratorAgent = new ToolLoopAgent(orchestratorConfig);
+/**
+ * Get the assistant agent (lazy-initialized).
+ * Defers OpenAI client creation until first access, after .env is loaded.
+ */
+export function getAssistantAgent(): ToolLoopAgent<AssistantTools> {
+  if (!cachedAssistantAgent) {
+    cachedAssistantAgent = new ToolLoopAgent(createAssistantConfig());
+  }
+  return cachedAssistantAgent;
+}
+
+/**
+ * Get the orchestrator agent (lazy-initialized).
+ * Defers OpenAI client creation until first access, after .env is loaded.
+ */
+export function getOrchestratorAgent(): ToolLoopAgent<OrchestratorTools> {
+  if (!cachedOrchestratorAgent) {
+    cachedOrchestratorAgent = new ToolLoopAgent(createOrchestratorConfig());
+  }
+  return cachedOrchestratorAgent;
+}
+
+// Backward-compatible exports using getter pattern
+// These defer initialization until property access
+export const assistantAgent = {
+  get stream() {
+    return getAssistantAgent().stream.bind(getAssistantAgent());
+  },
+  get tools() {
+    return getAssistantAgent().tools;
+  },
+} as ToolLoopAgent<AssistantTools>;
+
+export const orchestratorAgent = {
+  get stream() {
+    return getOrchestratorAgent().stream.bind(getOrchestratorAgent());
+  },
+  get tools() {
+    return getOrchestratorAgent().tools;
+  },
+} as ToolLoopAgent<OrchestratorTools>;
 
 export function getAssistantAgentDefaults() {
   return createAssistantDefaults();
@@ -101,9 +157,12 @@ export function getOrchestratorAgentDefaults() {
   return createOrchestratorDefaults();
 }
 
-export type AssistantUIMessage = InferAgentUIMessage<typeof assistantAgent>;
+// Type inference using the actual agent types
+export type AssistantUIMessage = InferAgentUIMessage<
+  ToolLoopAgent<AssistantTools>
+>;
 export type OrchestratorUIMessage = InferAgentUIMessage<
-  typeof orchestratorAgent
+  ToolLoopAgent<OrchestratorTools>
 >;
 
 // Expose constants for downstream tuning/testing when required.

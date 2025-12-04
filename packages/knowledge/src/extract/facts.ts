@@ -1,29 +1,24 @@
 import nlp from "compromise";
 import type { Knowledge } from "../hypergraph.js";
-import {
-  fact,
-  knowledgeHash,
-  nodeFromHash,
-  relation,
-} from "../hypergraph.js";
-import { canonicalize, clampConfidence, isStopword } from "./entities.js";
-import { extractEntities } from "./entities.js";
-import { extractRelations } from "./relations.js";
-import { extractTemporal } from "./temporal.js";
+import { fact, knowledgeHash, nodeFromHash, relation } from "../hypergraph.js";
+import { cacheExtraction, getCachedExtraction } from "./cache.js";
 import { detectContradiction } from "./contradictions.js";
 import {
-  cacheExtraction,
-  getCachedExtraction,
-} from "./cache.js";
+  canonicalize,
+  clampConfidence,
+  extractEntities,
+  isStopword,
+} from "./entities.js";
+import { extractRelations } from "./relations.js";
+import { extractTemporal } from "./temporal.js";
 import type {
-  BaseView,
-  Entity,
   EntityKind,
+  EntityMention,
   ExtractedFact,
+  ExtractionResult,
   SentenceJson,
   TextView,
 } from "./types.js";
-import type { ExtractionResult } from "./types.js";
 import { asTextView } from "./types.js";
 
 /**
@@ -113,7 +108,9 @@ export const extract = (text: string, source: string): ExtractionResult => {
     const sentenceDoc = asTextView(nlp(sentence.text ?? ""));
     const sentenceEntities = entityDetails
       .filter((entity) =>
-        entity.mentions.some((mention) => mention.sentence === index)
+        entity.mentions.some(
+          (mention: EntityMention) => mention.sentence === index
+        )
       )
       .map((entity) => entity.label);
     const sentenceRelations = relations.filter(
@@ -269,4 +266,3 @@ export const toKnowledge = (result: ExtractionResult): KnowledgeEntry[] => {
 
   return list;
 };
-

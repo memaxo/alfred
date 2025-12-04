@@ -17,3 +17,12 @@ export {
   t,
 } from "./trpc";
 export { sanitizeResult } from "./utils/generate";
+export {
+  assertDbAvailable,
+  assertUvAvailable,
+  isDbAvailable,
+  isDbConnectionError,
+  isTransientError,
+  isUvAvailable,
+  resetDbAvailability,
+} from "./utils/service-availability";

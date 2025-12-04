@@ -152,7 +152,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
   async function cancelSuspension(
     state: SuspensionState,
     {
-      fromDispose,
+      fromDispose: _fromDispose,
       result,
     }: { fromDispose: boolean; result: "cancelled" | "timeout" }
   ) {

@@ -21,7 +21,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkflowRunIdRouteImport } from './routes/workflow.$runId'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as ExperimentalTuneRouteImport } from './routes/experimental/tune'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as DevEdgesRouteImport } from './routes/dev/edges'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as AdminVoiceRouteImport } from './routes/admin/voice'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
@@ -94,9 +96,19 @@ const ExperimentalTuneRoute = ExperimentalTuneRouteImport.update({
   path: '/experimental/tune',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevEdgesRoute = DevEdgesRouteImport.update({
   id: '/dev/edges',
   path: '/dev/edges',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMetricsRoute = ApiMetricsRouteImport.update({
@@ -167,7 +179,9 @@ export interface FileRoutesByFullPath {
   '/voice-s2s': typeof VoiceS2sRoute
   '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/search': typeof ApiSearchRoute
   '/dev/edges': typeof DevEdgesRoute
+  '/docs/$': typeof DocsSplatRoute
   '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
@@ -193,7 +207,9 @@ export interface FileRoutesByTo {
   '/voice-s2s': typeof VoiceS2sRoute
   '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/search': typeof ApiSearchRoute
   '/dev/edges': typeof DevEdgesRoute
+  '/docs/$': typeof DocsSplatRoute
   '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
@@ -220,7 +236,9 @@ export interface FileRoutesById {
   '/voice-s2s': typeof VoiceS2sRoute
   '/admin/voice': typeof AdminVoiceRoute
   '/api/metrics': typeof ApiMetricsRoute
+  '/api/search': typeof ApiSearchRoute
   '/dev/edges': typeof DevEdgesRoute
+  '/docs/$': typeof DocsSplatRoute
   '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/workflow/$runId': typeof WorkflowRunIdRoute
@@ -248,7 +266,9 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/admin/voice'
     | '/api/metrics'
+    | '/api/search'
     | '/dev/edges'
+    | '/docs/$'
     | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
@@ -274,7 +294,9 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/admin/voice'
     | '/api/metrics'
+    | '/api/search'
     | '/dev/edges'
+    | '/docs/$'
     | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
@@ -300,7 +322,9 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/admin/voice'
     | '/api/metrics'
+    | '/api/search'
     | '/dev/edges'
+    | '/docs/$'
     | '/experimental/tune'
     | '/healthz/deps'
     | '/workflow/$runId'
@@ -326,7 +350,9 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   VoiceS2sRoute: typeof VoiceS2sRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
+  ApiSearchRoute: typeof ApiSearchRoute
   DevEdgesRoute: typeof DevEdgesRoute
+  DocsSplatRoute: typeof DocsSplatRoute
   ExperimentalTuneRoute: typeof ExperimentalTuneRoute
   WorkflowRunIdRoute: typeof WorkflowRunIdRoute
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
@@ -426,11 +452,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExperimentalTuneRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/edges': {
       id: '/dev/edges'
       path: '/dev/edges'
       fullPath: '/dev/edges'
       preLoaderRoute: typeof DevEdgesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/metrics': {
@@ -545,7 +585,9 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   VoiceS2sRoute: VoiceS2sRoute,
   ApiMetricsRoute: ApiMetricsRoute,
+  ApiSearchRoute: ApiSearchRoute,
   DevEdgesRoute: DevEdgesRoute,
+  DocsSplatRoute: DocsSplatRoute,
   ExperimentalTuneRoute: ExperimentalTuneRoute,
   WorkflowRunIdRoute: WorkflowRunIdRoute,
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,

@@ -1,16 +1,16 @@
 import nlp from "compromise";
 import {
-  ORG_KEYWORDS,
-  ORG_TAGS,
-  PERSON_TITLES,
-  PLACE_TAGS,
-} from "../lexicon/index.js";
-import {
   getLanguageFromExtension,
   isDevTool,
   isFramework,
   isProgrammingLanguage,
 } from "../lexicon/code.js";
+import {
+  ORG_KEYWORDS,
+  ORG_TAGS,
+  PERSON_TITLES,
+  PLACE_TAGS,
+} from "../lexicon/index.js";
 import type {
   BaseView,
   Entity,
@@ -19,7 +19,6 @@ import type {
   MaybeMentionTerm,
   MentionTerm,
   SentenceJson,
-  TextView,
 } from "./types.js";
 import { asTextView } from "./types.js";
 
@@ -49,22 +48,6 @@ export const canonicalize = (value: string): string =>
 export const isStopword = (word: string): boolean => {
   const doc = nlp(word);
   return doc.has("#StopWord") || doc.has("#Determiner");
-};
-
-const getSentenceBoundary = (
-  text: string,
-  index: number,
-  length: number
-): string => {
-  let start = index;
-  while (start > 0 && !/[.!?]/.test(text[start - 1] ?? "")) {
-    start--;
-  }
-  let end = index + length;
-  while (end < text.length && !/[.!?]/.test(text[end] ?? "")) {
-    end++;
-  }
-  return text.slice(start, end + 1).trim();
 };
 
 export const toMention = (terms: MaybeMentionTerm[]): EntityMention | null => {
@@ -213,7 +196,8 @@ export const extractCodeEntities = (text: string): Entity[] => {
   const seen = new Set<string>();
 
   // Extract file paths and extensions
-  const filePathRegex = /([\w\-./]+\.(?:js|ts|py|java|cpp|rs|go|rb|php|swift|kt|scala|clj|hs|erl|ex|ml|fs|dart|lua|pl|r|m|sql|html|css|scss|sass|less|xml|json|yaml|yml|toml|md|sh|bash|zsh|ps1|bat|asm|s))/gi;
+  const filePathRegex =
+    /([\w\-./]+\.(?:js|ts|py|java|cpp|rs|go|rb|php|swift|kt|scala|clj|hs|erl|ex|ml|fs|dart|lua|pl|r|m|sql|html|css|scss|sass|less|xml|json|yaml|yml|toml|md|sh|bash|zsh|ps1|bat|asm|s))/gi;
   const fileMatches = text.matchAll(filePathRegex);
 
   for (const match of fileMatches) {
@@ -298,11 +282,7 @@ export const extractEntities = (text: string): Entity[] => {
 
   register(doc.people() as unknown as BaseView, "person", 0.92);
   register(doc.places() as unknown as BaseView, "place", 0.87);
-  register(
-    doc.organizations() as unknown as BaseView,
-    "organization",
-    0.85
-  );
+  register(doc.organizations() as unknown as BaseView, "organization", 0.85);
 
   for (const entry of doc.match("#Pronoun").json() as SentenceJson[]) {
     const label = cleanText(entry.text ?? "");
@@ -354,15 +334,20 @@ export const extractEntities = (text: string): Entity[] => {
       entityMap.set(canonical, codeEntity);
     } else if (existing.kind === "unknown") {
       existing.kind = codeEntity.kind;
-      existing.confidence = Math.max(existing.confidence, codeEntity.confidence);
+      existing.confidence = Math.max(
+        existing.confidence,
+        codeEntity.confidence
+      );
     }
   }
 
   const entities = Array.from(entityMap.values());
   entities.forEach((entity) =>
-    entity.mentions.sort((a, b) => a.sentence - b.sentence || a.start - b.start)
+    entity.mentions.sort(
+      (a: EntityMention, b: EntityMention) =>
+        a.sentence - b.sentence || a.start - b.start
+    )
   );
 
   return entities.sort((a, b) => b.confidence - a.confidence);
 };
-

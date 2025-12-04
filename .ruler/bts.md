@@ -24,3 +24,4 @@ This project is a Better-T-Stack monorepo orchestrated by Turborepo and Bun work
 - Gate background schedulers behind env flags (e.g. `SCHED_REMIND=1`).
 - Treat `@alfred/auth/token` as the only source for tool token signing/verification.
 - Update `docs/alfred-prd.md` and `.ruler` guidance when milestones ship.
+- **Graceful degradation**: App must render without database or UV. Use `isDbAvailable()` and `isUvAvailable()` before starting dependent services. See `.ruler/graceful-degradation.md`.

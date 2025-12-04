@@ -14,13 +14,9 @@
     "noFallthroughCasesInSwitch": true,
     "composite": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "../type" },
-    { "path": "../agent" },
-    { "path": "../metrics" }
-  ]
+  "references": [{ "path": "../type" }, { "path": "../metrics" }]
 }

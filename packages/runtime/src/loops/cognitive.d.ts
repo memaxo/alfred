@@ -26,4 +26,3 @@ export type CognitiveLoopResult = {
 export declare function runCognitiveLoop(_ctx: RuntimeContext, streamId: string, incomingEvent: Event): Promise<CognitiveLoopResult>;
 export declare function computeEffects(state: CognitiveState): CognitiveEffect[];
 export declare function runAssistantGeneration(ctx: RuntimeContext, _streamId: string, input: string): Promise<Outcome>;
-//# sourceMappingURL=cognitive.d.ts.map
