@@ -84,6 +84,7 @@ export function detectLoop(window: string[], threshold = 0.8): boolean {
   if (window.length < 2) return false;
 
   const current = window[window.length - 1];
+  if (current === undefined) return false;
 
   // Check against previous N thoughts
   // If we find high similarity with ANY recent thought, it might be a loop.

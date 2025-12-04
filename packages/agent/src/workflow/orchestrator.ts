@@ -968,7 +968,7 @@ export async function orchestrateWorkflowStream(
       logger.error("workflow_global_timeout", { runId: outerRunId ?? "unknown" });
       recordEvent("error");
       closeTimer("error");
-      const resolvedRunId = runId;
+      const resolvedRunId = outerRunId;
       if (resolvedRunId) {
         workflowRepo
           .updateRun(resolvedRunId, {
