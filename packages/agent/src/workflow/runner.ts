@@ -258,7 +258,7 @@ export function runPlanV6(
 
       yield createRunEvent(runId);
 
-      if (linear) {
+      if (linear?.sessionId) {
         const thoughtActivityPromise = emitLinearActivity("thought", {
           sessionId: linear.sessionId,
           space: linear.space,
@@ -464,7 +464,7 @@ export function runPlanV6(
             result,
           } as any;
 
-          if (linear) {
+          if (linear?.sessionId) {
             const now = Date.now();
             const last = lastActivityTime.get(runId) ?? 0;
             if (now - last > 30_000) {
@@ -537,7 +537,7 @@ export function runPlanV6(
       finalMessage = error instanceof Error ? error.message : String(error);
       throw error;
     } finally {
-      if (linear) {
+      if (linear?.sessionId) {
         if (finalStatus === "completed") {
           const completionResult =
             typeof finalMessage === "string" ? finalMessage : "";
