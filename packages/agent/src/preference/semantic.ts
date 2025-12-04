@@ -100,7 +100,8 @@ function averageVectors(vectors: number[][]): Float32Array | null {
   for (const vector of vectors) {
     if (!vector) continue;
     for (let i = 0; i < length; i += 1) {
-      acc[i] += vector[i] ?? 0;
+      const current = acc[i] ?? 0;
+      acc[i] = current + (vector[i] ?? 0);
     }
   }
   return normalizeVector(acc.map((value) => value / vectors.length));

@@ -15,7 +15,7 @@ export function levenshteinDistance(a: string, b: string): number {
   const matrix = Array.from({ length: b.length + 1 }, (_, i) => i);
 
   for (let i = 1; i <= a.length; i++) {
-    let prev = matrix[0];
+    let prev = matrix[0] ?? 0;
     matrix[0] = i;
 
     for (let j = 1; j <= b.length; j++) {
@@ -23,7 +23,7 @@ export function levenshteinDistance(a: string, b: string): number {
       if (a[i - 1] === b[j - 1]) {
         matrix[j] = prev;
       } else {
-        matrix[j] = 1 + Math.min(matrix[j - 1] ?? 0, matrix[j] ?? 0, prev);
+        matrix[j] = 1 + Math.min(matrix[j - 1] ?? 0, temp, prev);
       }
       prev = temp;
     }
@@ -94,14 +94,14 @@ export function detectLoop(window: string[], threshold = 0.8): boolean {
 
   // 1. Check immediate predecessor
   const prev = window[window.length - 2];
-  if (calculateSimilarity(current, prev) > threshold) {
+  if (prev !== undefined && calculateSimilarity(current, prev) > threshold) {
     return true;
   }
 
   // 2. Check A-B-A pattern (ping-pong)
   if (window.length >= 3) {
     const prevPrev = window[window.length - 3];
-    if (calculateSimilarity(current, prevPrev) > threshold) {
+    if (prevPrev !== undefined && calculateSimilarity(current, prevPrev) > threshold) {
       return true;
     }
   }

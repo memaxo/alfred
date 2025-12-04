@@ -21,10 +21,6 @@ export type EntityLinkResult = {
   paths: string[][];
 };
 
-function normalizeEntity(entity: string): string {
-  return entity.trim().toLowerCase();
-}
-
 function shouldSkipEmbedding(entity: string): boolean {
   // Skip embedding if domain classification already detected it
   const domains = classifyDomain(entity);
@@ -121,7 +117,7 @@ export async function linkEntities(
     candidates.map(async (entity, i) => {
       try {
         // Cast needed due to stale dist types - rebuild @alfred/db to fix
-        const result = (await findNearestConcept(
+        const result = (await (findNearestConcept as Function)(
           entity,
           targetConcepts,
           3,

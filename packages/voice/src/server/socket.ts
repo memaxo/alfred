@@ -151,7 +151,7 @@ export class VoiceSocketHandler {
     ws: ServerWebSocket<VoiceSocketData>,
     payload: unknown
   ) => {
-    send(ws, payload, (error, reason) => {
+    send(ws, payload, (_, reason) => {
       this.hooks.onSendError?.(reason);
     });
   };

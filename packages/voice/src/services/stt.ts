@@ -25,6 +25,14 @@ export async function normalizeLocalSttAudio(input: SttInput) {
     throw new Error("audio_payload_empty");
   }
 
+  // Validate audio size before processing
+  const estimatedBytes = Math.ceil((sanitized.length * 3) / 4);
+  if (estimatedBytes > MAX_AUDIO_BYTES) {
+    throw new Error(
+      `audio_payload_too_large: ${estimatedBytes} bytes exceeds ${MAX_AUDIO_BYTES} byte limit`
+    );
+  }
+
   if (isLikelyPCM(input.mimeType)) {
     return {
       audioBase64: sanitized,

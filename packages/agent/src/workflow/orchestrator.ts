@@ -300,6 +300,7 @@ export async function orchestrateWorkflowStream(
   };
 
   const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  let outerRunId: string | null = null; // Track runId for timeout error logging
   const globalTimeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
       cancelled = true;
@@ -545,9 +546,11 @@ export async function orchestrateWorkflowStream(
 
       if (input.runId) {
         runId = input.runId;
+        outerRunId = runId;
         await workflowRepo.updateRun(runId, { status: "running" });
       } else {
         runId = executor.runId;
+        outerRunId = runId;
         const storedInput = {
           ...(input as any),
           executionId: runId,
@@ -562,9 +565,9 @@ export async function orchestrateWorkflowStream(
           linearSessionId: input.linear?.sessionId,
           linearSpace: input.linear?.space,
           linearIssueId:
-            input.linear?.issueId ?? input.linear?.sessionId ?? null,
+            input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
           linearIssueUrl:
-            linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? null,
+            linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
         });
 
         if (input.linear?.sessionId && input.authzLinear) {
@@ -962,7 +965,7 @@ export async function orchestrateWorkflowStream(
 
   Promise.race([asyncTask, globalTimeoutPromise]).catch((error) => {
     if (error instanceof Error && error.message === "workflow_global_timeout") {
-      logger.error("workflow_global_timeout", { runId: runId ?? "unknown" });
+      logger.error("workflow_global_timeout", { runId: outerRunId ?? "unknown" });
       recordEvent("error");
       closeTimer("error");
       const resolvedRunId = runId;

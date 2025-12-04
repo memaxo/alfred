@@ -11,7 +11,6 @@ export class VoiceRegistry {
   private readonly ttsPool: TTSPool;
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private readonly logger: VoiceLogger;
-  private lastStatsAt = 0;
 
   constructor(sttPool: STTPool, ttsPool: TTSPool, logger?: VoiceLogger) {
     this.sttPool = sttPool;
@@ -86,7 +85,6 @@ export class VoiceRegistry {
 
   getStats() {
     const now = Date.now();
-    this.lastStatsAt = now;
     return {
       generatedAt: now,
       activeSessions: this.sessions.size,
