@@ -22,10 +22,12 @@ async function scanKeys(redis: ReturnType<typeof getRedis>): Promise<string[]> {
   let cursor = "0";
   const keys: string[] = [];
   do {
-    const [nextCursor, batch] = (await redis.scan(cursor, {
+    // Bun Redis client has different scan signature than node-redis
+    const result = await (redis as any).scan(cursor, {
       MATCH: `${KEY_PREFIX}*`,
       COUNT: SCAN_COUNT,
-    })) as [string, string[]];
+    });
+    const [nextCursor, batch] = result as [string, string[]];
     cursor = nextCursor;
     if (Array.isArray(batch)) {
       keys.push(...batch);

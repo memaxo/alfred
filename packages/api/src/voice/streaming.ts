@@ -18,6 +18,7 @@ import {
   voiceWebSocketConnectionRejectedTotal,
   voiceWebSocketConnectionsCurrent,
   voiceWebSocketPingTimeoutTotal,
+  voiceWebSocketSendFailuresTotal,
   voiceWebSocketUpgradeDurationSeconds,
   voiceWebSocketUpgradeRateLimitHitsTotal,
 } from "../metrics";
@@ -43,7 +44,7 @@ const CLEANUP_INTERVAL_MS = 10_000;
 const MAX_CONCURRENT_CONNECTIONS = 100;
 const MAX_CONNECTIONS_PER_MINUTE_PER_IP = 10;
 const MAX_CONNECTIONS_PER_MINUTE_PER_USER = 5;
-const PING_INTERVAL_MS = 30_000;
+const _PING_INTERVAL_MS = 30_000; // Reserved for future ping implementation
 const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
@@ -359,10 +360,10 @@ export function startVoiceStreamingPrototype(): void {
           sessionId: ws.data.sessionId,
         });
       },
-      ping(ws, data) {
+      ping(ws, _data) {
         ws.data.pingSentAt = Date.now();
       },
-      pong(ws, data) {
+      pong(ws, _data) {
         ws.data.lastActivity = Date.now();
       },
       close(ws) {

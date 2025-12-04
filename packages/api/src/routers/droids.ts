@@ -418,7 +418,9 @@ async function registerResumableRun(runId: string, entry: PendingResumeEntry) {
         pendingResumableRuns.delete(runId);
         await removePendingRecord(runId);
         abortController.abort();
-        entry.streamSession?.cancel();
+        if (entry.type === "stream") {
+          entry.streamSession?.cancel();
+        }
       },
       abortController,
     });

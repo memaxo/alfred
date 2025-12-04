@@ -111,5 +111,5 @@ function computePercentile(
     }
   }
   const last = buckets[buckets.length - 1]?.[0];
-  return Number.isFinite(last) ? last : null;
+  return last !== undefined && Number.isFinite(last) ? last : null;
 }

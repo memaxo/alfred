@@ -21,8 +21,7 @@ const sessions = new Map<string, any>();
 
 async function getPty() {
   try {
-    // Dynamically import node-pty only if available
-    // @ts-expect-error - optional dependency
+    // Dynamically import node-pty only if available (optional dependency)
     const mod = await import("node-pty");
     return mod.default || mod;
   } catch (error) {

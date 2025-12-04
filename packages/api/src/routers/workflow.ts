@@ -153,9 +153,9 @@ export const workflowRouter: ReturnType<typeof router> = router({
           reasoningSince: Date.now(),
         };
         const linearIssueId =
-          preparedLinear?.issueId ?? preparedLinear?.sessionId ?? null;
+          preparedLinear?.issueId ?? preparedLinear?.sessionId ?? undefined;
         const linearIssueUrl =
-          ticket?.issueUrl ?? preparedLinear?.issueUrl ?? null;
+          ticket?.issueUrl ?? preparedLinear?.issueUrl ?? undefined;
 
         await workflowRepo.createRun({
           id: executor.runId,
