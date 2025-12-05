@@ -1,13 +1,17 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
-  mockPolicyAudit,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import { TRPCError } from "@trpc/server";
+import { metricsStub } from "./utils/mock-metrics";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
-setupTestEnv();
-mockPolicyAudit();
+mock.module("@alfred/api/metrics", () => metricsStub);
 
 const createReminderMock = vi.fn();
 const getRemindersMock = vi.fn();
@@ -21,127 +25,307 @@ mock.module("@alfred/db/repo/assistant", () => ({
   getDueReminders: getDueRemindersMock,
   markReminderFired: markReminderFiredMock,
   deleteReminder: deleteReminderMock,
+  createNote: vi.fn(),
+  getNotes: vi.fn(),
+  updateNote: vi.fn(),
+  deleteNote: vi.fn(),
+  createTimer: vi.fn(),
+  getActiveTimers: vi.fn(),
+  markTimerCompleted: vi.fn(),
+  cancelTimer: vi.fn(),
+  createBookmark: vi.fn(),
+  getBookmarks: vi.fn(),
+  deleteBookmark: vi.fn(),
+  createTask: vi.fn(),
+  getTasks: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
 }));
 
-let caller: Awaited<ReturnType<typeof createTestCaller>>;
+describe("remindRouter", () => {
+  beforeEach(() => {
+    createReminderMock.mockReset();
+    getRemindersMock.mockReset();
+    getDueRemindersMock.mockReset();
+    markReminderFiredMock.mockReset();
+    deleteReminderMock.mockReset();
+  });
 
-beforeAll(async () => {
-  caller = await createTestCaller();
-});
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
-afterEach(() => {
-  resetAllMocks();
-});
-
-describe("remind router", () => {
   describe("create", () => {
-    it("creates a reminder", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.remind.create({
+          title: "Test Reminder",
+          due: new Date().toISOString(),
+        })
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it("creates reminder with valid input", async () => {
+      const dueDate = new Date("2025-12-31T12:00:00Z");
       const mockReminder = {
-        id: "reminder-id",
+        id: "123e4567-e89b-12d3-a456-426614174000",
         userId: "test-user",
-        title: "test reminder",
-        due: new Date(),
+        title: "Test Reminder",
+        description: "Test description",
+        due: dueDate,
+        recurring: null,
+        fired: false,
+        created: new Date(),
+        updated: new Date(),
       };
 
       createReminderMock.mockResolvedValue(mockReminder);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       const result = await caller.remind.create({
-        title: "test reminder",
-        description: "test description",
-        due: new Date().toISOString(),
-        recurring: "daily",
+        title: "Test Reminder",
+        due: dueDate.toISOString(),
+        description: "Test description",
       });
 
+      expect(result).toEqual(mockReminder);
       expect(createReminderMock).toHaveBeenCalledWith(
         "test-user",
-        "test reminder",
-        expect.any(Date),
-        "test description",
-        "daily"
+        "Test Reminder",
+        dueDate,
+        "Test description",
+        undefined
       );
-      expect(result).toEqual(mockReminder);
     });
 
-    it("validates required fields", async () => {
+    it("creates reminder without optional fields", async () => {
+      const dueDate = new Date("2025-12-31T12:00:00Z");
+      const mockReminder = {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        userId: "test-user",
+        title: "Test Reminder",
+        description: null,
+        due: dueDate,
+        recurring: null,
+        fired: false,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createReminderMock.mockResolvedValue(mockReminder);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.create({
+        title: "Test Reminder",
+        due: dueDate.toISOString(),
+      });
+
+      expect(result).toEqual(mockReminder);
+      expect(createReminderMock).toHaveBeenCalledWith(
+        "test-user",
+        "Test Reminder",
+        dueDate,
+        undefined,
+        undefined
+      );
+    });
+
+    it("validates title is required", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
       await expect(
         caller.remind.create({
           title: "",
           due: new Date().toISOString(),
-        } as any)
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates title length", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const longTitle = "a".repeat(257);
+
+      await expect(
+        caller.remind.create({
+          title: longTitle,
+          due: new Date().toISOString(),
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates due date format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.create({
+          title: "Test Reminder",
+          due: "invalid-date",
+        })
       ).rejects.toThrow();
     });
   });
 
   describe("list", () => {
-    it("lists reminders with pagination", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(caller.remind.list({})).rejects.toThrow(TRPCError);
+    });
+
+    it("lists reminders scoped to user", async () => {
       const mockReminders = [
-        { id: "reminder-1", title: "reminder 1" },
-        { id: "reminder-2", title: "reminder 2" },
+        {
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          userId: "test-user",
+          title: "Reminder 1",
+          description: null,
+          due: new Date("2025-12-31T12:00:00Z"),
+          recurring: null,
+          fired: false,
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "223e4567-e89b-12d3-a456-426614174001",
+          userId: "test-user",
+          title: "Reminder 2",
+          description: null,
+          due: new Date("2025-12-31T13:00:00Z"),
+          recurring: null,
+          fired: false,
+          created: new Date(),
+          updated: new Date(),
+        },
       ];
 
       getRemindersMock.mockResolvedValue(mockReminders);
 
-      const result = await caller.remind.list({
-        limit: 10,
-        offset: 0,
-      });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.list({ limit: 100, offset: 0 });
 
-      expect(getRemindersMock).toHaveBeenCalledWith("test-user", 10, 0);
       expect(result).toEqual(mockReminders);
+      expect(getRemindersMock).toHaveBeenCalledWith("test-user", 100, 0);
+    });
+
+    it("uses default limit and offset", async () => {
+      getRemindersMock.mockResolvedValue([]);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      await caller.remind.list({});
+
+      expect(getRemindersMock).toHaveBeenCalledWith("test-user", 100, 0);
+    });
+
+    it("validates limit bounds", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(caller.remind.list({ limit: 0 })).rejects.toThrow();
+      await expect(caller.remind.list({ limit: 201 })).rejects.toThrow();
     });
   });
 
   describe("due", () => {
-    it("gets due reminders", async () => {
-      const mockDue = [{ id: "reminder-1", title: "due reminder" }];
-      getDueRemindersMock.mockResolvedValue(mockDue);
-
-      const before = new Date().toISOString();
-      const result = await caller.remind.due({ before });
-
-      expect(getDueRemindersMock).toHaveBeenCalledWith(
-        "test-user",
-        expect.any(Date)
-      );
-      expect(result).toEqual(mockDue);
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(caller.remind.due({})).rejects.toThrow(TRPCError);
     });
 
-    it("uses current date when before not provided", async () => {
+    it("gets due reminders", async () => {
+      const beforeDate = new Date("2025-12-31T12:00:00Z");
+      const mockReminders = [
+        {
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          userId: "test-user",
+          title: "Due Reminder",
+          description: null,
+          due: new Date("2025-12-31T11:00:00Z"),
+          recurring: null,
+          fired: false,
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      getDueRemindersMock.mockResolvedValue(mockReminders);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.due({
+        before: beforeDate.toISOString(),
+      });
+
+      expect(result).toEqual(mockReminders);
+      expect(getDueRemindersMock).toHaveBeenCalledWith("test-user", beforeDate);
+    });
+
+    it("uses current date when before is not provided", async () => {
       getDueRemindersMock.mockResolvedValue([]);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       await caller.remind.due({});
 
-      expect(getDueRemindersMock).toHaveBeenCalledWith(
-        "test-user",
-        expect.any(Date)
-      );
+      expect(getDueRemindersMock).toHaveBeenCalled();
+      const callArg = getDueRemindersMock.mock.calls[0]?.[1];
+      expect(callArg).toBeInstanceOf(Date);
     });
   });
 
   describe("fire", () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.remind.fire({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
+
     it("marks reminder as fired", async () => {
-      const mockUpdated = { id: "reminder-id", fired: true };
-      markReminderFiredMock.mockResolvedValue(mockUpdated);
+      const reminderId = "123e4567-e89b-12d3-a456-426614174000";
+      markReminderFiredMock.mockResolvedValue(1);
 
-      const result = await caller.remind.fire({
-        id: "reminder-id",
-      });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.fire({ id: reminderId });
 
-      expect(markReminderFiredMock).toHaveBeenCalledWith("reminder-id");
-      expect(result).toEqual({ updated: mockUpdated });
+      expect(result).toEqual({ updated: 1 });
+      expect(markReminderFiredMock).toHaveBeenCalledWith(reminderId);
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.fire({ id: "invalid-uuid" })
+      ).rejects.toThrow();
     });
   });
 
   describe("delete", () => {
-    it("deletes a reminder", async () => {
-      deleteReminderMock.mockResolvedValue(true);
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.remind.delete({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
 
-      const result = await caller.remind.delete({
-        id: "reminder-id",
-      });
+    it("deletes reminder", async () => {
+      const reminderId = "123e4567-e89b-12d3-a456-426614174000";
+      deleteReminderMock.mockResolvedValue(1);
 
-      expect(deleteReminderMock).toHaveBeenCalledWith("reminder-id");
-      expect(result).toEqual({ deleted: true });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.remind.delete({ id: reminderId });
+
+      expect(result).toEqual({ deleted: 1 });
+      expect(deleteReminderMock).toHaveBeenCalledWith(reminderId);
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.remind.delete({ id: "invalid-uuid" })
+      ).rejects.toThrow();
     });
   });
 });

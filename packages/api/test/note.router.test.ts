@@ -1,134 +1,312 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
-  mockPolicyAudit,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import { TRPCError } from "@trpc/server";
+import { metricsStub } from "./utils/mock-metrics";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
-setupTestEnv();
-mockPolicyAudit();
+mock.module("@alfred/api/metrics", () => metricsStub);
 
 const createNoteMock = vi.fn();
 const getNotesMock = vi.fn();
 const updateNoteMock = vi.fn();
 const deleteNoteMock = vi.fn();
+const ingestMock = vi.fn().mockResolvedValue(undefined);
+
+mock.module("@alfred/rag", () => ({
+  ingest: ingestMock,
+  embed: vi.fn().mockResolvedValue([]),
+  embedMany: vi.fn().mockResolvedValue([]),
+  retrieve: vi.fn().mockResolvedValue([]),
+  chunk: vi.fn().mockReturnValue([]),
+  setEmbeddingProvider: vi.fn(),
+  evaluateRetrieval: vi.fn(),
+  evaluateWithModel: vi.fn(),
+  rerank: vi.fn(),
+  EMBEDDING_DIM: 1536,
+}));
 
 mock.module("@alfred/db/repo/assistant", () => ({
   createNote: createNoteMock,
   getNotes: getNotesMock,
   updateNote: updateNoteMock,
   deleteNote: deleteNoteMock,
+  createReminder: vi.fn(),
+  getReminders: vi.fn(),
+  getDueReminders: vi.fn(),
+  markReminderFired: vi.fn(),
+  createTimer: vi.fn(),
+  getActiveTimers: vi.fn(),
+  markTimerCompleted: vi.fn(),
+  cancelTimer: vi.fn(),
+  createBookmark: vi.fn(),
+  getBookmarks: vi.fn(),
+  deleteBookmark: vi.fn(),
+  createTask: vi.fn(),
+  getTasks: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
 }));
 
-let caller: Awaited<ReturnType<typeof createTestCaller>>;
+describe("noteRouter", () => {
+  beforeEach(() => {
+    createNoteMock.mockReset();
+    getNotesMock.mockReset();
+    updateNoteMock.mockReset();
+    deleteNoteMock.mockReset();
+    ingestMock.mockReset().mockResolvedValue(undefined);
+  });
 
-beforeAll(async () => {
-  caller = await createTestCaller();
-});
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
-afterEach(() => {
-  resetAllMocks();
-});
-
-describe("note router", () => {
   describe("create", () => {
-    it("creates a note", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.note.create({
+          content: "Test note content",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it("creates note with valid input", async () => {
       const mockNote = {
-        id: "note-id",
+        id: "note-123",
         userId: "test-user",
-        content: "test content",
-        createdAt: new Date(),
+        title: "Test Note",
+        content: "Test note content",
+        tags: ["test"],
+        created: new Date(),
+        updated: new Date(),
       };
 
       createNoteMock.mockResolvedValue(mockNote);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       const result = await caller.note.create({
-        content: "test content",
-        title: "test title",
-        tags: ["tag1"],
+        title: "Test Note",
+        content: "Test note content",
+        tags: ["test"],
       });
 
+      expect(result).toEqual(mockNote);
       expect(createNoteMock).toHaveBeenCalledWith(
         "test-user",
-        "test content",
-        "test title",
-        ["tag1"]
+        "Test note content",
+        "Test Note",
+        ["test"]
       );
-      expect(result).toEqual(mockNote);
     });
 
-    it("validates required content", async () => {
+    it("creates note without optional fields", async () => {
+      const mockNote = {
+        id: "note-123",
+        userId: "test-user",
+        title: null,
+        content: "Test note content",
+        tags: null,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createNoteMock.mockResolvedValue(mockNote);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.note.create({
+        content: "Test note content",
+      });
+
+      expect(result).toEqual(mockNote);
+      expect(createNoteMock).toHaveBeenCalledWith(
+        "test-user",
+        "Test note content",
+        undefined,
+        undefined
+      );
+    });
+
+    it("validates title length", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const longTitle = "a".repeat(257);
+
       await expect(
         caller.note.create({
+          title: longTitle,
+          content: "Test content",
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates content is required", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.create({
+          title: "Test Note",
           content: "",
-        } as any)
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates tags count", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const tooManyTags = Array.from({ length: 33 }, (_, i) => `tag-${i}`);
+
+      await expect(
+        caller.note.create({
+          content: "Test content",
+          tags: tooManyTags,
+        })
       ).rejects.toThrow();
     });
   });
 
   describe("list", () => {
-    it("lists notes with pagination", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(caller.note.list({})).rejects.toThrow(TRPCError);
+    });
+
+    it("lists notes scoped to user", async () => {
       const mockNotes = [
-        { id: "note-1", content: "content 1" },
-        { id: "note-2", content: "content 2" },
+        {
+          id: "note-1",
+          userId: "test-user",
+          title: "Note 1",
+          content: "Content 1",
+          tags: null,
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "note-2",
+          userId: "test-user",
+          title: "Note 2",
+          content: "Content 2",
+          tags: null,
+          created: new Date(),
+          updated: new Date(),
+        },
       ];
 
       getNotesMock.mockResolvedValue(mockNotes);
 
-      const result = await caller.note.list({
-        limit: 10,
-        offset: 0,
-      });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.note.list({ limit: 100, offset: 0 });
 
-      expect(getNotesMock).toHaveBeenCalledWith("test-user", 10, 0);
       expect(result).toEqual(mockNotes);
+      expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0);
     });
 
-    it("uses default pagination", async () => {
+    it("uses default limit and offset", async () => {
       getNotesMock.mockResolvedValue([]);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       await caller.note.list({});
 
       expect(getNotesMock).toHaveBeenCalledWith("test-user", 100, 0);
     });
+
+    it("validates limit bounds", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(caller.note.list({ limit: 0 })).rejects.toThrow();
+      await expect(caller.note.list({ limit: 201 })).rejects.toThrow();
+    });
+
+    it("validates offset is non-negative", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(caller.note.list({ offset: -1 })).rejects.toThrow();
+    });
   });
 
   describe("update", () => {
-    it("updates a note", async () => {
-      const mockUpdated = { id: "note-id", content: "updated" };
-      updateNoteMock.mockResolvedValue(mockUpdated);
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.note.update({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          content: "Updated content",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
 
+    it("updates note with valid input", async () => {
+      const noteId = "123e4567-e89b-12d3-a456-426614174000";
+      updateNoteMock.mockResolvedValue(1);
+
+      const caller = await createTestCaller({ userId: "test-user" });
       const result = await caller.note.update({
-        id: "note-id",
-        content: "updated content",
+        id: noteId,
+        title: "Updated Title",
+        content: "Updated content",
+        tags: ["updated"],
       });
 
-      expect(updateNoteMock).toHaveBeenCalledWith("note-id", {
-        content: "updated content",
+      expect(result).toEqual({ updated: 1 });
+      expect(updateNoteMock).toHaveBeenCalledWith(noteId, {
+        title: "Updated Title",
+        content: "Updated content",
+        tags: ["updated"],
       });
-      expect(result).toEqual({ updated: mockUpdated });
     });
 
     it("requires at least one field to update", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
       await expect(
         caller.note.update({
-          id: "note-id",
-        } as any)
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.update({
+          id: "invalid-uuid",
+          content: "Updated",
+        })
       ).rejects.toThrow();
     });
   });
 
   describe("delete", () => {
-    it("deletes a note", async () => {
-      deleteNoteMock.mockResolvedValue(true);
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.note.delete({ id: "123e4567-e89b-12d3-a456-426614174000" })
+      ).rejects.toThrow(TRPCError);
+    });
 
-      const result = await caller.note.delete({
-        id: "note-id",
-      });
+    it("deletes note", async () => {
+      const noteId = "123e4567-e89b-12d3-a456-426614174000";
+      deleteNoteMock.mockResolvedValue(1);
 
-      expect(deleteNoteMock).toHaveBeenCalledWith("note-id");
-      expect(result).toEqual({ deleted: true });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.note.delete({ id: noteId });
+
+      expect(result).toEqual({ deleted: 1 });
+      expect(deleteNoteMock).toHaveBeenCalledWith(noteId);
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.note.delete({ id: "invalid-uuid" })
+      ).rejects.toThrow();
     });
   });
 });

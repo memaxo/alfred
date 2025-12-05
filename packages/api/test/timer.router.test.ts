@@ -1,13 +1,17 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import {
-  mockPolicyAudit,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
-import { createTestCaller } from "./utils/trpc";
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
+import { TRPCError } from "@trpc/server";
+import { metricsStub } from "./utils/mock-metrics";
+import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 
-setupTestEnv();
-mockPolicyAudit();
+mock.module("@alfred/api/metrics", () => metricsStub);
 
 const createTimerMock = vi.fn();
 const getActiveTimersMock = vi.fn();
@@ -19,115 +23,235 @@ mock.module("@alfred/db/repo/assistant", () => ({
   getActiveTimers: getActiveTimersMock,
   markTimerCompleted: markTimerCompletedMock,
   cancelTimer: cancelTimerMock,
-  // Stubs for other exports to satisfy imports in appRouter
-  createTask: vi.fn(),
-  getTasks: vi.fn(),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
   createNote: vi.fn(),
   getNotes: vi.fn(),
   updateNote: vi.fn(),
   deleteNote: vi.fn(),
   createReminder: vi.fn(),
-  getDueReminders: vi.fn(),
   getReminders: vi.fn(),
-  getDueRemindersAll: vi.fn(),
+  getDueReminders: vi.fn(),
   markReminderFired: vi.fn(),
   deleteReminder: vi.fn(),
   createBookmark: vi.fn(),
   getBookmarks: vi.fn(),
   deleteBookmark: vi.fn(),
+  createTask: vi.fn(),
+  getTasks: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
 }));
 
-let caller: Awaited<ReturnType<typeof createTestCaller>>;
+describe("timerRouter", () => {
+  beforeEach(() => {
+    createTimerMock.mockReset();
+    getActiveTimersMock.mockReset();
+    markTimerCompletedMock.mockReset();
+    cancelTimerMock.mockReset();
+  });
 
-beforeAll(async () => {
-  caller = await createTestCaller();
-});
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
-afterEach(() => {
-  resetAllMocks();
-});
-
-describe("timer router", () => {
   describe("create", () => {
-    it("creates a timer", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.timer.create({
+          duration: 60,
+        })
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it("creates timer with valid input", async () => {
       const mockTimer = {
-        id: "timer-id",
+        id: "123e4567-e89b-12d3-a456-426614174000",
         userId: "test-user",
         duration: 60,
-        label: "test timer",
+        label: "Test Timer",
+        started: new Date(),
+        completed: false,
+        cancelled: false,
+        created: new Date(),
+        updated: new Date(),
       };
 
       createTimerMock.mockResolvedValue(mockTimer);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       const result = await caller.timer.create({
         duration: 60,
-        label: "test timer",
+        label: "Test Timer",
       });
 
+      expect(result).toEqual(mockTimer);
       expect(createTimerMock).toHaveBeenCalledWith(
         "test-user",
         60,
-        "test timer"
+        "Test Timer"
       );
-      expect(result).toEqual(mockTimer);
     });
 
-    it("validates positive duration", async () => {
+    it("creates timer without optional label", async () => {
+      const mockTimer = {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        userId: "test-user",
+        duration: 30,
+        label: null,
+        started: new Date(),
+        completed: false,
+        cancelled: false,
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      createTimerMock.mockResolvedValue(mockTimer);
+
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.timer.create({
+        duration: 30,
+      });
+
+      expect(result).toEqual(mockTimer);
+      expect(createTimerMock).toHaveBeenCalledWith("test-user", 30, undefined);
+    });
+
+    it("validates duration is positive", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: 0,
+        })
+      ).rejects.toThrow();
+
       await expect(
         caller.timer.create({
           duration: -1,
-        } as any)
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates duration is an integer", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.create({
+          duration: 1.5,
+        })
+      ).rejects.toThrow();
+    });
+
+    it("validates label length", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+      const longLabel = "a".repeat(129);
+
+      await expect(
+        caller.timer.create({
+          duration: 60,
+          label: longLabel,
+        })
       ).rejects.toThrow();
     });
   });
 
   describe("active", () => {
-    it("gets active timers", async () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(caller.timer.active()).rejects.toThrow(TRPCError);
+    });
+
+    it("gets active timers scoped to user", async () => {
       const mockTimers = [
-        { id: "timer-1", duration: 60 },
-        { id: "timer-2", duration: 120 },
+        {
+          id: "123e4567-e89b-12d3-a456-426614174000",
+          userId: "test-user",
+          duration: 60,
+          label: "Timer 1",
+          started: new Date(),
+          completed: false,
+          cancelled: false,
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "223e4567-e89b-12d3-a456-426614174001",
+          userId: "test-user",
+          duration: 30,
+          label: "Timer 2",
+          started: new Date(),
+          completed: false,
+          cancelled: false,
+          created: new Date(),
+          updated: new Date(),
+        },
       ];
 
       getActiveTimersMock.mockResolvedValue(mockTimers);
 
+      const caller = await createTestCaller({ userId: "test-user" });
       const result = await caller.timer.active();
 
-      expect(getActiveTimersMock).toHaveBeenCalledWith("test-user");
       expect(result).toEqual(mockTimers);
+      expect(getActiveTimersMock).toHaveBeenCalledWith("test-user");
     });
   });
 
   describe("done", () => {
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.timer.done({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
+
     it("marks timer as completed", async () => {
-      const mockUpdated = { id: "timer-id", completed: true };
-      markTimerCompletedMock.mockResolvedValue(mockUpdated);
+      const timerId = "123e4567-e89b-12d3-a456-426614174000";
+      markTimerCompletedMock.mockResolvedValue(1);
 
-      const result = await caller.timer.done({
-        id: "123e4567-e89b-12d3-a456-426614174000",
-      });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.timer.done({ id: timerId });
 
-      expect(markTimerCompletedMock).toHaveBeenCalledWith(
-        "123e4567-e89b-12d3-a456-426614174000"
-      );
-      expect(result).toEqual({ updated: mockUpdated });
+      expect(result).toEqual({ updated: 1 });
+      expect(markTimerCompletedMock).toHaveBeenCalledWith(timerId);
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(caller.timer.done({ id: "invalid-uuid" })).rejects.toThrow();
     });
   });
 
   describe("cancel", () => {
-    it("cancels a timer", async () => {
-      const mockUpdated = { id: "timer-id", cancelled: true };
-      cancelTimerMock.mockResolvedValue(mockUpdated);
+    it("rejects unauthenticated requests", async () => {
+      const caller = await createUnauthedCaller();
+      await expect(
+        caller.timer.cancel({
+          id: "123e4567-e89b-12d3-a456-426614174000",
+        })
+      ).rejects.toThrow(TRPCError);
+    });
 
-      const result = await caller.timer.cancel({
-        id: "123e4567-e89b-12d3-a456-426614174000",
-      });
+    it("cancels timer", async () => {
+      const timerId = "123e4567-e89b-12d3-a456-426614174000";
+      cancelTimerMock.mockResolvedValue(1);
 
-      expect(cancelTimerMock).toHaveBeenCalledWith(
-        "123e4567-e89b-12d3-a456-426614174000"
-      );
-      expect(result).toEqual({ updated: mockUpdated });
+      const caller = await createTestCaller({ userId: "test-user" });
+      const result = await caller.timer.cancel({ id: timerId });
+
+      expect(result).toEqual({ updated: 1 });
+      expect(cancelTimerMock).toHaveBeenCalledWith(timerId);
+    });
+
+    it("validates UUID format", async () => {
+      const caller = await createTestCaller({ userId: "test-user" });
+
+      await expect(
+        caller.timer.cancel({ id: "invalid-uuid" })
+      ).rejects.toThrow();
     });
   });
 });
