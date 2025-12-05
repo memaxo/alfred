@@ -2,7 +2,7 @@
 name = "alfred-voice-rocm"
 version = "0.1.0"
 description = "Voice models dependencies for ALFRED (ROCm/AMD GPU variant)"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "nemo_toolkit[asr]>=1.23.0",
     "packaging",
@@ -31,7 +31,7 @@ torchaudio = [
     { index = "pytorch-rocm" },
 ]
 
-# PyTorch ROCm index (verify version match, e.g. 6.2)
+# PyTorch ROCm index (rocm6.2 - matches embed package for consistency)
 [[tool.uv.index]]
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm6.2"

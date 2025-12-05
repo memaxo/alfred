@@ -78,40 +78,49 @@ describe("Voice Pipeline Integration", () => {
   });
 
   describe("TTS Synthesis", () => {
-    it.skipIf(!voicePoolsInitialized)("synthesizes text to speech", async () => {
-      const result = await caller.voice.ttsSynthesize({
-        text: "Hello, this is a test.",
-        voice: "en_US-lessac-medium", // Piper voice name
-        format: "mp3",
-      });
-
-      expect(result).toBeDefined();
-      expect(result.audioBase64).toBeDefined();
-      expect(result.mimeType).toContain("audio");
-    });
-
-    it.skipIf(!voicePoolsInitialized)("handles empty text gracefully", async () => {
-      await expect(
-        caller.voice.ttsSynthesize({
-          text: "",
-          voice: "en_US-lessac-medium",
+    it.skipIf(!voicePoolsInitialized)(
+      "synthesizes text to speech",
+      async () => {
+        const result = await caller.voice.ttsSynthesize({
+          text: "Hello, this is a test.",
+          voice: "en_US-lessac-medium", // Piper voice name
           format: "mp3",
-        })
-      ).rejects.toBeDefined();
-    });
+        });
+
+        expect(result).toBeDefined();
+        expect(result.audioBase64).toBeDefined();
+        expect(result.mimeType).toContain("audio");
+      }
+    );
+
+    it.skipIf(!voicePoolsInitialized)(
+      "handles empty text gracefully",
+      async () => {
+        await expect(
+          caller.voice.ttsSynthesize({
+            text: "",
+            voice: "en_US-lessac-medium",
+            format: "mp3",
+          })
+        ).rejects.toBeDefined();
+      }
+    );
   });
 
   describe("Voice Preview", () => {
-    it.skipIf(!voicePoolsInitialized)("previews a voice with sample text", async () => {
-      const result = await caller.voice.previewVoice({
-        voice: "en_US-lessac-medium",
-        text: "Hello, I am Alfred.",
-      });
+    it.skipIf(!voicePoolsInitialized)(
+      "previews a voice with sample text",
+      async () => {
+        const result = await caller.voice.previewVoice({
+          voice: "en_US-lessac-medium",
+          text: "Hello, I am Alfred.",
+        });
 
-      expect(result).toBeDefined();
-      expect(result.audioBase64).toBeDefined();
-      expect(result.mimeType).toBeDefined();
-    });
+        expect(result).toBeDefined();
+        expect(result.audioBase64).toBeDefined();
+        expect(result.mimeType).toBeDefined();
+      }
+    );
   });
 });
 
