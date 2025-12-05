@@ -1,4 +1,5 @@
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
@@ -8,8 +9,10 @@ import {
   vi,
 } from "bun:test";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -26,6 +29,35 @@ const mockRequireToolScopesAndPolicy = mock();
 mock.module("@alfred/auth/token", () => ({
   requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
 }));
+
+/**
+ * Security Test Cleanup
+ *
+ * These tests create fixtures inside process.cwd()/tmp because
+ * openDirectorySecure only allows directories under process.cwd().
+ * We clean up after all tests to avoid polluting the repository.
+ */
+const REPO_TMP = path.join(process.cwd(), "tmp");
+
+afterAll(() => {
+  if (!existsSync(REPO_TMP)) return;
+
+  // Clean up only security test fixtures (prefixed with git-secure-, droid-secure-, docker-secure-)
+  try {
+    const entries = readdirSync(REPO_TMP);
+    for (const entry of entries) {
+      if (
+        entry.startsWith("git-secure-") ||
+        entry.startsWith("droid-secure-") ||
+        entry.startsWith("docker-secure-")
+      ) {
+        rmSync(path.join(REPO_TMP, entry), { recursive: true, force: true });
+      }
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+});
 
 beforeEach(() => {
   mockRequireToolScopesAndPolicy.mockReset();

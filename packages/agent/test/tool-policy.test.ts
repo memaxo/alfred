@@ -20,8 +20,18 @@ const { assertAllowedDirectory: assertDroidAllowedDirectory } = droidInternals;
 const { assertAllowedDirectory: assertDockerAllowedDirectory } =
   dockerInternals;
 
-// Use os.tmpdir() instead of process.cwd() to avoid polluting the repo
-const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "alfred-policy-test-"));
+/**
+ * Security Policy Tests
+ *
+ * IMPORTANT: These tests MUST use directories inside process.cwd() because
+ * the security functions (assertAllowedDirectory, openDirectorySecure) only
+ * allow directories under the current working directory. This is by design
+ * to prevent sandbox escapes.
+ *
+ * The tmp-policy-test directory is created inside the repo and cleaned up
+ * after all tests complete.
+ */
+const TMP_ROOT = path.join(process.cwd(), "tmp-policy-test");
 
 function ensureWorkspaceSandbox(name: string) {
   const target = path.join(TMP_ROOT, name);

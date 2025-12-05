@@ -1,10 +1,15 @@
 import path from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { DirectoryHandle } from "../../security/filesystem.js";
 import {
-  assertAllowedDirectory,
-  createTimeout,
   DEFAULT_ALLOW_PREFIXES,
+  DirectoryAccessError,
+  openDirectorySecure,
+} from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
+import {
+  createTimeout,
   DEFAULT_TIMEOUT_SEC,
   isWithinBase,
   MAX_TIMEOUT_SEC,
@@ -94,6 +99,26 @@ function pickEnv(custom: Record<string, string> | undefined) {
   }
 
   return safeEnv;
+}
+
+/**
+ * Acquire a secure directory handle for the working directory.
+ * Uses file descriptor pinning to prevent TOCTOU attacks via symlink swaps.
+ */
+function acquireWorkingDirectoryHandle(candidate?: string): DirectoryHandle {
+  try {
+    return openDirectorySecure(candidate ?? process.cwd(), {
+      allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
+    });
+  } catch (error) {
+    if (
+      error instanceof DirectoryAccessError &&
+      error.code === "not_directory"
+    ) {
+      throw new Error("droid_invalid_cwd_not_directory");
+    }
+    throw new Error("droid_invalid_cwd");
+  }
 }
 
 async function enforcePolicy(input: DroidToolInput) {
@@ -193,15 +218,16 @@ export const toolDroid = {
   execute: async ({ input, writer }: DroidExecuteArgs) => {
     await enforcePolicy(input);
 
-    const cwd = input.cw
-      ? assertAllowedDirectory(input.cw, "droid")
-      : process.cwd();
+    // Acquire secure directory handle to prevent TOCTOU symlink attacks
+    const cwdHandle = acquireWorkingDirectoryHandle(input.cw);
     const flags = buildFlags(input);
     const command = process.env.DROID_BIN?.trim() || "droid";
     const executable = resolveExecutable(command, "droid");
 
-    const proc = Bun.spawn([executable, ...flags], {
-      cwd,
+    const proc = spawnWithSecureCwd({
+      cwdHandle,
+      cmd: executable,
+      args: flags,
       env: pickEnv(input.env),
       stdout: "pipe",
       stderr: "pipe",
@@ -230,10 +256,12 @@ export const toolDroid = {
     try {
       exitCode = await proc.exited;
     } catch (error) {
+      cwdHandle.close();
       timeoutCtx.clear();
       stopDurationTimer();
       throw error;
     } finally {
+      cwdHandle.close();
       timeoutCtx.clear();
       stopDurationTimer();
     }
@@ -270,4 +298,6 @@ export const __internals = {
   isWithinBase,
   pickEnv,
   resolveExecutable: (cmd: string) => resolveExecutable(cmd, "droid"),
+  assertAllowedDirectory: (candidate: string) =>
+    acquireWorkingDirectoryHandle(candidate).path,
 };
