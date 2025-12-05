@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
 import {
   __internals,
   ModelProcess,
@@ -10,16 +17,21 @@ const { resolvePythonExecutable } = __internals;
 
 describe("Environment Variable Overrides", () => {
   let savedEnv: Record<string, string | undefined>;
+
+  // ProcessInstance is immutable - create once
   let processInstance: ModelProcess;
 
-  beforeEach(() => {
-    savedEnv = saveEnvVars(["VOICE_USE_UV", "PYTHON_PATH"]);
-
+  beforeAll(() => {
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
       modelPath: "test-model",
     };
     processInstance = new ModelProcess(config);
+  });
+
+  beforeEach(() => {
+    // Save env vars before each test (they get mutated)
+    savedEnv = saveEnvVars(["VOICE_USE_UV", "PYTHON_PATH"]);
   });
 
   afterEach(() => {

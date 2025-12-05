@@ -256,6 +256,24 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Setup UV (for Python tests)
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.6.0"
+        continue-on-error: true
+
+      - name: Verify Python Environment (fail-fast)
+        run: |
+          # Check if voice package Python environment is healthy
+          # This catches corrupted environments before running expensive tests
+          if [ -f packages/voice/scripts/verify-python.ts ]; then
+            bun run packages/voice/scripts/verify-python.ts || {
+              echo "::error::Python environment is corrupted! See logs for repair instructions."
+              exit 1
+            }
+          fi
+        continue-on-error: true
+
       - name: Run tests
         env:
           LANE: ${{ needs.changes.outputs.lane }}

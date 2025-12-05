@@ -1,29 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import os from "node:os";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   __internals,
   ModelProcess,
   type ProcessConfig,
 } from "../src/process/base";
-import { cleanupTestVenv, createTestVenv } from "./utils/python-helpers";
+import {
+  cleanupTestVenv,
+  createIsolatedTestDir,
+  createTestVenv,
+} from "./utils/python-helpers";
 
 const { findVenvPython } = __internals;
 
 describe("Virtual Environment Detection", () => {
-  let tempVoiceDir: string;
+  let testDir: ReturnType<typeof createIsolatedTestDir>;
 
   beforeEach(() => {
-    tempVoiceDir = mkdtempSync(join(os.tmpdir(), "alfred-venv-test-"));
+    // Use isolated test directory (safe - writes only to temp)
+    testDir = createIsolatedTestDir("venv-detection-");
   });
 
   afterEach(() => {
-    try {
-      rmSync(tempVoiceDir, { recursive: true, force: true });
-    } catch {
-      // Ignore cleanup errors
-    }
+    testDir.cleanup();
   });
 
   it("should find venv Python on Unix", async () => {
@@ -31,7 +31,7 @@ describe("Virtual Environment Detection", () => {
       return; // Skip on Windows
     }
 
-    const venvPython = createTestVenv(tempVoiceDir);
+    const venvPython = createTestVenv(testDir.voiceDir);
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -39,7 +39,7 @@ describe("Virtual Environment Detection", () => {
     };
     const processInstance = new ModelProcess(config);
 
-    const result = findVenvPython(processInstance)(tempVoiceDir);
+    const result = findVenvPython(processInstance)(testDir.voiceDir);
 
     expect(result).toBe(venvPython);
     expect(result).toContain("bin");
@@ -51,7 +51,7 @@ describe("Virtual Environment Detection", () => {
       return; // Skip on non-Windows
     }
 
-    const venvPython = createTestVenv(tempVoiceDir);
+    const venvPython = createTestVenv(testDir.voiceDir);
 
     const config: ProcessConfig = {
       scriptPath: "C:\\test\\script.py",
@@ -59,7 +59,7 @@ describe("Virtual Environment Detection", () => {
     };
     const processInstance = new ModelProcess(config);
 
-    const result = findVenvPython(processInstance)(tempVoiceDir);
+    const result = findVenvPython(processInstance)(testDir.voiceDir);
 
     expect(result).toBe(venvPython);
     expect(result).toContain("Scripts");
@@ -68,7 +68,7 @@ describe("Virtual Environment Detection", () => {
 
   it("should return null when .venv does not exist", async () => {
     // Ensure .venv directory missing
-    cleanupTestVenv(tempVoiceDir);
+    cleanupTestVenv(testDir.voiceDir);
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -76,14 +76,14 @@ describe("Virtual Environment Detection", () => {
     };
     const processInstance = new ModelProcess(config);
 
-    const result = findVenvPython(processInstance)(tempVoiceDir);
+    const result = findVenvPython(processInstance)(testDir.voiceDir);
 
     expect(result).toBeNull();
   });
 
   it("should return null when Python executable missing in venv", async () => {
     // Create .venv directory but no Python executable
-    const venvDir = join(tempVoiceDir, ".venv");
+    const venvDir = join(testDir.voiceDir, ".venv");
     mkdirSync(venvDir, { recursive: true });
 
     const config: ProcessConfig = {
@@ -92,7 +92,7 @@ describe("Virtual Environment Detection", () => {
     };
     const processInstance = new ModelProcess(config);
 
-    const result = findVenvPython(processInstance)(tempVoiceDir);
+    const result = findVenvPython(processInstance)(testDir.voiceDir);
 
     expect(result).toBeNull();
   });
@@ -101,8 +101,8 @@ describe("Virtual Environment Detection", () => {
     // Create .venv with invalid Python path (directory instead of file)
     const venvBinDir =
       process.platform === "win32"
-        ? join(tempVoiceDir, ".venv", "Scripts")
-        : join(tempVoiceDir, ".venv", "bin");
+        ? join(testDir.voiceDir, ".venv", "Scripts")
+        : join(testDir.voiceDir, ".venv", "bin");
     mkdirSync(venvBinDir, { recursive: true });
 
     const pythonPath =
@@ -120,7 +120,7 @@ describe("Virtual Environment Detection", () => {
     const processInstance = new ModelProcess(config);
 
     // Should return null (accessSync will fail for directory)
-    const result = findVenvPython(processInstance)(tempVoiceDir);
+    const result = findVenvPython(processInstance)(testDir.voiceDir);
 
     expect(result).toBeNull();
   });

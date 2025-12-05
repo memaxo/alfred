@@ -10,6 +10,8 @@
     "install-deps": "bash scripts/install.sh",
     "download-models": "uv run python scripts/download.py",
     "verify": "uv run python scripts/download.py --verify-only",
+    "verify:python": "bun run scripts/verify-python.ts",
+    "repair:python": "bun run scripts/repair-python.ts",
     "setup": "bash scripts/install.sh && uv run python scripts/download.py",
     "setup:ci": "uv sync --frozen && uv run python scripts/download.py",
     "download-supertonic": "bash scripts/supertonic.sh"

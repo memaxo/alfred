@@ -1,6 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
-import os from "node:os";
 import { join, delimiter as pathDelimiter } from "node:path";
 import {
   __internals,
@@ -10,6 +8,7 @@ import {
 import {
   cleanupTestVenv,
   createFakeExecutable,
+  createIsolatedTestDir,
   createTestVenv,
   hasUv,
   restoreEnvVars,
@@ -19,23 +18,18 @@ import {
 const { resolvePythonExecutable } = __internals;
 
 describe("Python Executable Resolution", () => {
-  let tempVoiceDir: string;
+  let testDir: ReturnType<typeof createIsolatedTestDir>;
   let realVoiceDir: string;
   let savedEnv: Record<string, string | undefined>;
   let processInstance: ModelProcess;
 
   beforeEach(() => {
-    // Create a truly temporary directory for tests that modify venv
-    // This prevents tests from corrupting the real packages/voice/.venv
-    tempVoiceDir = join(
-      os.tmpdir(),
-      `alfred-voice-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    );
-    mkdirSync(tempVoiceDir, { recursive: true });
+    // Create isolated test directory (safe - writes only to temp)
+    testDir = createIsolatedTestDir("python-resolution-");
 
     // Keep reference to real voice dir for UV tests that need actual project structure
     realVoiceDir = join(process.cwd(), "packages", "voice");
-    savedEnv = saveEnvVars(["VOICE_USE_UV", "PYTHON_PATH"]);
+    savedEnv = saveEnvVars(["VOICE_USE_UV", "PYTHON_PATH", "PATH"]);
 
     const config: ProcessConfig = {
       scriptPath: join(realVoiceDir, "scripts", "stt_server.py"),
@@ -46,12 +40,7 @@ describe("Python Executable Resolution", () => {
 
   afterEach(() => {
     restoreEnvVars(savedEnv);
-    // Clean up the temporary directory
-    try {
-      rmSync(tempVoiceDir, { recursive: true, force: true });
-    } catch {
-      // Ignore cleanup errors
-    }
+    testDir.cleanup();
   });
 
   describe("UV Run Path", () => {
@@ -59,7 +48,7 @@ describe("Python Executable Resolution", () => {
       const uvAvailable = await hasUv();
       if (!uvAvailable) {
         // Create fake UV in temp bin
-        const tempBin = join(tempVoiceDir, "bin");
+        const tempBin = join(testDir.rootDir, "bin");
         createFakeExecutable(tempBin, "uv");
         process.env.PATH = [tempBin, process.env.PATH]
           .filter(Boolean)
@@ -80,7 +69,7 @@ describe("Python Executable Resolution", () => {
     it("should skip UV when VOICE_USE_UV=false", async () => {
       const uvAvailable = await hasUv();
       if (!uvAvailable) {
-        const tempBin = join(tempVoiceDir, "bin");
+        const tempBin = join(testDir.rootDir, "bin");
         createFakeExecutable(tempBin, "uv");
         process.env.PATH = [tempBin, process.env.PATH]
           .filter(Boolean)
@@ -98,7 +87,7 @@ describe("Python Executable Resolution", () => {
     it("should use relative script path for UV run", async () => {
       const uvAvailable = await hasUv();
       if (!uvAvailable) {
-        const tempBin = join(tempVoiceDir, "bin");
+        const tempBin = join(testDir.rootDir, "bin");
         createFakeExecutable(tempBin, "uv");
         process.env.PATH = [tempBin, process.env.PATH]
           .filter(Boolean)
@@ -123,9 +112,9 @@ describe("Python Executable Resolution", () => {
 
     it("should detect venv Python in custom directory", async () => {
       const { findVenvPython } = __internals;
-      const venvPython = createTestVenv(tempVoiceDir);
+      const venvPython = createTestVenv(testDir.voiceDir);
 
-      const result = findVenvPython(processInstance)(tempVoiceDir);
+      const result = findVenvPython(processInstance)(testDir.voiceDir);
 
       expect(result).toBe(venvPython);
     });
@@ -133,15 +122,15 @@ describe("Python Executable Resolution", () => {
     it("should return null when venv missing", async () => {
       const { findVenvPython } = __internals;
       // Ensure .venv does not exist in temp dir
-      cleanupTestVenv(tempVoiceDir);
+      cleanupTestVenv(testDir.voiceDir);
 
-      const result = findVenvPython(processInstance)(tempVoiceDir);
+      const result = findVenvPython(processInstance)(testDir.voiceDir);
 
       expect(result).toBeNull();
     });
 
     it("should handle platform-specific venv paths", async () => {
-      const venvPython = createTestVenv(tempVoiceDir);
+      const venvPython = createTestVenv(testDir.voiceDir);
 
       if (process.platform === "win32") {
         expect(venvPython).toContain("Scripts");
@@ -188,7 +177,7 @@ describe("Python Executable Resolution", () => {
     it("should set voiceDir as cwd for UV run", async () => {
       const uvAvailable = await hasUv();
       if (!uvAvailable) {
-        const tempBin = join(tempVoiceDir, "bin");
+        const tempBin = join(testDir.rootDir, "bin");
         createFakeExecutable(tempBin, "uv");
         process.env.PATH = [tempBin, process.env.PATH]
           .filter(Boolean)

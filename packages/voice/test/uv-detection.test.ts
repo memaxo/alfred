@@ -1,32 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import os from "node:os";
+import { rmSync } from "node:fs";
 import { join, delimiter as pathDelimiter } from "node:path";
 import {
   __internals,
   ModelProcess,
   type ProcessConfig,
 } from "../src/process/base";
-import { createFakeExecutable } from "./utils/python-helpers";
+import {
+  createFakeExecutable,
+  createIsolatedTestDir,
+} from "./utils/python-helpers";
 
 const { findUvPath } = __internals;
 
 describe("UV Path Detection", () => {
-  let tempBinDir: string;
+  let testDir: ReturnType<typeof createIsolatedTestDir>;
   let originalPath: string | undefined;
 
   beforeEach(() => {
-    tempBinDir = mkdtempSync(join(os.tmpdir(), "alfred-uv-test-"));
+    // Use isolated test directory (safe - writes only to temp)
+    testDir = createIsolatedTestDir("uv-detection-");
     originalPath = process.env.PATH;
   });
 
   afterEach(() => {
     process.env.PATH = originalPath ?? "";
-    try {
-      rmSync(tempBinDir, { recursive: true, force: true });
-    } catch {
-      // Ignore cleanup errors
-    }
+    testDir.cleanup();
   });
 
   it("should find UV in PATH on Unix", async () => {
@@ -34,8 +33,8 @@ describe("UV Path Detection", () => {
       return; // Skip on Windows
     }
 
-    const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = tempBinDir;
+    const uvPath = createFakeExecutable(testDir.rootDir, "uv");
+    process.env.PATH = testDir.rootDir;
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -53,8 +52,8 @@ describe("UV Path Detection", () => {
       return; // Skip on non-Windows
     }
 
-    const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = tempBinDir;
+    const uvPath = createFakeExecutable(testDir.rootDir, "uv");
+    process.env.PATH = testDir.rootDir;
 
     const config: ProcessConfig = {
       scriptPath: "C:\\test\\script.py",
@@ -68,7 +67,7 @@ describe("UV Path Detection", () => {
   });
 
   it("should return null when UV not in PATH", async () => {
-    process.env.PATH = tempBinDir; // Only temp dir, no UV
+    process.env.PATH = testDir.rootDir; // Only temp dir, no UV
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -97,8 +96,8 @@ describe("UV Path Detection", () => {
   });
 
   it("should verify UV path exists", async () => {
-    const uvPath = createFakeExecutable(tempBinDir, "uv");
-    process.env.PATH = tempBinDir;
+    const uvPath = createFakeExecutable(testDir.rootDir, "uv");
+    process.env.PATH = testDir.rootDir;
 
     const config: ProcessConfig = {
       scriptPath: "/test/script.py",
@@ -119,8 +118,8 @@ describe("UV Path Detection", () => {
   });
 
   it("should take first result when multiple UV paths found", async () => {
-    const bin1 = join(tempBinDir, "bin1");
-    const bin2 = join(tempBinDir, "bin2");
+    const bin1 = join(testDir.rootDir, "bin1");
+    const bin2 = join(testDir.rootDir, "bin2");
     const uvPath1 = createFakeExecutable(bin1, "uv");
     createFakeExecutable(bin2, "uv");
 
