@@ -1,5 +1,5 @@
-import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
 import { withBudget } from "@alfred/metrics/performance";
+import { createTokenEstimator } from "@alfred/metrics/token";
 import { convertToModelMessages, pruneMessages } from "ai";
 import { getModelContextInfo } from "./model";
 const DEFAULT_HISTORY_RATIO = 0.5;

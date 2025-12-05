@@ -8,7 +8,7 @@ const MAX_SUBTASKS =
 function getDecompositionTruncatedMetric() {
   try {
     // Lazy import to avoid circular dependencies
-    const metrics = require("@alfred/api/metrics");
+    const metrics = require("@alfred/metrics/shared");
     return metrics.decompositionTruncatedTotal;
   } catch {
     return null;

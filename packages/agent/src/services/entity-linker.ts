@@ -1,12 +1,12 @@
-import {
-  entityLinkingDurationMs,
-  entityLinkingFallbackTotal,
-} from "@alfred/api/metrics";
 import { findNearestConcept } from "@alfred/db/repo/graph";
 import { extract } from "@alfred/knowledge/extractor";
 import { classifyDomain } from "@alfred/knowledge/lexicon/domains";
 import { ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
+import {
+  entityLinkingDurationMs,
+  entityLinkingFallbackTotal,
+} from "@alfred/metrics/shared";
 import { embedMany } from "@alfred/rag";
 
 // Type for findNearestConcept result (defined locally to work around stale dist types)
@@ -86,9 +86,9 @@ export async function linkEntities(
   const targetConcepts = Object.keys(ANCHORS);
 
   // Generate embeddings for vector-native entity linking
-  const embeddings: Array<number[] | undefined> = new Array(candidates.length).fill(
-    undefined
-  );
+  const embeddings: Array<number[] | undefined> = new Array(
+    candidates.length
+  ).fill(undefined);
   const embeddingTargets = candidates
     .map((entity, index) => ({ entity, index }))
     .filter(({ entity }) => !shouldSkipEmbedding(entity));

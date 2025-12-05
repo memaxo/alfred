@@ -536,7 +536,7 @@ export async function orchestrateWorkflowStream(
         })) as WorkflowEvent[];
       }
 
-      const executor = createWorkflowExecutor(
+      const executor = await createWorkflowExecutor(
         input,
         abortController,
         history,
@@ -965,7 +965,9 @@ export async function orchestrateWorkflowStream(
 
   Promise.race([asyncTask, globalTimeoutPromise]).catch((error) => {
     if (error instanceof Error && error.message === "workflow_global_timeout") {
-      logger.error("workflow_global_timeout", { runId: outerRunId ?? "unknown" });
+      logger.error("workflow_global_timeout", {
+        runId: outerRunId ?? "unknown",
+      });
       recordEvent("error");
       closeTimer("error");
       const resolvedRunId = outerRunId;

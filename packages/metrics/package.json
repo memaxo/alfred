@@ -18,6 +18,14 @@
     "./registry": {
       "types": "./dist/registry.d.ts",
       "default": "./src/registry.ts"
+    },
+    "./shared": {
+      "types": "./dist/shared.d.ts",
+      "default": "./src/shared.ts"
+    },
+    "./token": {
+      "types": "./dist/token.d.ts",
+      "default": "./src/token.ts"
     }
   },
   "scripts": {

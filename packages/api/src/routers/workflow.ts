@@ -140,7 +140,7 @@ export const workflowRouter: ReturnType<typeof router> = router({
           linear: preparedLinear,
         } as typeof input;
 
-        const executor = createWorkflowExecutor(
+        const executor = await createWorkflowExecutor(
           workflowPayload,
           abortController,
           undefined,

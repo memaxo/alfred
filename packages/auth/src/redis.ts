@@ -1,25 +1,10 @@
 import { logger } from "@alfred/logger";
+import {
+  redisConnectionErrorsTotal,
+  redisConnectionStatus,
+  redisReconnectionAttemptsTotal,
+} from "@alfred/metrics/shared";
 import { redis as defaultRedis, RedisClient } from "bun";
-
-let metricsInitialized = false;
-let redisConnectionStatus: { set: (value: number) => void } | null = null;
-let redisConnectionErrorsTotal: { inc: () => void } | null = null;
-let redisReconnectionAttemptsTotal: { inc: () => void } | null = null;
-
-async function initializeMetrics() {
-  if (metricsInitialized) {
-    return;
-  }
-  try {
-    const metrics = await import("@alfred/api/metrics");
-    redisConnectionStatus = metrics.redisConnectionStatus;
-    redisConnectionErrorsTotal = metrics.redisConnectionErrorsTotal;
-    redisReconnectionAttemptsTotal = metrics.redisReconnectionAttemptsTotal;
-    metricsInitialized = true;
-  } catch {
-    metricsInitialized = true;
-  }
-}
 
 let client: RedisClient | null = null;
 let status: "init" | "connecting" | "ok" | "err" = "init";
@@ -69,19 +54,17 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
       newClient.onclose = (error) => {
         status = "err";
         client = null;
-        void initializeMetrics()
-          .then(() => {
-            redisConnectionStatus?.set(0);
-            if (error) {
-              redisConnectionErrorsTotal?.inc();
-              logger.warn("redis_connection_closed", {
-                error: error instanceof Error ? error.message : String(error),
-              });
-            }
-          })
-          .catch(() => {
-            // Metrics initialization failed, continue without metrics
-          });
+        try {
+          redisConnectionStatus.set(0);
+          if (error) {
+            redisConnectionErrorsTotal.inc();
+            logger.warn("redis_connection_closed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        } catch {
+          // Metrics may not be available in all environments
+        }
       };
 
       newClient.onconnect = () => {
@@ -91,26 +74,22 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
           clearTimeout(retryTimer);
           retryTimer = null;
         }
-        void initializeMetrics()
-          .then(() => {
-            redisConnectionStatus?.set(1);
-          })
-          .catch(() => {
-            // Metrics initialization failed, continue without metrics
-          });
+        try {
+          redisConnectionStatus.set(1);
+        } catch {
+          // Metrics may not be available in all environments
+        }
       };
 
       const clientWithError = newClient as RedisClient & {
         onerror: ((error: Error) => void) | null;
       };
       clientWithError.onerror = (err: Error) => {
-        void initializeMetrics()
-          .then(() => {
-            redisConnectionErrorsTotal?.inc();
-          })
-          .catch(() => {
-            // Metrics initialization failed, continue without metrics
-          });
+        try {
+          redisConnectionErrorsTotal.inc();
+        } catch {
+          // Metrics may not be available in all environments
+        }
         logger.error("redis_connection_error", {
           error: err instanceof Error ? err.message : String(err),
           attempt: attempt + 1,
@@ -146,14 +125,12 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
     }
   }
 
-  void initializeMetrics()
-    .then(() => {
-      redisConnectionErrorsTotal?.inc();
-      redisConnectionStatus?.set(0);
-    })
-    .catch(() => {
-      // Metrics initialization failed, continue without metrics
-    });
+  try {
+    redisConnectionErrorsTotal.inc();
+    redisConnectionStatus.set(0);
+  } catch {
+    // Metrics may not be available in all environments
+  }
 
   logger.error("redis_connection_failed_after_retries", {
     maxAttempts: REDIS_RETRY_MAX_ATTEMPTS,
@@ -189,13 +166,11 @@ export function getRedis(): RedisClient | null {
       return null;
     }
 
-    void initializeMetrics()
-      .then(() => {
-        redisReconnectionAttemptsTotal?.inc();
-      })
-      .catch(() => {
-        // Metrics initialization failed, continue without metrics
-      });
+    try {
+      redisReconnectionAttemptsTotal.inc();
+    } catch {
+      // Metrics may not be available in all environments
+    }
 
     const delay = Math.min(
       REDIS_RETRY_INITIAL_DELAY_MS * 2 ** (retryAttempt - 1),

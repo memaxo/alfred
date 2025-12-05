@@ -5,9 +5,14 @@
     "declarationMap": false,
     "sourceMap": false,
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "**/*.test.ts"],
-  "references": [{ "path": "../db" }, { "path": "../policy" }]
+  "references": [
+    { "path": "../db" },
+    { "path": "../metrics" },
+    { "path": "../policy" }
+  ]
 }

@@ -23,6 +23,7 @@
     { "path": "../policy" },
     { "path": "../history" },
     { "path": "../db" },
-    { "path": "../metrics" }
+    { "path": "../metrics" },
+    { "path": "../agent" }
   ]
 }

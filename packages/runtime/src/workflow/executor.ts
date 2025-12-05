@@ -4,12 +4,12 @@ import { runPlanV6 } from "@alfred/agent/workflow/runner";
 import type { workflowInput } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
-import { createRuntime } from "@alfred/runtime";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import type { z } from "zod";
+import { createRuntime } from "../core";
 
 export function shouldUseWorkflowRuntime(): boolean {
   return process.env.USE_WORKFLOW_RUNTIME === "true";

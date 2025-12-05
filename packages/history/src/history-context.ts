@@ -1,5 +1,5 @@
-import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
 import { withBudget } from "@alfred/metrics/performance";
+import { createTokenEstimator } from "@alfred/metrics/token";
 import type { UIMessage } from "@alfred/type/stream";
 import { convertToModelMessages, pruneMessages } from "ai";
 import { getModelContextInfo } from "./model";

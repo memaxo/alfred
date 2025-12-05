@@ -1,8 +1,4 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import {
-  cognitiveEntropyEventsTotal,
-  cognitivePhysiologyGauge,
-} from "@alfred/api/metrics";
 import type {
   CognitiveState,
   Event,
@@ -13,6 +9,10 @@ import type {
 import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
+import {
+  cognitiveEntropyEventsTotal,
+  cognitivePhysiologyGauge,
+} from "@alfred/metrics/shared";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 
 // Temporary: Autonomy Logic (to be expanded)

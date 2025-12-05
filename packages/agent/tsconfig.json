@@ -19,7 +19,6 @@
     { "path": "../metrics" },
     { "path": "../db" },
     { "path": "../rag" },
-    { "path": "../voice" },
-    { "path": "../history" }
+    { "path": "../voice" }
   ]
 }

@@ -2,13 +2,32 @@ import { createHash } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
-import { createRuntime } from "@alfred/runtime";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { runPlanV6 } from "./runner";
+
+// Type for the runtime executor (defined here to avoid circular dependency)
+type RuntimeExecutor = {
+  runId: string;
+  summary: string;
+  stream: AsyncGenerator<WorkflowEvent, void, void>;
+  resume: (payload: { resumeData?: unknown }) => Promise<void>;
+  cancel: () => Promise<void>;
+};
+
+// Dynamic import to avoid circular dependency with @alfred/runtime
+// Using a variable to prevent TypeScript from statically analyzing the import
+async function getCreateRuntime(): Promise<(opts: unknown) => RuntimeExecutor> {
+  const modulePath = "@alfred/runtime";
+  // biome-ignore lint/security/noGlobalEval: Required to prevent TypeScript static analysis
+  const runtime = await (eval(`import("${modulePath}")`) as Promise<{
+    createRuntime: (opts: unknown) => RuntimeExecutor;
+  }>);
+  return runtime.createRuntime;
+}
 
 const policyObligationSchema = z.object({
   type: z.string().min(1),
@@ -84,7 +103,7 @@ export function shouldUseWorkflowRuntime(): boolean {
   return process.env.USE_WORKFLOW_RUNTIME === "true";
 }
 
-export function createWorkflowExecutor(
+export async function createWorkflowExecutor(
   input: z.infer<typeof workflowInput>,
   abortController: AbortController,
   history?: WorkflowEvent[],
@@ -92,6 +111,7 @@ export function createWorkflowExecutor(
 ) {
   if (shouldUseWorkflowRuntime()) {
     const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
+    const createRuntime = await getCreateRuntime();
 
     return createRuntime({
       input: {

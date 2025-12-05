@@ -1,8 +1,8 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/api/metrics";
 import { idle, initialAutonomy, updateAutonomy } from "@alfred/cognitive/state";
 import { applyTransition } from "@alfred/cognitive/transition";
 import { cognitiveRepo } from "@alfred/db";
+import { cognitiveEntropyEventsTotal, cognitivePhysiologyGauge, } from "@alfred/metrics/shared";
 // Temporary: Autonomy Logic (to be expanded)
 const createInitialAutonomy = () => initialAutonomy(Date.now());
 /**

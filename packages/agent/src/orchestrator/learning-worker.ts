@@ -37,9 +37,9 @@ const loadMetrics = async () => {
   // might not set it consistently across all environments, or we might WANT to test metrics.
   // Instead, we wrap the import in a try/catch block which is sufficient safety.
   try {
-    const apiMetrics = await import("@alfred/api/metrics");
-    if (apiMetrics.memoryMaintenanceDurationSeconds) {
-      metrics = apiMetrics;
+    const sharedMetrics = await import("@alfred/metrics/shared");
+    if (sharedMetrics.memoryMaintenanceDurationSeconds) {
+      metrics = sharedMetrics;
     }
   } catch {
     // Keep mocks

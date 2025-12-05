@@ -4,7 +4,7 @@ import type { LinearActivityType } from "./linear";
 
 function getLinearRateLimitMetrics() {
   try {
-    const metrics = require("@alfred/api/metrics");
+    const metrics = require("@alfred/metrics/shared");
     return {
       rateLimitTotal: metrics.linearRateLimitTotal,
       rateLimitWaitSeconds: metrics.linearRateLimitWaitSeconds,

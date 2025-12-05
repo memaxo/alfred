@@ -638,7 +638,7 @@ async function runCodexWithSdk({
     });
     try {
       const { codexSessionValidationTimeoutTotal } = await import(
-        "@alfred/api/metrics"
+        "@alfred/metrics/shared"
       );
       codexSessionValidationTimeoutTotal.inc();
     } catch {
