@@ -6,6 +6,9 @@
  *
  * Requires local voice models to be installed:
  *   cd packages/voice && ./scripts/install-deps.sh
+ *
+ * Note: There's a known dependency conflict between nemo_toolkit (datasets 2.14.4)
+ * and pyarrow 22.0.0. Tests will gracefully skip if voice pools fail to initialize.
  */
 
 process.env.DATABASE_URL = "sqlite::memory:";

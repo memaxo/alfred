@@ -9,23 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VoiceS2sRouteImport } from './routes/voice-s2s'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as MindscapeRouteImport } from './routes/mindscape'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
-import { Route as DriveRouteImport } from './routes/drive'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkflowRunIdRouteImport } from './routes/workflow.$runId'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
-import { Route as ExperimentalTuneRouteImport } from './routes/experimental/tune'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
-import { Route as DevEdgesRouteImport } from './routes/dev/edges'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
-import { Route as AdminVoiceRouteImport } from './routes/admin/voice'
+import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
+import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
+import { Route as ProtectedMindscapeRouteImport } from './routes/_protected/mindscape'
+import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
+import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
 import { Route as ApiWorkflowStreamRouteImport } from './routes/api/workflow/stream'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
@@ -35,25 +32,14 @@ import { Route as ApiLinearWebhookRouteImport } from './routes/api/linear/webhoo
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
+import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
+import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
+import { Route as ProtectedDevEdgesRouteImport } from './routes/_protected/dev/edges'
+import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
 
-const VoiceS2sRoute = VoiceS2sRouteImport.update({
-  id: '/voice-s2s',
-  path: '/voice-s2s',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MindscapeRoute = MindscapeRouteImport.update({
-  id: '/mindscape',
-  path: '/mindscape',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -66,14 +52,8 @@ const HealthzRoute = HealthzRouteImport.update({
   path: '/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DriveRoute = DriveRouteImport.update({
-  id: '/drive',
-  path: '/drive',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const ProtectedRoute = ProtectedRouteImport.update({
+  id: '/_protected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -81,29 +61,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkflowRunIdRoute = WorkflowRunIdRouteImport.update({
-  id: '/workflow/$runId',
-  path: '/workflow/$runId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const HealthzDepsRoute = HealthzDepsRouteImport.update({
   id: '/deps',
   path: '/deps',
   getParentRoute: () => HealthzRoute,
 } as any)
-const ExperimentalTuneRoute = ExperimentalTuneRouteImport.update({
-  id: '/experimental/tune',
-  path: '/experimental/tune',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevEdgesRoute = DevEdgesRouteImport.update({
-  id: '/dev/edges',
-  path: '/dev/edges',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -116,10 +81,30 @@ const ApiMetricsRoute = ApiMetricsRouteImport.update({
   path: '/api/metrics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminVoiceRoute = AdminVoiceRouteImport.update({
-  id: '/voice',
-  path: '/voice',
-  getParentRoute: () => AdminRoute,
+const ProtectedVoiceS2sRoute = ProtectedVoiceS2sRouteImport.update({
+  id: '/voice-s2s',
+  path: '/voice-s2s',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedMindscapeRoute = ProtectedMindscapeRouteImport.update({
+  id: '/mindscape',
+  path: '/mindscape',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
+  id: '/drive',
+  path: '/drive',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const AuthCallbackLinearRoute = AuthCallbackLinearRouteImport.update({
   id: '/auth/callback/linear',
@@ -166,25 +151,46 @@ const ApiAssistantAgentSplatRoute = ApiAssistantAgentSplatRouteImport.update({
   path: '/api/assistant-agent/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
+  id: '/workflow/$runId',
+  path: '/workflow/$runId',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedExperimentalTuneRoute =
+  ProtectedExperimentalTuneRouteImport.update({
+    id: '/experimental/tune',
+    path: '/experimental/tune',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedDevEdgesRoute = ProtectedDevEdgesRouteImport.update({
+  id: '/dev/edges',
+  path: '/dev/edges',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => ProtectedAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
-  '/drive': typeof DriveRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
-  '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/voice-s2s': typeof VoiceS2sRoute
-  '/admin/voice': typeof AdminVoiceRoute
+  '/admin': typeof ProtectedAdminRouteWithChildren
+  '/drive': typeof ProtectedDriveRoute
+  '/mindscape': typeof ProtectedMindscapeRoute
+  '/settings': typeof ProtectedSettingsRoute
+  '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/dev/edges': typeof DevEdgesRoute
   '/docs/$': typeof DocsSplatRoute
-  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
-  '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/dev/edges': typeof ProtectedDevEdgesRoute
+  '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -197,22 +203,22 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
-  '/drive': typeof DriveRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
-  '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/voice-s2s': typeof VoiceS2sRoute
-  '/admin/voice': typeof AdminVoiceRoute
+  '/admin': typeof ProtectedAdminRouteWithChildren
+  '/drive': typeof ProtectedDriveRoute
+  '/mindscape': typeof ProtectedMindscapeRoute
+  '/settings': typeof ProtectedSettingsRoute
+  '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/dev/edges': typeof DevEdgesRoute
   '/docs/$': typeof DocsSplatRoute
-  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
-  '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/dev/edges': typeof ProtectedDevEdgesRoute
+  '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -226,22 +232,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRouteWithChildren
-  '/drive': typeof DriveRoute
+  '/_protected': typeof ProtectedRouteWithChildren
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
-  '/mindscape': typeof MindscapeRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/voice-s2s': typeof VoiceS2sRoute
-  '/admin/voice': typeof AdminVoiceRoute
+  '/_protected/admin': typeof ProtectedAdminRouteWithChildren
+  '/_protected/drive': typeof ProtectedDriveRoute
+  '/_protected/mindscape': typeof ProtectedMindscapeRoute
+  '/_protected/settings': typeof ProtectedSettingsRoute
+  '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/dev/edges': typeof DevEdgesRoute
   '/docs/$': typeof DocsSplatRoute
-  '/experimental/tune': typeof ExperimentalTuneRoute
   '/healthz/deps': typeof HealthzDepsRoute
-  '/workflow/$runId': typeof WorkflowRunIdRoute
+  '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
+  '/_protected/dev/edges': typeof ProtectedDevEdgesRoute
+  '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -256,21 +263,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
-    | '/drive'
     | '/healthz'
     | '/login'
-    | '/mindscape'
     | '/onboarding'
+    | '/admin'
+    | '/drive'
+    | '/mindscape'
     | '/settings'
     | '/voice-s2s'
-    | '/admin/voice'
     | '/api/metrics'
     | '/api/search'
-    | '/dev/edges'
     | '/docs/$'
-    | '/experimental/tune'
     | '/healthz/deps'
+    | '/admin/voice'
+    | '/dev/edges'
+    | '/experimental/tune'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
@@ -284,21 +291,21 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
-    | '/drive'
     | '/healthz'
     | '/login'
-    | '/mindscape'
     | '/onboarding'
+    | '/admin'
+    | '/drive'
+    | '/mindscape'
     | '/settings'
     | '/voice-s2s'
-    | '/admin/voice'
     | '/api/metrics'
     | '/api/search'
-    | '/dev/edges'
     | '/docs/$'
-    | '/experimental/tune'
     | '/healthz/deps'
+    | '/admin/voice'
+    | '/dev/edges'
+    | '/experimental/tune'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
@@ -312,22 +319,23 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/admin'
-    | '/drive'
+    | '/_protected'
     | '/healthz'
     | '/login'
-    | '/mindscape'
     | '/onboarding'
-    | '/settings'
-    | '/voice-s2s'
-    | '/admin/voice'
+    | '/_protected/admin'
+    | '/_protected/drive'
+    | '/_protected/mindscape'
+    | '/_protected/settings'
+    | '/_protected/voice-s2s'
     | '/api/metrics'
     | '/api/search'
-    | '/dev/edges'
     | '/docs/$'
-    | '/experimental/tune'
     | '/healthz/deps'
-    | '/workflow/$runId'
+    | '/_protected/admin/voice'
+    | '/_protected/dev/edges'
+    | '/_protected/experimental/tune'
+    | '/_protected/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
@@ -341,20 +349,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRouteWithChildren
-  DriveRoute: typeof DriveRoute
+  ProtectedRoute: typeof ProtectedRouteWithChildren
   HealthzRoute: typeof HealthzRouteWithChildren
   LoginRoute: typeof LoginRoute
-  MindscapeRoute: typeof MindscapeRoute
   OnboardingRoute: typeof OnboardingRoute
-  SettingsRoute: typeof SettingsRoute
-  VoiceS2sRoute: typeof VoiceS2sRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiSearchRoute: typeof ApiSearchRoute
-  DevEdgesRoute: typeof DevEdgesRoute
   DocsSplatRoute: typeof DocsSplatRoute
-  ExperimentalTuneRoute: typeof ExperimentalTuneRoute
-  WorkflowRunIdRoute: typeof WorkflowRunIdRoute
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -368,32 +369,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/voice-s2s': {
-      id: '/voice-s2s'
-      path: '/voice-s2s'
-      fullPath: '/voice-s2s'
-      preLoaderRoute: typeof VoiceS2sRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mindscape': {
-      id: '/mindscape'
-      path: '/mindscape'
-      fullPath: '/mindscape'
-      preLoaderRoute: typeof MindscapeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -410,18 +390,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/drive': {
-      id: '/drive'
-      path: '/drive'
-      fullPath: '/drive'
-      preLoaderRoute: typeof DriveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/_protected': {
+      id: '/_protected'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -431,13 +404,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workflow/$runId': {
-      id: '/workflow/$runId'
-      path: '/workflow/$runId'
-      fullPath: '/workflow/$runId'
-      preLoaderRoute: typeof WorkflowRunIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/healthz/deps': {
       id: '/healthz/deps'
       path: '/deps'
@@ -445,25 +411,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthzDepsRouteImport
       parentRoute: typeof HealthzRoute
     }
-    '/experimental/tune': {
-      id: '/experimental/tune'
-      path: '/experimental/tune'
-      fullPath: '/experimental/tune'
-      preLoaderRoute: typeof ExperimentalTuneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/docs/$': {
       id: '/docs/$'
       path: '/docs/$'
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dev/edges': {
-      id: '/dev/edges'
-      path: '/dev/edges'
-      fullPath: '/dev/edges'
-      preLoaderRoute: typeof DevEdgesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -480,12 +432,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/voice': {
-      id: '/admin/voice'
-      path: '/voice'
-      fullPath: '/admin/voice'
-      preLoaderRoute: typeof AdminVoiceRouteImport
-      parentRoute: typeof AdminRoute
+    '/_protected/voice-s2s': {
+      id: '/_protected/voice-s2s'
+      path: '/voice-s2s'
+      fullPath: '/voice-s2s'
+      preLoaderRoute: typeof ProtectedVoiceS2sRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/settings': {
+      id: '/_protected/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ProtectedSettingsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/mindscape': {
+      id: '/_protected/mindscape'
+      path: '/mindscape'
+      fullPath: '/mindscape'
+      preLoaderRoute: typeof ProtectedMindscapeRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/drive': {
+      id: '/_protected/drive'
+      path: '/drive'
+      fullPath: '/drive'
+      preLoaderRoute: typeof ProtectedDriveRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/admin': {
+      id: '/_protected/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof ProtectedAdminRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/auth/callback/linear': {
       id: '/auth/callback/linear'
@@ -550,18 +530,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantAgentSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_protected/workflow/$runId': {
+      id: '/_protected/workflow/$runId'
+      path: '/workflow/$runId'
+      fullPath: '/workflow/$runId'
+      preLoaderRoute: typeof ProtectedWorkflowRunIdRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/experimental/tune': {
+      id: '/_protected/experimental/tune'
+      path: '/experimental/tune'
+      fullPath: '/experimental/tune'
+      preLoaderRoute: typeof ProtectedExperimentalTuneRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/dev/edges': {
+      id: '/_protected/dev/edges'
+      path: '/dev/edges'
+      fullPath: '/dev/edges'
+      preLoaderRoute: typeof ProtectedDevEdgesRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/admin/voice': {
+      id: '/_protected/admin/voice'
+      path: '/voice'
+      fullPath: '/admin/voice'
+      preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
+      parentRoute: typeof ProtectedAdminRoute
+    }
   }
 }
 
-interface AdminRouteChildren {
-  AdminVoiceRoute: typeof AdminVoiceRoute
+interface ProtectedAdminRouteChildren {
+  ProtectedAdminVoiceRoute: typeof ProtectedAdminVoiceRoute
 }
 
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminVoiceRoute: AdminVoiceRoute,
+const ProtectedAdminRouteChildren: ProtectedAdminRouteChildren = {
+  ProtectedAdminVoiceRoute: ProtectedAdminVoiceRoute,
 }
 
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
+  ProtectedAdminRouteChildren,
+)
+
+interface ProtectedRouteChildren {
+  ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
+  ProtectedDriveRoute: typeof ProtectedDriveRoute
+  ProtectedMindscapeRoute: typeof ProtectedMindscapeRoute
+  ProtectedSettingsRoute: typeof ProtectedSettingsRoute
+  ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
+  ProtectedDevEdgesRoute: typeof ProtectedDevEdgesRoute
+  ProtectedExperimentalTuneRoute: typeof ProtectedExperimentalTuneRoute
+  ProtectedWorkflowRunIdRoute: typeof ProtectedWorkflowRunIdRoute
+}
+
+const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
+  ProtectedDriveRoute: ProtectedDriveRoute,
+  ProtectedMindscapeRoute: ProtectedMindscapeRoute,
+  ProtectedSettingsRoute: ProtectedSettingsRoute,
+  ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
+  ProtectedDevEdgesRoute: ProtectedDevEdgesRoute,
+  ProtectedExperimentalTuneRoute: ProtectedExperimentalTuneRoute,
+  ProtectedWorkflowRunIdRoute: ProtectedWorkflowRunIdRoute,
+}
+
+const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
+  ProtectedRouteChildren,
+)
 
 interface HealthzRouteChildren {
   HealthzDepsRoute: typeof HealthzDepsRoute
@@ -576,20 +612,13 @@ const HealthzRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRouteWithChildren,
-  DriveRoute: DriveRoute,
+  ProtectedRoute: ProtectedRouteWithChildren,
   HealthzRoute: HealthzRouteWithChildren,
   LoginRoute: LoginRoute,
-  MindscapeRoute: MindscapeRoute,
   OnboardingRoute: OnboardingRoute,
-  SettingsRoute: SettingsRoute,
-  VoiceS2sRoute: VoiceS2sRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   ApiSearchRoute: ApiSearchRoute,
-  DevEdgesRoute: DevEdgesRoute,
   DocsSplatRoute: DocsSplatRoute,
-  ExperimentalTuneRoute: ExperimentalTuneRoute,
-  WorkflowRunIdRoute: WorkflowRunIdRoute,
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
