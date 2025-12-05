@@ -21,3 +21,7 @@
 19. **Autonomy properties.** Cognitive autonomy suites must assert monotonic reactions to consecutive successes/failures, zero-effect when reliability is 0, and `[0,1]` clamps across stress loops.
 
 20. **Build verification CI.** Run `scripts/verify-build.ts` in CI before deploying to catch server code leakage. The script builds the web app and scans client bundles for forbidden strings (`drizzle-orm`, `postgres`, `@alfred/db`, `openai`, etc.).
+21. **Test sandbox isolation.** Tests that create temporary files MUST use `os.tmpdir()` via `createTestSandbox()` from `@alfred/test-kit`. Never use `path.join(process.cwd(), "tmp")` or write to repository directories. The only exception is security boundary tests (see rule 22).
+22. **Security boundary tests.** Tests for `openDirectorySecure()` and `assertAllowedDirectory()` must use directories inside `process.cwd()` because that's the security invariant being validated. Document this exception with a comment block and ensure `afterAll` cleanup removes test fixtures.
+23. **Venv protection.** Tests must never write to `packages/*/.*venv*/` directories. Use isolated temp directories for any venv-related fixtures. Verify venv integrity in CI if tests touch Python resolution logic.
+24. **Test cleanup guarantees.** Use `createTrackedSandbox()` for automatic cleanup on process exit, or ensure `afterAll`/`afterEach` hooks remove all created directories. Failed tests must not leave artifacts in the repository.

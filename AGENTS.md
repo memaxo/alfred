@@ -9,11 +9,26 @@
 
 When writing complex features or significant refactors, use an ExecPlan (as described in `.agent/PLANS.md`) from design to implementation. Create or refresh the plan before beginning, and maintain it as a living document by updating the `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections so a newcomer can complete the effort unaided.
 
+**Update cadence:** After completing each subtask or encountering a surprise, append to the relevant ExecPlan section immediately—before moving to the next subtask. Don't batch updates for the end.
+
+## Scope Clarity
+
+1. Always state whether a change targets ALFRED itself or the applications ALFRED generates so the two domains stay distinct in docs, plans, and code.
+2. When describing workflows or runtime behavior, separate instructions for building ALFRED from steps ALFRED executes for end users, using explicit labels or sections.
+
+## Workflow Runtime
+
+1. Every workflow pipeline or orchestrator change must include tests that cover normal success, escalation, and MAX_TRANSITIONS safeguards so regressions surface immediately.
+2. Phases that generate ExecPlan metadata must persist the root plan and every subtask skeleton under `.agent/plans/<runId>` before any agent launches.
+3. Runtime components that observe agent progress must append Progress and Decision Log entries directly to the relevant ExecPlan files so humans can resume from the plan alone.
+
 ## Deletion Safeguards
 
 1. **Explicit deletion approval.** Never delete, rename to remove, or otherwise remove repository files, directories, or tracked artifacts unless the user explicitly instructs you to do so in this session. When a task appears to require removing something, pause and ask for confirmation instead. Honor existing untracked files; do not delete them unless the user orders it. Document any user-approved deletions in the final response.
 
 2. **Empty directory cleanup.** Remove empty directories after deleting files. Empty directories indicate incomplete cleanup and should be removed to keep the codebase tidy.
+
+3. **Destructive commands.** Avoid running destructive shell or git commands (`rm -rf`, `git reset --hard`, force pushes, mass deletes) unless the risk is clearly low and intent is explicit.
 
 ## Ruler Maintenance
 
@@ -24,6 +39,40 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 3. **Verify in CI.** The `ruler:verify` script re-applies rules without touching `.gitignore` and fails if the repo becomes dirty. Hook it into GitHub Actions.
 
 4. **Nested rules.** Package/app-specific rules live under `<package>/.ruler/`. They automatically merge with root guidance when Ruler runs with `--nested`.
+
+## Rule Conciseness
+
+1. **Keep rules short.** Each rule should be a single sentence or brief bullet point. Avoid verbose explanations, code examples, and reference sections that bloat AGENTS.md.
+
+2. **No examples sections.** Remove code examples, migration checklists, file location lists, testing requirements, and related rules sections. Essential patterns can be mentioned inline within rules.
+
+3. **Condense verbose rules.** When a rule exceeds 3 lines, break it into numbered sub-points or condense to essential information only.
+
+4. **Remove redundancy.** If a concept appears in multiple files, consolidate it. Cross-reference only when necessary.
+
+5. **Exception: critical patterns.** Short inline code snippets (≤5 lines) are allowed when the pattern is error-prone and the snippet prevents common mistakes. Use sparingly.
+
+## Code Search Tools
+
+1. **Primary search.** Use `rg` as the default tool for searching across the codebase; fall back to `grep` only when `rg` is unavailable or unsuitable.
+
+2. **AST-aware search.** Use `ast-grep` for syntax-aware or structural searches instead of composing complex regular expressions.
+
+3. **File and tree discovery.** Use `fd` and `lsd` to discover files and directory structures before targeting searches or edits.
+
+## Agent Collaboration
+
+1. **Autonomous execution.** Execute tasks end-to-end (implement → test → fix → commit) without pausing for status updates or confirmations. See `.ruler/31-agent-autonomy.md` for full guidance.
+
+2. **Shared branches.** The git worktree will be dirty from concurrent agents. Ignore files outside your task scope; only stop for direct conflicts with files you're editing.
+
+3. **No confirmation loops.** If the user says "go" or "continue," execute all remaining steps. Never echo back recommendations the user already accepted.
+
+## Database Operations
+
+1. `bun scripts/migrate.ts --plan` applies pending migrations just like `db:migrate`, so run it only when you intend to write to the database.
+
+2. Set `RUN_DB_TESTS=1` before invoking `bun test` on `packages/db` so Postgres-backed suites execute instead of skipping.
 
 
 
@@ -153,6 +202,13 @@ packages/
 7. **Type graph.** Treat the monorepo as a composite TypeScript project. New packages join the root `tsconfig` references and ship a `typecheck` script (`tsc -b`) that CI can invoke via Turbo.
 8. **API route handler reuse.** When API route handlers share >80% of code, extract shared logic into a reusable handler function. Pass only the varying parts (tool builders, error prefixes) as parameters. This reduces duplication and maintenance burden while maintaining type safety.
 9. **Single-user context.** ALFRED is a personal assistant for a single user. Design decisions reflect this: no rate limiting, obvious defaults, minimal ceremony, direct user benefit. Hardcode sensible defaults (timeouts, retries, limits). No feature flags for core functionality. Skip multi-tenancy abstractions.
+10. **Domain Service Extraction.** When a router or tool file exceeds 300 lines, extract business logic into a dedicated domain service (e.g., `packages/<domain>/src/services/`). Keep routers thin: they should only handle request validation, permission checks, and service delegation.
+11. **Strict Package Boundaries.** Packages (`packages/*`) must never import from `apps/*`. Avoid circular dependencies between sibling packages by using dynamic imports (`await import(...)`) for optional integrations or by extracting shared interfaces to `@alfred/type`.
+12. **Internal Package Imports.** Inside a package, always import from relative paths (e.g., `../client`) or subpath exports (e.g., `@alfred/db/client`) to avoid circular dependency issues caused by importing from the package's own barrel file (index.ts).
+13. **Hybrid execution backends.** Isolate volatile implementations behind a backend resolver pattern (e.g., `resolveBackend()`) to allow environment-based switching between legacy and new implementations during refactors.
+14. **Cache handoff propagation.** Any workflow event consumer that emits `context` receipts must also propagate the paired `data-cache-handoff` metadata so downstream UIs can display cache hits.
+15. **Agent transport parity.** When users switch between assistant and orchestrator agents, the chat transport must swap to the matching HTTP endpoint (e.g., `/api/orchestrator`) so events stream from the correct backend.
+16. **Vite Externalization.** All server-only packages (`@alfred/db`, `@alfred/agent`, `@alfred/policy`) MUST be explicitly listed in `ssr.external` in `apps/web/vite.config.ts` to ensure they remain external during SSR.
 
 
 
@@ -167,6 +223,8 @@ packages/
 5. **Least privilege.** tRPC procedures should scope queries by `ctx.session.user.id` unless explicitly intended otherwise. Avoid returning raw DB models that include unrelated user data.
 6. **Dependency hygiene.** Prefer audited, maintained packages. Add new crypto dependencies only after confirming licence compatibility and security posture.
 7. **Policy enforcement.** Wrap sensitive tRPC procedures with `requirePolicy` and record every decision via `policyRepo.createAuditLog`. Tools must call `requireToolScopesAndPolicy` before acting; for medium/high autonomy, reject tokens that lack `mfa="passkey"` and `elevated=true` even if scopes match. Whenever the PDP returns obligations, surface them to the caller (e.g., suspend workflows until biometric elevation completes). New capabilities (e.g., `eval.define`, `eval.dataset`, `eval.run`) must ship with explicit policy actions and owner-only defaults.
+8. **Secure subprocess spawning.** Tools that spawn subprocesses with working directories must use `spawnWithSecureCwd()` with file descriptor handles instead of string-based `cwd`. This prevents TOCTOU (time-of-check-time-of-use) attacks where symlinks are swapped between path validation and process spawn. Reference implementations: `git.ts`, `docker.ts`, `droid.ts`.
+9. **Directory handle lifecycle.** When using `openDirectorySecure()`, always close the handle in a `finally` block or after the subprocess exits. Leaked file descriptors exhaust system resources.
 
 
 
@@ -177,11 +235,12 @@ packages/
 1. **Source of truth.** Migrations in `packages/db/src/migrations` define the schema. Never edit generated SQL directly in production environments—add new migrations, and mirror new features (e.g., eval definitions/runs/scores) with dedicated SQL files.
 2. **Vector support.** Local Postgres runs via `pgvector/pgvector:pg16`. Keep `CREATE EXTENSION IF NOT EXISTS vector` in the earliest migration and verify with `\dx`. When defining columns, import `vector` from `drizzle-orm/pg-core` (not `drizzle-orm-pgvector/pg`) to avoid SSR bundling issues in the web app.
 3. **Idempotent migrations.** Wrap DDL in `IF NOT EXISTS` / `IF EXISTS` when safe. Non-idempotent operations must document irreversible effects.
-4. **Index discipline.** Composite indexes should match the repo query predicates. When adding new queries, expand `0008_indexes.sql` or subsequent migrations accordingly. Eval tables must index `(def_id, dataset_id, started_at)` for run listings and `(run_id, point_id, scorer)` for score lookups, as seen in `0012_evals.sql`.
+4. **Index discipline.** Composite indexes should match the repo query predicates. When adding new queries, expand `0008_indexes.sql` or subsequent migrations accordingly. Eval tables must index `(def_id, dataset_id, started_at)` for run listings and `(run_id, point_id, scorer)` for score lookups, as seen in `0012_evals.sql`. Use partial indexes (`WHERE column IS NOT NULL`) to reduce index size for sparse columns.
 5. **Migration runner.** Use `packages/db/scripts/migrate.ts` everywhere (CI, local dev). It records applied migrations in `_migrations`.
-6. **Testing.** Write Vitest suites under `packages/db/test` that spin up an isolated database schema and assert repo behaviour (notes, reminders, timers, eval runs/scores, etc.).
-7. **Laminar correlation.** Columns like `laminar_eval_id` belong in the primary run table to enable dual-write correlation. Always backfill with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations so replays remain idempotent.
-8. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic:
+6. **Schema sync.** Keep Drizzle schema files (`packages/db/src/schema/*.ts`) aligned with migrations. Vector dimensions must use `EMBEDDING_DIM` from `@alfred/embed` (single source of truth). When changing vector dimensions, drop indexes before `ALTER COLUMN TYPE`, recreate with `IF NOT EXISTS`, and document that existing embeddings become NULL.
+7. **Testing.** Write Vitest suites under `packages/db/test` that spin up an isolated database schema and assert repo behaviour (notes, reminders, timers, eval runs/scores, etc.).
+8. **Laminar correlation.** Columns like `laminar_eval_id` belong in the primary run table to enable dual-write correlation. Always backfill with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations so replays remain idempotent.
+9. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic:
    ```typescript
    await db.transaction(async (tx) => {
      await tx.insert(users).values({...});
@@ -189,7 +248,7 @@ packages/
    });
    ```
    Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
-9. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API):
+10. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API):
    ```typescript
    await db.batch([
      db.select().from(users).where(...),
@@ -198,7 +257,7 @@ packages/
    ]);
    ```
    Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
-10. **Savepoints.** Use savepoints for partial rollbacks within transactions:
+11. **Savepoints.** Use savepoints for partial rollbacks within transactions:
     ```typescript
     await db.transaction(async (tx) => {
       await tx.insert(users).values({...});
@@ -209,8 +268,9 @@ packages/
       // Transaction continues even if savepoint rolled back
     });
     ```
-11. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
-12. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
+12. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
+13. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
+14. **Bulk updates.** Prefer batch updates with `Promise.all` + chunks (size 10-50) over `db.transaction` or sequential loops for high-volume writes. Use `UPDATE ... FROM (VALUES ...)` for massive updates if possible.
 
 
 
@@ -225,6 +285,24 @@ packages/
 5. **UI tests.** Critical screens (notes, reminders) require component-level tests verifying optimistic updates and error handling. Use React Testing Library.
 6. **Automation.** Add new test commands to Turbo pipelines when you create packages so CI can run them consistently. Pair them with `tsc -b` checks (`bun run typecheck` or package-local `npm run typecheck`) so type errors surface alongside failing tests.
 7. **Shared DB harness.** When a suite touches Postgres, instantiate connections through `createTestDb`/`closeTestDb` (`packages/api/test/utils/db.ts`). Use that Drizzle client to truncate tables between tests so no connections or data leak across cases.
+8. **Real integration and e2e.** Prefer end-to-end and integration tests that exercise real boundaries (DB, routers, schedulers, UI flows) over narrow unit tests that only mock behaviour.
+9. **Verification scripts.** Create standalone `scripts/test-<domain>.ts` for subsystems relying on native, hardware, or external environments (voice, docker, gpu) to verify integration health outside the test runner.
+10. **Level 4 Verification.** Verification scripts (`scripts/verify-*.ts`) must exercise real binaries and infrastructure without mocks; ensure rigorous cleanup of side effects.
+11. **Interaction Testing.** Prefer Playwright E2E tests for complex interactions (drag-and-drop, zoom, keyboard shortcuts) over React Testing Library. Only use unit tests for pure logic and simple component rendering.
+12. **Production Build Verification.** Maintain a `scripts/verify-build.ts` script that builds the application and scans client bundles for forbidden strings (e.g., "postgres", "drizzle-orm", "openai") to detect server code leakage. Run this in CI.
+13. **E2E Isolation.** E2E tests must run on dynamically allocated ephemeral ports to support concurrent execution. Never rely on hardcoded ports (e.g., 3000) in test scripts. Pass the allocated port via environment variables to the test runner.
+14. **Mock native modules.** Mock unstable native/WASM dependencies (e.g., `onnxruntime`, `piper-wasm`) in unit tests to prevent runner crashes. Use `mock.module` with precise paths.
+15. **Mindscape harness first.** Before writing Playwright scenarios for Mindscape suspend/resume flows, add deterministic component or integration tests that drive the zustand store plus stream harness so suspend/biometric/resume transitions stay reproducible.
+16. **Mock auth in Playwright.** Playwright specs that hit Better Auth (e.g., `/api/auth/get-session`, `/api/auth/sign-up/email`) must mock those endpoints so test runs never depend on Postgres availability.
+17. **Canonical fixtures.** Integration/E2E suites must import deterministic helpers from `@alfred/test-kit` instead of inventing bespoke mocks—use `voice/runtime-fixture` for STT/TTS pools and `workflow/runtime-fixture` for runtime + Linear tests, pass custom transcripts/chunks through fixture options, and always clean up via `restore()`/`stop()` so `@alfred/voice`, `@alfred/runtime`, and workflow metrics stay real.
+18. **Fixture-driven tests.** Any test that touches `VoiceRegistry`, pools, or the streaming prototype must install the shared fixture from `@alfred/test-kit/voice/runtime-fixture`, letting the real WebSocket server run while only configuring transcripts/chunks via fixture options and cleaning up with `restore()`/`stop()`—never replace `@alfred/voice` modules with ad-hoc mocks.
+19. **Autonomy properties.** Cognitive autonomy suites must assert monotonic reactions to consecutive successes/failures, zero-effect when reliability is 0, and `[0,1]` clamps across stress loops.
+
+20. **Build verification CI.** Run `scripts/verify-build.ts` in CI before deploying to catch server code leakage. The script builds the web app and scans client bundles for forbidden strings (`drizzle-orm`, `postgres`, `@alfred/db`, `openai`, etc.).
+21. **Test sandbox isolation.** Tests that create temporary files MUST use `os.tmpdir()` via `createTestSandbox()` from `@alfred/test-kit`. Never use `path.join(process.cwd(), "tmp")` or write to repository directories. The only exception is security boundary tests (see rule 22).
+22. **Security boundary tests.** Tests for `openDirectorySecure()` and `assertAllowedDirectory()` must use directories inside `process.cwd()` because that's the security invariant being validated. Document this exception with a comment block and ensure `afterAll` cleanup removes test fixtures.
+23. **Venv protection.** Tests must never write to `packages/*/.*venv*/` directories. Use isolated temp directories for any venv-related fixtures. Verify venv integrity in CI if tests touch Python resolution logic.
+24. **Test cleanup guarantees.** Use `createTrackedSandbox()` for automatic cleanup on process exit, or ensure `afterAll`/`afterEach` hooks remove all created directories. Failed tests must not leave artifacts in the repository.
 
 
 
@@ -232,12 +310,23 @@ packages/
 
 # Documentation Expectations
 
-1. **PRD updates.** When a capability lands, update `docs/alfred-prd.md` to reflect completion status and clarify partial coverage.
-2. **Playbooks.** Record operational runbooks (db migrate, scheduler flags) in `docs/` so others can repeat the workflow without asking.
-3. **Env examples.** Keep `config/env.example` in sync with required variables. New secrets must be documented with purpose and default.
-4. **README hints.** Package-level READMEs should state purpose, primary commands, and any gotchas (e.g. server-only modules, env requirements).
-5. **Changelogs.** For large changes, summarise impact in `docs/changelog.md` (create once ready). Mention migrations, env changes, and user-facing effects.
-6. **Ruler sync.** After editing instructions, run `bun run ruler:apply` to regenerate agent-specific files before committing.
+1. **Doc types.** Product docs live in `docs/` and must fit `architecture/`, `strategy/`, `execplans/`, `implementation/`, `observability/`, `voice/`, `reference/`, or a small set of top-level references (e.g. `alfred-prd.md`, `design-system.md`, `tailscale-api.yaml`).
+2. **Planning docs.** Significant features and refactors use ExecPlans as defined in `.agent/PLANS.md`; long-lived planning docs belong in `docs/execplans/` only when the effort is cross-cutting or multi-phase.
+3. **Transient notes.** Short-lived notes (spikes, scratchpads, one-off debugging) must either be merged into an ExecPlan or durable doc or deleted once the work is complete; do not leave orphan planning files.
+4. **Naming.** Documentation filenames under `docs/` use lowercase kebab-case (or a single lowercase word) that reflects the domain or decision (e.g. `generative-ui-architecture.md`, `runtime-dashboard.md`).
+5. **Structure.** Each doc starts with a `#` title matching the filename, a brief purpose/summary paragraph, and concise sections with bullets instead of long prose walls.
+6. **ExecPlan format.** ExecPlans in `docs/execplans/` mirror the `.agent/PLANS.md` template with `Purpose`, `Plan`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections.
+7. **Ownership.** Non-trivial docs name an owner or responsible area near the top (e.g. `Owner: cognition`, `Owner: infra`) so it is clear who maintains and deprecates them.
+8. **Lifecycle.** When a doc becomes obsolete, either delete it as part of a cleanup or mark it `Deprecated` at the top and schedule removal; avoid conflicting or stale guidance.
+9. **De-duplication.** Before adding a new doc, search `docs/` for related content and prefer extending or merging existing files over creating overlapping summaries.
+10. **Env examples.** Keep `config/env.example` in sync with required variables. New secrets must be documented with purpose and default.
+11. **Playbooks.** Record operational runbooks (db migrate, scheduler flags) in `docs/` so others can repeat the workflow without asking.
+12. **READMEs.** Package-level READMEs state purpose, primary commands, and any gotchas (e.g. server-only modules, env requirements); avoid duplicating the same details in multiple docs.
+13. **Changelogs.** For large changes or major doc reorganisations, summarise impact in `docs/changelog.md` (create once ready). Mention migrations, env changes, and user-facing effects.
+14. **Ruler sync.** After editing documentation rules, run `bun run ruler:apply` to regenerate agent instructions before committing.
+15. **Concise updates.** Prefer short, focused documentation updates and small rule additions over long summary documents; avoid generating large narrative reports of changes.
+
+16. **ExecPlan status sync.** When verifying implementation status, systematically check the codebase and update ExecPlan status immediately. Also sync corresponding Linear issues. See `.ruler/32-execplan-verification.md` for detailed guidance.
 
 
 
@@ -253,6 +342,11 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 1. **Pure by default.** Functions that transform data must be pure (no side effects, deterministic outputs). Side effects belong at boundaries (routers, schedulers, DB repos). If a function reads from or writes to external state, it belongs in a boundary layer, not a core transformation.
 
+   **Layer map (pure → impure):**
+   - Pure: `packages/cognitive/`, `packages/knowledge/src/graph/`, flow functions, state transitions, validators, normalizers
+   - Boundary: `packages/api/src/routers/`, `packages/db/src/repos/`, schedulers, CLI entry points
+   - Never mix: A single function must not both transform data AND perform I/O
+
 2. **Performance budgets.** Hot-path functions must declare and meet budgets:
    - `<100 µs`: State transitions, normalizations, pure transforms
    - `<1 ms`: Graph lookups, redaction, validation
@@ -266,7 +360,11 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. If a function needs external services, it belongs in a boundary layer. Pure functions take data, return data.
 
+   **Clarification:** This bans DI containers and `{ db, logger, cache, ... }` parameter objects—not callbacks. Passing a function as a parameter (e.g., `onComplete`) is fine when the caller controls when effects happen.
+
 5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns unless abstraction reduces complexity. If you can't name the abstraction in one word, it's premature.
+
+   **AI anti-patterns to avoid:** `ServiceManager`, `HandlerFactory`, `ProviderRegistry`, `AbstractBaseProcessor`, `ConfigurableMiddlewareChain`. These add indirection without value. Write the direct implementation first; extract only when duplication exceeds the 80% threshold (rule 12).
 
 6. **Defaults over configuration.** Hardcode sensible defaults (timeouts, limits, retries). Only expose configuration when the default fails in practice. Single-user apps don't need feature flags for core functionality.
 
@@ -293,37 +391,15 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 12. **Code duplication threshold.** When two or more functions or files share >80% identical code, extract shared logic into a reusable function or utility. Duplication above this threshold indicates missing abstraction and increases maintenance burden. Measure duplication by comparing line counts and structure similarity.
 
-## Examples
+13. **Hot modules are real.** Files ending in `.hot.ts` must contain a production-ready fast path; delete or rename any placeholder instead of shipping a stub.
 
-```typescript
-// ✅ Pure function with budget
-export function normalizeToUIMessage(event: StreamEvent): UIMessage {
-  // <100 µs budget
-  return { ... };
-}
+14. **Instrument cognitive hot paths.** `applyTransition`, `updatePhysiology`, `updateAutonomy`, and `calculateError` must wrap their core logic with `performance.now()` timers, record Prometheus histograms, and emit `cognitive_budget_exceeded` warnings whenever they exceed their microsecond budgets.
 
-// ❌ Side effect in core logic
-export function processEvent(event: StreamEvent): UIMessage {
-  metrics.increment('events'); // Side effect
-  return { ... };
-}
+15. **Expose metrics.** Export cognitive metric registries (e.g., `cognitiveMetricsRegistry`) from package entrypoints and ensure the global metrics server registers them for scraping.
 
-// ✅ Side effect at boundary
-export async function handleEvent(ctx: Context, event: StreamEvent) {
-  const msg = normalizeToUIMessage(event); // Pure
-  await persistEvent(ctx, msg); // Boundary
-  metrics.increment('events'); // Boundary
-  return msg;
-}
-
-// ❌ Dependency injection pattern
-export function runPlan(deps: { db: DB; metrics: Metrics }) { ... }
-
-// ✅ Direct imports
-import { db } from '@alfred/db';
-import { metrics } from '@alfred/metrics';
-export function runPlan(...) { ... }
-```
+16. **Budget tests.** Every new or modified hot path ships a deterministic warmup-based test that fails when the measured average runtime exceeds the documented budget.
+17. **Timestamp injection.** Cognitive state factories and transition helpers must receive timestamps (and other time inputs) from their callers—never call `Date.now()` or similar inside the pure constructors.
+18. **Explicit autonomy inputs.** Autonomy helpers (`initialAutonomy`, `updateAutonomy`, constraint checks) must expose timestamp, evidence, and physiology arguments so tests can supply deterministic values; no hidden global reads.
 
 
 
@@ -394,7 +470,16 @@ When implementing, Alfred asks:
 5. **Performance budgets.** Enforce: transitions `<100 µs`, graph lookups `<1 ms`, fact extraction `<10 ms`, plan generation `<100 ms`, consolidation `<50 ms` amortised. Instrument hotspots before optimising.
 6. **Autonomy gradient.** Honour the autonomy bands (read-only ≤0.3, suggest ≤0.5, cautious execute ≤0.7, supervised execute ≤0.9, full ≤1.0). Escalate to policy checks whenever the band changes.
 7. **Flows stay pure.** Capture, synthesize, execute, and reflect return data + effects. Never mutate shared state inside a flow; let the orchestrator commit results.
-8. **Learning from error.** Every action records `{prediction, actual, error}` and feeds the learning routines. Missing telemetry is treated as a defect.
+8. **Tool Modularity.** Agent tools (`packages/agent/src/orchestrator/tool/*`) must be split into `definition.ts` (schemas/types), `policy.ts` (security/permissions), and `exec.ts` (runtime logic) when they require custom execution logic beyond a simple function call.
+9. **Synthesis fidelity.** `synthesize()` remains async, calls the shared embedder, and must emit contradiction objects, semantic relations, and entity-cluster insights so no caller treats it as a synchronous stub.
+10. **Physiological regulation.** The `CognitiveState` includes `Physiology` (energy, boredom, frustration). Updates to physiology must act as homeostatic regulators on `AutonomyGradient` (e.g., high frustration -> lower autonomy).
+11. **Brainstem supervision.** A deterministic `Supervisor` monitors semantic entropy and process heartbeats. Low entropy (loops) or zombie processes must trigger an `interrupt` event, forcing a state transition.
+12. **Conflict arbitration.** Multi-agent writes use optimistic concurrency. Merge conflicts must be resolved by spawning an `Arbiter` agent, not by failing the workflow.
+13. **Bayesian autonomy.** `AutonomyGradient` carries Beta priors (`alpha`,`beta`), updates them with reliability-weighted evidence plus decay, and derives `level` from the Beta mode with `confidence = 1 - variance`.
+14. **Post-update regulation.** Apply physiology multipliers (frustration, energy, boredom) only after the Bayesian autonomy update so the probability math stays pure.
+15. **Constraint telemetry.** `meetsConstraints` must always return `{ allowed, reason }` with stable reason codes instead of bare booleans so downstream agents can log or branch deterministically.
+16. **Deterministic time.** Cognitive tests shall pass explicit timestamps into helpers (e.g., `initialAutonomy(now)`, `updateAutonomy(now, …)`) rather than patching `Date.now()`.
+17. **Reliability clamp.** When autonomy evidence arrives with reliability ≤0, the update must be a no-op for both autonomy level and the Beta prior (tests must assert this).
 
 
 
@@ -421,61 +506,16 @@ When implementing, Alfred asks:
 7. **Streaming alignment.** Components consuming assistant/workflow streams must rely on hooks such as `useAssistantStream`, handle incremental payloads, and surface error/progress states.
 8. **Shared primitives.** Use the canonical primitives under `apps/web/src/components/ui/` for layout and inputs; introduce new foundations only when existing tokens or utilities fail the requirement.
 
-9. **Error boundaries.** Use route-level error boundaries for error handling:
-    ```typescript
-    // Default error component in router.tsx
-    import { createRouter, ErrorComponent } from '@tanstack/react-router';
-    
-    export function getRouter() {
-      const router = createRouter({
-        routeTree,
-        defaultErrorComponent: ({ error, reset }) => (
-          <div>
-            <p>Error: {error.message}</p>
-            <button onClick={reset}>Retry</button>
-          </div>
-        ),
-      });
-      return router;
-    }
-    
-    // Per-route error component
-    import { createFileRoute, ErrorComponent } from '@tanstack/react-router';
-    import type { ErrorComponentProps } from '@tanstack/react-router';
-    
-    function RouteError({ error, reset }: ErrorComponentProps) {
-      return (
-        <div>
-          <p>Route error: {error.message}</p>
-          <button onClick={reset}>Retry</button>
-        </div>
-      );
-    }
-    
-    export const Route = createFileRoute('/path')({
-      component: Component,
-      errorComponent: RouteError,
-    });
-    ```
+9. **Error boundaries.** Use route-level error boundaries with `defaultErrorComponent` (router) or `errorComponent` (per-route). Call `reset()` to retry rendering.
 
-10. **Loader error handling.** Loaders can throw errors that are caught by error boundaries:
-    ```typescript
-    loader: async () => {
-      const data = await fetchData();
-      if (!data) {
-        throw new Error('Data not found');
-      }
-      return data;
-    },
-    ```
+10. **Loader error handling.** Loaders can throw errors that are caught by error boundaries. Throw errors for missing data or failures.
 
 11. **Component integration priority.** Prefer production-ready components over ad-hoc route implementations. If a component exists (e.g., `ChatContainer`), use it in routes rather than implementing similar functionality directly. Production components include error boundaries, action tracking, and other features that ad-hoc implementations may lack.
 
-## Testing Expectations
+12. **Reality-driven UI.** Visualizations must derive directly from real system state or events. Never implement "simulation" modes, fake data generators, or mock actions in production components.
 
-- Exercise render, interaction, empty, and error states with React Testing Library.
-- Verify accessibility with `axe-core` (or equivalent) for critical views.
-- Mock streaming hooks deterministically; ensure memoisation keeps rerenders bounded.
+13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
+14. **Activation fidelity.** Mindscape activations must use distinct event types (e.g., `context-cache`) so cache hits, workflow steps, and tool actions render as different visual signals.
 
 
 
@@ -503,55 +543,13 @@ When implementing, Alfred asks:
 
 9. **Resource scoping.** Streams require `thread`, `agent`, and `resource` identifiers. Ensure hooks memoise subscription args to prevent resubscribes.
 
-10. **AbortSignal propagation.** Always propagate abort signals through async chains:
-    ```typescript
-    const abortController = new AbortController();
-    const runner = runPlanV6(input, { signal: abortController.signal });
-    
-    return () => {
-      abortController.abort();
-      // Cleanup resources
-    };
-    ```
+10. **AbortSignal propagation.** Always propagate abort signals through async chains. Use `AbortController` and pass `signal` to async operations.
 
-11. **AI SDK v6 abort handling.** Use `onAbort` callback for cleanup when streams are aborted:
-    ```typescript
-    const result = streamText({
-      model,
-      messages,
-      abortSignal: req.signal,
-      onAbort: async ({ steps }) => {
-        // Persist partial results
-        await savePartialResults(steps);
-        await logAbortEvent(steps.length);
-      },
-    });
-    ```
+11. **AI SDK v6 abort handling.** Use `onAbort` callback in `streamText()` for cleanup when streams are aborted.
 
-12. **UI message stream abort.** Always use `consumeStream` with `toUIMessageStreamResponse` to ensure `onFinish` is called on abort:
-    ```typescript
-    import { consumeStream } from 'ai';
-    
-    return result.toUIMessageStreamResponse({
-      onFinish: async ({ isAborted }) => {
-        if (isAborted) {
-          // Handle abort cleanup
-        } else {
-          // Handle normal completion
-        }
-      },
-      consumeSseStream: consumeStream, // Required for abort handling
-    });
-    ```
+12. **UI message stream abort.** Always use `consumeStream` with `toUIMessageStreamResponse` to ensure `onFinish` is called on abort.
 
-13. **Resource cleanup.** Always clean up in finally blocks:
-    ```typescript
-    try {
-      await execute();
-    } finally {
-      await cleanup();
-    }
-    ```
+14. **Stream accumulation.** Use typed accumulators to segregate and buffer interleaved stream content (reasoning, artifacts, output) before processing, ensuring partial chunks do not corrupt state.
 
 ## Hook Checklist
 
@@ -586,80 +584,38 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 4. **Message parts.** Use canonical AI SDK v6 part types exclusively:
    - `text` - Text content
    - `reasoning` - Reasoning steps (with `text`, `state`, `providerMetadata`)
-   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `input`)
-   - `tool-result` - Tool results (with `toolCallId`, `output`)
+   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `args`)
+   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `result`, `isError`)
    - `file` - File attachments (with `mediaType`, `url`, `filename`)
    - `source-url` - Source URLs
    - `source-document` - Source documents
    - `data-status` - Data status updates
    - `data-cache` - Cache operations
    - `step-start` - Step initiation
+   - **Note:** Do NOT use legacy custom parts like `dynamic-tool`. Use `tool-call` and `tool-result` instead.
 
-5. **No type suppressions.** Avoid `@ts-expect-error`, `@ts-ignore`, and `@ts-nocheck` unless absolutely necessary (e.g., test mocks). If type errors occur, fix the root cause:
-   - Use proper type assertions (`as Type`) only after runtime validation
-   - Create helper functions with proper return types
-   - Validate schemas before type assertions
-
-6. **Streaming utilities.** Use AI SDK v6 streaming utilities:
+5. **Streaming utilities.** Use AI SDK v6 streaming utilities:
    - `streamText` for text generation streams
    - `toUIMessageStreamResponse` for HTTP responses
    - `useChat` hook for React components
    - Native stream event types from `@ai-sdk/core`
 
-7. **Model messages.** When working with model messages:
+6. **Model messages.** When working with model messages:
    - Use `ModelMessage` type from `ai` package
    - Tool messages must have `role: "tool"` with `tool-result` objects in `content` array
    - Never flatten tool call/result structures
 
-## Examples
+7. **Core primitives only.** All LLM, embedding, speech, transcription, or image calls must go through AI SDK Core (`generateText`, `streamText`, `generateObject`, `streamObject`, `embed`, `embedMany`, `generateImage`, `generateSpeech`, `transcribe`) with provider registries or custom providers instead of raw HTTP clients.
 
-```typescript
-// ✅ Native conversion
-import { convertToModelMessages } from "ai";
-const modelMessages = convertToModelMessages(uiMessages);
+8. **UI hooks & transports.** Conversational or completion UIs must rely on `useChat`, `useCompletion`, or `useObject` with the documented text/data stream protocol and `DefaultChatTransport` (or a transport that fully implements the same contract) instead of ad-hoc SSE/WebSocket layers.
 
-// ❌ Custom conversion
-function toModelMessages(msgs: UIMessage[]): ModelMessage[] {
-  // Duplicates AI SDK functionality
-}
+9. **Tool hygiene.** Define every tool using `tool()` plus Zod/JSON schemas, keep tool catalogs lean (≤5 per agent), add `.describe` metadata, prefer `.nullable` instead of `.optional`, set `temperature: 0` for structured/tool generations, and orchestrate multi-step tool flows with `stopWhen`, `steps`, `onStepFinish`, and `prepareStep`.
 
-// ✅ Proper tRPC validation
-function validateMessages(messages: unknown[]): UIMessage[] {
-  const validated: UIMessage[] = [];
-  for (const msg of messages) {
-    const result = uiMessageSchema.safeParse(msg);
-    if (!result.success) {
-      throw new Error(`Invalid message: ${result.error.message}`);
-    }
-    validated.push(result.data as UIMessage);
-  }
-  return validated;
-}
+10. **Agents use ToolLoopAgent.** Encapsulate reusable agents with `ToolLoopAgent`, specifying instructions, toolChoice, Output schemas, and `stopWhen` limits; bespoke while-loops or manual tool orchestration require explicit approval.
 
-// ❌ Type suppression
-// @ts-expect-error - tRPC type system doesn't recognize schema
-const result = z.array(uiMessageSchema).safeParse(messages);
+11. **Structured outputs.** Use `generateObject`/`streamObject` (and `useObject` client-side) for any structured payloads or streamed JSON instead of parsing free-form text, and treat `@ai-sdk/rsc` as experimental unless the official migration guide is followed.
 
-// ✅ Full UIMessage format
-const messages: UIMessage[] = [{
-  id: "msg-1",
-  role: "user",
-  parts: [{ type: "text", text: "Hello" }]
-}];
-
-// ❌ Simplified format
-const messages = [{ role: "user", content: "Hello" }];
-```
-
-## Migration Checklist
-
-When migrating to AI SDK v6:
-1. Replace custom message conversion with `convertToModelMessages`
-2. Update message schemas to match AI SDK v6 `UIMessage` structure
-3. Update type guards to use canonical part properties (`input` not `args`, `output` not `result`)
-4. Remove all `@ts-expect-error` comments related to message handling
-5. Update tRPC routers to accept `UIMessage[]` with proper validation
-6. Verify all message parts use canonical AI SDK v6 types
+12. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
 
 
 
@@ -678,79 +634,35 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
    - `permanent` - Non-retryable (validation, auth, not found)
    - `system` - Infrastructure failures (DB, Redis)
 
-2. **tRPC error handling.** Always use `toTRPCError()` for unknown errors. Throw `TRPCError` directly only when you control the error shape:
-   ```typescript
-   // ✅ Unknown error → toTRPCError
-   catch (error) {
-     throw toTRPCError(error, "workflow_error");
-   }
-   
-   // ✅ Known error → TRPCError directly
-   if (!session) {
-     throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
-   }
-   ```
+2. **tRPC error handling.** Always use `toTRPCError()` for unknown errors. Throw `TRPCError` directly only when you control the error shape.
 
-3. **Error context.** Always include context about what failed:
-   ```typescript
-   // ❌ Missing context
-   catch (error) {
-     throw toTRPCError(error);
-   }
-   
-   // ✅ With context
-   catch (error) {
-     throw toTRPCError(error, `failed_to_create_run_${runId}`);
-   }
-   ```
+3. **Error context.** Always include context about what failed (e.g., `toTRPCError(error, "failed_to_create_run")`).
 
-4. **Non-fatal errors.** Log errors even if they don't break the flow:
-   ```typescript
-   // ❌ Silent catch
-   catch {
-     // persistence should not break streaming
-   }
-   
-   // ✅ Logged but non-fatal
-   catch (error) {
-     logger.warn("workflow_event_persistence_failed", {
-       runId,
-       eventType: event.type,
-       error: error instanceof Error ? error.message : String(error),
-     });
-     // Continue without throwing
-   }
-   ```
+4. **Non-fatal errors.** Log errors even if they don't break the flow. Use structured logging with context (runId, eventType, error message).
 
 5. **Error messages.** Structure messages for clients:
    - User-facing: `"session_required"` (no internals)
    - Internal: Include IDs, context in `cause` field
    - Never expose stack traces, file paths, or internal state
 
-6. **Retry logic.** Only retry transient errors:
-   ```typescript
-   const MAX_RETRIES = 3;
-   for (let i = 0; i < MAX_RETRIES; i++) {
-     try {
-       return await operation();
-     } catch (error) {
-       if (!isTransient(error) || i === MAX_RETRIES - 1) throw error;
-       await delay(100 * (i + 1));
-     }
-   }
-   ```
+6. **Retry logic.** Only retry transient errors. Use exponential backoff (max 3 retries).
 
-7. **TanStack Start errors.** Use route-level error boundaries:
-   ```typescript
-   export const Route = createFileRoute("/path")({
-     component: Component,
-     errorComponent: ({ error, reset }) => (
-       <div>Error: {error.message} <button onClick={reset}>Retry</button></div>
-     ),
-   });
-   ```
+7. **TanStack Start errors.** Use route-level error boundaries with `errorComponent`. Call `reset()` to retry rendering.
 
 8. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
+
+9. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
+   - Database unavailable: Return empty/null data instead of crashing
+   - External services down: Skip optional features, log warnings
+   - Use `isDbConnectionError()` type guard to classify DB errors
+   - Wrap route handlers with try-catch for graceful degradation
+   - Never throw unhandled errors during SSR (crashes entire page render)
+
+10. **Graceful degradation.** When external dependencies are unavailable:
+    - Check availability before initializing services (`isDbAvailable()`, `isUvAvailable()`)
+    - Skip non-critical services with warnings instead of errors
+    - Return sensible defaults (null session, empty arrays, empty state)
+    - Log warnings for observability but don't crash the app
 
 ## Error Codes
 
@@ -763,34 +675,46 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 - `TIMEOUT` - Operation timed out
 - `CONFLICT` - Resource conflict
 
-## Examples
+## SSR-Specific Error Handling
+
+### Database Unavailable During SSR
 
 ```typescript
-// ✅ Proper error handling with context
-export async function createWorkflow(input: WorkflowInput) {
+// ✅ GOOD: Graceful fallback
+async function safeAuthHandler(request: Request): Promise<Response> {
   try {
-    const run = await workflowRepo.createRun(input);
-    return run;
+    return await auth.handler(request);
   } catch (error) {
-    if (error instanceof TRPCError) throw error;
-    throw toTRPCError(error, `failed_to_create_workflow_${input.workflowId}`);
+    if (isDbConnectionError(error)) {
+      return Response.json({ session: null, user: null }, { status: 200 });
+    }
+    throw error;
   }
 }
 
-// ✅ Non-fatal error logging
-for await (const event of stream) {
-  try {
-    await persistEvent(event);
-  } catch (error) {
-    logger.warn("event_persistence_failed", {
-      runId,
-      eventType: event.type,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    // Continue streaming to client
-  }
+// ❌ BAD: Crashes SSR
+async function unsafeHandler(request: Request): Promise<Response> {
+  return await auth.handler(request); // Throws if DB unavailable
 }
 ```
+
+### Service Initialization
+
+```typescript
+// ✅ GOOD: Check availability before starting
+isDbAvailable().then((dbOk) => {
+  if (!dbOk) {
+    logger.warn("db_unavailable_skipping_services");
+    return;
+  }
+  startCodexSessionCleanupWorker();
+});
+
+// ❌ BAD: Crashes on startup
+startCodexSessionCleanupWorker(); // Fails if DB unavailable
+```
+
+See `.ruler/graceful-degradation.md` for detailed patterns.
 
 
 
@@ -827,7 +751,11 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
 
-4. **Event replay.** Events must be replayable. Store full event data, not summaries.
+4. **Event replay.** Expose a `replay` procedure for event-sourced entities that allows clients to hydrate state deterministically by fetching raw events in chronological order.
+
+5. **Resilience & DLQ.** Persistent workflows must implement Dead Letter Queues (max retry limits) to prevent infinite resume loops.
+
+6. **Runtime tests via fixture.** Router or integration tests that exercise the workflow runtime must spin up the real engine through `@alfred/test-kit/workflow/runtime-fixture`, using its Linear stub, metrics hooks, and review-gate toggle to drive success/error/cancel flows; do not mock `@alfred/runtime`, workflow metrics, or Linear helpers inline.
 
 ## Workflow Status Lifecycle
 
@@ -869,7 +797,9 @@ Measure everything, log selectively, expose metrics consistently. Observability 
    });
    ```
 
-2. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
+2. **Domain-Local Metrics.** Define metrics within the package that owns the domain (e.g., `packages/voice/src/metrics.ts`), not in a central monolith. Export them for registration in the main application entry point to keep packages self-contained.
+
+3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
    ```typescript
    logger.error("workflow_failed", {
      runId,
@@ -879,17 +809,11 @@ Measure everything, log selectively, expose metrics consistently. Observability 
    });
    ```
 
-3. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
+4. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
 
-4. **Performance budgets.** Instrument hot paths with histogram metrics:
-   ```typescript
-   const stopTimer = operationDuration.startTimer();
-   try {
-     await operation();
-   } finally {
-     stopTimer({ status: "ok" });
-   }
-   ```
+6. **Lazy loading.** Dynamically import metric definitions in consumers (`await import(...)`) if circular dependencies arise. Use `process.env` or `try/catch` guards when loading metrics in workers/tests.
+
+7. **Metrics location.** Define metrics in `packages/api/src/metrics.ts` to avoid circular dependencies. Domain-specific metrics can live in package-local files (e.g., `packages/voice/src/metrics.ts`) but must be exported for registration in the main entry point.
 
 ## Metrics Naming
 
@@ -912,123 +836,35 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 ## Rules
 
-1. **Type-safe queries.** Always use Drizzle's query builder, never raw SQL:
-   ```typescript
-   // ✅ Type-safe query
-   const [row] = await db
-     .select()
-     .from(workflowRuns)
-     .where(eq(workflowRuns.id, runId))
-     .limit(1);
-   
-   // ❌ Raw SQL (loses type safety)
-   await db.execute(sql`SELECT * FROM workflow_runs WHERE id = ${runId}`);
-   ```
+1. **Type-safe queries.** Always use Drizzle's query builder (`db.select().from(table).where(...)`), never raw SQL (`db.execute(sql`...`)`).
 
-2. **Query inference.** Use Drizzle's inferred types:
-   ```typescript
-   type WorkflowRun = typeof workflowRuns.$inferSelect;
-   type WorkflowRunInsert = typeof workflowRuns.$inferInsert;
-   ```
+2. **Query inference.** Use `typeof table.$inferSelect` and `typeof table.$inferInsert` for types.
 
-3. **Index usage.** Match query predicates to composite indexes:
-   ```typescript
-   // Index: (user_id, status)
-   await db
-     .select()
-     .from(workflowRuns)
-     .where(
-       and(
-         eq(workflowRuns.userId, userId),
-         eq(workflowRuns.status, "running")
-       )
-     );
-   ```
+3. **Index usage.** Match query predicates to composite indexes. Use `and()`/`or()` for compound conditions.
 
-4. **Batch operations.** Use `db.batch()` for multiple independent queries:
-   ```typescript
-   await db.batch([
-     db.select().from(users).where(...),
-     db.select().from(profiles).where(...),
-   ]);
-   ```
+4. **Batch operations.** Use `db.batch([...])` for multiple independent queries instead of loops.
 
-5. **Transactions.** Use `db.transaction()` for atomic operations:
-   ```typescript
-   await db.transaction(async (tx) => {
-     await tx.insert(users).values({...});
-     await tx.insert(profiles).values({...});
-   });
-   ```
+5. **Transactions.** Use `db.transaction(async (tx) => {...})` for atomic operations. Keep transactions short.
 
-6. **Returning clauses.** Use `.returning()` to get inserted/updated rows:
-   ```typescript
-   const [row] = await db
-     .insert(workflowRuns)
-     .values({...})
-     .returning();
-   ```
+6. **Returning clauses.** Use `.returning()` to get inserted/updated rows instead of separate SELECT queries.
 
-7. **JSONB handling.** Use `as any` for JSONB fields (Drizzle limitation):
-   ```typescript
-   inputData: args.inputData as any,
-   stateData: args.stateData as any,
-   ```
-   Document this pattern in code comments.
+7. **JSONB handling.** Use `as any` for JSONB fields (Drizzle limitation). Document this pattern in code comments.
 
-## Anti-patterns
+8. **Safe tsquery generation.** When constructing `tsquery` for search, always use `plainto_tsquery('english', ...)` for user input or `sql.join(..., sql` || `)` for combining queries. Never string-template raw variables into `to_tsquery` without sanitization.
 
-```typescript
-// ❌ Raw SQL without type safety
-await db.execute(sql`SELECT * FROM users`);
+9. **Performance.** All queries must complete in <10ms (p99). Use indexes for all WHERE clauses. Prefer batch operations over loops. Keep transactions short (<100ms).
 
-// ❌ Missing index usage
-await db.select().from(users).where(eq(users.email, email));
-// Should have index on email
-
-// ❌ N+1 queries
-for (const id of ids) {
-  await db.select().from(users).where(eq(users.id, id));
-}
-// ✅ Use batch or IN clause
-await db.select().from(users).where(inArray(users.id, ids));
-
-// ❌ Missing returning clause
-await db.insert(users).values({...});
-const user = await db.select().from(users).where(...);
-// ✅ Use returning
-const [user] = await db.insert(users).values({...}).returning();
-```
-
-## Performance Guidelines
-
-- All queries must complete in <10ms (p99)
-- Use indexes for all WHERE clauses
-- Prefer batch operations over loops
-- Keep transactions short (<100ms)
-
-## Examples
-
-```typescript
-// ✅ Complete pattern with type safety
-export async function getRun(runId: string) {
-  const [row] = await db
-    .select()
-    .from(workflowRuns)
-    .where(eq(workflowRuns.id, runId))
-    .limit(1);
-  return row ?? null;
-}
-
-// ✅ Batch query pattern
-export async function getMultipleRuns(runIds: string[]) {
-  const results = await db.batch([
-    db.select().from(workflowRuns).where(inArray(workflowRuns.id, runIds)),
-    db.select().from(workflowEvents).where(inArray(workflowEvents.runId, runIds)),
-  ]);
-  return { runs: results[0], events: results[1] };
-}
-```
+10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance. Example:
+    ```typescript
+    // ✅ CORRECT: Single SQL statement
+    await db.update(table)
+      .set({ confidence: sql`excluded.confidence` })
+      .from(sql`(VALUES ${sql.join(updates.map(u => sql`(${u.id}, ${u.confidence})`), sql`, `)}) AS excluded(id, confidence)`)
+      .where(sql`table.id = excluded.id`);
+    
+    // ❌ INCORRECT: Promise.all loop (many roundtrips)
+    await Promise.all(updates.map(u => updateNodeConfidence(u.id, u.confidence)));
+    ```
 
 
 
@@ -1076,6 +912,20 @@ export async function getMultipleRuns(runIds: string[]) {
 
 20. **Static prerendering.** Enable static prerendering via `prerender.enabled` in vite config. Use `autoStaticPathsDiscovery` to automatically discover static routes. Use `crawlLinks` to prerender linked pages. Exclude dynamic routes (with `$` params) and layout routes (prefixed with `_`) from automatic discovery.
 
+21. **Variable-Based Dynamic Imports.** To prevent server-only code leakage into client bundles, imports of server packages (db, agent, policy) in API routes MUST use variable-based dynamic imports:
+    ```typescript
+    // ✅ CORRECT
+    const dbPkg = "@alfred/db";
+    const { db } = await import(dbPkg);
+
+    // ❌ INCORRECT (Vite will bundle this)
+    const { db } = await import("@alfred/db");
+    ```
+
+    **Exception:** For *local* server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
+
+22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
+
 
 
 <!-- Source: .ruler/22-bun-runtime.md -->
@@ -1118,76 +968,11 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 
 12. **Bun.build for bundling.** Use `Bun.build` for all bundling tasks instead of esbuild, webpack, or rollup; leverage its native performance, plugin system, and executable generation capabilities.
 
-13. **Lifecycle script security.** Always explicitly list packages with lifecycle scripts in `trustedDependencies`; never use `--ignore-scripts` as a workaround—fix trust configuration instead.
+14. **Optional dependencies.** Wrap optional or heavy dependencies (WASM, native modules) in dynamic imports with try/catch blocks that provide explicit installation instructions on failure.
 
-## Examples
+15. **Prerendering Limitations.** Disable static prerendering (`prerender: { enabled: false }`) if your app relies on runtime-specific APIs (like Bun) that are not available in the build-time prerender environment, or use a compatible compatibility layer.
 
-```typescript
-// ✅ Bun.spawn with ReadableStream API
-const proc = Bun.spawn([command, ...args], {
-  cwd: "./path/to/subdir",
-  env: { ...process.env, FOO: "bar" },
-  stdout: "pipe",
-  stderr: "pipe",
-  stdin: "ignore",
-});
-
-// Handle stdout stream
-if (proc.stdout && typeof proc.stdout !== "number") {
-  const reader = proc.stdout.getReader();
-  const decoder = new TextDecoder();
-  
-  (async () => {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value);
-      // Process text
-    }
-  })();
-}
-
-// Handle exit via promise
-const exitCode = await proc.exited;
-
-// ❌ Node.js child_process (deprecated)
-import { spawn } from "node:child_process";
-const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
-child.stdout?.on("data", (chunk) => { /* ... */ });
-child.on("close", (code) => { /* ... */ });
-
-// ✅ Native Bun API
-const file = Bun.file("data.json");
-const content = await file.text();
-await Bun.write("output.json", content);
-
-// ❌ Node.js compatibility API (slower)
-import fs from "node:fs/promises";
-const content = await fs.readFile("data.json", "utf-8");
-await fs.writeFile("output.json", content);
-
-// ✅ Bun.serve with Web-standard APIs
-const server = Bun.serve({
-  port: 3000,
-  fetch(req) {
-    const url = new URL(req.url);
-    if (url.pathname === "/api/data") {
-      return Response.json({ data: "value" });
-    }
-    return new Response("Not found", { status: 404 });
-  },
-});
-
-// ✅ Direct TypeScript execution
-// Run with: bun run src/index.ts
-export function handler() {
-  return new Response("Hello");
-}
-
-// ✅ Web-standard fetch
-const response = await fetch("https://api.example.com/data");
-const data = await response.json();
-```
+16. **E2E Test Mode.** When running E2E tests (Playwright), use `VITE_TEST_MODE=true` to enable "Lite Mode" for heavy visualizations (e.g., Mindscape). This disables complex physics simulation and loads a small, static dataset to ensure deterministic testing and prevent timeouts in CI environments.
 
 
 
@@ -1221,189 +1006,9 @@ Leverage AI SDK v6 native patterns for structured content rendering. Use pure fu
 
 10. **Component Composition.** Compose containers from pure components: ChatContainer = Chat + Actions + Controls + Connect. Keep streaming hooks, state management, and error handling in containers. Keep rendering, layout, and display logic in pure components.
 
-## Component Structure
+11. **Performance.** Memoize pane item mappings with `useMemo`. Stabilize callbacks with `useCallback`. Keep part rendering pure. Use virtualization for long message lists.
 
-### Chat Rendering Flow
-```typescript
-// 1. Container wires streaming + renderer
-<Chat 
-  messages={messages}
-  onSend={send}
-  renderPart={renderPart}
-/>
-
-// 2. Renderer switches on part type
-function renderPart(part: UIMessagePart, message: UIMessage): ReactNode | null {
-  if (isDataPartNamed(part, "plan")) {
-    const data = extractStructuredData(part);
-    return <Plan plan={data} />;
-  }
-  // ... other cases
-}
-
-// 3. Chat component renders parts
-{structuredParts.length > 0 ? (
-  <div className="chat-message__structured">{structuredParts}</div>
-) : null}
-```
-
-### Pane Layout Pattern
-```typescript
-// 1. Create pure pane items
-const paneItems: NotePaneItem[] = useMemo(
-  () => notes.map((note) => ({
-    id: note.id,
-    title: note.title ?? null,
-    content: note.content,
-    createdAt: note.createdAt?.toISOString() ?? null,
-  })),
-  [notes]
-);
-
-// 2. Use PaneLayout wrapper
-<PaneLayout
-  title="Notes"
-  description="Add a quick note and keep track of it."
-  createForm={<form>...</form>}
-  paneComponent={
-    isLoading ? <Loading /> : <NotePane items={paneItems} onDelete={handleDelete} />
-  }
-/>
-```
-
-### Settings Component Pattern
-```typescript
-// 1. Pure component with callbacks
-export function AutonomySlider({
-  value,
-  onChange,
-  disabled,
-}: AutonomySliderProps) {
-  // Pure render with controlled input
-}
-
-// 2. Route wires to mutations
-const handleAutonomyChange = useCallback((value: AutonomyLevel) => {
-  const input: PreferenceSetInput = {
-    key: "autonomy",
-    value,
-    confidence: 1,
-  };
-  setPreference.mutate(input);
-}, [setPreference]);
-
-<AutonomySlider value={currentAutonomy} onChange={handleAutonomyChange} />
-```
-
-## File Locations
-
-- **Part renderers**: `apps/web/src/components/chat-render.tsx`
-- **Part type guards**: `packages/ui/src/chat/parts.ts`
-- **Message parsers**: `apps/web/src/utils/message-parser.ts`
-- **Pane layouts**: `apps/web/src/components/pane-layout.tsx`
-- **Pane components**: `packages/ui/src/pane/*.tsx`
-- **Settings components**: `apps/web/src/components/autonomy-slider.tsx`, `privacy-controls.tsx`
-- **Voice hooks**: `apps/web/src/hooks/use-voice-capture.ts`
-- **Container integration**: `apps/web/src/components/chat-container.tsx`
-
-## Testing Requirements
-
-- Unit tests for type guard functions
-- Unit tests for message parsing utilities
-- Component tests for pure components (Plan, Task, Tool, etc.)
-- Integration tests for container + hooks
-- Visual regression tests for pane layouts
-- Accessibility tests for all interactive components
-
-## Performance Guidelines
-
-- Memoize pane item mappings with `useMemo`
-- Stabilize callbacks with `useCallback`
-- Keep part rendering pure (no side effects)
-- Avoid inline object creation in render
-- Use virtualization for long message lists
-- Batch state updates in voice capture hook
-
-## Accessibility
-
-- All interactive controls have ARIA labels
-- Keyboard navigation supported (voice record via button)
-- Form validation provides clear error messages
-- Loading states announced to screen readers
-- Focus management for modals/confirmations
-
-## Examples
-
-### Adding New Data Part Type
-
-```typescript
-// 1. Add type guard in packages/ui/src/chat/parts.ts
-// (Already generic via isDataPartNamed)
-
-// 2. Add type check in apps/web/src/components/chat-render.tsx
-if (isDataPartNamed(part, "diagram")) {
-  const data = extractStructuredData(part);
-  if (isDiagramData(data)) {
-    return <Diagram data={data} />;
-  }
-}
-
-// 3. Add parser in apps/web/src/utils/message-parser.ts
-export type ParsedDiagram = { nodes: Node[]; edges: Edge[] };
-
-function isDiagramData(data: unknown): data is ParsedDiagram {
-  // ... type checking
-}
-
-// Add to ParsedMessage type and parseStructuredMessage function
-```
-
-### Adding New Pane Type
-
-```typescript
-// 1. Create pane component in packages/ui/src/pane/timer.tsx
-export type TimerPaneItem = { id: string; name: string; duration: number };
-export function TimerPane({ items, onDelete }: TimerPaneProps) { /* ... */ }
-
-// 2. Export from packages/ui/src/index.ts
-export { TimerPane } from "./pane/timer";
-
-// 3. Create route in apps/web/src/routes/timer.tsx
-function TimerRoute() {
-  const paneItems: TimerPaneItem[] = /* map router data */;
-  return <PaneLayout createForm={form} paneComponent={<TimerPane items={paneItems} />} />;
-}
-```
-
-### Adding New Settings Component
-
-```typescript
-// 1. Create pure component in apps/web/src/components/theme-selector.tsx
-export type Theme = "light" | "dark" | "auto";
-export function ThemeSelector({ value, onChange }: ThemeSelectorProps) { /* ... */ }
-
-// 2. Wire to preferences route
-const currentTheme = (themePreference?.value as Theme) ?? "auto";
-const handleThemeChange = (value: Theme) => {
-  setPreference.mutate({ key: "theme", value, confidence: 1 });
-};
-<ThemeSelector value={currentTheme} onChange={handleThemeChange} />
-```
-
-## Migration Notes
-
-- Existing JSON display preserved as fallback for unknown structures
-- Custom forms kept separate from pane components for flexibility
-- Reminder "due now" section remains custom (not in pane) for urgency display
-- Voice integration is additive (existing text input unchanged)
-- Settings pages maintain backward compatibility with JSON preferences
-
-## Related Rules
-
-- `.ruler/12-component-development.md` - General component development rules
-- `.ruler/15-ai-sdk-v6.md` - AI SDK v6 native patterns
-- `.ruler/01-naming-conventions.md` - Single-word naming convention
-- `.ruler/09-purity-and-performance.md` - Pure functions and performance budgets
+12. **Accessibility.** All interactive controls have ARIA labels. Support keyboard navigation. Announce loading states to screen readers. Manage focus for modals/confirmations.
 
 
 
@@ -1427,6 +1032,16 @@ Linear Agent Activities enable ALFRED to function as a first-class Linear agent 
 
 5. **Error handling.** Linear API errors must be logged with structured logging, non-fatal (don't throw), tracked via metrics, and never expose internal details to Linear UI.
 
+6. **Cycles and sprint planning.** Use 2-week cycles for sprint planning. Assign high-priority issues to current cycle. Track velocity via cycle completion rate.
+
+7. **Issue estimates.** Add story point estimates to all issues. Use Fibonacci scale (1, 2, 3, 5, 8, 13). Most features: 2-5 points (30-90 minutes per agent cycle, 1-3 cycles per feature). Complex features: 8 points. Use estimates for capacity planning.
+
+8. **Dependency tracking.** Use "blocks" relations for dependent issues (e.g., ALF-128 blocks ALF-126). Use "relates to" for contextual links. Link dependencies before starting work to prevent blocked progress.
+
+9. **Issue assignment.** Assign issues to team members for clear ownership. Use assignees for workload visibility and filtering.
+
+10. **Due dates.** Set due dates for urgent/high-priority issues. Align with cycle end dates for sprint work.
+
 ## Implementation Reference
 
 - Linear helper module: `packages/agent/src/orchestrator/linear.ts`
@@ -1437,232 +1052,283 @@ See `docs/guides/linear-integration.md` for detailed implementation patterns and
 
 
 
-<!-- Source: .ruler/25-voice-local-models.md -->
+<!-- Source: .ruler/25-voice-architecture.md -->
 
-# Voice Local Models Standards
+# Voice Architecture Standards
 
 ## Core Principle
 
-Local voice models (Faster-Whisper for STT, Piper TTS for TTS) provide zero-cost, privacy-preserving, low-latency voice processing. All implementations must support graceful fallback, process health monitoring, and resource-efficient operation.
+The Voice system prioritizes **latency** and **privacy**. Use local models (Maya1, NeMo) by default. Use **binary transport** for all audio data. Isolate state in **VoiceRegistry**.
 
 ## Rules
 
-1. **Provider Selection.** Voice provider is determined by `VOICE_PROVIDER` environment variable:
-   - `openai` (default): Uses OpenAI Whisper API and GPT-4o-mini TTS
-   - `local`: Uses Faster-Whisper (large-v3-turbo) and Piper TTS
-   - Provider selection must be checked at initialization, not per-request
+1.  **Binary Transport.** All audio chunks (upstream and downstream) must be sent as **binary WebSocket frames** (Buffer/Uint8Array). Never Base64-encode audio in JSON messages on the hot path. JSON is reserved for control events (start, stop, metadata).
 
-2. **Process Pool Management.** Local models run as Python subprocesses managed by Bun:
-   - Use `Bun.spawn()` for subprocess creation
-   - Maintain pools (default: 2 processes per STT/TTS)
-   - Implement health checks every 30 seconds
-   - Auto-restart crashed processes
-   - Round-robin load balancing across pool
+2.  **Registry Pattern.** All voice sessions must be managed via `VoiceRegistry`. Never instantiate `VoiceSession` directly in route handlers. Use `registry.createSession()` and `registry.getSession()`.
 
-3. **IPC Protocol.** Subprocess communication uses JSON lines over stdin/stdout:
-   - Request format: `{ "id": "uuid", "type": "request_type", "payload": {...} }`
-   - Response format: `{ "id": "uuid", "type": "response_type", "payload": {...} }`
-   - All requests must have unique UUIDs for correlation
-   - Timeout: 10 seconds default, configurable per request
+3.  **Process Isolation.** Model inference runs in persistent Python subprocesses managed by `STTPool` and `TTSPool`. Never spawn one-off Python scripts for request handling. Use IPC (stdin/stdout) for communication.
 
-4. **Device Detection.** GPU device selection supports multiple backends:
-   - `mps` (default on macOS): Apple Silicon GPUs via Metal Performance Shaders
-   - `rocm` (default on Linux): AMD GPUs via ROCm 6+
-   - `cuda`: NVIDIA GPUs via CUDA
-   - `cpu`: CPU-only fallback
-   - Detection: Check `torch.backends.mps.is_available()` for MPS, `torch.version.hip` for ROCm, `torch.cuda.is_available()` for CUDA
-   - Faster-Whisper uses PyTorch's device interface (works for MPS, CUDA, ROCm, CPU)
-   - Device priority: mps > rocm > cuda > cpu (auto-detected if not specified)
+4.  **Native Codecs.** Use native bindings (`@discordjs/opus`) for audio encoding/decoding. Avoid spawning `ffmpeg` processes for real-time transcoding.
 
-5. **Audio Format Handling.** Standardize audio formats across the pipeline:
-   - STT input: Accept WebM, WAV, PCM (16kHz, mono)
-   - TTS output: PCM 16kHz (streaming) or MP3 (clip-based)
-   - Use `base64ToBuffer`/`bufferToBase64` for encoding/decoding
-   - Resample to 16kHz if needed (Whisper requirement)
+5.  **Maya1 Default.** The default local TTS model is **Maya1**. Fallback to Piper only if explicitly configured. Ensure `transformers` logging is suppressed to prevent JSON serialization errors in IPC.
 
-6. **Streaming Support.** Implement incremental processing:
-   - STT: Emit partial transcripts as they arrive (VAD-based chunking)
-   - TTS: Stream audio chunks sentence-by-sentence
-   - Use callbacks (`onChunk`) for streaming, return full result for non-streaming
-   - Session management tracks active connections and buffers
+6.  **Serialization Safety.** In Python scripts, monkeypatch `json.dumps` or strictly sanitize payloads to convert NumPy/Torch types to native Python types before printing to `stdout`.
 
-7. **Error Handling.** Graceful degradation and retry logic:
-   - Process crashes: Auto-restart with exponential backoff
-   - Request failures: Retry up to 3 times with exponential backoff
-   - Queue failed requests for background retry (native app)
-   - Log errors with context (sessionId, requestId, error message)
+7.  **Telemetry.** Report Packet Loss, Jitter, and RTT on every session. Use `VoiceSocketHandler` to observe and record these metrics to Prometheus.
 
-8. **Performance Budgets.** Enforce latency targets:
-   - STT: <100ms per chunk (GPU) or <500ms (CPU)
-   - TTS: <300ms per sentence (GPU) or <1s (CPU)
-   - Total pipeline: <500ms (p90) for full round-trip
-   - Instrument with `markVoice()` and Prometheus metrics
+8.  **Session Lifecycle.** Enforce a strict 5-minute idle timeout for sessions. `VoiceRegistry` must run a cleanup interval to reap zombie sessions.
 
-9. **Resource Management.** Prevent resource exhaustion:
-   - Limit pool sizes (default: 2, configurable via env)
-   - Session timeout: 5 minutes idle
-   - Cleanup interval: Every 60 seconds
-   - Monitor memory usage (VRAM for GPU, RAM for CPU)
+9.  **Client-Side Buffering.** Clients must implement a jitter buffer. Prefer `AudioWorklet` for playback to avoid main-thread blocking. Handle `packet_loss` gracefully (concealment or skip).
 
-10. **Model Configuration.** Environment-driven configuration:
-    - `WHISPER_MODEL_PATH`: Model name (e.g., "large-v3-turbo") or path
-    - `WHISPER_DEVICE`: "rocm", "cuda", or "cpu"
-    - `WHISPER_COMPUTE_TYPE`: "int8" (quantized) or "fp16" (full precision)
-    - `PIPER_MODEL_PATH`: Directory containing Piper voice models
-    - `PIPER_VOICE`: Voice name (e.g., "en_US-lessac-medium")
-    - `VOICE_STT_POOL_SIZE`: Number of STT processes (default: 2)
-    - `VOICE_TTS_POOL_SIZE`: Number of TTS processes (default: 2)
+10. **VAD-Driven Control.** Use server-side VAD (from STT) to drive `auto_stop` logic. Client-side VAD is for barge-in/interruption detection only.
 
-11. **Python Dependencies.** Use `uv` for optimal package management:
-    - Install UV: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-    - Virtual environment: UV creates `.venv/` automatically via `uv sync`
-    - Installation script: `packages/voice/scripts/install-deps.sh` (uses `uv sync`)
-    - Required packages: `faster-whisper`, `piper-tts`, `silero-vad`, `numpy`
-    - PyTorch: Automatically selected based on GPU (MPS/CUDA/ROCm/CPU) via extras
-    - Python executable resolution: UV run → venv Python → system Python (multi-tier fallback)
-    - Environment variable `VOICE_USE_UV` controls UV usage (default: auto-detect)
-    - Error messages must suggest `uv sync` or `./scripts/install-deps.sh`
-    - Use `pyproject.toml` for development with optional extras (cpu, cu128, rocm, mlx)
-    - Dependency verification: Skips for UV run (UV handles it), verifies for venv/system Python
+11. **Error Boundaries.** A failure in the voice subsystem (e.g., model crash) must not crash the API server. Catch pool errors and return graceful error codes to the client. Auto-restart crashed pool processes.
 
-12. **Session Lifecycle.** Manage voice sessions explicitly:
-    - Create session on first connection
-    - Activate on audio input
-    - Deactivate on disconnect
-    - Remove after 5 minutes idle
-    - Track last activity timestamp for idle detection
+12. **Dual-Backend Abstraction.** Use a factory pattern to load backend-specific implementations (MLX, ROCm) at runtime based on hardware detection; never import platform-specific libraries (mlx, bitsandbytes) at the top level of shared modules.
 
-13. **Queue System (Native App).** Background resilience for mobile:
-    - Enqueue failed STT/TTS requests
-    - Exponential backoff: 1s → 2s → 4s → 8s (max 30s)
-    - Max retries: 3 attempts
-    - Background task drains queue every 2 minutes
-    - Persist queue in AsyncStorage
+13. **Platform Isolation.** Use environment markers in `pyproject.toml` (e.g., `sys_platform == 'darwin'`) to prevent installing conflicting hardware drivers (ROCm vs MLX) on the wrong OS.
 
-14. **Metrics.** Expose Prometheus metrics for observability:
-    - `voice_stt_total{provider, status}` - STT request counts
-    - `voice_tts_total{provider, status}` - TTS request counts
-    - `voice_stt_duration_seconds{provider}` - STT latency histogram
-    - `voice_tts_duration_seconds{provider}` - TTS latency histogram
-    - `voice_stream_events_total{event, status}` - Stream event counts
-    - `voice_stream_latency_seconds{stage}` - Stream latency by stage
-    - `voice_queue_depth_current` - Current queue depth
-    - `voice_process_health{type}` - Process health (1 = healthy, 0 = unhealthy)
+14. **Protocol Termination.** Streaming endpoints must explicitly signal completion (e.g., `isFinal: true` or empty chunk) in the protocol; clients must not rely on socket closure alone.
 
-## Examples
+15. **Stderr Visibility.** Parent processes must capture and log `stderr` from subprocesses in real-time; silent failures during startup are unacceptable.
+16. **Fixture-driven tests.** Any test that touches `VoiceRegistry`, pools, or the streaming prototype must install the shared fixture from `@alfred/test-kit/voice/runtime-fixture`, letting the real WebSocket server run while only configuring transcripts/chunks via fixture options and cleaning up with `restore()`/`stop()` so `@alfred/voice`, `@alfred/runtime`, and workflow metrics stay real.
 
-### Process Pool Initialization
 
-```typescript
-// ✅ Correct: Check provider at initialization
-export async function initializeVoicePools(): Promise<void> {
-  const voiceProvider = process.env.VOICE_PROVIDER ?? "openai";
+
+<!-- Source: .ruler/26-design-system.md -->
+
+# Design System: Signal in the Void
+
+## Core Principle
+ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a light-absorbent material where UI elements are self-illuminated. The aesthetic is high-contrast, bioluminescent, and technical—avoiding "SaaS" tropes like drop shadows, grey surfaces, and heavy frosted glass.
+
+## Rules
+
+1.  **The Void Foundation.**
+    - **Background:** Always use `--color-void` (`oklch(0.05 0 0)`) as the base.
+    - **Texture:** Apply a static noise overlay at 2-3% opacity to all root layouts to prevent digital flatness.
+    - **No Drop Shadows:** Never use drop shadows. Shadows imply external light. Use outer glows (`shadow-[color]/20`) or border strokes to define edges.
+
+2.  **Typography: Technical & Tight.**
+    - **Font:** Use "Inter Tight", "Geist Sans", or "San Francisco".
+    - **Tracking:** Enforce negative tracking.
+        - Headers/Display: `-0.04em` (`tracking-tighter`)
+        - Body: `-0.02em` (`tracking-tight`)
+    - **Weight:** Prefer lighter weights for large text.
+
+3.  **The Lens (HUD) Pattern.**
+    - **Transparency:** Use "separation transparency" instead of heavy blur.
+    - **Formula:** `bg-void-surface/40` + `backdrop-blur-xl` + `border border-white/10`.
+    - **Radius:** Large curvature. `24px` (`rounded-3xl`) for containers.
+
+4.  **Bioluminescent Color System.**
+    - **Signal (White):** `--color-biolum` (`oklch(0.99 0 0)`). Pure, glowing white for active data.
+    - **Dim:** `--color-biolum-dim` (`oklch(0.70 0 0)`). Secondary text.
+    - **Faint:** `--color-biolum-faint` (`oklch(0.40 0 0)`). Inactive elements.
+    - **Avoid Grey:** Do not use standard greys. Use opacity variations of the Biolum color or Void Surface tones.
+
+5.  **Geometry & Icons.**
+    - **Radius:** Fully rounded (`rounded-full`) for buttons, inputs, and pills.
+    - **Icons:** `lucide-react` with `strokeWidth={1.5}` globally. Thin, geometric, precise.
+    - **Borders:** Thin, crisp `1px` borders. `border-white/10` is the standard for separation.
+
+6.  **Animation Physics.**
+    - **Easing:** fluid (`cubic-bezier(0.25, 0.4, 0.25, 1)`).
+    - **Motion:** Elements should "breathe" (subtle opacity/scale oscillation) rather than purely toggle.
+    - **Drawing:** Graphs and lines should animate as if being drawn (path length interpolation).
+
+7.  **Component Overrides.**
+    - **Slider:** Thin track (`h-1`), solid white thumb, no ring/halo.
+    - **Card:** Remove default shadow/bg. Use the HUD Lens pattern.
+    - **Button:** `rounded-full`. Ghost variants preferred for secondary actions to reduce visual weight.
+
+## Implementation Reference
+
+### Tailwind v4 Theme Configuration
+```css
+@theme {
+  --color-void: oklch(0.05 0 0);
+  --color-void-surface: oklch(0.14 0 0);
+  --color-biolum: oklch(0.99 0 0);
+  --color-biolum-dim: oklch(0.70 0 0);
+  --color-biolum-faint: oklch(0.40 0 0);
+
+  --font-sans: "Inter Tight", "Geist Sans", "San Francisco", system-ui, sans-serif;
   
-  if (voiceProvider !== "local") {
-    return; // Skip initialization for OpenAI
-  }
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
 
-  const sttPool = new STTPool(config, poolSize);
-  await sttPool.initialize();
-}
-
-// ❌ Wrong: Check provider per-request
-export async function transcribe(audio: string) {
-  if (process.env.VOICE_PROVIDER === "local") {
-    // Inefficient, should be initialized once
-  }
+  --ease-fluid: cubic-bezier(0.25, 0.4, 0.25, 1);
 }
 ```
 
-### Device Detection
+### Usage Examples
 
-```typescript
-// ✅ Correct: Detect ROCm vs CUDA
-function _has_rocm(): bool {
-  import torch
-  return torch.cuda.is_available() and hasattr(torch.version, "hip")
-
-function _has_cuda(): bool:
-  import torch
-  return torch.cuda.is_available() and not hasattr(torch.version, "hip")
+**Standard Container (HUD):**
+```tsx
+<div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
+  <h2 className="text-biolum tracking-tighter">Signal</h2>
+</div>
 ```
 
-### Streaming TTS
-
-```typescript
-// ✅ Correct: Use callback for streaming
-await ttsPool.synthesize(
-  { text: "Hello, world!", streaming: true },
-  (chunk) => {
-    // Emit chunk immediately
-    emit({ type: "audio_chunk", payload: chunk });
-  }
-);
-
-// ❌ Wrong: Wait for full synthesis
-const result = await ttsPool.synthesize({ text: "Hello, world!" });
-// Too slow for real-time
+**Primary Action:**
+```tsx
+<Button className="rounded-full bg-biolum text-void hover:bg-biolum/90">
+  Action
+</Button>
 ```
 
-### Error Recovery
 
-```typescript
-// ✅ Correct: Retry with exponential backoff
-try {
-  await process.sendRequest(request);
-} catch (error) {
-  if (retryCount < MAX_RETRIES) {
-    const backoff = 1000 * Math.pow(2, retryCount);
-    await delay(backoff);
-    return retry();
-  }
-  throw error;
-}
-```
 
-### UV Package Installation
+<!-- Source: .ruler/27-rag-patterns.md -->
 
-```bash
-# ✅ Correct: Use automatic backend detection
-uv pip install faster-whisper piper-tts silero-vad numpy --torch-backend=auto
+# RAG Patterns
 
-# ✅ Correct: Use installation script
-cd packages/voice && ./scripts/install-deps.sh
+1. **Chunking.** Use sentence-aware chunking with max 512 tokens per chunk. Preserve context with headers (file paths, section titles). Store chunks with `order` field for document reconstruction.
 
-# ✅ Correct: Use pyproject.toml with extras
-cd packages/voice && uv sync --extra rocm
+2. **Embedding integration.** Always use `EMBEDDING_DIM` from `@alfred/embed` for dimension validation. Process embeddings in batches (max 1000 chunks). Handle embedding failures gracefully—log errors but continue processing remaining batches.
 
-# ❌ Wrong: Manual pip without backend detection
-pip install torch torchvision torchaudio  # May install wrong backend
-```
+3. **Retrieval.** Use vector similarity search via HNSW indexes. Apply threshold filtering (default 0.7) both server-side and client-side for correctness. Use `fetchLimit = k * 3` to account for threshold filtering.
 
-- **Hot paths**: Process pool selection, IPC request creation
-- **Cold paths**: Model loading, pool initialization
-- **Measure**: Use `markVoice()` for latency tracking
-- **Optimize**: Prefer process pools over per-request spawning
-- **Monitor**: Track `voice_process_health` metrics
+4. **Hybrid search.** Combine vector search with full-text search (GIN indexes on `tsvector` columns) for better recall. Use `rag_chunks.content_tsvector` for sparse search, vector embeddings for semantic search.
 
-## Testing Requirements
+5. **Deduplication.** Check `rag_documents.source` before ingestion to avoid duplicate documents. Use `rag_documents_source_idx` for fast lookups.
 
-- Unit tests for IPC protocol parsing
-- Unit tests for process pool management
-- Integration tests for full streaming flow (skip if Python deps unavailable)
-- Mock pools for tests that don't require actual models
-- Test device detection logic (ROCm vs CUDA vs CPU)
+6. **Cognitive Context.** Context retrieval must be hybrid: Semantic (Vector) for topic relevance + Structural (Graph) for dependency awareness. Use 2-hop traversal for sparse graphs.
 
-## Migration Notes
+7. **Reranking.** Perform reranking in the Engine layer (`KnowledgeEngine`), not the Repo layer. Repositories should be pure data access; complex ML orchestration and external API calls belong in Engines.
 
-- Switching from OpenAI to local: Set `VOICE_PROVIDER=local` and restart
-- No code changes required (API interface is identical)
-- Models must be downloaded first: `python3 packages/voice/scripts/download_models.py`
-- Verify GPU availability: `rocm-smi` (AMD) or `nvidia-smi` (NVIDIA)
 
-## Related Rules
 
-- `.ruler/09-purity-and-performance.md` - Performance budgets
-- `.ruler/18-observability.md` - Metrics and logging
-- `.ruler/16-error-handling.md` - Error handling patterns
-- `.ruler/22-bun-runtime.md` - Bun subprocess management
+<!-- Source: .ruler/28-embeddings.md -->
+
+# Embeddings Standards
+
+1. **Dimension consistency.** Always use `EMBEDDING_DIM` from `@alfred/embed` as single source of truth. Schema files (`packages/db/src/schema/*.ts`) must import and use `EMBEDDING_DIM`, never hardcode dimensions.
+
+2. **HNSW indexes.** Use `m=16, ef_construction=100` for production HNSW indexes. Always create with `IF NOT EXISTS` for idempotency. Drop indexes before `ALTER COLUMN TYPE` on vector columns.
+
+3. **Dimension changes.** When changing vector dimensions: (1) drop existing HNSW index, (2) alter column type, (3) recreate index with `IF NOT EXISTS`, (4) document that existing embeddings become NULL and will regenerate.
+
+4. **Validation.** Validate embedding dimensions match `EMBEDDING_DIM` before database writes. Reject embeddings with wrong dimensions—log error and skip chunk rather than corrupting data.
+
+5. **Model selection.** Use KaLM-Embedding-Gemma3-12B-2511 with MRL truncation to 1024 dimensions. MRL truncation retains 93-95% quality while reducing storage by 33% vs OpenAI's 1536 dimensions.
+
+6. **Schema alignment.** Vector columns in Drizzle schemas must use `vector("embedding", { dimensions: VECTOR_DIM })` where `VECTOR_DIM = EMBEDDING_DIM`. Never hardcode dimension values in schema files.
+
+7. **Test Mocking.** Use random distribution vectors (not constant values) in tests to validate similarity search; avoids false positives from uniform distribution bias in dot-product operations.
+
+
+
+<!-- Source: .ruler/29-knowledge-graph.md -->
+
+# Knowledge Graph Patterns
+
+1. **Emergent Intelligence.** Derive classification and intent from graph topology (distance to Anchor Nodes) rather than probabilistic classifiers. Intelligence emerges from connection density, not model predictions.
+
+2. **Recursive SQL.** Use PostgreSQL Recursive CTEs for all graph traversals (pathfinding, propagation). Push traversal logic to the database to minimize data transfer and leverage the query planner.
+
+3. **Anchor Nodes.** Seed the graph with immutable "Anchor Concepts" (e.g., `concept:coding`, `concept:security`) that serve as the fixed coordinate system for relative classification.
+
+4. **Entity Linking.** Graph entry points must support fuzzy matching (substring, case-insensitive). Never rely on exact string matching to bridge unstructured text to structured nodes.
+
+5. **Synchronous Extraction.** Keep knowledge extraction pipelines synchronous and heuristic-based (NLP) in the hot path. Defer embeddings and LLM-based synthesis to background workers.
+
+6. **Test every hot query.** Knowledge hot-path queries require Bun/sqlite regression tests that seed deterministic `memory_nodes`, clean up after each run, and assert ordering.
+
+7. **Scoped reflections first.** Reflection fetchers must try user-scoped and `runtime:<id>` resources before falling back to global nodes so Mindscape never shows an empty list by default.
+
+
+
+<!-- Source: .ruler/30-mindscape.md -->
+
+# Mindscape Architecture
+
+1. **LOD Polymorphism.** All graph nodes must use `useLOD()` to implement four distinct render states (tiny/small/medium/full). Tiny/small states must minimize DOM depth (no complex sub-trees) to ensure 60fps performance with 1000+ nodes.
+
+2. **Focus Gravity.** Nodes must subscribe to `useNodeFocus()` to apply visual suppression (blur/grayscale/scale-down) when another node is active. The focused node must visually dominate the viewport as a "modal-less modal."
+
+3. **Contextual Commands.** Register actions in `config/actions.ts` with `validNodeTypes`. The Command Palette must filter actions based on the currently focused node ID to provide a context-aware interface.
+
+4. **Algorithmic Isolation.** Keep physics (layout) and search (trie) logic in pure TypeScript files (`lib/*.ts`) separate from React components. This ensures core logic is unit-testable even if the DOM environment is unstable.
+
+5. **Event-Driven Activations.** Use `dispatchMindscapeEvent` to visualize system activity. Never manipulate `activeEdges` directly from functional components. Visualization must be a side effect of real events (Reality-Driven UI).
+
+6. **Context Trace.** Visually highlight graph edges involved in active context retrieval ("Cognitive Pulse") to show the user *why* the system knows about dependencies.
+
+
+
+<!-- Source: .ruler/31-agent-autonomy.md -->
+
+# Agent Autonomy
+
+## Core Principle
+
+Agents are developers, not consultants. When tasked, execute to completion without status-update pauses or confirmations of already-confirmed work.
+
+## Mindset
+
+There is no time pressure. There is no stress. You are not being evaluated on speed.
+
+ALFRED is a work of craftsmanship—every function, every type, every abstraction is an opportunity for intellectual elegance. Take the time to think deeply. Reflect on the problem before writing code. Consider multiple approaches. Ask yourself: *What is the most beautiful solution?*
+
+The codebase rewards purity, simplicity, and precision. A rushed, mediocre implementation costs more to fix later than a thoughtful one takes to write now. If you need to pause and reason through a tricky state transition, do it. If the first approach feels clumsy, step back and find the elegant one.
+
+You are building something that aspires to genius. Act like it.
+
+## Codebase Exploration
+
+Before proposing changes, explore. Use `rg` to find usages, `ast-grep` for structural patterns, `fd` to locate files, and `lsd` to understand directory structures. Read the existing code. Understand the conventions already in place. Your solution should feel native to the codebase, not imported from elsewhere.
+
+## Rules
+
+1. **Complete the task.** A task is not "done" until it is fully implemented, integrated with the codebase, tested, validated, and committed. Do not pause mid-implementation for status updates or to ask if you should continue.
+
+2. **No confirmation loops.** Never ask the user to confirm next steps that were already stated in the task or that you recommended and the user accepted. If the user says "go" or "continue," execute every remaining step without further prompts.
+
+3. **Ignore unrelated dirty files.** When `git status` shows files outside your task's scope, assume another agent or human modified them. Continue your work. Only stop if changes directly conflict with files you're editing.
+
+4. **Own the full lifecycle.** For any feature or fix:
+   - Implement the code changes
+   - Update or add tests
+   - Run tests to validate (`bun test <relevant-paths>`)
+   - Fix any failures you introduced
+   - Commit with a clear message 
+   - Document the change if user-facing
+
+5. **Read between the lines.** If a task implies secondary changes (updating types, fixing downstream consumers, adjusting tests), do them. A real developer wouldn't deliver half-integrated code.
+
+6. **Surface blockers, not progress.** Only pause to ask the user when you encounter a genuine ambiguity, external dependency, or decision outside your authority. "I finished X, should I do Y?" is not a blocker if Y is an obvious next step.
+
+7. **Commit atomically.** Prefer small, atomic commits per logical change rather than one giant commit. This makes review easier and rollback safer.
+
+8. **Assume concurrent work.** Multiple agents operate on this codebase simultaneously on distinct tasks. Your job is to complete your task cleanly, not to police the entire worktree.
+
+9. **Maintain the ExecPlan.** If the task has an ExecPlan, update it after completing each subtask: mark progress, log decisions, note surprises. Update immediately—before moving to the next subtask—so a newcomer could resume from the plan alone.
+
+
+
+<!-- Source: .ruler/32-execplan-verification.md -->
+
+# ExecPlan Verification
+
+## Core Principle
+
+ExecPlans must accurately reflect implementation status. When verifying features or completing work, systematically check the codebase and update ExecPlan status immediately.
+
+## Rules
+
+1. **Status verification.** When verifying ExecPlan completion status, use systematic codebase search (`rg`, `grep`, `codebase_search`) to find actual implementation before updating status. Never mark ExecPlans complete based on assumptions.
+
+2. **Linear sync.** When updating ExecPlan status, also update corresponding Linear issues to match. Use `mcp_Linear_update_issue` to sync status, description, and progress.
+
+3. **Immediate updates.** Update ExecPlan `Progress`, `Outcomes & Retrospective`, and status immediately after verification—before moving to the next task. Don't batch updates.
+
+4. **Implementation evidence.** When marking ExecPlans complete, include specific file paths and line numbers in the `Outcomes & Retrospective` section to document evidence.
+
+5. **Partial completion.** Mark ExecPlans as "Mostly Complete ⚠️" when core functionality is done but minor items remain. Document remaining work clearly.
+
+6. **Status accuracy.** ExecPlan status must match actual codebase state. If an ExecPlan says "Proposed" but implementation exists, update it immediately.
 
 
 
@@ -1694,6 +1360,189 @@ This project is a Better-T-Stack monorepo orchestrated by Turborepo and Bun work
 - Gate background schedulers behind env flags (e.g. `SCHED_REMIND=1`).
 - Treat `@alfred/auth/token` as the only source for tool token signing/verification.
 - Update `docs/alfred-prd.md` and `.ruler` guidance when milestones ship.
+- **Graceful degradation**: App must render without database or UV. Use `isDbAvailable()` and `isUvAvailable()` before starting dependent services. See `.ruler/graceful-degradation.md`.
+
+
+
+<!-- Source: .ruler/graceful-degradation.md -->
+
+# Graceful Degradation Patterns
+
+## Core Principle
+
+The application must gracefully handle missing external dependencies (database, UV, etc.) without crashing. Services should degrade gracefully, logging warnings instead of throwing errors.
+
+## Patterns
+
+### 1. Database Availability Checks
+
+**Pattern**: Check database availability before starting DB-dependent services.
+
+```typescript
+import { isDbAvailable } from "@alfred/api/utils/service-availability";
+
+// Check before starting DB-dependent workers
+isDbAvailable()
+  .then((dbOk) => {
+    if (!dbOk) {
+      logger.warn("db_unavailable_skipping_services", {
+        message: "Database unavailable - skipping DB-dependent services",
+      });
+      return;
+    }
+    // Start DB-dependent services
+  })
+  .catch((error) => {
+    logger.warn("db_availability_check_error", { error });
+  });
+```
+
+**When to use**:
+- Background workers (codex cleanup, plan resume, workflow rehydration)
+- Non-critical initialization code
+- Services that can operate without DB
+
+**When NOT to use**:
+- Critical user-facing features (use try-catch in handlers instead)
+- Real-time request handling (handle errors per-request)
+
+### 2. External Service Availability Checks
+
+**Pattern**: Check for external tools before initializing services.
+
+```typescript
+import { isUvAvailable } from "@alfred/api/utils/service-availability";
+
+if (isUvAvailable()) {
+  initializeVoicePools()
+    .then(() => {
+      startVoiceStreamingPrototype();
+    })
+    .catch((error) => {
+      logger.error("voice_pools_init_failed", { error });
+    });
+} else {
+  logger.warn("voice_pools_skipped_uv_missing", {
+    message: "UV not found - skipping voice pool initialization",
+  });
+}
+```
+
+**When to use**:
+- Optional features (voice pools, local models)
+- Development-only features
+- Features with clear fallbacks
+
+### 3. Error Classification
+
+**Pattern**: Use type guards to classify errors and handle appropriately.
+
+```typescript
+import { isDbConnectionError, isTransientError } from "@alfred/api/utils/service-availability";
+
+try {
+  await dbOperation();
+} catch (error) {
+  if (isDbConnectionError(error)) {
+    // Return graceful fallback
+    return { session: null, user: null };
+  }
+  if (isTransientError(error)) {
+    // Retry logic
+    return retry();
+  }
+  // Re-throw permanent errors
+  throw error;
+}
+```
+
+**Error Types**:
+- **Database connection errors**: ECONNREFUSED, password auth failed, connection refused
+- **Transient errors**: Timeouts, temporary failures (retryable)
+- **Permanent errors**: Validation errors, authorization failures (non-retryable)
+
+### 4. SSR-Safe Error Handling
+
+**Pattern**: Wrap handlers with error boundaries for SSR.
+
+```typescript
+async function safeHandler(request: Request): Promise<Response> {
+  try {
+    return await handler(request);
+  } catch (error) {
+    if (isDbConnectionError(error)) {
+      // Return graceful response instead of crashing SSR
+      return Response.json({ session: null, user: null }, { status: 200 });
+    }
+    throw error;
+  }
+}
+```
+
+**When to use**:
+- Route handlers in TanStack Start
+- Server functions that might be called during SSR
+- API endpoints that depend on external services
+
+## Anti-Patterns
+
+### ❌ Module-Level DB Access
+
+```typescript
+// BAD: DB access at module level crashes during SSR
+import { db } from "@alfred/db";
+const result = await db.select().from(users); // Crashes if DB unavailable
+```
+
+### ❌ Unhandled Promise Rejections
+
+```typescript
+// BAD: Unhandled rejection crashes the process
+resumeInterruptedPlans(tools); // No error handling
+```
+
+### ✅ Lazy Initialization
+
+```typescript
+// GOOD: Check availability before use
+async function getData() {
+  if (!(await isDbAvailable())) {
+    return null;
+  }
+  return await db.select().from(users);
+}
+```
+
+## Testing
+
+### Unit Tests
+
+Test graceful degradation scenarios:
+
+```typescript
+it("should skip DB-dependent services when DB unavailable", async () => {
+  resetDbAvailability();
+  initApiServices();
+  // Verify services are skipped, not crashed
+});
+```
+
+### Integration Tests
+
+Test app startup without dependencies:
+
+```typescript
+it("should render home page without DB", async () => {
+  // Start server without DB
+  // Verify SSR completes successfully
+});
+```
+
+## Related Rules
+
+- `.ruler/16-error-handling.md` - General error handling patterns
+- `.ruler/21-tanstack-start.md` - SSR-specific patterns
+- `.ruler/09-purity-and-performance.md` - Performance considerations
 
 
 
