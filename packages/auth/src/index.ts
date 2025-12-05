@@ -6,7 +6,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { passkey } from "better-auth/plugins/passkey";
 import { reactStartCookies } from "better-auth/react-start";
-import { setBiometricTicket } from "./biometric";
+import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
 const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
 const origin = baseUrl.replace(/\/$/, "");
@@ -61,6 +61,21 @@ export const auth = betterAuth({
                 return;
               }
               await setBiometricTicket(sessionId, 120);
+            }),
+          },
+          {
+            // Auto-grant bio ticket for email sign-in when BIO_AUTH_BYPASS is enabled
+            matcher: (ctx) => ctx.path === "/sign-in/email",
+            handler: createAuthMiddleware(async (ctx) => {
+              const session =
+                ctx.context.newSession?.session ??
+                ctx.context.session?.session ??
+                null;
+              const sessionId = session?.id || session?.token;
+              if (!sessionId) {
+                return;
+              }
+              await autoGrantBiometricIfBypassed(sessionId);
             }),
           },
         ],

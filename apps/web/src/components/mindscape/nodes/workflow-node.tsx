@@ -157,6 +157,7 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
     <MindscapeNode
       className="w-[400px]"
       id={id}
+      nodeType="workflow"
       selected={selected}
       title={validatedData.label ?? "Workflow"}
     >

@@ -7,7 +7,7 @@ import { RouteError } from "@/components/route-error";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/drive")({
+export const Route = createFileRoute("/_protected/drive")({
   component: DriveModeRoute,
   errorComponent: RouteError,
 });

@@ -36,6 +36,7 @@ import { MindscapeDetailPanel } from "./detail-panel";
 import { MindscapeInitializer } from "./initializer";
 import { LivingEdge } from "./living-edge";
 import { WorkflowManager } from "./monitor";
+import { NodePanel } from "./node-panel";
 import { ArtifactNode } from "./nodes/artifact-node";
 import { BookmarkNode } from "./nodes/bookmark-node";
 import { ChatNode } from "./nodes/chat-node";
@@ -618,6 +619,11 @@ function MindscapeCanvasInner({
           edges={visibleEdges}
           edgeTypes={edgeTypes}
           fitView
+          fitViewOptions={{
+            minZoom: 0.8,
+            maxZoom: 1.5,
+            padding: 0.3,
+          }}
           maxZoom={4}
           minZoom={0.1}
           nodes={visibleNodes}
@@ -752,6 +758,11 @@ function MindscapeCanvasInner({
         />
       </div>
       <MindscapeCommandPalette
+        nodes={nodes}
+        onFocus={focusAndCenter}
+        onSpawn={spawnNodeFromType}
+      />
+      <NodePanel
         nodes={nodes}
         onFocus={focusAndCenter}
         onSpawn={spawnNodeFromType}

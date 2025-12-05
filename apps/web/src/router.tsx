@@ -3,11 +3,13 @@ import Loader from "./components/loader";
 import { RouteError } from "./components/route-error";
 import "./index.css";
 import {
+  MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { handleAuthError } from "@/lib/auth-error-handler";
 import { createBrowserTrpcClient } from "@/lib/trpc-client";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
@@ -15,6 +17,11 @@ import { trpc } from "./utils/trpc";
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
+      // Handle auth errors first - redirects to login
+      if (handleAuthError(error)) {
+        return;
+      }
+      // Show generic error toast for other errors
       toast.error(error.message, {
         action: {
           label: "retry",
@@ -23,6 +30,12 @@ export const queryClient = new QueryClient({
           },
         },
       });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      // Handle auth errors for mutations too
+      handleAuthError(error);
     },
   }),
   defaultOptions: { queries: { staleTime: 60 * 1000 } },

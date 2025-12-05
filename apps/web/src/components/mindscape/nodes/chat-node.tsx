@@ -148,6 +148,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
         )
       }
       id={id}
+      nodeType="chat"
       selected={selected}
       title="Neural Stream"
     >

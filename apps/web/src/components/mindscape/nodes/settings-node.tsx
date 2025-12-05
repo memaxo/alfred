@@ -147,9 +147,10 @@ export function SettingsNode({ id, data, selected }: NodeProps) {
 
   return (
     <MindscapeNode
-      className="w-[420px] border-slate-500/20 bg-slate-950/10"
+      className="w-[420px]"
       headerActions={<Settings2 className="h-4 w-4 text-slate-200" />}
       id={id}
+      nodeType="settings"
       selected={selected}
       title="Settings"
     >

@@ -103,9 +103,10 @@ export function TodoNode({ id, data, selected }: NodeProps) {
 
   return (
     <MindscapeNode
-      className="w-[320px] border-emerald-500/20 bg-emerald-950/10"
+      className="w-[320px]"
       headerActions={<CheckSquare className="h-4 w-4 text-emerald-300" />}
       id={id}
+      nodeType="todo"
       selected={selected}
       title="Todos"
     >

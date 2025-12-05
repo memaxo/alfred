@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMindscapeStore } from "@/store/mindscape";
 import { useNodeFocus } from "../lod";
+import {
+  getNodeTier,
+  type MindscapeSpawnType,
+  type NodeTier,
+  tierStyles,
+} from "../spawn";
 
 export type MindscapeNodeProps = {
   id: string;
@@ -26,6 +32,10 @@ export type MindscapeNodeProps = {
     source?: boolean;
     target?: boolean;
   };
+  /** Node type for tier-based styling. If not provided, defaults to tertiary tier. */
+  nodeType?: MindscapeSpawnType;
+  /** Override tier directly */
+  tier?: NodeTier;
 };
 
 export function MindscapeNode({
@@ -37,15 +47,23 @@ export function MindscapeNode({
   selected,
   headerActions,
   handles = { source: true, target: true },
+  nodeType,
+  tier: tierOverride,
 }: MindscapeNodeProps) {
   const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
   const { isDimmed, isFocused } = useNodeFocus(id);
+
+  // Determine tier for styling
+  const tier = tierOverride ?? (nodeType ? getNodeTier(nodeType) : "tertiary");
+  const tierStyle = tierStyles[tier];
 
   return (
     <Node
       aria-label={title}
       className={cn(
-        "min-w-[300px] border border-white/10 bg-void-surface/40 backdrop-blur-xl transition-all duration-500 ease-fluid",
+        "min-w-[300px] border bg-void-surface/40 backdrop-blur-xl transition-all duration-500 ease-fluid",
+        tierStyle.border,
+        tierStyle.glow,
         selected &&
           "scale-[1.01] border-biolum shadow-[0_0_15px_rgba(var(--biolum-rgb),0.3)]",
         isDimmed && "scale-95 opacity-20 blur-sm grayscale",

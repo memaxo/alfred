@@ -11,7 +11,7 @@ const workflowSearchSchema = z.object({
   drawer: z.literal("1").optional(),
 });
 
-export const Route = createFileRoute("/workflow/$runId")({
+export const Route = createFileRoute("/_protected/workflow/$runId")({
   component: WorkflowRunRoute,
   validateSearch: workflowSearchSchema,
 });

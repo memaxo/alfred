@@ -1,5 +1,30 @@
 # Documentation Changelog
 
+## 2025-12-05 — VCR Integration Testing Infrastructure
+
+- Created comprehensive VCR (Video Cassette Recorder) testing infrastructure for AI providers:
+  - `packages/test-kit/src/vcr/` - Full VCR module with types, hashing, cassette I/O, and recorder
+  - Supports OpenAI, Anthropic, Google, and Cohere providers
+  - Automatic authorization header redaction for security
+  - Request matching by hash with configurable matchers
+- Added new integration tests with VCR recording:
+  - `packages/api/test/integration/openai-vcr.integration.test.ts` - OpenAI API recording/replay
+  - `packages/api/test/integration/workflow-pipeline.integration.test.ts` - Workflow streaming
+  - `packages/api/test/integration/voice-pipeline.integration.test.ts` - Voice pipeline (local models)
+  - `packages/api/test/integration/auth-flow.integration.test.ts` - Authentication flows
+- Added Playwright E2E tests:
+  - `apps/web/tests/auth.e2e.spec.ts` - 15 authentication tests
+  - `apps/web/tests/workflow-execution.e2e.spec.ts` - 10 workflow UI tests
+  - `apps/web/tests/settings.e2e.spec.ts` - 12 settings/preferences tests
+- Added cassette validation script: `scripts/validate-cassettes.ts`
+- Added new npm scripts:
+  - `test:integration:full` - Run all integration tests
+  - `test:vcr:record` - Run integration tests in VCR record mode
+  - `test:vcr:validate` - Validate existing cassettes
+- Updated CI pipeline (`.github/workflows/ci.yml`) with VCR validation and new test steps
+- Added `consumeRouteRateLimit` backward compatibility function in `packages/api/src/trpc.ts`
+- Created documentation: `docs/testing/vcr-integration-testing.md`
+
 ## 2025-11-26 — Documentation Expansion and Guides
 
 - Created comprehensive developer guides:

@@ -60,16 +60,85 @@ const spawnLabels: Record<MindscapeSpawnType, string> = {
   concept: "Concept",
 };
 
+/**
+ * Node hierarchy tiers - determines visual prominence and distance from orb
+ */
+export type NodeTier = "primary" | "secondary" | "tertiary";
+
+export const tierConfig: Record<
+  NodeTier,
+  {
+    types: readonly MindscapeSpawnType[];
+    radius: number;
+    glowIntensity: number;
+  }
+> = {
+  primary: {
+    types: ["chat", "droid"] as const,
+    radius: 200,
+    glowIntensity: 1.0,
+  },
+  secondary: {
+    types: ["workflow", "workflowlist", "note", "reminder", "todo"] as const,
+    radius: 350,
+    glowIntensity: 0.6,
+  },
+  tertiary: {
+    types: [
+      "settings",
+      "privacy",
+      "profile",
+      "integrations",
+      "timer",
+      "bookmark",
+      "deployment",
+      "concept",
+    ] as const,
+    radius: 500,
+    glowIntensity: 0.3,
+  },
+};
+
+/**
+ * Get the tier for a given spawn type
+ */
+export function getNodeTier(type: MindscapeSpawnType): NodeTier {
+  for (const [tier, config] of Object.entries(tierConfig)) {
+    if ((config.types as readonly string[]).includes(type)) {
+      return tier as NodeTier;
+    }
+  }
+  return "tertiary";
+}
+
+/**
+ * Fixed angles for primary nodes (in radians)
+ * Chat: right of orb (0), Droid: left of orb (PI)
+ */
+const primaryNodeAngles: Partial<Record<MindscapeSpawnType, number>> = {
+  chat: 0,
+  droid: Math.PI,
+};
+
+/**
+ * Track how many nodes of each tier have been spawned for angle distribution
+ */
+const tierSpawnCounts: Record<NodeTier, number> = {
+  primary: 0,
+  secondary: 0,
+  tertiary: 0,
+};
+
 export function formatSpawnLabel(type: MindscapeSpawnType): string {
   return spawnLabels[type];
 }
 
 export function createSpawnNode(
   type: MindscapeSpawnType,
-  nodeCount: number
+  _nodeCount: number
 ): Node<ArtifactData> | null {
   const id = `${type}-${nanoid(6)}`;
-  const position = getSpawnPosition(nodeCount);
+  const position = getSpawnPositionForType(type);
 
   switch (type) {
     case "chat":
@@ -218,13 +287,78 @@ export function createSpawnNode(
   }
 }
 
-function getSpawnPosition(nodeCount: number) {
-  const angle = (nodeCount % 12) * ((2 * Math.PI) / 12);
-  const ring = Math.floor(nodeCount / 12) + 1;
-  const radius = 320 + ring * 120;
+/**
+ * Get spawn position for a specific node type using tier-based layout
+ */
+function getSpawnPositionForType(type: MindscapeSpawnType) {
+  const tier = getNodeTier(type);
+  const config = tierConfig[tier];
+
+  // Primary nodes have fixed angles
+  const fixedAngle = primaryNodeAngles[type];
+  if (tier === "primary" && fixedAngle !== undefined) {
+    return {
+      x: Math.cos(fixedAngle) * config.radius,
+      y: Math.sin(fixedAngle) * config.radius,
+    };
+  }
+
+  // Secondary and tertiary nodes distribute evenly around their ring
+  const count = tierSpawnCounts[tier];
+  tierSpawnCounts[tier] = count + 1;
+
+  // Distribute nodes evenly, offset by tier to avoid overlaps
+  const nodesPerRing = tier === "secondary" ? 8 : 12;
+  const angleOffset = tier === "secondary" ? Math.PI / 8 : Math.PI / 12;
+  const angle =
+    angleOffset + (count % nodesPerRing) * ((2 * Math.PI) / nodesPerRing);
+
+  // Add slight radius variation for multiple rings
+  const ring = Math.floor(count / nodesPerRing);
+  const radius = config.radius + ring * 80;
 
   return {
     x: Math.cos(angle) * radius,
     y: Math.sin(angle) * radius,
   };
+}
+
+/**
+ * Reset spawn counts (call when clearing the canvas)
+ */
+export function resetSpawnCounts() {
+  tierSpawnCounts.primary = 0;
+  tierSpawnCounts.secondary = 0;
+  tierSpawnCounts.tertiary = 0;
+}
+
+/**
+ * CSS classes for tier-based visual hierarchy
+ */
+export const tierStyles: Record<
+  NodeTier,
+  { glow: string; border: string; color: string }
+> = {
+  primary: {
+    glow: "shadow-[0_0_30px_rgba(0,255,136,0.4)]",
+    border: "border-[#00FF88]/60",
+    color: "#00FF88",
+  },
+  secondary: {
+    glow: "shadow-[0_0_20px_rgba(255,255,255,0.2)]",
+    border: "border-white/30",
+    color: "#FFFFFF",
+  },
+  tertiary: {
+    glow: "shadow-[0_0_10px_rgba(255,255,255,0.1)]",
+    border: "border-white/15",
+    color: "#888888",
+  },
+};
+
+/**
+ * Get tier styling for a node type
+ */
+export function getTierStyles(type: MindscapeSpawnType) {
+  return tierStyles[getNodeTier(type)];
 }

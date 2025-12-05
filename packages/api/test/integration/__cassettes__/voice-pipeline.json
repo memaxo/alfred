@@ -1,0 +1,1039 @@
+{
+  "version": 2,
+  "name": "/Users/jackmazac/Development/alfred/packages/api/test/integration/__cassettes__/voice-pipeline.json",
+  "createdAt": "2025-12-05T02:21:20.967Z",
+  "interactions": [
+    {
+      "id": "6a858e9a-1af9-4f77-8b8d-77dfb7457fc2",
+      "timestamp": 1764901281614,
+      "provider": "openai",
+      "model": "openai/gpt-4o-mini",
+      "request": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "headers": {
+          "authorization": "[REDACTED]",
+          "content-type": "application/json",
+          "user-agent": "ai/6.0.0-beta.94 ai-sdk/provider-utils/3.0.12 runtime/bun/1.2.18"
+        },
+        "body": {
+          "model": "openai/gpt-4o-mini",
+          "messages": [
+            {
+              "role": "user",
+              "content": "What time is it?"
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "book",
+                "description": "Manage bookmarks (create, list, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "focus",
+                "description": "Toggle focus mode, adjust parameters, and inspect the current focus state.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start",
+                        "stop",
+                        "status",
+                        "set"
+                      ]
+                    },
+                    "durationMin": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 720
+                    },
+                    "note": {
+                      "type": "string",
+                      "maxLength": 280
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "handoff",
+                "description": "Escalate a requirement to the orchestrator planning workflow.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "requirement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "auto": {
+                      "default": "read",
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "low"
+                      ]
+                    },
+                    "authz": {
+                      "type": "string"
+                    },
+                    "workspace": {
+                      "type": "string"
+                    },
+                    "repoBase": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "requirement",
+                    "auto"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "home",
+                "description": "Interact with home status/control providers (skeleton).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "list",
+                        "status",
+                        "set"
+                      ]
+                    },
+                    "entity": {
+                      "type": "string"
+                    },
+                    "state": {},
+                    "authz": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "note",
+                "description": "Manage assistant notes (create, list, update, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "update",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "remind",
+                "description": "Manage reminders (create, list, due, complete, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "due",
+                        "complete",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "due": {
+                      "type": "string"
+                    },
+                    "before": {
+                      "type": "string"
+                    },
+                    "recurring": {
+                      "type": "string"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "timer",
+                "description": "Manage timers (start, list active, complete, cancel).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start",
+                        "active",
+                        "done",
+                        "cancel"
+                      ]
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 86400
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "web",
+                "description": "Guarded web access for the assistant agent (search and fetch with conservative limits).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "search",
+                        "fetch"
+                      ]
+                    },
+                    "q": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "topK": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3
+                    },
+                    "timeoutSec": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 15
+                    },
+                    "authz": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "mindscape_read",
+                "description": "Read the current state of the Mindscape (nodes and connections). Use this to understand the spatial layout of knowledge.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "description": "Optional search query to filter nodes by label",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "mindscape_connect",
+                "description": "Connect two nodes in the Mindscape with a directed edge.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "fromId": {
+                      "description": "ID of the source node",
+                      "type": "string"
+                    },
+                    "toId": {
+                      "description": "ID of the target node",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "default": "relates_to",
+                      "type": "string",
+                      "enum": [
+                        "relates_to",
+                        "blocks",
+                        "depends_on"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "fromId",
+                    "toId",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            }
+          ],
+          "tool_choice": "auto"
+        }
+      },
+      "response": {
+        "status": 401,
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "9a9011d1ced7d254-LAX",
+          "connection": "keep-alive",
+          "content-length": "254",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Fri, 05 Dec 2025 02:21:21 GMT",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Origin",
+          "x-content-type-options": "nosniff",
+          "x-envoy-upstream-service-time": "0",
+          "x-openai-proxy-wasm": "v0.1",
+          "x-request-id": "req_015694eb228b4db9af07a124db48cf52",
+          "set-cookie": "_cfuvid=scePM1nzIF3T7FW01UasoCFRwYpH_CdmnXl9gTbK_lI-1764901281614-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None"
+        },
+        "body": {
+          "error": {
+            "message": "Incorrect API key provided: test. You can find your API key at https://platform.openai.com/account/api-keys.",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "invalid_api_key"
+          }
+        }
+      },
+      "requestHash": "g2vwtc",
+      "durationMs": 277
+    },
+    {
+      "id": "5af7114b-25ad-4c87-8e5d-4b33eb8aaa49",
+      "timestamp": 1764901281697,
+      "provider": "openai",
+      "model": "openai/gpt-4o-mini",
+      "request": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "headers": {
+          "authorization": "[REDACTED]",
+          "content-type": "application/json",
+          "user-agent": "ai/6.0.0-beta.94 ai-sdk/provider-utils/3.0.12 runtime/bun/1.2.18"
+        },
+        "body": {
+          "model": "openai/gpt-4o-mini",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Hello!"
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "book",
+                "description": "Manage bookmarks (create, list, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "focus",
+                "description": "Toggle focus mode, adjust parameters, and inspect the current focus state.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start",
+                        "stop",
+                        "status",
+                        "set"
+                      ]
+                    },
+                    "durationMin": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 720
+                    },
+                    "note": {
+                      "type": "string",
+                      "maxLength": 280
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "handoff",
+                "description": "Escalate a requirement to the orchestrator planning workflow.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "requirement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "auto": {
+                      "default": "read",
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "low"
+                      ]
+                    },
+                    "authz": {
+                      "type": "string"
+                    },
+                    "workspace": {
+                      "type": "string"
+                    },
+                    "repoBase": {
+                      "type": "string"
+                    },
+                    "context": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "requirement",
+                    "auto"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "home",
+                "description": "Interact with home status/control providers (skeleton).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "list",
+                        "status",
+                        "set"
+                      ]
+                    },
+                    "entity": {
+                      "type": "string"
+                    },
+                    "state": {},
+                    "authz": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "note",
+                "description": "Manage assistant notes (create, list, update, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "update",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "remind",
+                "description": "Manage reminders (create, list, due, complete, delete).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "list",
+                        "due",
+                        "complete",
+                        "delete"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "due": {
+                      "type": "string"
+                    },
+                    "before": {
+                      "type": "string"
+                    },
+                    "recurring": {
+                      "type": "string"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "offset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "timer",
+                "description": "Manage timers (start, list active, complete, cancel).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start",
+                        "active",
+                        "done",
+                        "cancel"
+                      ]
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 86400
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "web",
+                "description": "Guarded web access for the assistant agent (search and fetch with conservative limits).",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "search",
+                        "fetch"
+                      ]
+                    },
+                    "q": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "topK": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3
+                    },
+                    "timeoutSec": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 15
+                    },
+                    "authz": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "mindscape_read",
+                "description": "Read the current state of the Mindscape (nodes and connections). Use this to understand the spatial layout of knowledge.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "description": "Optional search query to filter nodes by label",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "mindscape_connect",
+                "description": "Connect two nodes in the Mindscape with a directed edge.",
+                "parameters": {
+                  "$schema": "http://json-schema.org/draft-07/schema#",
+                  "type": "object",
+                  "properties": {
+                    "fromId": {
+                      "description": "ID of the source node",
+                      "type": "string"
+                    },
+                    "toId": {
+                      "description": "ID of the target node",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "default": "relates_to",
+                      "type": "string",
+                      "enum": [
+                        "relates_to",
+                        "blocks",
+                        "depends_on"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "fromId",
+                    "toId",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            }
+          ],
+          "tool_choice": "auto"
+        }
+      },
+      "response": {
+        "status": 401,
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "9a9011d24854d254-LAX",
+          "connection": "keep-alive",
+          "content-length": "254",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Fri, 05 Dec 2025 02:21:21 GMT",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Origin",
+          "x-content-type-options": "nosniff",
+          "x-envoy-upstream-service-time": "1",
+          "x-openai-proxy-wasm": "v0.1",
+          "x-request-id": "req_138769071986441d9201279a5177595a",
+          "set-cookie": "_cfuvid=oFae0bwrylDI5gCPmkFTt.qQUWLSxm7toG4PR6Of7uY-1764901281698-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None"
+        },
+        "body": {
+          "error": {
+            "message": "Incorrect API key provided: test. You can find your API key at https://platform.openai.com/account/api-keys.",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "invalid_api_key"
+          }
+        }
+      },
+      "requestHash": "a4vdm",
+      "durationMs": 75
+    }
+  ]
+}

@@ -9,6 +9,8 @@
     "./cognitive": "./src/cognitive/index.ts",
     "./physical": "./src/physical/index.ts",
     "./env": "./src/env/index.ts",
+    "./vcr": "./src/vcr/index.ts",
+    "./vcr/*": "./src/vcr/*",
     "./voice": "./src/voice/index.ts",
     "./voice/*": "./src/voice/*",
     "./voice/runtime-fixture": "./src/voice/runtime-fixture.ts",

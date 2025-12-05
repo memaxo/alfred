@@ -4,10 +4,10 @@ import { useMindscapeStore } from "@/store/mindscape";
 
 export type LODLevel = "tiny" | "small" | "medium" | "full";
 
-// Zoom thresholds
-const THRESHOLD_SMALL = 0.4;
-const THRESHOLD_MEDIUM = 0.8;
-const THRESHOLD_FULL = 1.5;
+// Zoom thresholds - lowered to show full orb at default zoom
+const THRESHOLD_SMALL = 0.2;
+const THRESHOLD_MEDIUM = 0.5;
+const THRESHOLD_FULL = 0.8;
 
 /**
  * React hook that returns the current Level of Detail (LOD)

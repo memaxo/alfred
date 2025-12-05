@@ -197,9 +197,10 @@ export function NoteNode({ id, data, selected }: NodeProps) {
   // LOD 2/3: Medium/Full - Original card logic
   return (
     <MindscapeNode
-      className="w-[360px] border-yellow-500/20 bg-yellow-950/10"
+      className="w-[360px]"
       headerActions={headerIcon}
       id={id}
+      nodeType="note"
       selected={selected}
       title={parsed.title?.trim() || "Untitled Note"}
     >

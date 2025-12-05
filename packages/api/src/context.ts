@@ -87,7 +87,23 @@ function resolveReferer(headers: Headers) {
   return headers.get("referer") ?? headers.get("referrer");
 }
 
+/**
+ * Check if test mode is enabled. Only allows test session bypass in non-production
+ * environments with explicit TEST_MODE or VITE_TEST_MODE flag.
+ */
+function isTestModeEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  const testMode = process.env.TEST_MODE ?? process.env.VITE_TEST_MODE;
+  return testMode === "true" || testMode === "1";
+}
+
 function parseTestSession(headers: Headers): AuthSession | null {
+  if (!isTestModeEnabled()) {
+    return null;
+  }
+
   const value = headers.get(TEST_SESSION_HEADER);
   if (!value) {
     return null;

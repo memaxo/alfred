@@ -35,7 +35,7 @@ type VoiceTelemetry = NonNullable<VoiceStats["telemetry"]>;
 type PoolStats = NonNullable<VoiceStats["sttPool"]>;
 type PoolProcess = PoolStats["health"][number];
 
-export const Route = createFileRoute("/admin/voice")({
+export const Route = createFileRoute("/_protected/admin/voice")({
   component: VoiceAdminRoute,
 });
 

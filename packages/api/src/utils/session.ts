@@ -1,4 +1,5 @@
 import type { auth } from "@alfred/auth";
+import type { Context } from "../context";
 
 type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
@@ -28,6 +29,21 @@ export function getSessionUser(
     roles: Array.isArray(user.roles) ? user.roles : undefined,
     scopes: Array.isArray(user.scopes) ? user.scopes : undefined,
   };
+}
+
+/**
+ * Extract the session ID from context.
+ * Better Auth stores session ID in different places depending on the auth flow.
+ * This helper provides a consistent way to get it without unsafe casts.
+ */
+export function getSessionId(ctx: Context): string | null {
+  if (!ctx.session) {
+    return null;
+  }
+  const sessionRecord = ctx.session.session as
+    | { id?: string; token?: string }
+    | undefined;
+  return sessionRecord?.id ?? sessionRecord?.token ?? null;
 }
 
 export function getSessionUserId(user: SessionUser | null): string {

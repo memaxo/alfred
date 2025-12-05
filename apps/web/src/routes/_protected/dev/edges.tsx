@@ -115,6 +115,6 @@ function EdgesPreview() {
   );
 }
 
-export const Route = createFileRoute("/dev/edges")({
+export const Route = createFileRoute("/_protected/dev/edges")({
   component: EdgesPreview,
 });

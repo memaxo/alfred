@@ -428,6 +428,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
           </div>
         }
         id={id}
+        nodeType="droid"
         selected={selected}
         title="Droid Exec"
       >

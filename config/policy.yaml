@@ -1,176 +1,37 @@
 # ALFRED Policy Configuration (RBAC + ABAC + Obligations)
+# Simplified for single-user context (Jack is the sole owner)
+#
+# Architecture:
+# 1. Default: Owner can do everything
+# 2. Sensitive actions require biometric verification (passkey)
+# 3. Deployment requires both biometric + manual confirmation
 
 roles:
   owner:
     scopes:
-      - assistant.read
-      - assistant.write
-      - assistant.escalate
-      - web.read
-      - note.read
-      - note.write
-      - remind.read
-      - remind.write
-      - timer.read
-      - timer.write
-      - book.read
-      - book.write
-      - slack.read
-      - slack.write
-      - home.read
-      - home.write
-      - focus.read
-      - focus.write
-      - orchestrator.read
-      - orchestrator.write
-      - workflow.plan
-      - droid.exec
-      - droid.read
-      - git.read
-      - git.write
-      - proxmox.read
-      - proxmox.write
-      - router.read
-      - router.write
-      - deploy.read
-      - deploy.write
-      - linear.read
-      - linear.write
-      - profile.read
-      - profile.write
-      - preference.read
-      - preference.write
-      - privacy.read
-      - privacy.write
-      - privacy.purge
-      - token.issue
-      - token.elevate
-      - eval.define
-      - eval.dataset
-      - eval.run
-
-  user:
-    scopes:
-      - assistant.read
-      - assistant.write
-      - assistant.escalate
-      - web.read
-      - note.read
-      - note.write
-      - remind.read
-      - remind.write
-      - timer.read
-      - timer.write
-      - book.read
-      - book.write
-      - profile.read
-      - profile.write
-      - preference.read
-      - preference.write
-      - privacy.read
-      - privacy.write
-      - privacy.purge
+      # Jack has all scopes - this is a personal assistant
+      - "*"
 
 rules:
-  - id: token-issue-owner
-    actions: ["token.issue"]
+  # Default allow for owner - covers all non-sensitive actions
+  - id: owner-allow-all
+    actions: ["*"]
     roles: ["owner"]
     effect: "allow"
+    priority: 0
 
-  - id: assistant-generate
-    actions: ["assistant.generate"]
-    roles: ["owner", "user"]
-    effect: "allow"
+  # ============================================
+  # Sensitive Actions Requiring Biometric
+  # ============================================
 
-  - id: assistant-stream
-    actions: ["assistant.stream"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: assistant-escalate
-    actions: ["assistant.escalate"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: linear-auth-owner
-    actions: ["linear.getAuthorizeUrl", "linear.oauthCallback"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: profile-write
-    actions: ["profile.write"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: preference-write
-    actions: ["preference.write"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: privacy-purge
-    actions: ["privacy.purge"]
-    roles: ["owner", "user"]
-    effect: "allow"
-
-  - id: allow-droid-exec-owner
-    actions: ["droid.exec"]
-    roles: ["owner"]
-    resource:
-      kind: "repo"
-    effect: "allow"
-
-  - id: git-read-owner
-    actions: ["git.status", "git.diff", "git.fetch"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: git-write-owner
-    actions:
-      [
-        "git.branch.create",
-        "git.branch.delete",
-        "git.branch.update",
-        "git.worktree.add",
-        "git.worktree.remove",
-        "git.commit",
-        "git.push",
-        "git.merge",
-        "git.reset.hard",
-      ]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: router-owner
-    actions: ["router.register", "router.update", "router.remove"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: docker-owner
-    actions:
-      [
-        "docker.build",
-        "docker.run",
-        "docker.stop",
-        "docker.rm",
-        "docker.inspect",
-        "docker.logs",
-        "docker.wait",
-        "docker.exec.probe",
-      ]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: ticket-owner
-    actions: ["ticket.*"]
-    roles: ["owner"]
-    effect: "allow"
-
+  # Elevated autonomy (medium/high) requires passkey
   - id: require-bio-droid-exec-autonomy
     actions: ["droid.exec"]
     roles: ["owner"]
     resource:
       kind: "repo"
     effect: "allow"
+    priority: 10
     conditions:
       - source: context
         field: auto
@@ -181,15 +42,12 @@ rules:
         metadata:
           code: requireBio
 
-  - id: workflow-plan-owner
-    actions: ["workflow.plan"]
-    roles: ["owner"]
-    effect: "allow"
-
+  # Workflow planning with elevated autonomy
   - id: workflow-plan-elevated
     actions: ["workflow.plan"]
     roles: ["owner"]
     effect: "allow"
+    priority: 10
     conditions:
       - source: context
         field: auto
@@ -200,25 +58,24 @@ rules:
         metadata:
           code: requireBio
 
+  # Token elevation requires audit acknowledgement
   - id: token-elevate-owner
     actions: ["token.elevate"]
     roles: ["owner"]
     effect: "allow"
+    priority: 10
     obligations:
       - type: confirmation
         reason: audit_required
         metadata:
           code: audit
 
-  - id: home-control-owner
-    actions: ["home.control"]
-    roles: ["owner"]
-    effect: "allow"
-
+  # Sensitive home controls (locks, garage, alarm)
   - id: home-control-sensitive-requires-bio
     actions: ["home.control"]
     roles: ["owner"]
     effect: "allow"
+    priority: 10
     conditions:
       - field: "entity"
         in: ["lock", "garage", "alarm"]
@@ -228,10 +85,12 @@ rules:
         metadata:
           code: requireBio
 
+  # Production deployments require biometric + manual confirmation
   - id: deploy-promote-owner
     actions: ["deploy.promote"]
     roles: ["owner"]
     effect: "allow"
+    priority: 10
     obligations:
       - type: biometric
         reason: deploy_promotion_passkey
@@ -242,51 +101,19 @@ rules:
         metadata:
           code: requireManual
 
-  - id: deploy-preview-owner
-    actions: ["deploy.preview"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: deploy-remove-owner
-    actions: ["deploy.remove"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: deploy-health-owner
-    actions: ["deploy.health"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: proxmox-power-owner
-    actions: ["proxmox.power"]
-    roles: ["owner"]
-    effect: "allow"
-
+  # Proxmox admin operations require biometric
   - id: proxmox-admin-requires-bio
     actions: ["proxmox.admin"]
     roles: ["owner"]
     effect: "allow"
+    priority: 10
     obligations:
       - type: biometric
         reason: proxmox_admin_passkey
         metadata:
           code: requireBio
 
-  - id: eval-define-owner
-    actions: ["eval.define"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: eval-dataset-owner
-    actions: ["eval.dataset"]
-    roles: ["owner"]
-    effect: "allow"
-
-  - id: eval-run-owner
-    actions: ["eval.run"]
-    roles: ["owner"]
-    effect: "allow"
-
+# Registered scopes (for reference, owner has "*")
 scopes:
   - assistant.read
   - assistant.write

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 
-export const Route = createFileRoute("/experimental/tune")({
+export const Route = createFileRoute("/_protected/experimental/tune")({
   component: VoiceTuner,
 });
 

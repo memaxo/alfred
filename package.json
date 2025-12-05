@@ -60,6 +60,9 @@
     "test:mindscape:integration": "bunx playwright test --config apps/web/playwright.config.ts --project=integration",
     "test:mindscape:e2e": "bunx playwright test --config apps/web/playwright.config.ts --project=e2e",
     "test:mindscape:all": "bunx playwright test --config apps/web/playwright.config.ts",
+    "test:integration:full": "bun test packages/api/test/integration/*.integration.test.ts",
+    "test:vcr:record": "VCR_RECORD=1 bun run test:integration:full",
+    "test:vcr:validate": "bun scripts/validate-cassettes.ts",
     "workflow:cleanup": "bun packages/api/src/workers/workflow-suspension-cleanup.ts",
     "tools:sync-js": "bun scripts/tools/sync-js.ts",
     "tools:sync-js:check": "bun scripts/tools/sync-js.ts --check"

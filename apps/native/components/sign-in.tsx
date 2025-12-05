@@ -13,6 +13,7 @@ export function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
@@ -40,6 +41,41 @@ export function SignIn() {
       }
     );
   };
+
+  const handlePasskeyLogin = async () => {
+    if (!email) {
+      setError("Please enter your email to use passkey sign-in");
+      return;
+    }
+
+    setIsPasskeyLoading(true);
+    setError(null);
+
+    try {
+      await authClient.signIn.passkey(
+        { email },
+        {
+          onError: (error) => {
+            setError(error.error?.message || "Passkey sign-in failed");
+            setIsPasskeyLoading(false);
+          },
+          onSuccess: () => {
+            setEmail("");
+            setPassword("");
+            queryClient.refetchQueries();
+          },
+          onFinished: () => {
+            setIsPasskeyLoading(false);
+          },
+        }
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Passkey sign-in failed");
+      setIsPasskeyLoading(false);
+    }
+  };
+
+  const isAnyLoading = isLoading || isPasskeyLoading;
 
   return (
     <View className="mt-6 rounded-lg border border-border bg-card p-4">
@@ -73,14 +109,34 @@ export function SignIn() {
       />
 
       <TouchableOpacity
-        className="flex-row items-center justify-center rounded-md bg-primary p-4"
-        disabled={isLoading}
+        className="mb-3 flex-row items-center justify-center rounded-md bg-primary p-4"
+        disabled={isAnyLoading}
         onPress={handleLogin}
       >
         {isLoading ? (
           <ActivityIndicator color="#fff" size="small" />
         ) : (
           <Text className="font-medium text-primary-foreground">Sign In</Text>
+        )}
+      </TouchableOpacity>
+
+      <View className="mb-3 flex-row items-center">
+        <View className="h-px flex-1 bg-border" />
+        <Text className="mx-4 text-muted-foreground text-sm">or</Text>
+        <View className="h-px flex-1 bg-border" />
+      </View>
+
+      <TouchableOpacity
+        className="flex-row items-center justify-center rounded-md border border-border bg-card p-4"
+        disabled={isAnyLoading}
+        onPress={handlePasskeyLogin}
+      >
+        {isPasskeyLoading ? (
+          <ActivityIndicator color="#6366f1" size="small" />
+        ) : (
+          <Text className="font-medium text-foreground">
+            Sign in with Face ID / Touch ID
+          </Text>
         )}
       </TouchableOpacity>
     </View>

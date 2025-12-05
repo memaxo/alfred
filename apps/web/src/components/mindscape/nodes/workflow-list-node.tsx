@@ -158,9 +158,10 @@ export function WorkflowListNode({
   return (
     <>
       <MindscapeNode
-        className="w-[420px] border-white/10 bg-void-surface/30"
+        className="w-[420px]"
         headerActions={<ListChecks className="h-4 w-4 text-biolum" />}
         id={id}
+        nodeType="workflowlist"
         selected={selected}
         title="Workflows"
       >

@@ -8,6 +8,7 @@ import {
   useMindscapeStore,
 } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
+import { tierConfig } from "./spawn";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type NoteListItem = RouterOutputs["note"]["list"][number];
@@ -86,10 +87,12 @@ export function MindscapeInitializer() {
 
     if (hasOrb && !hasChat) {
       const chatId = nanoid();
+      // Primary tier: radius 200, angle 0 (right of orb)
+      const primaryRadius = tierConfig.primary.radius;
       addArtifact({
         id: chatId,
         type: "chat",
-        position: { x: 500, y: 0 },
+        position: { x: primaryRadius, y: 0 },
         data: {
           label: "Neural Stream",
           messages: [],
@@ -119,10 +122,12 @@ export function MindscapeInitializer() {
       return;
     }
 
+    // Primary tier: radius 200, angle PI (left of orb)
+    const primaryRadius = tierConfig.primary.radius;
     addArtifact({
       id: "droid-exec",
       type: "droid",
-      position: { x: -240, y: 220 },
+      position: { x: -primaryRadius, y: 0 },
       data: {
         label: "Droid Exec",
         prompt: "",
@@ -141,16 +146,26 @@ export function MindscapeInitializer() {
       return;
     }
 
+    // Secondary tier: radius 350, distributed around top-right quadrant
+    const secondaryRadius = tierConfig.secondary.radius;
     notes.forEach((note: NoteListItem, index: number) => {
       const noteNodeId = `note-${note.id}`;
       if (nodeIds.includes(noteNodeId)) {
         return;
       }
 
+      // Distribute notes in top-right quadrant (angle -PI/4 to PI/4)
+      const angleOffset = -Math.PI / 4;
+      const angleStep = Math.PI / 8;
+      const angle = angleOffset + index * angleStep;
+
       addArtifact({
         id: noteNodeId,
         type: "note",
-        position: { x: 800 + index * 30, y: -200 + index * 60 },
+        position: {
+          x: Math.cos(angle) * secondaryRadius,
+          y: Math.sin(angle) * secondaryRadius,
+        },
         data: {
           label: note.title?.trim() || "Untitled Note",
           noteId: note.id,
@@ -171,6 +186,8 @@ export function MindscapeInitializer() {
       return;
     }
 
+    // Secondary tier: radius 350, distributed around top-left quadrant
+    const secondaryRadius = tierConfig.secondary.radius;
     reminders.forEach((reminder: DueReminderItem, index: number) => {
       const reminderNodeId = `reminder-${reminder.id}`;
       if (nodeIds.includes(reminderNodeId)) {
@@ -184,10 +201,18 @@ export function MindscapeInitializer() {
       const isDue = dueIso ? new Date(dueIso).getTime() <= Date.now() : false;
       const status = reminder.firedAt ? "fired" : isDue ? "due" : "scheduled";
 
+      // Distribute reminders in top-left quadrant (angle 3*PI/4 to 5*PI/4)
+      const angleOffset = (3 * Math.PI) / 4;
+      const angleStep = Math.PI / 8;
+      const angle = angleOffset + index * angleStep;
+
       addArtifact({
         id: reminderNodeId,
         type: "reminder",
-        position: { x: -800 - index * 30, y: -200 + index * 60 },
+        position: {
+          x: Math.cos(angle) * secondaryRadius,
+          y: Math.sin(angle) * secondaryRadius,
+        },
         data: {
           label: reminder.title || "Reminder",
           reminderId: reminder.id,
@@ -314,10 +339,19 @@ export function MindscapeInitializer() {
               ? props.workflowRunId
               : undefined;
 
+      // Tertiary tier: radius 500, distributed around bottom quadrant
+      const tertiaryRadius = tierConfig.tertiary.radius;
+      const angleOffset = Math.PI / 2; // Start at bottom
+      const angleStep = Math.PI / 6;
+      const angle = angleOffset + index * angleStep;
+
       addArtifact({
         id: flowId,
         type: "knowledge",
-        position: { x: 200 + index * 40, y: 200 + index * 40 },
+        position: {
+          x: Math.cos(angle) * tertiaryRadius,
+          y: Math.sin(angle) * tertiaryRadius,
+        },
         data: {
           type: "knowledge",
           label: node.label,
@@ -376,10 +410,19 @@ export function MindscapeInitializer() {
         },
       };
 
+      // Tertiary tier: radius 500, distributed around bottom-right
+      const tertiaryRadius = tierConfig.tertiary.radius;
+      const angleOffset = Math.PI / 3; // Start at bottom-right
+      const angleStep = Math.PI / 8;
+      const angle = angleOffset + index * angleStep;
+
       addArtifact({
         id: flowId,
         type: "knowledge",
-        position: { x: 400 + index * 40, y: 350 + index * 40 },
+        position: {
+          x: Math.cos(angle) * tertiaryRadius,
+          y: Math.sin(angle) * tertiaryRadius,
+        },
         data: knowledgeData as ArtifactData,
       });
       if (node.id.dbId) {

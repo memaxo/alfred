@@ -1,5 +1,8 @@
 import type { inferRouterOutputs } from "@trpc/server";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -13,8 +16,83 @@ import { authClient } from "@/lib/auth-client";
 import type { TRPCAppRouter } from "@/utils/trpc";
 import { queryClient, trpc } from "@/utils/trpc";
 
+type Passkey = {
+  id: string;
+  name: string | null;
+  deviceType?: string;
+  createdAt?: string;
+};
+
 export default function ProfileTab() {
   const { data: session } = authClient.useSession();
+  const [passkeys, setPasskeys] = useState<Passkey[]>([]);
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(false);
+  const [isAddingPasskey, setIsAddingPasskey] = useState(false);
+
+  const loadPasskeys = useCallback(async () => {
+    setIsLoadingPasskeys(true);
+    try {
+      const result = await authClient.passkey.listUserPasskeys();
+      if (result.data) {
+        setPasskeys(result.data as Passkey[]);
+      }
+    } catch {
+      // Passkeys may not be available on this device
+    } finally {
+      setIsLoadingPasskeys(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      loadPasskeys();
+    }
+  }, [session?.user, loadPasskeys]);
+
+  const handleAddPasskey = async () => {
+    setIsAddingPasskey(true);
+    try {
+      const result = await authClient.passkey.addPasskey({
+        name: `Device ${new Date().toLocaleDateString()}`,
+      });
+      if (result.data) {
+        Alert.alert("Success", "Passkey added successfully");
+        loadPasskeys();
+      }
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Failed to add passkey"
+      );
+    } finally {
+      setIsAddingPasskey(false);
+    }
+  };
+
+  const handleDeletePasskey = (passkeyId: string, name: string | null) => {
+    Alert.alert(
+      "Delete Passkey",
+      `Are you sure you want to delete "${name || "this passkey"}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await authClient.passkey.deletePasskey({ id: passkeyId });
+              loadPasskeys();
+            } catch (err) {
+              Alert.alert(
+                "Error",
+                err instanceof Error ? err.message : "Failed to delete passkey"
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
   type PrivateDataOutput = RouterOutputs["privateData"];
@@ -175,6 +253,64 @@ export default function ProfileTab() {
               </Text>
             </View>
           )}
+        </View>
+
+        <View className="mb-6 rounded-lg border border-border p-4">
+          <Text className="mb-3 font-medium text-foreground">
+            Security - Passkeys
+          </Text>
+          <Text className="mb-4 text-muted-foreground text-sm">
+            Passkeys let you sign in with Face ID or Touch ID instead of a
+            password.
+          </Text>
+
+          {isLoadingPasskeys ? (
+            <ActivityIndicator size="small" />
+          ) : passkeys.length > 0 ? (
+            <View className="mb-4 space-y-2">
+              {passkeys.map((pk) => (
+                <View
+                  className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
+                  key={pk.id}
+                >
+                  <View className="flex-1">
+                    <Text className="font-medium text-foreground">
+                      {pk.name || "Unnamed Device"}
+                    </Text>
+                    {pk.createdAt && (
+                      <Text className="text-muted-foreground text-xs">
+                        Added {new Date(pk.createdAt).toLocaleDateString()}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    className="rounded-md bg-destructive/10 px-3 py-2"
+                    onPress={() => handleDeletePasskey(pk.id, pk.name)}
+                  >
+                    <Text className="text-destructive text-sm">Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text className="mb-4 text-muted-foreground text-sm">
+              No passkeys registered yet.
+            </Text>
+          )}
+
+          <TouchableOpacity
+            className="flex-row items-center justify-center rounded-md bg-primary px-4 py-3"
+            disabled={isAddingPasskey}
+            onPress={handleAddPasskey}
+          >
+            {isAddingPasskey ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text className="font-medium text-primary-foreground">
+                Add Passkey (Face ID / Touch ID)
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </Container>

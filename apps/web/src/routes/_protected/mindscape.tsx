@@ -12,7 +12,7 @@ const mindscapeSearchSchema = z.object({
   ragDoc: z.string().uuid().optional(),
 });
 
-export const Route = createFileRoute("/mindscape")({
+export const Route = createFileRoute("/_protected/mindscape")({
   component: MindscapeRoute,
   validateSearch: mindscapeSearchSchema,
   loader: () => getInitialMindscapeFrame(),

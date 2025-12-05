@@ -5,7 +5,7 @@ import { RouteError } from "@/components/route-error";
 import { Viz } from "@/components/viz";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 
-export const Route = createFileRoute("/voice-s2s")({
+export const Route = createFileRoute("/_protected/voice-s2s")({
   component: VoiceS2SRouteView,
   errorComponent: RouteError,
 });

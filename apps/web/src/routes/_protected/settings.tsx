@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_protected/settings")({
   component: SettingsRoute,
 });
 

@@ -219,9 +219,10 @@ export function ReminderNode({ id, data, selected }: NodeProps) {
 
   return (
     <MindscapeNode
-      className="w-[320px] border-blue-500/20 bg-blue-950/10"
+      className="w-[320px]"
       headerActions={<Bell className="h-4 w-4 text-blue-400" />}
       id={id}
+      nodeType="reminder"
       selected={selected}
       title={parsed.title?.trim() || "Reminder"}
     >

@@ -299,6 +299,14 @@ jobs:
         run: bun scripts/check-tmux-leaks.ts
         continue-on-error: true
 
+      - name: Validate VCR cassettes
+        run: bun run test:vcr:validate
+        continue-on-error: true
+
+      - name: Full integration tests
+        run: bun run test:integration:full
+        continue-on-error: true
+
   e2e:
     name: E2E Tests
     needs:
@@ -327,6 +335,18 @@ jobs:
         run: |
           cd apps/web
           bun run test:e2e:auto
+
+      - name: Run Auth E2E
+        run: bunx playwright test apps/web/tests/auth.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        continue-on-error: true
+
+      - name: Run Workflow E2E
+        run: bunx playwright test apps/web/tests/workflow-execution.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        continue-on-error: true
+
+      - name: Run Settings E2E
+        run: bunx playwright test apps/web/tests/settings.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        continue-on-error: true
 
       - name: No-DB smoke test
         run: |

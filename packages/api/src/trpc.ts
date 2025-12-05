@@ -86,46 +86,58 @@ export type AuthedContext = {
   policy?: Context["policy"];
 };
 
-// Simple in-memory rate limiter keyed by user + procedure per minute
-type Bucket = { count: number; resetAt: number };
-const buckets = new Map<string, Bucket>();
-const windowMs = 60_000;
+// Simple global rate limiter for single-user context
+// 1000 requests per minute is plenty for a personal assistant
+let requestCount = 0;
+let resetTime = Date.now() + 60_000;
+const RATE_LIMIT = 1000;
+
 function getLimitPerMinute() {
   const raw = process.env.ROUTE_RATE_LIMIT_PER_MINUTE;
-  const n = Number.parseInt(raw ?? "60", 10);
-  return Math.max(1, Number.isFinite(n) ? n : 60);
+  const n = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : RATE_LIMIT;
 }
 
-function rateKey(userId: string | null, procedure?: string, type?: string) {
-  return [userId ?? "anon", procedure ?? "unknown", type ?? "unknown"].join(
-    ":"
-  );
-}
-
-export async function consumeRouteRateLimit(
-  userId: string | null,
-  procedure?: string,
-  type?: string
-): Promise<void> {
-  const key = rateKey(userId, procedure, type);
+export const rateLimit = t.middleware(async ({ path, next }) => {
   const now = Date.now();
-  const bucket = buckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-  } else if (bucket.count + 1 > getLimitPerMinute()) {
+
+  // Reset counter at the start of each minute window
+  if (now > resetTime) {
+    requestCount = 0;
+    resetTime = now + 60_000;
+  }
+
+  // Increment and check limit
+  if (++requestCount > getLimitPerMinute()) {
     const m = await getMetrics();
-    m?.rateLimitHitsTotal.inc({ procedure: procedure ?? "unknown" });
+    m?.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
     throw new TRPCError({
-      code: "TOO_MANY_REQUESTS" as any,
+      code: "TOO_MANY_REQUESTS" as TRPCError["code"],
       message: "rate_limited",
     });
-  } else {
-    bucket.count++;
   }
-}
 
-export const rateLimit = t.middleware(async ({ ctx, path, type, next }) => {
-  const userId = (ctx.session as any)?.user?.id ?? null;
-  await consumeRouteRateLimit(userId, path, type);
   return next();
 });
+
+/**
+ * Consumes the route rate limit.
+ * Simplified for single-user context - just increments global counter.
+ * @deprecated Use rateLimit middleware instead
+ */
+export async function consumeRouteRateLimit(
+  _routeId: string,
+  _sessionId?: string | null
+): Promise<void> {
+  const now = Date.now();
+  if (now > resetTime) {
+    requestCount = 0;
+    resetTime = now + 60_000;
+  }
+  if (++requestCount > getLimitPerMinute()) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS" as TRPCError["code"],
+      message: "rate_limited",
+    });
+  }
+}
