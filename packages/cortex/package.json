@@ -1,0 +1,47 @@
+{
+  "name": "@alfred/cortex",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./engine": {
+      "types": "./dist/engine.d.ts",
+      "default": "./src/engine.ts"
+    },
+    "./math": {
+      "types": "./dist/math/index.d.ts",
+      "default": "./src/math/index.ts"
+    },
+    "./coordinate": {
+      "types": "./dist/coordinate.d.ts",
+      "default": "./src/coordinate.ts"
+    },
+    "./systems/*": {
+      "types": "./dist/systems/*.d.ts",
+      "default": "./src/systems/*.ts"
+    },
+    "./fallback/*": {
+      "types": "./dist/fallback/*.d.ts",
+      "default": "./src/fallback/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@alfred/type": "workspace:*"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}
