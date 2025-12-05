@@ -219,6 +219,107 @@ await supersededEdge(oldEdgeId, { weight: 0.9 });
 
 **Metrics**: `alfred_bitemporal_edge_operations_total`, `alfred_bitemporal_historical_queries_total`
 
+## Explicit Memory Tools
+
+The agent has access to explicit memory tools that provide direct control over the knowledge graph and conversation history. These tools enable the agent to actively manage memories rather than relying solely on implicit background processing.
+
+**Location**: `packages/agent/assistant/src/tool/memory/`
+
+### Available Tools
+
+| Tool | Description | Key Operations |
+|------|-------------|----------------|
+| `memory_search` | Semantic search through memories | Query embedding, similarity scoring, top-K retrieval |
+| `memory_retrieve` | Get specific memory by ID | Full details, optional neighbor expansion |
+| `memory_update` | Update memory metadata | Confidence, properties, label |
+| `memory_remove` | Remove a memory | Soft delete (archive) or hard delete |
+| `memory_boost` | Reinforce a memory | Increase confidence by configurable amount |
+| `memory_traverse` | Walk the knowledge graph | Simple BFS or semantic DSA-BFS traversal |
+| `memory_history` | Review conversation history | List conversations, get messages, search |
+| `memory_stats` | System health metrics | Node counts, confidence distribution, access patterns |
+
+### Usage Examples
+
+#### Semantic Search
+```typescript
+// Agent can search memories by meaning
+const result = await memory_search({
+  query: "user's preferred programming languages",
+  resource: "user",
+  topK: 10,
+  minScore: 0.5
+});
+```
+
+#### Memory Reinforcement
+```typescript
+// When agent confirms information is correct, boost confidence
+await memory_boost({
+  id: nodeId,
+  amount: 0.15,
+  reason: "User confirmed this preference"
+});
+```
+
+#### Graph Traversal
+```typescript
+// Explore related knowledge using semantic DSA-BFS
+const result = await memory_traverse({
+  startId: factId,
+  query: "related programming concepts",
+  maxDepth: 3,
+  direction: "both"
+});
+```
+
+#### Conversation Review
+```typescript
+// Review past conversations for context
+const history = await memory_history({
+  userId: "user-1",
+  conversationId: conversationId,
+  limit: 20,
+  search: "project requirements"
+});
+```
+
+### Tool Registration
+
+Memory tools are automatically registered in `packages/agent/src/v6.ts`:
+
+```typescript
+import { memoryTools } from "../assistant/src/tool/memory";
+
+const assistantToolSources: LegacyTool[] = [
+  // ... other tools
+  ...memoryTools,
+];
+```
+
+### Metrics
+
+Memory tool operations emit Prometheus metrics:
+
+- `alfred_memory_tool_calls_total{tool, status}` - Tool call counts
+- `alfred_memory_search_latency_seconds` - Search latency
+- `alfred_memory_search_results_count` - Results per search
+- `alfred_memory_traverse_depth` - Traversal depth reached
+- `alfred_memory_boosts_total` - Boost operations
+- `alfred_memory_removals_total{type}` - Removals by type (archived/deleted)
+
+### Testing
+
+```bash
+# Run memory tool tests
+cd packages/agent && bun test test/tool/memory.test.ts
+```
+
+The test suite includes 44 tests covering:
+- Embedding utilities (embedQuery, embedTexts, normalizeEmbedding)
+- Tool input validation (Zod schemas)
+- Tool execution with mocked dependencies
+- Tool metadata verification
+
 ## Prometheus Metrics
 
 All new metrics are prefixed with `alfred_` and registered in `packages/api/src/metrics.ts`:

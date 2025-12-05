@@ -1,5 +1,27 @@
 # Documentation Changelog
 
+## 2025-12-05 — Explicit Memory Tools for Agent
+
+- Implemented 8 explicit memory tools giving the agent direct control over the knowledge graph:
+  - `memory_search` - Semantic search with on-the-fly query embedding
+  - `memory_retrieve` - Get memory by ID with optional neighbor expansion
+  - `memory_update` - Update confidence, properties, or label
+  - `memory_remove` - Soft delete (archive) or hard delete
+  - `memory_boost` - Reinforce memories by increasing confidence
+  - `memory_traverse` - Walk knowledge graph with BFS or semantic DSA-BFS
+  - `memory_history` - Review past conversation history
+  - `memory_stats` - System health metrics and confidence distribution
+- Added Prometheus metrics for memory tool operations:
+  - `alfred_memory_tool_calls_total{tool, status}`
+  - `alfred_memory_search_latency_seconds`
+  - `alfred_memory_search_results_count`
+  - `alfred_memory_traverse_depth`
+  - `alfred_memory_boosts_total`
+  - `alfred_memory_removals_total{type}`
+- Created comprehensive unit tests (44 tests) in `packages/agent/test/tool/memory.test.ts`
+- Updated `docs/guides/memory-system.md` with explicit memory tools documentation
+- Updated `docs/alfred-prd.md` Phase 4.3 and Architecture Decision Log
+
 ## 2025-12-05 — VCR Integration Testing Infrastructure
 
 - Created comprehensive VCR (Video Cassette Recorder) testing infrastructure for AI providers:

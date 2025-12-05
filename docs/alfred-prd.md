@@ -209,6 +209,15 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [ ] Implement `home.ts` tool for Home Assistant integration - **SKELETON ONLY** (`packages/agent/assistant/src/tool/home.ts` throws `"home_tool_not_implemented"`)
 - [x] Wire focus mode to response templates and policy (`packages/api/src/voice/assistant.ts` line 118-124)
 - [x] Add tool usage tracking to learning system (`packages/runtime/src/engines/learning.ts`, `packages/agent/src/orchestrator/learning-worker.ts`)
+- [x] **Implement explicit memory tools** (`packages/agent/assistant/src/tool/memory/`) - 8 tools for agent-controlled memory management:
+  - `memory_search` - Semantic search with on-the-fly query embedding
+  - `memory_retrieve` - Get memory by ID with neighbor expansion
+  - `memory_update` - Update confidence/properties/label
+  - `memory_remove` - Soft delete (archive) or hard delete
+  - `memory_boost` - Reinforce memories by increasing confidence
+  - `memory_traverse` - Walk knowledge graph (BFS or semantic DSA-BFS)
+  - `memory_history` - Review conversation history
+  - `memory_stats` - System health metrics
 
 ### Phase 5 — Workflow Capabilities (Week 9-11)
 
@@ -423,6 +432,14 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 **Implementation**: React Flow based canvas, shared `useChatLogic` hook, `Cmd+M` global toggle.
 **Impact**: Enhanced user capability to manage complex tasks and visualize agent reasoning.
 **Status**: ✅ Complete (2025-11-20)
+
+### 2025-12: Explicit Memory Tools
+**Decision**: Create suite of explicit memory tools for agent-controlled memory management
+**Rationale**: Background implicit memory processing is insufficient for complex tasks. Agent needs direct control to search, update, boost, remove, and traverse memories based on context.
+**Implementation**: 8 separate tools (`memory_search`, `memory_retrieve`, `memory_update`, `memory_remove`, `memory_boost`, `memory_traverse`, `memory_history`, `memory_stats`) with full embedding access for semantic operations.
+**Alternatives Considered**: Single unified tool (rejected - poor discoverability), read-only tools (rejected - agent needs to reinforce/correct memories)
+**Impact**: Agent can actively manage its knowledge base, improving accuracy through explicit reinforcement and correction.
+**Status**: ✅ Complete (2025-12-04)
 
 ## Notes
 
