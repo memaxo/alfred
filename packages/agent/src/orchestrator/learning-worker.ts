@@ -9,10 +9,14 @@ import {
   upsertEdges,
   upsertNodes,
 } from "@alfred/db/repo/graph/index";
+import { memoryNodes } from "@alfred/db/schema/graph";
 import { workflowRuns } from "@alfred/db/schema/workflow";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import { knowledgeHash } from "@alfred/knowledge/hypergraph";
-import { getOntologyKnowledge } from "@alfred/knowledge/ontology";
+import {
+  getOntologyKnowledge,
+  SEED_CONFIDENCE,
+} from "@alfred/knowledge/ontology";
 import { deriveAlternativeFacts } from "@alfred/knowledge/reasoning/alternatives";
 import { deriveCausalityFromText } from "@alfred/knowledge/reasoning/causality";
 import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
@@ -263,6 +267,80 @@ async function processDreaming() {
   }
 }
 
+/**
+ * Learn domain classification from user correction.
+ * Creates high-confidence domain association node in the graph.
+ *
+ * @param text - The text that was classified
+ * @param correctDomain - The correct domain (user-provided)
+ * @param incorrectDomain - The incorrect domain that was classified (optional)
+ */
+export async function learnDomainCorrection(
+  text: string,
+  correctDomain: string,
+  incorrectDomain?: string
+): Promise<void> {
+  logger.info("learning_worker_domain_correction", {
+    textLength: text.length,
+    correctDomain,
+    incorrectDomain,
+  });
+
+  try {
+    // Generate embedding for semantic similarity matching
+    const embeddings = await embedMany([text]);
+    const embedding = embeddings[0];
+
+    // Create hash for the domain association
+    const hashInput = `domain:${text.substring(0, 500)}:${correctDomain}`;
+    const hash = createHash("sha256").update(hashInput).digest("hex");
+
+    // Upsert correct domain association with high confidence
+    await upsertNodes([
+      {
+        resource: "user",
+        hash,
+        kind: "domain_association",
+        label: text.substring(0, 200),
+        properties: {
+          domain: correctDomain,
+          confidence: 0.9, // High confidence for user corrections
+          source: "correction",
+          correctedFrom: incorrectDomain ?? null,
+          correctedAt: new Date().toISOString(),
+        },
+        embedding,
+      },
+    ]);
+
+    // If there was an incorrect classification, decay its confidence
+    if (incorrectDomain) {
+      // Find existing association nodes for the incorrect domain
+      const incorrectHash = createHash("sha256")
+        .update(`domain:${text.substring(0, 500)}:${incorrectDomain}`)
+        .digest("hex");
+
+      // We don't have a direct lookup by hash, but the upsert will handle deduplication
+      // The next decay cycle will naturally lower confidence on unused associations
+      logger.debug("learning_worker_incorrect_domain_noted", {
+        incorrectDomain,
+        incorrectHash,
+      });
+    }
+
+    logger.info("learning_worker_domain_correction_complete", {
+      correctDomain,
+      hash,
+    });
+  } catch (error) {
+    logger.error("learning_worker_domain_correction_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      correctDomain,
+    });
+    throw error;
+  }
+}
+
 async function processMemoryMaintenance(config: LearningWorkerConfig) {
   logger.debug("learning_worker_maintenance_started");
   const stopTimer = metrics.memoryMaintenanceDurationSeconds.startTimer();
@@ -316,6 +394,10 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       metrics.memoryNodesCleanedTotal.inc(deletedCount);
       logger.info("learning_worker_cleanup", { count: deletedCount });
     }
+
+    // 4. Decay seed nodes that have learned overrides
+    // Seed nodes with higher-confidence learned equivalents should decay faster
+    await decaySeedNodesWithLearnedOverrides(config);
   } catch (error) {
     logger.warn("learning_worker_maintenance_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -325,13 +407,93 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
   }
 }
 
+/**
+ * Decay seed nodes that have been superseded by learned knowledge.
+ * When a domain_association with source="correction" exists with confidence >= 0.8,
+ * any corresponding seed nodes should decay faster.
+ */
+async function decaySeedNodesWithLearnedOverrides(
+  config: LearningWorkerConfig
+): Promise<void> {
+  try {
+    // Find seed nodes (source="seed") in the domain_association kind
+    const seedNodes = await db
+      .select()
+      .from(memoryNodes)
+      .where(
+        and(
+          eq(memoryNodes.kind, "domain_association"),
+          sql`${memoryNodes.properties}->>'source' = 'seed'`,
+          sql`(${memoryNodes.properties}->>'confidence')::numeric > ${config.confidenceFloor}`
+        )
+      )
+      .limit(100);
+
+    if (seedNodes.length === 0) {
+      return;
+    }
+
+    // For each seed node, check if there's a learned node with higher confidence
+    const updates: Array<{ id: string; confidence: number }> = [];
+
+    for (const seedNode of seedNodes) {
+      const props = (seedNode.properties as Record<string, any>) || {};
+      const seedDomain = props.domain;
+      const seedConfidence =
+        typeof props.confidence === "number"
+          ? props.confidence
+          : SEED_CONFIDENCE;
+
+      if (!seedDomain) {
+        continue;
+      }
+
+      // Check for learned associations for the same domain with higher confidence
+      const learnedNodes = await db
+        .select()
+        .from(memoryNodes)
+        .where(
+          and(
+            eq(memoryNodes.kind, "domain_association"),
+            sql`${memoryNodes.properties}->>'source' IN ('correction', 'learned')`,
+            sql`${memoryNodes.properties}->>'domain' = ${seedDomain}`,
+            sql`(${memoryNodes.properties}->>'confidence')::numeric > ${seedConfidence}`
+          )
+        )
+        .limit(1);
+
+      if (learnedNodes.length > 0) {
+        // Seed has been superseded - apply accelerated decay
+        const newConfidence = Math.max(
+          config.confidenceFloor,
+          seedConfidence * config.decayFactor * 0.5 // 2x decay rate for superseded seeds
+        );
+
+        updates.push({
+          id: seedNode.id,
+          confidence: newConfidence,
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      const decayedCount = await updateNodeConfidenceBatch(updates);
+      logger.info("learning_worker_seed_decay", { count: decayedCount });
+    }
+  } catch (error) {
+    logger.warn("learning_worker_seed_decay_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function seedOntology() {
   logger.debug("learning_worker_seeding_ontology");
   const knowledge = getOntologyKnowledge();
   const nodes = knowledge.filter((k) => k.data._ !== "relation");
   const edges = knowledge.filter((k) => k.data._ === "relation");
 
-  // Upsert Nodes
+  // Upsert Nodes with low confidence to allow learned knowledge to override
   const nodeMap = await upsertNodes(
     nodes.map((k) => ({
       resource: "ontology",
@@ -343,11 +505,11 @@ async function seedOntology() {
           : k.data._ === "insight"
             ? k.data.conclusion
             : "unknown",
-      properties: { confidence: 1.0, source: "system" },
+      properties: { confidence: SEED_CONFIDENCE, source: "seed" },
     }))
   );
 
-  // Upsert Edges
+  // Upsert Edges with seed source for tracking
   const edgeSeeds = edges
     .map((k) => {
       const rel = k.data as any;
@@ -367,8 +529,8 @@ async function seedOntology() {
         fromId: fromNode.id,
         toId: toNode.id,
         kind: rel.kind,
-        weight: rel.weight ?? 1.0,
-        metadata: { source: "system" },
+        weight: rel.weight ?? SEED_CONFIDENCE,
+        metadata: { source: "seed" },
       };
     })
     .filter((e) => e !== null);

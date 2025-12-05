@@ -2,6 +2,13 @@ import type { Knowledge } from "./hypergraph.js";
 import { fact, knowledgeHash, nodeFromHash, relation } from "./hypergraph.js";
 
 /**
+ * Seed confidence for bootstrap ontology nodes.
+ * Low confidence (0.5) allows learned knowledge to override seeds
+ * when learned confidence exceeds LEARNED_OVERRIDE_THRESHOLD (0.8).
+ */
+export const SEED_CONFIDENCE = 0.5;
+
+/**
  * Ontology Anchors
  * These are the immutable "Platonic Ideals" of the system.
  * The graph topology uses these as roots for classification.
@@ -140,8 +147,9 @@ export function getOntologyKnowledge(): { hash: string; data: Knowledge }[] {
   const list: { hash: string; data: Knowledge }[] = [];
 
   // 1. Create Anchor Nodes
+  // Uses SEED_CONFIDENCE (0.5) to allow learned knowledge to override
   for (const anchor of ALL_ANCHORS) {
-    const k = fact(anchor.label, 1.0, "ontology");
+    const k = fact(anchor.label, SEED_CONFIDENCE, "ontology");
     // Force the ID/Hash to match our convention if we could,
     // but Hypergraph is content-addressed.
     // For ontology, we might just let them generate their own hashes
@@ -151,16 +159,22 @@ export function getOntologyKnowledge(): { hash: string; data: Knowledge }[] {
   }
 
   // 2. Create Triples
+  // Uses SEED_CONFIDENCE (0.5) to allow learned knowledge to override
   for (const [sub, rel, obj] of SEED_DATA) {
-    const s = fact(sub, 1.0, "ontology");
-    const o = fact(obj, 1.0, "ontology");
+    const s = fact(sub, SEED_CONFIDENCE, "ontology");
+    const o = fact(obj, SEED_CONFIDENCE, "ontology");
     const sHash = knowledgeHash(s);
     const oHash = knowledgeHash(o);
 
     list.push({ hash: sHash, data: s });
     list.push({ hash: oHash, data: o });
 
-    const r = relation(nodeFromHash(sHash), nodeFromHash(oHash), rel, 1.0);
+    const r = relation(
+      nodeFromHash(sHash),
+      nodeFromHash(oHash),
+      rel,
+      SEED_CONFIDENCE
+    );
     list.push({ hash: knowledgeHash(r), data: r });
   }
 

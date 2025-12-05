@@ -207,3 +207,88 @@ export async function findNodesByConfidence(
 
   return query;
 }
+
+/**
+ * Domain association result type
+ */
+export type DomainAssociation = {
+  domain: string;
+  confidence: number;
+  source: "learned" | "seed";
+};
+
+/**
+ * Find domain associations for text using FTS and keyword matching.
+ * Returns learned domain classifications with confidence scores.
+ *
+ * @param text - Text to find domain associations for
+ * @param resource - Resource scope (default: "user")
+ * @param limit - Maximum results to return (default: 5)
+ */
+export async function findDomainAssociations(
+  text: string,
+  resource = "user",
+  limit = 5
+): Promise<DomainAssociation[]> {
+  if (!text || text.trim().length === 0) {
+    return [];
+  }
+
+  const normalizedText = text.trim();
+
+  // Query domain_association nodes using FTS
+  const ftsQuery = sql<{
+    label: string;
+    properties: Record<string, unknown> | null;
+    rankScore: number | string | null;
+  }>`
+    WITH search AS (
+      SELECT plainto_tsquery('english', ${normalizedText}) AS query
+    )
+    SELECT
+      mn.label,
+      mn.properties,
+      ts_rank(mn.label_tsvector, search.query) AS "rankScore"
+    FROM memory_nodes mn,
+      search
+    WHERE mn.kind = 'domain_association'
+      AND mn.sanitized = true
+      AND (mn.resource = ${resource} OR mn.resource = 'ontology')
+      AND mn.label_tsvector @@ search.query
+    ORDER BY "rankScore" DESC NULLS LAST, mn.created_at DESC NULLS LAST
+    LIMIT ${limit * 2}
+  `;
+
+  const result = await db.execute(ftsQuery);
+  const rows = (result.rows ?? []) as Array<{
+    label: string;
+    properties: Record<string, unknown> | null;
+    rankScore: number | string | null;
+  }>;
+
+  const associations: DomainAssociation[] = [];
+  const seenDomains = new Set<string>();
+
+  for (const row of rows) {
+    const props = row.properties ?? {};
+    const domain = typeof props.domain === "string" ? props.domain : null;
+    const confidence =
+      typeof props.confidence === "number" ? props.confidence : 0.5;
+    const source = props.source === "seed" ? "seed" : "learned";
+
+    if (domain && !seenDomains.has(domain)) {
+      seenDomains.add(domain);
+      associations.push({
+        domain,
+        confidence,
+        source: source as "learned" | "seed",
+      });
+    }
+
+    if (associations.length >= limit) {
+      break;
+    }
+  }
+
+  return associations;
+}

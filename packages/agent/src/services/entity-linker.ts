@@ -1,6 +1,10 @@
 import { findNearestConcept } from "@alfred/db/repo/graph";
 import { extract } from "@alfred/knowledge/extractor";
-import { classifyDomain } from "@alfred/knowledge/lexicon/domains";
+import {
+  classifyDomain,
+  classifyDomainWithLearning,
+  type DomainResult,
+} from "@alfred/knowledge/lexicon/domains";
 import { ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
 import {
@@ -16,15 +20,50 @@ type ConceptResult = {
   node: { id: string; label: string };
 } | null;
 
+// Type for findDomainAssociations result (defined locally to work around stale dist types)
+type DomainAssociation = {
+  domain: string;
+  confidence: number;
+  source: "learned" | "seed";
+};
+
 export type EntityLinkResult = {
   domains: string[];
+  domainResults?: DomainResult[];
   paths: string[][];
 };
 
 function shouldSkipEmbedding(entity: string): boolean {
-  // Skip embedding if domain classification already detected it
+  // Skip embedding if domain classification already detected it (sync path)
   const domains = classifyDomain(entity);
   return domains.length > 0;
+}
+
+/**
+ * Lazy import of findDomainAssociations to avoid build dependency issues
+ */
+async function getFindDomainAssociations(): Promise<
+  typeof import("@alfred/db/repo/graph/read").findDomainAssociations
+> {
+  const { findDomainAssociations } = await import("@alfred/db/repo/graph/read");
+  return findDomainAssociations;
+}
+
+/**
+ * Adapter for findDomainAssociations to match DomainResult type
+ */
+async function findAssociationsAdapter(
+  text: string,
+  resource: string,
+  limit?: number
+): Promise<DomainResult[]> {
+  const findDomainAssociations = await getFindDomainAssociations();
+  const associations = await findDomainAssociations(text, resource, limit);
+  return associations.map((a: DomainAssociation) => ({
+    domain: a.domain,
+    confidence: a.confidence,
+    source: a.source,
+  }));
 }
 
 /**
@@ -75,9 +114,15 @@ export async function linkEntities(
     return { domains: [], paths: [] };
   }
 
-  // 2. Use domain classification for fast detection
-  const classifiedDomains = classifyDomain(recentUserMessages);
-  const detectedConcepts = new Set<string>(classifiedDomains);
+  // 2. Use domain classification with learning for improved detection
+  const classifiedDomains = await classifyDomainWithLearning(
+    recentUserMessages,
+    "user",
+    findAssociationsAdapter
+  );
+  const detectedConcepts = new Set<string>(
+    classifiedDomains.map((d) => d.domain)
+  );
 
   // 3. Query the Graph for connection to Anchor Concepts
   // We check the first 5 entities to keep latency low
@@ -143,6 +188,7 @@ export async function linkEntities(
 
   return {
     domains: Array.from(detectedConcepts),
+    domainResults: classifiedDomains,
     paths: detectedPaths,
   };
 }

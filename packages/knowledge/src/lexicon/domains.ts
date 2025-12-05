@@ -1,13 +1,68 @@
 /**
  * Domain classification for knowledge extraction.
- * Fast heuristic-based domain detection for agent context.
+ * Hybrid system: sync static fallback with async learned associations.
+ * Performance budget: <1ms for sync path
  */
 
-import {
-  isDevTool,
-  isFramework,
-  isProgrammingLanguage,
-} from "./code.js";
+import { isDevTool, isFramework, isProgrammingLanguage } from "./code.js";
+
+/**
+ * Domain classification result with source tracking
+ */
+export type DomainResult = {
+  domain: string;
+  confidence: number;
+  source: "learned" | "static" | "seed";
+};
+
+/**
+ * Confidence threshold for learned knowledge to override static
+ */
+export const LEARNED_OVERRIDE_THRESHOLD = 0.8;
+
+/**
+ * Metric recording callbacks (set via registerClassificationMetrics)
+ * Enables external packages to instrument without circular dependencies
+ */
+type ClassificationMetrics = {
+  recordSource: (domain: string, source: "learned" | "static" | "seed") => void;
+  recordCacheHit: (hit: boolean) => void;
+  recordDuration: (method: "sync" | "async", durationMs: number) => void;
+};
+
+let metrics: ClassificationMetrics | null = null;
+
+/**
+ * Register metric recording callbacks
+ * Call from @alfred/api or similar to wire up Prometheus counters
+ */
+export function registerClassificationMetrics(m: ClassificationMetrics): void {
+  metrics = m;
+}
+
+/**
+ * Cache TTL for domain associations
+ */
+const CACHE_TTL_MS = 60_000; // 1 minute
+
+/**
+ * Cached domain association
+ */
+type CachedAssociation = {
+  domains: DomainResult[];
+  expiresAt: number;
+};
+
+/**
+ * In-memory cache for learned domain associations
+ * Enables sync path to return cached learned results
+ */
+const domainCache = new Map<string, CachedAssociation>();
+
+/**
+ * Maximum cache entries to prevent unbounded memory growth
+ */
+const MAX_CACHE_ENTRIES = 1000;
 
 /**
  * Domain keyword maps for fast classification
@@ -213,11 +268,11 @@ const DOMAIN_KEYWORDS: Record<string, readonly string[]> = {
 } as const;
 
 /**
- * Fast domain classification from text.
- * Returns array of detected domains, ordered by confidence.
+ * Internal static domain classification.
+ * Pure keyword matching against DOMAIN_KEYWORDS.
  * Performance budget: <1ms
  */
-export function classifyDomain(text: string): string[] {
+function classifyDomainStatic(text: string): string[] {
   const normalized = text.toLowerCase();
   const domainScores = new Map<string, number>();
 
@@ -252,3 +307,179 @@ export function classifyDomain(text: string): string[] {
   return sorted;
 }
 
+/**
+ * Normalize cache key for consistent lookups
+ */
+function getCacheKey(text: string): string {
+  return text.toLowerCase().trim().substring(0, 500);
+}
+
+/**
+ * Evict oldest cache entries if limit exceeded
+ */
+function evictCacheIfNeeded(): void {
+  if (domainCache.size > MAX_CACHE_ENTRIES) {
+    const firstKey = domainCache.keys().next().value;
+    if (firstKey) {
+      domainCache.delete(firstKey);
+    }
+  }
+}
+
+/**
+ * Fast domain classification from text (sync).
+ * Returns cached learned results if available, otherwise static fallback.
+ * Performance budget: <1ms
+ *
+ * For non-hot paths, prefer classifyDomainWithLearning() for graph-backed results.
+ */
+export function classifyDomain(text: string): DomainResult[] {
+  const start = performance.now();
+  const cacheKey = getCacheKey(text);
+  const cached = domainCache.get(cacheKey);
+
+  // Return cached learned results if valid
+  if (cached && cached.expiresAt > Date.now()) {
+    metrics?.recordCacheHit(true);
+    for (const result of cached.domains) {
+      metrics?.recordSource(result.domain, result.source);
+    }
+    metrics?.recordDuration("sync", performance.now() - start);
+    return cached.domains;
+  }
+
+  metrics?.recordCacheHit(false);
+
+  // Sync static fallback (guaranteed <1ms)
+  const staticDomains = classifyDomainStatic(text);
+  const results = staticDomains.map((domain) => ({
+    domain,
+    confidence: 0.5,
+    source: "static" as const,
+  }));
+
+  for (const result of results) {
+    metrics?.recordSource(result.domain, result.source);
+  }
+  metrics?.recordDuration("sync", performance.now() - start);
+
+  return results;
+}
+
+/**
+ * Async domain classification with graph-based learning.
+ * Queries learned associations first, falls back to static.
+ * Populates cache for subsequent sync calls.
+ *
+ * @param text - Text to classify
+ * @param resource - Resource scope for graph queries (default: "user")
+ * @param findAssociations - Optional graph query function (for dependency injection)
+ */
+export async function classifyDomainWithLearning(
+  text: string,
+  resource = "user",
+  findAssociations?: (
+    text: string,
+    resource: string,
+    limit?: number
+  ) => Promise<DomainResult[]>
+): Promise<DomainResult[]> {
+  const start = performance.now();
+  const cacheKey = getCacheKey(text);
+
+  // Check cache first
+  const cached = domainCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    metrics?.recordCacheHit(true);
+    for (const result of cached.domains) {
+      metrics?.recordSource(result.domain, result.source);
+    }
+    metrics?.recordDuration("async", performance.now() - start);
+    return cached.domains;
+  }
+
+  metrics?.recordCacheHit(false);
+
+  // Query graph for learned associations if function provided
+  if (findAssociations) {
+    try {
+      const learned = await findAssociations(text, resource, 5);
+
+      if (learned.length > 0) {
+        // Check for high-confidence learned results that should override static
+        const highConfidence = learned.filter(
+          (l) =>
+            l.source !== "seed" && l.confidence >= LEARNED_OVERRIDE_THRESHOLD
+        );
+
+        const results =
+          highConfidence.length > 0
+            ? highConfidence // Use ONLY learned if above threshold
+            : learned; // Otherwise use all learned results
+
+        // Cache for future sync calls
+        domainCache.set(cacheKey, {
+          domains: results,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        evictCacheIfNeeded();
+
+        // Record metrics
+        for (const result of results) {
+          metrics?.recordSource(result.domain, result.source);
+        }
+        metrics?.recordDuration("async", performance.now() - start);
+
+        return results;
+      }
+    } catch {
+      // Graph query failed, fall through to static
+    }
+  }
+
+  // Fall back to static
+  const staticDomains = classifyDomainStatic(text);
+  const results = staticDomains.map((domain) => ({
+    domain,
+    confidence: 0.5,
+    source: "static" as const,
+  }));
+
+  // Record metrics
+  for (const result of results) {
+    metrics?.recordSource(result.domain, result.source);
+  }
+  metrics?.recordDuration("async", performance.now() - start);
+
+  // Don't cache static results to avoid blocking future learned lookups
+  return results;
+}
+
+/**
+ * Update cache with learned association (called after learning)
+ */
+export function updateDomainCache(text: string, domains: DomainResult[]): void {
+  const cacheKey = getCacheKey(text);
+  domainCache.set(cacheKey, {
+    domains,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+  evictCacheIfNeeded();
+}
+
+/**
+ * Clear domain cache (for testing)
+ */
+export function clearDomainCache(): void {
+  domainCache.clear();
+}
+
+/**
+ * Get cache stats (for metrics)
+ */
+export function getDomainCacheStats(): { size: number; maxSize: number } {
+  return {
+    size: domainCache.size,
+    maxSize: MAX_CACHE_ENTRIES,
+  };
+}

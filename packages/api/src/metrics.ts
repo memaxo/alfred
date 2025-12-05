@@ -538,6 +538,51 @@ export const preferencePromptFailuresTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+/**
+ * Classification metrics for emergent learning system
+ * Tracks source of domain classifications (learned vs static vs seed)
+ */
+export const classificationSourceTotal = new client.Counter({
+  name: "alfred_classification_source_total",
+  help: "Count of domain classifications grouped by domain and source.",
+  labelNames: ["domain", "source"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * Classification accuracy tracking
+ * Tracks user confirmations vs corrections for learning effectiveness
+ */
+export const classificationAccuracyTotal = new client.Counter({
+  name: "alfred_classification_accuracy_total",
+  help: "Count of classification outcomes (confirmed vs corrected).",
+  labelNames: ["domain", "outcome"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * Classification latency histogram
+ * Tracks performance of domain classification operations
+ */
+export const classificationDurationSeconds = new client.Histogram({
+  name: "alfred_classification_duration_seconds",
+  help: "Duration of domain classification operations in seconds.",
+  labelNames: ["method"] as const,
+  buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+  registers: [metricsRegistry],
+});
+
+/**
+ * Domain cache statistics
+ * Tracks cache hits/misses for learned domain associations
+ */
+export const domainCacheHitsTotal = new client.Counter({
+  name: "alfred_domain_cache_hits_total",
+  help: "Count of domain cache hits and misses.",
+  labelNames: ["result"] as const,
+  registers: [metricsRegistry],
+});
+
 export const redisCommandsTotal = new client.Counter({
   name: "redis_commands_total",
   help: "Count of Redis commands executed grouped by operation.",
@@ -680,6 +725,31 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       agent.registerMemoryForgetsCounter?.(memoryForgetsTotal);
     } catch (error) {
       logger.warn("metrics_agent_hooks_disabled", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Wire classification metrics to @alfred/knowledge
+    try {
+      const { registerClassificationMetrics } = await import(
+        "@alfred/knowledge/lexicon/domains"
+      );
+      registerClassificationMetrics({
+        recordSource: (
+          domain: string,
+          source: "learned" | "static" | "seed"
+        ) => {
+          classificationSourceTotal.inc({ domain, source });
+        },
+        recordCacheHit: (hit: boolean) => {
+          domainCacheHitsTotal.inc({ result: hit ? "hit" : "miss" });
+        },
+        recordDuration: (method: "sync" | "async", durationMs: number) => {
+          classificationDurationSeconds.observe({ method }, durationMs / 1000);
+        },
+      });
+    } catch (error) {
+      logger.warn("metrics_classification_hooks_disabled", {
         reason: error instanceof Error ? error.message : String(error),
       });
     }

@@ -267,7 +267,47 @@ export const FILE_EXTENSIONS: Record<string, string> = {
 };
 
 /**
- * Check if a term is a programming language
+ * Code lexicon result with source tracking
+ */
+export type CodeLexiconResult = {
+  result: boolean;
+  source: "learned" | "static";
+  confidence: number;
+};
+
+/**
+ * Confidence threshold for learned code lexicon to override static
+ */
+const LEARNED_OVERRIDE_THRESHOLD = 0.8;
+
+/**
+ * Cache for learned code lexicon associations
+ */
+type CachedCodeAssociation = {
+  result: boolean;
+  source: "learned" | "static";
+  confidence: number;
+  expiresAt: number;
+};
+
+const codeLexiconCache = new Map<string, CachedCodeAssociation>();
+const CACHE_TTL_MS = 60_000; // 1 minute
+const MAX_CACHE_ENTRIES = 500;
+
+/**
+ * Evict oldest cache entries if limit exceeded
+ */
+function evictCacheIfNeeded(): void {
+  if (codeLexiconCache.size > MAX_CACHE_ENTRIES) {
+    const firstKey = codeLexiconCache.keys().next().value;
+    if (firstKey) {
+      codeLexiconCache.delete(firstKey);
+    }
+  }
+}
+
+/**
+ * Check if a term is a programming language (sync, static-only)
  */
 export function isProgrammingLanguage(term: string): boolean {
   const normalized = term.toLowerCase();
@@ -275,7 +315,7 @@ export function isProgrammingLanguage(term: string): boolean {
 }
 
 /**
- * Check if a term is a framework
+ * Check if a term is a framework (sync, static-only)
  */
 export function isFramework(term: string): boolean {
   const normalized = term.toLowerCase();
@@ -283,7 +323,7 @@ export function isFramework(term: string): boolean {
 }
 
 /**
- * Check if a term is a development tool
+ * Check if a term is a development tool (sync, static-only)
  */
 export function isDevTool(term: string): boolean {
   const normalized = term.toLowerCase();
@@ -291,9 +331,177 @@ export function isDevTool(term: string): boolean {
 }
 
 /**
- * Get language from file extension
+ * Get language from file extension (deterministic, no learning needed)
  */
 export function getLanguageFromExtension(ext: string): string | null {
   return FILE_EXTENSIONS[ext.toLowerCase()] ?? null;
 }
 
+/**
+ * Check if a term is a programming language with graph-based learning.
+ * Queries learned associations first, falls back to static.
+ *
+ * @param term - Term to check
+ * @param resource - Resource scope for graph queries (default: "user")
+ * @param findCodeAssociation - Optional graph query function
+ */
+export async function isProgrammingLanguageWithLearning(
+  term: string,
+  resource = "user",
+  findCodeAssociation?: (
+    term: string,
+    category: "language" | "framework" | "tool",
+    resource: string
+  ) => Promise<CodeLexiconResult | null>
+): Promise<CodeLexiconResult> {
+  const cacheKey = `lang:${term.toLowerCase()}`;
+  const cached = codeLexiconCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      result: cached.result,
+      source: cached.source,
+      confidence: cached.confidence,
+    };
+  }
+
+  // Query graph for learned associations if function provided
+  if (findCodeAssociation) {
+    try {
+      const learned = await findCodeAssociation(term, "language", resource);
+      if (learned && learned.confidence >= LEARNED_OVERRIDE_THRESHOLD) {
+        codeLexiconCache.set(cacheKey, {
+          ...learned,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        evictCacheIfNeeded();
+        return learned;
+      }
+    } catch {
+      // Graph query failed, fall through to static
+    }
+  }
+
+  // Fall back to static
+  const staticResult = isProgrammingLanguage(term);
+  return {
+    result: staticResult,
+    source: "static",
+    confidence: staticResult ? 0.85 : 0.5,
+  };
+}
+
+/**
+ * Check if a term is a framework with graph-based learning.
+ * Queries learned associations first, falls back to static.
+ *
+ * @param term - Term to check
+ * @param resource - Resource scope for graph queries (default: "user")
+ * @param findCodeAssociation - Optional graph query function
+ */
+export async function isFrameworkWithLearning(
+  term: string,
+  resource = "user",
+  findCodeAssociation?: (
+    term: string,
+    category: "language" | "framework" | "tool",
+    resource: string
+  ) => Promise<CodeLexiconResult | null>
+): Promise<CodeLexiconResult> {
+  const cacheKey = `fw:${term.toLowerCase()}`;
+  const cached = codeLexiconCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      result: cached.result,
+      source: cached.source,
+      confidence: cached.confidence,
+    };
+  }
+
+  // Query graph for learned associations if function provided
+  if (findCodeAssociation) {
+    try {
+      const learned = await findCodeAssociation(term, "framework", resource);
+      if (learned && learned.confidence >= LEARNED_OVERRIDE_THRESHOLD) {
+        codeLexiconCache.set(cacheKey, {
+          ...learned,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        evictCacheIfNeeded();
+        return learned;
+      }
+    } catch {
+      // Graph query failed, fall through to static
+    }
+  }
+
+  // Fall back to static
+  const staticResult = isFramework(term);
+  return {
+    result: staticResult,
+    source: "static",
+    confidence: staticResult ? 0.82 : 0.5,
+  };
+}
+
+/**
+ * Check if a term is a dev tool with graph-based learning.
+ * Queries learned associations first, falls back to static.
+ *
+ * @param term - Term to check
+ * @param resource - Resource scope for graph queries (default: "user")
+ * @param findCodeAssociation - Optional graph query function
+ */
+export async function isDevToolWithLearning(
+  term: string,
+  resource = "user",
+  findCodeAssociation?: (
+    term: string,
+    category: "language" | "framework" | "tool",
+    resource: string
+  ) => Promise<CodeLexiconResult | null>
+): Promise<CodeLexiconResult> {
+  const cacheKey = `tool:${term.toLowerCase()}`;
+  const cached = codeLexiconCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      result: cached.result,
+      source: cached.source,
+      confidence: cached.confidence,
+    };
+  }
+
+  // Query graph for learned associations if function provided
+  if (findCodeAssociation) {
+    try {
+      const learned = await findCodeAssociation(term, "tool", resource);
+      if (learned && learned.confidence >= LEARNED_OVERRIDE_THRESHOLD) {
+        codeLexiconCache.set(cacheKey, {
+          ...learned,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        evictCacheIfNeeded();
+        return learned;
+      }
+    } catch {
+      // Graph query failed, fall through to static
+    }
+  }
+
+  // Fall back to static
+  const staticResult = isDevTool(term);
+  return {
+    result: staticResult,
+    source: "static",
+    confidence: staticResult ? 0.8 : 0.5,
+  };
+}
+
+/**
+ * Clear code lexicon cache (for testing)
+ */
+export function clearCodeLexiconCache(): void {
+  codeLexiconCache.clear();
+}

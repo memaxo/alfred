@@ -4,6 +4,7 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 type PreferenceRow = typeof userSchema.preferences.$inferSelect;
 
 import { recordMemoryForget, recordMemoryUpdate } from "@alfred/agent";
+import { learnDomainCorrection } from "@alfred/agent/orchestrator/learning-worker";
 import { inferPreferenceFromCorrection } from "@alfred/agent/preference/inference";
 import { invalidatePreferenceCache } from "@alfred/agent/preference/loader";
 import {
@@ -282,5 +283,44 @@ export const preferenceRouter = router({
       recordMemoryUpdate("preference", "inferred");
 
       return { inferred: 1 };
+    }),
+
+  /**
+   * Correct a domain classification.
+   * Creates a high-confidence learned association in the knowledge graph.
+   */
+  correctClassification: authedProcedure
+    .use(
+      requirePolicy("preference.write", (input, ctx) =>
+        mapPreferenceResource(input, ctx)
+      )
+    )
+    .input(
+      z.object({
+        text: z.string().min(1).max(1000),
+        correctDomain: z.string().min(1).max(100),
+        incorrectDomain: z.string().min(1).max(100).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = ctx.session;
+      if (!session?.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      ensureObligations(ctx);
+
+      await learnDomainCorrection(
+        input.text,
+        input.correctDomain,
+        input.incorrectDomain
+      );
+
+      recordMemoryUpdate("classification", "correction");
+
+      return { success: true };
     }),
 });
