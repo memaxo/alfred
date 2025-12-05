@@ -18,6 +18,8 @@ const metricsSource = readFileSync(
 );
 
 const exportConstRegex = /export const (\w+)/g;
+// Also match re-exports: export { name1, name2 } from "..."
+const reExportRegex = /export\s*\{\s*([^}]+)\s*\}/g;
 const metricsStub: Record<string, unknown> = {};
 
 for (const match of metricsSource.matchAll(exportConstRegex)) {
@@ -27,6 +29,20 @@ for (const match of metricsSource.matchAll(exportConstRegex)) {
     continue;
   }
   metricsStub[name] = createMetricStub();
+}
+
+// Handle re-exports like: export { foo, bar, baz } from "..."
+for (const match of metricsSource.matchAll(reExportRegex)) {
+  const exports = match[1].split(",").map((s) => s.trim());
+  for (const exp of exports) {
+    // Handle "name as alias" syntax
+    const namePart = exp.split(/\s+as\s+/)[0].trim();
+    // Skip type exports
+    if (namePart.startsWith("type ")) continue;
+    if (namePart && !metricsStub[namePart]) {
+      metricsStub[namePart] = createMetricStub();
+    }
+  }
 }
 
 metricsStub.metricsRegistry = {};

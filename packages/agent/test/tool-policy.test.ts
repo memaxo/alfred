@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
@@ -20,7 +20,8 @@ const { assertAllowedDirectory: assertDroidAllowedDirectory } = droidInternals;
 const { assertAllowedDirectory: assertDockerAllowedDirectory } =
   dockerInternals;
 
-const TMP_ROOT = path.join(process.cwd(), "tmp-policy-test");
+// Use os.tmpdir() instead of process.cwd() to avoid polluting the repo
+const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "alfred-policy-test-"));
 
 function ensureWorkspaceSandbox(name: string) {
   const target = path.join(TMP_ROOT, name);
@@ -33,6 +34,11 @@ function makeExternalDir(prefix: string) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+// Cleanup TMP_ROOT after all tests
+afterAll(() => {
+  fs.rmSync(TMP_ROOT, { recursive: true, force: true });
+});
+
 // Mock @alfred/auth/token
 const mockRequireToolScopesAndPolicy = mock();
 mock.module("@alfred/auth/token", () => ({
@@ -42,13 +48,6 @@ mock.module("@alfred/auth/token", () => ({
 describe("Tool Policy & Security", () => {
   describe("assertAllowedDirectory", () => {
     const cwd = process.cwd();
-    const tempDir = path.join(cwd, "tmp-policy-test");
-
-    beforeEach(() => {
-      try {
-        fs.mkdirSync(tempDir, { recursive: true });
-      } catch {}
-    });
 
     it("allows CWD", () => {
       const handle = assertCodexAllowedDirectory(cwd);

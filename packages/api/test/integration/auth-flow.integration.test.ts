@@ -15,6 +15,13 @@ process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 process.env.BETTER_AUTH_SECRET = "test-secret-key-for-integration-tests";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
+// Test Ed25519 key pair for token signing (generated for tests only)
+process.env.AGENT_ED25519_PRIVATE = `-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIMbwVzM8K7s4xXeXnVvHLO4LRE5yKJ+2NxRxzOyYGFqk
+-----END PRIVATE KEY-----`;
+process.env.AGENT_ED25519_PUBLIC_PEM = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEADJWbfZHVqE3+g4ZqzxXnYJ2+H6KyXS0N4s7L2g5tqsE=
+-----END PUBLIC KEY-----`;
 
 import { beforeAll, describe, expect, it } from "bun:test";
 
@@ -158,15 +165,16 @@ describe("Auth Flow Integration", () => {
   });
 
   describe("Privacy Operations", () => {
-    it("retrieves privacy summary", async () => {
+    it("retrieves privacy facts", async () => {
       const caller = await createTestCaller({
         userId: "privacy-user",
         roles: ["owner"],
         scopes: ["privacy.read"],
       });
 
-      const summary = await caller.privacy.summary();
-      expect(summary).toBeDefined();
+      const facts = await caller.privacy.facts({});
+      expect(facts).toBeDefined();
+      expect(Array.isArray(facts)).toBe(true);
     });
   });
 });
@@ -190,7 +198,7 @@ describe("Route Protection", () => {
         name: "remind.list",
         fn: (c: any) => c.remind.list({ limit: 10, offset: 0 }),
       },
-      { name: "timer.list", fn: (c: any) => c.timer.list() },
+      { name: "timer.active", fn: (c: any) => c.timer.active() },
       { name: "profile.get", fn: (c: any) => c.profile.get() },
     ];
 
@@ -206,47 +214,58 @@ describe("Route Protection", () => {
   });
 });
 
+// CRUD Operations require full PostgreSQL schema (tsvector columns, all tables)
+// SQLite in-memory doesn't have these - skip when using SQLite
 describe("CRUD Operations with Auth", () => {
+  const isUsingSqlite = process.env.DATABASE_URL?.includes("sqlite");
+
   describe("Notes", () => {
-    it("creates, reads, updates, and deletes notes", async () => {
-      const caller = await createTestCaller({
-        userId: "crud-user",
-        roles: ["owner"],
-        scopes: ["note.read", "note.write"],
-      });
+    // Note repo uses tsvector for full-text search which SQLite doesn't support
+    it.skipIf(isUsingSqlite)(
+      "creates, reads, updates, and deletes notes",
+      async () => {
+        const caller = await createTestCaller({
+          userId: "crud-user",
+          roles: ["owner"],
+          scopes: ["note.read", "note.write"],
+        });
 
-      // Create
-      const created = await caller.note.create({
-        title: "Test Note",
-        content: "Test content",
-      });
-      expect(created.id).toBeDefined();
+        // Create
+        const created = await caller.note.create({
+          title: "Test Note",
+          content: "Test content",
+        });
+        expect(created.id).toBeDefined();
 
-      // Read
-      const notes = await caller.note.list({ limit: 10, offset: 0 });
-      expect(notes.some((n: { id: string }) => n.id === created.id)).toBe(true);
+        // Read
+        const notes = await caller.note.list({ limit: 10, offset: 0 });
+        expect(notes.some((n: { id: string }) => n.id === created.id)).toBe(
+          true
+        );
 
-      // Update
-      const updated = await caller.note.update({
-        id: created.id,
-        title: "Updated Title",
-      });
-      expect(updated.title).toBe("Updated Title");
+        // Update
+        const updated = await caller.note.update({
+          id: created.id,
+          title: "Updated Title",
+        });
+        expect(updated.title).toBe("Updated Title");
 
-      // Delete
-      const deleted = await caller.note.remove({ id: created.id });
-      expect(deleted.id).toBe(created.id);
+        // Delete
+        const deleted = await caller.note.remove({ id: created.id });
+        expect(deleted.id).toBe(created.id);
 
-      // Verify deleted
-      const afterDelete = await caller.note.list({ limit: 10, offset: 0 });
-      expect(afterDelete.some((n: { id: string }) => n.id === created.id)).toBe(
-        false
-      );
-    });
+        // Verify deleted
+        const afterDelete = await caller.note.list({ limit: 10, offset: 0 });
+        expect(
+          afterDelete.some((n: { id: string }) => n.id === created.id)
+        ).toBe(false);
+      }
+    );
   });
 
   describe("Reminders", () => {
-    it("creates and lists reminders", async () => {
+    // Reminder table doesn't exist in SQLite schema
+    it.skipIf(isUsingSqlite)("creates and lists reminders", async () => {
       const caller = await createTestCaller({
         userId: "reminder-user",
         roles: ["owner"],
@@ -257,7 +276,7 @@ describe("CRUD Operations with Auth", () => {
 
       const created = await caller.remind.create({
         title: "Test Reminder",
-        dueAt: dueAt.toISOString(),
+        due: dueAt.toISOString(),
       });
       expect(created.id).toBeDefined();
 
@@ -269,7 +288,9 @@ describe("CRUD Operations with Auth", () => {
   });
 
   describe("Timers", () => {
-    it("creates and manages timers", async () => {
+    // Timer repo uses PostgreSQL interval syntax (::int * interval '1 second')
+    // which is incompatible with SQLite. Skip when using SQLite.
+    it.skipIf(isUsingSqlite)("creates and manages timers", async () => {
       const caller = await createTestCaller({
         userId: "timer-user",
         roles: ["owner"],
@@ -282,10 +303,10 @@ describe("CRUD Operations with Auth", () => {
       });
       expect(created.id).toBeDefined();
 
-      const timers = await caller.timer.list();
-      expect(timers.some((t: { id: string }) => t.id === created.id)).toBe(
-        true
-      );
+      const activeTimers = await caller.timer.active();
+      expect(
+        activeTimers.some((t: { id: string }) => t.id === created.id)
+      ).toBe(true);
     });
   });
 });

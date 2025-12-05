@@ -46,13 +46,58 @@ export const dbModuleStub = {
     getConversation: vi.fn().mockResolvedValue(null),
     createMessage: vi.fn().mockResolvedValue(null),
     getMessage: vi.fn().mockResolvedValue(null),
+    getMessages: vi.fn().mockResolvedValue([]),
+    getConversations: vi.fn().mockResolvedValue([]),
+    getActiveUserIds: vi.fn().mockResolvedValue([]),
+    getConversationHistory: vi
+      .fn()
+      .mockResolvedValue({ conversation: null, messages: [] }),
+    messageRowToUIMessage: vi.fn(
+      (row: { id: string; role?: string; content?: string }) => ({
+        id: row.id,
+        role: row.role ?? "assistant",
+        parts: [{ type: "text", text: row.content ?? "" }],
+      })
+    ),
   },
   userRepo: {
     getPreferences: vi.fn().mockResolvedValue([]),
-    setPreference: vi.fn().mockResolvedValue(null),
+    setPreference: vi
+      .fn()
+      .mockImplementation(
+        (
+          userId: string,
+          key: string,
+          value: unknown,
+          confidence = 1,
+          source = "user"
+        ) =>
+          Promise.resolve({
+            id: `pref-${Date.now()}`,
+            userId,
+            key,
+            value,
+            confidence,
+            source,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+      ),
     deletePreference: vi.fn().mockResolvedValue(0),
     addFeedback: vi.fn().mockResolvedValue(undefined),
     getFeedback: vi.fn().mockResolvedValue([]),
+    getProfile: vi.fn().mockImplementation((userId: string) =>
+      Promise.resolve({
+        id: userId,
+        name: "Test User",
+        email: `${userId}@test.local`,
+        preferences: [],
+      })
+    ),
+    searchFacts: vi.fn().mockResolvedValue([]),
+    listFacts: vi.fn().mockResolvedValue([]),
+    deleteFact: vi.fn().mockResolvedValue(1),
+    getEvents: vi.fn().mockResolvedValue([]),
   },
   workflowRepo: {},
   assistantSchema: {},

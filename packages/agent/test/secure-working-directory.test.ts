@@ -42,12 +42,23 @@ afterEach(() => {
   delete process.env.ORCH_SECURE_SPAWN_WRAPPER;
 });
 
+/**
+ * Creates a workspace fixture for security tests.
+ *
+ * IMPORTANT: These tests specifically test the security boundary enforcement.
+ * The workspace MUST be inside process.cwd() for openDirectorySecure to accept it.
+ * The "outside" directory is in os.tmpdir() to simulate an escape target.
+ *
+ * The fixture is always cleaned up in the test's finally block via cleanupPaths().
+ */
 function createWorkspaceFixture(prefix: string) {
+  // Security tests require workspace inside cwd - openDirectorySecure checks this
   const repoTmp = path.join(process.cwd(), "tmp");
   mkdirSync(repoTmp, { recursive: true });
   const base = mkdtempSync(path.join(repoTmp, prefix));
   const workspace = path.join(base, "workspace");
   mkdirSync(workspace, { recursive: true });
+  // "outside" must be outside cwd to test escape prevention
   const outside = mkdtempSync(path.join(os.tmpdir(), `${prefix}outside-`));
   return { base, workspace, outside };
 }

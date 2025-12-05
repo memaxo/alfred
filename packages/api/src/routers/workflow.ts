@@ -12,7 +12,7 @@ import {
   type OrchestratorCallbacks,
   orchestrateWorkflowStream,
 } from "@alfred/agent/workflow/orchestrator";
-import { runRegistry } from "@alfred/agent/workflow/registry";
+import { type RunHandle, runRegistry } from "@alfred/agent/workflow/registry";
 import {
   mapWorkflowResource,
   mapWorkflowRunResource,
@@ -380,6 +380,42 @@ export const workflowRouter: ReturnType<typeof router> = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
       }
       return run;
+    }),
+
+  cancel: authedProcedure
+    .input(z.object({ runId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const run = await workflowRepo.getRun(input.runId);
+      if (!run) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+      }
+      if (run.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "not_owner" });
+      }
+      if (run.status !== "running" && run.status !== "suspended") {
+        return { cancelled: false, reason: "already_finished" };
+      }
+      // Cancel via registry if still active
+      const handle = (
+        runRegistry as { runs?: Map<string, RunHandle> }
+      ).runs?.get(input.runId);
+      if (handle) {
+        try {
+          await handle.cancel();
+        } catch {
+          // Ignore cancel errors - run may have already completed
+        }
+      }
+      // Update status in DB
+      await workflowRepo.updateRun(input.runId, {
+        status: "cancelled",
+        completedAt: new Date(),
+      });
+      logger.info("workflow_cancelled", {
+        runId: input.runId,
+        userId: ctx.session.user.id,
+      });
+      return { cancelled: true };
     }),
 
   events: authedProcedure
