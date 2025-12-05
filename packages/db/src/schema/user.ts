@@ -114,4 +114,21 @@ export const feedback = pgTable("user_feedback", {
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+/**
+ * Domain override thresholds (calibrated per-domain)
+ * Reference: alfred-memory-review.md - "Domain-adaptive thresholds improve accuracy"
+ *
+ * Formula: threshold = base × (1 - error_rate) + min × error_rate
+ * Higher error rates result in lower thresholds (more trust in learned knowledge)
+ */
+export const domainThresholds = pgTable("domain_thresholds", {
+  domain: text("domain").primaryKey(),
+  threshold: real("threshold").notNull().default(0.8),
+  correctionCount: integer("correction_count").notNull().default(0),
+  classificationCount: integer("classification_count").notNull().default(0),
+  accuracy: real("accuracy"),
+  created: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 // TODO: [Phase 14] Add feedback analysis for self-improvement

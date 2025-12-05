@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db, isSqliteDriver } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
+import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./scoring";
 import type { EdgeRow, NodeRow } from "./types";
 import {
   normalizeEdge,
@@ -9,24 +10,79 @@ import {
   stringFromProps,
 } from "./utils";
 
+/**
+ * Options for findNearestConcept with top-K retrieval
+ */
+export type FindConceptOptions = {
+  /** Maximum BFS depth (default: 3) */
+  maxDepth?: number;
+  /** Resource scope filter */
+  resource?: string;
+  /** Query embedding for semantic matching */
+  embedding?: number[];
+  /** Number of candidates to retrieve (default: 20) */
+  topK?: number;
+  /** Minimum score for final results (default: 0.3) */
+  minScore?: number;
+  /**
+   * @deprecated Use topK and minScore instead
+   * Legacy threshold for backwards compatibility
+   */
+  matchThreshold?: number;
+};
+
 // Graph Algorithm: Find Nearest Concept (BFS)
 // Optimized to run in SQL for performance
+// Now uses top-K retrieval instead of static threshold
 export async function findNearestConcept(
   startNodeLabel: string | undefined,
   targetConcepts: string[],
   maxDepth = 3,
   resource?: string,
   embedding?: number[],
-  matchThreshold = 0.5 // Cosine distance threshold (lower is better)
+  matchThresholdOrOptions: number | FindConceptOptions = {}
 ): Promise<{ concept: string; path: string[]; node: NodeRow } | null> {
+  // Handle backwards compatibility
+  const options: FindConceptOptions =
+    typeof matchThresholdOrOptions === "number"
+      ? {
+          maxDepth,
+          resource,
+          embedding,
+          // Convert legacy threshold to top-K parameters
+          topK: DEFAULT_TOP_K,
+          minScore: Math.max(DEFAULT_MIN_SCORE, 1 - matchThresholdOrOptions),
+          matchThreshold: matchThresholdOrOptions,
+        }
+      : {
+          maxDepth: matchThresholdOrOptions.maxDepth ?? maxDepth,
+          resource: matchThresholdOrOptions.resource ?? resource,
+          embedding: matchThresholdOrOptions.embedding ?? embedding,
+          topK: matchThresholdOrOptions.topK ?? DEFAULT_TOP_K,
+          minScore: matchThresholdOrOptions.minScore ?? DEFAULT_MIN_SCORE,
+          matchThreshold: matchThresholdOrOptions.matchThreshold,
+        };
+
+  // Use legacy threshold if explicitly provided, otherwise use top-K approach
+  const useTopK = options.matchThreshold === undefined;
+  const effectiveThreshold = useTopK
+    ? 1 - (options.minScore ?? DEFAULT_MIN_SCORE)
+    : (options.matchThreshold ?? 0.5);
+
+  const effectiveMaxDepth = options.maxDepth ?? maxDepth;
+  const effectiveResource = options.resource ?? resource;
+  const effectiveEmbedding = options.embedding ?? embedding;
+  const effectiveTopK = options.topK ?? DEFAULT_TOP_K;
+
   if (isSqliteDriver()) {
     return findNearestConceptSqlite({
       startNodeLabel,
       targetConcepts,
-      maxDepth,
-      resource,
-      embedding,
-      matchThreshold,
+      maxDepth: effectiveMaxDepth,
+      resource: effectiveResource,
+      embedding: effectiveEmbedding,
+      matchThreshold: effectiveThreshold,
+      topK: effectiveTopK,
     });
   }
 
@@ -34,28 +90,32 @@ export async function findNearestConcept(
   const targets = targetConcepts.map((c) => c.toLowerCase());
   const start = startNodeLabel || ""; // Handle undefined startNodeLabel
 
-  const startNodeSelection = embedding
+  // Use top-K retrieval: get more candidates, then filter
+  const candidateLimit = useTopK ? effectiveTopK : 1;
+
+  const startNodeSelection = effectiveEmbedding
     ? sql`
-      SELECT id, 0 as depth, ARRAY[id] as path
+      SELECT id, 0 as depth, ARRAY[id] as path,
+             embedding <=> ${sql.raw(`ARRAY[${effectiveEmbedding.join(",")}]::vector`)} as distance
       FROM memory_nodes
       WHERE embedding IS NOT NULL
-        ${resource ? sql`AND resource = ${resource}` : sql``}
-        AND embedding <=> ${sql.raw(`ARRAY[${embedding.join(",")}]::vector`)} < ${matchThreshold}
+        ${effectiveResource ? sql`AND resource = ${effectiveResource}` : sql``}
+        AND embedding <=> ${sql.raw(`ARRAY[${effectiveEmbedding.join(",")}]::vector`)} < ${effectiveThreshold}
       ORDER BY embedding <=> ${sql.raw(
-        `ARRAY[${embedding.join(",")}]::vector`
+        `ARRAY[${effectiveEmbedding.join(",")}]::vector`
       )} ASC
-      LIMIT 1
+      LIMIT ${candidateLimit}
     `
     : sql`
-      SELECT id, 0, ARRAY[id] as path
+      SELECT id, 0, ARRAY[id] as path, 0::float as distance
       FROM memory_nodes
       WHERE (
           label = ${start}
           OR (LENGTH(${start}) > 3 AND label ILIKE ${"%" + start + "%"})
           OR (LENGTH(${start}) > 3 AND ${start} ILIKE '%' || label || '%')
         )
-        ${resource ? sql`AND resource = ${resource}` : sql``}
-      LIMIT 1
+        ${effectiveResource ? sql`AND resource = ${effectiveResource}` : sql``}
+      LIMIT ${candidateLimit}
     `;
 
   // We use a recursive CTE to traverse the graph
@@ -85,8 +145,8 @@ export async function findNearestConcept(
         END
       FROM memory_edges e
       JOIN traversal ON (e.from_id = traversal.node_id OR e.to_id = traversal.node_id)
-      WHERE traversal.depth < ${maxDepth}
-        ${resource ? sql`AND e.resource = ${resource}` : sql``}
+      WHERE traversal.depth < ${effectiveMaxDepth}
+        ${effectiveResource ? sql`AND e.resource = ${effectiveResource}` : sql``}
         AND NOT (
           CASE
             WHEN e.from_id = traversal.node_id THEN e.to_id
@@ -122,6 +182,8 @@ type SqliteTraversalInput = {
   resource?: string;
   embedding?: number[];
   matchThreshold: number;
+  /** Number of candidates to retrieve (default: 20) */
+  topK?: number;
 };
 
 async function findNearestConceptSqlite({
@@ -131,9 +193,11 @@ async function findNearestConceptSqlite({
   resource,
   embedding,
   matchThreshold,
-}: SqliteTraversalInput): Promise<
-  { concept: string; path: string[]; node: NodeRow } | null
-> {
+}: SqliteTraversalInput): Promise<{
+  concept: string;
+  path: string[];
+  node: NodeRow;
+} | null> {
   const normalizedTargets = new Set(
     targetConcepts.map((concept) => concept.toLowerCase())
   );
@@ -160,7 +224,8 @@ async function findNearestConceptSqlite({
 
     const label = (current.node.label ?? "").toLowerCase();
     const isTarget = normalizedTargets.has(label);
-    const isStartLabel = normalizedStart.length > 0 && label === normalizedStart;
+    const isStartLabel =
+      normalizedStart.length > 0 && label === normalizedStart;
 
     if (isTarget && (current.depth > 0 || !isStartLabel)) {
       return {
@@ -232,7 +297,7 @@ function addNeighbor(
   source: string,
   target: string
 ): void {
-  if (!source || !target) {
+  if (!(source && target)) {
     return;
   }
   const neighbors = adjacency.get(source);
@@ -326,11 +391,7 @@ function normalizeEmbedding(value: unknown): number[] | null {
     if (value.byteLength % 4 !== 0) {
       return null;
     }
-    const view = new DataView(
-      value.buffer,
-      value.byteOffset,
-      value.byteLength
-    );
+    const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
     const result: number[] = [];
     for (let offset = 0; offset < view.byteLength; offset += 4) {
       result.push(view.getFloat32(offset, true));

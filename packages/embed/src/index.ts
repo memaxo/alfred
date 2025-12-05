@@ -7,6 +7,21 @@ import { EmbedPool } from "./pool";
 
 export { EmbedPool } from "./pool";
 export { EmbedProcess } from "./process";
+// Int8 quantization for 4x storage reduction with 97%+ accuracy retention
+export {
+  computeScale,
+  cosineSimilarity,
+  dequantizeBatch,
+  dequantizeFromInt8,
+  deserializeQuantized,
+  type QuantizationMetadata,
+  type QuantizedEmbedding,
+  quantizeBatch,
+  quantizedCosineSimilarity,
+  quantizeToInt8,
+  serializeQuantized,
+  storageRatio,
+} from "./quantize";
 export type {
   EmbedConfig,
   EmbedRequest,

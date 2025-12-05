@@ -583,6 +583,152 @@ export const domainCacheHitsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+// ============================================================================
+// Memory System Enhancement Metrics (alfred-memory-review.md implementation)
+// ============================================================================
+
+/**
+ * Int8 quantization statistics
+ * Tracks embeddings quantized and storage savings
+ */
+export const embeddingQuantizationsTotal = new client.Counter({
+  name: "alfred_embedding_quantizations_total",
+  help: "Count of embedding quantization operations by status.",
+  labelNames: ["status"] as const, // "success" | "error" | "skipped"
+  registers: [metricsRegistry],
+});
+
+export const embeddingStorageSavedBytes = new client.Counter({
+  name: "alfred_embedding_storage_saved_bytes",
+  help: "Total bytes saved through int8 quantization.",
+  registers: [metricsRegistry],
+});
+
+/**
+ * Adaptive decay statistics
+ * Tracks how access frequency affects decay
+ */
+export const adaptiveDecayOperationsTotal = new client.Counter({
+  name: "alfred_adaptive_decay_operations_total",
+  help: "Count of adaptive decay operations by outcome.",
+  labelNames: ["outcome"] as const, // "decayed" | "retained" | "pruned"
+  registers: [metricsRegistry],
+});
+
+export const nodeAccessCountHistogram = new client.Histogram({
+  name: "alfred_node_access_count",
+  help: "Distribution of node access counts.",
+  buckets: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000],
+  registers: [metricsRegistry],
+});
+
+/**
+ * Domain threshold calibration statistics
+ * Tracks how thresholds adapt based on corrections
+ */
+export const domainThresholdCalibrationTotal = new client.Counter({
+  name: "alfred_domain_threshold_calibrations_total",
+  help: "Count of domain threshold calibration events by domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});
+
+export const domainThresholdGauge = new client.Gauge({
+  name: "alfred_domain_threshold",
+  help: "Current override threshold per domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});
+
+export const domainAccuracyGauge = new client.Gauge({
+  name: "alfred_domain_accuracy",
+  help: "Current classification accuracy per domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * DSA-BFS traversal statistics
+ * Tracks similarity-aware graph traversal performance
+ */
+export const dsaBfsTraversalsTotal = new client.Counter({
+  name: "alfred_dsa_bfs_traversals_total",
+  help: "Count of DSA-BFS traversal operations by outcome.",
+  labelNames: ["outcome"] as const, // "found" | "not_found" | "early_termination"
+  registers: [metricsRegistry],
+});
+
+export const dsaBfsExpansionsHistogram = new client.Histogram({
+  name: "alfred_dsa_bfs_expansions",
+  help: "Distribution of node expansions per DSA-BFS traversal.",
+  buckets: [1, 5, 10, 25, 50, 100, 200, 500],
+  registers: [metricsRegistry],
+});
+
+export const dsaBfsDurationSeconds = new client.Histogram({
+  name: "alfred_dsa_bfs_duration_seconds",
+  help: "Duration of DSA-BFS traversal operations.",
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+/**
+ * CRAG retrieval evaluation statistics
+ * Tracks retrieval quality decisions
+ */
+export const cragEvaluationsTotal = new client.Counter({
+  name: "alfred_crag_evaluations_total",
+  help: "Count of CRAG evaluations by action decision.",
+  labelNames: ["action"] as const, // "use" | "refine" | "fallback"
+  registers: [metricsRegistry],
+});
+
+export const cragScoreHistogram = new client.Histogram({
+  name: "alfred_crag_score",
+  help: "Distribution of CRAG evaluation scores.",
+  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+  registers: [metricsRegistry],
+});
+
+/**
+ * Concept drift detection statistics
+ * Tracks ADWIN drift detection events
+ */
+export const conceptDriftDetectionsTotal = new client.Counter({
+  name: "alfred_concept_drift_detections_total",
+  help: "Count of concept drift detection events by domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});
+
+export const conceptDriftWindowSize = new client.Gauge({
+  name: "alfred_concept_drift_window_size",
+  help: "Current ADWIN window size per domain.",
+  labelNames: ["domain"] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * Bi-temporal edge statistics
+ * Tracks soft deletes and historical queries
+ */
+export const bitemporalEdgeOperationsTotal = new client.Counter({
+  name: "alfred_bitemporal_edge_operations_total",
+  help: "Count of bi-temporal edge operations by type.",
+  labelNames: ["operation"] as const, // "create" | "soft_delete" | "supersede"
+  registers: [metricsRegistry],
+});
+
+export const bitemporalHistoricalQueriesTotal = new client.Counter({
+  name: "alfred_bitemporal_historical_queries_total",
+  help: "Count of historical graph queries.",
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// End Memory System Enhancement Metrics
+// ============================================================================
+
 export const redisCommandsTotal = new client.Counter({
   name: "redis_commands_total",
   help: "Count of Redis commands executed grouped by operation.",

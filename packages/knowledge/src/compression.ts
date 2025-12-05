@@ -35,6 +35,10 @@ export const DEFAULT_COMPRESSION_CONFIG: CompressionConfig = {
   patternMinConfidence: 0.7,
 };
 
+/**
+ * Standard confidence decay without access tracking.
+ * Uses simple exponential decay: confidence = initial × 0.5^(elapsed/halfLife)
+ */
 export function decayConfidence(
   node: Knowledge,
   elapsedMs: number,
@@ -48,6 +52,73 @@ export function decayConfidence(
   const factor = 0.5 ** (elapsedMs / halfLife);
   const next = updateConfidence(node, current * factor);
   return next;
+}
+
+/**
+ * Adaptive confidence decay based on access frequency.
+ * More frequently accessed nodes decay slower.
+ *
+ * Formula: effective_half_life = base_half_life × (1 + log(1 + access_count))
+ *
+ * This means:
+ * - access_count=0: effective_half_life = base (normal decay)
+ * - access_count=9: effective_half_life = base × 2.30 (~2.3x slower decay)
+ * - access_count=99: effective_half_life = base × 4.61 (~4.6x slower decay)
+ * - access_count=999: effective_half_life = base × 6.91 (~7x slower decay)
+ *
+ * Reference: alfred-memory-review.md - "Adaptive decay based on access frequency"
+ *
+ * @param node - The knowledge node to decay
+ * @param elapsedMs - Time since last update in milliseconds
+ * @param baseHalfLife - Base half-life in milliseconds (before access adjustment)
+ * @param accessCount - Number of times this node has been accessed
+ * @returns The node with decayed confidence
+ */
+export function decayConfidenceAdaptive(
+  node: Knowledge,
+  elapsedMs: number,
+  baseHalfLife: number,
+  accessCount: number
+): Knowledge {
+  if (node._ !== "fact" && node._ !== "insight") {
+    return node;
+  }
+
+  // Calculate effective half-life based on access frequency
+  // Formula: effective_half_life = base_half_life × (1 + log(1 + access_count))
+  const accessMultiplier = 1 + Math.log(1 + accessCount);
+  const effectiveHalfLife = baseHalfLife * accessMultiplier;
+
+  const current = Number(node.confidence);
+  const factor = 0.5 ** (elapsedMs / effectiveHalfLife);
+  const next = updateConfidence(node, current * factor);
+  return next;
+}
+
+/**
+ * Calculate the effective half-life for a node based on access count.
+ * Useful for estimating when a node will decay below a threshold.
+ *
+ * @param baseHalfLife - Base half-life in milliseconds
+ * @param accessCount - Number of times the node has been accessed
+ * @returns Effective half-life in milliseconds
+ */
+export function calculateEffectiveHalfLife(
+  baseHalfLife: number,
+  accessCount: number
+): number {
+  return baseHalfLife * (1 + Math.log(1 + accessCount));
+}
+
+/**
+ * Calculate the access multiplier for a given access count.
+ * Returns how many times slower decay will be compared to base.
+ *
+ * @param accessCount - Number of times the node has been accessed
+ * @returns Multiplier for half-life (1.0 = no change, 2.0 = 2x slower)
+ */
+export function getAccessMultiplier(accessCount: number): number {
+  return 1 + Math.log(1 + accessCount);
 }
 
 export function consolidatePatterns(

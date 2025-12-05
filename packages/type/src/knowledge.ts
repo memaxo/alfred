@@ -4,6 +4,23 @@
 
 export type KnowledgeConfidence = number & { readonly _: unique symbol };
 
+/**
+ * Knowledge Source Types for tiered seed confidence
+ * Reference: alfred-memory-review.md - "Bootstrap ontology seeding should vary by knowledge type"
+ *
+ * - official: Official documentation, verified facts (0.8)
+ * - established: Well-established community knowledge (0.7)
+ * - inferred: Inferred relationships, derived knowledge (0.5)
+ * - community: Community-sourced, moderate reliability (0.5)
+ * - preference: User-specific preferences, high update expectation (0.4)
+ */
+export type KnowledgeSourceType =
+  | "official"
+  | "established"
+  | "inferred"
+  | "community"
+  | "preference";
+
 export type KnowledgeFact = {
   id: string;
   content: string;

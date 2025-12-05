@@ -4,6 +4,102 @@ import { memoryEdges, memoryNodes } from "../../schema/graph";
 import type { EdgeRow, NodeRow } from "./types";
 import { buildEdgeWhere } from "./utils";
 
+/**
+ * Record access to a node, incrementing access_count and updating last_accessed_at.
+ * Used for adaptive decay: effective_half_life = base_half_life × (1 + log(1 + access_count))
+ *
+ * @param nodeId - ID of the node being accessed
+ * @returns The updated node or null if not found
+ */
+export async function recordAccess(nodeId: string): Promise<NodeRow | null> {
+  const [row] = await db
+    .update(memoryNodes)
+    .set({
+      accessCount: sql`${memoryNodes.accessCount} + 1`,
+      lastAccessedAt: new Date(),
+    })
+    .where(eq(memoryNodes.id, nodeId))
+    .returning();
+
+  return row ?? null;
+}
+
+/**
+ * Record access to multiple nodes in a single batch operation.
+ * More efficient for recording access to many nodes at once.
+ *
+ * @param nodeIds - Array of node IDs being accessed
+ * @returns Number of nodes updated
+ */
+export async function recordAccessBatch(nodeIds: string[]): Promise<number> {
+  if (nodeIds.length === 0) {
+    return 0;
+  }
+
+  const result = await db
+    .update(memoryNodes)
+    .set({
+      accessCount: sql`${memoryNodes.accessCount} + 1`,
+      lastAccessedAt: new Date(),
+    })
+    .where(sql`${memoryNodes.id} = ANY(${nodeIds})`);
+
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Find cold nodes (rarely accessed) that are candidates for more aggressive decay.
+ * Cold nodes have low access counts and haven't been accessed recently.
+ *
+ * @param accessThreshold - Maximum access_count to consider "cold" (default: 5)
+ * @param daysUnaccessed - Minimum days since last access (default: 30)
+ * @param limit - Maximum nodes to return
+ */
+export async function findColdNodes(
+  accessThreshold = 5,
+  daysUnaccessed = 30,
+  limit = 1000
+): Promise<NodeRow[]> {
+  const threshold = new Date(Date.now() - daysUnaccessed * 24 * 60 * 60 * 1000);
+
+  return db
+    .select()
+    .from(memoryNodes)
+    .where(
+      and(
+        sql`${memoryNodes.accessCount} < ${accessThreshold}`,
+        sql`(${memoryNodes.lastAccessedAt} IS NULL OR ${memoryNodes.lastAccessedAt} < ${threshold.toISOString()}::timestamp)`,
+        sql`${memoryNodes.resource} != 'ontology'`,
+        sql`properties->>'archived' IS NULL`
+      )
+    )
+    .orderBy(memoryNodes.accessCount, memoryNodes.lastAccessedAt)
+    .limit(limit);
+}
+
+/**
+ * Find hot nodes (frequently accessed) that should have extended retention.
+ *
+ * @param accessThreshold - Minimum access_count to consider "hot" (default: 10)
+ * @param limit - Maximum nodes to return
+ */
+export async function findHotNodes(
+  accessThreshold = 10,
+  limit = 100
+): Promise<NodeRow[]> {
+  return db
+    .select()
+    .from(memoryNodes)
+    .where(
+      and(
+        sql`${memoryNodes.accessCount} >= ${accessThreshold}`,
+        sql`properties->>'archived' IS NULL`
+      )
+    )
+    .orderBy(desc(memoryNodes.accessCount), desc(memoryNodes.lastAccessedAt))
+    .limit(limit);
+}
+
 export async function getNode(nodeId: string): Promise<NodeRow | null> {
   const [row] = await db
     .select()

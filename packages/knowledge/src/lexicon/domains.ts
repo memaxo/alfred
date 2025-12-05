@@ -42,8 +42,10 @@ export function registerClassificationMetrics(m: ClassificationMetrics): void {
 
 /**
  * Cache TTL for domain associations
+ * Set to 5 minutes based on research showing 300-600s optimal for preference data
+ * (Reference: alfred-memory-review.md - "60s is too short for domain preferences")
  */
-const CACHE_TTL_MS = 60_000; // 1 minute
+const CACHE_TTL_MS = 300_000; // 5 minutes
 
 /**
  * Cached domain association

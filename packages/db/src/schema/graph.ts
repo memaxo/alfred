@@ -7,6 +7,7 @@ import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   boolean,
   customType,
+  integer,
   jsonb,
   pgTable,
   real,
@@ -39,6 +40,17 @@ export const memoryNodes = pgTable("memory_nodes", {
   updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   labelTsvector: tsvector("label_tsvector"),
   embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
+  // Int8 quantized embedding for 4x storage reduction (97%+ accuracy retention)
+  // Format: 8-byte float64 scale + int8 data
+  embeddingQuantized: customType<{ data: Uint8Array; driverData: Buffer }>({
+    dataType() {
+      return "bytea";
+    },
+  })("embedding_quantized"),
+  // Access tracking for adaptive decay (reference: alfred-memory-review.md)
+  // effective_half_life = base_half_life × (1 + log(1 + access_count))
+  accessCount: integer("access_count").notNull().default(0),
+  lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
 });
 
 // Index coverage:
@@ -46,6 +58,12 @@ export const memoryNodes = pgTable("memory_nodes", {
 
 /**
  * Memory edges (relationships between nodes)
+ *
+ * Uses bi-temporal model (Zep-style) for non-destructive updates:
+ * - valid_from/valid_to: When the relationship is valid in the real world
+ * - created_at: When we recorded this edge (transaction time)
+ *
+ * Reference: alfred-memory-review.md - "Bi-temporal edges for non-lossy updates"
  */
 export const memoryEdges = pgTable("memory_edges", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -60,7 +78,13 @@ export const memoryEdges = pgTable("memory_edges", {
   metadata: jsonb("metadata"), // Arbitrary edge properties
   resource: text("resource").notNull(), // Scope identifier
   hash: text("hash").notNull(), // Unique edge identifier
+  // Transaction time: when we learned about this edge
   created: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  // Bi-temporal validity period: when the edge is/was valid in the real world
+  // NULL valid_from = valid from the beginning of time
+  // NULL valid_to = valid until the end of time (current)
+  validFrom: timestamp("valid_from", { withTimezone: true }),
+  validTo: timestamp("valid_to", { withTimezone: true }),
 });
 
 // Index coverage:
