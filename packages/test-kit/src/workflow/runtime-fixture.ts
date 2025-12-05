@@ -2,6 +2,27 @@ import { mock, vi } from "bun:test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+import { createVCR, type VCRRecorder } from "../vcr";
+
+/**
+ * VCR Mode Configuration
+ *
+ * When enabled, AI provider responses are recorded/replayed via VCR
+ * instead of using stub mocks. This provides more realistic testing
+ * while remaining deterministic.
+ *
+ * Usage:
+ *   const handle = await installWorkflowRuntimeFixture({
+ *     vcr: {
+ *       cassettePath: path.join(__dirname, '__cassettes__', 'test.json'),
+ *       strictReplay: true,
+ *     }
+ *   });
+ */
+export type VCRConfig = {
+  cassettePath: string;
+  strictReplay?: boolean;
+};
 
 type WorkflowRunRecord = {
   id: string;
@@ -53,6 +74,8 @@ export type WorkflowRuntimeFixtureHandle = {
   clearRepo(): void;
   clearLinearRequests(): void;
   stop(): Promise<void>;
+  /** VCR instance when VCR mode is enabled (null when using stubs) */
+  vcr: InstanceType<typeof VCRRecorder> | null;
 };
 
 const aiStreamState: { mode: StreamMode } = { mode: "normal" };
@@ -308,7 +331,25 @@ mock.module(runtimeReviewPath, () => ({
   },
 }));
 
-export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFixtureHandle> {
+export type WorkflowRuntimeFixtureOptions = {
+  vcr?: VCRConfig;
+};
+
+let activeVcr: InstanceType<typeof VCRRecorder> | null = null;
+
+export async function installWorkflowRuntimeFixture(
+  options?: WorkflowRuntimeFixtureOptions
+): Promise<WorkflowRuntimeFixtureHandle> {
+  // Initialize VCR if configured
+  if (options?.vcr) {
+    activeVcr = createVCR({
+      cassettePath: options.vcr.cassettePath,
+      strictReplay: options.vcr.strictReplay ?? false,
+    });
+    await activeVcr.start();
+    // When VCR is active, it intercepts fetch requests
+    // AI providers using fetch will be automatically recorded/replayed
+  }
   const runs = new Map<string, WorkflowRunRecord>();
   const events: WorkflowEventRecord[] = [];
   const linearRequests: LinearRequest[] = [];
@@ -513,7 +554,13 @@ export async function installWorkflowRuntimeFixture(): Promise<WorkflowRuntimeFi
     },
     async stop() {
       server.stop();
+      if (activeVcr) {
+        await activeVcr.stop();
+        activeVcr = null;
+      }
     },
+    /** VCR instance when VCR mode is enabled */
+    vcr: activeVcr,
   };
 }
 

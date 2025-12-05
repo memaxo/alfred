@@ -1,6 +1,7 @@
 export * from "./cognitive/index";
 export * from "./env/index";
 export * from "./kinetic/index";
+export * from "./performance/index";
 export * from "./physical/index";
 export * from "./sandbox/index";
 export * from "./vcr/index";

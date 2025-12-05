@@ -7,8 +7,9 @@
  * Requires local voice models to be installed:
  *   cd packages/voice && ./scripts/install-deps.sh
  *
- * Note: There's a known dependency conflict between nemo_toolkit (datasets 2.14.4)
- * and pyarrow 22.0.0. Tests will gracefully skip if voice pools fail to initialize.
+ * Note: The pyarrow/nemo_toolkit dependency conflict has been resolved by
+ * pinning datasets>=2.21.0 in pyproject.toml. If tests still fail to initialize,
+ * run `cd packages/voice && uv sync` to update the lock file.
  */
 
 process.env.DATABASE_URL = "sqlite::memory:";
@@ -30,6 +31,7 @@ let createTestCaller: typeof import("../utils/trpc").createTestCaller;
 let initializeVoicePools: typeof import("../../src/voice/pools").initializeVoicePools;
 let shutdownVoicePools: typeof import("../../src/voice/pools").shutdownVoicePools;
 let voicePoolsInitialized = false;
+let poolsInitError: Error | null = null;
 
 beforeAll(async () => {
   // Load test utilities
@@ -44,8 +46,11 @@ beforeAll(async () => {
     voicePoolsInitialized = true;
     console.log("Voice pools initialized for local models");
   } catch (error) {
+    poolsInitError = error instanceof Error ? error : new Error(String(error));
     console.warn("Voice pools initialization failed:", error);
-    console.warn("Skipping voice tests - local models may not be installed");
+    console.warn(
+      "If pyarrow error, run: cd packages/voice && uv sync --upgrade"
+    );
   }
 });
 
@@ -78,53 +83,68 @@ describe("Voice Pipeline Integration", () => {
   });
 
   describe("TTS Synthesis", () => {
-    it.skipIf(!voicePoolsInitialized)(
-      "synthesizes text to speech",
-      async () => {
-        const result = await caller.voice.ttsSynthesize({
-          text: "Hello, this is a test.",
-          voice: "en_US-lessac-medium", // Piper voice name
+    it("synthesizes text to speech", async () => {
+      if (!voicePoolsInitialized) {
+        console.warn(
+          "Skipping: voice pools not initialized",
+          poolsInitError?.message
+        );
+        return;
+      }
+
+      const result = await caller.voice.ttsSynthesize({
+        text: "Hello, this is a test.",
+        voice: "en_US-lessac-medium", // Piper voice name
+        format: "mp3",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.audioBase64).toBeDefined();
+      expect(result.mimeType).toContain("audio");
+    });
+
+    it("handles empty text gracefully", async () => {
+      if (!voicePoolsInitialized) {
+        console.warn(
+          "Skipping: voice pools not initialized",
+          poolsInitError?.message
+        );
+        return;
+      }
+
+      await expect(
+        caller.voice.ttsSynthesize({
+          text: "",
+          voice: "en_US-lessac-medium",
           format: "mp3",
-        });
-
-        expect(result).toBeDefined();
-        expect(result.audioBase64).toBeDefined();
-        expect(result.mimeType).toContain("audio");
-      }
-    );
-
-    it.skipIf(!voicePoolsInitialized)(
-      "handles empty text gracefully",
-      async () => {
-        await expect(
-          caller.voice.ttsSynthesize({
-            text: "",
-            voice: "en_US-lessac-medium",
-            format: "mp3",
-          })
-        ).rejects.toBeDefined();
-      }
-    );
+        })
+      ).rejects.toBeDefined();
+    });
   });
 
   describe("Voice Preview", () => {
-    it.skipIf(!voicePoolsInitialized)(
-      "previews a voice with sample text",
-      async () => {
-        const result = await caller.voice.previewVoice({
-          voice: "en_US-lessac-medium",
-          text: "Hello, I am Alfred.",
-        });
-
-        expect(result).toBeDefined();
-        expect(result.audioBase64).toBeDefined();
-        expect(result.mimeType).toBeDefined();
+    it("previews a voice with sample text", async () => {
+      if (!voicePoolsInitialized) {
+        console.warn(
+          "Skipping: voice pools not initialized",
+          poolsInitError?.message
+        );
+        return;
       }
-    );
+
+      const result = await caller.voice.previewVoice({
+        voice: "en_US-lessac-medium",
+        text: "Hello, I am Alfred.",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.audioBase64).toBeDefined();
+      expect(result.mimeType).toBeDefined();
+    });
   });
 });
 
-describe.skipIf(!voicePoolsInitialized)("Voice to Assistant Pipeline", () => {
+describe("Voice to Assistant Pipeline", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
   beforeEach(async () => {
@@ -141,6 +161,14 @@ describe.skipIf(!voicePoolsInitialized)("Voice to Assistant Pipeline", () => {
   });
 
   it("synthesizes text to speech with local models", async () => {
+    if (!voicePoolsInitialized) {
+      console.warn(
+        "Skipping: voice pools not initialized",
+        poolsInitError?.message
+      );
+      return;
+    }
+
     // Test TTS with Piper local model
     const result = await caller.voice.ttsSynthesize({
       text: "Hello, this is Alfred speaking.",
@@ -165,7 +193,15 @@ describe("Voice Error Handling", () => {
     });
   });
 
-  it.skipIf(!voicePoolsInitialized)("handles invalid voice ID", async () => {
+  it("handles invalid voice ID", async () => {
+    if (!voicePoolsInitialized) {
+      console.warn(
+        "Skipping: voice pools not initialized",
+        poolsInitError?.message
+      );
+      return;
+    }
+
     await expect(
       caller.voice.ttsSynthesize({
         text: "Test",

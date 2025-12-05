@@ -56,6 +56,12 @@ jobs:
       - name: Workflow Runtime Stream Provenance (Postgres)
         run: WORKFLOW_RUNTIME_STREAM_TEST_USE_EXISTING_DB=1 bun test packages/api/test/workflow.runtime-stream-provenance.integration.test.ts
 
+      - name: Postgres-Specific Features Integration
+        run: bun run test:integration:postgres
+
+      - name: Full Pipeline Integration Tests (Postgres)
+        run: RUN_DB_TESTS=1 bun test packages/api/test/integration/workflow-full-pipeline.integration.test.ts packages/api/test/integration/cognitive-full-pipeline.integration.test.ts packages/api/test/integration/workflow-cognitive.integration.test.ts packages/api/test/integration/workflow-knowledge.integration.test.ts
+
       - name: Verify tmux sessions (default)
         run: bun scripts/verify-sessions.ts
 

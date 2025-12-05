@@ -17,15 +17,21 @@ dependencies = [
     "accelerate>=0.26.0",
     "termcolor>=2.4.0",
     "ml_dtypes>=0.5.0",
-    # Note: Known datasets/pyarrow compatibility issue
+    # Force datasets>=2.21.0 to resolve pyarrow compatibility
     # - datasets 2.14.4 (from nemo_toolkit) uses PyExtensionType (removed in pyarrow 13.0+)
-    # - pyarrow 22.0.0 is required by nemo_toolkit
-    # - This incompatibility cannot be resolved by pinning (nemo_toolkit requires pyarrow 22.0.0)
-    # - Voice tests will skip if pools fail to initialize due to this issue
-    # - Workaround: Use nemo_toolkit without datasets features, or wait for upstream fix
+    # - datasets>=2.21.0 uses pa.ExtensionType instead (compatible with pyarrow 22.0.0)
+    # - Override the nemo_toolkit constraint with a newer datasets version
+    "datasets>=2.21.0",
     # Platform-specific dependencies (macOS only for dev)
     "mlx>=0.19.0; sys_platform == 'darwin'",
     "mlx-lm>=0.19.0; sys_platform == 'darwin'",
+]
+
+# Dependency overrides to resolve conflicts
+[tool.uv]
+# Override nemo_toolkit's datasets constraint to use a compatible version
+override-dependencies = [
+    "datasets>=2.21.0",
 ]
 
 # Note: Cross-platform PyTorch configuration is handled via environment variables

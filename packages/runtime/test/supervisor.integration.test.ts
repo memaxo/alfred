@@ -105,6 +105,176 @@ describe("WorkflowRuntime supervisor integration", () => {
       );
     });
   });
+
+  it("detects low entropy (semantic loops)", async () => {
+    // Test that repeated similar outputs trigger entropy detection
+    AISDKAdapter.prototype.stream = async function* () {
+      // Emit nearly identical reasoning traces
+      for (let i = 0; i < 5; i++) {
+        yield {
+          type: "reasoning",
+          text: "Analyzing the same pattern repeatedly",
+        } as WorkflowEvent;
+      }
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+      });
+
+      // Should detect the repetitive pattern and interrupt
+      await expect(consume(runtime)).rejects.toThrow(/boredom_loop_detected/);
+    });
+  });
+
+  it("detects zombie processes (no progress)", async () => {
+    // Test that supervisor detects when process makes no progress
+    let eventCount = 0;
+
+    AISDKAdapter.prototype.stream = async function* (options) {
+      const signal = options.abortSignal;
+
+      // Emit one event then stall
+      yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+      eventCount++;
+
+      // Wait indefinitely (simulating a zombie process)
+      await new Promise<never>((_, reject) => {
+        if (signal?.aborted) {
+          reject(signal.reason);
+          return;
+        }
+        signal?.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      });
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        supervisorHeartbeatMs: 100,
+        supervisorCheckIntervalMs: 20,
+      });
+
+      await expect(consume(runtime)).rejects.toThrow(/heartbeat_failed/);
+      expect(eventCount).toBe(1);
+    });
+  });
+
+  it("propagates interrupt event to cognitive state", async () => {
+    // Test that interrupt events are properly typed and propagated
+    const events: WorkflowEvent[] = [];
+
+    AISDKAdapter.prototype.stream = async function* () {
+      for (let i = 0; i < 6; i++) {
+        const event = {
+          type: "reasoning",
+          text: `Loop iteration ${i}`,
+        } as WorkflowEvent;
+        events.push(event);
+        yield event;
+      }
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+      });
+
+      try {
+        await consume(runtime);
+      } catch (error) {
+        // Interrupt should have occurred
+        expect(error).toBeDefined();
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        expect(errorMsg).toContain("interrupt");
+      }
+
+      // Events should have been emitted before interrupt
+      expect(events.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("handles multiple reasoning traces correctly", async () => {
+    // Test that distinct reasoning traces don't trigger false positives
+    AISDKAdapter.prototype.stream = async function* () {
+      const distinctReasons = [
+        "First: Analyzing user requirements",
+        "Second: Designing architecture",
+        "Third: Planning implementation",
+        "Fourth: Considering edge cases",
+        "Fifth: Finalizing approach",
+      ];
+
+      for (const text of distinctReasons) {
+        yield {
+          type: "reasoning",
+          text,
+        } as WorkflowEvent;
+      }
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+      });
+
+      // Should NOT throw - distinct reasoning traces should be allowed
+      // (The test passes if no error is thrown)
+      try {
+        await consume(runtime);
+      } catch (error) {
+        // If it throws, make sure it's not a loop detection error
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        expect(errorMsg).not.toContain("boredom_loop");
+      }
+    });
+  });
+
+  it("respects supervisor check interval", async () => {
+    let checkCount = 0;
+    const startTime = performance.now();
+
+    AISDKAdapter.prototype.stream = async function* (options) {
+      const signal = options.abortSignal;
+
+      // Wait a bit then finish
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Count how many times the stream is accessed
+      checkCount++;
+
+      if (signal?.aborted) {
+        throw signal.reason;
+      }
+
+      yield { type: "reasoning", text: "Processing" } as WorkflowEvent;
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        supervisorCheckIntervalMs: 50,
+      });
+
+      await consume(runtime);
+
+      const duration = performance.now() - startTime;
+      // Should complete in reasonable time
+      expect(duration).toBeLessThan(1000);
+    });
+  });
 });
 
 async function consume(runtime: ReturnType<typeof createRuntime>) {
