@@ -6,6 +6,7 @@ import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
 import { toolHandoff } from "../assistant/src/tool/handoff";
 import { toolHome } from "../assistant/src/tool/home";
+import { memoryTools } from "../assistant/src/tool/memory";
 import {
   toolMindscapeConnect,
   toolMindscapeRead,
@@ -120,6 +121,7 @@ const assistantToolSources: LegacyTool[] = [
   toolWebAssistant,
   toolMindscapeRead,
   toolMindscapeConnect,
+  ...memoryTools,
 ];
 
 const orchestratorToolSources: LegacyTool[] = [

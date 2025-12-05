@@ -729,6 +729,55 @@ export const bitemporalHistoricalQueriesTotal = new client.Counter({
 // End Memory System Enhancement Metrics
 // ============================================================================
 
+// ============================================================================
+// Memory Tools Metrics
+// ============================================================================
+
+export const memoryToolCallsTotal = new client.Counter({
+  name: "alfred_memory_tool_calls_total",
+  help: "Count of memory tool calls by tool name and status.",
+  labelNames: ["tool", "status"] as const, // "success" | "error"
+  registers: [metricsRegistry],
+});
+
+export const memorySearchLatencySeconds = new client.Histogram({
+  name: "alfred_memory_search_latency_seconds",
+  help: "Latency of memory search operations.",
+  buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const memorySearchResultsCount = new client.Histogram({
+  name: "alfred_memory_search_results_count",
+  help: "Number of results returned by memory search operations.",
+  buckets: [0, 1, 5, 10, 20, 50, 100],
+  registers: [metricsRegistry],
+});
+
+export const memoryTraverseDepth = new client.Histogram({
+  name: "alfred_memory_traverse_depth",
+  help: "Depth reached during memory graph traversal.",
+  buckets: [1, 2, 3, 4, 5],
+  registers: [metricsRegistry],
+});
+
+export const memoryBoostsTotal = new client.Counter({
+  name: "alfred_memory_boosts_total",
+  help: "Count of memory boost operations.",
+  registers: [metricsRegistry],
+});
+
+export const memoryRemovalsTotal = new client.Counter({
+  name: "alfred_memory_removals_total",
+  help: "Count of memory removal operations by type.",
+  labelNames: ["type"] as const, // "archived" | "deleted"
+  registers: [metricsRegistry],
+});
+
+// ============================================================================
+// End Memory Tools Metrics
+// ============================================================================
+
 export const redisCommandsTotal = new client.Counter({
   name: "redis_commands_total",
   help: "Count of Redis commands executed grouped by operation.",

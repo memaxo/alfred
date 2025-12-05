@@ -243,3 +243,92 @@ export function registerCompressionNodeCounter(counter: SingleLabelCounter) {
 export function recordCompressionNodeUpdate(kind: string, count: number) {
   compressionNodeCounter?.labels(kind).inc(count);
 }
+
+// Memory Tool Metrics
+type MemoryToolCounter = {
+  labels: (tool: string, status: string) => { inc: (value?: number) => void };
+};
+
+type MemorySearchHistogram = {
+  observe: (value: number) => void;
+};
+
+type MemoryResultsHistogram = {
+  observe: (value: number) => void;
+};
+
+type MemoryTraverseHistogram = {
+  observe: (value: number) => void;
+};
+
+type MemoryBoostCounter = {
+  inc: (value?: number) => void;
+};
+
+type MemoryRemovalCounter = {
+  labels: (type: string) => { inc: (value?: number) => void };
+};
+
+let memoryToolCounter: MemoryToolCounter | null = null;
+let memorySearchLatencyHistogram: MemorySearchHistogram | null = null;
+let memorySearchResultsHistogram: MemoryResultsHistogram | null = null;
+let memoryTraverseDepthHistogram: MemoryTraverseHistogram | null = null;
+let memoryBoostCounter: MemoryBoostCounter | null = null;
+let memoryRemovalCounter: MemoryRemovalCounter | null = null;
+
+export function registerMemoryToolCounter(counter: MemoryToolCounter) {
+  memoryToolCounter = counter;
+}
+
+export function recordMemoryToolCall(
+  tool: string,
+  status: "success" | "error"
+) {
+  memoryToolCounter?.labels(tool, status).inc();
+}
+
+export function registerMemorySearchLatencyHistogram(
+  histogram: MemorySearchHistogram
+) {
+  memorySearchLatencyHistogram = histogram;
+}
+
+export function recordMemorySearchLatency(durationSeconds: number) {
+  memorySearchLatencyHistogram?.observe(durationSeconds);
+}
+
+export function registerMemorySearchResultsHistogram(
+  histogram: MemoryResultsHistogram
+) {
+  memorySearchResultsHistogram = histogram;
+}
+
+export function recordMemorySearchResults(count: number) {
+  memorySearchResultsHistogram?.observe(count);
+}
+
+export function registerMemoryTraverseDepthHistogram(
+  histogram: MemoryTraverseHistogram
+) {
+  memoryTraverseDepthHistogram = histogram;
+}
+
+export function recordMemoryTraverseDepth(depth: number) {
+  memoryTraverseDepthHistogram?.observe(depth);
+}
+
+export function registerMemoryBoostCounter(counter: MemoryBoostCounter) {
+  memoryBoostCounter = counter;
+}
+
+export function recordMemoryBoost() {
+  memoryBoostCounter?.inc();
+}
+
+export function registerMemoryRemovalCounter(counter: MemoryRemovalCounter) {
+  memoryRemovalCounter = counter;
+}
+
+export function recordMemoryRemoval(type: "archived" | "deleted") {
+  memoryRemovalCounter?.labels(type).inc();
+}
