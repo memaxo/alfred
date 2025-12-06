@@ -34,7 +34,7 @@
     "preflight": "bun scripts/preflight.ts",
     "ci": "bun run tools:sync-js:check && turbo run typecheck && bun run test:sqlite && bun run test:postgres && bun run test:integration && bun run test:workflow-integration && bun run smoke:hypergraph",
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "NODE_OPTIONS='--max-old-space-size=16384' turbo build",
     "typecheck": "tsc -b --pretty false",
     "typecheck:workspace": "turbo typecheck",
     "tune:run": "bun run packages/tune/src/cli.ts",
