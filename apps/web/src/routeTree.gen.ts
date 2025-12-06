@@ -16,6 +16,7 @@ import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as DemoCortexRouteImport } from './routes/demo/cortex'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
@@ -33,6 +34,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
+import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedDevEdgesRouteImport } from './routes/_protected/dev/edges'
 import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
@@ -69,6 +71,11 @@ const HealthzDepsRoute = HealthzDepsRouteImport.update({
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoCortexRoute = DemoCortexRouteImport.update({
+  id: '/demo/cortex',
+  path: '/demo/cortex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -156,6 +163,11 @@ const ProtectedWorkflowRunIdRoute = ProtectedWorkflowRunIdRouteImport.update({
   path: '/workflow/$runId',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedSettingsVisualRoute = ProtectedSettingsVisualRouteImport.update({
+  id: '/visual',
+  path: '/visual',
+  getParentRoute: () => ProtectedSettingsRoute,
+} as any)
 const ProtectedExperimentalTuneRoute =
   ProtectedExperimentalTuneRouteImport.update({
     id: '/experimental/tune',
@@ -181,15 +193,17 @@ export interface FileRoutesByFullPath {
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
   '/mindscape': typeof ProtectedMindscapeRoute
-  '/settings': typeof ProtectedSettingsRoute
+  '/settings': typeof ProtectedSettingsRouteWithChildren
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
+  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/dev/edges': typeof ProtectedDevEdgesRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
@@ -209,15 +223,17 @@ export interface FileRoutesByTo {
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
   '/mindscape': typeof ProtectedMindscapeRoute
-  '/settings': typeof ProtectedSettingsRoute
+  '/settings': typeof ProtectedSettingsRouteWithChildren
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
+  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/dev/edges': typeof ProtectedDevEdgesRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
@@ -239,15 +255,17 @@ export interface FileRoutesById {
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
   '/_protected/drive': typeof ProtectedDriveRoute
   '/_protected/mindscape': typeof ProtectedMindscapeRoute
-  '/_protected/settings': typeof ProtectedSettingsRoute
+  '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
+  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
   '/_protected/dev/edges': typeof ProtectedDevEdgesRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
@@ -273,11 +291,13 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
+    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/admin/voice'
     | '/dev/edges'
     | '/experimental/tune'
+    | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
@@ -301,11 +321,13 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
+    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/admin/voice'
     | '/dev/edges'
     | '/experimental/tune'
+    | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
@@ -330,11 +352,13 @@ export interface FileRouteTypes {
     | '/_protected/voice-s2s'
     | '/api/metrics'
     | '/api/search'
+    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/_protected/admin/voice'
     | '/_protected/dev/edges'
     | '/_protected/experimental/tune'
+    | '/_protected/settings/visual'
     | '/_protected/workflow/$runId'
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
@@ -355,6 +379,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  DemoCortexRoute: typeof DemoCortexRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
@@ -416,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/docs/$'
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/cortex': {
+      id: '/demo/cortex'
+      path: '/demo/cortex'
+      fullPath: '/demo/cortex'
+      preLoaderRoute: typeof DemoCortexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -537,6 +569,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedWorkflowRunIdRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/settings/visual': {
+      id: '/_protected/settings/visual'
+      path: '/visual'
+      fullPath: '/settings/visual'
+      preLoaderRoute: typeof ProtectedSettingsVisualRouteImport
+      parentRoute: typeof ProtectedSettingsRoute
+    }
     '/_protected/experimental/tune': {
       id: '/_protected/experimental/tune'
       path: '/experimental/tune'
@@ -573,11 +612,22 @@ const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
   ProtectedAdminRouteChildren,
 )
 
+interface ProtectedSettingsRouteChildren {
+  ProtectedSettingsVisualRoute: typeof ProtectedSettingsVisualRoute
+}
+
+const ProtectedSettingsRouteChildren: ProtectedSettingsRouteChildren = {
+  ProtectedSettingsVisualRoute: ProtectedSettingsVisualRoute,
+}
+
+const ProtectedSettingsRouteWithChildren =
+  ProtectedSettingsRoute._addFileChildren(ProtectedSettingsRouteChildren)
+
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
   ProtectedDriveRoute: typeof ProtectedDriveRoute
   ProtectedMindscapeRoute: typeof ProtectedMindscapeRoute
-  ProtectedSettingsRoute: typeof ProtectedSettingsRoute
+  ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
   ProtectedDevEdgesRoute: typeof ProtectedDevEdgesRoute
   ProtectedExperimentalTuneRoute: typeof ProtectedExperimentalTuneRoute
@@ -588,7 +638,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
   ProtectedDriveRoute: ProtectedDriveRoute,
   ProtectedMindscapeRoute: ProtectedMindscapeRoute,
-  ProtectedSettingsRoute: ProtectedSettingsRoute,
+  ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
   ProtectedDevEdgesRoute: ProtectedDevEdgesRoute,
   ProtectedExperimentalTuneRoute: ProtectedExperimentalTuneRoute,
@@ -618,6 +668,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   ApiSearchRoute: ApiSearchRoute,
+  DemoCortexRoute: DemoCortexRoute,
   DocsSplatRoute: DocsSplatRoute,
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,

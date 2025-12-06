@@ -24,6 +24,7 @@ import { todoRouter } from "./todo";
 import { tokenRouter } from "./token";
 import { tuneRouter } from "./tune";
 import { userRouter } from "./user";
+import { visualRouter } from "./visual";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
 
@@ -56,6 +57,7 @@ export const appRouter: ReturnType<typeof router> = router({
   profile: profileRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,
+  visual: visualRouter,
   voice: voiceRouter,
   fs: fsRouter,
   terminal: terminalRouter,

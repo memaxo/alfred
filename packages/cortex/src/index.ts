@@ -12,6 +12,17 @@ export {
   StorageBuffer,
   UniformBuffer,
 } from "./buffer";
+// Configuration and presets
+export {
+  animateConfig,
+  applyPreset,
+  applyVisualConfig,
+  getVisualConfig,
+  interpolateConfig,
+  parseOklch,
+  rgbToOklch,
+  updateVisualConfig,
+} from "./config";
 export type { TemporalState } from "./coordinate";
 // Coordinate system
 export {
@@ -37,7 +48,6 @@ export {
 } from "./engine";
 // Fallback renderers
 export * from "./fallback";
-
 // Frame graph
 export {
   buildStandardFrameGraph,
@@ -45,7 +55,6 @@ export {
   FrameGraph,
   PASS_NAMES,
 } from "./frame-graph";
-
 // LOD and culling
 export {
   computeLOD,
@@ -57,6 +66,18 @@ export {
 } from "./lod";
 // Math utilities
 export * from "./math";
+export type { PresetMetadata } from "./presets";
+export {
+  getDefaultPreset,
+  getPreset,
+  mergeWithPreset,
+  PRESET_BALANCED,
+  PRESET_MAXIMUM,
+  PRESET_METADATA,
+  PRESET_MINIMAL,
+  PRESET_PERFORMANCE,
+  VISUAL_PRESETS,
+} from "./presets";
 export type { SemanticConfig, SemanticState } from "./semantic";
 // Semantic projection
 export {

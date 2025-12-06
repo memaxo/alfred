@@ -7,21 +7,49 @@ const shouldStartWebServer =
   process.env.PLAYWRIGHT_SKIP_WEB_SERVER !== "1" &&
   process.env.CI !== "workflow-test";
 
+// Screenshot configuration
+const CAPTURE_SCREENSHOTS = process.env.PLAYWRIGHT_SCREENSHOTS === "1";
+const SCREENSHOT_DIR = "./test-results/screenshots";
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 120 * 1000,
   expect: {
     timeout: 15 * 1000,
+    // Visual comparison thresholds
+    toHaveScreenshot: {
+      threshold: 0.2,
+      maxDiffPixelRatio: 0.05,
+    },
+    toMatchSnapshot: {
+      threshold: 0.2,
+    },
   },
+  // Output configuration for screenshots and reports
+  outputDir: "./test-results",
+  snapshotDir: "./test-snapshots",
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
+  // Reporter configuration for comprehensive analysis
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "./test-results/html-report", open: "never" }],
+    ["json", { outputFile: "./test-results/results.json" }],
+  ],
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",
     video: "retain-on-failure",
-    screenshot: "only-on-failure",
+    // Enhanced screenshot configuration
+    screenshot: CAPTURE_SCREENSHOTS ? "on" : "only-on-failure",
     viewport: { width: 1440, height: 900 },
+    // Animation handling for consistent screenshots
+    launchOptions: {
+      slowMo: process.env.PLAYWRIGHT_SLOW_MO
+        ? Number(process.env.PLAYWRIGHT_SLOW_MO)
+        : undefined,
+    },
   },
   webServer: shouldStartWebServer
     ? [

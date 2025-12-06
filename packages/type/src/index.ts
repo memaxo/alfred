@@ -19,5 +19,7 @@ export { RuntimeContext } from "./runtime-context";
 // Streaming and UI message types
 export * from "./stream";
 export * from "./stream.zod";
+// Visual configuration types
+export * from "./visual";
 // Voice streaming types
 export * from "./voice";
