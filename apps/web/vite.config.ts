@@ -16,6 +16,10 @@ const serverOnlyRegex = [
   /^@alfred\/db(?:\/.*)?$/,
 ];
 const serverOnlyPackages = ["@alfred/agent", "@alfred/policy", "@alfred/db"];
+
+// Browser-only packages that use WebGPU/Canvas APIs - must be externalized from SSR
+const browserOnlyRegex = [/^@alfred\/cortex(?:\/.*)?$/];
+const browserOnlyPackages = ["@alfred/cortex"];
 const serverOnlyDeps = [
   "bun",
   "bun:sqlite",
@@ -134,7 +138,14 @@ export default defineConfig({
     ],
   },
   ssr: {
-    external: [...serverOnlyDeps, ...serverOnlyPackages, ...serverOnlyRegex],
+    external: [
+      ...serverOnlyDeps,
+      ...serverOnlyPackages,
+      ...serverOnlyRegex,
+      // Browser-only packages (WebGPU) - externalize from SSR
+      ...browserOnlyPackages,
+      ...browserOnlyRegex,
+    ],
     noExternal: [/^fumadocs-mdx:collections\/.*/, "fumadocs-mdx"],
     resolve: {
       alias: {

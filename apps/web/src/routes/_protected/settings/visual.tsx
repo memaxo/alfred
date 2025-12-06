@@ -5,8 +5,12 @@
  * For full parameter access, use /demo/cortex.
  */
 
-import { COLOR_PALETTES, PRESET_METADATA } from "@alfred/cortex";
-import type { ColorPalette, VisualPreset } from "@alfred/type";
+import { PRESET_METADATA } from "@alfred/cortex";
+import {
+  COLOR_PALETTES,
+  type ColorPalette,
+  type VisualPreset,
+} from "@alfred/type";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, ExternalLink, Palette } from "lucide-react";
 import { useCallback, useRef } from "react";

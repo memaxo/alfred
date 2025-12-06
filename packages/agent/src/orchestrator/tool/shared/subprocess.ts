@@ -287,7 +287,7 @@ export function createTimeout(
  * @param writer - Writer for stderr chunks
  */
 export function streamStderr(
-  proc: { stderr: ReadableStream<Uint8Array> | number | null },
+  proc: { stderr: ReadableStream<Uint8Array> | number | null | undefined },
   writer: ToolWriter
 ): void {
   if (!proc.stderr || typeof proc.stderr === "number") {
