@@ -28,6 +28,7 @@
       "default": "./src/fallback/*.ts"
     }
   },
+  "sideEffects": false,
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b -w",

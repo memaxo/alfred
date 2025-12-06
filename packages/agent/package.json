@@ -1,6 +1,7 @@
 {
   "name": "@alfred/agent",
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc -b",

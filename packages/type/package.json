@@ -63,6 +63,7 @@
     "check-types": "tsc --noEmit",
     "typecheck": "tsc -b"
   },
+  "sideEffects": false,
   "dependencies": {
     "zod": "catalog:",
     "ai": "^6.0.0-beta.94"

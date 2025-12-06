@@ -2,6 +2,7 @@
   "name": "@alfred/learning",
   "version": "0.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -154,9 +154,31 @@ export default defineConfig({
     },
   },
   build: {
+    // Enable tree shaking and minification
+    minify: "esbuild",
+    target: "esnext",
     rollupOptions: {
       external: [...serverOnlyDeps, ...serverOnlyRegex],
+      output: {
+        // Enable tree shaking for better dead code elimination
+        // Conservative manualChunks to avoid circular dependencies that break CSS manifest plugin
+        manualChunks: (id) => {
+          // Only split truly independent, large libraries to avoid circular chunk dependencies
+          // Tree shaking still works via sideEffects configuration in package.json files
+          if (id.includes("node_modules")) {
+            // Shiki (syntax highlighting) - largest bundle, completely independent
+            if (id.includes("shiki")) {
+              return "shiki-vendor";
+            }
+            // All other vendors stay together to avoid circular deps
+            // Vite's default chunking will still optimize
+          }
+          return undefined;
+        },
+      },
     },
+    // Optimize chunk size warnings
+    chunkSizeWarningLimit: 1000,
   },
   resolve: {
     conditions: ["bun", "module", "import", "default"],
