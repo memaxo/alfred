@@ -5,7 +5,6 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
-  type NodeProps,
   type NodeTypes,
   type OnConnect,
   Panel,
@@ -73,8 +72,12 @@ type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
 // Wrap each node component with error boundary
+// Note: Using 'any' here because ReactFlow's internal NodeProps type system
+// conflicts with our typed node components. The actual type safety is enforced
+// at the individual node component level.
 const wrapWithErrorBoundary =
-  (Component: React.ComponentType<NodeProps>) => (props: NodeProps) => (
+  <T extends { id: string }>(Component: React.ComponentType<T>) =>
+  (props: T) => (
     <NodeErrorBoundary nodeId={props.id}>
       <Component {...props} />
     </NodeErrorBoundary>
@@ -242,7 +245,7 @@ function MindscapeCanvasInner({
     [onRagDocNavigate]
   );
 
-  const reactFlow = useReactFlow<ArtifactData>();
+  const reactFlow = useReactFlow();
   const { mutateAsync: connectEdge } = trpc.graph.connect.useMutation();
 
   const [showRuntimeKnowledge, setShowRuntimeKnowledge] = useState(true);

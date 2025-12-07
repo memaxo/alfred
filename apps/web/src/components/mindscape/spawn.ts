@@ -146,7 +146,7 @@ export function createSpawnNode(
         id,
         type: "chat",
         position,
-        data: { label: "Neural Stream", messages: [] },
+        data: { type: "chat", label: "Neural Stream", messages: [] },
       };
     case "note":
       return {
@@ -154,6 +154,7 @@ export function createSpawnNode(
         type: "note",
         position,
         data: {
+          type: "note",
           label: "New Note",
           title: "",
           content: "",
@@ -167,6 +168,7 @@ export function createSpawnNode(
         type: "reminder",
         position,
         data: {
+          type: "reminder",
           label: "Reminder",
           title: "",
           due: undefined,
@@ -182,6 +184,7 @@ export function createSpawnNode(
         type: "timer",
         position,
         data: {
+          type: "timer",
           label: "Timers",
           defaultMinutes: 25,
           lastLabel: undefined,
@@ -193,6 +196,7 @@ export function createSpawnNode(
         type: "bookmark",
         position,
         data: {
+          type: "bookmark",
           label: "Bookmarks",
           lastTags: [],
         },
@@ -203,6 +207,7 @@ export function createSpawnNode(
         type: "todo",
         position,
         data: {
+          type: "todo",
           label: "Todo List",
           filter: "all",
         },
@@ -212,7 +217,7 @@ export function createSpawnNode(
         id,
         type: "workflow",
         position,
-        data: { label: "Workflow", status: "Idle", messages: [] },
+        data: { type: "workflow", label: "Workflow", status: "Idle", messages: [] },
       };
     case "droid":
       return {
@@ -220,6 +225,7 @@ export function createSpawnNode(
         type: "droid",
         position,
         data: {
+          type: "droid",
           label: "Droid Exec",
           prompt: "",
           auto: "low",
@@ -233,42 +239,42 @@ export function createSpawnNode(
         id,
         type: "settings",
         position,
-        data: { label: "Settings", autonomy: "low", voiceProvider: "local" },
+        data: { type: "settings", label: "Settings", autonomy: "low", voiceProvider: "local" },
       };
     case "privacy":
       return {
         id,
         type: "privacy",
         position,
-        data: { label: "Privacy" },
+        data: { type: "privacy", label: "Privacy" },
       };
     case "profile":
       return {
         id,
         type: "profile",
         position,
-        data: { label: "Profile" },
+        data: { type: "profile", label: "Profile" },
       };
     case "integrations":
       return {
         id,
         type: "integrations",
         position,
-        data: { label: "Integrations" },
+        data: { type: "integrations", label: "Integrations" },
       };
     case "workflowlist":
       return {
         id,
         type: "workflowlist",
         position,
-        data: { label: "Workflows", filter: "all" },
+        data: { type: "workflowlist", label: "Workflows", filter: "all" },
       };
     case "deployment":
       return {
         id,
         type: "deployment",
         position,
-        data: { label: "Deployments", liveHealth: false },
+        data: { type: "deployment", label: "Deployments", liveHealth: false },
       };
     case "concept":
       return {
@@ -276,6 +282,7 @@ export function createSpawnNode(
         type: "concept",
         position,
         data: {
+          type: "concept",
           label: "New Concept",
           entityType: "concept",
           confidence: 1.0,

@@ -103,16 +103,15 @@ export function useFocusedContext(): FocusedContext {
     }
 
     if ("messages" in data && Array.isArray(data.messages)) {
-      // Extract text from last 3 messages
+      // Extract text from last 3 messages using AI SDK v6 parts structure
       const recent = data.messages
         .slice(-3)
         .map((m) => {
-          if (typeof m.content === "string") return m.content;
-          // Handle AI SDK v6 parts
-          if (Array.isArray(m.content)) {
-            return m.content
-              .filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
+          // Handle AI SDK v6 parts array
+          if (Array.isArray(m.parts)) {
+            return m.parts
+              .filter((p: { type: string }) => p.type === "text")
+              .map((p: { text?: string }) => p.text ?? "")
               .join(" ");
           }
           return "";
@@ -201,12 +200,12 @@ export function useFocusedContext(): FocusedContext {
       effectiveNodeId && contextCache
         ? contextCache[effectiveNodeId]
         : undefined;
-    const contextSnapshot = contextEntry
+    const contextSnapshot: ContextSnapshot | null = contextEntry
       ? {
           status:
             contextEntry.source === "handoff" || contextEntry.phase === "cache"
-              ? "cache"
-              : "live",
+              ? ("cache" as const)
+              : ("live" as const),
           summary: contextEntry.receipt?.summary,
           timestamp:
             contextEntry.receipt?.created ??

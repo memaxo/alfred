@@ -1,6 +1,6 @@
 import type { AppRouter } from "@alfred/api/routers";
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
-import type { createTRPCProxyClient, Subscriber } from "@trpc/client";
+import type { createTRPCProxyClient } from "@trpc/client";
 import { toast } from "sonner";
 import { formatCodexErrorMessage } from "@/lib/codex-errors";
 
@@ -131,10 +131,10 @@ export function subscribeToDroidStream({
       onComplete,
     });
   }
-  const observable = client.droid.stream.subscribe(input);
-  return observable.subscribe({
-    next(event) {
-      const normalized = normalizeEvent(event as RawDroidStreamEvent);
+  // tRPC v11 subscription API
+  const subscription = client.droid.stream.subscribe(input, {
+    onData(event: RawDroidStreamEvent) {
+      const normalized = normalizeEvent(event);
       if (!normalized) {
         return;
       }
@@ -148,7 +148,7 @@ export function subscribeToDroidStream({
 
       onEvent?.(normalized);
     },
-    error(err) {
+    onError(err: unknown) {
       const normalizedError =
         err instanceof Error ? err : new Error(String(err));
       const message = formatCodexErrorMessage(normalizedError.message);
@@ -165,10 +165,11 @@ export function subscribeToDroidStream({
         toast.error(`Droid stream failed: ${message}`);
       }
     },
-    complete() {
+    onComplete() {
       onComplete?.();
     },
-  } as Subscriber<RawDroidStreamEvent>);
+  });
+  return subscription;
 }
 
 declare global {

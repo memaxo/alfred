@@ -99,7 +99,7 @@ const mapHealthResource = (raw: unknown) => {
   );
 };
 
-export const deployRouter: ReturnType<typeof router> = router({
+export const deployRouter = router({
   list: authedProcedure.input(listInput).query(async ({ ctx, input }) => {
     const session = ctx.session;
     const userId = session?.user?.id;

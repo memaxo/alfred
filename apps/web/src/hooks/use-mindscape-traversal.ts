@@ -6,7 +6,6 @@ import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
 type GraphNode =
   inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["nodes"][number];
-type GraphEdge = inferRouterOutputs<TRPCAppRouter>["graph"]["getEdges"][number];
 
 export function useMindscapeTraversal() {
   const { nodes, focusedNodeId, addArtifact, setEdges, edges } =
@@ -51,7 +50,9 @@ export function useMindscapeTraversal() {
 
     // 1. Add Nodes
     traversalResult.nodes.forEach((node: GraphNode, index: number) => {
-      const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
+      // Handle union type - access properties that may or may not exist
+      const nodeId = node.id as { uiId?: string; dbId?: string; hgHash?: string };
+      const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
       if (!ref) return;
 
       // Check if node already exists (by dbId or ID)
@@ -85,8 +86,8 @@ export function useMindscapeTraversal() {
           summary,
           source: "runtime",
           graph: {
-            dbId: node.id.dbId,
-            hgHash: node.id.hgHash,
+            dbId: nodeId.dbId,
+            hgHash: nodeId.hgHash,
           },
         } as ArtifactData,
       });

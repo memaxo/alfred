@@ -101,7 +101,7 @@ type WorkflowDetailContentProps = {
   eventsLoading: boolean;
   ragDocs: WorkflowReasoningResult["provenance"]["ragDocuments"];
   reasoningLoading: boolean;
-  reasoningError: Error | null;
+  reasoningError: { message: string } | null;
   footer?: React.ReactNode;
   onMindscapeNavigate?: () => void;
   onNavigateToMindscape?: (documentId: string) => void;
@@ -195,8 +195,8 @@ export function WorkflowDetailContent({
               <div>
                 <h4 className="text-biolum-dim text-sm">Started</h4>
                 <p className="text-biolum">
-                  {workflow.startedAt
-                    ? new Date(workflow.startedAt).toLocaleString()
+                  {workflow.created
+                    ? new Date(workflow.created).toLocaleString()
                     : "—"}
                 </p>
               </div>
@@ -233,7 +233,7 @@ export function WorkflowDetailContent({
               )}
             </div>
 
-            {workflow.inputData && (
+            {workflow.inputData !== null && workflow.inputData !== undefined && (
               <div>
                 <h4 className="mb-2 text-biolum-dim text-sm">Input Data</h4>
                 <pre className="overflow-x-auto rounded-xl border border-white/10 bg-void-surface/40 p-4 font-mono text-biolum text-xs">
@@ -328,7 +328,7 @@ export function WorkflowDetailContent({
                             ).toLocaleTimeString()}
                           </span>
                         </div>
-                        {event.eventData && (
+                        {event.eventData !== null && event.eventData !== undefined && (
                           <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
                             {JSON.stringify(event.eventData, null, 2)}
                           </pre>
@@ -370,11 +370,5 @@ function normalizeTimestamp(
   if (!value) {
     return;
   }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  return;
+  return value;
 }

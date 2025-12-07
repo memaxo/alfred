@@ -31,7 +31,7 @@ import {
   useCortexLOD,
   useCortexOrbState,
 } from "@/lib/cortex-bridge";
-import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
+import { useMindscapeStore } from "@/store/mindscape";
 import { MindscapeCommandPalette } from "./command-palette";
 import { MindscapeDetailPanel } from "./detail-panel";
 import { MindscapeInitializer } from "./initializer";
@@ -166,7 +166,7 @@ function CortexMindscapeCanvasInner({
   const viewport = useViewport();
   useCortexLOD(engine, viewport.zoom);
 
-  const reactFlow = useReactFlow<ArtifactData>();
+  const reactFlow = useReactFlow();
 
   // Initialize with Orb if empty
   useEffect(() => {

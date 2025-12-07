@@ -1,5 +1,5 @@
 import type { inferRouterOutputs } from "@trpc/server";
-import type { Node, NodeProps } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import { ListChecks, PlusCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -19,6 +19,7 @@ import { workflowListNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { useLOD, useNodeFocus } from "../lod";
 import { createSpawnNode } from "../spawn";
+import type { MindscapeNodeProps } from "../types";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
@@ -50,9 +51,7 @@ export function WorkflowListNode({
   id,
   data,
   selected,
-  x = 0,
-  y = 0,
-}: NodeProps) {
+}: MindscapeNodeProps) {
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -69,7 +68,7 @@ export function WorkflowListNode({
     status:
       statusFilter === "all"
         ? undefined
-        : (statusFilter as WorkflowRun["status"]),
+        : (statusFilter as "running" | "completed" | "failed" | "suspended" | "cancelled"),
     limit: 20,
     offset: 0,
   });
@@ -99,16 +98,22 @@ export function WorkflowListNode({
       focusNode(existing.id);
       return;
     }
+    // Get current node position from store
+    const currentNode = nodes.find((n) => n.id === id);
+    const nodeX = currentNode?.position?.x ?? 0;
+    const nodeY = currentNode?.position?.y ?? 0;
+    
     const derivedId = `workflow-${run.id}`;
     const newNode: Node<ArtifactData> = {
       id: derivedId,
       type: "workflow" as const,
-      position: { x: x + 420, y },
+      position: { x: nodeX + 420, y: nodeY },
       data: {
+        type: "workflow",
         label: run.workflowId ?? "Workflow",
         title: run.workflowId ?? "Workflow",
-        description: run.summary ?? undefined,
-        status: run.status,
+        description: undefined,
+        status: run.status as "Idle" | "running" | "completed" | "failed" | "pending" | "starting",
         runId: run.id,
         messages: [],
         graph: { dbId: run.id },
@@ -130,8 +135,8 @@ export function WorkflowListNode({
   const sortedWorkflows = useMemo(
     () =>
       [...workflows].sort((a, b) => {
-        const timeA = a.startedAt ? new Date(a.startedAt).getTime() : 0;
-        const timeB = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+        const timeA = a.created ? new Date(a.created).getTime() : 0;
+        const timeB = b.created ? new Date(b.created).getTime() : 0;
         return timeB - timeA;
       }),
     [workflows]
@@ -217,8 +222,8 @@ export function WorkflowListNode({
                           {workflow.workflowId ?? workflow.id.slice(0, 8)}
                         </p>
                         <p className="text-biolum-faint text-xs">
-                          {workflow.startedAt
-                            ? new Date(workflow.startedAt).toLocaleString()
+                          {workflow.created
+                            ? new Date(workflow.created).toLocaleString()
                             : "Scheduled"}
                         </p>
                       </div>

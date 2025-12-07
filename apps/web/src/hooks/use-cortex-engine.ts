@@ -44,7 +44,7 @@ export interface UseCortexEngineResult {
  * Hook to manage Cortex WebGPU engine lifecycle
  */
 export function useCortexEngine(
-  canvasRef: React.RefObject<HTMLCanvasElement>,
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
   options: UseCortexEngineOptions = {}
 ): UseCortexEngineResult {
   const { postProcessing = true, onReady, onError, autoStart = true } = options;

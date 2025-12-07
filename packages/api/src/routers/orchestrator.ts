@@ -37,7 +37,7 @@ function mapResource(raw: unknown) {
   };
 }
 
-export const orchestratorRouter: ReturnType<typeof router> = router({
+export const orchestratorRouter = router({
   generate: authedProcedure
     .use(rateLimit)
     .use(requirePolicy("orchestrator.generate", (raw) => mapResource(raw)))

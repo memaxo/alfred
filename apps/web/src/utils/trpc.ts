@@ -1,4 +1,4 @@
-import type { appRouter } from "@alfred/api/src/routers/index";
+import type { appRouter } from "@alfred/api/routers/index";
 import { createTRPCReact } from "@trpc/react-query";
 
 type AppRouter = typeof appRouter;

@@ -395,7 +395,7 @@ const codexProcedures = {
     }),
 };
 
-export const codexRouter: ReturnType<typeof router> = router(codexProcedures);
+export const codexRouter = router(codexProcedures);
 
 export const __internals = {
   createCodexStreamObservable,

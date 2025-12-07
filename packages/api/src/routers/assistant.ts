@@ -79,7 +79,7 @@ function mapResource(raw: unknown) {
   };
 }
 
-export const assistantRouter: ReturnType<typeof router> = router({
+export const assistantRouter = router({
   getConfig: authedProcedure.query(async () => {
     const defaults = getAssistantAgentDefaults();
     const modelId = defaults.model.modelId;

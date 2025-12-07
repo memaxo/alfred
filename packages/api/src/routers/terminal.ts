@@ -32,7 +32,7 @@ async function getPty() {
   }
 }
 
-export const terminalRouter: ReturnType<typeof router> = router({
+export const terminalRouter = router({
   createSession: authedProcedure
     .input(
       z.object({

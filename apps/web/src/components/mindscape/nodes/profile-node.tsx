@@ -158,7 +158,7 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
         name: value.name.trim() || null,
         email: value.email.trim() || null,
         avatar: value.avatar.trim() || null,
-        timezone: value.timezone.trim() || null,
+        timezone: value.timezone.trim() || undefined,
       });
     },
   });
@@ -182,7 +182,12 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
       try {
         const result = await authClient.passkey.listUserPasskeys();
         if (result.data) {
-          setPasskeys(result.data);
+          setPasskeys(result.data.map((p) => ({
+            id: p.id,
+            name: p.name ?? "Unknown Device",
+            deviceType: p.deviceType ?? undefined,
+            createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
+          })));
         }
       } catch {
         // ignore
@@ -202,11 +207,16 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
       const result = await authClient.passkey.addPasskey({
         name: `Device ${new Date().toLocaleDateString()}`,
       });
-      if (result.data) {
+      if (result?.data) {
         toast.success("Passkey added successfully");
         const listResult = await authClient.passkey.listUserPasskeys();
         if (listResult.data) {
-          setPasskeys(listResult.data);
+          setPasskeys(listResult.data.map((p) => ({
+            id: p.id,
+            name: p.name ?? "Unknown Device",
+            deviceType: p.deviceType ?? undefined,
+            createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
+          })));
         }
       }
     } catch (error) {
@@ -225,7 +235,12 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
         toast.success("Passkey deleted");
         const listResult = await authClient.passkey.listUserPasskeys();
         if (listResult.data) {
-          setPasskeys(listResult.data);
+          setPasskeys(listResult.data.map((p) => ({
+            id: p.id,
+            name: p.name ?? "Unknown Device",
+            deviceType: p.deviceType ?? undefined,
+            createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
+          })));
         }
       }
     } catch (error) {

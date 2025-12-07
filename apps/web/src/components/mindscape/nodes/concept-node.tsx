@@ -1,7 +1,7 @@
-import type { NodeProps } from "@xyflow/react";
 import { Brain, Network } from "lucide-react";
 import type { ConceptNodeData } from "@/store/mindscape";
 import { useLOD, useNodeFocus } from "../lod";
+import type { MindscapeNodeProps } from "../types";
 import { getConfidenceStyle } from "../utils";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
@@ -11,7 +11,7 @@ export function ConceptNode({
   id,
   data,
   selected,
-}: NodeProps<ConceptNodeData>) {
+}: MindscapeNodeProps<ConceptNodeData>) {
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -85,14 +85,6 @@ export function ConceptNode({
       <div className="break-words font-medium text-sm tracking-tight">
         {data.label ?? "Unknown Concept"}
       </div>
-
-      {data.topics && data.topics.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {data.topics.map((topic) => (
-            <TopicBadge key={topic} topic={topic} />
-          ))}
-        </div>
-      )}
 
       {data.description && (
         <p className="mt-2 line-clamp-3 text-white/60 text-xs leading-relaxed">

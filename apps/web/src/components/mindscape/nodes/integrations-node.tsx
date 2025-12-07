@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { BiolumBadge } from "@/components/tremor";
 import { Button } from "@/components/ui/button";
+import { hasWindow } from "@/lib/env/isomorphic";
 import { useMindscapeStore } from "@/store/mindscape";
 import { integrationsNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
@@ -48,10 +49,10 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
   const isLinearExpired = linearStatus?.connected && linearStatus?.isExpired;
 
   useEffect(() => {
-    if (linearStatus?.workspace) {
+    if (linearStatus?.connected && linearStatus.workspace) {
       updateArtifactData(id, { lastLinearStatus: linearStatus.workspace });
     }
-  }, [linearStatus?.workspace, id, updateArtifactData]);
+  }, [linearStatus, id, updateArtifactData]);
 
   // LOD 0: Tiny
   if (lod === "tiny") {
@@ -104,7 +105,7 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
                 : "Not Connected"}
             </BiolumBadge>
           </div>
-          {linearStatus?.workspace && !isLinearExpired && (
+          {linearStatus?.connected && linearStatus.workspace && !isLinearExpired && (
             <p className="mt-2 text-biolum-faint text-xs">
               Workspace: {linearStatus.workspace}
             </p>

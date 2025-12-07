@@ -732,4 +732,4 @@ const droidProcedures = {
     }),
 };
 
-export const droidsRouter: ReturnType<typeof router> = router(droidProcedures);
+export const droidsRouter = router(droidProcedures);

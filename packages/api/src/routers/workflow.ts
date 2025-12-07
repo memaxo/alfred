@@ -103,7 +103,7 @@ function coerceRecord(val: unknown): Record<string, unknown> {
   return {};
 }
 
-export const workflowRouter: ReturnType<typeof router> = router({
+export const workflowRouter = router({
   start: authedProcedure
     .use(rateLimit)
     .use(requirePolicy("workflow.plan", (raw) => mapWorkflowResource(raw)))

@@ -22,7 +22,7 @@ function mapResource(raw: unknown) {
   };
 }
 
-export const homeRouter: ReturnType<typeof router> = router({
+export const homeRouter = router({
   list: authedProcedure
     .use(requirePolicy("home.read", mapResource))
     .input(listInput)

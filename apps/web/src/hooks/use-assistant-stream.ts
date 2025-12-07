@@ -46,47 +46,48 @@ function toArgs(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+// Type guards for ALFRED's custom part types (see AGENTS.md AI SDK v6 section)
+function isToolCallPart(part: unknown): part is { type: "tool-call"; toolCallId: string; toolName?: string; input?: unknown } {
+  return isRecord(part) && part.type === "tool-call" && typeof part.toolCallId === "string";
+}
+
+function isToolResultPart(part: unknown): part is { type: "tool-result"; toolCallId: string; toolName?: string; output?: unknown } {
+  return isRecord(part) && part.type === "tool-result" && typeof part.toolCallId === "string";
+}
+
 export function deriveActions(
   messages: AssistantUIMessage[]
 ): AssistantAction[] {
   const actionMap = new Map<string, AssistantAction>();
 
   for (const message of messages) {
-    for (const part of message.parts) {
-      if (part.type === "tool-call") {
-        const toolCallPart = part as {
-          toolCallId: string;
-          toolName?: string;
-          input?: unknown;
-        };
-        const args = toArgs(toolCallPart.input);
-        const existing = actionMap.get(toolCallPart.toolCallId);
+    // Cast parts to unknown[] to use type guards for ALFRED's custom part types
+    const parts = message.parts as unknown[];
+    for (const part of parts) {
+      if (isToolCallPart(part)) {
+        const args = toArgs(part.input);
+        const existing = actionMap.get(part.toolCallId);
         const base: AssistantAction = existing ?? {
-          id: toolCallPart.toolCallId,
-          name: toolCallPart.toolName ?? "tool",
+          id: part.toolCallId,
+          name: part.toolName ?? "tool",
           args,
           status: "running",
         };
-        actionMap.set(toolCallPart.toolCallId, {
+        actionMap.set(part.toolCallId, {
           ...base,
           args,
           status: existing?.status === "completed" ? "completed" : "running",
         });
       }
 
-      if (part.type === "tool-result") {
-        const toolResultPart = part as {
-          toolCallId: string;
-          toolName?: string;
-          output?: unknown;
-        };
-        const existing = actionMap.get(toolResultPart.toolCallId);
-        actionMap.set(toolResultPart.toolCallId, {
-          id: toolResultPart.toolCallId,
-          name: existing?.name ?? toolResultPart.toolName ?? "tool",
+      if (isToolResultPart(part)) {
+        const existing = actionMap.get(part.toolCallId);
+        actionMap.set(part.toolCallId, {
+          id: part.toolCallId,
+          name: existing?.name ?? part.toolName ?? "tool",
           args: existing?.args ?? {},
           status: "completed",
-          result: toolResultPart.output,
+          result: part.output,
         });
       }
     }
@@ -150,7 +151,8 @@ export function useAssistantStream(
     () =>
       new DefaultChatTransport({
         api: apiBase,
-        fetch: trackedFetch,
+        // Custom fetch wrapper for conversation ID tracking
+        fetch: trackedFetch as typeof fetch,
         prepareSendMessagesRequest: ({ body }) => ({
           body: {
             ...(body ?? {}),
@@ -161,9 +163,10 @@ export function useAssistantStream(
     [apiBase, trackedFetch]
   );
 
-  const chat = useChat<AssistantUIMessage>({
+  // Cast messages for AI SDK compatibility - ALFRED's AssistantUIMessage extends UIMessage
+  const chat = useChat({
     transport,
-    messages: initialMessages ?? [],
+    messages: (initialMessages ?? []) as Parameters<typeof useChat>[0]["messages"],
     onError,
   });
 
@@ -173,7 +176,7 @@ export function useAssistantStream(
     }
   }, [chat.error, onError]);
 
-  const actions = useMemo(() => deriveActions(chat.messages), [chat.messages]);
+  const actions = useMemo(() => deriveActions(chat.messages as AssistantUIMessage[]), [chat.messages]);
 
   const send = useCallback(
     (text: string) => {
@@ -192,13 +195,25 @@ export function useAssistantStream(
 
   const hydrate = useCallback(
     (messages: AssistantUIMessage[]) => {
-      chat.setMessages(messages);
+      // Cast for AI SDK compatibility
+      chat.setMessages(messages as Parameters<typeof chat.setMessages>[0]);
+    },
+    [chat]
+  );
+
+  const addToolResult = useCallback(
+    (result: { toolCallId: string; result: unknown }) => {
+      chat.addToolResult({
+        tool: "unknown",
+        toolCallId: result.toolCallId,
+        output: result.result,
+      });
     },
     [chat]
   );
 
   return {
-    messages: chat.messages,
+    messages: chat.messages as AssistantUIMessage[],
     actions,
     status: chat.status,
     error: chat.error ?? null,
@@ -206,6 +221,6 @@ export function useAssistantStream(
     clear,
     hydrate,
     conversationId,
-    addToolResult: chat.addToolResult,
+    addToolResult,
   };
 }

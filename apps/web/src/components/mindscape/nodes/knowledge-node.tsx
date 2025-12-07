@@ -1,19 +1,17 @@
-import type { NodeProps } from "@xyflow/react";
 import { Brain, Play, Sparkles } from "lucide-react";
 import type { KnowledgeNodeData } from "@/store/mindscape";
 import { useMindscapeStore } from "@/store/mindscape";
 import { useLOD, useNodeFocus } from "../lod";
 import { createSpawnNode } from "../spawn";
+import type { MindscapeNodeProps } from "../types";
 import { getConfidenceStyle } from "../utils";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
-
-// ... existing TOPIC_STYLES and TopicBadge ...
 
 export function KnowledgeNode({
   id,
   data,
   selected,
-}: NodeProps<KnowledgeNodeData>) {
+}: MindscapeNodeProps<KnowledgeNodeData>) {
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -141,14 +139,6 @@ export function KnowledgeNode({
       <div className="mt-2 font-semibold text-base">
         {data.label ?? "Knowledge"}
       </div>
-
-      {data.topics && data.topics.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {data.topics.map((topic) => (
-            <TopicBadge key={topic} topic={topic} />
-          ))}
-        </div>
-      )}
 
       {data.summary && (
         <p className="mt-2 line-clamp-3 text-sm text-white/70">

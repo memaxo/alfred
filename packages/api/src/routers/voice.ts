@@ -142,7 +142,7 @@ function toTRPCError(
   });
 }
 
-export const voiceRouter: ReturnType<typeof router> = router({
+export const voiceRouter = router({
   sttTranscribe: authedProcedure
     .use(requirePolicy("voice.stt", toSttResource))
     .input(sttInput)

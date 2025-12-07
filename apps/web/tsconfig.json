@@ -10,7 +10,6 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "outDir": "./.tsbuild",
-    "composite": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -34,27 +33,9 @@
     },
     "types": ["vite/client"],
     "jsx": "react-jsx",
-    "declaration": true,
     "skipLibCheck": true,
     "sourceMap": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
-  "exclude": ["node_modules", ".tsbuild", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"],
-  "references": [
-    {
-      "path": "../../packages/api"
-    },
-    {
-      "path": "../../packages/auth"
-    },
-    {
-      "path": "../../packages/history"
-    },
-    {
-      "path": "../../packages/ui"
-    },
-    {
-      "path": "../../packages/voice"
-    }
-  ]
+  "exclude": ["node_modules", ".tsbuild", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"]
 }
