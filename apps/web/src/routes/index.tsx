@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ScrambleText } from "@/components/scramble-text";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
 import { MindscapeEngine } from "@/lib/mindscape/engine";
-import { trpc } from "@/utils/trpc";
-// import { fetchInitialMindscape } from "@/lib/mindscape/initial-frame.server"; // Not exported by module
 
 // Temporary fix: inline mock loader or use getInitialMindscapeFrame if that's what it should be
 import { getInitialMindscapeFrame } from "@/lib/mindscape/initial-frame.server";
@@ -25,7 +23,12 @@ function Mindscape() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
 
-  const voiceSession = useVoiceSessionWeb(trpc);
+  const voiceSession = useVoiceSessionWeb();
+
+  // Derive voice states from hook return
+  const isSpeaking = voiceSession.stream.status === "responding";
+  const isProcessing = voiceSession.isProcessing;
+  const isRecording = voiceSession.isRecording;
 
   // Sync Agent State with Engine
   useEffect(() => {
@@ -33,16 +36,16 @@ function Mindscape() {
       return;
     }
 
-    if (voiceSession.state.isSpeaking) {
+    if (isSpeaking) {
       engineRef.current.setAgentState("speaking");
-    } else if (voiceSession.state.isProcessing) {
+    } else if (isProcessing) {
       engineRef.current.setAgentState("processing");
-    } else if (voiceSession.state.isRecording) {
+    } else if (isRecording) {
       engineRef.current.setAgentState("listening");
     } else {
       engineRef.current.setAgentState("idle");
     }
-  }, [voiceSession.state]);
+  }, [isSpeaking, isProcessing, isRecording]);
 
   const handleEnter = () => {
     engineRef.current?.triggerWarp();
@@ -63,11 +66,7 @@ function Mindscape() {
   };
 
   const toggleVoiceSession = async () => {
-    if (
-      voiceSession.state.isRecording ||
-      voiceSession.state.isProcessing ||
-      voiceSession.state.isSpeaking
-    ) {
+    if (isRecording || isProcessing || isSpeaking) {
       voiceSession.clear();
     } else {
       await toggleAudio(); // Ensure mic is active for visualization too
@@ -89,9 +88,9 @@ function Mindscape() {
       if (
         e.code === "Space" &&
         !e.repeat &&
-        !voiceSession.state.isRecording &&
-        !voiceSession.state.isProcessing &&
-        !voiceSession.state.isSpeaking
+        !isRecording &&
+        !isProcessing &&
+        !isSpeaking
       ) {
         e.preventDefault();
         await toggleAudio(); // Ensure context is active
@@ -107,7 +106,7 @@ function Mindscape() {
         return;
       }
 
-      if (e.code === "Space" && voiceSession.state.isRecording) {
+      if (e.code === "Space" && isRecording) {
         e.preventDefault();
         await voiceSession.stopAndTranscribe();
       }
@@ -121,7 +120,9 @@ function Mindscape() {
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [
-    voiceSession.state,
+    isRecording,
+    isProcessing,
+    isSpeaking,
     toggleAudio,
     voiceSession.start,
     voiceSession.stopAndTranscribe,
@@ -188,13 +189,13 @@ function Mindscape() {
             </button>
 
             <button
-              className={`flex items-center gap-2 text-sm ${voiceSession.state.isRecording ? "animate-pulse text-red-500" : voiceSession.state.isProcessing ? "text-blue-400" : "text-[oklch(0.40_0_0)]"} transition-colors hover:text-[oklch(0.99_0_0)]`}
+              className={`flex items-center gap-2 text-sm ${isRecording ? "animate-pulse text-red-500" : isProcessing ? "text-blue-400" : "text-[oklch(0.40_0_0)]"} transition-colors hover:text-[oklch(0.99_0_0)]`}
               onClick={toggleVoiceSession}
               title="Talk to Alfred"
             >
-              {voiceSession.state.isSpeaking ? (
+              {isSpeaking ? (
                 <Volume2 className="h-4 w-4" />
-              ) : voiceSession.state.isRecording ? (
+              ) : isRecording ? (
                 <MicOff className="h-4 w-4" />
               ) : (
                 <Mic className="h-4 w-4" />
@@ -204,14 +205,14 @@ function Mindscape() {
 
           {/* Minimal Transcript Display */}
           {(voiceSession.state.transcript ||
-            voiceSession.lastResponse?.assistant.text) && (
+            voiceSession.lastResponse?.assistant?.text) && (
             <div className="mt-4 max-w-md rounded-2xl border border-[oklch(0.20_0_0)] bg-[oklch(0.05_0_0)]/80 p-4 text-left font-mono backdrop-blur-md">
               {voiceSession.state.transcript && (
                 <p className="mb-2 text-[oklch(0.70_0_0)] text-sm">
                   {"> "} <ScrambleText text={voiceSession.state.transcript} />
                 </p>
               )}
-              {voiceSession.lastResponse && (
+              {voiceSession.lastResponse?.assistant?.text && (
                 <p className="text-[oklch(0.99_0_0)] text-sm">
                   <ScrambleText
                     text={voiceSession.lastResponse.assistant.text}

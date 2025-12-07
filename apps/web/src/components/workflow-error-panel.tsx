@@ -40,30 +40,32 @@ const commonIssues: Record<string, string[]> = {
   ],
 };
 
+const defaultSolutions = [
+  "Review the error details below",
+  "Check workflow logs for more context",
+  "Try rerunning the workflow",
+];
+
 function getSuggestedSolutions(errorMessage: string): string[] {
   const lowerMessage = errorMessage.toLowerCase();
 
   if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
-    return commonIssues.timeout;
+    return commonIssues.timeout ?? defaultSolutions;
   }
   if (lowerMessage.includes("auth") || lowerMessage.includes("unauthorized")) {
-    return commonIssues.authentication;
+    return commonIssues.authentication ?? defaultSolutions;
   }
   if (
     lowerMessage.includes("forbidden") ||
     lowerMessage.includes("permission")
   ) {
-    return commonIssues.permission;
+    return commonIssues.permission ?? defaultSolutions;
   }
   if (lowerMessage.includes("network") || lowerMessage.includes("connect")) {
-    return commonIssues.network;
+    return commonIssues.network ?? defaultSolutions;
   }
 
-  return [
-    "Review the error details below",
-    "Check workflow logs for more context",
-    "Try rerunning the workflow",
-  ];
+  return defaultSolutions;
 }
 
 export function WorkflowErrorPanel({

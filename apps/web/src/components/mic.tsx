@@ -7,6 +7,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Mic as MicIcon } from "lucide-react";
 
 type MicDevice = {
   id: string;
@@ -50,7 +51,7 @@ export function Mic({
         size="lg"
         variant={isRecording ? "destructive" : "default"}
       >
-        <Mic className="mr-2 size-4" />
+        <MicIcon className="mr-2 size-4" />
         {isRecording ? "Stop Recording" : "Start Recording"}
       </Button>
     </div>

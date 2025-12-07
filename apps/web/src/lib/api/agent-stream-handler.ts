@@ -17,7 +17,12 @@ import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
 import { logger } from "@alfred/logger";
 import { uiMessageSchema } from "@alfred/type/stream.zod";
-import { consumeStream, generateId, type UIMessage } from "ai";
+import {
+  consumeStream,
+  convertToModelMessages,
+  generateId,
+  type UIMessage,
+} from "ai";
 import { z } from "zod";
 
 const requestSchema = z
@@ -162,10 +167,8 @@ export async function handleAgentStreamRequest(
     // ToolLoopAgent.stream({ system: ... }) ?
 
     const result = await agent.stream({
-      messages: preparedUiMessages,
+      messages: convertToModelMessages(preparedUiMessages),
       abortSignal: request.signal,
-      // @ts-expect-error - system property availability depends on Agent interface
-      system: preferencePrompt,
     });
 
     const response = result.toUIMessageStreamResponse({

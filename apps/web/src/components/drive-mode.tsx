@@ -14,14 +14,16 @@ type DriveModeProps = {
   className?: string;
 };
 
-function getAgentState(status: string) {
+function getAgentState(
+  status: string
+): "idle" | "thinking" | "speaking" | "listening" {
   if (status === "listening") {
     return "listening";
   }
   if (status === "thinking") {
     return "thinking";
   }
-  return null;
+  return "idle";
 }
 
 function getStatus(isRecording: boolean, isProcessing: boolean) {
@@ -60,7 +62,7 @@ export function DriveMode({
         </p>
       </div>
 
-      <Orb agentState={getAgentState(status)} className="h-64 w-64" />
+      <Orb status={getAgentState(status)} className="h-64 w-64" />
 
       {isProcessing && <Load message="Processing your request..." />}
 

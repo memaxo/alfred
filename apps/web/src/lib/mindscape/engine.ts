@@ -34,6 +34,9 @@ export class MindscapeEngine {
   private audioLow = 0;
   private audioMid = 0;
 
+  // Agent State (0=idle, 1=listening, 2=processing, 3=speaking)
+  private agentState = 0;
+
   // Transition Params (Current)
   private readonly currentParams = {
     f1: 10.0,
@@ -134,7 +137,18 @@ export class MindscapeEngine {
 
     // Phase 7: Pre-warm shader
     try {
-      this.renderer.render(0);
+      this.renderer.render(
+        0,
+        this.mouse,
+        0,
+        0,
+        this.currentParams.f1,
+        this.currentParams.f2,
+        this.currentParams.f3,
+        this.currentParams.tint_h,
+        this.currentParams.tint_c,
+        this.currentParams.flow_speed
+      );
     } catch (_e) {}
 
     this.start();
@@ -324,12 +338,12 @@ export class MindscapeEngine {
 
       let sumLow = 0;
       for (let i = 0; i < lowBins; i++) {
-        sumLow += this.audioData[i];
+        sumLow += this.audioData[i] ?? 0;
       }
 
       let sumMid = 0;
       for (let i = lowBins; i < midBins; i++) {
-        sumMid += this.audioData[i];
+        sumMid += this.audioData[i] ?? 0;
       }
 
       const avgLow = sumLow / lowBins / 255.0;
@@ -447,7 +461,7 @@ export class MindscapeEngine {
         intensity **= 3.0;
 
         const charIndex = signalToCharIndex(intensity, GLYPH_SET.length);
-        const char = GLYPH_SET[charIndex];
+        const char = GLYPH_SET[charIndex] ?? " ";
 
         if (char !== " ") {
           // Color Grading

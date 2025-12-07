@@ -12,18 +12,19 @@ export const OrbNode = memo((_props: NodeProps) => {
   const frameRef = useRef<number>(0);
 
   // Map stream status to Orb agentState
-  const agentState = (() => {
+  // AgentState is null | "thinking" | "listening" | "talking"
+  const agentState: null | "thinking" | "listening" | "talking" = (() => {
     switch (streamStatus) {
       case "recording":
         return "listening";
       case "processing":
         return "thinking";
       case "playing":
-        return "speaking";
+        return "talking";
       case "connecting":
-        return "thinking"; // or a specific state if Orb supports it
+        return "thinking";
       default:
-        return "idle";
+        return null;
     }
   })();
 
@@ -95,7 +96,7 @@ export const OrbNode = memo((_props: NodeProps) => {
     return (
       <div className="relative flex h-16 w-16 items-center justify-center">
         <div
-          className={`h-6 w-6 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.9)] ${agentState !== "idle" ? "animate-pulse" : ""}`}
+          className={`h-6 w-6 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.9)] ${agentState !== null ? "animate-pulse" : ""}`}
         />
         {handles}
       </div>
@@ -107,7 +108,7 @@ export const OrbNode = memo((_props: NodeProps) => {
     return (
       <div className="relative flex h-24 w-24 items-center justify-center">
         <div
-          className={`h-16 w-16 rounded-full border border-white/60 bg-black shadow-[0_0_30px_rgba(255,255,255,0.6),inset_0_0_20px_rgba(168,85,247,0.3)] ${agentState !== "idle" ? "animate-pulse" : ""}`}
+          className={`h-16 w-16 rounded-full border border-white/60 bg-black shadow-[0_0_30px_rgba(255,255,255,0.6),inset_0_0_20px_rgba(168,85,247,0.3)] ${agentState !== null ? "animate-pulse" : ""}`}
         />
         {handles}
       </div>
@@ -129,7 +130,7 @@ export const OrbNode = memo((_props: NodeProps) => {
           />
           {/* Core void */}
           <div
-            className={`relative h-[120px] w-[120px] rounded-full border-2 border-white/70 bg-black shadow-[0_0_60px_rgba(168,85,247,0.4),0_0_100px_rgba(255,255,255,0.2)] ${agentState !== "idle" ? "animate-pulse" : ""}`}
+            className={`relative h-[120px] w-[120px] rounded-full border-2 border-white/70 bg-black shadow-[0_0_60px_rgba(168,85,247,0.4),0_0_100px_rgba(255,255,255,0.2)] ${agentState !== null ? "animate-pulse" : ""}`}
           />
         </div>
         {handles}

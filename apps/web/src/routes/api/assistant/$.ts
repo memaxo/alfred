@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { UIMessage } from "ai";
 
 async function handleAssistantRequest(request: Request): Promise<Response> {
   const agentPkg = "@alfred/agent";
@@ -13,7 +14,7 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
     request,
     getAssistantAgentDefaults,
     "assistant",
-    async (messages) => {
+    async (messages: UIMessage[]) => {
       const result = await analyzeContext(messages);
       const persona = getPersonaInstruction(result.domains);
       return {
@@ -30,7 +31,7 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
 export const Route = createFileRoute("/api/assistant/$")({
   server: {
     handlers: {
-      POST: ({ request }) => handleAssistantRequest(request),
+      POST: ({ request }: { request: Request }) => handleAssistantRequest(request),
     },
   },
 });

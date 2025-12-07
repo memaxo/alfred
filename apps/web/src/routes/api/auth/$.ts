@@ -46,11 +46,11 @@ async function safeAuthHandler(request: Request): Promise<Response> {
 export const Route = createFileRoute("/api/auth/$")({
   server: {
     handlers: {
-      GET: ({ request }) => {
+      GET: ({ request }: { request: Request }) => {
         logger.debug("auth_get_request", { url: request.url });
         return safeAuthHandler(request);
       },
-      POST: ({ request }) => {
+      POST: ({ request }: { request: Request }) => {
         logger.debug("auth_post_request", { url: request.url });
         return safeAuthHandler(request);
       },

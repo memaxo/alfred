@@ -202,9 +202,12 @@ function WorkflowDrawerBody({
     if (!runId) {
       return;
     }
+    const inputData = runQuery.data?.inputData as
+      | { requirement?: string }
+      | undefined;
     const expected =
-      typeof runQuery.data?.inputData?.requirement === "string"
-        ? runQuery.data?.inputData?.requirement
+      typeof inputData?.requirement === "string"
+        ? inputData.requirement
         : `Workflow ${runId}`;
     setFeedbackDraft({
       streamId: runId,
@@ -235,7 +238,10 @@ function WorkflowDrawerBody({
         streamId: runId,
         expected: values.expected,
         actual: values.actual,
-        surface: values.surface ?? feedbackDraft.surface ?? "mindscape",
+        surface: (values.surface ?? feedbackDraft.surface ?? "mindscape") as
+          | "chat"
+          | "mindscape"
+          | "voice",
       });
       recordFeedback(runId, feedbackDraft.intent);
       toast.success("Workflow feedback recorded.");
@@ -263,7 +269,7 @@ function WorkflowDrawerBody({
                 ? "Marked accurate"
                 : "Needs revision"}
               {" · "}
-              {formatRelativeTime(workflowFeedback.updatedAt)}
+              {formatRelativeTime(new Date(workflowFeedback.updatedAt))}
             </p>
           ) : null}
         </div>

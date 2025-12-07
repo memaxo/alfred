@@ -231,7 +231,10 @@ export function MindscapeDetailPanel({
         streamId: feedbackDraft.streamId,
         expected: values.expected,
         actual: values.actual,
-        surface: values.surface ?? feedbackDraft.surface ?? "mindscape",
+        surface: (values.surface ?? feedbackDraft.surface ?? "mindscape") as
+          | "chat"
+          | "mindscape"
+          | "voice",
       });
       recordFeedback(focusedNodeId, feedbackDraft.intent);
       toast.success("Mindscape feedback recorded.");
@@ -300,7 +303,7 @@ export function MindscapeDetailPanel({
                   ? "Marked accurate"
                   : "Needs revision"}
                 {" · "}
-                {formatRelativeTime(lastFeedback.updatedAt)}
+                {formatRelativeTime(new Date(lastFeedback.updatedAt))}
               </span>
             ) : null}
           </div>

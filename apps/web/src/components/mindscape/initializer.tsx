@@ -16,6 +16,9 @@ type DueReminderItem = RouterOutputs["remind"]["due"][number];
 type GraphEdge = RouterOutputs["graph"]["getEdges"][number];
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
+// Helper type for accessing UnifiedNodeRef properties safely
+type NodeIdRef = { uiId?: string; dbId?: string; hgHash?: string };
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -314,7 +317,8 @@ export function MindscapeInitializer() {
 
     let added = false;
     traverseResult.nodes.forEach((node: GraphNode, index: number) => {
-      const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
+      const nodeId = node.id as NodeIdRef;
+      const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
       if (!ref) {
         return;
       }
@@ -368,8 +372,8 @@ export function MindscapeInitializer() {
           source: "runtime",
           runId,
           graph: {
-            dbId: node.id.dbId,
-            hgHash: node.id.hgHash,
+            dbId: nodeId.dbId,
+            hgHash: nodeId.hgHash,
           },
         } as ArtifactData,
       });
@@ -390,7 +394,8 @@ export function MindscapeInitializer() {
 
     let added = false;
     ragResult.nodes.forEach((node: GraphNode, index: number) => {
-      const ref = node.id.dbId ?? node.id.hgHash ?? node.id.uiId;
+      const nodeId = node.id as NodeIdRef;
+      const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
       if (!ref) {
         return;
       }
@@ -411,8 +416,8 @@ export function MindscapeInitializer() {
         summary,
         source: "rag",
         graph: {
-          dbId: node.id.dbId,
-          hgHash: node.id.hgHash,
+          dbId: nodeId.dbId,
+          hgHash: nodeId.hgHash,
         },
       };
 
@@ -431,8 +436,8 @@ export function MindscapeInitializer() {
         },
         data: knowledgeData as ArtifactData,
       });
-      if (node.id.dbId) {
-        cacheRagDoc(node.id.dbId, knowledgeData);
+      if (nodeId.dbId) {
+        cacheRagDoc(nodeId.dbId, knowledgeData);
       }
       added = true;
     });
@@ -512,9 +517,7 @@ export function MindscapeInitializer() {
   }, [edges, mapEdgeToFlow, setEdges]);
 
   trpc.graph.watchEdges.useSubscription(
-    graphNodeIds.length > 0
-      ? { nodeIds: graphNodeIds, resource: "user", pollMs: 5000 }
-      : undefined,
+    { nodeIds: graphNodeIds, resource: "user", pollMs: 5000 },
     {
       enabled: graphNodeIds.length > 0,
       onData: ({ edges: incoming }) => {

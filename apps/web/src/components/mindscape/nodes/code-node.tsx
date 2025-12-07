@@ -24,9 +24,6 @@ export function CodeNode({ id, data, selected }: NodeProps) {
     { path },
     {
       enabled: !!path,
-      onError: (err: Error) => {
-        toast.error(`Failed to read file: ${err.message}`);
-      },
     }
   );
 
@@ -36,7 +33,7 @@ export function CodeNode({ id, data, selected }: NodeProps) {
       setIsDirty(false);
       refetch();
     },
-    onError: (err: Error) => {
+    onError: (err) => {
       toast.error(`Failed to save file: ${err.message}`);
     },
   });

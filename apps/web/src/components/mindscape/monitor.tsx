@@ -1,3 +1,4 @@
+import type { Obligation, ObligationResumeEvent } from "@alfred/type";
 import type { WorkflowEvent } from "@alfred/type";
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -9,7 +10,7 @@ import {
   type WorkflowStreamInput,
 } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
-import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
+import { type WorkflowNodeData, useMindscapeStore } from "@/store/mindscape";
 
 type StreamInput = WorkflowStreamInput & {
   context: {
@@ -23,7 +24,7 @@ function WorkflowSubscription({
   data,
 }: {
   nodeId: string;
-  data: ArtifactData;
+  data: WorkflowNodeData;
 }) {
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
@@ -38,14 +39,13 @@ function WorkflowSubscription({
     const node = useMindscapeStore
       .getState()
       .nodes.find((n) => n.id === nodeId);
-    const nodeMessages = (node?.data as ArtifactData | undefined)?.messages;
+    const nodeData = node?.data as WorkflowNodeData | undefined;
+    const nodeMessages = nodeData?.messages;
     return Array.isArray(nodeMessages) ? nodeMessages : [];
   };
 
   const [streamInput, setStreamInput] = useState<StreamInput | null>(null);
-  const [status, setStatus] = useState<string>(
-    (data.status as string) || "pending"
-  );
+  const [status, setStatus] = useState<string>(data.status || "pending");
   const processedEvents = useRef(new Set<string>());
   const resume = useObligationResume({ target: "workflow" });
 
@@ -54,7 +54,7 @@ function WorkflowSubscription({
     if (status === "pending" && !streamInput) {
       const prepare = async () => {
         try {
-          const auto = (data.auto as any) || "low";
+          const auto = data.auto || "low";
           // Mock token for test env if getToolToken fails (e.g. in tests)
           // Or wrap in try/catch.
           // Ideally getToolToken should be mocked in tests.
@@ -65,10 +65,10 @@ function WorkflowSubscription({
           );
 
           setStreamInput({
-            requirement: (data.requirement as string) || "Run workflow",
+            requirement: data.requirement || "Run workflow",
             authz: `Bearer ${token}`,
             auto,
-            mode: (data.mode as any) || "sequential",
+            mode: data.mode || "sequential",
             context: {
               enable: true,
               web: true,
@@ -102,14 +102,15 @@ function WorkflowSubscription({
 
       if (event.type === "obligation") {
         setStatus("suspended");
+        const runId = event.runId as string;
         resume.prompt({
-          runId: event.runId,
-          obligations: event.obligations,
-          resumeEvents: event.resumeEvents ?? [],
+          runId,
+          obligations: event.obligations as Obligation[],
+          resumeEvents: (event.resumeEvents ?? []) as ObligationResumeEvent[],
         });
         updateArtifactData(nodeId, {
           status: "suspended",
-          pendingRunId: event.runId,
+          runId,
         });
         return;
       }
@@ -182,7 +183,7 @@ function WorkflowSubscription({
 
   return (
     <ObligationChallengeDialog
-      mode="inline"
+      mode="auto"
       onClose={() => {
         resume.close();
       }}
@@ -200,18 +201,22 @@ export function WorkflowManager() {
   // Subscribe to nodes that need processing
   const activeWorkflowNodes = useMindscapeStore(
     useShallow((state) =>
-      state.nodes.filter(
-        (n) =>
-          n.type === "workflow" &&
-          ["pending", "starting", "running"].includes(n.data.status as string)
-      )
+      state.nodes.filter((n) => {
+        if (n.type !== "workflow") return false;
+        const data = n.data as WorkflowNodeData;
+        return ["pending", "starting", "running"].includes(data.status || "");
+      })
     )
   );
 
   return (
     <>
       {activeWorkflowNodes.map((node) => (
-        <WorkflowSubscription data={node.data} key={node.id} nodeId={node.id} />
+        <WorkflowSubscription
+          data={node.data as WorkflowNodeData}
+          key={node.id}
+          nodeId={node.id}
+        />
       ))}
     </>
   );

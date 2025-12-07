@@ -26,6 +26,7 @@ export type MindscapeSearchParams = {
   nodeId?: string;
   spawn?: MindscapeSpawnType;
   open?: string;
+  ragDoc?: string;
 };
 
 export const singletonSpawnTypes: MindscapeSpawnType[] = [

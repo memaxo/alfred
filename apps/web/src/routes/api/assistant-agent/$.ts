@@ -13,7 +13,7 @@ async function handleRequest(request: Request): Promise<Response> {
 export const Route = createFileRoute("/api/assistant-agent/$")({
   server: {
     handlers: {
-      POST: ({ request }) => handleRequest(request),
+      POST: ({ request }: { request: Request }) => handleRequest(request),
     },
   },
 });

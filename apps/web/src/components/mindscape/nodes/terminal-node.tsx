@@ -39,7 +39,7 @@ export function TerminalNode({ id, selected }: NodeProps) {
       onData(data: string) {
         terminalRef.current?.write(data);
       },
-      onError(err: Error) {
+      onError(err) {
         toast.error(`Terminal connection error: ${err.message}`);
       },
     }
@@ -95,7 +95,7 @@ export function TerminalNode({ id, selected }: NodeProps) {
             setSessionId(newSessionId);
             sessionIdRef.current = newSessionId;
           },
-          onError: (err: Error) => {
+          onError: (err) => {
             toast.error(`Failed to create terminal session: ${err.message}`);
             term.write(
               "\r\n\x1b[31mFailed to create terminal session.\x1b[0m\r\n"

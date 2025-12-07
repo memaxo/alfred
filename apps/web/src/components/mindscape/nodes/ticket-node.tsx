@@ -42,7 +42,7 @@ export function TicketNode({ id, data, selected }: NodeProps) {
       toast.success("Ticket updated");
       // In a real app, we'd invalidate queries or update local state
     },
-    onError: (err: Error) => {
+    onError: (err) => {
       toast.error(`Failed to update ticket: ${err.message}`);
     },
   });

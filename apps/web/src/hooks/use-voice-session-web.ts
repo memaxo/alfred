@@ -1,6 +1,5 @@
 import { createVoiceSession } from "@alfred/voice/session";
 import type {
-  SpeechToSpeechRequest,
   SpeechToSpeechResponse,
   VoiceClient,
   VoiceSessionDescriptor,
@@ -11,10 +10,6 @@ import { trpc } from "@/utils/trpc";
 import { useVoiceAudio } from "./use-voice-audio";
 import { useVoiceProtocol } from "./use-voice-protocol";
 
-type SpeechOverrides = Partial<
-  Omit<SpeechToSpeechRequest, "audioBase64" | "mimeType">
->;
-
 // Telemetry loop interval
 const TELEMETRY_INTERVAL_MS = 5000;
 
@@ -24,8 +19,8 @@ export function useVoiceSessionWeb() {
   const s2sMutation = trpc.voice.speechToSpeech.useMutation();
 
   // --- State ---
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording] = useState(false);
+  const [isProcessing] = useState(false);
   const [lastResponse, setLastResponse] =
     useState<SpeechToSpeechResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +96,10 @@ export function useVoiceSessionWeb() {
   );
 
   useEffect(() => {
-    if (sessionData && sessionData.length > 0) syncSessionInfo(sessionData[0]);
+    if (sessionData && sessionData.length > 0) {
+      // sessionData items are compatible with VoiceSessionDescriptor
+      syncSessionInfo(sessionData[0] as VoiceSessionDescriptor);
+    }
   }, [sessionData, syncSessionInfo]);
 
   // --- Actions ---

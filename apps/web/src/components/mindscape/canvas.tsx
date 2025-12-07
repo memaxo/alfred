@@ -71,6 +71,9 @@ import { MindscapeWorkflowDrawer } from "./workflow-drawer";
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 
+// Helper type for accessing UnifiedNodeRef properties safely
+type NodeIdRef = { uiId?: string; dbId?: string; hgHash?: string };
+
 // Wrap each node component with error boundary
 // Note: Using 'any' here because ReactFlow's internal NodeProps type system
 // conflicts with our typed node components. The actual type safety is enforced
@@ -534,11 +537,11 @@ function MindscapeCanvasInner({
       return;
     }
     const docNode = (ragDocGraph.nodes as GraphNode[]).find((node) => {
-      const id = node.id ?? {};
+      const id = (node.id ?? {}) as NodeIdRef;
       return (
-        id?.dbId === ragDocQuery ||
-        id?.hgHash === ragDocQuery ||
-        id?.uiId === ragDocQuery
+        id.dbId === ragDocQuery ||
+        id.hgHash === ragDocQuery ||
+        id.uiId === ragDocQuery
       );
     });
     if (!docNode) {
@@ -547,10 +550,11 @@ function MindscapeCanvasInner({
       return;
     }
 
+    const docNodeId = docNode.id as NodeIdRef;
     const props = (docNode.properties ?? {}) as Record<string, unknown>;
     const summary =
       typeof props.content === "string" ? props.content : undefined;
-    const docDbId = docNode.id?.dbId ?? ragDocQuery;
+    const docDbId = docNodeId.dbId ?? ragDocQuery;
     const derivedId = `rag-knowledge-${docDbId}`;
 
     const exists = nodes.find((node) => node.id === derivedId);
@@ -563,7 +567,7 @@ function MindscapeCanvasInner({
         source: "rag",
         graph: {
           dbId: docDbId,
-          hgHash: docNode.id?.hgHash,
+          hgHash: docNodeId.hgHash,
         },
       };
       addArtifact({

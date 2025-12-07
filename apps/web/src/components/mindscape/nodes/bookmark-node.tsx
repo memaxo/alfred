@@ -194,7 +194,7 @@ export function BookmarkNode({ id, data, selected }: NodeProps) {
                   </p>
                   {bookmark.tags && bookmark.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {bookmark.tags.map((tag) => (
+                      {bookmark.tags.map((tag: string) => (
                         <span
                           className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200 uppercase tracking-wide"
                           key={tag}

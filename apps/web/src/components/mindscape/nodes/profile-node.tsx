@@ -182,7 +182,12 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
       try {
         const result = await authClient.passkey.listUserPasskeys();
         if (result.data) {
-          setPasskeys(result.data.map((p) => ({
+          setPasskeys(result.data.map((p: {
+            id: string;
+            name?: string | null;
+            deviceType?: string | null;
+            createdAt?: string | Date | null;
+          }) => ({
             id: p.id,
             name: p.name ?? "Unknown Device",
             deviceType: p.deviceType ?? undefined,
@@ -211,7 +216,12 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
         toast.success("Passkey added successfully");
         const listResult = await authClient.passkey.listUserPasskeys();
         if (listResult.data) {
-          setPasskeys(listResult.data.map((p) => ({
+          setPasskeys(listResult.data.map((p: {
+            id: string;
+            name?: string | null;
+            deviceType?: string | null;
+            createdAt?: string | Date | null;
+          }) => ({
             id: p.id,
             name: p.name ?? "Unknown Device",
             deviceType: p.deviceType ?? undefined,
@@ -235,7 +245,12 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
         toast.success("Passkey deleted");
         const listResult = await authClient.passkey.listUserPasskeys();
         if (listResult.data) {
-          setPasskeys(listResult.data.map((p) => ({
+          setPasskeys(listResult.data.map((p: {
+            id: string;
+            name?: string | null;
+            deviceType?: string | null;
+            createdAt?: string | Date | null;
+          }) => ({
             id: p.id,
             name: p.name ?? "Unknown Device",
             deviceType: p.deviceType ?? undefined,

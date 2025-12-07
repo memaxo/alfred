@@ -68,12 +68,14 @@ export function useVoiceAudio() {
       vadRef.current = vad;
       setAnalyser(vad.getAnalyser());
 
-      vad.on("speech_start", () => {
-        worklet.port.postMessage({ type: "clear" });
-        onSpeechStart();
+      vad.on((event) => {
+        if (event === "speech_start") {
+          worklet.port.postMessage({ type: "clear" });
+          onSpeechStart();
+        } else if (event === "speech_end") {
+          onSpeechEnd();
+        }
       });
-
-      vad.on("speech_end", onSpeechEnd);
 
       // Audio Graph
       const source = ctx.createMediaStreamSource(stream);
