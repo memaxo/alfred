@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_protected/experimental/tune")({
 function VoiceTuner() {
   const [vadThreshold, setVadThreshold] = useState(0.5);
   const [maxUtteranceMs, setMaxUtteranceMs] = useState(20_000);
-  const [silenceTimeoutMs, setSilenceTimeoutMs] = useState(1000); // Client-side? No, this should drive autoStop
+  const [_silenceTimeoutMs, _setSilenceTimeoutMs] = useState(1000); // Client-side? No, this should drive autoStop
 
   // Note: In current implementation, maxUtteranceMs is total length, not silence.
   // The server uses VAD logic internally.
@@ -53,7 +53,7 @@ function VoiceTuner() {
                 disabled={isRecording}
                 max={1}
                 min={0}
-                onValueChange={([v]) => setVadThreshold(v)}
+                onValueChange={([v]) => setVadThreshold(v ?? 0.5)}
                 step={0.05}
                 value={[vadThreshold]}
               />
@@ -71,7 +71,7 @@ function VoiceTuner() {
                 disabled={isRecording}
                 max={60_000}
                 min={1000}
-                onValueChange={([v]) => setMaxUtteranceMs(v)}
+                onValueChange={([v]) => setMaxUtteranceMs(v ?? 20000)}
                 step={1000}
                 value={[maxUtteranceMs]}
               />

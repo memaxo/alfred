@@ -28,7 +28,7 @@ function MindscapeRoute() {
         onRagDocNavigate={(documentId) =>
           navigate({
             to: "/mindscape",
-            search: (prev) => ({
+            search: (prev: Record<string, unknown>) => ({
               ...prev,
               ragDoc: documentId,
             }),
@@ -38,7 +38,7 @@ function MindscapeRoute() {
           navigate({
             to: "/workflow/$runId",
             params: { runId },
-            search: () => ({ drawer: "1" }),
+            search: () => ({ drawer: "1" as const }),
           })
         }
         searchParams={search}

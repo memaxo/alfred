@@ -50,7 +50,7 @@ function VoiceS2SRouteView() {
       for (let i = 0; i < barCount; i++) {
         let sum = 0;
         for (let j = 0; j < step; j++) {
-          sum += dataArray[i * step + j];
+          sum += dataArray[i * step + j] ?? 0;
         }
         // Normalize 0-1
         bars.push(sum / step / 255);
@@ -104,7 +104,9 @@ function VoiceS2SRouteView() {
   const handleToggle = useCallback(async () => {
     if (isRecording) {
       try {
-        const result = await speechToSpeech();
+        const result = (await speechToSpeech()) as
+          | { assistant?: { text?: string } }
+          | undefined;
         setAssistantText(result?.assistant?.text ?? "");
         toast.success("Response ready");
       } catch (err) {

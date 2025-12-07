@@ -72,17 +72,17 @@ export function useCognitiveStateIntegration(
     // High frustration = more chaotic motion
     // Low energy = slower, dimmer
     // High boredom = subtle pulsing
+    // Map orbState to numeric value for shader uniforms
+    const orbStateValue =
+      orbState === "idle"
+        ? 1
+        : orbState === "listening"
+          ? 2
+          : orbState === "active"
+            ? 3
+            : 4; // processing
     engine.setUniforms({
-      orbState:
-        orbState === "dormant"
-          ? 0
-          : orbState === "idle"
-            ? 1
-            : orbState === "listening"
-              ? 2
-              : orbState === "active"
-                ? 3
-                : 4,
+      orbState: orbStateValue,
     });
   }, [engine, cognitiveState]);
 }
@@ -115,7 +115,7 @@ export function useVoiceFFTIntegration(
       // Low frequencies (bass): 0-250Hz
       const lowEnd = Math.floor(voiceState.fft.length * 0.1);
       for (let i = 0; i < lowEnd; i++) {
-        audioLow += (voiceState.fft[i] + 140) / 140; // Normalize from dB
+        audioLow += ((voiceState.fft[i] ?? 0) + 140) / 140; // Normalize from dB
       }
       audioLow = Math.min(1, audioLow / lowEnd);
 
@@ -123,7 +123,7 @@ export function useVoiceFFTIntegration(
       const midStart = lowEnd;
       const midEnd = Math.floor(voiceState.fft.length * 0.5);
       for (let i = midStart; i < midEnd; i++) {
-        audioMid += (voiceState.fft[i] + 140) / 140;
+        audioMid += ((voiceState.fft[i] ?? 0) + 140) / 140;
       }
       audioMid = Math.min(1, audioMid / (midEnd - midStart));
     } else {

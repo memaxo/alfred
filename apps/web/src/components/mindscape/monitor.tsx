@@ -168,7 +168,12 @@ function WorkflowSubscription({
       }
       const existing = resolveCurrentMessages();
       updateArtifactData(nodeId, {
-        messages: [...existing, ...messages],
+        messages: [...existing, ...messages] as Array<{
+          id: string;
+          role: "system" | "user" | "assistant";
+          parts: unknown[];
+          metadata?: unknown;
+        }>,
       });
     },
     onError(err) {

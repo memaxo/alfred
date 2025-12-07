@@ -198,8 +198,11 @@ export function DeploymentNode({ id, data, selected }: NodeProps) {
   const groupedDeployments = useMemo(() => {
     const groups: Record<string, typeof deployments> = {};
     for (const deployment of deployments) {
-      groups[deployment.app] = groups[deployment.app] || [];
-      groups[deployment.app].push(deployment);
+      const appKey = deployment.app;
+      if (!groups[appKey]) {
+        groups[appKey] = [];
+      }
+      groups[appKey].push(deployment);
     }
     return Object.entries(groups);
   }, [deployments]);

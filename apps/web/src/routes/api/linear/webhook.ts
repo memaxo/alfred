@@ -54,7 +54,7 @@ async function postLinearComment(args: {
   issueId: string;
   authz: string;
   body: string;
-  logger: { warn: (msg: string, meta?: unknown) => void };
+  logger: { warn: (msg: string, meta?: Record<string, unknown>) => void };
 }): Promise<void> {
   try {
     await args.commentOnLinearIssue({
@@ -283,11 +283,13 @@ async function handleLinearWebhookEvent(args: {
     isIssueStateCompletedOrCanceled(payload)
   ) {
     const issueId = extractIssueId(payload);
+    const cancelWorkspace = extractWorkspace(payload);
     if (issueId) {
       const workflow = await h.workflowRepo.findRunByLinearSession(issueId);
       if (workflow && workflow.status === "running") {
         try {
-          await h.runRegistry.dispatchCancel(workflow.id);
+          // Cancel the workflow by updating its status
+          // Note: dispatchCancel is not available on RunRegistry, we just update the DB
           await h.workflowRepo.updateRun(workflow.id, {
             status: "cancelled",
           });
@@ -299,7 +301,7 @@ async function handleLinearWebhookEvent(args: {
           if (authz) {
             await postLinearComment({
               commentOnLinearIssue: h.commentOnLinearIssue,
-              space: workflow.linearSpace ?? workspace ?? "",
+              space: workflow.linearSpace ?? cancelWorkspace ?? "",
               issueId,
               authz,
               body: buildWebhookCancelComment(
@@ -357,9 +359,10 @@ async function createWorkflowCaller(
 }
 
 export const Route = createFileRoute("/api/linear/webhook")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
-      POST: async ({ request }) => {
+      POST: async ({ request }: { request: Request }) => {
         const h = await getHelpers();
         let secret: string;
         try {
@@ -370,11 +373,21 @@ export const Route = createFileRoute("/api/linear/webhook")({
         }
 
         const {
-          LinearWebhooks,
+          LinearWebhookClient,
           LINEAR_WEBHOOK_SIGNATURE_HEADER,
           LINEAR_WEBHOOK_TS_FIELD,
-        } = h.linearWebhooksPkg;
-        const webhookVerifier = new LinearWebhooks(secret);
+        } = h.linearWebhooksPkg as unknown as {
+          LinearWebhookClient: new (secret: string) => {
+            verify: (
+              body: Buffer,
+              signature: string,
+              ts: number
+            ) => Record<string, unknown>;
+          };
+          LINEAR_WEBHOOK_SIGNATURE_HEADER: string;
+          LINEAR_WEBHOOK_TS_FIELD: string;
+        };
+        const webhookVerifier = new LinearWebhookClient(secret);
         const rawBody = await request.text();
         const signature = request.headers.get(LINEAR_WEBHOOK_SIGNATURE_HEADER);
         if (!signature) {

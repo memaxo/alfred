@@ -323,7 +323,7 @@ export function WorkflowNode({ id, data, selected }: NodeProps) {
                           </span>
                         )}
                       </div>
-                      {event.eventData && (
+                      {event.eventData != null && (
                         <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] text-biolum-faint">
                           {JSON.stringify(event.eventData, null, 2)}
                         </pre>

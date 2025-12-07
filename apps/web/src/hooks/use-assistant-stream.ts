@@ -166,7 +166,7 @@ export function useAssistantStream(
   // Cast messages for AI SDK compatibility - ALFRED's AssistantUIMessage extends UIMessage
   const chat = useChat({
     transport,
-    messages: (initialMessages ?? []) as Parameters<typeof useChat>[0]["messages"],
+    initialMessages: initialMessages ?? [],
     onError,
   });
 

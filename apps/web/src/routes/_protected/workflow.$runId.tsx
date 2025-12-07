@@ -50,7 +50,7 @@ function WorkflowRunRoute() {
     navigate({
       to: "/workflow/$runId",
       params: { runId },
-      search: () => (open ? { drawer: "1" } : {}),
+      search: () => (open ? { drawer: "1" as const } : {}),
       replace: true,
     });
   };
@@ -87,7 +87,7 @@ function WorkflowRunRoute() {
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
       to: "/mindscape",
-      search: (prev) => ({
+      search: (prev: Record<string, unknown>) => ({
         ...prev,
         ragDoc: documentId,
       }),
@@ -157,7 +157,7 @@ function WorkflowRunRoute() {
         onNavigateToMindscape={(documentId) =>
           navigate({
             to: "/mindscape",
-            search: (prev) => ({
+            search: (prev: Record<string, unknown>) => ({
               ...prev,
               ragDoc: documentId,
             }),

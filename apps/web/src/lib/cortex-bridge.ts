@@ -68,7 +68,7 @@ export function xyflowNodeToCortex(
   const nodeType = node.type ?? "default";
   const cortexType = NODE_TYPE_MAP[nodeType] ?? "memory";
   const color = getNodeTypeColor(cortexType);
-  const radius = NODE_RADIUS_MAP[nodeType] ?? NODE_RADIUS_MAP.default;
+  const radius = NODE_RADIUS_MAP[nodeType] ?? NODE_RADIUS_MAP.default ?? 30;
 
   return {
     id: node.id,

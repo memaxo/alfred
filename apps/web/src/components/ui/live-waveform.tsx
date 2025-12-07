@@ -365,7 +365,7 @@ export const LiveWaveform = ({
               );
               const value = Math.min(
                 1,
-                (relevantData[dataIndex] / 255) * sensitivity
+                ((relevantData[dataIndex] ?? 0) / 255) * sensitivity
               );
               newBars.push(Math.max(0.05, value));
             }
@@ -376,7 +376,7 @@ export const LiveWaveform = ({
               );
               const value = Math.min(
                 1,
-                (relevantData[dataIndex] / 255) * sensitivity
+                ((relevantData[dataIndex] ?? 0) / 255) * sensitivity
               );
               newBars.push(Math.max(0.05, value));
             }
@@ -391,7 +391,7 @@ export const LiveWaveform = ({
             const relevantData = dataArray.slice(startFreq, endFreq);
 
             for (let i = 0; i < relevantData.length; i++) {
-              sum += relevantData[i];
+              sum += relevantData[i] ?? 0;
             }
             const average = (sum / relevantData.length / 255) * sensitivity;
 

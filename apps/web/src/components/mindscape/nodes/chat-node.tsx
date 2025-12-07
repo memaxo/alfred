@@ -95,7 +95,15 @@ export function ChatNode({ id, data, selected }: NodeProps) {
         return;
       }
       lastMessagesRef.current = key;
-      updateArtifactData(id, { messages, type: "chat" });
+      updateArtifactData(id, {
+        messages: messages as unknown as Array<{
+          id: string;
+          role: "system" | "user" | "assistant";
+          parts: unknown[];
+          metadata?: unknown;
+        }>,
+        type: "chat",
+      });
     }
   }, [messages, id, updateArtifactData]);
 

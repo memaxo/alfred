@@ -52,7 +52,7 @@ export function WorkflowDetailModal({
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
       to: "/mindscape",
-      search: (prev) => ({
+      search: (prev: Record<string, unknown>) => ({
         ...prev,
         ragDoc: documentId,
       }),

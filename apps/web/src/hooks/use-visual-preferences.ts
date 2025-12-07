@@ -34,7 +34,7 @@ export type UseVisualPreferencesResult = {
   /** Whether config is loading */
   isLoading: boolean;
   /** Error if any */
-  error: Error | null;
+  error: { message: string } | null;
   /** Whether there are unsaved changes */
   isDirty: boolean;
   /** Update the entire config */

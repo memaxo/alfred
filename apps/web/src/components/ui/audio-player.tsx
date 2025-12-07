@@ -326,7 +326,7 @@ export const AudioPlayerProgress = ({
         otherProps.onPointerUp?.(e);
       }}
       onValueChange={(vals) => {
-        player.seek(vals[0]);
+        player.seek(vals[0] ?? 0);
         otherProps.onValueChange?.(vals);
       }}
       step={otherProps.step || 0.25}

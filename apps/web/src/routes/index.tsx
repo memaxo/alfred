@@ -26,7 +26,7 @@ function Mindscape() {
   const voiceSession = useVoiceSessionWeb();
 
   // Derive voice states from hook return
-  const isSpeaking = voiceSession.stream.status === "responding";
+  const isSpeaking = voiceSession.stream.status === "playing";
   const isProcessing = voiceSession.isProcessing;
   const isRecording = voiceSession.isRecording;
 

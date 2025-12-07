@@ -275,7 +275,7 @@ export const useMindscapeStore = create<MindscapeState>()(
 
       onNodesChange: (changes) => {
         set({
-          nodes: applyNodeChanges(changes, get().nodes),
+          nodes: applyNodeChanges(changes, get().nodes) as Node<ArtifactData>[],
         });
       },
       onEdgesChange: (changes) => {
@@ -336,12 +336,13 @@ export const useMindscapeStore = create<MindscapeState>()(
         }
 
         // Update only if validation succeeds
+        const validatedData = result.data as Record<string, unknown>;
         set((state) => ({
           nodes: state.nodes.map((n) => {
             if (n.id === nodeId) {
               return {
                 ...n,
-                data: { ...n.data, ...result.data } as ArtifactData,
+                data: { ...n.data, ...validatedData } as ArtifactData,
               };
             }
             return n;

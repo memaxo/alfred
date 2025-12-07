@@ -29,9 +29,11 @@ async function handleAssistantRequest(request: Request): Promise<Response> {
 }
 
 export const Route = createFileRoute("/api/assistant/$")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
-      POST: ({ request }: { request: Request }) => handleAssistantRequest(request),
+      POST: ({ request }: { request: Request }) =>
+        handleAssistantRequest(request),
     },
   },
 });

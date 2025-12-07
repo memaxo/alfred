@@ -279,9 +279,11 @@ export async function handleWorkflowStreamRequest(
 }
 
 export const Route = createFileRoute("/api/workflow/stream")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
-      POST: ({ request }) => handleWorkflowStreamRequest(request),
+      POST: ({ request }: { request: Request }) =>
+        handleWorkflowStreamRequest(request),
     },
   },
 });

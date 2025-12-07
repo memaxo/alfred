@@ -17,7 +17,7 @@ export function ChatMessage({
   content: string | AssistantPart[];
   renderPart?: (part: AssistantPart, message: AssistantUIMessage) => ReactNode;
 }) {
-  if (role === "data" || role === "system") {
+  if (role === "system") {
     return null;
   }
 

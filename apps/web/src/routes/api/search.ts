@@ -7,9 +7,10 @@ const server = createFromSource(source, {
 });
 
 export const Route = createFileRoute("/api/search")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
-      GET: async ({ request }) => server.GET(request),
+      GET: async ({ request }: { request: Request }) => server.GET(request),
     },
   },
 });

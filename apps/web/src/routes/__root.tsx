@@ -55,7 +55,7 @@ function RootDocument() {
       if ((e.metaKey || e.ctrlKey) && e.key === "m") {
         e.preventDefault();
         if (location.pathname === "/mindscape") {
-          router.navigate({ to: "/ai" });
+          router.navigate({ to: "/" });
         } else {
           router.navigate({ to: "/mindscape" });
         }

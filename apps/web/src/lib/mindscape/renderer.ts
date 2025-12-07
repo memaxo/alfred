@@ -234,8 +234,8 @@ export class MindscapeRenderer {
     uniformData[4] = this.width;
     uniformData[5] = this.height;
 
-    uniformData[6] = mouse[0];
-    uniformData[7] = mouse[1];
+    uniformData[6] = mouse[0] ?? 0;
+    uniformData[7] = mouse[1] ?? 0;
 
     uniformData[8] = f1;
     uniformData[9] = f2;

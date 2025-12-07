@@ -69,7 +69,7 @@ export class EnergyVAD {
       // Calculate average energy
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
-        sum += dataArray[i];
+        sum += dataArray[i] ?? 0;
       }
       const average = sum / bufferLength;
 

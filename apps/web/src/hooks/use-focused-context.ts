@@ -110,8 +110,10 @@ export function useFocusedContext(): FocusedContext {
           // Handle AI SDK v6 parts array
           if (Array.isArray(m.parts)) {
             return m.parts
-              .filter((p: { type: string }) => p.type === "text")
-              .map((p: { text?: string }) => p.text ?? "")
+              .filter(
+                (p): p is { type: "text"; text: string } => p.type === "text"
+              )
+              .map((p) => p.text ?? "")
               .join(" ");
           }
           return "";

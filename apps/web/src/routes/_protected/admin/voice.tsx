@@ -157,7 +157,9 @@ export function VoiceAdminView() {
         </Button>
       </div>
 
-      {stats.message ? <MessageBanner message={stats.message} /> : null}
+      {"message" in stats && stats.message ? (
+        <MessageBanner message={stats.message as string} />
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (

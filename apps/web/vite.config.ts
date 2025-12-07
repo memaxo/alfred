@@ -138,6 +138,7 @@ export default defineConfig({
     ],
   },
   ssr: {
+    // @ts-expect-error - Vite SSR external accepts RegExp but types are strict
     external: [
       ...serverOnlyDeps,
       ...serverOnlyPackages,
@@ -148,6 +149,7 @@ export default defineConfig({
     ],
     noExternal: [/^fumadocs-mdx:collections\/.*/, "fumadocs-mdx"],
     resolve: {
+      // @ts-expect-error - Vite resolve alias types
       alias: {
         "node-pty": resolve(__dirname, "./src/stubs/node-pty.ts"),
       },

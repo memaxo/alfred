@@ -20,7 +20,11 @@ export function usePhysicsWorker({
   nodes: Node<ArtifactData>[];
   edges: Edge[];
   focusId: string | null;
-  setNodes: (nodes: Node<ArtifactData>[]) => void; // Or use the store's updater
+  setNodes: (
+    updater:
+      | Node<ArtifactData>[]
+      | ((prev: Node<ArtifactData>[]) => Node<ArtifactData>[])
+  ) => void;
   active?: boolean;
 }) {
   const workerRef = useRef<Worker | null>(null);
@@ -96,9 +100,9 @@ export function usePhysicsWorker({
 
     const loop = () => {
       if (latestPositions.current.size > 0) {
-        setNodes((prevNodes) => {
+        setNodes((prevNodes: Node<ArtifactData>[]) => {
           let changed = false;
-          const next = prevNodes.map((n) => {
+          const next = prevNodes.map((n: Node<ArtifactData>) => {
             const pos = latestPositions.current.get(n.id);
             if (!pos) return n;
 

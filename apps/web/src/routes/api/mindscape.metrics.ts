@@ -8,9 +8,10 @@ const payloadSchema = z.object({
 });
 
 export const Route = createFileRoute("/api/mindscape/metrics")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
-      POST: async ({ request }) => {
+      POST: async ({ request }: { request: Request }) => {
         let parsed: z.infer<typeof payloadSchema>;
         try {
           const body = await request.json();

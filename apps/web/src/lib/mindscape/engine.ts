@@ -35,7 +35,11 @@ export class MindscapeEngine {
   private audioMid = 0;
 
   // Agent State (0=idle, 1=listening, 2=processing, 3=speaking)
-  private agentState = 0;
+  private agentStateValue = 0;
+
+  get agentState() {
+    return this.agentStateValue;
+  }
 
   // Transition Params (Current)
   private readonly currentParams = {
@@ -245,7 +249,7 @@ export class MindscapeEngine {
   setAgentState(state: "idle" | "listening" | "processing" | "speaking") {
     switch (state) {
       case "idle":
-        this.agentState = 0;
+        this.agentStateValue = 0;
         this.targetParams = {
           f1: 10.0,
           f2: 8.0,
@@ -256,7 +260,7 @@ export class MindscapeEngine {
         };
         break;
       case "listening":
-        this.agentState = 1;
+        this.agentStateValue = 1;
         this.targetParams = {
           f1: 12.0,
           f2: 10.0,
@@ -267,7 +271,7 @@ export class MindscapeEngine {
         };
         break;
       case "processing":
-        this.agentState = 2;
+        this.agentStateValue = 2;
         this.targetParams = {
           f1: 23.0,
           f2: 19.0,
@@ -278,7 +282,7 @@ export class MindscapeEngine {
         };
         break;
       case "speaking":
-        this.agentState = 3;
+        this.agentStateValue = 3;
         this.targetParams = {
           f1: 5.0,
           f2: 4.0,
@@ -328,7 +332,9 @@ export class MindscapeEngine {
 
     // Process Audio (Split Bands)
     if (this.analyzer && this.audioData) {
-      this.analyzer.getByteFrequencyData(this.audioData);
+      this.analyzer.getByteFrequencyData(
+        this.audioData as Uint8Array<ArrayBuffer>
+      );
 
       const binCount = this.audioData.length;
       // Lows: 0 - 20% (Bass)

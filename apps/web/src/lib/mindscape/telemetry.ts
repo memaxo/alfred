@@ -13,7 +13,7 @@ const pending: PendingSnapshot = {
 const FLUSH_INTERVAL_MS = 5000;
 const ENDPOINT = "/api/mindscape/metrics";
 
-let flushHandle: ReturnType<typeof setTimeout> | null = null;
+let flushHandle: number | null = null;
 let listenersRegistered = false;
 
 function resetSnapshot() {

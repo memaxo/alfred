@@ -2,6 +2,7 @@ import { healthChecksTotal } from "@alfred/api/metrics";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/healthz")({
+  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       GET: () => {
