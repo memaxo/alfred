@@ -20,6 +20,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { hasWindow } from "@/lib/env/isomorphic";
 import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
 import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
@@ -210,7 +211,7 @@ function MindscapeCanvasInner({
         onWorkflowNavigate(runId);
         return;
       }
-      if (typeof window !== "undefined") {
+      if (hasWindow()) {
         window.location.assign(`/workflow/${runId}`);
       }
     },
@@ -232,7 +233,7 @@ function MindscapeCanvasInner({
         onRagDocNavigate(documentId);
         return;
       }
-      if (typeof window !== "undefined") {
+      if (hasWindow()) {
         const url = new URL(window.location.href);
         url.searchParams.set("ragDoc", documentId);
         window.history.replaceState(window.history.state, "", url.toString());
@@ -247,22 +248,22 @@ function MindscapeCanvasInner({
   const [showRuntimeKnowledge, setShowRuntimeKnowledge] = useState(true);
   const [showRagKnowledge, setShowRagKnowledge] = useState(true);
 
-  const focusedNode = useMemo(
-    () => nodes.find((candidate) => candidate.id === focusedNodeId) ?? null,
-    [nodes, focusedNodeId]
-  );
-
-  const highlightedRagDocDbId = useMemo(() => {
-    const artifact = focusedNode?.data as ArtifactData | undefined;
-    if (
-      artifact?.type === "knowledge" &&
-      artifact.source === "rag" &&
-      typeof artifact.graph?.dbId === "string"
-    ) {
-      return artifact.graph.dbId;
-    }
-    return null;
-  }, [focusedNode]);
+  // TODO: Use focusedNode and highlightedRagDocDbId for RAG doc highlighting in future
+  // const focusedNode = useMemo(
+  //   () => nodes.find((candidate) => candidate.id === focusedNodeId) ?? null,
+  //   [nodes, focusedNodeId]
+  // );
+  // const highlightedRagDocDbId = useMemo(() => {
+  //   const artifact = focusedNode?.data as ArtifactData | undefined;
+  //   if (
+  //     artifact?.type === "knowledge" &&
+  //     artifact.source === "rag" &&
+  //     typeof artifact.graph?.dbId === "string"
+  //   ) {
+  //     return artifact.graph.dbId;
+  //   }
+  //   return null;
+  // }, [focusedNode]);
 
   const ragDocCacheEntryCount = useMemo(
     () => Object.keys(ragDocCache).length,
@@ -287,7 +288,7 @@ function MindscapeCanvasInner({
         id: "singularity",
         type: "orb",
         position: { x: 0, y: 0 },
-        data: { label: "Singularity" },
+        data: { type: "orb", label: "Singularity" },
         draggable: false,
         selectable: false,
       });
@@ -758,7 +759,6 @@ function MindscapeCanvasInner({
         />
       </div>
       <MindscapeCommandPalette
-        nodes={nodes}
         onFocus={focusAndCenter}
         onSpawn={spawnNodeFromType}
       />
@@ -772,7 +772,7 @@ function MindscapeCanvasInner({
 }
 
 function clearSearchParams(keys: string[]) {
-  if (typeof window === "undefined") {
+  if (!hasWindow()) {
     return;
   }
 

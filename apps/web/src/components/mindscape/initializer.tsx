@@ -68,10 +68,12 @@ export function MindscapeInitializer() {
       return;
     }
 
+    // Check for test mode or explicit disable flag
+    // Note: This is client-side code, so we check import.meta.env directly
+    // Server-side checks would use server-only utilities
     if (
-      typeof process !== "undefined" &&
-      (process.env.BUN_TEST === "1" ||
-        process.env.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1")
+      import.meta.env?.BUN_TEST === "1" ||
+      import.meta.env?.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1"
     ) {
       // Skip chat autospawn in test or when explicitly disabled so
       // tests and lightweight environments can focus on graph behaviour.
@@ -94,6 +96,7 @@ export function MindscapeInitializer() {
         type: "chat",
         position: { x: primaryRadius, y: 0 },
         data: {
+          type: "chat",
           label: "Neural Stream",
           messages: [],
         },
@@ -129,6 +132,7 @@ export function MindscapeInitializer() {
       type: "droid",
       position: { x: -primaryRadius, y: 0 },
       data: {
+        type: "droid",
         label: "Droid Exec",
         prompt: "",
         auto: "low",
@@ -167,6 +171,7 @@ export function MindscapeInitializer() {
           y: Math.sin(angle) * secondaryRadius,
         },
         data: {
+          type: "note",
           label: note.title?.trim() || "Untitled Note",
           noteId: note.id,
           title: note.title,
@@ -214,6 +219,7 @@ export function MindscapeInitializer() {
           y: Math.sin(angle) * secondaryRadius,
         },
         data: {
+          type: "reminder",
           label: reminder.title || "Reminder",
           reminderId: reminder.id,
           title: reminder.title,

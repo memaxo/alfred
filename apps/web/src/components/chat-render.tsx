@@ -12,6 +12,8 @@ import {
   isDataPartNamed,
   isToolCallPart,
   isToolResultPart,
+  type ToolCallPart,
+  type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 import type { ReactNode } from "react";
 import {
@@ -28,14 +30,16 @@ import { Plan } from "./plan";
 import { Task } from "./task";
 import { Think } from "./think";
 
+type Task = {
+  id: string;
+  title: string;
+  status: "pending" | "running" | "completed" | "error";
+  subtasks?: Task[];
+};
+
 function isPlanData(data: unknown): data is {
   requirement: string;
-  tasks: Array<{
-    id: string;
-    title: string;
-    status: "pending" | "running" | "completed" | "error";
-    subtasks?: unknown[];
-  }>;
+  tasks: Task[];
 } {
   if (!data || typeof data !== "object") {
     return false;
@@ -131,9 +135,12 @@ type PartHandlers = {
 
 const dataPartRenderers: PartRenderer[] = [
   (part) =>
-    renderStructuredPart(part, "plan", (data) =>
-      isPlanData(data) ? <Plan plan={data} /> : null
-    ),
+    renderStructuredPart(part, "plan", (data) => {
+      if (isPlanData(data)) {
+        return <Plan plan={data} />;
+      }
+      return null;
+    }),
   (part) =>
     renderStructuredPart(part, "task", (data) =>
       isTaskData(data) ? <Task {...data} /> : null
@@ -195,10 +202,15 @@ function renderToolCall(
     return null;
   }
 
+  // Cast to ALFRED's tool-call type (validated by isToolCallPart)
+  const toolCall = part as unknown as ToolCallPart;
+  const { toolCallId, toolName, input } = toolCall;
+
   // Look ahead for matching result
-  const resultPart = message.parts.find(
-    (p) => isToolResultPart(p) && p.toolCallId === part.toolCallId
-  );
+  const resultPart = message.parts.find((p) => {
+    if (!isToolResultPart(p)) return false;
+    return (p as unknown as ToolResultPart).toolCallId === toolCallId;
+  });
 
   const state = resultPart ? "output-available" : "input-available";
 
@@ -241,23 +253,28 @@ function renderToolCall(
 
   const handleApprove = () => {
     handlers?.onAddToolResult?.({
-      toolCallId: part.toolCallId,
-      result: "Approved", // Or a specific approval payload
+      toolCallId,
+      result: "Approved",
     });
   };
 
   const handleDeny = () => {
     handlers?.onAddToolResult?.({
-      toolCallId: part.toolCallId,
-      result: "Denied", // Or error? Usually we just return a result saying denied.
+      toolCallId,
+      result: "Denied",
     });
   };
 
+  // Get result for output display
+  const output = resultPart
+    ? (resultPart as unknown as ToolResultPart).output
+    : undefined;
+
   return (
     <Tool defaultOpen={!resultPart}>
-      <ToolHeader state={state} title={part.toolName} type="tool-call" />
+      <ToolHeader state={state} title={toolName} type="tool-call" />
       <ToolContent>
-        <ToolInput input={part.args} />
+        <ToolInput input={input} />
         {state !== "output-available" && handlers?.onAddToolResult ? (
           <ToolActions
             onApprove={handleApprove}
@@ -265,11 +282,8 @@ function renderToolCall(
             state="approval-requested"
           />
         ) : null}
-        {resultPart && isToolResultPart(resultPart) ? (
-          <ToolOutput
-            errorText={undefined}
-            output={resultPart.result} // Errors not strictly typed in Part yet
-          />
+        {output !== undefined ? (
+          <ToolOutput errorText={undefined} output={output} />
         ) : null}
       </ToolContent>
     </Tool>
@@ -284,10 +298,15 @@ function renderToolResult(
     return null;
   }
 
+  // Cast to ALFRED's tool-result type (validated by isToolResultPart)
+  const toolResult = part as unknown as ToolResultPart;
+  const { toolCallId, toolName, output } = toolResult;
+
   // Check if we already rendered this in a tool-call block
-  const callPart = message.parts.find(
-    (p) => isToolCallPart(p) && p.toolCallId === part.toolCallId
-  );
+  const callPart = message.parts.find((p) => {
+    if (!isToolCallPart(p)) return false;
+    return (p as unknown as ToolCallPart).toolCallId === toolCallId;
+  });
 
   // If we found the call part, suppress this standalone result
   // (it was rendered inside the tool-call block)
@@ -295,22 +314,19 @@ function renderToolResult(
     return null;
   }
 
-  // Orphaned result (e.g. history where call is missing)
-  const output = part.result;
-
   // Fallback handling for structured data in output
   if (isPlanData(output)) {
     return <Plan plan={output} />;
   }
   if (isTaskData(output)) {
-    return <Task {...output} />;
+    return <Task id={output.id} title={output.title} status={output.status} progress={output.progress} />;
   }
 
   return (
     <Tool defaultOpen={true}>
       <ToolHeader
         state="output-available"
-        title={part.toolName ?? "Tool Result"}
+        title={toolName ?? "Tool Result"}
         type="tool-result"
       />
       <ToolContent>

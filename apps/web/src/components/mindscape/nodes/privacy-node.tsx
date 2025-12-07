@@ -24,7 +24,8 @@ export function PrivacyNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
   useNodeFocus(id);
 
-  const _parsed = privacyNodeDataSchema.safeParse(data);
+  // Validate data structure (result intentionally unused)
+  privacyNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );

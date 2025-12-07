@@ -175,11 +175,10 @@ export function parseStructuredMessage(message: AgentMessage): ParsedMessage {
       if (isThinkData(data)) {
         result.thinks.push(data);
       }
-    }
-
-    // Handle tool-result parts
-    if (isToolResultPart(part)) {
-      const output = part.output;
+    } else if (isToolResultPart(part)) {
+      // Handle tool-result parts
+      const toolResultPart = part;
+      const output = toolResultPart.output;
       if (output && typeof output === "object") {
         const obj = output as Record<string, unknown>;
 

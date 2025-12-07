@@ -20,6 +20,7 @@ import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
 } from "@/components/cognitive-feedback/dialog";
+import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 import { ContextLens } from "@/components/mindscape/context-lens";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
@@ -31,10 +32,18 @@ import { Controls } from "./controls";
 import { ErrorBoundary } from "./error-boundary";
 import { Load } from "./load";
 
+export type ChatContainerProps = {
+  agent?: "assistant" | "orchestrator";
+  thread?: string;
+  resource?: string;
+  initialMessages?: AssistantUIMessage[];
+  initialConversationId?: string | null;
+};
+
 export function ChatContainer({
   agent,
-  thread,
-  resource,
+  thread: _thread,
+  resource: _resource,
   initialMessages,
   initialConversationId,
 }: ChatContainerProps) {
@@ -48,7 +57,6 @@ export function ChatContainer({
     error,
     voiceError,
     currentAgent,
-    showActionsPanel,
     activeActions,
     handleAgentChange,
     clear,
@@ -117,7 +125,11 @@ export function ChatContainer({
   );
 
   const handleFeedbackSubmit = useCallback(
-    async (values: { expected: string; actual: string; surface?: string }) => {
+    async (values: {
+      expected: string;
+      actual: string;
+      surface?: FeedbackSurface;
+    }) => {
       if (!feedbackDraft) {
         return;
       }
@@ -200,7 +212,7 @@ export function ChatContainer({
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
               />
             </div>
-            {showActionsPanel && (
+            {activeActions.length > 0 && (
               <div className="border-t lg:w-80 lg:border-t-0 lg:border-l xl:w-96">
                 <div className="h-full overflow-auto p-4">
                   <Actions actions={actions} />

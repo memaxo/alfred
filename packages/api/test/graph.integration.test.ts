@@ -5,6 +5,7 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import "./utils/mock-hypergraph";
+import { createTestSession } from "@alfred/test-kit/auth";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { eq } from "drizzle-orm";
@@ -17,15 +18,7 @@ let memoryEdges: typeof import("@alfred/db/schema/graph").memoryEdges;
 let _ingest: typeof import("@alfred/rag").ingest;
 let setEmbeddingProvider: typeof import("@alfred/rag").setEmbeddingProvider;
 
-type SessionUser = {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  scopes: string[];
-};
-
-const TEST_USER: SessionUser = {
+const TEST_USER = {
   id: "graph-integration-user",
   email: "graph.integration@test.local",
   name: "Graph Integration",
@@ -53,11 +46,12 @@ function createCaller() {
     ["scanContext", null],
   ]);
 
+  const session = createTestSession(TEST_USER, {
+    session: { sessionId: `sess-${runtime.requestId}` },
+  });
+
   return graphRouter.createCaller({
-    session: {
-      user: TEST_USER,
-      session: { id: `sess-${runtime.requestId}` },
-    },
+    session,
     runtime,
     runtimeContext,
     policy: { obligations: [] },

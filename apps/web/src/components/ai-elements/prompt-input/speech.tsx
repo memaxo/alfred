@@ -56,14 +56,14 @@ interface SpeechRecognitionErrorEvent extends Event {
 }
 
 declare global {
-  type Window = {
-    SpeechRecognition: {
+  interface Window {
+    SpeechRecognition?: {
       new (): SpeechRecognition;
     };
-    webkitSpeechRecognition: {
+    webkitSpeechRecognition?: {
       new (): SpeechRecognition;
     };
-  };
+  }
 }
 
 export type PromptInputSpeechButtonProps = ComponentProps<
@@ -90,9 +90,12 @@ export const PromptInputSpeechButton = ({
       typeof window !== "undefined" &&
       ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
     ) {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      const speechRecognition = new SpeechRecognition();
+      const SpeechRecognitionClass =
+        window.SpeechRecognition ?? window.webkitSpeechRecognition;
+      if (!SpeechRecognitionClass) {
+        return;
+      }
+      const speechRecognition = new SpeechRecognitionClass();
 
       speechRecognition.continuous = true;
       speechRecognition.interimResults = true;
@@ -106,13 +109,13 @@ export const PromptInputSpeechButton = ({
         setIsListening(false);
       };
 
-      speechRecognition.onresult = (event) => {
+      speechRecognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalTranscript += result[0]?.transcript ?? "";
+          const result = event.results.item(i);
+          if (result?.isFinal) {
+            finalTranscript += result.item(0)?.transcript ?? "";
           }
         }
 
@@ -128,7 +131,7 @@ export const PromptInputSpeechButton = ({
         }
       };
 
-      speechRecognition.onerror = (_event) => {
+      speechRecognition.onerror = (_event: SpeechRecognitionErrorEvent) => {
         setIsListening(false);
       };
 

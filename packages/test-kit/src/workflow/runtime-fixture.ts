@@ -475,14 +475,15 @@ export async function installWorkflowRuntimeFixture(
       if (req.method !== "POST") {
         return new Response("not found", { status: 404 });
       }
-      const payload = await req.json();
+      const payload = (await req.json()) as Record<string, unknown>;
+      const actionValue = payload.action;
       linearRequests.push({
-        action: payload.action,
+        action: typeof actionValue === "string" ? actionValue : undefined,
         input: payload,
       });
-      const action = String(payload.action ?? "activity");
+      const action = String(actionValue ?? "activity");
       const id =
-        payload.issueId ?? payload.sessionId ?? payload.teamId ?? randomUUID();
+        (payload.issueId ?? payload.sessionId ?? payload.teamId ?? randomUUID()) as string;
       const body: Record<string, unknown> = {
         ok: true,
         id,

@@ -28,7 +28,7 @@ import { visualRouter } from "./visual";
 import { voiceRouter } from "./voice";
 import { workflowRouter } from "./workflow";
 
-export const appRouter: ReturnType<typeof router> = router({
+export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),
   admin: adminRouter,
   graph: graphRouter,

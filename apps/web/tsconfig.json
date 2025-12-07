@@ -20,6 +20,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@alfred/api/*": ["../../packages/api/src/*"],
+      "@alfred/api/test/*": ["../../packages/api/test/*"],
       "@alfred/auth/*": ["../../packages/auth/src/*"],
       "@alfred/db": ["../../packages/db/src/index.ts"],
       "@alfred/db/*": ["../../packages/db/src/*"],
@@ -38,7 +39,7 @@
     "sourceMap": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
-  "exclude": ["node_modules", ".tsbuild"],
+  "exclude": ["node_modules", ".tsbuild", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"],
   "references": [
     {
       "path": "../../packages/api"
@@ -48,6 +49,9 @@
     },
     {
       "path": "../../packages/history"
+    },
+    {
+      "path": "../../packages/ui"
     },
     {
       "path": "../../packages/voice"

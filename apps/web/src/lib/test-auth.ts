@@ -46,10 +46,16 @@ export function getTestPasskeys(): TestPasskey[] {
   return [...passkeyState.current];
 }
 
+import { hasWindow as hasWindowIsomorphic } from "@/lib/env/isomorphic";
+
 const fallbackFetch = globalThis.fetch?.bind(globalThis);
 
+/**
+ * Check if window object is available.
+ * Uses isomorphic utility for proper tree-shaking.
+ */
 function hasWindow() {
-  return typeof window !== "undefined";
+  return hasWindowIsomorphic();
 }
 
 function createRandomId(prefix: string) {
@@ -82,10 +88,21 @@ function base64Decode(value: string) {
   throw new Error("base64_decode_unavailable");
 }
 
-function getEnv(key: string) {
+/**
+ * Get environment variable value.
+ * Uses isomorphic pattern for proper tree-shaking.
+ * Server implementation checks process.env.
+ * Client implementation uses import.meta.env.
+ * 
+ * Note: This function remains synchronous for compatibility with existing callers.
+ * For async server-only access, use server-only utilities directly.
+ */
+function getEnv(key: string): string | undefined {
+  // Server-side: check process.env
   if (typeof process !== "undefined" && process.env?.[key]) {
     return process.env[key];
   }
+  // Client-side: check import.meta.env
   if (typeof import.meta !== "undefined") {
     const env = (import.meta as ImportMeta & { env?: Record<string, string> })
       .env;
@@ -100,7 +117,13 @@ function getEnv(key: string) {
   return;
 }
 
-function isTestModeEnabled() {
+/**
+ * Check if test mode is enabled.
+ * 
+ * Uses isomorphic hasWindow utility and synchronous environment checks.
+ * For server-side async test mode detection, use getTestMode from isomorphic utilities.
+ */
+function isTestModeEnabled(): boolean {
   const explicit = getEnv("VITE_TEST_MODE") ?? getEnv("TEST_MODE");
   const realAuth =
     getEnv("PLAYWRIGHT_REAL_AUTH") ?? getEnv("VITE_PLAYWRIGHT_REAL_AUTH");
@@ -225,7 +248,10 @@ export function createTestModeFetch(): typeof fetch | undefined {
   if (!fallbackFetch) {
     return;
   }
-  return (input: RequestInfo | URL, init?: RequestInit) => {
+  // Return a fetch-compatible function
+  // Note: TypeScript may complain about missing fetch properties (preconnect, etc.)
+  // but these are not used in practice
+  const testFetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const serialized = getSerializedTestSession();
     const url = resolveUrl(input);
     if (!(serialized && url && shouldAttachHeader(url))) {
@@ -244,6 +270,9 @@ export function createTestModeFetch(): typeof fetch | undefined {
       headers,
     });
   };
+  
+  // Copy fetch properties if they exist (for TypeScript compatibility)
+  return testFetch as typeof fetch;
 }
 
 function getSerializedTestSession() {

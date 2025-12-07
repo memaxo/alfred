@@ -10,9 +10,9 @@ export interface IPty {
 }
 
 export function spawn(
-  file: string,
-  args: string[],
-  options?: {
+  _file: string,
+  _args: string[],
+  _options?: {
     name?: string;
     cols?: number;
     rows?: number;

@@ -12,15 +12,15 @@
 
 6. **Route loaders are isomorphic.** Route loaders run on both server (SSR) and client (navigation). Never assume loaders are server-only. Use server functions inside loaders for server-only operations. Access loader data via `Route.useLoaderData()`.
 
-7. **Server-only utilities.** Use `createServerOnlyFn()` for server-only utilities (environment variables, file system access). Never access `process.env` directly in isomorphic code - it exposes secrets to the client bundle. Use `createServerOnlyFn` to ensure server-only code crashes if accidentally called from client.
+7. **Server-only utilities.** Use `createServerOnlyFn()` for server-only utilities (environment variables, file system access). Never access `process.env` directly in isomorphic code - it exposes secrets to the client bundle. Use `createServerOnlyFn` to ensure server-only code crashes if accidentally called from client. Import centralized utilities from `@/lib/env/server-only` instead of creating ad-hoc wrappers.
 
-8. **Isomorphic functions.** Use `createIsomorphicFn()` when you need different server/client implementations. Prefer this over manual `typeof window` checks - the framework handles environment detection and tree-shaking. Always provide both `.server()` and `.client()` implementations.
+8. **Isomorphic functions.** Use `createIsomorphicFn()` when you need different server/client implementations. Never use `typeof window` or `typeof process` checks - use centralized utilities from `@/lib/env/isomorphic` (e.g., `hasWindow()`, `getTestMode()`). The framework handles environment detection and tree-shaking automatically. Always provide both `.server()` and `.client()` implementations.
 
 9. **Environment variables.** Server functions can access any `process.env` variable. Client code can only access variables prefixed with `VITE_`. Never use `VITE_` prefix for secrets, API keys, or database URLs. Access secrets only in server functions via `process.env`.
 
 10. **Route protection.** Use `beforeLoad` for route protection and authentication checks. Throw `redirect()` from `@tanstack/react-router` to redirect unauthorized users. Return context data from `beforeLoad` to pass to child routes via `Route.useRouteContext()`. `beforeLoad` runs on both server (SSR) and client (navigation).
 
-11. **Selective SSR.** Use `ssr: false` for routes requiring browser-only APIs (localStorage, canvas). Use `ssr: 'data-only'` to run loaders on server but render components on client. Child routes inherit parent SSR config but can only make it more restrictive (true → data-only/false, data-only → false).
+11. **Selective SSR.** Use `ssr: false` for routes requiring browser-only APIs (WebGPU, Canvas, localStorage). Always add `ssr: false` to routes using WebGPU/Canvas rendering (e.g., Mindscape, Cortex). Use `ssr: 'data-only'` to run loaders on server but render components on client. Child routes inherit parent SSR config but can only make it more restrictive (true → data-only/false, data-only → false).
 
 12. **Hydration mismatches.** Never render time-dependent, random, or locale-dependent content directly in SSR components. Use `useState` + `useEffect` for client-only updates or wrap in `ClientOnly` component. Use cookies to pass client context (timezone, locale) to server for deterministic rendering.
 
@@ -34,7 +34,7 @@
 
 17. **Middleware composition.** Compose middleware using `.middleware([...])` to create dependency chains. Always call `next()` in `.server()` methods to progress the chain. Use `next({ context: {...} })` to pass data to nested middleware. Request middleware cannot depend on server function middleware, but server function middleware can depend on request middleware.
 
-18. **Global middleware.** Use global middleware (`requestMiddleware`, `functionMiddleware`) in `createStart()` for cross-cutting concerns. Request middleware runs before every request (server routes, SSR, server functions). Server function middleware runs before every server function.
+18. **Global middleware.** Configure global middleware (`requestMiddleware`, `functionMiddleware`) in `src/start.ts` using `createStart()`. Export as `startInstance`. Request middleware runs before every request (server routes, SSR, server functions). Server function middleware runs before every server function. Use for logging, error handling, and cross-cutting concerns.
 
 19. **Client context validation.** Always validate client-sent context in server-side middleware before using it. Client context is type-safe but not runtime-validated. Use Zod validators via `zodValidator()` to validate dynamic user-generated data sent via `sendContext`. Never trust unvalidated client context for security-sensitive operations.
 
@@ -53,4 +53,8 @@
     **Exception:** For *local* server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
 
 22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
+
+23. **Server function request access.** To access the request object in server functions, use `getRequest()` from `@tanstack/react-start/server`. Do not rely on handler parameters for GET requests - the request is not available in the handler context. Example: `const request = getRequest(); const header = request.headers.get('x-header');`
+
+24. **Authentication middleware.** Use `requireAuthMiddleware` from `@/lib/middleware/auth` for server functions requiring authentication. Apply via `.middleware([requireAuthMiddleware])`. The middleware provides `context.user` and `context.session` to handlers. Never duplicate authentication logic - use the shared middleware.
 

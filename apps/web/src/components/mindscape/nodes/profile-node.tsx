@@ -30,7 +30,8 @@ export function ProfileNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
   useNodeFocus(id);
 
-  const _parsed = profileNodeDataSchema.safeParse(data);
+  // Validate data structure (result intentionally unused)
+  profileNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );

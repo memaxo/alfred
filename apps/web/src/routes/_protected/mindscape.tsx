@@ -13,9 +13,10 @@ const mindscapeSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_protected/mindscape")({
+  ssr: false, // Uses ReactFlow and WebGPU - browser-only
   component: MindscapeRoute,
   validateSearch: mindscapeSearchSchema,
-  loader: () => getInitialMindscapeFrame(),
+  loader: () => getInitialMindscapeFrame(), // Keep loader for data fetching
 });
 
 function MindscapeRoute() {

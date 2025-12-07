@@ -8,6 +8,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+import { createTestSession, type TestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import {
   mockPolicyAudit,
@@ -74,7 +75,9 @@ const createPoolMocks = () => {
   };
 };
 
-async function createCallerWithCustomSession(session: any) {
+type PartialSession = { user?: Record<string, unknown>; session?: Record<string, unknown> } | null;
+
+async function createCallerWithCustomSession(session: TestSession | PartialSession) {
   const { appRouter } = await import("@alfred/api/routers/index");
   const runtime = {
     requestId: "custom-session",

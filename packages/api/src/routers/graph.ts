@@ -69,7 +69,8 @@ const unifiedQuerySchema = z.discriminatedUnion("kind", [
   contextQuerySchema,
 ]);
 
-export const graphRouter: any = router({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- tRPC router type is complex
+export const graphRouter: ReturnType<typeof router> = router({
   getEdges: authedProcedure
     .input(
       z.object({

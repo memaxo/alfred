@@ -1,104 +1,158 @@
 import type { UIMessage } from "@alfred/type/stream";
 
-export function isTextPart(
-  part: UIMessage["parts"][number]
-): part is { type: "text"; text: string } {
-  if (part.type !== "text") {
-    return false;
-  }
-  return typeof part.text === "string";
-}
+type UIPart = UIMessage["parts"][number];
 
-export function isReasoningPart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: "reasoning" }> {
-  if (part.type !== "reasoning") {
-    return false;
-  }
-  return typeof (part as { text?: unknown }).text === "string";
-}
+/**
+ * ALFRED UI message part types.
+ *
+ * ALFRED extends the AI SDK UIMessage format to include explicit tool-call
+ * and tool-result part types for cleaner serialization and persistence.
+ *
+ * These types are used for narrowing after type guard checks.
+ *
+ * ## Type Casting Note
+ *
+ * Consumers may need to use `as unknown as ToolCallPart` after type guards
+ * when the source type is `UIMessagePart` from AI SDK. This is because:
+ *
+ * 1. AI SDK's `ToolUIPart` uses `type: "tool-${toolName}"` (template literal)
+ * 2. ALFRED uses `type: "tool-call"` and `type: "tool-result"` (literal strings)
+ *
+ * The type guards check runtime values correctly, but TypeScript's type system
+ * can't reconcile the structural mismatch at compile time. See `.ruler/15-ai-sdk-v6.md`
+ * for full documentation of ALFRED's custom UIMessage format.
+ */
 
-export function isToolCallPart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: string }> & {
+export type ToolCallPart = {
   type: "tool-call";
-  toolName?: string;
-  args?: unknown;
-  toolCallId?: string;
-} {
-  return part.type === "tool-call";
-}
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+};
 
-export function isToolResultPart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: string }> & {
+export type ToolResultPart = {
   type: "tool-result";
-  toolName?: string;
-  result?: unknown;
-  toolCallId?: string;
-  isError?: boolean;
-  errorText?: string;
-} {
-  return part.type === "tool-result";
-}
+  toolCallId: string;
+  toolName: string;
+  output: unknown;
+};
 
-export function isFilePart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: "file" }> {
-  if (part.type !== "file") {
-    return false;
-  }
-  const filePart = part as { mediaType?: unknown; url?: unknown };
+/**
+ * Type guard for text parts.
+ */
+export function isTextPart(
+  part: unknown
+): part is { type: "text"; text: string } {
   return (
-    typeof filePart.mediaType === "string" && typeof filePart.url === "string"
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "text"
   );
 }
 
+/**
+ * Type guard for reasoning parts.
+ */
+export function isReasoningPart(
+  part: unknown
+): part is { type: "reasoning"; text: string } {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "reasoning"
+  );
+}
+
+/**
+ * Type guard for tool-call parts.
+ * ALFRED uses explicit tool-call types in UI messages.
+ */
+export function isToolCallPart(part: unknown): part is ToolCallPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "tool-call"
+  );
+}
+
+/**
+ * Type guard for tool-result parts.
+ * ALFRED uses explicit tool-result types in UI messages.
+ */
+export function isToolResultPart(part: unknown): part is ToolResultPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "tool-result"
+  );
+}
+
+/**
+ * Type guard for file parts.
+ */
+export function isFilePart(
+  part: unknown
+): part is { type: "file"; mediaType: string; url: string } {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "file"
+  );
+}
+
+/**
+ * Type guard for any data-* part.
+ */
 export function isDataPart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: `data-${string}` }> {
-  return typeof part.type === "string" && part.type.startsWith("data-");
+  part: unknown
+): part is { type: `data-${string}`; data: unknown } {
+  if (typeof part !== "object" || part === null) return false;
+  const type = (part as { type?: unknown }).type;
+  return typeof type === "string" && type.startsWith("data-");
 }
 
-export function isDataCachePart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: "data-cache" }> & {
-  data: unknown;
-  key?: readonly unknown[];
-  value?: unknown;
-} {
-  return part.type === "data-cache";
+/**
+ * Type guard for data-cache parts.
+ */
+export function isDataCachePart(part: unknown): boolean {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "data-cache"
+  );
 }
 
-export function isDataStatusPart(
-  part: UIMessage["parts"][number]
-): part is Extract<UIMessage["parts"][number], { type: "data-status" }> & {
-  data: unknown;
-  transient?: boolean;
-} {
-  return part.type === "data-status";
+/**
+ * Type guard for data-status parts.
+ */
+export function isDataStatusPart(part: unknown): boolean {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === "data-status"
+  );
 }
 
-export function isDataPartNamed(
-  part: UIMessage["parts"][number],
-  name: string
-): part is Extract<UIMessage["parts"][number], { type: `data-${string}` }> & {
-  type: `data-${string}`;
-  data?: unknown;
-  id?: string;
-} {
-  return part.type === `data-${name}`;
+/**
+ * Type guard for named data parts.
+ */
+export function isDataPartNamed(part: unknown, name: string): boolean {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    (part as { type?: unknown }).type === `data-${name}`
+  );
 }
 
-export function extractStructuredData(
-  part: UIMessage["parts"][number]
-): unknown {
+/**
+ * Extracts structured data from data parts or tool results.
+ */
+export function extractStructuredData(part: UIPart): unknown {
   if (isDataPart(part)) {
-    const dataPart = part as { data?: unknown };
-    return dataPart.data;
+    return (part as { data?: unknown }).data;
   }
   if (isToolResultPart(part)) {
-    return part.result;
+    return (part as { output?: unknown }).output;
   }
   return null;
 }

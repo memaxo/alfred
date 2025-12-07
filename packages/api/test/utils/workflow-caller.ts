@@ -1,4 +1,10 @@
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import type { Obligation } from "@alfred/type";
+import {
+  createTestSession,
+  type AuthSession,
+  type TestSession,
+} from "@alfred/test-kit/auth";
 
 type WorkflowRuntime = {
   requestId: string;
@@ -35,7 +41,7 @@ export const DEFAULT_WORKFLOW_TEST_USER: WorkflowTestUser = {
 type WorkflowCallerOptions = {
   user?: WorkflowTestUser | null;
   runtime?: Partial<WorkflowRuntime>;
-  obligations?: string[];
+  obligations?: Obligation[];
 };
 
 let cachedWorkflowRouter:
@@ -81,18 +87,20 @@ export async function createWorkflowCaller(
   const resolvedUser =
     options.user === undefined ? DEFAULT_WORKFLOW_TEST_USER : options.user;
 
-  const session =
+  // Create a properly typed session using test-kit factory
+  const session: TestSession | null =
     resolvedUser === null
       ? null
-      : {
-          user: resolvedUser,
-          session: { id: `sess-${runtime.requestId}` },
-        };
+      : createTestSession(resolvedUser, {
+          session: { sessionId: `sess-${runtime.requestId}` },
+        });
 
-  return router.createCaller({
+  const context = {
     session,
     runtime,
     runtimeContext,
     policy: { obligations: options.obligations ?? [] },
-  } as Parameters<typeof router.createCaller>[0]);
+  } satisfies Parameters<typeof router.createCaller>[0];
+
+  return router.createCaller(context);
 }

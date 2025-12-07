@@ -11,8 +11,9 @@ import { trpc } from "@/utils/trpc";
 import { getInitialMindscapeFrame } from "@/lib/mindscape/initial-frame.server";
 
 export const Route = createFileRoute("/")({
+  ssr: false, // Uses WebGPU Canvas - browser-only
   component: Mindscape,
-  loader: () => getInitialMindscapeFrame(),
+  loader: () => getInitialMindscapeFrame(), // Keep loader for data fetching
 });
 
 function Mindscape() {

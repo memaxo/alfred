@@ -18,7 +18,7 @@ describe("SSR Generation", () => {
     const rows = lines.filter((l) => l.length > 0);
 
     expect(rows.length).toBe(h);
-    expect(rows[0].length).toBe(w);
+    expect(rows[0]?.length).toBe(w);
   });
 
   test("calculateAsciiFrame uses valid glyphs", () => {

@@ -27,6 +27,7 @@ import { useVisualPreferences } from "@/hooks/use-visual-preferences";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_protected/settings/visual")({
+  ssr: false, // Uses Cortex Canvas - browser-only
   component: VisualSettingsPage,
 });
 

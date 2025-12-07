@@ -15,7 +15,8 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
   const lod = useLOD();
   useNodeFocus(id);
 
-  const _parsed = integrationsNodeDataSchema.safeParse(data);
+  // Validate data structure (result intentionally unused, validation for side-effect only)
+  integrationsNodeDataSchema.safeParse(data);
   const updateArtifactData = useMindscapeStore(
     (state) => state.updateArtifactData
   );
@@ -24,7 +25,7 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
   const getAuthorizeUrlMutation = trpc.linear.getAuthorizeUrl.useMutation();
 
   const handleLinearConnect = useCallback(async () => {
-    if (typeof window === "undefined") {
+    if (!hasWindow()) {
       return;
     }
     try {

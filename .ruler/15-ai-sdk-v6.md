@@ -16,18 +16,18 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
    - Return properly typed `UIMessage[]` after validation
    - Never use `@ts-expect-error` or `@ts-ignore` to bypass validation
 
-4. **Message parts.** Use canonical AI SDK v6 part types exclusively:
+4. **Message parts.** Use canonical AI SDK v6 part types:
    - `text` - Text content
    - `reasoning` - Reasoning steps (with `text`, `state`, `providerMetadata`)
-   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `args`)
-   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `result`, `isError`)
+   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `input`)
+   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `output`, `isError`)
    - `file` - File attachments (with `mediaType`, `url`, `filename`)
    - `source-url` - Source URLs
    - `source-document` - Source documents
    - `data-status` - Data status updates
    - `data-cache` - Cache operations
    - `step-start` - Step initiation
-   - **Note:** Do NOT use legacy custom parts like `dynamic-tool`. Use `tool-call` and `tool-result` instead.
+   - **Note:** AI SDK v6 uses `input`/`output`, NOT `args`/`result`. ALFRED's custom zod schema (`@alfred/type/stream.zod.ts`) uses explicit `tool-call`/`tool-result` types for persistence benefits.
 
 5. **Streaming utilities.** Use AI SDK v6 streaming utilities:
    - `streamText` for text generation streams
@@ -51,4 +51,30 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 11. **Structured outputs.** Use `generateObject`/`streamObject` (and `useObject` client-side) for any structured payloads or streamed JSON instead of parsing free-form text, and treat `@ai-sdk/rsc` as experimental unless the official migration guide is followed.
 
 12. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
+
+## ALFRED's Custom UIMessage Format
+
+ALFRED intentionally deviates from AI SDK v6's native `ToolUIPart` format for persistence and validation benefits:
+
+**AI SDK v6 Native Format:**
+- Tool parts use `type: "tool-${toolName}"` (e.g., `tool-weather`)
+- Single part represents entire tool lifecycle with `state` property
+- Rich state machine: `input-streaming` → `input-available` → `approval-requested` → `output-available`
+
+**ALFRED's Custom Format (`@alfred/type/stream.zod.ts`):**
+- Explicit `type: "tool-call"` and `type: "tool-result"` discriminants
+- Separate parts for call and result (easier to persist/query)
+- Uses `input`/`output` properties (matches v6 naming)
+
+**Why the deviation:**
+1. **Persistence simplicity** - Static type discriminants are easier to index/query
+2. **Serialization determinism** - Explicit types serialize predictably
+3. **Validation clarity** - Zod discriminated unions work cleanly
+4. **History reconstruction** - Separate parts make replay straightforward
+
+**Type guard implications:**
+- TypeScript's AI SDK types don't include ALFRED's custom part types
+- Type guards must accept `unknown` and return explicit predicates
+- Use `as unknown as ToolCallPart` after guards with explanatory comments
+- See `@alfred/ui/chat/parts.ts` for canonical type guards
 

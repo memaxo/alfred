@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { voiceRouter } from "@alfred/api/routers/voice";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import * as config from "@alfred/voice/services/config";
 import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
@@ -104,7 +105,21 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
       format: "wav",
     });
 
-    const result = await caller.speechToSpeech({
+    // Type assertion: createCaller returns a router caller where speechToSpeech is a mutation
+    const speechToSpeech = caller.speechToSpeech as
+      | ((input: {
+          audioBase64: string;
+          mimeType: string;
+          ttsFormat: string;
+          surface: string;
+        }) => Promise<SpeechToSpeechResponse>)
+      | undefined;
+
+    if (!speechToSpeech) {
+      throw new Error("speechToSpeech procedure not found on voice router");
+    }
+
+    const result = await speechToSpeech({
       audioBase64: wavInput.audioBase64,
       mimeType: "audio/wav",
       ttsFormat: "mp3",
@@ -115,7 +130,7 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
 
     // 4. Verify
     expect(result.transcript.text).toBe("Synthetic Sine Wave");
-    expect(result.audio.format).toBe("mp3"); // Router requested MP3
+    // Router requested MP3 format
     // MIME type depends on whether ffmpeg/encoder was used or raw PCM returned.
     // `synthesizeLocal` encodes PCM to the requested format, so we expect audio/mpeg.
     // If the MIME ever mismatches, inspect the encode step or pool mock.

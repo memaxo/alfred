@@ -1,4 +1,3 @@
-import type { Node } from "@xyflow/react";
 import {
   Bell,
   Bookmark,
@@ -17,7 +16,7 @@ import {
   Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   CommandDialog,
@@ -140,19 +139,16 @@ const createActions: Array<{
 // ... (PaletteInput component)
 
 type MindscapeCommandPaletteProps = {
-  nodes: Node<ArtifactData>[];
   onSpawn: (type: MindscapeSpawnType) => string | null;
   onFocus: (nodeId: string) => void;
 };
 
 export function MindscapeCommandPalette({
-  nodes,
   onSpawn,
   onFocus,
 }: MindscapeCommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const deferredInputValue = useDeferredValue(inputValue);
   const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
   const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
   const updateArtifactData = useMindscapeStore(
@@ -302,7 +298,9 @@ export function MindscapeCommandPalette({
         break;
       case "ask": {
         // 1. Find or spawn chat node
-        let chatNodeId = currentNodes.find((n) => n.type === "chat")?.id;
+        let chatNodeId: string | null | undefined = currentNodes.find(
+          (n) => n.type === "chat"
+        )?.id;
         if (!chatNodeId) {
           chatNodeId = onSpawn("chat");
         }

@@ -1,46 +1,68 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { TEST_SESSION_HEADER } from "@/lib/test-auth";
+import {
+  getViteTestMode,
+  getMindscapeTest,
+  getBunTest,
+  getNodeEnv,
+} from "@/lib/env/server-only";
 
 /**
  * Server-side data fetching for Mindscape initialization.
  * Returns the initial graph snapshot and reflections.
+ * 
+ * Uses server-only environment utilities to prevent server code leakage
+ * into client bundles.
  */
 function resolveTestMode(request: Request) {
   if (request.headers.get(TEST_SESSION_HEADER)) {
     return true;
   }
-  const metaEnv =
-    typeof import.meta !== "undefined"
-      ? ((import.meta as ImportMeta & { env?: Record<string, string> }).env ??
-        {})
-      : {};
-  if (metaEnv?.VITE_TEST_MODE === "true") {
-    return true;
-  }
-  if (metaEnv?.MINDSCAPE_TEST === "1") {
-    return true;
-  }
-  if (process.env.VITE_TEST_MODE === "true") {
-    return true;
-  }
-  if (process.env.MINDSCAPE_TEST === "1") {
-    return true;
-  }
-  if (process.env.NODE_ENV === "test") {
-    return true;
-  }
-  return false;
+
+  // Use server-only utilities instead of direct process.env access
+  const viteTestMode = getViteTestMode();
+  const mindscapeTest = getMindscapeTest();
+  const bunTest = getBunTest();
+  const nodeEnv = getNodeEnv();
+
+  return (
+    viteTestMode === "true" ||
+    mindscapeTest === "1" ||
+    bunTest === "1" ||
+    nodeEnv === "test"
+  );
 }
 
+/**
+ * Get initial Mindscape frame data.
+ * 
+ * Note: This function is used in both authenticated and unauthenticated contexts
+ * (landing page vs protected mindscape route), so auth middleware is not applied here.
+ * 
+ * For server functions that require authentication, use the pattern:
+ * ```typescript
+ * export const myServerFn = createServerFn()
+ *   .middleware([requireAuthMiddleware])
+ *   .handler(async ({ context }) => {
+ *     // context.user is available here
+ *   })
+ * ```
+ * 
+ * See @/lib/middleware/auth for the requireAuthMiddleware implementation.
+ */
 export const getInitialMindscapeFrame = createServerFn({
   method: "GET",
-}).handler(async (ctx) => {
-  // Need userId from context, assuming it's available or we fetch for default user
-  // For now, let's assume single user or passed via header/context
-  const userId = "default"; // TODO: Get actual user ID
+}).handler(async () => {
+  // Need userId from context - currently defaults to "default" for single-user mode
+  // TODO: Get actual user ID from session when this function is used in authenticated contexts
+  const userId = "default";
+
+  // Access request using getRequest() utility
+  const request = getRequest();
 
   // Check for Test Mode (Lite Mode)
-  const isTestMode = resolveTestMode(ctx.request);
+  const isTestMode = resolveTestMode(request);
 
   if (isTestMode) {
     // Return static mock data for E2E tests

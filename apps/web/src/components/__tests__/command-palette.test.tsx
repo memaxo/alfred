@@ -76,7 +76,7 @@ describe("MindscapeCommandPalette", () => {
 
   it("should open on Cmd+K", async () => {
     render(
-      <MindscapeCommandPalette nodes={[]} onFocus={mock()} onSpawn={mock()} />
+      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
     );
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -86,7 +86,7 @@ describe("MindscapeCommandPalette", () => {
 
   it("should show create actions by default", async () => {
     render(
-      <MindscapeCommandPalette nodes={[]} onFocus={mock()} onSpawn={mock()} />
+      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
     );
     openPalette();
 
@@ -101,7 +101,7 @@ describe("MindscapeCommandPalette", () => {
 
   it("should show ghost text suggestion", async () => {
     render(
-      <MindscapeCommandPalette nodes={[]} onFocus={mock()} onSpawn={mock()} />
+      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
     );
     openPalette();
 

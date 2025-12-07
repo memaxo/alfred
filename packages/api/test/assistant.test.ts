@@ -7,6 +7,7 @@ import {
   it,
 } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { sql } from "drizzle-orm";
 import { resetAgentMocks } from "./utils/agent-mock";
@@ -50,15 +51,12 @@ function createCaller() {
     ["userId", TEST_USER],
     ["scanContext", null],
   ]);
+  const session = createTestSession({ id: TEST_USER });
   return appRouter.createCaller({
-    session: {
-      user: {
-        id: TEST_USER,
-      },
-    },
+    session,
     runtime,
     runtimeContext,
-  } as any);
+  } as Parameters<typeof appRouter.createCaller>[0]);
 }
 
 describeFn("assistant routers", () => {

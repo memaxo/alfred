@@ -328,8 +328,8 @@ export const useMindscapeStore = create<MindscapeState>()(
           graph: mergedGraph,
         };
 
-        // Validate merged data (use partial to allow partial updates)
-        const result = schema.partial().safeParse(mergedData);
+        // Validate merged data (schema fields are optional, supporting partial updates)
+        const result = schema.safeParse(mergedData);
 
         if (!result.success) {
           return;
@@ -574,7 +574,6 @@ function sanitizeNodeForPersist(node: Node<ArtifactData>): Node<ArtifactData> {
     id: node.id,
     type: node.type,
     position: node.position,
-    positionAbsolute: node.positionAbsolute,
     dragging: false,
     data: sanitizedData,
     draggable: node.draggable,
@@ -600,12 +599,14 @@ function sanitizeNodeData(node: Node<ArtifactData>): ArtifactData {
   return data;
 }
 
+import { hasWindow } from "@/lib/env/isomorphic";
+
 declare global {
   interface Window {
     __MINDSCAPE_STORE__?: typeof useMindscapeStore;
   }
 }
 
-if (typeof window !== "undefined" && !window.__MINDSCAPE_STORE__) {
+if (hasWindow() && !window.__MINDSCAPE_STORE__) {
   window.__MINDSCAPE_STORE__ = useMindscapeStore;
 }

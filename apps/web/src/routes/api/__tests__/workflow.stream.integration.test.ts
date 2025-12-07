@@ -18,7 +18,7 @@ const [
   { handleWorkflowStreamRequest },
   workflowAccess,
 ] = await Promise.all([
-  import("../../../../../../packages/api/test/utils/workflow-server.ts"),
+  import("@alfred/api/test/utils/workflow-server"),
   import("@alfred/db"),
   import("../workflow/stream"),
   import("@alfred/api/workflow/access"),

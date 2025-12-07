@@ -10,7 +10,7 @@ export { Actions } from "./actions";
 export { Tool } from "./ai-elements/tool";
 export { Artifact } from "./artifact";
 // Voice & Audio
-export { Audio } from "./audio";
+export { AudioPlayer } from "./audio";
 export { Branch } from "./branch";
 export { Canvas } from "./canvas";
 // Containers

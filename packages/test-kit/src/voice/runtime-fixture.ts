@@ -1,6 +1,4 @@
 import { vi } from "bun:test";
-import type { STTPool } from "@alfred/voice/process/stt";
-import type { TTSPool } from "@alfred/voice/process/tts";
 import { createVoiceTestRegistry } from "./registry";
 
 export { createVoiceFixture, createVoiceTestRegistry } from "./registry";
@@ -10,15 +8,18 @@ import type { VoiceTestOptions } from "./registry";
 export async function installVoiceTestPools(options?: VoiceTestOptions) {
   const poolsModule = await import("@alfred/api/voice/pools");
   const { registry, sttPool, ttsPool } = createVoiceTestRegistry(options);
-  const typedStt = sttPool as unknown as STTPool;
-  const typedTts = ttsPool as unknown as TTSPool;
+  // Use the return type from getVoicePools to ensure type compatibility
+  type VoicePools = ReturnType<typeof poolsModule.getVoicePools>;
+  const typedStt = sttPool as unknown as VoicePools["sttPool"];
+  const typedTts = ttsPool as unknown as VoicePools["ttsPool"];
+  const typedRegistry = registry as unknown as VoicePools["voiceRegistry"];
 
   const getVoicePoolsSpy = vi
     .spyOn(poolsModule, "getVoicePools")
     .mockReturnValue({
       sttPool: typedStt,
       ttsPool: typedTts,
-      voiceRegistry: registry,
+      voiceRegistry: typedRegistry,
     });
 
   const initSpy = vi

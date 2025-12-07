@@ -5,6 +5,7 @@ import {
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
 } from "@alfred/agent/orchestrator/tool/codex/constants";
+import { resolveExecutable } from "@alfred/agent/orchestrator/tool/shared";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import { runRegistry } from "@alfred/agent/workflow/registry";
 import {
@@ -254,7 +255,15 @@ function createScript(prompt: string, out: DroidRunInput["out"]) {
 }
 
 function spawnDroidProcess(input: DroidRunInput) {
-  const command = input.command ?? process.execPath;
+  let command: string;
+  if (input.command) {
+    // Resolve command from PATH if not absolute
+    command = resolveExecutable(input.command, "droid");
+  } else {
+    // Default to Bun executable
+    command = process.execPath;
+  }
+
   const args = input.args ?? ["-e", createScript(input.prompt, input.out)];
 
   return Bun.spawn([command, ...args], {

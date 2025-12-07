@@ -581,18 +581,18 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
    - Return properly typed `UIMessage[]` after validation
    - Never use `@ts-expect-error` or `@ts-ignore` to bypass validation
 
-4. **Message parts.** Use canonical AI SDK v6 part types exclusively:
+4. **Message parts.** Use canonical AI SDK v6 part types:
    - `text` - Text content
    - `reasoning` - Reasoning steps (with `text`, `state`, `providerMetadata`)
-   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `args`)
-   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `result`, `isError`)
+   - `tool-call` - Tool invocations (with `toolCallId`, `toolName`, `input`)
+   - `tool-result` - Tool results (with `toolCallId`, `toolName`, `output`, `isError`)
    - `file` - File attachments (with `mediaType`, `url`, `filename`)
    - `source-url` - Source URLs
    - `source-document` - Source documents
    - `data-status` - Data status updates
    - `data-cache` - Cache operations
    - `step-start` - Step initiation
-   - **Note:** Do NOT use legacy custom parts like `dynamic-tool`. Use `tool-call` and `tool-result` instead.
+   - **Note:** AI SDK v6 uses `input`/`output`, NOT `args`/`result`. ALFRED's custom zod schema (`@alfred/type/stream.zod.ts`) uses explicit `tool-call`/`tool-result` types for persistence benefits.
 
 5. **Streaming utilities.** Use AI SDK v6 streaming utilities:
    - `streamText` for text generation streams
@@ -616,6 +616,32 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 11. **Structured outputs.** Use `generateObject`/`streamObject` (and `useObject` client-side) for any structured payloads or streamed JSON instead of parsing free-form text, and treat `@ai-sdk/rsc` as experimental unless the official migration guide is followed.
 
 12. **Runtime reliability.** Implement caching, rate limiting, back-pressure, abort handling, and error hooks with the prescribed middleware (`wrapLanguageModel`, `simulateReadableStream`, Upstash KV/Ratelimit patterns, `onAbort`, `onError`) before adding custom infra.
+
+## ALFRED's Custom UIMessage Format
+
+ALFRED intentionally deviates from AI SDK v6's native `ToolUIPart` format for persistence and validation benefits:
+
+**AI SDK v6 Native Format:**
+- Tool parts use `type: "tool-${toolName}"` (e.g., `tool-weather`)
+- Single part represents entire tool lifecycle with `state` property
+- Rich state machine: `input-streaming` → `input-available` → `approval-requested` → `output-available`
+
+**ALFRED's Custom Format (`@alfred/type/stream.zod.ts`):**
+- Explicit `type: "tool-call"` and `type: "tool-result"` discriminants
+- Separate parts for call and result (easier to persist/query)
+- Uses `input`/`output` properties (matches v6 naming)
+
+**Why the deviation:**
+1. **Persistence simplicity** - Static type discriminants are easier to index/query
+2. **Serialization determinism** - Explicit types serialize predictably
+3. **Validation clarity** - Zod discriminated unions work cleanly
+4. **History reconstruction** - Separate parts make replay straightforward
+
+**Type guard implications:**
+- TypeScript's AI SDK types don't include ALFRED's custom part types
+- Type guards must accept `unknown` and return explicit predicates
+- Use `as unknown as ToolCallPart` after guards with explanatory comments
+- See `@alfred/ui/chat/parts.ts` for canonical type guards
 
 
 
@@ -884,15 +910,15 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 6. **Route loaders are isomorphic.** Route loaders run on both server (SSR) and client (navigation). Never assume loaders are server-only. Use server functions inside loaders for server-only operations. Access loader data via `Route.useLoaderData()`.
 
-7. **Server-only utilities.** Use `createServerOnlyFn()` for server-only utilities (environment variables, file system access). Never access `process.env` directly in isomorphic code - it exposes secrets to the client bundle. Use `createServerOnlyFn` to ensure server-only code crashes if accidentally called from client.
+7. **Server-only utilities.** Use `createServerOnlyFn()` for server-only utilities (environment variables, file system access). Never access `process.env` directly in isomorphic code - it exposes secrets to the client bundle. Use `createServerOnlyFn` to ensure server-only code crashes if accidentally called from client. Import centralized utilities from `@/lib/env/server-only` instead of creating ad-hoc wrappers.
 
-8. **Isomorphic functions.** Use `createIsomorphicFn()` when you need different server/client implementations. Prefer this over manual `typeof window` checks - the framework handles environment detection and tree-shaking. Always provide both `.server()` and `.client()` implementations.
+8. **Isomorphic functions.** Use `createIsomorphicFn()` when you need different server/client implementations. Never use `typeof window` or `typeof process` checks - use centralized utilities from `@/lib/env/isomorphic` (e.g., `hasWindow()`, `getTestMode()`). The framework handles environment detection and tree-shaking automatically. Always provide both `.server()` and `.client()` implementations.
 
 9. **Environment variables.** Server functions can access any `process.env` variable. Client code can only access variables prefixed with `VITE_`. Never use `VITE_` prefix for secrets, API keys, or database URLs. Access secrets only in server functions via `process.env`.
 
 10. **Route protection.** Use `beforeLoad` for route protection and authentication checks. Throw `redirect()` from `@tanstack/react-router` to redirect unauthorized users. Return context data from `beforeLoad` to pass to child routes via `Route.useRouteContext()`. `beforeLoad` runs on both server (SSR) and client (navigation).
 
-11. **Selective SSR.** Use `ssr: false` for routes requiring browser-only APIs (localStorage, canvas). Use `ssr: 'data-only'` to run loaders on server but render components on client. Child routes inherit parent SSR config but can only make it more restrictive (true → data-only/false, data-only → false).
+11. **Selective SSR.** Use `ssr: false` for routes requiring browser-only APIs (WebGPU, Canvas, localStorage). Always add `ssr: false` to routes using WebGPU/Canvas rendering (e.g., Mindscape, Cortex). Use `ssr: 'data-only'` to run loaders on server but render components on client. Child routes inherit parent SSR config but can only make it more restrictive (true → data-only/false, data-only → false).
 
 12. **Hydration mismatches.** Never render time-dependent, random, or locale-dependent content directly in SSR components. Use `useState` + `useEffect` for client-only updates or wrap in `ClientOnly` component. Use cookies to pass client context (timezone, locale) to server for deterministic rendering.
 
@@ -906,7 +932,7 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 17. **Middleware composition.** Compose middleware using `.middleware([...])` to create dependency chains. Always call `next()` in `.server()` methods to progress the chain. Use `next({ context: {...} })` to pass data to nested middleware. Request middleware cannot depend on server function middleware, but server function middleware can depend on request middleware.
 
-18. **Global middleware.** Use global middleware (`requestMiddleware`, `functionMiddleware`) in `createStart()` for cross-cutting concerns. Request middleware runs before every request (server routes, SSR, server functions). Server function middleware runs before every server function.
+18. **Global middleware.** Configure global middleware (`requestMiddleware`, `functionMiddleware`) in `src/start.ts` using `createStart()`. Export as `startInstance`. Request middleware runs before every request (server routes, SSR, server functions). Server function middleware runs before every server function. Use for logging, error handling, and cross-cutting concerns.
 
 19. **Client context validation.** Always validate client-sent context in server-side middleware before using it. Client context is type-safe but not runtime-validated. Use Zod validators via `zodValidator()` to validate dynamic user-generated data sent via `sendContext`. Never trust unvalidated client context for security-sensitive operations.
 
@@ -925,6 +951,10 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
     **Exception:** For *local* server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
 
 22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
+
+23. **Server function request access.** To access the request object in server functions, use `getRequest()` from `@tanstack/react-start/server`. Do not rely on handler parameters for GET requests - the request is not available in the handler context. Example: `const request = getRequest(); const header = request.headers.get('x-header');`
+
+24. **Authentication middleware.** Use `requireAuthMiddleware` from `@/lib/middleware/auth` for server functions requiring authentication. Apply via `.middleware([requireAuthMiddleware])`. The middleware provides `context.user` and `context.session` to handlers. Never duplicate authentication logic - use the shared middleware.
 
 
 
@@ -1329,6 +1359,40 @@ ExecPlans must accurately reflect implementation status. When verifying features
 5. **Partial completion.** Mark ExecPlans as "Mostly Complete ⚠️" when core functionality is done but minor items remain. Document remaining work clearly.
 
 6. **Status accuracy.** ExecPlan status must match actual codebase state. If an ExecPlan says "Proposed" but implementation exists, update it immediately.
+
+
+
+<!-- Source: .ruler/33-test-patterns.md -->
+
+# Test Patterns
+
+## Session Construction
+
+1. **Use test-kit session factory.** Create test sessions using `createTestSession` from `@alfred/test-kit/auth` instead of inline object construction. This ensures type safety and proper Better Auth session structure.
+
+2. **No double assertions for sessions.** Never use `as unknown as AuthSession` patterns. If the test-kit factory doesn't meet your needs, extend `createTestSession` with new overrides.
+
+3. **TestSession branding.** Test sessions are branded with `__test: true` to prevent accidental production use. Use `isTestSession()` guard when debugging.
+
+4. **Session serialization.** Use `serializeTestSession` / `deserializeTestSession` for header transport in integration tests.
+
+## Headers Handling
+
+5. **Use headers utility.** When extracting headers from `HeadersInit` variants (Headers, array tuples, or Record), use `getHeaderValue` from `@alfred/api/utils/headers` instead of inline branching.
+
+## Type Guards
+
+6. **Part type guards return unknown.** Type guards for ALFRED's custom UIMessage parts (tool-call, tool-result) must accept `unknown` and return proper type predicates since AI SDK types don't include these custom types.
+
+7. **Cast after guard.** After a type guard narrows a part, use explicit cast (`as unknown as ToolCallPart`) with a comment explaining why. This is necessary due to ALFRED's extended UIMessage format.
+
+8. **Export narrowed types.** Export `ToolCallPart`, `ToolResultPart`, and similar types from `@alfred/ui/chat/parts` so consumers can cast correctly after guards.
+
+## Workflow Test Harness
+
+9. **Use WorkflowTestHarness.** For workflow integration tests, use `WorkflowTestHarness` from `@alfred/api/test/utils/workflow-server` which handles session patching, header construction, and cleanup.
+
+10. **withWorkflowHarness pattern.** Prefer `withWorkflowHarness(async (harness) => { ... })` for automatic cleanup over manual harness construction.
 
 
 

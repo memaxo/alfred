@@ -1,3 +1,4 @@
+export * from "./auth/index";
 export * from "./cognitive/index";
 export * from "./env/index";
 export * from "./kinetic/index";

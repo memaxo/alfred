@@ -127,7 +127,6 @@ function CortexMindscapeCanvasInner({
 
   const {
     nodes,
-    edges,
     focusedNodeId,
     onNodesChange,
     onEdgesChange,
@@ -137,7 +136,6 @@ function CortexMindscapeCanvasInner({
   } = useMindscapeStore(
     useShallow((state) => ({
       nodes: state.nodes,
-      edges: state.edges,
       focusedNodeId: state.focusedNodeId,
       onNodesChange: state.onNodesChange,
       onEdgesChange: state.onEdgesChange,
@@ -150,7 +148,7 @@ function CortexMindscapeCanvasInner({
   // Initialize Cortex engine
   const { engine, isReady, error, capability } = useCortexEngine(canvasRef, {
     postProcessing: true,
-    onReady: (cortex) => {
+    onReady: () => {
       console.log("[Cortex] Engine ready");
     },
     onError: (err) => {
@@ -177,7 +175,7 @@ function CortexMindscapeCanvasInner({
         id: "singularity",
         type: "orb",
         position: { x: 0, y: 0 },
-        data: { label: "Singularity" },
+        data: { type: "orb", label: "Singularity" },
         draggable: false,
         selectable: false,
       });
@@ -331,7 +329,6 @@ function CortexMindscapeCanvasInner({
       </div>
 
       <MindscapeCommandPalette
-        nodes={nodes}
         onFocus={focusAndCenter}
         onSpawn={spawnNodeFromType}
       />
@@ -354,8 +351,8 @@ export function useCortexEnabled(): boolean {
     // Check feature flag or environment
     const flag =
       typeof window !== "undefined"
-        ? (window as Record<string, unknown>).__CORTEX_ENABLED__ === true ||
-          import.meta.env?.VITE_CORTEX_ENABLED === "true"
+        ? (window as unknown as Record<string, unknown>).__CORTEX_ENABLED__ ===
+            true || import.meta.env?.VITE_CORTEX_ENABLED === "true"
         : false;
     setEnabled(flag);
   }, []);

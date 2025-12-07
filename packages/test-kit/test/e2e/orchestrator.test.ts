@@ -112,6 +112,9 @@ describe("Level 5 E2E: Orchestrator", () => {
         mfa: "passkey",
       }
     );
+    // Token is generated for future authenticated test cases
+    // Currently unused but kept for when auth tests are added
+    void token;
   });
 
   afterAll(async () => {

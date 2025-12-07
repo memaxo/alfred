@@ -78,7 +78,6 @@ function tick() {
   if (!nodes.size) return;
 
   const nodesArray = Array.from(nodes.values());
-  const nodeIds = nodesArray.map((n) => n.id);
   const positions = new Float32Array(nodesArray.length * 2); // [x, y, x, y...]
 
   // Pre-calc focus connections

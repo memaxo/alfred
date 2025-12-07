@@ -1,8 +1,14 @@
-import { randomUUID } from "node:crypto";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
 import type { Obligation } from "@alfred/type";
+import {
+  createTestSession,
+  serializeTestSession,
+  type AuthSession,
+  type TestSession,
+} from "@alfred/test-kit/auth";
+import { getHeaderValue } from "../../src/utils/headers";
 import {
   createWorkflowCaller,
   DEFAULT_WORKFLOW_TEST_USER,
@@ -10,8 +16,6 @@ import {
 } from "./workflow-caller";
 
 const TEST_SESSION_HEADER = "x-alfred-workflow-test-session";
-
-type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
 
 type SessionPatchState = {
   count: number;
@@ -22,35 +26,6 @@ const sessionPatchState: SessionPatchState = {
   count: 0,
   restore: null,
 };
-
-function normalizeUser(user: WorkflowTestUser) {
-  return {
-    id: user.id,
-    email: user.email ?? `${user.id}@test.local`,
-    name: user.name ?? "Workflow Test User",
-    roles: user.roles,
-    scopes: user.scopes,
-  };
-}
-
-function createAuthSession(
-  user: WorkflowTestUser,
-  sessionId: string = randomUUID()
-): AuthSession {
-  return {
-    user: normalizeUser(user),
-    session: {
-      id: sessionId,
-    },
-  } as AuthSession;
-}
-
-function encodeSession(session: AuthSession): string {
-  return JSON.stringify({
-    user: session.user,
-    session: session.session,
-  });
-}
 
 function installSessionPatch() {
   if (sessionPatchState.count === 0) {
@@ -63,7 +38,7 @@ function installSessionPatch() {
     const patchedGetSession = async (
       params: Parameters<(typeof auth)["api"]["getSession"]>[0]
     ) => {
-      const header = params?.headers?.get(TEST_SESSION_HEADER);
+      const header = getHeaderValue(params?.headers, TEST_SESSION_HEADER);
       if (header) {
         return JSON.parse(header) as AuthSession;
       }
@@ -101,7 +76,7 @@ export type WorkflowHarnessOptions = {
 export class WorkflowTestHarness {
   readonly user: WorkflowTestUser;
   readonly obligations: Obligation[];
-  private readonly session: AuthSession;
+  private readonly session: TestSession;
   private readonly sessionHeader: string;
 
   constructor(options?: WorkflowHarnessOptions) {
@@ -111,8 +86,8 @@ export class WorkflowTestHarness {
       ...options?.user,
     };
     this.obligations = options?.obligations ?? [];
-    this.session = createAuthSession(this.user);
-    this.sessionHeader = encodeSession(this.session);
+    this.session = createTestSession(this.user);
+    this.sessionHeader = serializeTestSession(this.session);
   }
 
   headers(init?: HeadersInit): Headers {

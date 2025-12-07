@@ -10,6 +10,8 @@ import {
   isTextPart,
   isToolCallPart,
   isToolResultPart,
+  type ToolCallPart,
+  type ToolResultPart,
 } from "./parts";
 
 type VirtualRange = { startIndex: number; endIndex: number };
@@ -91,13 +93,17 @@ function buildRenderBlock(message: UIMessage, index: number): RenderBlock {
       .join("")
       .trim() || null;
 
-  const toolCalls = message.parts.filter(isToolCallPart).map((part) => ({
+  // ALFRED extends UIMessage with tool-call/tool-result types per stream.zod.ts
+  // Cast through unknown since AI SDK's native types don't include these
+  const toolCallParts = message.parts.filter(isToolCallPart) as unknown as ToolCallPart[];
+  const toolCalls = toolCallParts.map((part) => ({
     id: part.toolCallId ?? null,
     name: part.toolName ?? null,
     args: part.input ?? null,
   }));
 
-  const toolResults = message.parts.filter(isToolResultPart).map((part) => ({
+  const toolResultParts = message.parts.filter(isToolResultPart) as unknown as ToolResultPart[];
+  const toolResults = toolResultParts.map((part) => ({
     id: part.toolCallId ?? null,
     name: part.toolName ?? null,
     result: part.output ?? null,

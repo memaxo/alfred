@@ -50,9 +50,16 @@ export class HardwareProbe {
           stderr: "ignore",
         }
       );
-      // If python runs, that's a good sign, but actual server check is harder without knowing port.
-      // We'll leave voiceServer as false default, tests can spin it up.
-    } catch {}
+      const exitCode = await proc.exited;
+      // If python runs successfully (exit code 0), that's a good sign
+      // Actual server check is harder without knowing port, so we'll leave voiceServer as false default
+      // Tests can spin up their own server if needed
+      if (exitCode === 0) {
+        caps.voiceServer = true;
+      }
+    } catch {
+      // Python not available or failed to run
+    }
 
     logger.info("hardware_probe_result", caps);
     return caps;

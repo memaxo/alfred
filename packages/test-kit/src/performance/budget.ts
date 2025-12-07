@@ -96,6 +96,12 @@ export async function withBudget<T>(
   const durationMs = performance.now() - start;
   const withinBudget = durationMs <= budgetMs;
 
+  if (!withinBudget) {
+    console.warn(
+      `Performance budget exceeded: "${name}" took ${durationMs.toFixed(2)}ms (budget: ${budgetMs}ms)`
+    );
+  }
+
   return {
     result,
     durationMs,

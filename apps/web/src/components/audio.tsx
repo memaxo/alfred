@@ -16,12 +16,12 @@ type AudioProps = {
   className?: string;
 };
 
-export function Audio({ src, autoPlay = false, className }: AudioProps) {
+export function AudioPlayer({ src, autoPlay = false, className }: AudioProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const audio = new Audio(src);
+    const audio = new window.Audio(src);
     audio.onended = () => setIsPlaying(false);
     audioRef.current = audio;
 

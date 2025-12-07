@@ -12,6 +12,10 @@ import {
   stopReminderScheduler,
 } from "@alfred/api/scheduler/remind";
 import { logger } from "@alfred/logger";
+import {
+  getSchedRemind,
+  getSchedPreferenceInference,
+} from "@/lib/env/server-only";
 
 let initialized = false;
 
@@ -19,6 +23,9 @@ let initialized = false;
  * Initialize all server-side services
  * - Reminder scheduler (if enabled)
  * - API services (compression worker, voice pools)
+ * 
+ * Uses server-only environment utilities to prevent server code leakage
+ * into client bundles.
  */
 export function initServer() {
   if (initialized) {
@@ -28,27 +35,40 @@ export function initServer() {
   initialized = true;
 
   // Initialize reminder scheduler (if enabled)
-  if (process.env.SCHED_REMIND === "1") {
-    startReminderScheduler({ logger });
-    logger.info("assistant_remind_scheduler_init", {
-      message: "Scheduler init requested (SCHED_REMIND=1)",
-    });
-  } else {
-    logger.info("assistant_remind_scheduler_disabled", {
-      message: "Scheduler disabled (unset SCHED_REMIND)",
+  // Use server-only utility instead of direct process.env access
+  try {
+    if (getSchedRemind() === "1") {
+      startReminderScheduler({ logger });
+      logger.info("assistant_remind_scheduler_init", {
+        message: "Scheduler init requested (SCHED_REMIND=1)",
+      });
+    } else {
+      logger.info("assistant_remind_scheduler_disabled", {
+        message: "Scheduler disabled (unset SCHED_REMIND)",
+      });
+    }
+  } catch (error) {
+    logger.error("assistant_remind_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 
-  if (process.env.SCHED_PREFERENCE_INFERENCE === "1") {
-    startPreferenceInferenceScheduler({ logger });
-    startPreferenceDecayScheduler({ logger });
-    logger.info("preference_scheduler_init", {
-      message: "Preference schedulers started",
-    });
-  } else {
-    logger.info("preference_scheduler_disabled", {
-      message:
-        "Set SCHED_PREFERENCE_INFERENCE=1 to enable preference schedulers",
+  try {
+    if (getSchedPreferenceInference() === "1") {
+      startPreferenceInferenceScheduler({ logger });
+      startPreferenceDecayScheduler({ logger });
+      logger.info("preference_scheduler_init", {
+        message: "Preference schedulers started",
+      });
+    } else {
+      logger.info("preference_scheduler_disabled", {
+        message:
+          "Set SCHED_PREFERENCE_INFERENCE=1 to enable preference schedulers",
+      });
+    }
+  } catch (error) {
+    logger.error("preference_scheduler_init_failed", {
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 

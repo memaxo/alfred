@@ -1,6 +1,5 @@
 "use client";
 
-import type { ToolUIPart } from "ai";
 import {
   type ComponentProps,
   createContext,
@@ -10,6 +9,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { ToolState } from "./tool";
 
 type ToolUIPartApproval =
   | {
@@ -41,7 +41,7 @@ type ToolUIPartApproval =
 
 type ConfirmationContextValue = {
   approval: ToolUIPartApproval;
-  state: ToolUIPart["state"];
+  state: ToolState;
 };
 
 const ConfirmationContext = createContext<ConfirmationContextValue | null>(
@@ -60,7 +60,7 @@ const useConfirmation = () => {
 
 export type ConfirmationProps = ComponentProps<typeof Alert> & {
   approval?: ToolUIPartApproval;
-  state: ToolUIPart["state"];
+  state: ToolState;
 };
 
 export const Confirmation = ({

@@ -167,12 +167,12 @@ export class VCRRecorder {
   /**
    * Creates the fetch interceptor
    */
-  private createInterceptor(): typeof globalThis.fetch {
+  private createInterceptor() {
     const originalFetch = this.originalFetch!;
     const self = this;
 
-    return async function interceptedFetch(
-      input: RequestInfo | URL,
+    const interceptedFetch = async function (
+      input: string | URL | Request,
       init?: RequestInit
     ): Promise<Response> {
       const url =
@@ -218,7 +218,12 @@ export class VCRRecorder {
 
       // Replay mode - find matching recording
       if (self.mode === "replay") {
-        const recorded = findInteraction(self.cassette, requestHash);
+        // Use custom matcher if provided, otherwise fall back to hash matching
+        const recorded = self.matcher
+          ? self.cassette.interactions.find((i) =>
+              self.matcher(requestInfo, i)
+            )
+          : findInteraction(self.cassette, requestHash);
 
         if (recorded) {
           console.log(`VCR: Replaying ${provider} request (${recorded.model})`);
@@ -271,6 +276,8 @@ export class VCRRecorder {
 
       return response;
     };
+
+    return interceptedFetch as typeof globalThis.fetch;
   }
 
   /**

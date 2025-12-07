@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { evaluate } from "@alfred/policy";
+import { createTestSession } from "@alfred/test-kit/auth";
 import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import { deployRouter } from "../src/routers/deploy";
@@ -73,9 +74,10 @@ describe("Deploy Router Policy Enforcement", () => {
       obligations: [biometricObligation],
     });
 
+    const session = createTestSession({ id: "user-1" });
     const caller = deployRouter.createCaller({
-      session: { user: { id: "user-1", role: "user" } },
-    } as any);
+      session,
+    } as Parameters<typeof deployRouter.createCaller>[0]);
 
     try {
       await caller.promote({
@@ -105,9 +107,10 @@ describe("Deploy Router Policy Enforcement", () => {
       obligations: [approvalObligation],
     });
 
+    const session = createTestSession({ id: "user-1" });
     const caller = deployRouter.createCaller({
-      session: { user: { id: "user-1", role: "user" } },
-    } as any);
+      session,
+    } as Parameters<typeof deployRouter.createCaller>[0]);
 
     try {
       await caller.remove({

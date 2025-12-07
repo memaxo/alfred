@@ -64,15 +64,12 @@ export function BookmarkPane({
           {/* Tags */}
           {bookmark.tags && bookmark.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {(typeof bookmark.tags === "string"
-                ? bookmark.tags.split(",")
-                : bookmark.tags
-              ).map((tag, idx) => (
+              {bookmark.tags.map((tag: string, idx: number) => (
                 <span
                   className="rounded-full border border-white/10 bg-biolum/10 px-2 py-1 text-biolum-dim text-xs"
                   key={idx}
                 >
-                  {typeof tag === "string" ? tag.trim() : tag}
+                  {tag.trim()}
                 </span>
               ))}
             </div>

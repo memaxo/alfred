@@ -104,5 +104,8 @@ export function wrapModelWithVCR(
 
   // Placeholder: In a real implementation, we would return a Proxy that traps calls.
   // For now, we will expose VCR helper methods to be used manually in the Adapter.
+  // TODO: Implement VCR wrapping when AI SDK integration is complete
+  // The vcr parameter is kept for future implementation compatibility
+  void vcr; // Mark as intentionally unused until implementation
   return model;
 }

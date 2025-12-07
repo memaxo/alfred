@@ -32,6 +32,7 @@ import { useVisualPreferences } from "@/hooks/use-visual-preferences";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/demo/cortex")({
+  ssr: false, // Uses Cortex Canvas - browser-only
   component: CortexDemoPage,
 });
 
