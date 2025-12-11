@@ -275,11 +275,16 @@ packages/agent/
 │   │   │   ├── handoff.ts
 │   │   │   └── home.ts
 │   │   └── orchestrator/    # Orchestration tools
-│   │       ├── codex.ts
+│   │       ├── codex/       # Complex tool (folder structure)
 │   │       ├── docker.ts
 │   │       ├── droid.ts
 │   │       ├── git.ts
 │   │       ├── proxmox.ts
+│   │       ├── rag/         # RAG document management
+│   │       │   ├── definition.ts
+│   │       │   ├── policy.ts
+│   │       │   ├── exec.ts
+│   │       │   └── index.ts
 │   │       ├── router.ts
 │   │       ├── ticket.ts
 │   │       └── web.ts

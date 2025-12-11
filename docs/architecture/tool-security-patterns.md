@@ -9,7 +9,7 @@ This document outlines the security and authorization patterns for ALFRED tools 
 ## Tool Categories
 
 ### 1. Orchestrator Tools
-**Examples:** `codex`, `git`, `docker`, `ticket`, `web` (orchestrator version)
+**Examples:** `codex`, `git`, `docker`, `ticket`, `web`, `rag_ingest`, `rag_query`, `rag_list`, `rag_delete`
 
 *   **Context:** High-risk, system-level operations.
 *   **Security:** **Strictly Policy-Enforced**.
