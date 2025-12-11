@@ -28,6 +28,11 @@
       "default": "./src/orchestrator/*.ts",
       "types": "./src/orchestrator/*.ts"
     },
+    "./orchestrator/tool/shared": {
+      "bun": "./src/orchestrator/tool/shared/index.ts",
+      "default": "./src/orchestrator/tool/shared/index.ts",
+      "types": "./src/orchestrator/tool/shared/index.ts"
+    },
     "./utils/*": {
       "bun": "./src/utils/*.ts",
       "default": "./src/utils/*.ts",

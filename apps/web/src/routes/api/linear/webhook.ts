@@ -359,7 +359,6 @@ async function createWorkflowCaller(
 }
 
 export const Route = createFileRoute("/api/linear/webhook")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {

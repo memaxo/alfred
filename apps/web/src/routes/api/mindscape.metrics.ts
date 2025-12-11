@@ -8,7 +8,6 @@ const payloadSchema = z.object({
 });
 
 export const Route = createFileRoute("/api/mindscape/metrics")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {

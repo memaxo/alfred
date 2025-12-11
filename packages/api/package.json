@@ -8,6 +8,10 @@
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./src/*.ts"
+    },
+    "./trpc-internal": {
+      "types": "./dist/trpc-internal.d.ts",
+      "default": "./src/trpc-internal.ts"
     }
   },
   "type": "module",

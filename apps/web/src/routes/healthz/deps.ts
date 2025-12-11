@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "drizzle-orm";
 
 export const Route = createFileRoute("/healthz/deps")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       GET: async () => {

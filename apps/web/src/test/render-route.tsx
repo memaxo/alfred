@@ -66,7 +66,15 @@ export function createTestTrpcClient(
             observer.complete?.();
             return () => {};
           }
-          const cleanup = handler(op.input, {
+          const subscriptionHandler = handler as (
+            input: unknown,
+            observer: {
+              next: (value: unknown) => void;
+              error: (error: unknown) => void;
+              complete: () => void;
+            }
+          ) => undefined | (() => void);
+          const cleanup = subscriptionHandler(op.input, {
             next: (value) =>
               observer.next({
                 result: {
@@ -74,7 +82,8 @@ export function createTestTrpcClient(
                   data: value,
                 },
               }),
-            error: (error) => observer.error?.(error),
+            error: (error) =>
+              observer.error?.(error as Parameters<typeof observer.error>[0]),
             complete: () => observer.complete?.(),
           });
           return () => {
@@ -84,7 +93,10 @@ export function createTestTrpcClient(
           };
         }
 
-        Promise.resolve(handler ? handler(op.input) : undefined)
+        const queryOrMutationHandler = handler as TestTrpcHandler | undefined;
+        Promise.resolve(
+          queryOrMutationHandler ? queryOrMutationHandler(op.input) : undefined
+        )
           .then((data) => {
             observer.next({
               result: {
@@ -94,7 +106,9 @@ export function createTestTrpcClient(
             });
             observer.complete?.();
           })
-          .catch((error) => observer.error?.(error));
+          .catch((error) =>
+            observer.error?.(error as Parameters<typeof observer.error>[0])
+          );
 
         return () => {};
       });

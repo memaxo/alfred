@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - jsdom doesn't have types in this project
 import { JSDOM } from "jsdom";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -6,9 +8,9 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 
 const { window } = dom;
 
-globalThis.window = window as unknown as typeof globalThis.window;
+(globalThis as { window: unknown }).window = window;
 globalThis.document = window.document;
-globalThis.self = window as unknown as typeof globalThis;
+(globalThis as { self: unknown }).self = window;
 globalThis.HTMLElement = window.HTMLElement;
 globalThis.Element = window.Element;
 globalThis.Node = window.Node;

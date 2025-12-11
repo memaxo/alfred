@@ -43,3 +43,29 @@ export type UIMessageAction = {
   error?: string;
   updatedAt?: string;
 };
+
+/**
+ * Stream events for AI SDK v6 structured streams.
+ * Mirroring @ai-sdk/core definitions for shared usage.
+ */
+export type StreamEvent =
+  | { type: "text-delta"; textDelta: string }
+  | {
+      type: "tool-call";
+      toolCallId: string;
+      toolName: string;
+      args: unknown;
+    }
+  | {
+      type: "tool-result";
+      toolCallId: string;
+      result: unknown;
+      isError?: boolean;
+    }
+  | { type: "reasoning"; textDelta: string }
+  | {
+      type: "finish";
+      finishReason: string;
+      usage?: { promptTokens: number; completionTokens: number };
+    }
+  | { type: "error"; error: unknown };

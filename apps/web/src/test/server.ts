@@ -123,8 +123,8 @@ async function ensureInternalServer(
   });
 
   const api: TestServer = {
-    url: `http://127.0.0.1:${instance.port}`,
-    port: instance.port,
+    url: `http://127.0.0.1:${instance.port ?? 0}`,
+    port: instance.port ?? 0,
     db: dbClient.db,
     getSession() {
       return sessionRef;

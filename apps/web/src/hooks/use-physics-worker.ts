@@ -31,7 +31,7 @@ export function usePhysicsWorker({
   const latestPositions = useRef<Map<string, { x: number; y: number }>>(
     new Map()
   );
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
 
   // Initialize Worker
   useEffect(() => {

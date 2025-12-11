@@ -44,6 +44,24 @@
       "import": "./dist/repo/graph/index.js",
       "types": "./dist/repo/graph/index.d.ts"
     },
+    "./repo/graph/read": {
+      "bun": "./src/repo/graph/read.ts",
+      "default": "./dist/repo/graph/read.js",
+      "import": "./dist/repo/graph/read.js",
+      "types": "./dist/repo/graph/read.d.ts"
+    },
+    "./repo/graph/write": {
+      "bun": "./src/repo/graph/write.ts",
+      "default": "./dist/repo/graph/write.js",
+      "import": "./dist/repo/graph/write.js",
+      "types": "./dist/repo/graph/write.d.ts"
+    },
+    "./repo/graph/scoring": {
+      "bun": "./src/repo/graph/scoring.ts",
+      "default": "./dist/repo/graph/scoring.js",
+      "import": "./dist/repo/graph/scoring.js",
+      "types": "./dist/repo/graph/scoring.d.ts"
+    },
     "./testing": {
       "bun": "./src/testing.ts",
       "default": "./dist/testing.js",
@@ -52,7 +70,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && tsc -b --emitDeclarationOnly",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "bun scripts/migrate.ts",

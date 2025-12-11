@@ -8,6 +8,7 @@ import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
+import type { LanguageModel } from "ai";
 import type { z } from "zod";
 import { createRuntime } from "../core";
 
@@ -23,7 +24,11 @@ export function createWorkflowExecutor(
 ) {
   if (shouldUseWorkflowRuntime()) {
     // NEW: Use @alfred/runtime
-    const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
+    // Cast model type to resolve version mismatch between @ai-sdk/openai (v2.0.0 provider)
+    // and ai package (v3.0.0-beta.24 provider). Runtime behavior is compatible.
+    const model = openai(
+      process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
+    ) as unknown as LanguageModel;
 
     return createRuntime({
       input: {

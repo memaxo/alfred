@@ -44,7 +44,6 @@ async function safeAuthHandler(request: Request): Promise<Response> {
 }
 
 export const Route = createFileRoute("/api/auth/$")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       GET: ({ request }: { request: Request }) => {

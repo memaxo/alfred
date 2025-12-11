@@ -1,12 +1,12 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
 import type { AIAdapter } from "@alfred/type/ai-adapter";
-import type { CoreMessage, GenerateObjectResult, GenerateTextResult } from "ai";
+import type { GenerateObjectResult, GenerateTextResult, ModelMessage } from "ai";
 import { generateObject, generateText } from "ai";
 import type { z } from "zod";
 
 export class DefaultAIAdapter implements AIAdapter {
   async generateText(params: {
-    messages: CoreMessage[];
+    messages: ModelMessage[];
     system?: string;
     tools?: Record<string, any>;
   }): Promise<GenerateTextResult<Record<string, any>, never>> {
@@ -20,7 +20,7 @@ export class DefaultAIAdapter implements AIAdapter {
   }
 
   async generateObject<T>(params: {
-    messages: CoreMessage[];
+    messages: ModelMessage[];
     system?: string;
     schema: z.ZodType<T, any, any>;
     prompt?: string;

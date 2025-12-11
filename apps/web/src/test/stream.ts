@@ -52,7 +52,7 @@ export function createMockStream(
       queue.length = 0;
       listeners.length = 0;
     },
-    async next(kind?: StreamEvent["type"], timeoutMs = 1000) {
+    async next(kind?: StreamEvent["type"], timeoutMs = 1000): Promise<StreamEvent> {
       if (isClosed) {
         throw new Error("stream_closed");
       }
@@ -60,6 +60,9 @@ export function createMockStream(
       const existingIndex = queue.findIndex(match);
       if (existingIndex >= 0) {
         const [event] = queue.splice(existingIndex, 1);
+        if (!event) {
+          throw new Error("stream_queue_error");
+        }
         return event;
       }
       return new Promise<StreamEvent>((resolve, reject) => {

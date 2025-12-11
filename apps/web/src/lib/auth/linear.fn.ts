@@ -18,10 +18,12 @@ export const processCallback = createServerFn({ method: "POST" })
       state: z.string().min(1),
     })
   )
-  .handler(async ({ data, request }) => {
+  .handler(async ({ data }) => {
+    const { getRequest } = await import("@tanstack/react-start/server");
     const { createContext } = await import("@alfred/api/context");
     const { appRouter } = await import("@alfred/api/routers/index");
 
+    const request = getRequest();
     const ctx = await createContext({ req: request });
     const caller = appRouter.createCaller(ctx);
 

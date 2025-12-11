@@ -133,8 +133,9 @@ export function subscribeToDroidStream({
   }
   // tRPC v11 subscription API
   const subscription = client.droid.stream.subscribe(input, {
-    onData(event: RawDroidStreamEvent) {
-      const normalized = normalizeEvent(event);
+    onData(event) {
+      const typedEvent = event as RawDroidStreamEvent;
+      const normalized = normalizeEvent(typedEvent);
       if (!normalized) {
         return;
       }

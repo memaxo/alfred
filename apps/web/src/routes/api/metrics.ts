@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/api/metrics")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       GET: async () => {

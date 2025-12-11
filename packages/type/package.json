@@ -54,6 +54,14 @@
     "./policy": {
       "types": "./dist/policy.d.ts",
       "default": "./src/policy.ts"
+    },
+    "./ai-adapter": {
+      "types": "./dist/ai-adapter.d.ts",
+      "default": "./src/ai-adapter.ts"
+    },
+    "./voice": {
+      "types": "./dist/voice.d.ts",
+      "default": "./src/voice.ts"
     }
   },
   "scripts": {

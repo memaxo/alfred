@@ -15,7 +15,6 @@ async function handleOrchestratorRequest(request: Request): Promise<Response> {
 }
 
 export const Route = createFileRoute("/api/orchestrator/$")({
-  // @ts-expect-error - TanStack Start server handlers
   server: {
     handlers: {
       POST: ({ request }: { request: Request }) =>

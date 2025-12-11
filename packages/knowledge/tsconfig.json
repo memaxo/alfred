@@ -2,6 +2,7 @@
   "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "./src",
     "types": ["bun", "node"],
     "moduleResolution": "bundler",
     "module": "ESNext",

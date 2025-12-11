@@ -5,6 +5,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "outDir": "dist",
+    "rootDir": "src",
     "composite": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false
