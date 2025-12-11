@@ -1,0 +1,515 @@
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type {
+  KnowledgeConnectInput,
+  KnowledgeExtractInput,
+  KnowledgeQueryInput,
+} from "../src/orchestrator/tool/knowledge/definition";
+
+// Mock dependencies before importing
+const mockRequireToolScopesAndPolicy = mock();
+mock.module("@alfred/auth/token", () => ({
+  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
+}));
+
+const mockExtract = mock();
+const mockToKnowledge = mock();
+mock.module("@alfred/knowledge", () => ({
+  extract: mockExtract,
+  toKnowledge: mockToKnowledge,
+  semanticQuery: mock(),
+}));
+
+const mockFindNodesByKind = mock();
+const mockGetNode = mock();
+const mockGetOutboundEdges = mock();
+const mockUpsertNodes = mock();
+const mockUpsertEdges = mock();
+mock.module("@alfred/db/repo/graph", () => ({
+  findNodesByKind: mockFindNodesByKind,
+  getNode: mockGetNode,
+  getOutboundEdges: mockGetOutboundEdges,
+  upsertNodes: mockUpsertNodes,
+  upsertEdges: mockUpsertEdges,
+}));
+
+mock.module("@alfred/logger", () => ({
+  logger: {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  },
+}));
+
+// Import tools after mocking
+const {
+  toolKnowledgeQuery,
+  toolKnowledgeExtract,
+  toolKnowledgeConnect,
+} = await import("../src/orchestrator/tool/knowledge");
+
+describe("Knowledge Graph Tools", () => {
+  beforeEach(() => {
+    mockRequireToolScopesAndPolicy.mockReset();
+    mockExtract.mockReset();
+    mockToKnowledge.mockReset();
+    mockFindNodesByKind.mockReset();
+    mockGetNode.mockReset();
+    mockGetOutboundEdges.mockReset();
+    mockUpsertNodes.mockReset();
+    mockUpsertEdges.mockReset();
+
+    // Default to allowing all policy checks
+    mockRequireToolScopesAndPolicy.mockResolvedValue({
+      decision: { allow: true },
+      claims: {
+        sub: "test-user",
+        scopes: ["knowledge.read", "knowledge.write"],
+        elevated: true,
+        mfa: "passkey",
+      },
+    });
+  });
+
+  describe("knowledge_query", () => {
+    it("returns matching nodes from the knowledge graph", async () => {
+      const mockNodes = [
+        {
+          id: "node-1",
+          resource: "user",
+          hash: "hash-1",
+          kind: "fact",
+          label: "React is a JavaScript library for building user interfaces",
+          properties: { confidence: 0.9 },
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "node-2",
+          resource: "user",
+          hash: "hash-2",
+          kind: "fact",
+          label: "React uses JSX syntax for components",
+          properties: { confidence: 0.85 },
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      mockFindNodesByKind.mockResolvedValue(mockNodes);
+
+      const input: KnowledgeQueryInput = {
+        query: "React JavaScript library",
+        limit: 10,
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeQuery.execute({ input });
+
+      expect(result.nodes).toHaveLength(2);
+      expect(result.nodes[0].label).toContain("React");
+      expect(result.total).toBe(2);
+    });
+
+    it("filters by resource when specified", async () => {
+      const mockNodes = [
+        {
+          id: "node-1",
+          resource: "user",
+          hash: "hash-1",
+          kind: "fact",
+          label: "User fact about coding",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "node-2",
+          resource: "runtime:123",
+          hash: "hash-2",
+          kind: "fact",
+          label: "Runtime fact about coding",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      mockFindNodesByKind.mockResolvedValue(mockNodes);
+
+      const input: KnowledgeQueryInput = {
+        query: "coding",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeQuery.execute({ input });
+
+      expect(result.nodes).toHaveLength(1);
+      expect(result.nodes[0].id).toBe("node-1");
+    });
+
+    it("includes edges when requested", async () => {
+      const mockNodes = [
+        {
+          id: "node-1",
+          resource: "user",
+          hash: "hash-1",
+          kind: "fact",
+          label: "Docker containers",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      const mockEdges = [
+        {
+          id: "edge-1",
+          fromId: "node-1",
+          toId: "node-2",
+          kind: "relates_to",
+          resource: "user",
+          hash: "edge-hash-1",
+          weight: 1,
+          created: new Date(),
+        },
+      ];
+
+      mockFindNodesByKind.mockResolvedValue(mockNodes);
+      mockGetOutboundEdges.mockResolvedValue(mockEdges);
+
+      const input: KnowledgeQueryInput = {
+        query: "Docker",
+        includeEdges: true,
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeQuery.execute({ input });
+
+      expect(result.nodes).toHaveLength(1);
+      // Edges only included if target node is also in results
+      expect(mockGetOutboundEdges).toHaveBeenCalled();
+    });
+
+    it("enforces knowledge.read policy", async () => {
+      mockRequireToolScopesAndPolicy.mockRejectedValue(
+        new Error("unauthorized")
+      );
+
+      const input: KnowledgeQueryInput = {
+        query: "test query",
+      };
+
+      await expect(toolKnowledgeQuery.execute({ input })).rejects.toThrow(
+        "unauthorized"
+      );
+    });
+  });
+
+  describe("knowledge_extract", () => {
+    it("extracts and persists knowledge from text", async () => {
+      const extractionResult = {
+        facts: [
+          {
+            content: "SpaceX was founded in 2002",
+            confidence: 0.9,
+            source: "conversation",
+            entities: ["SpaceX"],
+            relations: [],
+          },
+        ],
+        entities: new Set(["SpaceX"]),
+        entityDetails: [
+          { label: "SpaceX", kind: "organization", confidence: 0.95, mentions: [], isPronoun: false },
+        ],
+        relations: [],
+        contradictions: [],
+        temporal: [],
+      };
+
+      const knowledgeEntries = [
+        {
+          hash: "fact-hash-1",
+          data: {
+            _: "fact" as const,
+            content: "SpaceX was founded in 2002",
+            confidence: 0.9,
+            source: "conversation",
+          },
+        },
+      ];
+
+      const nodeMap = new Map([
+        ["user:fact-hash-1", {
+          id: "node-1",
+          resource: "user",
+          hash: "fact-hash-1",
+          kind: "fact",
+          label: "SpaceX was founded in 2002",
+          properties: { confidence: 0.9 },
+          created: new Date(),
+          updated: new Date(),
+        }],
+      ]);
+
+      mockExtract.mockReturnValue(extractionResult);
+      mockToKnowledge.mockReturnValue(knowledgeEntries);
+      mockUpsertNodes.mockResolvedValue(nodeMap);
+
+      const input: KnowledgeExtractInput = {
+        content: "SpaceX was founded in 2002 by Elon Musk.",
+        source: "conversation",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeExtract.execute({ input });
+
+      expect(result.extracted).toBe(1);
+      expect(result.facts).toHaveLength(1);
+      expect(result.facts[0].label).toContain("SpaceX");
+      expect(mockExtract).toHaveBeenCalledWith(input.content, input.source);
+    });
+
+    it("returns empty result for content with no extractable facts", async () => {
+      mockExtract.mockReturnValue({
+        facts: [],
+        entities: new Set(),
+        entityDetails: [],
+        relations: [],
+        contradictions: [],
+        temporal: [],
+      });
+      mockToKnowledge.mockReturnValue([]);
+
+      const input: KnowledgeExtractInput = {
+        content: "Hello there.",
+        source: "test",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeExtract.execute({ input });
+
+      expect(result.extracted).toBe(0);
+      expect(result.facts).toHaveLength(0);
+    });
+
+    it("enforces knowledge.write policy", async () => {
+      mockRequireToolScopesAndPolicy.mockRejectedValue(
+        new Error("unauthorized")
+      );
+
+      const input: KnowledgeExtractInput = {
+        content: "Test content",
+        source: "test",
+        resource: "user",
+      };
+
+      await expect(toolKnowledgeExtract.execute({ input })).rejects.toThrow(
+        "unauthorized"
+      );
+    });
+
+    it("rejects content exceeding max size", async () => {
+      const input: KnowledgeExtractInput = {
+        content: "x".repeat(101 * 1024), // 101KB
+        source: "test",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      await expect(toolKnowledgeExtract.execute({ input })).rejects.toThrow(
+        "knowledge_content_too_large"
+      );
+    });
+  });
+
+  describe("knowledge_connect", () => {
+    it("creates an edge between two nodes", async () => {
+      const fromNode = {
+        id: "node-1",
+        resource: "user",
+        hash: "hash-1",
+        kind: "fact",
+        label: "React",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      const toNode = {
+        id: "node-2",
+        resource: "user",
+        hash: "hash-2",
+        kind: "fact",
+        label: "Frontend",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      const createdEdge = {
+        id: "edge-1",
+        resource: "user",
+        hash: "node-1-node-2-relates_to",
+        fromId: "node-1",
+        toId: "node-2",
+        kind: "relates_to",
+        weight: 1,
+        metadata: null,
+        created: new Date(),
+      };
+
+      mockGetNode
+        .mockResolvedValueOnce(fromNode)
+        .mockResolvedValueOnce(toNode);
+      mockUpsertEdges.mockResolvedValue([createdEdge]);
+
+      const input: KnowledgeConnectInput = {
+        fromId: "node-1",
+        toId: "node-2",
+        kind: "relates_to",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeConnect.execute({ input });
+
+      expect(result.edgeId).toBe("edge-1");
+      expect(result.fromId).toBe("node-1");
+      expect(result.toId).toBe("node-2");
+      expect(result.kind).toBe("relates_to");
+    });
+
+    it("throws error if source node not found", async () => {
+      mockGetNode.mockResolvedValueOnce(null);
+
+      const input: KnowledgeConnectInput = {
+        fromId: "non-existent",
+        toId: "node-2",
+        kind: "relates_to",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      await expect(toolKnowledgeConnect.execute({ input })).rejects.toThrow(
+        "knowledge_node_not_found: non-existent"
+      );
+    });
+
+    it("throws error if target node not found", async () => {
+      const fromNode = {
+        id: "node-1",
+        resource: "user",
+        hash: "hash-1",
+        kind: "fact",
+        label: "React",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockGetNode
+        .mockResolvedValueOnce(fromNode)
+        .mockResolvedValueOnce(null);
+
+      const input: KnowledgeConnectInput = {
+        fromId: "node-1",
+        toId: "non-existent",
+        kind: "relates_to",
+        resource: "user",
+        authz: "Bearer test-token",
+      };
+
+      await expect(toolKnowledgeConnect.execute({ input })).rejects.toThrow(
+        "knowledge_node_not_found: non-existent"
+      );
+    });
+
+    it("enforces knowledge.write policy", async () => {
+      mockRequireToolScopesAndPolicy.mockRejectedValue(
+        new Error("unauthorized")
+      );
+
+      const input: KnowledgeConnectInput = {
+        fromId: "node-1",
+        toId: "node-2",
+        kind: "relates_to",
+        resource: "user",
+      };
+
+      await expect(toolKnowledgeConnect.execute({ input })).rejects.toThrow(
+        "unauthorized"
+      );
+    });
+
+    it("supports all edge types", async () => {
+      const fromNode = { id: "node-1", resource: "user", hash: "h1", kind: "fact", label: "A", properties: {}, created: new Date(), updated: new Date() };
+      const toNode = { id: "node-2", resource: "user", hash: "h2", kind: "fact", label: "B", properties: {}, created: new Date(), updated: new Date() };
+
+      mockGetNode.mockResolvedValue(fromNode).mockResolvedValue(toNode);
+      mockUpsertEdges.mockResolvedValue([{
+        id: "edge-1",
+        resource: "user",
+        hash: "hash",
+        fromId: "node-1",
+        toId: "node-2",
+        kind: "depends_on",
+        weight: 1,
+        metadata: null,
+        created: new Date(),
+      }]);
+
+      const edgeTypes = ["relates_to", "blocks", "depends_on", "is_a", "part_of"] as const;
+
+      for (const kind of edgeTypes) {
+        const result = toolKnowledgeConnect.inputSchema.safeParse({
+          fromId: "node-1",
+          toId: "node-2",
+          kind,
+        });
+        expect(result.success).toBe(true);
+      }
+    });
+  });
+
+  describe("Schema Validation", () => {
+    it("knowledge_query requires query string", () => {
+      const invalid = {};
+      const result = toolKnowledgeQuery.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("knowledge_extract requires content and source", () => {
+      const invalid = { content: "test" };
+      const result = toolKnowledgeExtract.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("knowledge_connect requires fromId and toId", () => {
+      const invalid = { fromId: "node-1" };
+      const result = toolKnowledgeConnect.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("knowledge_query limit must be positive", () => {
+      const invalid = { query: "test", limit: -5 };
+      const result = toolKnowledgeQuery.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("knowledge_extract confidence must be between 0 and 1", () => {
+      const invalid = { content: "test", source: "test", confidence: 1.5 };
+      const result = toolKnowledgeExtract.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+
+    it("knowledge_connect kind must be valid enum value", () => {
+      const invalid = { fromId: "a", toId: "b", kind: "invalid_type" };
+      const result = toolKnowledgeConnect.inputSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+    });
+  });
+});

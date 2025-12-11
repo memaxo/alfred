@@ -28,6 +28,11 @@ import {
   toolRagList,
   toolRagQuery,
 } from "./orchestrator/tool/rag";
+import {
+  toolKnowledgeConnect,
+  toolKnowledgeExtract,
+  toolKnowledgeQuery,
+} from "./orchestrator/tool/knowledge";
 import { toolTicket } from "./orchestrator/tool/ticket";
 import { toolWeb } from "./orchestrator/tool/web";
 
@@ -121,6 +126,7 @@ const assistantToolSources: LegacyTool[] = [
   toolFocus,
   toolHandoff,
   toolHome,
+  toolKnowledgeQuery, // Read-only knowledge graph access
   toolNote,
   toolRemind,
   toolTimer,
@@ -135,6 +141,9 @@ const orchestratorToolSources: LegacyTool[] = [
   toolDocker,
   toolDroid,
   toolGit,
+  toolKnowledgeQuery,
+  toolKnowledgeExtract,
+  toolKnowledgeConnect,
   toolRagIngest,
   toolRagQuery,
   toolRagList,
