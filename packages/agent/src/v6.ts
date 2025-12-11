@@ -22,6 +22,12 @@ import { toolGit } from "./orchestrator/tool/git";
 import { toolProxmox } from "./orchestrator/tool/proxmox";
 import { toolRouter } from "./orchestrator/tool/router";
 import { toolSession } from "./orchestrator/tool/session";
+import {
+  toolRagDelete,
+  toolRagIngest,
+  toolRagList,
+  toolRagQuery,
+} from "./orchestrator/tool/rag";
 import { toolTicket } from "./orchestrator/tool/ticket";
 import { toolWeb } from "./orchestrator/tool/web";
 
@@ -129,6 +135,10 @@ const orchestratorToolSources: LegacyTool[] = [
   toolDocker,
   toolDroid,
   toolGit,
+  toolRagIngest,
+  toolRagQuery,
+  toolRagList,
+  toolRagDelete,
   toolSession,
   toolProxmox,
   toolRouter,
