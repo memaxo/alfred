@@ -9,6 +9,8 @@ import {
 } from "../src/state";
 import { applyTransition } from "../src/transition";
 
+// budget: state-transition
+
 const measureAverageMs = (
   run: () => void,
   iterations: number,

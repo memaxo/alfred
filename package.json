@@ -40,6 +40,7 @@
     "typecheck:workspace": "turbo typecheck",
     "tune:run": "bun run packages/tune/src/cli.ts",
     "check:budgets": "bun scripts/check-budgets.ts",
+    "test:perf": "bun test packages/cognitive/test/performance-budget.test.ts packages/knowledge/test/extractor.perf.test.ts packages/knowledge/test/hypergraph.perf.test.ts packages/agent/test/multi/performance.test.ts packages/runtime/test/performance.test.ts",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "db:push": "turbo -F @alfred/db db:push",

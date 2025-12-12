@@ -3,6 +3,8 @@ import { extract } from "../src/extractor";
 import { extractEntities } from "../src/extractor";
 import { extractTemporal } from "../src/extractor";
 
+// budget: fact-extraction
+
 describe("extract() performance budget", () => {
   const SAMPLE_TEXT =
     "Dr. Alice Smith from Google Inc met Bob at 3pm yesterday. They discussed the project timeline and agreed to meet again next week.";

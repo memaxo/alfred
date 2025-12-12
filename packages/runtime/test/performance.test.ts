@@ -5,10 +5,13 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import { withBudget } from "@alfred/metrics/performance";
 import type { KnowledgeFact, KnowledgeUpdate } from "@alfred/type/knowledge";
+import type { KnowledgeConfidence } from "@alfred/type/knowledge";
+import { assertBudget, withBudget } from "@alfred/test-kit";
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
+
+const toConfidence = (value: number) => value as KnowledgeConfidence;
 
 describe("Performance: Context Builder", () => {
   let builder: ContextBuilder;
@@ -18,12 +21,13 @@ describe("Performance: Context Builder", () => {
   });
 
   it("context build meets uncached budget (<5s)", async () => {
-    await withBudget("context-uncached", 5000, async () => {
-      await builder.build({
+    const result = await withBudget("context-uncached", 5000, async () =>
+      builder.build({
         requirement: "test requirement",
         workspace: "/test",
-      });
-    });
+      })
+    );
+    expect(result.withinBudget).toBe(true);
   });
 
   it("context build meets cached budget (<50ms)", async () => {
@@ -34,12 +38,13 @@ describe("Performance: Context Builder", () => {
     });
 
     // Should be <50ms from cache
-    await withBudget("context-cached", 50, async () => {
-      await builder.build({
+    const result = await withBudget("context-cached", 50, async () =>
+      builder.build({
         requirement: "test requirement",
         workspace: "/test",
-      });
-    });
+      })
+    );
+    expect(result.withinBudget).toBe(true);
   });
 
   it("cache eviction does not cause performance degradation", async () => {
@@ -54,12 +59,13 @@ describe("Performance: Context Builder", () => {
     }
 
     // Next build should trigger eviction but still be fast
-    await withBudget("context-eviction", 5000, async () => {
-      await builder.build({
+    const result = await withBudget("context-eviction", 5000, async () =>
+      builder.build({
         requirement: "eviction trigger",
         workspace: "/test",
-      });
-    });
+      })
+    );
+    expect(result.withinBudget).toBe(true);
 
     expect(builder.getCacheSize()).toBe(maxCapacity);
   });
@@ -73,18 +79,18 @@ describe("Performance: Learning Engine", () => {
   });
 
   it("outcome recording is fast (<1ms per outcome)", async () => {
-    await withBudget("outcome-record-100", 100, async () => {
-      for (let i = 0; i < 100; i++) {
-        engine.recordOutcome({
-          input: `test ${i}`,
-          output: `result ${i}`,
-          expected: `expected ${i}`,
-          error: 0,
-          context: { index: i },
-          ts: new Date().toISOString(),
-        });
-      }
-    });
+    const start = performance.now();
+    for (let i = 0; i < 100; i++) {
+      engine.recordOutcome({
+        input: `test ${i}`,
+        output: `result ${i}`,
+        expected: `expected ${i}`,
+        error: 0,
+        context: { index: i },
+        ts: new Date().toISOString(),
+      });
+    }
+    assertBudget("outcome-record-100", performance.now() - start, 100);
   });
 
   it("batch persistence meets budget (<1s per 100 updates)", async () => {
@@ -93,7 +99,7 @@ describe("Performance: Learning Engine", () => {
       const fact: KnowledgeFact = {
         id: `fact-${i}`,
         content: `value-${i}`,
-        confidence: 0.9 as any,
+        confidence: toConfidence(0.9),
         source: "test",
         timestamp: new Date().toISOString(),
       };
@@ -102,9 +108,10 @@ describe("Performance: Learning Engine", () => {
       });
     }
 
-    await withBudget("batch-persist-100", 1000, async () => {
-      await engine.persistUpdatesBatch(updates, "test-run-id");
-    });
+    const result = await withBudget("batch-persist-100", 1000, async () =>
+      engine.persistUpdatesBatch(updates, "test-run-id")
+    );
+    expect(result.withinBudget).toBe(true);
   });
 
   it("large batch processing meets budget (<5s per 1000 updates)", async () => {
@@ -113,7 +120,7 @@ describe("Performance: Learning Engine", () => {
       const fact: KnowledgeFact = {
         id: `insight-${i}`,
         content: `learning-${i}`,
-        confidence: 0.8 as any,
+        confidence: toConfidence(0.8),
         source: "test",
         timestamp: new Date().toISOString(),
       };
@@ -122,9 +129,10 @@ describe("Performance: Learning Engine", () => {
       });
     }
 
-    await withBudget("batch-persist-1000", 5000, async () => {
-      await engine.persistUpdatesBatch(updates, "test-run-id");
-    });
+    const result = await withBudget("batch-persist-1000", 5000, async () =>
+      engine.persistUpdatesBatch(updates, "test-run-id")
+    );
+    expect(result.withinBudget).toBe(true);
   });
 
   it("outcome eviction at capacity is fast (<1ms)", async () => {
@@ -143,16 +151,16 @@ describe("Performance: Learning Engine", () => {
     }
 
     // Recording past capacity should trigger eviction
-    await withBudget("outcome-eviction", 1, async () => {
-      engine.recordOutcome({
-        input: "eviction trigger",
-        output: "result",
-        expected: "expected",
-        error: 0,
-        context: {},
-        ts: new Date().toISOString(),
-      });
+    const start = performance.now();
+    engine.recordOutcome({
+      input: "eviction trigger",
+      output: "result",
+      expected: "expected",
+      error: 0,
+      context: {},
+      ts: new Date().toISOString(),
     });
+    assertBudget("outcome-eviction", performance.now() - start, 1);
 
     expect(engine.getOutcomeCount()).toBe(maxCapacity);
   });
@@ -178,7 +186,7 @@ describe("Performance: Budget Enforcement", () => {
     const fact: KnowledgeFact = {
       id: "fact-duration",
       content: "duration-test",
-      confidence: 0.9 as any,
+      confidence: toConfidence(0.9),
       source: "test",
       timestamp: new Date().toISOString(),
     };

@@ -5,6 +5,8 @@ import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
 import { updateTracker } from "@alfred/agent/orchestrator/multi/tracker";
 import type { ContextBundle } from "@alfred/type/plan";
 
+// budget: plan-generation
+
 const makeBundle = (count: number): ContextBundle => ({
   maxTokens: 2000,
   estimatedTokens: 200,

@@ -2,117 +2,130 @@
 
 /**
  * ALFRED Performance Budget Checker
- * Parses performance budget comments and measures function execution times
- * Fails CI on budget breaches
+ *
+ * Hybrid enforcement (ALF-141):
+ * - This script validates that required budget categories have deterministic perf-test coverage.
+ * - Perf tests themselves are the ground truth for measurement and failure.
+ *
+ * Coverage markers (place in perf tests):
+ *   // budget: state-transition
+ *   // budget: graph-lookup
+ *   // budget: fact-extraction
+ *   // budget: plan-generation
  */
 
-type Budget = {
-  file: string;
-  function: string;
-  line: number;
-  budget: string; // e.g., "<100 µs", "<1 ms", "<10 ms"
-  budgetMs: number; // Converted to milliseconds
-};
+import { BUDGET_DEFAULTS } from "@alfred/test-kit";
 
-type Violation = {
-  budget: Budget;
-  actualMs: number;
-  message: string;
-};
+type BudgetCategory = keyof typeof BUDGET_DEFAULTS;
 
-const BUDGET_PATTERN = /\/\/\s*(<[\d.]+)\s*(µs|ms|s)\s*budget/i;
-const FUNCTION_PATTERN = /(?:export\s+)?(?:async\s+)?function\s+(\w+)/g;
+const REQUIRED_CATEGORIES: BudgetCategory[] = [
+  "state-transition",
+  "graph-lookup",
+  "fact-extraction",
+  "plan-generation",
+];
 
-function parseBudget(budgetStr: string): number {
-  const match = budgetStr.match(/([\d.]+)\s*(µs|ms|s)/i);
-  if (!match) {
-    return 0;
+const MARKER_PATTERN = /^\s*\/\/\s*budget:\s*([a-z0-9-]+)\s*$/i;
+
+async function collectPerfTestFiles(): Promise<string[]> {
+  const patterns = [
+    "packages/**/test/**/*.perf.test.ts",
+    "packages/**/test/**/*performance*.test.ts",
+    "tests/perf/**/*.test.ts",
+  ] as const;
+
+  const files = new Set<string>();
+
+  for (const pattern of patterns) {
+    const glob = new Bun.Glob(pattern);
+    for await (const path of glob.scan(".")) {
+      files.add(path);
+    }
   }
 
-  const value = Number.parseFloat(match[1]);
-  const unit = match[2].toLowerCase();
+  // Explicit inclusions (stable even if naming changes)
+  files.add("packages/cognitive/test/performance-budget.test.ts");
+  files.add("packages/agent/test/multi/performance.test.ts");
+  files.add("packages/runtime/test/performance.test.ts");
 
-  switch (unit) {
-    case "µs":
-    case "us":
-      return value / 1000; // Convert to ms
-    case "ms":
-      return value;
-    case "s":
-      return value * 1000; // Convert to ms
-    default:
-      return 0;
-  }
+  return Array.from(files).sort();
 }
 
-function _findBudgets(filePath: string): Budget[] {
-  const budgets: Budget[] = [];
-  const content = Bun.file(filePath).text();
-  const lines = content.split("\n");
+function isBudgetCategory(value: string): value is BudgetCategory {
+  return Object.prototype.hasOwnProperty.call(BUDGET_DEFAULTS, value);
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(BUDGET_PATTERN);
-    if (match) {
-      const budgetStr = match[1] + match[2];
-      const budgetMs = parseBudget(budgetStr);
+async function collectCoverage(): Promise<Map<BudgetCategory, string[]>> {
+  const coverage = new Map<BudgetCategory, string[]>();
+  for (const category of REQUIRED_CATEGORIES) {
+    coverage.set(category, []);
+  }
 
-      // Find function name (look backwards)
-      let functionName = "unknown";
-      for (let j = i; j >= 0 && j > i - 10; j--) {
-        const funcMatch = lines[j].match(FUNCTION_PATTERN);
-        if (funcMatch) {
-          functionName = funcMatch[1];
-          break;
-        }
+  const files = await collectPerfTestFiles();
+
+  for (const file of files) {
+    const bunFile = Bun.file(file);
+    if (!(await bunFile.exists())) {
+      continue;
+    }
+    const text = await bunFile.text();
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      const match = line.match(MARKER_PATTERN);
+      if (!match) {
+        continue;
       }
-
-      budgets.push({
-        file: filePath,
-        function: functionName,
-        line: i + 1,
-        budget: budgetStr,
-        budgetMs,
-      });
+      const raw = match[1]?.toLowerCase();
+      if (!raw) {
+        continue;
+      }
+      if (!isBudgetCategory(raw)) {
+        continue;
+      }
+      if (!REQUIRED_CATEGORIES.includes(raw)) {
+        continue;
+      }
+      const bucket = coverage.get(raw);
+      if (bucket && !bucket.includes(file)) {
+        bucket.push(file);
+      }
     }
   }
 
-  return budgets;
+  return coverage;
 }
 
-function checkBudgets(): Violation[] {
-  const violations: Violation[] = [];
+async function main(): Promise<void> {
+  console.log("ALFRED Performance Budget Coverage Gate");
 
-  // TODO: [Phase 3] Implement actual measurement
-  // - Parse TypeScript files
-  // - Extract functions with budget comments
-  // - Measure execution times
-  // - Compare against budgets
-  // - Report violations
+  const coverage = await collectCoverage();
 
-  return violations;
-}
+  const missing = REQUIRED_CATEGORIES.filter(
+    (category) => (coverage.get(category) ?? []).length === 0
+  );
 
-function main() {
-  console.log("ALFRED Performance Budget Checker");
-  console.log("TODO: [Phase 3] Implement budget measurement logic");
-
-  const violations = checkBudgets();
-
-  if (violations.length > 0) {
-    console.error(`Found ${violations.length} budget violations:`);
-    for (const v of violations) {
-      console.error(
-        `  ${v.budget.file}:${v.budget.line} [${v.budget.function}] ` +
-          `Budget: ${v.budget.budget}, Actual: ${v.actualMs.toFixed(2)}ms - ${v.message}`
-      );
+  if (missing.length > 0) {
+    console.error("Missing performance budget coverage:");
+    for (const category of missing) {
+      const budgetMs = BUDGET_DEFAULTS[category];
+      console.error(`- ${category} (default budget: ${budgetMs}ms)`);
     }
+    console.error("");
+    console.error("Fix: add `// budget: <category>` markers to deterministic perf tests.");
+    console.error(
+      "Example: `// budget: graph-lookup` in a test that asserts graph lookup performance."
+    );
     process.exit(1);
   }
 
-  console.log("All performance budgets passed!");
+  console.log("All required budget categories have perf-test coverage:");
+  for (const category of REQUIRED_CATEGORIES) {
+    const files = coverage.get(category) ?? [];
+    console.log(`- ${category}: ${files.length} file(s)`);
+  }
 }
 
 if (import.meta.main) {
-  main();
+  await main();
 }

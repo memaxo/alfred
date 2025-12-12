@@ -256,6 +256,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Performance budget coverage gate
+        run: bun run check:budgets
+
+      - name: Performance budget tests
+        run: bun run test:perf
+
       - name: Setup UV (for Python tests)
         uses: astral-sh/setup-uv@v4
         with:
