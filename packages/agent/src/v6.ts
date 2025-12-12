@@ -12,6 +12,10 @@ import {
   toolMindscapeRead,
 } from "../assistant/src/tool/mindscape";
 import { toolNote } from "../assistant/src/tool/note";
+import {
+  toolPreferenceGet,
+  toolPreferenceSet,
+} from "../assistant/src/tool/preference";
 import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
 import { toolWebAssistant } from "../assistant/src/tool/web";
@@ -134,6 +138,8 @@ const assistantToolSources: LegacyTool[] = [
   toolHome,
   toolKnowledgeQuery, // Read-only knowledge graph access
   toolNote,
+  toolPreferenceGet,
+  toolPreferenceSet,
   toolRemind,
   toolTimer,
   toolWebAssistant,

@@ -50,7 +50,7 @@ ALFRED is a **personal AI assistant** designed for deep single-user personalizat
 - [x] Add packages/api/src/routers/token.ts token exchange router skeleton
 - [x] Add packages/api/src/metrics.ts prom-client registry skeleton and metric declarations
 - [x] Add packages/agent/src/v6.ts AI SDK tool registry helpers
-- [x] Add packages/agent/assistant/src/tool/* skeletons for note, remind, timer, book, focus, web, handoff, home
+- [x] Add packages/agent/assistant/src/tool/* skeletons for note, remind, timer, book, focus, web, handoff, home, preference
 - [x] Add packages/agent/src/orchestrator/tool/* skeletons for droid, git, router, ticket, web
 - [x] Add packages/auth/src/auth.ts Better Auth instance scaffold (drizzle adapter + passkey) with placeholders
 - [x] Add packages/auth/src/token.ts Ed25519 issuance/verification and claims skeleton
