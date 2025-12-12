@@ -48,6 +48,36 @@ export function useMindscapeTraversal() {
   useEffect(() => {
     if (!(traversalResult && focusedDbId)) return;
 
+    const parseEntityFactLabel = (
+      label: string
+    ): { entityType: string; label: string } | null => {
+      const match = /^[\[(]entity:([^\])]+)[\])]\s+(.+)$/.exec(label.trim());
+      if (!match) {
+        return null;
+      }
+      const entityType = match[1]?.trim();
+      const entityLabel = match[2]?.trim();
+      if (!(entityType && entityLabel)) {
+        return null;
+      }
+      return { entityType, label: entityLabel };
+    };
+
+    const isConceptNode = (node: GraphNode) =>
+      node.kind === "fact" &&
+      typeof node.label === "string" &&
+      Boolean(parseEntityFactLabel(node.label));
+
+    const kindByDbId = new Map<string, "concept" | "knowledge">();
+    traversalResult.nodes.forEach((node: GraphNode) => {
+      const nodeId = node.id as { uiId?: string; dbId?: string; hgHash?: string };
+      const dbId = nodeId.dbId ?? nodeId.uiId ?? nodeId.hgHash;
+      if (!dbId) {
+        return;
+      }
+      kindByDbId.set(dbId, isConceptNode(node) ? "concept" : "knowledge");
+    });
+
     // 1. Add Nodes
     traversalResult.nodes.forEach((node: GraphNode, index: number) => {
       // Handle union type - access properties that may or may not exist
@@ -55,14 +85,19 @@ export function useMindscapeTraversal() {
       const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
       if (!ref) return;
 
+      const isConcept = isConceptNode(node);
+
       // Check if node already exists (by dbId or ID)
       const exists = nodes.some(
-        (n) => n.data?.graph?.dbId === ref || n.id === `knowledge-${ref}`
+        (n) =>
+          n.data?.graph?.dbId === ref ||
+          n.id === `knowledge-${ref}` ||
+          n.id === `concept-${ref}`
       );
       if (exists) return;
 
-      // Spawn new knowledge node
-      const flowId = `knowledge-${ref}`;
+      // Spawn new node
+      const flowId = isConcept ? `concept-${ref}` : `knowledge-${ref}`;
       const props = (node.properties ?? {}) as Record<string, unknown>;
       const summary =
         typeof props.content === "string" ? props.content : undefined;
@@ -74,6 +109,31 @@ export function useMindscapeTraversal() {
 
       const x = parentPos.x + radius * Math.cos(angle);
       const y = parentPos.y + radius * Math.sin(angle);
+
+      if (isConcept) {
+        const parsed = parseEntityFactLabel(node.label ?? "");
+        const confidence =
+          typeof props.confidence === "number" ? props.confidence : undefined;
+        addArtifact({
+          id: flowId,
+          type: "concept",
+          position: { x, y },
+          data: {
+            type: "concept",
+            label: parsed?.label ?? node.label,
+            entityType: parsed?.entityType,
+            confidence,
+            archived: typeof props.archived === "string" ? props.archived : undefined,
+            description:
+              typeof props.description === "string" ? props.description : undefined,
+            graph: {
+              dbId: nodeId.dbId,
+              hgHash: nodeId.hgHash,
+            },
+          } as ArtifactData,
+        });
+        return;
+      }
 
       addArtifact({
         id: flowId,
@@ -98,12 +158,18 @@ export function useMindscapeTraversal() {
 
     if (traversalResult.edges) {
       const newEdges = traversalResult.edges.map((edge: any) => {
+        const sourceKind = kindByDbId.get(edge.fromId) ?? "knowledge";
+        const targetKind = kindByDbId.get(edge.toId) ?? "knowledge";
+
+        const sourceFallback = `${sourceKind}-${edge.fromId}`;
+        const targetFallback = `${targetKind}-${edge.toId}`;
+
         const sourceId =
           nodes.find((n) => n.data?.graph?.dbId === edge.fromId)?.id ??
-          `knowledge-${edge.fromId}`;
+          sourceFallback;
         const targetId =
           nodes.find((n) => n.data?.graph?.dbId === edge.toId)?.id ??
-          `knowledge-${edge.toId}`;
+          targetFallback;
 
         return {
           id: edge.id,
