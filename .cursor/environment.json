@@ -1,7 +1,7 @@
 {
   "snapshot": "snapshot-20251205-10de8907-c1d6-419d-967e-39a87ebaad0f",
   "install": "bun install",
-  "start": "if ! command -v docker &> /dev/null; then curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sudo sh /tmp/get-docker.sh && rm /tmp/get-docker.sh && sudo usermod -aG docker $USER || true; fi && (sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || sudo dockerd > /dev/null 2>&1 &) && sleep 3 && until docker info > /dev/null 2>&1; do sleep 1; done",
+  "start": "if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sudo sh /tmp/get-docker.sh && rm /tmp/get-docker.sh && sudo usermod -aG docker $USER || true; fi && if docker info >/dev/null 2>&1; then exit 0; fi && (sudo systemctl start docker >/dev/null 2>&1 || sudo service docker start >/dev/null 2>&1 || sudo dockerd >/tmp/dockerd.log 2>&1 &) && sleep 3 && timeout 45 bash -lc 'until docker info >/dev/null 2>&1; do sleep 1; done' || (echo 'docker_unavailable' >&2; true)",
   "terminals": [
     {
       "name": "PostgreSQL Database",
