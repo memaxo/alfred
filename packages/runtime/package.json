@@ -12,13 +12,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "bun": "./src/index.ts",
-      "default": "./dist/index.js"
+      "default": "./src/index.ts"
     },
     "./*": {
       "types": "./dist/*.d.ts",
-      "bun": "./src/*.ts",
-      "default": "./dist/*.js"
+      "default": "./src/*.ts"
     }
   },
   "dependencies": {

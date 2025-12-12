@@ -100,28 +100,38 @@ export const workflowSuspensionCleanupTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
-export {
-  linearActivityDurationSeconds,
-  linearActivityEmissionsTotal,
-  linearSessionOperationsTotal,
-  linearWebhookEventsTotal,
-  linearWebhookWorkflowCancelsTotal,
-  linearWebhookWorkflowStartsTotal,
-  multiAgentAgentDurationSeconds,
-  multiAgentErrorsTotal,
-  multiAgentTasksTotal,
-  multiAgentWavesTotal,
-  replayQueriesTotal,
-  replayQueryDurationSeconds,
-  runnerErrorsTotal,
-  runnerStepsTotal,
-  runRegistryDispatchDurationSeconds,
-  runRegistryEventsTotal,
-  workflowProvenanceDurationSeconds,
-  workflowProvenanceEdgesTotal,
-  workflowStreamDurationSeconds,
-  workflowStreamEventsTotal,
-} from "@alfred/agent/workflow/metrics";
+import * as workflowMetrics from "@alfred/agent/workflow/metrics";
+
+export const linearActivityDurationSeconds =
+  workflowMetrics.linearActivityDurationSeconds;
+export const linearActivityEmissionsTotal =
+  workflowMetrics.linearActivityEmissionsTotal;
+export const linearSessionOperationsTotal =
+  workflowMetrics.linearSessionOperationsTotal;
+export const linearWebhookEventsTotal = workflowMetrics.linearWebhookEventsTotal;
+export const linearWebhookWorkflowCancelsTotal =
+  workflowMetrics.linearWebhookWorkflowCancelsTotal;
+export const linearWebhookWorkflowStartsTotal =
+  workflowMetrics.linearWebhookWorkflowStartsTotal;
+export const multiAgentAgentDurationSeconds =
+  workflowMetrics.multiAgentAgentDurationSeconds;
+export const multiAgentErrorsTotal = workflowMetrics.multiAgentErrorsTotal;
+export const multiAgentTasksTotal = workflowMetrics.multiAgentTasksTotal;
+export const multiAgentWavesTotal = workflowMetrics.multiAgentWavesTotal;
+export const replayQueriesTotal = workflowMetrics.replayQueriesTotal;
+export const replayQueryDurationSeconds = workflowMetrics.replayQueryDurationSeconds;
+export const runnerErrorsTotal = workflowMetrics.runnerErrorsTotal;
+export const runnerStepsTotal = workflowMetrics.runnerStepsTotal;
+export const runRegistryDispatchDurationSeconds =
+  workflowMetrics.runRegistryDispatchDurationSeconds;
+export const runRegistryEventsTotal = workflowMetrics.runRegistryEventsTotal;
+export const workflowProvenanceDurationSeconds =
+  workflowMetrics.workflowProvenanceDurationSeconds;
+export const workflowProvenanceEdgesTotal =
+  workflowMetrics.workflowProvenanceEdgesTotal;
+export const workflowStreamDurationSeconds =
+  workflowMetrics.workflowStreamDurationSeconds;
+export const workflowStreamEventsTotal = workflowMetrics.workflowStreamEventsTotal;
 
 // decompositionTruncatedTotal, linearRateLimitTotal, linearRateLimitWaitSeconds,
 // linearRateLimitRetryAfterTotal are now in @alfred/metrics/shared and re-exported below

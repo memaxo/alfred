@@ -1,7 +1,3 @@
-process.env.DATABASE_URL = "sqlite::memory:";
-process.env.OPENAI_API_KEY ??= "test-key";
-process.env.DISABLE_TRPC_METRICS = "1";
-
 import {
   afterAll,
   beforeAll,
@@ -12,17 +8,37 @@ import {
   vi,
 } from "bun:test";
 
-const [
-  { WorkflowTestHarness },
-  { workflowSchema, db },
-  { handleWorkflowStreamRequest },
-  workflowAccess,
-] = await Promise.all([
-  import("@alfred/api/test/utils/workflow-server"),
-  import("@alfred/db"),
+process.env.DATABASE_URL = "sqlite::memory:";
+process.env.OPENAI_API_KEY ??= "test-key";
+process.env.DISABLE_TRPC_METRICS = "1";
+
+type Harness = {
+  reset: () => Promise<void>;
+  close: () => Promise<void>;
+  invoke: (
+    handler: (request: Request) => Promise<Response>,
+    body: unknown
+  ) => Promise<Response>;
+};
+
+const harnessPkg = "@alfred/api/test/utils/workflow-server";
+const dbPkg = "@alfred/db";
+const workflowAccessPkg = "@alfred/api/workflow/access";
+
+const [harnessMod, dbMod, streamMod, workflowAccess] = await Promise.all([
+  import(harnessPkg),
+  import(dbPkg),
   import("../workflow/stream"),
-  import("@alfred/api/workflow/access"),
+  import(workflowAccessPkg),
 ]);
+
+const createHarness = (): Harness => {
+  const Ctor = harnessMod.WorkflowTestHarness as unknown as new () => Harness;
+  return new Ctor();
+};
+
+const { workflowSchema, db } = dbMod;
+const { handleWorkflowStreamRequest } = streamMod;
 
 const minimalInput = {
   requirement: "Plan integration workflow",
@@ -30,7 +46,7 @@ const minimalInput = {
   mode: "sequential" as const,
 };
 
-type ParsedEvent = { name: string; data: any };
+type ParsedEvent = { name: string; data: unknown };
 
 async function collectSseEvents(response: Response): Promise<ParsedEvent[]> {
   const events: ParsedEvent[] = [];
@@ -90,10 +106,10 @@ function parseEvent(raw: string): ParsedEvent | null {
 }
 
 describe("/api/workflow/stream integration", () => {
-  let harness: WorkflowTestHarness;
+  let harness: Harness;
 
   beforeAll(() => {
-    harness = new WorkflowTestHarness();
+    harness = createHarness();
   });
 
   beforeEach(async () => {
