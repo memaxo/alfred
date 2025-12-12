@@ -6,6 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@alfred/logger";
 import { supervise } from "@alfred/learning/self_supervision";
+import type { KnowledgeInsight } from "@alfred/type/knowledge";
 import { redactObject, redactSecrets } from "../../../utils/redaction.js";
 import { recordAudit } from "../../../utils/audit.js";
 import type {
@@ -26,13 +27,35 @@ type NodeRow = {
   properties: unknown;
 };
 
+/**
+ * Error threshold for triggering insight generation.
+ * When prediction error >= this value, supervise() is called to generate insights.
+ */
 const INSIGHT_ERROR_THRESHOLD = 0.15;
+
+/**
+ * Maximum length for rule strings stored in the knowledge graph.
+ * Rules exceeding this length are truncated.
+ */
 const RULE_MAX_LEN = 240;
 
+/**
+ * Timeout for LLM refinement calls (milliseconds).
+ * Prevents hanging on slow or unresponsive LLM APIs.
+ */
+const LLM_REFINEMENT_TIMEOUT_MS = 10_000;
+
+/**
+ * Clamps a numeric value to the range [0, 1].
+ */
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+/**
+ * Tokenizes text into lowercase word tokens.
+ * Optimized for large inputs by using Set operations.
+ */
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
@@ -41,26 +64,51 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length > 0);
 }
 
+/**
+ * Computes Jaccard distance (1 - similarity) between two strings.
+ * Optimized for large inputs using Set intersection.
+ *
+ * @param expected - Expected outcome text
+ * @param actual - Actual outcome text
+ * @returns Error value in range [0, 1] where 0 = identical, 1 = completely different
+ */
 function jaccardError(expected: string, actual: string): number {
-  const e = new Set(tokenize(expected));
-  const a = new Set(tokenize(actual));
-  if (e.size === 0 && a.size === 0) {
+  const eTokens = tokenize(expected);
+  const aTokens = tokenize(actual);
+  
+  // Early return for empty cases
+  if (eTokens.length === 0 && aTokens.length === 0) {
     return 0;
   }
-  if (e.size === 0 || a.size === 0) {
+  if (eTokens.length === 0 || aTokens.length === 0) {
     return 1;
   }
+  
+  // Use Sets for O(1) lookup - more efficient than array iteration
+  const eSet = new Set(eTokens);
+  const aSet = new Set(aTokens);
+  
+  // Compute intersection efficiently
   let inter = 0;
-  for (const token of e) {
-    if (a.has(token)) {
+  // Iterate over smaller set for better performance
+  const smallerSet = eSet.size <= aSet.size ? eSet : aSet;
+  const largerSet = eSet.size <= aSet.size ? aSet : eSet;
+  
+  for (const token of smallerSet) {
+    if (largerSet.has(token)) {
       inter += 1;
     }
   }
-  const union = e.size + a.size - inter;
+  
+  const union = eSet.size + aSet.size - inter;
   const similarity = union === 0 ? 0 : inter / union;
   return clamp01(1 - similarity);
 }
 
+/**
+ * Computes prediction error between expected and actual outcomes.
+ * Returns 0 if no expected value is provided.
+ */
 function computePredictionError(input: LearnRecordInput): number {
   const expected = input.expected?.trim();
   if (!expected) {
@@ -73,6 +121,9 @@ function computePredictionError(input: LearnRecordInput): number {
   return jaccardError(expected, actual);
 }
 
+/**
+ * Truncates a string to a maximum length, appending ellipsis if truncated.
+ */
 function truncate(value: string, max: number): string {
   if (value.length <= max) {
     return value;
@@ -80,10 +131,17 @@ function truncate(value: string, max: number): string {
   return `${value.slice(0, max)}…`;
 }
 
+/**
+ * Normalizes a tool sequence by trimming and filtering empty strings.
+ */
 function normalizeToolSequence(seq: string[]): string[] {
   return seq.map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
+/**
+ * Builds a heuristic rule string from pattern input.
+ * Format: "[domain] description (tools: seq1 → seq2 → ...)"
+ */
 function buildHeuristicRule(input: LearnPatternInput): string {
   const domain = input.domain?.trim();
   const seq = normalizeToolSequence(input.toolSequence).join(" → ");
@@ -91,6 +149,60 @@ function buildHeuristicRule(input: LearnPatternInput): string {
   return truncate(`${headline.trim()} (tools: ${seq})`, RULE_MAX_LEN);
 }
 
+/**
+ * Builds the prompt for LLM rule refinement.
+ */
+function buildRefinementPrompt(args: {
+  description: string;
+  toolSequence: string[];
+  context: Record<string, unknown> | undefined;
+  domain: string | undefined;
+}): string {
+  const safeContext = redactObject(args.context) as Record<string, unknown> | undefined;
+  return [
+    "You are extracting a reusable operational pattern for an agent.",
+    "Write ONE concise rule (imperative voice).",
+    "No markdown. No prefacing.",
+    "",
+    `Domain: ${args.domain ?? "(none)"}`,
+    `Description: ${redactSecrets(args.description)}`,
+    `Tool sequence: ${args.toolSequence.map(redactSecrets).join(" -> ")}`,
+    `Context (JSON): ${safeContext ? JSON.stringify(safeContext).slice(0, 2000) : "{}"}`,
+  ].join("\n");
+}
+
+/**
+ * Creates OpenAI client with configuration from environment variables.
+ */
+async function createOpenAIClient() {
+  const openaiModule = await import("@ai-sdk/openai");
+  const { createOpenAI } = openaiModule;
+  
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("openai_api_key_missing");
+  }
+
+  return createOpenAI({
+    apiKey,
+    ...(process.env.OPENAI_BASE_URL
+      ? { baseURL: process.env.OPENAI_BASE_URL }
+      : {}),
+    ...(process.env.OPENAI_ORGANIZATION
+      ? { organization: process.env.OPENAI_ORGANIZATION }
+      : process.env.OPENAI_ORG
+        ? { organization: process.env.OPENAI_ORG }
+        : {}),
+  });
+}
+
+/**
+ * Attempts to refine a pattern rule using an LLM.
+ * Falls back to null if LLM is disabled, unavailable, or times out.
+ *
+ * @param args - Pattern description, tool sequence, context, and domain
+ * @returns Refined rule string or null if refinement failed/disabled
+ */
 async function maybeRefineRuleWithLlm(args: {
   description: string;
   toolSequence: string[];
@@ -107,23 +219,12 @@ async function maybeRefineRuleWithLlm(args: {
   }
 
   try {
-    const [{ generateObject }, { createOpenAI }, { z }] = await Promise.all([
+    const [{ generateObject }, { z }] = await Promise.all([
       import("ai"),
-      import("@ai-sdk/openai"),
       import("zod"),
     ]);
 
-    const openai = createOpenAI({
-      apiKey,
-      ...(process.env.OPENAI_BASE_URL
-        ? { baseURL: process.env.OPENAI_BASE_URL }
-        : {}),
-      ...(process.env.OPENAI_ORGANIZATION
-        ? { organization: process.env.OPENAI_ORGANIZATION }
-        : process.env.OPENAI_ORG
-          ? { organization: process.env.OPENAI_ORG }
-          : {}),
-    });
+    const openai = await createOpenAIClient();
 
     const schema = z.object({
       rule: z
@@ -133,36 +234,39 @@ async function maybeRefineRuleWithLlm(args: {
         .describe("A concise, reusable rule capturing the pattern."),
     });
 
-    const safeContext = redactObject(args.context) as Record<string, unknown> | undefined;
-    const prompt = [
-      "You are extracting a reusable operational pattern for an agent.",
-      "Write ONE concise rule (imperative voice).",
-      "No markdown. No prefacing.",
-      "",
-      `Domain: ${args.domain ?? "(none)"}`,
-      `Description: ${redactSecrets(args.description)}`,
-      `Tool sequence: ${args.toolSequence.map(redactSecrets).join(" -> ")}`,
-      `Context (JSON): ${safeContext ? JSON.stringify(safeContext).slice(0, 2000) : "{}"}`,
-    ].join("\n");
+    const prompt = buildRefinementPrompt(args);
+    const modelId = process.env.LEARN_PATTERN_MODEL?.trim() || "gpt-4o-mini";
 
-    const result = await generateObject({
-      model: openai.chat(process.env.LEARN_PATTERN_MODEL?.trim() || "gpt-4o-mini"),
+    // Add timeout to prevent hanging on slow/unresponsive APIs
+    const refinementPromise = generateObject({
+      model: openai.chat(modelId) as Parameters<typeof generateObject>[0]["model"],
       schema,
       prompt,
       temperature: 0,
-      maxTokens: 120,
     });
 
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error("llm_refinement_timeout")),
+        LLM_REFINEMENT_TIMEOUT_MS
+      );
+    });
+
+    const result = await Promise.race([refinementPromise, timeoutPromise]);
     const candidate = result.object.rule.trim();
     return candidate.length > 0 ? truncate(candidate, RULE_MAX_LEN) : null;
   } catch (error) {
     logger.debug("learn_pattern_llm_refine_failed", {
       error: error instanceof Error ? error.message : String(error),
+      domain: args.domain,
     });
     return null;
   }
 }
 
+/**
+ * Extracts the first value from a Map, or null if empty.
+ */
 function firstMapValue<T>(map: Map<string, T>): T | null {
   for (const value of map.values()) {
     return value;
@@ -170,6 +274,33 @@ function firstMapValue<T>(map: Map<string, T>): T | null {
   return null;
 }
 
+/**
+ * Type guard for insight nodes with conclusion property.
+ * Checks if a node from supervise() output is a KnowledgeInsight node.
+ */
+function isInsightNode(node: unknown): node is KnowledgeInsight {
+  return (
+    typeof node === "object" &&
+    node !== null &&
+    "conclusion" in node &&
+    "derived" in node &&
+    "confidence" in node &&
+    typeof (node as { conclusion?: unknown }).conclusion === "string" &&
+    Array.isArray((node as { derived?: unknown }).derived) &&
+    typeof (node as { confidence?: unknown }).confidence === "number"
+  );
+}
+
+/**
+ * Executes learn_record tool: persists workflow outcome and generates insights.
+ *
+ * Resource ID pattern: `runtime:${workflowId}` - scoped to specific workflow run.
+ * This allows learning outcomes to be associated with their originating workflow.
+ *
+ * @param args - Input data and user ID
+ * @returns Learning record ID and prediction error
+ * @throws Error if persistence fails
+ */
 export async function executeLearnRecord(args: {
   input: LearnRecordInput;
   userId: string;
@@ -213,7 +344,9 @@ export async function executeLearnRecord(args: {
 
   const outcomeRow = firstMapValue(outcomeMap);
   if (!outcomeRow) {
-    throw new Error("learning_record_persist_failed");
+    throw new Error(
+      `learning_record_persist_failed: workflowId=${args.input.workflowId}, userId=${args.userId}`
+    );
   }
 
   let insightCount = 0;
@@ -234,32 +367,24 @@ export async function executeLearnRecord(args: {
     if (updates && updates.length > 0) {
       const insightSeeds = updates
         .map((update) => update.node)
-        .filter((node) => node && typeof node === "object")
-        .flatMap((node) => {
-          if (!("conclusion" in node)) {
-            return [];
-          }
-          const conclusion = (node as { conclusion?: unknown }).conclusion;
-          const confidence = (node as { confidence?: unknown }).confidence;
-          if (typeof conclusion !== "string" || conclusion.trim().length === 0) {
-            return [];
-          }
+        .filter((node): node is NonNullable<typeof node> => node !== null && typeof node === "object")
+        .filter(isInsightNode)
+        .filter((node) => node.conclusion.trim().length > 0)
+        .map((node) => {
           const insightProps = {
-            confidence: typeof confidence === "number" ? confidence : null,
+            confidence: node.confidence,
             workflowId: args.input.workflowId,
             outcomeId: outcomeRow.id,
             error,
             source: "learn_record",
           };
-          return [
-            {
-              resource,
-              hash: randomUUID(),
-              kind: "insight",
-              label: truncate(conclusion.trim(), 240),
-              properties: insightProps,
-            },
-          ];
+          return {
+            resource,
+            hash: randomUUID(),
+            kind: "insight",
+            label: truncate(node.conclusion.trim(), 240),
+            properties: insightProps,
+          };
         });
 
       if (insightSeeds.length > 0) {
@@ -297,6 +422,16 @@ export async function executeLearnRecord(args: {
   };
 }
 
+/**
+ * Executes learn_pattern tool: stores successful tool sequences as reusable patterns.
+ *
+ * Resource ID pattern: `"user"` or `${domain}` - scoped to user or domain.
+ * Patterns are shared across workflows within the same domain for reuse.
+ *
+ * @param args - Pattern input and user ID
+ * @returns Pattern ID, description, and confidence
+ * @throws Error if persistence fails
+ */
 export async function executeLearnPattern(args: {
   input: LearnPatternInput;
   userId: string;
@@ -344,7 +479,9 @@ export async function executeLearnPattern(args: {
 
   const row = firstMapValue(nodeMap);
   if (!row) {
-    throw new Error("learning_pattern_persist_failed");
+    throw new Error(
+      `learning_pattern_persist_failed: domain=${args.input.domain ?? "user"}, userId=${args.userId}`
+    );
   }
 
   void recordAudit({
@@ -373,6 +510,16 @@ export async function executeLearnPattern(args: {
   };
 }
 
+/**
+ * Executes learn_mistake tool: records mistakes and corrections as heuristic rules.
+ *
+ * Resource ID pattern: `"user"` or `${domain}` - scoped to user or domain.
+ * Mistakes are stored as heuristics to avoid similar errors in future workflows.
+ *
+ * @param args - Mistake input and user ID
+ * @returns Mistake ID and recording status
+ * @throws Error if persistence fails
+ */
 export async function executeLearnMistake(args: {
   input: LearnMistakeInput;
   userId: string;
@@ -411,7 +558,9 @@ export async function executeLearnMistake(args: {
 
   const row = firstMapValue(nodeMap);
   if (!row) {
-    throw new Error("learning_mistake_persist_failed");
+    throw new Error(
+      `learning_mistake_persist_failed: domain=${args.input.domain ?? "user"}, userId=${args.userId}, severity=${args.input.severity}`
+    );
   }
 
   void recordAudit({
