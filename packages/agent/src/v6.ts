@@ -29,6 +29,11 @@ import {
   toolRagQuery,
 } from "./orchestrator/tool/rag";
 import {
+  toolLearnMistake,
+  toolLearnPattern,
+  toolLearnRecord,
+} from "./orchestrator/tool/learning";
+import {
   toolKnowledgeConnect,
   toolKnowledgeCorrect,
   toolKnowledgeExtract,
@@ -150,6 +155,9 @@ const orchestratorToolSources: LegacyTool[] = [
   toolRagQuery,
   toolRagList,
   toolRagDelete,
+  toolLearnRecord,
+  toolLearnPattern,
+  toolLearnMistake,
   toolSession,
   toolProxmox,
   toolRouter,

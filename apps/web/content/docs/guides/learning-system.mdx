@@ -28,6 +28,14 @@ Outcome recording captures the essential comparison: what was expected versus wh
 
 Pattern extraction identifies recurring success factors. When similar tasks consistently succeed with particular tool sequences, those sequences become patterns worth reusing. The learning system abstracts over individual successes to identify general strategies that transfer across tasks. These patterns feed into the knowledge graph as first-class entities that inform future planning.
 
+## Explicit Agent Tools
+
+The orchestrator can also record learning explicitly during execution via dedicated tools:
+
+- **`learn_record`**: Persist a workflow outcome (`expected` vs `actual`) under `resource = runtime:<workflowId>`; when prediction error is non-trivial, it also emits supervised insight nodes.
+- **`learn_pattern`**: Persist a reusable pattern node capturing a successful tool sequence; uses deterministic extraction by default and can optionally refine the rule with a fast/low-cost LLM when configured.
+- **`learn_mistake`**: Persist a mistake + correction as a heuristic-style rule (intended to be retrieved as “intuition” for similar future work).
+
 ## Architecture
 
 The learning system operates through several interconnected components. The supervision loop monitors workflow outcomes and generates learning events. The mistake ledger tracks errors for pattern analysis. The preference inferencer detects implicit user preferences from behavior. All components feed their outputs into the knowledge graph, where learning becomes actionable knowledge.
