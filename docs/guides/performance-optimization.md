@@ -292,6 +292,17 @@ Before optimizing:
 
 Every hot path should have a budget test:
 
+### CI Budget Enforcement
+
+ALFRED enforces performance budgets in CI using two steps:
+
+- `bun run check:budgets`: Validates that required budget categories have deterministic perf-test coverage. Tests declare coverage with a marker comment:
+  - `// budget: state-transition`
+  - `// budget: graph-lookup`
+  - `// budget: fact-extraction`
+  - `// budget: plan-generation`
+- `bun run test:perf`: Runs the focused perf suite. These tests are the source of truth for measurement and should fail on regressions.
+
 ```typescript
 test("transition meets budget", async () => {
   const state = idle(Date.now());

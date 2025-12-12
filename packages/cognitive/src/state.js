@@ -339,7 +339,9 @@ export const updatePhysiology = (
   } finally {
     const durationMs = performance.now() - start;
     cognitivePhysiologyUpdateDuration.observe(durationMs / 1000);
-    if (durationMs > 0.01) {
+    // Keep production warnings, but avoid noisy perf-test output.
+    const shouldWarn = process.env.NODE_ENV !== "test";
+    if (shouldWarn && durationMs > 0.01) {
       console.warn(
         `cognitive_budget_exceeded: physiology update took ${durationMs.toFixed(
           4
@@ -440,7 +442,9 @@ export function updateAutonomy(
   } finally {
     const durationMs = performance.now() - start;
     cognitiveAutonomyUpdateDuration.observe(durationMs / 1000);
-    if (durationMs > 0.05) {
+    // Keep production warnings, but avoid noisy perf-test output.
+    const shouldWarn = process.env.NODE_ENV !== "test";
+    if (shouldWarn && durationMs > 0.05) {
       console.warn(
         `cognitive_budget_exceeded: autonomy update took ${durationMs.toFixed(
           4
@@ -496,7 +500,9 @@ export const calculateError = (expected, actual) => {
   } finally {
     const durationMs = performance.now() - start;
     cognitiveErrorCalculationDuration.observe(durationMs / 1000);
-    if (durationMs > 0.1) {
+    // Keep production warnings, but avoid noisy perf-test output.
+    const shouldWarn = process.env.NODE_ENV !== "test";
+    if (shouldWarn && durationMs > 0.1) {
       console.warn(
         `cognitive_budget_exceeded: error calculation took ${durationMs.toFixed(
           4

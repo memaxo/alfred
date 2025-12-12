@@ -25,6 +25,11 @@ const REQUIRED_CATEGORIES: BudgetCategory[] = [
   "plan-generation",
 ];
 
+// Future candidates (not required yet):
+// - "db-query": often involves Postgres, can be flaky/noisy in CI until isolated/harnessed.
+// - "workflow-stream": depends on streaming harness stability and CI environment variance.
+// - "ui-render": belongs in browser/E2E perf profiling rather than unit perf tests.
+
 const MARKER_PATTERN = /^\s*\/\/\s*budget:\s*([a-z0-9-]+)\s*$/i;
 
 async function collectPerfTestFiles(): Promise<string[]> {
