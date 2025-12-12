@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   KnowledgeConnectInput,
+  KnowledgeCorrectInput,
   KnowledgeExtractInput,
   KnowledgeQueryInput,
 } from "../src/orchestrator/tool/knowledge/definition";
@@ -21,15 +22,25 @@ mock.module("@alfred/knowledge", () => ({
 
 const mockFindNodesByKind = mock();
 const mockGetNode = mock();
+const mockFindNodeByHash = mock();
 const mockGetOutboundEdges = mock();
+const mockGetEdge = mock();
 const mockUpsertNodes = mock();
 const mockUpsertEdges = mock();
+const mockUpdateNode = mock();
+const mockArchiveNodes = mock();
+const mockCreateCorrection = mock();
 mock.module("@alfred/db/repo/graph", () => ({
   findNodesByKind: mockFindNodesByKind,
   getNode: mockGetNode,
+  findNodeByHash: mockFindNodeByHash,
   getOutboundEdges: mockGetOutboundEdges,
+  getEdge: mockGetEdge,
   upsertNodes: mockUpsertNodes,
   upsertEdges: mockUpsertEdges,
+  updateNode: mockUpdateNode,
+  archiveNodes: mockArchiveNodes,
+  createCorrection: mockCreateCorrection,
 }));
 
 mock.module("@alfred/logger", () => ({
@@ -46,6 +57,7 @@ const {
   toolKnowledgeQuery,
   toolKnowledgeExtract,
   toolKnowledgeConnect,
+  toolKnowledgeCorrect,
 } = await import("../src/orchestrator/tool/knowledge");
 
 describe("Knowledge Graph Tools", () => {
@@ -55,9 +67,14 @@ describe("Knowledge Graph Tools", () => {
     mockToKnowledge.mockReset();
     mockFindNodesByKind.mockReset();
     mockGetNode.mockReset();
+    mockFindNodeByHash.mockReset();
     mockGetOutboundEdges.mockReset();
+    mockGetEdge.mockReset();
     mockUpsertNodes.mockReset();
     mockUpsertEdges.mockReset();
+    mockUpdateNode.mockReset();
+    mockArchiveNodes.mockReset();
+    mockCreateCorrection.mockReset();
 
     // Default to allowing all policy checks
     mockRequireToolScopesAndPolicy.mockResolvedValue({
@@ -472,6 +489,232 @@ describe("Knowledge Graph Tools", () => {
         });
         expect(result.success).toBe(true);
       }
+    });
+  });
+
+  describe("knowledge_correct", () => {
+    it("updates a node label and records a correction", async () => {
+      const node = {
+        id: "node-1",
+        resource: "user",
+        hash: "hash-1",
+        kind: "fact",
+        label: "SpaceX was founded in 2000",
+        properties: { confidence: 0.8 },
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockGetNode.mockResolvedValue(node);
+      mockUpdateNode.mockResolvedValue({
+        ...node,
+        label: "SpaceX was founded in 2002",
+      });
+      mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
+
+      const input: KnowledgeCorrectInput = {
+        nodeId: "node-1",
+        resource: "user",
+        correction: {
+          type: "update",
+          newValue: "SpaceX was founded in 2002",
+          reason: "Incorrect founding year",
+        },
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeCorrect.execute({ input });
+
+      expect(result.corrected).toBe(true);
+      expect(result.nodeId).toBe("node-1");
+      expect(result.correctionId).toBe("correction-1");
+      expect(result.previousValue?.label).toBe("SpaceX was founded in 2000");
+      expect(mockUpdateNode).toHaveBeenCalledTimes(1);
+      expect(mockCreateCorrection).toHaveBeenCalledTimes(1);
+    });
+
+    it("updates node properties using propertiesPatch", async () => {
+      const node = {
+        id: "node-1",
+        resource: "user",
+        hash: "hash-1",
+        kind: "fact",
+        label: "React release date",
+        properties: { confidence: 0.4, source: "conversation" },
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockGetNode.mockResolvedValue(node);
+      mockUpdateNode.mockImplementation(async (_id: string, updates: unknown) => {
+        const u = updates as { properties?: Record<string, unknown> };
+        return { ...node, properties: u.properties ?? node.properties };
+      });
+      mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
+
+      const input: KnowledgeCorrectInput = {
+        nodeId: "node-1",
+        resource: "user",
+        correction: {
+          type: "update",
+          reason: "Adjust confidence",
+          propertiesPatch: { confidence: 0.9 },
+        },
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeCorrect.execute({ input });
+
+      expect(result.corrected).toBe(true);
+      expect(mockUpdateNode).toHaveBeenCalledTimes(1);
+    });
+
+    it("archives a node when delete is requested (requires confirm)", async () => {
+      const node = {
+        id: "node-1",
+        resource: "user",
+        hash: "hash-1",
+        kind: "fact",
+        label: "Incorrect fact",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockGetNode.mockResolvedValue(node);
+      mockArchiveNodes.mockResolvedValue(1);
+      mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
+
+      const input: KnowledgeCorrectInput = {
+        nodeId: "node-1",
+        resource: "user",
+        confirm: true,
+        correction: {
+          type: "delete",
+          reason: "Incorrect fact",
+        },
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeCorrect.execute({ input });
+
+      expect(result.corrected).toBe(true);
+      expect(mockArchiveNodes).toHaveBeenCalledWith(["node-1"], "Incorrect fact");
+      expect(result.correctionId).toBe("correction-1");
+    });
+
+    it("rejects delete when confirm flag is missing", async () => {
+      const input: KnowledgeCorrectInput = {
+        nodeId: "node-1",
+        resource: "user",
+        correction: {
+          type: "delete",
+          reason: "Bad fact",
+        },
+        authz: "Bearer test-token",
+      };
+
+      await expect(toolKnowledgeCorrect.execute({ input })).rejects.toThrow(
+        "knowledge_correct_confirmation_required"
+      );
+    });
+
+    it("updates an edge metadata via metadataPatch", async () => {
+      const edge = {
+        id: "edge-1",
+        resource: "user",
+        hash: "edge-hash-1",
+        fromId: "node-1",
+        toId: "node-2",
+        kind: "relates_to",
+        weight: 1,
+        metadata: { weightHint: 0.1 },
+        created: new Date(),
+      };
+
+      mockGetEdge.mockResolvedValue(edge);
+      mockUpsertEdges.mockResolvedValue([
+        { ...edge, metadata: { weightHint: 0.1, note: "corrected" } },
+      ]);
+      mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
+
+      const input: KnowledgeCorrectInput = {
+        edgeId: "edge-1",
+        resource: "user",
+        correction: {
+          type: "update",
+          reason: "Fix relation metadata",
+          metadataPatch: { note: "corrected" },
+        },
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeCorrect.execute({ input });
+
+      expect(result.corrected).toBe(true);
+      expect(result.edgeId).toBe("edge-1");
+      expect(result.correctionId).toBe("correction-1");
+      expect(mockUpsertEdges).toHaveBeenCalledTimes(1);
+    });
+
+    it("supports factId lookup via findNodeByHash", async () => {
+      const node = {
+        id: "node-1",
+        resource: "user",
+        hash: "fact-hash",
+        kind: "fact",
+        label: "Old fact",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+
+      mockFindNodeByHash.mockResolvedValue(node);
+      mockUpdateNode.mockResolvedValue({ ...node, label: "New fact" });
+      mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
+
+      const input: KnowledgeCorrectInput = {
+        factId: "fact-hash",
+        resource: "user",
+        correction: {
+          type: "update",
+          newValue: "New fact",
+          reason: "Fix value",
+        },
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeCorrect.execute({ input });
+
+      expect(result.corrected).toBe(true);
+      expect(mockFindNodeByHash).toHaveBeenCalledWith("user", "fact-hash");
+    });
+
+    it("enforces biometric elevation (passkey + elevated)", async () => {
+      mockRequireToolScopesAndPolicy.mockResolvedValue({
+        decision: { allow: true },
+        claims: {
+          sub: "test-user",
+          scopes: ["knowledge.write"],
+          elevated: false,
+          mfa: "none",
+        },
+      });
+
+      const input: KnowledgeCorrectInput = {
+        nodeId: "node-1",
+        resource: "user",
+        correction: {
+          type: "update",
+          newValue: "New value",
+          reason: "Fix value",
+        },
+        authz: "Bearer test-token",
+      };
+
+      await expect(toolKnowledgeCorrect.execute({ input })).rejects.toThrow(
+        "biometric_required"
+      );
     });
   });
 

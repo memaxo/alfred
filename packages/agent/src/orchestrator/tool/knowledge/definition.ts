@@ -86,3 +86,63 @@ export const knowledgeConnectOutputSchema = z.object({
 
 export type KnowledgeConnectInput = z.infer<typeof knowledgeConnectInputSchema>;
 export type KnowledgeConnectOutput = z.infer<typeof knowledgeConnectOutputSchema>;
+
+// ============================================================================
+// knowledge_correct
+// ============================================================================
+
+export const knowledgeCorrectInputSchema = z.object({
+  nodeId: z.string().min(1).optional().describe("Node ID to correct"),
+  factId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Fact identifier (stored as memory_nodes.hash)"),
+  edgeId: z.string().min(1).optional().describe("Edge ID to correct"),
+  resource: z
+    .string()
+    .default("user")
+    .describe("Resource scope (default: 'user')"),
+  correction: z.object({
+    type: z.enum(["update", "delete"]).describe("Correction operation"),
+    newValue: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("New label value (required for node label update)"),
+    reason: z
+      .string()
+      .min(1)
+      .describe("Why this correction is needed (required)"),
+    propertiesPatch: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("Patch to merge into node properties (for node updates)"),
+    metadataPatch: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("Patch to merge into edge metadata (for edge updates)"),
+  }),
+  confirm: z
+    .boolean()
+    .optional()
+    .describe("Safety confirmation flag (required for delete)"),
+  authz: z.string().optional().describe("Authorization token"),
+});
+
+export const knowledgeCorrectOutputSchema = z.object({
+  corrected: z.boolean(),
+  nodeId: z.string().optional(),
+  edgeId: z.string().optional(),
+  correctionId: z.string(),
+  previousValue: z
+    .object({
+      label: z.string().optional(),
+      properties: z.unknown().optional(),
+      metadata: z.unknown().optional(),
+    })
+    .optional(),
+});
+
+export type KnowledgeCorrectInput = z.infer<typeof knowledgeCorrectInputSchema>;
+export type KnowledgeCorrectOutput = z.infer<typeof knowledgeCorrectOutputSchema>;

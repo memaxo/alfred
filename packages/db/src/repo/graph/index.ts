@@ -4,6 +4,7 @@
  */
 
 export * from "./dsa-bfs.js";
+export * from "./correction.js";
 export * from "./read.js";
 export * from "./scoring.js";
 export * from "./temporal.js";

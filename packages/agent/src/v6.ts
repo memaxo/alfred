@@ -30,6 +30,7 @@ import {
 } from "./orchestrator/tool/rag";
 import {
   toolKnowledgeConnect,
+  toolKnowledgeCorrect,
   toolKnowledgeExtract,
   toolKnowledgeQuery,
 } from "./orchestrator/tool/knowledge";
@@ -144,6 +145,7 @@ const orchestratorToolSources: LegacyTool[] = [
   toolKnowledgeQuery,
   toolKnowledgeExtract,
   toolKnowledgeConnect,
+  toolKnowledgeCorrect,
   toolRagIngest,
   toolRagQuery,
   toolRagList,

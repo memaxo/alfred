@@ -92,6 +92,22 @@ export const memoryEdges = pgTable("memory_edges", {
 // - (from_id, kind, resource) and (to_id, kind, resource) compound indexes (0035)
 // - kind-only index for type filtering (0035)
 
+/**
+ * Knowledge corrections (durable records for graph mutations)
+ */
+export const knowledgeCorrections = pgTable("knowledge_corrections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  resource: text("resource").notNull(),
+  targetType: text("target_type").notNull(), // "node" | "edge"
+  targetId: uuid("target_id").notNull(),
+  operation: text("operation").notNull(), // "update" | "delete"
+  reason: text("reason").notNull(),
+  previous: jsonb("previous"),
+  patch: jsonb("patch"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // TODO: [Phase 4] Add graph traversal helpers in repo layer
 // - getNeighbors(nodeId, direction, kind)
 // - findPath(fromId, toId, maxDepth)

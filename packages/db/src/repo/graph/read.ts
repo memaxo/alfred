@@ -110,6 +110,19 @@ export async function getNode(nodeId: string): Promise<NodeRow | null> {
   return row ?? null;
 }
 
+export async function findNodeByHash(
+  resource: string,
+  hash: string
+): Promise<NodeRow | null> {
+  const [row] = await db
+    .select()
+    .from(memoryNodes)
+    .where(and(eq(memoryNodes.resource, resource), eq(memoryNodes.hash, hash)))
+    .limit(1);
+
+  return row ?? null;
+}
+
 export async function getEdge(edgeId: string): Promise<EdgeRow | null> {
   const [row] = await db
     .select()

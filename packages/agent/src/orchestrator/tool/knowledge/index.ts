@@ -6,10 +6,13 @@
 import { withPolicyApproval } from "../approval.js";
 import {
   type KnowledgeConnectInput,
+  type KnowledgeCorrectInput,
   type KnowledgeExtractInput,
   type KnowledgeQueryInput,
   knowledgeConnectInputSchema,
   knowledgeConnectOutputSchema,
+  knowledgeCorrectInputSchema,
+  knowledgeCorrectOutputSchema,
   knowledgeExtractInputSchema,
   knowledgeExtractOutputSchema,
   knowledgeQueryInputSchema,
@@ -17,11 +20,13 @@ import {
 } from "./definition.js";
 import {
   executeConnect,
+  executeCorrect,
   executeExtract,
   executeQuery,
 } from "./exec.js";
 import {
   enforceConnectPolicy,
+  enforceCorrectPolicy,
   enforceExtractPolicy,
   enforceQueryPolicy,
 } from "./policy.js";
@@ -30,6 +35,8 @@ import {
 export type {
   KnowledgeConnectInput,
   KnowledgeConnectOutput,
+  KnowledgeCorrectInput,
+  KnowledgeCorrectOutput,
   KnowledgeExtractInput,
   KnowledgeExtractOutput,
   KnowledgeQueryInput,
@@ -40,6 +47,8 @@ export type {
 export {
   knowledgeConnectInputSchema,
   knowledgeConnectOutputSchema,
+  knowledgeCorrectInputSchema,
+  knowledgeCorrectOutputSchema,
   knowledgeExtractInputSchema,
   knowledgeExtractOutputSchema,
   knowledgeQueryInputSchema,
@@ -161,9 +170,52 @@ export const aiToolKnowledgeConnect = withPolicyApproval(
 );
 
 // ============================================================================
+// Tool: knowledge_correct
+// ============================================================================
+
+export const toolKnowledgeCorrect = {
+  name: "knowledge_correct",
+  description:
+    "Correct errors in the knowledge graph by updating a node/edge or archiving an incorrect fact. Requires elevated (passkey) authorization for safety.",
+  inputSchema: knowledgeCorrectInputSchema,
+  outputSchema: knowledgeCorrectOutputSchema,
+  execute: async ({ input }: { input: KnowledgeCorrectInput }) => {
+    const { userId } = await enforceCorrectPolicy(input);
+    return executeCorrect(input, userId);
+  },
+};
+
+const aiToolKnowledgeCorrectBase = {
+  name: toolKnowledgeCorrect.name,
+  description: toolKnowledgeCorrect.description,
+  parameters: toolKnowledgeCorrect.inputSchema,
+  inputSchema: toolKnowledgeCorrect.inputSchema,
+  execute: async (input: KnowledgeCorrectInput) =>
+    toolKnowledgeCorrect.execute({ input }),
+};
+
+export const aiToolKnowledgeCorrect = withPolicyApproval(
+  aiToolKnowledgeCorrectBase,
+  (input: KnowledgeCorrectInput) => ({
+    action: "knowledge.correct",
+    resource: {
+      kind: "knowledge",
+      id: input.resource ?? "user",
+    },
+    scopes: ["knowledge.write"],
+    authz: input.authz,
+    context: {
+      requireElevated: true,
+      requireBiometric: true,
+    },
+  })
+);
+
+// ============================================================================
 // Export types for tool consumers
 // ============================================================================
 
 export type ToolKnowledgeQuery = typeof toolKnowledgeQuery;
 export type ToolKnowledgeExtract = typeof toolKnowledgeExtract;
 export type ToolKnowledgeConnect = typeof toolKnowledgeConnect;
+export type ToolKnowledgeCorrect = typeof toolKnowledgeCorrect;

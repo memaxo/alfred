@@ -39,7 +39,7 @@ The newly refactored Knowledge Extraction system (powered by `compromise` + `chr
 ## Identified Gaps
 
 1.  **Agent Tooling**: While the *system* uses extraction automatically during RAG/Cognition, the **Agent** (the LLM persona) does not have a direct `tool.extract()` or `tool.learn()` to explicitly save a fact during a conversation. It relies on the `capture` flow which runs in the background.
-2.  **Feedback Loop**: There is no explicit mechanism for the Agent to *correct* extraction errors found in the graph (e.g., "No, SpaceX was founded in 2002, not 2000").
+2.  **Feedback Loop**: Addressed via `knowledge_correct` (ALF-128) — orchestrator-only, requires elevated (passkey) auth, and persists durable correction records for auditing and review.
 
 ## Conclusion
 The extraction system is well-integrated into the "subconscious" processing layers (RAG, Cognitive Capture). It effectively turns unstructured text into structured graph data without user intervention. The next logical step would be exposing high-level control of this memory to the Agent itself.

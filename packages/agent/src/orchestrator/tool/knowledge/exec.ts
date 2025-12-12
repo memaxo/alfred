@@ -4,9 +4,12 @@
  */
 
 import { logger } from "@alfred/logger";
+import { recordAudit } from "../../../utils/audit.js";
 import type {
   KnowledgeConnectInput,
   KnowledgeConnectOutput,
+  KnowledgeCorrectInput,
+  KnowledgeCorrectOutput,
   KnowledgeExtractInput,
   KnowledgeExtractOutput,
   KnowledgeQueryInput,
@@ -35,6 +38,10 @@ type EdgeRow = {
   weight: number;
   metadata: unknown;
   created: Date;
+};
+
+type CorrectionRow = {
+  id: string;
 };
 
 type NodeSeed = {
@@ -333,5 +340,223 @@ export async function executeConnect(input: KnowledgeConnectInput): Promise<Know
     fromId: edge.fromId,
     toId: edge.toId,
     kind: edge.kind,
+  };
+}
+
+function recordFromUnknown(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function mergeRecord(
+  base: unknown,
+  patch: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (!patch) {
+    return undefined;
+  }
+  return { ...recordFromUnknown(base), ...patch };
+}
+
+/**
+ * Execute knowledge_correct
+ * Updates node labels/properties or edge metadata, or archives nodes.
+ */
+export async function executeCorrect(
+  input: KnowledgeCorrectInput,
+  userId: string
+): Promise<KnowledgeCorrectOutput> {
+  const graphPkg = "@alfred/db/repo/graph";
+  const graphRepo = await import(graphPkg);
+
+  const resource = input.resource ?? "user";
+  const operation = input.correction.type;
+  const reason = input.correction.reason;
+
+  const correctionContextBase = {
+    resource,
+    reason,
+    operation,
+  };
+
+  if (input.edgeId) {
+    const edge: EdgeRow | null = await graphRepo.getEdge(input.edgeId);
+    if (!edge) {
+      throw new Error("knowledge_edge_not_found");
+    }
+    if (edge.resource !== resource) {
+      throw new Error("knowledge_correct_resource_mismatch");
+    }
+
+    if (operation === "delete") {
+      throw new Error("knowledge_edge_delete_not_supported");
+    }
+
+    const metadataPatch = input.correction.metadataPatch;
+    if (!metadataPatch || Object.keys(metadataPatch).length === 0) {
+      throw new Error("knowledge_edge_update_missing_patch");
+    }
+
+    const previousValue = { metadata: edge.metadata };
+    const nextMetadata = mergeRecord(edge.metadata, metadataPatch);
+
+    const updatedEdges: EdgeRow[] = await graphRepo.upsertEdges([
+      {
+        resource,
+        hash: edge.hash,
+        fromId: edge.fromId,
+        toId: edge.toId,
+        kind: edge.kind,
+        weight: edge.weight,
+        metadata: nextMetadata ?? null,
+      },
+    ]);
+
+    const updated = updatedEdges[0] ?? null;
+    if (!updated) {
+      throw new Error("knowledge_edge_update_failed");
+    }
+
+    const correction: CorrectionRow = await graphRepo.createCorrection({
+      userId,
+      resource,
+      targetType: "edge",
+      targetId: updated.id,
+      operation: "update",
+      reason,
+      previous: previousValue,
+      patch: { metadataPatch },
+    });
+
+    void recordAudit({
+      userId,
+      action: "knowledge.correct",
+      resource: { kind: "knowledge", id: resource },
+      decision: "allow",
+      obligations: [],
+      context: {
+        ...correctionContextBase,
+        targetType: "edge",
+        edgeId: updated.id,
+        correctionId: correction.id,
+      },
+    });
+
+    return {
+      corrected: true,
+      edgeId: updated.id,
+      correctionId: correction.id,
+      previousValue,
+    };
+  }
+
+  const node: NodeRow | null = input.nodeId
+    ? await graphRepo.getNode(input.nodeId)
+    : input.factId
+      ? await graphRepo.findNodeByHash(resource, input.factId)
+      : null;
+
+  if (!node) {
+    throw new Error("knowledge_node_not_found");
+  }
+  if (node.resource !== resource) {
+    throw new Error("knowledge_correct_resource_mismatch");
+  }
+
+  const previousValue = { label: node.label, properties: node.properties };
+
+  if (operation === "delete") {
+    const archivedCount: number = await graphRepo.archiveNodes([node.id], reason);
+
+    const correction: CorrectionRow = await graphRepo.createCorrection({
+      userId,
+      resource,
+      targetType: "node",
+      targetId: node.id,
+      operation: "delete",
+      reason,
+      previous: previousValue,
+      patch: { archived: true },
+    });
+
+    void recordAudit({
+      userId,
+      action: "knowledge.correct",
+      resource: { kind: "knowledge", id: resource },
+      decision: "allow",
+      obligations: [],
+      context: {
+        ...correctionContextBase,
+        targetType: "node",
+        nodeId: node.id,
+        correctionId: correction.id,
+        archivedCount,
+      },
+    });
+
+    return {
+      corrected: archivedCount > 0,
+      nodeId: node.id,
+      correctionId: correction.id,
+      previousValue,
+    };
+  }
+
+  const newLabel = input.correction.newValue;
+  const propertiesPatch = input.correction.propertiesPatch;
+
+  const nextProperties = mergeRecord(node.properties, propertiesPatch);
+
+  if (!newLabel && !nextProperties) {
+    throw new Error("knowledge_correct_update_empty");
+  }
+
+  const updatedNode: NodeRow | null = await graphRepo.updateNode(node.id, {
+    ...(newLabel ? { label: newLabel } : {}),
+    ...(nextProperties ? { properties: nextProperties } : {}),
+  });
+
+  if (!updatedNode) {
+    throw new Error("knowledge_node_not_found");
+  }
+
+  const correction: CorrectionRow = await graphRepo.createCorrection({
+    userId,
+    resource,
+    targetType: "node",
+    targetId: updatedNode.id,
+    operation: "update",
+    reason,
+    previous: previousValue,
+    patch: { newValue: newLabel ?? null, propertiesPatch: propertiesPatch ?? null },
+  });
+
+  void recordAudit({
+    userId,
+    action: "knowledge.correct",
+    resource: { kind: "knowledge", id: resource },
+    decision: "allow",
+    obligations: [],
+    context: {
+      ...correctionContextBase,
+      targetType: "node",
+      nodeId: updatedNode.id,
+      correctionId: correction.id,
+    },
+  });
+
+  logger.info("knowledge_correct_completed", {
+    nodeId: updatedNode.id,
+    operation: "update",
+    resource,
+  });
+
+  return {
+    corrected: true,
+    nodeId: updatedNode.id,
+    correctionId: correction.id,
+    previousValue,
   };
 }

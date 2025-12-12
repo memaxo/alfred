@@ -113,6 +113,18 @@ rules:
         metadata:
           code: requireBio
 
+  # Knowledge graph corrections require biometric elevation
+  - id: knowledge-correct-requires-bio
+    actions: ["knowledge.correct"]
+    roles: ["owner"]
+    effect: "allow"
+    priority: 10
+    obligations:
+      - type: biometric
+        reason: knowledge_correction_passkey
+        metadata:
+          code: requireBio
+
 # Registered scopes (for reference, owner has "*")
 scopes:
   - assistant.read
@@ -157,6 +169,8 @@ scopes:
   - privacy.read
   - privacy.write
   - privacy.purge
+  - knowledge.read
+  - knowledge.write
   - token.issue
   - token.elevate
   - eval.define
