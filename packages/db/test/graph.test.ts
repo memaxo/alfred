@@ -200,6 +200,57 @@ describeFn("graphRepo", () => {
     expect(subEdges.length).toBe(2); // A->B and C->B both touch the set {A, C}
   });
 
+  it("bulk-updates node confidence without clobbering properties", async () => {
+    const nodes = await graphRepo.upsertNodes([
+      {
+        resource: TEST_RESOURCE,
+        hash: "conf-1",
+        kind: "fact",
+        label: "Conf 1",
+        properties: { confidence: 0.8, domain: "a" },
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "conf-2",
+        kind: "fact",
+        label: "Conf 2",
+        properties: null,
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "conf-3",
+        kind: "fact",
+        label: "Conf 3",
+        properties: { confidence: 0.2 },
+      },
+    ]);
+
+    const id1 = nodes.get(`${TEST_RESOURCE}:conf-1`)?.id;
+    const id2 = nodes.get(`${TEST_RESOURCE}:conf-2`)?.id;
+    const id3 = nodes.get(`${TEST_RESOURCE}:conf-3`)?.id;
+
+    if (!(id1 && id2 && id3)) {
+      throw new Error("Missing node ids");
+    }
+
+    const updated = await graphRepo.updateNodeConfidenceBatch([
+      { id: id1, confidence: 0.5 },
+      { id: id2, confidence: 0.3 },
+      { id: id3, confidence: 2 }, // clamped
+      { id: "00000000-0000-0000-0000-000000000000", confidence: 0.1 }, // missing
+    ]);
+
+    expect(updated).toBe(3);
+
+    const n1 = await graphRepo.getNode(id1);
+    const n2 = await graphRepo.getNode(id2);
+    const n3 = await graphRepo.getNode(id3);
+
+    expect(n1?.properties).toEqual({ confidence: 0.5, domain: "a" });
+    expect(n2?.properties).toEqual({ confidence: 0.3 });
+    expect(n3?.properties).toEqual({ confidence: 1 });
+  });
+
   it("reconstructs reasoning chain", async () => {
     const executionId = "exec-1";
     // Steps 1 -> 2 -> 3
@@ -325,15 +376,9 @@ describeFn("graphRepo", () => {
       TEST_RESOURCE
     );
 
-    // It's possible the graph traversal order is different or finding "Cooking" if connected (it's not).
-    // Debugging output if failed.
-    if (!result || result.concept !== "TypeScript") {
-      console.log("Nearest concept result:", JSON.stringify(result));
-    }
-
     expect(result).not.toBeNull();
     expect(result?.concept).toBe("TypeScript");
-    // Depth 0=Prog, 1=Lang, 2=TS
-    expect(result?.depth).toBe(2);
+    // Path includes the starting node id(s); depth is edges traversed.
+    expect(result?.path.length).toBe(3);
   });
 });

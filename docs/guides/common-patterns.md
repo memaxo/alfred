@@ -59,7 +59,7 @@ await Promise.all(
 );
 ```
 
-**Current Status:** `updateNodeConfidenceBatch` still uses Promise.all pattern. See `packages/db/src/repo/graph/write.ts` lines 288-309.
+**Current Status:** Implemented. `updateNodeConfidenceBatch` uses a set-based bulk update (`UPDATE ... FROM (VALUES ...)`) in `packages/db/src/repo/graph/write.ts`.
 
 **Reference:** `.ruler/19-drizzle-patterns.md` rule 10
 

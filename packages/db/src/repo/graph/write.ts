@@ -292,20 +292,60 @@ export async function updateNodeConfidenceBatch(
     return 0;
   }
 
-  let count = 0;
-  // Process in chunks of 10 to control concurrency
-  for (let i = 0; i < updates.length; i += 10) {
-    const batch = updates.slice(i, i + 10);
-    const results = await Promise.all(
-      batch.map(async (update) => {
-        const result = await updateNodeConfidence(update.id, update.confidence);
-        return result ? 1 : 0;
-      })
-    );
-    count += results.reduce((a: number, b) => a + b, 0);
+  // Clamp + validate upfront to avoid writing invalid JSON values.
+  const safeUpdates: Array<{ id: string; confidence: number }> = [];
+  for (const update of updates) {
+    const confidence = Number(update.confidence);
+    if (!Number.isFinite(confidence)) {
+      continue;
+    }
+    safeUpdates.push({
+      id: update.id,
+      confidence: Math.max(0, Math.min(1, confidence)),
+    });
   }
 
-  return count;
+  if (safeUpdates.length === 0) {
+    return 0;
+  }
+
+  // Keep the query size bounded to avoid huge statements and parameter limits.
+  const CHUNK = 5000;
+  let updated = 0;
+
+  for (let i = 0; i < safeUpdates.length; i += CHUNK) {
+    const chunk = safeUpdates.slice(i, i + CHUNK);
+
+    // Postgres bulk update pattern:
+    // UPDATE memory_nodes
+    // SET properties = ..., updated = NOW()
+    // FROM (VALUES (...), (...)) AS v(id, confidence)
+    // WHERE memory_nodes.id = v.id
+    // RETURNING memory_nodes.id
+    const values = sql`(VALUES ${sql.join(
+      chunk.map((u) => sql`(${u.id}::uuid, ${u.confidence})`),
+      sql`, `
+    )}) AS v(id, confidence)`;
+
+    const rows = await db
+      .update(memoryNodes)
+      .set({
+        properties: sql`
+          CASE
+            WHEN ${memoryNodes.properties} IS NULL THEN jsonb_build_object('confidence', v.confidence)
+            ELSE jsonb_set(${memoryNodes.properties}, '{confidence}', v.confidence::text::jsonb)
+          END
+        `,
+        updated: sql`NOW()`,
+      })
+      .from(values)
+      .where(sql`${memoryNodes.id} = v.id`)
+      .returning({ id: memoryNodes.id });
+
+    updated += rows.length;
+  }
+
+  return updated;
 }
 
 export async function touchNodes(nodeIds: string[]): Promise<number> {
