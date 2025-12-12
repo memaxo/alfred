@@ -126,7 +126,7 @@ export async function findNearestConcept(
     path: string[];
     node: NodeRow;
   }>`
-    WITH RECURSIVE traversal (node_id, depth, path) AS (
+    WITH RECURSIVE traversal (node_id, depth, path, distance) AS (
       -- Base case: find the start node by label (Exact Match OR Substring Match if length > 3)
       (${startNodeSelection})
       
@@ -142,7 +142,8 @@ export async function findNearestConcept(
         traversal.path || CASE
           WHEN e.from_id = traversal.node_id THEN e.to_id
           ELSE e.from_id
-        END
+        END,
+        traversal.distance
       FROM memory_edges e
       JOIN traversal ON (e.from_id = traversal.node_id OR e.to_id = traversal.node_id)
       WHERE traversal.depth < ${effectiveMaxDepth}

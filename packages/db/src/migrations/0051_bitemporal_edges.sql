@@ -22,7 +22,7 @@ ADD COLUMN IF NOT EXISTS valid_to timestamp with time zone;
 -- Index for point-in-time queries ("what edges were valid at time T")
 CREATE INDEX IF NOT EXISTS memory_edges_valid_at_idx
   ON memory_edges (valid_from, valid_to)
-  WHERE valid_to IS NULL OR valid_to > NOW();
+  ;
 
 -- Index for historical queries
 CREATE INDEX IF NOT EXISTS memory_edges_valid_range_idx

@@ -68,33 +68,32 @@ To prevent accidental massive data loss during decay cycles:
 
 ## Performance Optimization
 
-### Current Implementation
+### Current Implementation (Optimized)
 
-Memory maintenance uses `Promise.all` loops for bulk updates:
-- `updateNodeConfidenceBatch` processes nodes in parallel
-- Multiple DB roundtrips per batch
-
-### Optimization Pattern
-
-For better performance, prefer single SQL `UPDATE ... FROM (VALUES ...)` statement:
+Memory maintenance uses a set-based bulk update for confidence decay:
+- `updateNodeConfidenceBatch` uses a single `UPDATE ... FROM (VALUES ...)` statement per chunk
+- Avoids per-row DB roundtrips
 
 ```typescript
-// ✅ OPTIMIZED: Single SQL statement (pending implementation)
+// ✅ OPTIMIZED: Single SQL statement
 await db.update(memoryNodes)
-  .set({ confidence: sql`excluded.confidence` })
+  .set({
+    properties: sql`
+      CASE
+        WHEN memory_nodes.properties IS NULL THEN jsonb_build_object('confidence', v.confidence)
+        ELSE jsonb_set(memory_nodes.properties, '{confidence}', to_jsonb(v.confidence))
+      END
+    `,
+    updated: sql`NOW()`,
+  })
   .from(sql`(VALUES ${sql.join(
-    updates.map(u => sql`(${u.id}, ${u.confidence})`),
+    updates.map(u => sql`(${u.id}::uuid, ${u.confidence})`),
     sql`, `
-  )}) AS excluded(id, confidence)`)
-  .where(sql`memory_nodes.id = excluded.id`);
-
-// ⚠️ CURRENT: Promise.all loop (many roundtrips)
-await Promise.all(
-  updates.map(u => updateNodeConfidence(u.id, u.confidence))
-);
+  )}) AS v(id, confidence)`)
+  .where(sql`memory_nodes.id = v.id`);
 ```
 
-**Status:** Optimization pending. Current implementation functional but can be improved.
+**Status:** Implemented in `packages/db/src/repo/graph/write.ts`.
 
 **Reference:** `.ruler/19-drizzle-patterns.md` rule 10
 

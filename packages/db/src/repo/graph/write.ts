@@ -6,6 +6,9 @@ import { getNode } from "./read";
 import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
 import { sanitize, uniqSeeds } from "./utils";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function createNode(
   resource: string,
   hash: string,
@@ -273,8 +276,8 @@ export async function updateNodeConfidence(
     .set({
       properties: sql`
         CASE
-          WHEN properties IS NULL THEN jsonb_build_object('confidence', ${clamped})
-          ELSE jsonb_set(properties, '{confidence}', ${clamped}::text::jsonb)
+          WHEN properties IS NULL THEN jsonb_build_object('confidence', ${clamped}::double precision)
+          ELSE jsonb_set(properties, '{confidence}', to_jsonb(${clamped}::double precision))
         END
       `,
       updated: sql`NOW()`,
@@ -292,20 +295,63 @@ export async function updateNodeConfidenceBatch(
     return 0;
   }
 
-  let count = 0;
-  // Process in chunks of 10 to control concurrency
-  for (let i = 0; i < updates.length; i += 10) {
-    const batch = updates.slice(i, i + 10);
-    const results = await Promise.all(
-      batch.map(async (update) => {
-        const result = await updateNodeConfidence(update.id, update.confidence);
-        return result ? 1 : 0;
-      })
-    );
-    count += results.reduce((a: number, b) => a + b, 0);
+  // Clamp + validate upfront to avoid writing invalid JSON values.
+  const safeUpdates: Array<{ id: string; confidence: number }> = [];
+  for (const update of updates) {
+    if (!UUID_RE.test(update.id)) {
+      continue;
+    }
+    const confidence = Number(update.confidence);
+    if (!Number.isFinite(confidence)) {
+      continue;
+    }
+    safeUpdates.push({
+      id: update.id,
+      confidence: Math.max(0, Math.min(1, confidence)),
+    });
   }
 
-  return count;
+  if (safeUpdates.length === 0) {
+    return 0;
+  }
+
+  // Keep the query size bounded to avoid huge statements and parameter limits.
+  const CHUNK = 5000;
+  let updated = 0;
+
+  for (let i = 0; i < safeUpdates.length; i += CHUNK) {
+    const chunk = safeUpdates.slice(i, i + CHUNK);
+
+    // Postgres bulk update pattern:
+    // UPDATE memory_nodes
+    // SET properties = ..., updated = NOW()
+    // FROM (VALUES (...), (...)) AS v(id, confidence)
+    // WHERE memory_nodes.id = v.id
+    // RETURNING memory_nodes.id
+    const values = sql`(VALUES ${sql.join(
+      chunk.map((u) => sql`(${u.id}::uuid, ${u.confidence}::double precision)`),
+      sql`, `
+    )}) AS v(id, confidence)`;
+
+    const rows = await db
+      .update(memoryNodes)
+      .set({
+        properties: sql`
+          CASE
+            WHEN ${memoryNodes.properties} IS NULL THEN jsonb_build_object('confidence', v.confidence)
+            ELSE jsonb_set(${memoryNodes.properties}, '{confidence}', to_jsonb(v.confidence))
+          END
+        `,
+        updated: sql`NOW()`,
+      })
+      .from(values)
+      .where(sql`${memoryNodes.id} = v.id`)
+      .returning({ id: memoryNodes.id });
+
+    updated += rows.length;
+  }
+
+  return updated;
 }
 
 export async function touchNodes(nodeIds: string[]): Promise<number> {
