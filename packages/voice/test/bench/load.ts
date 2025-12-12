@@ -28,7 +28,7 @@ const registry = new VoiceRegistry(mockPools as any, mockPools as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8898;
-const server = Bun.serve({
+const server = Bun.serve<any>({
   port: PORT,
   websocket: {
     open(ws) {
@@ -53,39 +53,51 @@ describe("Load Benchmark", () => {
   });
 
   it(`handles ${CLIENTS} concurrent sessions sending ${CHUNKS_PER_SEC} chunks/s`, async () => {
+    const oldFfmpegPath = process.env.VOICE_FFMPEG_PATH;
+    process.env.VOICE_FFMPEG_PATH = "/__missing__/ffmpeg";
     const clients: WebSocket[] = [];
     const _errors = 0;
 
-    // Connect all
-    for (let i = 0; i < CLIENTS; i++) {
-      const ws = new WebSocket(`ws://localhost:${PORT}`);
-      await new Promise<void>((resolve) => (ws.onopen = () => resolve()));
-      ws.send(JSON.stringify({ type: "start", sessionId: `load-${i}` }));
-      clients.push(ws);
-    }
-
-    const start = performance.now();
-    const interval = 1000 / CHUNKS_PER_SEC;
-    const audio = new Uint8Array(320); // 20ms PCM
-
-    // Send loop
-    const timer = setInterval(() => {
-      if (performance.now() - start > DURATION_MS) {
-        clearInterval(timer);
-        return;
+    try {
+      // Connect all
+      for (let i = 0; i < CLIENTS; i++) {
+        const ws = new WebSocket(`ws://localhost:${PORT}`);
+        await new Promise<void>((resolve) => (ws.onopen = () => resolve()));
+        ws.send(JSON.stringify({ type: "start", sessionId: `load-${i}` }));
+        clients.push(ws);
       }
+
+      const start = performance.now();
+      const interval = 1000 / CHUNKS_PER_SEC;
+      const audio = new Uint8Array(320); // 20ms PCM
+
+      // Send loop
+      const timer = setInterval(() => {
+        if (performance.now() - start > DURATION_MS) {
+          clearInterval(timer);
+          return;
+        }
+        for (const ws of clients) {
+          ws.send(audio); // Send binary
+        }
+      }, interval);
+
+      // Wait
+      await new Promise((resolve) => setTimeout(resolve, DURATION_MS + 1000));
+
       for (const ws of clients) {
-        ws.send(audio); // Send binary
+        ws.close();
       }
-    }, interval);
-
-    // Wait
-    await new Promise((resolve) => setTimeout(resolve, DURATION_MS + 1000));
-
-    for (const ws of clients) {
-      ws.close();
+      // If server didn't crash and event loop wasn't blocked, we assume success.
+      // This also implicitly verifies that the hot path didn't touch ffmpeg
+      // (VOICE_FFMPEG_PATH is intentionally invalid for this test).
+    } finally {
+      if (oldFfmpegPath === undefined) {
+        // biome-ignore lint/performance/noDelete: test cleanup
+        delete process.env.VOICE_FFMPEG_PATH;
+      } else {
+        process.env.VOICE_FFMPEG_PATH = oldFfmpegPath;
+      }
     }
-    // If server didn't crash and event loop wasn't blocked, we assume success.
-    // Real metrics would require monitoring process.cpuUsage() or similar.
   }, 30_000);
 });
