@@ -2,9 +2,6 @@ import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
-const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
-
 const TEST_RESOURCE = "test-resource";
 
 let graphRepo: typeof import("@alfred/db").graphRepo;
@@ -19,7 +16,7 @@ async function resetGraph() {
   );
 }
 
-describeFn("graphRepo", () => {
+describePostgres("graphRepo", () => {
   beforeAll(async () => {
     requirePostgresTestEnv(
       "graphRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."

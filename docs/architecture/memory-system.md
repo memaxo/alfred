@@ -77,12 +77,20 @@ Memory maintenance uses a set-based bulk update for confidence decay:
 ```typescript
 // ✅ OPTIMIZED: Single SQL statement
 await db.update(memoryNodes)
-  .set({ confidence: sql`excluded.confidence` })
+  .set({
+    properties: sql`
+      CASE
+        WHEN memory_nodes.properties IS NULL THEN jsonb_build_object('confidence', v.confidence)
+        ELSE jsonb_set(memory_nodes.properties, '{confidence}', to_jsonb(v.confidence))
+      END
+    `,
+    updated: sql`NOW()`,
+  })
   .from(sql`(VALUES ${sql.join(
-    updates.map(u => sql`(${u.id}, ${u.confidence})`),
+    updates.map(u => sql`(${u.id}::uuid, ${u.confidence})`),
     sql`, `
-  )}) AS excluded(id, confidence)`)
-  .where(sql`memory_nodes.id = excluded.id`);
+  )}) AS v(id, confidence)`)
+  .where(sql`memory_nodes.id = v.id`);
 ```
 
 **Status:** Implemented in `packages/db/src/repo/graph/write.ts`.

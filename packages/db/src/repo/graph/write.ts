@@ -6,6 +6,9 @@ import { getNode } from "./read";
 import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
 import { sanitize, uniqSeeds } from "./utils";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function createNode(
   resource: string,
   hash: string,
@@ -273,8 +276,8 @@ export async function updateNodeConfidence(
     .set({
       properties: sql`
         CASE
-          WHEN properties IS NULL THEN jsonb_build_object('confidence', ${clamped})
-          ELSE jsonb_set(properties, '{confidence}', ${clamped}::text::jsonb)
+          WHEN properties IS NULL THEN jsonb_build_object('confidence', ${clamped}::double precision)
+          ELSE jsonb_set(properties, '{confidence}', to_jsonb(${clamped}::double precision))
         END
       `,
       updated: sql`NOW()`,
@@ -295,6 +298,9 @@ export async function updateNodeConfidenceBatch(
   // Clamp + validate upfront to avoid writing invalid JSON values.
   const safeUpdates: Array<{ id: string; confidence: number }> = [];
   for (const update of updates) {
+    if (!UUID_RE.test(update.id)) {
+      continue;
+    }
     const confidence = Number(update.confidence);
     if (!Number.isFinite(confidence)) {
       continue;
@@ -323,7 +329,7 @@ export async function updateNodeConfidenceBatch(
     // WHERE memory_nodes.id = v.id
     // RETURNING memory_nodes.id
     const values = sql`(VALUES ${sql.join(
-      chunk.map((u) => sql`(${u.id}::uuid, ${u.confidence})`),
+      chunk.map((u) => sql`(${u.id}::uuid, ${u.confidence}::double precision)`),
       sql`, `
     )}) AS v(id, confidence)`;
 
@@ -333,7 +339,7 @@ export async function updateNodeConfidenceBatch(
         properties: sql`
           CASE
             WHEN ${memoryNodes.properties} IS NULL THEN jsonb_build_object('confidence', v.confidence)
-            ELSE jsonb_set(${memoryNodes.properties}, '{confidence}', v.confidence::text::jsonb)
+            ELSE jsonb_set(${memoryNodes.properties}, '{confidence}', to_jsonb(v.confidence))
           END
         `,
         updated: sql`NOW()`,

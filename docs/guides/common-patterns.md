@@ -46,12 +46,20 @@ const { helper } = await import("./helper");
 ```typescript
 // ✅ CORRECT: Single SQL statement
 await db.update(table)
-  .set({ confidence: sql`excluded.confidence` })
+  .set({
+    properties: sql`
+      CASE
+        WHEN table.properties IS NULL THEN jsonb_build_object('confidence', v.confidence)
+        ELSE jsonb_set(table.properties, '{confidence}', to_jsonb(v.confidence))
+      END
+    `,
+    updated: sql`NOW()`,
+  })
   .from(sql`(VALUES ${sql.join(
-    updates.map(u => sql`(${u.id}, ${u.confidence})`),
+    updates.map(u => sql`(${u.id}::uuid, ${u.confidence})`),
     sql`, `
-  )}) AS excluded(id, confidence)`)
-  .where(sql`table.id = excluded.id`);
+  )}) AS v(id, confidence)`)
+  .where(sql`table.id = v.id`);
 
 // ❌ INCORRECT: Promise.all loop (many roundtrips)
 await Promise.all(
