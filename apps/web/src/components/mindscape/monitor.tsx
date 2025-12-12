@@ -1,5 +1,6 @@
 import type { Obligation, ObligationResumeEvent } from "@alfred/type";
 import type { WorkflowEvent } from "@alfred/type";
+import type { UIMessage } from "@alfred/type/stream";
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";

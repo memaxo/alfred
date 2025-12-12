@@ -1,4 +1,5 @@
 import type { AssistantUIMessage } from "@alfred/agent";
+import type { UIMessage } from "@alfred/type/stream";
 import type { NodeProps } from "@xyflow/react";
 import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
