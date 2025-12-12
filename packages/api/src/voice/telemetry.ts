@@ -1,4 +1,5 @@
 import {
+  voiceAssistantDurationSeconds,
   voiceSessionJitterMillis,
   voiceSessionPacketLossTotal,
   voiceSessionRttMillis,
@@ -18,6 +19,7 @@ export type HistogramSummary = {
 export type VoiceTelemetrySnapshot = {
   sttLatency: HistogramSummary;
   ttsLatency: HistogramSummary;
+  assistantLatency: HistogramSummary;
   roundTrip: HistogramSummary;
   jitter: HistogramSummary;
   packetLossTotal: number;
@@ -27,16 +29,30 @@ type HistogramMetric = client.Histogram<string>;
 type CounterMetric = client.Counter<string>;
 
 export async function collectVoiceTelemetry(): Promise<VoiceTelemetrySnapshot> {
-  const [sttLatency, ttsLatency, roundTrip, jitter, packetLossTotal] =
-    await Promise.all([
-      summarizeHistogram(voiceSttDurationSeconds, "seconds"),
-      summarizeHistogram(voiceTtsDurationSeconds, "seconds"),
-      summarizeHistogram(voiceSessionRttMillis, "milliseconds"),
-      summarizeHistogram(voiceSessionJitterMillis, "milliseconds"),
-      summarizeCounter(voiceSessionPacketLossTotal),
-    ]);
+  const [
+    sttLatency,
+    ttsLatency,
+    assistantLatency,
+    roundTrip,
+    jitter,
+    packetLossTotal,
+  ] = await Promise.all([
+    summarizeHistogram(voiceSttDurationSeconds, "seconds"),
+    summarizeHistogram(voiceTtsDurationSeconds, "seconds"),
+    summarizeHistogram(voiceAssistantDurationSeconds, "seconds"),
+    summarizeHistogram(voiceSessionRttMillis, "milliseconds"),
+    summarizeHistogram(voiceSessionJitterMillis, "milliseconds"),
+    summarizeCounter(voiceSessionPacketLossTotal),
+  ]);
 
-  return { sttLatency, ttsLatency, roundTrip, jitter, packetLossTotal };
+  return {
+    sttLatency,
+    ttsLatency,
+    assistantLatency,
+    roundTrip,
+    jitter,
+    packetLossTotal,
+  };
 }
 
 async function summarizeCounter(counter: CounterMetric): Promise<number> {
@@ -91,7 +107,7 @@ function computeAverage(sum: number, count: number): number | null {
 }
 
 function computePercentile(
-  buckets: Array<[number, number]>,
+  buckets: [number, number][],
   totalCount: number,
   percentile: number
 ): number | null {
@@ -110,6 +126,6 @@ function computePercentile(
       return le;
     }
   }
-  const last = buckets[buckets.length - 1]?.[0];
+  const last = buckets.at(-1)?.[0];
   return last !== undefined && Number.isFinite(last) ? last : null;
 }

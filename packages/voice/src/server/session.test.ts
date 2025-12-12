@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Buffer } from "node:buffer";
+import {
+  voiceSttDurationSeconds,
+  voiceSttTotal,
+  voiceTtsDurationSeconds,
+  voiceTtsTotal,
+} from "../metrics";
 import type { STTPool } from "../process/stt";
 import type { TTSPool } from "../process/tts";
 import { VoiceRegistry } from "./registry";
@@ -7,25 +13,27 @@ import { VoiceSession } from "./session";
 
 // Mock Pools
 class MockSTTPool {
-  async transcribe(_req: any) {
-    return {
+  transcribe(_req: any) {
+    return Promise.resolve({
       text: "test transcript",
       language: "en",
       isPartial: false,
-    };
+      durationSeconds: 0.12,
+      model: "faster-whisper-large-v3-turbo",
+    });
   }
 }
 
 class MockTTSPool {
-  async synthesize(req: any, onChunk: any) {
+  synthesize(req: any, onChunk: any) {
     if (req.streaming && onChunk) {
       onChunk({ audioBase64: "dGVzdA==", mimeType: "audio/pcm" }); // "test" in base64
     }
-    return {
+    return Promise.resolve({
       audioBase64: "dGVzdA==",
       mimeType: "audio/pcm",
       sampleRate: 16_000,
-    };
+    });
   }
 }
 
@@ -35,6 +43,11 @@ describe("VoiceSession (Server)", () => {
   let ttsPool: any;
 
   beforeEach(() => {
+    voiceSttTotal.reset();
+    voiceSttDurationSeconds.reset();
+    voiceTtsTotal.reset();
+    voiceTtsDurationSeconds.reset();
+
     sttPool = new MockSTTPool();
     ttsPool = new MockTTSPool();
     session = new VoiceSession({
@@ -53,6 +66,14 @@ describe("VoiceSession (Server)", () => {
 
     await session.processAudioChunk("dGVzdA==", "audio/wav");
     expect(session.getTranscript()).toBe("test transcript test transcript");
+
+    const metric = await voiceSttDurationSeconds.get();
+    const count =
+      metric.values.find((v) => {
+        const name = v.metricName;
+        return typeof name === "string" && name.endsWith("_count");
+      })?.value ?? 0;
+    expect(count).toBeGreaterThan(0);
   });
 
   it("should stream synthesis", async () => {
@@ -63,9 +84,17 @@ describe("VoiceSession (Server)", () => {
       expect(chunk.toString()).toBe("test"); // "dGVzdA==" decoded
     });
     expect(chunksReceived).toBe(1);
+
+    const metric = await voiceTtsDurationSeconds.get();
+    const count =
+      metric.values.find((v) => {
+        const name = v.metricName;
+        return typeof name === "string" && name.endsWith("_count");
+      })?.value ?? 0;
+    expect(count).toBeGreaterThan(0);
   });
 
-  it("should track idle state", async () => {
+  it("should track idle state", () => {
     session.activate();
     expect(session.isIdle(1000)).toBe(false);
     // We can't easily mock Date.now() in bun:test without affecting the runtime,
