@@ -12,6 +12,18 @@ export type StepResult = {
   error?: string;
 };
 
+type StepCompleteEvent = {
+  _: "step_complete";
+  ts: number;
+  step: number;
+  action: string;
+  description?: string;
+  status: StepResult["status"];
+  durationMs: number;
+  output?: unknown;
+  error?: string;
+};
+
 export class PlanRunner {
   constructor(
     private readonly streamId: string,
@@ -21,7 +33,7 @@ export class PlanRunner {
   async executePlan(plan: ExecutionPlan, startStep = 0): Promise<void> {
     // Get initial lastEventId (needed for snapshots)
     const latestSnapshot = await cognitiveRepo.getLatestSnapshot(this.streamId);
-    const lastEventId =
+    let lastEventId =
       latestSnapshot?.lastEventId || "00000000-0000-0000-0000-000000000000";
     const currentAutonomy =
       (latestSnapshot?.state as any)?.auto || initialAutonomy(Date.now());
@@ -55,7 +67,34 @@ export class PlanRunner {
       }
 
       // console.log(`Executing step: ${step.description}`);
+      const stepStartedAt = Date.now();
       const result = await this.executeStep(step, this.tools);
+      const stepDurationMs = Date.now() - stepStartedAt;
+
+      // Emit explicit per-step completion event for observability.
+      try {
+        const event = this.buildStepCompleteEvent(
+          i,
+          step,
+          result,
+          stepDurationMs
+        );
+        const inserted = await cognitiveRepo.appendEvent(
+          this.streamId,
+          "step_complete",
+          event as unknown as Record<string, unknown>
+        );
+        if (inserted?.id) {
+          lastEventId = inserted.id;
+        }
+      } catch (err) {
+        logger.warn("plan_runner_step_complete_event_failed", {
+          streamId: this.streamId,
+          step: i,
+          action: step.action,
+          error: String(err),
+        });
+      }
 
       if (result.status === "suspended") {
         logger.info("plan_runner_suspended", {
@@ -73,6 +112,36 @@ export class PlanRunner {
         throw new Error(`Step failed: ${step.action} - ${result.error}`);
       }
     }
+  }
+
+  private buildStepCompleteEvent(
+    stepIndex: number,
+    step: ExecutionStep,
+    result: StepResult,
+    durationMs: number
+  ): StepCompleteEvent {
+    const base: StepCompleteEvent = {
+      _: "step_complete",
+      ts: Date.now(),
+      step: stepIndex,
+      action: step.action,
+      description: step.description,
+      status: result.status,
+      durationMs,
+    };
+
+    if (result.status === "failed") {
+      return { ...base, error: result.error ?? "unknown_error" };
+    }
+
+    if (result.status === "completed") {
+      const summary = summarizeStepOutput(result.output);
+      if (summary !== undefined) {
+        return { ...base, output: summary };
+      }
+    }
+
+    return base;
   }
 
   private async enforceSafetyGate(
@@ -128,5 +197,28 @@ export class PlanRunner {
       }
       return { status: "failed", error: error.message };
     }
+  }
+}
+
+function summarizeStepOutput(output: unknown): unknown {
+  if (output === null) {
+    return null;
+  }
+  if (typeof output === "string") {
+    return output.length > 1000 ? `${output.slice(0, 1000)}…` : output;
+  }
+  if (typeof output === "number" || typeof output === "boolean") {
+    return output;
+  }
+  if (typeof output === "undefined") {
+    return undefined;
+  }
+
+  // Avoid throwing on complex/non-serializable tool outputs.
+  try {
+    const json = JSON.stringify(output);
+    return json.length > 1000 ? `${json.slice(0, 1000)}…` : json;
+  } catch {
+    return "[unserializable_output]";
   }
 }
