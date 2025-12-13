@@ -56,40 +56,11 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 
 ### Database Unavailable During SSR
 
-```typescript
-// ✅ GOOD: Graceful fallback
-async function safeAuthHandler(request: Request): Promise<Response> {
-  try {
-    return await auth.handler(request);
-  } catch (error) {
-    if (isDbConnectionError(error)) {
-      return Response.json({ session: null, user: null }, { status: 200 });
-    }
-    throw error;
-  }
-}
-
-// ❌ BAD: Crashes SSR
-async function unsafeHandler(request: Request): Promise<Response> {
-  return await auth.handler(request); // Throws if DB unavailable
-}
-```
+Wrap handlers with try-catch and use `isDbConnectionError()` to return graceful fallbacks (e.g., `{ session: null, user: null }`) instead of crashing SSR. Never throw unhandled errors during SSR.
 
 ### Service Initialization
 
-```typescript
-// ✅ GOOD: Check availability before starting
-isDbAvailable().then((dbOk) => {
-  if (!dbOk) {
-    logger.warn("db_unavailable_skipping_services");
-    return;
-  }
-  startCodexSessionCleanupWorker();
-});
-
-// ❌ BAD: Crashes on startup
-startCodexSessionCleanupWorker(); // Fails if DB unavailable
-```
+Check availability before starting services using `isDbAvailable()` or `isUvAvailable()`. Skip non-critical services with warnings instead of crashing on startup.
 
 See `.ruler/graceful-degradation.md` for detailed patterns.
 

@@ -46,36 +46,12 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 ## Implementation Reference
 
 ### Tailwind v4 Theme Configuration
-```css
-@theme {
-  --color-void: oklch(0.05 0 0);
-  --color-void-surface: oklch(0.14 0 0);
-  --color-biolum: oklch(0.99 0 0);
-  --color-biolum-dim: oklch(0.70 0 0);
-  --color-biolum-faint: oklch(0.40 0 0);
 
-  --font-sans: "Inter Tight", "Geist Sans", "San Francisco", system-ui, sans-serif;
-  
-  --radius-3xl: 24px;
-  --radius-full: 9999px;
-
-  --ease-fluid: cubic-bezier(0.25, 0.4, 0.25, 1);
-}
-```
+Define colors in `@theme` block: `--color-void` (`oklch(0.05 0 0)`), `--color-void-surface` (`oklch(0.14 0 0)`), `--color-biolum` (`oklch(0.99 0 0)`), `--color-biolum-dim` (`oklch(0.70 0 0)`), `--color-biolum-faint` (`oklch(0.40 0 0)`). Set font to "Inter Tight", "Geist Sans", or "San Francisco". Define `--radius-3xl: 24px`, `--radius-full: 9999px`, `--ease-fluid: cubic-bezier(0.25, 0.4, 0.25, 1)`.
 
 ### Usage Examples
 
-**Standard Container (HUD):**
-```tsx
-<div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
-  <h2 className="text-biolum tracking-tighter">Signal</h2>
-</div>
-```
+**Standard Container (HUD):** Use `rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl` for containers. Apply `text-biolum tracking-tighter` to headings.
 
-**Primary Action:**
-```tsx
-<Button className="rounded-full bg-biolum text-void hover:bg-biolum/90">
-  Action
-</Button>
-```
+**Primary Action:** Use `rounded-full bg-biolum text-void hover:bg-biolum/90` for primary buttons.
 
