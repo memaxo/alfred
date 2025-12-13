@@ -93,8 +93,8 @@ describe("graph router integration (sqlite)", () => {
   afterEach(async () => {
     // Reset RAG embedding provider between tests
     setEmbeddingProvider(null);
-    await db.delete(memoryEdges).run();
-    await db.delete(memoryNodes).run();
+    await db.delete(memoryEdges).execute();
+    await db.delete(memoryNodes).execute();
   });
 
   it("returns persisted edges via graph.getEdges", async () => {
@@ -259,7 +259,8 @@ describe("graph router integration (sqlite)", () => {
     });
 
     expect(result.nodes.length).toBeGreaterThanOrEqual(1);
-    expect(result.edges.length).toBeGreaterThanOrEqual(1);
+    const edges = result.edges ?? [];
+    expect(edges.length).toBeGreaterThanOrEqual(1);
 
     const seenRag = result.nodes.some((node: any) => {
       const isRagDoc = node.kind === "rag_document";
@@ -268,9 +269,7 @@ describe("graph router integration (sqlite)", () => {
     });
     expect(seenRag).toBe(true);
 
-    const seenExplains = result.edges.some(
-      (edge: any) => edge.kind === "explains"
-    );
+    const seenExplains = edges.some((edge: any) => edge.kind === "explains");
     expect(seenExplains).toBe(true);
   });
 });

@@ -11,6 +11,7 @@ import { evalRouter } from "./eval";
 import { fsRouter } from "./fs";
 import { graphRouter } from "./graph";
 import { jwksRouter } from "./jwks";
+import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
 import { noteRouter } from "./note";
 import { orchestratorRouter } from "./orchestrator";
@@ -32,6 +33,7 @@ export const appRouter = router({
   healthCheck: publicProcedure.query(() => "OK"),
   admin: adminRouter,
   graph: graphRouter,
+  knowledge: knowledgeRouter,
   user: userRouter,
   privateData: protectedProcedure.query(({ ctx }) => ({
     message: "This is private",
