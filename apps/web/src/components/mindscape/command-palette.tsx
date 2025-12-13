@@ -30,6 +30,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { type ContextActionId, getActionsForNode } from "@/config/actions";
+import { MINDSCAPE_CONFIG } from "@/config/mindscape";
 import { useCommandUsage } from "@/hooks/use-command-usage";
 import { PrefixTrie } from "@/lib/trie";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
@@ -345,117 +346,122 @@ export function MindscapeCommandPalette({
         break;
       }
       case "visualize": {
-        const nodeType =
-          focusedNode.type || (focusedNode.data as ArtifactData).type;
-        const data = focusedNode.data as ArtifactData;
+        try {
+          const nodeType =
+            focusedNode.type || (focusedNode.data as ArtifactData).type;
+          const data = focusedNode.data as ArtifactData;
 
-        let text = "";
-        if (nodeType === "note") {
-          const note = data as NoteData;
-          text = [note.title ?? note.label, note.content]
-            .filter(Boolean)
-            .join("\n\n");
-        } else if (nodeType === "knowledge") {
-          const knowledge = data as KnowledgeData;
-          text = [knowledge.label, knowledge.summary].filter(Boolean).join("\n\n");
-        } else {
-          text = [data.label].filter(Boolean).join("\n\n");
-        }
-
-        if (!text.trim()) {
-          toast.info("No text available to visualize.");
-          break;
-        }
-
-        const result = await visualizeKnowledge({
-          text,
-          resource: "user",
-          limit: 20,
-        });
-
-        if (!result.nodes.length) {
-          toast.info("No entities detected yet.");
-          break;
-        }
-
-        const parentPos = focusedNode.position ?? { x: 0, y: 0 };
-        const radius = 260;
-
-        // Spawn concept nodes
-        result.nodes.forEach((node, index) => {
-          const uiId = `concept-${node.id}`;
-          const exists = currentNodes.some((n) => n.id === uiId);
-          if (exists) {
-            return;
+          let text = "";
+          if (nodeType === "note") {
+            const note = data as NoteData;
+            text = [note.title ?? note.label, note.content]
+              .filter(Boolean)
+              .join("\n\n");
+          } else if (nodeType === "knowledge") {
+            const knowledge = data as KnowledgeData;
+            text = [knowledge.label, knowledge.summary].filter(Boolean).join("\n\n");
+          } else {
+            text = [data.label].filter(Boolean).join("\n\n");
           }
 
-          const angle = (index / result.nodes.length) * 2 * Math.PI;
-          const x = parentPos.x + radius * Math.cos(angle);
-          const y = parentPos.y + radius * Math.sin(angle);
+          if (!text.trim()) {
+            toast.info("No text available to visualize.");
+            break;
+          }
 
-          const conceptData: ConceptData = {
-            type: "concept",
-            label: node.label,
-            entityType: node.entityType,
-            confidence: node.confidence,
-            archived: node.archived,
-            description: node.description,
-            graph: {
-              dbId: node.id,
-              hgHash: node.hgHash,
-            },
-          };
-
-          addArtifact({
-            id: uiId,
-            type: "concept",
-            position: { x, y },
-            data: conceptData,
+          const result = await visualizeKnowledge({
+            text,
+            resource: "user",
+            limit: 20,
           });
-        });
 
-        // Merge concept edges + link focused node to concepts locally
-        const edgeMap = new Map<string, Edge>(edges.map((edge) => [edge.id, edge]));
-
-        for (const edge of result.edges) {
-          const source = `concept-${edge.fromId}`;
-          const target = `concept-${edge.toId}`;
-          const nextEdge = {
-            id: edge.id,
-            source,
-            target,
-            type: "default",
-            data: {
-              kind: edge.kind,
-              fromDbId: edge.fromId,
-              toDbId: edge.toId,
-            },
-            style: { stroke: "rgba(255, 255, 255, 0.2)" },
-          } satisfies Edge;
-          edgeMap.set(nextEdge.id, nextEdge);
-        }
-
-        for (const node of result.nodes) {
-          const conceptUiId = `concept-${node.id}`;
-          const localId = `e-${focusedNode.id}-${conceptUiId}`;
-          if (edgeMap.has(localId)) {
-            continue;
+          if (!result.nodes.length) {
+            toast.info("No entities detected yet.");
+            break;
           }
-          const localEdge = {
-            id: localId,
-            source: focusedNode.id,
-            target: conceptUiId,
-            type: "default",
-            data: {
-              kind: "mentions",
-            },
-            style: { stroke: "rgba(99, 102, 241, 0.25)" },
-          } satisfies Edge;
-          edgeMap.set(localEdge.id, localEdge);
-        }
 
-        setEdges(Array.from(edgeMap.values()));
-        toast.success("Knowledge visualized");
+          const parentPos = focusedNode.position ?? { x: 0, y: 0 };
+          const radius = MINDSCAPE_CONFIG.SPAWN_RADIUS;
+
+          // Spawn concept nodes
+          result.nodes.forEach((node, index) => {
+            const uiId = `concept-${node.id}`;
+            const exists = currentNodes.some((n) => n.id === uiId);
+            if (exists) {
+              return;
+            }
+
+            const angle = (index / result.nodes.length) * 2 * Math.PI;
+            const x = parentPos.x + radius * Math.cos(angle);
+            const y = parentPos.y + radius * Math.sin(angle);
+
+            const conceptData: ConceptData = {
+              type: "concept",
+              label: node.label,
+              entityType: node.entityType,
+              confidence: node.confidence,
+              archived: node.archived,
+              description: node.description,
+              graph: {
+                dbId: node.id,
+                hgHash: node.hgHash,
+              },
+            };
+
+            addArtifact({
+              id: uiId,
+              type: "concept",
+              position: { x, y },
+              data: conceptData,
+            });
+          });
+
+          // Merge concept edges + link focused node to concepts locally
+          const edgeMap = new Map<string, Edge>(edges.map((edge) => [edge.id, edge]));
+
+          for (const edge of result.edges) {
+            const source = `concept-${edge.fromId}`;
+            const target = `concept-${edge.toId}`;
+            const nextEdge = {
+              id: edge.id,
+              source,
+              target,
+              type: "default",
+              data: {
+                kind: edge.kind,
+                fromDbId: edge.fromId,
+                toDbId: edge.toId,
+              },
+              style: { stroke: "rgba(255, 255, 255, 0.2)" },
+            } satisfies Edge;
+            edgeMap.set(nextEdge.id, nextEdge);
+          }
+
+          for (const node of result.nodes) {
+            const conceptUiId = `concept-${node.id}`;
+            const localId = `e-${focusedNode.id}-${conceptUiId}`;
+            if (edgeMap.has(localId)) {
+              continue;
+            }
+            const localEdge = {
+              id: localId,
+              source: focusedNode.id,
+              target: conceptUiId,
+              type: "default",
+              data: {
+                kind: "mentions",
+              },
+              style: { stroke: "rgba(99, 102, 241, 0.25)" },
+            } satisfies Edge;
+            edgeMap.set(localEdge.id, localEdge);
+          }
+
+          setEdges(Array.from(edgeMap.values()));
+          toast.success("Knowledge visualized");
+        } catch (error) {
+          toast.error("Failed to visualize knowledge");
+          console.error("visualize_action_failed", error);
+        }
         break;
       }
       default:

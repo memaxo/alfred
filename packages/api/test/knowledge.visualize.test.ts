@@ -123,5 +123,48 @@ describe("knowledge.visualize (sqlite)", () => {
       stored.some((row) => /^[\[(]entity:/.test(row.label.trim().toLowerCase()))
     ).toBe(true);
   });
+
+  it("handles text with minimal entities gracefully", async () => {
+    const caller = createCaller();
+    const resource = `test-minimal-${Date.now()}`;
+
+    const result = await caller.visualize({
+      resource,
+      text: "Hello world.",
+      limit: 10,
+    });
+
+    // Should complete without error
+    // Note: Even simple text may have facts extracted, but minimal entity nodes
+    expect(result.meta).toBeDefined();
+    expect(result.nodes.length).toBeGreaterThanOrEqual(0);
+    expect(result.edges.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it("handles duplicate entities in input text", async () => {
+    const caller = createCaller();
+    const resource = `test-duplicates-${Date.now()}`;
+
+    const result = await caller.visualize({
+      resource,
+      text: "Elon Musk met Elon Musk. SpaceX launched SpaceX rockets.",
+      limit: 10,
+    });
+
+    // Should extract unique entities
+    expect(result.meta.extractedEntities).toBeGreaterThan(0);
+
+    // Check that duplicate entity names don't create duplicate nodes
+    const elonNodes = result.nodes.filter((n) =>
+      n.label.toLowerCase().includes("elon")
+    );
+    // Should have at most 1 node for "Elon Musk" (deduplication via hash)
+    expect(elonNodes.length).toBeLessThanOrEqual(1);
+
+    const spacexNodes = result.nodes.filter((n) =>
+      n.label.toLowerCase().includes("spacex")
+    );
+    expect(spacexNodes.length).toBeLessThanOrEqual(1);
+  });
 });
 

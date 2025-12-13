@@ -1,6 +1,8 @@
+import { parseEntityFactLabel } from "@alfred/knowledge/entity";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { MINDSCAPE_CONFIG } from "@/config/mindscape";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 
@@ -48,21 +50,6 @@ export function useMindscapeTraversal() {
   useEffect(() => {
     if (!(traversalResult && focusedDbId)) return;
 
-    const parseEntityFactLabel = (
-      label: string
-    ): { entityType: string; label: string } | null => {
-      const match = /^[\[(]entity:([^\])]+)[\])]\s+(.+)$/.exec(label.trim());
-      if (!match) {
-        return null;
-      }
-      const entityType = match[1]?.trim();
-      const entityLabel = match[2]?.trim();
-      if (!(entityType && entityLabel)) {
-        return null;
-      }
-      return { entityType, label: entityLabel };
-    };
-
     const isConceptNode = (node: GraphNode) =>
       node.kind === "fact" &&
       typeof node.label === "string" &&
@@ -104,7 +91,7 @@ export function useMindscapeTraversal() {
 
       // Calculate position: radial expansion around focused node
       const angle = (index / traversalResult.nodes.length) * 2 * Math.PI;
-      const radius = 250; // Distance from parent
+      const radius = MINDSCAPE_CONFIG.SPAWN_RADIUS;
       const parentPos = focusedNode?.position ?? { x: 0, y: 0 };
 
       const x = parentPos.x + radius * Math.cos(angle);

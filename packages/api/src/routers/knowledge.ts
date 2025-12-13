@@ -1,14 +1,31 @@
 import { db } from "@alfred/db";
-import {
-  upsertEdges,
-  upsertNodes,
-  type EdgeSeed as GraphEdgeSeed,
-  type NodeSeed as GraphNodeSeed,
-} from "@alfred/db/repo/graph";
+import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+
+/** Node seed for graph upsert operations */
+type GraphNodeSeed = {
+  resource: string;
+  hash: string;
+  kind: string;
+  label: string;
+  properties?: unknown;
+  embedding?: number[];
+};
+
+/** Edge seed for graph upsert operations */
+type GraphEdgeSeed = {
+  resource: string;
+  hash: string;
+  fromId: string;
+  toId: string;
+  kind: string;
+  weight?: number;
+  metadata?: unknown;
+};
+import { parseEntityFactLabel } from "@alfred/knowledge/entity";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
@@ -50,20 +67,8 @@ function asProps(value: unknown): Record<string, unknown> {
   return {};
 }
 
-function parseEntityFactLabel(label: string): { entityType: string; label: string } | null {
-  // Note: `sanitizeContextText()` normalizes `[`/`]` to `(`/`)` in DB writes.
-  // Accept both raw and sanitized formats: "[entity:person] Alice" / "(entity:person) Alice".
-  const match = /^[\[(]entity:([^\])]+)[\])]\s+(.+)$/.exec(label.trim());
-  if (!match) {
-    return null;
-  }
-  const entityType = match[1]?.trim();
-  const entityLabel = match[2]?.trim();
-  if (!(entityType && entityLabel)) {
-    return null;
-  }
-  return { entityType, label: entityLabel };
-}
+/** Maximum facts to fetch for entity filtering */
+const ENTITY_FETCH_LIMIT = 500;
 
 const visualizeInputSchema = z.object({
   text: z.string().min(1).max(20_000),
@@ -198,20 +203,23 @@ export const knowledgeRouter = router({
         .filter(Boolean)
     );
 
-    // Pull a bounded window of recent fact nodes and keep only entity facts.
-    const recentFacts = await db
+    // Pull a bounded window of recent entity fact nodes with SQL-level filtering.
+    // Filter by source containing ":entity" at the database level for better performance.
+    const recentEntityFacts = await db
       .select()
       .from(memoryNodes)
-      .where(and(eq(memoryNodes.resource, resource), eq(memoryNodes.kind, "fact")))
+      .where(
+        and(
+          eq(memoryNodes.resource, resource),
+          eq(memoryNodes.kind, "fact"),
+          sql`json_extract(${memoryNodes.properties}, '$.source') LIKE '%:entity%'`
+        )
+      )
       .orderBy(desc(memoryNodes.created))
-      .limit(500);
+      .limit(ENTITY_FETCH_LIMIT);
 
-    const entityRows = recentFacts.filter((row) => {
-      const props = asProps(row.properties);
-      const src = typeof props.source === "string" ? props.source : "";
-      if (!src.includes(":entity")) {
-        return false;
-      }
+    // Further filter by parsed entity label format and extracted labels
+    const entityRows = recentEntityFacts.filter((row) => {
       const parsed = parseEntityFactLabel(row.label);
       if (!parsed) {
         return false;

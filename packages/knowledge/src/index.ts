@@ -5,6 +5,7 @@
  */
 
 export * from "./compression.js";
+export * from "./entity.js";
 export type {
   Contradiction,
   Entity,

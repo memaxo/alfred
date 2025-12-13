@@ -12,6 +12,10 @@
       "types": "./dist/compression.d.ts",
       "default": "./src/compression.ts"
     },
+    "./entity": {
+      "types": "./dist/entity.d.ts",
+      "default": "./src/entity.ts"
+    },
     "./extractor": {
       "types": "./dist/extractor.d.ts",
       "default": "./src/extractor.ts"
