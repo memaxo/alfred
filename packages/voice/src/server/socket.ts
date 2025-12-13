@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { logger } from "@alfred/logger";
 import type {
   VoiceStreamAudioChunkPayload,
@@ -469,23 +470,28 @@ export class VoiceSocketHandler {
     }
 
     try {
+      // Record assistant (LLM/orchestrator) latency for telemetry.
+      // This measures the time from transcript completion to assistant response,
+      // separate from STT/TTS latencies to enable component-level analysis.
       const assistantProvider = "orchestrator";
+      const assistantTimerStart = performance.now();
       const assistant = await this.hooks.runAssistant(
         ws.data.userId,
         transcript,
         ws.data.runtime
       );
+      const assistantWallSeconds = (performance.now() - assistantTimerStart) / 1000;
+      // Use hook-provided duration if available, otherwise fall back to wall-clock time
+      const durationSeconds = assistant.durationSeconds ?? assistantWallSeconds;
       recordVoiceAssistant({
         provider: assistantProvider,
         status: "ok",
-        durationSeconds: assistant.durationSeconds,
+        durationSeconds,
       });
-      if (typeof assistant.durationSeconds === "number") {
-        voiceStreamLatencySeconds.observe(
-          { stage: "assistant" },
-          assistant.durationSeconds
-        );
-      }
+      voiceStreamLatencySeconds.observe(
+        { stage: "assistant" },
+        durationSeconds
+      );
 
       this.sendWithErrorHandling(ws, {
         type: "assistant_message",

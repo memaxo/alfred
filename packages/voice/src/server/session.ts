@@ -38,7 +38,9 @@ export class VoiceSession {
   constructor(config: VoiceSessionConfig) {
     this.config = config;
     this.logger = config.logger ?? defaultLogger;
-    // Provider is inferred from env; pool internals are not exposed.
+    // Provider labels are inferred from env since pool internals are not exposed.
+    // This is a limitation: actual provider may differ if pools are reconfigured.
+    // TODO: Consider exposing provider from pool configuration for accurate labeling.
     this.sttProvider = "maya1";
     this.ttsProvider =
       process.env.TTS_PROVIDER === "supertonic" ? "supertonic" : "maya1";
