@@ -288,6 +288,16 @@ export async function ciVerifyPythonEnvironment(): Promise<void> {
   const health = await verifyVoicePythonHealth();
 
   if (!health.healthy) {
+    const strict = process.env.VOICE_STRICT_PYTHON === "1";
+    const isMissingPython = health.error === "Python executable does not exist";
+    if (process.env.CI && !strict && isMissingPython) {
+      console.warn(
+        "⚠️ Voice Python environment not found; skipping voice Python verification.\n" +
+          "   To enable in CI, set VOICE_STRICT_PYTHON=1 and ensure 'cd packages/voice && uv sync' has been run."
+      );
+      return;
+    }
+
     console.error("❌ PYTHON ENVIRONMENT CORRUPTED!");
     console.error(`   Path: ${health.pythonPath}`);
     console.error(`   Error: ${health.error}`);

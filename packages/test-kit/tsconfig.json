@@ -1,12 +1,20 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*", "test/**/*"],
+  "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@alfred/test-kit": ["./src/index.ts"],
-      "@alfred/test-kit/*": ["./src/*"]
-    }
-  }
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules", "test"],
+  "references": [
+    { "path": "../type" },
+    { "path": "../db" },
+    { "path": "../voice" },
+    { "path": "../agent" },
+    { "path": "../runtime" },
+    { "path": "../api" }
+  ]
 }

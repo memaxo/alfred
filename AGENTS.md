@@ -240,34 +240,9 @@ packages/
 6. **Schema sync.** Keep Drizzle schema files (`packages/db/src/schema/*.ts`) aligned with migrations. Vector dimensions must use `EMBEDDING_DIM` from `@alfred/embed` (single source of truth). When changing vector dimensions, drop indexes before `ALTER COLUMN TYPE`, recreate with `IF NOT EXISTS`, and document that existing embeddings become NULL.
 7. **Testing.** Write Vitest suites under `packages/db/test` that spin up an isolated database schema and assert repo behaviour (notes, reminders, timers, eval runs/scores, etc.).
 8. **Laminar correlation.** Columns like `laminar_eval_id` belong in the primary run table to enable dual-write correlation. Always backfill with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations so replays remain idempotent.
-9. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic:
-   ```typescript
-   await db.transaction(async (tx) => {
-     await tx.insert(users).values({...});
-     await tx.insert(profiles).values({...});
-   });
-   ```
-   Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
-10. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API):
-   ```typescript
-   await db.batch([
-     db.select().from(users).where(...),
-     db.select().from(profiles).where(...),
-     db.insert(notes).values({...}),
-   ]);
-   ```
-   Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
-11. **Savepoints.** Use savepoints for partial rollbacks within transactions:
-    ```typescript
-    await db.transaction(async (tx) => {
-      await tx.insert(users).values({...});
-      await tx.savepoint(async (sp) => {
-        await sp.update(profiles).set({...});
-        if (condition) throw new Error("Rollback savepoint");
-      });
-      // Transaction continues even if savepoint rolled back
-    });
-    ```
+9. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic. Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
+10. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API). Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
+11. **Savepoints.** Use savepoints for partial rollbacks within transactions. Call `tx.savepoint()` inside a transaction to create a nested transaction that can rollback independently while the outer transaction continues.
 12. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
 13. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
 14. **Bulk updates.** Prefer batch updates with `Promise.all` + chunks (size 10-50) over `db.transaction` or sequential loops for high-volume writes. Use `UPDATE ... FROM (VALUES ...)` for massive updates if possible.
@@ -517,6 +492,8 @@ When implementing, Alfred asks:
 13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
 14. **Activation fidelity.** Mindscape activations must use distinct event types (e.g., `context-cache`) so cache hits, workflow steps, and tool actions render as different visual signals.
 
+15. **Shared constants extraction.** When the same constant value appears in multiple files (e.g., spawn radius, fetch limits), extract it to a shared config file (e.g., `apps/web/src/config/<domain>.ts`). Export as `const DOMAIN_CONFIG = { CONSTANT_NAME: value } as const`. Import and use the constant instead of hardcoding values. This ensures consistency and makes updates easier.
+
 
 
 <!-- Source: .ruler/13-streaming-patterns.md -->
@@ -705,40 +682,11 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 
 ### Database Unavailable During SSR
 
-```typescript
-// ✅ GOOD: Graceful fallback
-async function safeAuthHandler(request: Request): Promise<Response> {
-  try {
-    return await auth.handler(request);
-  } catch (error) {
-    if (isDbConnectionError(error)) {
-      return Response.json({ session: null, user: null }, { status: 200 });
-    }
-    throw error;
-  }
-}
-
-// ❌ BAD: Crashes SSR
-async function unsafeHandler(request: Request): Promise<Response> {
-  return await auth.handler(request); // Throws if DB unavailable
-}
-```
+Wrap handlers with try-catch and use `isDbConnectionError()` to return graceful fallbacks (e.g., `{ session: null, user: null }`) instead of crashing SSR. Never throw unhandled errors during SSR.
 
 ### Service Initialization
 
-```typescript
-// ✅ GOOD: Check availability before starting
-isDbAvailable().then((dbOk) => {
-  if (!dbOk) {
-    logger.warn("db_unavailable_skipping_services");
-    return;
-  }
-  startCodexSessionCleanupWorker();
-});
-
-// ❌ BAD: Crashes on startup
-startCodexSessionCleanupWorker(); // Fails if DB unavailable
-```
+Check availability before starting services using `isDbAvailable()` or `isUvAvailable()`. Skip non-critical services with warnings instead of crashing on startup.
 
 See `.ruler/graceful-degradation.md` for detailed patterns.
 
@@ -754,26 +702,9 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 ## Rules
 
-1. **Suspend/resume for obligations.** Implement workflow suspension when PDP returns `requireBio` obligation:
-   ```typescript
-   await runRegistry.register(runId, {
-     resume: async ({ resumeData }) => {
-       await runner.resume(resumeData);
-     },
-     cancel: async () => {
-       abortController.abort();
-     },
-     abortController,
-   });
-   ```
+1. **Suspend/resume for obligations.** Implement workflow suspension when PDP returns `requireBio` obligation. Register run with `resume` and `cancel` callbacks plus `abortController` via `runRegistry.register()`.
 
-2. **Timeout enforcement.** Enforce timeouts at workflow level (default: 30 minutes):
-   ```typescript
-   const timeout = setTimeout(() => {
-     abortController.abort();
-     workflowRepo.updateRun(runId, { status: "failed", errorMessage: "timeout" });
-   }, WORKFLOW_TIMEOUT_MS);
-   ```
+2. **Timeout enforcement.** Enforce timeouts at workflow level (default: 30 minutes). Use `setTimeout` to abort controller and update run status to "failed" with timeout error message.
 
 3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
 
@@ -813,27 +744,11 @@ Measure everything, log selectively, expose metrics consistently. Observability 
 
 ## Rules
 
-1. **Metrics registration.** Register all metrics in `packages/api/src/metrics.ts`:
-   ```typescript
-   export const myMetric = new client.Counter({
-     name: "my_metric_total",
-     help: "Description",
-     labelNames: ["label1", "label2"] as const,
-     registers: [metricsRegistry],
-   });
-   ```
+1. **Metrics registration.** Register all metrics in `packages/api/src/metrics.ts`. Use Prometheus client with `Counter`, `Histogram`, or `Gauge` constructors. Include `name` (with `_total` suffix for counters), `help` description, `labelNames` array, and `registers` array containing the metrics registry.
 
 2. **Domain-Local Metrics.** Define metrics within the package that owns the domain (e.g., `packages/voice/src/metrics.ts`), not in a central monolith. Export them for registration in the main application entry point to keep packages self-contained.
 
-3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
-   ```typescript
-   logger.error("workflow_failed", {
-     runId,
-     workflowId,
-     error: error.message,
-     duration: durationMs,
-   });
-   ```
+3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies. Include context fields like `runId`, `workflowId`, `error`, `duration` in the log object.
 
 4. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
 
@@ -880,17 +795,9 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 9. **Performance.** All queries must complete in <10ms (p99). Use indexes for all WHERE clauses. Prefer batch operations over loops. Keep transactions short (<100ms).
 
-10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance. Example:
-    ```typescript
-    // ✅ CORRECT: Single SQL statement
-    await db.update(table)
-      .set({ confidence: sql`excluded.confidence` })
-      .from(sql`(VALUES ${sql.join(updates.map(u => sql`(${u.id}, ${u.confidence})`), sql`, `)}) AS excluded(id, confidence)`)
-      .where(sql`table.id = excluded.id`);
-    
-    // ❌ INCORRECT: Promise.all loop (many roundtrips)
-    await Promise.all(updates.map(u => updateNodeConfidence(u.id, u.confidence)));
-    ```
+10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance.
+
+11. **SQL-level JSON filtering.** When filtering rows by JSONB properties, use SQL-level filtering (`sql\`json_extract(column, '$.path') LIKE '%pattern%'\``) instead of fetching all rows and filtering in memory. This reduces data transfer and improves performance.
 
 
 
@@ -938,17 +845,7 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 20. **Static prerendering.** Enable static prerendering via `prerender.enabled` in vite config. Use `autoStaticPathsDiscovery` to automatically discover static routes. Use `crawlLinks` to prerender linked pages. Exclude dynamic routes (with `$` params) and layout routes (prefixed with `_`) from automatic discovery.
 
-21. **Variable-Based Dynamic Imports.** To prevent server-only code leakage into client bundles, imports of server packages (db, agent, policy) in API routes MUST use variable-based dynamic imports:
-    ```typescript
-    // ✅ CORRECT
-    const dbPkg = "@alfred/db";
-    const { db } = await import(dbPkg);
-
-    // ❌ INCORRECT (Vite will bundle this)
-    const { db } = await import("@alfred/db");
-    ```
-
-    **Exception:** For *local* server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
+21. **Variable-Based Dynamic Imports.** To prevent server-only code leakage into client bundles, imports of server packages (db, agent, policy) in API routes MUST use variable-based dynamic imports. Assign package name to variable first, then import: `const pkg = "@alfred/db"; const { db } = await import(pkg)`. Exception: For local server-only files (e.g., `./ascii`), use static string literals `await import("./ascii")` instead of variables to ensure bundlers can resolve the path during analysis.
 
 22. **Browser-Only Libraries.** Libraries that access `window` or `document` on import (e.g., `xterm`, `canvas-confetti`) MUST be imported dynamically inside `useEffect` or `componentDidMount`. Never import them at the top level of a component file.
 
@@ -1175,38 +1072,14 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 ## Implementation Reference
 
 ### Tailwind v4 Theme Configuration
-```css
-@theme {
-  --color-void: oklch(0.05 0 0);
-  --color-void-surface: oklch(0.14 0 0);
-  --color-biolum: oklch(0.99 0 0);
-  --color-biolum-dim: oklch(0.70 0 0);
-  --color-biolum-faint: oklch(0.40 0 0);
 
-  --font-sans: "Inter Tight", "Geist Sans", "San Francisco", system-ui, sans-serif;
-  
-  --radius-3xl: 24px;
-  --radius-full: 9999px;
-
-  --ease-fluid: cubic-bezier(0.25, 0.4, 0.25, 1);
-}
-```
+Define colors in `@theme` block: `--color-void` (`oklch(0.05 0 0)`), `--color-void-surface` (`oklch(0.14 0 0)`), `--color-biolum` (`oklch(0.99 0 0)`), `--color-biolum-dim` (`oklch(0.70 0 0)`), `--color-biolum-faint` (`oklch(0.40 0 0)`). Set font to "Inter Tight", "Geist Sans", or "San Francisco". Define `--radius-3xl: 24px`, `--radius-full: 9999px`, `--ease-fluid: cubic-bezier(0.25, 0.4, 0.25, 1)`.
 
 ### Usage Examples
 
-**Standard Container (HUD):**
-```tsx
-<div className="rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl p-6">
-  <h2 className="text-biolum tracking-tighter">Signal</h2>
-</div>
-```
+**Standard Container (HUD):** Use `rounded-3xl border border-white/10 bg-void-surface/40 backdrop-blur-xl` for containers. Apply `text-biolum tracking-tighter` to headings.
 
-**Primary Action:**
-```tsx
-<Button className="rounded-full bg-biolum text-void hover:bg-biolum/90">
-  Action
-</Button>
-```
+**Primary Action:** Use `rounded-full bg-biolum text-void hover:bg-biolum/90` for primary buttons.
 
 
 
@@ -1268,6 +1141,10 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 
 7. **Scoped reflections first.** Reflection fetchers must try user-scoped and `runtime:<id>` resources before falling back to global nodes so Mindscape never shows an empty list by default.
 
+8. **Entity fact label parsing.** Use `parseEntityFactLabel` from `@alfred/knowledge/entity` to extract entity type and label from fact node labels formatted as `[entity:type] label` or `(entity:type) label`. Never duplicate this parsing logic—always import from the shared utility.
+
+9. **Visualization routers.** Knowledge visualization routers (`trpc.knowledge.visualize`) must: (a) extract entities via `@alfred/knowledge/extractor`, (b) persist via `upsertNodes`/`upsertEdges`, (c) filter entity facts using SQL-level JSON filtering (`json_extract(properties, '$.source') LIKE '%:entity%'`) instead of in-memory filtering, (d) return bounded subgraphs with nodes and edges for UI rendering.
+
 
 
 <!-- Source: .ruler/30-mindscape.md -->
@@ -1285,6 +1162,12 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 5. **Event-Driven Activations.** Use `dispatchMindscapeEvent` to visualize system activity. Never manipulate `activeEdges` directly from functional components. Visualization must be a side effect of real events (Reality-Driven UI).
 
 6. **Context Trace.** Visually highlight graph edges involved in active context retrieval ("Cognitive Pulse") to show the user *why* the system knows about dependencies.
+
+7. **Concept node spawning.** When spawning concept nodes from graph traversal or visualization, use radial positioning around the parent node: `angle = (index / totalNodes) * 2 * Math.PI`, `x = parentPos.x + radius * Math.cos(angle)`, `y = parentPos.y + radius * Math.sin(angle)`. Use `MINDSCAPE_CONFIG.SPAWN_RADIUS` constant from `@/config/mindscape` for consistent spacing.
+
+8. **Edge deduplication.** When merging edges from visualization results, use `Map<string, Edge>` keyed by edge ID to prevent duplicates. Merge new edges into existing edge map before calling `setEdges(Array.from(edgeMap.values()))`.
+
+9. **Async action error handling.** Command palette actions that call async tRPC mutations must wrap execution in try-catch blocks. Surface errors via toast notifications (`toast.error()`) and log with structured context (`console.error("action_failed", error)`). Never silently swallow errors from async actions.
 
 
 
@@ -1505,26 +1388,7 @@ The application must gracefully handle missing external dependencies (database, 
 
 ### 1. Database Availability Checks
 
-**Pattern**: Check database availability before starting DB-dependent services.
-
-```typescript
-import { isDbAvailable } from "@alfred/api/utils/service-availability";
-
-// Check before starting DB-dependent workers
-isDbAvailable()
-  .then((dbOk) => {
-    if (!dbOk) {
-      logger.warn("db_unavailable_skipping_services", {
-        message: "Database unavailable - skipping DB-dependent services",
-      });
-      return;
-    }
-    // Start DB-dependent services
-  })
-  .catch((error) => {
-    logger.warn("db_availability_check_error", { error });
-  });
-```
+**Pattern**: Check database availability before starting DB-dependent services. Use `isDbAvailable()` from `@alfred/api/utils/service-availability`. If unavailable, log warning and skip service initialization. Handle errors in catch block.
 
 **When to use**:
 - Background workers (codex cleanup, plan resume, workflow rehydration)
@@ -1537,25 +1401,7 @@ isDbAvailable()
 
 ### 2. External Service Availability Checks
 
-**Pattern**: Check for external tools before initializing services.
-
-```typescript
-import { isUvAvailable } from "@alfred/api/utils/service-availability";
-
-if (isUvAvailable()) {
-  initializeVoicePools()
-    .then(() => {
-      startVoiceStreamingPrototype();
-    })
-    .catch((error) => {
-      logger.error("voice_pools_init_failed", { error });
-    });
-} else {
-  logger.warn("voice_pools_skipped_uv_missing", {
-    message: "UV not found - skipping voice pool initialization",
-  });
-}
-```
+**Pattern**: Check for external tools before initializing services. Use `isUvAvailable()` or similar availability checks. If unavailable, log warning and skip initialization. Wrap service initialization in try-catch to handle failures gracefully.
 
 **When to use**:
 - Optional features (voice pools, local models)
@@ -1564,26 +1410,7 @@ if (isUvAvailable()) {
 
 ### 3. Error Classification
 
-**Pattern**: Use type guards to classify errors and handle appropriately.
-
-```typescript
-import { isDbConnectionError, isTransientError } from "@alfred/api/utils/service-availability";
-
-try {
-  await dbOperation();
-} catch (error) {
-  if (isDbConnectionError(error)) {
-    // Return graceful fallback
-    return { session: null, user: null };
-  }
-  if (isTransientError(error)) {
-    // Retry logic
-    return retry();
-  }
-  // Re-throw permanent errors
-  throw error;
-}
-```
+**Pattern**: Use type guards (`isDbConnectionError`, `isTransientError`) to classify errors and handle appropriately. Return graceful fallbacks for connection errors, retry transient errors, re-throw permanent errors.
 
 **Error Types**:
 - **Database connection errors**: ECONNREFUSED, password auth failed, connection refused
@@ -1592,21 +1419,7 @@ try {
 
 ### 4. SSR-Safe Error Handling
 
-**Pattern**: Wrap handlers with error boundaries for SSR.
-
-```typescript
-async function safeHandler(request: Request): Promise<Response> {
-  try {
-    return await handler(request);
-  } catch (error) {
-    if (isDbConnectionError(error)) {
-      // Return graceful response instead of crashing SSR
-      return Response.json({ session: null, user: null }, { status: 200 });
-    }
-    throw error;
-  }
-}
-```
+**Pattern**: Wrap handlers with try-catch for SSR. Use `isDbConnectionError()` to detect DB failures and return graceful responses (e.g., `Response.json({ session: null, user: null }, { status: 200 })`) instead of crashing SSR.
 
 **When to use**:
 - Route handlers in TanStack Start
@@ -1617,55 +1430,25 @@ async function safeHandler(request: Request): Promise<Response> {
 
 ### ❌ Module-Level DB Access
 
-```typescript
-// BAD: DB access at module level crashes during SSR
-import { db } from "@alfred/db";
-const result = await db.select().from(users); // Crashes if DB unavailable
-```
+Never access DB at module level (top-level await). This crashes during SSR if DB is unavailable. Always check availability or wrap in functions.
 
 ### ❌ Unhandled Promise Rejections
 
-```typescript
-// BAD: Unhandled rejection crashes the process
-resumeInterruptedPlans(tools); // No error handling
-```
+Never call async functions without error handling. Unhandled rejections crash the process. Always wrap in try-catch or use `.catch()`.
 
 ### ✅ Lazy Initialization
 
-```typescript
-// GOOD: Check availability before use
-async function getData() {
-  if (!(await isDbAvailable())) {
-    return null;
-  }
-  return await db.select().from(users);
-}
-```
+Check availability before use. Use `isDbAvailable()` or similar checks inside async functions before performing DB operations.
 
 ## Testing
 
 ### Unit Tests
 
-Test graceful degradation scenarios:
-
-```typescript
-it("should skip DB-dependent services when DB unavailable", async () => {
-  resetDbAvailability();
-  initApiServices();
-  // Verify services are skipped, not crashed
-});
-```
+Test graceful degradation scenarios. Reset availability state, initialize services, verify services are skipped (not crashed) when dependencies unavailable.
 
 ### Integration Tests
 
-Test app startup without dependencies:
-
-```typescript
-it("should render home page without DB", async () => {
-  // Start server without DB
-  // Verify SSR completes successfully
-});
-```
+Test app startup without dependencies. Start server without DB, verify SSR completes successfully, verify optional features are skipped with warnings.
 
 ## Related Rules
 

@@ -1,6 +1,8 @@
 import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { z } from "zod";
 
+export type MindscapeUiMessage = z.infer<typeof uiMessageSchema>;
+
 const graphMappingSchema = z
   .object({
     dbId: z.string().min(1).optional(),

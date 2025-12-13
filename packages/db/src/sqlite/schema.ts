@@ -11,13 +11,19 @@ const statements = [
     sanitized INTEGER NOT NULL DEFAULT 0,
     label_tsvector TEXT,
     embedding BLOB,
+    embedding_quantized BLOB,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    last_accessed_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(resource, hash)
   );`,
   "ALTER TABLE memory_nodes ADD COLUMN label_tsvector TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
+  "ALTER TABLE memory_nodes ADD COLUMN embedding_quantized BLOB;",
   "ALTER TABLE memory_nodes ADD COLUMN sanitized INTEGER DEFAULT 0;",
+  "ALTER TABLE memory_nodes ADD COLUMN access_count INTEGER DEFAULT 0;",
+  "ALTER TABLE memory_nodes ADD COLUMN last_accessed_at TEXT;",
   `CREATE TABLE IF NOT EXISTS memory_edges (
     id TEXT PRIMARY KEY,
     resource TEXT NOT NULL,
@@ -28,8 +34,12 @@ const statements = [
     weight REAL DEFAULT 1.0,
     metadata TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    valid_from TEXT,
+    valid_to TEXT,
     UNIQUE(resource, hash)
   );`,
+  "ALTER TABLE memory_edges ADD COLUMN valid_from TEXT;",
+  "ALTER TABLE memory_edges ADD COLUMN valid_to TEXT;",
   `CREATE INDEX IF NOT EXISTS memory_edges_from_idx
     ON memory_edges(resource, from_id, kind);`,
   `CREATE INDEX IF NOT EXISTS memory_edges_to_idx

@@ -1,6 +1,6 @@
+import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { AssistantUIMessage } from "@alfred/agent";
-import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type AssistantActionStatus =
@@ -106,7 +106,6 @@ export function useAssistantStream(
     onResponse,
     api: apiBase = "/api/assistant",
   } = options;
-  options;
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId ?? null
   );
@@ -166,9 +165,15 @@ export function useAssistantStream(
   // Cast messages for AI SDK compatibility - ALFRED's AssistantUIMessage extends UIMessage
   const chat = useChat({
     transport,
-    initialMessages: initialMessages ?? [],
     onError,
   });
+
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      chat.setMessages(initialMessages as Parameters<typeof chat.setMessages>[0]);
+    }
+    // We only want to run this when initialMessages changes.
+  }, [chat, initialMessages]);
 
   useEffect(() => {
     if (chat.error && onError) {

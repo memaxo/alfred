@@ -25,11 +25,15 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
     - [x] Implement the "pause/resume" pattern in `packages/api/src/routers/deploy.ts` **and** `packages/api/src/routers/workflow.ts`, plus propagate structured obligation events through the SSE transport and Mindscape UI.
     - [x] Share a `createWorkflowSuspension` helper (metrics + timeout) across TRPC + SSE routes and emit `resumeEvents` metadata so clients know which `workflow.resume` event to deliver.
     - [x] Add workflow suspension cleanup worker + Mindscape obligation dialog that surfaces reason/metadata and new `withObligationRetry` client helper for TRPC flows.
-- [ ] **Part 3: Mindscape Visualization**
-    - [ ] Create `ConceptNode` component in `apps/web`.
-    - [ ] Create `RelationEdge` component (if standard edges aren't enough).
-    - [ ] Implement `trpc.knowledge.visualize` (or similar) to fetch graph neighborhood.
-    - [ ] Add "Visualize Knowledge" action to Mindscape (e.g., via Command Palette or context menu on text notes).
+- [x] **Part 3: Mindscape Visualization**
+    - [x] Create `ConceptNode` component in `apps/web`.
+    - [x] Implement `trpc.knowledge.visualize` to extract entities and return visualization data.
+    - [x] Add "Visualize Knowledge" action to Mindscape Command Palette.
+    - [x] Spawn `concept` nodes from graph traversal when entity facts are encountered.
+    - [x] Extract shared constants (`SPAWN_RADIUS`) to `config/mindscape.ts`.
+    - [x] Extract `parseEntityFactLabel` utility to `@alfred/knowledge/entity`.
+    - [x] Optimize entity fact queries with SQL-level JSON filtering.
+    - [x] Add comprehensive test coverage including edge cases.
 
 ## Surprises & Discoveries
 
@@ -46,7 +50,9 @@ This phase addresses three critical areas to deepen ALFRED's intelligence and se
 
 ## Outcomes & Retrospective
 
-*(Populate during execution)*
+- Implemented `trpc.knowledge.visualize` to extract entities via `@alfred/knowledge`, persist them, and return a bounded concept subgraph (`packages/api/src/routers/knowledge.ts`).
+- Wired Mindscape Command Palette action “Visualize Knowledge” to call the procedure and spawn concept nodes + edges (`apps/web/src/config/actions.ts`, `apps/web/src/components/mindscape/command-palette.tsx`).
+- Updated Mindscape traversal to auto-render entity facts as `concept` nodes when expanding the graph (`apps/web/src/hooks/use-mindscape-traversal.ts`).
 
 ## Context and Orientation
 

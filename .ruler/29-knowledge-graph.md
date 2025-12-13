@@ -13,3 +13,7 @@
 6. **Test every hot query.** Knowledge hot-path queries require Bun/sqlite regression tests that seed deterministic `memory_nodes`, clean up after each run, and assert ordering.
 
 7. **Scoped reflections first.** Reflection fetchers must try user-scoped and `runtime:<id>` resources before falling back to global nodes so Mindscape never shows an empty list by default.
+
+8. **Entity fact label parsing.** Use `parseEntityFactLabel` from `@alfred/knowledge/entity` to extract entity type and label from fact node labels formatted as `[entity:type] label` or `(entity:type) label`. Never duplicate this parsing logic—always import from the shared utility.
+
+9. **Visualization routers.** Knowledge visualization routers (`trpc.knowledge.visualize`) must: (a) extract entities via `@alfred/knowledge/extractor`, (b) persist via `upsertNodes`/`upsertEdges`, (c) filter entity facts using SQL-level JSON filtering (`json_extract(properties, '$.source') LIKE '%:entity%'`) instead of in-memory filtering, (d) return bounded subgraphs with nodes and edges for UI rendering.

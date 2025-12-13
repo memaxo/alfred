@@ -1,10 +1,20 @@
 import { beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { voiceRouter } from "@alfred/api/routers/voice";
 import { RuntimeContext } from "@alfred/type/runtime-context";
+import { ensureFfmpegAvailable } from "@alfred/voice/audio/codec";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import * as config from "@alfred/voice/services/config";
 import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
+
+const hasFfmpeg = (() => {
+  try {
+    ensureFfmpegAvailable();
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 // Mock Config
 spyOn(config, "getVoiceProvider").mockReturnValue("maya1");
@@ -38,7 +48,9 @@ describe("Level 5 E2E: Voice Physical Layer", () => {
     console.log(`[Physical] GPU Available: ${hasGpu}`);
   });
 
-  it("processes synthetic audio signal", async () => {
+  const runIt = hasFfmpeg ? it : it.skip;
+
+  runIt("processes synthetic audio signal", async () => {
     // 1. Generate Signal (440Hz sine wave, 1 sec)
     const pcmBuffer = SyntheticSignal.sine(440, 1000);
     const audioBase64 = pcmBuffer.toString("base64");

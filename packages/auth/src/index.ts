@@ -1,11 +1,11 @@
 import { db } from "@alfred/db";
 import * as schema from "@alfred/db/schema/auth";
 import { expo } from "@better-auth/expo";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { passkey } from "better-auth/plugins/passkey";
-import { reactStartCookies } from "better-auth/react-start";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { autoGrantBiometricIfBypassed, setBiometricTicket } from "./biometric";
 
 const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
@@ -82,6 +82,6 @@ export const auth = betterAuth({
       },
     },
     expo(),
-    reactStartCookies(),
+    tanstackStartCookies(),
   ],
 });

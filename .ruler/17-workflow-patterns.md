@@ -6,26 +6,9 @@ Workflows are durable, resumable, and observable. Follow existing patterns in `p
 
 ## Rules
 
-1. **Suspend/resume for obligations.** Implement workflow suspension when PDP returns `requireBio` obligation:
-   ```typescript
-   await runRegistry.register(runId, {
-     resume: async ({ resumeData }) => {
-       await runner.resume(resumeData);
-     },
-     cancel: async () => {
-       abortController.abort();
-     },
-     abortController,
-   });
-   ```
+1. **Suspend/resume for obligations.** Implement workflow suspension when PDP returns `requireBio` obligation. Register run with `resume` and `cancel` callbacks plus `abortController` via `runRegistry.register()`.
 
-2. **Timeout enforcement.** Enforce timeouts at workflow level (default: 30 minutes):
-   ```typescript
-   const timeout = setTimeout(() => {
-     abortController.abort();
-     workflowRepo.updateRun(runId, { status: "failed", errorMessage: "timeout" });
-   }, WORKFLOW_TIMEOUT_MS);
-   ```
+2. **Timeout enforcement.** Enforce timeouts at workflow level (default: 30 minutes). Use `setTimeout` to abort controller and update run status to "failed" with timeout error message.
 
 3. **Cancellation support.** Always propagate AbortSignal through async chains and clean up in finally blocks.
 

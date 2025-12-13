@@ -256,7 +256,6 @@ function calculateRelevance(
  * Generate query refinement suggestions.
  */
 function generateRefinementSuggestions(
-  query: string,
   queryTerms: string[],
   documents: EvaluatorDocument[]
 ): string[] {
@@ -366,7 +365,7 @@ export function evaluateRetrieval(
       coverage < config.minCoverage
         ? "Insufficient query term coverage"
         : "Ambiguous results quality";
-    suggestions = generateRefinementSuggestions(query, queryTerms, documents);
+    suggestions = generateRefinementSuggestions(queryTerms, documents);
   }
 
   return {

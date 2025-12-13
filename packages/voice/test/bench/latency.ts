@@ -7,6 +7,24 @@ import {
 } from "../../src/server/socket";
 import { VoiceStreamClient } from "../../src/stream";
 
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) {
+    throw new Error("percentile_empty");
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const clamped = Math.min(100, Math.max(0, p));
+  const rank = (clamped / 100) * (sorted.length - 1);
+  const low = Math.floor(rank);
+  const high = Math.ceil(rank);
+  if (low === high) {
+    return sorted[low] ?? sorted[sorted.length - 1] ?? 0;
+  }
+  const lowValue = sorted[low] ?? 0;
+  const highValue = sorted[high] ?? lowValue;
+  const t = rank - low;
+  return lowValue + (highValue - lowValue) * t;
+}
+
 // Mock dependencies
 const mockHooks: VoiceSocketHooks = {
   onSessionStart: async () => "reg-1",
@@ -40,7 +58,7 @@ const registry = new VoiceRegistry(mockSttPool as any, mockTtsPool as any);
 const handler = new VoiceSocketHandler(registry, mockHooks);
 
 const PORT = 8899;
-const server = Bun.serve({
+const server = Bun.serve<any>({
   port: PORT,
   websocket: {
     open(ws) {
@@ -68,62 +86,69 @@ describe("Latency Benchmark", () => {
   });
 
   it("measures round trip latency", async () => {
-    const client = new VoiceStreamClient({ url: `ws://localhost:${PORT}` });
+    const oldFfmpegPath = process.env.VOICE_FFMPEG_PATH;
+    process.env.VOICE_FFMPEG_PATH = "/__missing__/ffmpeg";
+    let resolveNextTranscript: ((timestampMs: number) => void) | null = null;
+    try {
+      const client = new VoiceStreamClient(
+        { url: `ws://localhost:${PORT}` },
+        {
+          onPartialTranscript: (_ev) => {
+            if (!resolveNextTranscript) {
+              return;
+            }
+            const resolve = resolveNextTranscript;
+            resolveNextTranscript = null;
+            resolve(performance.now());
+          },
+          onError: (ev) => {
+            throw new Error(`voice_stream_client_error:${ev.message}`);
+          },
+        }
+      );
 
-    const _start = performance.now();
-    await client.startSession({ language: "en" });
-    const _connected = performance.now();
+      await client.startSession({ language: "en" });
 
-    const _chunksSent = 0;
-    const _firstChunkAck = 0;
+      const runs = 25;
+      const latenciesMs: number[] = [];
+      const audio = new Uint8Array(320); // 20ms PCM16 @ 16kHz mono
 
-    const _chunkPromise = new Promise<void>((_resolve) => {
-      // We can't easily hook into client private handler, so we rely on server logs or side effects?
-      // Actually, VoiceStreamClient accepts handlers!
-    });
+      for (let i = 0; i < runs; i++) {
+        const receivedAt = new Promise<number>((resolve, reject) => {
+          resolveNextTranscript = resolve;
+          setTimeout(() => {
+            if (resolveNextTranscript === resolve) {
+              resolveNextTranscript = null;
+              reject(new Error("timeout_waiting_for_partial_transcript"));
+            }
+          }, 2000);
+        });
 
-    // Re-instantiate with handlers
-    await client.close();
-
-    let transcriptReceived = 0;
-    const client2 = new VoiceStreamClient(
-      { url: `ws://localhost:${PORT}` },
-      {
-        onPartialTranscript: (ev) => {
-          // console.log("Got transcript:", ev);
-          transcriptReceived = performance.now();
-        },
-        onError: (err) => {
-          console.error("Client error:", err);
-        },
+        const sendAt = performance.now();
+        await client.sendAudioChunk({
+          audio,
+          mimeType: "audio/pcm",
+          emitPartial: true,
+        });
+        const recvAt = await receivedAt;
+        latenciesMs.push(recvAt - sendAt);
       }
-    );
 
-    await client2.startSession();
+      const p50 = percentile(latenciesMs, 50);
+      const p95 = percentile(latenciesMs, 95);
 
-    const sendTime = performance.now();
-    // Send 20ms of audio (320 bytes for 16kHz 16-bit mono)
-    const audio = new Uint8Array(320);
-    await client2.sendAudioChunk({
-      audioBase64: Buffer.from(audio).toString("base64"),
-      mimeType: "audio/pcm",
-      emitPartial: true, // Explicitly request partial
-    });
+      // Local loopback + mocked 10ms "inference" should be comfortably below 50ms.
+      expect(p95).toBeLessThan(50);
+      expect(p50).toBeLessThan(35);
 
-    // Wait for transcript
-    let loops = 0;
-    while (transcriptReceived === 0 && performance.now() - sendTime < 2000) {
-      await new Promise((r) => setTimeout(r, 10));
-      loops++;
+      await client.close();
+    } finally {
+      if (oldFfmpegPath === undefined) {
+        // biome-ignore lint/performance/noDelete: test cleanup
+        delete process.env.VOICE_FFMPEG_PATH;
+      } else {
+        process.env.VOICE_FFMPEG_PATH = oldFfmpegPath;
+      }
     }
-    // console.log("Loops waited:", loops);
-
-    if (transcriptReceived > 0) {
-      expect(transcriptReceived - sendTime).toBeLessThan(50); // Expect < 50ms for local loopback + 10ms inference
-    } else {
-      throw new Error("Timeout waiting for transcript");
-    }
-
-    await client2.close();
   });
 });

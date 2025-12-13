@@ -15,7 +15,13 @@ const serverOnlyRegex = [
   /^@alfred\/policy(?:\/.*)?$/,
   /^@alfred\/db(?:\/.*)?$/,
 ];
-const serverOnlyPackages = ["@alfred/agent", "@alfred/policy", "@alfred/db"];
+const serverOnlyPackages = [
+  "@alfred/agent",
+  "@alfred/auth",
+  "@alfred/policy",
+  "@alfred/db",
+  "@alfred/runtime",
+];
 
 // Browser-only packages that use WebGPU/Canvas APIs - must be externalized from SSR
 const browserOnlyRegex = [/^@alfred\/cortex(?:\/.*)?$/];

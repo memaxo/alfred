@@ -34,7 +34,8 @@ export default defineConfig({
   // Reporter configuration for comprehensive analysis
   reporter: [
     ["list"],
-    ["html", { outputFolder: "./test-results/html-report", open: "never" }],
+    // Playwright requires the HTML report folder to be outside `outputDir`.
+    ["html", { outputFolder: "./playwright-report", open: "never" }],
     ["json", { outputFile: "./test-results/results.json" }],
   ],
   use: {

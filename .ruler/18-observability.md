@@ -6,27 +6,11 @@ Measure everything, log selectively, expose metrics consistently. Observability 
 
 ## Rules
 
-1. **Metrics registration.** Register all metrics in `packages/api/src/metrics.ts`:
-   ```typescript
-   export const myMetric = new client.Counter({
-     name: "my_metric_total",
-     help: "Description",
-     labelNames: ["label1", "label2"] as const,
-     registers: [metricsRegistry],
-   });
-   ```
+1. **Metrics registration.** Register all metrics in `packages/api/src/metrics.ts`. Use Prometheus client with `Counter`, `Histogram`, or `Gauge` constructors. Include `name` (with `_total` suffix for counters), `help` description, `labelNames` array, and `registers` array containing the metrics registry.
 
 2. **Domain-Local Metrics.** Define metrics within the package that owns the domain (e.g., `packages/voice/src/metrics.ts`), not in a central monolith. Export them for registration in the main application entry point to keep packages self-contained.
 
-3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies:
-   ```typescript
-   logger.error("workflow_failed", {
-     runId,
-     workflowId,
-     error: error.message,
-     duration: durationMs,
-   });
-   ```
+3. **Structured logging.** Use structured logs (JSON) for errors, security events, and performance anomalies. Include context fields like `runId`, `workflowId`, `error`, `duration` in the log object.
 
 4. **Log redaction.** Never log passwords, tokens, API keys, PII, or full request/response bodies.
 

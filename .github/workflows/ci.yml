@@ -39,8 +39,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const core = require('@actions/core');
-
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const eventName = context.eventName;
@@ -192,7 +190,7 @@ jobs:
     needs: 
       - changes
       - ruler
-    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'db' }}
+    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'tests' || needs.changes.outputs.lane == 'db' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -216,7 +214,7 @@ jobs:
     needs:
       - changes
       - ruler
-    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'db' }}
+    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'tests' || needs.changes.outputs.lane == 'db' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -433,6 +431,20 @@ jobs:
       - e2e
     if: ${{ needs.changes.outputs.lane == 'db' }}
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: alfred
+          POSTGRES_PASSWORD: alfred
+          POSTGRES_DB: alfred
+        options: >-
+          --health-cmd "pg_isready -U alfred" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://alfred:alfred@localhost:5432/alfred
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -447,5 +459,5 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Dry-run migrations
-        run: bun run db:migrate -- --dry-run
+      - name: Run migrations (ephemeral DB smoke)
+        run: bun run db:migrate

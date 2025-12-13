@@ -11,6 +11,7 @@ import {
 } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
 import { type WorkflowNodeData, useMindscapeStore } from "@/store/mindscape";
+import type { MindscapeUiMessage } from "@/store/mindscape.schemas";
 
 type StreamInput = WorkflowStreamInput & {
   context: {
@@ -35,13 +36,15 @@ function WorkflowSubscription({
   const clearContextReceipt = useMindscapeStore(
     (state) => state.clearContextReceipt
   );
-  const resolveCurrentMessages = () => {
+  const resolveCurrentMessages = (): MindscapeUiMessage[] => {
     const node = useMindscapeStore
       .getState()
       .nodes.find((n) => n.id === nodeId);
     const nodeData = node?.data as WorkflowNodeData | undefined;
     const nodeMessages = nodeData?.messages;
-    return Array.isArray(nodeMessages) ? nodeMessages : [];
+    return Array.isArray(nodeMessages)
+      ? (nodeMessages as MindscapeUiMessage[])
+      : [];
   };
 
   const [streamInput, setStreamInput] = useState<StreamInput | null>(null);
@@ -168,12 +171,7 @@ function WorkflowSubscription({
       }
       const existing = resolveCurrentMessages();
       updateArtifactData(nodeId, {
-        messages: [...existing, ...messages] as Array<{
-          id: string;
-          role: "system" | "user" | "assistant";
-          parts: unknown[];
-          metadata?: unknown;
-        }>,
+        messages: [...existing, ...messages],
       });
     },
     onError(err) {

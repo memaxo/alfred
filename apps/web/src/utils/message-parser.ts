@@ -10,6 +10,7 @@ import {
   extractStructuredData,
   isDataPartNamed,
   isToolResultPart,
+  type ToolResultPart,
 } from "@alfred/ui/chat/parts";
 
 type AgentMessage = AssistantUIMessage | OrchestratorUIMessage;
@@ -177,7 +178,9 @@ export function parseStructuredMessage(message: AgentMessage): ParsedMessage {
       }
     } else if (isToolResultPart(part)) {
       // Handle tool-result parts
-      const toolResultPart = part;
+      // Type guard is runtime-correct, but we cast due to ALFRED's custom tool-result
+      // part type not existing in the AI SDK's UIMessage typings.
+      const toolResultPart = part as unknown as ToolResultPart;
       const output = toolResultPart.output;
       if (output && typeof output === "object") {
         const obj = output as Record<string, unknown>;

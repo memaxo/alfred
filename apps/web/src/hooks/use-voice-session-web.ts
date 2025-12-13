@@ -14,6 +14,10 @@ import { useVoiceProtocol } from "./use-voice-protocol";
 const TELEMETRY_INTERVAL_MS = 5000;
 
 export function useVoiceSessionWeb() {
+  const isTestMode =
+    import.meta.env.VITE_TEST_MODE === "true" ||
+    import.meta.env.MINDSCAPE_TEST === "1";
+
   const sttMutation = trpc.voice.sttTranscribe.useMutation();
   const ttsMutation = trpc.voice.ttsSynthesize.useMutation();
   const s2sMutation = trpc.voice.speechToSpeech.useMutation();
@@ -80,11 +84,13 @@ export function useVoiceSessionWeb() {
   // --- Preferences & Session Sync ---
   const { data: prefs } = trpc.user.getPreferences.useQuery(undefined, {
     staleTime: 60_000,
+    enabled: !isTestMode,
   });
   const { data: sessionData, refetch: refetchSessions } =
     trpc.voice.sessions.useQuery(undefined, {
       staleTime: 5000,
       refetchOnWindowFocus: false,
+      enabled: !isTestMode,
     });
 
   const syncSessionInfo = useCallback(

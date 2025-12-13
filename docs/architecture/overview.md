@@ -112,7 +112,7 @@ This is the **integration layer** that makes all other packages work together.
 ### Tool Packages
 
 **`packages/agent/`** - AI SDK tool definitions and registries
-- Assistant tools (note, remind, timer, book, focus, web, handoff, home)
+- Assistant tools (note, remind, timer, book, focus, web, handoff, home, preference_get, preference_set)
 - Orchestrator tools (codex, docker, droid, git, proxmox, router, ticket, web)
 - Tool registry wiring for AI SDK v6 and shared helpers (including Linear integration).
 

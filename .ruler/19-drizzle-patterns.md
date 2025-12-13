@@ -24,15 +24,7 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
 
 9. **Performance.** All queries must complete in <10ms (p99). Use indexes for all WHERE clauses. Prefer batch operations over loops. Keep transactions short (<100ms).
 
-10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance. Example:
-    ```typescript
-    // ✅ CORRECT: Single SQL statement
-    await db.update(table)
-      .set({ confidence: sql`excluded.confidence` })
-      .from(sql`(VALUES ${sql.join(updates.map(u => sql`(${u.id}, ${u.confidence})`), sql`, `)}) AS excluded(id, confidence)`)
-      .where(sql`table.id = excluded.id`);
-    
-    // ❌ INCORRECT: Promise.all loop (many roundtrips)
-    await Promise.all(updates.map(u => updateNodeConfidence(u.id, u.confidence)));
-    ```
+10. **Bulk updates.** For bulk updates of the same column (e.g., confidence decay), prefer single SQL `UPDATE ... FROM (VALUES ...)` statement over `Promise.all` loops. This reduces DB roundtrips and improves performance.
+
+11. **SQL-level JSON filtering.** When filtering rows by JSONB properties, use SQL-level filtering (`sql\`json_extract(column, '$.path') LIKE '%pattern%'\``) instead of fetching all rows and filtering in memory. This reduces data transfer and improves performance.
 

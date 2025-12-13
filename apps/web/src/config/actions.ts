@@ -5,6 +5,7 @@ import {
   EyeOff,
   Maximize2,
   MessageSquare,
+  Network,
   Pin,
   RotateCw,
   Trash2,
@@ -21,6 +22,7 @@ export type ContextActionId =
   | "summarize"
   | "clear-history"
   | "hide"
+  | "visualize"
   | "ask";
 
 export type ContextAction = {
@@ -50,6 +52,14 @@ export const CONTEXT_ACTIONS: ContextAction[] = [
     validNodeTypes: "all",
     shortcut: "A",
     aliases: ["chat", "query", "question", "discuss"],
+  },
+  {
+    id: "visualize",
+    label: "Visualize Knowledge",
+    icon: Network,
+    validNodeTypes: ["note", "knowledge", "concept"],
+    shortcut: "V",
+    aliases: ["graph", "concepts", "entities", "extract"],
   },
   {
     id: "pin",

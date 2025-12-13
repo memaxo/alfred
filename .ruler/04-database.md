@@ -8,34 +8,9 @@
 6. **Schema sync.** Keep Drizzle schema files (`packages/db/src/schema/*.ts`) aligned with migrations. Vector dimensions must use `EMBEDDING_DIM` from `@alfred/embed` (single source of truth). When changing vector dimensions, drop indexes before `ALTER COLUMN TYPE`, recreate with `IF NOT EXISTS`, and document that existing embeddings become NULL.
 7. **Testing.** Write Vitest suites under `packages/db/test` that spin up an isolated database schema and assert repo behaviour (notes, reminders, timers, eval runs/scores, etc.).
 8. **Laminar correlation.** Columns like `laminar_eval_id` belong in the primary run table to enable dual-write correlation. Always backfill with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations so replays remain idempotent.
-9. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic:
-   ```typescript
-   await db.transaction(async (tx) => {
-     await tx.insert(users).values({...});
-     await tx.insert(profiles).values({...});
-   });
-   ```
-   Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
-10. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API):
-   ```typescript
-   await db.batch([
-     db.select().from(users).where(...),
-     db.select().from(profiles).where(...),
-     db.insert(notes).values({...}),
-   ]);
-   ```
-   Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
-11. **Savepoints.** Use savepoints for partial rollbacks within transactions:
-    ```typescript
-    await db.transaction(async (tx) => {
-      await tx.insert(users).values({...});
-      await tx.savepoint(async (sp) => {
-        await sp.update(profiles).set({...});
-        if (condition) throw new Error("Rollback savepoint");
-      });
-      // Transaction continues even if savepoint rolled back
-    });
-    ```
+9. **Transactions.** Use `db.transaction()` for multi-step operations that must be atomic. Transactions automatically rollback on error. Use for operations that must succeed or fail together. PostgreSQL reserves a dedicated connection from the pool—keep transactions short to avoid connection exhaustion.
+10. **Batch operations.** Use `db.batch()` for multiple independent queries (Drizzle batch API). Batch operations execute sequentially in a single round-trip. Use for independent queries that don't require atomicity.
+11. **Savepoints.** Use savepoints for partial rollbacks within transactions. Call `tx.savepoint()` inside a transaction to create a nested transaction that can rollback independently while the outer transaction continues.
 12. **Query performance.** All repo queries must complete in <10ms (p99). Instrument with metrics before optimizing.
 13. **Connection pooling.** PostgreSQL transactions reserve connections. Avoid long-running transactions to prevent connection exhaustion.
 14. **Bulk updates.** Prefer batch updates with `Promise.all` + chunks (size 10-50) over `db.transaction` or sequential loops for high-volume writes. Use `UPDATE ... FROM (VALUES ...)` for massive updates if possible.

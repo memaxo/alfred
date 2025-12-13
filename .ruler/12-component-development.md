@@ -29,3 +29,5 @@
 
 13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
 14. **Activation fidelity.** Mindscape activations must use distinct event types (e.g., `context-cache`) so cache hits, workflow steps, and tool actions render as different visual signals.
+
+15. **Shared constants extraction.** When the same constant value appears in multiple files (e.g., spawn radius, fetch limits), extract it to a shared config file (e.g., `apps/web/src/config/<domain>.ts`). Export as `const DOMAIN_CONFIG = { CONSTANT_NAME: value } as const`. Import and use the constant instead of hardcoding values. This ensures consistency and makes updates easier.

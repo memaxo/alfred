@@ -1,7 +1,7 @@
 # ExecPlan: Cognitive Architecture Maturity
 
 **Owner:** Runtime/Cognitive
-**Status:** Mostly Complete ⚠️ (Phases 1, 2, 4 done; Phase 3 partial)
+**Status:** Complete ✅ (Phases 1–4 done)
 
 ## Purpose
 Mature the Cognitive Architecture from a passive "shadow" system into an active, autonomous decision-making engine. This plan addresses architectural blockers (dependency cycles), enables safety-gated autonomy, activates structured planning capabilities, and closes the learning loop via explicit feedback.
@@ -32,7 +32,7 @@ Move beyond simple text responses to multi-step execution.
     - ✅ Iterates through `plan.steps`.
     - ✅ Executes each step via `executeStep`.
     - ✅ Handles suspension and failures.
-- [ ] **Step-by-Step Persistence**: Checkpointing exists (lines 38-48), but `step_complete` events not explicitly emitted.
+- [x] **Step-by-Step Persistence**: `cognitive_step_complete` events emitted after each plan step (`packages/runtime/src/loops/plan-runner.ts`) and asserted in `packages/runtime/test/plan-runner.test.ts`.
 
 ### Phase 4: Explicit Feedback
 Close the learning loop.
@@ -74,7 +74,7 @@ const { object: plan } = await generateObject({
 ## Progress
 - [x] Phase 1: Dependency Cycle Resolution ✅
 - [x] Phase 2: Autonomy Gating ✅
-- [x] Phase 3: Structured Planning ⚠️ (plan execution done, step_complete events pending)
+- [x] Phase 3: Structured Planning ✅
 - [x] Phase 4: Explicit Feedback ✅
 
 ## Decision Log
@@ -83,10 +83,10 @@ const { object: plan } = await generateObject({
 
 ## Outcomes & Retrospective
 
-**Status**: ⚠️ Mostly Complete (Phases 1, 2, 4 done; Phase 3 partial)
+**Status**: ✅ Complete
 
 - Dependency cycle resolved via `AIAdapter` interface and `DefaultAIAdapter` implementation.
 - Autonomy gating fully implemented with `classifyPlanRisk` and `enforceSafetyGate`.
 - Structured planning implemented via `PlanRunner` with step execution and checkpointing.
 - Explicit feedback loop closed via `cognitive.feedback` router and UI controls.
-- Remaining: Explicit `step_complete` event emissions for better observability.
+- Added explicit per-step `cognitive_step_complete` cognitive events for better observability.

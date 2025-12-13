@@ -271,6 +271,7 @@ packages/agent/
 │   │   │   ├── timer.ts
 │   │   │   ├── book.ts
 │   │   │   ├── focus.ts
+│   │   │   ├── preference.ts
 │   │   │   ├── web.ts
 │   │   │   ├── handoff.ts
 │   │   │   └── home.ts

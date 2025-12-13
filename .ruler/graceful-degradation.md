@@ -8,26 +8,7 @@ The application must gracefully handle missing external dependencies (database, 
 
 ### 1. Database Availability Checks
 
-**Pattern**: Check database availability before starting DB-dependent services.
-
-```typescript
-import { isDbAvailable } from "@alfred/api/utils/service-availability";
-
-// Check before starting DB-dependent workers
-isDbAvailable()
-  .then((dbOk) => {
-    if (!dbOk) {
-      logger.warn("db_unavailable_skipping_services", {
-        message: "Database unavailable - skipping DB-dependent services",
-      });
-      return;
-    }
-    // Start DB-dependent services
-  })
-  .catch((error) => {
-    logger.warn("db_availability_check_error", { error });
-  });
-```
+**Pattern**: Check database availability before starting DB-dependent services. Use `isDbAvailable()` from `@alfred/api/utils/service-availability`. If unavailable, log warning and skip service initialization. Handle errors in catch block.
 
 **When to use**:
 - Background workers (codex cleanup, plan resume, workflow rehydration)
@@ -40,25 +21,7 @@ isDbAvailable()
 
 ### 2. External Service Availability Checks
 
-**Pattern**: Check for external tools before initializing services.
-
-```typescript
-import { isUvAvailable } from "@alfred/api/utils/service-availability";
-
-if (isUvAvailable()) {
-  initializeVoicePools()
-    .then(() => {
-      startVoiceStreamingPrototype();
-    })
-    .catch((error) => {
-      logger.error("voice_pools_init_failed", { error });
-    });
-} else {
-  logger.warn("voice_pools_skipped_uv_missing", {
-    message: "UV not found - skipping voice pool initialization",
-  });
-}
-```
+**Pattern**: Check for external tools before initializing services. Use `isUvAvailable()` or similar availability checks. If unavailable, log warning and skip initialization. Wrap service initialization in try-catch to handle failures gracefully.
 
 **When to use**:
 - Optional features (voice pools, local models)
@@ -67,26 +30,7 @@ if (isUvAvailable()) {
 
 ### 3. Error Classification
 
-**Pattern**: Use type guards to classify errors and handle appropriately.
-
-```typescript
-import { isDbConnectionError, isTransientError } from "@alfred/api/utils/service-availability";
-
-try {
-  await dbOperation();
-} catch (error) {
-  if (isDbConnectionError(error)) {
-    // Return graceful fallback
-    return { session: null, user: null };
-  }
-  if (isTransientError(error)) {
-    // Retry logic
-    return retry();
-  }
-  // Re-throw permanent errors
-  throw error;
-}
-```
+**Pattern**: Use type guards (`isDbConnectionError`, `isTransientError`) to classify errors and handle appropriately. Return graceful fallbacks for connection errors, retry transient errors, re-throw permanent errors.
 
 **Error Types**:
 - **Database connection errors**: ECONNREFUSED, password auth failed, connection refused
@@ -95,21 +39,7 @@ try {
 
 ### 4. SSR-Safe Error Handling
 
-**Pattern**: Wrap handlers with error boundaries for SSR.
-
-```typescript
-async function safeHandler(request: Request): Promise<Response> {
-  try {
-    return await handler(request);
-  } catch (error) {
-    if (isDbConnectionError(error)) {
-      // Return graceful response instead of crashing SSR
-      return Response.json({ session: null, user: null }, { status: 200 });
-    }
-    throw error;
-  }
-}
-```
+**Pattern**: Wrap handlers with try-catch for SSR. Use `isDbConnectionError()` to detect DB failures and return graceful responses (e.g., `Response.json({ session: null, user: null }, { status: 200 })`) instead of crashing SSR.
 
 **When to use**:
 - Route handlers in TanStack Start
@@ -120,55 +50,25 @@ async function safeHandler(request: Request): Promise<Response> {
 
 ### ❌ Module-Level DB Access
 
-```typescript
-// BAD: DB access at module level crashes during SSR
-import { db } from "@alfred/db";
-const result = await db.select().from(users); // Crashes if DB unavailable
-```
+Never access DB at module level (top-level await). This crashes during SSR if DB is unavailable. Always check availability or wrap in functions.
 
 ### ❌ Unhandled Promise Rejections
 
-```typescript
-// BAD: Unhandled rejection crashes the process
-resumeInterruptedPlans(tools); // No error handling
-```
+Never call async functions without error handling. Unhandled rejections crash the process. Always wrap in try-catch or use `.catch()`.
 
 ### ✅ Lazy Initialization
 
-```typescript
-// GOOD: Check availability before use
-async function getData() {
-  if (!(await isDbAvailable())) {
-    return null;
-  }
-  return await db.select().from(users);
-}
-```
+Check availability before use. Use `isDbAvailable()` or similar checks inside async functions before performing DB operations.
 
 ## Testing
 
 ### Unit Tests
 
-Test graceful degradation scenarios:
-
-```typescript
-it("should skip DB-dependent services when DB unavailable", async () => {
-  resetDbAvailability();
-  initApiServices();
-  // Verify services are skipped, not crashed
-});
-```
+Test graceful degradation scenarios. Reset availability state, initialize services, verify services are skipped (not crashed) when dependencies unavailable.
 
 ### Integration Tests
 
-Test app startup without dependencies:
-
-```typescript
-it("should render home page without DB", async () => {
-  // Start server without DB
-  // Verify SSR completes successfully
-});
-```
+Test app startup without dependencies. Start server without DB, verify SSR completes successfully, verify optional features are skipped with warnings.
 
 ## Related Rules
 
