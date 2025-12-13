@@ -1,7 +1,7 @@
 # ExecPlan: SSR Hardening Plan
 
 **Owner:** Infrastructure
-**Status:** Mostly Complete ⚠️ (Build verification done; API route audit pending)
+**Status:** Complete ✅
 
 ## Purpose
 
@@ -16,22 +16,31 @@ Harden SSR build process to prevent server-only code leakage into client bundles
 ## Progress
 
 - [x] Build verification script created (`scripts/verify-build.ts`)
-- [ ] Audit API routes for top-level server package imports
-- [ ] Refactor to variable-based dynamic imports
-- [ ] Add automated Playwright smoke tests against production build
+- [x] Audit API routes for top-level server package imports
+- [x] Refactor to variable-based dynamic imports
+- [x] Add automated Playwright smoke tests against production build
 - [x] Update `.ruler/21-tanstack-start.md` with new rules (rules 21-22 added)
 
 ## Implementation
 
 - ✅ `scripts/verify-build.ts` exists and checks for forbidden strings in client bundles
 - ✅ Rules documented in `.ruler/21-tanstack-start.md` (variable-based dynamic imports, browser-only libraries)
-- ⚠️ API route audit pending (systematic scan needed)
+- ✅ All API routes refactored to use variable-based dynamic imports:
+  - `apps/web/src/routes/api/workflow/stream.ts` - Refactored with `getWorkflowHelpers()`
+  - `apps/web/src/routes/api/auth/$.ts` - Refactored with `getAuthHelpers()`
+  - `apps/web/src/routes/api/search.ts` - Refactored with `getSearchServer()`
+  - `apps/web/src/routes/api/linear/webhook.ts` - Refactored with variable-based imports
+  - Other routes (`assistant/$.ts`, `orchestrator/$.ts`, `metrics.ts`, `mindscape.metrics.ts`, `trpc/$.ts`, `assistant-agent/$.ts`) already use variable-based imports
+- ✅ Production smoke tests created (`apps/web/tests/build.prod.smoke.spec.ts`)
+- ✅ Playwright production config created (`apps/web/playwright.prod.config.ts`)
+- ✅ Production server script created (`apps/web/scripts/serveprod.ts`)
+- ✅ Build verification runs in CI (`.github/workflows/ci.yml` - `build-verify` job)
 
 ## Remaining Work
 
-- [ ] Audit `apps/web/src/routes/api` for top-level server package imports
-- [ ] Refactor to variable-based dynamic imports
-- [ ] Add Playwright smoke tests against production build
+- [x] Audit `apps/web/src/routes/api` for top-level server package imports
+- [x] Refactor to variable-based dynamic imports
+- [x] Add Playwright smoke tests against production build
 
 ## Rules
 
