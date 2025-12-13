@@ -36,3 +36,23 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
     await Promise.all(updates.map(u => updateNodeConfidence(u.id, u.confidence)));
     ```
 
+11. **SQL-level JSON filtering.** When filtering rows by JSONB properties, use SQL-level filtering (`sql\`json_extract(column, '$.path') LIKE '%pattern%'\``) instead of fetching all rows and filtering in memory. This reduces data transfer and improves performance. Example:
+    ```typescript
+    // ✅ CORRECT: SQL-level filtering
+    await db.select()
+      .from(memoryNodes)
+      .where(
+        and(
+          eq(memoryNodes.kind, "fact"),
+          sql`json_extract(${memoryNodes.properties}, '$.source') LIKE '%:entity%'`
+        )
+      );
+    
+    // ❌ INCORRECT: In-memory filtering (fetches unnecessary rows)
+    const allFacts = await db.select().from(memoryNodes).where(eq(memoryNodes.kind, "fact"));
+    const entityFacts = allFacts.filter(row => {
+      const props = asProps(row.properties);
+      return props.source?.includes(":entity");
+    });
+    ```
+

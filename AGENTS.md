@@ -517,6 +517,8 @@ When implementing, Alfred asks:
 13. **Testing.** Exercise render, interaction, empty, and error states with React Testing Library. Verify accessibility with `axe-core` for critical views. Mock streaming hooks deterministically.
 14. **Activation fidelity.** Mindscape activations must use distinct event types (e.g., `context-cache`) so cache hits, workflow steps, and tool actions render as different visual signals.
 
+15. **Shared constants extraction.** When the same constant value appears in multiple files (e.g., spawn radius, fetch limits), extract it to a shared config file (e.g., `apps/web/src/config/<domain>.ts`). Export as `const DOMAIN_CONFIG = { CONSTANT_NAME: value } as const`. Import and use the constant instead of hardcoding values. This ensures consistency and makes updates easier.
+
 
 
 <!-- Source: .ruler/13-streaming-patterns.md -->
@@ -890,6 +892,26 @@ Use Drizzle ORM's type-safe query builder consistently. Leverage TypeScript infe
     
     // ❌ INCORRECT: Promise.all loop (many roundtrips)
     await Promise.all(updates.map(u => updateNodeConfidence(u.id, u.confidence)));
+    ```
+
+11. **SQL-level JSON filtering.** When filtering rows by JSONB properties, use SQL-level filtering (`sql\`json_extract(column, '$.path') LIKE '%pattern%'\``) instead of fetching all rows and filtering in memory. This reduces data transfer and improves performance. Example:
+    ```typescript
+    // ✅ CORRECT: SQL-level filtering
+    await db.select()
+      .from(memoryNodes)
+      .where(
+        and(
+          eq(memoryNodes.kind, "fact"),
+          sql`json_extract(${memoryNodes.properties}, '$.source') LIKE '%:entity%'`
+        )
+      );
+    
+    // ❌ INCORRECT: In-memory filtering (fetches unnecessary rows)
+    const allFacts = await db.select().from(memoryNodes).where(eq(memoryNodes.kind, "fact"));
+    const entityFacts = allFacts.filter(row => {
+      const props = asProps(row.properties);
+      return props.source?.includes(":entity");
+    });
     ```
 
 
@@ -1268,6 +1290,10 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 
 7. **Scoped reflections first.** Reflection fetchers must try user-scoped and `runtime:<id>` resources before falling back to global nodes so Mindscape never shows an empty list by default.
 
+8. **Entity fact label parsing.** Use `parseEntityFactLabel` from `@alfred/knowledge/entity` to extract entity type and label from fact node labels formatted as `[entity:type] label` or `(entity:type) label`. Never duplicate this parsing logic—always import from the shared utility.
+
+9. **Visualization routers.** Knowledge visualization routers (`trpc.knowledge.visualize`) must: (a) extract entities via `@alfred/knowledge/extractor`, (b) persist via `upsertNodes`/`upsertEdges`, (c) filter entity facts using SQL-level JSON filtering (`json_extract(properties, '$.source') LIKE '%:entity%'`) instead of in-memory filtering, (d) return bounded subgraphs with nodes and edges for UI rendering.
+
 
 
 <!-- Source: .ruler/30-mindscape.md -->
@@ -1285,6 +1311,12 @@ ALFRED's interface is an ambient "Signal in the Void." It treats the screen as a
 5. **Event-Driven Activations.** Use `dispatchMindscapeEvent` to visualize system activity. Never manipulate `activeEdges` directly from functional components. Visualization must be a side effect of real events (Reality-Driven UI).
 
 6. **Context Trace.** Visually highlight graph edges involved in active context retrieval ("Cognitive Pulse") to show the user *why* the system knows about dependencies.
+
+7. **Concept node spawning.** When spawning concept nodes from graph traversal or visualization, use radial positioning around the parent node: `angle = (index / totalNodes) * 2 * Math.PI`, `x = parentPos.x + radius * Math.cos(angle)`, `y = parentPos.y + radius * Math.sin(angle)`. Use `MINDSCAPE_CONFIG.SPAWN_RADIUS` constant from `@/config/mindscape` for consistent spacing.
+
+8. **Edge deduplication.** When merging edges from visualization results, use `Map<string, Edge>` keyed by edge ID to prevent duplicates. Merge new edges into existing edge map before calling `setEdges(Array.from(edgeMap.values()))`.
+
+9. **Async action error handling.** Command palette actions that call async tRPC mutations must wrap execution in try-catch blocks. Surface errors via toast notifications (`toast.error()`) and log with structured context (`console.error("action_failed", error)`). Never silently swallow errors from async actions.
 
 
 
