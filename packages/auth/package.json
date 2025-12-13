@@ -25,6 +25,7 @@
   "dependencies": {
     "better-auth": "catalog:",
     "@better-auth/expo": "^1.3.13",
+    "@better-auth/passkey": "^1.4.4",
     "zod": "catalog:",
     "@alfred/db": "workspace:*",
     "jose": "^5.2.1",

@@ -167,6 +167,7 @@ export async function handleAgentStreamRequest(
     // ToolLoopAgent.stream({ system: ... }) ?
 
     const result = await agent.stream({
+      options: agent.tools,
       messages: convertToModelMessages(preparedUiMessages),
       abortSignal: request.signal,
     });

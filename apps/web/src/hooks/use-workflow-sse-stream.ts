@@ -1,6 +1,9 @@
 import type { WorkflowEvent } from "@alfred/type";
-import type { UIMessage } from "@alfred/type/stream";
+import { uiMessageSchema } from "@alfred/type/stream.zod";
 import { useEffect, useRef, useState } from "react";
+import type { z } from "zod";
+
+type UiMessage = z.infer<typeof uiMessageSchema>;
 
 export type WorkflowStreamInput = {
   requirement: string;
@@ -21,7 +24,7 @@ export type UseWorkflowSseStreamOptions = {
   input: WorkflowStreamInput | null;
   onWorkflowEvent?: (event: WorkflowEvent) => void;
   onUiMessages?: (
-    messages: UIMessage[],
+    messages: UiMessage[],
     meta: { runId: string; eventId: string; eventType: string }
   ) => void;
   onError?: (error: Error) => void;
@@ -42,7 +45,7 @@ type WorkflowStreamHarness = {
     input: WorkflowStreamInput;
     onWorkflowEvent?: (event: WorkflowEvent) => void;
     onUiMessages?: (
-      messages: UIMessage[],
+      messages: UiMessage[],
       meta: { runId: string; eventId: string; eventType: string }
     ) => void;
     onError?: (error: Error) => void;
@@ -177,7 +180,7 @@ export function useWorkflowSseStream(
           workflowEventRef.current?.(payload as WorkflowEvent);
         } else if (parsed.event === "ui-message") {
           const { messages, meta } = payload as {
-            messages: UIMessage[];
+            messages: UiMessage[];
             meta: { runId: string; eventId: string; eventType: string };
           };
           if (Array.isArray(messages)) {
