@@ -1,7 +1,7 @@
 # ExecPlan: SSR Hardening Plan
 
 **Owner:** Infrastructure
-**Status:** Mostly Complete ⚠️ (Build verification done; API route audit pending)
+**Status:** Complete ✅
 
 ## Purpose
 
@@ -16,22 +16,37 @@ Harden SSR build process to prevent server-only code leakage into client bundles
 ## Progress
 
 - [x] Build verification script created (`scripts/verify-build.ts`)
-- [ ] Audit API routes for top-level server package imports
-- [ ] Refactor to variable-based dynamic imports
-- [ ] Add automated Playwright smoke tests against production build
+- [x] Audit API routes for top-level server package imports (`apps/web/src/routes/api/**`)
+- [x] Refactor to variable-based dynamic imports (no top-level server package imports in API routes)
+- [x] Add automated Playwright smoke tests against production build
 - [x] Update `.ruler/21-tanstack-start.md` with new rules (rules 21-22 added)
 
 ## Implementation
 
 - ✅ `scripts/verify-build.ts` exists and checks for forbidden strings in client bundles
 - ✅ Rules documented in `.ruler/21-tanstack-start.md` (variable-based dynamic imports, browser-only libraries)
-- ⚠️ API route audit pending (systematic scan needed)
+- ✅ API routes refactored to avoid top-level server-only imports:
+  - `apps/web/src/routes/api/workflow/stream.ts`
+  - `apps/web/src/routes/api/auth/$.ts`
+  - `apps/web/src/routes/api/linear/webhook.ts`
+  - `apps/web/src/routes/api/search.ts`
+- ✅ Production-build Playwright smoke coverage:
+  - `apps/web/playwright.prod.config.ts`
+  - `apps/web/tests/build.prod.smoke.spec.ts`
+- ✅ SSR build reliability fixes discovered during verification:
+  - Pin `better-auth` to `1.3.13` (restores `better-auth/plugins/passkey` export)
+  - Align `@alfred/runtime` exports to source TS so Vite SSR can resolve entrypoints
+  - Ensure `@alfred/api/src/metrics.ts` produces stable, local bindings for agent workflow metrics (prevents runtime `ReferenceError` in production server bundle)
 
 ## Remaining Work
 
-- [ ] Audit `apps/web/src/routes/api` for top-level server package imports
-- [ ] Refactor to variable-based dynamic imports
-- [ ] Add Playwright smoke tests against production build
+- None.
+
+## Outcomes & Retrospective
+
+- **Outcome**: `apps/web/src/routes/api/**` no longer imports server-only packages at module scope; server dependencies are loaded via variable-based dynamic imports at request time.
+- **Outcome**: Added a dedicated Playwright config that runs smoke checks against the production build (`vite build`) and boots the built SSR server via `bun dist/server/server.js` (not the dev server).
+- **Outcome**: `bun run verify:build` and `bun run test:web:smoke:prod` both pass in CI-like conditions (no DB, no UV).
 
 ## Rules
 

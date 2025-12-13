@@ -1,31 +1,50 @@
-import crypto from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 
 const MAX_AGE_SECONDS = 5 * 60; // tolerate up to 5 minutes of clock drift
 
 // Lazy-loaded helpers wrapper
 async function getHelpers() {
-  const { appRouter } = await import("@alfred/api");
-  const metrics = await import("@alfred/api/metrics");
-  const { runRegistry } = await import("@alfred/agent/workflow/registry");
-  const { requireToolScopesAndPolicy } = await import("@alfred/auth/token");
-  const { linearRepo } = await import("@alfred/db");
-  const workflowRepo = await import("@alfred/db/repo/workflow");
-  const { logger } = await import("@alfred/logger");
-  const { RuntimeContext } = await import("@alfred/type/runtime-context");
-  const linearWebhooksPkg = (await import("@linear/sdk/webhooks")).default;
-  const linearIntegration = await import("@alfred/agent/integrations/linear");
+  const apiPkg = "@alfred/api";
+  const metricsPkg = "@alfred/api/metrics";
+  const tokenPkg = "@alfred/auth/token";
+  const dbPkg = "@alfred/db";
+  const workflowRepoPkg = "@alfred/db/repo/workflow";
+  const loggerPkg = "@alfred/logger";
+  const runtimeContextPkg = "@alfred/type/runtime-context";
+  const linearWebhooksPkgName = "@linear/sdk/webhooks";
+  const linearIntegrationPkg = "@alfred/agent/integrations/linear";
+
+  const [
+    api,
+    metrics,
+    token,
+    db,
+    workflowRepo,
+    log,
+    runtimeContext,
+    linearWebhooks,
+    linearIntegration,
+  ] = await Promise.all([
+    import(apiPkg),
+    import(metricsPkg),
+    import(tokenPkg),
+    import(dbPkg),
+    import(workflowRepoPkg),
+    import(loggerPkg),
+    import(runtimeContextPkg),
+    import(linearWebhooksPkgName),
+    import(linearIntegrationPkg),
+  ]);
 
   return {
-    appRouter,
+    appRouter: api.appRouter,
     metrics,
-    runRegistry,
-    requireToolScopesAndPolicy,
-    linearRepo,
+    requireToolScopesAndPolicy: token.requireToolScopesAndPolicy,
+    linearRepo: db.linearRepo,
     workflowRepo,
-    logger,
-    RuntimeContext,
-    linearWebhooksPkg,
+    logger: log.logger,
+    RuntimeContext: runtimeContext.RuntimeContext,
+    linearWebhooksPkg: (linearWebhooks as { default: unknown }).default,
     commentOnLinearIssue: linearIntegration.commentOnLinearIssue,
   };
 }
@@ -363,6 +382,8 @@ export const Route = createFileRoute("/api/linear/webhook")({
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         const h = await getHelpers();
+        const cryptoPkg = "node:crypto";
+        const { randomUUID } = await import(cryptoPkg);
         let secret: string;
         try {
           secret = getWebhookSecret();
@@ -466,7 +487,7 @@ export const Route = createFileRoute("/api/linear/webhook")({
         const runId =
           typeof runIdCandidate === "string" && runIdCandidate.length > 0
             ? runIdCandidate
-            : crypto.randomUUID();
+            : randomUUID();
 
         // Handle resume for linear-authz events (existing functionality)
         if (authz && authz.length > 0) {
