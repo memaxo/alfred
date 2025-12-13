@@ -21,7 +21,7 @@
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "testcontainers": "^10.16.0",
