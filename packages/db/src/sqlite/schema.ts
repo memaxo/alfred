@@ -11,12 +11,14 @@ const statements = [
     sanitized INTEGER NOT NULL DEFAULT 0,
     label_tsvector TEXT,
     embedding BLOB,
+    embedding_quantized BLOB,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(resource, hash)
   );`,
   "ALTER TABLE memory_nodes ADD COLUMN label_tsvector TEXT;",
   "ALTER TABLE memory_nodes ADD COLUMN embedding BLOB;",
+  "ALTER TABLE memory_nodes ADD COLUMN embedding_quantized BLOB;",
   "ALTER TABLE memory_nodes ADD COLUMN sanitized INTEGER DEFAULT 0;",
   `CREATE TABLE IF NOT EXISTS memory_edges (
     id TEXT PRIMARY KEY,

@@ -42,7 +42,8 @@ async function listSessionsViaTmux(): Promise<string[]> {
   if (
     exitCode === 1 &&
     (message.includes("failed to connect") ||
-      message.toLowerCase().includes("no server running"))
+      message.toLowerCase().includes("no server running") ||
+      message.toLowerCase().includes("no such file or directory"))
   ) {
     return [];
   }

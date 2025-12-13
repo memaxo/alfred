@@ -72,6 +72,7 @@ __pycache__/
 
 # Test results
 test-results/
+apps/web/playwright-report/
 *.test.ts.tmp
 tmp-*.test.ts
 
