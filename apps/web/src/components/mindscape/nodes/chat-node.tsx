@@ -1,5 +1,4 @@
 import type { AssistantUIMessage } from "@alfred/agent";
-import type { UIMessage } from "@alfred/type/stream";
 import type { NodeProps } from "@xyflow/react";
 import { MessageSquare, Mic } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
@@ -22,6 +21,7 @@ import { useFocusedContext } from "@/hooks/use-focused-context";
 import { useMindscapeExecutor } from "@/hooks/use-mindscape-executor";
 import { useMindscapeStore } from "@/store/mindscape";
 import { chatNodeDataSchema } from "@/store/mindscape.schemas";
+import type { MindscapeUiMessage } from "@/store/mindscape.schemas";
 import { useLOD, useNodeFocus } from "../lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
@@ -97,12 +97,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
       }
       lastMessagesRef.current = key;
       updateArtifactData(id, {
-        messages: messages as unknown as Array<{
-          id: string;
-          role: "system" | "user" | "assistant";
-          parts: unknown[];
-          metadata?: unknown;
-        }>,
+        messages: messages as unknown as MindscapeUiMessage[],
         type: "chat",
       });
     }

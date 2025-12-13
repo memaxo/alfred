@@ -86,9 +86,9 @@ describe("PlanRunner", () => {
       value: "foo",
     });
     expect(appendEventMock).toHaveBeenCalledTimes(1);
-    expect(appendEventMock.mock.calls[0]?.[1]).toBe("step_complete");
+    expect(appendEventMock.mock.calls[0]?.[1]).toBe("cognitive_step_complete");
     expect(appendEventMock.mock.calls[0]?.[2]).toMatchObject({
-      _: "step_complete",
+      _: "cognitive_step_complete",
       step: 0,
       action: "test-tool",
       status: "completed",
@@ -130,9 +130,9 @@ describe("PlanRunner", () => {
     // Step completion event is still emitted for observability.
     expect(appendEventMock).toHaveBeenCalled();
     const lastCall = appendEventMock.mock.calls.at(-1);
-    expect(lastCall?.[1]).toBe("step_complete");
+    expect(lastCall?.[1]).toBe("cognitive_step_complete");
     expect(lastCall?.[2]).toMatchObject({
-      _: "step_complete",
+      _: "cognitive_step_complete",
       step: 0,
       action: "fail-tool",
       status: "failed",
@@ -176,7 +176,7 @@ describe("PlanRunner", () => {
     expect(suspendTools["suspend-tool"].execute).toHaveBeenCalled();
     expect(appendEventMock).toHaveBeenCalledTimes(1);
     expect(appendEventMock.mock.calls[0]?.[2]).toMatchObject({
-      _: "step_complete",
+      _: "cognitive_step_complete",
       step: 0,
       action: "suspend-tool",
       status: "suspended",

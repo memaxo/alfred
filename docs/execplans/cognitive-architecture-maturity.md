@@ -32,7 +32,7 @@ Move beyond simple text responses to multi-step execution.
     - ✅ Iterates through `plan.steps`.
     - ✅ Executes each step via `executeStep`.
     - ✅ Handles suspension and failures.
-- [x] **Step-by-Step Persistence**: `step_complete` events emitted after each plan step (`packages/runtime/src/loops/plan-runner.ts`) and asserted in `packages/runtime/test/plan-runner.test.ts`.
+- [x] **Step-by-Step Persistence**: `cognitive_step_complete` events emitted after each plan step (`packages/runtime/src/loops/plan-runner.ts`) and asserted in `packages/runtime/test/plan-runner.test.ts`.
 
 ### Phase 4: Explicit Feedback
 Close the learning loop.
@@ -89,4 +89,4 @@ const { object: plan } = await generateObject({
 - Autonomy gating fully implemented with `classifyPlanRisk` and `enforceSafetyGate`.
 - Structured planning implemented via `PlanRunner` with step execution and checkpointing.
 - Explicit feedback loop closed via `cognitive.feedback` router and UI controls.
-- Added explicit per-step `step_complete` cognitive events for better observability.
+- Added explicit per-step `cognitive_step_complete` cognitive events for better observability.

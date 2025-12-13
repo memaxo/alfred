@@ -79,11 +79,9 @@ type TranscriptViewerContainerProps = {
   segmentComposer?: SegmentComposer;
   hideAudioTags?: boolean;
   children?: ReactNode;
-} & Omit<ComponentPropsWithoutRef<"div">, "children"> &
-  Pick<
-    Parameters<typeof useTranscriptViewer>[0],
-    "onPlay" | "onPause" | "onTimeUpdate" | "onEnded" | "onDurationChange"
-  >;
+  onTimeUpdate?: (time: number) => void;
+  onSegmentChange?: (index: number) => void;
+} & Omit<ComponentPropsWithoutRef<"div">, "children" | "onTimeUpdate">;
 
 function TranscriptViewerContainer({
   audioSrc,
@@ -93,22 +91,20 @@ function TranscriptViewerContainer({
   hideAudioTags = true,
   children,
   className,
-  onPlay,
-  onPause,
   onTimeUpdate,
-  onEnded,
-  onDurationChange,
+  onSegmentChange,
   ...props
 }: TranscriptViewerContainerProps) {
+  const initialSegments = useMemo(
+    () => alignmentToSegments(alignment, segmentComposer),
+    [alignment, segmentComposer]
+  );
+
   const viewerState = useTranscriptViewer({
-    alignment,
-    hideAudioTags,
-    segmentComposer,
-    onPlay,
-    onPause,
     onTimeUpdate,
-    onEnded,
-    onDurationChange,
+    onSegmentChange,
+    initialSegments,
+    audioSrc,
   });
 
   const { audioRef } = viewerState;
@@ -200,14 +196,8 @@ function TranscriptViewerWords({
   gapClassNames,
   ...props
 }: TranscriptViewerWordsProps) {
-  const {
-    spokenSegments,
-    unspokenSegments,
-    currentWord,
-    segments,
-    duration,
-    currentTime,
-  } = useTranscriptViewerContext();
+  const { currentWord, segments, duration, currentTime } =
+    useTranscriptViewerContext();
 
   const nearEnd = useMemo(() => {
     if (!duration) {
@@ -216,33 +206,53 @@ function TranscriptViewerWords({
     return currentTime >= duration - 0.01;
   }, [currentTime, duration]);
 
+  type WordOrGap =
+    | { kind: "gap"; segment: TranscriptGap; status: TranscriptViewerWordStatus }
+    | {
+        kind: "word";
+        word: TranscriptWordType;
+        status: TranscriptViewerWordStatus;
+      };
+
   const segmentsWithStatus = useMemo(() => {
     if (nearEnd) {
-      return segments.map((segment) => ({
-        segment,
-        status: "spoken" as const,
-      }));
+      const entries: WordOrGap[] = [];
+      for (const segment of segments) {
+        if (segment.kind === "gap") {
+          entries.push({ kind: "gap", segment, status: "spoken" });
+          continue;
+        }
+        for (const word of segment.words) {
+          entries.push({ kind: "word", word, status: "spoken" });
+        }
+      }
+      return entries;
     }
 
-    const entries: Array<{
-      segment: TranscriptSegment;
-      status: TranscriptViewerWordStatus;
-    }> = [];
+    const entries: WordOrGap[] = [];
+    const currentWordId = currentWord?.id ?? null;
 
-    for (const segment of spokenSegments) {
-      entries.push({ segment, status: "spoken" });
-    }
+    for (const segment of segments) {
+      if (segment.kind === "gap") {
+        const status: TranscriptViewerWordStatus =
+          segment.end <= currentTime ? "spoken" : "unspoken";
+        entries.push({ kind: "gap", segment, status });
+        continue;
+      }
 
-    if (currentWord) {
-      entries.push({ segment: currentWord, status: "current" });
-    }
-
-    for (const segment of unspokenSegments) {
-      entries.push({ segment, status: "unspoken" });
+      for (const word of segment.words) {
+        const status: TranscriptViewerWordStatus =
+          currentWordId && word.id === currentWordId
+            ? "current"
+            : word.end <= currentTime
+              ? "spoken"
+              : "unspoken";
+        entries.push({ kind: "word", word, status });
+      }
     }
 
     return entries;
-  }, [spokenSegments, unspokenSegments, currentWord, nearEnd, segments]);
+  }, [currentTime, currentWord?.id, nearEnd, segments]);
 
   return (
     <div
@@ -250,8 +260,9 @@ function TranscriptViewerWords({
       data-slot="transcript-words"
       {...props}
     >
-      {segmentsWithStatus.map(({ segment, status }) => {
-        if (segment.kind === "gap") {
+      {segmentsWithStatus.map((entry) => {
+        if (entry.kind === "gap") {
+          const { segment, status } = entry;
           const content = renderGap
             ? renderGap({ segment, status })
             : segment.text;
@@ -260,22 +271,23 @@ function TranscriptViewerWords({
               className={cn(gapClassNames)}
               data-kind="gap"
               data-status={status}
-              key={`gap-${segment.segmentIndex}`}
+              key={`gap-${segment.segmentIndex ?? `${segment.start}-${segment.end}`}`}
             >
               {content}
             </span>
           );
         }
 
+        const { word, status } = entry;
         if (renderWord) {
           return (
             <span
               className={cn(wordClassNames)}
               data-kind="word"
               data-status={status}
-              key={`word-${segment.segmentIndex}`}
+              key={`word-${word.id}`}
             >
-              {renderWord({ word: segment, status })}
+              {renderWord({ word, status })}
             </span>
           );
         }
@@ -283,9 +295,9 @@ function TranscriptViewerWords({
         return (
           <TranscriptViewerWord
             className={wordClassNames}
-            key={`word-${segment.segmentIndex}`}
+            key={`word-${word.id}`}
             status={status}
-            word={segment}
+            word={word}
           />
         );
       })}
@@ -424,3 +436,94 @@ export {
   useTranscriptViewerContext,
 };
 export type { CharacterAlignmentResponseModel };
+
+function isAlignmentArray(value: unknown): value is Array<unknown> {
+  return Array.isArray(value);
+}
+
+function alignmentToSegments(
+  alignment: CharacterAlignmentResponseModel,
+  composer?: SegmentComposer
+): TranscriptSegment[] {
+  if (composer) {
+    return composer.segments;
+  }
+
+  const raw = alignment as unknown as Record<string, unknown>;
+  const characters = raw.characters;
+  const starts = raw.character_start_times_seconds;
+  const ends = raw.character_end_times_seconds;
+
+  if (
+    !(
+      isAlignmentArray(characters) &&
+      isAlignmentArray(starts) &&
+      isAlignmentArray(ends)
+    )
+  ) {
+    return [];
+  }
+
+  const words: TranscriptWordType[] = [];
+  let buffer = "";
+  let wordStart: number | null = null;
+  let wordEnd: number | null = null;
+
+  for (let i = 0; i < characters.length; i++) {
+    const ch = characters[i];
+    const start = starts[i];
+    const end = ends[i];
+    if (!(typeof ch === "string" && typeof start === "number" && typeof end === "number")) {
+      continue;
+    }
+
+    const isSpace = ch.trim() === "";
+    if (isSpace) {
+      if (buffer.length > 0 && wordStart !== null && wordEnd !== null) {
+        words.push({
+          id: `${words.length}`,
+          text: buffer,
+          start: wordStart,
+          end: wordEnd,
+        });
+      }
+      buffer = "";
+      wordStart = null;
+      wordEnd = null;
+      continue;
+    }
+
+    if (buffer.length === 0) {
+      wordStart = start;
+    }
+    buffer += ch;
+    wordEnd = end;
+  }
+
+  if (buffer.length > 0 && wordStart !== null && wordEnd !== null) {
+    words.push({
+      id: `${words.length}`,
+      text: buffer,
+      start: wordStart,
+      end: wordEnd,
+    });
+  }
+
+  if (words.length === 0) {
+    return [];
+  }
+
+  const start = words[0]?.start ?? 0;
+  const end = words.at(-1)?.end ?? start;
+
+  return [
+    {
+      kind: "speaker",
+      speaker: "Speaker",
+      start,
+      end,
+      words,
+      segmentIndex: 0,
+    },
+  ];
+}

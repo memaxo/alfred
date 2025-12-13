@@ -12,8 +12,8 @@ export type StepResult = {
   error?: string;
 };
 
-type StepCompleteEvent = {
-  _: "step_complete";
+type CognitiveStepCompleteEvent = {
+  _: "cognitive_step_complete";
   ts: number;
   step: number;
   action: string;
@@ -81,7 +81,7 @@ export class PlanRunner {
         );
         const inserted = await cognitiveRepo.appendEvent(
           this.streamId,
-          "step_complete",
+          "cognitive_step_complete",
           event as unknown as Record<string, unknown>
         );
         if (inserted?.id) {
@@ -119,9 +119,9 @@ export class PlanRunner {
     step: ExecutionStep,
     result: StepResult,
     durationMs: number
-  ): StepCompleteEvent {
-    const base: StepCompleteEvent = {
-      _: "step_complete",
+  ): CognitiveStepCompleteEvent {
+    const base: CognitiveStepCompleteEvent = {
+      _: "cognitive_step_complete",
       ts: Date.now(),
       step: stepIndex,
       action: step.action,
