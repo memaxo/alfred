@@ -52,7 +52,8 @@ const SESSION_START_TIMEOUT_MS = 10_000;
 
 const isReactNative =
   typeof navigator !== "undefined" &&
-  (navigator as any).product === "ReactNative";
+  "product" in navigator &&
+  (navigator as Navigator & { product?: unknown }).product === "ReactNative";
 const isNodeEnvironment =
   typeof globalThis !== "undefined" &&
   !("window" in globalThis) &&
@@ -64,7 +65,23 @@ function createSocket(
   protocols?: string | string[],
   headers?: Record<string, string>
 ): WebSocket {
-  const Impl: any = WebSocket;
+  type NodeWsCtor = new (
+    url: string,
+    options: { headers?: Record<string, string>; protocol?: string }
+  ) => WebSocket;
+  type StandardWsCtor = new (
+    url: string,
+    protocols?: string | string[]
+  ) => WebSocket;
+  type ReactNativeWsCtor = new (
+    url: string,
+    protocols?: string | string[],
+    options?: { headers?: Record<string, string> }
+  ) => WebSocket;
+
+  const Impl = WebSocket as unknown as NodeWsCtor &
+    StandardWsCtor &
+    ReactNativeWsCtor;
   const hasHeaders = headers && Object.keys(headers).length > 0;
 
   if (isNodeEnvironment && hasHeaders) {
@@ -91,7 +108,7 @@ function normalizeMessageData(data: unknown): string {
   ) {
     const buffer = data instanceof ArrayBuffer ? data : data.buffer;
     if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder().decode(buffer as any);
+      return new TextDecoder().decode(buffer);
     }
     const bytes = new Uint8Array(buffer);
     let result = "";
@@ -171,19 +188,21 @@ export class VoiceStreamClient {
     }
   }
 
-  async sendTelemetry(metrics: {
+  sendTelemetry(metrics: {
     packetLoss: number;
     jitter: number;
     rtt: number;
   }): Promise<void> {
     if (!(this.isConnected() && this.sessionId)) {
-      return;
+      return Promise.resolve();
     }
     this.send({
       type: "telemetry_report",
       sessionId: this.sessionId,
       ...metrics,
+      timestamp: Date.now(),
     });
+    return Promise.resolve();
   }
 
   async stop(
@@ -193,7 +212,7 @@ export class VoiceStreamClient {
     this.send({ type: "stop", reason });
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
     this.closed = true;
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.close();
@@ -201,6 +220,7 @@ export class VoiceStreamClient {
     this.socket = null;
     this.rejectPendingSession(new Error("voice_stream_socket_closed"));
     this.clearSessionTimer();
+    return Promise.resolve();
   }
 
   private rejectPendingSession(error: Error) {
@@ -287,9 +307,11 @@ export class VoiceStreamClient {
             event.data instanceof ArrayBuffer ||
             event.data instanceof Buffer
           ) {
-            const audioBase64 = Buffer.from(event.data as any).toString(
-              "base64"
-            );
+            const bytes =
+              event.data instanceof ArrayBuffer
+                ? new Uint8Array(event.data)
+                : event.data;
+            const audioBase64 = Buffer.from(bytes).toString("base64");
             this.handlers.onTtsChunk?.({
               type: "tts_chunk",
               sessionId: this.sessionId ?? "",

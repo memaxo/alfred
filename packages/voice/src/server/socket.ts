@@ -16,9 +16,11 @@ import {
   type TargetFormat,
 } from "../audio/codec";
 import {
+  recordVoiceAssistant,
   voiceSessionJitterMillis,
   voiceSessionPacketLossTotal,
   voiceSessionRttMillis,
+  voiceStreamLatencySeconds,
 } from "../metrics";
 import type { VoiceRegistry } from "./registry";
 import type { VoiceSession } from "./session";
@@ -91,6 +93,20 @@ function normalizeCodec(value?: string): StreamCodec {
   return SUPPORTED_STREAM_CODECS.includes(v) ? v : "pcm";
 }
 
+function getEventType(payload: unknown): string {
+  if (!(typeof payload === "object" && payload !== null && "type" in payload)) {
+    return "unknown";
+  }
+  const value = (payload as { type?: unknown }).type;
+  return typeof value === "string" ? value : "unknown";
+}
+
+function toBufferFromBinary(message: ArrayBuffer | Uint8Array): Buffer {
+  return Buffer.from(
+    message instanceof ArrayBuffer ? new Uint8Array(message) : message
+  );
+}
+
 function send(
   ws: ServerWebSocket<VoiceSocketData>,
   payload: unknown,
@@ -101,10 +117,7 @@ function send(
     const error = new Error(`websocket_not_open: state=${ws.readyState}`);
     logger.error("voice_websocket_send_failed", {
       sessionId: ws.data.sessionId ?? null,
-      eventType:
-        typeof payload === "object" && payload !== null && "type" in payload
-          ? String((payload as any).type)
-          : "unknown",
+      eventType: getEventType(payload),
       error: error.message,
       reason: "not_open",
     });
@@ -121,10 +134,7 @@ function send(
       : "send_error";
     logger.error("voice_websocket_send_failed", {
       sessionId: ws.data.sessionId ?? null,
-      eventType:
-        typeof payload === "object" && payload !== null && "type" in payload
-          ? String((payload as any).type)
-          : "unknown",
+      eventType: getEventType(payload),
       error: err.message,
       reason,
     });
@@ -137,7 +147,7 @@ function parseMessage(message: string | ArrayBuffer | Uint8Array) {
     const text =
       typeof message === "string"
         ? message
-        : Buffer.from(message as any).toString();
+        : toBufferFromBinary(message).toString();
     return JSON.parse(text) as Record<string, unknown>;
   } catch (error) {
     throw new Error(
@@ -147,7 +157,7 @@ function parseMessage(message: string | ArrayBuffer | Uint8Array) {
 }
 
 export class VoiceSocketHandler {
-  private sendWithErrorHandling = (
+  private readonly sendWithErrorHandling = (
     ws: ServerWebSocket<VoiceSocketData>,
     payload: unknown
   ) => {
@@ -176,7 +186,7 @@ export class VoiceSocketHandler {
       ) {
         await this.handleChunk(ws, {
           type: "audio_chunk",
-          audioBase64: Buffer.from(message as any).toString("base64"),
+          audioBase64: toBufferFromBinary(message).toString("base64"),
           mimeType:
             ws.data.codec === "opus" ? "audio/ogg;codecs=opus" : PCM_MIME_TYPE, // Assume negotiated codec
           emitPartial: true,
@@ -459,11 +469,23 @@ export class VoiceSocketHandler {
     }
 
     try {
+      const assistantProvider = "orchestrator";
       const assistant = await this.hooks.runAssistant(
         ws.data.userId,
         transcript,
         ws.data.runtime
       );
+      recordVoiceAssistant({
+        provider: assistantProvider,
+        status: "ok",
+        durationSeconds: assistant.durationSeconds,
+      });
+      if (typeof assistant.durationSeconds === "number") {
+        voiceStreamLatencySeconds.observe(
+          { stage: "assistant" },
+          assistant.durationSeconds
+        );
+      }
 
       this.sendWithErrorHandling(ws, {
         type: "assistant_message",
@@ -483,6 +505,7 @@ export class VoiceSocketHandler {
       await this.streamTts(ws, session, assistant.text);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
+      recordVoiceAssistant({ provider: "orchestrator", status: "error" });
       if (ws.data.sessionRegistryId) {
         await this.hooks.onSessionError(ws.data.sessionRegistryId, msg);
       }
@@ -605,7 +628,7 @@ export class VoiceSocketHandler {
     }
   }
 
-  public async cleanup(sessionId: string) {
+  public cleanup(sessionId: string) {
     this.sessionRegistry.removeSession(sessionId);
   }
 }

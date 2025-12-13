@@ -28,8 +28,8 @@ After this change:
 - [x] Phase 3: Telemetry & Monitoring
     - [x] Define telemetry events in `@alfred/type` (packet_loss, jitter, latencies).
     - [x] Instrument `VoiceStreamClient` to track sequence numbers and report loss (Handled via existing events, added report type).
-    - [ ] Instrument `VoiceSession` to record granular component latencies (STT, LLM, TTS).
-    - [ ] Create a basic dashboard or log sink for voice metrics.
+    - [x] Instrument `VoiceSession` to record granular component latencies (STT, LLM, TTS).
+    - [x] Create a basic dashboard or log sink for voice metrics. (Admin stats endpoint + Prometheus metrics)
 
 ## Outcomes & Retrospective
 
@@ -43,9 +43,17 @@ Implemented real-time Mindscape visualization.
 - **Component**: Updated `OrbNode` to visualize VAD energy levels and map stream status (recording/processing/playing) to Orb states (listening/thinking/speaking).
 - **Hook**: `useVoiceSessionWeb` now updates the global store with VAD analyser node and stream status.
 
-Telemetry: Added `telemetry_report` event type to schema and handlers. Full instrumentation of `VoiceSession` is pending but basic protocol support is in place.
+Telemetry: Added `telemetry_report` event type to schema and handlers, plus server-side component latency instrumentation (STT, assistant/LLM, TTS).
 
-This completes the core experience improvements for voice. The system now supports barge-in, visual feedback, and has the protocol foundation for detailed quality monitoring.
+Telemetry: Added granular server-side latency instrumentation for STT/TTS (streaming `VoiceSession`) and LLM/orchestrator latency (streaming `VoiceSocketHandler`), surfaced via Prometheus and the existing admin stats endpoint.
+
+**Implementation evidence (Phase 3):**
+- `packages/voice/src/server/session.ts` instruments streaming STT/TTS and records Prometheus metrics (`stt_stream_transcribe`, `tts_stream_synthesize`) plus `voice_stt_*` / `voice_tts_*` counters+histograms (see lines 47-120).
+- `packages/voice/src/server/socket.ts` records assistant latency/count on the streaming stop path (see lines 463-510).
+- `packages/voice/src/metrics.ts` adds `voice_assistant_*` metrics and `recordVoiceAssistant()` helper (see lines 70-126).
+- `packages/api/src/voice/telemetry.ts` includes `assistantLatency` in `collectVoiceTelemetry()` so `admin.getVoiceStats` reports it (see lines 1-50).
+
+This completes the core experience improvements for voice. The system now supports barge-in, visual feedback, and has both network-quality telemetry (`telemetry_report`) and server-side component latency instrumentation.
 
 ## Context and Orientation
 

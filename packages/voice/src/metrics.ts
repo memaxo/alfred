@@ -67,6 +67,21 @@ export const voiceTtsDurationSeconds = ensureHistogram({
   registers: [metricsRegistry],
 });
 
+export const voiceAssistantTotal = ensureCounter({
+  name: "voice_assistant_total",
+  help: "Count of voice assistant (LLM/orchestrator) invocations grouped by provider and status.",
+  labelNames: ["provider", "status"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceAssistantDurationSeconds = ensureHistogram({
+  name: "voice_assistant_duration_seconds",
+  help: "Duration of voice assistant (LLM/orchestrator) inference in seconds grouped by provider.",
+  labelNames: ["provider"] as const,
+  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 20],
+  registers: [metricsRegistry],
+});
+
 export function recordVoiceStt({
   provider,
   status,
@@ -93,6 +108,24 @@ export function recordVoiceTts({
   const normalizedProvider = coerceProvider(provider);
   voiceTtsTotal.inc({ provider: normalizedProvider, status });
   observeDuration(voiceTtsDurationSeconds, normalizedProvider, durationSeconds);
+}
+
+export function recordVoiceAssistant({
+  provider,
+  status,
+  durationSeconds,
+}: {
+  provider?: string;
+  status: VoiceMetricStatus;
+  durationSeconds?: number;
+}) {
+  const normalizedProvider = coerceProvider(provider);
+  voiceAssistantTotal.inc({ provider: normalizedProvider, status });
+  observeDuration(
+    voiceAssistantDurationSeconds,
+    normalizedProvider,
+    durationSeconds
+  );
 }
 
 export const voiceStreamEventsTotal = ensureCounter({

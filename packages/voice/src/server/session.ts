@@ -1,5 +1,11 @@
 import { Buffer } from "node:buffer";
+import { performance } from "node:perf_hooks";
 import { logger as globalLogger } from "@alfred/logger";
+import {
+  recordVoiceStt,
+  recordVoiceTts,
+  voiceStreamLatencySeconds,
+} from "../metrics";
 import type { STTPool, STTResult } from "../process/stt";
 import type { TTSPool } from "../process/tts";
 
@@ -26,10 +32,16 @@ export class VoiceSession {
   private lastActivity: number = Date.now();
   private transcriptBuffer = "";
   private readonly logger: VoiceLogger;
+  private readonly sttProvider: string;
+  private readonly ttsProvider: string;
 
   constructor(config: VoiceSessionConfig) {
     this.config = config;
     this.logger = config.logger ?? defaultLogger;
+    // Provider is inferred from env; pool internals are not exposed.
+    this.sttProvider = "maya1";
+    this.ttsProvider =
+      process.env.TTS_PROVIDER === "supertonic" ? "supertonic" : "maya1";
   }
 
   async processAudioChunk(
@@ -41,6 +53,7 @@ export class VoiceSession {
     this.audioBuffer.push(Buffer.from(audioBase64, "base64"));
 
     // Process audio chunk for transcription
+    const timerStart = performance.now();
     try {
       const result = await this.config.sttPool.transcribe({
         audioBase64,
@@ -51,11 +64,36 @@ export class VoiceSession {
         sessionId: options?.sessionId ?? this.config.sessionId,
       });
 
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      const durationSeconds =
+        typeof result.durationSeconds === "number"
+          ? result.durationSeconds
+          : wallSeconds;
+      voiceStreamLatencySeconds.observe(
+        { stage: "stt_stream_transcribe" },
+        wallSeconds
+      );
+      recordVoiceStt({
+        provider: this.sttProvider,
+        status: "ok",
+        durationSeconds,
+      });
+
       if (result.text) {
         this.transcriptBuffer += `${result.text} `;
       }
       return result;
     } catch (error) {
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "stt_stream_transcribe" },
+        wallSeconds
+      );
+      recordVoiceStt({
+        provider: this.sttProvider,
+        status: "error",
+        durationSeconds: wallSeconds,
+      });
       this.logger.error("voice_session_transcribe_error", {
         sessionId: this.config.sessionId,
         error: error instanceof Error ? error.message : String(error),
@@ -68,6 +106,7 @@ export class VoiceSession {
     this.lastActivity = Date.now();
     const audioChunks: Buffer[] = [];
 
+    const timerStart = performance.now();
     try {
       await this.config.ttsPool.synthesize(
         {
@@ -79,7 +118,27 @@ export class VoiceSession {
           audioChunks.push(Buffer.from(chunk.audioBase64, "base64"));
         }
       );
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "tts_stream_synthesize" },
+        wallSeconds
+      );
+      recordVoiceTts({
+        provider: this.ttsProvider,
+        status: "ok",
+        durationSeconds: wallSeconds,
+      });
     } catch (error) {
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "tts_stream_synthesize" },
+        wallSeconds
+      );
+      recordVoiceTts({
+        provider: this.ttsProvider,
+        status: "error",
+        durationSeconds: wallSeconds,
+      });
       this.logger.error("voice_session_synthesize_error", {
         sessionId: this.config.sessionId,
         error: error instanceof Error ? error.message : String(error),
@@ -96,6 +155,7 @@ export class VoiceSession {
     onChunk: (chunk: Buffer) => void
   ): Promise<void> {
     this.lastActivity = Date.now();
+    const timerStart = performance.now();
     try {
       await this.config.ttsPool.synthesize(
         {
@@ -107,7 +167,27 @@ export class VoiceSession {
           onChunk(Buffer.from(chunk.audioBase64, "base64"));
         }
       );
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "tts_stream_synthesize" },
+        wallSeconds
+      );
+      recordVoiceTts({
+        provider: this.ttsProvider,
+        status: "ok",
+        durationSeconds: wallSeconds,
+      });
     } catch (error) {
+      const wallSeconds = (performance.now() - timerStart) / 1000;
+      voiceStreamLatencySeconds.observe(
+        { stage: "tts_stream_synthesize" },
+        wallSeconds
+      );
+      recordVoiceTts({
+        provider: this.ttsProvider,
+        status: "error",
+        durationSeconds: wallSeconds,
+      });
       this.logger.error("voice_session_stream_synthesis_error", {
         sessionId: this.config.sessionId,
         error: error instanceof Error ? error.message : String(error),

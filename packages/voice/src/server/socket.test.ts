@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { voiceAssistantDurationSeconds, voiceAssistantTotal } from "../metrics";
 
 // Mock opus BEFORE imports that might use it
 // Note: This must be done before any imports that transitively import @discordjs/opus
@@ -45,8 +46,9 @@ const mockSession = {
     endOfUtterance: false,
   })),
   getTranscript: mock(() => "hello world"),
-  streamSynthesis: mock(async (_text: string, _voice: string, onChunk: any) => {
+  streamSynthesis: mock((_text: string, _voice: string, onChunk: any) => {
     onChunk(Buffer.from("test"));
+    return Promise.resolve();
   }),
   clearTranscript: mock(() => {}),
 };
@@ -64,7 +66,10 @@ const mockHooks: VoiceSocketHooks = {
   onAssistantResponse: mock(async () => {}),
   onSessionError: mock(async () => {}),
   onSessionComplete: mock(async () => {}),
-  runAssistant: mock(async () => ({ text: "assistant reply" })),
+  runAssistant: mock(async () => ({
+    text: "assistant reply",
+    durationSeconds: 0.3,
+  })),
 };
 
 function createMockWs(): ServerWebSocket<VoiceSocketData> {
@@ -73,6 +78,7 @@ function createMockWs(): ServerWebSocket<VoiceSocketData> {
       userId: "user-1",
       lastActivity: 0,
     },
+    readyState: 1,
     send: mock(() => 0),
     close: mock(() => {}),
   } as unknown as ServerWebSocket<VoiceSocketData>;
@@ -83,6 +89,8 @@ describe("VoiceSocketHandler", () => {
   let ws: ServerWebSocket<VoiceSocketData>;
 
   beforeEach(() => {
+    voiceAssistantTotal.reset();
+    voiceAssistantDurationSeconds.reset();
     handler = new VoiceSocketHandler(mockManager, mockHooks);
     ws = createMockWs();
     // Reset mocks
@@ -165,5 +173,13 @@ describe("VoiceSocketHandler", () => {
     expect(sent.some((m: any) => m.type === "assistant_message")).toBe(true);
     expect(sent.some((m: any) => m.type === "tts_chunk_binary")).toBe(true);
     expect(sent.some((m: any) => m.type === "tts_complete")).toBe(true);
+
+    const metric = await voiceAssistantDurationSeconds.get();
+    const count =
+      metric.values.find((v) => {
+        const name = v.metricName;
+        return typeof name === "string" && name.endsWith("_count");
+      })?.value ?? 0;
+    expect(count).toBeGreaterThan(0);
   });
 });
