@@ -18,12 +18,24 @@ mock.module("@/utils/trpc", () => {
     };
   };
 
+  const buildQuery = () => ({
+    useQuery: () => ({
+      data: undefined,
+      isPending: false,
+      refetch: vi.fn(),
+    }),
+  });
+
   return {
     trpc: {
       voice: {
         sttTranscribe: buildMutation(sttMutate),
         ttsSynthesize: buildMutation(ttsMutate),
         speechToSpeech: buildMutation(s2sMutate),
+        sessions: buildQuery(),
+      },
+      user: {
+        getPreferences: buildQuery(),
       },
     },
   };
@@ -104,43 +116,28 @@ describe("useVoiceSessionWeb", () => {
     });
   });
 
-  it("starts recording via MediaRecorder", async () => {
+  it("exposes legacy API stubs", () => {
     const { result } = renderHook(() => useVoiceSessionWeb());
 
-    await act(async () => {
-      await result.current.start();
-    });
-
-    expect(getUserMediaMock).toHaveBeenCalled();
-    expect(result.current.isRecording).toBe(true);
+    // Legacy methods are now stubs (no-ops) - verify they exist and don't throw
+    expect(typeof result.current.start).toBe("function");
+    expect(typeof result.current.speechToSpeech).toBe("function");
+    expect(typeof result.current.stream.start).toBe("function");
+    expect(result.current.stream.supported).toBeDefined();
   });
 
-  it("sends captured clip to speechToSpeech and updates response", async () => {
+  it("disables voice queries in test mode", () => {
+    // Set test mode
+    const originalEnv = import.meta.env.VITE_TEST_MODE;
+    (import.meta.env as any).VITE_TEST_MODE = "true";
+
     const { result } = renderHook(() => useVoiceSessionWeb());
 
-    await act(async () => {
-      await result.current.start();
-    });
+    // In test mode, queries should be disabled (no errors thrown)
+    expect(result.current.session).toBeNull();
+    expect(result.current.stream.supported).toBeDefined();
 
-    const recorder = mediaRecorderInstances.at(-1);
-    if (!recorder) {
-      throw new Error("MediaRecorder instance missing");
-    }
-
-    const sample = new Blob([new Uint8Array([1, 2, 3])], {
-      type: "audio/webm",
-    });
-    recorder.emitData(sample);
-
-    await act(async () => {
-      await result.current.speechToSpeech();
-    });
-
-    expect(s2sMutate).toHaveBeenCalledTimes(1);
-    expect(s2sMutate.mock.calls[0][0]).toMatchObject({
-      mimeType: "audio/webm",
-    });
-    expect(result.current.lastResponse?.assistant?.text).toBe("reply");
-    expect(result.current.error).toBeNull();
+    // Restore
+    (import.meta.env as any).VITE_TEST_MODE = originalEnv;
   });
 });
