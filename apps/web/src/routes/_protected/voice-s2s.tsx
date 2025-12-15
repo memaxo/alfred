@@ -10,6 +10,13 @@ export const Route = createFileRoute("/_protected/voice-s2s")({
   errorComponent: RouteError,
 });
 
+/**
+ * Render the Voice (Speech to Speech) route view with controls, status, and visualizations for voice sessions.
+ *
+ * Displays UI for starting/stopping a voice session, performing speech-to-speech, managing a streaming prototype (hands-free) mode, and viewing transcripts and assistant replies. Exposes a large hold-to-talk control (also toggled by the Space key when appropriate), an optional streaming toggle with VAD progress and frequency visualization when available, session identifiers, and inline error/status messages.
+ *
+ * @returns The route view element for the Voice (Speech to Speech) page.
+ */
 export function VoiceS2SRouteView() {
   const {
     state,
