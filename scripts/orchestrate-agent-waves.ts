@@ -140,25 +140,127 @@ async function retryWithBackoff<T>(
 
 // Utility: Call Linear MCP tool
 // NOTE: This script is designed to run in Cursor's environment where MCP tools are available.
-// When run via Cursor agent or in MCP-enabled context, use call_mcp_tool directly.
-// For standalone execution, you would need to implement Linear API client or use Linear CLI.
+// When run via Cursor agent, MCP tools are injected via call_mcp_tool function.
+// For standalone execution, falls back to Linear SDK (requires LINEAR_API_KEY).
 async function callLinearMCP(
   toolName: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  // In Cursor environment with MCP access:
-  // return await call_mcp_tool({ server: "user-Linear", toolName, arguments: args });
-  
-  // For standalone execution, you could:
-  // 1. Use Linear GraphQL API directly with LINEAR_API_KEY
-  // 2. Use linear CLI: `linear issue list --format json`
-  // 3. Implement a Linear client wrapper
-  
-  // Placeholder implementation - replace with actual MCP call or API client
-  throw new Error(
-    `Linear MCP integration required. This script must run in Cursor environment with MCP access, or implement Linear API client.\n` +
-    `Would call: ${toolName} with args: ${JSON.stringify(args)}`
-  );
+  // Check if running in Cursor environment with MCP access
+  // call_mcp_tool is injected by Cursor's MCP runtime when available
+  const mcpAvailable =
+    typeof globalThis !== "undefined" &&
+    "call_mcp_tool" in globalThis &&
+    typeof (globalThis as { call_mcp_tool?: unknown }).call_mcp_tool === "function";
+
+  if (mcpAvailable) {
+    try {
+      const mcpTool = (globalThis as { call_mcp_tool: (params: {
+        server: string;
+        toolName: string;
+        arguments: Record<string, unknown>;
+      }) => Promise<unknown> }).call_mcp_tool;
+      
+      return await mcpTool({
+        server: "user-Linear",
+        toolName,
+        arguments: args,
+      });
+    } catch (error) {
+      console.warn(`[MCP] Failed to call ${toolName}, falling back to SDK:`, error);
+      // Fall through to SDK implementation
+    }
+  }
+
+  // Fallback: Linear SDK implementation for standalone execution
+  const apiKey = process.env.LINEAR_API_KEY || process.env.LINEAR_MCP_TOKEN;
+  if (!apiKey) {
+    throw new Error(
+      `Linear MCP integration required. This script must run in Cursor environment with MCP access, ` +
+      `or set LINEAR_API_KEY/LINEAR_MCP_TOKEN environment variable for standalone execution.\n` +
+      `Would call: ${toolName} with args: ${JSON.stringify(args)}`
+    );
+  }
+
+  // Use Linear SDK as fallback
+  const { LinearClient } = await import("@linear/sdk");
+  const client = new LinearClient({ accessToken: apiKey });
+
+  switch (toolName) {
+    case "list_issues": {
+      const team = args.team as string;
+      const state = args.state as string[] | string | undefined;
+      const limit = (args.limit as number) || 50;
+
+      const issues = await client.issues({
+        filter: {
+          team: { name: { eq: team } },
+          ...(state
+            ? {
+                state: Array.isArray(state)
+                  ? { name: { in: state } }
+                  : { name: { eq: state } },
+              }
+            : {}),
+        },
+        first: Math.min(limit, 250),
+      });
+
+      return (
+        issues.nodes?.map((issue) => ({
+          id: issue.id,
+          identifier: issue.identifier,
+          title: issue.title,
+          description: issue.description,
+          status: issue.state?.name,
+          parentId: issue.parent?.id,
+        })) || []
+      );
+    }
+
+    case "get_issue": {
+      const id = args.id as string;
+      const issue = await client.issue(id);
+      if (!issue) {
+        throw new Error(`Issue ${id} not found`);
+      }
+      return {
+        id: issue.id,
+        identifier: issue.identifier,
+        title: issue.title,
+        description: issue.description,
+        status: issue.state?.name,
+        parentId: issue.parent?.id,
+      };
+    }
+
+    case "update_issue": {
+      const issueId = args.issueId as string;
+      const update: Record<string, unknown> = {};
+      if (args.delegate) {
+        update.assigneeId = args.delegate as string;
+      }
+      if (args.status) {
+        // Note: Would need to resolve status ID from name via team states query
+        update.stateId = args.status as string;
+      }
+      const result = await client.updateIssue(issueId, update);
+      return result?.issue || null;
+    }
+
+    case "create_comment": {
+      const issueId = args.issueId as string;
+      const body = args.body as string;
+      const result = await client.createComment({
+        issueId,
+        body,
+      });
+      return result?.comment || null;
+    }
+
+    default:
+      throw new Error(`Unsupported Linear tool: ${toolName}`);
+  }
 }
 
 // Phase 1: Discovery
