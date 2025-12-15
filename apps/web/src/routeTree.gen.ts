@@ -20,6 +20,7 @@ import { Route as DemoCortexRouteImport } from './routes/demo/cortex'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
+import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as ProtectedMindscapeRouteImport } from './routes/_protected/mindscape'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
@@ -91,6 +92,11 @@ const ApiMetricsRoute = ApiMetricsRouteImport.update({
 const ProtectedVoiceS2sRoute = ProtectedVoiceS2sRouteImport.update({
   id: '/voice-s2s',
   path: '/voice-s2s',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedTimerRoute = ProtectedTimerRouteImport.update({
+  id: '/timer',
+  path: '/timer',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/drive': typeof ProtectedDriveRoute
   '/mindscape': typeof ProtectedMindscapeRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
+  '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/drive': typeof ProtectedDriveRoute
   '/mindscape': typeof ProtectedMindscapeRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
+  '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/_protected/drive': typeof ProtectedDriveRoute
   '/_protected/mindscape': typeof ProtectedMindscapeRoute
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
+  '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/drive'
     | '/mindscape'
     | '/settings'
+    | '/timer'
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/drive'
     | '/mindscape'
     | '/settings'
+    | '/timer'
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/_protected/drive'
     | '/_protected/mindscape'
     | '/_protected/settings'
+    | '/_protected/timer'
     | '/_protected/voice-s2s'
     | '/api/metrics'
     | '/api/search'
@@ -469,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/voice-s2s'
       fullPath: '/voice-s2s'
       preLoaderRoute: typeof ProtectedVoiceS2sRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/timer': {
+      id: '/_protected/timer'
+      path: '/timer'
+      fullPath: '/timer'
+      preLoaderRoute: typeof ProtectedTimerRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/settings': {
@@ -628,6 +647,7 @@ interface ProtectedRouteChildren {
   ProtectedDriveRoute: typeof ProtectedDriveRoute
   ProtectedMindscapeRoute: typeof ProtectedMindscapeRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
+  ProtectedTimerRoute: typeof ProtectedTimerRoute
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
   ProtectedDevEdgesRoute: typeof ProtectedDevEdgesRoute
   ProtectedExperimentalTuneRoute: typeof ProtectedExperimentalTuneRoute
@@ -639,6 +659,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDriveRoute: ProtectedDriveRoute,
   ProtectedMindscapeRoute: ProtectedMindscapeRoute,
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
+  ProtectedTimerRoute: ProtectedTimerRoute,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
   ProtectedDevEdgesRoute: ProtectedDevEdgesRoute,
   ProtectedExperimentalTuneRoute: ProtectedExperimentalTuneRoute,
