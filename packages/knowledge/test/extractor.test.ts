@@ -258,21 +258,21 @@ describe("classifyDomain()", () => {
     const text = "I'm writing JavaScript code using React framework.";
     const domains = classifyDomain(text);
 
-    expect(domains).toContain("Coding");
+    expect(domains.some((d) => d.domain === "Coding")).toBe(true);
   });
 
   it("classifies Security domain", () => {
     const text = "There's a vulnerability in the authentication system.";
     const domains = classifyDomain(text);
 
-    expect(domains).toContain("Security");
+    expect(domains.some((d) => d.domain === "Security")).toBe(true);
   });
 
   it("classifies AI domain", () => {
     const text = "Using machine learning and transformers for NLP.";
     const domains = classifyDomain(text);
 
-    expect(domains).toContain("AI");
+    expect(domains.some((d) => d.domain === "AI")).toBe(true);
   });
 
   it("classifies multiple domains", () => {
