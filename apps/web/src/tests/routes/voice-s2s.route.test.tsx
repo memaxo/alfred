@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import { fireEvent, render, waitFor } from "../../test/testing-library";
-import { VoiceS2SRouteView } from "../voice-s2s";
+import { VoiceS2SRouteView } from "@/routes/_protected/voice-s2s";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -19,6 +19,23 @@ mock.module("@/hooks/use-voice-session-web", () => ({
   useVoiceSessionWeb: useVoiceSessionWebMock,
 }));
 
+// Build a default stream mock object
+const buildStreamMock = (overrides: Record<string, unknown> = {}) => ({
+  analyser: null,
+  supported: false,
+  isActive: false,
+  status: "idle",
+  vadConfidence: null,
+  transcript: "",
+  assistantText: "",
+  sessionId: null,
+  autoStopReason: null,
+  error: null,
+  start: vi.fn(),
+  stop: vi.fn(),
+  ...overrides,
+});
+
 describe("VoiceS2SRouteView", () => {
   beforeEach(() => {
     toastSuccess.mockReset();
@@ -32,6 +49,7 @@ describe("VoiceS2SRouteView", () => {
 
     useVoiceSessionWebMock.mockReturnValue({
       state: { capture: "idle", transcript: "", error: null, lastUpdated: 0 },
+      session: null,
       start,
       speechToSpeech: vi.fn(),
       isRecording: false,
@@ -39,6 +57,7 @@ describe("VoiceS2SRouteView", () => {
       lastResponse: null,
       error: null,
       clear,
+      stream: buildStreamMock(),
     });
 
     const view = render(<VoiceS2SRouteView />);
@@ -64,6 +83,7 @@ describe("VoiceS2SRouteView", () => {
         error: null,
         lastUpdated: 0,
       },
+      session: null,
       start: vi.fn(),
       speechToSpeech,
       isRecording: true,
@@ -71,6 +91,7 @@ describe("VoiceS2SRouteView", () => {
       lastResponse: null,
       error: null,
       clear: vi.fn(),
+      stream: buildStreamMock(),
     });
 
     const view = render(<VoiceS2SRouteView />);
