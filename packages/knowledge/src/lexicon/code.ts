@@ -159,9 +159,15 @@ export const FRAMEWORKS = [
 ] as const;
 
 /**
- * Development tools (~40 entries)
+ * Development tools (~50 entries)
  */
 export const DEV_TOOLS = [
+  // Runtimes
+  "node",
+  "nodejs",
+  "bun",
+  "deno",
+  // Containers & Orchestration
   "docker",
   "kubernetes",
   "k8s",
@@ -174,32 +180,39 @@ export const DEV_TOOLS = [
   "consul",
   "vault",
   "nomad",
+  // Version Control
   "git",
   "github",
   "gitlab",
   "bitbucket",
+  // CI/CD
   "jenkins",
   "circleci",
   "travis",
   "github-actions",
   "gitlab-ci",
   "azure-devops",
+  // Cloud
   "aws",
   "gcp",
   "azure",
   "vercel",
   "netlify",
   "cloudflare",
+  // Servers
   "nginx",
   "apache",
+  // Databases
   "redis",
   "postgres",
   "postgresql",
   "mysql",
   "mongodb",
   "elasticsearch",
+  // Message Queues
   "kafka",
   "rabbitmq",
+  // Monitoring
   "prometheus",
   "grafana",
 ] as const;

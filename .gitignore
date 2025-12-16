@@ -101,3 +101,7 @@ core
 .agent/plans/
 docker/postgres/data
 tmp-policy-test/
+
+# Build profiling artifacts (heap snapshots, diagnostic reports)
+.profiles/
+**/*.heapsnapshot

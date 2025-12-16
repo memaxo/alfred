@@ -420,7 +420,7 @@ async function registerResumableRun(runId: string, entry: PendingResumeEntry) {
 
   try {
     await registerRunHandle(runId, {
-      resume: async ({ resumeData }) => {
+      resume: async ({ resumeData }: { resumeData: ResumePayload }) => {
         await handleResume(runId, resumeData);
       },
       cancel: async () => {
