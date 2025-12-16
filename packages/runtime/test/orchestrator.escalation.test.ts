@@ -185,6 +185,19 @@ afterAll(() => {
   mock.restore();
 });
 
+/**
+ * Helper function to find escalation events in the event stream.
+ * Reduces repetition and improves type safety.
+ */
+function findEscalationEvent(
+  events: WorkflowEvent[]
+): (WorkflowEvent & { message: string; reason?: string }) | undefined {
+  return events.find(
+    (e): e is WorkflowEvent & { message: string; reason?: string } =>
+      e.type === "notice" && (e as any).message === "workflow_escalated"
+  );
+}
+
 describe("runOrchestrator escalation", () => {
   it("halts merge/review when waves escalate", async () => {
     const workspace = await mkdtemp(path.join(tmpdir(), "orch-esc-"));
@@ -230,9 +243,7 @@ describe("runOrchestrator escalation", () => {
     expect(runReviewPhaseCalled).toBe(false);
 
     // Verify escalation notice event was emitted
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
     expect(escalationEvent).toBeDefined();
   });
 
@@ -273,9 +284,7 @@ describe("runOrchestrator escalation", () => {
     }
 
     // Find the escalation notice event
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
 
     expect(escalationEvent).toBeDefined();
     expect((escalationEvent as any).reason).toBe(expectedReason);
@@ -316,9 +325,7 @@ describe("runOrchestrator escalation", () => {
 
     // Verify that the escalation event is in the stream
     // (persistence to workflow_events happens at a higher layer)
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
 
     expect(escalationEvent).toBeDefined();
     expect((escalationEvent as any).reason).toBe("architecture_mismatch");
@@ -364,9 +371,7 @@ describe("runOrchestrator escalation", () => {
     }
 
     // Verify NO escalation event was emitted
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
     expect(escalationEvent).toBeUndefined();
 
     // Verify merge phase WAS called (normal flow)
@@ -423,9 +428,7 @@ describe("runOrchestrator escalation", () => {
     }
 
     // Both escalation and interrupt events should be emitted
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
     const interruptEvent = events.find(
       (e) =>
         e.type === "notice" && (e as any).message === "workflow_interrupted"
@@ -473,9 +476,7 @@ describe("runOrchestrator escalation", () => {
     }
 
     // Escalation event should still be emitted
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
     expect(escalationEvent).toBeDefined();
 
     // Reason should be undefined (not an error)
@@ -583,9 +584,7 @@ describe("runOrchestrator escalation", () => {
     }
 
     // Find the escalation event
-    const escalationEvent = events.find(
-      (e) => e.type === "notice" && (e as any).message === "workflow_escalated"
-    );
+    const escalationEvent = findEscalationEvent(events);
 
     expect(escalationEvent).toBeDefined();
 
