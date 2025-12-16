@@ -3,6 +3,8 @@
  * Shared type definitions for the entire system
  */
 
+// Build-time constants
+export * from "./build-constants";
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./guards";
