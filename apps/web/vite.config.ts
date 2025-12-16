@@ -48,6 +48,10 @@ const serverOnlyDeps = [
   "node:child_process",
   "stream",
   "fs",
+  // better-auth subpath exports don't resolve correctly on Linux runners
+  "better-auth",
+  "@better-auth/expo",
+  "@better-auth/passkey",
   "path",
   "util",
   "crypto",
