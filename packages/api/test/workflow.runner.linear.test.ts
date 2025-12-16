@@ -24,7 +24,7 @@ const delegateMock = mock(async () => {});
 const startedMock = mock(async () => ({ stateId: "state-id" }));
 const externalUrlMock = mock(async () => {});
 
-mock.module("@alfred/agent/orchestrator/linear", () => ({
+mock.module("@alfred/agent/integrations/linear", () => ({
   __esModule: true,
   emitLinearActivity: emitLinearActivityStub,
   setLinearDelegate: delegateMock,
@@ -46,7 +46,16 @@ mock.module("@alfred/api/metrics", () => ({
   linearSessionOperationsTotal: { inc: vi.fn() },
 }));
 
-const { runPlanV6 } = await import("@alfred/api/workflow/runner");
+mock.module("@alfred/agent/workflow/metrics", () => ({
+  __esModule: true,
+  runnerStepsTotal: { inc: vi.fn() },
+  runnerErrorsTotal: { inc: vi.fn() },
+  linearActivityEmissionsTotal: { inc: vi.fn() },
+  linearActivityDurationSeconds: { startTimer: () => () => {} },
+  linearSessionOperationsTotal: { inc: vi.fn() },
+}));
+
+const { runPlanV6 } = await import("@alfred/agent/workflow/runner");
 
 async function collectEvents<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   const results: T[] = [];

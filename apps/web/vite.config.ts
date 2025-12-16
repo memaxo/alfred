@@ -1,5 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -10,10 +12,73 @@ import * as fumadocsConfig from "./fumadocs.config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Extract build-time constants for Vite define configuration
+ */
+function getBuildConstants(): Record<string, string> {
+  const constants: Record<string, string> = {};
+
+  // Get version from package.json
+  try {
+    const rootPackageJson = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf-8")
+    );
+    constants.BUILD_VERSION = JSON.stringify(rootPackageJson.version || "dev");
+  } catch {
+    constants.BUILD_VERSION = JSON.stringify("dev");
+  }
+
+  // Try git describe for version
+  try {
+    const gitVersion = execSync("git describe --tags --always", {
+      encoding: "utf-8",
+      cwd: resolve(__dirname, "../.."),
+    }).trim();
+    if (gitVersion) {
+      constants.BUILD_VERSION = JSON.stringify(gitVersion);
+    }
+  } catch {
+    // Ignore git errors
+  }
+
+  // Build timestamp
+  constants.BUILD_TIME = JSON.stringify(new Date().toISOString());
+
+  // Git commit
+  try {
+    const gitCommit = execSync("git rev-parse HEAD", {
+      encoding: "utf-8",
+      cwd: resolve(__dirname, "../.."),
+    }).trim();
+    constants.GIT_COMMIT = JSON.stringify(gitCommit);
+  } catch {
+    constants.GIT_COMMIT = JSON.stringify("unknown");
+  }
+
+  // Git branch
+  try {
+    const gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+      encoding: "utf-8",
+      cwd: resolve(__dirname, "../.."),
+    }).trim();
+    constants.GIT_BRANCH = JSON.stringify(gitBranch);
+  } catch {
+    constants.GIT_BRANCH = JSON.stringify("unknown");
+  }
+
+  // NODE_ENV
+  constants.NODE_ENV = JSON.stringify(
+    process.env.NODE_ENV || "development"
+  );
+
+  return constants;
+}
+
 const serverOnlyRegex = [
   /^@alfred\/agent(?:\/.*)?$/,
   /^@alfred\/policy(?:\/.*)?$/,
   /^@alfred\/db(?:\/.*)?$/,
+  /^@alfred\/voice(?:\/.*)?$/,
 ];
 const serverOnlyPackages = [
   "@alfred/agent",
@@ -21,6 +86,7 @@ const serverOnlyPackages = [
   "@alfred/policy",
   "@alfred/db",
   "@alfred/runtime",
+  "@alfred/voice",
 ];
 
 // Browser-only packages that use WebGPU/Canvas APIs - must be externalized from SSR
@@ -46,6 +112,10 @@ const serverOnlyDeps = [
   "node:child_process",
   "stream",
   "fs",
+  // better-auth subpath exports don't resolve correctly on Linux runners
+  "better-auth",
+  "@better-auth/expo",
+  "@better-auth/passkey",
   "path",
   "util",
   "crypto",
@@ -132,6 +202,9 @@ const useEffectEventShimPlugin = {
 };
 
 export default defineConfig({
+  define: {
+    ...getBuildConstants(),
+  },
   optimizeDeps: {
     exclude: [
       "@alfred/agent",
