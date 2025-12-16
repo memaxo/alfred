@@ -12,7 +12,11 @@ import {
   type OrchestratorCallbacks,
   orchestrateWorkflowStream,
 } from "@alfred/agent/workflow/orchestrator";
-import { type RunHandle, runRegistry } from "@alfred/agent/workflow/registry";
+import {
+  type ResumePayload,
+  type RunHandle,
+  runRegistry,
+} from "@alfred/agent/workflow/registry";
 import {
   mapWorkflowResource,
   mapWorkflowRunResource,
@@ -86,7 +90,7 @@ configureLinearMetrics({
       activitiesDropped: codexLinearActivitiesDroppedTotal,
       activityBatches: codexLinearActivityBatchesTotal,
     });
-    sessionManager.configureContinuityMetrics((status) => {
+    sessionManager.configureContinuityMetrics((status: "success" | "failure") => {
       codexSessionContinuityTotal.inc({ status });
     });
   } catch (error) {
@@ -209,7 +213,7 @@ export const workflowRouter = router({
         });
 
         await registerRunHandle(executor.runId, {
-          resume: async ({ resumeData }) => {
+          resume: async ({ resumeData }: { resumeData: ResumePayload }) => {
             await executor.resume(resumeData);
           },
           cancel: async () => {
