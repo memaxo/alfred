@@ -17,6 +17,8 @@ import {
 import {
   detectNeedsGuidance,
   detectStuck,
+  getStuckDetectionDefaults,
+  type StuckDetectionOptions,
   type TrackerState,
   updateTracker,
 } from "@alfred/agent/orchestrator/multi/tracker";
@@ -719,7 +721,15 @@ export async function* runWaves(
         waveEvents.push(ev);
       }
 
-      const stuck = detectStuck(trackerState, spec.agentId as any, Date.now());
+      // Use stuck detection thresholds from project config or env var defaults
+      const stuckOpts: StuckDetectionOptions =
+        projectConfig?.stuckDetection ?? getStuckDetectionDefaults();
+      const stuck = detectStuck(
+        trackerState,
+        spec.agentId as any,
+        Date.now(),
+        stuckOpts
+      );
       const trackerAgent = trackerState.agents[spec.agentId as any];
       const status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
       const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);

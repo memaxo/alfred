@@ -254,7 +254,7 @@ export function createWorkflowSuspension(options: SuspensionOptions) {
     }
 
     await registerRunHandle(runId, {
-      resume: async ({ resumeData }) => {
+      resume: async ({ resumeData }: { resumeData: ResumePayload }) => {
         if (!current || current.runId !== runId) {
           return;
         }

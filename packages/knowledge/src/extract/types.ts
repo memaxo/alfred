@@ -120,6 +120,12 @@ export type ExtractionResult = {
   relations: RelationTriple[];
   contradictions: Contradiction[];
   temporal: TemporalExpression[];
+  /** Detected topic domains (e.g., "Coding", "AI", "Security") */
+  topics: string[];
+  /** Whether text contains code blocks or code patterns */
+  hasCodeBlock: boolean;
+  /** Primary domain for this extraction */
+  primaryDomain: string | null;
 };
 
 export type MentionTerm = {
