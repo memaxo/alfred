@@ -166,10 +166,73 @@ This is expected when the database is not running. Start it with `bun run db:sta
 
 The dev server now starts without critical errors. Restart to verify.
 
+## Issue 4: Better Auth Module Resolution Failure
+
+### Error
+```
+[commonjs--resolver] Missing "./tanstack-start" specifier in "better-auth" package
+error during build:
+Cannot find module 'better-auth/tanstack-start'
+```
+
+### Root Cause
+Version mismatch between `better-auth` core package and its plugins (`@better-auth/expo`, `@better-auth/passkey`). The `./tanstack-start` subpath export was introduced in `better-auth@1.4.x`, but older versions (1.3.x) only exported `./react-start`.
+
+### Solution
+
+**Align all Better Auth packages to the same minor version:**
+
+```json
+// package.json (catalog)
+{
+  "workspaces": {
+    "catalog": {
+      "better-auth": "1.4.7"
+    }
+  }
+}
+
+// packages/auth/package.json
+{
+  "dependencies": {
+    "better-auth": "catalog:",
+    "@better-auth/expo": "1.4.7",
+    "@better-auth/passkey": "1.4.7"
+  }
+}
+
+// apps/native/package.json
+{
+  "dependencies": {
+    "better-auth": "catalog:",
+    "@better-auth/expo": "1.4.7"
+  }
+}
+```
+
+### Verification
+```bash
+# Reinstall dependencies
+bun install --frozen-lockfile
+
+# Verify TypeScript resolution
+bun run typecheck
+
+# Verify Vite SSR build
+bun run verify:build
+```
+
+### Important Notes
+
+- All `better-auth` packages (`better-auth`, `@better-auth/expo`, `@better-auth/passkey`) must be on the same minor version (e.g., all 1.4.x) to avoid subpath export mismatches.
+- Use the catalog version for `better-auth` and pin exact versions for plugins.
+- The import in `packages/auth/src/index.ts` uses `better-auth/tanstack-start`, which requires `better-auth@1.4.0` or higher.
+
 ## Related Documentation
 
 - Database setup: `README.md` → Database Setup
 - Environment configuration: `config/env.example`
 - SSR hardening: `docs/execplans/ssr-hardening-plan.md`
 - Voice local models: `.ruler/25-voice-local-models.md`
+- Better Auth integration: `docs/reference/better-auth/integrations/tanstack.md`
 
