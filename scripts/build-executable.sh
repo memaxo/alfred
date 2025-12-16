@@ -11,6 +11,7 @@ TARGET="${TARGET:-bun-linux-x64}"
 MINIFY="${MINIFY:-true}"
 SOURCEMAP="${SOURCEMAP:-true}"
 BYTECODE="${BYTECODE:-false}"
+NODE_ENV="${NODE_ENV:-production}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -29,6 +30,34 @@ fi
 # Ensure dist directory exists
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
+# Extract build-time constants
+# Get version from package.json or git describe
+if [ -f "package.json" ]; then
+  BUILD_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+else
+  BUILD_VERSION="unknown"
+fi
+
+# Try git describe for version if available
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  GIT_VERSION=$(git describe --tags --always 2>/dev/null || echo "$BUILD_VERSION")
+  if [ "$GIT_VERSION" != "$BUILD_VERSION" ] && [ "$GIT_VERSION" != "unknown" ]; then
+    BUILD_VERSION="$GIT_VERSION"
+  fi
+fi
+
+# Get build timestamp
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Get git commit and branch
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+  GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+else
+  GIT_COMMIT="unknown"
+  GIT_BRANCH="unknown"
+fi
+
 # Build command
 BUILD_CMD="bun build --compile --target=$TARGET"
 
@@ -43,6 +72,15 @@ fi
 if [ "$BYTECODE" = "true" ]; then
   BUILD_CMD="$BUILD_CMD --bytecode"
 fi
+
+# Inject build-time constants via --define flags
+# Values must be JSON-quoted strings
+BUILD_CMD="$BUILD_CMD --define BUILD_VERSION='\"$BUILD_VERSION\"'"
+BUILD_CMD="$BUILD_CMD --define BUILD_TIME='\"$BUILD_TIME\"'"
+BUILD_CMD="$BUILD_CMD --define GIT_COMMIT='\"$GIT_COMMIT\"'"
+BUILD_CMD="$BUILD_CMD --define GIT_BRANCH='\"$GIT_BRANCH\"'"
+BUILD_CMD="$BUILD_CMD --define NODE_ENV='\"$NODE_ENV\"'"
+BUILD_CMD="$BUILD_CMD --define BUILD_TARGET='\"$TARGET\"'"
 
 BUILD_CMD="$BUILD_CMD $ENTRY_POINT --outfile $OUTPUT_FILE"
 

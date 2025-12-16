@@ -18,7 +18,13 @@ export {
   isDevTool,
   getLanguageFromExtension,
 } from "./code.js";
-export { classifyDomain } from "./domains.js";
+export {
+  classifyDomain,
+  detectTopics,
+  applyTopicBoost,
+  type TopicResult,
+  type DomainResult,
+} from "./domains.js";
 
 import { ANTONYM_PAIRS } from "./antonyms.js";
 

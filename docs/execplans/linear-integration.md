@@ -33,6 +33,7 @@ After this change, ALFRED will function as a first-class Linear agent. Users wil
 - [x] (2025-11-12 08:12Z) Handle comment creation events
 - [x] (2025-11-12 08:12Z) Write unit tests for Linear helper functions
 - [x] (2025-11-12 08:12Z) Write integration tests for workflow runner
+- [x] (2025-12-15 16:30Z) Fixed test import path in workflow.runner.linear.test.ts (@alfred/agent/workflow/runner)
 - [x] (2025-11-24 15:20Z) Added automatic Linear ticket creation/linking when workflows start
 - [x] (2025-11-24 15:35Z) Enforced review checklist + Linear completion gating before marking runs complete
 - [ ] (2025-11-24 18:30Z) Manual end-to-end testing with real Linear workspace (blocked – no Linear sandbox credentials available here; see runbook below)
@@ -64,7 +65,52 @@ These steps remain blocked in this environment because the required Linear sandb
 
 ## Outcomes & Retrospective
 
-(To be filled at completion. Summarize what was achieved, what remains incomplete, and lessons learned for future work.)
+**Status: Mostly Complete ⚠️**
+
+### What was achieved:
+- **Linear helper functions** fully implemented in `packages/agent/src/orchestrator/linear.ts`:
+  - `emitLinearActivity()` with p-retry exponential backoff and rate limiting
+  - `setLinearDelegate()`, `setLinearStarted()`, `setLinearCompleted()`, `setLinearCancelled()`
+  - `setLinearSessionExternalUrl()`, `commentOnLinearIssue()`
+  - `extractIssueIdFromSession()` for session parsing
+  
+- **Workflow runner integration** in `packages/agent/src/workflow/runner.ts`:
+  - 10-second acknowledgment (thought activity with 9-second timeout via Promise.race)
+  - Session initialization (delegate, state, external URL) - fire-and-forget
+  - Action activity emissions during tool execution (30-second throttle, ephemeral)
+  - Response/error activity emission on completion
+  
+- **Webhook handler** at `apps/web/src/routes/api/linear/webhook.ts`:
+  - HMAC SHA256 signature verification using Linear SDK
+  - Issue assignment handling → starts workflows
+  - Issue state change handling → cancels workflows
+  - Comment creation handling (logged, TODO for context enrichment)
+  
+- **Prometheus metrics** in `packages/agent/src/workflow/metrics.ts`:
+  - `linear_activity_emissions_total` (type, status)
+  - `linear_activity_duration_seconds` (type)
+  - `linear_session_operations_total` (operation)
+  - `linear_webhook_events_total` (event_type, action)
+  - `linear_webhook_workflow_starts/cancels_total`
+
+- **Rate limiting** via `packages/agent/src/orchestrator/linear-rate-limiter.ts`:
+  - ~55 req/min with 30-second cooldown for action events
+  - 9-second startup buffer for initial thought activity
+  - HTTP 429 handling with Retry-After respect
+
+- **Tests**:
+  - Unit tests for Linear helpers (`packages/agent/test/linear.test.ts`)
+  - Integration tests for workflow runner (`packages/api/test/workflow.runner.linear.test.ts`)
+  - Rate limiter tests (`packages/agent/test/orchestrator/linear-rate-limiter*.test.ts`)
+
+### What remains incomplete:
+- **Manual E2E testing** with real Linear workspace (blocked by missing sandbox credentials)
+  - See Manual Validation Runbook section for steps when credentials become available
+
+### Lessons learned:
+1. Cross-package TypeScript rootDir conflicts can be solved with runtime metric injection (`configureLinearMetrics`)
+2. Fire-and-forget patterns are essential for resilience - Linear failures should never break workflows
+3. The 10-second deadline for first activity requires aggressive timeout handling (9-second race)
 
 
 ## Context and Orientation

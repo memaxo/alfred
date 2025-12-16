@@ -80,3 +80,39 @@ Server-only package. Never import into browser bundles.
 - Token budget validation: Immediate
 - Event emission: <1ms per event
 
+## Stuck Detection Configuration
+
+The runtime detects stuck agents using three heuristics that can be tuned via environment variables or project configuration.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STUCK_NO_PROGRESS_MS` | `120000` | Time without events before agent is stuck (ms) |
+| `STUCK_MAX_REPEATS` | `5` | Consecutive identical commands before stuck |
+| `STUCK_MAX_FILE_FLIP_FLOPS` | `4` | Same file modifications before stuck |
+
+### Project Configuration
+
+Add `stuckDetection` to your project config:
+
+```typescript
+const projectConfig: ProjectConfig = {
+  type: 'node',
+  testCommand: 'bun test',
+  // ... other config
+  stuckDetection: {
+    noProgressMs: 300_000,  // 5 minutes for complex tasks
+    maxRepeats: 10,         // Allow more retries
+    maxFileFlipFlops: 8,    // Allow more refactoring
+  },
+};
+```
+
+### Tuning Guidelines
+
+- **Long-running tasks**: Increase `noProgressMs` for complex analysis or large codebases
+- **Iterative tasks**: Increase `maxRepeats` for tasks requiring multiple test/fix cycles
+- **Refactoring tasks**: Increase `maxFileFlipFlops` for tasks touching the same files repeatedly
+- **Quick feedback**: Decrease all values for faster stuck detection in simple tasks
+

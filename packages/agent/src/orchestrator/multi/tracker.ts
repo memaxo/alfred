@@ -1,6 +1,37 @@
 import type { SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
 
+/**
+ * Configuration options for stuck detection thresholds.
+ * All thresholds can be tuned per-workflow or via environment variables.
+ */
+export type StuckDetectionOptions = {
+  /** Time in milliseconds without events before agent is considered stuck (default: 120000) */
+  noProgressMs?: number;
+  /** Number of repeated identical commands that indicates stuck state (default: 5) */
+  maxRepeats?: number;
+  /** Number of times the same file can be modified before considered flip-flopping (default: 4) */
+  maxFileFlipFlops?: number;
+};
+
+/**
+ * Get stuck detection defaults from environment variables.
+ * Falls back to hardcoded defaults if env vars not set.
+ */
+export function getStuckDetectionDefaults(): Required<StuckDetectionOptions> {
+  return {
+    noProgressMs: Number.parseInt(
+      process.env.STUCK_NO_PROGRESS_MS ?? "120000",
+      10
+    ),
+    maxRepeats: Number.parseInt(process.env.STUCK_MAX_REPEATS ?? "5", 10),
+    maxFileFlipFlops: Number.parseInt(
+      process.env.STUCK_MAX_FILE_FLIP_FLOPS ?? "4",
+      10
+    ),
+  };
+}
+
 export type AgentStatus =
   | "created"
   | "running"
@@ -159,20 +190,17 @@ export function detectStuck(
   state: TrackerState,
   agentId: AgentId,
   now: number,
-  opts?: {
-    noProgressMs?: number;
-    maxRepeats?: number;
-    maxFileFlipFlops?: number;
-  }
+  opts?: StuckDetectionOptions
 ): boolean {
   const agent = state.agents[agentId];
   if (!agent) {
     return false;
   }
 
-  const noProgressMs = opts?.noProgressMs ?? 120_000;
-  const maxRepeats = opts?.maxRepeats ?? 5;
-  const maxFileFlipFlops = opts?.maxFileFlipFlops ?? 4;
+  const defaults = getStuckDetectionDefaults();
+  const noProgressMs = opts?.noProgressMs ?? defaults.noProgressMs;
+  const maxRepeats = opts?.maxRepeats ?? defaults.maxRepeats;
+  const maxFileFlipFlops = opts?.maxFileFlipFlops ?? defaults.maxFileFlipFlops;
 
   // 1) Time-based: no events for too long
   if (now - agent.lastEventTs > noProgressMs) {
