@@ -1,3 +1,4 @@
+import type { StuckDetectionOptions } from "@alfred/agent/orchestrator/multi/tracker";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
@@ -10,6 +11,8 @@ export type ProjectConfig = {
   runCommand: string;
   installCommand: string;
   buildCommand: string;
+  /** Optional stuck detection thresholds for tuning agent behavior */
+  stuckDetection?: StuckDetectionOptions;
 };
 
 export type OrchestratorContext = {

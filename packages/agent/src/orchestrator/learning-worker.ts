@@ -596,6 +596,13 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
   const extraction = extract(textToAnalyze, `run:${run.id}`);
   const knowledgeEntries = toKnowledge(extraction);
 
+  // Extract topic metadata for persistence
+  const topicsMeta = {
+    topics: extraction.topics,
+    primaryDomain: extraction.primaryDomain,
+    hasCodeBlock: extraction.hasCodeBlock,
+  };
+
   const [causalEntries, decisionEntries, alternativeEntries] =
     await Promise.all([
       deriveCausalityFromText(textToAnalyze),
@@ -644,7 +651,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
     embeddings = new Array(knowledgeEntries.length).fill(undefined);
   }
 
-  // Upsert nodes
+  // Upsert nodes with topic metadata for domain-aware retrieval
   const nodeMap = await upsertNodes(
     mergedEntries.map((entry, i) => ({
       resource,
@@ -656,6 +663,10 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
         source: `run:${run.id}`,
         runId: run.id,
         workflowId: run.workflowId,
+        // Domain-aware learning metadata
+        topics: topicsMeta.topics,
+        primaryDomain: topicsMeta.primaryDomain,
+        hasCodeBlock: topicsMeta.hasCodeBlock,
       },
       embedding: embeddings[i],
     }))

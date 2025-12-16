@@ -6,6 +6,7 @@ const workflowRepoMocks = {
   updateRun: vi.fn().mockResolvedValue(undefined),
   appendEvent: vi.fn().mockResolvedValue(undefined),
   listEvents: vi.fn().mockResolvedValue([]),
+  getRun: vi.fn().mockResolvedValue(null),
 };
 
 mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
@@ -104,6 +105,8 @@ const reviewGateInstances: Array<{
   applyPlan: vi.Mock;
   summary: vi.Mock;
   requireAtLeast: vi.Mock;
+  serialize: vi.Mock;
+  restore: vi.Mock;
 }> = [];
 
 mock.module("../../src/workflow/review-gate", () => ({
@@ -113,6 +116,13 @@ mock.module("../../src/workflow/review-gate", () => ({
     summary = vi.fn(() => [] as any[]);
     isSatisfied = vi.fn(() => true);
     requireAtLeast = vi.fn();
+    serialize = vi.fn(() => ({
+      checks: [],
+      planInitialized: false,
+      planRequired: false,
+      minimumRequired: 0,
+    }));
+    restore = vi.fn();
     constructor() {
       reviewGateInstances.push(this);
     }
@@ -356,6 +366,264 @@ describe("workflow orchestrator self-correction", () => {
       ([event]) => (event as any)?.kind === "review-escalated"
     );
     expect(forwarded?.[0]).toMatchObject({ data: escalationPayload });
+  });
+});
+
+describe("workflow orchestrator review gate persistence", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    reviewGateInstances.length = 0;
+  });
+
+  it("persists ReviewGate state to stateData on suspend", async () => {
+    const serializedState = {
+      checks: [
+        { id: "tests", type: "test", status: "passed", attempts: 1 },
+        { id: "lint", type: "lint", status: "pending", attempts: 0 },
+      ],
+      planInitialized: true,
+      planRequired: true,
+      minimumRequired: 1,
+    };
+
+    createWorkflowExecutorMock.mockReturnValueOnce({
+      runId: "run-suspend",
+      summary: "suspended",
+      stream: (async function* () {
+        yield { type: "run", id: "run-suspend" } as WorkflowEvent;
+        yield {
+          type: "notice",
+          message: "workflow_suspended",
+        } as WorkflowEvent;
+      })(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+    });
+
+    workflowRepoMocks.getRun.mockResolvedValue({
+      id: "run-suspend",
+      stateData: { existingKey: "existingValue" },
+    });
+
+    await orchestrateWorkflowStream(
+      {
+        requirement: "Test suspend",
+        auto: "medium",
+        mode: "sequential",
+        context: { enable: false },
+      } as any,
+      { user: { id: "user-1" } },
+      {
+        triggerPreferenceRefresh: vi.fn(),
+        ensureObligations: vi.fn(),
+        context: {},
+        emitError: vi.fn(),
+        emitNext: vi.fn(),
+        emitComplete: vi.fn(),
+      }
+    );
+
+    await flushMicrotasks();
+
+    const gate = reviewGateInstances[0];
+    if (gate) {
+      gate.serialize.mockReturnValue(serializedState);
+    }
+
+    // Wait for async markSuspended to complete
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Verify serialize was called
+    expect(gate?.serialize).toHaveBeenCalled();
+
+    // Verify updateRun was called with stateData containing reviewGate
+    const updateCalls = workflowRepoMocks.updateRun.mock.calls;
+    const stateDataCall = updateCalls.find(
+      ([runId, data]: [string, any]) =>
+        runId === "run-suspend" && data.stateData !== undefined
+    );
+
+    expect(stateDataCall).toBeTruthy();
+    if (stateDataCall) {
+      expect(stateDataCall[1].stateData).toHaveProperty("reviewGate");
+    }
+  });
+
+  it("restores ReviewGate state from stateData on resume", async () => {
+    const storedReviewGateState = {
+      checks: [
+        { id: "tests", type: "test", status: "passed", attempts: 2 },
+        { id: "lint", type: "lint", status: "failed", attempts: 1 },
+      ],
+      planInitialized: true,
+      planRequired: true,
+      minimumRequired: 2,
+    };
+
+    const storedEscalation = {
+      reason: "fixer_exhausted",
+      attempts: 3,
+    };
+
+    workflowRepoMocks.getRun.mockResolvedValue({
+      id: "run-resume",
+      stateData: {
+        reviewGate: storedReviewGateState,
+        reviewEscalation: storedEscalation,
+      },
+    });
+
+    createWorkflowExecutorMock.mockReturnValueOnce({
+      runId: "run-resume",
+      summary: "ok",
+      stream: (async function* () {
+        yield { type: "run", id: "run-resume" } as WorkflowEvent;
+      })(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+    });
+
+    await orchestrateWorkflowStream(
+      {
+        runId: "run-resume", // This indicates a resume
+        requirement: "Test resume",
+        auto: "medium",
+        mode: "sequential",
+        context: { enable: false },
+      } as any,
+      { user: { id: "user-1" } },
+      {
+        triggerPreferenceRefresh: vi.fn(),
+        ensureObligations: vi.fn(),
+        context: {},
+        emitError: vi.fn(),
+        emitNext: vi.fn(),
+        emitComplete: vi.fn(),
+      }
+    );
+
+    await flushMicrotasks();
+
+    // Verify getRun was called to fetch the workflow state
+    expect(workflowRepoMocks.getRun).toHaveBeenCalledWith("run-resume");
+
+    // Verify restore was called with the stored state
+    const gate = reviewGateInstances[0];
+    expect(gate?.restore).toHaveBeenCalledWith(storedReviewGateState);
+  });
+
+  it("handles missing stateData gracefully on resume", async () => {
+    workflowRepoMocks.getRun.mockResolvedValue({
+      id: "run-no-state",
+      stateData: null,
+    });
+
+    createWorkflowExecutorMock.mockReturnValueOnce({
+      runId: "run-no-state",
+      summary: "ok",
+      stream: (async function* () {
+        yield { type: "run", id: "run-no-state" } as WorkflowEvent;
+      })(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+    });
+
+    const emitError = vi.fn();
+
+    await orchestrateWorkflowStream(
+      {
+        runId: "run-no-state",
+        requirement: "Test resume no state",
+        auto: "medium",
+        mode: "sequential",
+        context: { enable: false },
+      } as any,
+      { user: { id: "user-1" } },
+      {
+        triggerPreferenceRefresh: vi.fn(),
+        ensureObligations: vi.fn(),
+        context: {},
+        emitError,
+        emitNext: vi.fn(),
+        emitComplete: vi.fn(),
+      }
+    );
+
+    await flushMicrotasks();
+
+    // Should not error when stateData is missing
+    expect(emitError).not.toHaveBeenCalled();
+
+    // restore should not be called since there's no reviewGate in stateData
+    const gate = reviewGateInstances[0];
+    expect(gate?.restore).not.toHaveBeenCalled();
+  });
+
+  it("persists reviewEscalation along with reviewGate state on suspend", async () => {
+    createWorkflowExecutorMock.mockReturnValueOnce({
+      runId: "run-escalate-suspend",
+      summary: "suspended",
+      stream: (async function* () {
+        yield { type: "run", id: "run-escalate-suspend" } as WorkflowEvent;
+        yield {
+          type: "event",
+          kind: "review-escalated",
+          data: {
+            reason: "fixer_exhausted",
+            attempts: 3,
+            summary: "Failed after 3 attempts",
+          },
+        } as WorkflowEvent;
+        yield {
+          type: "notice",
+          message: "workflow_suspended",
+        } as WorkflowEvent;
+      })(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+    });
+
+    workflowRepoMocks.getRun.mockResolvedValue({
+      id: "run-escalate-suspend",
+      stateData: {},
+    });
+
+    await orchestrateWorkflowStream(
+      {
+        requirement: "Test escalation suspend",
+        auto: "medium",
+        mode: "sequential",
+        context: { enable: false },
+      } as any,
+      { user: { id: "user-1" } },
+      {
+        triggerPreferenceRefresh: vi.fn(),
+        ensureObligations: vi.fn(),
+        context: {},
+        emitError: vi.fn(),
+        emitNext: vi.fn(),
+        emitComplete: vi.fn(),
+      }
+    );
+
+    // Wait for async operations to complete
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Verify updateRun was called with stateData containing reviewEscalation
+    const updateCalls = workflowRepoMocks.updateRun.mock.calls;
+    const stateDataCall = updateCalls.find(
+      ([runId, data]: [string, any]) =>
+        runId === "run-escalate-suspend" && data.stateData !== undefined
+    );
+
+    expect(stateDataCall).toBeTruthy();
+    if (stateDataCall) {
+      expect(stateDataCall[1].stateData).toHaveProperty("reviewEscalation");
+      expect(stateDataCall[1].stateData.reviewEscalation).toMatchObject({
+        reason: "fixer_exhausted",
+        attempts: 3,
+      });
+    }
   });
 });
 
