@@ -102,20 +102,35 @@ function normalizeMessageData(data: unknown): string {
   if (typeof data === "string") {
     return data;
   }
-  if (
-    typeof ArrayBuffer !== "undefined" &&
-    (data instanceof ArrayBuffer || ArrayBuffer.isView(data))
-  ) {
-    const buffer = data instanceof ArrayBuffer ? data : data.buffer;
-    if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder().decode(buffer);
+  if (typeof ArrayBuffer !== "undefined") {
+    // Handle ArrayBuffer directly
+    if (data instanceof ArrayBuffer) {
+      if (typeof TextDecoder !== "undefined") {
+        return new TextDecoder().decode(data);
+      }
+      const bytes = new Uint8Array(data);
+      let result = "";
+      for (const byte of bytes) {
+        result += String.fromCharCode(byte);
+      }
+      return result;
     }
-    const bytes = new Uint8Array(buffer);
-    let result = "";
-    for (const byte of bytes) {
-      result += String.fromCharCode(byte);
+    // Handle ArrayBufferView (Uint8Array, DataView, etc.) - respect byteOffset/byteLength
+    if (ArrayBuffer.isView(data)) {
+      const view = new Uint8Array(
+        data.buffer,
+        data.byteOffset,
+        data.byteLength
+      );
+      if (typeof TextDecoder !== "undefined") {
+        return new TextDecoder().decode(view);
+      }
+      let result = "";
+      for (const byte of view) {
+        result += String.fromCharCode(byte);
+      }
+      return result;
     }
-    return result;
   }
   return "";
 }

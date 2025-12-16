@@ -17,14 +17,12 @@
   "type": "module",
   "sideEffects": ["**/init.ts", "**/index.ts", "**/metrics.ts"],
   "scripts": {
-    "build": "tsdown",
+    "build": "tsc -b --emitDeclarationOnly",
     "test": "bun test --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "test:postgres": "RUN_DB_TESTS=1 bun test --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",
     "typecheck": "tsc -b"
   },
-  "devDependencies": {
-    "tsdown": "catalog:"
-  },
+  "devDependencies": {},
   "peerDependencies": {
     "typescript": "^5"
   },

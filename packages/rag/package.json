@@ -10,8 +10,8 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
+    "build": "tsc -b --emitDeclarationOnly",
+    "dev": "tsc -b --watch",
     "lint": "biome check .",
     "check-types": "tsc --noEmit",
     "typecheck": "tsc -b"
@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",
-    "tsdown": "^0.2.16",
     "typescript": "^5.7.2"
   }
 }
