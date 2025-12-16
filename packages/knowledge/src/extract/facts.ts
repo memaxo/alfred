@@ -1,6 +1,7 @@
 import nlp from "compromise";
 import type { Knowledge } from "../hypergraph.js";
 import { fact, knowledgeHash, nodeFromHash, relation } from "../hypergraph.js";
+import { applyTopicBoost, detectTopics } from "../lexicon/domains.js";
 import { cacheExtraction, getCachedExtraction } from "./cache.js";
 import { detectContradiction } from "./contradictions.js";
 import {
@@ -78,6 +79,9 @@ export const extract = (text: string, source: string): ExtractionResult => {
       relations: [],
       contradictions: [],
       temporal: [],
+      topics: [],
+      hasCodeBlock: false,
+      primaryDomain: null,
     };
   }
 
@@ -90,6 +94,9 @@ export const extract = (text: string, source: string): ExtractionResult => {
       facts: cached.facts.map((f) => ({ ...f, source })),
     };
   }
+
+  // Detect topics early for confidence boosting
+  const topicResult = detectTopics(trimmed);
 
   const entityDetails = extractEntities(trimmed);
   const relations = extractRelations(trimmed, entityDetails);
@@ -117,9 +124,13 @@ export const extract = (text: string, source: string): ExtractionResult => {
       (relation) => relation.sentence === index
     );
 
+    // Apply domain-based confidence boosting
+    const baseConfidence = computeSentenceConfidence(sentenceDoc);
+    const boostedConfidence = applyTopicBoost(baseConfidence, topicResult);
+
     facts.push({
       content,
-      confidence: computeSentenceConfidence(sentenceDoc),
+      confidence: boostedConfidence,
       source,
       entities: [...new Set(sentenceEntities)],
       relations: sentenceRelations,
@@ -159,6 +170,9 @@ export const extract = (text: string, source: string): ExtractionResult => {
     relations,
     contradictions,
     temporal,
+    topics: topicResult.topics,
+    hasCodeBlock: topicResult.hasCodeBlock,
+    primaryDomain: topicResult.primaryDomain,
   };
 
   // Cache result

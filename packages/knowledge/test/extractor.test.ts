@@ -256,37 +256,40 @@ describe("extractCodeEntities()", () => {
 describe("classifyDomain()", () => {
   it("classifies Coding domain", () => {
     const text = "I'm writing JavaScript code using React framework.";
-    const domains = classifyDomain(text);
+    const results = classifyDomain(text);
+    const domains = results.map((r) => r.domain);
 
-    expect(domains).toContain("Coding");
+    expect(domains.some((d) => d.domain === "Coding")).toBe(true);
   });
 
   it("classifies Security domain", () => {
     const text = "There's a vulnerability in the authentication system.";
-    const domains = classifyDomain(text);
+    const results = classifyDomain(text);
+    const domains = results.map((r) => r.domain);
 
-    expect(domains).toContain("Security");
+    expect(domains.some((d) => d.domain === "Security")).toBe(true);
   });
 
   it("classifies AI domain", () => {
     const text = "Using machine learning and transformers for NLP.";
-    const domains = classifyDomain(text);
+    const results = classifyDomain(text);
+    const domains = results.map((r) => r.domain);
 
-    expect(domains).toContain("AI");
+    expect(domains.some((d) => d.domain === "AI")).toBe(true);
   });
 
   it("classifies multiple domains", () => {
     const text = "Building a secure AI application with Python.";
-    const domains = classifyDomain(text);
+    const results = classifyDomain(text);
 
-    expect(domains.length).toBeGreaterThan(1);
+    expect(results.length).toBeGreaterThan(1);
   });
 
   it("returns empty array for unrelated text", () => {
     const text = "The weather is nice today.";
-    const domains = classifyDomain(text);
+    const results = classifyDomain(text);
 
-    expect(domains.length).toBe(0);
+    expect(results.length).toBe(0);
   });
 });
 
