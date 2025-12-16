@@ -13,12 +13,10 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "build": "tsdown",
+    "build": "tsc -b --emitDeclarationOnly",
     "typecheck": "tsc -b"
   },
-  "devDependencies": {
-    "tsdown": "catalog:"
-  },
+  "devDependencies": {},
   "peerDependencies": {
     "typescript": "^5"
   },
