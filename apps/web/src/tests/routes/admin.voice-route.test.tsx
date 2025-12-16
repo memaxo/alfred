@@ -2,7 +2,7 @@ import "../../test/reset-mocks";
 import { describe, expect, it } from "bun:test";
 import { TRPCClientError } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
-import { VoiceAdminView } from "@/routes/admin/voice";
+import { VoiceAdminView } from "@/routes/_protected/admin/voice";
 import {
   createTestQueryClient,
   createTestTrpcClient,

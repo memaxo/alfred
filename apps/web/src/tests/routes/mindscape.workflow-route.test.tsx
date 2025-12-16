@@ -18,6 +18,45 @@ import {
 import { trpc } from "@/utils/trpc";
 import { fireEvent, render, waitFor } from "../../test/testing-library";
 
+// Mock physics worker for Bun test environment
+mock.module("@/workers/physics.worker?worker", () => ({
+  default: class MockWorker {
+    postMessage() {}
+    terminate() {}
+    onmessage = null;
+  },
+}));
+
+mock.module("@/hooks/use-physics-worker", () => ({
+  usePhysicsWorker: () => ({
+    ready: true,
+    running: false,
+    start: () => {},
+    stop: () => {},
+    addNode: () => {},
+    removeNode: () => {},
+    setFixed: () => {},
+  }),
+}));
+
+// Mock server function that calls getRequest()
+mock.module("@/lib/mindscape/initial-frame.server", () => ({
+  getInitialMindscapeFrame: () =>
+    Promise.resolve({
+      nodes: [
+        {
+          id: "singularity",
+          type: "singularity",
+          x: 0,
+          y: 0,
+          data: { title: "Singularity", label: "Singularity" },
+        },
+      ],
+      edges: [],
+      reflections: [],
+    }),
+}));
+
 mock.module("@/components/ui/dialog", () => {
   const React = require("react") as typeof import("react");
   const omitCustom = <T extends Record<string, unknown>>(props: T) => {
@@ -51,8 +90,12 @@ mock.module("@/components/ui/dialog", () => {
   };
 });
 
-const { Route: MindscapeFileRoute } = await import("../mindscape");
-const { Route: WorkflowFileRoute } = await import("../workflow.$runId");
+const { Route: MindscapeFileRoute } = await import(
+  "@/routes/_protected/mindscape"
+);
+const { Route: WorkflowFileRoute } = await import(
+  "@/routes/_protected/workflow.$runId"
+);
 
 const runtimeRunId = "run-provenance-1";
 

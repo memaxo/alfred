@@ -41,6 +41,15 @@ if (typeof globalThis.cancelAnimationFrame === "undefined") {
   };
 }
 
+// Also set on window since some libraries access window.* directly
+if (typeof (window as any).requestAnimationFrame === "undefined") {
+  (window as any).requestAnimationFrame = globalThis.requestAnimationFrame;
+}
+
+if (typeof (window as any).cancelAnimationFrame === "undefined") {
+  (window as any).cancelAnimationFrame = globalThis.cancelAnimationFrame;
+}
+
 // Provide minimal canvas and resize observer shims for jsdom-based tests.
 const CanvasElementCtor = (window as any).HTMLCanvasElement
   ? (window as any).HTMLCanvasElement
