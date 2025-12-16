@@ -30,6 +30,12 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@alfred/agent": "workspace:*",
+    "@alfred/api": "workspace:*",
+    "@alfred/db": "workspace:*",
+    "@alfred/runtime": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "@alfred/voice": "workspace:*",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2"
   },

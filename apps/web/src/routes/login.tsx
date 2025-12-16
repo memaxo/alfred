@@ -5,6 +5,7 @@ import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 
 export const Route = createFileRoute("/login")({
+  ssr: false,
   component: RouteComponent,
   errorComponent: RouteError,
 });

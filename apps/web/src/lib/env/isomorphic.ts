@@ -1,60 +1,45 @@
 /**
- * Isomorphic environment detection utilities.
- * 
- * These functions use `createIsomorphicFn` to provide environment-specific
- * implementations that are automatically tree-shaken. Server code is removed
- * from client bundles, and client code is removed from server bundles.
- * 
- * Use these for environment detection that needs to work in both server
- * and client contexts.
+ * Environment detection utilities.
+ *
+ * NOTE: We intentionally avoid `createIsomorphicFn()` here because Bun unit tests
+ * execute these modules outside TanStack Start's bundler context, which can
+ * cause `createIsomorphicFn` stubs to return `undefined` at runtime.
+ *
+ * Keeping these helpers "boring" ensures they work in:
+ * - SSR runtime
+ * - Client runtime
+ * - Bun unit tests
  */
-import { createIsomorphicFn } from "@tanstack/react-start";
 
 /**
  * Check if test mode is enabled.
- * 
- * Server implementation: Checks server-only environment variables.
- * Client implementation: Checks Vite environment variables.
- * 
- * Automatically tree-shaken - server code not included in client bundle.
  */
-export const getTestMode = createIsomorphicFn()
-  .server(async () => {
-    // Dynamic import to avoid bundling server-only code in client
-    const {
-      getViteTestMode,
-      getMindscapeTest,
-      getBunTest,
-      getNodeEnv,
-    } = await import("./server-only");
-
-    const viteTestMode = getViteTestMode();
-    const mindscapeTest = getMindscapeTest();
-    const bunTest = getBunTest();
-    const nodeEnv = getNodeEnv();
-
-    return (
+export async function getTestMode(): Promise<boolean> {
+  if (typeof process !== "undefined") {
+    const viteTestMode = process.env?.VITE_TEST_MODE;
+    const mindscapeTest = process.env?.MINDSCAPE_TEST;
+    const bunTest = process.env?.BUN_TEST;
+    const nodeEnv = process.env?.NODE_ENV;
+    if (
       viteTestMode === "true" ||
       mindscapeTest === "1" ||
       bunTest === "1" ||
       nodeEnv === "test"
-    );
-  })
-  .client(() => {
-    const env = import.meta.env;
-    return (
-      env?.VITE_TEST_MODE === "true" || env?.MINDSCAPE_TEST === "1"
-    );
-  });
+    ) {
+      return true;
+    }
+  }
+  if (typeof import.meta !== "undefined") {
+    const env = (import.meta as ImportMeta & { env?: Record<string, string> })
+      .env;
+    return env?.VITE_TEST_MODE === "true" || env?.MINDSCAPE_TEST === "1";
+  }
+  return false;
+}
 
 /**
  * Check if window object is available.
- * 
- * Server implementation: Always returns false.
- * Client implementation: Checks if window is defined.
- * 
- * Automatically tree-shaken - server code not included in client bundle.
  */
-export const hasWindow = createIsomorphicFn()
-  .server(() => false)
-  .client(() => typeof window !== "undefined");
+export function hasWindow(): boolean {
+  return typeof window !== "undefined";
+}

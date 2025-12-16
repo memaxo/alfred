@@ -130,7 +130,24 @@ function isTestModeEnabled(): boolean {
   if (realAuth === "1") {
     return false;
   }
-  return explicit === "true" || explicit === "1";
+  if (explicit === "true" || explicit === "1") {
+    return true;
+  }
+  if (hasWindow()) {
+    // Fallback for Playwright and other harnesses that inject sessions directly.
+    // This keeps test auth robust even when VITE_TEST_MODE isn't plumbed through.
+    try {
+      if (window.sessionStorage.getItem(TEST_SESSION_STORAGE_KEY)) {
+        return true;
+      }
+    } catch (_error) {
+      // ignore storage failures
+    }
+    if (globalThis.__TEST_SESSION__?.data) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function ensureSession(): TestSession {

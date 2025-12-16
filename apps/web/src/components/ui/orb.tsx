@@ -1,6 +1,5 @@
 "use client";
 
-import { useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -98,9 +97,32 @@ function Scene({
   const targetColor1Ref = useRef(new THREE.Color(colors[0]));
   const targetColor2Ref = useRef(new THREE.Color(colors[1]));
   const animSpeedRef = useRef(0.1);
-  const perlinNoiseTexture = useTexture(
-    "https://storage.googleapis.com/eleven-public-cdn/images/perlin-noise.png"
-  );
+  const perlinNoiseTexture = useMemo(() => {
+    // Avoid any external network fetches (E2E runs offline; build verification forbids CDN URLs).
+    // Deterministic noise based on seed so visuals are stable in tests.
+    const size = 128;
+    const data = new Uint8Array(size * size * 4);
+    const rand = splitmix32(seed ?? 0x6f_72_62); // "orb" seed
+    for (let i = 0; i < data.length; i += 4) {
+      const v = Math.floor(rand() * 256);
+      data[i] = v;
+      data[i + 1] = v;
+      data[i + 2] = v;
+      data[i + 3] = 255;
+    }
+    const texture = new THREE.DataTexture(
+      data,
+      size,
+      size,
+      THREE.RGBAFormat
+    );
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  }, [seed]);
 
   const agentRef = useRef<AgentState>(agentState);
   const modeRef = useRef<"auto" | "manual">(volumeMode);
@@ -245,8 +267,6 @@ function Scene({
   }, [gl]);
 
   const uniforms = useMemo(() => {
-    perlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-    perlinNoiseTexture.wrapT = THREE.RepeatWrapping;
     const isDark =
       typeof document !== "undefined" &&
       document.documentElement.classList.contains("dark");

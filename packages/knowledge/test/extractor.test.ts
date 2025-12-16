@@ -259,7 +259,7 @@ describe("classifyDomain()", () => {
     const results = classifyDomain(text);
     const domains = results.map((r) => r.domain);
 
-    expect(domains.some((d) => d.domain === "Coding")).toBe(true);
+    expect(domains.some((d) => d === "Coding")).toBe(true);
   });
 
   it("classifies Security domain", () => {
@@ -267,7 +267,7 @@ describe("classifyDomain()", () => {
     const results = classifyDomain(text);
     const domains = results.map((r) => r.domain);
 
-    expect(domains.some((d) => d.domain === "Security")).toBe(true);
+    expect(domains.some((d) => d === "Security")).toBe(true);
   });
 
   it("classifies AI domain", () => {
@@ -275,7 +275,7 @@ describe("classifyDomain()", () => {
     const results = classifyDomain(text);
     const domains = results.map((r) => r.domain);
 
-    expect(domains.some((d) => d.domain === "AI")).toBe(true);
+    expect(domains.some((d) => d === "AI")).toBe(true);
   });
 
   it("classifies multiple domains", () => {

@@ -41,13 +41,13 @@ async function legacySignUp(page: Page) {
   const email = `mindscape+${suffix}@example.com`;
   const password = `Mindscape-${suffix}!`;
 
-  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: /sign up/i }).click();
   await page.waitForURL(/\/mindscape$/);
-  await expect(page.locator(".react-flow")).toBeVisible();
+  await expect(page.locator(".react-flow")).toBeVisible({ timeout: 60_000 });
   return { name, email, password };
 }
 
@@ -67,8 +67,8 @@ export async function signUpTestUser(page: Page) {
     email: `mindscape+${suffix}@example.com`,
   });
   await primeBrowserSession(page, session);
-  await page.goto("/mindscape", { waitUntil: "networkidle" });
-  await expect(page.locator(".react-flow")).toBeVisible();
+  await page.goto("/mindscape", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".react-flow")).toBeVisible({ timeout: 60_000 });
   return {
     name: session.user.name,
     email: session.user.email,

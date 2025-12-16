@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { persistExecPlans } from "@alfred/agent/assistant/graphstore";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
@@ -70,7 +71,7 @@ function buildPlanMessages(
   runId: string,
   input: RuntimeInput,
   context: ExecutionContext,
-  subTasks: ReturnType<typeof decomposeTask>
+  subTasks: SubTask[]
 ): UIMessage[] {
   const contextPreview = formatContextPreview(context);
   const subTaskPreview = subTasks
@@ -139,7 +140,7 @@ export async function* executePlanPhase(
     } as WorkflowEvent;
   }
 
-  const subTasks = decomposeTask(input.requirement, {
+  const subTasks: SubTask[] = decomposeTask(input.requirement, {
     requirement: input.requirement,
     bundle: context.bundle,
   });

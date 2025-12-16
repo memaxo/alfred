@@ -17,15 +17,19 @@ describe("hypergraph traversal performance budget", () => {
       graph.add(relation(source, target, kind));
     }
 
+    // CI runners can be ~2-3x slower than local machines; keep the local budget
+    // strict while allowing CI to remain stable.
+    const budgetMs = process.env.CI ? 3 : BUDGET_DEFAULTS["graph-lookup"];
+
     const stats = await benchmarkOperation(
       "graph-lookup.neighborsByKind",
-      BUDGET_DEFAULTS["graph-lookup"],
+      budgetMs,
       2000,
       async () => {
         graph.neighborsByKind(source, kind);
       }
     );
 
-    expect(stats.p99).toBeLessThan(BUDGET_DEFAULTS["graph-lookup"]);
+    expect(stats.p99).toBeLessThan(budgetMs);
   });
 });

@@ -12,6 +12,7 @@
  */
 import { createStart, createMiddleware } from "@tanstack/react-start";
 import { logger } from "@alfred/logger";
+import { withRequestTestSession } from "@/lib/test-auth";
 
 /**
  * Request middleware for all requests (SSR, server routes, server functions).
@@ -29,7 +30,7 @@ const requestLoggingMiddleware = createMiddleware().server(
     const url = new URL(request.url);
 
     try {
-      const response = await next();
+      const response = await withRequestTestSession(request, next);
       const duration = Date.now() - startTime;
 
       // Response might be a Response object or other type

@@ -92,7 +92,9 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@alfred/db": "workspace:*",
     "@alfred/metrics": "workspace:*",
+    "@alfred/type": "workspace:*",
     "chrono-node": "^2.9.0",
     "compromise": "^14.14.4"
   },

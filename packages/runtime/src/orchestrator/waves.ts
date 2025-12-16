@@ -5,6 +5,7 @@ import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
+import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   appendDecisionLogEntry,
   applyProgressUpdate,
@@ -14,6 +15,7 @@ import {
   buildAgentSpec,
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
+import type { AgentSpec, WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   detectNeedsGuidance,
   detectStuck,
@@ -214,7 +216,7 @@ export async function* runWaves(
     ctx.scanContext = context;
   }
 
-  const subTasks = decomposeTask(input.requirement, {
+  const subTasks: SubTask[] = decomposeTask(input.requirement, {
     requirement: effectiveRequirement,
     bundle: context.bundle,
   });
@@ -231,12 +233,12 @@ export async function* runWaves(
     };
   }
 
-  const subTaskById = new Map(subTasks.map((t) => [t.id, t]));
+  const subTaskById = new Map<string, SubTask>(subTasks.map((t) => [t.id, t]));
   const maxParallel = Number.parseInt(
     process.env.ORCHESTRATOR_MAX_PARALLEL || "2",
     10
   );
-  const waves = planWaves(subTasks, { maxParallel });
+  const waves: WavePlan[] = planWaves(subTasks, { maxParallel });
 
   if (waves.length === 0) {
     // Fallback: treat all subtasks as a single wave.
@@ -287,8 +289,8 @@ export async function* runWaves(
       message: `wave_${wave.id}_start`,
     } as any;
 
-    const agentSpecs = wave.agents
-      .map((id) => {
+    const agentSpecs: AgentSpec[] = wave.agents
+      .map((id: string): AgentSpec | null => {
         const task = subTaskById.get(id);
         if (!task) {
           return null;
@@ -307,9 +309,7 @@ export async function* runWaves(
         agentSubTaskIds.set(spec.agentId, spec.subTaskId);
         return spec;
       })
-      .filter((spec): spec is ReturnType<typeof buildAgentSpec> =>
-        Boolean(spec)
-      );
+      .filter((spec: AgentSpec | null): spec is AgentSpec => spec !== null);
 
     yield {
       type: "event",
