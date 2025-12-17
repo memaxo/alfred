@@ -120,6 +120,7 @@ describe("useFocusedContext", () => {
       },
     });
 
+    const graphDbId = "123e4567-e89b-12d3-a456-426614174000";
     useMindscapeStore.setState({
       nodes: [
         {
@@ -129,6 +130,7 @@ describe("useFocusedContext", () => {
             type: "knowledge",
             label: "Quantum Physics",
             summary: "Study of small things.",
+            graph: { resource: "user", dbId: graphDbId },
           },
           position: { x: 0, y: 0 },
         } as any,
@@ -151,7 +153,7 @@ describe("useFocusedContext", () => {
     const lastCall = runQuerySpy.mock.calls[0][0] as any;
     expect(lastCall).toMatchObject({
       kind: "context",
-      nodeId: "know-1",
+      nodeId: graphDbId,
     });
     expect(lastCall.text).toContain("Quantum Physics");
 

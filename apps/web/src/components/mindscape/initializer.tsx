@@ -19,8 +19,8 @@ type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
 // Helper type for accessing UnifiedNodeRef properties safely
 type NodeIdRef = { uiId?: string; dbId?: string; hgHash?: string };
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const GRAPH_DBID_PATTERN =
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
 
 export function MindscapeInitializer() {
   const { nodes, addArtifact, autoLayout, setEdges, cacheRagDoc } =
@@ -36,28 +36,19 @@ export function MindscapeInitializer() {
 
   const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes]);
   const graphNodeIds = useMemo(() => {
-    const derived = nodes
-      .map((node) => {
-        if (node.data?.graph?.dbId && UUID_PATTERN.test(node.data.graph.dbId)) {
-          return node.data.graph.dbId;
-        }
-        if (UUID_PATTERN.test(node.id)) {
-          return node.id;
-        }
-        const suffix = node.id.split("-").pop();
-        if (suffix && UUID_PATTERN.test(suffix)) {
-          return suffix;
-        }
-        return null;
-      })
-      .filter((id): id is string => Boolean(id));
-    const ids = Array.from(new Set(derived));
-    // console.log("graphNodeIds calculated:", ids.length, ids[0]);
-    return ids;
+    const ids: string[] = [];
+    for (const node of nodes) {
+      const dbId = node.data?.graph?.dbId;
+      if (typeof dbId === "string" && GRAPH_DBID_PATTERN.test(dbId)) {
+        ids.push(dbId);
+      }
+    }
+    return Array.from(new Set(ids));
   }, [nodes]);
 
   const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
   const { data: reminders } = trpc.remind.due.useQuery({});
+  const ensureMirrors = trpc.graph.ensureMirrors.useMutation();
   const { data: edges } = trpc.graph.getEdges.useQuery(
     { nodeIds: graphNodeIds },
     { enabled: graphNodeIds.length > 0, refetchInterval: 5000 }
@@ -71,13 +62,16 @@ export function MindscapeInitializer() {
       return;
     }
 
-    // Check for test mode or explicit disable flag
-    // Note: This is client-side code, so we check import.meta.env directly
-    // Server-side checks would use server-only utilities
-    if (
+    // Skip chat autospawn in tests or when explicitly disabled.
+    // In Bun tests, `process.env` is set, while in the browser we rely on Vite's `import.meta.env`.
+    const disableChatAutospawn =
       import.meta.env?.BUN_TEST === "1" ||
-      import.meta.env?.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1"
-    ) {
+      import.meta.env?.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1" ||
+      (typeof process !== "undefined" &&
+        (process.env.BUN_TEST === "1" ||
+          process.env.MINDSCAPE_DISABLE_CHAT_AUTOSPAWN === "1"));
+
+    if (disableChatAutospawn) {
       // Skip chat autospawn in test or when explicitly disabled so
       // tests and lightweight environments can focus on graph behaviour.
       return;
@@ -155,38 +149,70 @@ export function MindscapeInitializer() {
 
     // Secondary tier: radius 350, distributed around top-right quadrant
     const secondaryRadius = tierConfig.secondary.radius;
-    notes.forEach((note: NoteListItem, index: number) => {
-      const noteNodeId = `note-${note.id}`;
-      if (nodeIds.includes(noteNodeId)) {
+    let cancelled = false;
+
+    void (async () => {
+      const missing = notes.filter(
+        (note) => !nodeIds.includes(`note-${note.id}`)
+      );
+      if (missing.length === 0) {
         return;
       }
 
-      // Distribute notes in top-right quadrant (angle -PI/4 to PI/4)
-      const angleOffset = -Math.PI / 4;
-      const angleStep = Math.PI / 8;
-      const angle = angleOffset + index * angleStep;
-
-      addArtifact({
-        id: noteNodeId,
-        type: "note",
-        position: {
-          x: Math.cos(angle) * secondaryRadius,
-          y: Math.sin(angle) * secondaryRadius,
-        },
-        data: {
-          type: "note",
-          label: note.title?.trim() || "Untitled Note",
-          noteId: note.id,
-          title: note.title,
-          content: note.content,
-          tags: note.tags,
-          mode: "view",
-          updatedAt: note.updatedAt?.toISOString?.() ?? undefined,
-          graph: { dbId: note.id },
-        },
+      const ensured = await ensureMirrors.mutateAsync({
+        resource: "user",
+        entities: missing.map((note) => ({ kind: "note" as const, id: note.id })),
       });
-    });
-  }, [notes, nodeIds, addArtifact]);
+
+      const dbIdByEntityId = new Map(
+        ensured.refs.map((entry) => [entry.entity.id, entry.ref.id.dbId])
+      );
+
+      missing.forEach((note: NoteListItem, index: number) => {
+        const noteNodeId = `note-${note.id}`;
+        if (nodeIds.includes(noteNodeId)) {
+          return;
+        }
+        const dbId = dbIdByEntityId.get(note.id);
+        if (!dbId) {
+          return;
+        }
+
+        // Distribute notes in top-right quadrant (angle -PI/4 to PI/4)
+        const angleOffset = -Math.PI / 4;
+        const angleStep = Math.PI / 8;
+        const angle = angleOffset + index * angleStep;
+
+        if (cancelled) {
+          return;
+        }
+
+        addArtifact({
+          id: noteNodeId,
+          type: "note",
+          position: {
+            x: Math.cos(angle) * secondaryRadius,
+            y: Math.sin(angle) * secondaryRadius,
+          },
+          data: {
+            type: "note",
+            label: note.title?.trim() || "Untitled Note",
+            noteId: note.id,
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+            mode: "view",
+            updatedAt: note.updatedAt?.toISOString?.() ?? undefined,
+            graph: { resource: "user", dbId },
+          },
+        });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notes, nodeIds, addArtifact, ensureMirrors]);
 
   // Sync Reminders
   useEffect(() => {
@@ -196,45 +222,80 @@ export function MindscapeInitializer() {
 
     // Secondary tier: radius 350, distributed around top-left quadrant
     const secondaryRadius = tierConfig.secondary.radius;
-    reminders.forEach((reminder: DueReminderItem, index: number) => {
-      const reminderNodeId = `reminder-${reminder.id}`;
-      if (nodeIds.includes(reminderNodeId)) {
+    let cancelled = false;
+
+    void (async () => {
+      const missing = reminders.filter(
+        (reminder) => !nodeIds.includes(`reminder-${reminder.id}`)
+      );
+      if (missing.length === 0) {
         return;
       }
 
-      const dueIso =
-        reminder.due instanceof Date
-          ? reminder.due.toISOString()
-          : reminder.due;
-      const isDue = dueIso ? new Date(dueIso).getTime() <= Date.now() : false;
-      const status = reminder.firedAt ? "fired" : isDue ? "due" : "scheduled";
-
-      // Distribute reminders in top-left quadrant (angle 3*PI/4 to 5*PI/4)
-      const angleOffset = (3 * Math.PI) / 4;
-      const angleStep = Math.PI / 8;
-      const angle = angleOffset + index * angleStep;
-
-      addArtifact({
-        id: reminderNodeId,
-        type: "reminder",
-        position: {
-          x: Math.cos(angle) * secondaryRadius,
-          y: Math.sin(angle) * secondaryRadius,
-        },
-        data: {
-          type: "reminder",
-          label: reminder.title || "Reminder",
-          reminderId: reminder.id,
-          title: reminder.title,
-          due: dueIso,
-          description: reminder.description ?? undefined,
-          status,
-          mode: "view",
-          graph: { dbId: reminder.id },
-        },
+      const ensured = await ensureMirrors.mutateAsync({
+        resource: "user",
+        entities: missing.map((reminder) => ({
+          kind: "reminder" as const,
+          id: reminder.id,
+        })),
       });
-    });
-  }, [reminders, nodeIds, addArtifact]);
+
+      const dbIdByEntityId = new Map(
+        ensured.refs.map((entry) => [entry.entity.id, entry.ref.id.dbId])
+      );
+
+      missing.forEach((reminder: DueReminderItem, index: number) => {
+        const reminderNodeId = `reminder-${reminder.id}`;
+        if (nodeIds.includes(reminderNodeId)) {
+          return;
+        }
+        const dbId = dbIdByEntityId.get(reminder.id);
+        if (!dbId) {
+          return;
+        }
+
+        const dueIso =
+          reminder.due instanceof Date
+            ? reminder.due.toISOString()
+            : reminder.due;
+        const isDue = dueIso ? new Date(dueIso).getTime() <= Date.now() : false;
+        const status = reminder.firedAt ? "fired" : isDue ? "due" : "scheduled";
+
+        // Distribute reminders in top-left quadrant (angle 3*PI/4 to 5*PI/4)
+        const angleOffset = (3 * Math.PI) / 4;
+        const angleStep = Math.PI / 8;
+        const angle = angleOffset + index * angleStep;
+
+        if (cancelled) {
+          return;
+        }
+
+        addArtifact({
+          id: reminderNodeId,
+          type: "reminder",
+          position: {
+            x: Math.cos(angle) * secondaryRadius,
+            y: Math.sin(angle) * secondaryRadius,
+          },
+          data: {
+            type: "reminder",
+            label: reminder.title || "Reminder",
+            reminderId: reminder.id,
+            title: reminder.title,
+            due: dueIso,
+            description: reminder.description ?? undefined,
+            status,
+            mode: "view",
+            graph: { resource: "user", dbId },
+          },
+        });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reminders, nodeIds, addArtifact, ensureMirrors]);
 
   const primaryGraphNodeId = graphNodeIds[0];
 
@@ -372,6 +433,7 @@ export function MindscapeInitializer() {
           source: "runtime",
           runId,
           graph: {
+            resource: "user",
             dbId: nodeId.dbId,
             hgHash: nodeId.hgHash,
           },
@@ -416,6 +478,7 @@ export function MindscapeInitializer() {
         summary,
         source: "rag",
         graph: {
+          resource: "user",
           dbId: nodeId.dbId,
           hgHash: nodeId.hgHash,
         },
@@ -449,46 +512,29 @@ export function MindscapeInitializer() {
     }
   }, [ragResult, nodeIds, addArtifact, autoLayout, cacheRagDoc]);
 
-  const ensureGraphMapping = useCallback((dbId: string) => {
-    const store = useMindscapeStore.getState();
-    const existing = store.nodes.find(
-      (node) => node.data?.graph?.dbId === dbId
-    );
-    if (existing) {
-      return;
-    }
-    const suffixMatch = store.nodes.find((node) => node.id.endsWith(dbId));
-    if (suffixMatch) {
-      store.updateArtifactData(suffixMatch.id, {
-        graph: { dbId },
-      } as Partial<ArtifactData>);
-    }
-  }, []);
-
-  const findNodeIdByDbId = useCallback(
-    (dbId: string) => {
-      const mapped = nodes.find((node) => node.data?.graph?.dbId === dbId);
-      if (mapped) {
-        return mapped.id;
+  const dbIdToFlowId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const node of nodes) {
+      const dbId = node.data?.graph?.dbId;
+      if (typeof dbId === "string" && dbId.length > 0) {
+        map.set(dbId, node.id);
       }
-      const suffixMatch = nodes.find((node) => node.id.endsWith(dbId));
-      if (suffixMatch) {
-        return suffixMatch.id;
-      }
-      return `note-${dbId}`;
-    },
-    [nodes]
-  );
+    }
+    return map;
+  }, [nodes]);
 
   const mapEdgeToFlow = useCallback(
     (edge: GraphEdge) => {
-      // ensureGraphMapping(edge.fromId);
-      // ensureGraphMapping(edge.toId);
+      const source = dbIdToFlowId.get(edge.fromId);
+      const target = dbIdToFlowId.get(edge.toId);
+      if (!(source && target)) {
+        return null;
+      }
       const isExplains = edge.kind === "explains";
       return {
         id: edge.id,
-        source: findNodeIdByDbId(edge.fromId),
-        target: findNodeIdByDbId(edge.toId),
+        source,
+        target,
         animated: !isExplains,
         data: {
           kind: edge.kind,
@@ -504,7 +550,7 @@ export function MindscapeInitializer() {
           : { stroke: "rgba(255, 255, 255, 0.2)" },
       };
     },
-    [ensureGraphMapping, findNodeIdByDbId]
+    [dbIdToFlowId]
   );
 
   // Sync Edges
@@ -512,7 +558,9 @@ export function MindscapeInitializer() {
     if (!edges) {
       return;
     }
-    const newEdges = edges.map(mapEdgeToFlow);
+    const newEdges = edges
+      .map(mapEdgeToFlow)
+      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
     setEdges(newEdges);
   }, [edges, mapEdgeToFlow, setEdges]);
 
@@ -521,7 +569,9 @@ export function MindscapeInitializer() {
     {
       enabled: graphNodeIds.length > 0,
       onData: ({ edges: incoming }) => {
-        const mapped = incoming.map(mapEdgeToFlow);
+        const mapped = incoming
+          .map(mapEdgeToFlow)
+          .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
         useMindscapeStore.setState((state) => {
           const merged = new Map(
             state.edges.map((edge) => [

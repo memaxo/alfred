@@ -4,6 +4,7 @@ import {
   getNotes,
   updateNote,
 } from "@alfred/db/repo/assistant";
+import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import { logger } from "@alfred/logger";
 import { ingest } from "@alfred/rag";
 import z from "zod";
@@ -59,6 +60,25 @@ export const noteRouter = router({
         throw new Error("Failed to create note");
       }
 
+      const mirrorLabel =
+        typeof note.title === "string" && note.title.trim().length > 0
+          ? note.title
+          : input.content.trim().slice(0, 80);
+
+      await ensureMirrorNodes("user", [
+        {
+          kind: "note",
+          id: note.id,
+          label: mirrorLabel,
+          properties: {
+            entity: { kind: "note", id: note.id },
+            title: note.title,
+            updatedAt:
+              note.updated instanceof Date ? note.updated.toISOString() : null,
+          },
+        },
+      ]);
+
       // Fire-and-forget RAG embedding (non-blocking)
       // Skip embedding if content is empty or whitespace only
       const trimmedContent = input.content.trim();
@@ -86,6 +106,14 @@ export const noteRouter = router({
       content: input.content,
       tags: input.tags,
     });
+
+    await ensureMirrorNodes("user", [
+      {
+        kind: "note",
+        id: input.id,
+        label: input.title,
+      },
+    ]);
 
     // Re-embed if content changed (fire-and-forget)
     // Skip embedding if content is empty or whitespace only

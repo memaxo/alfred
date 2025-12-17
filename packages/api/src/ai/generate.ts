@@ -1,4 +1,5 @@
 import { normalizeToUiMessages } from "@alfred/agent";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import { generateText } from "ai";
@@ -15,6 +16,60 @@ export type GenerateTextInput = Parameters<typeof generateText>[0];
 
 export { generateText };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const coerceString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length > 0 ? value : undefined;
+
+function coerceGenerateResult(result: unknown): {
+  text?: string | null;
+  toolCalls?: Array<{
+    id?: string;
+    name?: string;
+    toolName?: string;
+    args?: unknown;
+  }> | null;
+  toolResults?: Array<{
+    id?: string;
+    toolName?: string;
+    result?: unknown;
+    output?: unknown;
+  }> | null;
+} {
+  if (!isRecord(result)) {
+    return {};
+  }
+
+  const text = typeof result.text === "string" ? result.text : null;
+
+  const toolCalls = Array.isArray(result.toolCalls)
+    ? result.toolCalls.map((raw) => {
+        const call = isRecord(raw) ? raw : {};
+        return {
+          id: coerceString(call.id),
+          name: coerceString(call.name),
+          toolName: coerceString(call.toolName),
+          args: call.args,
+        };
+      })
+    : null;
+
+  const toolResults = Array.isArray(result.toolResults)
+    ? result.toolResults.map((raw) => {
+        const item = isRecord(raw) ? raw : {};
+        return {
+          id: coerceString(item.id),
+          toolName: coerceString(item.toolName),
+          result: item.result,
+          output: item.output,
+        };
+      })
+    : null;
+
+  return { text, toolCalls, toolResults };
+}
+
 /**
  * Persist non-stream generate results to the durable workflow store for replay.
  */
@@ -29,7 +84,7 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       inputData: args.input,
       stateData: null,
     });
-    const uiMessages = normalizeToUiMessages((args.result ?? {}) as any);
+    const uiMessages = normalizeToUiMessages(coerceGenerateResult(args.result));
     const eventId = makeEventId({
       runId,
       type: "ui-message",
@@ -39,7 +94,12 @@ export async function persistResult(args: PersistArgs): Promise<string | null> {
       runId,
       eventId,
       eventType: "ui-message",
-      eventData: uiMessages,
+      eventData: wrapEventEnvelope({
+        id: eventId,
+        type: "ui-message",
+        resource: "user",
+        data: uiMessages,
+      }),
     });
     return runId;
   } catch (error) {

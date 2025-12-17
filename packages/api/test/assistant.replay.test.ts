@@ -1,9 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import {
-  createTestCaller,
-  resetAllMocks,
-  setupTestEnv,
-} from "./utils/router-helpers";
+import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
 
 setupTestEnv();
 
@@ -35,15 +31,48 @@ mock.module("@alfred/db/repo/workflow", () => ({
   ),
 }));
 
-// Mock generateText but keep real persistResult from the module
 const generateTextMock = vi.fn();
 mock.module("@alfred/api/ai/generate", async () => {
-  const real = await import("../../src/ai/generate");
+  const { normalizeToUiMessages } = await import("@alfred/agent");
+  const { wrapEventEnvelope } = await import("@alfred/agent/utils/envelope");
+  const workflowRepo = await import("@alfred/db/repo/workflow");
+
   return {
     generateText: generateTextMock,
-    persistResult: real.persistResult,
+    persistResult: async (args: {
+      userId: string;
+      kind: "assistant" | "orchestrator";
+      input: unknown;
+      result: unknown;
+    }) => {
+      const runId = crypto.randomUUID();
+      await workflowRepo.createRun({
+        id: runId,
+        userId: args.userId,
+        workflowId: `${args.kind}-generate`,
+        status: "completed",
+        inputData: args.input,
+        stateData: null,
+      });
+      const uiMessages = normalizeToUiMessages((args.result ?? {}) as any);
+      const eventId = crypto.randomUUID();
+      await workflowRepo.appendEvent({
+        runId,
+        eventId,
+        eventType: "ui-message",
+        eventData: wrapEventEnvelope({
+          id: eventId,
+          type: "ui-message",
+          resource: "user",
+          data: uiMessages,
+        }),
+      });
+      return runId;
+    },
   };
 });
+
+const { createTestCaller } = await import("./utils/trpc");
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -81,7 +110,7 @@ describe("assistant.generate persistence & replay", () => {
     expect(appended.length).toBe(1);
     const evt = appended[0];
     expect(evt.eventType).toBe("ui-message");
-    const data = evt.eventData as any[];
+    const data = (evt.eventData as any)?.data as any[];
     expect(Array.isArray(data)).toBe(true);
     expect(data[0]?.role).toBe("assistant");
     const parts = data[0]?.parts ?? [];

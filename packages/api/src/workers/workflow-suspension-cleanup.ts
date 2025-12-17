@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { unregisterRunHandle } from "@alfred/agent/workflow/session-recovery";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
@@ -25,12 +27,19 @@ export async function cleanupSuspendedWorkflows(now: number = Date.now()) {
           status: "cancelled",
           completedAt: new Date(),
         });
+        const eventId = randomUUID();
         await workflowRepo.appendEvent({
           runId: run.id,
+          eventId,
           eventType: "suspend",
-          eventData: {
-            reason: "suspension_timeout",
-          },
+          eventData: wrapEventEnvelope({
+            id: eventId,
+            type: "suspend",
+            resource: "user",
+            data: {
+              reason: "suspension_timeout",
+            },
+          }),
         });
         workflowSuspensionCleanupTotal.labels("timeout").inc();
         cleaned += 1;

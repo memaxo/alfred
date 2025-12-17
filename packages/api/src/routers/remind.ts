@@ -1,4 +1,5 @@
 import * as assistantRepo from "@alfred/db/repo/assistant";
+import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import z from "zod";
 import { authedProcedure, router } from "../trpc";
 
@@ -20,15 +21,31 @@ const reminderListInput = z.object({
 export const remindRouter = router({
   create: authedProcedure
     .input(reminderCreateInput)
-    .mutation(({ ctx, input }) =>
-      assistantRepo.createReminder(
+    .mutation(async ({ ctx, input }) => {
+      const reminder = await assistantRepo.createReminder(
         ctx.session.user.id,
         input.title,
         new Date(input.due),
         input.description,
         input.recurring
-      )
-    ),
+      );
+
+      await ensureMirrorNodes("user", [
+        {
+          kind: "reminder",
+          id: reminder.id,
+          label: reminder.title,
+          properties: {
+            entity: { kind: "reminder", id: reminder.id },
+            title: reminder.title,
+            due: reminder.due instanceof Date ? reminder.due.toISOString() : null,
+            status: reminder.fired ? "fired" : "scheduled",
+          },
+        },
+      ]);
+
+      return reminder;
+    }),
 
   list: authedProcedure
     .input(reminderListInput)
@@ -53,6 +70,19 @@ export const remindRouter = router({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
       const updated = await assistantRepo.markReminderFired(input.id);
+
+      await ensureMirrorNodes("user", [
+        {
+          kind: "reminder",
+          id: input.id,
+          properties: {
+            entity: { kind: "reminder", id: input.id },
+            status: "fired",
+            firedAt: new Date().toISOString(),
+          },
+        },
+      ]);
+
       return { updated };
     }),
 
@@ -60,6 +90,18 @@ export const remindRouter = router({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input }) => {
       const deleted = await assistantRepo.deleteReminder(input.id);
+
+      await ensureMirrorNodes("user", [
+        {
+          kind: "reminder",
+          id: input.id,
+          properties: {
+            entity: { kind: "reminder", id: input.id },
+            deletedAt: new Date().toISOString(),
+          },
+        },
+      ]);
+
       return { deleted };
     }),
 });

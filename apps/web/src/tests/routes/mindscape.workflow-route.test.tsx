@@ -155,7 +155,10 @@ describe("Mindscape → Workflow navigation", () => {
             label: "Runtime Router Node",
             source: "runtime",
             runId: runtimeRunId,
-            graph: { dbId: "db-runtime-node" },
+            graph: {
+              resource: "user",
+              dbId: "123e4567-e89b-12d3-a456-426614174000",
+            },
           },
           selectable: true,
           draggable: true,

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import { db } from "@alfred/db";
-import { touchNodes } from "@alfred/db/repo/graph/index";
+import { ensureMirrorNodes, touchNodes } from "@alfred/db/repo/graph";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import {
   getExplainingDocuments,
@@ -11,6 +11,7 @@ import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
+import { logger } from "@alfred/logger";
 import {
   graphContextDurationSeconds,
   graphQueriesTotal,
@@ -18,9 +19,41 @@ import {
   graphRagEmptyTotal,
   graphRagHitsTotal,
 } from "../metrics";
+import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;
+
+function mapGraphWriteResource(raw: unknown) {
+  const input =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const resource = typeof input.resource === "string" ? input.resource : "user";
+  const fromId = typeof input.fromId === "string" ? input.fromId : undefined;
+  const toId = typeof input.toId === "string" ? input.toId : undefined;
+  const edgeKind = typeof input.kind === "string" ? input.kind : undefined;
+
+  if (fromId && toId) {
+    return {
+      kind: "graph" as const,
+      id: resource,
+      attrs: {
+        op: "connect",
+        fromId,
+        toId,
+        edgeKind,
+      },
+    };
+  }
+
+  return {
+    kind: "graph" as const,
+    id: resource,
+    attrs: {
+      op: "ensure_mirrors",
+      entities: Array.isArray(input.entities) ? input.entities.length : 0,
+    },
+  };
+}
 
 const traverseQuerySchema = z.object({
   kind: z.literal("traverse"),
@@ -70,6 +103,49 @@ const unifiedQuerySchema = z.discriminatedUnion("kind", [
 ]);
 
 export const graphRouter = router({
+  ensureMirrors: authedProcedure
+    .use(requirePolicy("graph.write", (raw) => mapGraphWriteResource(raw)))
+    .input(
+      z.object({
+        resource: z.string().optional(),
+        entities: z.array(
+          z.object({
+            kind: z.enum(["note", "reminder", "workflow_run"]),
+            id: z.string().uuid(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const resource = input.resource ?? "user";
+      const rowsByEntity = await ensureMirrorNodes(resource, input.entities);
+
+      const refs = input.entities
+        .map((entity) => {
+          const row = rowsByEntity.get(`${entity.kind}:${entity.id}`);
+          if (!row) {
+            return null;
+          }
+          return {
+            entity,
+            ref: {
+              id: { dbId: row.id },
+              resource,
+            },
+          };
+        })
+        .filter(
+          (
+            entry
+          ): entry is {
+            entity: { kind: "note" | "reminder" | "workflow_run"; id: string };
+            ref: { id: { dbId: string }; resource: string };
+          } => Boolean(entry)
+        );
+
+      return { refs };
+    }),
+
   getEdges: authedProcedure
     .input(
       z.object({
@@ -78,13 +154,13 @@ export const graphRouter = router({
       })
     )
     .query(async ({ input }) => {
-      try {
-        const { nodeIds } = input;
-        if (nodeIds.length === 0) {
-          return [];
-        }
-        const resource = input.resource ?? "user";
+      const { nodeIds } = input;
+      if (nodeIds.length === 0) {
+        return [];
+      }
+      const resource = input.resource ?? "user";
 
+      try {
         return await db
           .select()
           .from(memoryEdges)
@@ -96,18 +172,23 @@ export const graphRouter = router({
             )
           );
       } catch (error) {
-        console.error("GRAPH_GET_EDGES_ERROR", error);
+        logger.error("graph_get_edges_failed", {
+          resource,
+          nodeCount: nodeIds.length,
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
     }),
 
   connect: authedProcedure
+    .use(requirePolicy("graph.write", (raw) => mapGraphWriteResource(raw)))
     .input(
       z.object({
         fromId: z.string(),
         toId: z.string(),
         kind: z
-          .enum(["relates_to", "blocks", "depends_on"])
+          .enum(["relates_to", "blocks", "depends_on", "is_a", "part_of"])
           .default("relates_to"),
         resource: z.string().optional(),
       })
@@ -328,7 +409,11 @@ export const graphRouter = router({
               });
             } catch (error) {
               // Ignore deep RAG failures, fallback to 1-hop
-              console.warn("Deep RAG failed", error);
+              logger.warn("graph_context_deep_traversal_failed", {
+                resource,
+                nodeId: input.nodeId,
+                error: error instanceof Error ? error.message : String(error),
+              });
             }
           }
 
@@ -442,7 +527,10 @@ export const graphRouter = router({
           if (nodeIds.length > 0) {
             // Use a microtask or immediate to detach from current stack
             void touchNodes(nodeIds).catch((err) => {
-              console.error("ACTIVE_RECALL_ERROR", err);
+              logger.warn("graph_active_recall_failed", {
+                nodeCount: nodeIds.length,
+                error: err instanceof Error ? err.message : String(err),
+              });
             });
           }
         }
@@ -455,7 +543,11 @@ export const graphRouter = router({
 
         return result;
       } catch (error) {
-        console.error("GRAPH_RUN_QUERY_ERROR", error);
+        logger.error("graph_run_query_failed", {
+          kind,
+          resource,
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       } finally {
         if (stopTimer) {

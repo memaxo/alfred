@@ -2,6 +2,8 @@ import type { ExecutionPlan, ExecutionStep } from "@alfred/cognitive";
 import type { RiskAssessment } from "@alfred/cognitive/logic/autonomy";
 import { shouldGateExecution } from "@alfred/cognitive/logic/autonomy";
 import { executing, initialAutonomy } from "@alfred/cognitive/state";
+import type { Plan as CognitivePlan } from "@alfred/cognitive/state";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { classifyPlanRisk } from "../engines/safety";
@@ -10,6 +12,15 @@ export type StepResult = {
   status: "completed" | "failed" | "suspended";
   output?: unknown;
   error?: string;
+};
+
+type ToolExecuteContext = {
+  toolCallId: string;
+  messages: unknown[];
+};
+
+type ToolLike = {
+  execute: (input: unknown, ctx: ToolExecuteContext) => Promise<unknown>;
 };
 
 type CognitiveStepCompleteEvent = {
@@ -27,17 +38,29 @@ type CognitiveStepCompleteEvent = {
 export class PlanRunner {
   constructor(
     private readonly streamId: string,
-    private readonly tools: Record<string, any>
+    private readonly tools: Record<string, ToolLike>
   ) {}
 
   async executePlan(plan: ExecutionPlan, startStep = 0): Promise<void> {
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+      typeof value === "object" && value !== null && !Array.isArray(value);
+
     // Get initial lastEventId (needed for snapshots)
     const latestSnapshot = await cognitiveRepo.getLatestSnapshot(this.streamId);
     let lastEventId =
       latestSnapshot?.lastEventId || "00000000-0000-0000-0000-000000000000";
+    const snapshotState = latestSnapshot?.state;
+    const snapshotRecord = isRecord(snapshotState) ? snapshotState : null;
+    const autoCandidate = snapshotRecord?.auto;
     const currentAutonomy =
-      (latestSnapshot?.state as any)?.auto || initialAutonomy(Date.now());
-    const retryCount = ((latestSnapshot?.state as any)?.retryCount ?? 0) + 1;
+      isRecord(autoCandidate) && typeof autoCandidate.level === "number"
+        ? (autoCandidate as ReturnType<typeof initialAutonomy>)
+        : initialAutonomy(Date.now());
+    const retryCandidate = snapshotRecord?.retryCount;
+    const retryCount =
+      (typeof retryCandidate === "number" && Number.isFinite(retryCandidate)
+        ? retryCandidate
+        : 0) + 1;
 
     await this.enforceSafetyGate(plan, currentAutonomy);
 
@@ -49,13 +72,26 @@ export class PlanRunner {
 
       // Checkpoint execution state
       try {
-        const state = executing(Date.now(), plan as any, currentAutonomy);
-        (state as any).step = i;
-        (state as any).retryCount = retryCount; // Persist retry count
+        const planForState: CognitivePlan = {
+          steps: plan.steps.map((step) => ({
+            action: step.action,
+            params: step.params as Record<string, unknown>,
+            timeout: step.timeout,
+            retryable: step.retryable,
+          })),
+          duration: plan.duration,
+          confidence: Math.max(0, Math.min(1, plan.confidence)) as unknown as CognitivePlan["confidence"],
+        };
+        const state = executing(Date.now(), planForState, currentAutonomy);
+        const persistedState: Record<string, unknown> = {
+          ...(state as unknown as Record<string, unknown>),
+          step: i,
+          retryCount,
+        };
 
         await cognitiveRepo.saveSnapshot(
           this.streamId,
-          state as any,
+          persistedState,
           lastEventId
         );
       } catch (err) {
@@ -79,10 +115,23 @@ export class PlanRunner {
           result,
           stepDurationMs
         );
+        const envelope = wrapEventEnvelope({
+          id: crypto.randomUUID(),
+          type: "cognitive_step_complete",
+          resource: "user",
+          data: event,
+        });
         const inserted = await cognitiveRepo.appendEvent(
           this.streamId,
           "cognitive_step_complete",
-          event as unknown as Record<string, unknown>
+          {
+            v: envelope.v,
+            id: envelope.id,
+            type: envelope.type,
+            createdAt: envelope.createdAt,
+            resource: envelope.resource,
+            data: envelope.data,
+          }
         );
         if (inserted?.id) {
           lastEventId = inserted.id;
@@ -174,7 +223,7 @@ export class PlanRunner {
 
   private async executeStep(
     step: ExecutionStep,
-    tools: Record<string, any>
+    tools: Record<string, ToolLike>
   ): Promise<StepResult> {
     const tool = tools[step.action];
 
@@ -191,11 +240,17 @@ export class PlanRunner {
       });
 
       return { status: "completed", output };
-    } catch (error: any) {
-      if (error.message === "suspended" || error.name === "SuspendedError") {
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === "suspended" || error.name === "SuspendedError")
+      ) {
         return { status: "suspended" };
       }
-      return { status: "failed", error: error.message };
+      return {
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 }

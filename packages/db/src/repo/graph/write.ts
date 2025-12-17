@@ -148,6 +148,179 @@ export async function upsertNodes(
   return map;
 }
 
+export type MirrorEntityKind = "note" | "reminder" | "workflow_run";
+
+export type MirrorEntitySeed = {
+  kind: MirrorEntityKind;
+  id: string;
+  label?: string;
+  properties?: unknown;
+};
+
+function getMirrorHash(seed: { kind: MirrorEntityKind; id: string }): string {
+  switch (seed.kind) {
+    case "note":
+      return `note:${seed.id}`;
+    case "reminder":
+      return `reminder:${seed.id}`;
+    case "workflow_run":
+      return `workflowrun:${seed.id}`;
+  }
+}
+
+function getMirrorLabel(seed: MirrorEntitySeed): string {
+  if (typeof seed.label === "string" && seed.label.length > 0) {
+    return seed.label;
+  }
+  return `${seed.kind}:${seed.id}`;
+}
+
+/**
+ * Ensure that domain entities have graph mirror nodes in `memory_nodes`.
+ *
+ * A mirror node is a graph node whose identity is keyed by `(resource, hash)` so
+ * FK-constrained graph edges can reference it via `memory_nodes.id`.
+ */
+export async function ensureMirrorNodes(
+  resource: string,
+  seeds: MirrorEntitySeed[]
+): Promise<Map<string, NodeRow>> {
+  if (seeds.length === 0) {
+    return new Map();
+  }
+
+  const deduped: MirrorEntitySeed[] = [];
+  const seen = new Set<string>();
+  for (const seed of seeds) {
+    if (!UUID_RE.test(seed.id)) {
+      continue;
+    }
+    const key = `${seed.kind}:${seed.id}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(seed);
+  }
+
+  const withLabel: MirrorEntitySeed[] = [];
+  const withoutLabel: MirrorEntitySeed[] = [];
+  for (const seed of deduped) {
+    if (typeof seed.label === "string" && seed.label.length > 0) {
+      withLabel.push(seed);
+    } else {
+      withoutLabel.push(seed);
+    }
+  }
+
+  const rowsByHash = new Map<string, NodeRow>();
+
+  if (withLabel.length > 0) {
+    const nodeSeeds: NodeSeed[] = withLabel.map((seed) => ({
+      resource,
+      hash: getMirrorHash(seed),
+      kind: seed.kind,
+      label: getMirrorLabel(seed),
+      properties:
+        seed.properties === undefined
+          ? {
+              entity: { kind: seed.kind, id: seed.id },
+              mirror: true,
+            }
+          : seed.properties,
+    }));
+
+    const upserted = await upsertNodes(nodeSeeds);
+    for (const [key, row] of upserted) {
+      rowsByHash.set(key, row);
+    }
+  }
+
+  if (withoutLabel.length > 0) {
+    const filters = withoutLabel.map((seed) =>
+      and(
+        eq(memoryNodes.resource, resource),
+        eq(memoryNodes.hash, getMirrorHash(seed))
+      )
+    );
+
+    const existing = await db
+      .select()
+      .from(memoryNodes)
+      .where(filters.length === 1 ? filters[0] : or(...filters));
+    const existingByHash = new Map(existing.map((row) => [row.hash, row]));
+
+    const toInsert: MirrorEntitySeed[] = [];
+    const toUpsertProps: Array<{ seed: MirrorEntitySeed; row: NodeRow }> = [];
+
+    for (const seed of withoutLabel) {
+      const hash = getMirrorHash(seed);
+      const row = existingByHash.get(hash);
+      if (!row) {
+        toInsert.push(seed);
+        continue;
+      }
+      if (seed.properties !== undefined) {
+        toUpsertProps.push({ seed, row });
+      }
+      rowsByHash.set(`${resource}:${hash}`, row);
+    }
+
+    if (toUpsertProps.length > 0) {
+      const updateSeeds: NodeSeed[] = toUpsertProps.map(({ seed, row }) => ({
+        resource,
+        hash: getMirrorHash(seed),
+        kind: seed.kind,
+        label: row.label,
+        properties: seed.properties,
+      }));
+      const updated = await upsertNodes(updateSeeds);
+      for (const [key, row] of updated) {
+        rowsByHash.set(key, row);
+      }
+    }
+
+    if (toInsert.length > 0) {
+      const values = toInsert.map((seed) => ({
+        resource,
+        hash: getMirrorHash(seed),
+        kind: seed.kind,
+        label: sanitizeContextText(getMirrorLabel(seed)),
+        properties:
+          seed.properties === undefined || seed.properties === null
+            ? null
+            : sanitizeGraphValue(seed.properties),
+        sanitized: true,
+      }));
+
+      await db
+        .insert(memoryNodes)
+        .values(values)
+        .onConflictDoNothing({
+          target: [memoryNodes.resource, memoryNodes.hash],
+        })
+        .returning({ id: memoryNodes.id });
+
+      const inserted = await db
+        .select()
+        .from(memoryNodes)
+        .where(filters.length === 1 ? filters[0] : or(...filters));
+      for (const row of inserted) {
+        rowsByHash.set(`${row.resource}:${row.hash}`, row);
+      }
+    }
+  }
+
+  const result = new Map<string, NodeRow>();
+  for (const seed of deduped) {
+    const row = rowsByHash.get(`${resource}:${getMirrorHash(seed)}`);
+    if (row) {
+      result.set(`${seed.kind}:${seed.id}`, row);
+    }
+  }
+  return result;
+}
+
 export async function createEdge(
   resource: string,
   hash: string,

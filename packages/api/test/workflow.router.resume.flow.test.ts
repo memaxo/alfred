@@ -58,14 +58,48 @@ mock.module("@alfred/api/src/trpc", () => {
 // Import test helpers dynamically after mocks are registered
 let createTestCaller: typeof import("./utils/trpc")["createTestCaller"];
 let toObservable: typeof import("./utils/stream")["toObservable"];
-// Mock graph dependency pulled transitively during router import
-mock.module("@alfred/db/repo/graph", () => ({
+
+// Mock graph dependency pulled transitively during router import.
+// We provide a broad surface area because appRouter imports agent workers/tools
+// that import many named exports from this module.
+const graphIndexStub = {
   getGraphClient: vi.fn().mockReturnValue({}),
   findNearestConcept: vi.fn().mockResolvedValue(null),
-  upsertNodes: vi.fn().mockResolvedValue(new Map()),
-  upsertEdges: vi.fn().mockResolvedValue(undefined),
   getReasoningChain: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+  ensureMirrorNodes: vi.fn().mockResolvedValue(new Map()),
+  upsertNodes: vi.fn().mockResolvedValue(new Map()),
+  upsertEdges: vi.fn().mockResolvedValue([]),
+  touchNodes: vi.fn().mockResolvedValue(0),
+  archiveNodes: vi.fn().mockResolvedValue(0),
+  deleteArchivedNodes: vi.fn().mockResolvedValue(0),
+  findNodesByConfidence: vi.fn().mockResolvedValue([]),
+  findNodesForDecay: vi.fn().mockResolvedValue([]),
+  updateNodeConfidenceBatch: vi.fn().mockResolvedValue(0),
+};
+
+mock.module("@alfred/db/repo/graph", () => graphIndexStub);
+mock.module("@alfred/db/repo/graph/index", () => graphIndexStub);
+
+const ensureMirrorNodesMock = vi.fn().mockResolvedValue(new Map());
+const graphWriteStub = {
+  createNode: vi.fn(),
+  updateNode: vi.fn(),
+  deleteNode: vi.fn(),
+  upsertNodes: vi.fn(),
+  createEdge: vi.fn(),
+  deleteEdge: vi.fn(),
+  upsertEdges: vi.fn(),
+  archiveNodes: vi.fn(),
+  deleteArchivedNodes: vi.fn(),
+  updateNodeConfidence: vi.fn(),
+  updateNodeConfidenceBatch: vi.fn(),
   touchNodes: vi.fn(),
+  deleteNodesBatch: vi.fn(),
+};
+
+mock.module("@alfred/db/repo/graph/write", () => ({
+  ...graphWriteStub,
+  ensureMirrorNodes: ensureMirrorNodesMock,
 }));
 // Mock policy evaluate to allow with no obligations
 const evaluateMock = vi.fn();
@@ -77,6 +111,17 @@ mock.module("@alfred/policy", () => ({
 // Mock runner to control stream + resume behavior
 const runPlanV6Mock = vi.fn();
 mock.module("@alfred/api/workflow/runner", () => ({
+  runPlanV6: runPlanV6Mock,
+}));
+
+// The workflow orchestrator lives in @alfred/agent and imports its own runner via a relative import.
+// Mock both the package path and the absolute source path so `createWorkflowExecutor()` uses this stub.
+mock.module("@alfred/agent/workflow/runner", () => ({
+  runPlanV6: runPlanV6Mock,
+}));
+const agentRunnerAbs = new URL("../../agent/src/workflow/runner.ts", import.meta.url)
+  .pathname;
+mock.module(agentRunnerAbs, () => ({
   runPlanV6: runPlanV6Mock,
 }));
 // Mock metrics consumed by routers to avoid importing full metrics registry
@@ -123,6 +168,19 @@ afterEach(() => {
   createRunMock.mockClear();
   appendEventMock.mockClear();
   updateRunMock.mockClear();
+  ensureMirrorNodesMock.mockClear();
+  graphIndexStub.getGraphClient.mockClear();
+  graphIndexStub.findNearestConcept.mockClear();
+  graphIndexStub.getReasoningChain.mockClear();
+  graphIndexStub.ensureMirrorNodes.mockClear();
+  graphIndexStub.upsertNodes.mockClear();
+  graphIndexStub.upsertEdges.mockClear();
+  graphIndexStub.touchNodes.mockClear();
+  graphIndexStub.archiveNodes.mockClear();
+  graphIndexStub.deleteArchivedNodes.mockClear();
+  graphIndexStub.findNodesByConfidence.mockClear();
+  graphIndexStub.findNodesForDecay.mockClear();
+  graphIndexStub.updateNodeConfidenceBatch.mockClear();
 });
 
 async function _subscribeToStream(
@@ -175,7 +233,8 @@ describe("workflow router resume flow (integration)", () => {
 
     // Start a stream and collect events in the background
     const events: WorkflowEvent[] = [];
-    const sub: any = toObservable(caller.workflow.stream(input as any));
+    const candidate = await caller.workflow.stream(input as any);
+    const sub: any = toObservable(candidate);
 
     const runIdRef: { id: string | null } = { id: null };
 
@@ -198,7 +257,6 @@ describe("workflow router resume flow (integration)", () => {
           }
         },
         error: (err: unknown) => {
-          console.error("deploy stream error", err);
           reject(err);
         },
         complete: resolve,
@@ -212,13 +270,18 @@ describe("workflow router resume flow (integration)", () => {
         runIdRef.id = firstRun;
       }
     }
-    console.log("deploy events", events);
-
     const completed = events.some(
       (e: any) =>
         e?.type === "report" || (e?.type === "progress" && e?.pct === 100)
     );
     expect(completed).toBe(true);
+    expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+    expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+      "user",
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "workflow_run", id: "resume-run-1" }),
+      ])
+    );
   });
 
   it("acknowledges linear-authz via resume and completes", async () => {
@@ -249,7 +312,8 @@ describe("workflow router resume flow (integration)", () => {
     });
 
     const events: WorkflowEvent[] = [];
-    const sub: any = toObservable(caller.workflow.stream(input as any));
+    const candidate = await caller.workflow.stream(input as any);
+    const sub: any = toObservable(candidate);
     const runIdRef: { id: string | null } = { id: null };
 
     const done = new Promise<void>((resolve, reject) => {
@@ -270,7 +334,6 @@ describe("workflow router resume flow (integration)", () => {
           }
         },
         error: (err: unknown) => {
-          console.error("linear stream error", err);
           reject(err);
         },
         complete: resolve,
@@ -284,8 +347,6 @@ describe("workflow router resume flow (integration)", () => {
         runIdRef.id = firstRun;
       }
     }
-    console.log("linear events", events);
-
     const completed = events.some(
       (e: any) =>
         e?.type === "report" || (e?.type === "progress" && e?.pct === 100)

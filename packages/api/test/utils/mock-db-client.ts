@@ -17,6 +17,29 @@ const isSqliteDriver = vi.fn(() => false);
 
 mock.module("@alfred/db/src/client", () => ({ db: dbStub, isSqliteDriver }));
 mock.module("@alfred/db/client", () => ({ db: dbStub, isSqliteDriver }));
+
+const conversationRepoShim = {
+  createConversation: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).createConversation(...args),
+  getConversationByWorkflow: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getConversationByWorkflow(...args),
+  getConversation: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getConversation(...args),
+  createMessage: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).createMessage(...args),
+  getMessage: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getMessage(...args),
+  getMessages: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getMessages(...args),
+  getConversations: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getConversations(...args),
+  getActiveUserIds: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getActiveUserIds(...args),
+  getConversationHistory: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).getConversationHistory(...args),
+  messageRowToUIMessage: (...args: any[]) =>
+    (dbModuleStub.conversationRepo as any).messageRowToUIMessage(...args),
+} as const;
 const defaultConversationRow = {
   id: "conversation-default",
   userId: "test-user",
@@ -115,11 +138,11 @@ export const dbModuleStub = {
 mock.module("@alfred/db", () => dbModuleStub);
 mock.module(
   "@alfred/db/repo/conversation",
-  () => dbModuleStub.conversationRepo
+  () => conversationRepoShim
 );
 mock.module(
   "@alfred/db/src/repo/conversation",
-  () => dbModuleStub.conversationRepo
+  () => conversationRepoShim
 );
 mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
 mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);

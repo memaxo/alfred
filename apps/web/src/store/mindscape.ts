@@ -41,12 +41,8 @@ import {
 export type ArtifactType =
   | "chat"
   | "workflow"
-  | "tool"
-  | "result"
   | "terminal"
   | "droid"
-  | "data"
-  | "preview"
   | "note"
   | "reminder"
   | "ticket"
@@ -361,12 +357,6 @@ export const useMindscapeStore = create<MindscapeState>()(
             typeof nodesOrUpdater === "function"
               ? nodesOrUpdater(state.nodes)
               : nodesOrUpdater;
-          console.log(
-            "setNodes count:",
-            newNodes.length,
-            "first:",
-            newNodes[0]?.id
-          );
           return { nodes: newNodes };
         });
       },
@@ -554,7 +544,7 @@ export const useMindscapeStore = create<MindscapeState>()(
       },
     }),
     {
-      name: "mindscape-storage",
+      name: "mindscape-storage-v2",
       partialize: (state) => ({
         nodes: state.nodes.map(sanitizeNodeForPersist),
         edges: state.edges,

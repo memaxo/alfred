@@ -18,6 +18,22 @@ const getNotesMock = vi.fn();
 const updateNoteMock = vi.fn();
 const deleteNoteMock = vi.fn();
 const ingestMock = vi.fn().mockResolvedValue(undefined);
+const ensureMirrorNodesMock = vi.fn().mockResolvedValue(new Map());
+const graphWriteStub = {
+  createNode: vi.fn(),
+  updateNode: vi.fn(),
+  deleteNode: vi.fn(),
+  upsertNodes: vi.fn(),
+  createEdge: vi.fn(),
+  deleteEdge: vi.fn(),
+  upsertEdges: vi.fn(),
+  archiveNodes: vi.fn(),
+  deleteArchivedNodes: vi.fn(),
+  updateNodeConfidence: vi.fn(),
+  updateNodeConfidenceBatch: vi.fn(),
+  touchNodes: vi.fn(),
+  deleteNodesBatch: vi.fn(),
+};
 
 mock.module("@alfred/rag", () => ({
   ingest: ingestMock,
@@ -54,6 +70,11 @@ mock.module("@alfred/db/repo/assistant", () => ({
   deleteTask: vi.fn(),
 }));
 
+mock.module("@alfred/db/repo/graph/write", () => ({
+  ...graphWriteStub,
+  ensureMirrorNodes: ensureMirrorNodesMock,
+}));
+
 describe("noteRouter", () => {
   beforeEach(() => {
     createNoteMock.mockReset();
@@ -61,6 +82,20 @@ describe("noteRouter", () => {
     updateNoteMock.mockReset();
     deleteNoteMock.mockReset();
     ingestMock.mockReset().mockResolvedValue(undefined);
+    ensureMirrorNodesMock.mockReset().mockResolvedValue(new Map());
+    graphWriteStub.createNode.mockReset();
+    graphWriteStub.updateNode.mockReset();
+    graphWriteStub.deleteNode.mockReset();
+    graphWriteStub.upsertNodes.mockReset();
+    graphWriteStub.createEdge.mockReset();
+    graphWriteStub.deleteEdge.mockReset();
+    graphWriteStub.upsertEdges.mockReset();
+    graphWriteStub.archiveNodes.mockReset();
+    graphWriteStub.deleteArchivedNodes.mockReset();
+    graphWriteStub.updateNodeConfidence.mockReset();
+    graphWriteStub.updateNodeConfidenceBatch.mockReset();
+    graphWriteStub.touchNodes.mockReset();
+    graphWriteStub.deleteNodesBatch.mockReset();
   });
 
   afterEach(() => {
@@ -79,7 +114,7 @@ describe("noteRouter", () => {
 
     it("creates note with valid input", async () => {
       const mockNote = {
-        id: "note-123",
+        id: "123e4567-e89b-12d3-a456-426614174000",
         userId: "test-user",
         title: "Test Note",
         content: "Test note content",
@@ -104,11 +139,18 @@ describe("noteRouter", () => {
         "Test Note",
         ["test"]
       );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "note", id: mockNote.id }),
+        ])
+      );
     });
 
     it("creates note without optional fields", async () => {
       const mockNote = {
-        id: "note-123",
+        id: "123e4567-e89b-12d3-a456-426614174000",
         userId: "test-user",
         title: null,
         content: "Test note content",
@@ -130,6 +172,13 @@ describe("noteRouter", () => {
         "Test note content",
         undefined,
         undefined
+      );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "note", id: mockNote.id }),
+        ])
       );
     });
 
@@ -258,6 +307,17 @@ describe("noteRouter", () => {
         content: "Updated content",
         tags: ["updated"],
       });
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "note",
+            id: noteId,
+            label: "Updated Title",
+          }),
+        ])
+      );
     });
 
     it("requires at least one field to update", async () => {

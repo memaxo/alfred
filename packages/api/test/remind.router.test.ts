@@ -18,6 +18,22 @@ const getRemindersMock = vi.fn();
 const getDueRemindersMock = vi.fn();
 const markReminderFiredMock = vi.fn();
 const deleteReminderMock = vi.fn();
+const ensureMirrorNodesMock = vi.fn().mockResolvedValue(new Map());
+const graphWriteStub = {
+  createNode: vi.fn(),
+  updateNode: vi.fn(),
+  deleteNode: vi.fn(),
+  upsertNodes: vi.fn(),
+  createEdge: vi.fn(),
+  deleteEdge: vi.fn(),
+  upsertEdges: vi.fn(),
+  archiveNodes: vi.fn(),
+  deleteArchivedNodes: vi.fn(),
+  updateNodeConfidence: vi.fn(),
+  updateNodeConfidenceBatch: vi.fn(),
+  touchNodes: vi.fn(),
+  deleteNodesBatch: vi.fn(),
+};
 
 mock.module("@alfred/db/repo/assistant", () => ({
   createReminder: createReminderMock,
@@ -42,6 +58,11 @@ mock.module("@alfred/db/repo/assistant", () => ({
   deleteTask: vi.fn(),
 }));
 
+mock.module("@alfred/db/repo/graph/write", () => ({
+  ...graphWriteStub,
+  ensureMirrorNodes: ensureMirrorNodesMock,
+}));
+
 describe("remindRouter", () => {
   beforeEach(() => {
     createReminderMock.mockReset();
@@ -49,6 +70,20 @@ describe("remindRouter", () => {
     getDueRemindersMock.mockReset();
     markReminderFiredMock.mockReset();
     deleteReminderMock.mockReset();
+    ensureMirrorNodesMock.mockReset().mockResolvedValue(new Map());
+    graphWriteStub.createNode.mockReset();
+    graphWriteStub.updateNode.mockReset();
+    graphWriteStub.deleteNode.mockReset();
+    graphWriteStub.upsertNodes.mockReset();
+    graphWriteStub.createEdge.mockReset();
+    graphWriteStub.deleteEdge.mockReset();
+    graphWriteStub.upsertEdges.mockReset();
+    graphWriteStub.archiveNodes.mockReset();
+    graphWriteStub.deleteArchivedNodes.mockReset();
+    graphWriteStub.updateNodeConfidence.mockReset();
+    graphWriteStub.updateNodeConfidenceBatch.mockReset();
+    graphWriteStub.touchNodes.mockReset();
+    graphWriteStub.deleteNodesBatch.mockReset();
   });
 
   afterEach(() => {
@@ -97,6 +132,13 @@ describe("remindRouter", () => {
         "Test description",
         undefined
       );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "reminder", id: mockReminder.id }),
+        ])
+      );
     });
 
     it("creates reminder without optional fields", async () => {
@@ -128,6 +170,13 @@ describe("remindRouter", () => {
         dueDate,
         undefined,
         undefined
+      );
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "reminder", id: mockReminder.id }),
+        ])
       );
     });
 
@@ -288,6 +337,13 @@ describe("remindRouter", () => {
 
       expect(result).toEqual({ updated: 1 });
       expect(markReminderFiredMock).toHaveBeenCalledWith(reminderId);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "reminder", id: reminderId }),
+        ])
+      );
     });
 
     it("validates UUID format", async () => {
@@ -318,6 +374,13 @@ describe("remindRouter", () => {
 
       expect(result).toEqual({ deleted: 1 });
       expect(deleteReminderMock).toHaveBeenCalledWith(reminderId);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledTimes(1);
+      expect(ensureMirrorNodesMock).toHaveBeenCalledWith(
+        "user",
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "reminder", id: reminderId }),
+        ])
+      );
     });
 
     it("validates UUID format", async () => {

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { recordAudit } from "@alfred/agent/utils/audit";
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import type { ResumePayload } from "@alfred/agent/workflow/registry";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
@@ -100,13 +101,20 @@ function recordSuspensionOutcome(
 }
 
 async function appendObligationEvent(runId: string, obligations: Obligation[]) {
+  const eventId = randomUUID();
   await workflowRepo.appendEvent({
     runId,
+    eventId,
     eventType: "suspend",
-    eventData: {
-      reason: "policy_obligation",
-      obligations,
-    },
+    eventData: wrapEventEnvelope({
+      id: eventId,
+      type: "suspend",
+      resource: "user",
+      data: {
+        reason: "policy_obligation",
+        obligations,
+      },
+    }),
   });
 }
 

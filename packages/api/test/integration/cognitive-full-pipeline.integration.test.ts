@@ -137,6 +137,16 @@ afterAll(async () => {
   process.env.DATABASE_URL = originalDatabaseUrl;
 });
 
+function unwrapPayload(raw: unknown): unknown {
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (obj.v === 1 && "data" in obj) {
+      return obj.data;
+    }
+  }
+  return raw;
+}
+
 describe("Cognitive Full Pipeline Integration", () => {
   beforeEach(async () => {
     await resetCognitiveTables();
@@ -241,7 +251,8 @@ describe("Cognitive Full Pipeline Integration", () => {
       const events = await cognitiveRepo.getAllEvents(streamId);
       expect(events).toHaveLength(1);
       expect(events[0]?.type).toBe("input");
-      expect((events[0]?.payload as any).content).toBe("Persist this");
+      const payload = unwrapPayload(events[0]?.payload) as any;
+      expect(payload?.content).toBe("Persist this");
     });
 
     it("replays events to reconstruct state", async () => {
@@ -439,7 +450,8 @@ describe("Cognitive Full Pipeline Integration", () => {
       const interruptEvents = events.filter((e) => e.type === "interrupt");
 
       expect(interruptEvents).toHaveLength(1);
-      expect((interruptEvents[0]?.payload as any).reason).toContain("boredom");
+      const payload = unwrapPayload(interruptEvents[0]?.payload) as any;
+      expect(String(payload?.reason ?? "")).toContain("boredom");
     });
 
     it("updates boredom on loop detection", async () => {

@@ -1,4 +1,5 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
+import { unwrapEventEnvelope, wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import type {
   CognitiveState,
   Event,
@@ -14,6 +15,7 @@ import {
   cognitivePhysiologyGauge,
 } from "@alfred/metrics/shared";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
+import type { ModelMessage } from "ai";
 
 // Temporary: Autonomy Logic (to be expanded)
 const createInitialAutonomy = () => initialAutonomy(Date.now());
@@ -42,6 +44,11 @@ export async function runCognitiveLoop(
   streamId: string,
   incomingEvent: Event
 ): Promise<CognitiveLoopResult> {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  const isEventLike = (value: unknown): value is { _: string } =>
+    isRecord(value) && typeof value._ === "string";
+
   // 1. Hydrate State (Simplified: Replay all events for now)
   const events = await cognitiveRepo.getAllEvents(streamId);
   let state: CognitiveState = idle(Date.now());
@@ -49,7 +56,11 @@ export async function runCognitiveLoop(
 
   // Replay history
   for (const record of events) {
-    const historicalEvent = record.payload as unknown as Event;
+    const unwrapped = unwrapEventEnvelope(record.payload);
+    if (!isEventLike(unwrapped.data)) {
+      continue;
+    }
+    const historicalEvent = unwrapped.data as Event;
     const result = applyTransition(state, autonomy, historicalEvent);
     state = result.state;
     autonomy = result.autonomy;
@@ -78,10 +89,23 @@ export async function runCognitiveLoop(
   }
 
   // 3. Persist
+  const envelope = wrapEventEnvelope({
+    id: crypto.randomUUID(),
+    type: incomingEvent._,
+    resource: "user",
+    data: incomingEvent,
+  });
   await cognitiveRepo.appendEvent(
     streamId,
     incomingEvent._,
-    incomingEvent as unknown as Record<string, unknown>
+    {
+      v: envelope.v,
+      id: envelope.id,
+      type: envelope.type,
+      createdAt: envelope.createdAt,
+      resource: envelope.resource,
+      data: envelope.data,
+    }
   );
 
   const effects = computeEffects(newState);
@@ -168,10 +192,10 @@ export async function runAssistantGeneration(
     // For now, we reconstruct the messages array.
     // In future, we should fetch conversation history properly or rely on the adapter
     // to handle history if it's stateful (though the adapter interface is stateless).
-    const messages = [
+    const messages: ModelMessage[] = [
       { role: "system", content: defaults.instructions },
       { role: "user", content: input },
-    ] as any[];
+    ];
 
     // Use the injected AI adapter
     const result = await ctx.ai.generateText({
@@ -188,10 +212,11 @@ export async function runAssistantGeneration(
       duration,
     };
     return outcome;
-  } catch (error: any) {
+  } catch (error) {
     const outcome: Outcome = {
       _: "failure",
-      error: error?.message ?? "assistant_generation_failed",
+      error:
+        error instanceof Error ? error.message : "assistant_generation_failed",
       recoverable: true,
     };
     return outcome;

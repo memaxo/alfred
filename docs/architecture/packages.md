@@ -211,6 +211,11 @@ export function loadPolicies(yaml: string): Policy[];
 **Purpose**: Compose all domain packages into cohesive execution  
 **Dependencies**: `cognitive`, `knowledge`, `learning`, `policy`, `agent`, `db`
 
+**Workflow orchestration (runtime)**:
+- `packages/runtime/src/workflow/orchestrator.ts` is the boundary that streams `WorkflowEvent`s and persists them.
+- Keep orchestration concerns split into focused sibling modules (e.g. `linear.ts`, `history.ts`, `observe.ts`, `persist.ts`, `lifecycle.ts`, `timeout.ts`) so lifecycle, persistence, observability, and integrations do not interleave.
+- Preserve invariants: redaction-first, enveloped persistence, deterministic event IDs, single-shot terminal finalization, always unregister run handles.
+
 **Structure**:
 ```
 packages/runtime/
@@ -218,8 +223,14 @@ packages/runtime/
 │   ├── core/
 │   │   └── runtime.ts       # CoreRuntime class
 │   ├── workflow/
-│   │   ├── runtime.ts       # WorkflowRuntime class
-│   │   └── normalize.ts     # Event normalization
+│   │   ├── executor.ts      # Executor selection + conversation persistence helpers
+│   │   ├── orchestrator.ts  # Streaming boundary (TRPC/SSE use this pattern)
+│   │   ├── linear.ts        # Linear integration lane
+│   │   ├── persist.ts       # Event persistence + UI message derivation lane
+│   │   ├── observe.ts       # Metrics + reasoning capture lane
+│   │   ├── lifecycle.ts     # Status/audit/finalization lane
+│   │   ├── timeout.ts       # Global timeout guard
+│   │   └── provenance.ts    # Reason trace persistence
 │   ├── context/
 │   │   └── builder.ts       # Context building
 │   └── domains/

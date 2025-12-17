@@ -203,7 +203,6 @@ function MindscapeCanvasInner({
   });
 
   const handleWorkflowInspect = useCallback((runId: string) => {
-    console.log("handleWorkflowInspect called with", runId);
     setInspectedRunId(runId);
   }, []);
 
@@ -312,8 +311,7 @@ function MindscapeCanvasInner({
             padding: 0.4,
           });
         } catch (_error) {
-          if (import.meta.env.DEV) {
-          }
+          // Ignore fitView errors (e.g. node not mounted yet).
         }
       });
     },
@@ -501,6 +499,7 @@ function MindscapeCanvasInner({
           ...cachedRagDoc,
           type: "knowledge",
           graph: {
+            resource: cachedRagDoc.graph?.resource ?? "user",
             dbId: ragDocQuery,
             hgHash: cachedRagDoc.graph?.hgHash,
           },
@@ -566,6 +565,7 @@ function MindscapeCanvasInner({
         summary,
         source: "rag",
         graph: {
+          resource: "user",
           dbId: docDbId,
           hgHash: docNodeId.hgHash,
         },
@@ -593,14 +593,54 @@ function MindscapeCanvasInner({
 
   const onConnectPersisting = useCallback<OnConnect>(
     async (connection) => {
+      const beforeEdges = useMindscapeStore.getState().edges;
+      const beforeCount = beforeEdges.length;
+
       onConnect(connection);
+
+      const afterEdges = useMindscapeStore.getState().edges;
+      const added = afterEdges.slice(beforeCount);
+      const localEdge =
+        added.find(
+          (edge) =>
+            edge.source === connection.source && edge.target === connection.target
+        ) ?? added[0];
+      if (!localEdge) {
+        return;
+      }
+
+      const rollback = () => {
+        if (!localEdge?.id) {
+          return;
+        }
+        useMindscapeStore.setState((state) => ({
+          edges: state.edges.filter((edge) => edge.id !== localEdge.id),
+        }));
+      };
+
       const sourceNode = nodes.find((node) => node.id === connection.source);
       const targetNode = nodes.find((node) => node.id === connection.target);
-      const fromId = sourceNode?.data?.graph?.dbId;
-      const toId = targetNode?.data?.graph?.dbId;
+      const fromGraph = sourceNode?.data?.graph;
+      const toGraph = targetNode?.data?.graph;
+      const fromId = fromGraph?.dbId;
+      const toId = toGraph?.dbId;
+      const fromResource = fromGraph?.resource;
+      const toResource = toGraph?.resource;
+
       if (!(fromId && toId)) {
-        if (import.meta.env.DEV) {
-        }
+        toast.error("Only graph-backed nodes can be linked.");
+        rollback();
+        return;
+      }
+      if (fromResource && toResource && fromResource !== toResource) {
+        toast.error("Cannot link nodes from different resources.");
+        rollback();
+        return;
+      }
+      const resource = fromResource ?? toResource;
+      if (!resource) {
+        toast.error("Cannot link nodes without a resource.");
+        rollback();
         return;
       }
       try {
@@ -608,11 +648,11 @@ function MindscapeCanvasInner({
           fromId,
           toId,
           kind: "relates_to",
-          resource: "user",
+          resource,
         });
       } catch (_error) {
-        if (import.meta.env.DEV) {
-        }
+        toast.error("Failed to persist edge.");
+        rollback();
       }
     },
     [connectEdge, nodes, onConnect]
@@ -620,7 +660,7 @@ function MindscapeCanvasInner({
 
   return (
     <>
-      <div className="relative h-screen w-full bg-[oklch(0.05_0_0)]">
+      <div className="relative h-screen w-full bg-void">
         <ReactFlow
           colorMode="dark"
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}

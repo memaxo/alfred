@@ -1,5 +1,6 @@
 import { configureLinearMetrics } from "@alfred/agent/integrations/linear";
 import { recordAudit } from "@alfred/agent/utils/audit";
+import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
   linearActivityDurationSeconds,
@@ -41,6 +42,7 @@ import {
   codexLinearIntegrationLatencySeconds,
   codexSessionContinuityTotal,
 } from "@alfred/api/metrics";
+import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
   ReasoningEdgeRecord,
@@ -151,8 +153,8 @@ export const workflowRouter = router({
           ctx.runtimeContext
         );
 
-        const storedInput = {
-          ...(workflowPayload as any),
+        const storedInput: Record<string, unknown> = {
+          ...workflowPayload,
           executionId: executor.runId,
           reasoningSince: Date.now(),
         };
@@ -172,6 +174,21 @@ export const workflowRouter = router({
           linearIssueId,
           linearIssueUrl,
         });
+
+        await ensureMirrorNodes("user", [
+          {
+            kind: "workflow_run",
+            id: executor.runId,
+            label: deriveWorkflowTitle(workflowPayload.requirement),
+            properties: {
+              entity: { kind: "workflow_run", id: executor.runId },
+              workflowId: "plan",
+              status: "running",
+              linearIssueId,
+              linearIssueUrl,
+            },
+          },
+        ]);
 
         try {
           const { conversation, created } = await ensureWorkflowConversation({
@@ -477,12 +494,14 @@ export const workflowRouter = router({
             ? run.created.getTime()
             : undefined;
 
-      const { getReasoningChain } = await import("@alfred/db/repo/graph");
-      const { reconstructReasoningChain } = await import(
-        "@alfred/knowledge/query"
-      );
-      const { memoryNodes } = await import("@alfred/db/schema/graph");
-      const { db } = await import("@alfred/db");
+      const graphRepoPkg = "@alfred/db/repo/graph";
+      const { getReasoningChain } = await import(graphRepoPkg);
+      const knowledgeQueryPkg = "@alfred/knowledge/query";
+      const { reconstructReasoningChain } = await import(knowledgeQueryPkg);
+      const graphSchemaPkg = "@alfred/db/schema/graph";
+      const { memoryNodes } = await import(graphSchemaPkg);
+      const dbPkg = "@alfred/db";
+      const { db } = await import(dbPkg);
 
       const limit = input.limit;
       const initialArgs = {
@@ -609,9 +628,14 @@ export const workflowRouter = router({
       })
     )
     .query(async ({ input }) => {
-      const stop = replayQueryDurationSeconds.startTimer({
-        event_type: input.eventType,
-      } as any);
+      let stop: (() => void) | null = null;
+      try {
+        stop = replayQueryDurationSeconds.startTimer({
+          event_type: input.eventType,
+        });
+      } catch {
+        stop = null;
+      }
       const items = await workflowRepo.listEventsByTypePaged({
         runId: input.runId,
         eventType: input.eventType,
@@ -620,11 +644,11 @@ export const workflowRouter = router({
         order: input.order,
       });
       const transformed = items.map((e) => ({
-        eventId: (e as any).eventId,
+        eventId: e.eventId,
         runId: e.runId,
         eventType: e.eventType,
-        eventData: e.eventData,
-        timestamp: (e as any).timestamp,
+        eventData: unwrapEventEnvelope(e.eventData).data,
+        timestamp: e.timestamp,
       }));
       let total: number | undefined;
       if (input.includeTotal) {
@@ -639,9 +663,9 @@ export const workflowRouter = router({
         transformed.length === pageSize &&
         (total === undefined || (page + 1) * pageSize < total);
       try {
-        replayQueriesTotal.inc({ event_type: input.eventType } as any);
+        replayQueriesTotal.inc({ event_type: input.eventType });
       } finally {
-        stop();
+        stop?.();
       }
       return { items: transformed, page, pageSize, total, hasMore };
     }),

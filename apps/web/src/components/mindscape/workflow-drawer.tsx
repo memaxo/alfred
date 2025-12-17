@@ -78,7 +78,6 @@ export function MindscapeWorkflowDrawer({
   onNavigateFull,
   onNavigateToMindscape,
 }: MindscapeWorkflowDrawerProps) {
-  console.log("MindscapeWorkflowDrawer render. runId:", runId, "open:", open);
   const drawerOpen = open ?? Boolean(runId);
   const [activeTab, setActiveTab] = useState<"overview" | "events" | "error">(
     "overview"
@@ -140,23 +139,9 @@ function WorkflowDrawerBody({
   onNavigateToMindscape,
 }: WorkflowDrawerBodyProps) {
   const queryRunId = drawerOpen && runId ? runId : "";
-  console.log(
-    "WorkflowDrawerBody render. queryRunId:",
-    queryRunId,
-    "drawerOpen:",
-    drawerOpen
-  );
   const runQuery = trpc.workflow.get.useQuery(
     { runId: queryRunId },
     { enabled: drawerOpen && queryRunId.length > 0 }
-  );
-  console.log(
-    "runQuery status:",
-    runQuery.status,
-    "data:",
-    runQuery.data,
-    "error:",
-    runQuery.error
   );
 
   const eventsQuery = trpc.workflow.events.useQuery(

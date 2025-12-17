@@ -4,6 +4,7 @@ import { signUpTestUser } from "./helpers/auth";
 
 const WORKFLOW_ID = "run-provenance-1";
 const RAG_DOC_ID = "doc-drawer-1";
+const RAG_DOC_NODE_DBID = "223e4567-e89b-12d3-a456-426614174001";
 
 const trpcResponse = (json: unknown) =>
   JSON.stringify([{ result: { data: json } }]);
@@ -20,8 +21,7 @@ async function handleTrpcRequest(
   const results = procedures.map((proc) => {
     const resolver = mocks[proc];
     if (!resolver) {
-      console.warn(`No mock for TRPC procedure: ${proc}`);
-      return { result: { data: null } }; // Or throw?
+      return { result: { data: null } };
     }
     // We ignore input for now and just call resolver
     return { result: { data: resolver() } };
@@ -67,10 +67,10 @@ test.describe("Mindscape workflow drawer loop", () => {
       "graph.explainedBy": () => ({
         nodes: [
           {
-            id: RAG_DOC_ID,
+            id: RAG_DOC_NODE_DBID,
             label: "Drawer Doc",
             kind: "knowledge",
-            properties: { title: "Drawer Doc" },
+            properties: { title: "Drawer Doc", documentId: RAG_DOC_ID },
           },
         ],
         edges: [],
@@ -79,11 +79,11 @@ test.describe("Mindscape workflow drawer loop", () => {
         nodes: [
           {
             id: {
-              dbId: RAG_DOC_ID,
+              dbId: RAG_DOC_NODE_DBID,
             },
             label: "Drawer Doc",
             kind: "knowledge",
-            properties: { content: "Drawer doc summary" },
+            properties: { content: "Drawer doc summary", documentId: RAG_DOC_ID },
           },
         ],
         edges: [],
@@ -140,7 +140,10 @@ test.describe("Mindscape workflow drawer loop", () => {
               label: "Runtime Drawer Node",
               source: "runtime",
               runId: workflowId,
-              graph: { dbId: "123e4567-e89b-12d3-a456-426614174000" },
+              graph: {
+                resource: "user",
+                dbId: "123e4567-e89b-12d3-a456-426614174000",
+              },
             },
             selectable: true,
             draggable: true,
@@ -170,19 +173,6 @@ test.describe("Mindscape workflow drawer loop", () => {
     await expect.poll(() => feedbackCalled, { timeout: 2000 }).toBeTruthy();
 
     // Click "Open full view" button in the header
-    // Use evaluate to debug if element exists
-    const buttonExists = await page.evaluate(
-      () =>
-        !!document.querySelector('[data-testid="mindscape-drawer-open-full"]')
-    );
-    if (buttonExists) {
-      console.log("Button found in DOM");
-    } else {
-      console.log("Button not found in DOM");
-      // Try to log body
-      // console.log(document.body.innerHTML);
-    }
-
     await page.getByTestId("mindscape-drawer-open-full").click({ force: true });
     await page.waitForURL(/\/workflow\/run-provenance-1\?drawer=1/);
 

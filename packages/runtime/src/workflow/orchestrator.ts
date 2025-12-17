@@ -1,32 +1,11 @@
-import { setTimeout as delay } from "node:timers/promises";
-import {
-  commentOnLinearIssue,
-  emitLinearActivity,
-  extractIssueIdFromSession,
-  setLinearCancelled,
-  setLinearCompleted,
-  setLinearDelegate,
-  setLinearSessionExternalUrl,
-  setLinearStarted,
-} from "@alfred/agent/integrations/linear";
 import { recordAudit } from "@alfred/agent/utils/audit";
-import { makeEventId } from "@alfred/agent/utils/event-id";
-import { eventToUiMessages } from "@alfred/agent/utils/normalize";
-import { redactEventData } from "@alfred/agent/utils/redaction";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
-  multiAgentAgentDurationSeconds,
-  multiAgentErrorsTotal,
-  multiAgentTasksTotal,
-  multiAgentWavesTotal,
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
-import {
-  type ReviewCheckStatus,
-  ReviewGate,
-} from "@alfred/agent/workflow/review-gate";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import { ReviewGate } from "@alfred/agent/workflow/review-gate";
 import {
   registerRunHandle,
   unregisterRunHandle,
@@ -34,6 +13,7 @@ import {
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   createRequirementMessage,
@@ -43,16 +23,42 @@ import {
   persistWorkflowMessages,
   shouldUseWorkflowRuntime,
 } from "./executor";
+import {
+  bootstrapLinearSession,
+  safeFinalizeLinearFailure,
+  safeFinalizeLinearSuccess,
+} from "./linear";
+import { createLifecycle } from "./lifecycle";
 import { type ReasonTrace, workflowProvenance } from "./provenance";
+import { loadHistory } from "./history";
+import { observeEvent } from "./observe";
+import { persistStreamEvent } from "./persist";
+import { startTimeout } from "./timeout";
+
+function coerceRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
+  }
+  return {};
+}
+
+function getRuntimeContextFromCallbacks(
+  candidate: unknown
+): RuntimeContext<Record<string, unknown>> | undefined {
+  const ctx = coerceRecord(candidate).runtimeContext;
+  return ctx instanceof RuntimeContext
+    ? (ctx as RuntimeContext<Record<string, unknown>>)
+    : undefined;
+}
 
 export type OrchestratorCallbacks = {
   triggerPreferenceRefresh: (
     userId: string,
     payload: { reason: string }
   ) => void;
-  ensureObligations?: (ctx: any) => void;
-  context?: any;
-  emitError: (error: any) => void;
+  ensureObligations?: (ctx: unknown) => void;
+  context?: unknown;
+  emitError: (error: unknown) => void;
   emitNext: (event: WorkflowEvent) => void;
   emitComplete: () => void;
   emitUiMessages?: (
@@ -81,206 +87,44 @@ export async function orchestrateWorkflowStream(
     }
   }
 
-  const externalUrlBase =
-    process.env.PUBLIC_URL ??
-    process.env.VITE_APP_URL ??
-    process.env.APP_URL ??
-    null;
-
-  const workflowUrlFor = (id: string | null): string | null => {
-    if (!(id && externalUrlBase)) {
-      return null;
-    }
-    const normalized = externalUrlBase.endsWith("/")
-      ? externalUrlBase.slice(0, -1)
-      : externalUrlBase;
-    return `${normalized}/workflow/${id}`;
-  };
-
-  const resolveIssueId = (
-    linear: NonNullable<WorkflowInputPayload["linear"]>
-  ): string | null => {
-    if (linear.issueId && linear.issueId.length > 0) {
-      return linear.issueId;
-    }
-    if (linear.sessionId) {
-      return extractIssueIdFromSession(linear.sessionId);
-    }
-    return null;
-  };
-
-  const bootstrapLinearSession = async (args: {
-    runId: string;
-    requirement: string;
-    linear: NonNullable<WorkflowInputPayload["linear"]>;
-    authz: string;
-    workflowUrl: string | null;
-  }): Promise<void> => {
-    const { runId, requirement, linear, authz, workflowUrl } = args;
-    try {
-      const thoughtPromise = emitLinearActivity("thought", {
-        sessionId: linear.sessionId as string,
-        space: linear.space,
-        authz,
-        body: `Starting workflow: ${requirement}`,
-      }).catch((error) => {
-        logger.warn("linear_thought_activity_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return { ok: false };
-      });
-
-      await Promise.race([
-        thoughtPromise,
-        delay(9000).then(() => {
-          logger.warn("linear_thought_activity_timeout", { runId });
-          return { ok: false };
-        }),
-      ]);
-
-      const issueId = resolveIssueId(linear);
-      if (!issueId) {
-        logger.warn("linear_issue_id_missing", { runId });
-        return;
-      }
-
-      setLinearDelegate({
-        space: linear.space,
-        issueId,
-        authz,
-      }).catch((error) => {
-        logger.warn("linear_delegate_setup_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-
-      setLinearStarted({
-        space: linear.space,
-        issueId,
-        authz,
-      }).catch((error) => {
-        logger.warn("linear_started_setup_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-
-      if (workflowUrl) {
-        setLinearSessionExternalUrl(
-          linear.sessionId as string,
-          linear.space,
-          authz,
-          workflowUrl
-        ).catch((error) => {
-          logger.warn("linear_external_url_setup_failed", {
-            runId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-      } else {
-        logger.warn("linear_external_url_setup_missing_base", { runId });
-      }
-    } catch (error) {
-      logger.warn("linear_bootstrap_failed", {
-        runId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const finalizeLinearSuccess = async (args: {
-    runId: string;
-    finalMessage: string | null;
-    reviewChecks: ReviewCheckStatus[];
-    linear: NonNullable<WorkflowInputPayload["linear"]>;
-    authz: string;
-    workflowUrl: string | null;
-  }): Promise<void> => {
-    const { runId, finalMessage, reviewChecks, linear, authz, workflowUrl } =
-      args;
-    const issueId = resolveIssueId(linear);
-    if (!issueId) {
-      throw new Error("linear_issue_id_missing");
-    }
-
-    await setLinearCompleted({
-      space: linear.space,
-      issueId,
-      authz,
-    });
-
-    const commentBody = buildLinearCompletionComment({
-      runId,
-      finalMessage,
-      reviewChecks,
-      workflowUrl,
-    });
-
-    await commentOnLinearIssue({
-      space: linear.space,
-      issueId,
-      authz,
-      body: commentBody,
-    });
-  };
-
-  const finalizeLinearFailure = async (args: {
-    runId: string;
-    reason: string;
-    linear: NonNullable<WorkflowInputPayload["linear"]>;
-    authz: string;
-    workflowUrl: string | null;
-  }): Promise<void> => {
-    const { runId, reason, linear, authz, workflowUrl } = args;
-    const issueId = resolveIssueId(linear);
-    if (!issueId) {
-      throw new Error("linear_issue_id_missing");
-    }
-
-    await setLinearCancelled({
-      space: linear.space,
-      issueId,
-      authz,
-    });
-
-    const commentBody = buildLinearFailureComment({
-      runId,
-      reason,
-      workflowUrl,
-    });
-
-    await commentOnLinearIssue({
-      space: linear.space,
-      issueId,
-      authz,
-      body: commentBody,
-    });
-  };
+  // Linear integration lives in `./linear`.
 
   const abortController = new AbortController();
   let cancelled = false;
   let suspended = false;
-  let timerClosed = false;
+  const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  let outerRunId: string | null = null;
   abortController.signal.addEventListener("abort", () => {
     cancelled = true;
   });
 
   const stopStreamTimer = workflowStreamDurationSeconds.startTimer();
-  const closeTimer = (status: "ok" | "error" | "cancel") => {
-    if (timerClosed) {
-      return;
-    }
-    stopStreamTimer({ status });
-    timerClosed = true;
-  };
 
   const recordEvent = (
     event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel"
   ) => {
     workflowStreamEventsTotal.inc({ event });
   };
+
+  const lifecycle = createLifecycle({
+    userId: session.user.id,
+    stopStreamTimer,
+    recordEvent,
+    triggerPreferenceRefresh: callbacks.triggerPreferenceRefresh,
+    emitComplete: callbacks.emitComplete,
+  });
+
+  const timeout = startTimeout({
+    ms: GLOBAL_TIMEOUT_MS,
+    lifecycle,
+    recordEvent,
+    abortController,
+    markCancelled: () => {
+      cancelled = true;
+    },
+    getRunId: () => outerRunId,
+    emitError: callbacks.emitError,
+  });
 
   const push = (event: WorkflowEvent) => {
     if (cancelled) {
@@ -316,12 +160,11 @@ export async function orchestrateWorkflowStream(
       const resolvedRunId =
         runId ?? executorRunId ?? input.runId ?? "unassigned";
       try {
-        await finalizeLinearFailure({
+        await safeFinalizeLinearFailure({
           runId: resolvedRunId,
           reason,
           linear: input.linear,
           authz: input.authzLinear,
-          workflowUrl: workflowUrlFor(resolvedRunId),
         });
       } catch (error) {
         logger.warn("linear_failure_notification_failed", {
@@ -335,110 +178,16 @@ export async function orchestrateWorkflowStream(
       callbacks.triggerPreferenceRefresh(session.user.id, { reason });
 
     const markCancelled = async () => {
-      if (!runId) {
-        return;
-      }
-      try {
-        await workflowRepo.updateRun(runId, {
-          status: "cancelled",
-          completedAt: new Date(),
-        });
-        await recordAudit({
-          userId: session.user.id,
-          action: "workflow.stream.cancel",
-          resource: { kind: "workflow", id: runId },
-          decision: "allow",
-        });
-        refreshPreferences("workflow_stream_cancelled");
-      } catch (error) {
-        logger.warn("workflow_cancellation_update_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
       await notifyLinearFailure("workflow_cancelled");
-      if (!timerClosed) {
-        recordEvent("cancel");
-        closeTimer("cancel");
-      }
-      callbacks.emitComplete();
+      await lifecycle.markCancelled(runId);
     };
 
     const markSuspended = async () => {
-      if (!runId) {
-        return;
-      }
-      try {
-        await workflowRepo.updateRun(runId, {
-          status: "suspended",
-          completedAt: undefined, // Not complete yet
-        });
-        await recordAudit({
-          userId: session.user.id,
-          action: "workflow.stream.suspend",
-          resource: { kind: "workflow", id: runId },
-          decision: "allow",
-        });
-        refreshPreferences("workflow_stream_suspended");
-      } catch (error) {
-        logger.warn("workflow_suspension_update_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      if (!timerClosed) {
-        recordEvent("complete");
-        closeTimer("ok");
-      }
-      callbacks.emitComplete();
+      await lifecycle.markSuspended(runId);
     };
 
     const markCompleted = async () => {
-      if (!runId) {
-        return;
-      }
-      try {
-        await workflowRepo.updateRun(runId, {
-          status: "completed",
-          completedAt: new Date(),
-        });
-        await recordAudit({
-          userId: session.user.id,
-          action: "workflow.stream.complete",
-          resource: { kind: "workflow", id: runId },
-          decision: "allow",
-        });
-        refreshPreferences("workflow_stream_complete");
-      } catch (error) {
-        logger.warn("workflow_completion_update_failed", {
-          runId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      recordEvent("complete");
-      closeTimer("ok");
-      callbacks.emitComplete();
-    };
-
-    const addReasoning = (event: WorkflowEvent) => {
-      if (!useRuntime) {
-        return;
-      }
-      if (event.type !== "reasoning") {
-        return;
-      }
-      const payload = event as any;
-      const text =
-        typeof payload.text === "string" && payload.text.length > 0
-          ? payload.text
-          : typeof payload.reasoning === "string" &&
-              payload.reasoning.length > 0
-            ? payload.reasoning
-            : null;
-      if (!text) {
-        return;
-      }
-      reasonTraces.push({ text, timestamp: Date.now() });
+      await lifecycle.markCompleted(runId);
     };
 
     try {
@@ -456,29 +205,27 @@ export async function orchestrateWorkflowStream(
 
       let history: WorkflowEvent[] | undefined;
       if (input.runId) {
-        const events = await workflowRepo.listEvents(input.runId);
-        history = events.reverse().map((e) => ({
-          ...(e.eventData as object),
-          type: e.eventType,
-        })) as WorkflowEvent[];
+        history = await loadHistory(input.runId);
       }
 
       const executor = createWorkflowExecutor(
         input,
         abortController,
         history,
-        callbacks.context?.runtimeContext
+        getRuntimeContextFromCallbacks(callbacks.context)
       );
       executorRunId = executor.runId;
 
       if (input.runId) {
         runId = input.runId;
+        outerRunId = runId;
         await workflowRepo.updateRun(runId, { status: "running" });
       } else {
         // Explicitly cast to string to satisfy TS even if we know it's a string
         runId = String(executor.runId);
-        const storedInput = {
-          ...(input as any),
+        outerRunId = runId;
+        const storedInput: Record<string, unknown> = {
+          ...input,
           executionId: runId,
           reasoningSince: Date.now(),
         };
@@ -502,7 +249,6 @@ export async function orchestrateWorkflowStream(
             requirement: input.requirement,
             linear: input.linear,
             authz: input.authzLinear,
-            workflowUrl: workflowUrlFor(runId),
           });
         }
       }
@@ -559,221 +305,26 @@ export async function orchestrateWorkflowStream(
       });
 
       recordEvent("run");
-      const VALID_EVENT_TYPES = [
-        "run",
-        "progress",
-        "context",
-        "require-scope",
-        "notice",
-        "error",
-        "stdout",
-        "stderr",
-        "droid",
-        "data-cache-handoff",
-      ] as const;
-      const getEventType = (event: WorkflowEvent): string => {
-        const type = event.type;
-        return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
-      };
-
-      const maybeUiMessages = (event: WorkflowEvent): UIMessage[] | null => {
-        const msgs = eventToUiMessages(event);
-        return Array.isArray(msgs) && msgs.length > 0 ? msgs : null;
-      };
 
       for await (const event of executor.stream) {
-        try {
-          // Multi-agent observability hooks
-          const evt = event as any;
-          if (evt.kind === "data-subtasks" && Array.isArray(evt.data)) {
-            multiAgentTasksTotal.inc(
-              { status: "created" },
-              evt.data.length || 1
-            );
-          } else if (evt.kind === "data-wave-plan") {
-            multiAgentWavesTotal.inc({ status: "started" });
-          } else if (evt.kind === "wave-result") {
-            const data = evt.data || {};
-            const status =
-              typeof data.status === "string" ? data.status : "completed";
-            multiAgentWavesTotal.inc({ status });
+        observeEvent({ event, reviewGate, useRuntime, reasonTraces });
 
-            const agents: Array<{
-              role?: string;
-              status?: string;
-              stuck?: boolean;
-              durationSeconds?: number;
-            }> = Array.isArray(data.agents) ? data.agents : [];
-
-            for (const agent of agents) {
-              const role =
-                agent.role && agent.role.length > 0 ? agent.role : "worker";
-              const rawStatus = agent.status;
-              const outcome: "ok" | "error" | "stuck" =
-                rawStatus === "stuck" || agent.stuck
-                  ? "stuck"
-                  : rawStatus === "failed"
-                    ? "error"
-                    : "ok";
-
-              const dur = agent.durationSeconds;
-              if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
-                multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);
-              }
-
-              if (outcome !== "ok") {
-                multiAgentErrorsTotal.inc({ kind: "stuck_agent" });
-              }
-            }
-          } else if (evt.kind === "wave-aborted") {
-            multiAgentErrorsTotal.inc({ kind: "wave_aborted" });
-          } else if (evt.kind === "merge-conflict") {
-            multiAgentErrorsTotal.inc({ kind: "merge_conflict" });
-          } else if (evt.kind === "merge-plan") {
-            multiAgentTasksTotal.inc({ status: "merged" });
-          } else if (evt.kind === "review-plan") {
-            multiAgentTasksTotal.inc({ status: "review" });
-            reviewGate.applyPlan(evt.data ?? {});
-          } else if (evt.kind === "review-check") {
-            reviewGate.recordCheck({
-              id: evt.data?.id,
-              type: evt.data?.type,
-              status: evt.data?.status,
-              attempt: evt.data?.attempt,
-              evidence:
-                evt.data?.output ?? evt.data?.error ?? evt.data?.evidence,
-            });
-          } else if (
-            evt.kind === "merge-agent-result" ||
-            evt.kind === "review-agent-result" ||
-            evt.kind === "conflict-agent-result" ||
-            evt.kind === "conflict-resolution-result" ||
-            evt.kind === "review-exec-result"
-          ) {
-            const data = evt.data || {};
-            const role =
-              typeof data.role === "string" && data.role.length > 0
-                ? data.role
-                : "worker";
-            const rawStatus = data.status as string | undefined;
-            const outcome: "ok" | "error" | "stuck" =
-              rawStatus === "stuck"
-                ? "stuck"
-                : rawStatus === "failed"
-                  ? "error"
-                  : "ok";
-            const dur = data.durationSeconds;
-            if (typeof dur === "number" && Number.isFinite(dur) && dur >= 0) {
-              multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);
-            }
-            if (outcome !== "ok") {
-              const kind =
-                evt.kind === "merge-agent-result"
-                  ? "merge_failed"
-                  : evt.kind === "review-agent-result"
-                    ? "review_failed"
-                    : evt.kind === "conflict-agent-result"
-                      ? "merge_conflict_analysis_failed"
-                      : evt.kind === "conflict-resolution-result"
-                        ? "merge_conflict_resolution_failed"
-                        : "review_exec_failed";
-              multiAgentErrorsTotal.inc({ kind });
-            }
-          }
-        } catch {
-          // Metrics must never break streaming; ignore metric errors.
+        const persisted = await persistStreamEvent({
+          event,
+          runId: runId ?? executor.runId,
+          userId: session.user.id,
+          workflowConversationId,
+          persistedMessageKeys,
+          emitUiMessages: callbacks.emitUiMessages,
+          triggerPreferenceRefresh: callbacks.triggerPreferenceRefresh,
+          linear: input.linear,
+          authzLinear: input.authzLinear,
+        });
+        if (persisted) {
+          push({ ...event, eventId: persisted.eventId });
         }
-
-        try {
-          addReasoning(event);
-        } catch {
-          // Reasoning capture must never break streaming.
-        }
-
-        try {
-          const redactedEventData = redactEventData(event);
-          const eventType = getEventType(event);
-          const eventId = makeEventId({
-            runId,
-            type: eventType,
-            data: redactedEventData,
-          });
-          await workflowRepo.appendEvent({
-            runId,
-            eventId,
-            eventType,
-            eventData: redactedEventData,
-          });
-
-          const uiMessages = maybeUiMessages(event);
-          if (uiMessages && uiMessages.length > 0) {
-            await workflowRepo.appendEvent({
-              runId,
-              eventId: makeEventId({
-                runId,
-                type: "ui-message",
-                data: uiMessages,
-              }),
-              eventType: "ui-message",
-              eventData: uiMessages,
-            });
-          }
-          if (workflowConversationId && uiMessages && uiMessages.length > 0) {
-            const persisted = await persistWorkflowMessages({
-              userId: session.user.id,
-              conversationId: workflowConversationId,
-              messages: uiMessages,
-              persistedKeys: persistedMessageKeys,
-              runId: runId ?? executor.runId,
-              baseId: eventId,
-              eventType: event.type,
-              eventId,
-            });
-            if (persisted > 0) {
-              refreshPreferences("workflow_messages_persisted");
-            }
-          }
-          if (uiMessages && uiMessages.length > 0) {
-            const resolvedRunId = runId ?? executor.runId;
-            callbacks.emitUiMessages?.(uiMessages, {
-              runId: resolvedRunId,
-              eventId,
-              eventType,
-              originalEvent: event,
-            });
-          }
-          push({ ...event, eventId } as WorkflowEvent);
-
-          if (
-            event.type === "notice" &&
-            (event as any).message === "workflow_suspended"
-          ) {
-            suspended = true;
-          }
-
-          if (
-            input.linear?.sessionId &&
-            input.authzLinear &&
-            event.type === "error"
-          ) {
-            emitLinearActivity("error", {
-              sessionId: input.linear.sessionId,
-              space: input.linear.space,
-              authz: input.authzLinear,
-              body: (event as any).message ?? "Workflow error occurred",
-            }).catch((error) => {
-              logger.warn("linear_activity_emission_failed", {
-                runId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            });
-          }
-        } catch (error) {
-          logger.warn("workflow_event_persistence_failed", {
-            runId,
-            eventType: getEventType(event),
-            error: error instanceof Error ? error.message : String(error),
-          });
+        if (persisted?.suspended) {
+          suspended = true;
         }
       }
 
@@ -817,13 +368,12 @@ export async function orchestrateWorkflowStream(
         throw new Error("review_checklist_incomplete");
       }
       if (input.linear?.sessionId && input.authzLinear) {
-        await finalizeLinearSuccess({
+        await safeFinalizeLinearSuccess({
           runId: runId ?? executor.runId,
           finalMessage: "Workflow completed successfully.",
           reviewChecks: reviewGate.summary(),
           linear: input.linear,
           authz: input.authzLinear,
-          workflowUrl: workflowUrlFor(runId ?? executor.runId),
         });
       }
 
@@ -833,29 +383,13 @@ export async function orchestrateWorkflowStream(
         await markCancelled();
         return;
       }
-      await notifyLinearFailure(
-        error instanceof Error ? error.message : String(error)
-      );
-      recordEvent("error");
-      closeTimer("error");
-      if (runId) {
-        try {
-          await workflowRepo.updateRun(runId, {
-            status: "failed",
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          });
-        } catch (updateError) {
-          logger.warn("workflow_error_status_update_failed", {
-            runId,
-            error:
-              updateError instanceof Error
-                ? updateError.message
-                : String(updateError),
-          });
-        }
-      }
-      callbacks.emitError(error);
+      await lifecycle.markFailed({
+        runId,
+        error,
+        input,
+        notifyLinearFailure,
+        emitError: callbacks.emitError,
+      });
     } finally {
       try {
         if (runId) {
@@ -867,66 +401,27 @@ export async function orchestrateWorkflowStream(
           error: error instanceof Error ? error.message : String(error),
         });
       }
+      timeout.stop();
     }
   })();
 
-  asyncTask.catch((error) => callbacks.emitError(error));
+  void asyncTask.catch((error) => {
+    logger.error("workflow_stream_task_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    try {
+      callbacks.emitError(error);
+    } catch (emitError) {
+      logger.error("workflow_stream_emit_error_failed", {
+        error: emitError instanceof Error ? emitError.message : String(emitError),
+      });
+    }
+  });
 
   return () => {
     cancelled = true;
     abortController.abort();
-    if (!timerClosed) {
-      recordEvent("cancel");
-      closeTimer("cancel");
-    }
+    lifecycle.closeTimer("cancel");
+    timeout.stop();
   };
-}
-
-function buildLinearCompletionComment(args: {
-  runId: string;
-  finalMessage: string | null;
-  reviewChecks: ReviewCheckStatus[];
-  workflowUrl: string | null;
-}): string {
-  const lines: string[] = [
-    `Workflow run ${args.runId} completed successfully.`,
-  ];
-
-  if (args.workflowUrl) {
-    lines.push(`Run details: ${args.workflowUrl}`);
-  }
-
-  if (args.finalMessage && args.finalMessage.trim().length > 0) {
-    lines.push(`Summary: ${args.finalMessage.trim()}`);
-  }
-
-  if (args.reviewChecks.length > 0) {
-    lines.push("Review checks:");
-    for (const check of args.reviewChecks) {
-      const attemptInfo =
-        check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
-      lines.push(`- ${check.type}: ${check.status}${attemptInfo}`);
-    }
-  } else {
-    lines.push("Review checks: not required.");
-  }
-
-  return lines.join("\n");
-}
-
-function buildLinearFailureComment(args: {
-  runId: string;
-  reason: string;
-  workflowUrl: string | null;
-}): string {
-  const lines: string[] = [`Workflow run ${args.runId} failed.`];
-  if (args.workflowUrl) {
-    lines.push(`Run details: ${args.workflowUrl}`);
-  }
-  const trimmedReason = args.reason?.trim();
-  if (trimmedReason) {
-    lines.push(`Reason: ${trimmedReason}`);
-  }
-  lines.push("Review the run log, address the failure, and re-run when ready.");
-  return lines.join("\n");
 }

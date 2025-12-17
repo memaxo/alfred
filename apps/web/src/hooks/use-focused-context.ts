@@ -4,6 +4,26 @@ import type { ArtifactData } from "@/store/mindscape";
 import { useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const coerceString = (value: unknown): string | null =>
+  typeof value === "string" && value.length > 0 ? value : null;
+
+const coerceDate = (value: unknown): Date | null => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "string" && value.length > 0) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Date(value);
+  }
+  return null;
+};
+
 type ContextState = {
   content: string | null;
   nodeType: string | null;
@@ -71,6 +91,11 @@ export function useFocusedContext(): FocusedContext {
   }, [focusedNodeId, nodes, edges]);
 
   const focusedNode = nodes.find((n) => n.id === effectiveNodeId);
+  const focusedGraphNodeId = useMemo(() => {
+    const data = focusedNode?.data as ArtifactData | undefined;
+    const dbId = data?.graph?.dbId;
+    return typeof dbId === "string" && dbId.length > 0 ? dbId : null;
+  }, [focusedNode]);
 
   // 1. Extract local data from the node immediately
   useEffect(() => {
@@ -122,12 +147,17 @@ export function useFocusedContext(): FocusedContext {
       content += `\nRecent Messages:\n${recent}`;
     }
 
-    const title = "title" in data ? data.title : undefined;
+    const title =
+      "title" in data && typeof data.title === "string" ? data.title : null;
+    const label =
+      coerceString(data.label) ??
+      coerceString(title) ??
+      (content.trim().length > 0 ? "Focused context" : "Untitled");
 
     setLocalContext({
       content: content.trim() || null,
       nodeType: focusedNode.type || "unknown",
-      label: (data.label || title || "Untitled") as string,
+      label,
       isLoading: false,
       isError: false,
       ragDocuments: [],
@@ -135,15 +165,25 @@ export function useFocusedContext(): FocusedContext {
   }, [focusedNode]);
 
   // 2. "Active RAG" - Fetch related context for complex nodes
-  const shouldFetchRag =
+  const focusedArtifact = focusedNode?.data as ArtifactData | undefined;
+  const focusedLabel = coerceString(focusedArtifact?.label);
+  const focusedSummary =
+    focusedArtifact && "summary" in focusedArtifact
+      ? coerceString(focusedArtifact.summary)
+      : null;
+  const focusedDescription =
+    focusedArtifact && "description" in focusedArtifact
+      ? coerceString(focusedArtifact.description)
+      : null;
+
+  const shouldFetchRag = Boolean(
     focusedNode &&
-    (focusedNode.type === "knowledge" || focusedNode.type === "concept") &&
-    !!(focusedNode.data as any).label;
+      (focusedNode.type === "knowledge" || focusedNode.type === "concept") &&
+      focusedLabel
+  );
 
   const queryText = shouldFetchRag
-    ? (focusedNode!.data as any).label +
-      " " +
-      ((focusedNode!.data as any).summary || "")
+    ? `${focusedLabel ?? ""} ${focusedSummary ?? focusedDescription ?? ""}`.trim()
     : "";
 
   // Debounce the query text to prevent spamming the backend during rapid navigation
@@ -156,10 +196,15 @@ export function useFocusedContext(): FocusedContext {
 
   // Calculate dynamic budget based on model context window (30% heuristic)
   const contextBudget = useMemo(() => {
-    if (!configQuery.data) return 2000; // Safe default fallback
+    const windowTokens = Number(
+      (configQuery.data as { contextWindow?: unknown } | undefined)?.contextWindow
+    );
+    if (!Number.isFinite(windowTokens) || windowTokens <= 0) {
+      return 2000;
+    }
     // 30% of context window, converted to approx characters (1 token ~= 4 chars)
     // Example: 128k tokens * 0.3 * 4 = 153,600 chars
-    return Math.floor(configQuery.data.contextWindow * 0.3 * 4);
+    return Math.floor(windowTokens * 0.3 * 4);
   }, [configQuery.data]);
 
   // Dynamic topK: Aim to fill the budget. Assuming ~2000 chars per chunk (500 tokens).
@@ -168,7 +213,7 @@ export function useFocusedContext(): FocusedContext {
   const ragQuery = trpc.graph.runQuery.useQuery(
     {
       kind: "context",
-      nodeId: focusedNodeId ?? "",
+      nodeId: focusedGraphNodeId ?? "",
       text: debouncedQueryText,
       topK: Math.min(targetTopK, 50),
     },
@@ -177,7 +222,7 @@ export function useFocusedContext(): FocusedContext {
         !!shouldFetchRag &&
         debouncedQueryText.length > 0 &&
         !!configQuery.data &&
-        !!focusedNodeId,
+        !!focusedGraphNodeId,
       staleTime: 1000 * 60 * 5, // Cache for 5 minutes
       retry: false,
     }
@@ -188,12 +233,22 @@ export function useFocusedContext(): FocusedContext {
     (state) => state.setHighlightedEdges
   );
   useEffect(() => {
-    if (ragQuery.data && ragQuery.data.edges) {
-      const edgeIds = ragQuery.data.edges.map((e: any) => e.id);
-      setHighlightedEdges(edgeIds);
-    } else {
+    const edgesValue = (ragQuery.data as { edges?: unknown } | undefined)?.edges;
+    if (!Array.isArray(edgesValue) || edgesValue.length === 0) {
       setHighlightedEdges([]);
+      return;
     }
+    const ids: string[] = [];
+    for (const edge of edgesValue) {
+      if (!isRecord(edge)) {
+        continue;
+      }
+      const id = coerceString(edge.id);
+      if (id) {
+        ids.push(id);
+      }
+    }
+    setHighlightedEdges(ids);
   }, [ragQuery.data, setHighlightedEdges]);
 
   // 3. Merge local context with Active RAG results
@@ -210,7 +265,7 @@ export function useFocusedContext(): FocusedContext {
               : ("live" as const),
           summary: contextEntry.receipt?.summary,
           timestamp:
-            contextEntry.receipt?.created ??
+            coerceDate(contextEntry.receipt?.created) ??
             new Date(contextEntry.updatedAt ?? Date.now()),
           phase: contextEntry.phase,
           source: contextEntry.source,
@@ -232,21 +287,57 @@ export function useFocusedContext(): FocusedContext {
       ragQuery.data.nodes &&
       ragQuery.data.nodes.length > 0
     ) {
-      const potentialDocs = ragQuery.data.nodes
-        .filter((n: any) => n.id !== focusedNodeId) // Exclude self
-        .map((n: any) => {
-          const isGraph = n.kind === "link";
+      const nodesValue = (ragQuery.data as { nodes?: unknown } | undefined)
+        ?.nodes;
+      const nodesList = Array.isArray(nodesValue) ? nodesValue : [];
+      const potentialDocs = nodesList
+        .filter((raw) => {
+          if (!focusedGraphNodeId) {
+            return true;
+          }
+          if (!isRecord(raw)) {
+            return true;
+          }
+          const idValue = raw.id;
+          if (isRecord(idValue)) {
+            const id =
+              coerceString(idValue.dbId) ??
+              coerceString(idValue.uiId) ??
+              coerceString(idValue.hgHash);
+            return id ? id !== focusedGraphNodeId : true;
+          }
+          if (typeof idValue === "string") {
+            return idValue !== focusedGraphNodeId;
+          }
+          return true;
+        })
+        .map((raw) => {
+          const node = isRecord(raw) ? raw : {};
+          const kind = coerceString(node.kind);
+          const isGraph = kind === "link";
+
+          const props = isRecord(node.properties) ? node.properties : {};
+          const data = isRecord(node.data) ? node.data : {};
+
           let summary = "";
           if (isGraph) {
-            const rel = n.properties?.relation || "related to";
-            const dir = n.properties?.direction || "outgoing";
-            summary = `(Graph Edge) ${dir === "incoming" ? "Is " + rel + " by" : rel} ${localContext.label}`;
+            const rel = coerceString(props.relation) ?? "related to";
+            const dir = coerceString(props.direction) ?? "outgoing";
+            const label = localContext.label ?? "this node";
+            summary = `(Graph Edge) ${dir === "incoming" ? `Is ${rel} by` : rel} ${label}`;
           } else {
-            summary = n.data?.summary || n.data?.content?.slice(0, 200) || "";
+            const fromData =
+              coerceString(data.summary) ??
+              (typeof data.content === "string"
+                ? data.content.slice(0, 200)
+                : null);
+            summary = fromData ?? "";
           }
 
+          const label =
+            coerceString(node.label) ?? coerceString(data.label) ?? "Unknown";
           return {
-            label: n.label || n.data?.label || "Unknown",
+            label,
             summary,
             source: isGraph ? ("graph" as const) : ("vector" as const),
           };
@@ -312,7 +403,7 @@ export function useFocusedContext(): FocusedContext {
     ragQuery.data,
     ragQuery.isLoading,
     ragQuery.isError,
-    focusedNodeId,
+    focusedGraphNodeId,
     contextBudget,
     contextCache,
     effectiveNodeId,

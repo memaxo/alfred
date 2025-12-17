@@ -9,6 +9,8 @@ export * from "./build-constants";
 export * from "./cognitive";
 export * from "./guards";
 export * from "./history";
+export * from "./envelope";
+export * from "./envelope.zod";
 // Knowledge graph types
 export * from "./knowledge";
 // Personalization schemas
@@ -17,6 +19,8 @@ export * from "./personal";
 export * from "./plan";
 // Policy + auth shared types
 export * from "./policy";
+export * from "./ref";
+export * from "./ref.zod";
 export { RuntimeContext } from "./runtime-context";
 // Streaming and UI message types
 export * from "./stream";

@@ -1,4 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
+import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
@@ -14,6 +15,7 @@ import {
   setLinearStarted,
 } from "../integrations/linear";
 import { recordAudit } from "../utils/audit";
+import { unwrapEventEnvelope, wrapEventEnvelope } from "../utils/envelope";
 import { makeEventId } from "../utils/event-id";
 import { eventToUiMessages } from "../utils/normalize";
 import { redactEventData } from "../utils/redaction";
@@ -39,6 +41,17 @@ import {
 } from "./services";
 import { registerRunHandle, unregisterRunHandle } from "./session-recovery";
 
+function coerceRecord(val: unknown): Record<string, unknown> {
+  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
+  }
+  return {};
+}
+
+function coerceNonEmptyString(val: unknown): string | null {
+  return typeof val === "string" && val.length > 0 ? val : null;
+}
+
 type ReviewEscalationSummary = {
   reason?: string;
   attempts?: number;
@@ -59,9 +72,9 @@ export type OrchestratorCallbacks = {
     userId: string,
     payload: { reason: string }
   ) => void;
-  ensureObligations?: (ctx: any) => void;
-  context?: any;
-  emitError: (error: any) => void;
+  ensureObligations?: (ctx: unknown) => void;
+  context?: unknown;
+  emitError: (error: unknown) => void;
   emitNext: (event: WorkflowEvent) => void;
   emitComplete: () => void;
   emitUiMessages?: (
@@ -500,14 +513,9 @@ export async function orchestrateWorkflowStream(
       if (event.type !== "reasoning") {
         return;
       }
-      const payload = event as any;
+      const payload = coerceRecord(event);
       const text =
-        typeof payload.text === "string" && payload.text.length > 0
-          ? payload.text
-          : typeof payload.reasoning === "string" &&
-              payload.reasoning.length > 0
-            ? payload.reasoning
-            : null;
+        coerceNonEmptyString(payload.text) ?? coerceNonEmptyString(payload.reasoning);
       if (!text) {
         return;
       }
@@ -530,17 +538,24 @@ export async function orchestrateWorkflowStream(
       let history: WorkflowEvent[] | undefined;
       if (input.runId) {
         const events = await workflowRepo.listEvents(input.runId);
-        history = events.reverse().map((e) => ({
-          ...(e.eventData as object),
-          type: e.eventType,
-        })) as WorkflowEvent[];
+        history = events
+          .reverse()
+          .filter((e) => e.eventType !== "ui-message")
+          .map((e) => {
+            const unwrapped = unwrapEventEnvelope(e.eventData);
+            const payload =
+              unwrapped.data && typeof unwrapped.data === "object"
+                ? (unwrapped.data as Record<string, unknown>)
+                : {};
+            return { ...payload, type: e.eventType } as WorkflowEvent;
+          });
       }
 
       const executor = await createWorkflowExecutor(
         input,
         abortController,
         history,
-        callbacks.context?.runtimeContext
+        coerceRecord(callbacks.context).runtimeContext
       );
       executorRunId = executor.runId;
 
@@ -551,8 +566,8 @@ export async function orchestrateWorkflowStream(
       } else {
         runId = executor.runId;
         outerRunId = runId;
-        const storedInput = {
-          ...(input as any),
+        const storedInput: Record<string, unknown> = {
+          ...input,
           executionId: runId,
           reasoningSince: Date.now(),
         };
@@ -568,6 +583,28 @@ export async function orchestrateWorkflowStream(
             input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
           linearIssueUrl:
             linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
+        });
+
+        void ensureMirrorNodes("user", [
+          {
+            kind: "workflow_run",
+            id: runId,
+            label: deriveWorkflowTitle(input.requirement),
+            properties: {
+              entity: { kind: "workflow_run", id: runId },
+              workflowId: "plan",
+              status: "running",
+              linearIssueId:
+                input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
+              linearIssueUrl:
+                linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
+            },
+          },
+        ]).catch((error) => {
+          logger.warn("workflow_run_mirror_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
 
         if (input.linear?.sessionId && input.authzLinear) {
@@ -647,7 +684,9 @@ export async function orchestrateWorkflowStream(
       ] as const;
       const getEventType = (event: WorkflowEvent): string => {
         const type = event.type;
-        return VALID_EVENT_TYPES.includes(type as any) ? type : "event";
+        return (VALID_EVENT_TYPES as readonly string[]).includes(type)
+          ? type
+          : "event";
       };
 
       const maybeUiMessages = (event: WorkflowEvent): UIMessage[] | null => {
@@ -658,18 +697,19 @@ export async function orchestrateWorkflowStream(
       for await (const event of executor.stream) {
         try {
           // Multi-agent observability hooks
-          const evt = event as any;
-          if (evt.kind === "data-subtasks" && Array.isArray(evt.data)) {
+          const evt = coerceRecord(event);
+          const kind = coerceNonEmptyString(evt.kind);
+          if (kind === "data-subtasks" && Array.isArray(evt.data)) {
             multiAgentTasksTotal.inc(
               { status: "created" },
               evt.data.length || 1
             );
-          } else if (evt.kind === "data-wave-plan") {
+          } else if (kind === "data-wave-plan") {
             multiAgentWavesTotal.inc({ status: "started" });
-          } else if (evt.kind === "wave-result") {
-            const data = evt.data || {};
+          } else if (kind === "wave-result") {
+            const data = coerceRecord(evt.data);
             const status =
-              typeof data.status === "string" ? data.status : "completed";
+              coerceNonEmptyString(data.status) ?? "completed";
             multiAgentWavesTotal.inc({ status });
 
             const agents: Array<{
@@ -677,12 +717,14 @@ export async function orchestrateWorkflowStream(
               status?: string;
               stuck?: boolean;
               durationSeconds?: number;
-            }> = Array.isArray(data.agents) ? data.agents : [];
+            }> = Array.isArray(data.agents)
+              ? (data.agents as Array<Record<string, unknown>>).map(coerceRecord)
+              : [];
 
             for (const agent of agents) {
               const role =
-                agent.role && agent.role.length > 0 ? agent.role : "worker";
-              const rawStatus = agent.status;
+                coerceNonEmptyString(agent.role) ?? "worker";
+              const rawStatus = coerceNonEmptyString(agent.status);
               const outcome: "ok" | "error" | "stuck" =
                 rawStatus === "stuck" || agent.stuck
                   ? "stuck"
@@ -699,37 +741,50 @@ export async function orchestrateWorkflowStream(
                 multiAgentErrorsTotal.inc({ kind: "stuck_agent" });
               }
             }
-          } else if (evt.kind === "wave-aborted") {
+          } else if (kind === "wave-aborted") {
             multiAgentErrorsTotal.inc({ kind: "wave_aborted" });
-          } else if (evt.kind === "merge-conflict") {
+          } else if (kind === "merge-conflict") {
             multiAgentErrorsTotal.inc({ kind: "merge_conflict" });
-          } else if (evt.kind === "merge-plan") {
+          } else if (kind === "merge-plan") {
             multiAgentTasksTotal.inc({ status: "merged" });
-          } else if (evt.kind === "review-plan") {
+          } else if (kind === "review-plan") {
             multiAgentTasksTotal.inc({ status: "review" });
-            reviewGate.applyPlan(evt.data ?? {});
-          } else if (evt.kind === "review-check") {
+            reviewGate.applyPlan(coerceRecord(evt.data));
+          } else if (kind === "review-check") {
+            const check = coerceRecord(evt.data);
+            const evidenceRaw = check.output ?? check.error ?? check.evidence;
+            let evidence: string | undefined;
+            if (typeof evidenceRaw === "string") {
+              evidence = evidenceRaw;
+            } else if (evidenceRaw !== undefined && evidenceRaw !== null) {
+              try {
+                evidence = JSON.stringify(evidenceRaw);
+              } catch {
+                evidence = String(evidenceRaw);
+              }
+            }
+
             reviewGate.recordCheck({
-              id: evt.data?.id,
-              type: evt.data?.type,
-              status: evt.data?.status,
-              attempt: evt.data?.attempt,
-              evidence:
-                evt.data?.output ?? evt.data?.error ?? evt.data?.evidence,
+              id: coerceNonEmptyString(check.id) ?? undefined,
+              type: coerceNonEmptyString(check.type) ?? undefined,
+              status: coerceNonEmptyString(check.status) ?? undefined,
+              attempt:
+                typeof check.attempt === "number" && Number.isFinite(check.attempt)
+                  ? check.attempt
+                  : undefined,
+              evidence,
             });
           } else if (
-            evt.kind === "merge-agent-result" ||
-            evt.kind === "review-agent-result" ||
-            evt.kind === "conflict-agent-result" ||
-            evt.kind === "conflict-resolution-result" ||
-            evt.kind === "review-exec-result"
+            kind === "merge-agent-result" ||
+            kind === "review-agent-result" ||
+            kind === "conflict-agent-result" ||
+            kind === "conflict-resolution-result" ||
+            kind === "review-exec-result"
           ) {
-            const data = evt.data || {};
+            const data = coerceRecord(evt.data);
             const role =
-              typeof data.role === "string" && data.role.length > 0
-                ? data.role
-                : "worker";
-            const rawStatus = data.status as string | undefined;
+              coerceNonEmptyString(data.role) ?? "worker";
+            const rawStatus = coerceNonEmptyString(data.status);
             const outcome: "ok" | "error" | "stuck" =
               rawStatus === "stuck"
                 ? "stuck"
@@ -741,30 +796,42 @@ export async function orchestrateWorkflowStream(
               multiAgentAgentDurationSeconds.observe({ role, outcome }, dur);
             }
             if (outcome !== "ok") {
-              const kind =
-                evt.kind === "merge-agent-result"
+              const errorKind =
+                kind === "merge-agent-result"
                   ? "merge_failed"
-                  : evt.kind === "review-agent-result"
+                  : kind === "review-agent-result"
                     ? "review_failed"
-                    : evt.kind === "conflict-agent-result"
+                    : kind === "conflict-agent-result"
                       ? "merge_conflict_analysis_failed"
-                      : evt.kind === "conflict-resolution-result"
+                      : kind === "conflict-resolution-result"
                         ? "merge_conflict_resolution_failed"
                         : "review_exec_failed";
-              multiAgentErrorsTotal.inc({ kind });
+              multiAgentErrorsTotal.inc({ kind: errorKind });
             }
-          } else if (evt.kind === "review-escalated") {
+          } else if (kind === "review-escalated") {
             reviewEscalation = {
-              reason: evt.data?.reason,
-              attempts: evt.data?.attempts,
-              fixerAttempts: evt.data?.fixerAttempts,
-              plan: evt.data?.plan,
-              failures: evt.data?.failures,
-              relevantFiles: evt.data?.relevantFiles,
-              summary: evt.data?.summary,
+              reason: coerceNonEmptyString(coerceRecord(evt.data).reason) ?? undefined,
+              attempts:
+                typeof coerceRecord(evt.data).attempts === "number"
+                  ? (coerceRecord(evt.data).attempts as number)
+                  : undefined,
+              fixerAttempts:
+                typeof coerceRecord(evt.data).fixerAttempts === "number"
+                  ? (coerceRecord(evt.data).fixerAttempts as number)
+                  : undefined,
+              plan: coerceNonEmptyString(coerceRecord(evt.data).plan) ?? undefined,
+              failures: Array.isArray(coerceRecord(evt.data).failures)
+                ? (coerceRecord(evt.data).failures as ReviewEscalationSummary["failures"])
+                : undefined,
+              relevantFiles: Array.isArray(coerceRecord(evt.data).relevantFiles)
+                ? (coerceRecord(evt.data).relevantFiles as string[])
+                : undefined,
+              summary: coerceNonEmptyString(coerceRecord(evt.data).summary) ?? undefined,
             };
             if (!reviewEscalationMetricRecorded) {
-              const metricKind = formatEscalationMetricKind(evt.data?.reason);
+              const metricKind = formatEscalationMetricKind(
+                coerceNonEmptyString(coerceRecord(evt.data).reason) ?? undefined
+              );
               multiAgentErrorsTotal.inc({ kind: metricKind });
               reviewEscalationMetricRecorded = true;
             }
@@ -791,20 +858,31 @@ export async function orchestrateWorkflowStream(
             runId,
             eventId,
             eventType,
-            eventData: redactedEventData,
+            eventData: wrapEventEnvelope({
+              id: eventId,
+              type: eventType,
+              resource: "user",
+              data: redactedEventData,
+            }),
           });
 
           const uiMessages = maybeUiMessages(event);
           if (uiMessages && uiMessages.length > 0) {
+            const uiEventId = makeEventId({
+              runId,
+              type: "ui-message",
+              data: uiMessages,
+            });
             await workflowRepo.appendEvent({
               runId,
-              eventId: makeEventId({
-                runId,
+              eventId: uiEventId,
+              eventType: "ui-message",
+              eventData: wrapEventEnvelope({
+                id: uiEventId,
                 type: "ui-message",
+                resource: "user",
                 data: uiMessages,
               }),
-              eventType: "ui-message",
-              eventData: uiMessages,
             });
           }
           if (workflowConversationId && uiMessages && uiMessages.length > 0) {
@@ -835,7 +913,8 @@ export async function orchestrateWorkflowStream(
 
           if (
             event.type === "notice" &&
-            (event as any).message === "workflow_suspended"
+            coerceNonEmptyString(coerceRecord(event).message) ===
+              "workflow_suspended"
           ) {
             suspended = true;
           }
@@ -845,11 +924,14 @@ export async function orchestrateWorkflowStream(
             input.authzLinear &&
             event.type === "error"
           ) {
+            const message =
+              coerceNonEmptyString(coerceRecord(event).message) ??
+              "Workflow error occurred";
             emitLinearActivity("error", {
               sessionId: input.linear.sessionId,
               space: input.linear.space,
               authz: input.authzLinear,
-              body: (event as any).message ?? "Workflow error occurred",
+              body: message,
             }).catch((error) => {
               logger.warn("linear_activity_emission_failed", {
                 runId,
