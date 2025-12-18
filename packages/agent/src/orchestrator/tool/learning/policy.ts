@@ -53,7 +53,9 @@ function enforceToolSequence(
   }
 }
 
-function enforceContextSize(context: Record<string, unknown> | undefined): void {
+function enforceContextSize(
+  context: Record<string, unknown> | undefined
+): void {
   const size = safeJsonSize(context);
   if (size > MAX_CONTEXT_JSON_LEN) {
     throw new Error("learning_context_too_large");
@@ -68,17 +70,21 @@ export async function enforceLearnRecordPolicy(
   enforceToolSequence(input.toolSequence, "learning_tool_sequence_too_large");
   enforceContextSize(input.context);
 
-  const { claims } = await requireToolScopesAndPolicy(input.authz, ["learning.write"], {
-    action: "learning.record",
-    resource: {
-      kind: "learning",
-      id: `runtime:${input.workflowId}`,
-    },
-    context: {
-      outcome: input.outcome,
-      contentLength: input.actual.length,
-    },
-  });
+  const { claims } = await requireToolScopesAndPolicy(
+    input.authz,
+    ["learning.write"],
+    {
+      action: "learning.record",
+      resource: {
+        kind: "learning",
+        id: `runtime:${input.workflowId}`,
+      },
+      context: {
+        outcome: input.outcome,
+        contentLength: input.actual.length,
+      },
+    }
+  );
 
   return { userId: claims.sub };
 }
@@ -90,18 +96,22 @@ export async function enforceLearnPatternPolicy(
   enforceToolSequence(input.toolSequence, "learning_tool_sequence_too_large");
   enforceContextSize(input.context);
 
-  const { claims } = await requireToolScopesAndPolicy(input.authz, ["learning.write"], {
-    action: "learning.pattern",
-    resource: {
-      kind: "learning",
-      id: input.domain ?? "user",
-    },
-    context: {
-      domain: input.domain ?? null,
-      confidence: input.confidence,
-      toolCount: input.toolSequence.length,
-    },
-  });
+  const { claims } = await requireToolScopesAndPolicy(
+    input.authz,
+    ["learning.write"],
+    {
+      action: "learning.pattern",
+      resource: {
+        kind: "learning",
+        id: input.domain ?? "user",
+      },
+      context: {
+        domain: input.domain ?? null,
+        confidence: input.confidence,
+        toolCount: input.toolSequence.length,
+      },
+    }
+  );
 
   return { userId: claims.sub };
 }
@@ -113,18 +123,21 @@ export async function enforceLearnMistakePolicy(
   assertMaxLen(input.correction, "learning_correction_too_large");
   enforceContextSize(input.context);
 
-  const { claims } = await requireToolScopesAndPolicy(input.authz, ["learning.write"], {
-    action: "learning.mistake",
-    resource: {
-      kind: "learning",
-      id: input.domain ?? "user",
-    },
-    context: {
-      domain: input.domain ?? null,
-      severity: input.severity,
-    },
-  });
+  const { claims } = await requireToolScopesAndPolicy(
+    input.authz,
+    ["learning.write"],
+    {
+      action: "learning.mistake",
+      resource: {
+        kind: "learning",
+        id: input.domain ?? "user",
+      },
+      context: {
+        domain: input.domain ?? null,
+        severity: input.severity,
+      },
+    }
+  );
 
   return { userId: claims.sub };
 }
-

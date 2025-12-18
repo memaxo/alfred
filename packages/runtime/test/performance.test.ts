@@ -5,9 +5,12 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { KnowledgeFact, KnowledgeUpdate } from "@alfred/type/knowledge";
-import type { KnowledgeConfidence } from "@alfred/type/knowledge";
 import { assertBudget, withBudget } from "@alfred/test-kit";
+import type {
+  KnowledgeConfidence,
+  KnowledgeFact,
+  KnowledgeUpdate,
+} from "@alfred/type/knowledge";
 import { ContextBuilder } from "../src/context";
 import { LearningEngine } from "../src/engines/learning";
 

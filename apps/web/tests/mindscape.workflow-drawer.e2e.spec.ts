@@ -83,7 +83,10 @@ test.describe("Mindscape workflow drawer loop", () => {
             },
             label: "Drawer Doc",
             kind: "knowledge",
-            properties: { content: "Drawer doc summary", documentId: RAG_DOC_ID },
+            properties: {
+              content: "Drawer doc summary",
+              documentId: RAG_DOC_ID,
+            },
           },
         ],
         edges: [],

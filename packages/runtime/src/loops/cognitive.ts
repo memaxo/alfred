@@ -1,5 +1,8 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import { unwrapEventEnvelope, wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import {
+  unwrapEventEnvelope,
+  wrapEventEnvelope,
+} from "@alfred/agent/utils/envelope";
 import type {
   CognitiveState,
   Event,
@@ -95,18 +98,14 @@ export async function runCognitiveLoop(
     resource: "user",
     data: incomingEvent,
   });
-  await cognitiveRepo.appendEvent(
-    streamId,
-    incomingEvent._,
-    {
-      v: envelope.v,
-      id: envelope.id,
-      type: envelope.type,
-      createdAt: envelope.createdAt,
-      resource: envelope.resource,
-      data: envelope.data,
-    }
-  );
+  await cognitiveRepo.appendEvent(streamId, incomingEvent._, {
+    v: envelope.v,
+    id: envelope.id,
+    type: envelope.type,
+    createdAt: envelope.createdAt,
+    resource: envelope.resource,
+    data: envelope.data,
+  });
 
   const effects = computeEffects(newState);
 

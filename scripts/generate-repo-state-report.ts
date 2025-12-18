@@ -2,14 +2,14 @@
 
 /**
  * Generate Repository State Report from Linear Issues
- * 
+ *
  * Fetches all open Linear issues from Alfred-ops team and generates
  * a structured markdown report documenting ticket status, implementation
  * gaps, and actionable recommendations.
- * 
- * Usage: 
+ *
+ * Usage:
  *   LINEAR_API_KEY=<token> bun scripts/generate-repo-state-report.ts
- * 
+ *
  * Or set LINEAR_API_KEY in your environment:
  *   export LINEAR_API_KEY="your-token"
  *   bun scripts/generate-repo-state-report.ts
@@ -100,7 +100,9 @@ async function fetchLinearGraphQL<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Linear API error: ${response.status} ${response.statusText}`
+    );
   }
 
   const payload = (await response.json()) as {
@@ -140,7 +142,9 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
   }>(teamsQuery);
 
   const team = teamsData.teams.nodes.find(
-    (t) => t.name === teamName || t.key === teamName.toLowerCase().replace(/\s+/g, "-")
+    (t) =>
+      t.name === teamName ||
+      t.key === teamName.toLowerCase().replace(/\s+/g, "-")
   );
 
   if (!team) {
@@ -326,9 +330,7 @@ function generateReport(
 
   const totalEstimate = calculateTotalEstimate(openIssues);
   const missingEstimate = openIssues.filter((i) => !i.estimate).length;
-  const missingLabels = openIssues.filter(
-    (i) => !i.labels.nodes.length
-  ).length;
+  const missingLabels = openIssues.filter((i) => !i.labels.nodes.length).length;
   const missingAssignee = openIssues.filter((i) => !i.assignee).length;
 
   let report = `# Repository State Report
@@ -589,11 +591,15 @@ async function main() {
 
     await writeFile(reportPath, report, "utf-8");
     console.log(`\n✅ Report generated: ${reportPath}`);
-    console.log(`\nSummary:`);
+    console.log("\nSummary:");
     console.log(`- Open issues: ${openIssues.length}`);
     console.log(`- Duplicates found: ${duplicates.length}`);
-    console.log(`- Missing estimates: ${openIssues.filter((i) => !i.estimate).length}`);
-    console.log(`- Missing labels: ${openIssues.filter((i) => !i.labels.nodes.length).length}`);
+    console.log(
+      `- Missing estimates: ${openIssues.filter((i) => !i.estimate).length}`
+    );
+    console.log(
+      `- Missing labels: ${openIssues.filter((i) => !i.labels.nodes.length).length}`
+    );
   } catch (error) {
     console.error("Error generating report:", error);
     if (error instanceof Error) {

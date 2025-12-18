@@ -1,13 +1,13 @@
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { auth } from "@alfred/auth";
 import { db, workflowSchema } from "@alfred/db";
-import type { Obligation } from "@alfred/type";
 import {
+  type AuthSession,
   createTestSession,
   serializeTestSession,
-  type AuthSession,
   type TestSession,
 } from "@alfred/test-kit/auth";
+import type { Obligation } from "@alfred/type";
 import { getHeaderValue } from "../../src/utils/headers";
 import {
   createWorkflowCaller,

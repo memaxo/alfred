@@ -277,7 +277,9 @@ describe("detectStuck with custom thresholds", () => {
     });
 
     // Should be stuck after 60s (env var threshold) but not 50s
-    expect(detectStuck(state, "agent-env" as AgentId, now + 50_000)).toBe(false);
+    expect(detectStuck(state, "agent-env" as AgentId, now + 50_000)).toBe(
+      false
+    );
     expect(detectStuck(state, "agent-env" as AgentId, now + 70_000)).toBe(true);
 
     process.env.STUCK_NO_PROGRESS_MS = originalEnv;

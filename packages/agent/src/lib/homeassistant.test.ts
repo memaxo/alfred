@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { type HomeAssistantError, HomeAssistant } from "./homeassistant";
+import { HomeAssistant, type HomeAssistantError } from "./homeassistant";
 
 const mockBaseUrl = "http://homeassistant.local:8123";
 const mockToken = "test-token-12345";
@@ -41,7 +41,10 @@ describe("HomeAssistant client", () => {
       });
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.getStates();
 
       expect(result).toHaveLength(2);
@@ -57,11 +60,16 @@ describe("HomeAssistant client", () => {
       ];
 
       const fetchMock = mock(() =>
-        Promise.resolve(new Response(JSON.stringify(mockStates), { status: 200 }))
+        Promise.resolve(
+          new Response(JSON.stringify(mockStates), { status: 200 })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.getStates("light");
 
       expect(result).toHaveLength(2);
@@ -85,7 +93,10 @@ describe("HomeAssistant client", () => {
       });
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.getState("light.living_room");
 
       expect(result.entity_id).toBe("light.living_room");
@@ -96,12 +107,18 @@ describe("HomeAssistant client", () => {
     it("throws notfound error for missing entity", async () => {
       const fetchMock = mock(() =>
         Promise.resolve(
-          new Response(JSON.stringify({}), { status: 404, statusText: "Not Found" })
+          new Response(JSON.stringify({}), {
+            status: 404,
+            statusText: "Not Found",
+          })
         )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.getState("light.nonexistent");
@@ -134,7 +151,10 @@ describe("HomeAssistant client", () => {
       });
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.callService("light", "turn_on", {
         entity_id: "light.living_room",
       });
@@ -149,7 +169,10 @@ describe("HomeAssistant client", () => {
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.callService("script", "run_script", {});
 
       expect(result).toEqual([]);
@@ -172,11 +195,16 @@ describe("HomeAssistant client", () => {
       ];
 
       const fetchMock = mock(() =>
-        Promise.resolve(new Response(JSON.stringify(mockStates), { status: 200 }))
+        Promise.resolve(
+          new Response(JSON.stringify(mockStates), { status: 200 })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.listEntities();
 
       expect(result).toHaveLength(2);
@@ -192,11 +220,16 @@ describe("HomeAssistant client", () => {
       ];
 
       const fetchMock = mock(() =>
-        Promise.resolve(new Response(JSON.stringify(mockStates), { status: 200 }))
+        Promise.resolve(
+          new Response(JSON.stringify(mockStates), { status: 200 })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.listEntities();
 
       expect(result[0].name).toBe("light.living_room");
@@ -214,14 +247,23 @@ describe("HomeAssistant client", () => {
       ];
 
       const fetchMock = mock(() =>
-        Promise.resolve(new Response(JSON.stringify(mockResult), { status: 200 }))
+        Promise.resolve(
+          new Response(JSON.stringify(mockResult), { status: 200 })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
-      const result = await client.controlEntity("light.living_room", "turn_on", {
-        brightness: 128,
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
       });
+      const result = await client.controlEntity(
+        "light.living_room",
+        "turn_on",
+        {
+          brightness: 128,
+        }
+      );
 
       expect(result.success).toBe(true);
       expect(result.entityId).toBe("light.living_room");
@@ -229,7 +271,10 @@ describe("HomeAssistant client", () => {
     });
 
     it("throws error for invalid entity ID", async () => {
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.controlEntity("invalid", "turn_on");
@@ -246,12 +291,17 @@ describe("HomeAssistant client", () => {
     it("returns true when connection is valid", async () => {
       const fetchMock = mock(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ message: "API running" }), { status: 200 })
+          new Response(JSON.stringify({ message: "API running" }), {
+            status: 200,
+          })
         )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.ping();
 
       expect(result).toBe(true);
@@ -263,7 +313,10 @@ describe("HomeAssistant client", () => {
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       const result = await client.ping();
 
       expect(result).toBe(false);
@@ -273,11 +326,16 @@ describe("HomeAssistant client", () => {
   describe("error handling", () => {
     it("maps 401 to auth error", async () => {
       const fetchMock = mock(() =>
-        Promise.resolve(new Response("", { status: 401, statusText: "Unauthorized" }))
+        Promise.resolve(
+          new Response("", { status: 401, statusText: "Unauthorized" })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.getStates();
@@ -291,11 +349,16 @@ describe("HomeAssistant client", () => {
 
     it("maps 403 to auth error", async () => {
       const fetchMock = mock(() =>
-        Promise.resolve(new Response("", { status: 403, statusText: "Forbidden" }))
+        Promise.resolve(
+          new Response("", { status: 403, statusText: "Forbidden" })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.getStates();
@@ -315,7 +378,10 @@ describe("HomeAssistant client", () => {
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.getStates();
@@ -353,11 +419,16 @@ describe("HomeAssistant client", () => {
 
     it("handles network errors", async () => {
       const fetchMock = mock(() =>
-        Promise.reject(Object.assign(new Error("fetch failed"), { name: "TypeError" }))
+        Promise.reject(
+          Object.assign(new Error("fetch failed"), { name: "TypeError" })
+        )
       );
       globalThis.fetch = fetchMock as typeof globalThis.fetch;
 
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
 
       try {
         await client.getStates();
@@ -387,7 +458,10 @@ describe("HomeAssistant client", () => {
     });
 
     it("uses default timeout when not specified", async () => {
-      const client = new HomeAssistant({ baseUrl: mockBaseUrl, token: mockToken });
+      const client = new HomeAssistant({
+        baseUrl: mockBaseUrl,
+        token: mockToken,
+      });
       // Internal check - the client should use 5000ms default
       expect(client).toBeDefined();
     });

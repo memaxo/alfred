@@ -1,9 +1,9 @@
 /**
  * Tests for isomorphic environment utilities.
- * 
+ *
  * These tests verify that isomorphic functions work correctly
  * in both server and client contexts with proper tree-shaking.
- * 
+ *
  * Note: Isomorphic functions created with createIsomorphicFn don't expose
  * .server/.client properties directly. They're automatically invoked
  * based on the execution context. These tests verify the functions exist

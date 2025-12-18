@@ -26,7 +26,10 @@ export async function createCorrection(params: {
     patch: params.patch ?? null,
   };
 
-  const [row] = await db.insert(knowledgeCorrections).values(record).returning();
+  const [row] = await db
+    .insert(knowledgeCorrections)
+    .values(record)
+    .returning();
 
   if (!row) {
     throw new Error("knowledge_correction_create_failed");
@@ -35,9 +38,7 @@ export async function createCorrection(params: {
   return row;
 }
 
-export async function getCorrection(
-  id: string
-): Promise<CorrectionRow | null> {
+export async function getCorrection(id: string): Promise<CorrectionRow | null> {
   const [row] = await db
     .select()
     .from(knowledgeCorrections)

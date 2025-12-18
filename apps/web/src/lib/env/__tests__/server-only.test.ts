@@ -1,6 +1,6 @@
 /**
  * Tests for server-only environment utilities.
- * 
+ *
  * These tests verify that server-only functions work correctly
  * and provide runtime protection against client calls.
  */

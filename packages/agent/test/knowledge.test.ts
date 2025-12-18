@@ -238,7 +238,13 @@ describe("Knowledge Graph Tools", () => {
         ],
         entities: new Set(["SpaceX"]),
         entityDetails: [
-          { label: "SpaceX", kind: "organization", confidence: 0.95, mentions: [], isPronoun: false },
+          {
+            label: "SpaceX",
+            kind: "organization",
+            confidence: 0.95,
+            mentions: [],
+            isPronoun: false,
+          },
         ],
         relations: [],
         contradictions: [],
@@ -258,16 +264,19 @@ describe("Knowledge Graph Tools", () => {
       ];
 
       const nodeMap = new Map([
-        ["user:fact-hash-1", {
-          id: "node-1",
-          resource: "user",
-          hash: "fact-hash-1",
-          kind: "fact",
-          label: "SpaceX was founded in 2002",
-          properties: { confidence: 0.9 },
-          created: new Date(),
-          updated: new Date(),
-        }],
+        [
+          "user:fact-hash-1",
+          {
+            id: "node-1",
+            resource: "user",
+            hash: "fact-hash-1",
+            kind: "fact",
+            label: "SpaceX was founded in 2002",
+            properties: { confidence: 0.9 },
+            created: new Date(),
+            updated: new Date(),
+          },
+        ],
       ]);
 
       mockExtract.mockReturnValue(extractionResult);
@@ -379,9 +388,7 @@ describe("Knowledge Graph Tools", () => {
         created: new Date(),
       };
 
-      mockGetNode
-        .mockResolvedValueOnce(fromNode)
-        .mockResolvedValueOnce(toNode);
+      mockGetNode.mockResolvedValueOnce(fromNode).mockResolvedValueOnce(toNode);
       mockUpsertEdges.mockResolvedValue([createdEdge]);
 
       const input: KnowledgeConnectInput = {
@@ -428,9 +435,7 @@ describe("Knowledge Graph Tools", () => {
         updated: new Date(),
       };
 
-      mockGetNode
-        .mockResolvedValueOnce(fromNode)
-        .mockResolvedValueOnce(null);
+      mockGetNode.mockResolvedValueOnce(fromNode).mockResolvedValueOnce(null);
 
       const input: KnowledgeConnectInput = {
         fromId: "node-1",
@@ -463,23 +468,49 @@ describe("Knowledge Graph Tools", () => {
     });
 
     it("supports all edge types", async () => {
-      const fromNode = { id: "node-1", resource: "user", hash: "h1", kind: "fact", label: "A", properties: {}, created: new Date(), updated: new Date() };
-      const toNode = { id: "node-2", resource: "user", hash: "h2", kind: "fact", label: "B", properties: {}, created: new Date(), updated: new Date() };
+      const fromNode = {
+        id: "node-1",
+        resource: "user",
+        hash: "h1",
+        kind: "fact",
+        label: "A",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
+      const toNode = {
+        id: "node-2",
+        resource: "user",
+        hash: "h2",
+        kind: "fact",
+        label: "B",
+        properties: {},
+        created: new Date(),
+        updated: new Date(),
+      };
 
       mockGetNode.mockResolvedValue(fromNode).mockResolvedValue(toNode);
-      mockUpsertEdges.mockResolvedValue([{
-        id: "edge-1",
-        resource: "user",
-        hash: "hash",
-        fromId: "node-1",
-        toId: "node-2",
-        kind: "depends_on",
-        weight: 1,
-        metadata: null,
-        created: new Date(),
-      }]);
+      mockUpsertEdges.mockResolvedValue([
+        {
+          id: "edge-1",
+          resource: "user",
+          hash: "hash",
+          fromId: "node-1",
+          toId: "node-2",
+          kind: "depends_on",
+          weight: 1,
+          metadata: null,
+          created: new Date(),
+        },
+      ]);
 
-      const edgeTypes = ["relates_to", "blocks", "depends_on", "is_a", "part_of"] as const;
+      const edgeTypes = [
+        "relates_to",
+        "blocks",
+        "depends_on",
+        "is_a",
+        "part_of",
+      ] as const;
 
       for (const kind of edgeTypes) {
         const result = toolKnowledgeConnect.inputSchema.safeParse({
@@ -546,10 +577,12 @@ describe("Knowledge Graph Tools", () => {
       };
 
       mockGetNode.mockResolvedValue(node);
-      mockUpdateNode.mockImplementation(async (_id: string, updates: unknown) => {
-        const u = updates as { properties?: Record<string, unknown> };
-        return { ...node, properties: u.properties ?? node.properties };
-      });
+      mockUpdateNode.mockImplementation(
+        async (_id: string, updates: unknown) => {
+          const u = updates as { properties?: Record<string, unknown> };
+          return { ...node, properties: u.properties ?? node.properties };
+        }
+      );
       mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
 
       const input: KnowledgeCorrectInput = {
@@ -599,7 +632,10 @@ describe("Knowledge Graph Tools", () => {
       const result = await toolKnowledgeCorrect.execute({ input });
 
       expect(result.corrected).toBe(true);
-      expect(mockArchiveNodes).toHaveBeenCalledWith(["node-1"], "Incorrect fact");
+      expect(mockArchiveNodes).toHaveBeenCalledWith(
+        ["node-1"],
+        "Incorrect fact"
+      );
       expect(result.correctionId).toBe("correction-1");
     });
 

@@ -4,18 +4,21 @@ import * as path from "node:path";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   appendDecisionLogEntry,
   applyProgressUpdate,
   generateSubtaskExecPlanSkeleton,
 } from "@alfred/agent/orchestrator/multi/execplan";
+import type {
+  AgentSpec,
+  WavePlan,
+} from "@alfred/agent/orchestrator/multi/spawn";
 import {
   buildAgentSpec,
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
-import type { AgentSpec, WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
 import {
   detectNeedsGuidance,
   detectStuck,

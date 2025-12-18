@@ -110,12 +110,7 @@ function Scene({
       data[i + 2] = v;
       data[i + 3] = 255;
     }
-    const texture = new THREE.DataTexture(
-      data,
-      size,
-      size,
-      THREE.RGBAFormat
-    );
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.minFilter = THREE.LinearFilter;
@@ -203,7 +198,17 @@ function Scene({
       }
     }
     const u = mat.uniforms;
-    if (!u.uTime || !u.uOpacity || !u.uAnimation || !u.uInputVolume || !u.uOutputVolume || !u.uColor1 || !u.uColor2) {
+    if (
+      !(
+        u.uTime &&
+        u.uOpacity &&
+        u.uAnimation &&
+        u.uInputVolume &&
+        u.uOutputVolume &&
+        u.uColor1 &&
+        u.uColor2
+      )
+    ) {
       return;
     }
     u.uTime.value += delta * 0.5;

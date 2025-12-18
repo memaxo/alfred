@@ -9,7 +9,6 @@ const shouldStartWebServer =
 
 // Screenshot configuration
 const CAPTURE_SCREENSHOTS = process.env.PLAYWRIGHT_SCREENSHOTS === "1";
-const SCREENSHOT_DIR = "./test-results/screenshots";
 
 export default defineConfig({
   testDir: "./tests",

@@ -67,7 +67,8 @@ const aiToolLearnRecordBase = {
   description: toolLearnRecord.description,
   parameters: toolLearnRecord.inputSchema,
   inputSchema: toolLearnRecord.inputSchema,
-  execute: async (input: LearnRecordInput) => toolLearnRecord.execute({ input }),
+  execute: async (input: LearnRecordInput) =>
+    toolLearnRecord.execute({ input }),
 };
 
 export const aiToolLearnRecord = withPolicyApproval(
@@ -175,4 +176,3 @@ export const aiToolLearnMistake = withPolicyApproval(
 export type ToolLearnRecord = typeof toolLearnRecord;
 export type ToolLearnPattern = typeof toolLearnPattern;
 export type ToolLearnMistake = typeof toolLearnMistake;
-

@@ -1,11 +1,11 @@
 import { recordAudit } from "@alfred/agent/utils/audit";
-import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
 import {
   workflowStreamDurationSeconds,
   workflowStreamEventsTotal,
 } from "@alfred/agent/workflow/metrics";
 import { ReviewGate } from "@alfred/agent/workflow/review-gate";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import {
   registerRunHandle,
   unregisterRunHandle,
@@ -24,16 +24,16 @@ import {
   persistWorkflowMessages,
   shouldUseWorkflowRuntime,
 } from "./executor";
+import { loadHistory } from "./history";
+import { createLifecycle } from "./lifecycle";
 import {
   bootstrapLinearSession,
   safeFinalizeLinearFailure,
   safeFinalizeLinearSuccess,
 } from "./linear";
-import { createLifecycle } from "./lifecycle";
-import { type ReasonTrace, workflowProvenance } from "./provenance";
-import { loadHistory } from "./history";
 import { observeEvent } from "./observe";
 import { persistStreamEvent } from "./persist";
+import { type ReasonTrace, workflowProvenance } from "./provenance";
 import { startTimeout } from "./timeout";
 
 function coerceRecord(val: unknown): Record<string, unknown> {
@@ -417,7 +417,8 @@ export async function orchestrateWorkflowStream(
       callbacks.emitError(error);
     } catch (emitError) {
       logger.error("workflow_stream_emit_error_failed", {
-        error: emitError instanceof Error ? emitError.message : String(emitError),
+        error:
+          emitError instanceof Error ? emitError.message : String(emitError),
       });
     }
   });

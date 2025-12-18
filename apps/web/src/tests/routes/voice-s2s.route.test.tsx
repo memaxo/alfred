@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { SpeechToSpeechResponse } from "@alfred/voice/types";
-import { fireEvent, render, waitFor } from "../../test/testing-library";
 import { VoiceS2SRouteView } from "@/routes/_protected/voice-s2s";
+import { fireEvent, render, waitFor } from "../../test/testing-library";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();

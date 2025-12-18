@@ -15,7 +15,11 @@
     }
   },
   "type": "module",
-  "sideEffects": ["**/init.ts", "**/index.ts", "**/metrics.ts"],
+  "sideEffects": [
+    "**/init.ts",
+    "**/index.ts",
+    "**/metrics.ts"
+  ],
   "scripts": {
     "build": "tsc -b --emitDeclarationOnly",
     "test": "bun test --preload ./test/utils/mock-metrics.ts --preload ./test/utils/mock-db-client.ts --preload ./test/utils/mock-voice.ts",

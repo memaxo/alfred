@@ -161,7 +161,10 @@ export function MindscapeInitializer() {
 
       const ensured = await ensureMirrors.mutateAsync({
         resource: "user",
-        entities: missing.map((note) => ({ kind: "note" as const, id: note.id })),
+        entities: missing.map((note) => ({
+          kind: "note" as const,
+          id: note.id,
+        })),
       });
 
       const dbIdByEntityId = new Map(

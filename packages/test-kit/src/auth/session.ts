@@ -12,7 +12,9 @@ import type { auth } from "@alfred/auth";
  * Better Auth session type derived from the auth API.
  * This is the canonical session type used throughout ALFRED.
  */
-export type AuthSession = Awaited<ReturnType<(typeof auth)["api"]["getSession"]>>;
+export type AuthSession = Awaited<
+  ReturnType<(typeof auth)["api"]["getSession"]>
+>;
 
 /**
  * Minimal user properties required for test sessions.
@@ -77,7 +79,8 @@ export function createTestSession(
   overrides?: { session?: SessionOverrides; user?: UserOverrides }
 ): TestSession {
   const now = new Date();
-  const sessionId = overrides?.session?.sessionId ?? `sess-${user.id}-${Date.now()}`;
+  const sessionId =
+    overrides?.session?.sessionId ?? `sess-${user.id}-${Date.now()}`;
 
   // Construct the full session object matching Better Auth's structure
   const session = {
@@ -96,7 +99,9 @@ export function createTestSession(
       id: sessionId,
       userId: user.id,
       token: overrides?.session?.token ?? `token-${sessionId}`,
-      expiresAt: overrides?.session?.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt:
+        overrides?.session?.expiresAt ??
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: overrides?.session?.createdAt ?? now,
       updatedAt: overrides?.session?.updatedAt ?? now,
       ipAddress: overrides?.session?.ipAddress ?? null,
@@ -114,16 +119,19 @@ export function createTestSession(
 /**
  * Creates a test session with default user.
  */
-export function createDefaultTestSession(
-  overrides?: { session?: SessionOverrides; user?: UserOverrides }
-): TestSession {
+export function createDefaultTestSession(overrides?: {
+  session?: SessionOverrides;
+  user?: UserOverrides;
+}): TestSession {
   return createTestSession(DEFAULT_TEST_USER, overrides);
 }
 
 /**
  * Type guard to check if a session is a test session.
  */
-export function isTestSession(session: AuthSession | null): session is TestSession {
+export function isTestSession(
+  session: AuthSession | null
+): session is TestSession {
   if (!session) return false;
   return "__test" in session && session.__test === true;
 }
@@ -132,7 +140,7 @@ export function isTestSession(session: AuthSession | null): session is TestSessi
  * Serializes a test session for header transport.
  */
 export function serializeTestSession(session: AuthSession): string {
-  if (!session?.session || !session?.user) {
+  if (!(session?.session && session?.user)) {
     throw new Error("Invalid session: missing session or user data");
   }
   return JSON.stringify({
@@ -146,7 +154,7 @@ export function serializeTestSession(session: AuthSession): string {
  */
 export function deserializeTestSession(payload: string): AuthSession {
   const parsed = JSON.parse(payload);
-  if (!parsed?.user || !parsed?.session) {
+  if (!(parsed?.user && parsed?.session)) {
     throw new Error("Invalid session payload: missing user or session");
   }
   return parsed as AuthSession;

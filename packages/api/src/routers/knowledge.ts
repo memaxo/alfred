@@ -22,6 +22,7 @@ type GraphEdgeSeed = {
   weight?: number;
   metadata?: unknown;
 };
+
 import { parseEntityFactLabel } from "@alfred/knowledge/entity";
 import { extract, toKnowledge } from "@alfred/knowledge/extractor";
 import type { Knowledge, NodeId } from "@alfred/knowledge/hypergraph";
@@ -156,140 +157,145 @@ function makeEdge(
 }
 
 export const knowledgeRouter = router({
-  visualize: authedProcedure.input(visualizeInputSchema).mutation(async ({ ctx, input }) => {
-    const resource = input.resource ?? "user";
-    const limit = input.limit ?? 20;
-    const source = `mindscape:${ctx.session.user.id}`;
+  visualize: authedProcedure
+    .input(visualizeInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const resource = input.resource ?? "user";
+      const limit = input.limit ?? 20;
+      const source = `mindscape:${ctx.session.user.id}`;
 
-    const extraction = extract(input.text, source);
-    const entries = toKnowledge(extraction);
+      const extraction = extract(input.text, source);
+      const entries = toKnowledge(extraction);
 
-    // Persist to DB (facts + entity facts + relation edges) with visible failures (unlike runtime fire-and-forget).
-    const nodeSeeds: GraphNodeSeed[] = [];
-    const relationEntries: Array<{ hash: string; data: Knowledge }> = [];
-    for (const entry of entries) {
-      const nodeSeed = makeNode(resource, entry);
-      if (nodeSeed) {
-        nodeSeeds.push(nodeSeed);
-      }
-      if (entry.data._ === "relation") {
-        relationEntries.push(entry);
-      }
-    }
-
-    const nodeMap = await upsertNodes(nodeSeeds);
-    if (relationEntries.length > 0) {
-      const idMap = new Map<string, { id: string }>();
-      for (const row of nodeMap.values()) {
-        idMap.set(nodeKey(row.resource, row.hash), { id: row.id });
-      }
-
-      const edgeSeeds: GraphEdgeSeed[] = [];
-      for (const rel of relationEntries) {
-        const seed = makeEdge(resource, rel, idMap);
-        if (seed) {
-          edgeSeeds.push(seed);
+      // Persist to DB (facts + entity facts + relation edges) with visible failures (unlike runtime fire-and-forget).
+      const nodeSeeds: GraphNodeSeed[] = [];
+      const relationEntries: Array<{ hash: string; data: Knowledge }> = [];
+      for (const entry of entries) {
+        const nodeSeed = makeNode(resource, entry);
+        if (nodeSeed) {
+          nodeSeeds.push(nodeSeed);
+        }
+        if (entry.data._ === "relation") {
+          relationEntries.push(entry);
         }
       }
-      if (edgeSeeds.length > 0) {
-        await upsertEdges(edgeSeeds);
+
+      const nodeMap = await upsertNodes(nodeSeeds);
+      if (relationEntries.length > 0) {
+        const idMap = new Map<string, { id: string }>();
+        for (const row of nodeMap.values()) {
+          idMap.set(nodeKey(row.resource, row.hash), { id: row.id });
+        }
+
+        const edgeSeeds: GraphEdgeSeed[] = [];
+        for (const rel of relationEntries) {
+          const seed = makeEdge(resource, rel, idMap);
+          if (seed) {
+            edgeSeeds.push(seed);
+          }
+        }
+        if (edgeSeeds.length > 0) {
+          await upsertEdges(edgeSeeds);
+        }
       }
-    }
 
-    const extractedEntityLabels = new Set(
-      (extraction.entityDetails ?? [])
-        .filter((entity) => !entity.isPronoun)
-        .map((entity) => entity.label.trim().toLowerCase())
-        .filter(Boolean)
-    );
+      const extractedEntityLabels = new Set(
+        (extraction.entityDetails ?? [])
+          .filter((entity) => !entity.isPronoun)
+          .map((entity) => entity.label.trim().toLowerCase())
+          .filter(Boolean)
+      );
 
-    // Pull a bounded window of recent entity fact nodes with SQL-level filtering.
-    // Filter by source containing ":entity" at the database level for better performance.
-    const recentEntityFacts = await db
-      .select()
-      .from(memoryNodes)
-      .where(
-        and(
-          eq(memoryNodes.resource, resource),
-          eq(memoryNodes.kind, "fact"),
-          sql`json_extract(${memoryNodes.properties}, '$.source') LIKE '%:entity%'`
+      // Pull a bounded window of recent entity fact nodes with SQL-level filtering.
+      // Filter by source containing ":entity" at the database level for better performance.
+      const recentEntityFacts = await db
+        .select()
+        .from(memoryNodes)
+        .where(
+          and(
+            eq(memoryNodes.resource, resource),
+            eq(memoryNodes.kind, "fact"),
+            sql`json_extract(${memoryNodes.properties}, '$.source') LIKE '%:entity%'`
+          )
         )
-      )
-      .orderBy(desc(memoryNodes.created))
-      .limit(ENTITY_FETCH_LIMIT);
+        .orderBy(desc(memoryNodes.created))
+        .limit(ENTITY_FETCH_LIMIT);
 
-    // Further filter by parsed entity label format and extracted labels
-    const entityRows = recentEntityFacts.filter((row) => {
-      const parsed = parseEntityFactLabel(row.label);
-      if (!parsed) {
-        return false;
-      }
-      if (extractedEntityLabels.size === 0) {
-        return true;
-      }
-      return extractedEntityLabels.has(parsed.label.toLowerCase());
-    });
+      // Further filter by parsed entity label format and extracted labels
+      const entityRows = recentEntityFacts.filter((row) => {
+        const parsed = parseEntityFactLabel(row.label);
+        if (!parsed) {
+          return false;
+        }
+        if (extractedEntityLabels.size === 0) {
+          return true;
+        }
+        return extractedEntityLabels.has(parsed.label.toLowerCase());
+      });
 
-    const picked = entityRows.slice(0, limit);
-    const nodeIds = picked.map((row) => row.id);
-    const nodeIdSet = new Set(nodeIds);
+      const picked = entityRows.slice(0, limit);
+      const nodeIds = picked.map((row) => row.id);
+      const nodeIdSet = new Set(nodeIds);
 
-    const nodes: VisualizeNode[] = picked.map((row) => {
-      const props = asProps(row.properties);
-      const parsed = parseEntityFactLabel(row.label);
-      const confidence = typeof props.confidence === "number" ? props.confidence : undefined;
-      const archived = typeof props.archived === "string" ? props.archived : undefined;
-      const description =
-        typeof props.description === "string" ? props.description : undefined;
+      const nodes: VisualizeNode[] = picked.map((row) => {
+        const props = asProps(row.properties);
+        const parsed = parseEntityFactLabel(row.label);
+        const confidence =
+          typeof props.confidence === "number" ? props.confidence : undefined;
+        const archived =
+          typeof props.archived === "string" ? props.archived : undefined;
+        const description =
+          typeof props.description === "string" ? props.description : undefined;
 
-      return {
-        id: row.id,
-        label: parsed?.label ?? row.label,
-        entityType: parsed?.entityType,
-        confidence,
-        archived,
-        description,
-        hgHash: row.hash,
-      };
-    });
+        return {
+          id: row.id,
+          label: parsed?.label ?? row.label,
+          entityType: parsed?.entityType,
+          confidence,
+          archived,
+          description,
+          hgHash: row.hash,
+        };
+      });
 
-    const edges: VisualizeEdge[] =
-      nodeIds.length === 0
-        ? []
-        : (
-            await db
-              .select()
-              .from(memoryEdges)
-              .where(
-                and(
-                  eq(memoryEdges.resource, resource),
-                  or(
-                    inArray(memoryEdges.fromId, nodeIds),
-                    inArray(memoryEdges.toId, nodeIds)
+      const edges: VisualizeEdge[] =
+        nodeIds.length === 0
+          ? []
+          : (
+              await db
+                .select()
+                .from(memoryEdges)
+                .where(
+                  and(
+                    eq(memoryEdges.resource, resource),
+                    or(
+                      inArray(memoryEdges.fromId, nodeIds),
+                      inArray(memoryEdges.toId, nodeIds)
+                    )
                   )
                 )
+                .orderBy(desc(memoryEdges.created))
+            )
+              .filter(
+                (edge) => nodeIdSet.has(edge.fromId) && nodeIdSet.has(edge.toId)
               )
-              .orderBy(desc(memoryEdges.created))
-          )
-            .filter((edge) => nodeIdSet.has(edge.fromId) && nodeIdSet.has(edge.toId))
-            .map((edge) => ({
-              id: edge.id,
-              fromId: edge.fromId,
-              toId: edge.toId,
-              kind: edge.kind,
-              weight: edge.weight ?? undefined,
-            }));
+              .map((edge) => ({
+                id: edge.id,
+                fromId: edge.fromId,
+                toId: edge.toId,
+                kind: edge.kind,
+                weight: edge.weight ?? undefined,
+              }));
 
-    return {
-      nodes,
-      edges,
-      meta: {
-        resource,
-        extractedEntities: extractedEntityLabels.size,
-        nodeCount: nodes.length,
-        edgeCount: edges.length,
-      },
-    };
-  }),
+      return {
+        nodes,
+        edges,
+        meta: {
+          resource,
+          extractedEntities: extractedEntityLabels.size,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+        },
+      };
+    }),
 });
-

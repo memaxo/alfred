@@ -55,7 +55,7 @@ export function getHeaderValue(
       return record[name] ?? null;
     }
     const key = Object.keys(record).find((k) => k.toLowerCase() === lowerName);
-    return key ? record[key] ?? null : null;
+    return key ? (record[key] ?? null) : null;
   }
 
   return null;

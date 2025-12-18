@@ -72,9 +72,14 @@ export type UseTranscriptViewerOptions = {
 export function useTranscriptViewer(
   options: UseTranscriptViewerOptions = {}
 ): UseTranscriptViewerResult {
-  const { initialSegments = [], onTimeUpdate: _onTimeUpdate, onSegmentChange } = options;
+  const {
+    initialSegments = [],
+    onTimeUpdate: _onTimeUpdate,
+    onSegmentChange,
+  } = options;
 
-  const [segments, setSegments] = useState<TranscriptSegment[]>(initialSegments);
+  const [segments, setSegments] =
+    useState<TranscriptSegment[]>(initialSegments);
   const [currentTime, setCurrentTime] = useState(0);
   const [status, setStatus] = useState<TranscriptViewerStatus>("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -153,14 +158,21 @@ export function useTranscriptViewer(
       }
     }
 
-    return { spokenSegments: spoken, unspokenSegments: unspoken, currentWord: word };
+    return {
+      spokenSegments: spoken,
+      unspokenSegments: unspoken,
+      currentWord: word,
+    };
   }, [segments, currentTime, activeWordIndex]);
 
   const isPlaying = status === "playing";
 
-  const seekToTime = useCallback((time: number) => {
-    seek(time);
-  }, [seek]);
+  const seekToTime = useCallback(
+    (time: number) => {
+      seek(time);
+    },
+    [seek]
+  );
 
   const [_isScrubbing, setIsScrubbing] = useState(false);
   const startScrubbing = useCallback(() => setIsScrubbing(true), []);

@@ -3,28 +3,28 @@
  * Modular lexicon system with domain-specific word lists.
  */
 
-export { PERSON_TITLES } from "./titles.js";
-export { ORG_KEYWORDS, ORG_TAGS } from "./organizations.js";
 export { ANTONYM_PAIRS } from "./antonyms.js";
-export { PLACE_TAGS } from "./places.js";
-export { RECURRENCE_REGEX } from "./temporal.js";
 export {
-  PROGRAMMING_LANGUAGES,
-  FRAMEWORKS,
   DEV_TOOLS,
   FILE_EXTENSIONS,
-  isProgrammingLanguage,
-  isFramework,
-  isDevTool,
+  FRAMEWORKS,
   getLanguageFromExtension,
+  isDevTool,
+  isFramework,
+  isProgrammingLanguage,
+  PROGRAMMING_LANGUAGES,
 } from "./code.js";
 export {
-  classifyDomain,
-  detectTopics,
   applyTopicBoost,
-  type TopicResult,
+  classifyDomain,
   type DomainResult,
+  detectTopics,
+  type TopicResult,
 } from "./domains.js";
+export { ORG_KEYWORDS, ORG_TAGS } from "./organizations.js";
+export { PLACE_TAGS } from "./places.js";
+export { RECURRENCE_REGEX } from "./temporal.js";
+export { PERSON_TITLES } from "./titles.js";
 
 import { ANTONYM_PAIRS } from "./antonyms.js";
 
@@ -43,4 +43,3 @@ export function buildAntonymMap(): Map<string, Set<string>> {
   }
   return map;
 }
-

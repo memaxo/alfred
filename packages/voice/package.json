@@ -2,7 +2,9 @@
   "name": "@alfred/voice",
   "version": "0.0.1",
   "type": "module",
-  "sideEffects": ["**/metrics.ts"],
+  "sideEffects": [
+    "**/metrics.ts"
+  ],
   "scripts": {
     "dev": "tsc -b -w",
     "build": "tsc -b",

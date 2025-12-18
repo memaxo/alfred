@@ -94,7 +94,9 @@ describe("OpenAI API with VCR", () => {
         {
           id: "msg-1",
           role: "user",
-          parts: [{ type: "text", text: "What is 2+2? Answer with just the number." }],
+          parts: [
+            { type: "text", text: "What is 2+2? Answer with just the number." },
+          ],
         },
       ],
     });
@@ -108,7 +110,9 @@ describe("OpenAI API with VCR", () => {
         {
           id: "msg-1",
           role: "user",
-          parts: [{ type: "text", text: "What is 2+2? Answer with just the number." }],
+          parts: [
+            { type: "text", text: "What is 2+2? Answer with just the number." },
+          ],
         },
         {
           id: "msg-2",
@@ -118,7 +122,9 @@ describe("OpenAI API with VCR", () => {
         {
           id: "msg-3",
           role: "user",
-          parts: [{ type: "text", text: "Now multiply that by 3. Just the number." }],
+          parts: [
+            { type: "text", text: "Now multiply that by 3. Just the number." },
+          ],
         },
       ],
     });

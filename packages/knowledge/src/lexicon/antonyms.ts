@@ -202,4 +202,3 @@ export const ANTONYM_PAIRS: readonly [string, string][] = [
   ["wide", "narrow"],
   ["young", "old"],
 ] as const;
-

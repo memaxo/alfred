@@ -34,7 +34,9 @@
       "afterEach",
       "beforeAll",
       "afterAll",
-      "vi"
+      "vi",
+      "AudioWorkletProcessor",
+      "registerProcessor"
     ]
   },
   "linter": {

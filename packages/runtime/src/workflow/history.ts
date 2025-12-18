@@ -24,4 +24,3 @@ export async function loadHistory(runId: string): Promise<WorkflowEvent[]> {
       return hydrated;
     });
 }
-

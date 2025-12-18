@@ -1,8 +1,8 @@
+import type { ExecutionPlan } from "@alfred/cognitive";
 import type {
   RiskAssessment,
   RiskLevel,
 } from "@alfred/cognitive/logic/autonomy";
-import type { ExecutionPlan } from "@alfred/cognitive";
 import { RISK_ANCHORS } from "@alfred/knowledge/ontology";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
@@ -183,7 +183,9 @@ export async function classifyPlanRisk(
       return DEFAULT_ASSESSMENT;
     }
 
-    const stepTexts = steps.map((step: StepLike, index: number) => describeStep(step, index));
+    const stepTexts = steps.map((step: StepLike, index: number) =>
+      describeStep(step, index)
+    );
     let stepEmbeddings: number[][] = [];
     try {
       stepEmbeddings = await embedMany(stepTexts);

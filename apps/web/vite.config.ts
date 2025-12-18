@@ -1,7 +1,7 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -67,9 +67,7 @@ function getBuildConstants(): Record<string, string> {
   }
 
   // NODE_ENV
-  constants.NODE_ENV = JSON.stringify(
-    process.env.NODE_ENV || "development"
-  );
+  constants.NODE_ENV = JSON.stringify(process.env.NODE_ENV || "development");
 
   return constants;
 }
@@ -254,7 +252,7 @@ export default defineConfig({
             // All other vendors stay together to avoid circular deps
             // Vite's default chunking will still optimize
           }
-          return undefined;
+          return;
         },
       },
     },

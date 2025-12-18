@@ -4,11 +4,11 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { logger } from "@alfred/logger";
 import { supervise } from "@alfred/learning/self_supervision";
+import { logger } from "@alfred/logger";
 import type { KnowledgeInsight } from "@alfred/type/knowledge";
-import { redactObject, redactSecrets } from "../../../utils/redaction.js";
 import { recordAudit } from "../../../utils/audit.js";
+import { redactObject, redactSecrets } from "../../../utils/redaction.js";
 import type {
   LearnMistakeInput,
   LearnMistakeOutput,
@@ -75,7 +75,7 @@ function tokenize(text: string): string[] {
 function jaccardError(expected: string, actual: string): number {
   const eTokens = tokenize(expected);
   const aTokens = tokenize(actual);
-  
+
   // Early return for empty cases
   if (eTokens.length === 0 && aTokens.length === 0) {
     return 0;
@@ -83,23 +83,23 @@ function jaccardError(expected: string, actual: string): number {
   if (eTokens.length === 0 || aTokens.length === 0) {
     return 1;
   }
-  
+
   // Use Sets for O(1) lookup - more efficient than array iteration
   const eSet = new Set(eTokens);
   const aSet = new Set(aTokens);
-  
+
   // Compute intersection efficiently
   let inter = 0;
   // Iterate over smaller set for better performance
   const smallerSet = eSet.size <= aSet.size ? eSet : aSet;
   const largerSet = eSet.size <= aSet.size ? aSet : eSet;
-  
+
   for (const token of smallerSet) {
     if (largerSet.has(token)) {
       inter += 1;
     }
   }
-  
+
   const union = eSet.size + aSet.size - inter;
   const similarity = union === 0 ? 0 : inter / union;
   return clamp01(1 - similarity);
@@ -145,7 +145,9 @@ function normalizeToolSequence(seq: string[]): string[] {
 function buildHeuristicRule(input: LearnPatternInput): string {
   const domain = input.domain?.trim();
   const seq = normalizeToolSequence(input.toolSequence).join(" → ");
-  const headline = domain ? `[${domain}] ${input.description}` : input.description;
+  const headline = domain
+    ? `[${domain}] ${input.description}`
+    : input.description;
   return truncate(`${headline.trim()} (tools: ${seq})`, RULE_MAX_LEN);
 }
 
@@ -158,7 +160,9 @@ function buildRefinementPrompt(args: {
   context: Record<string, unknown> | undefined;
   domain: string | undefined;
 }): string {
-  const safeContext = redactObject(args.context) as Record<string, unknown> | undefined;
+  const safeContext = redactObject(args.context) as
+    | Record<string, unknown>
+    | undefined;
   return [
     "You are extracting a reusable operational pattern for an agent.",
     "Write ONE concise rule (imperative voice).",
@@ -177,7 +181,7 @@ function buildRefinementPrompt(args: {
 async function createOpenAIClient() {
   const openaiModule = await import("@ai-sdk/openai");
   const { createOpenAI } = openaiModule;
-  
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("openai_api_key_missing");
@@ -239,7 +243,9 @@ async function maybeRefineRuleWithLlm(args: {
 
     // Add timeout to prevent hanging on slow/unresponsive APIs
     const refinementPromise = generateObject({
-      model: openai.chat(modelId) as Parameters<typeof generateObject>[0]["model"],
+      model: openai.chat(modelId) as Parameters<
+        typeof generateObject
+      >[0]["model"],
       schema,
       prompt,
       temperature: 0,
@@ -311,7 +317,9 @@ export async function executeLearnRecord(args: {
   const resource = `runtime:${args.input.workflowId}`;
   const error = computePredictionError(args.input);
 
-  const safeExpected = args.input.expected ? redactSecrets(args.input.expected) : undefined;
+  const safeExpected = args.input.expected
+    ? redactSecrets(args.input.expected)
+    : undefined;
   const safeActual = redactSecrets(args.input.actual);
   const safeToolSequence = args.input.toolSequence
     ? normalizeToolSequence(args.input.toolSequence).map(redactSecrets)
@@ -367,7 +375,10 @@ export async function executeLearnRecord(args: {
     if (updates && updates.length > 0) {
       const insightSeeds = updates
         .map((update) => update.node)
-        .filter((node): node is NonNullable<typeof node> => node !== null && typeof node === "object")
+        .filter(
+          (node): node is NonNullable<typeof node> =>
+            node !== null && typeof node === "object"
+        )
         .filter(isInsightNode)
         .filter((node) => node.conclusion.trim().length > 0)
         .map((node) => {
@@ -453,7 +464,9 @@ export async function executeLearnPattern(args: {
   const rule = refined ?? heuristicRule;
   const source = refined ? "llm" : "heuristic";
 
-  const safeTools = normalizeToolSequence(args.input.toolSequence).map(redactSecrets);
+  const safeTools = normalizeToolSequence(args.input.toolSequence).map(
+    redactSecrets
+  );
   const safeContext = args.input.context
     ? (redactObject(args.input.context) as Record<string, unknown>)
     : undefined;
@@ -534,7 +547,10 @@ export async function executeLearnMistake(args: {
     ? (redactObject(args.input.context) as Record<string, unknown>)
     : undefined;
 
-  const rule = truncate(`Avoid: ${safeMistake}. Fix: ${safeCorrection}`, RULE_MAX_LEN);
+  const rule = truncate(
+    `Avoid: ${safeMistake}. Fix: ${safeCorrection}`,
+    RULE_MAX_LEN
+  );
 
   const nodeMap: Map<string, NodeRow> = await graphRepo.upsertNodes([
     {
@@ -549,7 +565,12 @@ export async function executeLearnMistake(args: {
         severity: args.input.severity,
         domain: args.input.domain ?? null,
         context: safeContext ?? null,
-        confidence: args.input.severity === "high" ? 0.9 : args.input.severity === "medium" ? 0.75 : 0.6,
+        confidence:
+          args.input.severity === "high"
+            ? 0.9
+            : args.input.severity === "medium"
+              ? 0.75
+              : 0.6,
         source: "explicit_mistake",
         recordedAt: new Date().toISOString(),
       },
@@ -585,4 +606,3 @@ export async function executeLearnMistake(args: {
     recorded: true,
   };
 }
-

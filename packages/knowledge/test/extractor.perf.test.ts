@@ -1,7 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { extract } from "../src/extractor";
-import { extractEntities } from "../src/extractor";
-import { extractTemporal } from "../src/extractor";
+import { extract, extractEntities, extractTemporal } from "../src/extractor";
 
 // budget: fact-extraction
 
@@ -73,4 +71,3 @@ describe("extractTemporal() performance budget", () => {
     expect(avg).toBeLessThan(3);
   });
 });
-

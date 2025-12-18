@@ -1,17 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { TEST_SESSION_HEADER } from "@/lib/test-auth";
 import {
-  getViteTestMode,
-  getMindscapeTest,
   getBunTest,
+  getMindscapeTest,
   getNodeEnv,
+  getViteTestMode,
 } from "@/lib/env/server-only";
+import { TEST_SESSION_HEADER } from "@/lib/test-auth";
 
 /**
  * Server-side data fetching for Mindscape initialization.
  * Returns the initial graph snapshot and reflections.
- * 
+ *
  * Uses server-only environment utilities to prevent server code leakage
  * into client bundles.
  */
@@ -36,10 +36,10 @@ function resolveTestMode(request: Request) {
 
 /**
  * Get initial Mindscape frame data.
- * 
+ *
  * Note: This function is used in both authenticated and unauthenticated contexts
  * (landing page vs protected mindscape route), so auth middleware is not applied here.
- * 
+ *
  * For server functions that require authentication, use the pattern:
  * ```typescript
  * export const myServerFn = createServerFn()
@@ -48,7 +48,7 @@ function resolveTestMode(request: Request) {
  *     // context.user is available here
  *   })
  * ```
- * 
+ *
  * See @/lib/middleware/auth for the requireAuthMiddleware implementation.
  */
 export const getInitialMindscapeFrame = createServerFn({

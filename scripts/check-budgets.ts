@@ -117,7 +117,9 @@ async function main(): Promise<void> {
       console.error(`- ${category} (default budget: ${budgetMs}ms)`);
     }
     console.error("");
-    console.error("Fix: add `// budget: <category>` markers to deterministic perf tests.");
+    console.error(
+      "Fix: add `// budget: <category>` markers to deterministic perf tests."
+    );
     console.error(
       "Example: `// budget: graph-lookup` in a test that asserts graph lookup performance."
     );

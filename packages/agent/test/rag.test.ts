@@ -46,12 +46,8 @@ mock.module("@alfred/logger", () => ({
 }));
 
 // Import tools after mocking
-const {
-  toolRagIngest,
-  toolRagQuery,
-  toolRagList,
-  toolRagDelete,
-} = await import("../src/orchestrator/tool/rag");
+const { toolRagIngest, toolRagQuery, toolRagList, toolRagDelete } =
+  await import("../src/orchestrator/tool/rag");
 
 describe("RAG Tools", () => {
   beforeEach(() => {

@@ -197,7 +197,8 @@ export function useFocusedContext(): FocusedContext {
   // Calculate dynamic budget based on model context window (30% heuristic)
   const contextBudget = useMemo(() => {
     const windowTokens = Number(
-      (configQuery.data as { contextWindow?: unknown } | undefined)?.contextWindow
+      (configQuery.data as { contextWindow?: unknown } | undefined)
+        ?.contextWindow
     );
     if (!Number.isFinite(windowTokens) || windowTokens <= 0) {
       return 2000;
@@ -233,7 +234,8 @@ export function useFocusedContext(): FocusedContext {
     (state) => state.setHighlightedEdges
   );
   useEffect(() => {
-    const edgesValue = (ragQuery.data as { edges?: unknown } | undefined)?.edges;
+    const edgesValue = (ragQuery.data as { edges?: unknown } | undefined)
+      ?.edges;
     if (!Array.isArray(edgesValue) || edgesValue.length === 0) {
       setHighlightedEdges([]);
       return;

@@ -43,7 +43,9 @@ const hasRelativeDateFormatTag = (result: ChronoResult): boolean => {
         : false;
     }
     if (typeof tags === "object") {
-      return Boolean((tags as Record<string, unknown>).RelativeDateFormatParser);
+      return Boolean(
+        (tags as Record<string, unknown>).RelativeDateFormatParser
+      );
     }
     return false;
   } catch {
@@ -165,4 +167,3 @@ export const extractTemporal = (text: string): TemporalExpression[] => {
 
   return expressions;
 };
-

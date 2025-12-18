@@ -71,7 +71,7 @@ function VoiceTuner() {
                 disabled={isRecording}
                 max={60_000}
                 min={1000}
-                onValueChange={([v]) => setMaxUtteranceMs(v ?? 20000)}
+                onValueChange={([v]) => setMaxUtteranceMs(v ?? 20_000)}
                 step={1000}
                 value={[maxUtteranceMs]}
               />

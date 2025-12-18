@@ -1,21 +1,20 @@
 import { describe, expect, it } from "bun:test";
-
+import { extractCodeEntities } from "../src/extract/entities";
 import {
+  detectContradiction,
   extract,
   extractEntities,
   extractRelations,
   extractTemporal,
-  detectContradiction,
   inferPattern,
 } from "../src/extractor";
-import { extractCodeEntities } from "../src/extract/entities";
-import { classifyDomain } from "../src/lexicon/domains";
 import {
-  isProgrammingLanguage,
-  isFramework,
-  isDevTool,
   getLanguageFromExtension,
+  isDevTool,
+  isFramework,
+  isProgrammingLanguage,
 } from "../src/lexicon/code";
+import { classifyDomain } from "../src/lexicon/domains";
 
 describe("extract()", () => {
   it("extracts entities, relations, and facts from text", () => {

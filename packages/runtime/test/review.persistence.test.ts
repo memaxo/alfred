@@ -34,15 +34,13 @@ describe("review fixAttempts persistence", () => {
   // Mock workflowRepo
   const mockWorkflowRepo = {
     getRun: mock(async (runId: string) => mockWorkflowRun),
-    updateRun: mock(
-      async (runId: string, patch: { stateData?: unknown }) => {
-        updateRunCalls.push({ runId, patch });
-        if (mockWorkflowRun && patch.stateData) {
-          mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
-        }
-        return mockWorkflowRun;
+    updateRun: mock(async (runId: string, patch: { stateData?: unknown }) => {
+      updateRunCalls.push({ runId, patch });
+      if (mockWorkflowRun && patch.stateData) {
+        mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
       }
-    ),
+      return mockWorkflowRun;
+    }),
   };
 
   beforeEach(() => {
@@ -113,11 +111,16 @@ describe("review fixAttempts persistence", () => {
       branches: [],
     };
 
-    const events: Array<{ type?: string; kind?: string; message?: string; data?: unknown }> = [];
+    const events: Array<{
+      type?: string;
+      kind?: string;
+      message?: string;
+      data?: unknown;
+    }> = [];
     try {
       const generator = runReviewPhase(ctx, mergePlan);
       for await (const event of generator) {
-        events.push(event as typeof events[number]);
+        events.push(event as (typeof events)[number]);
       }
     } finally {
       await cleanupPlanDir(runId);
@@ -130,7 +133,9 @@ describe("review fixAttempts persistence", () => {
     // Verify escalation event was emitted after exhausting retries
     const escalationEvent = events.find((e) => e?.kind === "review-escalated");
     expect(escalationEvent).toBeDefined();
-    expect((escalationEvent?.data as { reason?: string })?.reason).toBe("fixer_exhausted");
+    expect((escalationEvent?.data as { reason?: string })?.reason).toBe(
+      "fixer_exhausted"
+    );
   });
 
   it("persists fixAttempts to stateData after each fix attempt", async () => {
@@ -191,7 +196,9 @@ describe("review fixAttempts persistence", () => {
     // Verify updateRun was called with incrementing fixAttempts
     const stateDataUpdates = updateRunCalls
       .filter((call) => call.patch.stateData)
-      .map((call) => (call.patch.stateData as Record<string, unknown>)?.fixAttempts);
+      .map(
+        (call) => (call.patch.stateData as Record<string, unknown>)?.fixAttempts
+      );
 
     expect(stateDataUpdates).toEqual([1, 2, 3]);
   });
@@ -238,11 +245,16 @@ describe("review fixAttempts persistence", () => {
       branches: [],
     };
 
-    const events: Array<{ type?: string; kind?: string; message?: string; data?: unknown }> = [];
+    const events: Array<{
+      type?: string;
+      kind?: string;
+      message?: string;
+      data?: unknown;
+    }> = [];
     try {
       const generator = runReviewPhase(ctx, mergePlan);
       for await (const event of generator) {
-        events.push(event as typeof events[number]);
+        events.push(event as (typeof events)[number]);
       }
     } finally {
       await cleanupPlanDir(runId);
@@ -306,7 +318,7 @@ describe("review fixAttempts persistence", () => {
     try {
       const generator = runReviewPhase(ctx, mergePlan);
       for await (const event of generator) {
-        events.push(event as typeof events[number]);
+        events.push(event as (typeof events)[number]);
       }
     } finally {
       await cleanupPlanDir(runId);
@@ -318,7 +330,9 @@ describe("review fixAttempts persistence", () => {
     // Verify the review eventually passed
     const resultEvent = events.find((e) => e?.kind === "review-exec-result");
     expect(resultEvent).toBeDefined();
-    expect((resultEvent?.data as { status?: string })?.status).toBe("completed");
+    expect((resultEvent?.data as { status?: string })?.status).toBe(
+      "completed"
+    );
   });
 
   it("handles workflowRepo errors gracefully", async () => {

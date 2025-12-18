@@ -1,9 +1,9 @@
 /**
  * Process Linear OAuth callback.
- * 
+ *
  * This server function handles the OAuth callback from Linear.
  * It uses input validation with Zod and processes the callback via tRPC.
- * 
+ *
  * Note: This function does not use auth middleware because it's part of the
  * OAuth flow itself. For authenticated server functions, see the middleware
  * pattern in @/lib/middleware/auth.

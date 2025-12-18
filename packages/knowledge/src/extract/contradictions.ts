@@ -1,12 +1,7 @@
 import nlp from "compromise";
 import { buildAntonymMap } from "../lexicon/index.js";
 import { canonicalize, clampConfidence, isStopword } from "./entities.js";
-import type {
-  BaseView,
-  Contradiction,
-  NumberJson,
-  TextView,
-} from "./types.js";
+import type { BaseView, Contradiction, NumberJson, TextView } from "./types.js";
 import { asTextView } from "./types.js";
 
 /**
@@ -126,4 +121,3 @@ export const detectContradiction = (
 
   return null;
 };
-

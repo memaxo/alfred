@@ -75,18 +75,8 @@ export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
       | null
       | number
       | ReadableStream,
-    stdout: (stdout ?? "pipe") as
-      | "inherit"
-      | "pipe"
-      | "ignore"
-      | null
-      | number,
-    stderr: (stderr ?? "pipe") as
-      | "inherit"
-      | "pipe"
-      | "ignore"
-      | null
-      | number,
+    stdout: (stdout ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
+    stderr: (stderr ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
   });
 }
 

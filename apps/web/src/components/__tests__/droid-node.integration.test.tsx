@@ -119,7 +119,8 @@ describe("DroidNode", () => {
   afterEach(() => {
     (globalThis as HarnessGlobal).__droidStreamTestHarness__ = undefined;
     if (typeof window !== "undefined") {
-      (window as unknown as HarnessGlobal).__droidStreamTestHarness__ = undefined;
+      (window as unknown as HarnessGlobal).__droidStreamTestHarness__ =
+        undefined;
     }
   });
 

@@ -40,11 +40,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -76,10 +72,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -100,12 +93,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "stop",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["start", "stop", "status", "set"]
                     },
                     "durationMin": {
                       "type": "integer",
@@ -117,10 +105,7 @@
                       "maxLength": 280
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -146,10 +131,7 @@
                     "auto": {
                       "default": "read",
                       "type": "string",
-                      "enum": [
-                        "read",
-                        "low"
-                      ]
+                      "enum": ["read", "low"]
                     },
                     "authz": {
                       "type": "string"
@@ -168,11 +150,7 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": [
-                    "userId",
-                    "requirement",
-                    "auto"
-                  ],
+                  "required": ["userId", "requirement", "auto"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -193,11 +171,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "list",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["list", "status", "set"]
                     },
                     "entity": {
                       "type": "string"
@@ -207,10 +181,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -231,12 +202,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "update",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "update", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -264,10 +230,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -288,13 +251,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "due",
-                        "complete",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "due", "complete", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -325,10 +282,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -349,12 +303,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "active",
-                        "done",
-                        "cancel"
-                      ]
+                      "enum": ["start", "active", "done", "cancel"]
                     },
                     "label": {
                       "type": "string"
@@ -368,10 +317,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -392,10 +338,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "search",
-                        "fetch"
-                      ]
+                      "enum": ["search", "fetch"]
                     },
                     "q": {
                       "type": "string",
@@ -419,10 +362,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -467,18 +407,10 @@
                     "kind": {
                       "default": "relates_to",
                       "type": "string",
-                      "enum": [
-                        "relates_to",
-                        "blocks",
-                        "depends_on"
-                      ]
+                      "enum": ["relates_to", "blocks", "depends_on"]
                     }
                   },
-                  "required": [
-                    "fromId",
-                    "toId",
-                    "kind"
-                  ],
+                  "required": ["fromId", "toId", "kind"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -595,11 +527,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -631,10 +559,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -655,12 +580,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "stop",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["start", "stop", "status", "set"]
                     },
                     "durationMin": {
                       "type": "integer",
@@ -672,10 +592,7 @@
                       "maxLength": 280
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -701,10 +618,7 @@
                     "auto": {
                       "default": "read",
                       "type": "string",
-                      "enum": [
-                        "read",
-                        "low"
-                      ]
+                      "enum": ["read", "low"]
                     },
                     "authz": {
                       "type": "string"
@@ -723,11 +637,7 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": [
-                    "userId",
-                    "requirement",
-                    "auto"
-                  ],
+                  "required": ["userId", "requirement", "auto"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -748,11 +658,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "list",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["list", "status", "set"]
                     },
                     "entity": {
                       "type": "string"
@@ -762,10 +668,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -786,12 +689,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "update",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "update", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -819,10 +717,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -843,13 +738,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "due",
-                        "complete",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "due", "complete", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -880,10 +769,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -904,12 +790,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "active",
-                        "done",
-                        "cancel"
-                      ]
+                      "enum": ["start", "active", "done", "cancel"]
                     },
                     "label": {
                       "type": "string"
@@ -923,10 +804,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -947,10 +825,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "search",
-                        "fetch"
-                      ]
+                      "enum": ["search", "fetch"]
                     },
                     "q": {
                       "type": "string",
@@ -974,10 +849,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1022,18 +894,10 @@
                     "kind": {
                       "default": "relates_to",
                       "type": "string",
-                      "enum": [
-                        "relates_to",
-                        "blocks",
-                        "depends_on"
-                      ]
+                      "enum": ["relates_to", "blocks", "depends_on"]
                     }
                   },
-                  "required": [
-                    "fromId",
-                    "toId",
-                    "kind"
-                  ],
+                  "required": ["fromId", "toId", "kind"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1158,11 +1022,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -1194,10 +1054,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1218,12 +1075,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "stop",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["start", "stop", "status", "set"]
                     },
                     "durationMin": {
                       "type": "integer",
@@ -1235,10 +1087,7 @@
                       "maxLength": 280
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1264,10 +1113,7 @@
                     "auto": {
                       "default": "read",
                       "type": "string",
-                      "enum": [
-                        "read",
-                        "low"
-                      ]
+                      "enum": ["read", "low"]
                     },
                     "authz": {
                       "type": "string"
@@ -1286,11 +1132,7 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": [
-                    "userId",
-                    "requirement",
-                    "auto"
-                  ],
+                  "required": ["userId", "requirement", "auto"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1311,11 +1153,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "list",
-                        "status",
-                        "set"
-                      ]
+                      "enum": ["list", "status", "set"]
                     },
                     "entity": {
                       "type": "string"
@@ -1325,10 +1163,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1349,12 +1184,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "update",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "update", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -1382,10 +1212,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1406,13 +1233,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "create",
-                        "list",
-                        "due",
-                        "complete",
-                        "delete"
-                      ]
+                      "enum": ["create", "list", "due", "complete", "delete"]
                     },
                     "id": {
                       "type": "string"
@@ -1443,10 +1264,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1467,12 +1285,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "start",
-                        "active",
-                        "done",
-                        "cancel"
-                      ]
+                      "enum": ["start", "active", "done", "cancel"]
                     },
                     "label": {
                       "type": "string"
@@ -1486,10 +1299,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1510,10 +1320,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "search",
-                        "fetch"
-                      ]
+                      "enum": ["search", "fetch"]
                     },
                     "q": {
                       "type": "string",
@@ -1537,10 +1344,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "userId",
-                    "action"
-                  ],
+                  "required": ["userId", "action"],
                   "additionalProperties": false
                 },
                 "strict": false
@@ -1585,18 +1389,10 @@
                     "kind": {
                       "default": "relates_to",
                       "type": "string",
-                      "enum": [
-                        "relates_to",
-                        "blocks",
-                        "depends_on"
-                      ]
+                      "enum": ["relates_to", "blocks", "depends_on"]
                     }
                   },
-                  "required": [
-                    "fromId",
-                    "toId",
-                    "kind"
-                  ],
+                  "required": ["fromId", "toId", "kind"],
                   "additionalProperties": false
                 },
                 "strict": false

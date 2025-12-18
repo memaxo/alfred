@@ -62,7 +62,7 @@ export function DriveMode({
         </p>
       </div>
 
-      <Orb status={getAgentState(status)} className="h-64 w-64" />
+      <Orb className="h-64 w-64" status={getAgentState(status)} />
 
       {isProcessing && <Load message="Processing your request..." />}
 

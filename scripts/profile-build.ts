@@ -29,10 +29,10 @@
  *     logs/         - stdout.log, stderr.log, gc.log
  */
 
-import { spawn } from "bun";
-import { mkdir, appendFile } from "node:fs/promises";
-import { resolve, basename, join } from "node:path";
 import { createWriteStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
+import { spawn } from "bun";
 
 type Options = {
   cwd: string;
@@ -181,8 +181,12 @@ async function main(): Promise<void> {
   console.log(`│ Working directory: ${cwdAbsolute}`);
   console.log(`│ Output directory:  ${outputDir}`);
   console.log(`│ Max heap size:     ${options.maxOldSpaceSize} MB`);
-  console.log(`│ GC tracing:        ${options.traceGc ? "enabled" : "disabled"}`);
-  console.log(`│ Heap profiling:    ${options.heapProf ? "enabled" : "disabled"}`);
+  console.log(
+    `│ GC tracing:        ${options.traceGc ? "enabled" : "disabled"}`
+  );
+  console.log(
+    `│ Heap profiling:    ${options.heapProf ? "enabled" : "disabled"}`
+  );
   console.log(`│ Command:           ${options.cmd.join(" ")}`);
   console.log("└─────────────────────────────────────────────────────────────");
   console.log();

@@ -99,4 +99,3 @@ export const inferPattern = (
 
   return pattern([], templateToRule(template), accuracy);
 };
-

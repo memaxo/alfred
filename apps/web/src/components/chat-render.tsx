@@ -319,7 +319,14 @@ function renderToolResult(
     return <Plan plan={output} />;
   }
   if (isTaskData(output)) {
-    return <Task id={output.id} title={output.title} status={output.status} progress={output.progress} />;
+    return (
+      <Task
+        id={output.id}
+        progress={output.progress}
+        status={output.status}
+        title={output.title}
+      />
+    );
   }
 
   return (

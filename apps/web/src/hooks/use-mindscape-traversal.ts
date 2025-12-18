@@ -57,7 +57,11 @@ export function useMindscapeTraversal() {
 
     const kindByDbId = new Map<string, "concept" | "knowledge">();
     traversalResult.nodes.forEach((node: GraphNode) => {
-      const nodeId = node.id as { uiId?: string; dbId?: string; hgHash?: string };
+      const nodeId = node.id as {
+        uiId?: string;
+        dbId?: string;
+        hgHash?: string;
+      };
       const dbId = nodeId.dbId ?? nodeId.uiId ?? nodeId.hgHash;
       if (!dbId) {
         return;
@@ -68,7 +72,11 @@ export function useMindscapeTraversal() {
     // 1. Add Nodes
     traversalResult.nodes.forEach((node: GraphNode, index: number) => {
       // Handle union type - access properties that may or may not exist
-      const nodeId = node.id as { uiId?: string; dbId?: string; hgHash?: string };
+      const nodeId = node.id as {
+        uiId?: string;
+        dbId?: string;
+        hgHash?: string;
+      };
       const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
       if (!ref) return;
 
@@ -110,9 +118,12 @@ export function useMindscapeTraversal() {
             label: parsed?.label ?? node.label,
             entityType: parsed?.entityType,
             confidence,
-            archived: typeof props.archived === "string" ? props.archived : undefined,
+            archived:
+              typeof props.archived === "string" ? props.archived : undefined,
             description:
-              typeof props.description === "string" ? props.description : undefined,
+              typeof props.description === "string"
+                ? props.description
+                : undefined,
             graph: {
               dbId: nodeId.dbId,
               hgHash: nodeId.hgHash,

@@ -20,16 +20,20 @@ mock.module("@alfred/agent", () => ({
 }));
 
 // Mock Cognitive Repo
-type SnapshotLike =
-  | { lastEventId: string; state: Record<string, unknown> }
-  | null;
+type SnapshotLike = {
+  lastEventId: string;
+  state: Record<string, unknown>;
+} | null;
 const getLatestSnapshotMock = mock(async (): Promise<SnapshotLike> => null);
 const saveSnapshotMock = mock(async () => {});
 const appendEventMock = mock(
-  async (_streamId: string, _type: string, _payload: Record<string, unknown>) =>
-    ({
-      id: "00000000-0000-0000-0000-000000000001",
-    })
+  async (
+    _streamId: string,
+    _type: string,
+    _payload: Record<string, unknown>
+  ) => ({
+    id: "00000000-0000-0000-0000-000000000001",
+  })
 );
 
 mock.module("@alfred/db", () => ({

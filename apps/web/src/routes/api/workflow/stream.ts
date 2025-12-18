@@ -255,8 +255,10 @@ export async function handleWorkflowStreamRequest(
           });
           return refreshed.obligations;
         },
-        startWorkflow: (options: { runId: string; obligations: Obligation[] }) =>
-          startWorkflow(options),
+        startWorkflow: (options: {
+          runId: string;
+          obligations: Obligation[];
+        }) => startWorkflow(options),
         onError: (error: unknown, info: { runId: string }) => {
           const { runId } = info;
           h.logger.error("workflow_resume_failed", {

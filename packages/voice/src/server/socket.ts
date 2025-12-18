@@ -480,7 +480,8 @@ export class VoiceSocketHandler {
         transcript,
         ws.data.runtime
       );
-      const assistantWallSeconds = (performance.now() - assistantTimerStart) / 1000;
+      const assistantWallSeconds =
+        (performance.now() - assistantTimerStart) / 1000;
       // Use hook-provided duration if available, otherwise fall back to wall-clock time
       const durationSeconds = assistant.durationSeconds ?? assistantWallSeconds;
       recordVoiceAssistant({

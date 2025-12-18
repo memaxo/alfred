@@ -5,9 +5,9 @@
  * Microphone input selection for voice recording
  */
 
+import { Mic as MicIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Mic as MicIcon } from "lucide-react";
 
 type MicDevice = {
   id: string;

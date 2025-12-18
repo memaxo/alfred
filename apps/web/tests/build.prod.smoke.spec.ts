@@ -10,4 +10,3 @@ test("renders landing page from production build", async ({ page }) => {
     page.getByRole("heading", { name: "Welcome to ALFRED" })
   ).toBeVisible();
 });
-

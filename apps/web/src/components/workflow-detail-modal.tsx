@@ -233,14 +233,15 @@ export function WorkflowDetailContent({
               )}
             </div>
 
-            {workflow.inputData !== null && workflow.inputData !== undefined && (
-              <div>
-                <h4 className="mb-2 text-biolum-dim text-sm">Input Data</h4>
-                <pre className="overflow-x-auto rounded-xl border border-white/10 bg-void-surface/40 p-4 font-mono text-biolum text-xs">
-                  {JSON.stringify(workflow.inputData, null, 2)}
-                </pre>
-              </div>
-            )}
+            {workflow.inputData !== null &&
+              workflow.inputData !== undefined && (
+                <div>
+                  <h4 className="mb-2 text-biolum-dim text-sm">Input Data</h4>
+                  <pre className="overflow-x-auto rounded-xl border border-white/10 bg-void-surface/40 p-4 font-mono text-biolum text-xs">
+                    {JSON.stringify(workflow.inputData, null, 2)}
+                  </pre>
+                </div>
+              )}
 
             <div className="rounded-3xl border border-white/10 bg-void-surface/40 p-4 backdrop-blur">
               <div className="flex items-start justify-between gap-3">
@@ -328,11 +329,12 @@ export function WorkflowDetailContent({
                             ).toLocaleTimeString()}
                           </span>
                         </div>
-                        {event.eventData !== null && event.eventData !== undefined && (
-                          <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
-                            {JSON.stringify(event.eventData, null, 2)}
-                          </pre>
-                        )}
+                        {event.eventData !== null &&
+                          event.eventData !== undefined && (
+                            <pre className="mt-2 overflow-x-auto font-mono text-biolum-dim text-xs">
+                              {JSON.stringify(event.eventData, null, 2)}
+                            </pre>
+                          )}
                       </div>
                     </div>
                   </div>

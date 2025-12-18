@@ -75,7 +75,9 @@ type KnowledgeEntry = {
  * Execute knowledge_query
  * Searches the knowledge graph using natural language
  */
-export async function executeQuery(input: KnowledgeQueryInput): Promise<KnowledgeQueryOutput> {
+export async function executeQuery(
+  input: KnowledgeQueryInput
+): Promise<KnowledgeQueryOutput> {
   // Dynamic imports to avoid bundling issues
   const graphPkg = "@alfred/db/repo/graph";
   const graphRepo = await import(graphPkg);
@@ -84,7 +86,10 @@ export async function executeQuery(input: KnowledgeQueryInput): Promise<Knowledg
 
   // Build in-memory hypergraph from database nodes
   // For simplicity, we query nodes directly and use text matching
-  const allNodes: NodeRow[] = await graphRepo.findNodesByKind("fact", limit * 3);
+  const allNodes: NodeRow[] = await graphRepo.findNodesByKind(
+    "fact",
+    limit * 3
+  );
 
   // Filter by resource if specified
   const filteredNodes = input.resource
@@ -93,7 +98,9 @@ export async function executeQuery(input: KnowledgeQueryInput): Promise<Knowledg
 
   // Simple text-based search using query terms
   const queryLower = input.query.toLowerCase();
-  const queryTerms = queryLower.split(/\s+/).filter((t: string) => t.length > 2);
+  const queryTerms = queryLower
+    .split(/\s+/)
+    .filter((t: string) => t.length > 2);
 
   type ScoredNode = { node: NodeRow; score: number };
   const scoredNodes: ScoredNode[] = filteredNodes
@@ -157,7 +164,9 @@ export async function executeQuery(input: KnowledgeQueryInput): Promise<Knowledg
  * Execute knowledge_extract
  * Extracts facts and relations from text and persists to graph
  */
-export async function executeExtract(input: KnowledgeExtractInput): Promise<KnowledgeExtractOutput> {
+export async function executeExtract(
+  input: KnowledgeExtractInput
+): Promise<KnowledgeExtractOutput> {
   const knowledgePkg = "@alfred/knowledge";
   const graphPkg = "@alfred/db/repo/graph";
 
@@ -251,7 +260,11 @@ export async function executeExtract(input: KnowledgeExtractInput): Promise<Know
   const relations: KnowledgeExtractOutput["relations"] = [];
 
   for (const [, row] of nodeMap.entries()) {
-    if (row.kind === "fact" || row.kind === "insight" || row.kind === "pattern") {
+    if (
+      row.kind === "fact" ||
+      row.kind === "insight" ||
+      row.kind === "pattern"
+    ) {
       facts.push({
         id: row.id,
         label: row.label,
@@ -287,7 +300,9 @@ export async function executeExtract(input: KnowledgeExtractInput): Promise<Know
  * Execute knowledge_connect
  * Creates an edge between two nodes in the knowledge graph
  */
-export async function executeConnect(input: KnowledgeConnectInput): Promise<KnowledgeConnectOutput> {
+export async function executeConnect(
+  input: KnowledgeConnectInput
+): Promise<KnowledgeConnectOutput> {
   const graphPkg = "@alfred/db/repo/graph";
   const graphRepo = await import(graphPkg);
 
@@ -355,7 +370,7 @@ function mergeRecord(
   patch: Record<string, unknown> | undefined
 ): Record<string, unknown> | undefined {
   if (!patch) {
-    return undefined;
+    return;
   }
   return { ...recordFromUnknown(base), ...patch };
 }
@@ -468,7 +483,10 @@ export async function executeCorrect(
   const previousValue = { label: node.label, properties: node.properties };
 
   if (operation === "delete") {
-    const archivedCount: number = await graphRepo.archiveNodes([node.id], reason);
+    const archivedCount: number = await graphRepo.archiveNodes(
+      [node.id],
+      reason
+    );
 
     const correction: CorrectionRow = await graphRepo.createCorrection({
       userId,
@@ -509,7 +527,7 @@ export async function executeCorrect(
 
   const nextProperties = mergeRecord(node.properties, propertiesPatch);
 
-  if (!newLabel && !nextProperties) {
+  if (!(newLabel || nextProperties)) {
     throw new Error("knowledge_correct_update_empty");
   }
 
@@ -530,7 +548,10 @@ export async function executeCorrect(
     operation: "update",
     reason,
     previous: previousValue,
-    patch: { newValue: newLabel ?? null, propertiesPatch: propertiesPatch ?? null },
+    patch: {
+      newValue: newLabel ?? null,
+      propertiesPatch: propertiesPatch ?? null,
+    },
   });
 
   void recordAudit({

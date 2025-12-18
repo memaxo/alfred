@@ -91,21 +91,25 @@ describe("knowledge.visualize (sqlite)", () => {
     expect(result.meta.extractedEntities).toBeGreaterThan(0);
 
     const storedAll = await db
-      .select({ id: memoryNodes.id, label: memoryNodes.label, kind: memoryNodes.kind })
+      .select({
+        id: memoryNodes.id,
+        label: memoryNodes.label,
+        kind: memoryNodes.kind,
+      })
       .from(memoryNodes)
       .where(eq(memoryNodes.resource, resource));
 
     expect(storedAll.length).toBeGreaterThan(0);
     expect(
       storedAll.some((row) =>
-        /^[\[(]entity:/.test(row.label.trim().toLowerCase())
+        /^[[(]entity:/.test(row.label.trim().toLowerCase())
       )
     ).toBe(true);
 
     expect(result.nodes.length).toBeGreaterThanOrEqual(2);
-    expect(result.nodes.some((n) => n.label.toLowerCase().includes("elon"))).toBe(
-      true
-    );
+    expect(
+      result.nodes.some((n) => n.label.toLowerCase().includes("elon"))
+    ).toBe(true);
     expect(
       result.nodes.some((n) => n.label.toLowerCase().includes("spacex"))
     ).toBe(true);
@@ -120,7 +124,7 @@ describe("knowledge.visualize (sqlite)", () => {
 
     expect(stored.length).toBeGreaterThan(0);
     expect(
-      stored.some((row) => /^[\[(]entity:/.test(row.label.trim().toLowerCase()))
+      stored.some((row) => /^[[(]entity:/.test(row.label.trim().toLowerCase()))
     ).toBe(true);
   });
 
@@ -167,4 +171,3 @@ describe("knowledge.visualize (sqlite)", () => {
     expect(spacexNodes.length).toBeLessThanOrEqual(1);
   });
 });
-

@@ -516,7 +516,8 @@ export async function orchestrateWorkflowStream(
       }
       const payload = coerceRecord(event);
       const text =
-        coerceNonEmptyString(payload.text) ?? coerceNonEmptyString(payload.reasoning);
+        coerceNonEmptyString(payload.text) ??
+        coerceNonEmptyString(payload.reasoning);
       if (!text) {
         return;
       }
@@ -606,7 +607,9 @@ export async function orchestrateWorkflowStream(
               linearIssueId:
                 input.linear?.issueId ?? input.linear?.sessionId ?? undefined,
               linearIssueUrl:
-                linearIssueUrlFromCreation ?? input.linear?.issueUrl ?? undefined,
+                linearIssueUrlFromCreation ??
+                input.linear?.issueUrl ??
+                undefined,
             },
           },
         ]).catch((error) => {
@@ -717,8 +720,7 @@ export async function orchestrateWorkflowStream(
             multiAgentWavesTotal.inc({ status: "started" });
           } else if (kind === "wave-result") {
             const data = coerceRecord(evt.data);
-            const status =
-              coerceNonEmptyString(data.status) ?? "completed";
+            const status = coerceNonEmptyString(data.status) ?? "completed";
             multiAgentWavesTotal.inc({ status });
 
             const agents: Array<{
@@ -727,12 +729,13 @@ export async function orchestrateWorkflowStream(
               stuck?: boolean;
               durationSeconds?: number;
             }> = Array.isArray(data.agents)
-              ? (data.agents as Array<Record<string, unknown>>).map(coerceRecord)
+              ? (data.agents as Array<Record<string, unknown>>).map(
+                  coerceRecord
+                )
               : [];
 
             for (const agent of agents) {
-              const role =
-                coerceNonEmptyString(agent.role) ?? "worker";
+              const role = coerceNonEmptyString(agent.role) ?? "worker";
               const rawStatus = coerceNonEmptyString(agent.status);
               const outcome: "ok" | "error" | "stuck" =
                 rawStatus === "stuck" || agent.stuck
@@ -778,7 +781,8 @@ export async function orchestrateWorkflowStream(
               type: coerceNonEmptyString(check.type) ?? undefined,
               status: coerceNonEmptyString(check.status) ?? undefined,
               attempt:
-                typeof check.attempt === "number" && Number.isFinite(check.attempt)
+                typeof check.attempt === "number" &&
+                Number.isFinite(check.attempt)
                   ? check.attempt
                   : undefined,
               evidence,
@@ -791,8 +795,7 @@ export async function orchestrateWorkflowStream(
             kind === "review-exec-result"
           ) {
             const data = coerceRecord(evt.data);
-            const role =
-              coerceNonEmptyString(data.role) ?? "worker";
+            const role = coerceNonEmptyString(data.role) ?? "worker";
             const rawStatus = coerceNonEmptyString(data.status);
             const outcome: "ok" | "error" | "stuck" =
               rawStatus === "stuck"
@@ -819,7 +822,9 @@ export async function orchestrateWorkflowStream(
             }
           } else if (kind === "review-escalated") {
             reviewEscalation = {
-              reason: coerceNonEmptyString(coerceRecord(evt.data).reason) ?? undefined,
+              reason:
+                coerceNonEmptyString(coerceRecord(evt.data).reason) ??
+                undefined,
               attempts:
                 typeof coerceRecord(evt.data).attempts === "number"
                   ? (coerceRecord(evt.data).attempts as number)
@@ -828,14 +833,18 @@ export async function orchestrateWorkflowStream(
                 typeof coerceRecord(evt.data).fixerAttempts === "number"
                   ? (coerceRecord(evt.data).fixerAttempts as number)
                   : undefined,
-              plan: coerceNonEmptyString(coerceRecord(evt.data).plan) ?? undefined,
+              plan:
+                coerceNonEmptyString(coerceRecord(evt.data).plan) ?? undefined,
               failures: Array.isArray(coerceRecord(evt.data).failures)
-                ? (coerceRecord(evt.data).failures as ReviewEscalationSummary["failures"])
+                ? (coerceRecord(evt.data)
+                    .failures as ReviewEscalationSummary["failures"])
                 : undefined,
               relevantFiles: Array.isArray(coerceRecord(evt.data).relevantFiles)
                 ? (coerceRecord(evt.data).relevantFiles as string[])
                 : undefined,
-              summary: coerceNonEmptyString(coerceRecord(evt.data).summary) ?? undefined,
+              summary:
+                coerceNonEmptyString(coerceRecord(evt.data).summary) ??
+                undefined,
             };
             if (!reviewEscalationMetricRecorded) {
               const metricKind = formatEscalationMetricKind(

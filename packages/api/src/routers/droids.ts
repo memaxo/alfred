@@ -341,7 +341,10 @@ async function loadPendingOrFail(runId: string): Promise<PendingResumeEntry> {
       message: "run_not_found_or_expired",
     });
   }
-  const pending: PendingResumeEntry = { type: record.type, input: record.input };
+  const pending: PendingResumeEntry = {
+    type: record.type,
+    input: record.input,
+  };
   pendingResumableRuns.set(runId, pending);
   return pending;
 }

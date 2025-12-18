@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { TRPCError } from "@trpc/server";
-import { createTestCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
+import { createTestCaller } from "./utils/trpc";
 
 describe("terminal router", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -34,8 +34,9 @@ describe("terminal router", () => {
       });
 
       const subscribers = new Set<(chunk: string) => void>();
-      let dataCallback: ((term: unknown, data: string | Uint8Array) => void) | null =
-        null;
+      let dataCallback:
+        | ((term: unknown, data: string | Uint8Array) => void)
+        | null = null;
 
       const mockProc = {
         terminal: {
@@ -130,7 +131,7 @@ describe("terminal router", () => {
       // Note: This test assumes node-pty mock is available via mock-node-pty.ts
       // To test true unavailability, we'd need to temporarily disable the mock
       // For now, we verify the error handling structure exists
-      
+
       // This test verifies the error path exists; actual unavailability testing
       // would require more complex mocking setup that's not worth the complexity
       expect(true).toBe(true); // Placeholder - error path is tested in integration
@@ -146,8 +147,9 @@ describe("terminal router", () => {
       });
 
       const subscribers = new Set<(chunk: string) => void>();
-      let dataCallback: ((term: unknown, data: string | Uint8Array) => void) | null =
-        null;
+      let dataCallback:
+        | ((term: unknown, data: string | Uint8Array) => void)
+        | null = null;
 
       const mockProc = {
         terminal: {
@@ -200,7 +202,9 @@ describe("terminal router", () => {
 
     it("emits NOT_FOUND for invalid sessionId", async () => {
       let error: TRPCError | null = null;
-      const observable = await caller.terminal.events({ sessionId: "invalid-id" });
+      const observable = await caller.terminal.events({
+        sessionId: "invalid-id",
+      });
       const subscription = toObservable(observable);
 
       await new Promise<void>((resolve) => {
@@ -239,9 +243,9 @@ describe("terminal router", () => {
         kill: vi.fn(),
       };
 
-      const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => {
-        return mockProc as unknown as Bun.Subprocess;
-      });
+      const spawnSpy = vi
+        .spyOn(Bun, "spawn")
+        .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({
         cols: 80,
@@ -293,9 +297,9 @@ describe("terminal router", () => {
         kill: vi.fn(),
       };
 
-      const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => {
-        return mockProc as unknown as Bun.Subprocess;
-      });
+      const spawnSpy = vi
+        .spyOn(Bun, "spawn")
+        .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({
         cols: 80,
@@ -342,9 +346,9 @@ describe("terminal router", () => {
         kill: mockKill,
       };
 
-      const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => {
-        return mockProc as unknown as Bun.Subprocess;
-      });
+      const spawnSpy = vi
+        .spyOn(Bun, "spawn")
+        .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({
         cols: 80,

@@ -20,16 +20,11 @@ export interface BuildInfo {
  */
 export function getBuildInfo(): BuildInfo {
   return {
-    version:
-      typeof BUILD_VERSION !== "undefined" ? BUILD_VERSION : "dev",
+    version: typeof BUILD_VERSION !== "undefined" ? BUILD_VERSION : "dev",
     buildTime:
-      typeof BUILD_TIME !== "undefined"
-        ? BUILD_TIME
-        : new Date().toISOString(),
-    commit:
-      typeof GIT_COMMIT !== "undefined" ? GIT_COMMIT : "unknown",
-    branch:
-      typeof GIT_BRANCH !== "undefined" ? GIT_BRANCH : "unknown",
+      typeof BUILD_TIME !== "undefined" ? BUILD_TIME : new Date().toISOString(),
+    commit: typeof GIT_COMMIT !== "undefined" ? GIT_COMMIT : "unknown",
+    branch: typeof GIT_BRANCH !== "undefined" ? GIT_BRANCH : "unknown",
     nodeEnv:
       typeof NODE_ENV !== "undefined"
         ? NODE_ENV

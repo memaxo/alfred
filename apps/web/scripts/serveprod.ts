@@ -44,4 +44,3 @@ const server = Bun.serve({
 });
 
 process.stdout.write(`[serveprod] http://${host}:${server.port}\n`);
-

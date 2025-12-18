@@ -1,8 +1,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { persistExecPlans } from "@alfred/agent/assistant/graphstore";
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";

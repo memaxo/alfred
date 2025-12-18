@@ -1,5 +1,5 @@
-import nlp from "compromise";
 import type * as chrono from "chrono-node";
+import type nlp from "compromise";
 
 /**
  * Type definitions for knowledge extraction
@@ -141,4 +141,3 @@ export type MaybeMentionTerm = {
 };
 
 export type MentionRecord = EntityMention & { entity: Entity };
-

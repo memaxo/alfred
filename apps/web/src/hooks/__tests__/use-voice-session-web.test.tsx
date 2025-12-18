@@ -1,6 +1,6 @@
 import "@/test/dom";
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { useVoiceSessionWeb } from "../use-voice-session-web";
 
 const sttMutate = vi.fn();

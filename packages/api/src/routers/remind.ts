@@ -38,7 +38,8 @@ export const remindRouter = router({
           properties: {
             entity: { kind: "reminder", id: reminder.id },
             title: reminder.title,
-            due: reminder.due instanceof Date ? reminder.due.toISOString() : null,
+            due:
+              reminder.due instanceof Date ? reminder.due.toISOString() : null,
             status: reminder.fired ? "fired" : "scheduled",
           },
         },

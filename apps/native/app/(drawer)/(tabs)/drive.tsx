@@ -18,6 +18,8 @@ const THREAD_ID = "drive-mode";
 
 type Status = "idle" | "holding" | "thinking" | "responding" | "error";
 
+type VoiceSession = ReturnType<typeof useVoiceSessionNative>;
+
 function getDrivePalette(isDarkColorScheme: boolean) {
   return {
     background: isDarkColorScheme ? "bg-black" : "bg-white",
@@ -34,7 +36,10 @@ function getDrivePalette(isDarkColorScheme: boolean) {
   };
 }
 
-async function processQueueItem(item: PendingItem, voice: any): Promise<any> {
+async function processQueueItem(
+  item: PendingItem,
+  voice: VoiceSession
+): Promise<unknown> {
   if (item.kind === "stt") {
     const result = await trpcClient.voice.sttTranscribe.mutate({
       audioBase64: item.payload.audioBase64,

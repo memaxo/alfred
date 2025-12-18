@@ -1,9 +1,9 @@
+import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import type { ExecutionPlan, ExecutionStep } from "@alfred/cognitive";
 import type { RiskAssessment } from "@alfred/cognitive/logic/autonomy";
 import { shouldGateExecution } from "@alfred/cognitive/logic/autonomy";
-import { executing, initialAutonomy } from "@alfred/cognitive/state";
 import type { Plan as CognitivePlan } from "@alfred/cognitive/state";
-import { wrapEventEnvelope } from "@alfred/agent/utils/envelope";
+import { executing, initialAutonomy } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { classifyPlanRisk } from "../engines/safety";
@@ -80,7 +80,10 @@ export class PlanRunner {
             retryable: step.retryable,
           })),
           duration: plan.duration,
-          confidence: Math.max(0, Math.min(1, plan.confidence)) as unknown as CognitivePlan["confidence"],
+          confidence: Math.max(
+            0,
+            Math.min(1, plan.confidence)
+          ) as unknown as CognitivePlan["confidence"],
         };
         const state = executing(Date.now(), planForState, currentAutonomy);
         const persistedState: Record<string, unknown> = {
@@ -266,7 +269,7 @@ function summarizeStepOutput(output: unknown): unknown {
     return output;
   }
   if (typeof output === "undefined") {
-    return undefined;
+    return;
   }
 
   // Avoid throwing on complex/non-serializable tool outputs.

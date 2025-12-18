@@ -19,10 +19,10 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
-import { hasWindow } from "@/lib/env/isomorphic";
 import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
 import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
+import { hasWindow } from "@/lib/env/isomorphic";
 import {
   type ArtifactData,
   type KnowledgeNodeData,
@@ -603,7 +603,8 @@ function MindscapeCanvasInner({
       const localEdge =
         added.find(
           (edge) =>
-            edge.source === connection.source && edge.target === connection.target
+            edge.source === connection.source &&
+            edge.target === connection.target
         ) ?? added[0];
       if (!localEdge) {
         return;

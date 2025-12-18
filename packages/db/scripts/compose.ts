@@ -1,4 +1,6 @@
-function isNonEmptyArray<T>(value: readonly T[]): value is readonly [T, ...T[]] {
+function isNonEmptyArray<T>(
+  value: readonly T[]
+): value is readonly [T, ...T[]] {
   return value.length > 0;
 }
 
@@ -26,11 +28,7 @@ async function probe(cmd: string, args: readonly string[]): Promise<boolean> {
 
 const args = process.argv.slice(2);
 
-if (!isNonEmptyArray(args)) {
-  // biome-ignore lint/suspicious/noConsole: CLI tool output.
-  console.error("usage: bun scripts/compose.ts <compose-args...>");
-  process.exitCode = 2;
-} else {
+if (isNonEmptyArray(args)) {
   if (await probe("docker", ["compose", "version"])) {
     process.exitCode = await run("docker", ["compose", ...args]);
   } else if (await probe("docker-compose", ["version"])) {
@@ -38,5 +36,8 @@ if (!isNonEmptyArray(args)) {
   } else {
     throw new Error("docker_compose_unavailable");
   }
+} else {
+  // biome-ignore lint/suspicious/noConsole: CLI tool output.
+  console.error("usage: bun scripts/compose.ts <compose-args...>");
+  process.exitCode = 2;
 }
-

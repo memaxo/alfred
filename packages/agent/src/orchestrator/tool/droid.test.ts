@@ -22,7 +22,9 @@ describe("extractDroidReasoning", () => {
       role: "assistant",
       text: "Let me check the file structure.",
     };
-    expect(extractDroidReasoning(chunk)).toBe("Let me check the file structure.");
+    expect(extractDroidReasoning(chunk)).toBe(
+      "Let me check the file structure."
+    );
   });
 
   it("extracts reasoning from message with 'analyzing' marker", () => {
@@ -84,7 +86,7 @@ describe("appendReasoningTrace", () => {
       truncated: false,
     };
     const text = "I'll analyze the code.";
-    const timestamp = 1234567890;
+    const timestamp = 1_234_567_890;
 
     appendReasoningTrace(acc, text, timestamp);
 
@@ -101,9 +103,9 @@ describe("appendReasoningTrace", () => {
       truncated: false,
     };
 
-    appendReasoningTrace(acc, "", 1234567890);
-    appendReasoningTrace(acc, "   ", 1234567890);
-    appendReasoningTrace(acc, "\n\t", 1234567890);
+    appendReasoningTrace(acc, "", 1_234_567_890);
+    appendReasoningTrace(acc, "   ", 1_234_567_890);
+    appendReasoningTrace(acc, "\n\t", 1_234_567_890);
 
     expect(acc.traces).toHaveLength(0);
     expect(acc.storedBytes).toBe(0);
@@ -118,7 +120,7 @@ describe("appendReasoningTrace", () => {
 
     // Fill accumulator beyond 5MB limit
     const largeText = "x".repeat(6 * 1024 * 1024); // 6MB exceeds 5MB limit
-    appendReasoningTrace(acc, largeText, 1234567890);
+    appendReasoningTrace(acc, largeText, 1_234_567_890);
 
     expect(acc.truncated).toBe(true);
     expect(acc.storedBytes).toBeLessThanOrEqual(6 * 1024 * 1024);
@@ -133,13 +135,13 @@ describe("appendReasoningTrace", () => {
 
     // Fill to truncation
     const largeText = "x".repeat(6 * 1024 * 1024); // 6MB, exceeds limit
-    appendReasoningTrace(acc, largeText, 1234567890);
+    appendReasoningTrace(acc, largeText, 1_234_567_890);
 
     const initialTraces = acc.traces.length;
     const initialBytes = acc.storedBytes;
 
     // Try to add more after truncation
-    appendReasoningTrace(acc, "More reasoning", 1234567891);
+    appendReasoningTrace(acc, "More reasoning", 1_234_567_891);
 
     expect(acc.traces).toHaveLength(initialTraces);
     expect(acc.storedBytes).toBeGreaterThan(initialBytes); // Still tracks bytes
@@ -177,4 +179,3 @@ describe("appendReasoningTrace", () => {
     expect(acc.traces[0]?.timestamp).toBeLessThanOrEqual(after);
   });
 });
-

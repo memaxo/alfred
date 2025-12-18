@@ -114,16 +114,14 @@ async function run() {
       "kill-session",
       "-t",
       sessionName,
-      ]);
+    ]);
   } finally {
-    await workspace
-      .cleanup()
-      .catch(() => {
-        // Ignore cleanup errors
-      });
+    await workspace.cleanup().catch(() => {
+      // Ignore cleanup errors
+    });
   }
 }
 
-  await run().catch(() => {
-    process.exitCode = 1;
-  });
+await run().catch(() => {
+  process.exitCode = 1;
+});

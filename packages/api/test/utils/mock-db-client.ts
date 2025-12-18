@@ -136,14 +136,8 @@ export const dbModuleStub = {
 };
 
 mock.module("@alfred/db", () => dbModuleStub);
-mock.module(
-  "@alfred/db/repo/conversation",
-  () => conversationRepoShim
-);
-mock.module(
-  "@alfred/db/src/repo/conversation",
-  () => conversationRepoShim
-);
+mock.module("@alfred/db/repo/conversation", () => conversationRepoShim);
+mock.module("@alfred/db/src/repo/conversation", () => conversationRepoShim);
 mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
 mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
 

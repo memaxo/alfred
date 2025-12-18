@@ -1,10 +1,10 @@
 /**
  * Server-only environment variable access utilities.
- * 
+ *
  * These functions use `createServerOnlyFn` to ensure they can only be called
  * on the server. If accidentally called from client code, they will throw
  * a runtime error, preventing server code leakage into client bundles.
- * 
+ *
  * All environment variable access in server functions should use these utilities
  * instead of direct `process.env` access.
  */

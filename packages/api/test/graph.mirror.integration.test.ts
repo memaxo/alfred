@@ -106,7 +106,10 @@ describe("graph mirror integration (sqlite)", () => {
       .select({ id: memoryNodes.id, hash: memoryNodes.hash })
       .from(memoryNodes)
       .where(
-        and(eq(memoryNodes.resource, "user"), inArray(memoryNodes.hash, expectedHashes))
+        and(
+          eq(memoryNodes.resource, "user"),
+          inArray(memoryNodes.hash, expectedHashes)
+        )
       );
 
     expect(rows).toHaveLength(3);

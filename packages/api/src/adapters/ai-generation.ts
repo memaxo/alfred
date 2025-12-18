@@ -1,6 +1,10 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
 import type { AIAdapter } from "@alfred/type/ai-adapter";
-import type { GenerateObjectResult, GenerateTextResult, ModelMessage } from "ai";
+import type {
+  GenerateObjectResult,
+  GenerateTextResult,
+  ModelMessage,
+} from "ai";
 import { generateObject, generateText } from "ai";
 import type { z } from "zod";
 

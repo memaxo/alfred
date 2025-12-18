@@ -1,6 +1,9 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { userRepo } from "@alfred/db";
-import { preferenceKeySchema, preferenceValueSchema } from "@alfred/type/preference";
+import {
+  preferenceKeySchema,
+  preferenceValueSchema,
+} from "@alfred/type/preference";
 import { z } from "zod";
 
 import { recordAssistantToolCall } from "../../../src/metrics";
@@ -64,7 +67,9 @@ export const toolPreferenceGet = {
     });
 
     const rows = await userRepo.getPreferences(input.userId);
-    const list = Array.isArray(rows) ? (rows as Array<Record<string, unknown>>) : [];
+    const list = Array.isArray(rows)
+      ? (rows as Array<Record<string, unknown>>)
+      : [];
 
     const filtered = list
       .filter((row) => {
@@ -157,4 +162,3 @@ export const toolPreferenceSet = {
 
 export type ToolPreferenceGet = typeof toolPreferenceGet;
 export type ToolPreferenceSet = typeof toolPreferenceSet;
-

@@ -76,7 +76,8 @@ const aiToolKnowledgeQueryBase = {
   description: toolKnowledgeQuery.description,
   parameters: toolKnowledgeQuery.inputSchema,
   inputSchema: toolKnowledgeQuery.inputSchema,
-  execute: async (input: KnowledgeQueryInput) => toolKnowledgeQuery.execute({ input }),
+  execute: async (input: KnowledgeQueryInput) =>
+    toolKnowledgeQuery.execute({ input }),
 };
 
 export const aiToolKnowledgeQuery = withPolicyApproval(
@@ -113,7 +114,8 @@ const aiToolKnowledgeExtractBase = {
   description: toolKnowledgeExtract.description,
   parameters: toolKnowledgeExtract.inputSchema,
   inputSchema: toolKnowledgeExtract.inputSchema,
-  execute: async (input: KnowledgeExtractInput) => toolKnowledgeExtract.execute({ input }),
+  execute: async (input: KnowledgeExtractInput) =>
+    toolKnowledgeExtract.execute({ input }),
 };
 
 export const aiToolKnowledgeExtract = withPolicyApproval(
@@ -153,7 +155,8 @@ const aiToolKnowledgeConnectBase = {
   description: toolKnowledgeConnect.description,
   parameters: toolKnowledgeConnect.inputSchema,
   inputSchema: toolKnowledgeConnect.inputSchema,
-  execute: async (input: KnowledgeConnectInput) => toolKnowledgeConnect.execute({ input }),
+  execute: async (input: KnowledgeConnectInput) =>
+    toolKnowledgeConnect.execute({ input }),
 };
 
 export const aiToolKnowledgeConnect = withPolicyApproval(

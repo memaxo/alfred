@@ -1,4 +1,8 @@
-import type { GenerateObjectResult, GenerateTextResult, ModelMessage } from "ai";
+import type {
+  GenerateObjectResult,
+  GenerateTextResult,
+  ModelMessage,
+} from "ai";
 import type { z } from "zod";
 
 export type AIAdapter = {

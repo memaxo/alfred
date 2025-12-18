@@ -13,8 +13,8 @@ import {
 } from "@alfred/api/scheduler/remind";
 import { logger } from "@alfred/logger";
 import {
-  getSchedRemind,
   getSchedPreferenceInference,
+  getSchedRemind,
 } from "@/lib/env/server-only";
 
 let initialized = false;
@@ -23,7 +23,7 @@ let initialized = false;
  * Initialize all server-side services
  * - Reminder scheduler (if enabled)
  * - API services (compression worker, voice pools)
- * 
+ *
  * Uses server-only environment utilities to prevent server code leakage
  * into client bundles.
  */

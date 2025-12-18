@@ -93,7 +93,7 @@ function base64Decode(value: string) {
  * Uses isomorphic pattern for proper tree-shaking.
  * Server implementation checks process.env.
  * Client implementation uses import.meta.env.
- * 
+ *
  * Note: This function remains synchronous for compatibility with existing callers.
  * For async server-only access, use server-only utilities directly.
  */
@@ -119,7 +119,7 @@ function getEnv(key: string): string | undefined {
 
 /**
  * Check if test mode is enabled.
- * 
+ *
  * Uses isomorphic hasWindow utility and synchronous environment checks.
  * For server-side async test mode detection, use getTestMode from isomorphic utilities.
  */
@@ -287,7 +287,7 @@ export function createTestModeFetch(): typeof fetch | undefined {
       headers,
     });
   };
-  
+
   // Copy fetch properties if they exist (for TypeScript compatibility)
   return testFetch as typeof fetch;
 }

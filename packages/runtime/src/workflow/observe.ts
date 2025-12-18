@@ -32,7 +32,8 @@ function maybeCaptureReasoning(args: {
   }
   const payload = coerceRecord(args.event);
   const text =
-    coerceNonEmptyString(payload.text) ?? coerceNonEmptyString(payload.reasoning);
+    coerceNonEmptyString(payload.text) ??
+    coerceNonEmptyString(payload.reasoning);
   if (!text) {
     return;
   }
@@ -192,4 +193,3 @@ export function observeEvent(args: {
     // Reasoning capture must never break streaming.
   }
 }
-

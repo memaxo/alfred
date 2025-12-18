@@ -29,11 +29,9 @@ mock.module("@alfred/logger", () => ({
   },
 }));
 
-const {
-  toolLearnMistake,
-  toolLearnPattern,
-  toolLearnRecord,
-} = await import("../src/orchestrator/tool/learning");
+const { toolLearnMistake, toolLearnPattern, toolLearnRecord } = await import(
+  "../src/orchestrator/tool/learning"
+);
 
 describe("Learning Tools", () => {
   beforeEach(() => {
@@ -51,7 +49,9 @@ describe("Learning Tools", () => {
       },
     });
 
-    mockUpsertNodes.mockResolvedValue(new Map([["user:any", { id: "node-1" }]]));
+    mockUpsertNodes.mockResolvedValue(
+      new Map([["user:any", { id: "node-1" }]])
+    );
     mockSupervise.mockReturnValue(null);
   });
 
@@ -214,7 +214,9 @@ describe("Learning Tools", () => {
 
   describe("learn_pattern", () => {
     it("persists pattern and returns patternId (deterministic fallback)", async () => {
-      mockUpsertNodes.mockResolvedValueOnce(new Map([["user:any", { id: "pattern-1" }]]));
+      mockUpsertNodes.mockResolvedValueOnce(
+        new Map([["user:any", { id: "pattern-1" }]])
+      );
 
       const input: LearnPatternInput = {
         description: "Deploy to staging with safe checks",
@@ -243,7 +245,7 @@ describe("Learning Tools", () => {
       const originalEnv = process.env.LEARN_PATTERN_LLM_ENABLED;
       const originalApiKey = process.env.OPENAI_API_KEY;
       const originalModel = process.env.LEARN_PATTERN_MODEL;
-      
+
       try {
         process.env.LEARN_PATTERN_LLM_ENABLED = "true";
         process.env.OPENAI_API_KEY = "test-key";
@@ -267,7 +269,9 @@ describe("Learning Tools", () => {
           object: { rule: "Use git status before deploying to staging" },
         });
 
-        mockUpsertNodes.mockResolvedValueOnce(new Map([["user:any", { id: "pattern-llm-1" }]]));
+        mockUpsertNodes.mockResolvedValueOnce(
+          new Map([["user:any", { id: "pattern-llm-1" }]])
+        );
 
         const input: LearnPatternInput = {
           description: "Deploy to staging",
@@ -298,7 +302,7 @@ describe("Learning Tools", () => {
     it("falls back to heuristic when LLM refinement times out", async () => {
       const originalEnv = process.env.LEARN_PATTERN_LLM_ENABLED;
       const originalApiKey = process.env.OPENAI_API_KEY;
-      
+
       try {
         process.env.LEARN_PATTERN_LLM_ENABLED = "true";
         process.env.OPENAI_API_KEY = "test-key";
@@ -317,10 +321,15 @@ describe("Learning Tools", () => {
 
         // Simulate timeout
         mockGenerateObject.mockImplementation(
-          () => new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 100))
+          () =>
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("timeout")), 100)
+            )
         );
 
-        mockUpsertNodes.mockResolvedValueOnce(new Map([["user:any", { id: "pattern-heuristic-1" }]]));
+        mockUpsertNodes.mockResolvedValueOnce(
+          new Map([["user:any", { id: "pattern-heuristic-1" }]])
+        );
 
         const input: LearnPatternInput = {
           description: "Deploy to staging",
@@ -331,7 +340,9 @@ describe("Learning Tools", () => {
         };
 
         // Re-import to pick up mocked modules
-        const { toolLearnPattern: toolLearnPatternReloaded } = await import("../src/orchestrator/tool/learning");
+        const { toolLearnPattern: toolLearnPatternReloaded } = await import(
+          "../src/orchestrator/tool/learning"
+        );
         const result = await toolLearnPatternReloaded.execute({ input });
 
         expect(result.patternId).toBe("pattern-heuristic-1");
@@ -344,7 +355,9 @@ describe("Learning Tools", () => {
 
   describe("learn_mistake", () => {
     it("persists mistake as heuristic and returns mistakeId", async () => {
-      mockUpsertNodes.mockResolvedValueOnce(new Map([["user:any", { id: "mistake-1" }]]));
+      mockUpsertNodes.mockResolvedValueOnce(
+        new Map([["user:any", { id: "mistake-1" }]])
+      );
 
       const input: LearnMistakeInput = {
         mistake: "Used force push on shared branch",
@@ -370,4 +383,3 @@ describe("Learning Tools", () => {
     });
   });
 });
-

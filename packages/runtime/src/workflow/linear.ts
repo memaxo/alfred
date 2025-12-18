@@ -234,7 +234,9 @@ function buildLinearCompletionComment(args: {
   reviewChecks: ReviewCheckStatus[];
   workflowUrl: string | null;
 }): string {
-  const lines: string[] = [`Workflow run ${args.runId} completed successfully.`];
+  const lines: string[] = [
+    `Workflow run ${args.runId} completed successfully.`,
+  ];
 
   if (args.workflowUrl) {
     lines.push(`Run details: ${args.workflowUrl}`);
@@ -247,7 +249,8 @@ function buildLinearCompletionComment(args: {
   if (args.reviewChecks.length > 0) {
     lines.push("Review checks:");
     for (const check of args.reviewChecks) {
-      const attemptInfo = check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
+      const attemptInfo =
+        check.attempts > 0 ? ` (attempt ${check.attempts})` : "";
       lines.push(`- ${check.type}: ${check.status}${attemptInfo}`);
     }
   } else {

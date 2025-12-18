@@ -155,7 +155,9 @@ export async function ensureLinearTicket(params: {
     ticket: {
       issueId,
       sessionId: issueId,
-      issueUrl: sanitize("url" in result ? (result as { url?: string }).url : undefined),
+      issueUrl: sanitize(
+        "url" in result ? (result as { url?: string }).url : undefined
+      ),
       created: true,
     },
   };

@@ -108,7 +108,8 @@ export const linearActivityEmissionsTotal =
   workflowMetrics.linearActivityEmissionsTotal;
 export const linearSessionOperationsTotal =
   workflowMetrics.linearSessionOperationsTotal;
-export const linearWebhookEventsTotal = workflowMetrics.linearWebhookEventsTotal;
+export const linearWebhookEventsTotal =
+  workflowMetrics.linearWebhookEventsTotal;
 export const linearWebhookWorkflowCancelsTotal =
   workflowMetrics.linearWebhookWorkflowCancelsTotal;
 export const linearWebhookWorkflowStartsTotal =
@@ -119,7 +120,8 @@ export const multiAgentErrorsTotal = workflowMetrics.multiAgentErrorsTotal;
 export const multiAgentTasksTotal = workflowMetrics.multiAgentTasksTotal;
 export const multiAgentWavesTotal = workflowMetrics.multiAgentWavesTotal;
 export const replayQueriesTotal = workflowMetrics.replayQueriesTotal;
-export const replayQueryDurationSeconds = workflowMetrics.replayQueryDurationSeconds;
+export const replayQueryDurationSeconds =
+  workflowMetrics.replayQueryDurationSeconds;
 export const runnerErrorsTotal = workflowMetrics.runnerErrorsTotal;
 export const runnerStepsTotal = workflowMetrics.runnerStepsTotal;
 export const runRegistryDispatchDurationSeconds =
@@ -131,7 +133,8 @@ export const workflowProvenanceEdgesTotal =
   workflowMetrics.workflowProvenanceEdgesTotal;
 export const workflowStreamDurationSeconds =
   workflowMetrics.workflowStreamDurationSeconds;
-export const workflowStreamEventsTotal = workflowMetrics.workflowStreamEventsTotal;
+export const workflowStreamEventsTotal =
+  workflowMetrics.workflowStreamEventsTotal;
 
 // decompositionTruncatedTotal, linearRateLimitTotal, linearRateLimitWaitSeconds,
 // linearRateLimitRetryAfterTotal are now in @alfred/metrics/shared and re-exported below

@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { voiceRouter } from "@alfred/api/routers/voice";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { ensureFfmpegAvailable } from "@alfred/voice/audio/codec";
-import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import * as config from "@alfred/voice/services/config";
+import type { SpeechToSpeechResponse } from "@alfred/voice/types";
 import { HardwareProbe } from "../../src/physical/probe";
 import { SyntheticSignal } from "../../src/physical/signal";
 

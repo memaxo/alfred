@@ -6,14 +6,14 @@ export async function openCommandPalette(page: Page) {
   // but the app listens to either ctrlKey or metaKey. Try Ctrl first, then Meta as fallback.
   await page.keyboard.press("Control+K");
   try {
-    await dialog.waitFor({ state: "visible", timeout: 1_000 });
+    await dialog.waitFor({ state: "visible", timeout: 1000 });
     return;
   } catch (_error) {
     // continue
   }
   await page.keyboard.press("Meta+K");
   try {
-    await dialog.waitFor({ state: "visible", timeout: 1_000 });
+    await dialog.waitFor({ state: "visible", timeout: 1000 });
     return;
   } catch (_error) {
     // continue

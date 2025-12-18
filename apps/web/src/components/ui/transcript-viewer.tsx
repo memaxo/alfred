@@ -207,7 +207,11 @@ function TranscriptViewerWords({
   }, [currentTime, duration]);
 
   type WordOrGap =
-    | { kind: "gap"; segment: TranscriptGap; status: TranscriptViewerWordStatus }
+    | {
+        kind: "gap";
+        segment: TranscriptGap;
+        status: TranscriptViewerWordStatus;
+      }
     | {
         kind: "word";
         word: TranscriptWordType;
@@ -473,7 +477,13 @@ function alignmentToSegments(
     const ch = characters[i];
     const start = starts[i];
     const end = ends[i];
-    if (!(typeof ch === "string" && typeof start === "number" && typeof end === "number")) {
+    if (
+      !(
+        typeof ch === "string" &&
+        typeof start === "number" &&
+        typeof end === "number"
+      )
+    ) {
       continue;
     }
 

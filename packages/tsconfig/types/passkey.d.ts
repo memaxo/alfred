@@ -17,4 +17,3 @@ declare module "@better-auth/passkey" {
 
   export function passkey(options: PasskeyOptions): BetterAuthPlugin;
 }
-

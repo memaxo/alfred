@@ -5,9 +5,13 @@ export type MindscapeUiMessage = z.infer<typeof uiMessageSchema>;
 
 const graphDbIdSchema = z.union([
   // Postgres UUID (production).
-  z.string().uuid(),
+  z
+    .string()
+    .uuid(),
   // SQLite defaultRandom() uuid fallback (Bun tests): lower(hex(randomblob(16))).
-  z.string().regex(/^[0-9a-f]{32}$/i),
+  z
+    .string()
+    .regex(/^[0-9a-f]{32}$/i),
 ]);
 
 const graphMappingSchema = z

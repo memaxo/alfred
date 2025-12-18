@@ -92,9 +92,11 @@ configureLinearMetrics({
       activitiesDropped: codexLinearActivitiesDroppedTotal,
       activityBatches: codexLinearActivityBatchesTotal,
     });
-    sessionManager.configureContinuityMetrics((status: "success" | "failure") => {
-      codexSessionContinuityTotal.inc({ status });
-    });
+    sessionManager.configureContinuityMetrics(
+      (status: "success" | "failure") => {
+        codexSessionContinuityTotal.inc({ status });
+      }
+    );
   } catch (error) {
     logger.warn("codex_linear_metrics_init_failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -527,19 +529,22 @@ export const workflowRouter = router({
 
       const nodeRecords: ReasoningNodeRecord[] = nodes.map(
         (node: (typeof nodes)[number]) => ({
-        id: node.id,
-        hash: node.hash,
-        label: node.label,
-        properties: (node.properties as Record<string, unknown> | null) ?? null,
-      }));
+          id: node.id,
+          hash: node.hash,
+          label: node.label,
+          properties:
+            (node.properties as Record<string, unknown> | null) ?? null,
+        })
+      );
 
       const edgeRecords: ReasoningEdgeRecord[] = edges.map(
         (edge: (typeof edges)[number]) => ({
-        fromId: edge.fromId,
-        toId: edge.toId,
-        kind: edge.kind,
-        metadata: (edge.metadata as Record<string, unknown> | null) ?? null,
-      }));
+          fromId: edge.fromId,
+          toId: edge.toId,
+          kind: edge.kind,
+          metadata: (edge.metadata as Record<string, unknown> | null) ?? null,
+        })
+      );
 
       const chain = reconstructReasoningChain(nodeRecords, edgeRecords);
 

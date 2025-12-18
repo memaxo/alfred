@@ -25,7 +25,10 @@ export function createLifecycle(args: {
   recordEvent: (
     event: "run" | "chunk" | "progress" | "error" | "complete" | "cancel"
   ) => void;
-  triggerPreferenceRefresh: (userId: string, payload: { reason: string }) => void;
+  triggerPreferenceRefresh: (
+    userId: string,
+    payload: { reason: string }
+  ) => void;
   emitComplete: () => void;
 }): Lifecycle {
   let timerClosed = false;
@@ -70,7 +73,9 @@ export function createLifecycle(args: {
         resource: { kind: "workflow", id: runId },
         decision: "allow",
       });
-      args.triggerPreferenceRefresh(args.userId, { reason: "workflow_stream_cancelled" });
+      args.triggerPreferenceRefresh(args.userId, {
+        reason: "workflow_stream_cancelled",
+      });
     } catch (error) {
       logger.warn("workflow_cancellation_update_failed", {
         runId,
@@ -101,7 +106,9 @@ export function createLifecycle(args: {
         resource: { kind: "workflow", id: runId },
         decision: "allow",
       });
-      args.triggerPreferenceRefresh(args.userId, { reason: "workflow_stream_suspended" });
+      args.triggerPreferenceRefresh(args.userId, {
+        reason: "workflow_stream_suspended",
+      });
     } catch (error) {
       logger.warn("workflow_suspension_update_failed", {
         runId,
@@ -132,7 +139,9 @@ export function createLifecycle(args: {
         resource: { kind: "workflow", id: runId },
         decision: "allow",
       });
-      args.triggerPreferenceRefresh(args.userId, { reason: "workflow_stream_complete" });
+      args.triggerPreferenceRefresh(args.userId, {
+        reason: "workflow_stream_complete",
+      });
     } catch (error) {
       logger.warn("workflow_completion_update_failed", {
         runId,
@@ -173,12 +182,16 @@ export function createLifecycle(args: {
         logger.warn("workflow_failure_audit_failed", {
           runId,
           error:
-            auditError instanceof Error ? auditError.message : String(auditError),
+            auditError instanceof Error
+              ? auditError.message
+              : String(auditError),
         });
       }
     }
 
-    await notifyLinearFailure(error instanceof Error ? error.message : String(error));
+    await notifyLinearFailure(
+      error instanceof Error ? error.message : String(error)
+    );
     args.recordEvent("error");
     closeTimer("error");
     if (runId) {
@@ -191,7 +204,9 @@ export function createLifecycle(args: {
         logger.warn("workflow_error_status_update_failed", {
           runId,
           error:
-            updateError instanceof Error ? updateError.message : String(updateError),
+            updateError instanceof Error
+              ? updateError.message
+              : String(updateError),
         });
       }
     }
@@ -208,4 +223,3 @@ export function createLifecycle(args: {
     markFailed,
   };
 }
-

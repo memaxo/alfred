@@ -10,9 +10,7 @@ import {
 
 describe("detectTopics", () => {
   test("detects Coding domain from programming keywords", () => {
-    const result = detectTopics(
-      "I prefer using Bun over Node for my servers."
-    );
+    const result = detectTopics("I prefer using Bun over Node for my servers.");
 
     expect(result.topics).toContain("Coding");
     expect(result.primaryDomain).toBe("Coding");

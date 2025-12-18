@@ -42,10 +42,7 @@ const graphFixture = new Map<
     "election",
     { concept: "Politics", path: ["Election", "Politics"], depth: 1 },
   ],
-  [
-    "headline",
-    { concept: "News", path: ["Headline", "News"], depth: 1 },
-  ],
+  ["headline", { concept: "News", path: ["Headline", "News"], depth: 1 }],
   ["reuters", { concept: "News", path: ["Reuters", "News"], depth: 1 }],
 ]);
 

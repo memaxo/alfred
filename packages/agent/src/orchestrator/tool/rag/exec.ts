@@ -4,8 +4,8 @@
  */
 
 import * as ragRepo from "@alfred/db/repo/rag";
-import { ingest, retrieve } from "@alfred/rag";
 import { logger } from "@alfred/logger";
+import { ingest, retrieve } from "@alfred/rag";
 import type {
   RagDeleteInput,
   RagDeleteOutput,
@@ -123,9 +123,7 @@ export async function executeQuery(
 /**
  * Execute rag_list - List ingested documents
  */
-export async function executeList(
-  input: RagListInput
-): Promise<RagListOutput> {
+export async function executeList(input: RagListInput): Promise<RagListOutput> {
   const limit = input.limit ?? DEFAULT_LIMIT;
 
   const documents = await ragRepo.listDocuments(limit);

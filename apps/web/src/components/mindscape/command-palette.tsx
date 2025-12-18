@@ -1,3 +1,4 @@
+import type { Edge } from "@xyflow/react";
 import {
   Bell,
   Bookmark,
@@ -15,7 +16,6 @@ import {
   UserCircle,
   Workflow,
 } from "lucide-react";
-import type { Edge } from "@xyflow/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -166,7 +166,8 @@ export function MindscapeCommandPalette({
   const edges = useMindscapeStore((state) => state.edges);
   const setEdges = useMindscapeStore((state) => state.setEdges);
   const { getUsage, recordUsage } = useCommandUsage();
-  const { mutateAsync: visualizeKnowledge } = trpc.knowledge.visualize.useMutation();
+  const { mutateAsync: visualizeKnowledge } =
+    trpc.knowledge.visualize.useMutation();
 
   const focusedNode = useMemo(
     () =>
@@ -359,7 +360,9 @@ export function MindscapeCommandPalette({
               .join("\n\n");
           } else if (nodeType === "knowledge") {
             const knowledge = data as KnowledgeData;
-            text = [knowledge.label, knowledge.summary].filter(Boolean).join("\n\n");
+            text = [knowledge.label, knowledge.summary]
+              .filter(Boolean)
+              .join("\n\n");
           } else {
             text = [data.label].filter(Boolean).join("\n\n");
           }
@@ -418,7 +421,9 @@ export function MindscapeCommandPalette({
           });
 
           // Merge concept edges + link focused node to concepts locally
-          const edgeMap = new Map<string, Edge>(edges.map((edge) => [edge.id, edge]));
+          const edgeMap = new Map<string, Edge>(
+            edges.map((edge) => [edge.id, edge])
+          );
 
           for (const edge of result.edges) {
             const source = `concept-${edge.fromId}`;

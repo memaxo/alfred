@@ -22,7 +22,9 @@ export async function resolveVoicePreference(
     const userModule = await import("@alfred/db/repo/user");
     const prefs = await userModule.getPreferences(userId);
     const voicePref = Array.isArray(prefs)
-      ? prefs.find((p: { key: string; value: unknown }) => p.key === "voice.tts")
+      ? prefs.find(
+          (p: { key: string; value: unknown }) => p.key === "voice.tts"
+        )
       : null;
 
     if (voicePref?.value && typeof voicePref.value === "string") {
@@ -31,7 +33,10 @@ export async function resolveVoicePreference(
   } catch (error) {
     try {
       const loggerModule = await import("@alfred/logger");
-      loggerModule.logger.warn("failed_to_resolve_voice_preference", { userId, error });
+      loggerModule.logger.warn("failed_to_resolve_voice_preference", {
+        userId,
+        error,
+      });
     } catch {
       // Ignore logger load failure
     }
@@ -52,7 +57,9 @@ export async function resolveSttLanguagePreference(
     const userModule = await import("@alfred/db/repo/user");
     const prefs = await userModule.getPreferences(userId);
     const langPref = Array.isArray(prefs)
-      ? prefs.find((p: { key: string; value: unknown }) => p.key === "voice.stt.language")
+      ? prefs.find(
+          (p: { key: string; value: unknown }) => p.key === "voice.stt.language"
+        )
       : null;
 
     if (langPref?.value && typeof langPref.value === "string") {
@@ -61,7 +68,10 @@ export async function resolveSttLanguagePreference(
   } catch (error) {
     try {
       const loggerModule = await import("@alfred/logger");
-      loggerModule.logger.warn("failed_to_resolve_stt_preference", { userId, error });
+      loggerModule.logger.warn("failed_to_resolve_stt_preference", {
+        userId,
+        error,
+      });
     } catch {
       // Ignore logger load failure
     }

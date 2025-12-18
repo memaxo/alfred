@@ -2,12 +2,12 @@
 
 /**
  * Script to delegate Linear tickets to Cursor background agents
- * 
+ *
  * This script:
  * 1. Gets issue details for each ticket
  * 2. Updates delegate field to "Cursor"
  * 3. Creates customized instruction comments
- * 
+ *
  * Usage: bun scripts/delegate-linear-tickets.ts
  */
 
@@ -25,7 +25,8 @@ export const TICKETS = [
   {
     id: "ALF-89",
     scope: "Part 3 only: ConceptNode component, visualize procedure",
-    keyFiles: "apps/web/src/components/mindscape/, packages/api/src/routers/knowledge.ts",
+    keyFiles:
+      "apps/web/src/components/mindscape/, packages/api/src/routers/knowledge.ts",
     tests: "Mindscape component tests",
   },
   {
@@ -65,7 +66,8 @@ export const TICKETS = [
   {
     id: "ALF-131",
     scope: "Implement Home Assistant provider",
-    keyFiles: "packages/agent/assistant/src/tool/home/providers/homeassistant.ts",
+    keyFiles:
+      "packages/agent/assistant/src/tool/home/providers/homeassistant.ts",
     tests: "Home automation integration tests",
   },
   {
@@ -120,7 +122,7 @@ export function generateCommentTemplate(issue: {
   tests?: string;
 }): string {
   const { title, description, scope, keyFiles, keyPatterns, tests } = issue;
-  
+
   return `@Cursor Agent Assignment
 
 ## Task
@@ -129,11 +131,19 @@ ${title}
 ## Scope
 ${scope || "See issue description for details"}
 
-${keyFiles ? `## Key Files
-${keyFiles}` : ""}
+${
+  keyFiles
+    ? `## Key Files
+${keyFiles}`
+    : ""
+}
 
-${keyPatterns ? `## Key Patterns
-${keyPatterns}` : ""}
+${
+  keyPatterns
+    ? `## Key Patterns
+${keyPatterns}`
+    : ""
+}
 
 ## Duties
 
@@ -169,8 +179,12 @@ Complete the following in order:
    - [ ] Add completion comment with summary of changes
    - [ ] Reference commit hash in completion comment
 
-${keyFiles ? `## Key Files/Patterns
-${keyFiles}` : ""}
+${
+  keyFiles
+    ? `## Key Files/Patterns
+${keyFiles}`
+    : ""
+}
 
 ## Related Issues
 See issue description for related issues and dependencies.

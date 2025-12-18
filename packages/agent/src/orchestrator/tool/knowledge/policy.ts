@@ -16,7 +16,9 @@ import type {
  * Scope: knowledge.read
  * Autonomy: read (0.0-0.3)
  */
-export async function enforceQueryPolicy(input: KnowledgeQueryInput): Promise<void> {
+export async function enforceQueryPolicy(
+  input: KnowledgeQueryInput
+): Promise<void> {
   await requireToolScopesAndPolicy(input.authz, ["knowledge.read"], {
     action: "knowledge.query",
     resource: {
@@ -31,7 +33,9 @@ export async function enforceQueryPolicy(input: KnowledgeQueryInput): Promise<vo
  * Scope: knowledge.write
  * Autonomy: low (0.3-0.5) - safe mutations
  */
-export async function enforceExtractPolicy(input: KnowledgeExtractInput): Promise<void> {
+export async function enforceExtractPolicy(
+  input: KnowledgeExtractInput
+): Promise<void> {
   // Validate content size (max 100KB for extraction)
   const maxContentSize = 100 * 1024;
   if (input.content.length > maxContentSize) {
@@ -52,7 +56,9 @@ export async function enforceExtractPolicy(input: KnowledgeExtractInput): Promis
  * Scope: knowledge.write
  * Autonomy: low (0.3-0.5) - safe mutations
  */
-export async function enforceConnectPolicy(input: KnowledgeConnectInput): Promise<void> {
+export async function enforceConnectPolicy(
+  input: KnowledgeConnectInput
+): Promise<void> {
   await requireToolScopesAndPolicy(input.authz, ["knowledge.write"], {
     action: "knowledge.connect",
     resource: {

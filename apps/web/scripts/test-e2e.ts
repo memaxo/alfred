@@ -1,7 +1,7 @@
 import { spawn } from "bun";
 
 // Function to find a free port
-async function getFreePort(startPort = 3100, endPort = 3200): Promise<number> {
+function getFreePort(startPort = 3100, endPort = 3200): Promise<number> {
   for (let port = startPort; port <= endPort; port++) {
     try {
       const server = Bun.serve({

@@ -47,11 +47,7 @@ const statusVariants: Record<
   cancelled: "default",
 };
 
-export function WorkflowListNode({
-  id,
-  data,
-  selected,
-}: MindscapeNodeProps) {
+export function WorkflowListNode({ id, data, selected }: MindscapeNodeProps) {
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -68,7 +64,12 @@ export function WorkflowListNode({
     status:
       statusFilter === "all"
         ? undefined
-        : (statusFilter as "running" | "completed" | "failed" | "suspended" | "cancelled"),
+        : (statusFilter as
+            | "running"
+            | "completed"
+            | "failed"
+            | "suspended"
+            | "cancelled"),
     limit: 20,
     offset: 0,
   });
@@ -102,7 +103,7 @@ export function WorkflowListNode({
     const currentNode = nodes.find((n) => n.id === id);
     const nodeX = currentNode?.position?.x ?? 0;
     const nodeY = currentNode?.position?.y ?? 0;
-    
+
     const derivedId = `workflow-${run.id}`;
     const newNode: Node<ArtifactData> = {
       id: derivedId,
@@ -113,7 +114,13 @@ export function WorkflowListNode({
         label: run.workflowId ?? "Workflow",
         title: run.workflowId ?? "Workflow",
         description: undefined,
-        status: run.status as "Idle" | "running" | "completed" | "failed" | "pending" | "starting",
+        status: run.status as
+          | "Idle"
+          | "running"
+          | "completed"
+          | "failed"
+          | "pending"
+          | "starting",
         runId: run.id,
         messages: [],
         graph: { resource: `workflow:${run.id}`, dbId: run.id },

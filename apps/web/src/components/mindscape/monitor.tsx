@@ -1,5 +1,8 @@
-import type { Obligation, ObligationResumeEvent } from "@alfred/type";
-import type { WorkflowEvent } from "@alfred/type";
+import type {
+  Obligation,
+  ObligationResumeEvent,
+  WorkflowEvent,
+} from "@alfred/type";
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ObligationChallengeDialog } from "@/components/biometric-challenge-dialog";
@@ -10,7 +13,7 @@ import {
   type WorkflowStreamInput,
 } from "@/hooks/use-workflow-sse-stream";
 import { getToolToken } from "@/lib/token";
-import { type WorkflowNodeData, useMindscapeStore } from "@/store/mindscape";
+import { useMindscapeStore, type WorkflowNodeData } from "@/store/mindscape";
 import type { MindscapeUiMessage } from "@/store/mindscape.schemas";
 
 type StreamInput = WorkflowStreamInput & {

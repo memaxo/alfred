@@ -2,13 +2,13 @@
 
 /**
  * Size and Prioritize Linear Tickets for POC Phase
- * 
+ *
  * Fetches all open Linear tickets, analyzes them, and updates with:
  * - Story point estimates (Fibonacci: 1, 2, 3, 5, 8, 13)
  * - Priority assignments (Urgent/High/Medium/Low)
  * - Labels (Feature, Bug, tech-debt, etc.)
  * - Status verification
- * 
+ *
  * Usage:
  *   LINEAR_API_KEY=<token> bun scripts/size-linear-tickets.ts
  *   OR: bun scripts/size-linear-tickets.ts (loads from .env)
@@ -125,7 +125,9 @@ async function fetchLinearGraphQL<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Linear API error: ${response.status} ${response.statusText}`
+    );
   }
 
   const payload = (await response.json()) as {
@@ -207,7 +209,9 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
   }>(teamsQuery);
 
   const team = teamsData.teams.nodes.find(
-    (t) => t.name === teamName || t.key === teamName.toLowerCase().replace(/\s+/g, "-")
+    (t) =>
+      t.name === teamName ||
+      t.key === teamName.toLowerCase().replace(/\s+/g, "-")
   );
 
   if (!team) {
@@ -318,12 +322,19 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
 
   // Determine ticket type
   const isEpic = title.includes("epic") || title.includes("[epic]");
-  const isBug = title.includes("bug") || title.includes("fix") || title.includes("error");
-  const isTechDebt = title.includes("tech debt") || title.includes("refactor") || title.includes("consolidate");
+  const isBug =
+    title.includes("bug") || title.includes("fix") || title.includes("error");
+  const isTechDebt =
+    title.includes("tech debt") ||
+    title.includes("refactor") ||
+    title.includes("consolidate");
   const isDoc = title.includes("document") || title.includes("doc");
-  const isInfra = title.includes("infrastructure") || title.includes("build") || title.includes("deploy");
+  const isInfra =
+    title.includes("infrastructure") ||
+    title.includes("build") ||
+    title.includes("deploy");
   const isTest = title.includes("test") || title.includes("coverage");
-  const isFeature = !isBug && !isTechDebt && !isDoc && !isInfra && !isTest;
+  const isFeature = !(isBug || isTechDebt || isDoc || isInfra || isTest);
 
   // Size estimation based on complexity indicators
   let size = issue.estimate || 0;
@@ -341,39 +352,83 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
       size = 5; // Auth layer simplification
     } else if (isEpic || title.includes("[epic]")) {
       size = 13; // Epics should be broken down
-    } else if (title.includes("simple") || title.includes("trivial") || title.includes("add comment") || title.includes("document lint")) {
+    } else if (
+      title.includes("simple") ||
+      title.includes("trivial") ||
+      title.includes("add comment") ||
+      title.includes("document lint")
+    ) {
       size = 1;
-    } else if (title.includes("write") && title.includes("test") && !title.includes("integration")) {
+    } else if (
+      title.includes("write") &&
+      title.includes("test") &&
+      !title.includes("integration")
+    ) {
       size = 2; // Simple test suite
     } else if (title.includes("create") && title.includes("table")) {
       size = 2; // Migration + repo
-    } else if (title.includes("add") && (title.includes("procedure") || title.includes("endpoint") || title.includes("tRPC"))) {
+    } else if (
+      title.includes("add") &&
+      (title.includes("procedure") ||
+        title.includes("endpoint") ||
+        title.includes("tRPC"))
+    ) {
       size = 2; // Single API endpoint
     } else if (title.includes("implement") && !title.includes("complex")) {
       // Single feature implementation
-      if (description.includes("multiple") || description.includes("several") || description.includes("suite")) {
+      if (
+        description.includes("multiple") ||
+        description.includes("several") ||
+        description.includes("suite")
+      ) {
         size = 5;
-      } else if (description.includes("integration") || description.includes("wire") || description.includes("connect")) {
+      } else if (
+        description.includes("integration") ||
+        description.includes("wire") ||
+        description.includes("connect")
+      ) {
         size = 3;
       } else {
         size = 2;
       }
     } else if (title.includes("refactor") || title.includes("extract")) {
       size = 5; // Refactoring is typically moderate complexity
-    } else if (title.includes("consolidate") || title.includes("architecture")) {
+    } else if (
+      title.includes("consolidate") ||
+      title.includes("architecture")
+    ) {
       size = 8; // Large architectural changes
-    } else if (title.includes("integration") && (title.includes("knowledge") || title.includes("policy") || title.includes("mindscape"))) {
+    } else if (
+      title.includes("integration") &&
+      (title.includes("knowledge") ||
+        title.includes("policy") ||
+        title.includes("mindscape"))
+    ) {
       size = 8; // Complex integrations
     } else if (title.includes("migration")) {
       size = 3; // Migration work
     } else {
       // Default based on keywords
-      const complexKeywords = ["system", "pipeline", "orchestration", "architecture", "integration"];
+      const complexKeywords = [
+        "system",
+        "pipeline",
+        "orchestration",
+        "architecture",
+        "integration",
+      ];
       const moderateKeywords = ["add", "implement", "create", "wire", "extend"];
-      
-      if (complexKeywords.some(k => title.includes(k) || description.includes(k))) {
+
+      if (
+        complexKeywords.some(
+          (k) => title.includes(k) || description.includes(k)
+        )
+      ) {
         size = 5;
-      } else if (moderateKeywords.some(k => title.includes(k) || description.includes(k))) {
+      } else if (
+        moderateKeywords.some(
+          (k) => title.includes(k) || description.includes(k)
+        )
+      ) {
         size = 3;
       } else {
         size = 2; // Conservative default
@@ -383,7 +438,7 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
 
   // Priority assignment (POC context)
   let priority = priorityToString(issue.priority);
-  
+
   // Specific ticket priority overrides
   if (issue.identifier === "ALF-134") {
     priority = "Urgent"; // POC-critical: agents need tools
@@ -391,19 +446,35 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
     priority = "High"; // Strategic integration, adds POC value
   } else if (issue.identifier === "ALF-72") {
     priority = "High"; // Core assistant functionality
-  } else if (issue.identifier === "ALF-139" || issue.identifier === "ALF-142" || issue.identifier === "ALF-143") {
+  } else if (
+    issue.identifier === "ALF-139" ||
+    issue.identifier === "ALF-142" ||
+    issue.identifier === "ALF-143"
+  ) {
     priority = "Medium"; // Tech debt, not POC-blocking
   } else if (priority === "None") {
     // POC-critical features
-    if (title.includes("workflow") && (title.includes("reliability") || title.includes("critical"))) {
+    if (
+      title.includes("workflow") &&
+      (title.includes("reliability") || title.includes("critical"))
+    ) {
       priority = "Urgent";
-    } else if (title.includes("tool") && (title.includes("gap") || title.includes("expose"))) {
+    } else if (
+      title.includes("tool") &&
+      (title.includes("gap") || title.includes("expose"))
+    ) {
       priority = "Urgent";
     } else if (title.includes("assistant") && title.includes("tool")) {
       priority = "High";
-    } else if (title.includes("voice") && (title.includes("basic") || title.includes("core"))) {
+    } else if (
+      title.includes("voice") &&
+      (title.includes("basic") || title.includes("core"))
+    ) {
       priority = "High";
-    } else if (title.includes("knowledge") && (title.includes("core") || title.includes("integration"))) {
+    } else if (
+      title.includes("knowledge") &&
+      (title.includes("core") || title.includes("integration"))
+    ) {
       priority = "High";
     } else if (title.includes("strategic") || title.includes("[strategic]")) {
       priority = "High";
@@ -420,31 +491,46 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
 
   // Labels
   const labels: string[] = [];
-  const existingLabels = issue.labels.nodes.map(l => l.name.toLowerCase());
-  
+  const existingLabels = issue.labels.nodes.map((l) => l.name.toLowerCase());
+
   if (isFeature && !existingLabels.includes("feature")) labels.push("Feature");
   if (isBug && !existingLabels.includes("bug")) labels.push("Bug");
-  if (isTechDebt && !existingLabels.includes("tech-debt")) labels.push("tech-debt");
-  if (isDoc && !existingLabels.includes("documentation")) labels.push("Documentation");
-  if (isInfra && !existingLabels.includes("infrastructure")) labels.push("Infrastructure");
+  if (isTechDebt && !existingLabels.includes("tech-debt"))
+    labels.push("tech-debt");
+  if (isDoc && !existingLabels.includes("documentation"))
+    labels.push("Documentation");
+  if (isInfra && !existingLabels.includes("infrastructure"))
+    labels.push("Infrastructure");
   if (isTest && !existingLabels.includes("testing")) labels.push("testing");
   if (isEpic && !existingLabels.includes("epic")) labels.push("epic");
 
   // Domain labels
-  if (title.includes("tool") && !existingLabels.includes("tools")) labels.push("tools");
-  if (title.includes("workflow") && !existingLabels.includes("workflow")) labels.push("workflow");
-  if (title.includes("voice") && !existingLabels.includes("voice")) labels.push("voice");
-  if (title.includes("knowledge") && !existingLabels.includes("knowledge")) labels.push("knowledge");
+  if (title.includes("tool") && !existingLabels.includes("tools"))
+    labels.push("tools");
+  if (title.includes("workflow") && !existingLabels.includes("workflow"))
+    labels.push("workflow");
+  if (title.includes("voice") && !existingLabels.includes("voice"))
+    labels.push("voice");
+  if (title.includes("knowledge") && !existingLabels.includes("knowledge"))
+    labels.push("knowledge");
   if (title.includes("ui") && !existingLabels.includes("ui")) labels.push("ui");
-  if (title.includes("api") && !existingLabels.includes("api")) labels.push("api");
-  if (title.includes("auth") && !existingLabels.includes("auth")) labels.push("auth");
+  if (title.includes("api") && !existingLabels.includes("api"))
+    labels.push("api");
+  if (title.includes("auth") && !existingLabels.includes("auth"))
+    labels.push("auth");
 
   // POC indicators
-  if (priority === "Urgent" || (priority === "High" && (title.includes("core") || title.includes("critical")))) {
+  if (
+    priority === "Urgent" ||
+    (priority === "High" &&
+      (title.includes("core") || title.includes("critical")))
+  ) {
     if (!existingLabels.includes("poc-critical")) labels.push("poc-critical");
-  } else if (priority === "Low" || isDoc || (isTechDebt && priority === "Medium")) {
-    if (!existingLabels.includes("post-poc")) labels.push("post-poc");
-  }
+  } else if (
+    (priority === "Low" || isDoc || (isTechDebt && priority === "Medium")) &&
+    !existingLabels.includes("post-poc")
+  )
+    labels.push("post-poc");
 
   update.actions.size = size;
   update.actions.priority = priority;
@@ -455,7 +541,10 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
   return update;
 }
 
-async function updateIssue(update: TicketUpdate, teamId: string): Promise<void> {
+async function updateIssue(
+  update: TicketUpdate,
+  teamId: string
+): Promise<void> {
   const apiKey = process.env.LINEAR_API_KEY;
   if (!apiKey) {
     throw new Error("LINEAR_API_KEY required");
@@ -479,12 +568,18 @@ async function updateIssue(update: TicketUpdate, teamId: string): Promise<void> 
   `;
 
   const input: Record<string, unknown> = {};
-  
-  if (update.actions.size !== undefined && update.actions.size !== update.currentEstimate) {
+
+  if (
+    update.actions.size !== undefined &&
+    update.actions.size !== update.currentEstimate
+  ) {
     input.estimate = update.actions.size;
   }
-  
-  if (update.actions.priority && update.actions.priority !== update.currentPriority) {
+
+  if (
+    update.actions.priority &&
+    update.actions.priority !== update.currentPriority
+  ) {
     input.priority = priorityToNumber(update.actions.priority);
   }
 
@@ -495,7 +590,9 @@ async function updateIssue(update: TicketUpdate, teamId: string): Promise<void> 
     if (stateId) {
       input.stateId = stateId;
     } else {
-      console.log(`⚠️  Status "${update.actions.status}" not found for ${update.identifier} (skipped)`);
+      console.log(
+        `⚠️  Status "${update.actions.status}" not found for ${update.identifier} (skipped)`
+      );
     }
   }
 
@@ -512,13 +609,23 @@ async function updateIssue(update: TicketUpdate, teamId: string): Promise<void> 
       input,
     });
     const changes: string[] = [];
-    if (update.actions.size !== undefined && update.actions.size !== update.currentEstimate) {
+    if (
+      update.actions.size !== undefined &&
+      update.actions.size !== update.currentEstimate
+    ) {
       changes.push(`size=${update.actions.size}`);
     }
-    if (update.actions.priority && update.actions.priority !== update.currentPriority) {
+    if (
+      update.actions.priority &&
+      update.actions.priority !== update.currentPriority
+    ) {
       changes.push(`priority=${update.actions.priority}`);
     }
-    if (update.actions.status && update.actions.status !== update.currentState && input.stateId) {
+    if (
+      update.actions.status &&
+      update.actions.status !== update.currentState &&
+      input.stateId
+    ) {
       changes.push(`status=${update.actions.status}`);
     }
     console.log(`✓ Updated ${update.identifier}: ${changes.join(", ")}`);
@@ -527,7 +634,10 @@ async function updateIssue(update: TicketUpdate, teamId: string): Promise<void> 
   }
 }
 
-async function verifyImplementation(identifier: string, title: string): Promise<{
+async function verifyImplementation(
+  identifier: string,
+  title: string
+): Promise<{
   isComplete: boolean;
   evidence: string;
 }> {
@@ -538,7 +648,10 @@ async function verifyImplementation(identifier: string, title: string): Promise<
     try {
       const { readFile } = await import("node:fs/promises");
       const content = await readFile(file, "utf-8");
-      if (content.includes("wavesResult.escalated") && content.includes("workflow_escalated")) {
+      if (
+        content.includes("wavesResult.escalated") &&
+        content.includes("workflow_escalated")
+      ) {
         return {
           isComplete: true,
           evidence: `${file}:43-51`,
@@ -570,8 +683,9 @@ async function verifyImplementation(identifier: string, title: string): Promise<
 }
 
 async function main() {
-  const dryRun = process.argv.includes("--dry-run") || !process.env.LINEAR_API_KEY;
-  
+  const dryRun =
+    process.argv.includes("--dry-run") || !process.env.LINEAR_API_KEY;
+
   if (dryRun) {
     console.log("⚠️  Running in dry-run mode (no updates will be made)");
     console.log("Set LINEAR_API_KEY environment variable to enable updates\n");
@@ -582,69 +696,78 @@ async function main() {
     const team = await fetchTeam(TEAM_NAME);
 
     console.log(`Found ${team.issues.nodes.length} open issues`);
-    
+
     // Process high-priority first
-    const inProgress = team.issues.nodes.filter(i => i.state.name === "In Progress");
-    const urgent = team.issues.nodes.filter(i => i.priority === 1);
-    const high = team.issues.nodes.filter(i => i.priority === 2);
-    
+    const inProgress = team.issues.nodes.filter(
+      (i) => i.state.name === "In Progress"
+    );
+    const urgent = team.issues.nodes.filter((i) => i.priority === 1);
+    const high = team.issues.nodes.filter((i) => i.priority === 2);
+
     const highPriority = [...new Set([...inProgress, ...urgent, ...high])];
-    const backlog = team.issues.nodes.filter(i => !highPriority.includes(i));
+    const backlog = team.issues.nodes.filter((i) => !highPriority.includes(i));
 
     console.log(`\nProcessing ${highPriority.length} high-priority tickets...`);
-    
+
     for (const issue of highPriority) {
       const update = analyzeTicket(issue);
-      
+
       // Verify implementation for In Progress tickets
       if (issue.state.name === "In Progress") {
-        const verification = await verifyImplementation(issue.identifier, issue.title);
+        const verification = await verifyImplementation(
+          issue.identifier,
+          issue.title
+        );
         if (verification.isComplete) {
           update.actions.status = "Done";
           update.actions.comment = `Implementation verified: ${verification.evidence}`;
         }
       }
-      
+
       updates.push(update);
     }
 
     console.log(`\nProcessing ${backlog.length} backlog tickets...`);
-    
+
     // Process backlog in batches
     for (let i = 0; i < backlog.length; i += BATCH_SIZE) {
       const batch = backlog.slice(i, i + BATCH_SIZE);
-      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} tickets)...`);
-      
+      console.log(
+        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} tickets)...`
+      );
+
       for (const issue of batch) {
         const update = analyzeTicket(issue);
         updates.push(update);
       }
-      
+
       // Rate limiting delay
       if (i + BATCH_SIZE < backlog.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
       }
     }
 
     console.log(`\nAnalyzed ${updates.length} tickets`);
-    
-    if (!dryRun) {
-      console.log(`\nApplying updates...`);
 
-    // Apply updates in batches
-    for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-      const batch = updates.slice(i, i + BATCH_SIZE);
-      
-      await Promise.all(batch.map(update => updateIssue(update, team.id)));
-      
-      if (i + BATCH_SIZE < updates.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
-      }
-    }
-      console.log(`\n✅ Updates applied`);
+    if (dryRun) {
+      console.log("\n⚠️  Dry-run mode: Skipping updates");
+      console.log(
+        "Set LINEAR_API_KEY and run without --dry-run to apply updates"
+      );
     } else {
-      console.log(`\n⚠️  Dry-run mode: Skipping updates`);
-      console.log(`Set LINEAR_API_KEY and run without --dry-run to apply updates`);
+      console.log("\nApplying updates...");
+
+      // Apply updates in batches
+      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        const batch = updates.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(batch.map((update) => updateIssue(update, team.id)));
+
+        if (i + BATCH_SIZE < updates.length) {
+          await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+      }
+      console.log("\n✅ Updates applied");
     }
 
     // Generate report
@@ -656,24 +779,37 @@ async function main() {
       `ticket-sizing-summary-${dateStr}.md`
     );
 
-    const sized = updates.filter(u => u.actions.size !== undefined && u.actions.size !== u.currentEstimate).length;
-    const prioritized = updates.filter(u => u.actions.priority && u.actions.priority !== u.currentPriority).length;
-    const statusCorrections = updates.filter(u => u.actions.status).length;
+    const sized = updates.filter(
+      (u) =>
+        u.actions.size !== undefined && u.actions.size !== u.currentEstimate
+    ).length;
+    const prioritized = updates.filter(
+      (u) => u.actions.priority && u.actions.priority !== u.currentPriority
+    ).length;
+    const statusCorrections = updates.filter((u) => u.actions.status).length;
 
     const byPriority = {
-      Urgent: updates.filter(u => u.actions.priority === "Urgent" || u.currentPriority === "Urgent").length,
-      High: updates.filter(u => u.actions.priority === "High" || u.currentPriority === "High").length,
-      Medium: updates.filter(u => u.actions.priority === "Medium" || u.currentPriority === "Medium").length,
-      Low: updates.filter(u => u.actions.priority === "Low" || u.currentPriority === "Low").length,
+      Urgent: updates.filter(
+        (u) => u.actions.priority === "Urgent" || u.currentPriority === "Urgent"
+      ).length,
+      High: updates.filter(
+        (u) => u.actions.priority === "High" || u.currentPriority === "High"
+      ).length,
+      Medium: updates.filter(
+        (u) => u.actions.priority === "Medium" || u.currentPriority === "Medium"
+      ).length,
+      Low: updates.filter(
+        (u) => u.actions.priority === "Low" || u.currentPriority === "Low"
+      ).length,
     };
 
     const bySize = {
-      1: updates.filter(u => u.actions.size === 1).length,
-      2: updates.filter(u => u.actions.size === 2).length,
-      3: updates.filter(u => u.actions.size === 3).length,
-      5: updates.filter(u => u.actions.size === 5).length,
-      8: updates.filter(u => u.actions.size === 8).length,
-      13: updates.filter(u => u.actions.size === 13).length,
+      1: updates.filter((u) => u.actions.size === 1).length,
+      2: updates.filter((u) => u.actions.size === 2).length,
+      3: updates.filter((u) => u.actions.size === 3).length,
+      5: updates.filter((u) => u.actions.size === 5).length,
+      8: updates.filter((u) => u.actions.size === 8).length,
+      13: updates.filter((u) => u.actions.size === 13).length,
     };
 
     const report = `# Ticket Sizing and Prioritization Summary
@@ -684,8 +820,8 @@ async function main() {
 
 ## Summary
 
-- **Tickets sized**: ${sized} (previously ${updates.filter(u => u.currentEstimate !== null).length})
-- **Tickets prioritized**: ${prioritized} (previously ${updates.filter(u => u.currentPriority !== "None").length})
+- **Tickets sized**: ${sized} (previously ${updates.filter((u) => u.currentEstimate !== null).length})
+- **Tickets prioritized**: ${prioritized} (previously ${updates.filter((u) => u.currentPriority !== "None").length})
 - **Status corrections**: ${statusCorrections}
 
 ## Breakdown by Priority
@@ -706,17 +842,19 @@ async function main() {
 
 ## High-Priority Ticket Updates
 
-${highPriority.map(issue => {
-  const update = updates.find(u => u.ticketId === issue.id);
-  if (!update) return "";
-  return `### ${update.identifier}: ${update.title}
+${highPriority
+  .map((issue) => {
+    const update = updates.find((u) => u.ticketId === issue.id);
+    if (!update) return "";
+    return `### ${update.identifier}: ${update.title}
 
 - **Current**: ${update.currentState}, ${update.currentPriority}, ${update.currentEstimate || "no estimate"} pts
 - **Updated**: Size=${update.actions.size}, Priority=${update.actions.priority}
 ${update.actions.status ? `- **Status**: ${update.actions.status}` : ""}
 ${update.actions.comment ? `- **Note**: ${update.actions.comment}` : ""}
 `;
-}).join("\n")}
+  })
+  .join("\n")}
 
 ---
 
@@ -725,7 +863,6 @@ ${update.actions.comment ? `- **Note**: ${update.actions.comment}` : ""}
 
     await writeFile(reportPath, report, "utf-8");
     console.log(`\n✅ Report generated: ${reportPath}`);
-    
   } catch (error) {
     console.error("Error processing tickets:", error);
     if (error instanceof Error) {

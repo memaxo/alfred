@@ -127,7 +127,14 @@ function emptyFrame(rows: number, cols: number): Frame {
 function setPixel(frame: Frame, row: number, col: number, value: number): void {
   const firstRow = frame[0];
   const targetRow = frame[row];
-  if (firstRow && targetRow && row >= 0 && row < frame.length && col >= 0 && col < firstRow.length) {
+  if (
+    firstRow &&
+    targetRow &&
+    row >= 0 &&
+    row < frame.length &&
+    col >= 0 &&
+    col < firstRow.length
+  ) {
     targetRow[col] = value;
   }
 }

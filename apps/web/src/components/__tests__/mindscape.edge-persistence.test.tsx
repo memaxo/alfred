@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import React from "react";
 import "../../test/testing-library";
 
 const toastErrorMock = vi.fn();

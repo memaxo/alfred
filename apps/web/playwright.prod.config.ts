@@ -1,6 +1,6 @@
-import { defineConfig, devices } from "@playwright/test";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.MINDSCAPE_PORT ?? 3100);
 const HOST = process.env.MINDSCAPE_HOST ?? "127.0.0.1";
@@ -8,7 +8,8 @@ const BASE_URL = process.env.MINDSCAPE_BASE_URL ?? `http://${HOST}:${PORT}`;
 const CWD = dirname(fileURLToPath(import.meta.url));
 
 const shouldStartWebServer =
-  process.env.PLAYWRIGHT_SKIP_WEB_SERVER !== "1" && process.env.CI !== "workflow-test";
+  process.env.PLAYWRIGHT_SKIP_WEB_SERVER !== "1" &&
+  process.env.CI !== "workflow-test";
 
 export default defineConfig({
   testDir: "./tests",
@@ -54,4 +55,3 @@ export default defineConfig({
     },
   ],
 });
-

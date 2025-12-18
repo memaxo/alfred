@@ -218,7 +218,12 @@ export function createSpawnNode(
         id,
         type: "workflow",
         position,
-        data: { type: "workflow", label: "Workflow", status: "Idle", messages: [] },
+        data: {
+          type: "workflow",
+          label: "Workflow",
+          status: "Idle",
+          messages: [],
+        },
       };
     case "droid":
       return {
@@ -240,7 +245,12 @@ export function createSpawnNode(
         id,
         type: "settings",
         position,
-        data: { type: "settings", label: "Settings", autonomy: "low", voiceProvider: "local" },
+        data: {
+          type: "settings",
+          label: "Settings",
+          autonomy: "low",
+          voiceProvider: "local",
+        },
       };
     case "privacy":
       return {

@@ -1,20 +1,18 @@
 import { createHash } from "node:crypto";
 import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import { db } from "@alfred/db";
-import {
-  ensureMirrorNodes,
-  touchNodes,
-} from "@alfred/db/repo/graph/write";
+import { ensureMirrorNodes, touchNodes } from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import {
   getExplainingDocuments,
   runQuery as runUnifiedQuery,
 } from "@alfred/graph";
 import { empty as createHypergraph } from "@alfred/knowledge/hypergraph";
+import { logger } from "@alfred/logger";
 import { observable } from "@trpc/server/observable";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
-import { logger } from "@alfred/logger";
+import { requirePolicy } from "../gate";
 import {
   graphContextDurationSeconds,
   graphQueriesTotal,
@@ -22,7 +20,6 @@ import {
   graphRagEmptyTotal,
   graphRagHitsTotal,
 } from "../metrics";
-import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
 type EdgeRow = typeof memoryEdges.$inferSelect;

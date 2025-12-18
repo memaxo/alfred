@@ -75,9 +75,7 @@ describe("MindscapeCommandPalette", () => {
   afterEach(cleanup);
 
   it("should open on Cmd+K", async () => {
-    render(
-      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
-    );
+    render(<MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />);
 
     expect(screen.queryByRole("dialog")).toBeNull();
     openPalette();
@@ -85,9 +83,7 @@ describe("MindscapeCommandPalette", () => {
   });
 
   it("should show create actions by default", async () => {
-    render(
-      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
-    );
+    render(<MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />);
     openPalette();
 
     await waitFor(() => {
@@ -100,9 +96,7 @@ describe("MindscapeCommandPalette", () => {
   // In a real integration test we'd want the real cmk, but it requires full DOM.
 
   it("should show ghost text suggestion", async () => {
-    render(
-      <MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />
-    );
+    render(<MindscapeCommandPalette onFocus={mock()} onSpawn={mock()} />);
     openPalette();
 
     const input = screen.getByPlaceholderText(/Create or jump/i);

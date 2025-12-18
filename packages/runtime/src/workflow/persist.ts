@@ -58,7 +58,10 @@ export async function persistStreamEvent(args: {
       originalEvent: WorkflowEvent;
     }
   ) => void;
-  triggerPreferenceRefresh: (userId: string, payload: { reason: string }) => void;
+  triggerPreferenceRefresh: (
+    userId: string,
+    payload: { reason: string }
+  ) => void;
   linear: WorkflowInputPayload["linear"] | undefined;
   authzLinear: string | undefined;
 }): Promise<{ eventId: string; suspended: boolean } | null> {
@@ -173,4 +176,3 @@ export async function persistStreamEvent(args: {
     return null;
   }
 }
-

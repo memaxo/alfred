@@ -23,7 +23,7 @@ class VoiceProcessor extends AudioWorkletProcessor {
     };
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs, _parameters) {
     // --- Playback (Output) ---
     const output = outputs[0];
     if (output && output.length > 0) {
@@ -35,18 +35,18 @@ class VoiceProcessor extends AudioWorkletProcessor {
           const currentChunk = this.buffer[0];
           const remainingInChunk = currentChunk.length - this.cursor;
           const spaceInOutput = outputChannel.length - outputIndex;
-          
+
           const copyCount = Math.min(remainingInChunk, spaceInOutput);
-          
+
           // Copy data
           outputChannel.set(
             currentChunk.subarray(this.cursor, this.cursor + copyCount),
             outputIndex
           );
-          
+
           this.cursor += copyCount;
           outputIndex += copyCount;
-          
+
           if (this.cursor >= currentChunk.length) {
             this.buffer.shift();
             this.cursor = 0;
@@ -69,7 +69,9 @@ class VoiceProcessor extends AudioWorkletProcessor {
       if (this.inputBuffer.length >= this.bufferSize) {
         const chunk = new Float32Array(this.inputBuffer);
         this.inputBuffer = [];
-        this.port.postMessage({ type: "audio_data", buffer: chunk }, [chunk.buffer]);
+        this.port.postMessage({ type: "audio_data", buffer: chunk }, [
+          chunk.buffer,
+        ]);
       }
     }
 

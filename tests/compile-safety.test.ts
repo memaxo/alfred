@@ -8,7 +8,6 @@ import { join, resolve } from "node:path";
  */
 
 const PACKAGES_DIR = resolve(import.meta.dir, "../packages");
-const APPS_DIR = resolve(import.meta.dir, "../apps");
 
 describe("Package export validation", () => {
   it("should have valid package.json exports for all packages", async () => {
@@ -25,7 +24,7 @@ describe("Package export validation", () => {
         );
         expect(packageJson.name).toBeDefined();
         expect(packageJson.exports || packageJson.main).toBeDefined();
-      } catch (error) {
+      } catch (_error) {
         // Some packages might not have package.json (like test fixtures)
         // That's okay, we just verify the ones that do
       }

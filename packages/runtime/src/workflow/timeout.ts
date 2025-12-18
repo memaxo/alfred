@@ -35,7 +35,10 @@ export function startTimeout(args: {
     args.lifecycle.closeTimer("error");
     if (runId) {
       workflowRepo
-        .updateRun(runId, { status: "failed", errorMessage: "workflow_global_timeout" })
+        .updateRun(runId, {
+          status: "failed",
+          errorMessage: "workflow_global_timeout",
+        })
         .catch((error) => {
           logger.warn("workflow_timeout_update_failed", {
             runId,
@@ -55,4 +58,3 @@ export function startTimeout(args: {
 
   return { stop };
 }
-

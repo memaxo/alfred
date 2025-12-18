@@ -1,6 +1,6 @@
-import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
 import type { AssistantUIMessage } from "@alfred/agent";
+import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type AssistantActionStatus =
@@ -47,12 +47,34 @@ function toArgs(value: unknown): Record<string, unknown> {
 }
 
 // Type guards for ALFRED's custom part types (see AGENTS.md AI SDK v6 section)
-function isToolCallPart(part: unknown): part is { type: "tool-call"; toolCallId: string; toolName?: string; input?: unknown } {
-  return isRecord(part) && part.type === "tool-call" && typeof part.toolCallId === "string";
+function isToolCallPart(
+  part: unknown
+): part is {
+  type: "tool-call";
+  toolCallId: string;
+  toolName?: string;
+  input?: unknown;
+} {
+  return (
+    isRecord(part) &&
+    part.type === "tool-call" &&
+    typeof part.toolCallId === "string"
+  );
 }
 
-function isToolResultPart(part: unknown): part is { type: "tool-result"; toolCallId: string; toolName?: string; output?: unknown } {
-  return isRecord(part) && part.type === "tool-result" && typeof part.toolCallId === "string";
+function isToolResultPart(
+  part: unknown
+): part is {
+  type: "tool-result";
+  toolCallId: string;
+  toolName?: string;
+  output?: unknown;
+} {
+  return (
+    isRecord(part) &&
+    part.type === "tool-result" &&
+    typeof part.toolCallId === "string"
+  );
 }
 
 export function deriveActions(
@@ -170,7 +192,9 @@ export function useAssistantStream(
 
   useEffect(() => {
     if (initialMessages && initialMessages.length > 0) {
-      chat.setMessages(initialMessages as Parameters<typeof chat.setMessages>[0]);
+      chat.setMessages(
+        initialMessages as Parameters<typeof chat.setMessages>[0]
+      );
     }
     // We only want to run this when initialMessages changes.
   }, [chat, initialMessages]);
@@ -181,7 +205,10 @@ export function useAssistantStream(
     }
   }, [chat.error, onError]);
 
-  const actions = useMemo(() => deriveActions(chat.messages as AssistantUIMessage[]), [chat.messages]);
+  const actions = useMemo(
+    () => deriveActions(chat.messages as AssistantUIMessage[]),
+    [chat.messages]
+  );
 
   const send = useCallback(
     (text: string) => {

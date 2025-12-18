@@ -95,9 +95,4 @@ export const ORG_KEYWORDS = [
 /**
  * Compromise tags that indicate organization entities.
  */
-export const ORG_TAGS = new Set([
-  "Organization",
-  "Company",
-  "Corporation",
-]);
-
+export const ORG_TAGS = new Set(["Organization", "Company", "Corporation"]);

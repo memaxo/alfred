@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { expect, it } from "bun:test";
 import { graphRepo } from "@alfred/db";
 import { describeSqlite } from "@alfred/db/testing";
 
@@ -9,9 +9,19 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
     const resource = `sqlite-traverse:${Date.now()}`;
     const seeds = [
       { resource, hash: "concept-coding", kind: "concept", label: "Coding" },
-      { resource, hash: "concept-frontend", kind: "concept", label: "Frontend" },
+      {
+        resource,
+        hash: "concept-frontend",
+        kind: "concept",
+        label: "Frontend",
+      },
       { resource, hash: "concept-react", kind: "concept", label: "React" },
-      { resource, hash: "concept-politics", kind: "concept", label: "Politics" },
+      {
+        resource,
+        hash: "concept-politics",
+        kind: "concept",
+        label: "Politics",
+      },
     ];
 
     const nodeMap = await graphRepo.upsertNodes(seeds as any);
@@ -22,31 +32,29 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
 
     expect(react && frontend && coding && politics).toBeTruthy();
 
-    await graphRepo.upsertEdges(
-      [
-        {
-          resource,
-          hash: "react-frontend",
-          fromId: react!.id,
-          toId: frontend!.id,
-          kind: "relates_to",
-        },
-        {
-          resource,
-          hash: "frontend-coding",
-          fromId: frontend!.id,
-          toId: coding!.id,
-          kind: "relates_to",
-        },
-        {
-          resource,
-          hash: "politics-isolated",
-          fromId: politics!.id,
-          toId: coding!.id,
-          kind: "relates_to",
-        },
-      ] as any
-    );
+    await graphRepo.upsertEdges([
+      {
+        resource,
+        hash: "react-frontend",
+        fromId: react!.id,
+        toId: frontend!.id,
+        kind: "relates_to",
+      },
+      {
+        resource,
+        hash: "frontend-coding",
+        fromId: frontend!.id,
+        toId: coding!.id,
+        kind: "relates_to",
+      },
+      {
+        resource,
+        hash: "politics-isolated",
+        fromId: politics!.id,
+        toId: coding!.id,
+        kind: "relates_to",
+      },
+    ] as any);
 
     const result = await graphRepo.findNearestConcept(
       "React",
@@ -80,24 +88,22 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
 
     expect(start && mid && target).toBeTruthy();
 
-    await graphRepo.upsertEdges(
-      [
-        {
-          resource,
-          hash: "start-mid",
-          fromId: start!.id,
-          toId: mid!.id,
-          kind: "relates_to",
-        },
-        {
-          resource,
-          hash: "mid-target",
-          fromId: mid!.id,
-          toId: target!.id,
-          kind: "relates_to",
-        },
-      ] as any
-    );
+    await graphRepo.upsertEdges([
+      {
+        resource,
+        hash: "start-mid",
+        fromId: start!.id,
+        toId: mid!.id,
+        kind: "relates_to",
+      },
+      {
+        resource,
+        hash: "mid-target",
+        fromId: mid!.id,
+        toId: target!.id,
+        kind: "relates_to",
+      },
+    ] as any);
 
     const result = await graphRepo.findNearestConcept(
       "React",

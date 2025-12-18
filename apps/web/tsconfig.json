@@ -42,5 +42,11 @@
     "vite.config.ts",
     "../../packages/tsconfig/types/bun.d.ts"
   ],
-  "exclude": ["node_modules", ".tsbuild", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"]
+  "exclude": [
+    "node_modules",
+    ".tsbuild",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**/*"
+  ]
 }

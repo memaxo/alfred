@@ -1,5 +1,5 @@
 import type { WorkflowEvent } from "@alfred/type";
-import { uiMessageSchema } from "@alfred/type/stream.zod";
+import type { uiMessageSchema } from "@alfred/type/stream.zod";
 import { useEffect, useRef, useState } from "react";
 import type { z } from "zod";
 

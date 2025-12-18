@@ -5,8 +5,8 @@ process.env.DISABLE_METRICS_HOOKS = "1";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import "./utils/mock-hypergraph";
-import { createTestSession } from "@alfred/test-kit/auth";
 import { empty, fact, relation } from "@alfred/knowledge/hypergraph";
+import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { eq } from "drizzle-orm";
 

@@ -7,10 +7,10 @@
 export * from "./build-constants";
 // Cognitive domain types
 export * from "./cognitive";
-export * from "./guards";
-export * from "./history";
 export * from "./envelope";
 export * from "./envelope.zod";
+export * from "./guards";
+export * from "./history";
 // Knowledge graph types
 export * from "./knowledge";
 // Personalization schemas

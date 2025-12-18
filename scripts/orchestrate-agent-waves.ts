@@ -2,49 +2,49 @@
 
 /**
  * Orchestrate agent waves: delegate tickets → monitor PRs → coordinate reviews → merge
- * 
+ *
  * This script orchestrates the complete agent workflow:
  * 1. Discovery: Find parallelizable Linear tickets
  * 2. Delegation: Assign tickets to Cursor agents with instructions
  * 3. Monitoring: Track PRs linked to Linear issues
  * 4. Review Coordination: Mark PRs ready, wait for CodeRabbit reviews, create feedback comments
  * 5. Merge: Check CI status and merge green PRs, update Linear issues
- * 
+ *
  * **Prerequisites:**
  * - Linear MCP server configured (`user-Linear`)
  * - GitHub CLI authenticated (`gh auth login`)
  * - CodeRabbit bot enabled on repository
- * 
+ *
  * **Usage:**
  *   bun scripts/orchestrate-agent-waves.ts [command]
- * 
+ *
  * **Commands:**
  *   delegate [--limit N]     - Delegate N parallelizable tickets to Cursor agents
  *   monitor                   - Monitor PRs for linked Linear issues
  *   review [--pr N]          - Mark PRs ready and coordinate CodeRabbit reviews
  *   merge [--dry-run]        - Merge green PRs and update Linear issues
  *   full [--limit N] [--dry-run] - Run complete workflow
- * 
+ *
  * **Environment Variables:**
  *   LINEAR_TEAM_ID           - Linear team ID (default: "Alfred-ops")
  *   GITHUB_REPO              - GitHub repo in format owner/repo (default: "memaxo/alfred")
- * 
+ *
  * **Examples:**
  *   # Delegate 10 tickets
  *   bun scripts/orchestrate-agent-waves.ts delegate --limit 10
- * 
+ *
  *   # Monitor all PRs
  *   bun scripts/orchestrate-agent-waves.ts monitor
- * 
+ *
  *   # Review specific PR
  *   bun scripts/orchestrate-agent-waves.ts review --pr 18
- * 
+ *
  *   # Dry-run merge (check what would be merged)
  *   bun scripts/orchestrate-agent-waves.ts merge --dry-run
- * 
+ *
  *   # Full workflow with 30 tickets
  *   bun scripts/orchestrate-agent-waves.ts full --limit 30
- * 
+ *
  * **Note:** This script requires MCP access to Linear. When run in Cursor environment,
  * MCP tools are automatically available. For standalone execution, implement Linear
  * API client or use Linear CLI as alternative.
@@ -129,8 +129,10 @@ async function retryWithBackoff<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       if (attempt < maxRetries - 1) {
-        const delayMs = baseDelay * Math.pow(2, attempt);
-        console.log(`[RETRY] Attempt ${attempt + 1} failed, retrying in ${delayMs}ms...`);
+        const delayMs = baseDelay * 2 ** attempt;
+        console.log(
+          `[RETRY] Attempt ${attempt + 1} failed, retrying in ${delayMs}ms...`
+        );
         await delay(delayMs);
       }
     }
@@ -151,23 +153,31 @@ async function callLinearMCP(
   const mcpAvailable =
     typeof globalThis !== "undefined" &&
     "call_mcp_tool" in globalThis &&
-    typeof (globalThis as { call_mcp_tool?: unknown }).call_mcp_tool === "function";
+    typeof (globalThis as { call_mcp_tool?: unknown }).call_mcp_tool ===
+      "function";
 
   if (mcpAvailable) {
     try {
-      const mcpTool = (globalThis as { call_mcp_tool: (params: {
-        server: string;
-        toolName: string;
-        arguments: Record<string, unknown>;
-      }) => Promise<unknown> }).call_mcp_tool;
-      
+      const mcpTool = (
+        globalThis as {
+          call_mcp_tool: (params: {
+            server: string;
+            toolName: string;
+            arguments: Record<string, unknown>;
+          }) => Promise<unknown>;
+        }
+      ).call_mcp_tool;
+
       return await mcpTool({
         server: "user-Linear",
         toolName,
         arguments: args,
       });
     } catch (error) {
-      console.warn(`[MCP] Failed to call ${toolName}, falling back to SDK:`, error);
+      console.warn(
+        `[MCP] Failed to call ${toolName}, falling back to SDK:`,
+        error
+      );
       // Fall through to SDK implementation
     }
   }
@@ -176,9 +186,9 @@ async function callLinearMCP(
   const apiKey = process.env.LINEAR_API_KEY || process.env.LINEAR_MCP_TOKEN;
   if (!apiKey) {
     throw new Error(
-      `Linear MCP integration required. This script must run in Cursor environment with MCP access, ` +
-      `or set LINEAR_API_KEY/LINEAR_MCP_TOKEN environment variable for standalone execution.\n` +
-      `Would call: ${toolName} with args: ${JSON.stringify(args)}`
+      "Linear MCP integration required. This script must run in Cursor environment with MCP access, " +
+        "or set LINEAR_API_KEY/LINEAR_MCP_TOKEN environment variable for standalone execution.\n" +
+        `Would call: ${toolName} with args: ${JSON.stringify(args)}`
     );
   }
 
@@ -265,7 +275,9 @@ async function callLinearMCP(
 
 // Phase 1: Discovery
 async function findParallelizableTickets(limit = 30): Promise<LinearIssue[]> {
-  console.log(`[DISCOVERY] Finding parallelizable tickets (limit: ${limit})...`);
+  console.log(
+    `[DISCOVERY] Finding parallelizable tickets (limit: ${limit})...`
+  );
 
   try {
     // Use Linear MCP list_issues
@@ -299,7 +311,7 @@ async function findParallelizableTickets(limit = 30): Promise<LinearIssue[]> {
     );
     return parallelizable;
   } catch (error) {
-    console.error(`[DISCOVERY] Error finding tickets:`, error);
+    console.error("[DISCOVERY] Error finding tickets:", error);
     throw error;
   }
 }
@@ -340,7 +352,10 @@ async function delegateTicket(
 
     console.log(`[DELEGATE] ✅ Delegated ${issue.identifier}`);
   } catch (error) {
-    console.error(`[DELEGATE] ❌ Failed to delegate ${issue.identifier}:`, error);
+    console.error(
+      `[DELEGATE] ❌ Failed to delegate ${issue.identifier}:`,
+      error
+    );
     throw error;
   }
 }
@@ -362,7 +377,9 @@ async function delegateTickets(
   // Process in batches
   for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
     const batch = tickets.slice(i, i + BATCH_SIZE);
-    console.log(`[DELEGATE] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}...`);
+    console.log(
+      `[DELEGATE] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}...`
+    );
 
     for (const ticket of batch) {
       try {
@@ -383,13 +400,15 @@ async function delegateTickets(
     }
   }
 
-  console.log(`[DELEGATE] Completed: ${stats.delegated}/${tickets.length} delegated`);
+  console.log(
+    `[DELEGATE] Completed: ${stats.delegated}/${tickets.length} delegated`
+  );
   return stats;
 }
 
 // Phase 3: Monitoring
 async function monitorPRs(): Promise<PRWithLinear[]> {
-  console.log(`[MONITOR] Monitoring PRs for Linear issue links...`);
+  console.log("[MONITOR] Monitoring PRs for Linear issue links...");
 
   try {
     // Get all open PRs
@@ -444,10 +463,12 @@ async function monitorPRs(): Promise<PRWithLinear[]> {
       }
     }
 
-    console.log(`[MONITOR] Found ${prsWithLinear.length} PRs linked to Linear issues`);
+    console.log(
+      `[MONITOR] Found ${prsWithLinear.length} PRs linked to Linear issues`
+    );
     return prsWithLinear;
   } catch (error) {
-    console.error(`[MONITOR] Error monitoring PRs:`, error);
+    console.error("[MONITOR] Error monitoring PRs:", error);
     throw error;
   }
 }
@@ -467,7 +488,9 @@ async function markPRsReady(prs: number[]): Promise<void> {
   }
 }
 
-async function getCodeRabbitReview(pr: number): Promise<CodeRabbitReview | null> {
+async function getCodeRabbitReview(
+  pr: number
+): Promise<CodeRabbitReview | null> {
   try {
     const reviewsOutput = await Bun.spawn([
       "gh",
@@ -494,13 +517,16 @@ async function getCodeRabbitReview(pr: number): Promise<CodeRabbitReview | null>
     const nitpickMatch = body.match(/Nitpick comments \((\d+)\)/);
 
     return {
-      actionable: actionableMatch ? parseInt(actionableMatch[1], 10) : 0,
-      nitpicks: nitpickMatch ? parseInt(nitpickMatch[1], 10) : 0,
+      actionable: actionableMatch ? Number.parseInt(actionableMatch[1], 10) : 0,
+      nitpicks: nitpickMatch ? Number.parseInt(nitpickMatch[1], 10) : 0,
       body,
       submittedAt: review.submitted_at,
     };
   } catch (error) {
-    console.error(`[REVIEW] Error getting CodeRabbit review for PR #${pr}:`, error);
+    console.error(
+      `[REVIEW] Error getting CodeRabbit review for PR #${pr}:`,
+      error
+    );
     return null;
   }
 }
@@ -530,7 +556,9 @@ async function createReviewComment(
   linearIssueId: string,
   review: CodeRabbitReview
 ): Promise<void> {
-  console.log(`[REVIEW] Creating review comment for Linear issue ${linearIssueId}...`);
+  console.log(
+    `[REVIEW] Creating review comment for Linear issue ${linearIssueId}...`
+  );
 
   // Extract key feedback areas from review body
   const feedbackAreas: string[] = [];
@@ -545,7 +573,9 @@ async function createReviewComment(
       line.includes("LGTM")
     ) {
       // Extract context around feedback
-      const context = lines.slice(Math.max(0, i - 2), Math.min(lines.length, i + 5)).join("\n");
+      const context = lines
+        .slice(Math.max(0, i - 2), Math.min(lines.length, i + 5))
+        .join("\n");
       if (context.length < 500) {
         feedbackAreas.push(context);
       }
@@ -574,9 +604,9 @@ ${review.actionable === 0 && review.nitpicks === 0 ? "CodeRabbit review is gener
       });
     });
 
-    console.log(`[REVIEW] ✅ Created review comment for Linear issue`);
+    console.log("[REVIEW] ✅ Created review comment for Linear issue");
   } catch (error) {
-    console.error(`[REVIEW] ❌ Failed to create review comment:`, error);
+    console.error("[REVIEW] ❌ Failed to create review comment:", error);
     throw error;
   }
 }
@@ -585,7 +615,9 @@ async function coordinateReviews(
   prs: PRWithLinear[],
   markReady = true
 ): Promise<WorkflowStats> {
-  console.log(`[REVIEW] Coordinating CodeRabbit reviews for ${prs.length} PRs...`);
+  console.log(
+    `[REVIEW] Coordinating CodeRabbit reviews for ${prs.length} PRs...`
+  );
 
   const stats: WorkflowStats = {
     delegated: 0,
@@ -612,7 +644,9 @@ async function coordinateReviews(
         stats.reviewsCompleted++;
         await delay(RATE_LIMIT_DELAY_MS);
       } else {
-        stats.errors.push(`No CodeRabbit review for PR #${prInfo.pr} within timeout`);
+        stats.errors.push(
+          `No CodeRabbit review for PR #${prInfo.pr} within timeout`
+        );
       }
     } catch (error) {
       const errorMsg = `Failed to coordinate review for PR #${prInfo.pr}: ${error}`;
@@ -635,7 +669,7 @@ async function checkCIStatus(pr: number): Promise<CIStatus> {
       "api",
       `repos/${GITHUB_REPO}/pulls/${pr}`,
       "--jq",
-      '{mergeable, statusesCheckRollup: .statusesCheckRollup}',
+      "{mergeable, statusesCheckRollup: .statusesCheckRollup}",
     ]).text();
 
     const prData = JSON.parse(prDataOutput) as {
@@ -730,7 +764,9 @@ async function mergeGreenPRs(
             status: "Done",
           });
         });
-        console.log(`[MERGE] ✅ Updated Linear issue ${prInfo.linearId} to Done`);
+        console.log(
+          `[MERGE] ✅ Updated Linear issue ${prInfo.linearId} to Done`
+        );
       } catch (error) {
         console.warn(
           `[MERGE] ⚠️ Failed to update Linear issue ${prInfo.linearId}:`,
@@ -753,7 +789,9 @@ async function mergeGreenPRs(
 
 // Main workflow
 async function runFullWorkflow(limit = 30, dryRun = false): Promise<void> {
-  console.log(`[WORKFLOW] Starting full agent wave workflow (limit: ${limit}, dry-run: ${dryRun})...`);
+  console.log(
+    `[WORKFLOW] Starting full agent wave workflow (limit: ${limit}, dry-run: ${dryRun})...`
+  );
 
   const overallStats: WorkflowStats = {
     delegated: 0,
@@ -797,7 +835,7 @@ async function runFullWorkflow(limit = 30, dryRun = false): Promise<void> {
       overallStats.errors.forEach((err) => console.log(`  - ${err}`));
     }
   } catch (error) {
-    console.error(`[WORKFLOW] Fatal error:`, error);
+    console.error("[WORKFLOW] Fatal error:", error);
     process.exit(1);
   }
 }
@@ -808,7 +846,7 @@ const args = process.argv.slice(3);
 
 if (command === "delegate") {
   const limit = args.includes("--limit")
-    ? parseInt(args[args.indexOf("--limit") + 1], 10)
+    ? Number.parseInt(args[args.indexOf("--limit") + 1], 10)
     : 30;
   findParallelizableTickets(limit)
     .then((tickets) => delegateTickets(tickets))
@@ -827,7 +865,9 @@ if (command === "delegate") {
     .then((prs) => {
       console.log(`Found ${prs.length} PRs linked to Linear issues:`);
       prs.forEach((p) =>
-        console.log(`  PR #${p.pr}: ${p.linearId} (${p.isDraft ? "draft" : "ready"})`)
+        console.log(
+          `  PR #${p.pr}: ${p.linearId} (${p.isDraft ? "draft" : "ready"})`
+        )
       );
     })
     .catch((error) => {
@@ -836,7 +876,9 @@ if (command === "delegate") {
     });
 } else if (command === "review") {
   const prArg = args.find((a) => a.startsWith("--pr"));
-  const prNumber = prArg ? parseInt(prArg.split("=")[1] || prArg.split(" ")[1], 10) : null;
+  const prNumber = prArg
+    ? Number.parseInt(prArg.split("=")[1] || prArg.split(" ")[1], 10)
+    : null;
 
   if (prNumber) {
     // Review specific PR
@@ -844,7 +886,9 @@ if (command === "delegate") {
       .then((prs) => {
         const pr = prs.find((p) => p.pr === prNumber);
         if (!pr) {
-          console.error(`PR #${prNumber} not found or not linked to Linear issue`);
+          console.error(
+            `PR #${prNumber} not found or not linked to Linear issue`
+          );
           process.exit(1);
         }
         return coordinateReviews([pr], false);
@@ -878,7 +922,7 @@ if (command === "delegate") {
     });
 } else if (command === "full") {
   const limit = args.includes("--limit")
-    ? parseInt(args[args.indexOf("--limit") + 1], 10)
+    ? Number.parseInt(args[args.indexOf("--limit") + 1], 10)
     : 30;
   const dryRun = args.includes("--dry-run");
   runFullWorkflow(limit, dryRun).catch((error) => {

@@ -482,8 +482,10 @@ export async function installWorkflowRuntimeFixture(
         input: payload,
       });
       const action = String(actionValue ?? "activity");
-      const id =
-        (payload.issueId ?? payload.sessionId ?? payload.teamId ?? randomUUID()) as string;
+      const id = (payload.issueId ??
+        payload.sessionId ??
+        payload.teamId ??
+        randomUUID()) as string;
       const body: Record<string, unknown> = {
         ok: true,
         id,

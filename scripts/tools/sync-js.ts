@@ -141,7 +141,7 @@ async function main() {
   if (CHECK_MODE) {
     if (stale > 0) {
       console.error(
-        `[tools:sync-js] ${stale} file(s) are out of date. Run \"bun run tools:sync-js\" and commit the updated artifacts.`
+        `[tools:sync-js] ${stale} file(s) are out of date. Run "bun run tools:sync-js" and commit the updated artifacts.`
       );
       process.exit(1);
     }

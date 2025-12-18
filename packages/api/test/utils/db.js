@@ -1,11 +1,27 @@
- function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }import { sql } from "drizzle-orm";
-import { drizzle, } from "drizzle-orm/node-postgres";
+function _optionalChain(ops) {
+  let lastAccessLHS;
+  let value = ops[0];
+  let i = 1;
+  while (i < ops.length) {
+    const op = ops[i];
+    const fn = ops[i + 1];
+    i += 2;
+    if ((op === "optionalAccess" || op === "optionalCall") && value == null) {
+      return;
+    }
+    if (op === "access" || op === "optionalAccess") {
+      lastAccessLHS = value;
+      value = fn(value);
+    } else if (op === "call" || op === "optionalCall") {
+      value = fn((...args) => value.call(lastAccessLHS, ...args));
+      lastAccessLHS = undefined;
+    }
+  }
+  return value;
+}
+import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
-
-
-
-
-
 
 /**
  * Creates an isolated test database connection.
@@ -84,7 +100,15 @@ export const dbFixtures = {
       VALUES (${source}, ${`Doc ${source}`})
       RETURNING id
     `);
-    const docId = _optionalChain([docResult, 'access', _2 => _2.rows, 'access', _3 => _3[0], 'optionalAccess', _4 => _4.id]) ;
+    const docId = _optionalChain([
+      docResult,
+      "access",
+      (_2) => _2.rows,
+      "access",
+      (_3) => _3[0],
+      "optionalAccess",
+      (_4) => _4.id,
+    ]);
 
     if (!docId) {
       throw new Error("Failed to create test document");
@@ -106,16 +130,20 @@ export const dbFixtures = {
   /**
    * Creates a test assistant thread
    */
-  async createThread(
-    db,
-    userId = "test-user",
-    agent = "assistant"
-  ) {
+  async createThread(db, userId = "test-user", agent = "assistant") {
     const threadResult = await db.execute(sql`
       INSERT INTO assistant_threads (user_id, agent)
       VALUES (${userId}, ${agent})
       RETURNING id
     `);
-    return _optionalChain([threadResult, 'access', _5 => _5.rows, 'access', _6 => _6[0], 'optionalAccess', _7 => _7.id]) ;
+    return _optionalChain([
+      threadResult,
+      "access",
+      (_5) => _5.rows,
+      "access",
+      (_6) => _6[0],
+      "optionalAccess",
+      (_7) => _7.id,
+    ]);
   },
 };

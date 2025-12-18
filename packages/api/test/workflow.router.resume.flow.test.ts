@@ -119,8 +119,10 @@ mock.module("@alfred/api/workflow/runner", () => ({
 mock.module("@alfred/agent/workflow/runner", () => ({
   runPlanV6: runPlanV6Mock,
 }));
-const agentRunnerAbs = new URL("../../agent/src/workflow/runner.ts", import.meta.url)
-  .pathname;
+const agentRunnerAbs = new URL(
+  "../../agent/src/workflow/runner.ts",
+  import.meta.url
+).pathname;
 mock.module(agentRunnerAbs, () => ({
   runPlanV6: runPlanV6Mock,
 }));

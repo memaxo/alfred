@@ -103,7 +103,8 @@ export const terminalRouter = router({
             return { sessionId };
           } catch (bunError) {
             logger.warn("terminal_bun_pty_failed", {
-              error: bunError instanceof Error ? bunError.message : String(bunError),
+              error:
+                bunError instanceof Error ? bunError.message : String(bunError),
             });
             // Fall through to node-pty
           }

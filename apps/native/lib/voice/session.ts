@@ -89,7 +89,7 @@ function hasQuery(
   );
 }
 
-async function resolveQuery(
+function resolveQuery(
   rawClient: unknown,
   path: string,
   input?: unknown
@@ -513,7 +513,7 @@ export function useVoiceSessionNative(
     currentRecordingRef.current = recording;
     const options =
       Audio.RecordingOptionsPresets?.HIGH_QUALITY ??
-      (Audio as any).RecordingOptionsPresets?.HIGH_QUALITY;
+      (Audio as unknown as { RecordingOptionsPresets?: { HIGH_QUALITY?: unknown } }).RecordingOptionsPresets?.HIGH_QUALITY;
     await recording.prepareToRecordAsync(options);
     await recording.startAsync();
     await new Promise((resolve) => setTimeout(resolve, durationMs));
@@ -652,11 +652,11 @@ export function useVoiceSessionNative(
     [stopStreamingCapture]
   );
 
-  const startFallback = async () => {
+  const startFallback = () => {
     throw new Error("voice_streaming_unavailable");
   };
 
-  const stopFallback = async () => {
+  const stopFallback = () => {
     // ignore
   };
 

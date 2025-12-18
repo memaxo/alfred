@@ -73,7 +73,7 @@ declare module "bun" {
     interface SpawnOptions<
       In extends Spawn.Writable = Spawn.Writable,
       Out extends Spawn.Readable = Spawn.Readable,
-      Err extends Spawn.Readable = Spawn.Readable
+      Err extends Spawn.Readable = Spawn.Readable,
     > {
       /**
        * Terminal options for pseudo-terminal (PTY) support
@@ -90,7 +90,7 @@ declare module "bun" {
   interface Subprocess<
     In extends Spawn.Writable = Spawn.Writable,
     Out extends Spawn.Readable = Spawn.Readable,
-    Err extends Spawn.Readable = Spawn.Readable
+    Err extends Spawn.Readable = Spawn.Readable,
   > {
     /**
      * Terminal instance (available when spawned with terminal option)
@@ -156,7 +156,7 @@ declare global {
       interface SpawnOptions<
         In extends Spawn.Writable = Spawn.Writable,
         Out extends Spawn.Readable = Spawn.Readable,
-        Err extends Spawn.Readable = Spawn.Readable
+        Err extends Spawn.Readable = Spawn.Readable,
       > {
         /**
          * Terminal options for pseudo-terminal (PTY) support
@@ -173,7 +173,7 @@ declare global {
     interface Subprocess<
       In extends Spawn.Writable = Spawn.Writable,
       Out extends Spawn.Readable = Spawn.Readable,
-      Err extends Spawn.Readable = Spawn.Readable
+      Err extends Spawn.Readable = Spawn.Readable,
     > {
       /**
        * Terminal instance (available when spawned with terminal option)

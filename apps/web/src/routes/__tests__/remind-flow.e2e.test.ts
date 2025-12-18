@@ -33,7 +33,7 @@ describe.skipIf(!shouldRun)("Reminder E2E Flow", () => {
 
   it("creates and lists a reminder", async () => {
     // Create a reminder
-    const due = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
+    const due = new Date(Date.now() + 3_600_000).toISOString(); // 1 hour from now
     const created = await client.remind.create.mutate({
       title: "Test Reminder E2E",
       due,
@@ -78,7 +78,7 @@ describe.skipIf(!shouldRun)("Reminder E2E Flow", () => {
 
   it("fires and deletes a reminder", async () => {
     // Create a reminder
-    const due = new Date(Date.now() + 3600000).toISOString();
+    const due = new Date(Date.now() + 3_600_000).toISOString();
     const created = await client.remind.create.mutate({
       title: "Fire Delete E2E",
       due,
@@ -110,7 +110,7 @@ describe.skipIf(!shouldRun)("Reminder E2E Flow", () => {
     // Create multiple reminders
     const reminders: Array<{ id: string }> = [];
     for (let i = 0; i < 5; i++) {
-      const due = new Date(Date.now() + 3600000 * (i + 1)).toISOString();
+      const due = new Date(Date.now() + 3_600_000 * (i + 1)).toISOString();
       const created = await client.remind.create.mutate({
         title: `Pagination Test ${i}`,
         due,

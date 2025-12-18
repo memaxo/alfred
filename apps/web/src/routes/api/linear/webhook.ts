@@ -397,7 +397,9 @@ export const Route = createFileRoute("/api/linear/webhook")({
           LINEAR_WEBHOOK_SIGNATURE_HEADER,
           LINEAR_WEBHOOK_TS_FIELD,
         } = h.linearWebhooksPkg as unknown as {
-          LinearWebhookClient: new (secret: string) => {
+          LinearWebhookClient: new (
+            secret: string
+          ) => {
             verify: (
               body: Buffer,
               signature: string,

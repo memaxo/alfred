@@ -105,11 +105,13 @@ export function IntegrationsNode({ id, data, selected }: NodeProps) {
                 : "Not Connected"}
             </BiolumBadge>
           </div>
-          {linearStatus?.connected && linearStatus.workspace && !isLinearExpired && (
-            <p className="mt-2 text-biolum-faint text-xs">
-              Workspace: {linearStatus.workspace}
-            </p>
-          )}
+          {linearStatus?.connected &&
+            linearStatus.workspace &&
+            !isLinearExpired && (
+              <p className="mt-2 text-biolum-faint text-xs">
+                Workspace: {linearStatus.workspace}
+              </p>
+            )}
           {isLinearExpired && (
             <p className="mt-2 text-amber-300 text-xs">
               Connection expired. Reconnect below.

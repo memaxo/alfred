@@ -104,8 +104,8 @@ function TimerCreateForm() {
           <Label htmlFor="duration">Duration (minutes)</Label>
           <Input
             id="duration"
-            min={1}
             max={1440}
+            min={1}
             onChange={(event) => setMinutes(event.target.value)}
             placeholder="25"
             type="number"
@@ -235,7 +235,7 @@ function TimerPane() {
 
   const utils = trpc.useUtils();
   const timersQuery = trpc.timer.active.useQuery(undefined, {
-    refetchInterval: 10000, // Refetch every 10s for sync
+    refetchInterval: 10_000, // Refetch every 10s for sync
   });
 
   const completeTimer = trpc.timer.done.useMutation({
@@ -258,26 +258,28 @@ function TimerPane() {
   const isActing = completeTimer.isPending || cancelTimer.isPending;
   const timers = (timersQuery.data ?? []) as TimerItem[];
 
-  const timerCards = useMemo<TimerCardData[]>(() => {
-    return timers.map((timer) => {
-      const startedAt = timer.startedAt
-        ? new Date(timer.startedAt).getTime()
-        : Date.now();
-      const elapsedSeconds = Math.max(0, (now - startedAt) / 1000);
-      const remainingSeconds = Math.max(0, timer.duration - elapsedSeconds);
-      const percent = Math.min(100, (elapsedSeconds / timer.duration) * 100);
-      const isExpired = remainingSeconds <= 0;
+  const timerCards = useMemo<TimerCardData[]>(
+    () =>
+      timers.map((timer) => {
+        const startedAt = timer.startedAt
+          ? new Date(timer.startedAt).getTime()
+          : Date.now();
+        const elapsedSeconds = Math.max(0, (now - startedAt) / 1000);
+        const remainingSeconds = Math.max(0, timer.duration - elapsedSeconds);
+        const percent = Math.min(100, (elapsedSeconds / timer.duration) * 100);
+        const isExpired = remainingSeconds <= 0;
 
-      return {
-        id: timer.id,
-        label: timer.label ?? "Timer",
-        remainingLabel: formatRemaining(remainingSeconds),
-        remainingSeconds,
-        percent,
-        isExpired,
-      };
-    });
-  }, [timers, now]);
+        return {
+          id: timer.id,
+          label: timer.label ?? "Timer",
+          remainingLabel: formatRemaining(remainingSeconds),
+          remainingSeconds,
+          percent,
+          isExpired,
+        };
+      }),
+    [timers, now]
+  );
 
   const handleComplete = useCallback(
     (id: string) => {

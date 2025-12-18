@@ -78,7 +78,9 @@ export function useChatLogic({
                 // If there is a next node, pulse the edge
                 if (i < path.length - 1) {
                   const nextNodeId = path[i + 1];
-                  const nextUiId = nextNodeId ? resolveId(nextNodeId) : undefined;
+                  const nextUiId = nextNodeId
+                    ? resolveId(nextNodeId)
+                    : undefined;
                   if (nextUiId) {
                     setTimeout(
                       () => {

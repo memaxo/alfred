@@ -10,4 +10,3 @@ export const PLACE_TAGS = new Set([
   "Address",
   "Continent",
 ]);
-

@@ -169,12 +169,11 @@ export class VCRRecorder {
    */
   private createInterceptor() {
     const originalFetch = this.originalFetch!;
-    const self = this;
 
-    const interceptedFetch = async function (
+    const interceptedFetch = async (
       input: string | URL | Request,
       init?: RequestInit
-    ): Promise<Response> {
+    ): Promise<Response> => {
       const url =
         typeof input === "string"
           ? input
@@ -189,7 +188,7 @@ export class VCRRecorder {
       }
 
       // Passthrough mode - just forward
-      if (self.mode === "passthrough") {
+      if (this.mode === "passthrough") {
         return originalFetch(input, init);
       }
 
@@ -217,20 +216,18 @@ export class VCRRecorder {
       const requestHash = hashRequest(requestInfo);
 
       // Replay mode - find matching recording
-      if (self.mode === "replay") {
+      if (this.mode === "replay") {
         // Use custom matcher if provided, otherwise fall back to hash matching
-        const recorded = self.matcher
-          ? self.cassette.interactions.find((i) =>
-              self.matcher(requestInfo, i)
-            )
-          : findInteraction(self.cassette, requestHash);
+        const recorded = this.matcher
+          ? this.cassette.interactions.find((i) => this.matcher(requestInfo, i))
+          : findInteraction(this.cassette, requestHash);
 
         if (recorded) {
           console.log(`VCR: Replaying ${provider} request (${recorded.model})`);
-          return self.createMockResponse(recorded);
+          return this.createMockResponse(recorded);
         }
 
-        if (self.strictReplay) {
+        if (this.strictReplay) {
           throw new Error(
             `VCR: No matching recording found for ${provider} request. ` +
               `Hash: ${requestHash}. Run with VCR_RECORD=1 to record.`
@@ -271,7 +268,7 @@ export class VCRRecorder {
         durationMs,
       };
 
-      addInteraction(self.cassette, interaction);
+      addInteraction(this.cassette, interaction);
       console.log(`VCR: Recorded ${provider} request (${interaction.model})`);
 
       return response;

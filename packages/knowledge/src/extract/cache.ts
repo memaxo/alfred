@@ -120,19 +120,14 @@ if (typeof setInterval !== "undefined") {
 /**
  * Get cached extraction result or null
  */
-export function getCachedExtraction(
-  text: string
-): ExtractionResult | null {
+export function getCachedExtraction(text: string): ExtractionResult | null {
   return cache.get(text);
 }
 
 /**
  * Cache extraction result
  */
-export function cacheExtraction(
-  text: string,
-  result: ExtractionResult
-): void {
+export function cacheExtraction(text: string, result: ExtractionResult): void {
   cache.set(text, result);
 }
 
@@ -142,4 +137,3 @@ export function cacheExtraction(
 export function clearExtractionCache(): void {
   cache.clear();
 }
-

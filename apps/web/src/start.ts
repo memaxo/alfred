@@ -1,27 +1,28 @@
 /**
  * TanStack Start global middleware configuration.
- * 
+ *
  * This file configures global middleware that runs for all requests
  * (SSR, server routes, server functions) and all server functions.
- * 
+ *
  * Middleware provides cross-cutting concerns like:
  * - Request/response logging
  * - Error handling
  * - Metrics collection
  * - Authentication
  */
-import { createStart, createMiddleware } from "@tanstack/react-start";
+
 import { logger } from "@alfred/logger";
+import { createMiddleware, createStart } from "@tanstack/react-start";
 import { withRequestTestSession } from "@/lib/test-auth";
 
 /**
  * Request middleware for all requests (SSR, server routes, server functions).
- * 
+ *
  * This middleware runs before every request handled by Start, including:
  * - Server-side rendering requests
  * - Server route handlers (GET, POST, etc.)
  * - Server function invocations
- * 
+ *
  * Use this for cross-cutting concerns that apply to all server requests.
  */
 const requestLoggingMiddleware = createMiddleware().server(
@@ -61,10 +62,10 @@ const requestLoggingMiddleware = createMiddleware().server(
 
 /**
  * Server function middleware for all server functions.
- * 
+ *
  * This middleware runs before every server function invocation.
  * It provides logging and error handling specific to server functions.
- * 
+ *
  * Use this for cross-cutting concerns that apply only to server functions,
  * such as input validation, authentication, or function-specific logging.
  */
@@ -96,7 +97,7 @@ const functionLoggingMiddleware = createMiddleware({ type: "function" }).server(
 
 /**
  * Create and export the Start instance with global middleware.
- * 
+ *
  * This instance is used by TanStack Start to configure global behavior.
  * The middleware defined here will run for all requests and server functions.
  */

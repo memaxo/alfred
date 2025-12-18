@@ -10,25 +10,46 @@ import { z } from "zod";
 // ============================================================================
 
 export const knowledgeQueryInputSchema = z.object({
-  query: z.string().min(1).describe("Natural language query to search the knowledge graph"),
-  limit: z.number().int().positive().max(100).optional().describe("Maximum results (default: 10)"),
-  resource: z.string().optional().describe("Filter by resource scope (e.g., 'user', 'runtime:<id>')"),
-  includeEdges: z.boolean().optional().describe("Include related edges in results"),
+  query: z
+    .string()
+    .min(1)
+    .describe("Natural language query to search the knowledge graph"),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(100)
+    .optional()
+    .describe("Maximum results (default: 10)"),
+  resource: z
+    .string()
+    .optional()
+    .describe("Filter by resource scope (e.g., 'user', 'runtime:<id>')"),
+  includeEdges: z
+    .boolean()
+    .optional()
+    .describe("Include related edges in results"),
   authz: z.string().optional().describe("Authorization token"),
 });
 
 export const knowledgeQueryOutputSchema = z.object({
-  nodes: z.array(z.object({
-    id: z.string(),
-    label: z.string(),
-    kind: z.string(),
-    properties: z.record(z.string(), z.unknown()).optional(),
-  })),
-  edges: z.array(z.object({
-    fromId: z.string(),
-    toId: z.string(),
-    kind: z.string(),
-  })).optional(),
+  nodes: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      kind: z.string(),
+      properties: z.record(z.string(), z.unknown()).optional(),
+    })
+  ),
+  edges: z
+    .array(
+      z.object({
+        fromId: z.string(),
+        toId: z.string(),
+        kind: z.string(),
+      })
+    )
+    .optional(),
   total: z.number(),
 });
 
@@ -41,28 +62,45 @@ export type KnowledgeQueryOutput = z.infer<typeof knowledgeQueryOutputSchema>;
 
 export const knowledgeExtractInputSchema = z.object({
   content: z.string().min(1).describe("Text content to extract knowledge from"),
-  source: z.string().min(1).describe("Source identifier (e.g., 'conversation', 'document:123')"),
-  resource: z.string().default("user").describe("Resource scope (default: 'user')"),
-  confidence: z.number().min(0).max(1).optional().describe("Extraction confidence override (0-1)"),
+  source: z
+    .string()
+    .min(1)
+    .describe("Source identifier (e.g., 'conversation', 'document:123')"),
+  resource: z
+    .string()
+    .default("user")
+    .describe("Resource scope (default: 'user')"),
+  confidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Extraction confidence override (0-1)"),
   authz: z.string().optional().describe("Authorization token"),
 });
 
 export const knowledgeExtractOutputSchema = z.object({
   extracted: z.number().describe("Number of facts extracted"),
-  facts: z.array(z.object({
-    id: z.string(),
-    label: z.string(),
-    kind: z.string(),
-  })),
-  relations: z.array(z.object({
-    fromId: z.string(),
-    toId: z.string(),
-    kind: z.string(),
-  })),
+  facts: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      kind: z.string(),
+    })
+  ),
+  relations: z.array(
+    z.object({
+      fromId: z.string(),
+      toId: z.string(),
+      kind: z.string(),
+    })
+  ),
 });
 
 export type KnowledgeExtractInput = z.infer<typeof knowledgeExtractInputSchema>;
-export type KnowledgeExtractOutput = z.infer<typeof knowledgeExtractOutputSchema>;
+export type KnowledgeExtractOutput = z.infer<
+  typeof knowledgeExtractOutputSchema
+>;
 
 // ============================================================================
 // knowledge_connect
@@ -71,9 +109,15 @@ export type KnowledgeExtractOutput = z.infer<typeof knowledgeExtractOutputSchema
 export const knowledgeConnectInputSchema = z.object({
   fromId: z.string().min(1).describe("Source node ID"),
   toId: z.string().min(1).describe("Target node ID"),
-  kind: z.enum(["relates_to", "blocks", "depends_on", "is_a", "part_of"]).optional().describe("Edge type (default: 'relates_to')"),
+  kind: z
+    .enum(["relates_to", "blocks", "depends_on", "is_a", "part_of"])
+    .optional()
+    .describe("Edge type (default: 'relates_to')"),
   resource: z.string().optional().describe("Resource scope (default: 'user')"),
-  properties: z.record(z.string(), z.unknown()).optional().describe("Additional edge properties"),
+  properties: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Additional edge properties"),
   authz: z.string().optional().describe("Authorization token"),
 });
 
@@ -85,7 +129,9 @@ export const knowledgeConnectOutputSchema = z.object({
 });
 
 export type KnowledgeConnectInput = z.infer<typeof knowledgeConnectInputSchema>;
-export type KnowledgeConnectOutput = z.infer<typeof knowledgeConnectOutputSchema>;
+export type KnowledgeConnectOutput = z.infer<
+  typeof knowledgeConnectOutputSchema
+>;
 
 // ============================================================================
 // knowledge_correct
@@ -145,4 +191,6 @@ export const knowledgeCorrectOutputSchema = z.object({
 });
 
 export type KnowledgeCorrectInput = z.infer<typeof knowledgeCorrectInputSchema>;
-export type KnowledgeCorrectOutput = z.infer<typeof knowledgeCorrectOutputSchema>;
+export type KnowledgeCorrectOutput = z.infer<
+  typeof knowledgeCorrectOutputSchema
+>;

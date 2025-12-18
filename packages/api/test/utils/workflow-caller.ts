@@ -1,10 +1,6 @@
-import { RuntimeContext } from "@alfred/type/runtime-context";
+import { createTestSession, type TestSession } from "@alfred/test-kit/auth";
 import type { Obligation } from "@alfred/type";
-import {
-  createTestSession,
-  type AuthSession,
-  type TestSession,
-} from "@alfred/test-kit/auth";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 
 type WorkflowRuntime = {
   requestId: string;

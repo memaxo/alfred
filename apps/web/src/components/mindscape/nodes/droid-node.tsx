@@ -113,7 +113,10 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   const computedMinutes = Math.floor(
     ((initial.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC) as number) / 60
   );
-  const fallbackMinutes = Math.max(computedMinutes, TIMEOUT_MINUTES_OPTIONS[0] ?? 5);
+  const fallbackMinutes = Math.max(
+    computedMinutes,
+    TIMEOUT_MINUTES_OPTIONS[0] ?? 5
+  );
   const initialTimeoutMinutes =
     TIMEOUT_MINUTES_OPTIONS.find((minutes) => minutes >= fallbackMinutes) ??
     TIMEOUT_MINUTES_OPTIONS[TIMEOUT_MINUTES_OPTIONS.length - 1] ??
@@ -435,9 +438,9 @@ export function DroidNode({ id, data, selected }: NodeProps) {
         <div className="flex flex-col gap-3 p-4">
           <Textarea
             aria-label="Droid prompt"
-            rows={3}
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Describe the task for droid..."
+            rows={3}
             value={prompt}
           />
           <div className="flex items-center gap-3">

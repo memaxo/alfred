@@ -8,10 +8,10 @@ const storage = new Map<string, string>();
 mock.module("@react-native-async-storage/async-storage", () => ({
   default: {
     getItem: async (key: string) => storage.get(key) ?? null,
-    setItem: async (key: string, value: string) => {
+    setItem: (key: string, value: string) => {
       storage.set(key, value);
     },
-    removeItem: async (key: string) => {
+    removeItem: (key: string) => {
       storage.delete(key);
     },
   },
@@ -78,7 +78,7 @@ describe("voice queue", () => {
     });
 
     await ageQueue(2000);
-    const processor = vi.fn(async () => {
+    const processor = vi.fn(() => {
       throw new Error("network_fail");
     });
 

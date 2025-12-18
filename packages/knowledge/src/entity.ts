@@ -15,7 +15,7 @@ export function parseEntityFactLabel(
   // Accept both raw and sanitized formats:
   // - "[entity:person] Alice"
   // - "(entity:person) Alice"
-  const match = /^[\[(]entity:([^\])]+)[\])]\s+(.+)$/.exec(label.trim());
+  const match = /^[[(]entity:([^\])]+)[\])]\s+(.+)$/.exec(label.trim());
   if (!match) {
     return null;
   }

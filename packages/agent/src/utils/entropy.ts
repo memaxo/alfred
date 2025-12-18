@@ -102,7 +102,10 @@ export function detectLoop(window: string[], threshold = 0.8): boolean {
   // 2. Check A-B-A pattern (ping-pong)
   if (window.length >= 3) {
     const prevPrev = window[window.length - 3];
-    if (prevPrev !== undefined && calculateSimilarity(current, prevPrev) > threshold) {
+    if (
+      prevPrev !== undefined &&
+      calculateSimilarity(current, prevPrev) > threshold
+    ) {
       return true;
     }
   }
