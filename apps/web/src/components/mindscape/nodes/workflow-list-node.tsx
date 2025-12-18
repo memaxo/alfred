@@ -116,7 +116,7 @@ export function WorkflowListNode({
         status: run.status as "Idle" | "running" | "completed" | "failed" | "pending" | "starting",
         runId: run.id,
         messages: [],
-        graph: { dbId: run.id },
+        graph: { resource: `workflow:${run.id}`, dbId: run.id },
       },
     };
     addArtifact(newNode);

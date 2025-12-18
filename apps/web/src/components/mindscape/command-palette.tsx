@@ -403,6 +403,7 @@ export function MindscapeCommandPalette({
               archived: node.archived,
               description: node.description,
               graph: {
+                resource: `concept:${node.id}`,
                 dbId: node.id,
                 hgHash: node.hgHash,
               },

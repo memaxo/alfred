@@ -3,7 +3,7 @@ import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
-import { RuntimeContext } from "@alfred/type";
+import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import {
   commentOnLinearIssue,
@@ -555,7 +555,9 @@ export async function orchestrateWorkflowStream(
       const contextRecord = coerceRecord(callbacks.context);
       const runtimeContext =
         contextRecord.runtimeContext instanceof RuntimeContext
-          ? contextRecord.runtimeContext
+          ? (contextRecord.runtimeContext as RuntimeContext<
+              Record<string, unknown>
+            >)
           : undefined;
 
       const executor = await createWorkflowExecutor(

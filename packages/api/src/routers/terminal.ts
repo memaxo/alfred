@@ -9,7 +9,7 @@ import { authedProcedure, router } from "../trpc";
 // Local session types (no exported abstraction per ALFRED rules)
 type BunPtySession = {
   kind: "bun";
-  proc: Bun.Subprocess & { terminal: NonNullable<Bun.Subprocess["terminal"]> };
+  proc: Bun.Subprocess & { terminal: Bun.Terminal };
   subscribers: Set<(chunk: string) => void>;
 };
 
@@ -74,7 +74,7 @@ export const terminalRouter = router({
               terminal: {
                 cols: input.cols,
                 rows: input.rows,
-                data(_term: NonNullable<Bun.Subprocess["terminal"]>, data: string | Uint8Array) {
+                data(_term: Bun.Terminal, data: string | Uint8Array) {
                   const chunk = toStringChunk(data);
                   for (const fn of subscribers) {
                     try {
@@ -93,7 +93,7 @@ export const terminalRouter = router({
             sessions.set(sessionId, {
               kind: "bun",
               proc: proc as Bun.Subprocess & {
-                terminal: NonNullable<Bun.Subprocess["terminal"]>;
+                terminal: Bun.Terminal;
               },
               subscribers,
             });
