@@ -10,15 +10,17 @@ setupTestEnv();
 mockPolicyAudit();
 
 const listDeploymentsMock = vi.fn();
-const getDeploymentMock = vi.fn();
+const getDeploymentByIdMock = vi.fn();
 const createDeploymentMock = vi.fn();
 const removeDeploymentMock = vi.fn();
 
-mock.module("@alfred/db/repo/deploy", () => ({
-  listDeployments: listDeploymentsMock,
-  getDeployment: getDeploymentMock,
-  createDeployment: createDeploymentMock,
-  removeDeployment: removeDeploymentMock,
+mock.module("@alfred/db", () => ({
+  deployRepo: {
+    listDeployments: listDeploymentsMock,
+    getDeploymentById: getDeploymentByIdMock,
+    createDeployment: createDeploymentMock,
+    removeDeployment: removeDeploymentMock,
+  },
 }));
 
 const toolDockerMock = {
@@ -76,13 +78,13 @@ describe("deploy router", () => {
         type: "preview",
       };
 
-      getDeploymentMock.mockResolvedValue(mockDeployment);
+      getDeploymentByIdMock.mockResolvedValue(mockDeployment);
 
       const result = await caller.deploy.get({
         id: "deploy-1",
       });
 
-      expect(getDeploymentMock).toHaveBeenCalledWith("deploy-1");
+      expect(getDeploymentByIdMock).toHaveBeenCalledWith("deploy-1");
       expect(result).toEqual(mockDeployment);
     });
   });

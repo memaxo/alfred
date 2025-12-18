@@ -28,13 +28,21 @@ const timedFact = (content: string, tsValue: number): Knowledge => ({
 
 beforeAll(async () => {
   originalDbUrl = process.env.DATABASE_URL;
+  // Set DATABASE_URL before importing db module so it initializes with SQLite
   process.env.DATABASE_URL = "sqlite::memory:";
+  
+  // Import db module after setting env var
+  const dbModule = await import("@alfred/db");
+  db = dbModule.db;
+  
+  // Verify db has delete method (SQLite drizzle should support it)
+  if (typeof db.delete !== "function") {
+    throw new Error("db.delete is not a function. Database may not be properly initialized.");
+  }
+
   const bridge = await import("@alfred/agent/assistant/hypergraph-bridge");
   persistHypergraphToDb = bridge.persistHypergraphToDb;
   loadHypergraphFromDb = bridge.loadHypergraphFromDb;
-
-  const dbModule = await import("@alfred/db");
-  db = dbModule.db;
 
   graphRepo = await import("@alfred/db/repo/graph");
 });

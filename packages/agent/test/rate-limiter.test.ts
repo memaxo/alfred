@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test";
+// Install Redis mocks before any imports that might use Redis
+import "@alfred/test-kit/redis";
+
 import { Semaphore, TokenBucket } from "../src/utils/rate-limiter";
 
 describe("Rate Limiting Utils", () => {

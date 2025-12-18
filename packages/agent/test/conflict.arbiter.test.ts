@@ -6,8 +6,7 @@
  *
  * Run: bun test conflict.arbiter.test.ts
  */
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { sys } from "../src/utils/process";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Track mock calls for cleanup verification
 let worktreeCreateCalls: unknown[] = [];
@@ -37,8 +36,18 @@ const mockCodexExecute = mock((_opts: unknown) => {
   return Promise.resolve({ result: "done", artifacts: [] });
 });
 
-// Spy on sys.spawn before mocking modules
-const spawnSpy = spyOn(sys, "spawn");
+// Create a mock spawn function that we can control
+const spawnMock = mock((command: string[] | string, options?: unknown) => {
+  // Default implementation - will be overridden by setupGitMocks
+  return createSpawnResult(0);
+});
+
+// Mock the sys module to use our mock spawn
+mock.module("../src/utils/process.js", () => ({
+  sys: {
+    spawn: spawnMock,
+  },
+}));
 
 // Mock Worktree Manager
 mock.module("../src/orchestrator/tool/worktree.js", () => ({
@@ -66,7 +75,7 @@ const { conflictArbiter } = await import("../src/orchestrator/conflict");
 describe("conflictArbiter", () => {
   beforeEach(() => {
     // Reset all mocks and tracking arrays - use mockReset to clear all state
-    spawnSpy.mockReset();
+    spawnMock.mockReset();
     mockWorktreeCreate.mockReset();
     mockWorktreeRemove.mockReset();
     mockCodexExecute.mockReset();
@@ -164,7 +173,7 @@ describe("conflictArbiter", () => {
       await conflictArbiter.resolve("/repo", "run-3", "main", "feature/auth");
 
       // Find the commit spawn call (should be the last one)
-      const commitCall = spawnSpy.mock.calls.find(
+      const commitCall = spawnMock.mock.calls.find(
         (call) =>
           Array.isArray(call[0]) &&
           call[0][0] === "git" &&
@@ -210,7 +219,7 @@ describe("conflictArbiter", () => {
 
       await conflictArbiter.resolve("/repo", "run-5", "main", "feat/4");
 
-      const commitCall = spawnSpy.mock.calls.find(
+      const commitCall = spawnMock.mock.calls.find(
         (call) =>
           Array.isArray(call[0]) &&
           call[0][0] === "git" &&
@@ -368,11 +377,11 @@ describe("conflictArbiter", () => {
     it("cleans up worktree when git diff --check throws", async () => {
       // Setup merge and conflict detection
       // 1. git merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1));
+      spawnMock.mockReturnValueOnce(createSpawnResult(1));
       // 2. git diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "file.ts"));
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "file.ts"));
       // 3. git diff --check - throws error
-      spawnSpy.mockReturnValueOnce({
+      spawnMock.mockReturnValueOnce({
         exited: Promise.reject(new Error("git diff --check failed")),
         stdout: "",
         stderr: "",
@@ -453,10 +462,10 @@ describe("conflictArbiter", () => {
 
     it("handles merge with higher exit codes gracefully", async () => {
       // Setup with higher exit code but conflicts present
-      spawnSpy.mockReturnValueOnce(createSpawnResult(128)); // merge with high exit code
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "error-file.ts")); // diff shows conflicts
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check passes
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit succeeds
+      spawnMock.mockReturnValueOnce(createSpawnResult(128)); // merge with high exit code
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "error-file.ts")); // diff shows conflicts
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check passes
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit succeeds
 
       const result = await conflictArbiter.resolve(
         "/repo",
@@ -470,10 +479,10 @@ describe("conflictArbiter", () => {
 
     it("fails gracefully when spawn throws synchronously", async () => {
       // This tests the try-catch in the resolve function
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "file.ts")); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "file.ts")); // diff --name-only
       // After Codex runs, git diff --check will throw
-      spawnSpy.mockReturnValueOnce({
+      spawnMock.mockReturnValueOnce({
         exited: Promise.reject(new Error("spawn ENOENT")),
         stdout: "",
         stderr: "",
@@ -494,10 +503,10 @@ describe("conflictArbiter", () => {
   describe("Codex agent configuration", () => {
     it("passes correct working directory to Codex", async () => {
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "cwd-test.ts")); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "cwd-test.ts")); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       await conflictArbiter.resolve("/repo", "run-18", "main", "feat/17");
 
@@ -508,10 +517,10 @@ describe("conflictArbiter", () => {
 
     it("sets high autonomy level for arbiter", async () => {
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "auto-test.ts")); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "auto-test.ts")); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       await conflictArbiter.resolve("/repo", "run-19", "main", "feat/18");
 
@@ -524,10 +533,10 @@ describe("conflictArbiter", () => {
 
     it("passes authz token to Codex when provided", async () => {
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "authz-test.ts")); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "authz-test.ts")); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       await conflictArbiter.resolve(
         "/repo",
@@ -546,10 +555,10 @@ describe("conflictArbiter", () => {
 
     it("passes userId to Codex when provided", async () => {
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "userid-test.ts")); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "userid-test.ts")); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       await conflictArbiter.resolve(
         "/repo",
@@ -572,10 +581,10 @@ describe("conflictArbiter", () => {
     it("handles multiple files with conflicts", async () => {
       const files = ["src/a.ts", "src/b.ts", "src/c.ts", "config.json"];
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, files.join("\n"))); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, files.join("\n"))); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       await conflictArbiter.resolve("/repo", "run-22", "main", "feat/21");
 
@@ -591,10 +600,10 @@ describe("conflictArbiter", () => {
     it("handles files with special characters in names", async () => {
       const files = ["file with spaces.ts", "file-with-dashes.ts"];
       // Fresh mock setup for this test
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, files.join("\n"))); // diff --name-only
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // diff --check
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, files.join("\n"))); // diff --name-only
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // diff --check
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       const result = await conflictArbiter.resolve(
         "/repo",
@@ -609,9 +618,9 @@ describe("conflictArbiter", () => {
     it("handles empty diff output gracefully", async () => {
       // Fresh mock setup: merge returns 1 (conflict) but diff shows no files
       // This is an edge case - the arbiter should take the "clean" path
-      spawnSpy.mockReturnValueOnce(createSpawnResult(1)); // merge with exit 1
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0, "")); // diff --name-only returns empty
-      spawnSpy.mockReturnValueOnce(createSpawnResult(0)); // commit
+      spawnMock.mockReturnValueOnce(createSpawnResult(1)); // merge with exit 1
+      spawnMock.mockReturnValueOnce(createSpawnResult(0, "")); // diff --name-only returns empty
+      spawnMock.mockReturnValueOnce(createSpawnResult(0)); // commit
 
       const result = await conflictArbiter.resolve(
         "/repo",
@@ -687,20 +696,20 @@ function setupGitMocks(config: GitMockConfig): void {
   } = config;
 
   // 1. git merge --no-commit --no-ff
-  spawnSpy.mockReturnValueOnce(createSpawnResult(mergeExit));
+  spawnMock.mockReturnValueOnce(createSpawnResult(mergeExit));
 
   // 2. git diff --name-only --diff-filter=U
-  spawnSpy.mockReturnValueOnce(createSpawnResult(0, conflictFiles.join("\n")));
+  spawnMock.mockReturnValueOnce(createSpawnResult(0, conflictFiles.join("\n")));
 
   // If there are no conflicts, we skip to commit
   if (conflictFiles.length === 0) {
     // 3. git commit (for clean merge)
-    spawnSpy.mockReturnValueOnce(createSpawnResult(commitExit));
+    spawnMock.mockReturnValueOnce(createSpawnResult(commitExit));
     return;
   }
 
   // 3. git diff --check (after Codex runs)
-  spawnSpy.mockReturnValueOnce(
+  spawnMock.mockReturnValueOnce(
     createSpawnResult(
       diffCheckExit,
       diffCheckExit === 0 ? "" : "Conflict markers found"
@@ -709,6 +718,6 @@ function setupGitMocks(config: GitMockConfig): void {
 
   // 4. git commit (only if diff --check passes)
   if (diffCheckExit === 0) {
-    spawnSpy.mockReturnValueOnce(createSpawnResult(commitExit));
+    spawnMock.mockReturnValueOnce(createSpawnResult(commitExit));
   }
 }

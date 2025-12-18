@@ -37,9 +37,9 @@ afterEach(() => {
 });
 
 describe("linear router", () => {
-  describe("authorize", () => {
+  describe("getAuthorizeUrl", () => {
     it("generates authorization URL", async () => {
-      const result = await caller.linear.authorize({});
+      const result = await caller.linear.getAuthorizeUrl({});
 
       expect(result.url).toContain("linear.app/oauth/authorize");
       expect(result.url).toContain("client_id=test-client-id");
@@ -47,7 +47,7 @@ describe("linear router", () => {
     });
   });
 
-  describe("callback", () => {
+  describe("oauthCallback", () => {
     it("exchanges authorization code for token", async () => {
       const mockTokenResponse = {
         access_token: "token-123",
@@ -65,8 +65,11 @@ describe("linear router", () => {
         accessToken: "token-123",
       });
 
-      const state = "test-state";
-      const result = await caller.linear.callback({
+      // First get a valid state from getAuthorizeUrl
+      const authResult = await caller.linear.getAuthorizeUrl({});
+      const state = authResult.state;
+
+      const result = await caller.linear.oauthCallback({
         code: "auth-code",
         state,
       });
@@ -77,7 +80,7 @@ describe("linear router", () => {
 
     it("validates state", async () => {
       await expect(
-        caller.linear.callback({
+        caller.linear.oauthCallback({
           code: "auth-code",
           state: "invalid-state",
         })

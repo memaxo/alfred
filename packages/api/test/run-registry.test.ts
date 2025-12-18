@@ -7,24 +7,22 @@ import {
   mock,
   vi,
 } from "bun:test";
+import { workflowMetricsStub } from "@alfred/test-kit/workflow/runtime-fixture";
+
+// Mock workflow metrics BEFORE importing registry
+mock.module("@alfred/agent/workflow/metrics", () => workflowMetricsStub);
+
+// Get references to the specific metric mocks we need to assert on
+const runRegistryEventsTotalMock = workflowMetricsStub.runRegistryEventsTotal;
+const runRegistryDispatchDurationSecondsMock =
+  workflowMetricsStub.runRegistryDispatchDurationSeconds;
+
+// Import registry AFTER mocking metrics
 import {
   MemoryRunRegistry,
   type ResumePayload,
   type RunHandle,
-} from "@alfred/api/run-registry";
-
-const runRegistryEventsTotalMock = {
-  inc: vi.fn(),
-};
-
-const runRegistryDispatchDurationSecondsMock = {
-  startTimer: vi.fn().mockReturnValue(() => {}),
-};
-
-mock.module("@alfred/api/metrics", () => ({
-  runRegistryEventsTotal: runRegistryEventsTotalMock,
-  runRegistryDispatchDurationSeconds: runRegistryDispatchDurationSecondsMock,
-}));
+} from "@alfred/agent/workflow/registry";
 
 const loggerWarnMock = vi.fn();
 
@@ -38,8 +36,10 @@ describe("MemoryRunRegistry", () => {
   let registry: MemoryRunRegistry;
 
   beforeEach(() => {
+    // Clear mocks before each test
+    runRegistryEventsTotalMock.inc.mockClear();
+    runRegistryDispatchDurationSecondsMock.startTimer.mockClear();
     registry = new MemoryRunRegistry();
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
