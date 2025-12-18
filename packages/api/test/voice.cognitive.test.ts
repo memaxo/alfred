@@ -1,26 +1,12 @@
-import { describe, expect, it, mock } from "bun:test";
-import { runAssistantForVoice } from "../src/voice/assistant";
+import { afterAll, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+
+// Install shared stubs used by router tests (db + agent) to keep this test
+// isolated from real Postgres / OpenAI.
+import "./utils/mock-db-client";
+import "./utils/agent-mock";
 
 // Mock dependencies
 process.env.OPENAI_API_KEY = "mock-key";
-
-// Mock Repo
-const mockEvents: any[] = [];
-mock.module("@alfred/db", () => ({
-  cognitiveRepo: {
-    getAllEvents: async () => mockEvents,
-    appendEvent: async (streamId: string, type: string, payload: any) => {
-      mockEvents.push({ streamId, type, payload });
-      return {} as any;
-    },
-  },
-  conversationRepo: {
-    getConversationHistory: async () => ({ messages: [] }),
-  },
-  userRepo: {
-    getPreferences: async () => [],
-  },
-}));
 
 // Mock AI Generate
 mock.module("../src/ai/generate", () => ({
@@ -36,9 +22,24 @@ const mockLoop = mock(async () => ({
   },
   effects: [],
 }));
-mock.module("@alfred/runtime", () => ({
-  runCognitiveLoop: mockLoop,
-}));
+
+let runAssistantForVoice: typeof import("../src/voice/assistant")["runAssistantForVoice"];
+
+beforeAll(async () => {
+  const runtimeAbs = new URL("../../runtime/src/index.ts", import.meta.url)
+    .pathname;
+  const realRuntime = await import(runtimeAbs);
+  mock.module("@alfred/runtime", () => ({
+    ...realRuntime,
+    runCognitiveLoop: mockLoop,
+  }));
+
+  ({ runAssistantForVoice } = await import("../src/voice/assistant"));
+});
+
+afterAll(() => {
+  mock.restore();
+});
 
 describe("Voice -> Cognitive Integration", () => {
   it("emits input and complete events to the cognitive loop", async () => {

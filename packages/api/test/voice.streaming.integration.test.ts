@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import { installVoiceTestPools } from "@alfred/test-kit/voice/runtime-fixture";
 
+// Install stable, full-surface stubs to prevent cross-test module conflicts.
+import "./utils/mock-db-client";
+import "./utils/agent-mock";
+
 // Remove static imports to allow mocking
 // import { startVoiceStreamingPrototype, stopVoiceStreamingPrototype } from "../src/voice/streaming";
 // import { initializeVoicePools, shutdownVoicePools } from "../src/voice/pools";
@@ -19,38 +23,17 @@ mock.module("@alfred/auth", () => ({
 
 // Mock policies
 mock.module("@alfred/policy", () => ({
-  evaluate: async () => ({ allow: true }),
-}));
-
-// Mock agent to avoid OpenAI requirement
-mock.module("@alfred/agent", () => ({
-  getAssistantAgentDefaults: () => ({
-    tools: {},
-    model: "test-model",
-    instructions: "system",
-  }),
-  normalizeToUiMessages: () => [],
+  evaluate: async () => ({ allow: true, obligations: [] }),
+  registerCacheObs: () => {},
 }));
 
 // Mock dependencies that require native modules or external services
 mock.module("node-pty", () => ({}));
-mock.module("@alfred/db/repo/conversation", () => ({
-  getConversationHistory: async () => [],
-  messageRowToUIMessage: (row: any) => row,
-}));
 
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: async () => {},
 }));
 
-mock.module("@alfred/db", () => ({
-  userRepo: { getPreferences: async () => [] },
-  db: {},
-  dbDriver: "postgres",
-  policyRepo: { createAuditLog: async () => {} },
-  assistantRepo: {},
-  workflowRepo: {},
-}));
 
 type VoiceFixtureHandle = Awaited<ReturnType<typeof installVoiceTestPools>>;
 

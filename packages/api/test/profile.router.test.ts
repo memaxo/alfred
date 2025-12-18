@@ -5,6 +5,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -12,35 +13,9 @@ mockPolicyAudit();
 
 const getProfileMock = vi.fn();
 const upsertProfileMock = vi.fn();
-mock.module("@alfred/db", () => ({
-  createDrizzleClient: vi.fn(),
-  createPgClient: vi.fn(),
-  createPgPool: vi.fn(),
-  db: {},
-  assistantRepo: {},
-  deployRepo: {},
-  evalRepo: {},
-  graphRepo: {},
-  linearRepo: {},
-  policyRepo: {},
-  ragRepo: {},
-  conversationRepo: {},
-  userRepo: {
-    getProfile: getProfileMock,
-    upsertProfile: upsertProfileMock,
-  },
-  workflowRepo: {},
-  assistantSchema: {},
-  deploySchema: {},
-  evalSchema: {},
-  graphSchema: {},
-  linearSchema: {},
-  policySchema: {},
-  ragSchema: {},
-  conversationSchema: {},
-  userSchema: {},
-  workflowSchema: {},
-}));
+
+dbModuleStub.userRepo.getProfile = getProfileMock;
+dbModuleStub.userRepo.upsertProfile = upsertProfileMock;
 
 mock.module("node-pty", () => ({
   spawn: vi.fn(() => ({

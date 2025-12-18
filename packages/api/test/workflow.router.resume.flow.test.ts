@@ -3,7 +3,16 @@ process.env.USE_WORKFLOW_RUNTIME = "0";
 // Import Redis mocks BEFORE any other imports
 import "@alfred/test-kit/redis";
 
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 
 // Ensure metrics are mocked for both package and source paths BEFORE any dynamic imports
@@ -77,6 +86,7 @@ const graphIndexStub = {
   archiveNodes: vi.fn().mockResolvedValue(0),
   deleteArchivedNodes: vi.fn().mockResolvedValue(0),
   findNodesByConfidence: vi.fn().mockResolvedValue([]),
+  findStaleNodes: vi.fn().mockResolvedValue([]),
   findNodesForDecay: vi.fn().mockResolvedValue([]),
   updateNodeConfidenceBatch: vi.fn().mockResolvedValue(0),
 };
@@ -156,39 +166,6 @@ mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
 }));
 
-// Functional runRegistry mock that tracks registered handles and calls their resume() method
-type RunHandle = {
-  resume(args: { resumeData: { event: string; authz: string } }): Promise<unknown>;
-  cancel(): Promise<unknown>;
-  abortController: AbortController;
-};
-
-const registeredHandles = new Map<string, RunHandle>();
-const registerMock = vi.fn((runId: string, handle: RunHandle) => {
-  registeredHandles.set(runId, handle);
-});
-const unregisterMock = vi.fn((runId: string) => {
-  registeredHandles.delete(runId);
-});
-const dispatchResumeMock = vi.fn(
-  async (runId: string, payload: { event: string; authz: string }) => {
-    const handle = registeredHandles.get(runId);
-    if (!handle) {
-      return false;
-    }
-    await handle.resume({ resumeData: payload });
-    return true;
-  }
-);
-
-mock.module("@alfred/agent/workflow/registry", () => ({
-  runRegistry: {
-    register: registerMock,
-    unregister: unregisterMock,
-    dispatchResume: dispatchResumeMock,
-  },
-}));
-
 let caller: Awaited<
   ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
 >;
@@ -220,10 +197,10 @@ afterEach(() => {
   graphIndexStub.findNodesByConfidence.mockClear();
   graphIndexStub.findNodesForDecay.mockClear();
   graphIndexStub.updateNodeConfidenceBatch.mockClear();
-  registeredHandles.clear();
-  registerMock.mockClear();
-  unregisterMock.mockClear();
-  dispatchResumeMock.mockClear();
+});
+
+afterAll(() => {
+  mock.restore();
 });
 
 async function _subscribeToStream(

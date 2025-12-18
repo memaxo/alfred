@@ -1,5 +1,6 @@
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
+import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -9,28 +10,32 @@ const dbInsertMock = vi.fn();
 const dbUpdateMock = vi.fn();
 const dbDeleteMock = vi.fn();
 
-mock.module("@alfred/db", () => ({
-  db: {
-    select: () => ({
-      from: dbSelectMock,
-    }),
-    insert: () => ({
-      values: dbInsertMock,
-    }),
-    update: () => ({
-      set: dbUpdateMock,
-      where: vi.fn(),
-    }),
-    delete: () => ({
-      where: dbDeleteMock,
-    }),
-  },
-}));
+const originalDb = dbModuleStub.db;
+dbModuleStub.db = {
+  select: () => ({
+    from: dbSelectMock,
+  }),
+  insert: () => ({
+    values: dbInsertMock,
+  }),
+  update: () => ({
+    set: dbUpdateMock,
+    where: vi.fn(),
+  }),
+  delete: () => ({
+    where: dbDeleteMock,
+    execute: vi.fn().mockResolvedValue({ rows: [] }),
+  }),
+} as unknown as typeof dbModuleStub.db;
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
   caller = await createTestCaller();
+});
+
+afterAll(() => {
+  dbModuleStub.db = originalDb;
 });
 
 afterEach(() => {

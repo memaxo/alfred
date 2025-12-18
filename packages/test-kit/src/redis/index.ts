@@ -19,6 +19,19 @@ process.env.REDIS_URL = "false";
 process.env.REDIS_RETRY_ENABLED = "false";
 process.env.RUN_REGISTRY_BACKEND = "memory";
 
+type ResumePayload = {
+  event: string;
+  authz: string;
+};
+
+type RunHandle = {
+  resume(args: { resumeData: ResumePayload }): Promise<unknown>;
+  cancel(): Promise<unknown>;
+  abortController: AbortController;
+};
+
+const handles = new Map<string, RunHandle>();
+
 /**
  * Mock implementations for Redis client
  */
@@ -33,9 +46,20 @@ export const redisMocks = {
  * Mock implementations for run registry
  */
 export const runRegistryMocks = {
-  register: vi.fn().mockResolvedValue(undefined),
-  unregister: vi.fn().mockResolvedValue(undefined),
-  dispatchResume: vi.fn().mockResolvedValue(true),
+  register: vi.fn(async (runId: string, handle: RunHandle) => {
+    handles.set(runId, handle);
+  }),
+  unregister: vi.fn(async (runId: string) => {
+    handles.delete(runId);
+  }),
+  dispatchResume: vi.fn(async (runId: string, payload: ResumePayload) => {
+    const handle = handles.get(runId);
+    if (!handle) {
+      return false;
+    }
+    await handle.resume({ resumeData: payload });
+    return true;
+  }),
 };
 
 /**
@@ -50,23 +74,6 @@ export function installRedisMocks() {
     isRedisHealthy: redisMocks.isRedisHealthy,
     resetRedisState: redisMocks.resetRedisState,
   }));
-
-  // Mock the run registry module
-  mock.module("@alfred/agent/workflow/registry", () => ({
-    runRegistry: runRegistryMocks,
-    MemoryRunRegistry: class MemoryRunRegistry {
-      runs = new Map();
-      register = runRegistryMocks.register;
-      unregister = runRegistryMocks.unregister;
-      dispatchResume = runRegistryMocks.dispatchResume;
-    },
-    RedisRunRegistry: class RedisRunRegistry {
-      constructor() {
-        throw new Error("RedisRunRegistry should not be instantiated in tests");
-      }
-    },
-    createRunRegistry: () => runRegistryMocks,
-  }));
 }
 
 /**
@@ -74,6 +81,7 @@ export function installRedisMocks() {
  * Call this in beforeEach/afterEach to ensure clean state between tests.
  */
 export function resetRedisMocks() {
+  handles.clear();
   redisMocks.getRedis.mockClear();
   redisMocks.getRedisAsync.mockClear();
   redisMocks.isRedisHealthy.mockClear();

@@ -4,19 +4,26 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
 mockPolicyAudit();
 
 const upsertLinearMock = vi.fn();
+const getLinearByOAuthMock = vi.fn();
 const cacheJTIMock = vi.fn();
+const requireToolScopesAndPolicyMock = vi.fn();
 
-mock.module("@alfred/db/repo/linear", () => ({
+dbModuleStub.linearRepo = {
   upsertLinear: upsertLinearMock,
-}));
+  getLinearByOAuth: getLinearByOAuthMock,
+};
 
 mock.module("@alfred/auth/token", () => ({
+  issueAccessToken: vi.fn(),
+  verifyAccessToken: vi.fn(),
+  requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
   cacheJTI: cacheJTIMock,
 }));
 
@@ -55,10 +62,34 @@ describe("linear router", () => {
         expires_in: 3600,
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as any);
+      global.fetch = vi.fn().mockImplementation(async (input: any) => {
+        const url = typeof input === "string" ? input : input?.url;
+        if (url === "https://api.linear.app/oauth/token") {
+          return {
+            ok: true,
+            json: async () => mockTokenResponse,
+          } as any;
+        }
+        if (url === "https://api.linear.app/graphql") {
+          return {
+            ok: true,
+            json: async () => ({
+              data: {
+                viewer: {
+                  id: "linear-viewer",
+                  email: "viewer@example.com",
+                  displayName: "Viewer",
+                  organization: {
+                    id: "linear-org",
+                    name: "Org",
+                  },
+                },
+              },
+            }),
+          } as any;
+        }
+        throw new Error(`unexpected fetch url: ${String(url)}`);
+      });
 
       upsertLinearMock.mockResolvedValue({
         userId: "test-user",

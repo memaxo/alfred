@@ -117,6 +117,21 @@ export const dbModuleStub = {
         preferences: [],
       })
     ),
+    upsertProfile: vi
+      .fn()
+      .mockImplementation(
+        (
+          userId: string,
+          patch: { name?: string; email?: string; avatar?: string; timezone?: string }
+        ) =>
+          Promise.resolve({
+            userId,
+            name: patch.name ?? "Test User",
+            email: patch.email ?? `${userId}@test.local`,
+            avatar: patch.avatar ?? null,
+            timezone: patch.timezone ?? null,
+          })
+      ),
     searchFacts: vi.fn().mockResolvedValue([]),
     listFacts: vi.fn().mockResolvedValue([]),
     deleteFact: vi.fn().mockResolvedValue(1),

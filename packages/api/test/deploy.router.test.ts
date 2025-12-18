@@ -4,6 +4,7 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -14,14 +15,12 @@ const getDeploymentByIdMock = vi.fn();
 const createDeploymentMock = vi.fn();
 const removeDeploymentMock = vi.fn();
 
-mock.module("@alfred/db", () => ({
-  deployRepo: {
-    listDeployments: listDeploymentsMock,
-    getDeploymentById: getDeploymentByIdMock,
-    createDeployment: createDeploymentMock,
-    removeDeployment: removeDeploymentMock,
-  },
-}));
+dbModuleStub.deployRepo = {
+  listDeployments: listDeploymentsMock,
+  getDeploymentById: getDeploymentByIdMock,
+  createDeployment: createDeploymentMock,
+  removeDeployment: removeDeploymentMock,
+};
 
 const toolDockerMock = {
   build: vi.fn(),
@@ -57,8 +56,15 @@ afterEach(() => {
 describe("deploy router", () => {
   describe("list", () => {
     it("lists deployments", async () => {
+      const deploymentId = "00000000-0000-0000-0000-000000000000";
       const mockDeployments = [
-        { id: "deploy-1", app: "app1", type: "preview" },
+        {
+          id: deploymentId,
+          userId: "test-user",
+          app: "app1",
+          type: "preview",
+          status: "running",
+        },
       ];
 
       listDeploymentsMock.mockResolvedValue(mockDeployments);
@@ -72,19 +78,22 @@ describe("deploy router", () => {
 
   describe("get", () => {
     it("gets a deployment", async () => {
+      const deploymentId = "00000000-0000-0000-0000-000000000000";
       const mockDeployment = {
-        id: "deploy-1",
+        id: deploymentId,
+        userId: "test-user",
         app: "app1",
         type: "preview",
+        status: "running",
       };
 
       getDeploymentByIdMock.mockResolvedValue(mockDeployment);
 
       const result = await caller.deploy.get({
-        id: "deploy-1",
+        id: deploymentId,
       });
 
-      expect(getDeploymentByIdMock).toHaveBeenCalledWith("deploy-1");
+      expect(getDeploymentByIdMock).toHaveBeenCalledWith(deploymentId);
       expect(result).toEqual(mockDeployment);
     });
   });

@@ -4,6 +4,8 @@ import {
   resetAllMocks,
   setupTestEnv,
 } from "./utils/router-helpers";
+import { recordMemoryForgetMock, resetAgentMocks } from "./utils/agent-mock";
+import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -13,20 +15,13 @@ const searchFactsMock = vi.fn();
 const listFactsMock = vi.fn();
 const deleteFactMock = vi.fn();
 const getEventsMock = vi.fn();
-const recordMemoryForgetMock = vi.fn();
 
-mock.module("@alfred/db", () => ({
-  userRepo: {
-    searchFacts: searchFactsMock,
-    listFacts: listFactsMock,
-    deleteFact: deleteFactMock,
-    getEvents: getEventsMock,
-  },
-}));
+dbModuleStub.userRepo.searchFacts = searchFactsMock;
+dbModuleStub.userRepo.listFacts = listFactsMock;
+dbModuleStub.userRepo.deleteFact = deleteFactMock;
+dbModuleStub.userRepo.getEvents = getEventsMock;
 
-mock.module("@alfred/agent", () => ({
-  recordMemoryForget: recordMemoryForgetMock,
-}));
+recordMemoryForgetMock.mockClear();
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -38,6 +33,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   resetAllMocks();
+  resetAgentMocks();
 });
 
 describe("privacy router", () => {

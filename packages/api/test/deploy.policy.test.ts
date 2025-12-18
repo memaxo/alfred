@@ -1,42 +1,24 @@
-import { describe, expect, mock, test } from "bun:test";
+import { beforeAll, describe, expect, mock, test } from "bun:test";
 import { evaluate } from "@alfred/policy";
 import { createTestSession } from "@alfred/test-kit/auth";
 import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
-import { deployRouter } from "../src/routers/deploy";
 
-// Mock dependencies
-const mockDb = {
-  query: {
-    deployments: {
-      findMany: mock(() => []),
-      findFirst: mock(() => null),
-    },
-  },
-  insert: mock(() => ({
-    values: mock(() => ({
-      onConflictDoNothing: mock(() => ({ returning: mock(() => []) })),
-    })),
+// Install stable DB stubs so this test doesn't override @alfred/db.
+import "./utils/mock-db-client";
+import { dbModuleStub } from "./utils/mock-db-client";
+
+dbModuleStub.deployRepo = {
+  listDeployments: mock(() => []),
+  getDeploymentById: mock(() => null),
+  getDeploymentByApp: mock(() => ({
+    id: "deploy-123",
+    domain: "example.com",
   })),
-  update: mock(() => ({
-    set: mock(() => ({ where: mock(() => ({ returning: mock(() => []) })) })),
-  })),
+  upsertDeployment: mock(() => ({ id: "deploy-123" })),
+  setDeploymentStatus: mock(() => {}),
+  recordHealthCheck: mock(() => {}),
 };
-
-mock.module("@alfred/db", () => ({
-  db: mockDb,
-  deployRepo: {
-    listDeployments: mock(() => []),
-    getDeploymentById: mock(() => null),
-    getDeploymentByApp: mock(() => ({
-      id: "deploy-123",
-      domain: "example.com",
-    })),
-    upsertDeployment: mock(() => ({ id: "deploy-123" })),
-    setDeploymentStatus: mock(() => {}),
-    recordHealthCheck: mock(() => {}),
-  },
-}));
 
 mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: mock(() => Promise.resolve()),
@@ -62,6 +44,12 @@ mock.module("@alfred/policy", () => ({
 }));
 
 describe("Deploy Router Policy Enforcement", () => {
+  let deployRouter: typeof import("../src/routers/deploy")["deployRouter"];
+
+  beforeAll(async () => {
+    ({ deployRouter } = await import("../src/routers/deploy"));
+  });
+
   test("promote throws PRECONDITION_FAILED when obligations exist", async () => {
     // Force evaluate to return obligations for this test
     const biometricObligation: Obligation = {
