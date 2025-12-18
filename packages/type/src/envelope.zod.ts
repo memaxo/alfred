@@ -8,5 +8,3 @@ export const eventEnvelopeSchema = z.object({
   resource: z.string().min(1).optional(),
   data: z.unknown(),
 });
-
-export type EventEnvelope = z.infer<typeof eventEnvelopeSchema>;

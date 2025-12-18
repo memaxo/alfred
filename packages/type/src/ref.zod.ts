@@ -17,6 +17,3 @@ export const nodeRefSchema = z.object({
   id: nodeIdRefSchema,
   resource: z.string().min(1),
 });
-
-export type NodeIdRef = z.infer<typeof nodeIdRefSchema>;
-export type NodeRef = z.infer<typeof nodeRefSchema>;
