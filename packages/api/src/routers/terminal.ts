@@ -1,3 +1,5 @@
+/// <reference path="../../../tsconfig/types/bun.d.ts" />
+
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";

@@ -36,6 +36,11 @@
     "skipLibCheck": true,
     "sourceMap": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts",
+    "../../packages/tsconfig/types/bun.d.ts"
+  ],
   "exclude": ["node_modules", ".tsbuild", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"]
 }
