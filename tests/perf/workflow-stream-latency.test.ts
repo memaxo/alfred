@@ -94,13 +94,14 @@ describe("workflow stream latency", () => {
   });
 });
 
-function mockImmediateWorkflow(delayMs = 5) {
+function mockImmediateWorkflow(delayMs = 0) {
   if (useRealLatencyMode || !orchestrateWorkflowStreamMock) {
     return;
   }
   orchestrateWorkflowStreamMock.mockImplementation(
     (_input, _session, callbacks) => {
-      setTimeout(() => {
+      // Use setImmediate for minimal delay while still being async
+      setImmediate(() => {
         const event: WorkflowEvent = {
           type: "notice",
           message: "workflow_started",
@@ -108,7 +109,7 @@ function mockImmediateWorkflow(delayMs = 5) {
         } as WorkflowEvent;
         callbacks.emitNext(event);
         callbacks.emitComplete();
-      }, delayMs);
+      });
       return () => {};
     }
   );

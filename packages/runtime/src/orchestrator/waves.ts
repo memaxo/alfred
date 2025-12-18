@@ -41,7 +41,9 @@ import type { OrchestratorContext } from "./types";
 const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
 function normalizeWorkingDirectory(candidate: string, workspaceRoot: string) {
-  const handle = openDirectorySecure(candidate, {
+  // Default to workspaceRoot if candidate is empty or undefined
+  const target = candidate && candidate.trim() ? candidate : workspaceRoot;
+  const handle = openDirectorySecure(target, {
     allowedPrefixes: [workspaceRoot],
   });
   const normalized = handle.path;

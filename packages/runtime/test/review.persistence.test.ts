@@ -1,13 +1,40 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
-import { runReviewPhase } from "../src/orchestrator/review";
 import type { OrchestratorContext } from "../src/orchestrator/types";
 import {
   cleanupPlanDir,
   mockRunner,
   preparePlanDir,
 } from "./utils/review-helpers";
+
+// Mock workflowRepo before importing runReviewPhase to ensure dynamic imports are intercepted
+let mockWorkflowRun: {
+  id: string;
+  stateData: Record<string, unknown> | null;
+} | null = null;
+let updateRunCalls: Array<{
+  runId: string;
+  patch: { stateData?: unknown };
+}> = [];
+
+// Create mock functions that can be reset
+const createMockWorkflowRepo = () => ({
+  getRun: mock(async (_runId: string) => mockWorkflowRun),
+  updateRun: mock(async (runId: string, patch: { stateData?: unknown }) => {
+    updateRunCalls.push({ runId, patch });
+    if (mockWorkflowRun && patch.stateData) {
+      mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+    }
+    return mockWorkflowRun;
+  }),
+});
+
+mock.module("@alfred/db/repo/workflow", () => ({
+  workflowRepo: createMockWorkflowRepo(),
+}));
+
+const { runReviewPhase } = await import("../src/orchestrator/review");
 
 /**
  * ALF-13: Persist fix attempt count (Security)
@@ -20,41 +47,19 @@ describe("review fixAttempts persistence", () => {
   let restoreRunner: (() => void) | undefined;
   let originalCodex: typeof toolCodex.execute;
   let originalSmoke: typeof smokeTester.verify;
-
-  // Mock state for workflowRepo
-  let mockWorkflowRun: {
-    id: string;
-    stateData: Record<string, unknown> | null;
-  } | null = null;
-  let updateRunCalls: Array<{
-    runId: string;
-    patch: { stateData?: unknown };
-  }> = [];
-
-  // Mock workflowRepo
-  const mockWorkflowRepo = {
-    getRun: mock(async (_runId: string) => mockWorkflowRun),
-    updateRun: mock(async (runId: string, patch: { stateData?: unknown }) => {
-      updateRunCalls.push({ runId, patch });
-      if (mockWorkflowRun && patch.stateData) {
-        mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
-      }
-      return mockWorkflowRun;
-    }),
-  };
+  let mockWorkflowRepo: ReturnType<typeof createMockWorkflowRepo>;
 
   beforeEach(() => {
     process.env.ORCH_TMUX_DISABLED = "1";
     originalCodex = toolCodex.execute;
     originalSmoke = smokeTester.verify;
 
-    // Reset mock state
+    // Reset mock state and recreate mock
     mockWorkflowRun = null;
     updateRunCalls = [];
-    mockWorkflowRepo.getRun.mockClear();
-    mockWorkflowRepo.updateRun.mockClear();
-
-    // Mock the @alfred/db/repo/workflow module
+    mockWorkflowRepo = createMockWorkflowRepo();
+    
+    // Re-mock the module with fresh mock functions
     mock.module("@alfred/db/repo/workflow", () => ({
       workflowRepo: mockWorkflowRepo,
     }));
