@@ -4,20 +4,36 @@ import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
-// Mock IPty interface (for reference/typing of dynamic import)
-// interface IPty {
-//   spawn(file: string, args: string[], options: any): IPty;
-//   on(event: string, listener: any): void;
-//   onExit(listener: any): { dispose: () => void };
-//   onData(listener: any): { dispose: () => void };
-//   resize(cols: number, rows: number): void;
-//   write(data: string): void;
-//   kill(signal?: string): void;
-//   dispose(): void;
-// }
+// Local session types (no exported abstraction per ALFRED rules)
+type BunPtySession = {
+  kind: "bun";
+  proc: Bun.Subprocess;
+  subscribers: Set<(chunk: string) => void>;
+};
+
+type NodePtySession = {
+  kind: "node-pty";
+  pty: {
+    onData: (fn: (data: string) => void) => { dispose: () => void };
+    onExit: (fn: () => void) => { dispose: () => void };
+    write: (data: string) => void;
+    resize: (cols: number, rows: number) => void;
+    kill: () => void;
+  };
+};
+
+type Session = BunPtySession | NodePtySession;
 
 // In-memory store for PTY sessions
-const sessions = new Map<string, any>();
+const sessions = new Map<string, Session>();
+
+function isPosixHost(): boolean {
+  return process.platform !== "win32";
+}
+
+function toStringChunk(data: string | Uint8Array): string {
+  return typeof data === "string" ? data : new TextDecoder().decode(data);
+}
 
 async function getPty() {
   try {
@@ -42,19 +58,56 @@ export const terminalRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const ptyBackend = await getPty();
-      if (!ptyBackend) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Terminal functionality is unavailable on this server",
-        });
-      }
-
       const shell = process.env.SHELL || "bash";
       const sessionId = crypto.randomUUID();
 
       try {
-        const ptyProcess = ptyBackend.spawn(shell, [], {
+        // 1) Prefer Bun PTY (POSIX-only)
+        if (isPosixHost()) {
+          try {
+            const subscribers = new Set<(chunk: string) => void>();
+            const proc = Bun.spawn([shell], {
+              cwd: input.cwd || process.env.HOME,
+              env: process.env as Record<string, string>,
+              terminal: {
+                cols: input.cols,
+                rows: input.rows,
+                data(_term, data) {
+                  const chunk = toStringChunk(data);
+                  for (const fn of subscribers) {
+                    try {
+                      fn(chunk);
+                    } catch (err) {
+                      logger.warn("terminal_subscriber_error", { error: err });
+                    }
+                  }
+                },
+              },
+            });
+
+            sessions.set(sessionId, { kind: "bun", proc, subscribers });
+            proc.exited.finally(() => {
+              sessions.delete(sessionId);
+            });
+            return { sessionId };
+          } catch (bunError) {
+            logger.warn("terminal_bun_pty_failed", {
+              error: bunError instanceof Error ? bunError.message : String(bunError),
+            });
+            // Fall through to node-pty
+          }
+        }
+
+        // 2) Fallback to node-pty (optional dependency)
+        const ptyBackend = await getPty();
+        if (!ptyBackend) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Terminal functionality is unavailable on this server",
+          });
+        }
+
+        const pty = ptyBackend.spawn(shell, [], {
           name: "xterm-color",
           cols: input.cols,
           rows: input.rows,
@@ -62,15 +115,16 @@ export const terminalRouter = router({
           env: process.env as Record<string, string>,
         });
 
-        sessions.set(sessionId, ptyProcess);
-
-        // Handle exit
-        ptyProcess.onExit(() => {
+        sessions.set(sessionId, { kind: "node-pty", pty });
+        pty.onExit(() => {
           sessions.delete(sessionId);
         });
 
         return { sessionId };
       } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         logger.error("terminal_create_failed", { error });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -83,8 +137,8 @@ export const terminalRouter = router({
     .input(z.object({ sessionId: z.string() }))
     .subscription(({ input }) =>
       observable<string>((emit) => {
-        const ptyProcess = sessions.get(input.sessionId);
-        if (!ptyProcess) {
+        const session = sessions.get(input.sessionId);
+        if (!session) {
           emit.error(
             new TRPCError({
               code: "NOT_FOUND",
@@ -94,11 +148,21 @@ export const terminalRouter = router({
           return () => {};
         }
 
-        const onData = ptyProcess.onData((data: string) => {
+        if (session.kind === "bun") {
+          const fn = (chunk: string) => emit.next(chunk);
+          session.subscribers.add(fn);
+          session.proc.exited
+            .then(() => emit.complete())
+            .catch(() => emit.complete());
+          return () => {
+            session.subscribers.delete(fn);
+          };
+        }
+
+        const onData = session.pty.onData((data: string) => {
           emit.next(data);
         });
-
-        const onExit = ptyProcess.onExit(() => {
+        const onExit = session.pty.onExit(() => {
           emit.complete();
         });
 
@@ -112,14 +176,18 @@ export const terminalRouter = router({
   write: authedProcedure
     .input(z.object({ sessionId: z.string(), data: z.string() }))
     .mutation(({ input }) => {
-      const ptyProcess = sessions.get(input.sessionId);
-      if (!ptyProcess) {
+      const session = sessions.get(input.sessionId);
+      if (!session) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Session not found",
         });
       }
-      ptyProcess.write(input.data);
+      if (session.kind === "bun") {
+        session.proc.terminal.write(input.data);
+        return;
+      }
+      session.pty.write(input.data);
     }),
 
   resize: authedProcedure
@@ -131,19 +199,38 @@ export const terminalRouter = router({
       })
     )
     .mutation(({ input }) => {
-      const ptyProcess = sessions.get(input.sessionId);
-      if (ptyProcess) {
-        ptyProcess.resize(input.cols, input.rows);
+      const session = sessions.get(input.sessionId);
+      if (!session) {
+        return;
       }
+      if (session.kind === "bun") {
+        session.proc.terminal.resize(input.cols, input.rows);
+        return;
+      }
+      session.pty.resize(input.cols, input.rows);
     }),
 
   kill: authedProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(({ input }) => {
-      const ptyProcess = sessions.get(input.sessionId);
-      if (ptyProcess) {
-        ptyProcess.kill();
-        sessions.delete(input.sessionId);
+      const session = sessions.get(input.sessionId);
+      if (!session) {
+        return;
       }
+      sessions.delete(input.sessionId);
+      if (session.kind === "bun") {
+        try {
+          session.proc.terminal.close();
+        } catch {
+          // Ignore close errors
+        }
+        try {
+          session.proc.kill();
+        } catch {
+          // Ignore kill errors
+        }
+        return;
+      }
+      session.pty.kill();
     }),
 });

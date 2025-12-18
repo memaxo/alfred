@@ -5,13 +5,15 @@
 set -euo pipefail
 
 # Configuration
-ENTRY_POINT="${ENTRY_POINT:-apps/web/src/server.ts}"
+ENTRY_POINT="${ENTRY_POINT:-apps/web/src/exe.ts}"
 OUTPUT_FILE="${OUTPUT_FILE:-dist/alfred-server}"
 TARGET="${TARGET:-bun-linux-x64}"
 MINIFY="${MINIFY:-true}"
 SOURCEMAP="${SOURCEMAP:-true}"
 BYTECODE="${BYTECODE:-false}"
 NODE_ENV="${NODE_ENV:-production}"
+# Feature flags for bun:bundle dead code elimination (comma-separated)
+FEATURES="${FEATURES:-}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -81,6 +83,17 @@ BUILD_CMD="$BUILD_CMD --define GIT_COMMIT='\"$GIT_COMMIT\"'"
 BUILD_CMD="$BUILD_CMD --define GIT_BRANCH='\"$GIT_BRANCH\"'"
 BUILD_CMD="$BUILD_CMD --define NODE_ENV='\"$NODE_ENV\"'"
 BUILD_CMD="$BUILD_CMD --define BUILD_TARGET='\"$TARGET\"'"
+
+# Add feature flags for bun:bundle dead code elimination
+if [ -n "$FEATURES" ]; then
+  IFS=',' read -ra FEATURE_ARRAY <<< "$FEATURES"
+  for feature in "${FEATURE_ARRAY[@]}"; do
+    feature=$(echo "$feature" | xargs) # trim whitespace
+    if [ -n "$feature" ]; then
+      BUILD_CMD="$BUILD_CMD --feature=$feature"
+    fi
+  done
+fi
 
 BUILD_CMD="$BUILD_CMD $ENTRY_POINT --outfile $OUTPUT_FILE"
 

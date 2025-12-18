@@ -110,14 +110,14 @@ bun build --compile \
 **Dockerfile Structure**:
 ```dockerfile
 # Stage 1: Build
-FROM oven/bun:1.2.18 AS builder
+FROM oven/bun:1.3.5 AS builder
 WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile
 RUN bun run build
 
 # Stage 2: Runtime
-FROM oven/bun:1.2.18-slim
+FROM oven/bun:1.3.5-slim
 WORKDIR /app
 
 # Copy built artifacts
