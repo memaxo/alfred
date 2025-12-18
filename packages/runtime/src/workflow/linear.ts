@@ -84,7 +84,7 @@ export async function bootstrapLinearSession(args: {
       space: linear.space,
       issueId,
       authz,
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       logger.warn("linear_delegate_setup_failed", {
         runId,
         error: error instanceof Error ? error.message : String(error),
@@ -95,7 +95,7 @@ export async function bootstrapLinearSession(args: {
       space: linear.space,
       issueId,
       authz,
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       logger.warn("linear_started_setup_failed", {
         runId,
         error: error instanceof Error ? error.message : String(error),
@@ -109,7 +109,7 @@ export async function bootstrapLinearSession(args: {
         linear.space,
         authz,
         url
-      ).catch((error) => {
+      ).catch((error: unknown) => {
         logger.warn("linear_external_url_setup_failed", {
           runId,
           error: error instanceof Error ? error.message : String(error),

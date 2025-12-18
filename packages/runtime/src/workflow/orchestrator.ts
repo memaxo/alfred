@@ -15,6 +15,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
+import type { ResumePayload } from "../types";
 import {
   createRequirementMessage,
   createWorkflowExecutor,
@@ -216,13 +217,16 @@ export async function orchestrateWorkflowStream(
       );
       executorRunId = executor.runId;
 
+      let resolvedRunId: string;
       if (input.runId) {
         runId = input.runId;
+        resolvedRunId = input.runId;
         outerRunId = runId;
-        await workflowRepo.updateRun(runId, { status: "running" });
+        await workflowRepo.updateRun(resolvedRunId, { status: "running" });
       } else {
         // Explicitly cast to string to satisfy TS even if we know it's a string
         runId = String(executor.runId);
+        resolvedRunId = runId;
         outerRunId = runId;
         const storedInput: Record<string, unknown> = {
           ...input,
@@ -256,7 +260,7 @@ export async function orchestrateWorkflowStream(
       try {
         const { conversation, created } = await ensureWorkflowConversation({
           userId: session.user.id,
-          workflowId: runId,
+          workflowId: resolvedRunId,
           title: deriveWorkflowTitle(input.requirement),
         });
         workflowConversationId = conversation.id;
@@ -264,11 +268,11 @@ export async function orchestrateWorkflowStream(
           const persisted = await persistWorkflowMessages({
             userId: session.user.id,
             conversationId: conversation.id,
-            messages: [createRequirementMessage(input, runId)],
+            messages: [createRequirementMessage(input, resolvedRunId)],
             persistedKeys: persistedMessageKeys,
-            runId,
+            runId: resolvedRunId,
             eventType: "workflow.requirement",
-            eventId: runId,
+            eventId: resolvedRunId,
           });
           if (persisted > 0) {
             refreshPreferences("workflow_requirement");
@@ -276,13 +280,13 @@ export async function orchestrateWorkflowStream(
         }
       } catch (error) {
         logger.warn("workflow_conversation_init_failed", {
-          runId,
+          runId: resolvedRunId,
           error: error instanceof Error ? error.message : String(error),
         });
       }
 
-      await registerRunHandle(runId, {
-        resume: async ({ resumeData }) => {
+      await registerRunHandle(resolvedRunId, {
+        resume: async ({ resumeData }: { resumeData: ResumePayload }) => {
           if (cancelled) {
             return;
           }
