@@ -35,14 +35,17 @@ mock.module("pg", () => {
   };
 });
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    debug: debugMock,
-    info: infoMock,
-    warn: warnMock,
-    error: errorMock,
-  },
-}));
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
+
+// Install shared mocks
+installLoggerMock();
+
+// Use shared mocks for assertions
+const debugMock = loggerMocks.debug;
+const infoMock = loggerMocks.info;
+const warnMock = loggerMocks.warn;
+const errorMock = loggerMocks.error;
 
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV;

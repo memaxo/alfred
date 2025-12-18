@@ -10,17 +10,20 @@ import { createTestCaller } from "./utils/trpc";
 setupTestEnv();
 mockPolicyAudit();
 
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+
+// Install shared mocks
+installAuthTokenMock();
+
 const upsertLinearMock = dbModuleStub.linearRepo.upsertLinear;
 const getLinearByOAuthMock = dbModuleStub.linearRepo.getLinearByOAuth;
-const cacheJTIMock = vi.fn();
-const requireToolScopesAndPolicyMock = vi.fn();
-
-mock.module("@alfred/auth/token", () => ({
-  issueAccessToken: vi.fn(),
-  verifyAccessToken: vi.fn(),
-  requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
-  cacheJTI: cacheJTIMock,
-}));
+const cacheJTIMock = authTokenMocks.cacheJTI;
+const requireToolScopesAndPolicyMock = authTokenMocks.requireToolScopesAndPolicy;
 
 process.env.LINEAR_CLIENT_ID = "test-client-id";
 process.env.LINEAR_CLIENT_SECRET = "test-secret";

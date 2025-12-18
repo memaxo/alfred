@@ -1,11 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
-const originalRedisUrl = process.env.REDIS_URL;
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
 
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Install shared mocks
+installAuthTokenMock();
+
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+
+const originalRedisUrl = process.env.REDIS_URL;
 
 const mockGetPreferences = mock();
 const mockSetPreference = mock();
@@ -39,7 +47,7 @@ describe("Preference Tools", () => {
   beforeEach(() => {
     process.env.REDIS_URL = "false";
 
-    mockRequireToolScopesAndPolicy.mockReset();
+    resetAuthTokenMocks();
     mockGetPreferences.mockReset();
     mockSetPreference.mockReset();
     mockInvalidatePreferenceCache.mockReset();

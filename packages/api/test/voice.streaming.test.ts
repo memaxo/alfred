@@ -18,18 +18,13 @@ mock.module("@alfred/db/repo/policy", () => ({
   createAuditLog: createAuditLogMock,
 }));
 
-const loggerInfoMock = vi.fn();
-const loggerWarnMock = vi.fn();
-const loggerErrorMock = vi.fn();
-const loggerDebugMock = vi.fn();
-mock.module("@alfred/logger", () => ({
-  logger: {
-    info: loggerInfoMock,
-    warn: loggerWarnMock,
-    error: loggerErrorMock,
-    debug: loggerDebugMock,
-  },
-}));
+// Use shared logger mock from mock-metrics (already imported)
+import { loggerStub } from "./utils/mock-metrics";
+
+const loggerInfoMock = loggerStub.info;
+const loggerWarnMock = loggerStub.warn;
+const loggerErrorMock = loggerStub.error;
+const loggerDebugMock = loggerStub.debug;
 
 const { authorizeVoiceStreamRequest, VoiceStreamAuthError } = await import(
   "../src/voice/streaming"

@@ -25,10 +25,18 @@ import { __internals as gitInternals } from "../src/orchestrator/tool/git";
 import * as filesystem from "../src/security/filesystem";
 import { openDirectorySecure } from "../src/security/filesystem";
 
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+
+// Install shared mocks
+installAuthTokenMock();
+
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
 
 /**
  * Security Test Cleanup
@@ -62,7 +70,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  mockRequireToolScopesAndPolicy.mockReset();
+  resetAuthTokenMocks();
   mockRequireToolScopesAndPolicy.mockResolvedValue({
     decision: { allow: true },
     claims: { elevated: true, mfa: "passkey" },

@@ -5,10 +5,20 @@ import type {
   LearnRecordInput,
 } from "../src/orchestrator/tool/learning/definition";
 
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+import { installLoggerMock } from "@alfred/test-kit/logger";
+
+// Install shared mocks
+installAuthTokenMock();
+installLoggerMock();
+
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
 
 const mockUpsertNodes = mock();
 mock.module("@alfred/db/repo/graph", () => ({
@@ -20,22 +30,13 @@ mock.module("@alfred/learning/self_supervision", () => ({
   supervise: mockSupervise,
 }));
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-}));
-
 const { toolLearnMistake, toolLearnPattern, toolLearnRecord } = await import(
   "../src/orchestrator/tool/learning"
 );
 
 describe("Learning Tools", () => {
   beforeEach(() => {
-    mockRequireToolScopesAndPolicy.mockReset();
+    resetAuthTokenMocks();
     mockUpsertNodes.mockReset();
     mockSupervise.mockReset();
 

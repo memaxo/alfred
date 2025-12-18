@@ -29,20 +29,17 @@ const metricsMock = {
 // Mock workflow metrics BEFORE any imports that use them
 mock.module("@alfred/agent/workflow/metrics", () => metricsMock);
 
-// Also mock logger to prevent any logging issues
-const loggerWarnMock = vi.fn();
-const loggerInfoMock = vi.fn();
-const loggerErrorMock = vi.fn();
-const loggerDebugMock = vi.fn();
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    warn: loggerWarnMock,
-    info: loggerInfoMock,
-    error: loggerErrorMock,
-    debug: loggerDebugMock,
-  },
-}));
+// Install shared mocks
+installLoggerMock();
+
+// Use shared mocks for assertions
+const loggerWarnMock = loggerMocks.warn;
+const loggerInfoMock = loggerMocks.info;
+const loggerErrorMock = loggerMocks.error;
+const loggerDebugMock = loggerMocks.debug;
 
 // Types for the dynamically imported module
 type MemoryRunRegistryType = import("@alfred/agent/workflow/registry").MemoryRunRegistry;

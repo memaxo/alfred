@@ -2,6 +2,16 @@ import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
+
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+
+// Install shared mocks
+installAuthTokenMock();
 import {
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
   MAX_TIMEOUT_SEC,
@@ -49,11 +59,8 @@ afterAll(() => {
   fs.rmSync(TMP_ROOT, { recursive: true, force: true });
 });
 
-// Mock @alfred/auth/token
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
 
 describe("Tool Policy & Security", () => {
   describe("assertAllowedDirectory", () => {
@@ -194,7 +201,7 @@ describe("Tool Policy & Security", () => {
 
   describe("enforcePolicy", () => {
     beforeEach(() => {
-      mockRequireToolScopesAndPolicy.mockReset();
+      resetAuthTokenMocks();
     });
 
     it("passes for low autonomy with valid token", async () => {

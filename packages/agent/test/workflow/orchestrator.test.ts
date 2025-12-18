@@ -11,14 +11,14 @@ const workflowRepoMocks = {
 
 mock.module("@alfred/db/repo/workflow", () => workflowRepoMocks);
 
-const loggerMock = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-};
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 
-mock.module("@alfred/logger", () => ({ logger: loggerMock }));
+// Install shared mocks
+installLoggerMock();
+
+// Use shared mocks for assertions
+const loggerMock = loggerMocks;
 
 const metricsMock = {
   workflowStreamDurationSeconds: { startTimer: () => () => {} },

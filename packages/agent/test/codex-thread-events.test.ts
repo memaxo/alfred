@@ -1,21 +1,19 @@
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
-const warnSpy = vi.fn();
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    warn: warnSpy,
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
+// Install shared mocks
+installLoggerMock();
+
+// Use shared mock for assertions
+const warnSpy = loggerMocks.warn;
 
 import { parseThreadEvent } from "../src/orchestrator/tool/codex/definition";
 
 describe("parseThreadEvent", () => {
   beforeEach(() => {
-    warnSpy.mockClear();
+    loggerMocks.warn.mockClear();
   });
 
   it("parses direct thread.started events", () => {

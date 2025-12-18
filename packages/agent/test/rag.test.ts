@@ -6,11 +6,20 @@ import type {
   RagQueryInput,
 } from "../src/orchestrator/tool/rag/definition";
 
-// Mock dependencies before importing
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+import { installLoggerMock } from "@alfred/test-kit/logger";
+
+// Install shared mocks
+installAuthTokenMock();
+installLoggerMock();
+
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
 
 const mockIngest = mock();
 const mockRetrieve = mock();
@@ -36,22 +45,13 @@ mock.module("@alfred/db/repo/rag", () => ({
   searchChunks: mockSearchChunks,
 }));
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-}));
-
 // Import tools after mocking
 const { toolRagIngest, toolRagQuery, toolRagList, toolRagDelete } =
   await import("../src/orchestrator/tool/rag");
 
 describe("RAG Tools", () => {
   beforeEach(() => {
-    mockRequireToolScopesAndPolicy.mockReset();
+    resetAuthTokenMocks();
     mockIngest.mockReset();
     mockRetrieve.mockReset();
     mockCreateDocument.mockReset();

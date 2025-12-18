@@ -9,22 +9,22 @@ import {
   vi,
 } from "bun:test";
 
-const requireToolScopesAndPolicy = vi.fn();
-const loggerWarn = vi.fn();
-const loggerError = vi.fn();
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+import { installLoggerMock, loggerMocks, resetLoggerMocks } from "@alfred/test-kit/logger";
 
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy,
-}));
+// Install shared mocks
+installAuthTokenMock();
+installLoggerMock();
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    warn: loggerWarn,
-    error: loggerError,
-    info: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
+// Use shared mocks for assertions
+const requireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+const loggerWarn = loggerMocks.warn;
+const loggerError = loggerMocks.error;
 
 const metrics = await import("../src/metrics");
 const recordPolicyCheckFailureSpy = vi.spyOn(
@@ -38,8 +38,8 @@ const { withPolicyApproval } = await import(
 
 describe("withPolicyApproval", () => {
   beforeEach(() => {
-    requireToolScopesAndPolicy.mockReset();
-    loggerWarn.mockReset();
+    resetAuthTokenMocks();
+    resetLoggerMocks();
     recordPolicyCheckFailureSpy.mockClear();
   });
 

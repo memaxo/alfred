@@ -14,6 +14,12 @@ import {
 } from "@alfred/agent/orchestrator/tool/codex/definition";
 import type { Obligation } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
 import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
@@ -23,10 +29,14 @@ import {
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";
 
+// Install shared mocks
+installAuthTokenMock();
+
 setupTestEnv();
 mockPolicyAudit();
 
-const requireToolScopesAndPolicyMock = vi.fn();
+// Use shared mock for assertions
+const requireToolScopesAndPolicyMock = authTokenMocks.requireToolScopesAndPolicy;
 const droidExecRunsTotalMock = {
   labels: vi.fn().mockReturnValue({
     inc: vi.fn(),
@@ -73,11 +83,7 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: requireToolScopesAndPolicyMock,
-  cacheJTI: vi.fn(),
-  issueAccessToken: vi.fn(),
-}));
+// Use shared auth token mock (already installed above)
 
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
@@ -101,7 +107,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  requireToolScopesAndPolicyMock.mockReset();
+  resetAuthTokenMocks();
   requireToolScopesAndPolicyMock.mockResolvedValue({
     claims: {
       elevated: true,

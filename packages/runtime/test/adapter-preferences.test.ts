@@ -65,9 +65,11 @@ mock.module("../src/metrics", () => ({
   runtimeHistoryTierDropsTotal: { inc: vi.fn() },
 }));
 
-mock.module("@alfred/logger", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock } from "@alfred/test-kit/logger";
+
+// Install shared mocks
+installLoggerMock();
 
 const { AISDKAdapter } = await import("../src/adapters/ai");
 

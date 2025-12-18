@@ -10,19 +10,17 @@ mock.module("../src/orchestrator/tool/ticket", () => ({
   },
 }));
 
-const loggerWarnMock = mock();
-const loggerInfoMock = mock();
-const loggerErrorMock = mock();
-const loggerDebugMock = mock();
+// Use shared test utilities - import BEFORE any other imports
+import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    warn: loggerWarnMock,
-    info: loggerInfoMock,
-    error: loggerErrorMock,
-    debug: loggerDebugMock,
-  },
-}));
+// Install shared mocks
+installLoggerMock();
+
+// Use shared mocks for assertions
+const loggerWarnMock = loggerMocks.warn;
+const loggerInfoMock = loggerMocks.info;
+const loggerErrorMock = loggerMocks.error;
+const loggerDebugMock = loggerMocks.debug;
 
 mock.module("p-retry", () => {
   const pRetry = <T>(fn: (attemptNumber: number) => T | Promise<T>) =>

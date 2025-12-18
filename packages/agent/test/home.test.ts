@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+
+// Install shared mocks
+installAuthTokenMock();
+
+// Use shared mock for assertions
+const mockRequireToolScopesAndPolicy = authTokenMocks.requireToolScopesAndPolicy;
+
 // Save original env
 const originalEnv = { ...process.env };
-
-// Mock dependencies before importing
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
 
 // Mock the metrics
 mock.module("../src/metrics", () => ({
@@ -37,7 +44,7 @@ const { toolHome } = await import("../assistant/src/tool/home");
 describe("Home Tool", () => {
   beforeEach(() => {
     // Reset all mocks
-    mockRequireToolScopesAndPolicy.mockReset();
+    resetAuthTokenMocks();
     mockGetStates.mockReset();
     mockGetState.mockReset();
     mockListEntities.mockReset();
