@@ -4,6 +4,7 @@ export * from "./env/index";
 export * from "./kinetic/index";
 export * from "./performance/index";
 export * from "./physical/index";
+export * from "./redis/index";
 export * from "./sandbox/index";
 export * from "./vcr/index";
 export * from "./voice/index";

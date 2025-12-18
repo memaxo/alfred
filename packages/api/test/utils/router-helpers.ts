@@ -7,6 +7,14 @@ import { mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
 import type { TRPCError } from "@trpc/server";
 
+// Re-export Redis mocks from test-kit for convenience
+export {
+  installRedisMocks,
+  resetRedisMocks,
+  redisMocks,
+  runRegistryMocks,
+} from "@alfred/test-kit/redis";
+
 /**
  * Common mock setup for policy audit logging
  */
@@ -169,7 +177,11 @@ export function resetAllMocks() {
 }
 
 /**
- * Default test environment setup
+ * Default test environment setup.
+ * Sets up environment variables for tests.
+ *
+ * Note: Redis configuration is handled by importing "@alfred/test-kit/redis"
+ * at the top of test files BEFORE other imports.
  */
 export function setupTestEnv() {
   process.env.DATABASE_URL ??= "postgres://localhost:5432/test";

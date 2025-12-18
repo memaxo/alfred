@@ -12,6 +12,7 @@
     "./env": "./src/env/index.ts",
     "./auth": "./src/auth/index.ts",
     "./auth/*": "./src/auth/*",
+    "./redis": "./src/redis/index.ts",
     "./vcr": "./src/vcr/index.ts",
     "./vcr/*": "./src/vcr/*",
     "./voice": "./src/voice/index.ts",
@@ -41,6 +42,7 @@
   },
   "peerDependencies": {
     "@alfred/api": "workspace:*",
+    "@alfred/auth": "workspace:*",
     "@alfred/db": "workspace:*",
     "@alfred/type": "workspace:*",
     "@alfred/voice": "workspace:*"

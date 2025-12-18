@@ -1,7 +1,11 @@
 process.env.USE_WORKFLOW_RUNTIME = "0";
 
+// Import Redis mocks BEFORE any other imports
+import "@alfred/test-kit/redis";
+
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
+
 // Ensure metrics are mocked for both package and source paths BEFORE any dynamic imports
 import "./utils/mock-metrics";
 import "./utils/mock-voice";

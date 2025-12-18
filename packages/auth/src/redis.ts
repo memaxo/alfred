@@ -12,20 +12,37 @@ let readyPromise: Promise<void> | null = null;
 let retryAttempt = 0;
 let retryTimer: NodeJS.Timeout | null = null;
 
-const REDIS_RETRY_ENABLED =
-  process.env.REDIS_RETRY_ENABLED?.toLowerCase() !== "false";
-const REDIS_RETRY_INITIAL_DELAY_MS = Number.parseInt(
-  process.env.REDIS_RETRY_INITIAL_DELAY_MS || "100",
-  10
-);
-const REDIS_RETRY_MAX_DELAY_MS = Number.parseInt(
-  process.env.REDIS_RETRY_MAX_DELAY_MS || "5000",
-  10
-);
-const REDIS_RETRY_MAX_ATTEMPTS = Number.parseInt(
-  process.env.REDIS_RETRY_MAX_ATTEMPTS || "5",
-  10
-);
+/**
+ * Get retry configuration from environment variables.
+ * Called lazily to allow tests to modify env before first use.
+ */
+function getRetryConfig() {
+  return {
+    enabled: process.env.REDIS_RETRY_ENABLED?.toLowerCase() !== "false",
+    initialDelayMs: Number.parseInt(
+      process.env.REDIS_RETRY_INITIAL_DELAY_MS || "100",
+      10
+    ),
+    maxDelayMs: Number.parseInt(
+      process.env.REDIS_RETRY_MAX_DELAY_MS || "5000",
+      10
+    ),
+    maxAttempts: Number.parseInt(
+      process.env.REDIS_RETRY_MAX_ATTEMPTS || "5",
+      10
+    ),
+  };
+}
+
+// Cached config (initialized lazily on first use to allow tests to modify env vars)
+let cachedConfig: ReturnType<typeof getRetryConfig> | null = null;
+
+function getConfig() {
+  if (!cachedConfig) {
+    cachedConfig = getRetryConfig();
+  }
+  return cachedConfig;
+}
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -37,16 +54,16 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
     return null;
   }
 
-  // If retries are disabled, only attempt once
-  const maxAttempts = REDIS_RETRY_ENABLED
-    ? REDIS_RETRY_MAX_ATTEMPTS
-    : 1;
+  const config = getConfig();
 
-  let delay = REDIS_RETRY_INITIAL_DELAY_MS;
+  // If retries are disabled, only attempt once
+  const maxAttempts = config.enabled ? config.maxAttempts : 1;
+
+  let delay = config.initialDelayMs;
   let lastError: Error | null = null;
 
   // Use shorter timeout when retries are disabled (typically in tests)
-  const connectionTimeout = REDIS_RETRY_ENABLED ? 5000 : 1000;
+  const connectionTimeout = config.enabled ? 5000 : 1000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -131,7 +148,7 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
         error instanceof Error ? error : new Error(String(error ?? ""));
 
       // If retries are disabled, fail immediately
-      if (!REDIS_RETRY_ENABLED) {
+      if (!config.enabled) {
         break;
       }
 
@@ -144,7 +161,7 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
         });
 
         await wait(delay);
-        delay = Math.min(delay * 2, REDIS_RETRY_MAX_DELAY_MS);
+        delay = Math.min(delay * 2, config.maxDelayMs);
       }
     }
   }
@@ -172,12 +189,14 @@ export function getRedis(): RedisClient | null {
     return null;
   }
 
+  const config = getConfig();
+
   if (client?.connected && status === "ok") {
     return client;
   }
 
   if (status === "err") {
-    if (!REDIS_RETRY_ENABLED) {
+    if (!config.enabled) {
       return null;
     }
 
@@ -186,7 +205,7 @@ export function getRedis(): RedisClient | null {
     }
 
     retryAttempt++;
-    if (retryAttempt > REDIS_RETRY_MAX_ATTEMPTS) {
+    if (retryAttempt > config.maxAttempts) {
       return null;
     }
 
@@ -197,8 +216,8 @@ export function getRedis(): RedisClient | null {
     }
 
     const delay = Math.min(
-      REDIS_RETRY_INITIAL_DELAY_MS * 2 ** (retryAttempt - 1),
-      REDIS_RETRY_MAX_DELAY_MS
+      config.initialDelayMs * 2 ** (retryAttempt - 1),
+      config.maxDelayMs
     );
 
     status = "connecting";
@@ -286,4 +305,36 @@ export async function isRedisHealthy(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Reset Redis client state for testing.
+ * Call this in beforeEach/afterEach to ensure clean state between tests.
+ *
+ * WARNING: This function is intended for testing only. Do not use in production.
+ */
+export function resetRedisState(): void {
+  // Clear any pending retry timer
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
+  // Close existing client if connected
+  if (client) {
+    try {
+      client.close();
+    } catch {
+      // Ignore close errors
+    }
+    client = null;
+  }
+
+  // Reset all state
+  status = "init";
+  readyPromise = null;
+  retryAttempt = 0;
+
+  // Reset cached config so tests can modify env vars
+  cachedConfig = null;
 }

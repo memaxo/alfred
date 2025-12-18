@@ -1,3 +1,6 @@
+// Import Redis mocks BEFORE any other imports
+import "@alfred/test-kit/redis";
+
 const USE_EXISTING_DB =
   process.env.WORKFLOW_RUNTIME_STREAM_TEST_USE_EXISTING_DB === "1";
 const ORIGINAL_DB_URL = process.env.DATABASE_URL;

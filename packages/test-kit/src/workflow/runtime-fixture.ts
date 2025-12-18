@@ -1,3 +1,6 @@
+// Import Redis mocks first - this sets up env vars and mocks before any other imports
+import "../redis/index";
+
 import { mock, vi } from "bun:test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";

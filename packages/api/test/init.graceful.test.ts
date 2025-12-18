@@ -1,3 +1,6 @@
+// Import Redis mocks BEFORE any other imports
+import "@alfred/test-kit/redis";
+
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { logger } from "@alfred/logger";
 import { initApiServices, shutdownApiServices } from "../src/init";
