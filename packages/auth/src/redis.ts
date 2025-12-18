@@ -37,14 +37,22 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
     return null;
   }
 
+  // If retries are disabled, only attempt once
+  const maxAttempts = REDIS_RETRY_ENABLED
+    ? REDIS_RETRY_MAX_ATTEMPTS
+    : 1;
+
   let delay = REDIS_RETRY_INITIAL_DELAY_MS;
   let lastError: Error | null = null;
 
-  for (let attempt = 0; attempt < REDIS_RETRY_MAX_ATTEMPTS; attempt++) {
+  // Use shorter timeout when retries are disabled (typically in tests)
+  const connectionTimeout = REDIS_RETRY_ENABLED ? 5000 : 1000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       const newClient = url
         ? new RedisClient(url, {
-            connectionTimeout: 5000,
+            connectionTimeout,
             autoReconnect: true,
             maxRetries: 10,
             enableOfflineQueue: true,
@@ -97,7 +105,18 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
         status = "err";
       };
 
-      await newClient.connect();
+      // Use Promise.race to enforce connection timeout
+      const connectPromise = newClient.connect();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Connection timeout")),
+          connectionTimeout
+        );
+        // Clear timeout if connect succeeds
+        connectPromise.finally(() => clearTimeout(timer));
+      });
+
+      await Promise.race([connectPromise, timeoutPromise]);
 
       if (newClient.connected) {
         client = newClient;
@@ -111,10 +130,15 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
       lastError =
         error instanceof Error ? error : new Error(String(error ?? ""));
 
-      if (attempt < REDIS_RETRY_MAX_ATTEMPTS - 1) {
+      // If retries are disabled, fail immediately
+      if (!REDIS_RETRY_ENABLED) {
+        break;
+      }
+
+      if (attempt < maxAttempts - 1) {
         logger.warn("redis_connection_retry", {
           attempt: attempt + 1,
-          maxAttempts: REDIS_RETRY_MAX_ATTEMPTS,
+          maxAttempts,
           delay,
           error: lastError.message,
         });
@@ -133,7 +157,7 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
   }
 
   logger.error("redis_connection_failed_after_retries", {
-    maxAttempts: REDIS_RETRY_MAX_ATTEMPTS,
+    maxAttempts,
     error: lastError?.message ?? "Unknown error",
   });
 

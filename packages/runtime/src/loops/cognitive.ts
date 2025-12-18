@@ -4,6 +4,7 @@ import {
   wrapEventEnvelope,
 } from "@alfred/agent/utils/envelope";
 import type {
+  AutonomyGradient,
   CognitiveState,
   Event,
   Outcome,
@@ -33,11 +34,14 @@ export type CognitiveLoopResult = {
   effects: CognitiveEffect[];
 };
 
+// Type guard for snapshot state with optional autonomy
+type SnapshotState = CognitiveState & { autonomy?: AutonomyGradient };
+
 /**
  * The Cognitive Runtime Loop
  *
  * Drives the state machine:
- * 1. Load state (Snapshot + Events)
+ * 1. Load state (Snapshot + Events since snapshot)
  * 2. Apply pure transition (State + Event -> New State)
  * 3. Persist Event & Snapshot
  * 4. Return Side Effects for the caller to execute safely
@@ -52,12 +56,26 @@ export async function runCognitiveLoop(
   const isEventLike = (value: unknown): value is { _: string } =>
     isRecord(value) && typeof value._ === "string";
 
-  // 1. Hydrate State (Simplified: Replay all events for now)
-  const events = await cognitiveRepo.getAllEvents(streamId);
-  let state: CognitiveState = idle(Date.now());
-  let autonomy = createInitialAutonomy();
+  // 1. Hydrate State (Snapshot + Events since snapshot for O(1) best case)
+  let state: CognitiveState;
+  let autonomy: AutonomyGradient;
+  let events: Awaited<ReturnType<typeof cognitiveRepo.getAllEvents>>;
 
-  // Replay history
+  // Try to load from snapshot first
+  const snapshot = await cognitiveRepo.getLatestSnapshot(streamId);
+  if (snapshot) {
+    const snapState = snapshot.state as SnapshotState;
+    state = snapState;
+    autonomy = snapState.autonomy ?? createInitialAutonomy();
+    // Only replay events since the snapshot
+    events = await cognitiveRepo.getEventsSince(streamId, snapshot.createdAt);
+  } else {
+    state = idle(Date.now());
+    autonomy = createInitialAutonomy();
+    events = await cognitiveRepo.getAllEvents(streamId);
+  }
+
+  // Replay history (NO metrics recording during replay - only for new events)
   for (const record of events) {
     const unwrapped = unwrapEventEnvelope(record.payload);
     if (!isEventLike(unwrapped.data)) {
@@ -67,8 +85,7 @@ export async function runCognitiveLoop(
     const result = applyTransition(state, autonomy, historicalEvent);
     state = result.state;
     autonomy = result.autonomy;
-    recordPhysiologyMetrics(state.physiology);
-    maybeRecordEntropyEvent(historicalEvent);
+    // Don't record metrics during replay - they inflate counters
   }
 
   // 2. Apply New Event

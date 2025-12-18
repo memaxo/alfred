@@ -105,8 +105,11 @@ export async function findActivePlans(): Promise<
     }
   }
 
+  // Type for cognitive state discriminant
+  type StateDiscriminant = { _?: string };
+
   return Array.from(latestByStream.values()).filter((snap) => {
-    const state = snap.state as any;
+    const state = snap.state as StateDiscriminant;
     return state._ === "executing";
   });
 }

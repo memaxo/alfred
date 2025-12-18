@@ -3,6 +3,7 @@
  * Zero-allocation design with content-addressed nodes
  */
 
+import { EMBEDDING_DIM } from "@alfred/embed";
 import { BTreeIndex } from "./indices/btree.js";
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";
@@ -122,17 +123,29 @@ class HAMT<V> {
   }
 }
 
-// Main Hypergraph
+/**
+ * Main Hypergraph
+ *
+ * @warning Memory growth: All internal Maps (edges, inbound, embeddings, etc.) grow
+ * unbounded as nodes are added. For large graphs with >100k nodes, consider
+ * implementing explicit cleanup via periodic persistence and reload, or using
+ * the dirty tracking to prune unused entries.
+ */
 export class Hypergraph {
   private readonly nodes = new HAMT<Knowledge>();
   private readonly temporal = new IntervalTree();
   private readonly spatial = new RTreeND(1024);
   private readonly ordered = new BTreeIndex<string, NodeId>(64);
+  /** @warning Grows unbounded. Consider cleanup for large graphs. */
   private readonly edges = new Map<NodeId, Set<NodeId>>();
+  /** @warning Grows unbounded. Consider cleanup for large graphs. */
   private readonly inbound = new Map<NodeId, Set<NodeId>>();
+  /** @warning Grows unbounded. Consider cleanup for large graphs. */
   private readonly edgesByKind = new Map<string, Map<NodeId, Set<NodeId>>>();
+  /** @warning Grows unbounded. Consider cleanup for large graphs. */
   private readonly inboundByKind = new Map<string, Map<NodeId, Set<NodeId>>>();
   private readonly dirty = new Set<NodeId>();
+  /** @warning Grows unbounded. Consider cleanup for large graphs. */
   private readonly embeddings = new Map<NodeId, Float32Array>();
   private nodeCount = 0;
   private modCount = 0;
@@ -256,8 +269,8 @@ export class Hypergraph {
   }
 
   setEmbedding(id: NodeId, vector: Float32Array): void {
-    if (vector.length !== 1024) {
-      throw new Error("embedding_dim_mismatch_1024");
+    if (vector.length !== EMBEDDING_DIM) {
+      throw new Error(`embedding_dim_mismatch_${EMBEDDING_DIM}`);
     }
     const stored =
       vector instanceof Float32Array ? vector : new Float32Array(vector);
@@ -329,13 +342,14 @@ export const empty = (): Hypergraph => new Hypergraph();
 export const fact = (
   content: string,
   conf: number,
-  source: string
+  source: string,
+  now?: number
 ): Knowledge => ({
   _: "fact",
   content,
   confidence: toConfidence(conf),
   source,
-  ts: timestamp(Date.now()),
+  ts: timestamp(now ?? Date.now()),
 });
 
 export const relation = (

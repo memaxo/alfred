@@ -38,7 +38,7 @@ export const EMBEDDING_DIM = 1024;
 let pool: EmbedPool | null = null;
 
 /**
- * Embed a single text and return 3840-dimensional vector
+ * Embed a single text and return 1024-dimensional vector (MRL truncated from 3840)
  */
 export async function embed(text: string): Promise<number[]> {
   if (!pool) {
@@ -62,7 +62,7 @@ export async function embed(text: string): Promise<number[]> {
 }
 
 /**
- * Embed multiple texts and return array of 3840-dimensional vectors
+ * Embed multiple texts and return array of 1024-dimensional vectors (MRL truncated from 3840)
  */
 export async function embedMany(texts: string[]): Promise<number[][]> {
   if (!pool) {

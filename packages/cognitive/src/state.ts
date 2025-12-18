@@ -342,6 +342,7 @@ export const updatePhysiology = (
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.01) {
+      console.warn(`cognitive_physiology_update_slow: ${durationMs.toFixed(3)}ms (budget: 0.01ms)`);
     }
   }
 };
@@ -440,6 +441,7 @@ export function updateAutonomy(
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.05) {
+      console.warn(`cognitive_autonomy_update_slow: ${durationMs.toFixed(3)}ms (budget: 0.05ms)`);
     }
   }
 }
@@ -493,6 +495,7 @@ export const calculateError = (expected: string, actual: string): number => {
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
+      console.warn(`cognitive_error_calculation_slow: ${durationMs.toFixed(3)}ms (budget: 0.1ms)`);
     }
   }
 };
@@ -617,7 +620,8 @@ export const evaluateReasoningQuality = (
 export const meetsConstraints = (
   auto: AutonomyGradient,
   action: string,
-  physiology?: Physiology
+  physiology?: Physiology,
+  now?: number
 ): { allowed: boolean; reason?: string } => {
   if (physiology) {
     if (physiology.frustration > 0.85) {
@@ -634,7 +638,7 @@ export const meetsConstraints = (
   for (const constraint of auto.constraints) {
     switch (constraint._) {
       case "temporal":
-        if (Date.now() > constraint.until) {
+        if ((now ?? Date.now()) > constraint.until) {
           return { allowed: false, reason: "temporal_constraint_expired" };
         }
         break;
@@ -677,26 +681,29 @@ export const isExecuting = (state: CognitiveState): boolean =>
   state._ === "executing";
 
 // Time-based state properties
-export const duration = (state: CognitiveState): number => {
-  const now = Date.now();
+export const duration = (state: CognitiveState, now?: number): number => {
+  const currentTime = now ?? Date.now();
   switch (state._) {
     case "idle":
-      return now - state.since;
+      return currentTime - state.since;
     case "capturing":
-      return now - state.started;
+      return currentTime - state.started;
     case "thinking":
-      return now - state.started;
+      return currentTime - state.started;
     case "deciding":
-      return state.deadline - now;
+      return state.deadline - currentTime;
     case "executing":
-      return now - state.started;
+      return currentTime - state.started;
     case "reflecting":
       return 0;
   }
 };
 
-export const isStale = (state: CognitiveState, threshold = 30_000): boolean =>
-  duration(state) > threshold;
+export const isStale = (
+  state: CognitiveState,
+  threshold = 30_000,
+  now?: number
+): boolean => duration(state, now) > threshold;
 
 // ======================================
 // Focus State Machine (productivity mode)

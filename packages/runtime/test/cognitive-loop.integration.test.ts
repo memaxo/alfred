@@ -85,7 +85,8 @@ describe("runCognitiveLoop integration", () => {
     const events = await cognitiveRepo?.getAllEvents(streamId);
     expect(events).toHaveLength(1);
     const payload = events[0]?.payload as Record<string, unknown>;
-    expect(payload.content).toBe("Plan day");
+    const eventData = payload.data as Record<string, unknown>;
+    expect(eventData.content).toBe("Plan day");
   });
 
   it("replays prior events so completion yields reflection", async () => {

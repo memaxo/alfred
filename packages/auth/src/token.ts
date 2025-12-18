@@ -205,6 +205,7 @@ export async function requireToolScopesAndPolicy(
 }
 
 const memoryJti = new Map<string, number>();
+const MAX_JTI_CACHE_SIZE = 10_000;
 
 export async function cacheJTI(jti: string, ttlSec: number) {
   const redis = getRedis();
@@ -231,6 +232,15 @@ export async function cacheJTI(jti: string, ttlSec: number) {
   if (existing && existing > now) {
     throw new Error("token_replayed");
   }
+
+  // Evict oldest entry if cache is full (LRU-style eviction)
+  if (memoryJti.size >= MAX_JTI_CACHE_SIZE) {
+    const oldest = memoryJti.keys().next().value;
+    if (oldest) {
+      memoryJti.delete(oldest);
+    }
+  }
+
   memoryJti.set(jti, expiresAt);
   const timer = setTimeout(() => {
     memoryJti.delete(jti);

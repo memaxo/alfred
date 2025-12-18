@@ -37,17 +37,16 @@ export const toolRunner = {
       }
     }
 
-    const [cmd, ...args] = finalCommand.split(" ");
-
-    if (!cmd) {
+    if (!finalCommand.trim()) {
       throw new Error("Empty command");
     }
 
-    const env = { ...process.env, CI: "true" };
+    // Use shell delegation to properly handle quoted arguments and complex commands
+    const env = { ...process.env, ...(projectConfig?.env ?? {}) };
 
     const proc =
       dirHandle === null
-        ? spawn([cmd, ...args], {
+        ? spawn(["sh", "-c", finalCommand], {
             cwd: cwd as string,
             stdout: "pipe",
             stderr: "pipe",
@@ -55,8 +54,8 @@ export const toolRunner = {
           })
         : spawnWithSecureCwd({
             cwdHandle: dirHandle,
-            cmd,
-            args,
+            cmd: "sh",
+            args: ["-c", finalCommand],
             env,
             stdout: "pipe",
             stderr: "pipe",

@@ -54,7 +54,9 @@ export const applyTransition = (
         ? event.deadline
         : "ts" in event
           ? event.ts
-          : Date.now();
+          : (() => {
+              throw new Error("event_missing_timestamp");
+            })();
     const nextPhysiology = applyPhysiologyEvent(state.physiology, event);
 
     switch (state._) {
@@ -119,6 +121,7 @@ export const applyTransition = (
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
+      console.warn(`cognitive_transition_slow: ${durationMs.toFixed(3)}ms (budget: 0.1ms)`);
     }
   }
 };

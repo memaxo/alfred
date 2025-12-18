@@ -9,6 +9,8 @@ mock.module("@alfred/db", () => {
   return {
     cognitiveRepo: {
       getAllEvents: async () => [], // Default empty
+      getLatestSnapshot: async () => undefined, // No snapshot
+      getEventsSince: async () => [], // No events since snapshot
       appendEvent: async () => ({}),
     },
   };
@@ -35,7 +37,7 @@ describe("Cognitive Loop", () => {
     );
 
     expect(state._).toBe("thinking");
-    // @ts-expect-error
+    // @ts-expect-error - state.about only exists on "thinking" state, TS union requires narrowing
     expect(state.about).toBe("Hello world");
     expect(effects).toEqual([
       { type: "generate_response", input: "Hello world" },
@@ -58,7 +60,7 @@ describe("Cognitive Loop", () => {
     ];
 
     // Override the mock implementation for this test
-    // @ts-expect-error
+    // @ts-expect-error - dynamically overriding mock function, TS doesn't know this is writable
     cognitiveRepo.getAllEvents = async () => history;
 
     const completeEvent: Event = {
@@ -74,7 +76,7 @@ describe("Cognitive Loop", () => {
     );
 
     expect(state._).toBe("reflecting");
-    // @ts-expect-error
+    // @ts-expect-error - state.outcome only exists on "reflecting" state, TS union requires narrowing
     expect(state.outcome._).toBe("success");
   });
 
