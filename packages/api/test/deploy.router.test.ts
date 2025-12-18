@@ -10,17 +10,8 @@ import { createTestCaller } from "./utils/trpc";
 setupTestEnv();
 mockPolicyAudit();
 
-const listDeploymentsMock = vi.fn();
-const getDeploymentByIdMock = vi.fn();
-const createDeploymentMock = vi.fn();
-const removeDeploymentMock = vi.fn();
-
-dbModuleStub.deployRepo = {
-  listDeployments: listDeploymentsMock,
-  getDeploymentById: getDeploymentByIdMock,
-  createDeployment: createDeploymentMock,
-  removeDeployment: removeDeploymentMock,
-};
+const listDeploymentsMock = dbModuleStub.deployRepo.listDeployments;
+const getDeploymentByIdMock = dbModuleStub.deployRepo.getDeploymentById;
 
 const toolDockerMock = {
   build: vi.fn(),

@@ -42,7 +42,11 @@ import {
 
 const createRuntimeMock = vi.fn();
 
+const runtimeAbs = new URL("../../runtime/src/index.ts", import.meta.url)
+  .pathname;
+const realRuntime = await import(runtimeAbs);
 mock.module("@alfred/runtime", () => ({
+  ...realRuntime,
   createRuntime: (...args: unknown[]) => createRuntimeMock(...args),
 }));
 

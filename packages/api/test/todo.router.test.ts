@@ -1,6 +1,6 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
+import { db } from "@alfred/db";
 import { resetAllMocks, setupTestEnv } from "./utils/router-helpers";
-import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller } from "./utils/trpc";
 
 setupTestEnv();
@@ -10,36 +10,15 @@ const dbInsertMock = vi.fn();
 const dbUpdateMock = vi.fn();
 const dbDeleteMock = vi.fn();
 
-const originalDb = dbModuleStub.db;
-dbModuleStub.db = {
-  select: () => ({
-    from: dbSelectMock,
-  }),
-  insert: () => ({
-    values: dbInsertMock,
-  }),
-  update: () => ({
-    set: dbUpdateMock,
-    where: vi.fn(),
-  }),
-  delete: () => ({
-    where: dbDeleteMock,
-    execute: vi.fn().mockResolvedValue({ rows: [] }),
-  }),
-} as unknown as typeof dbModuleStub.db;
-
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
 beforeAll(async () => {
   caller = await createTestCaller();
 });
 
-afterAll(() => {
-  dbModuleStub.db = originalDb;
-});
-
 afterEach(() => {
   resetAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("todo router", () => {
@@ -51,6 +30,9 @@ describe("todo router", () => {
       ];
 
       dbSelectMock.mockResolvedValue(mockTodos);
+      vi.spyOn(db, "select").mockReturnValue({
+        from: dbSelectMock,
+      } as unknown as ReturnType<typeof db.select>);
 
       const result = await caller.todo.getAll();
 
@@ -62,6 +44,9 @@ describe("todo router", () => {
     it("creates a todo", async () => {
       const mockTodo = { id: 1, text: "new todo", completed: false };
       dbInsertMock.mockResolvedValue([mockTodo]);
+      vi.spyOn(db, "insert").mockReturnValue({
+        values: dbInsertMock,
+      } as unknown as ReturnType<typeof db.insert>);
 
       const result = await caller.todo.create({
         text: "new todo",
@@ -82,9 +67,11 @@ describe("todo router", () => {
 
   describe("toggle", () => {
     it("toggles todo completion", async () => {
-      dbUpdateMock.mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-      });
+      const whereMock = vi.fn().mockResolvedValue([]);
+      dbUpdateMock.mockReturnValue({ where: whereMock });
+      vi.spyOn(db, "update").mockReturnValue({
+        set: dbUpdateMock,
+      } as unknown as ReturnType<typeof db.update>);
 
       await caller.todo.toggle({
         id: 1,
@@ -98,6 +85,9 @@ describe("todo router", () => {
   describe("delete", () => {
     it("deletes a todo", async () => {
       dbDeleteMock.mockResolvedValue([]);
+      vi.spyOn(db, "delete").mockReturnValue({
+        where: dbDeleteMock,
+      } as unknown as ReturnType<typeof db.delete>);
 
       await caller.todo.delete({
         id: 1,

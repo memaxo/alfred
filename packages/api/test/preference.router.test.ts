@@ -24,32 +24,28 @@ const inferPreferenceFromCorrectionMock = vi.fn();
 let recordMemoryUpdateSpy: ReturnType<typeof vi.spyOn>;
 let recordMemoryForgetSpy: ReturnType<typeof vi.spyOn>;
 
-dbModuleStub.userRepo = {
-  getPreferences: getPreferencesMock,
-  setPreference: setPreferenceMock,
-  deletePreference: deletePreferenceMock,
-  addFeedback: addFeedbackMock,
-  getFeedback: vi.fn().mockResolvedValue([]),
-};
+dbModuleStub.userRepo.getPreferences = getPreferencesMock;
+dbModuleStub.userRepo.setPreference = setPreferenceMock;
+dbModuleStub.userRepo.deletePreference = deletePreferenceMock;
+dbModuleStub.userRepo.addFeedback = addFeedbackMock;
+dbModuleStub.userRepo.getFeedback = vi.fn().mockResolvedValue([]);
 
-dbModuleStub.conversationRepo = {
-  getMessage: getMessageMock,
-  messageRowToUIMessage: messageRowToUIMessageMock,
-  getActiveUserIds: vi.fn().mockResolvedValue([]),
-  getConversations: vi.fn().mockResolvedValue([]),
-  getConversationHistory: vi.fn().mockResolvedValue(null),
-  createConversation: vi.fn(),
-  createMessage: vi.fn(),
-};
+dbModuleStub.conversationRepo.getMessage = getMessageMock;
+dbModuleStub.conversationRepo.messageRowToUIMessage = messageRowToUIMessageMock;
+dbModuleStub.conversationRepo.getActiveUserIds = vi.fn().mockResolvedValue([]);
+dbModuleStub.conversationRepo.getConversations = vi.fn().mockResolvedValue([]);
+dbModuleStub.conversationRepo.getConversationHistory = vi.fn().mockResolvedValue(null);
+dbModuleStub.conversationRepo.createConversation = vi.fn();
+dbModuleStub.conversationRepo.createMessage = vi.fn();
 
-dbModuleStub.userSchema = {
-  preferences: {
-    $inferSelect: {},
-  },
-};
+dbModuleStub.userSchema = dbModuleStub.userSchema ?? {};
+dbModuleStub.userSchema.preferences = { $inferSelect: {} };
 
 mock.module("@alfred/agent/preference/loader", () => ({
+  loadPreferences: vi.fn().mockResolvedValue(new Map()),
+  loadPreferencesWithDefaults: vi.fn().mockResolvedValue(new Map()),
   invalidatePreferenceCache: invalidatePreferenceCacheMock,
+  resetPreferenceCache: vi.fn(),
 }));
 
 mock.module("@alfred/agent/preference/inference", () => ({

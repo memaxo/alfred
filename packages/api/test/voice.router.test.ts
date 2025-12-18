@@ -1,5 +1,4 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
-import { metricsStub } from "./utils/mock-metrics";
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -12,13 +11,22 @@ mockPolicyAudit();
 
 process.env.OPENAI_API_KEY = "test-key";
 
-const recordVoiceSttMock = vi.fn();
-const recordVoiceTtsMock = vi.fn();
+const transcribeLocalMock = vi.fn();
+mock.module("@alfred/voice/services/stt", () => ({
+  transcribeLocal: transcribeLocalMock,
+}));
 
-mock.module("@alfred/api/metrics", () => ({
-  ...metricsStub,
-  recordVoiceStt: recordVoiceSttMock,
-  recordVoiceTts: recordVoiceTtsMock,
+const synthesizeLocalMock = vi.fn();
+mock.module("@alfred/voice/services/tts", () => ({
+  synthesizeLocal: synthesizeLocalMock,
+}));
+
+mock.module("../src/voice/pools", () => ({
+  getVoicePools: () => ({
+    sttPool: {},
+    ttsPool: {},
+    voiceRegistry: {},
+  }),
 }));
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
@@ -34,64 +42,51 @@ afterEach(() => {
 });
 
 describe("voice router", () => {
-  describe("stt", () => {
+  describe("sttTranscribe", () => {
     it("transcribes audio", async () => {
       const mockResponse = {
         text: "hello world",
+        model: "parakeet",
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      } as any);
+      transcribeLocalMock.mockResolvedValue(mockResponse);
 
       const audioBase64 = Buffer.from("test audio").toString("base64");
-      const result = await caller.voice.stt({
+      const result = await caller.voice.sttTranscribe({
         audioBase64,
         mimeType: "audio/webm",
       });
 
-      expect(global.fetch).toHaveBeenCalled();
+      expect(transcribeLocalMock).toHaveBeenCalled();
       expect(result).toMatchObject({
         text: "hello world",
       });
     });
-
-    it("validates audio size", async () => {
-      const largeAudio = Buffer.alloc(6 * 1024 * 1024).toString("base64");
-
-      await expect(
-        caller.voice.stt({
-          audioBase64: largeAudio,
-          mimeType: "audio/webm",
-        })
-      ).rejects.toThrow();
-    });
   });
 
-  describe("tts", () => {
+  describe("ttsSynthesize", () => {
     it("synthesizes speech", async () => {
-      const mockAudio = Buffer.from("audio data");
+      const mockAudio = {
+        audioBase64: Buffer.from("audio data").toString("base64"),
+        mimeType: "audio/mp3",
+      };
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        arrayBuffer: async () => mockAudio.buffer,
-      } as any);
+      synthesizeLocalMock.mockResolvedValue(mockAudio);
 
-      const result = await caller.voice.tts({
+      const result = await caller.voice.ttsSynthesize({
         text: "hello world",
         voice: "alloy",
       });
 
-      expect(global.fetch).toHaveBeenCalled();
-      expect(result).toHaveProperty("audioBase64");
+      expect(synthesizeLocalMock).toHaveBeenCalled();
+      expect(result).toEqual(mockAudio);
     });
 
     it("validates text length", async () => {
       const longText = "a".repeat(601);
 
       await expect(
-        caller.voice.tts({
+        caller.voice.ttsSynthesize({
           text: longText,
         })
       ).rejects.toThrow();

@@ -1,41 +1,14 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { MAX_HISTORY_MESSAGES } from "@alfred/type/history";
 import type { UIMessage } from "@alfred/type/stream";
-import { metricsStub } from "./utils/mock-metrics";
+import "./utils/agent-mock";
+import { dbModuleStub } from "./utils/mock-db-client";
+import { aiStub, metricsStub } from "./utils/mock-metrics";
 
-mock.module("@alfred/agent", () => ({
-  buildTools: () => ({}),
-}));
+const validateUIMessagesMock = aiStub.validateUIMessages;
 
-const validateUIMessagesMock = vi.fn(
-  async ({ messages }: { messages: UIMessage[] }) => messages
-);
-
-mock.module("ai", () => ({
-  validateUIMessages: validateUIMessagesMock,
-}));
-
-const conversationRepoMock = {
-  getConversations: vi.fn(),
-  getConversationHistory: vi.fn(),
-  getActiveUserIds: vi.fn(),
-};
-
-const workflowRepoMock = {
-  getToolCalls: vi.fn().mockResolvedValue([]),
-};
-
-const userRepoMock = {
-  getFeedback: vi.fn().mockResolvedValue([]),
-  setPreference: vi.fn().mockResolvedValue(null),
-};
-
-mock.module("@alfred/db/repo/conversation", () => conversationRepoMock);
-mock.module("@alfred/db/src/repo/conversation", () => conversationRepoMock);
-mock.module("@alfred/db/repo/workflow", () => workflowRepoMock);
-mock.module("@alfred/db/src/repo/workflow", () => workflowRepoMock);
-mock.module("@alfred/db/repo/user", () => userRepoMock);
-mock.module("@alfred/db/src/repo/user", () => userRepoMock);
+const conversationRepoMock = dbModuleStub.conversationRepo;
+const userRepoMock = dbModuleStub.userRepo;
 
 const inferResponsePreferencesMock = vi.fn();
 const inferDomainPreferencesMock = vi.fn().mockReturnValue(new Map());
@@ -151,7 +124,6 @@ describe("runPreferenceInference", () => {
     userRepoMock.setPreference.mockReset();
     conversationRepoMock.getConversations.mockReset();
     conversationRepoMock.getConversationHistory.mockReset();
-    workflowRepoMock.getToolCalls.mockResolvedValue([]);
     userRepoMock.getFeedback.mockResolvedValue([]);
     metricsStub.preferenceHistoryPrunedTotal.inc.mockReset();
   });

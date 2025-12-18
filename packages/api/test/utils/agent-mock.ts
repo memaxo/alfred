@@ -34,10 +34,15 @@ const getAssistantAgentDefaults = vi.fn(() => assistantDefaults);
 const getOrchestratorAgentDefaults = vi.fn(() => orchestratorDefaults);
 const recordMemoryUpdate = vi.fn();
 const recordMemoryForget = vi.fn();
-const eventToUiMessages = vi.fn(() => []);
-const normalizeToUiMessages = vi.fn(() => []);
 
-mock.module("@alfred/agent", () => ({
+mock.module("@alfred/agent", async () => {
+  const normalizeAbs = new URL(
+    "../../../agent/src/utils/normalize.ts",
+    import.meta.url
+  ).pathname;
+  const normalize = await import(normalizeAbs);
+
+  return {
   buildAssistantTools,
   buildOrchestratorTools,
   buildTools,
@@ -67,8 +72,17 @@ mock.module("@alfred/agent", () => ({
   recordAssistantEscalation: noop,
   recordMemoryUpdate,
   recordMemoryForget,
-  eventToUiMessages,
-  normalizeToUiMessages,
+    // Use real normalization helpers so tests exercising persistence/normalization
+    // get realistic parts instead of empty arrays.
+    eventToUiMessages: normalize.eventToUiMessages,
+    normalizeToUiMessages: normalize.normalizeToUiMessages,
+  };
+});
+
+// Some runtime modules import the v6 tool builder directly. Provide a stable stub
+// so tests don't pull in the full tool catalog (and its AI SDK dependencies).
+mock.module("@alfred/agent/v6", () => ({
+  buildTools,
 }));
 
 export function resetAgentMocks() {
@@ -98,6 +112,4 @@ export {
   getModelId as getModelIdMock,
   recordMemoryUpdate as recordMemoryUpdateMock,
   recordMemoryForget as recordMemoryForgetMock,
-  eventToUiMessages as eventToUiMessagesMock,
-  normalizeToUiMessages as normalizeToUiMessagesMock,
 };

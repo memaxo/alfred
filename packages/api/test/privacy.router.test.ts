@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import { EMBEDDING_DIM } from "@alfred/embed";
 import {
   mockPolicyAudit,
   resetAllMocks,
@@ -46,7 +47,7 @@ describe("privacy router", () => {
 
       searchFactsMock.mockResolvedValue(mockFacts);
 
-      const embedding = Array.from({ length: 1536 }, () => 0.1);
+      const embedding = Array.from({ length: EMBEDDING_DIM }, () => 0.1);
       const result = await caller.privacy.facts({
         embedding,
         limit: 10,
@@ -81,11 +82,13 @@ describe("privacy router", () => {
       deleteFactMock.mockResolvedValue(1);
 
       const result = await caller.privacy.deleteFact({
-        id: "fact-id",
+        id: "00000000-0000-0000-0000-000000000000",
         scope: "fact",
       });
 
-      expect(deleteFactMock).toHaveBeenCalledWith("fact-id");
+      expect(deleteFactMock).toHaveBeenCalledWith(
+        "00000000-0000-0000-0000-000000000000"
+      );
       expect(recordMemoryForgetMock).toHaveBeenCalledWith("fact");
       expect(result).toEqual({ removed: 1 });
     });
@@ -94,7 +97,7 @@ describe("privacy router", () => {
       deleteFactMock.mockResolvedValue(0);
 
       const result = await caller.privacy.deleteFact({
-        id: "nonexistent",
+        id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
       });
 
       expect(result).toEqual({ removed: 0 });

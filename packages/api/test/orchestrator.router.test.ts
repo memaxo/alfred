@@ -3,7 +3,7 @@ import {
   getOrchestratorAgentDefaultsMock,
   resetAgentMocks,
 } from "./utils/agent-mock";
-import { metricsStub } from "./utils/mock-metrics";
+import { aiStub, metricsStub } from "./utils/mock-metrics";
 import {
   mockGenerateText,
   mockPolicyAudit,
@@ -25,21 +25,7 @@ mock.module("node-pty", () => ({
 }));
 
 const generateMocks = mockGenerateText();
-const validateUIMessagesMock = vi.fn(
-  async ({ messages }: { messages: unknown[] }) => messages
-);
-const convertToModelMessagesMock = vi.fn((messages: unknown) => messages);
-const pruneMessagesMock = vi.fn(
-  ({ messages }: { messages: unknown[] }) => messages
-);
-const stepCountIsMock = vi.fn((max: number) => ({ max }));
-
-mock.module("ai", () => ({
-  stepCountIs: stepCountIsMock,
-  validateUIMessages: validateUIMessagesMock,
-  convertToModelMessages: convertToModelMessagesMock,
-  pruneMessages: pruneMessagesMock,
-}));
+const validateUIMessagesMock = aiStub.validateUIMessages;
 
 let caller: Awaited<ReturnType<typeof createTestCaller>>;
 
@@ -53,9 +39,6 @@ afterEach(() => {
   resetAllMocks();
   resetAgentMocks();
   validateUIMessagesMock.mockClear();
-  convertToModelMessagesMock.mockClear();
-  pruneMessagesMock.mockClear();
-  stepCountIsMock.mockClear();
   metricsStub.orchestratorGenerateRequestsTotal.inc.mockClear();
   metricsStub.orchestratorGenerateDurationSeconds.startTimer.mockClear();
 });

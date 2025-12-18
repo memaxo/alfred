@@ -119,12 +119,9 @@ const getPreferencesMock = vi.fn();
 const setPreferenceMock = vi.fn();
 const deletePreferenceMock = vi.fn();
 
-dbModuleStub.userRepo = {
-  ...dbModuleStub.userRepo,
-  getPreferences: getPreferencesMock,
-  setPreference: setPreferenceMock,
-  deletePreference: deletePreferenceMock,
-};
+dbModuleStub.userRepo.getPreferences = getPreferencesMock;
+dbModuleStub.userRepo.setPreference = setPreferenceMock;
+dbModuleStub.userRepo.deletePreference = deletePreferenceMock;
 
 let caller: Awaited<
   ReturnType<typeof import("./utils/trpc")["createTestCaller"]>

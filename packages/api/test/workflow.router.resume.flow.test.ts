@@ -159,6 +159,10 @@ mock.module("@alfred/db/repo/workflow", () => ({
   updateRun: updateRunMock,
   getRun: vi.fn().mockResolvedValue(null),
   listEvents: vi.fn().mockResolvedValue([]),
+  listRuns: vi.fn().mockResolvedValue([]),
+  listEventsByType: vi.fn().mockResolvedValue([]),
+  listEventsByTypePaged: vi.fn().mockResolvedValue([]),
+  countEventsByType: vi.fn().mockResolvedValue(0),
 }));
 
 // Keep metrics light in tests
@@ -197,10 +201,6 @@ afterEach(() => {
   graphIndexStub.findNodesByConfidence.mockClear();
   graphIndexStub.findNodesForDecay.mockClear();
   graphIndexStub.updateNodeConfidenceBatch.mockClear();
-});
-
-afterAll(() => {
-  mock.restore();
 });
 
 async function _subscribeToStream(

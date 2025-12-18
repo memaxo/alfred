@@ -1,5 +1,6 @@
-import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterEach, describe, expect, it, mock, vi } from "bun:test";
 import "./utils/agent-mock";
+import { policyStub } from "./utils/mock-metrics";
 
 const getSessionMock = vi.fn();
 mock.module("@alfred/auth", () => ({
@@ -10,10 +11,7 @@ mock.module("@alfred/auth", () => ({
   },
 }));
 
-const evaluateMock = vi.fn();
-mock.module("@alfred/policy", () => ({
-  evaluate: evaluateMock,
-}));
+const evaluateMock = policyStub.evaluate;
 
 const createAuditLogMock = vi.fn();
 mock.module("@alfred/db/repo/policy", () => ({
@@ -40,11 +38,8 @@ const { authorizeVoiceStreamRequest, VoiceStreamAuthError } = await import(
 afterEach(() => {
   getSessionMock.mockReset();
   evaluateMock.mockReset();
+  evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
   createAuditLogMock.mockReset();
-});
-
-afterAll(() => {
-  mock.restore();
 });
 
 describe("authorizeVoiceStreamRequest", () => {

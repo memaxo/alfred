@@ -1,22 +1,7 @@
 import { mock, vi } from "bun:test";
 
-// Provide a minimal Drizzle-like client so any accidental imports of
-// @alfred/db/src/client during router tests won't try to initialize a real
-// Postgres connection.
-const dbStub = new Proxy(
-  {},
-  {
-    get: () => () => ({
-      returning: () => [],
-      execute: async () => ({ rows: [] }),
-    }),
-  }
-);
-
-const isSqliteDriver = vi.fn(() => false);
-
-mock.module("@alfred/db/src/client", () => ({ db: dbStub, isSqliteDriver }));
-mock.module("@alfred/db/client", () => ({ db: dbStub, isSqliteDriver }));
+// Prefer sqlite for tests to avoid requiring Postgres.
+process.env.DATABASE_URL ??= "sqlite::memory:";
 
 const conversationRepoShim = {
   createConversation: (...args: any[]) =>
@@ -50,19 +35,20 @@ const defaultConversationRow = {
 };
 
 export const dbModuleStub = {
-  db: dbStub,
-  isSqliteDriver,
-  assistantRepo: {},
-  deployRepo: {},
-  evalRepo: {},
-  graphRepo: {},
-  linearRepo: {},
-  policyRepo: {},
-  ragRepo: {},
-  cognitiveRepo: {},
-  codexLearningRepo: {},
-  cognitiveEvents: {},
-  cognitiveSnapshots: {},
+  deployRepo: {
+    listDeployments: vi.fn().mockResolvedValue([]),
+    getDeploymentById: vi.fn().mockResolvedValue(null),
+    getDeploymentByApp: vi.fn().mockResolvedValue(null),
+    createDeployment: vi.fn().mockResolvedValue(null),
+    removeDeployment: vi.fn().mockResolvedValue(undefined),
+    upsertDeployment: vi.fn().mockResolvedValue({ id: "deploy-123" }),
+    setDeploymentStatus: vi.fn().mockResolvedValue(undefined),
+    recordHealthCheck: vi.fn().mockResolvedValue(undefined),
+  },
+  linearRepo: {
+    upsertLinear: vi.fn().mockResolvedValue(undefined),
+    getLinearByOAuth: vi.fn().mockResolvedValue(null),
+  },
   conversationRepo: {
     createConversation: vi.fn().mockResolvedValue(defaultConversationRow),
     getConversationByWorkflow: vi.fn().mockResolvedValue(null),
@@ -150,14 +136,22 @@ export const dbModuleStub = {
   workflowSchema: {},
 };
 
-mock.module("@alfred/db", () => dbModuleStub);
+const dbAbs = new URL("../../../db/src/index.ts", import.meta.url).pathname;
+const realDb = await import(dbAbs);
+mock.module("@alfred/db", () => ({
+  ...realDb,
+  userRepo: dbModuleStub.userRepo,
+  deployRepo: dbModuleStub.deployRepo,
+  linearRepo: dbModuleStub.linearRepo,
+}));
 mock.module("@alfred/db/repo/conversation", () => conversationRepoShim);
 mock.module("@alfred/db/src/repo/conversation", () => conversationRepoShim);
 mock.module("@alfred/db/repo/user", () => dbModuleStub.userRepo);
 mock.module("@alfred/db/src/repo/user", () => dbModuleStub.userRepo);
-
-// Provide a default DATABASE_URL to placate any leftover guards
-process.env.DATABASE_URL ??= "postgres://test:test@localhost:5432/test";
+mock.module("@alfred/db/repo/deploy", () => dbModuleStub.deployRepo);
+mock.module("@alfred/db/src/repo/deploy", () => dbModuleStub.deployRepo);
+mock.module("@alfred/db/repo/linear", () => dbModuleStub.linearRepo);
+mock.module("@alfred/db/src/repo/linear", () => dbModuleStub.linearRepo);
 
 // No-op policy audit logging during tests
 mock.module("@alfred/db/repo/policy", () => ({

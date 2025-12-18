@@ -77,10 +77,6 @@ describe("MemoryRunRegistry", () => {
     vi.restoreAllMocks();
   });
 
-  afterAll(() => {
-    mock.restore();
-  });
-
   describe("register", () => {
     it("registers a run handle", () => {
       const runId = "test-run-id";

@@ -79,7 +79,7 @@ const runScoresInput = z.object({
 });
 
 const mapEvalResource = (raw: unknown) => {
-  const data = raw as Partial<{
+  const data = (raw ?? {}) as Partial<{
     defSlug?: string;
     datasetId?: string;
     runId?: string;

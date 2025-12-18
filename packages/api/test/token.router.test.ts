@@ -36,6 +36,7 @@ mock.module("@alfred/auth/biometric", () => ({
   requireRecentBiometric: requireRecentBiometricMock,
   // Ensure index-level import of setBiometricTicket does not break when auth package is loaded indirectly
   setBiometricTicket: vi.fn(),
+  autoGrantBiometricIfBypassed: vi.fn(),
 }));
 
 // Allow policy by default for token routes

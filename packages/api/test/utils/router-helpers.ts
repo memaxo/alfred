@@ -184,7 +184,8 @@ export function resetAllMocks() {
  * at the top of test files BEFORE other imports.
  */
 export function setupTestEnv() {
-  process.env.DATABASE_URL ??= "postgres://localhost:5432/test";
+  // Default to sqlite in tests to avoid requiring a running Postgres.
+  process.env.DATABASE_URL ??= "sqlite::memory:";
   process.env.RUN_DB_TESTS ??= "0";
   process.env.DISABLE_METRICS_HOOKS = "1";
 }

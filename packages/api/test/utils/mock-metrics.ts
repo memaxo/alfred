@@ -65,6 +65,36 @@ mock.module("@alfred/api/src/metrics", () => ({
   ...metricsStub,
 }));
 
+// AI SDK is used across routers/history/runtime. Provide a stable stub so any test
+// file can safely import modules that depend on `ai` without needing ad-hoc mocks.
+const realAiModule = await import("ai");
+
+export const aiStub = {
+  ...realAiModule,
+  validateUIMessages: vi.fn(async ({ messages }: { messages?: unknown[] }) =>
+    Array.isArray(messages) ? messages : []
+  ),
+  generateText: vi.fn().mockResolvedValue({
+    text: "",
+    toolCalls: [],
+    toolResults: [],
+    usage: { inputTokens: 0, outputTokens: 0 },
+    finishReason: "stop",
+  }),
+  generateObject: vi.fn().mockResolvedValue({ object: {} }),
+  streamText: vi.fn(() => ({
+    fullStream: (async function* () {
+      yield {
+        type: "finish",
+        finishReason: "stop",
+        usage: { inputTokens: 0, outputTokens: 0 },
+      };
+    })(),
+  })),
+} as const;
+
+mock.module("ai", () => aiStub);
+
 // Policy hooks used by metrics: provide default no-op implementations.
 const defaultPolicyEvaluate = vi
   .fn()

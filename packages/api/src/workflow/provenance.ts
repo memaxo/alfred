@@ -1,1 +1,1 @@
-export * from "@alfred/runtime/src/workflow/provenance";
+export * from "@alfred/runtime/workflow/provenance";

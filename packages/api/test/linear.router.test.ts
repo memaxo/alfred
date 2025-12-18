@@ -10,15 +10,10 @@ import { createTestCaller } from "./utils/trpc";
 setupTestEnv();
 mockPolicyAudit();
 
-const upsertLinearMock = vi.fn();
-const getLinearByOAuthMock = vi.fn();
+const upsertLinearMock = dbModuleStub.linearRepo.upsertLinear;
+const getLinearByOAuthMock = dbModuleStub.linearRepo.getLinearByOAuth;
 const cacheJTIMock = vi.fn();
 const requireToolScopesAndPolicyMock = vi.fn();
-
-dbModuleStub.linearRepo = {
-  upsertLinear: upsertLinearMock,
-  getLinearByOAuth: getLinearByOAuthMock,
-};
 
 mock.module("@alfred/auth/token", () => ({
   issueAccessToken: vi.fn(),

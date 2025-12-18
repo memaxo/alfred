@@ -76,13 +76,12 @@ const createConversationMock = vi.fn();
 const getConversationByWorkflowMock = vi.fn();
 const createMessageMock = vi.fn();
 
-dbModuleStub.conversationRepo = {
-  createConversation: createConversationMock,
-  getConversationByWorkflow: getConversationByWorkflowMock,
-  createMessage: createMessageMock,
-  getConversation: vi.fn(),
-  getMessage: vi.fn(),
-};
+dbModuleStub.conversationRepo.createConversation = createConversationMock;
+dbModuleStub.conversationRepo.getConversationByWorkflow =
+  getConversationByWorkflowMock;
+dbModuleStub.conversationRepo.createMessage = createMessageMock;
+dbModuleStub.conversationRepo.getConversation = vi.fn();
+dbModuleStub.conversationRepo.getMessage = vi.fn();
 
 const workflowStreamDurationSecondsMock = {
   startTimer: vi.fn().mockReturnValue(() => {}),

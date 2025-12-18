@@ -1,17 +1,12 @@
-import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
+import { aiStub, metricsStub } from "./utils/mock-metrics";
 
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 
 import { TRPCError } from "@trpc/server";
 
-const validateUIMessagesMock = vi.fn(
-  async ({ messages }: { messages: UIMessage[] }) => messages
-);
-
-mock.module("ai", () => ({
-  validateUIMessages: validateUIMessagesMock,
-}));
+const validateUIMessagesMock = aiStub.validateUIMessages;
 
 const buildHistoryContextMock = vi.fn(
   async ({ messages }: { messages: UIMessage[] }) => ({
@@ -41,7 +36,11 @@ const buildHistoryContextMock = vi.fn(
   })
 );
 
+const historyAbs = new URL("../../history/src/index.ts", import.meta.url)
+  .pathname;
+const realHistory = await import(historyAbs);
 mock.module("@alfred/history", () => ({
+  ...realHistory,
   buildHistoryContext: buildHistoryContextMock,
   getHistoryBudgetDefaults: () => ({}),
 }));
@@ -52,10 +51,12 @@ mock.module("@alfred/logger", () => ({
     info: loggerInfoMock,
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
 const metricMocks = {
+  ...metricsStub,
   historyContextTokensTotal: { inc: vi.fn() },
   historyContextTierDropsTotal: { inc: vi.fn() },
   historyContextSelectionDurationSeconds: {
@@ -104,10 +105,6 @@ beforeEach(() => {
   metricMocks.historyContextSelectionDurationSeconds.startTimer.mockReturnValue(
     () => {}
   );
-});
-
-afterAll(() => {
-  mock.restore();
 });
 
 describe("prepareModelMessagesForGenerate", () => {

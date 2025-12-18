@@ -5,7 +5,16 @@
  * Uses mocked runtime executor to avoid Codex/CLI dependencies.
  */
 
-import { afterEach, beforeAll, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 import { metricsStub } from "./utils/mock-metrics";
 import {
@@ -17,6 +26,7 @@ import {
   setupTestEnv,
 } from "./utils/router-helpers";
 import { createTestCaller } from "./utils/trpc";
+import { toObservable } from "./utils/stream";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -38,8 +48,44 @@ const multiAgentWavesTotalMock = { inc: vi.fn() };
 const multiAgentAgentDurationSecondsMock = { observe: vi.fn() };
 const multiAgentErrorsTotalMock = { inc: vi.fn() };
 
+const createMetricStub = () => ({
+  inc: vi.fn(),
+  dec: vi.fn(),
+  observe: vi.fn(),
+  set: vi.fn(),
+  labels: vi.fn(() => createMetricStub()),
+  startTimer: vi.fn(() => vi.fn()),
+});
+
+const workflowMetricExtras = {
+  runRegistryEventsTotal: createMetricStub(),
+  runRegistryDispatchDurationSeconds: createMetricStub(),
+  replayQueriesTotal: createMetricStub(),
+  replayQueryDurationSeconds: createMetricStub(),
+  workflowProvenanceDurationSeconds: createMetricStub(),
+  workflowProvenanceEdgesTotal: createMetricStub(),
+  runnerStepsTotal: createMetricStub(),
+  runnerErrorsTotal: createMetricStub(),
+  linearActivityEmissionsTotal: createMetricStub(),
+  linearActivityDurationSeconds: createMetricStub(),
+  linearSessionOperationsTotal: createMetricStub(),
+  linearWebhookEventsTotal: createMetricStub(),
+  linearWebhookWorkflowStartsTotal: createMetricStub(),
+  linearWebhookWorkflowCancelsTotal: createMetricStub(),
+};
+
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
+  workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
+  workflowStreamEventsTotal: workflowStreamEventsTotalMock,
+  multiAgentTasksTotal: multiAgentTasksTotalMock,
+  multiAgentWavesTotal: multiAgentWavesTotalMock,
+  multiAgentAgentDurationSeconds: multiAgentAgentDurationSecondsMock,
+  multiAgentErrorsTotal: multiAgentErrorsTotalMock,
+}));
+
+mock.module("@alfred/agent/workflow/metrics", () => ({
+  ...workflowMetricExtras,
   workflowStreamDurationSeconds: workflowStreamDurationSecondsMock,
   workflowStreamEventsTotal: workflowStreamEventsTotalMock,
   multiAgentTasksTotal: multiAgentTasksTotalMock,
@@ -68,7 +114,7 @@ afterEach(() => {
 });
 
 describe("workflow failure modes (runtime)", () => {
-  beforeAll(() => {
+  beforeEach(() => {
     process.env.USE_WORKFLOW_RUNTIME = "true";
   });
 
@@ -136,9 +182,10 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({
+    const observable = await caller.workflow.stream({
       requirement: "test failure",
     });
+    const subscription = toObservable(observable);
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({
@@ -152,7 +199,7 @@ describe("workflow failure modes (runtime)", () => {
     const waveAbortCall = workflowRepoMocks.appendEvent.mock.calls.find(
       (c) =>
         c[0]?.eventType === "event" &&
-        (c[0]?.eventData as any)?.kind === "wave-aborted"
+        (c[0]?.eventData as any)?.data?.kind === "wave-aborted"
     );
     expect(waveAbortCall).toBeTruthy();
 
@@ -199,9 +246,10 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({
+    const observable = await caller.workflow.stream({
       requirement: "need guidance",
     });
+    const subscription = toObservable(observable);
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({
@@ -213,8 +261,8 @@ describe("workflow failure modes (runtime)", () => {
 
     const guidanceCall = workflowRepoMocks.appendEvent.mock.calls.find(
       (c) =>
-        (c[0]?.eventData as any)?.type === "notice" &&
-        (c[0]?.eventData as any)?.message === "agent_needs_guidance"
+        c[0]?.eventType === "notice" &&
+        (c[0]?.eventData as any)?.data?.message === "agent_needs_guidance"
     );
     expect(guidanceCall).toBeTruthy();
   });
@@ -253,9 +301,10 @@ describe("workflow failure modes (runtime)", () => {
     runRegistryMocks.register.mockResolvedValue(undefined);
     runRegistryMocks.unregister.mockResolvedValue(undefined);
 
-    const subscription = caller.workflow.stream({
+    const observable = await caller.workflow.stream({
       requirement: "merge conflict",
     });
+    const subscription = toObservable(observable);
 
     await new Promise<void>((resolve, reject) => {
       subscription.subscribe({

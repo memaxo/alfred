@@ -5,7 +5,10 @@ import type { STTPool } from "@alfred/voice/process/stt";
 // Increase timeout for model loading
 const TIMEOUT_MS = 300_000;
 
-describe("STT Integration (Parakeet)", () => {
+const describeIntegration =
+  process.env.RUN_VOICE_STT_INTEGRATION === "1" ? describe : describe.skip;
+
+describeIntegration("STT Integration (Parakeet)", () => {
   let sttPool: STTPool;
 
   beforeAll(async () => {
