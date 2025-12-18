@@ -91,7 +91,13 @@ describe("PlanRunner", () => {
     });
     expect(appendEventMock).toHaveBeenCalledTimes(1);
     expect(appendEventMock.mock.calls[0]?.[1]).toBe("cognitive_step_complete");
-    expect(appendEventMock.mock.calls[0]?.[2]).toMatchObject({
+    const payload = appendEventMock.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      v: 1,
+      type: "cognitive_step_complete",
+      resource: "user",
+    });
+    expect(payload.data).toMatchObject({
       _: "cognitive_step_complete",
       step: 0,
       action: "test-tool",
@@ -135,7 +141,13 @@ describe("PlanRunner", () => {
     expect(appendEventMock).toHaveBeenCalled();
     const lastCall = appendEventMock.mock.calls.at(-1);
     expect(lastCall?.[1]).toBe("cognitive_step_complete");
-    expect(lastCall?.[2]).toMatchObject({
+    const payload = lastCall?.[2] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      v: 1,
+      type: "cognitive_step_complete",
+      resource: "user",
+    });
+    expect(payload.data).toMatchObject({
       _: "cognitive_step_complete",
       step: 0,
       action: "fail-tool",
@@ -179,7 +191,13 @@ describe("PlanRunner", () => {
     await runner.executePlan(plan);
     expect(suspendTools["suspend-tool"].execute).toHaveBeenCalled();
     expect(appendEventMock).toHaveBeenCalledTimes(1);
-    expect(appendEventMock.mock.calls[0]?.[2]).toMatchObject({
+    const payload = appendEventMock.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      v: 1,
+      type: "cognitive_step_complete",
+      resource: "user",
+    });
+    expect(payload.data).toMatchObject({
       _: "cognitive_step_complete",
       step: 0,
       action: "suspend-tool",

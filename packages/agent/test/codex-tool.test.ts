@@ -39,8 +39,8 @@ mock.module("@alfred/db/src/repo/graph", () => ({
 
 import { logger } from "@alfred/metrics";
 
-import type { CodexToolInput } from "../src/orchestrator/tool/codex";
-import { __internals } from "../src/orchestrator/tool/codex";
+import type { CodexToolInput } from "../src/orchestrator/tool/codex/index";
+import { __internals } from "../src/orchestrator/tool/codex/index";
 
 const {
   isWithinBase,

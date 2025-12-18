@@ -156,6 +156,39 @@ mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
 }));
 
+// Functional runRegistry mock that tracks registered handles and calls their resume() method
+type RunHandle = {
+  resume(args: { resumeData: { event: string; authz: string } }): Promise<unknown>;
+  cancel(): Promise<unknown>;
+  abortController: AbortController;
+};
+
+const registeredHandles = new Map<string, RunHandle>();
+const registerMock = vi.fn((runId: string, handle: RunHandle) => {
+  registeredHandles.set(runId, handle);
+});
+const unregisterMock = vi.fn((runId: string) => {
+  registeredHandles.delete(runId);
+});
+const dispatchResumeMock = vi.fn(
+  async (runId: string, payload: { event: string; authz: string }) => {
+    const handle = registeredHandles.get(runId);
+    if (!handle) {
+      return false;
+    }
+    await handle.resume({ resumeData: payload });
+    return true;
+  }
+);
+
+mock.module("@alfred/agent/workflow/registry", () => ({
+  runRegistry: {
+    register: registerMock,
+    unregister: unregisterMock,
+    dispatchResume: dispatchResumeMock,
+  },
+}));
+
 let caller: Awaited<
   ReturnType<typeof import("./utils/trpc")["createTestCaller"]>
 >;
@@ -187,6 +220,10 @@ afterEach(() => {
   graphIndexStub.findNodesByConfidence.mockClear();
   graphIndexStub.findNodesForDecay.mockClear();
   graphIndexStub.updateNodeConfidenceBatch.mockClear();
+  registeredHandles.clear();
+  registerMock.mockClear();
+  unregisterMock.mockClear();
+  dispatchResumeMock.mockClear();
 });
 
 async function _subscribeToStream(
@@ -206,18 +243,31 @@ async function _subscribeToStream(
   return events;
 }
 
+// Helper to create a deferred promise
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("workflow router resume flow (integration)", () => {
   it("acknowledges deploy-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
-    // Prepare runner
-    let _resumed = false;
+    // Prepare runner with deferred resume promise
+    const resumeGate = deferred<{ event: string; authz: string }>();
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-1",
       summary: "ok",
-      resume: async () => {
-        _resumed = true;
+      resume: async (payload: { event: string; authz: string }): Promise<void> => {
+        resumeGate.resolve(payload);
       },
-      cancel: () => {},
+      cancel: () => {
+        resumeGate.reject(new Error("cancelled"));
+      },
       stream: (async function* () {
         yield { type: "run", id: "resume-run-1" } as any;
         yield {
@@ -225,9 +275,9 @@ describe("workflow router resume flow (integration)", () => {
           scopes: ["repo.write"],
           event: "deploy-authz",
         } as any;
-        // Wait a tick for resume
-        await new Promise((r) => setTimeout(r, 0));
-        // Emit notice + completion for stabilization regardless of resume dispatch
+        // Wait for resume to be called
+        await resumeGate.promise;
+        // Emit notice + completion after resume
         yield {
           type: "notice",
           message: "Authorization 'deploy-authz' acknowledged.",
@@ -293,14 +343,17 @@ describe("workflow router resume flow (integration)", () => {
   it("acknowledges linear-authz via resume and completes", async () => {
     evaluateMock.mockResolvedValue({ allow: true, obligations: [] });
     const input = { requirement: "test", auto: "high" as const };
-    let _resumed = false;
+    // Prepare runner with deferred resume promise
+    const resumeGate = deferred<{ event: string; authz: string }>();
     runPlanV6Mock.mockReturnValue({
       runId: "resume-run-2",
       summary: "ok",
-      resume: async () => {
-        _resumed = true;
+      resume: async (payload: { event: string; authz: string }): Promise<void> => {
+        resumeGate.resolve(payload);
       },
-      cancel: () => {},
+      cancel: () => {
+        resumeGate.reject(new Error("cancelled"));
+      },
       stream: (async function* () {
         yield { type: "run", id: "resume-run-2" } as any;
         yield {
@@ -308,7 +361,8 @@ describe("workflow router resume flow (integration)", () => {
           scopes: ["repo.write"],
           event: "linear-authz",
         } as any;
-        await new Promise((r) => setTimeout(r, 0));
+        // Wait for resume to be called
+        await resumeGate.promise;
         yield {
           type: "notice",
           message: "Authorization 'linear-authz' acknowledged.",
