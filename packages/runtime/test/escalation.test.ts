@@ -9,7 +9,7 @@ class MockPhase implements Phase<any, any> {
   ) {}
 
   async *run(
-    input: any,
+    _input: any,
     _context: any
   ): AsyncGenerator<any, PhaseResult<any>, void> {
     yield { type: "step-start", phase: this.id };

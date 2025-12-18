@@ -14,7 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WorkflowDetailModal } from "@/components/workflow-detail-modal";
-import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
+import {
+  type ArtifactData,
+  useMindscapeStore,
+  type WorkflowNodeData,
+} from "@/store/mindscape";
 import { workflowListNodeDataSchema } from "@/store/mindscape.schemas";
 import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 import { useLOD, useNodeFocus } from "../lod";
@@ -92,9 +96,13 @@ export function WorkflowListNode({ id, data, selected }: MindscapeNodeProps) {
   };
 
   const focusWorkflowNode = (run: WorkflowRun) => {
-    const existing = nodes.find(
-      (node) => node.type === "workflow" && (node.data as any)?.runId === run.id
-    );
+    const existing = nodes.find((node) => {
+      if (node.type !== "workflow") {
+        return false;
+      }
+      const workflowData = node.data as WorkflowNodeData;
+      return workflowData.type === "workflow" && workflowData.runId === run.id;
+    });
     if (existing) {
       focusNode(existing.id);
       return;

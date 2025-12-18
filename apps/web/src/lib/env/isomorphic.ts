@@ -14,7 +14,7 @@
 /**
  * Check if test mode is enabled.
  */
-export async function getTestMode(): Promise<boolean> {
+export function getTestMode(): Promise<boolean> {
   if (typeof process !== "undefined") {
     const viteTestMode = process.env?.VITE_TEST_MODE;
     const mindscapeTest = process.env?.MINDSCAPE_TEST;
@@ -26,15 +26,17 @@ export async function getTestMode(): Promise<boolean> {
       bunTest === "1" ||
       nodeEnv === "test"
     ) {
-      return true;
+      return Promise.resolve(true);
     }
   }
   if (typeof import.meta !== "undefined") {
     const env = (import.meta as ImportMeta & { env?: Record<string, string> })
       .env;
-    return env?.VITE_TEST_MODE === "true" || env?.MINDSCAPE_TEST === "1";
+    return Promise.resolve(
+      env?.VITE_TEST_MODE === "true" || env?.MINDSCAPE_TEST === "1"
+    );
   }
-  return false;
+  return Promise.resolve(false);
 }
 
 /**

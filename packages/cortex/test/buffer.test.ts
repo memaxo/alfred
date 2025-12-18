@@ -230,7 +230,7 @@ describe("UniformBuffer", () => {
   });
 
   it("creates aligned buffer", () => {
-    const ub = new UniformBuffer(device, 64, "test_uniform");
+    const _ub = new UniformBuffer(device, 64, "test_uniform");
     expect(device.createBuffer).toHaveBeenCalled();
     const call = (device.createBuffer as ReturnType<typeof mock>).mock.calls[0];
     // Size should be aligned to 256 bytes

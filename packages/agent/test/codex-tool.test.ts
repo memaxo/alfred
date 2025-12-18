@@ -87,15 +87,15 @@ describe("codex tool sandbox helpers", () => {
 
     it("rejects ../../../etc/passwd style traversal", () => {
       const base = createTempDir("alfred-codex-traverse-base-");
-      const escape = createTempDir("alfred-codex-traverse-escape-");
-      const secret = join(escape, "passwd");
+      const escapeDir = createTempDir("alfred-codex-traverse-escape-");
+      const secret = join(escapeDir, "passwd");
       writeFileSync(secret, "root:x:0:0");
 
-      const traversal = resolve(base, "..", basename(escape), "passwd");
+      const traversal = resolve(base, "..", basename(escapeDir), "passwd");
       expect(isWithinBase(base, traversal)).toBe(false);
 
       rmSync(base, { recursive: true, force: true });
-      rmSync(escape, { recursive: true, force: true });
+      rmSync(escapeDir, { recursive: true, force: true });
     });
 
     it("rejects null-byte injection attempts", () => {

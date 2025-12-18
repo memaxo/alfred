@@ -152,7 +152,7 @@ function verifyResults(events: string[]) {
   }
 }
 
-async function checkPort(port: number): Promise<void> {
+function checkPort(port: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const s = new WebSocket(`ws://localhost:${port}`);
     s.on("error", () => reject());

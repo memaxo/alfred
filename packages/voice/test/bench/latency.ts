@@ -17,7 +17,7 @@ function percentile(values: number[], p: number): number {
   const low = Math.floor(rank);
   const high = Math.ceil(rank);
   if (low === high) {
-    return sorted[low] ?? sorted[sorted.length - 1] ?? 0;
+    return sorted[low] ?? sorted.at(-1) ?? 0;
   }
   const lowValue = sorted[low] ?? 0;
   const highValue = sorted[high] ?? lowValue;

@@ -126,8 +126,7 @@ export const getInitialMindscapeFrame = createServerFn({
       activations: [],
       ascii,
     };
-  } catch (error) {
-    console.error("Failed to load Mindscape frame:", error);
+  } catch (_error) {
     // Fallback to empty state
     return {
       nodes: [],

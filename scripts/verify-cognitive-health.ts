@@ -11,6 +11,7 @@ import {
   cognitiveFeedbackSubmissionsTotal,
   metricsRegistry,
 } from "@alfred/api/metrics";
+import { timestamp } from "@alfred/cognitive/state";
 import type { CognitiveEffect } from "@alfred/runtime";
 import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
 import { RuntimeContext } from "@alfred/type/runtime-context";
@@ -20,8 +21,8 @@ process.env.DATABASE_URL ??= "sqlite::memory:";
 process.env.BUN_TEST ??= "1";
 
 const mockAiAdapter = {
-  async generateText({ messages }: { messages: Array<{ content?: string }> }) {
-    const content = messages[messages.length - 1]?.content ?? "unknown";
+  generateText({ messages }: { messages: Array<{ content?: string }> }) {
+    const content = messages.at(-1)?.content ?? "unknown";
     return {
       text: `Mock cognitive response: ${content}`,
       finishReason: "stop",
@@ -31,7 +32,7 @@ const mockAiAdapter = {
       usage: { promptTokens: 0, completionTokens: 0 },
     };
   },
-  async generateObject() {
+  generateObject() {
     throw new Error("generateObject not implemented in telemetry check");
   },
 };
@@ -48,7 +49,7 @@ async function verifyMetrics() {
     _: "input",
     content: "Telemetry focus check",
     source: "test",
-    ts: Date.now() as any,
+    ts: timestamp(Date.now()),
   });
   await processEffects(ctx, streamId, inputResult.effects);
 
@@ -56,7 +57,7 @@ async function verifyMetrics() {
     _: "interrupt",
     reason: "loop detected",
     priority: 1,
-    ts: Date.now() as any,
+    ts: timestamp(Date.now()),
   });
   await processEffects(ctx, streamId, interruptResult.effects);
 
@@ -88,7 +89,10 @@ async function processEffects(
 ) {
   const queue: CognitiveEffect[] = [...effects];
   while (queue.length) {
-    const effect = queue.shift()!;
+    const effect = queue.shift();
+    if (!effect) {
+      break;
+    }
     try {
       if (effect.type !== "generate_response") {
         continue;
@@ -97,7 +101,7 @@ async function processEffects(
       const { effects: followUp } = await runCognitiveLoop(ctx, streamId, {
         _: "complete",
         outcome,
-        ts: Date.now() as any,
+        ts: timestamp(Date.now()),
       });
       queue.push(...followUp);
     } catch (error) {

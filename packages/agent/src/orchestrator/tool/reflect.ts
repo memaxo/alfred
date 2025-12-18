@@ -43,7 +43,7 @@ const DOMAIN_MAP: Record<string, string> = {
   design: "26-design-system.md",
 };
 
-async function getTargetFile(domain?: string) {
+function getTargetFile(domain?: string): string {
   const rulerDir = resolve(process.cwd(), ".ruler");
   let filename = "99-learned.md";
 

@@ -31,14 +31,14 @@ let redisSubReady = false;
 let redisSubscribed = false;
 let redisInitPromise: Promise<void> | null = null;
 
-async function initializeRedis(): Promise<void> {
+function initializeRedis(): Promise<void> {
   const url = process.env.REDIS_URL?.trim();
   if (!url || url === "false") {
-    return;
+    return Promise.resolve();
   }
 
   if (redisCmd && redisSub && redisCmdReady && redisSubReady) {
-    return;
+    return Promise.resolve();
   }
 
   if (redisInitPromise) {

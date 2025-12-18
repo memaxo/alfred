@@ -212,10 +212,12 @@ class MockVoiceStreamingServer {
     }
   }
 
-  private async handleStart(ws: WebSocket, payload: Record<string, unknown>) {
+  private handleStart(ws: WebSocket, payload: Record<string, unknown>) {
     const state = this.connections.get(ws);
     const registry = this.registry;
-    if (!(state && registry)) return;
+    if (!(state && registry)) {
+      return;
+    }
 
     const requestedCodec = (payload.codec as VoiceStreamCodec) ?? "pcm";
     state.codec = requestedCodec;
@@ -248,7 +250,9 @@ class MockVoiceStreamingServer {
 
     if (payload.autoStop === true) {
       setTimeout(() => {
-        if (state.closed) return;
+        if (state.closed) {
+          return;
+        }
         this.send(ws, {
           type: "auto_stop",
           sessionId,
@@ -326,18 +330,20 @@ class MockVoiceStreamingServer {
       this.emitError(ws, "session_not_started", false);
       return;
     }
+    // sessionId is guaranteed to exist after the check above
+    const sessionId = state.sessionId;
     state.assistantText = `Responding to: ${
       state.lastTranscript ?? "no transcript"
     }`;
     this.sendStatus(ws, "processing");
     this.send(ws, {
       type: "final_transcript",
-      sessionId: state.sessionId,
+      sessionId,
       text: state.lastTranscript ?? "hello",
     });
     this.send(ws, {
       type: "assistant_message",
-      sessionId: state.sessionId,
+      sessionId,
       text: state.assistantText,
     });
 
@@ -349,7 +355,7 @@ class MockVoiceStreamingServer {
         state.sequence += 1;
         this.send(ws, {
           type: "tts_chunk",
-          sessionId: state.sessionId!,
+          sessionId,
           audioBase64: buffer.toString("base64"),
           mimeType: "audio/mpeg",
           sequence: state.sequence,
@@ -369,7 +375,9 @@ class MockVoiceStreamingServer {
     state: "recording" | "processing" | "playing" | "idle"
   ) {
     const conn = this.connections.get(ws);
-    if (!conn?.sessionId) return;
+    if (!conn?.sessionId) {
+      return;
+    }
     this.send(ws, {
       type: "status",
       sessionId: conn.sessionId,

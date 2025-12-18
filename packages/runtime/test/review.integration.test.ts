@@ -23,7 +23,7 @@ describe("review integration happy path", () => {
   });
 
   afterEach(async () => {
-    delete process.env.ORCH_TMUX_DISABLED;
+    process.env.ORCH_TMUX_DISABLED = undefined;
     restoreRunner?.();
     restoreRunner = undefined;
     toolCodex.execute = originalCodex;

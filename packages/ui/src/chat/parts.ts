@@ -106,7 +106,9 @@ export function isFilePart(
 export function isDataPart(
   part: unknown
 ): part is { type: `data-${string}`; data: unknown } {
-  if (typeof part !== "object" || part === null) return false;
+  if (typeof part !== "object" || part === null) {
+    return false;
+  }
   const type = (part as { type?: unknown }).type;
   return typeof type === "string" && type.startsWith("data-");
 }

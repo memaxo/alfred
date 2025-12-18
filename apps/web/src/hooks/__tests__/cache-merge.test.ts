@@ -28,7 +28,7 @@ describe("mergeCacheValue", () => {
   });
 
   it("returns newValue when current is not mergeable", () => {
-    const current = null;
+    const current: null = null;
     const newValue = { a: 1 };
     const result = mergeCacheValue(current, newValue);
     expect(result).toBe(newValue);
@@ -42,7 +42,7 @@ describe("mergeCacheValue", () => {
   });
 
   it("returns newValue when both are not mergeable", () => {
-    const current = null;
+    const current: null = null;
     const newValue = 123;
     const result = mergeCacheValue(current, newValue);
     expect(result).toBe(newValue);
@@ -50,7 +50,7 @@ describe("mergeCacheValue", () => {
 
   it("handles null gracefully", () => {
     const current = { a: 1 };
-    const newValue = null;
+    const newValue: null = null;
     const result = mergeCacheValue(current, newValue);
     expect(result).toBe(null);
   });

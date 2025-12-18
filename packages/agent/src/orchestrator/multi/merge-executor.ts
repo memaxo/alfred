@@ -1,6 +1,7 @@
 import { sys } from "../../utils/process";
 import { worktreeManager } from "../tool/worktree";
 import type { MergePlan } from "./merge";
+import type { GitInput } from "../tool/git";
 
 type GitResult = {
   exitCode: number;
@@ -58,15 +59,22 @@ export type MergeResult = {
   error?: string;
 };
 
+type ToolWriter =
+  | { write: (chunk: unknown) => Promise<void> | void }
+  | undefined;
+
 export type GitTool = {
-  execute(args: { input: any; writer?: any }): Promise<any>;
+  execute(args: {
+    input: GitInput;
+    writer?: ToolWriter;
+  }): Promise<{ ok: boolean; details?: unknown }>;
 };
 
 export async function executeMergePlan(
   plan: MergePlan,
   workspace: string,
   git: GitTool,
-  writer?: any,
+  writer?: ToolWriter,
   options?: { authz?: string; runId?: string }
 ): Promise<MergeResult> {
   if (!plan.branches || plan.branches.length === 0) {
@@ -111,13 +119,18 @@ export async function executeMergePlan(
         writer,
       });
       merged.push(branch);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         status: "failed",
         mergedBranches: merged,
         targetBranch,
         conflictBranch: branch,
-        error: error?.message ?? String(error),
+        error:
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : String(error),
       };
     }
   }

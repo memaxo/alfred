@@ -36,22 +36,22 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
       {
         resource,
         hash: "react-frontend",
-        fromId: react!.id,
-        toId: frontend!.id,
+        fromId: react?.id,
+        toId: frontend?.id,
         kind: "relates_to",
       },
       {
         resource,
         hash: "frontend-coding",
-        fromId: frontend!.id,
-        toId: coding!.id,
+        fromId: frontend?.id,
+        toId: coding?.id,
         kind: "relates_to",
       },
       {
         resource,
         hash: "politics-isolated",
-        fromId: politics!.id,
-        toId: coding!.id,
+        fromId: politics?.id,
+        toId: coding?.id,
         kind: "relates_to",
       },
     ] as any);
@@ -69,8 +69,8 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
     }
     expect(result.concept).toBe("Coding");
     expect(result.path.length).toBe(3);
-    expect(result.path[0]).toBe(react!.id);
-    expect(result.path[result.path.length - 1]).toBe(coding!.id);
+    expect(result.path[0]).toBe(react?.id);
+    expect(result.path.at(-1)).toBe(coding?.id);
   });
 
   it("respects the maxDepth guard", async () => {
@@ -92,15 +92,15 @@ describeSqlite("graphRepo.findNearestConcept sqlite fallback", () => {
       {
         resource,
         hash: "start-mid",
-        fromId: start!.id,
-        toId: mid!.id,
+        fromId: start?.id,
+        toId: mid?.id,
         kind: "relates_to",
       },
       {
         resource,
         hash: "mid-target",
-        fromId: mid!.id,
-        toId: target!.id,
+        fromId: mid?.id,
+        toId: target?.id,
         kind: "relates_to",
       },
     ] as any);

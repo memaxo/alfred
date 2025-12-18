@@ -22,7 +22,7 @@ describe("review fallback integration", () => {
   });
 
   afterEach(async () => {
-    delete process.env.ORCH_TMUX_DISABLED;
+    process.env.ORCH_TMUX_DISABLED = undefined;
     restoreRunner?.();
     restoreRunner = undefined;
     restoreCodex?.();

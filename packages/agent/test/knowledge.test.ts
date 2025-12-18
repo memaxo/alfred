@@ -467,7 +467,7 @@ describe("Knowledge Graph Tools", () => {
       );
     });
 
-    it("supports all edge types", async () => {
+    it("supports all edge types", () => {
       const fromNode = {
         id: "node-1",
         resource: "user",
@@ -577,12 +577,13 @@ describe("Knowledge Graph Tools", () => {
       };
 
       mockGetNode.mockResolvedValue(node);
-      mockUpdateNode.mockImplementation(
-        async (_id: string, updates: unknown) => {
-          const u = updates as { properties?: Record<string, unknown> };
-          return { ...node, properties: u.properties ?? node.properties };
-        }
-      );
+      mockUpdateNode.mockImplementation((_id: string, updates: unknown) => {
+        const u = updates as { properties?: Record<string, unknown> };
+        return Promise.resolve({
+          ...node,
+          properties: u.properties ?? node.properties,
+        });
+      });
       mockCreateCorrection.mockResolvedValue({ id: "correction-1" });
 
       const input: KnowledgeCorrectInput = {

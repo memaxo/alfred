@@ -57,14 +57,14 @@ export class TokenBucket {
  */
 export class Semaphore {
   private active = 0;
-  private queue: Array<() => void> = [];
+  private readonly queue: Array<() => void> = [];
 
   constructor(private readonly max: number) {}
 
-  async acquire(): Promise<void> {
+  acquire(): Promise<void> {
     if (this.active < this.max) {
       this.active++;
-      return;
+      return Promise.resolve();
     }
 
     return new Promise((resolve) => {

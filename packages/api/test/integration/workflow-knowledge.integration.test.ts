@@ -45,7 +45,7 @@ let WorkflowTestHarness: typeof import("../utils/workflow-server").WorkflowTestH
 let toObservable: typeof import("../utils/stream").toObservable;
 
 let db: typeof import("@alfred/db").db;
-let graphRepo: typeof import("@alfred/db/repo/graph");
+let _graphRepo: typeof import("@alfred/db/repo/graph");
 
 // Knowledge graph helpers
 let empty: typeof import("@alfred/knowledge/hypergraph").empty;
@@ -86,7 +86,7 @@ beforeAll(async () => {
   ({ empty, fact, relation, toConfidence } = await import(
     "@alfred/knowledge/hypergraph"
   ));
-  graphRepo = await import("@alfred/db/repo/graph");
+  _graphRepo = await import("@alfred/db/repo/graph");
 
   // Create and start VCR
   vcr = createVCR({
@@ -124,7 +124,7 @@ describe("Workflow → Knowledge Integration", () => {
 
   describe("Knowledge graph persistence", () => {
     it("creates knowledge graph from workflow context", async () => {
-      const resource = `wf-graph-${Date.now()}`;
+      const _resource = `wf-graph-${Date.now()}`;
       const graph = empty();
 
       // Create some facts from workflow context
@@ -182,7 +182,7 @@ describe("Workflow → Knowledge Integration", () => {
     it("workflow requests context for planning", async () => {
       const caller = await harness.createCaller();
       const events: WorkflowEvent[] = [];
-      let contextEvent: WorkflowEvent | undefined;
+      let _contextEvent: WorkflowEvent | undefined;
 
       const subscription = await caller.stream({
         requirement: "Analyze existing code patterns",
@@ -203,7 +203,7 @@ describe("Workflow → Knowledge Integration", () => {
           next: (event) => {
             events.push(event);
             if (event.type === "context") {
-              contextEvent = event;
+              _contextEvent = event;
             }
           },
           error: () => {
@@ -226,7 +226,7 @@ describe("Workflow → Knowledge Integration", () => {
     it("workflow uses cached knowledge", async () => {
       const caller = await harness.createCaller();
       const events: WorkflowEvent[] = [];
-      let cacheHandoff: WorkflowEvent | undefined;
+      let _cacheHandoff: WorkflowEvent | undefined;
 
       const subscription = await caller.stream({
         requirement: "Quick query using cached data",
@@ -242,7 +242,7 @@ describe("Workflow → Knowledge Integration", () => {
           next: (event) => {
             events.push(event);
             if (event.type === "data-cache-handoff") {
-              cacheHandoff = event;
+              _cacheHandoff = event;
             }
           },
           error: () => {
@@ -313,7 +313,7 @@ describe("Knowledge → Workflow Integration", () => {
       const existing1 = graph.add(
         fact("Project uses Express.js", 0.95, "project")
       );
-      const existing2 = graph.add(fact("Testing with Jest", 0.9, "project"));
+      const _existing2 = graph.add(fact("Testing with Jest", 0.9, "project"));
 
       // This knowledge would inform workflow planning
       expect(graph.size()).toBe(2);
@@ -324,16 +324,16 @@ describe("Knowledge → Workflow Integration", () => {
       const graph = empty();
 
       // Seed knowledge
-      const authPattern = graph.add(
+      const _authPattern = graph.add(
         fact("Auth uses JWT tokens", 0.9, "pattern")
       );
-      const dbPattern = graph.add(
+      const _dbPattern = graph.add(
         fact("Database uses Drizzle ORM", 0.9, "pattern")
       );
-      const testPattern = graph.add(fact("Tests use Vitest", 0.85, "pattern"));
+      const _testPattern = graph.add(fact("Tests use Vitest", 0.85, "pattern"));
 
       // Search for relevant context
-      const searchResults = graph.search("auth");
+      const _searchResults = graph.search("auth");
       // Should find auth-related facts
       expect(graph.size()).toBe(3);
     });
@@ -385,7 +385,7 @@ describe("Knowledge → Workflow Integration", () => {
       }
 
       const start = performance.now();
-      const results = graph.search("testing");
+      const _results = graph.search("testing");
       const duration = performance.now() - start;
 
       expect(duration).toBeLessThan(50); // 50ms budget for search
@@ -409,7 +409,9 @@ describe("Knowledge → Workflow Integration", () => {
       let hops = 0;
       while (hops < 10) {
         const neighbors = graph.neighbors(current);
-        if (neighbors.length === 0) break;
+        if (neighbors.length === 0) {
+          break;
+        }
         current = neighbors[0]!;
         hops++;
       }

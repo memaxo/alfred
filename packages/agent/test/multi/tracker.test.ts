@@ -217,9 +217,9 @@ describe("getStuckDetectionDefaults", () => {
 
   beforeEach(() => {
     // Clear relevant env vars
-    delete process.env.STUCK_NO_PROGRESS_MS;
-    delete process.env.STUCK_MAX_REPEATS;
-    delete process.env.STUCK_MAX_FILE_FLIP_FLOPS;
+    process.env.STUCK_NO_PROGRESS_MS = undefined;
+    process.env.STUCK_MAX_REPEATS = undefined;
+    process.env.STUCK_MAX_FILE_FLIP_FLOPS = undefined;
   });
 
   afterEach(() => {

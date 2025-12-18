@@ -20,6 +20,16 @@ type ConceptResult = {
   node: { id: string; label: string };
 } | null;
 
+// Type for findNearestConcept function (defined locally to work around stale dist types)
+type FindNearestConceptFn = (
+  startNodeLabel: string | undefined,
+  targetConcepts: string[],
+  maxDepth: number,
+  resource?: string,
+  embedding?: number[],
+  matchThresholdOrOptions?: number | unknown
+) => Promise<ConceptResult>;
+
 // Type for findDomainAssociations result (defined locally to work around stale dist types)
 type DomainAssociation = {
   domain: string;
@@ -162,14 +172,14 @@ export async function linkEntities(
     candidates.map(async (entity, i) => {
       try {
         // Cast needed due to stale dist types - rebuild @alfred/db to fix
-        const result = (await (findNearestConcept as Function)(
+        const result = await (findNearestConcept as FindNearestConceptFn)(
           entity,
           targetConcepts,
           3,
           "ontology",
           embeddings[i],
           0.5
-        )) as ConceptResult;
+        );
 
         // Normalization: Map "Coding" -> "Coding" (case match)
         if (result?.node) {

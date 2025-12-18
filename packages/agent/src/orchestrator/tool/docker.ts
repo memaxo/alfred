@@ -22,7 +22,7 @@ const MAX_TIMEOUT_SEC = 2 * 60 * 60;
 const PROBE_BODY_CAP_BYTES = 4 * 1024; // 4 KiB for health probe body
 
 function assertAllowedDirectory(candidate: string) {
-  let handle;
+  let handle: DirectoryHandle | undefined;
   try {
     handle = openDirectorySecure(candidate, {
       allowedPrefixes: DEFAULT_ALLOW_PREFIXES,
@@ -338,7 +338,7 @@ function parseInspectPorts(raw: unknown, containerPort?: number) {
   return results;
 }
 
-async function executeBuild(input: DockerInput, writer: ToolWriter) {
+function executeBuild(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle, cwd) => {
     const contextPath = resolveDirectory(
       cwd,
@@ -368,7 +368,7 @@ async function executeBuild(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeRun(input: DockerInput, writer: ToolWriter) {
+function executeRun(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const tag = ensure(input.tag, "docker_tag_required");
     const name = ensure(input.name, "docker_name_required");
@@ -445,7 +445,7 @@ async function executeRun(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeStop(input: DockerInput, writer: ToolWriter) {
+function executeStop(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
 
@@ -464,7 +464,7 @@ async function executeStop(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeRemove(input: DockerInput, writer: ToolWriter) {
+function executeRemove(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
 
@@ -483,7 +483,7 @@ async function executeRemove(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeInspect(input: DockerInput, writer: ToolWriter) {
+function executeInspect(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
 
@@ -514,7 +514,7 @@ async function executeInspect(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeLogs(input: DockerInput, writer: ToolWriter) {
+function executeLogs(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
     const args = ["logs"];
@@ -561,7 +561,7 @@ async function executeLogs(input: DockerInput, writer: ToolWriter) {
   });
 }
 
-async function executeWait(input: DockerInput, writer: ToolWriter) {
+function executeWait(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
     const result = await runDocker({
@@ -605,7 +605,7 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
     const truncated = rawBody.length > PROBE_BODY_CAP_BYTES;
     const body = truncated ? rawBody.slice(0, PROBE_BODY_CAP_BYTES) : rawBody;
 
-    await Promise.resolve(
+    Promise.resolve(
       writer?.write?.({
         type: "notice",
         message: "docker_probe_result",

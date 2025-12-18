@@ -25,7 +25,9 @@ const GRAD3 = [
 // Initialize permutation table
 (function initPerm() {
   const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 0; i < 256; i++) {
+    p[i] = i;
+  }
 
   // Fisher-Yates shuffle with fixed seed
   let seed = 12_345;

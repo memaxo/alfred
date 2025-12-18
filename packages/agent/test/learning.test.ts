@@ -294,7 +294,7 @@ describe("Learning Tools", () => {
         if (originalModel) {
           process.env.LEARN_PATTERN_MODEL = originalModel;
         } else {
-          delete process.env.LEARN_PATTERN_MODEL;
+          process.env.LEARN_PATTERN_MODEL = undefined;
         }
       }
     });

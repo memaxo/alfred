@@ -119,7 +119,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   );
   const initialTimeoutMinutes =
     TIMEOUT_MINUTES_OPTIONS.find((minutes) => minutes >= fallbackMinutes) ??
-    TIMEOUT_MINUTES_OPTIONS[TIMEOUT_MINUTES_OPTIONS.length - 1] ??
+    TIMEOUT_MINUTES_OPTIONS.at(-1) ??
     5;
   const [timeoutMinutes, setTimeoutMinutes] = useState<number>(
     initialTimeoutMinutes
@@ -141,8 +141,7 @@ export function DroidNode({ id, data, selected }: NodeProps) {
   if (!clientRef.current) {
     try {
       clientRef.current = createBrowserTrpcProxyClient();
-    } catch (error) {
-      console.warn("droid-node: falling back to noop trpc client", error);
+    } catch (_error) {
       clientRef.current = {
         droid: {
           stream: {

@@ -201,7 +201,7 @@ export const toolMemoryHistory = {
 
       let lastMessage: MessageSummary | null = null;
       if (messages.length > 0) {
-        const last = messages[messages.length - 1];
+        const last = messages.at(-1);
         if (last) {
           const uiMessage = messageRowToUIMessage(last);
           let preview = "";

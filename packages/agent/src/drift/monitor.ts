@@ -74,7 +74,7 @@ export type MonitorSnapshot = {
  * classification accuracy shifts significantly.
  */
 export class DriftMonitor {
-  private detectors = new Map<string, DomainDetector>();
+  private readonly detectors = new Map<string, DomainDetector>();
   private globalHistory: DriftEvent[] = [];
 
   private readonly adwinConfig: AdwinConfig;
@@ -143,9 +143,7 @@ export class DriftMonitor {
       // Trigger callback
       if (this.onDrift) {
         // Fire and forget, don't block
-        Promise.resolve(this.onDrift(event)).catch((err) => {
-          console.warn("Drift callback error:", err);
-        });
+        Promise.resolve(this.onDrift(event)).catch((_err) => {});
       }
     }
 

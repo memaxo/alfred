@@ -62,54 +62,54 @@ const CODE_RABBIT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const CODE_RABBIT_POLL_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 // Types
-interface LinearIssue {
+type LinearIssue = {
   id: string;
   identifier: string;
   title: string;
   description: string;
   status: string;
   parentId?: string | null;
-}
+};
 
-interface PRWithLinear {
+type PRWithLinear = {
   pr: number;
   linearId: string;
   linearIssueId: string;
   isDraft: boolean;
   title: string;
   url: string;
-}
+};
 
-interface CodeRabbitReview {
+type CodeRabbitReview = {
   actionable: number;
   nitpicks: number;
   body: string;
   submittedAt: string;
-}
+};
 
-interface CIStatus {
+type CIStatus = {
   mergeable: boolean;
   checks: {
     name: string;
     status: "completed" | "pending" | "failed";
     conclusion: "success" | "failure" | "neutral" | null;
   }[];
-}
+};
 
-interface TicketCustomData {
+type TicketCustomData = {
   scope?: string;
   keyFiles?: string;
   keyPatterns?: string;
   tests?: string;
-}
+};
 
-interface WorkflowStats {
+type WorkflowStats = {
   delegated: number;
   prsCreated: number;
   reviewsCompleted: number;
   merged: number;
   errors: string[];
-}
+};
 
 // Utility: Rate limiting delay
 function delay(ms: number): Promise<void> {

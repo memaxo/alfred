@@ -1,5 +1,5 @@
 import { Brain, Play, Sparkles } from "lucide-react";
-import type { KnowledgeNodeData } from "@/store/mindscape";
+import type { KnowledgeNodeData, WorkflowNodeData } from "@/store/mindscape";
 import { useMindscapeStore } from "@/store/mindscape";
 import { useLOD, useNodeFocus } from "../lod";
 import { createSpawnNode } from "../spawn";
@@ -25,25 +25,30 @@ export function KnowledgeNode({
   const confidenceStyle = getConfidenceStyle(data.confidence, data.archived);
 
   const handleLaunchWorkflow = () => {
-    if (!isRag) return;
+    if (!isRag) {
+      return;
+    }
     const { nodes, addArtifact, focusNode, updateArtifactData } =
       useMindscapeStore.getState();
 
     const base = createSpawnNode("workflow", nodes.length);
-    if (!base) return;
+    if (!base) {
+      return;
+    }
 
     const summary = data.summary ?? data.label ?? "RAG context";
     const requirement = `Use this context to help:\n\n${summary}`;
 
+    const baseData = base.data as WorkflowNodeData;
     const workflowNode = {
       ...base,
       data: {
-        ...(base.data as any),
+        ...baseData,
         label: "Workflow from RAG",
         requirement,
         description: summary,
-        auto: (base.data as any)?.auto ?? "low",
-        mode: (base.data as any)?.mode ?? "sequential",
+        auto: baseData.auto ?? "low",
+        mode: baseData.mode ?? "sequential",
       },
     };
 
@@ -54,7 +59,7 @@ export function KnowledgeNode({
       requirement,
       description: summary,
       label: "Workflow from RAG",
-    } as any);
+    });
   };
 
   // LOD 0: Tiny

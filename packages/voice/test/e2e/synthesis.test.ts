@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { TTSPool } from "../../src/process/tts";
 
 // High-level E2E test using the Node.js wrapper
-describe.skip("TTS End-to-End Synthesis (skipped: causes C++ exception in Bun runner)", () => {
+describe("TTS End-to-End Synthesis (skipped: causes C++ exception in Bun runner)", () => {
   // Point to the directory containing __main__.py
   const scriptPath = join(process.cwd(), "packages/voice/python/tts");
 
@@ -21,7 +21,7 @@ describe.skip("TTS End-to-End Synthesis (skipped: causes C++ exception in Bun ru
 
   beforeAll(async () => {
     // Override environment to force Maya1
-    delete process.env.TTS_PROVIDER;
+    process.env.TTS_PROVIDER = undefined;
   });
 
   afterAll(async () => {

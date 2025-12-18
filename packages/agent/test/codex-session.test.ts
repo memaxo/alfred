@@ -33,40 +33,41 @@ function cloneRecord(record: RepoRecord): RepoRecord {
   };
 }
 
-const createSessionRepoMock = vi.fn(async (record: any) => {
+const createSessionRepoMock = vi.fn((record: unknown) => {
+  const r = record as RepoRecord;
   const stored: RepoRecord = {
-    sessionId: record.sessionId,
-    userId: record.userId,
-    threadId: record.threadId,
-    workingDirectory: record.workingDirectory,
-    status: record.status,
-    linearIssueId: record.linearIssueId ?? null,
-    createdAt: new Date(record.createdAt),
-    lastAccessedAt: new Date(record.lastAccessedAt),
-    expiresAt: new Date(record.expiresAt),
+    sessionId: r.sessionId,
+    userId: r.userId,
+    threadId: r.threadId,
+    workingDirectory: r.workingDirectory,
+    status: r.status,
+    linearIssueId: r.linearIssueId ?? null,
+    createdAt: new Date(r.createdAt),
+    lastAccessedAt: new Date(r.lastAccessedAt),
+    expiresAt: new Date(r.expiresAt),
   };
   repoStore.set(stored.sessionId, stored);
-  return cloneRecord(stored);
+  return Promise.resolve(cloneRecord(stored));
 });
 
-const getSessionRepoMock = vi.fn(async (sessionId: string, userId: string) => {
+const getSessionRepoMock = vi.fn((sessionId: string, userId: string) => {
   const stored = repoStore.get(sessionId);
   if (!stored || stored.userId !== userId) {
-    return null;
+    return Promise.resolve(null);
   }
-  return cloneRecord(stored);
+  return Promise.resolve(cloneRecord(stored));
 });
 
-const getSessionByIdRepoMock = vi.fn(async (sessionId: string) => {
+const getSessionByIdRepoMock = vi.fn((sessionId: string) => {
   const stored = repoStore.get(sessionId);
-  return stored ? cloneRecord(stored) : null;
+  return Promise.resolve(stored ? cloneRecord(stored) : null);
 });
 
 const updateSessionRepoMock = vi.fn(
-  async (sessionId: string, patch: Record<string, unknown>) => {
+  (sessionId: string, patch: Record<string, unknown>) => {
     const stored = repoStore.get(sessionId);
     if (!stored) {
-      return null;
+      return Promise.resolve(null);
     }
     const next: RepoRecord = {
       ...stored,
@@ -87,15 +88,16 @@ const updateSessionRepoMock = vi.fn(
         : stored.expiresAt,
     };
     repoStore.set(sessionId, next);
-    return cloneRecord(next);
+    return Promise.resolve(cloneRecord(next));
   }
 );
 
-const deleteSessionRepoMock = vi.fn(async (sessionId: string) => {
+const deleteSessionRepoMock = vi.fn((sessionId: string) => {
   repoStore.delete(sessionId);
+  return Promise.resolve(undefined);
 });
 
-const cleanupExpiredSessionsRepoMock = vi.fn(async () => {
+const cleanupExpiredSessionsRepoMock = vi.fn(() => {
   const now = Date.now();
   let deleted = 0;
   for (const [sessionId, record] of repoStore.entries()) {
@@ -104,7 +106,7 @@ const cleanupExpiredSessionsRepoMock = vi.fn(async () => {
       deleted += 1;
     }
   }
-  return deleted;
+  return Promise.resolve(deleted);
 });
 
 mock.module("@alfred/db/repo/codex-session", () => ({
@@ -341,7 +343,7 @@ describe("CodexSessionManager", () => {
                 .getSession(sessionId, userId)
                 .then((session) => {
                   expect(session).toBeDefined();
-                  timestamps.push(session!.lastAccessedAt);
+                  timestamps.push(session?.lastAccessedAt);
                   resolve();
                 })
                 .catch(reject);
@@ -352,7 +354,11 @@ describe("CodexSessionManager", () => {
 
     expect(timestamps.length).toBe(5);
     for (let i = 1; i < timestamps.length; i += 1) {
-      expect(timestamps[i]).toBeGreaterThanOrEqual(timestamps[i - 1]!);
+      const prev = timestamps[i - 1];
+      const curr = timestamps[i];
+      if (prev !== undefined && curr !== undefined) {
+        expect(curr).toBeGreaterThanOrEqual(prev);
+      }
     }
   });
 

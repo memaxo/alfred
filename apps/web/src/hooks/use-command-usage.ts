@@ -11,7 +11,9 @@ export function useCommandUsage() {
   // For now, let's just use localStorage to avoid modifying the store schema too much if not needed.
 
   const getUsage = (): Record<string, number> => {
-    if (typeof window === "undefined") return DEFAULT_USAGE;
+    if (typeof window === "undefined") {
+      return DEFAULT_USAGE;
+    }
     try {
       const stored = localStorage.getItem("mindscape-command-usage");
       return stored ? JSON.parse(stored) : DEFAULT_USAGE;
@@ -21,7 +23,9 @@ export function useCommandUsage() {
   };
 
   const recordUsage = (commandLabel: string) => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
     const usage = getUsage();
     usage[commandLabel] = (usage[commandLabel] || 0) + 1;
     localStorage.setItem("mindscape-command-usage", JSON.stringify(usage));

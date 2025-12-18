@@ -92,8 +92,6 @@ export class STTPool {
         const traceback = payload?.traceback;
 
         if (traceback) {
-          // Log detailed traceback if available (could use logger, but here we ensure it propagates or logs)
-          console.error(`STT Process Error Traceback:\n${traceback}`);
         }
 
         throw new Error(message);

@@ -4,24 +4,30 @@ import { WorktreeWorkspace } from "../../src/environment/worktree";
 // Mock worktreeManager
 mock.module("../../src/orchestrator/tool/worktree", () => ({
   worktreeManager: {
-    create: mock(async (_repoBase, runId, id) => ({
-      path: `/tmp/alfred-test/${runId}/${id}`,
-      branch: `agent/${runId}/${id}`,
-      baseRef: "HEAD",
-    })),
-    remove: mock(async () => {}),
+    create: mock((_repoBase, runId, id) =>
+      Promise.resolve({
+        path: `/tmp/alfred-test/${runId}/${id}`,
+        branch: `agent/${runId}/${id}`,
+        baseRef: "HEAD",
+      })
+    ),
+    remove: mock(() => Promise.resolve(undefined)),
   },
 }));
 
 // Mock toolRunner
-const mockExecute = mock(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
+const mockExecute = mock(() =>
+  Promise.resolve({ stdout: "", stderr: "", exitCode: 0 })
+);
 mock.module("../../src/orchestrator/tool/runner", () => ({
   toolRunner: {
     execute: mockExecute,
   },
 }));
 
-const mockSessionExecute = mock(async () => ({ ok: true, sessions: [] }));
+const mockSessionExecute = mock(() =>
+  Promise.resolve({ ok: true, sessions: [] })
+);
 mock.module("../../src/orchestrator/tool/session", () => ({
   toolSession: {
     execute: mockSessionExecute,

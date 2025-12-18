@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 describe("Conflict Resolution Integration", () => {
   describe("Optimistic Concurrency", () => {
-    it("detects concurrent modifications", async () => {
+    it("detects concurrent modifications", () => {
       // Simulate two agents trying to modify the same resource
       const resource = { id: "resource-1", version: 1, content: "initial" };
 
@@ -46,11 +46,11 @@ describe("Conflict Resolution Integration", () => {
       expect(agent2Read.version).toBe(1);
     });
 
-    it("handles version collision gracefully", async () => {
+    it("handles version collision gracefully", () => {
       let currentVersion = 1;
       const attempts: number[] = [];
 
-      const tryUpdate = (readVersion: number, newContent: string): boolean => {
+      const tryUpdate = (readVersion: number, _newContent: string): boolean => {
         attempts.push(readVersion);
         if (readVersion !== currentVersion) {
           return false; // Conflict
@@ -82,7 +82,7 @@ describe("Conflict Resolution Integration", () => {
       let attemptCount = 0;
       const delays: number[] = [];
 
-      const attemptUpdate = async (
+      const attemptUpdate = (
         readVersion: number,
         _content: string
       ): Promise<boolean> => {
@@ -90,14 +90,14 @@ describe("Conflict Resolution Integration", () => {
         // Simulate another agent racing ahead on first two attempts
         if (attemptCount <= 2) {
           currentVersion++;
-          return false;
+          return Promise.resolve(false);
         }
         // Third attempt succeeds
         if (readVersion === currentVersion) {
           currentVersion++;
-          return true;
+          return Promise.resolve(true);
         }
-        return false;
+        return Promise.resolve(false);
       };
 
       const updateWithRetry = async (content: string): Promise<boolean> => {
@@ -105,7 +105,9 @@ describe("Conflict Resolution Integration", () => {
 
         while (retries < maxRetries) {
           const success = await attemptUpdate(readVersion, content);
-          if (success) return true;
+          if (success) {
+            return true;
+          }
 
           retries++;
           const delay = baseDelay * 2 ** (retries - 1);
@@ -160,7 +162,7 @@ describe("Conflict Resolution Integration", () => {
       };
     };
 
-    it("spawns arbiter on merge conflict", async () => {
+    it("spawns arbiter on merge conflict", () => {
       const conflict: Conflict = {
         resourceId: "file.ts",
         baseVersion: 1,
@@ -175,7 +177,7 @@ describe("Conflict Resolution Integration", () => {
       expect(resolution.resolvedContent).toContain("subtract");
     });
 
-    it("arbiter picks winner when merge not possible", async () => {
+    it("arbiter picks winner when merge not possible", () => {
       const conflict: Conflict = {
         resourceId: "config.json",
         baseVersion: 1,
@@ -193,7 +195,7 @@ describe("Conflict Resolution Integration", () => {
       expect(resolution.resolvedContent).toBeDefined();
     });
 
-    it("arbiter handles complex multi-file conflicts", async () => {
+    it("arbiter handles complex multi-file conflicts", () => {
       const conflicts: Conflict[] = [
         {
           resourceId: "src/auth.ts",
@@ -229,8 +231,7 @@ describe("Conflict Resolution Integration", () => {
     };
 
     class ConflictDetector {
-      private pendingWrites: Map<string, WriteOperation[]> = new Map();
-      private commitThresholdMs = 100;
+      private readonly pendingWrites: Map<string, WriteOperation[]> = new Map();
 
       queueWrite(op: WriteOperation): void {
         const existing = this.pendingWrites.get(op.resourceId) || [];
@@ -357,14 +358,14 @@ describe("Conflict Resolution Integration", () => {
 
       switch (strategy) {
         case "first_write_wins":
-          return sorted[0]!.content;
+          return sorted[0]?.content;
         case "last_write_wins":
-          return sorted[sorted.length - 1]!.content;
+          return sorted.at(-1)?.content;
         case "merge":
           return sorted.map((w) => w.content).join("\n");
         case "arbiter":
           // Arbiter would make a decision; simulate with last-write
-          return sorted[sorted.length - 1]!.content;
+          return sorted.at(-1)?.content;
         default:
           throw new Error(`Unknown strategy: ${strategy}`);
       }

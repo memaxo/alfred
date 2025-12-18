@@ -37,6 +37,7 @@ type DrawerErrorBoundaryState = {
   error: Error | null;
 };
 
+// biome-ignore lint/nursery/useReactFunctionComponents: Error boundaries must be class components per React API
 class DrawerErrorBoundary extends React.Component<
   DrawerErrorBoundaryProps,
   DrawerErrorBoundaryState
@@ -56,7 +57,7 @@ class DrawerErrorBoundary extends React.Component<
     }
   }
 
-  private handleReset = () => {
+  private readonly handleReset = () => {
     this.setState({ error: null });
   };
 

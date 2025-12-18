@@ -103,14 +103,16 @@ async function countGraphRows(resource: string) {
   return { nodes: nodes.length, edges: edges.length };
 }
 
-async function fetchRows<T>(query: Promise<T> | { all?: () => T }): Promise<T> {
+function fetchRows<T>(query: Promise<T> | { all?: () => T }): Promise<T> {
   if (typeof (query as Promise<T>).then === "function") {
     return query as Promise<T>;
   }
   if (typeof (query as { all?: () => T }).all === "function") {
-    return (query as { all: () => T }).all();
+    return Promise.resolve((query as { all: () => T }).all());
   }
-  throw new Error("Unsupported driver: select builder missing .then/.all");
+  return Promise.reject(
+    new Error("Unsupported driver: select builder missing .then/.all")
+  );
 }
 
 async function runMutation(query: Promise<unknown> | { run?: () => unknown }) {

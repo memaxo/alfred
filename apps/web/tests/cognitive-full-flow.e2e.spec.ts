@@ -153,7 +153,7 @@ test.describe("Cognitive Full Flow E2E", () => {
 
       if (await slider.isVisible({ timeout: 1000 })) {
         // Get initial value
-        const initialValue = await slider.inputValue();
+        const _initialValue = await slider.inputValue();
 
         // Change value
         await slider.fill("0.5");

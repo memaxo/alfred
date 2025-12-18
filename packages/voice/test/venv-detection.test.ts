@@ -26,7 +26,7 @@ describe("Virtual Environment Detection", () => {
     testDir.cleanup();
   });
 
-  it("should find venv Python on Unix", async () => {
+  it("should find venv Python on Unix", () => {
     if (process.platform === "win32") {
       return; // Skip on Windows
     }
@@ -66,7 +66,7 @@ describe("Virtual Environment Detection", () => {
     expect(result).toContain(".exe");
   });
 
-  it("should return null when .venv does not exist", async () => {
+  it("should return null when .venv does not exist", () => {
     // Ensure .venv directory missing
     cleanupTestVenv(testDir.voiceDir);
 
@@ -81,7 +81,7 @@ describe("Virtual Environment Detection", () => {
     expect(result).toBeNull();
   });
 
-  it("should return null when Python executable missing in venv", async () => {
+  it("should return null when Python executable missing in venv", () => {
     // Create .venv directory but no Python executable
     const venvDir = join(testDir.voiceDir, ".venv");
     mkdirSync(venvDir, { recursive: true });

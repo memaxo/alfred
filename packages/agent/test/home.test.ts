@@ -360,7 +360,7 @@ describe("Home Tool", () => {
     });
 
     it("returns error when HOME_PROVIDER is not set", async () => {
-      delete process.env.HOME_PROVIDER;
+      process.env.HOME_PROVIDER = undefined;
 
       const result = await toolHome.execute({
         input: {
@@ -378,7 +378,7 @@ describe("Home Tool", () => {
 
     it("returns error when HOME_BASE_URL is missing", async () => {
       process.env.HOME_PROVIDER = "homeassistant";
-      delete process.env.HOME_BASE_URL;
+      process.env.HOME_BASE_URL = undefined;
 
       const result = await toolHome.execute({
         input: {
@@ -396,7 +396,7 @@ describe("Home Tool", () => {
 
     it("returns error when HOME_TOKEN is missing", async () => {
       process.env.HOME_PROVIDER = "homeassistant";
-      delete process.env.HOME_TOKEN;
+      process.env.HOME_TOKEN = undefined;
 
       const result = await toolHome.execute({
         input: {

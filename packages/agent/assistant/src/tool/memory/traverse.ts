@@ -11,6 +11,7 @@ import {
   getNode,
   recordAccessBatch,
 } from "@alfred/db/repo/graph/read";
+import type { NodeRow } from "@alfred/db/repo/graph/types";
 import { z } from "zod";
 
 import {
@@ -118,7 +119,7 @@ export const toolMemoryTraverse = {
           limit: 50,
         });
 
-        const nodes = [];
+        const nodes: NodeRow[] = [];
         for (const { otherNodeId } of neighbors) {
           const node = await getNode(otherNodeId);
           if (node) {
@@ -149,7 +150,9 @@ export const toolMemoryTraverse = {
         // Get all nodes along the path
         for (let i = 0; i < result.path.length && i < limit; i++) {
           const nodeId = result.path[i];
-          if (!nodeId) continue;
+          if (!nodeId) {
+            continue;
+          }
 
           const node = await getNode(nodeId);
           if (node) {

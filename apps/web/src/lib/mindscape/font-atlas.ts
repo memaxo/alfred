@@ -48,7 +48,9 @@ export function createFontAtlas(device?: GPUDevice): FontAtlas {
   // Draw Glyphs
   for (let i = 0; i < totalChars; i++) {
     const char = GLYPH_SET[i];
-    if (!char) continue;
+    if (!char) {
+      continue;
+    }
     const x = (i % cols) * cellWidth;
     const y = Math.floor(i / cols) * cellHeight;
 

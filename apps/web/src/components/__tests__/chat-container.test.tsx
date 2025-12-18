@@ -238,8 +238,8 @@ function getMessageTexts(): string[] {
     );
 }
 
-async function emitAssistantMessage(text: string) {
-  await act(async () => {
+function emitAssistantMessage(text: string) {
+  act(() => {
     assistantStreamTestApi.send(text);
   });
 }

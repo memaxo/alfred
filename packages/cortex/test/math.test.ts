@@ -347,17 +347,17 @@ describe("Fractal Brownian Motion", () => {
 
   it("fbm is smoother with fewer octaves", () => {
     // More octaves = more detail = more variation
-    let variance1 = 0;
-    let variance4 = 0;
+    let _variance1 = 0;
+    let _variance4 = 0;
     const samples = 20;
 
     for (let i = 0; i < samples; i++) {
       const x = i * 0.1;
-      const v1 = fbm(x, 0, 1);
-      const v4 = fbm(x, 0, 4);
+      const _v1 = fbm(x, 0, 1);
+      const _v4 = fbm(x, 0, 4);
       if (i > 0) {
-        variance1 += Math.abs(fbm(x, 0, 1) - fbm(x - 0.1, 0, 1));
-        variance4 += Math.abs(fbm(x, 0, 4) - fbm(x - 0.1, 0, 4));
+        _variance1 += Math.abs(fbm(x, 0, 1) - fbm(x - 0.1, 0, 1));
+        _variance4 += Math.abs(fbm(x, 0, 4) - fbm(x - 0.1, 0, 4));
       }
     }
     // 4 octaves should generally show more variation
@@ -396,7 +396,7 @@ describe("Spiral Generation", () => {
     const center = vec2(0, 0);
     const points = generateLogarithmicSpiral(center, 0, 100, -0.1, 10, 1);
     const startDist = length(sub(points[0], center));
-    const endDist = length(sub(points[points.length - 1], center));
+    const endDist = length(sub(points.at(-1), center));
     expect(endDist).toBeLessThan(startDist);
   });
 
@@ -422,7 +422,7 @@ describe("Spiral Generation", () => {
     }
 
     // Last point should be near max radius
-    const lastPoint = points[points.length - 1];
+    const lastPoint = points.at(-1);
     expect(length(lastPoint)).toBeGreaterThan(maxRadius * 0.9);
   });
 });
@@ -451,7 +451,7 @@ describe("Corona Fiber Generation", () => {
 
   it("generateCoronaFiber ends near or at inner radius", () => {
     const fiber = generateCoronaFiber(0, 100, center, config, 0);
-    const endDist = length(sub(fiber[fiber.length - 1], center));
+    const endDist = length(sub(fiber.at(-1), center));
     // Fiber ends at the spiral radius clamped to innerRadius minimum
     // The end distance depends on spiral tightness and wobble
     expect(endDist).toBeGreaterThanOrEqual(config.innerRadius);

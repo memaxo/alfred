@@ -251,7 +251,9 @@ export class Adwin {
   private compressBuckets(): void {
     for (let level = 0; level < this.buckets.length; level++) {
       const bucketLevel = this.buckets[level];
-      if (!bucketLevel) continue;
+      if (!bucketLevel) {
+        continue;
+      }
 
       while (bucketLevel.length > this.maxBuckets) {
         // Merge two oldest buckets
@@ -311,11 +313,15 @@ export class Adwin {
     // Iterate through buckets from oldest to newest
     for (let level = this.buckets.length - 1; level >= 0; level--) {
       const bucketLevel = this.buckets[level];
-      if (!bucketLevel) continue;
+      if (!bucketLevel) {
+        continue;
+      }
 
       for (let i = 0; i < bucketLevel.length; i++) {
         const bucket = bucketLevel[i];
-        if (!bucket) continue;
+        if (!bucket) {
+          continue;
+        }
 
         prefixTotal += bucket.total;
         prefixCount += bucket.count;
@@ -395,7 +401,7 @@ export class Adwin {
     // Clean up empty levels
     while (
       this.buckets.length > 0 &&
-      (this.buckets[this.buckets.length - 1]?.length ?? 0) === 0
+      (this.buckets.at(-1)?.length ?? 0) === 0
     ) {
       this.buckets.pop();
     }

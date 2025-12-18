@@ -33,8 +33,8 @@ describe("workspace session coverage", () => {
   });
 
   afterEach(async () => {
-    delete process.env.ORCH_ENABLE_SESSIONS;
-    delete process.env.ORCH_TMUX_DISABLED;
+    process.env.ORCH_ENABLE_SESSIONS = undefined;
+    process.env.ORCH_TMUX_DISABLED = undefined;
     leakInternals.resetListHandler();
     activeSessions.clear();
 

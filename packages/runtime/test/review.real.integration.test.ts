@@ -130,7 +130,7 @@ describe("Real Review Gate Integration", () => {
     class ReviewStateMachine {
       private state: ReviewState = "pending";
       private retryCount = 0;
-      private maxRetries = 3;
+      private readonly maxRetries = 3;
 
       getState(): ReviewState {
         return this.state;
@@ -331,7 +331,7 @@ describe("Real Review Gate Integration", () => {
     };
 
     class WorkflowWithReview {
-      private steps: WorkflowStep[] = [];
+      private readonly steps: WorkflowStep[] = [];
       private reviewRequired = true;
 
       addStep(type: WorkflowStep["type"]): void {
@@ -344,7 +344,9 @@ describe("Real Review Gate Integration", () => {
 
       async runStep(index: number, success = true): Promise<void> {
         const step = this.steps[index];
-        if (!step) return;
+        if (!step) {
+          return;
+        }
 
         step.status = "running";
         await new Promise((r) => setTimeout(r, 1));

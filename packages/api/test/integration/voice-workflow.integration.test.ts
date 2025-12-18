@@ -47,7 +47,7 @@ let WorkflowTestHarness: typeof import("../utils/workflow-server").WorkflowTestH
 let toObservable: typeof import("../utils/stream").toObservable;
 
 let installVoiceTestPools: typeof import("@alfred/test-kit/voice/runtime-fixture").installVoiceTestPools;
-let createTestCaller: typeof import("../utils/trpc").createTestCaller;
+let _createTestCaller: typeof import("../utils/trpc").createTestCaller;
 
 // Table cleanup
 async function resetTables() {
@@ -75,7 +75,7 @@ beforeAll(async () => {
   ({ installVoiceTestPools } = await import(
     "@alfred/test-kit/voice/runtime-fixture"
   ));
-  ({ createTestCaller } = await import("../utils/trpc"));
+  ({ _createTestCaller } = await import("../utils/trpc"));
 
   // Create and start VCR
   vcr = createVCR({

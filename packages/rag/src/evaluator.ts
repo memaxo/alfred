@@ -200,7 +200,9 @@ function calculateCoherence(documents: EvaluatorDocument[]): number {
     for (let j = i + 1; j < docTerms.length; j++) {
       const set1 = docTerms[i];
       const set2 = docTerms[j];
-      if (!(set1 && set2)) continue;
+      if (!(set1 && set2)) {
+        continue;
+      }
 
       const intersection = new Set([...set1].filter((t) => set2.has(t)));
       const union = new Set([...set1, ...set2]);

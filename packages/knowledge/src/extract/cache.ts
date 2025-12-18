@@ -15,7 +15,7 @@ type CacheEntry = {
  * Max 100 entries, 5 minute TTL.
  */
 class ExtractionCache {
-  private cache = new Map<string, CacheEntry>();
+  private readonly cache = new Map<string, CacheEntry>();
   private readonly maxSize = 100;
   private readonly ttlMs = 5 * 60 * 1000; // 5 minutes
 
@@ -29,7 +29,7 @@ class ExtractionCache {
     for (let i = 0; i < normalized.length; i++) {
       const char = normalized.charCodeAt(i);
       hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash &= hash; // Convert to 32-bit integer
     }
     return hash.toString(36);
   }

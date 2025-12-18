@@ -39,14 +39,16 @@ export function withPolicyApproval<TInput, TOutput>(
         context: check.context,
       });
 
-      const obligations = (result as any).obligations as string[] | undefined;
+      const obligationTypes = result.decision.obligations.map((o) =>
+        typeof o === "string" ? o : o.type
+      );
 
-      if (obligations?.includes("require_confirmation")) {
+      if (obligationTypes.includes("require_confirmation")) {
         return true;
       }
 
       if (
-        obligations?.includes("require_biometric") &&
+        obligationTypes.includes("require_biometric") &&
         result.claims.mfa !== "passkey"
       ) {
         return true;

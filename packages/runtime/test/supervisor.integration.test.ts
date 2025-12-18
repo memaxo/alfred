@@ -36,12 +36,12 @@ describe("WorkflowRuntime supervisor integration", () => {
   afterAll(() => {
     AISDKAdapter.prototype.stream = baselineStream;
     if (originalDisableCodex === undefined) {
-      delete process.env.RUNTIME_DISABLE_CODEX;
+      process.env.RUNTIME_DISABLE_CODEX = undefined;
     } else {
       process.env.RUNTIME_DISABLE_CODEX = originalDisableCodex;
     }
     if (originalTestOrch === undefined) {
-      delete process.env.RUNTIME_TEST_ORCHESTRATION;
+      process.env.RUNTIME_TEST_ORCHESTRATION = undefined;
     } else {
       process.env.RUNTIME_TEST_ORCHESTRATION = originalTestOrch;
     }
@@ -241,7 +241,7 @@ describe("WorkflowRuntime supervisor integration", () => {
   });
 
   it("respects supervisor check interval", async () => {
-    let checkCount = 0;
+    let _checkCount = 0;
     const startTime = performance.now();
 
     AISDKAdapter.prototype.stream = async function* (options) {
@@ -251,7 +251,7 @@ describe("WorkflowRuntime supervisor integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Count how many times the stream is accessed
-      checkCount++;
+      _checkCount++;
 
       if (signal?.aborted) {
         throw signal.reason;
@@ -292,12 +292,12 @@ async function runWithExecutionEnv<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } finally {
     if (prevDisable === undefined) {
-      delete process.env.RUNTIME_DISABLE_CODEX;
+      process.env.RUNTIME_DISABLE_CODEX = undefined;
     } else {
       process.env.RUNTIME_DISABLE_CODEX = prevDisable;
     }
     if (prevTestOrch === undefined) {
-      delete process.env.RUNTIME_TEST_ORCHESTRATION;
+      process.env.RUNTIME_TEST_ORCHESTRATION = undefined;
     } else {
       process.env.RUNTIME_TEST_ORCHESTRATION = prevTestOrch;
     }

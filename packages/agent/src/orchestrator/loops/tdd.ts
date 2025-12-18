@@ -13,9 +13,9 @@ export type TDDContext = {
   execPlanPath: string;
   requirement: string;
   auto: "low" | "medium" | "high";
-  model?: any;
+  model?: string;
   containerId?: string;
-  context?: any;
+  context?: Record<string, unknown>;
   userId?: string;
 };
 
@@ -72,7 +72,7 @@ export async function runTDDLoop(
         context: context.context,
         userId: context.userId,
       },
-      writer: writer as any,
+      writer,
     });
 
     // Verify Test Fails

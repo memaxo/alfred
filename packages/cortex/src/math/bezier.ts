@@ -68,7 +68,9 @@ export function evalCubicBezierNormal(
 ): Vec2 {
   const tangent = evalCubicBezierTangent(p0, p1, p2, p3, t);
   const len = Math.sqrt(tangent.x * tangent.x + tangent.y * tangent.y);
-  if (len === 0) return { x: 0, y: 1 };
+  if (len === 0) {
+    return { x: 0, y: 1 };
+  }
   return {
     x: -tangent.y / len,
     y: tangent.x / len,

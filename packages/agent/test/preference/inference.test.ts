@@ -6,16 +6,20 @@ import type {
 } from "@alfred/type/preference";
 import type { UIMessage } from "@alfred/type/stream";
 
-const inferResponsePreferencesSemanticMock = mock(async () => ({
-  verbosity: [
-    { label: "concise" as ResponseVerbosity, score: 0.62 },
-    { label: "verbose" as ResponseVerbosity, score: 0.2 },
-  ],
-  tone: [{ label: "formal" as ResponseTone, score: 0.58 }],
-  format: [{ label: "bullet" as ResponseFormat, score: 0.4 }],
-}));
+const inferResponsePreferencesSemanticMock = mock(() =>
+  Promise.resolve({
+    verbosity: [
+      { label: "concise" as ResponseVerbosity, score: 0.62 },
+      { label: "verbose" as ResponseVerbosity, score: 0.2 },
+    ],
+    tone: [{ label: "formal" as ResponseTone, score: 0.58 }],
+    format: [{ label: "bullet" as ResponseFormat, score: 0.4 }],
+  })
+);
 
-const detectToneSemanticMock = mock(async () => "friendly" as ResponseTone);
+const detectToneSemanticMock = mock(() =>
+  Promise.resolve("friendly" as ResponseTone)
+);
 
 mock.module("../../src/preference/semantic", () => ({
   inferResponsePreferencesSemantic: inferResponsePreferencesSemanticMock,

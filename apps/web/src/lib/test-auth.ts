@@ -177,7 +177,7 @@ export function getTestSession(): TestSession | null {
 }
 
 export function clearTestSession() {
-  delete globalThis.__TEST_SESSION__;
+  globalThis.__TEST_SESSION__ = undefined;
   if (hasWindow()) {
     try {
       window.sessionStorage.removeItem(TEST_SESSION_STORAGE_KEY);
@@ -311,17 +311,18 @@ function createPasskey(name: string): TestPasskey {
 
 function getPasskeyApi() {
   return {
-    listUserPasskeys: async () => ({ data: [...passkeyState.current] }),
-    addPasskey: async ({ name }: { name: string }) => {
+    listUserPasskeys: () =>
+      Promise.resolve({ data: [...passkeyState.current] }),
+    addPasskey: ({ name }: { name: string }) => {
       const next = createPasskey(name);
       passkeyState.current = [next, ...passkeyState.current];
-      return { data: next };
+      return Promise.resolve({ data: next });
     },
-    deletePasskey: async ({ id }: { id: string }) => {
+    deletePasskey: ({ id }: { id: string }) => {
       passkeyState.current = passkeyState.current.filter(
         (record) => record.id !== id
       );
-      return { data: { removed: 1 } };
+      return Promise.resolve({ data: { removed: 1 } });
     },
   };
 }
@@ -345,28 +346,26 @@ export function installTestAuthClient<T>(client: T): T {
   const passkey = getPasskeyApi();
 
   Object.assign(client as Record<string, unknown>, {
-    async getSession() {
-      return { data: getTestSession() };
-    },
+    getSession: () => Promise.resolve({ data: getTestSession() }),
     useSession: () => getSessionHookResult(),
     signIn: {
-      email: async () => ({ data: getTestSession() }),
-      passkey: async () => ({ data: getTestSession() }),
+      email: () => Promise.resolve({ data: getTestSession() }),
+      passkey: () => Promise.resolve({ data: getTestSession() }),
     },
     signUp: {
-      email: async ({ email, name }: { email: string; name: string }) => {
+      email: ({ email, name }: { email: string; name: string }) => {
         const session = issueTestSession({ email, name });
-        return { data: session };
+        return Promise.resolve({ data: session });
       },
     },
-    signOut: async ({
+    signOut: ({
       fetchOptions,
     }: {
       fetchOptions?: { onSuccess?: () => void };
     } = {}) => {
       clearTestSession();
       fetchOptions?.onSuccess?.();
-      return { data: null };
+      return Promise.resolve({ data: null });
     },
     passkey,
   });

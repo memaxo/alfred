@@ -25,7 +25,7 @@ describe("filesystem thread validator fallback", () => {
 
     const validator = createFilesystemThreadValidatorForTests(tempHome);
     expect(validator).toBeDefined();
-    const result = await validator!("thread-abc");
+    const result = await validator?.("thread-abc");
     expect(result).toBe(true);
   });
 
@@ -35,7 +35,7 @@ describe("filesystem thread validator fallback", () => {
 
     const validator = createFilesystemThreadValidatorForTests(tempHome);
     expect(validator).toBeDefined();
-    const result = await validator!("missing-thread");
+    const result = await validator?.("missing-thread");
     expect(result).toBe(false);
   });
 
@@ -46,7 +46,7 @@ describe("filesystem thread validator fallback", () => {
 
     const validator = createFilesystemThreadValidatorForTests(tempHome);
     expect(validator).toBeDefined();
-    const result = await validator!("../../../etc/passwd");
+    const result = await validator?.("../../../etc/passwd");
     expect(result).toBe(false);
   });
 });

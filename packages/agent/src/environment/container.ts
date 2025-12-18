@@ -57,7 +57,7 @@ export class ContainerWorkspace extends WorktreeWorkspace {
       },
     });
 
-    const details = (res as any).details;
+    const details = res.details;
     if (!(res.ok && details?.containerId)) {
       throw new Error(`Failed to start container: ${details?.error}`);
     }
@@ -87,7 +87,7 @@ export class ContainerWorkspace extends WorktreeWorkspace {
   //  Yes, but for "Self-Healing" we mostly care about code.
   //  If environment breaks, we might need to restart container, but restoring code is step 1.)
 
-  async exec(
+  exec(
     command: string,
     options?: ExecOptions,
     projectConfig?: ProjectConfig | null

@@ -20,7 +20,7 @@ const originalUseContainers = process.env.ORCH_USE_CONTAINERS;
 
 afterEach(() => {
   if (originalUseContainers === undefined) {
-    delete process.env.ORCH_USE_CONTAINERS;
+    process.env.ORCH_USE_CONTAINERS = undefined;
     return;
   }
   process.env.ORCH_USE_CONTAINERS = originalUseContainers;

@@ -47,14 +47,14 @@ export function generateLogarithmicSpiral(
 /**
  * Corona fiber configuration
  */
-export interface FiberConfig {
+export type FiberConfig = {
   outerRadius: number;
   innerRadius: number;
   spiralTightness: number;
   segments: number;
   wobbleAmplitude: number;
   wobbleFrequency: number;
-}
+};
 
 /**
  * Generate a single corona fiber path

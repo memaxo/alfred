@@ -64,7 +64,7 @@ mock.module("@ai-sdk/react", () => {
         };
       }, []);
 
-      const sendMessage = async ({ text }: { text: string }) => {
+      const sendMessage = ({ text }: { text: string }) => {
         assistantChatMock.sendSpy(text);
         setStatus("streaming");
         const userMessage = ensureAssistantMessage({

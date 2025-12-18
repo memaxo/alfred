@@ -110,16 +110,22 @@ class TextToSpeech {
     const { textIds, textMask } = this.textProcessor.call(textList);
 
     const textIds0 = textIds[0];
-    if (!textIds0) throw new Error("textIds[0] missing");
+    if (!textIds0) {
+      throw new Error("textIds[0] missing");
+    }
 
     const textIdsFlat = new BigInt64Array(textIds.flat().map((x) => BigInt(x)));
     const textIdsShape = [bsz, textIds0.length];
     const textIdsTensor = new ort.Tensor("int64", textIdsFlat, textIdsShape);
 
     const textMask0 = textMask[0];
-    if (!textMask0) throw new Error("textMask[0] missing");
+    if (!textMask0) {
+      throw new Error("textMask[0] missing");
+    }
     const textMask00 = textMask0[0];
-    if (!textMask00) throw new Error("textMask[0][0] missing");
+    if (!textMask00) {
+      throw new Error("textMask[0][0] missing");
+    }
 
     const textMaskFlat = new Float32Array(textMask.flat(2));
     const textMaskShape = [bsz, 1, textMask00.length];
@@ -170,9 +176,13 @@ class TextToSpeech {
     );
 
     const latentMask0 = latentMask[0];
-    if (!latentMask0) throw new Error("latentMask[0] missing");
+    if (!latentMask0) {
+      throw new Error("latentMask[0] missing");
+    }
     const latentMask00 = latentMask0[0];
-    if (!latentMask00) throw new Error("latentMask[0][0] missing");
+    if (!latentMask00) {
+      throw new Error("latentMask[0][0] missing");
+    }
 
     const latentMaskFlat = new Float32Array(latentMask.flat(2));
     const latentMaskShape = [bsz, 1, latentMask00.length];
@@ -197,9 +207,13 @@ class TextToSpeech {
       ]);
 
       const xt0 = xt[0];
-      if (!xt0) throw new Error("xt[0] missing");
+      if (!xt0) {
+        throw new Error("xt[0] missing");
+      }
       const xt00 = xt0[0];
-      if (!xt00) throw new Error("xt[0][0] missing");
+      if (!xt00) {
+        throw new Error("xt[0][0] missing");
+      }
 
       const xtFlat = new Float32Array(xt.flat(2) as number[]);
       const xtShape = [bsz, xt0.length, xt00.length];
@@ -250,9 +264,13 @@ class TextToSpeech {
 
     // Generate waveform
     const finalXt0 = xt[0];
-    if (!finalXt0) throw new Error("xt[0] missing");
+    if (!finalXt0) {
+      throw new Error("xt[0] missing");
+    }
     const finalXt00 = finalXt0[0];
-    if (!finalXt00) throw new Error("xt[0][0] missing");
+    if (!finalXt00) {
+      throw new Error("xt[0][0] missing");
+    }
 
     const finalXtFlat = new Float32Array(xt.flat(2) as number[]);
     const finalXtShape = [bsz, finalXt0.length, finalXt00.length];

@@ -70,11 +70,7 @@ export async function withObligationRetry<T>(
     if (!obligations) {
       throw error;
     }
-    try {
-      await satisfyObligations(obligations);
-    } catch (satisfyError) {
-      throw satisfyError;
-    }
+    await satisfyObligations(obligations);
     return action();
   }
 }

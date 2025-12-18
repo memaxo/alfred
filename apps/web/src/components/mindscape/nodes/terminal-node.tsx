@@ -81,7 +81,11 @@ export function TerminalNode({ id, selected }: NodeProps) {
 
       term.loadAddon(fitAddon);
       term.loadAddon(webLinksAddon);
-      term.open(containerRef.current!); // Non-null assertion safe due to check above
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+      term.open(container);
       fitAddon.fit();
 
       terminalRef.current = term;

@@ -56,7 +56,7 @@ function createStubModule(reason: string): CodexModule {
       this.id = id;
     }
 
-    async runStreamed(prompt: string, _options: TurnOptions) {
+    runStreamed(prompt: string, _options: TurnOptions) {
       const events: ThreadEvent[] = [
         { type: "thread.started", thread_id: this.id } as ThreadEvent,
         { type: "turn.started" } as ThreadEvent,
@@ -75,7 +75,7 @@ function createStubModule(reason: string): CodexModule {
       ];
 
       return {
-        events: (async function* () {
+        events: (function* () {
           for (const event of events) {
             yield event;
           }
@@ -85,8 +85,6 @@ function createStubModule(reason: string): CodexModule {
   }
 
   class StubCodex {
-    constructor(_options: ConstructorParameters<CodexConstructor>[0]) {}
-
     startThread(_options: ThreadOptions): StubThread {
       return new StubThread(createThreadId());
     }
@@ -95,8 +93,8 @@ function createStubModule(reason: string): CodexModule {
       return new StubThread(threadId || createThreadId());
     }
 
-    async validateThread(): Promise<boolean> {
-      return true;
+    validateThread(): Promise<boolean> {
+      return Promise.resolve(true);
     }
   }
 

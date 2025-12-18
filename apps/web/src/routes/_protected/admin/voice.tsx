@@ -510,22 +510,36 @@ function formatPercent(value: number | undefined) {
 }
 
 function formatDuration(ms: number) {
-  if (!ms) return "0s";
+  if (!ms) {
+    return "0s";
+  }
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
-  if (hours > 0) return `${hours}h ${minutes % 60}m`;
-  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  }
   return `${seconds}s`;
 }
 
 function formatLastPing(lastPing: number | null | undefined) {
-  if (!lastPing) return "—";
+  if (!lastPing) {
+    return "—";
+  }
   const deltaSeconds = Math.floor((Date.now() - lastPing) / 1000);
-  if (deltaSeconds < 2) return "live";
-  if (deltaSeconds < 60) return `${deltaSeconds}s ago`;
+  if (deltaSeconds < 2) {
+    return "live";
+  }
+  if (deltaSeconds < 60) {
+    return `${deltaSeconds}s ago`;
+  }
   const minutes = Math.floor(deltaSeconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
   const hours = Math.floor(minutes / 60);
   return `${hours}h ago`;
 }

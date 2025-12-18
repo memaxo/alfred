@@ -76,7 +76,7 @@ const feedbackEvent = (expected: string, actual: string): Event =>
     ts: now(),
   }) as Event;
 
-const timeoutEvent = (deadline: number): Event =>
+const _timeoutEvent = (deadline: number): Event =>
   ({
     _: "timeout",
     deadline,
@@ -464,7 +464,7 @@ describe("Cognitive Full Pipeline Integration", () => {
       );
 
       // Multiple loop interrupts
-      const result2 = await runCognitiveLoop(
+      const _result2 = await runCognitiveLoop(
         ctx,
         streamId,
         interruptEvent("loop detected iteration 1")

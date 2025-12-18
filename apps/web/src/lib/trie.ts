@@ -6,7 +6,7 @@ type TrieNode<T> = {
 };
 
 export class PrefixTrie<T> {
-  private root: TrieNode<T>;
+  private readonly root: TrieNode<T>;
 
   constructor() {
     this.root = { children: new Map(), isEndOfWord: false, usageCount: 0 };
@@ -27,7 +27,12 @@ export class PrefixTrie<T> {
           usageCount: 0,
         });
       }
-      current = current.children.get(char)!;
+      // We just ensured the child exists above, so it's safe to assert
+      const child = current.children.get(char);
+      if (!child) {
+        throw new Error("Failed to create trie node");
+      }
+      current = child;
     }
 
     current.isEndOfWord = true;
@@ -44,17 +49,20 @@ export class PrefixTrie<T> {
    * Prioritizes higher usage score, then shorter words.
    */
   findCompletion(prefix: string): { completion: string; value: T } | null {
-    if (!prefix) return null;
+    if (!prefix) {
+      return null;
+    }
 
     let current = this.root;
     const normalized = prefix.toLowerCase();
 
     // 1. Traverse down to the end of the prefix
     for (const char of normalized) {
-      if (!current.children.has(char)) {
+      const child = current.children.get(char);
+      if (!child) {
         return null;
       }
-      current = current.children.get(char)!;
+      current = child;
     }
 
     // 2. BFS to find best completion.
@@ -80,7 +88,11 @@ export class PrefixTrie<T> {
     let steps = 0;
     while (queue.length > 0 && steps < 100) {
       steps++;
-      const { node: curr, path } = queue.shift()!;
+      const item = queue.shift();
+      if (!item) {
+        break;
+      }
+      const { node: curr, path } = item;
 
       if (curr.isEndOfWord && curr.value) {
         const candidateScore = curr.usageCount;
@@ -97,7 +109,10 @@ export class PrefixTrie<T> {
       const sortedKeys = Array.from(curr.children.keys()).sort();
       for (const key of sortedKeys) {
         if (path.length < maxDepth) {
-          queue.push({ node: curr.children.get(key)!, path: path + key });
+          const child = curr.children.get(key);
+          if (child) {
+            queue.push({ node: child, path: path + key });
+          }
         }
       }
     }

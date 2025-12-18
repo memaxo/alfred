@@ -192,9 +192,7 @@ export async function retrieve(
         // and we only have touchNodes by ID, we'd need to look them up first.
         // For now, we skip this step until we have a better mapping or index.
         // Alternatively, if we stored the memory node ID in the chunk metadata, we could use it.
-      } catch (err) {
-        console.error("ACTIVE_RECALL_RAG_ERROR", err);
-      }
+      } catch (_err) {}
     })();
   }
 

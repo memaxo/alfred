@@ -21,7 +21,7 @@ async function runTmux(args: string[]) {
   }
 
   const tmux = "tmux";
-  let proc;
+  let proc: ReturnType<typeof spawn>;
   try {
     proc = spawn([tmux, ...args], {
       stdout: "pipe",

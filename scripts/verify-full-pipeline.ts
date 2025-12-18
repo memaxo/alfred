@@ -17,6 +17,7 @@
 
 import * as path from "node:path";
 import { issueAccessToken } from "@alfred/auth/token";
+import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
@@ -180,10 +181,10 @@ async function verifyCognitiveTransitions(): Promise<boolean> {
       _: "input" as const,
       content: "Verify cognitive pipeline",
       source: "user" as const,
-      ts: Date.now(),
+      ts: timestamp(Date.now()),
     };
 
-    const result = await runCognitiveLoop(ctx, streamId, inputEvent as any);
+    const result = await runCognitiveLoop(ctx, streamId, inputEvent);
 
     const isThinking = result.state._ === "thinking";
     const hasEffects = result.effects.length > 0;
@@ -224,10 +225,10 @@ async function verifyPhysiologyUpdates(): Promise<boolean> {
       _: "input" as const,
       content: "Test physiology",
       source: "user" as const,
-      ts: Date.now(),
+      ts: timestamp(Date.now()),
     };
 
-    const first = await runCognitiveLoop(ctx, streamId, inputEvent as any);
+    const first = await runCognitiveLoop(ctx, streamId, inputEvent);
     const initialPhysiology = first.state.physiology;
 
     // Interrupt event should update physiology (energy decays, possibly boredom/frustration)
@@ -235,10 +236,10 @@ async function verifyPhysiologyUpdates(): Promise<boolean> {
       _: "interrupt" as const,
       reason: "test_interrupt",
       priority: 1,
-      ts: Date.now(),
+      ts: timestamp(Date.now()),
     };
 
-    const second = await runCognitiveLoop(ctx, streamId, interruptEvent as any);
+    const second = await runCognitiveLoop(ctx, streamId, interruptEvent);
     const updatedPhysiology = second.state.physiology;
 
     // Physiology should have changed - energy decays on each event processing

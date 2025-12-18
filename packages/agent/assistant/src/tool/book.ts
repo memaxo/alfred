@@ -104,7 +104,10 @@ export const toolBook = {
         return {
           bookmarks: rows
             .map((row) => mapBookmark(row))
-            .filter(Boolean) as any[],
+            .filter(
+              (bookmark): bookmark is NonNullable<ReturnType<typeof mapBookmark>> =>
+                bookmark !== null
+            ),
         };
       }
       case "delete": {

@@ -9,8 +9,12 @@
  * Space complexity: O(m)
  */
 export function levenshteinDistance(a: string, b: string): number {
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
+  if (a.length === 0) {
+    return b.length;
+  }
+  if (b.length === 0) {
+    return a.length;
+  }
 
   const matrix = Array.from({ length: b.length + 1 }, (_, i) => i);
 
@@ -38,9 +42,15 @@ export function levenshteinDistance(a: string, b: string): number {
  * 0.0 = completely different
  */
 export function calculateSimilarity(a: string, b: string): number {
-  if (!(a && b)) return 0.0;
-  if (a.length === 0 && b.length === 0) return 1.0;
-  if (a.length === 0 || b.length === 0) return 0.0;
+  if (!(a && b)) {
+    return 0.0;
+  }
+  if (a.length === 0 && b.length === 0) {
+    return 1.0;
+  }
+  if (a.length === 0 || b.length === 0) {
+    return 0.0;
+  }
 
   const distance = levenshteinDistance(a, b);
   const maxLength = Math.max(a.length, b.length);
@@ -53,7 +63,9 @@ export function calculateSimilarity(a: string, b: string): number {
  * Good for detecting "same thought, slightly different phrasing"
  */
 export function jaccardSimilarity(a: string, b: string): number {
-  if (!(a && b)) return 0.0;
+  if (!(a && b)) {
+    return 0.0;
+  }
 
   const tokenize = (text: string) =>
     new Set(
@@ -66,7 +78,9 @@ export function jaccardSimilarity(a: string, b: string): number {
   const setA = tokenize(a);
   const setB = tokenize(b);
 
-  if (setA.size === 0 && setB.size === 0) return 1.0;
+  if (setA.size === 0 && setB.size === 0) {
+    return 1.0;
+  }
 
   const intersection = new Set([...setA].filter((x) => setB.has(x)));
   const union = new Set([...setA, ...setB]);
@@ -81,10 +95,14 @@ export function jaccardSimilarity(a: string, b: string): number {
  * @returns boolean True if loop detected
  */
 export function detectLoop(window: string[], threshold = 0.8): boolean {
-  if (window.length < 2) return false;
+  if (window.length < 2) {
+    return false;
+  }
 
-  const current = window[window.length - 1];
-  if (current === undefined) return false;
+  const current = window.at(-1);
+  if (current === undefined) {
+    return false;
+  }
 
   // Check against previous N thoughts
   // If we find high similarity with ANY recent thought, it might be a loop.
@@ -94,14 +112,14 @@ export function detectLoop(window: string[], threshold = 0.8): boolean {
   // Strategy: Immediate repetition is bad. A-B-A repetition is also bad.
 
   // 1. Check immediate predecessor
-  const prev = window[window.length - 2];
+  const prev = window.at(-2);
   if (prev !== undefined && calculateSimilarity(current, prev) > threshold) {
     return true;
   }
 
   // 2. Check A-B-A pattern (ping-pong)
   if (window.length >= 3) {
-    const prevPrev = window[window.length - 3];
+    const prevPrev = window.at(-3);
     if (
       prevPrev !== undefined &&
       calculateSimilarity(current, prevPrev) > threshold

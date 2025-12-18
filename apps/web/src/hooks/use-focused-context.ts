@@ -67,9 +67,13 @@ export function useFocusedContext(): FocusedContext {
   // Logic: If focused node is Chat, try to find a connected "Topic" node.
   // Otherwise, use the focused node itself.
   const effectiveNodeId = useMemo(() => {
-    if (!focusedNodeId) return null;
+    if (!focusedNodeId) {
+      return null;
+    }
     const node = nodes.find((n) => n.id === focusedNodeId);
-    if (!node) return null;
+    if (!node) {
+      return null;
+    }
 
     if (node.type === "chat") {
       // Look for connected edges
@@ -274,7 +278,9 @@ export function useFocusedContext(): FocusedContext {
         }
       : null;
 
-    if (!localContext.label) return { ...localContext, contextSnapshot };
+    if (!localContext.label) {
+      return { ...localContext, contextSnapshot };
+    }
 
     let combinedContent = localContext.content || "";
     const ragDocuments: Array<{
@@ -284,11 +290,7 @@ export function useFocusedContext(): FocusedContext {
     }> = [];
     const MAX_RAG_CONTEXT_CHARS = contextBudget;
 
-    if (
-      ragQuery.data &&
-      ragQuery.data.nodes &&
-      ragQuery.data.nodes.length > 0
-    ) {
+    if (ragQuery.data?.nodes && ragQuery.data.nodes.length > 0) {
       const nodesValue = (ragQuery.data as { nodes?: unknown } | undefined)
         ?.nodes;
       const nodesList = Array.isArray(nodesValue) ? nodesValue : [];
@@ -362,15 +364,14 @@ export function useFocusedContext(): FocusedContext {
               if (doc.source === "vector") {
                 const remaining = MAX_RAG_CONTEXT_CHARS - currentLength - 5;
                 if (remaining > 20) {
-                  const truncated = entry.slice(0, remaining) + "...";
-                  combinedContent += truncated + "\n";
+                  const truncated = `${entry.slice(0, remaining)}...`;
+                  combinedContent += `${truncated}\n`;
                   ragDocuments.push({
                     ...doc,
-                    summary:
-                      doc.summary.slice(
-                        0,
-                        remaining - doc.label.length - prefix.length - 5
-                      ) + "...",
+                    summary: `${doc.summary.slice(
+                      0,
+                      remaining - doc.label.length - prefix.length - 5
+                    )}...`,
                   });
                 }
                 break;
@@ -378,12 +379,12 @@ export function useFocusedContext(): FocusedContext {
               // Graph edge: try to squeeze it in or skip if literally no space
               if (currentLength + entry.length < MAX_RAG_CONTEXT_CHARS + 500) {
                 // Allow small overflow for graph
-                combinedContent += entry + "\n";
+                combinedContent += `${entry}\n`;
                 currentLength += entry.length + 1;
                 ragDocuments.push(doc);
               }
             } else {
-              combinedContent += entry + "\n";
+              combinedContent += `${entry}\n`;
               currentLength += entry.length + 1;
               ragDocuments.push(doc);
             }

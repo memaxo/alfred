@@ -9,7 +9,7 @@ function setMockEvents(events: ThreadEvent[]) {
 }
 
 function createEventStream(events: ThreadEvent[]) {
-  return (async function* () {
+  return (function* () {
     for (const event of events) {
       yield event;
     }
@@ -27,10 +27,12 @@ mock.module("../src/metrics.js", () => ({
   startCodexSessionValidationTimer: () => () => {},
 }));
 
-const assessSessionResumeEligibilityMock = mock(async () => ({
-  canResume: false,
-  reason: "missing-session",
-}));
+const assessSessionResumeEligibilityMock = mock(() =>
+  Promise.resolve({
+    canResume: false,
+    reason: "missing-session",
+  })
+);
 
 const getSessionMock = mock(() => undefined as any);
 const createSessionMock = mock(() => {});
@@ -58,7 +60,7 @@ mock.module("@openai/codex-sdk", () => {
   class MockThread {
     id = "thread-mock";
 
-    async runStreamed() {
+    runStreamed() {
       const events = pendingEvents.map((event) => ({ ...event }));
       return {
         events: createEventStream(events),
@@ -67,8 +69,6 @@ mock.module("@openai/codex-sdk", () => {
   }
 
   class Codex {
-    constructor(_options: unknown) {}
-
     startThread() {
       return new MockThread();
     }
@@ -107,7 +107,7 @@ describe("executeWithSdk artifacts", () => {
   afterEach(() => {
     pendingEvents = [];
     if (originalCodexKey === undefined) {
-      delete process.env.CODEX_API_KEY;
+      process.env.CODEX_API_KEY = undefined;
     } else {
       process.env.CODEX_API_KEY = originalCodexKey;
     }

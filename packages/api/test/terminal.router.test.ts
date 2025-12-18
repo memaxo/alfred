@@ -16,7 +16,7 @@ describe("terminal router", () => {
       configurable: true,
     });
     // Clear sessions between tests
-    const terminalModule = await import("../src/routers/terminal");
+    const _terminalModule = await import("../src/routers/terminal");
     // Access the sessions map via a test helper or clear it
     // Since sessions is not exported, we'll rely on each test creating unique sessionIds
   });
@@ -34,7 +34,7 @@ describe("terminal router", () => {
       });
 
       const subscribers = new Set<(chunk: string) => void>();
-      let dataCallback:
+      let _dataCallback:
         | ((term: unknown, data: string | Uint8Array) => void)
         | null = null;
 
@@ -50,7 +50,7 @@ describe("terminal router", () => {
 
       vi.spyOn(Bun, "spawn").mockImplementation((_cmd, options) => {
         if (options?.terminal?.data) {
-          dataCallback = options.terminal.data;
+          _dataCallback = options.terminal.data;
           // Simulate adding subscriber
           subscribers.add(() => {});
         }
@@ -146,7 +146,7 @@ describe("terminal router", () => {
         configurable: true,
       });
 
-      const subscribers = new Set<(chunk: string) => void>();
+      const _subscribers = new Set<(chunk: string) => void>();
       let dataCallback:
         | ((term: unknown, data: string | Uint8Array) => void)
         | null = null;

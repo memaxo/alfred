@@ -40,7 +40,9 @@ export class EnergyVAD {
     this.stop(); // Cleanup existing
 
     const AudioContextClass =
-      window.AudioContext || (window as any).webkitAudioContext;
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!AudioContextClass) {
       return;
     }

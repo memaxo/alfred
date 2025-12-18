@@ -47,7 +47,7 @@ describe("End-to-End Voice Session (S2S)", () => {
     // Here we manually invoke the assistant simulation since we are testing the components.
 
     const assistantResult = await runAssistantForVoice({} as any, {
-      text: sttResult!.text,
+      text: sttResult?.text,
       userId,
     });
 

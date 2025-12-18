@@ -185,7 +185,7 @@ test.describe("Knowledge Pipeline E2E", () => {
         await page.waitForTimeout(500);
 
         // Nodes should show more detail
-        const detailedNode = page.locator('[data-lod="full"]').first();
+        const _detailedNode = page.locator('[data-lod="full"]').first();
         // LOD nodes may or may not be visible depending on graph state
       }
     });

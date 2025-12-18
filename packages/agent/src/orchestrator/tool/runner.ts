@@ -91,12 +91,16 @@ export const toolRunner = {
       readable: ReadableStream | number | null,
       chunks: string[]
     ) => {
-      if (!readable || typeof readable === "number") return;
+      if (!readable || typeof readable === "number") {
+        return;
+      }
       const reader = readable.getReader();
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
           lastActivity = Date.now();
           chunks.push(decoder.decode(value, { stream: true }));
         }
@@ -130,14 +134,17 @@ export const toolRunner = {
         exitCode,
         durationMs: Date.now() - start,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Ensure cleanup if promise.all fails
       proc.kill();
-      if (timedOut) throw new Error(`Command timed out after ${timeoutMs}ms`);
-      if (heartbeatFailed)
+      if (timedOut) {
+        throw new Error(`Command timed out after ${timeoutMs}ms`);
+      }
+      if (heartbeatFailed) {
         throw new Error(
           `Command killed due to inactivity (heartbeat) > ${DEFAULT_HEARTBEAT_MS}ms`
         );
+      }
       throw err;
     } finally {
       clearTimeout(totalTimeoutTimer);

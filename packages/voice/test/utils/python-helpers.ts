@@ -33,7 +33,9 @@ function cleanupAllSandboxes(): void {
 // Register cleanup handlers (only once)
 let handlersRegistered = false;
 function registerCleanupHandlers(): void {
-  if (handlersRegistered) return;
+  if (handlersRegistered) {
+    return;
+  }
   handlersRegistered = true;
 
   process.on("exit", cleanupAllSandboxes);
@@ -283,39 +285,20 @@ export async function verifyVoicePythonHealth(): Promise<{
  * Use this in CI to catch corruption early
  */
 export async function ciVerifyPythonEnvironment(): Promise<void> {
-  console.log("🔍 Verifying Python environment...");
-
   const health = await verifyVoicePythonHealth();
 
   if (!health.healthy) {
     const strict = process.env.VOICE_STRICT_PYTHON === "1";
     const isMissingPython = health.error === "Python executable does not exist";
     if (process.env.CI && !strict && isMissingPython) {
-      console.warn(
-        "⚠️ Voice Python environment not found; skipping voice Python verification.\n" +
-          "   To enable in CI, set VOICE_STRICT_PYTHON=1 and ensure 'cd packages/voice && uv sync' has been run."
-      );
       return;
     }
-
-    console.error("❌ PYTHON ENVIRONMENT CORRUPTED!");
-    console.error(`   Path: ${health.pythonPath}`);
-    console.error(`   Error: ${health.error}`);
-    console.error("");
-    console.error("🔧 To fix, run:");
-    console.error(
-      `   rm -rf "${dirname(dirname(health.pythonPath))}" && cd packages/voice && uv sync`
-    );
-    console.error("");
 
     throw new CorruptedPythonError(
       health.pythonPath,
       health.error ?? "Unknown"
     );
   }
-
-  console.log(`✅ Python environment healthy: ${health.version}`);
-  console.log(`   Path: ${health.pythonPath}`);
 }
 
 // ============================================================================
@@ -333,12 +316,9 @@ export async function attemptPythonRepair(): Promise<{
   const voiceDir = join(WORKSPACE_ROOT, "packages/voice");
   const venvPath = join(voiceDir, ".venv");
 
-  console.log("🔧 Attempting to repair Python environment...");
-
   // Step 1: Remove corrupted venv
   try {
     if (existsSync(venvPath)) {
-      console.log(`   Removing corrupted venv: ${venvPath}`);
       rmSync(venvPath, { recursive: true, force: true });
     }
   } catch (error) {
@@ -360,7 +340,6 @@ export async function attemptPythonRepair(): Promise<{
 
   // Step 3: Run uv sync
   try {
-    console.log("   Running uv sync...");
     const proc = spawn(["uv", "sync"], {
       cwd: voiceDir,
       stdout: "pipe",
@@ -385,7 +364,6 @@ export async function attemptPythonRepair(): Promise<{
   // Step 4: Verify repair
   const health = await verifyVoicePythonHealth();
   if (health.healthy) {
-    console.log(`✅ Python environment repaired: ${health.version}`);
     return {
       repaired: true,
       message: `Repaired successfully: Python ${health.version}`,
@@ -418,9 +396,6 @@ export async function ensureHealthyPython(): Promise<{
       wasRepaired: false,
     };
   }
-
-  // Attempt repair
-  console.warn(`⚠️  Python environment unhealthy: ${health.error}`);
   const repair = await attemptPythonRepair();
 
   if (repair.repaired) {
@@ -657,9 +632,6 @@ export function restoreEnvVars(
  * @deprecated Use createIsolatedTestDir() instead
  */
 export function createTempDir(prefix = "alfred-voice-test-"): string {
-  console.warn(
-    "DEPRECATED: createTempDir() is deprecated. Use createIsolatedTestDir() instead."
-  );
   return join(
     os.tmpdir(),
     `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -729,7 +701,7 @@ export async function failFastPythonCheck(): Promise<void> {
   const health = await verifyVoicePythonHealth();
 
   if (!health.healthy) {
-    const message = [
+    const _message = [
       "",
       "═══════════════════════════════════════════════════════════════════",
       "  ❌ PYTHON ENVIRONMENT CHECK FAILED - TESTS CANNOT RUN",
@@ -750,8 +722,6 @@ export async function failFastPythonCheck(): Promise<void> {
       "═══════════════════════════════════════════════════════════════════",
       "",
     ].join("\n");
-
-    console.error(message);
     throw new CorruptedPythonError(
       health.pythonPath,
       health.error ?? "Unknown"

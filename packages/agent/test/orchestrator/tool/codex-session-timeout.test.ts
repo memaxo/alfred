@@ -6,7 +6,7 @@ describe("Codex session validation timeout", () => {
   it("returns timeout result when validation exceeds 5 seconds", async () => {
     const slowValidator = mock(async () => {
       await new Promise((resolve) => setTimeout(resolve, 6000));
-      return true;
+      return Promise.resolve(true);
     });
 
     const session: CodexSessionState = {
@@ -45,7 +45,7 @@ describe("Codex session validation timeout", () => {
   it("returns normal result when validation completes before timeout", async () => {
     const fastValidator = mock(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      return true;
+      return Promise.resolve(true);
     });
 
     const session: CodexSessionState = {

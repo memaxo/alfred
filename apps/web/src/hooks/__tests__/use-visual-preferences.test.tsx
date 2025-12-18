@@ -81,7 +81,9 @@ const PRESET_MINIMAL: VisualConfig = {
 const applyVisualConfigMock = vi.fn();
 const getDefaultPresetMock = vi.fn(() => PRESET_BALANCED);
 const getPresetMock = vi.fn((name: string): VisualConfig => {
-  if (name === "minimal") return PRESET_MINIMAL;
+  if (name === "minimal") {
+    return PRESET_MINIMAL;
+  }
   return PRESET_BALANCED;
 });
 
@@ -393,23 +395,23 @@ describe("useVisualPreferences", () => {
         config: PRESET_BALANCED,
       };
 
-      let success: boolean;
+      let success: boolean | undefined;
       act(() => {
         success = result.current.importConfig(JSON.stringify(toImport));
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
 
     it("rejects invalid JSON", () => {
       const { result } = renderHook(() => useVisualPreferences());
 
-      let success: boolean;
+      let success: boolean | undefined;
       act(() => {
         success = result.current.importConfig("not valid json");
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
 
     it("rejects missing config", () => {
@@ -420,12 +422,12 @@ describe("useVisualPreferences", () => {
         // missing config
       };
 
-      let success: boolean;
+      let success: boolean | undefined;
       act(() => {
         success = result.current.importConfig(JSON.stringify(toImport));
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
   });
 

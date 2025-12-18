@@ -200,7 +200,7 @@ async function enrichGraphFromChunks(args: {
           ragResource: `rag:${args.source}`,
         },
       },
-    ] as any);
+    ]);
   } catch (_error) {
     // Ignore
   }
@@ -341,7 +341,7 @@ async function persistRagKnowledge(
     return;
   }
 
-  const nodeMap = await upsertNodes(nodeSeeds as any);
+  const nodeMap = await upsertNodes(nodeSeeds);
   if (edgeSeeds.length === 0) {
     return;
   }
@@ -364,5 +364,5 @@ async function persistRagKnowledge(
     return;
   }
 
-  await upsertEdges(edges as any);
+  await upsertEdges(edges);
 }

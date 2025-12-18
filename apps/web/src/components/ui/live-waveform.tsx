@@ -110,7 +110,7 @@ export const LiveWaveform = ({
           transitionProgressRef.current + 0.02
         );
 
-        const processingData = [];
+        const processingData: number[] = [];
         const barCount = Math.floor(
           (containerRef.current?.getBoundingClientRect().width || 200) /
             (barWidth + barGap)

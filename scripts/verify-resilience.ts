@@ -21,14 +21,14 @@ import { formatCodexRuntimeError } from "../packages/runtime/src/utils/codex-err
 const originalSpawn = sys.spawn;
 
 function mockCodexSpawn(stdoutContent: string) {
-  sys.spawn = ((cmd: string[], options: any) => {
+  sys.spawn = ((_cmd: string[], options: Parameters<typeof spawn>[1]) => {
     // We only want to mock the codex execution
     // But we need to return a Subprocess-like object
     // We can use real spawn for `echo` if we want, or just return a stream.
 
     // Simpler: Spawn a real `echo` command that prints the content!
     return spawn(["echo", stdoutContent], options);
-  }) as any;
+  }) as typeof sys.spawn;
 }
 
 function restoreSpawn() {
@@ -53,7 +53,7 @@ async function setupAuth() {
   });
 }
 
-async function verifyLoopDetection() {
+async function _verifyLoopDetection() {
   logger.info("verify_loop_detection_start");
 
   const repetitiveThought = JSON.stringify({
@@ -100,10 +100,11 @@ async function verifyLoopDetection() {
     });
     console.error("❌ Loop detection FAILED: Tool completed successfully.");
     process.exit(1);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     if (
-      String(error).includes("codex_exec_interrupted") ||
-      String(error).includes("loop_detected")
+      errorMessage.includes("codex_exec_interrupted") ||
+      errorMessage.includes("loop_detected")
     ) {
       console.log("✅ Loop detection PASSED: Caught interrupt.");
     } else {
@@ -114,7 +115,7 @@ async function verifyLoopDetection() {
         code,
       });
       // Check stack trace to see if it was the OpenAI check
-      if (String(error).includes("openai_api_key_missing")) {
+      if (errorMessage.includes("openai_api_key_missing")) {
         console.log("⚠️ Skipped: Environment missing API key for imports.");
         process.exit(0);
       }

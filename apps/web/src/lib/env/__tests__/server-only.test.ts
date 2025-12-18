@@ -27,14 +27,14 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.DATABASE_URL = original;
         } else {
-          delete process.env.DATABASE_URL;
+          process.env.DATABASE_URL = undefined;
         }
       }
     });
 
     it("should return undefined if DATABASE_URL is not set", () => {
       const original = process.env.DATABASE_URL;
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
       try {
         const result = getDatabaseUrl();
         expect(result).toBeUndefined();
@@ -57,7 +57,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.NODE_ENV = original;
         } else {
-          delete process.env.NODE_ENV;
+          process.env.NODE_ENV = undefined;
         }
       }
     });
@@ -74,7 +74,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.SCHED_REMIND = original;
         } else {
-          delete process.env.SCHED_REMIND;
+          process.env.SCHED_REMIND = undefined;
         }
       }
     });
@@ -91,7 +91,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.SCHED_PREFERENCE_INFERENCE = original;
         } else {
-          delete process.env.SCHED_PREFERENCE_INFERENCE;
+          process.env.SCHED_PREFERENCE_INFERENCE = undefined;
         }
       }
     });
@@ -108,7 +108,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.VITE_TEST_MODE = original;
         } else {
-          delete process.env.VITE_TEST_MODE;
+          process.env.VITE_TEST_MODE = undefined;
         }
       }
     });
@@ -125,7 +125,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.MINDSCAPE_TEST = original;
         } else {
-          delete process.env.MINDSCAPE_TEST;
+          process.env.MINDSCAPE_TEST = undefined;
         }
       }
     });
@@ -142,7 +142,7 @@ describe("server-only environment utilities", () => {
         if (original) {
           process.env.BUN_TEST = original;
         } else {
-          delete process.env.BUN_TEST;
+          process.env.BUN_TEST = undefined;
         }
       }
     });

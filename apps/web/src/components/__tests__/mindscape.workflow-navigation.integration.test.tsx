@@ -95,7 +95,7 @@ describe("Mindscape workflow CTA integration", () => {
     expect(button).toBeTruthy();
 
     if (button) {
-      await act(async () => {
+      act(() => {
         fireEvent.click(button);
       });
     }
@@ -109,7 +109,7 @@ describe("Mindscape workflow CTA integration", () => {
     expect(drawerAction).toBeTruthy();
 
     if (drawerAction) {
-      await act(async () => {
+      act(() => {
         fireEvent.click(drawerAction);
       });
     }

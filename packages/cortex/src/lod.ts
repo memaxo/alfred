@@ -69,7 +69,7 @@ export function getFiberSegments(zoom: number): number {
 export class LODManager {
   private currentZoom = 1;
   private currentLOD: LODLevel;
-  private listeners: Set<(lod: LODLevel) => void> = new Set();
+  private readonly listeners: Set<(lod: LODLevel) => void> = new Set();
 
   constructor() {
     this.currentLOD = computeLOD(1);
@@ -127,8 +127,8 @@ export class LODManager {
  * Grid-based spatial partitioning for efficient visibility queries.
  */
 export class SpatialIndex<T extends { position: Vec2 }> {
-  private cellSize: number;
-  private grid: Map<string, T[]> = new Map();
+  private readonly cellSize: number;
+  private readonly grid: Map<string, T[]> = new Map();
 
   constructor(cellSize = 200) {
     this.cellSize = cellSize;

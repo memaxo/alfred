@@ -7,32 +7,32 @@ describe("Redis Connection Management", () => {
   const originalRetryMaxAttempts = process.env.REDIS_RETRY_MAX_ATTEMPTS;
 
   beforeEach(() => {
-    delete process.env.REDIS_URL;
-    delete process.env.REDIS_RETRY_ENABLED;
-    delete process.env.REDIS_RETRY_MAX_ATTEMPTS;
+    process.env.REDIS_URL = undefined;
+    process.env.REDIS_RETRY_ENABLED = undefined;
+    process.env.REDIS_RETRY_MAX_ATTEMPTS = undefined;
   });
 
   afterEach(() => {
     if (originalRedisUrl) {
       process.env.REDIS_URL = originalRedisUrl;
     } else {
-      delete process.env.REDIS_URL;
+      process.env.REDIS_URL = undefined;
     }
     if (originalRetryEnabled) {
       process.env.REDIS_RETRY_ENABLED = originalRetryEnabled;
     } else {
-      delete process.env.REDIS_RETRY_ENABLED;
+      process.env.REDIS_RETRY_ENABLED = undefined;
     }
     if (originalRetryMaxAttempts) {
       process.env.REDIS_RETRY_MAX_ATTEMPTS = originalRetryMaxAttempts;
     } else {
-      delete process.env.REDIS_RETRY_MAX_ATTEMPTS;
+      process.env.REDIS_RETRY_MAX_ATTEMPTS = undefined;
     }
   });
 
   describe("getRedis()", () => {
     it("returns null when REDIS_URL is not set", () => {
-      delete process.env.REDIS_URL;
+      process.env.REDIS_URL = undefined;
       expect(getRedis()).toBeNull();
     });
 
@@ -49,7 +49,7 @@ describe("Redis Connection Management", () => {
 
   describe("getRedisAsync()", () => {
     it("returns null when REDIS_URL is not set", async () => {
-      delete process.env.REDIS_URL;
+      process.env.REDIS_URL = undefined;
       expect(await getRedisAsync()).toBeNull();
     });
 
@@ -61,7 +61,7 @@ describe("Redis Connection Management", () => {
 
   describe("isRedisHealthy()", () => {
     it("returns false when REDIS_URL is not set", async () => {
-      delete process.env.REDIS_URL;
+      process.env.REDIS_URL = undefined;
       expect(await isRedisHealthy()).toBe(false);
     });
 
@@ -81,10 +81,10 @@ describe("Redis Connection Management", () => {
 
     it("uses default retry settings when not configured", () => {
       process.env.REDIS_URL = "redis://localhost:6379";
-      delete process.env.REDIS_RETRY_ENABLED;
-      delete process.env.REDIS_RETRY_INITIAL_DELAY_MS;
-      delete process.env.REDIS_RETRY_MAX_DELAY_MS;
-      delete process.env.REDIS_RETRY_MAX_ATTEMPTS;
+      process.env.REDIS_RETRY_ENABLED = undefined;
+      process.env.REDIS_RETRY_INITIAL_DELAY_MS = undefined;
+      process.env.REDIS_RETRY_MAX_DELAY_MS = undefined;
+      process.env.REDIS_RETRY_MAX_ATTEMPTS = undefined;
       const client = getRedis();
       expect(client).toBeNull();
     });

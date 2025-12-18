@@ -120,7 +120,7 @@ export class KnowledgeEngine {
 
           // Limit to topK
           results = results.slice(0, topK);
-        } catch (error) {
+        } catch (_error) {
           // Continue without reranking on error
           results = results.slice(0, topK);
         }

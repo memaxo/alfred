@@ -89,8 +89,12 @@ export function useVoiceProtocol(
   }).current;
 
   const getClient = useCallback(() => {
-    if (!streamUrl) throw new Error("voice_stream_url_missing");
-    if (clientRef.current) return clientRef.current;
+    if (!streamUrl) {
+      throw new Error("voice_stream_url_missing");
+    }
+    if (clientRef.current) {
+      return clientRef.current;
+    }
 
     // Dynamically import to avoid server-side issues if needed, though VoiceStreamClient is pure JS
     const { VoiceStreamClient } = require("@alfred/voice/stream");
@@ -133,7 +137,7 @@ export function useVoiceProtocol(
     async (reason: "manual" | "silence" | "timeout" = "manual") => {
       try {
         await clientRef.current?.stop(reason);
-      } catch (err) {
+      } catch (_err) {
         // ignore stop errors
       }
     },

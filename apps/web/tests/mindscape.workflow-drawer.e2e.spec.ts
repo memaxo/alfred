@@ -6,7 +6,7 @@ const WORKFLOW_ID = "run-provenance-1";
 const RAG_DOC_ID = "doc-drawer-1";
 const RAG_DOC_NODE_DBID = "223e4567-e89b-12d3-a456-426614174001";
 
-const trpcResponse = (json: unknown) =>
+const _trpcResponse = (json: unknown) =>
   JSON.stringify([{ result: { data: json } }]);
 
 async function handleTrpcRequest(
@@ -15,7 +15,9 @@ async function handleTrpcRequest(
 ) {
   const url = new URL(route.request().url());
   const path = url.pathname.split("/api/trpc/")[1];
-  if (!path) return route.continue();
+  if (!path) {
+    return route.continue();
+  }
 
   const procedures = path.split(",");
   const results = procedures.map((proc) => {

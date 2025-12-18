@@ -52,10 +52,7 @@ export function createMockStream(
       queue.length = 0;
       listeners.length = 0;
     },
-    async next(
-      kind?: StreamEvent["type"],
-      timeoutMs = 1000
-    ): Promise<StreamEvent> {
+    next(kind?: StreamEvent["type"], timeoutMs = 1000): Promise<StreamEvent> {
       if (isClosed) {
         throw new Error("stream_closed");
       }
@@ -92,10 +89,10 @@ export function createMockStream(
   };
 }
 
-export async function waitForStreamMessage(
+export function waitForStreamMessage(
   controller: MockStreamController,
   kind: StreamEvent["type"],
   timeoutMs = 1000
-) {
+): Promise<StreamEvent> {
   return controller.next(kind, timeoutMs);
 }

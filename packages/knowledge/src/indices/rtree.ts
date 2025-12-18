@@ -619,8 +619,12 @@ export class RTreeND {
     const min = new Float32Array(this.dim);
     const max = new Float32Array(this.dim);
 
-    if (!a) return b ?? { min, max };
-    if (!b) return a;
+    if (!a) {
+      return b ?? { min, max };
+    }
+    if (!b) {
+      return a;
+    }
 
     for (let i = 0; i < this.dim; i++) {
       const aMin = a.min[i] ?? 0;
@@ -635,7 +639,9 @@ export class RTreeND {
   }
 
   private measure(rect: HyperRect | undefined): number {
-    if (!rect) return 0;
+    if (!rect) {
+      return 0;
+    }
     let sum = 0;
     for (let i = 0; i < this.dim; i++) {
       const minVal = rect.min[i] ?? 0;
@@ -647,7 +653,9 @@ export class RTreeND {
   }
 
   private enlargement(base: HyperRect | undefined, added: HyperRect): number {
-    if (!base) return this.measure(added);
+    if (!base) {
+      return this.measure(added);
+    }
     const combined = this.combine(base, added);
     return this.measure(combined) - this.measure(base);
   }

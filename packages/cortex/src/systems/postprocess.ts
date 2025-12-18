@@ -8,14 +8,14 @@
 import { UniformBuffer } from "../buffer";
 // Import shader source
 import bloomShaderSource from "../shaders/bloom.wgsl?raw";
-import type { RenderSystem, Vec2 } from "../types";
+import type { RenderSystem } from "../types";
 
 /** Bloom configuration */
-export interface BloomConfig {
+export type BloomConfig = {
   threshold: number;
   intensity: number;
   blurRadius: number;
-}
+};
 
 /** Default bloom config */
 export const DEFAULT_BLOOM_CONFIG: BloomConfig = {
@@ -31,7 +31,7 @@ export class PostProcessSystem implements RenderSystem {
   readonly name = "postprocess";
 
   private device: GPUDevice | null = null;
-  private config: BloomConfig;
+  private readonly config: BloomConfig;
 
   private uniformBuffer: UniformBuffer | null = null;
   private bloomParamsBuffer: UniformBuffer | null = null;
@@ -40,7 +40,6 @@ export class PostProcessSystem implements RenderSystem {
   private blurHPipeline: GPURenderPipeline | null = null;
   private blurVPipeline: GPURenderPipeline | null = null;
   private compositePipeline: GPURenderPipeline | null = null;
-  private aberrationPipeline: GPURenderPipeline | null = null;
   private combinedPipeline: GPURenderPipeline | null = null;
 
   private sampler: GPUSampler | null = null;
@@ -48,7 +47,6 @@ export class PostProcessSystem implements RenderSystem {
   // Intermediate textures
   private bloomTexture0: GPUTexture | null = null;
   private bloomTexture1: GPUTexture | null = null;
-  private resolution: Vec2 = { x: 1, y: 1 };
 
   constructor(config: Partial<BloomConfig> = {}) {
     this.config = { ...DEFAULT_BLOOM_CONFIG, ...config };
@@ -67,7 +65,6 @@ export class PostProcessSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Bloom shader error:", message.message);
       }
     }
 
@@ -182,7 +179,9 @@ export class PostProcessSystem implements RenderSystem {
   }
 
   private updateBloomParams(): void {
-    if (!this.bloomParamsBuffer) return;
+    if (!this.bloomParamsBuffer) {
+      return;
+    }
 
     this.bloomParamsBuffer.setFloat(0, this.config.threshold);
     this.bloomParamsBuffer.setFloat(1, this.config.intensity);
@@ -193,7 +192,9 @@ export class PostProcessSystem implements RenderSystem {
 
   /** Resize intermediate textures */
   resize(width: number, height: number): void {
-    if (!this.device) return;
+    if (!this.device) {
+      return;
+    }
 
     this.resolution = { x: width, y: height };
 
@@ -230,8 +231,10 @@ export class PostProcessSystem implements RenderSystem {
     this.updateBloomParams();
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
       this.uniformBuffer.setFloat(i, uniforms[i]);
@@ -239,7 +242,7 @@ export class PostProcessSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(_encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     // Post-processing is handled by main engine with specific targets
   }
 

@@ -45,16 +45,22 @@ describe("layoutSemantic", () => {
       stiffness: 0.1,
     });
 
-    const n1 = result.find((n) => n.id === "node1")!;
-    const n2 = result.find((n) => n.id === "node2")!;
-    const n3 = result.find((n) => n.id === "node3")!;
+    const n1 = result.find((n) => n.id === "node1");
+    const n2 = result.find((n) => n.id === "node2");
+    const n3 = result.find((n) => n.id === "node3");
+    expect(n1).toBeDefined();
+    expect(n2).toBeDefined();
+    expect(n3).toBeDefined();
+    if (!(n1 && n2 && n3)) {
+      throw new Error("Test nodes not found");
+    }
 
     // Distance to focused node
-    const dist2 = Math.sqrt(
+    const _dist2 = Math.sqrt(
       (n2.position.x - n1.position.x) ** 2 +
         (n2.position.y - n1.position.y) ** 2
     );
-    const dist3 = Math.sqrt(
+    const _dist3 = Math.sqrt(
       (n3.position.x - n1.position.x) ** 2 +
         (n3.position.y - n1.position.y) ** 2
     );

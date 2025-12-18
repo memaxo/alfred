@@ -47,9 +47,7 @@ function toArgs(value: unknown): Record<string, unknown> {
 }
 
 // Type guards for ALFRED's custom part types (see AGENTS.md AI SDK v6 section)
-function isToolCallPart(
-  part: unknown
-): part is {
+function isToolCallPart(part: unknown): part is {
   type: "tool-call";
   toolCallId: string;
   toolName?: string;
@@ -62,9 +60,7 @@ function isToolCallPart(
   );
 }
 
-function isToolResultPart(
-  part: unknown
-): part is {
+function isToolResultPart(part: unknown): part is {
   type: "tool-result";
   toolCallId: string;
   toolName?: string;

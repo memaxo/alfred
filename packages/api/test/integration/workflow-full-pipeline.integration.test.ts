@@ -181,7 +181,7 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Verify phase events exist
-      const phaseEvents = events.filter((e) => e.type === "phase");
+      const _phaseEvents = events.filter((e) => e.type === "phase");
       // May or may not have phase events depending on orchestrator configuration
       expect(events.some((e) => e.type === "run")).toBe(true);
     });
@@ -273,7 +273,7 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Look for wave-related events
-      const waveEvents = events.filter(
+      const _waveEvents = events.filter(
         (e) =>
           (e as { kind?: string }).kind === "wave-result" ||
           (e as { kind?: string }).kind === "wave-start"
@@ -477,7 +477,7 @@ describe("Workflow Full Pipeline Integration", () => {
     it("emits context receipts during scan phase", async () => {
       const caller = await harness.createCaller();
       const events: WorkflowEvent[] = [];
-      let hasContextEvent = false;
+      let _hasContextEvent = false;
 
       const input = {
         requirement: "Analyze the project structure",
@@ -500,7 +500,7 @@ describe("Workflow Full Pipeline Integration", () => {
           next: (event) => {
             events.push(event);
             if (event.type === "context") {
-              hasContextEvent = true;
+              _hasContextEvent = true;
             }
           },
           error: () => {
@@ -556,7 +556,9 @@ describe("Workflow Full Pipeline Integration", () => {
       expect(events.length).toBeGreaterThan(0);
 
       // Check for data-cache-handoff events
-      const cacheEvents = events.filter((e) => e.type === "data-cache-handoff");
+      const _cacheEvents = events.filter(
+        (e) => e.type === "data-cache-handoff"
+      );
       // Cache handoff may or may not be present depending on context
     });
   });
@@ -621,7 +623,7 @@ describe("Workflow Suspend/Resume", () => {
   it("handles obligation events during workflow", async () => {
     const caller = await harness.createCaller();
     const events: WorkflowEvent[] = [];
-    let hasObligationEvent = false;
+    let _hasObligationEvent = false;
 
     const input = {
       requirement: "High privilege operation requiring elevation",
@@ -639,7 +641,7 @@ describe("Workflow Suspend/Resume", () => {
         next: (event) => {
           events.push(event);
           if (event.type === "obligation") {
-            hasObligationEvent = true;
+            _hasObligationEvent = true;
           }
         },
         error: () => {

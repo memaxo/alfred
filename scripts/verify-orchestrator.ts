@@ -14,6 +14,8 @@ import * as fs from "node:fs/promises";
 import { issueAccessToken } from "@alfred/auth/token";
 import { logger } from "@alfred/logger";
 import { createRuntime } from "@alfred/runtime";
+import type { WorkflowEvent } from "@alfred/type/plan";
+import type { LanguageModel } from "ai";
 import { exportPKCS8, exportSPKI, generateKeyPair } from "jose";
 
 const VERIFICATION_FILE = `verification-${Date.now()}.txt`;
@@ -53,7 +55,7 @@ const mockModel = {
   provider: "mock",
   modelId: "mock-model",
   defaultObjectGenerationMode: "json",
-  doStream: async () => {
+  doStream: () => {
     return {
       stream: new ReadableStream({
         start(controller) {
@@ -106,7 +108,7 @@ async function verify() {
       workspace: process.cwd(),
     },
     // Use mock model
-    model: mockModel as any,
+    model: mockModel as LanguageModel<unknown>,
     authz: `Bearer ${token}`,
   });
 
@@ -118,13 +120,18 @@ async function verify() {
       if (event.type === "progress") {
         console.log(`[Progress]: ${event.pct}% - ${event.message}`);
       } else if (event.type === "notice") {
-        console.log(`[Notice]: ${(event as any).message}`);
-        if ((event as any).message === "execution_placeholder") {
+        const noticeEvent = event as WorkflowEvent & { type: "notice" };
+        console.log(`[Notice]: ${noticeEvent.message}`);
+        if (noticeEvent.message === "execution_placeholder") {
           console.log("⚡ Simulating agent execution...");
           await fs.writeFile(VERIFICATION_FILE, VERIFICATION_CONTENT);
         }
       } else if (event.type === "error") {
-        console.error(`[Error]: ${(event as any).message}`);
+        const errorEvent = event as WorkflowEvent & {
+          type: "error";
+          message: string;
+        };
+        console.error(`[Error]: ${errorEvent.message}`);
       }
     }
 

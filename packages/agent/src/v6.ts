@@ -51,7 +51,7 @@ type LegacyTool = {
   description: string;
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
-  execute: (...args: any[]) => unknown;
+  execute: (...args: unknown[]) => unknown;
 };
 
 type ToolMap = Record<string, ReturnType<typeof tool>>;
@@ -85,7 +85,7 @@ export function getOpenAI() {
   if (process.env.NODE_ENV === "test" && !firstEnv("OPENAI_API_KEY")) {
     return {
       chat: () => ({}),
-    } as any;
+    } as ReturnType<typeof createOpenAI>;
   }
 
   const apiKey = firstEnv("OPENAI_API_KEY");

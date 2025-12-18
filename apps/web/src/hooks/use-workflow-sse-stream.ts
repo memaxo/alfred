@@ -49,7 +49,7 @@ type WorkflowStreamHarness = {
       meta: { runId: string; eventId: string; eventType: string }
     ) => void;
     onError?: (error: Error) => void;
-  }) => { close: () => void } | void;
+  }) => { close: () => void } | undefined;
 };
 
 declare global {

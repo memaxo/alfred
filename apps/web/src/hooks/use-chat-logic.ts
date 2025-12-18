@@ -65,7 +65,9 @@ export function useChatLogic({
 
               path.forEach((nodeId, i) => {
                 const uiId = resolveId(nodeId);
-                if (!uiId) return;
+                if (!uiId) {
+                  return;
+                }
 
                 // Pulse the node
                 setTimeout(

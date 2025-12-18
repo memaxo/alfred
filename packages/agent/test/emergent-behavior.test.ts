@@ -82,8 +82,8 @@ mock.module("@alfred/db/repo/graph", () => ({
   findNearestConcept: findNearestConceptMock,
 }));
 
-const embedManyMock = mock(async (labels: string[]) =>
-  labels.map((label) => buildDeterministicVector(label))
+const embedManyMock = mock((labels: string[]) =>
+  Promise.resolve(labels.map((label) => buildDeterministicVector(label)))
 );
 
 mock.module("@alfred/rag", () => ({
@@ -264,7 +264,9 @@ function buildDeterministicVector(label: string): number[] {
 }
 
 function lookupFixtureEntry(label: string | undefined) {
-  if (!label) return;
+  if (!label) {
+    return;
+  }
   const normalized = normalizeLabel(label);
   if (!normalized) {
     return;

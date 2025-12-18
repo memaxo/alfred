@@ -22,7 +22,9 @@ export class DockerSandbox {
   }
 
   async start(): Promise<void> {
-    if (this.containerId) return;
+    if (this.containerId) {
+      return;
+    }
 
     logger.info("sandbox_start", { image: this.image });
 
@@ -69,7 +71,9 @@ export class DockerSandbox {
   async exec(
     command: string[]
   ): Promise<{ exitCode: number; output: string; error: string }> {
-    if (!this.containerId) throw new Error("Sandbox not started");
+    if (!this.containerId) {
+      throw new Error("Sandbox not started");
+    }
 
     logger.info("sandbox_exec", { command });
 
@@ -93,7 +97,9 @@ export class DockerSandbox {
 
   // Helper to write file content
   async writeFile(path: string, content: string): Promise<void> {
-    if (!this.containerId) throw new Error("Sandbox not started");
+    if (!this.containerId) {
+      throw new Error("Sandbox not started");
+    }
 
     // Use printf for safer writing than echo
     const safeContent = content.replace(/'/g, "'\\''");
@@ -101,7 +107,9 @@ export class DockerSandbox {
   }
 
   async readFile(path: string): Promise<string> {
-    if (!this.containerId) throw new Error("Sandbox not started");
+    if (!this.containerId) {
+      throw new Error("Sandbox not started");
+    }
     const result = await this.exec(["cat", path]);
     if (result.exitCode !== 0) {
       throw new Error(`Failed to read file ${path}: ${result.error}`);

@@ -10,7 +10,7 @@ export type InterruptResult =
   | { interrupt: true; reason: string };
 
 export class BrainstemSupervisor {
-  private thoughtWindow: string[] = [];
+  private readonly thoughtWindow: string[] = [];
   private readonly windowSize = 5;
   private readonly loopThreshold = 0.85;
 

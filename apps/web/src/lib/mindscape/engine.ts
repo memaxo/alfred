@@ -233,9 +233,14 @@ export class MindscapeEngine {
     }
 
     try {
-      this.audioContext = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("AudioContext not supported");
+      }
+      this.audioContext = new AudioContextClass();
       this.analyzer = this.audioContext.createAnalyser();
       this.analyzer.fftSize = 256;
       this.audioData = new Uint8Array(this.analyzer.frequencyBinCount);

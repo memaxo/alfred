@@ -21,7 +21,7 @@ afterEach(async () => {
 
 afterAll(() => {
   if (ORIGINAL_DB_URL === undefined) {
-    delete process.env.DATABASE_URL;
+    process.env.DATABASE_URL = undefined;
   } else {
     process.env.DATABASE_URL = ORIGINAL_DB_URL;
   }

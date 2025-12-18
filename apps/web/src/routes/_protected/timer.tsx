@@ -320,8 +320,12 @@ function TimerPane() {
 
   // Sort by remaining time (expired first, then shortest remaining)
   const sortedCards = [...timerCards].sort((a, b) => {
-    if (a.isExpired && !b.isExpired) return -1;
-    if (!a.isExpired && b.isExpired) return 1;
+    if (a.isExpired && !b.isExpired) {
+      return -1;
+    }
+    if (!a.isExpired && b.isExpired) {
+      return 1;
+    }
     return a.remainingSeconds - b.remainingSeconds;
   });
 

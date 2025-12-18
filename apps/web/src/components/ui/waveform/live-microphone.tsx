@@ -147,7 +147,12 @@ export const LiveMicrophoneWaveform = ({
         streamRef.current = stream;
 
         const AudioContextClass =
-          window.AudioContext || (window as any).webkitAudioContext;
+          window.AudioContext ||
+          (
+            window as typeof window & {
+              webkitAudioContext?: typeof AudioContext;
+            }
+          ).webkitAudioContext;
         const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = fftSize;
@@ -415,7 +420,7 @@ export const LiveMicrophoneWaveform = ({
         const offsetInBars = Math.floor(dragOffset / step);
 
         for (let i = 0; i < barCount; i++) {
-          let dataIndex;
+          let dataIndex: number;
 
           if (active) {
             dataIndex = dataToRender.length - 1 - i;

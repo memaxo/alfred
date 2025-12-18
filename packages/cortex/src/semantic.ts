@@ -11,7 +11,7 @@ import type { Point4D, Vec2 } from "./types";
 /**
  * Semantic embedding configuration
  */
-export interface SemanticConfig {
+export type SemanticConfig = {
   /** Embedding dimensionality (e.g., 768 for BERT, 1536 for OpenAI) */
   dimensions: number;
   /** Projection method */
@@ -20,7 +20,7 @@ export interface SemanticConfig {
   scale: number;
   /** Whether semantic positioning is active */
   enabled: boolean;
-}
+};
 
 export const DEFAULT_SEMANTIC_CONFIG: SemanticConfig = {
   dimensions: 1024, // ALFRED embedding dimension
@@ -32,7 +32,7 @@ export const DEFAULT_SEMANTIC_CONFIG: SemanticConfig = {
 /**
  * Semantic projection state
  */
-export interface SemanticState {
+export type SemanticState = {
   /** Projection basis matrix (2 x N) stored row-major */
   basis: Float32Array;
   /** Center point for embedding space */
@@ -41,7 +41,7 @@ export interface SemanticState {
   projections: Map<string, Vec2>;
   /** Configuration */
   config: SemanticConfig;
-}
+};
 
 /**
  * Create initial semantic state
@@ -219,7 +219,9 @@ export function createSemanticPoint4D(
  * Compute similarity between two embeddings (cosine similarity)
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length === 0 || b.length === 0) return 0;
+  if (a.length === 0 || b.length === 0) {
+    return 0;
+  }
 
   const n = Math.min(a.length, b.length);
   let dot = 0;
@@ -258,7 +260,9 @@ export function findNearestNeighbors(
  * Compute centroid of embeddings
  */
 export function computeCentroid(embeddings: number[][]): number[] {
-  if (embeddings.length === 0) return [];
+  if (embeddings.length === 0) {
+    return [];
+  }
 
   const dims = embeddings[0].length;
   const centroid = new Array(dims).fill(0);

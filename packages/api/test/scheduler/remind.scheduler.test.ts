@@ -45,7 +45,7 @@ describe("ReminderScheduler", () => {
 
   describe("env flag gating", () => {
     it("does not start when SCHED_REMIND is unset", () => {
-      delete process.env.SCHED_REMIND;
+      process.env.SCHED_REMIND = undefined;
       startReminderScheduler({ logger: loggerMock });
       expect(loggerMock.info).toHaveBeenCalledWith(
         expect.stringContaining("disabled")
@@ -188,7 +188,7 @@ describe("ReminderScheduler", () => {
       // The warning may not be logged if the second tick hasn't fired yet
       // but the concurrency guard should prevent it
 
-      resolveFirstTick!();
+      resolveFirstTick?.();
       stopReminderScheduler();
     });
   });

@@ -462,7 +462,7 @@ describe("RGB to OKLCH Conversion", () => {
 
 describe("Color Palettes", () => {
   it("all palettes have required keys", () => {
-    for (const [name, palette] of Object.entries(COLOR_PALETTES)) {
+    for (const [_name, palette] of Object.entries(COLOR_PALETTES)) {
       expect(palette.primary).toBeDefined();
       expect(palette.secondary).toBeDefined();
       expect(palette.accent).toBeDefined();

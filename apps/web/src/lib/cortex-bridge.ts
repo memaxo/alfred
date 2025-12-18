@@ -95,7 +95,9 @@ export function xyflowEdgeToCortex(
   const sourceNode = nodes.find((n) => n.id === edge.source);
   const targetNode = nodes.find((n) => n.id === edge.target);
 
-  if (!(sourceNode && targetNode)) return null;
+  if (!(sourceNode && targetNode)) {
+    return null;
+  }
 
   const sourcePos: Vec2 = {
     x: sourceNode.position.x + (sourceNode.width ?? 60) / 2,
@@ -165,14 +167,18 @@ export function useCortexBridge(engine: CortexEngine | null) {
 
   // Sync nodes to GPU
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     // Check if nodes actually changed (shallow comparison)
     const nodesChanged =
       nodes !== prevNodesRef.current ||
       focusedNodeId !== prevFocusedRef.current;
 
-    if (!nodesChanged) return;
+    if (!nodesChanged) {
+      return;
+    }
 
     prevNodesRef.current = nodes;
     prevFocusedRef.current = focusedNodeId;
@@ -198,11 +204,15 @@ export function useCortexBridge(engine: CortexEngine | null) {
 
   // Sync edges to GPU
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     // Check if edges actually changed
     const edgesChanged = edges !== prevEdgesRef.current;
-    if (!edgesChanged) return;
+    if (!edgesChanged) {
+      return;
+    }
 
     prevEdgesRef.current = edges;
 
@@ -224,7 +234,9 @@ export function useCortexBridge(engine: CortexEngine | null) {
 
   // Sync active edges (for animation)
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     const edgeSystem =
       engine.getSystem<import("@alfred/cortex/systems/edges").EdgeSystem>(
@@ -271,7 +283,9 @@ export function useCortexOrbState(
 
   // Update engine orb config
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     const config: OrbConfig = {
       center: orbCenter,
@@ -297,7 +311,9 @@ export function useCortexOrbState(
  */
 export function useCortexLOD(engine: CortexEngine | null, zoom: number) {
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     // Update camera zoom
     engine.setCamera({ zoom });

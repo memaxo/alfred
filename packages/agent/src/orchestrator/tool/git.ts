@@ -21,7 +21,7 @@ const MIN_TIMEOUT_SEC = 10;
 const MAX_TIMEOUT_SEC = 2 * 60 * 60;
 
 function assertAllowedDirectory(candidate: string) {
-  let handle;
+  let handle: DirectoryHandle | undefined;
   try {
     handle = openDirectorySecure(candidate, {
       allowedPrefixes: DEFAULT_ALLOW_PREFIXES,

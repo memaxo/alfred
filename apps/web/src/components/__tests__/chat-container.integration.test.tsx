@@ -42,7 +42,7 @@ describe("ChatContainer integration", () => {
   it("renders assistant stream messages", async () => {
     const { getByText } = render(<ChatContainer agent="assistant" />);
 
-    await act(async () => {
+    act(() => {
       assistantChatMock.emitAssistantMessage({
         id: "msg-assistant",
         role: "assistant",
@@ -60,7 +60,7 @@ describe("ChatContainer integration", () => {
       <ChatContainer agent="assistant" />
     );
 
-    await act(async () => {
+    act(() => {
       assistantChatMock.emitAssistantMessage({
         id: "msg-clear",
         role: "assistant",
@@ -85,7 +85,7 @@ describe("ChatContainer integration", () => {
       <ChatContainer agent="assistant" />
     );
 
-    await act(async () => {
+    act(() => {
       assistantChatMock.emitAssistantMessage({
         id: "msg-agent",
         role: "assistant",

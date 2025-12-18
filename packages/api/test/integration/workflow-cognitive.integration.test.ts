@@ -249,7 +249,7 @@ describe("Workflow → Cognitive Integration", () => {
 
   describe("Physiology affects workflow autonomy", () => {
     it("low energy state affects workflow decisions", async () => {
-      const streamId = stream("low-energy");
+      const _streamId = stream("low-energy");
 
       // Simulate multiple events to drain energy
       let state = idle(now());
@@ -296,7 +296,7 @@ describe("Workflow → Cognitive Integration", () => {
       await runCognitiveLoop(ctx, streamId, inputEvent("Repetitive task"));
 
       // Send loop detection interrupt
-      const result = await runCognitiveLoop(
+      const _result = await runCognitiveLoop(
         ctx,
         streamId,
         interruptEvent("boredom_loop_detected")

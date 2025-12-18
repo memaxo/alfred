@@ -10,11 +10,11 @@ import type { EdgeData, GlobalUniforms, NodeData, OrbConfig } from "../types";
 /**
  * WebGL renderer configuration
  */
-export interface WebGLConfig {
+export type WebGLConfig = {
   canvas: HTMLCanvasElement;
   particleCount: number;
   enableBloom: boolean;
-}
+};
 
 /**
  * Vertex shader for particles
@@ -128,9 +128,9 @@ void main() {
  * WebGL Fallback Renderer
  */
 export class WebGLRenderer {
-  private canvas: HTMLCanvasElement;
-  private gl: WebGL2RenderingContext;
-  private config: WebGLConfig;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly gl: WebGL2RenderingContext;
+  private readonly config: WebGLConfig;
 
   private particleProgram: WebGLProgram | null = null;
   private orbProgram: WebGLProgram | null = null;
@@ -138,11 +138,9 @@ export class WebGLRenderer {
   private particleBuffer: WebGLBuffer | null = null;
   private quadVAO: WebGLVertexArrayObject | null = null;
 
-  private particleData: Float32Array;
-  private nodes: NodeData[] = [];
-  private edges: EdgeData[] = [];
+  private readonly particleData: Float32Array;
   private orbConfig: OrbConfig | null = null;
-  private uniforms: GlobalUniforms;
+  private readonly uniforms: GlobalUniforms;
 
   private running = false;
   private lastTime = 0;
@@ -242,17 +240,20 @@ export class WebGLRenderer {
     const vs = this.compileShader(vsSource, gl.VERTEX_SHADER);
     const fs = this.compileShader(fsSource, gl.FRAGMENT_SHADER);
 
-    if (!(vs && fs)) return null;
+    if (!(vs && fs)) {
+      return null;
+    }
 
     const program = gl.createProgram();
-    if (!program) return null;
+    if (!program) {
+      return null;
+    }
 
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program link error:", gl.getProgramInfoLog(program));
       return null;
     }
 
@@ -263,13 +264,14 @@ export class WebGLRenderer {
     const { gl } = this;
 
     const shader = gl.createShader(type);
-    if (!shader) return null;
+    if (!shader) {
+      return null;
+    }
 
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error("Shader compile error:", gl.getShaderInfoLog(shader));
       return null;
     }
 
@@ -449,8 +451,10 @@ export class WebGLRenderer {
     gl.bindVertexArray(null);
   }
 
-  private loop = (time: number): void => {
-    if (!this.running) return;
+  private readonly loop = (time: number): void => {
+    if (!this.running) {
+      return;
+    }
 
     const dt = this.lastTime > 0 ? (time - this.lastTime) / 1000 : 0;
     this.lastTime = time;
@@ -468,7 +472,9 @@ export class WebGLRenderer {
    * Start
    */
   start(): void {
-    if (this.running) return;
+    if (this.running) {
+      return;
+    }
     this.running = true;
     this.lastTime = 0;
     requestAnimationFrame(this.loop);
@@ -488,11 +494,21 @@ export class WebGLRenderer {
     this.stop();
     // Clean up WebGL resources
     const { gl } = this;
-    if (this.particleProgram) gl.deleteProgram(this.particleProgram);
-    if (this.orbProgram) gl.deleteProgram(this.orbProgram);
-    if (this.particleVAO) gl.deleteVertexArray(this.particleVAO);
-    if (this.particleBuffer) gl.deleteBuffer(this.particleBuffer);
-    if (this.quadVAO) gl.deleteVertexArray(this.quadVAO);
+    if (this.particleProgram) {
+      gl.deleteProgram(this.particleProgram);
+    }
+    if (this.orbProgram) {
+      gl.deleteProgram(this.orbProgram);
+    }
+    if (this.particleVAO) {
+      gl.deleteVertexArray(this.particleVAO);
+    }
+    if (this.particleBuffer) {
+      gl.deleteBuffer(this.particleBuffer);
+    }
+    if (this.quadVAO) {
+      gl.deleteVertexArray(this.quadVAO);
+    }
   }
 }
 

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { spawn } from "bun";
 
 // Low-level integration test for the Python factory
-describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
+describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
   const scriptPath = join(process.cwd(), "packages/voice/python/tts");
   const venvPython = join(process.cwd(), "packages/voice/.venv/bin/python");
 
@@ -30,14 +30,18 @@ describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun run
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
 
         for (const line of lines) {
-          if (!line.trim()) continue;
+          if (!line.trim()) {
+            continue;
+          }
           console.log("Integration stdout:", line);
           try {
             const msg = JSON.parse(line);
@@ -58,11 +62,13 @@ describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun run
               proc.kill();
               break;
             }
-          } catch (e) {
+          } catch (_e) {
             // ignore parse errors
           }
         }
-        if (backendLoaded) break;
+        if (backendLoaded) {
+          break;
+        }
       }
     } catch (e) {
       proc.kill();

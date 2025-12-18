@@ -102,7 +102,11 @@ export const toolTimer = {
       case "active": {
         const rows = await getActiveTimers(input.userId);
         return {
-          timers: rows.map((row) => mapTimer(row)).filter(Boolean) as any[],
+          timers: rows
+            .map((row) => mapTimer(row))
+            .filter((timer): timer is NonNullable<ReturnType<typeof mapTimer>> =>
+              timer !== null
+            ),
         };
       }
       case "done": {

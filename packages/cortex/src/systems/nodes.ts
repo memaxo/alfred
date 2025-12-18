@@ -45,12 +45,10 @@ export class NodeSystem implements RenderSystem {
   private uniformBuffer: UniformBuffer | null = null;
 
   private renderPipeline: GPURenderPipeline | null = null;
-  private focusedPipeline: GPURenderPipeline | null = null;
   private bindGroup: GPUBindGroup | null = null;
 
   private nodes: NodeData[] = [];
-  private maxNodes: number;
-  private focusedNodeId: string | null = null;
+  private readonly maxNodes: number;
 
   constructor(maxNodes = 200) {
     this.maxNodes = maxNodes;
@@ -69,7 +67,6 @@ export class NodeSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Node shader error:", message.message);
       }
     }
 
@@ -196,7 +193,9 @@ export class NodeSystem implements RenderSystem {
   }
 
   private uploadNodes(): void {
-    if (!(this.device && this.nodeBuffer)) return;
+    if (!(this.device && this.nodeBuffer)) {
+      return;
+    }
 
     const data = new Float32Array(this.maxNodes * 8);
 
@@ -234,8 +233,10 @@ export class NodeSystem implements RenderSystem {
     }
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
       this.uniformBuffer.setFloat(i, uniforms[i]);
@@ -243,7 +244,7 @@ export class NodeSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(_encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     // Rendering handled by main engine pass
   }
 

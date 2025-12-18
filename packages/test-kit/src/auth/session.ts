@@ -132,7 +132,9 @@ export function createDefaultTestSession(overrides?: {
 export function isTestSession(
   session: AuthSession | null
 ): session is TestSession {
-  if (!session) return false;
+  if (!session) {
+    return false;
+  }
   return "__test" in session && session.__test === true;
 }
 

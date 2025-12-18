@@ -111,7 +111,7 @@ export async function findNearestConcept(
       FROM memory_nodes
       WHERE (
           label = ${start}
-          OR (LENGTH(${start}) > 3 AND label ILIKE ${"%" + start + "%"})
+          OR (LENGTH(${start}) > 3 AND label ILIKE ${`%${start}%`})
           OR (LENGTH(${start}) > 3 AND ${start} ILIKE '%' || label || '%')
         )
         ${effectiveResource ? sql`AND resource = ${effectiveResource}` : sql``}

@@ -45,7 +45,7 @@ export function VoiceS2SRouteView() {
       // Downsample for visualization (e.g. 20 bars)
       const barCount = 20;
       const step = Math.floor(bufferLength / barCount);
-      const bars = [];
+      const bars: number[] = [];
 
       for (let i = 0; i < barCount; i++) {
         let sum = 0;

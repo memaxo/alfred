@@ -39,7 +39,9 @@ describe("PipelineRunner", () => {
     try {
       while (true) {
         const res = await iterator.next();
-        if (res.done) break;
+        if (res.done) {
+          break;
+        }
       }
       throw new Error("Should have thrown");
     } catch (e: any) {

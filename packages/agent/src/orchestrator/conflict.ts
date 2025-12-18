@@ -92,9 +92,18 @@ INSTRUCTIONS:
 If you cannot resolve a conflict safely, create a file 'ESCALATION.md' explaining why.`;
 
       const writer = {
-        write: async (chunk: any) => {
+        write: (chunk: unknown) => {
           // Swallow output or log debug
-          if (chunk?.type === "stdout") process.stdout.write(chunk.text || "");
+          if (
+            typeof chunk === "object" &&
+            chunk !== null &&
+            "type" in chunk &&
+            chunk.type === "stdout" &&
+            "text" in chunk &&
+            typeof chunk.text === "string"
+          ) {
+            process.stdout.write(chunk.text);
+          }
         },
       };
 

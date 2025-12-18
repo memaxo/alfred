@@ -100,7 +100,7 @@ test.describe("Cross-Boundary E2E", () => {
         await page.waitForTimeout(5000);
 
         // Check for audio playback indicator
-        const audioPlaying = page.locator('[data-testid="audio-playing"]');
+        const _audioPlaying = page.locator('[data-testid="audio-playing"]');
         // Audio might play if voice output is enabled
       }
     });
@@ -327,9 +327,9 @@ test.describe("Cross-Boundary E2E", () => {
       }
     });
 
-    test("knowledge error shows notification", async ({ page }) => {
+    test("knowledge error shows notification", ({ page }) => {
       // Errors in knowledge system should be surfaced
-      const errorNotification = page.locator(
+      const _errorNotification = page.locator(
         '[data-testid="error-notification"]'
       );
 

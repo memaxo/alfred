@@ -26,26 +26,30 @@ const orchestratorInstructions = [
   "Surface blockers immediately so the user can intervene.",
 ].join(" ");
 
-const assistantPrepareStep: PrepareStepFunction<AssistantTools> = async ({
+const assistantPrepareStep: PrepareStepFunction<AssistantTools> = ({
   messages,
 }) => {
   if (messages.length > 40) {
-    return {
-      messages: [messages[0], ...messages.slice(-20)].filter(Boolean) as any[],
-    };
+    return Promise.resolve({
+      messages: [messages[0], ...messages.slice(-20)].filter(
+        (msg): msg is NonNullable<typeof msg> => msg !== null && msg !== undefined
+      ),
+    });
   }
-  return {};
+  return Promise.resolve({});
 };
 
-const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = async ({
+const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = ({
   messages,
 }) => {
   if (messages.length > 60) {
-    return {
-      messages: [messages[0], ...messages.slice(-30)].filter(Boolean) as any[],
-    };
+    return Promise.resolve({
+      messages: [messages[0], ...messages.slice(-30)].filter(
+        (msg): msg is NonNullable<typeof msg> => msg !== null && msg !== undefined
+      ),
+    });
   }
-  return {};
+  return Promise.resolve({});
 };
 
 // Tools can be built at module load (no API key required)

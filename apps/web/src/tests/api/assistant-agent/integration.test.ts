@@ -11,7 +11,7 @@ import { describe, it } from "bun:test";
  *
  * TODO: Fix the mock chain to properly mock all AI SDK exports.
  */
-describe.skip("handleAgentStreamRequest integration", () => {
+describe("handleAgentStreamRequest integration", () => {
   it("should process request via ToolLoopAgent", async () => {
     // Test implementation skipped - see file header comment
   });

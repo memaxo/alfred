@@ -11,7 +11,7 @@ import { fireEvent, waitFor } from "../../test/testing-library";
 
 describe("TimerRoute", () => {
   describe("TimerCreateForm", () => {
-    it("renders duration and label inputs", async () => {
+    it("renders duration and label inputs", () => {
       const handlers: TestTrpcHandlers = {
         queries: {
           "timer.active": () => [],

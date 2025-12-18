@@ -17,7 +17,6 @@ type CliArgs = {
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   if (!args.configPath) {
-    console.error("Usage: bun run packages/tune/src/cli.ts --config <path>");
     process.exit(1);
   }
 
@@ -39,7 +38,7 @@ const main = async () => {
 
   try {
     const result = await runFineTuneJob(config, options);
-    const summary = {
+    const _summary = {
       runId: result.runId,
       status: result.status,
       outputDir: result.artifacts.outputDir,
@@ -48,9 +47,7 @@ const main = async () => {
       startedAt: result.startedAt.toISOString(),
       completedAt: result.completedAt.toISOString(),
     };
-    console.log(JSON.stringify(summary, null, 2));
-  } catch (error) {
-    console.error("Fine-tune run failed:", error);
+  } catch (_error) {
     process.exit(1);
   }
 };
@@ -87,7 +84,6 @@ const parseArgs = (argv: string[]): CliArgs => {
         break;
       }
       default:
-        console.warn(`Unknown argument: ${arg}`);
     }
   }
   return args;

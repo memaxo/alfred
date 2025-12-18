@@ -79,8 +79,8 @@ describe("extractEntities()", () => {
     const entities = extractEntities(text);
 
     for (let i = 1; i < entities.length; i++) {
-      expect(entities[i - 1]!.confidence).toBeGreaterThanOrEqual(
-        entities[i]!.confidence
+      expect(entities[i - 1]?.confidence).toBeGreaterThanOrEqual(
+        entities[i]?.confidence
       );
     }
   });
@@ -94,9 +94,9 @@ describe("extractRelations()", () => {
     expect(relations.length).toBeGreaterThan(0);
     const relation = relations[0];
     expect(relation).toBeDefined();
-    expect(relation!.source).toBeDefined();
-    expect(relation!.relation).toBeDefined();
-    expect(relation!.target).toBeDefined();
+    expect(relation?.source).toBeDefined();
+    expect(relation?.relation).toBeDefined();
+    expect(relation?.target).toBeDefined();
   });
 
   it("returns empty array when no entities found", () => {
@@ -153,7 +153,7 @@ describe("detectContradiction()", () => {
     const result = detectContradiction(first, second);
 
     expect(result).not.toBeNull();
-    expect(result!.reason).toBe("negation");
+    expect(result?.reason).toBe("negation");
   });
 
   it("detects antonym contradictions", () => {
@@ -162,7 +162,7 @@ describe("detectContradiction()", () => {
     const result = detectContradiction(first, second);
 
     expect(result).not.toBeNull();
-    expect(result!.reason).toBe("antonym");
+    expect(result?.reason).toBe("antonym");
   });
 
   it("detects numeric contradictions", () => {

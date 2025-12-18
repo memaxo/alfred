@@ -183,7 +183,8 @@ export function MindscapeCommandPalette({
     if (!type) {
       return [];
     }
-    return getActionsForNode(type as any);
+    // Type is already ArtifactType from the discriminated union
+    return getActionsForNode(type);
   }, [focusedNode]);
 
   // Initialize Trie for O(K) lookups
@@ -464,9 +465,8 @@ export function MindscapeCommandPalette({
 
           setEdges(Array.from(edgeMap.values()));
           toast.success("Knowledge visualized");
-        } catch (error) {
+        } catch (_error) {
           toast.error("Failed to visualize knowledge");
-          console.error("visualize_action_failed", error);
         }
         break;
       }

@@ -334,11 +334,7 @@ export function MindscapeInitializer() {
       }
     }
 
-    if (
-      traverseResult &&
-      traverseResult.nodes &&
-      traverseResult.nodes.length > 0
-    ) {
+    if (traverseResult?.nodes && traverseResult.nodes.length > 0) {
       const node = traverseResult.nodes[0] as GraphNode;
       const props = (node.properties ?? {}) as Record<string, unknown>;
       const summary =
@@ -375,7 +371,7 @@ export function MindscapeInitializer() {
   );
 
   useEffect(() => {
-    if (!(traverseResult && traverseResult.nodes)) {
+    if (!traverseResult?.nodes) {
       return;
     }
 
@@ -453,7 +449,7 @@ export function MindscapeInitializer() {
   }, [traverseResult, nodeIds, addArtifact, autoLayout]);
 
   useEffect(() => {
-    if (!(ragResult && ragResult.nodes)) {
+    if (!ragResult?.nodes) {
       return;
     }
 

@@ -85,8 +85,10 @@ export function useTranscriptViewer(
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const duration = useMemo(() => {
-    if (segments.length === 0) return 0;
-    const lastSegment = segments[segments.length - 1];
+    if (segments.length === 0) {
+      return 0;
+    }
+    const lastSegment = segments.at(-1);
     return lastSegment?.end ?? 0;
   }, [segments]);
 
@@ -96,7 +98,9 @@ export function useTranscriptViewer(
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
-      if (!seg) continue;
+      if (!seg) {
+        continue;
+      }
       if (currentTime >= seg.start && currentTime <= seg.end) {
         segIdx = i;
         if (seg.kind === "speaker") {
@@ -150,11 +154,9 @@ export function useTranscriptViewer(
         spoken.push(seg);
       } else if (seg.start > currentTime) {
         unspoken.push(seg);
-      } else {
+      } else if (seg.kind === "speaker" && activeWordIndex !== null) {
         // Current segment
-        if (seg.kind === "speaker" && activeWordIndex !== null) {
-          word = seg.words[activeWordIndex] ?? null;
-        }
+        word = seg.words[activeWordIndex] ?? null;
       }
     }
 
@@ -213,10 +215,15 @@ export function createSegmentComposer(): SegmentComposer {
     addWord(word: TranscriptWord, speaker: string) {
       if (currentSpeaker !== speaker && currentWords.length > 0) {
         // Finalize previous segment
-        const lastWord = currentWords[currentWords.length - 1];
+        // currentSpeaker is guaranteed non-null here because currentWords.length > 0
+        // means we've added words, which requires a speaker
+        if (currentSpeaker === null) {
+          return;
+        }
+        const lastWord = currentWords.at(-1);
         segments.push({
           kind: "speaker",
-          speaker: currentSpeaker!,
+          speaker: currentSpeaker,
           start: segmentStart,
           end: lastWord?.end ?? segmentStart,
           words: currentWords,
@@ -229,7 +236,7 @@ export function createSegmentComposer(): SegmentComposer {
     },
     finalize() {
       if (currentWords.length > 0 && currentSpeaker) {
-        const lastWord = currentWords[currentWords.length - 1];
+        const lastWord = currentWords.at(-1);
         segments.push({
           kind: "speaker",
           speaker: currentSpeaker,

@@ -21,9 +21,6 @@ export async function loadCassette(
 
     // Validate version
     if (cassette.version !== 2) {
-      console.warn(
-        `VCR: Cassette version ${cassette.version} may not be compatible`
-      );
     }
 
     return cassette;

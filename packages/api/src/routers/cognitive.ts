@@ -83,8 +83,11 @@ async function handleCognitiveEffects(
 
   const queue: CognitiveEffect[] = [...initialEffects];
 
-  while (queue.length) {
-    const effect = queue.shift()!;
+  while (queue.length > 0) {
+    const effect = queue.shift();
+    if (!effect) {
+      break;
+    }
     try {
       switch (effect.type) {
         case "generate_response": {

@@ -457,7 +457,7 @@ describe("HomeAssistant client", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it("uses default timeout when not specified", async () => {
+    it("uses default timeout when not specified", () => {
       const client = new HomeAssistant({
         baseUrl: mockBaseUrl,
         token: mockToken,

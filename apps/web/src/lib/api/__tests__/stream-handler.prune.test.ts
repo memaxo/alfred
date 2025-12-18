@@ -48,7 +48,7 @@ mock.module("@alfred/logger", () => ({
   },
 }));
 
-const buildHistoryContextMock = vi.fn(async ({ messages }) => {
+const buildHistoryContextMock = vi.fn(({ messages }) => {
   const droppedMessage: UIMessage = {
     id: "assistant-old",
     role: "assistant",
@@ -56,7 +56,7 @@ const buildHistoryContextMock = vi.fn(async ({ messages }) => {
   };
   const tierByMessage = new WeakMap<UIMessage, HistoryTier>();
   tierByMessage.set(droppedMessage, "low");
-  return {
+  return Promise.resolve({
     uiMessages: messages.slice(-1),
     modelMessages: messages.slice(-1),
     droppedMessages: 1,
@@ -77,7 +77,7 @@ const buildHistoryContextMock = vi.fn(async ({ messages }) => {
         headroomTokens: 100,
       },
     },
-  };
+  });
 });
 
 mock.module("@alfred/history", () => ({

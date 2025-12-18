@@ -95,7 +95,9 @@ export function useVoiceSessionWeb() {
 
   const syncSessionInfo = useCallback(
     (snapshot: VoiceSessionDescriptor | null) => {
-      if (snapshot?.id) sessionIdRef.current = snapshot.id;
+      if (snapshot?.id) {
+        sessionIdRef.current = snapshot.id;
+      }
       setSessionInfo(snapshot);
     },
     []
@@ -112,13 +114,16 @@ export function useVoiceSessionWeb() {
 
   const startStreaming = useCallback(
     async (options?: { vadThreshold?: number; maxUtteranceMs?: number }) => {
-      if (!protocol.supported) throw new Error("voice_streaming_unavailable");
+      if (!protocol.supported) {
+        throw new Error("voice_streaming_unavailable");
+      }
 
       // Resolve Codec
       const sessionCodec = sessionInfo?.codec?.output;
-      const prefsCodec = prefs?.find((p: any) => p.key === "voice.codec")
-        ?.value as string;
-      const codec = (prefsCodec || sessionCodec || "mp3") as any;
+      const prefsCodec = prefs?.find((p) => p.key === "voice.codec")?.value as
+        | string
+        | undefined;
+      const codec: string = prefsCodec || sessionCodec || "mp3";
 
       const client = await protocol.connect({
         surface: "web",
@@ -144,11 +149,14 @@ export function useVoiceSessionWeb() {
       );
 
       // Start Telemetry
-      if (telemetryRef.current.interval)
+      if (telemetryRef.current.interval) {
         clearInterval(telemetryRef.current.interval);
+      }
       telemetryRef.current.interval = setInterval(() => {
         const { jitterBuffer, packetLoss } = telemetryRef.current;
-        if (jitterBuffer.length === 0 && packetLoss === 0) return;
+        if (jitterBuffer.length === 0 && packetLoss === 0) {
+          return;
+        }
 
         const avgJitter =
           jitterBuffer.length > 0
@@ -206,8 +214,9 @@ export function useVoiceSessionWeb() {
   // Cleanup
   useEffect(
     () => () => {
-      if (telemetryRef.current.interval)
+      if (telemetryRef.current.interval) {
         clearInterval(telemetryRef.current.interval);
+      }
       audio.stopCapture();
       protocol.disconnect("manual");
     },

@@ -33,15 +33,15 @@ export async function embedQuery(query: string): Promise<number[]> {
  * @param texts - Array of texts to embed
  * @returns Array of embedding vectors
  */
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+export function embedTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) {
-    return [];
+    return Promise.resolve([]);
   }
 
   const cleaned = texts.map((t) => t.trim()).filter((t) => t.length > 0);
 
   if (cleaned.length === 0) {
-    return [];
+    return Promise.resolve([]);
   }
 
   return embedMany(cleaned);

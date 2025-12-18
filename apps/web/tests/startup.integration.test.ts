@@ -19,13 +19,13 @@ describe("App startup without dependencies", () => {
     // Cleanup
   });
 
-  it("should start dev server without DB", async () => {
+  it("should start dev server without DB", () => {
     // This test verifies that the server can start
     // In a real integration test, we'd start the server and check it responds
     expect(true).toBe(true);
   });
 
-  it("should render home page without DB", async () => {
+  it("should render home page without DB", () => {
     // Verify that SSR can complete without DB
     // The Mindscape loader should return empty state gracefully
     expect(true).toBe(true);

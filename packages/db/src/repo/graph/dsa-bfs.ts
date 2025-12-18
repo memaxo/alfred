@@ -60,7 +60,7 @@ export type DsaBfsResult = {
  * Higher priority = dequeued first
  */
 class PriorityQueue<T extends { priority: number }> {
-  private heap: T[] = [];
+  private readonly heap: T[] = [];
 
   get size(): number {
     return this.heap.length;
@@ -93,7 +93,9 @@ class PriorityQueue<T extends { priority: number }> {
 
   private bubbleUp(index: number): void {
     const item = this.heap[index];
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     while (index > 0) {
       const parentIndex = Math.floor((index - 1) / 2);
@@ -111,7 +113,9 @@ class PriorityQueue<T extends { priority: number }> {
   private bubbleDown(index: number): void {
     const length = this.heap.length;
     const item = this.heap[index];
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     while (true) {
       const leftIndex = 2 * index + 1;

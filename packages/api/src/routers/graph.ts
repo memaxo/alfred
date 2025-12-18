@@ -373,8 +373,12 @@ export const graphRouter = router({
           // 1. Identify 1-hop neighbors
           const neighborIds = new Set<string>();
           edges.forEach((edge) => {
-            if (edge.fromId !== input.nodeId) neighborIds.add(edge.fromId);
-            if (edge.toId !== input.nodeId) neighborIds.add(edge.toId);
+            if (edge.fromId !== input.nodeId) {
+              neighborIds.add(edge.fromId);
+            }
+            if (edge.toId !== input.nodeId) {
+              neighborIds.add(edge.toId);
+            }
           });
 
           // 2. Deep RAG: If 1-hop is sparse (< 3) and we have neighbors, go deeper (2-hop)
@@ -404,8 +408,12 @@ export const graphRouter = router({
 
               // Add 2-hop neighbors to ID set for label fetching
               deepEdges.forEach((e) => {
-                if (!neighborIds.has(e.fromId)) neighborIds.add(e.fromId);
-                if (!neighborIds.has(e.toId)) neighborIds.add(e.toId);
+                if (!neighborIds.has(e.fromId)) {
+                  neighborIds.add(e.fromId);
+                }
+                if (!neighborIds.has(e.toId)) {
+                  neighborIds.add(e.toId);
+                }
               });
             } catch (error) {
               // Ignore deep RAG failures, fallback to 1-hop
@@ -492,7 +500,9 @@ export const graphRouter = router({
             /* ignore metrics errors */
           }
 
-          if (stopContextTimer) stopContextTimer();
+          if (stopContextTimer) {
+            stopContextTimer();
+          }
 
           return {
             nodes: [...allGraphNodes, ...(ragResult.nodes || [])],

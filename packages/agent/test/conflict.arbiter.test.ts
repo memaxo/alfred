@@ -16,24 +16,25 @@ let codexExecuteCalls: unknown[] = [];
 
 // Mock dependencies
 const mockWorktreeCreate = mock(
-  async (_repo: string, runId: string, agentId: string, baseRef?: string) => {
+  (_repo: string, runId: string, agentId: string, baseRef?: string) => {
     const handle = {
       path: `/tmp/mock-worktree/${runId}/${agentId}`,
       branch: `agent/${runId}/${agentId}`,
       baseRef: baseRef || "HEAD",
     };
     worktreeCreateCalls.push(handle);
-    return handle;
+    return Promise.resolve(handle);
   }
 );
 
-const mockWorktreeRemove = mock(async (_repo: string, path: string) => {
+const mockWorktreeRemove = mock((_repo: string, path: string) => {
   worktreeRemoveCalls.push({ repoRoot: _repo, path });
+  return Promise.resolve(undefined);
 });
 
-const mockCodexExecute = mock(async (_opts: unknown) => {
+const mockCodexExecute = mock((_opts: unknown) => {
   codexExecuteCalls.push(_opts);
-  return { result: "done", artifacts: [] };
+  return Promise.resolve({ result: "done", artifacts: [] });
 });
 
 // Spy on sys.spawn before mocking modules
@@ -44,9 +45,11 @@ mock.module("../src/orchestrator/tool/worktree.js", () => ({
   worktreeManager: {
     create: mockWorktreeCreate,
     remove: mockWorktreeRemove,
-    safeMerge: mock(async () => ({ success: true, conflictFiles: [] })),
-    cleanup: mock(async () => {}),
-    prune: mock(async () => {}),
+    safeMerge: mock(() =>
+      Promise.resolve({ success: true, conflictFiles: [] })
+    ),
+    cleanup: mock(() => Promise.resolve(undefined)),
+    prune: mock(() => Promise.resolve(undefined)),
   },
 }));
 
@@ -70,7 +73,7 @@ describe("conflictArbiter", () => {
 
     // Restore default implementations
     mockWorktreeCreate.mockImplementation(
-      async (
+      (
         _repo: string,
         runId: string,
         agentId: string,
@@ -82,17 +85,16 @@ describe("conflictArbiter", () => {
           baseRef: baseRef || "HEAD",
         };
         worktreeCreateCalls.push(handle);
-        return handle;
+        return Promise.resolve(handle);
       }
     );
-    mockWorktreeRemove.mockImplementation(
-      async (_repo: string, path: string) => {
-        worktreeRemoveCalls.push({ repoRoot: _repo, path });
-      }
-    );
-    mockCodexExecute.mockImplementation(async (_opts: unknown) => {
+    mockWorktreeRemove.mockImplementation((_repo: string, path: string) => {
+      worktreeRemoveCalls.push({ repoRoot: _repo, path });
+      return Promise.resolve(undefined);
+    });
+    mockCodexExecute.mockImplementation((_opts: unknown) => {
       codexExecuteCalls.push(_opts);
-      return { result: "done", artifacts: [] };
+      return Promise.resolve({ result: "done", artifacts: [] });
     });
 
     worktreeCreateCalls = [];

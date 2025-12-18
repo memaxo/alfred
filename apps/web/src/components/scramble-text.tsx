@@ -17,7 +17,7 @@ export function ScrambleText({
 
   useEffect(() => {
     let iteration = 0;
-    let interval: any = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     interval = setInterval(() => {
       setDisplay((_prev) =>

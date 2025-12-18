@@ -56,6 +56,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 }
 
 declare global {
+  // biome-ignore lint/nursery/useConsistentTypeDefinitions: Global augmentation requires interface for declaration merging
   interface Window {
     SpeechRecognition?: {
       new (): SpeechRecognition;

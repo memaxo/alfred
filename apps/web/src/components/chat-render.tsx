@@ -30,13 +30,6 @@ import { Plan } from "./plan";
 import { Task } from "./task";
 import { Think } from "./think";
 
-type Task = {
-  id: string;
-  title: string;
-  status: "pending" | "running" | "completed" | "error";
-  subtasks?: Task[];
-};
-
 function isPlanData(data: unknown): data is {
   requirement: string;
   tasks: Task[];
@@ -208,7 +201,9 @@ function renderToolCall(
 
   // Look ahead for matching result
   const resultPart = message.parts.find((p) => {
-    if (!isToolResultPart(p)) return false;
+    if (!isToolResultPart(p)) {
+      return false;
+    }
     return (p as unknown as ToolResultPart).toolCallId === toolCallId;
   });
 
@@ -304,7 +299,9 @@ function renderToolResult(
 
   // Check if we already rendered this in a tool-call block
   const callPart = message.parts.find((p) => {
-    if (!isToolCallPart(p)) return false;
+    if (!isToolCallPart(p)) {
+      return false;
+    }
     return (p as unknown as ToolCallPart).toolCallId === toolCallId;
   });
 

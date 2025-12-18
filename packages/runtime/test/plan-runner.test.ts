@@ -47,7 +47,7 @@ mock.module("@alfred/db", () => ({
 
 beforeEach(() => {
   process.env.RUNTIME_DISABLE_SAFETY_EMBED = "1";
-  delete process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL;
+  process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = undefined;
   appendEventMock.mockClear();
   getLatestSnapshotMock.mockReset();
   saveSnapshotMock.mockReset();
@@ -207,7 +207,7 @@ describe("PlanRunner", () => {
       confidence: 1,
     };
     await expect(runner.executePlan(plan)).rejects.toThrow(/Execution gated/);
-    delete process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL;
+    process.env.RUNTIME_FORCE_PLAN_RISK_LEVEL = undefined;
   });
 
   afterAll(() => {

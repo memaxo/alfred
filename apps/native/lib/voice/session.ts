@@ -513,7 +513,11 @@ export function useVoiceSessionNative(
     currentRecordingRef.current = recording;
     const options =
       Audio.RecordingOptionsPresets?.HIGH_QUALITY ??
-      (Audio as unknown as { RecordingOptionsPresets?: { HIGH_QUALITY?: unknown } }).RecordingOptionsPresets?.HIGH_QUALITY;
+      (
+        Audio as unknown as {
+          RecordingOptionsPresets?: { HIGH_QUALITY?: unknown };
+        }
+      ).RecordingOptionsPresets?.HIGH_QUALITY;
     await recording.prepareToRecordAsync(options);
     await recording.startAsync();
     await new Promise((resolve) => setTimeout(resolve, durationMs));

@@ -268,7 +268,9 @@ async function runAgentActivity(
     payload.ephemeral = input.ephemeral;
   }
 
-  const response = await client.createAgentActivity(payload as any);
+  const response = await client.createAgentActivity(
+    payload as Parameters<LinearClient["createAgentActivity"]>[0]
+  );
   const activity = await response.agentActivity;
   if (!(response.success && activity?.id)) {
     throw new Error("ticket_activity_failed");

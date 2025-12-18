@@ -7,7 +7,6 @@
  */
 
 // Metrics utilities
-// biome-ignore lint/performance/noBarrelFile: intentional single entry point for shared utilities
 export {
   createStageRecorder,
   type MetricTool,

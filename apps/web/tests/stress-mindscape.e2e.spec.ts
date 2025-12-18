@@ -12,12 +12,18 @@ test.describe("Mindscape Stress Test", () => {
     // Manually inject nodes via window store (exposed for debug in dev)
     await page.evaluate(() => {
       const store = (window as any).__MINDSCAPE_STORE__;
-      if (!store)
+      if (!store) {
         throw new Error(
           "Store not found - ensure window.__MINDSCAPE_STORE__ is exposed"
         );
+      }
 
-      const nodes = [];
+      const nodes: Array<{
+        id: string;
+        type: string;
+        position: { x: number; y: number };
+        data: { label: string };
+      }> = [];
       for (let i = 0; i < 1000; i++) {
         nodes.push({
           id: `star-${i}`,

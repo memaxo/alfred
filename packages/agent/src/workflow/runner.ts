@@ -136,7 +136,7 @@ async function* executePhaseWithTimeout(
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const start = Date.now();
   (await metrics()).runnerStepsTotal.inc({ phase, outcome: "start" });
-  yield { type: "step-start", phase } as any;
+  yield { type: "step-start", phase } as WorkflowEvent;
 
   try {
     for await (const evt of generator()) {
@@ -149,7 +149,7 @@ async function* executePhaseWithTimeout(
       yield evt;
     }
     (await metrics()).runnerStepsTotal.inc({ phase, outcome: "complete" });
-    yield { type: "step-complete", phase } as any;
+    yield { type: "step-complete", phase } as WorkflowEvent;
   } catch (error) {
     (await metrics()).runnerStepsTotal.inc({ phase, outcome: "error" });
     (await metrics()).runnerErrorsTotal.inc({
@@ -356,7 +356,7 @@ export function runPlanV6(
           }
         );
       } else {
-        yield { type: "step-skip", phase: scanPhase.name } as any;
+        yield { type: "step-skip", phase: scanPhase.name } as WorkflowEvent;
       }
 
       if (input.auto === "medium" || input.auto === "high") {
@@ -427,11 +427,12 @@ export function runPlanV6(
       yield* executePhaseWithTimeout(
         planPhase.name,
         planPhase.timeoutMs,
+        // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
         async function* () {
           yield {
             type: "assistant",
             text: `Draft plan for: ${input.requirement}`,
-          } as any;
+          } as WorkflowEvent;
           yield createProgressEvent(60, "plan_drafted");
         }
       );
@@ -453,7 +454,7 @@ export function runPlanV6(
             id: tcId,
             toolName,
             args,
-          } as any;
+          } as WorkflowEvent;
 
           await delay(20);
           const result = { text: "hello" };
@@ -462,7 +463,7 @@ export function runPlanV6(
             id: tcId,
             toolName,
             result,
-          } as any;
+          } as WorkflowEvent;
 
           if (linear?.sessionId) {
             const now = Date.now();
@@ -503,9 +504,10 @@ export function runPlanV6(
       yield* executePhaseWithTimeout(
         reportPhase.name,
         reportPhase.timeoutMs,
+        // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
         async function* () {
           const reportText = "Report complete.";
-          yield { type: "assistant", text: reportText } as any;
+          yield { type: "assistant", text: reportText } as WorkflowEvent;
           reportSummary = reportText;
           yield createProgressEvent(95, "report_complete");
         }
@@ -584,7 +586,7 @@ export function runPlanV6(
     runId,
     summary,
     stream: generator(),
-    async resume(payload: ResumePayload) {
+    resume(payload: ResumePayload) {
       if (resumeResolver) {
         resumeResolver(payload);
       } else {

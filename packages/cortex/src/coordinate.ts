@@ -14,11 +14,11 @@ import type { Camera, Point4D, Vec2 } from "./types";
 /**
  * Temporal state for time dimension
  */
-export interface TemporalState {
+export type TemporalState = {
   currentTime: number;
   historyWindow: number; // How far back to keep state
   states: Map<string, Point4D[]>; // Entity ID -> state history
-}
+};
 
 /**
  * Create initial temporal state
@@ -87,7 +87,7 @@ export function findBracketingStates(
 
   // Find states bracketing target time
   let before = first;
-  let after = history[history.length - 1]!;
+  let after = history.at(-1)!;
 
   for (let i = 0; i < history.length - 1; i++) {
     const curr = history[i]!;
@@ -218,7 +218,9 @@ export function computeNodeDepth(
   distanceFromFocus: number,
   maxDistance: number
 ): number {
-  if (isFocused) return 0;
+  if (isFocused) {
+    return 0;
+  }
   return Math.min(1, distanceFromFocus / maxDistance) * 0.5;
 }
 

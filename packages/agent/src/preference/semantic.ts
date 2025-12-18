@@ -98,7 +98,9 @@ function averageVectors(vectors: number[][]): Float32Array | null {
   }
   const acc = new Array<number>(length).fill(0);
   for (const vector of vectors) {
-    if (!vector) continue;
+    if (!vector) {
+      continue;
+    }
     for (let i = 0; i < length; i += 1) {
       const current = acc[i] ?? 0;
       acc[i] = current + (vector[i] ?? 0);
@@ -111,12 +113,17 @@ function cosine(a: Float32Array, b: Float32Array): number {
   let dot = 0;
   const len = Math.min(a.length, b.length);
   for (let i = 0; i < len; i += 1) {
-    dot += a[i]! * b[i]!;
+    // i is guaranteed to be within bounds due to loop condition
+    const aVal = a[i];
+    const bVal = b[i];
+    if (aVal !== undefined && bVal !== undefined) {
+      dot += aVal * bVal;
+    }
   }
   return dot;
 }
 
-async function getPreferenceCentroids(): Promise<PreferenceCentroids> {
+function getPreferenceCentroids(): Promise<PreferenceCentroids> {
   if (!centroidPromise) {
     centroidPromise = (async () => {
       const centroidMap: PreferenceCentroids = {
@@ -143,8 +150,12 @@ async function getPreferenceCentroids(): Promise<PreferenceCentroids> {
           string[],
         ][]) {
           const vectors = samples
-            .map(() => embeddings[cursor++]!)
-            .filter(Boolean);
+            .map(() => {
+              const embedding = embeddings[cursor];
+              cursor += 1;
+              return embedding;
+            })
+            .filter((e): e is Float32Array => e !== undefined);
           const centroid = averageVectors(vectors);
           if (centroid) {
             target.set(label, centroid);
@@ -238,7 +249,7 @@ export async function detectToneSemantic(
   return top.label;
 }
 
-export async function buildPreferenceEmbedding(
+export function buildPreferenceEmbedding(
   samples: string[]
 ): Promise<Float32Array | null> {
   return embedSamples(samples);

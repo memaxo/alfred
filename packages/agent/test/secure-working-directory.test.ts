@@ -40,7 +40,9 @@ mock.module("@alfred/auth/token", () => ({
 const REPO_TMP = path.join(process.cwd(), "tmp");
 
 afterAll(() => {
-  if (!existsSync(REPO_TMP)) return;
+  if (!existsSync(REPO_TMP)) {
+    return;
+  }
 
   // Clean up only security test fixtures (prefixed with git-secure-, droid-secure-, docker-secure-)
   try {
@@ -69,9 +71,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete process.env.DROID_BIN;
-  delete process.env.DOCKER_BIN;
-  delete process.env.ORCH_SECURE_SPAWN_WRAPPER;
+  process.env.DROID_BIN = undefined;
+  process.env.DOCKER_BIN = undefined;
+  process.env.ORCH_SECURE_SPAWN_WRAPPER = undefined;
 });
 
 /**

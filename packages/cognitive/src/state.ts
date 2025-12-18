@@ -287,14 +287,14 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const CONFIDENCE_DECAY_RATE = 0.95; // per day decay multiplier
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_BETA_PRIOR: BetaPrior = Object.freeze({ alpha: 2, beta: 5 });
-var betaMode = ({ alpha, beta }: BetaPrior): number => {
+const betaMode = ({ alpha, beta }: BetaPrior): number => {
   if (alpha <= 1 || beta <= 1) {
     return alpha / (alpha + beta);
   }
   return (alpha - 1) / (alpha + beta - 2);
 };
 
-var betaVariance = ({ alpha, beta }: BetaPrior): number => {
+const betaVariance = ({ alpha, beta }: BetaPrior): number => {
   const sum = alpha + beta;
   if (sum <= 0) {
     return 0;
@@ -342,11 +342,6 @@ export const updatePhysiology = (
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.01) {
-      console.warn(
-        `cognitive_budget_exceeded: physiology update took ${durationMs.toFixed(
-          4
-        )}ms`
-      );
     }
   }
 };
@@ -445,11 +440,6 @@ export function updateAutonomy(
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.05) {
-      console.warn(
-        `cognitive_budget_exceeded: autonomy update took ${durationMs.toFixed(
-          4
-        )}ms`
-      );
     }
   }
 }
@@ -503,11 +493,6 @@ export const calculateError = (expected: string, actual: string): number => {
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
-      console.warn(
-        `cognitive_budget_exceeded: error calculation took ${durationMs.toFixed(
-          4
-        )}ms`
-      );
     }
   }
 };

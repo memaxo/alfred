@@ -24,7 +24,7 @@ import type { RuntimeInput } from "../src/types";
 afterAll(() => {
   AISDKAdapter.prototype.stream = originalStream;
   if (originalDisableCodex === undefined) {
-    delete process.env.RUNTIME_DISABLE_CODEX;
+    process.env.RUNTIME_DISABLE_CODEX = undefined;
   } else {
     process.env.RUNTIME_DISABLE_CODEX = originalDisableCodex;
   }

@@ -6,7 +6,7 @@ import { desc, inArray } from "drizzle-orm";
  * Returns raw node/edge data optimized for visualization.
  */
 export async function fast_getGraphSnapshot(
-  userId: string,
+  _userId: string,
   options: { limit?: number } = {}
 ) {
   const { limit = 1000 } = options;

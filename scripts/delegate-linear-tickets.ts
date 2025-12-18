@@ -121,7 +121,7 @@ export function generateCommentTemplate(issue: {
   keyPatterns?: string;
   tests?: string;
 }): string {
-  const { title, description, scope, keyFiles, keyPatterns, tests } = issue;
+  const { title, scope, keyFiles, keyPatterns, tests } = issue;
 
   return `@Cursor Agent Assignment
 

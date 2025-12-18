@@ -35,7 +35,7 @@ export const adminRouter = router({
     try {
       const { voiceRegistry } = getVoicePools();
       return { ...voiceRegistry.getStats(), telemetry };
-    } catch (error) {
+    } catch (_error) {
       // If pools are not initialized (e.g. VOICE_PROVIDER set to cloud/default), return empty stats
       return {
         generatedAt: Date.now(),

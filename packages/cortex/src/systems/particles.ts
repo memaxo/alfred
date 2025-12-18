@@ -11,11 +11,11 @@ import particleShaderSource from "../shaders/particles.wgsl?raw";
 import type { RenderSystem, Vec2 } from "../types";
 
 /** Particle system configuration */
-export interface ParticleSystemConfig {
+export type ParticleSystemConfig = {
   maxParticles: number;
   spawnRadius: number;
   orbCenter: Vec2;
-}
+};
 
 /** Bytes per particle (must match WGSL struct) */
 const PARTICLE_STRIDE = 32; // 2 vec2f + 2 f32 + 2 f32 pad = 32 bytes
@@ -27,7 +27,7 @@ export class ParticleSystem implements RenderSystem {
   readonly name = "particles";
 
   private device: GPUDevice | null = null;
-  private config: ParticleSystemConfig;
+  private readonly config: ParticleSystemConfig;
 
   private particleBuffer: DoubleBuffer | null = null;
   private uniformBuffer: UniformBuffer | null = null;
@@ -35,7 +35,6 @@ export class ParticleSystem implements RenderSystem {
   private computePipeline: GPUComputePipeline | null = null;
   private renderPipeline: GPURenderPipeline | null = null;
   private computeBindGroups: [GPUBindGroup, GPUBindGroup] | null = null;
-  private renderBindGroup: GPUBindGroup | null = null;
 
   private particleCount: number;
 
@@ -57,7 +56,6 @@ export class ParticleSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Particle shader error:", message.message);
       }
     }
 
@@ -173,7 +171,9 @@ export class ParticleSystem implements RenderSystem {
   }
 
   private initializeParticles(): void {
-    if (!(this.device && this.particleBuffer)) return;
+    if (!(this.device && this.particleBuffer)) {
+      return;
+    }
 
     const data = new Float32Array(this.particleCount * 8); // 8 floats per particle
 
@@ -209,8 +209,10 @@ export class ParticleSystem implements RenderSystem {
     this.particleBuffer.swap();
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     // Copy relevant uniforms
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
@@ -219,7 +221,7 @@ export class ParticleSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     if (
       !(
         this.device &&
@@ -254,7 +256,9 @@ export class ParticleSystem implements RenderSystem {
 
   /** Set particle count (triggers reallocation) */
   setParticleCount(count: number): void {
-    if (count === this.particleCount || !this.device) return;
+    if (count === this.particleCount || !this.device) {
+      return;
+    }
 
     this.particleCount = count;
 

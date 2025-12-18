@@ -5,14 +5,14 @@
  * Provides typed access to build metadata injected at compile time
  */
 
-export interface BuildInfo {
+export type BuildInfo = {
   version: string;
   buildTime: string;
   commit: string;
   branch: string;
   nodeEnv: "development" | "production" | "test";
   target?: string;
-}
+};
 
 /**
  * Get build information from compile-time constants

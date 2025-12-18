@@ -218,7 +218,7 @@ export async function synthesize(
     return { insights, relations, contradictions };
   }
 
-  const graphFacts: Array<[NodeId, { _: "fact"; content: string }]> = [];
+  const graphFacts: [NodeId, { _: "fact"; content: string }][] = [];
   for (const [nodeId, knowledge] of graph.entries()) {
     if (knowledge._ === "fact") {
       graphFacts.push([nodeId, knowledge]);
@@ -227,7 +227,7 @@ export async function synthesize(
 
   const hasEmbeddings =
     typeof graph.embeddingCount === "function" && graph.embeddingCount() > 0;
-  const embeddingEntries: Array<[NodeId, Float32Array]> = hasEmbeddings
+  const embeddingEntries: [NodeId, Float32Array][] = hasEmbeddings
     ? Array.from(graph.embeddingEntries())
     : [];
 

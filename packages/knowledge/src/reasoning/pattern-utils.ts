@@ -8,9 +8,10 @@ const anchorByPattern = new Map<
   ReasoningPattern,
   (typeof PATTERN_ANCHORS)[number]
 >(
-  PATTERN_ANCHORS.map((anchor) => [anchor.pattern, anchor]) as Array<
-    [ReasoningPattern, (typeof PATTERN_ANCHORS)[number]]
-  >
+  PATTERN_ANCHORS.map((anchor) => [anchor.pattern, anchor]) as [
+    ReasoningPattern,
+    (typeof PATTERN_ANCHORS)[number],
+  ][]
 );
 
 const centroidCache = new Map<ReasoningPattern, Promise<Float32Array>>();

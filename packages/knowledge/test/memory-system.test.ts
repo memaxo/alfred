@@ -118,7 +118,7 @@ describe("Memory System Integration", () => {
       expect(m1000).toBeGreaterThan(m100);
 
       // Rate of increase should slow down
-      const increase1 = m10 - m0;
+      const _increase1 = m10 - m0;
       const increase2 = m100 - m10;
       const increase3 = m1000 - m100;
 

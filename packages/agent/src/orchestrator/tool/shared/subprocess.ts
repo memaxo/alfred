@@ -267,13 +267,11 @@ export function createTimeout(
     } catch {
       // ignore errors when killing the process
     }
-    // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
     void Promise.resolve(
       writer?.write?.({
         type: "notice",
         message: noticeMessage,
       })
-      // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
     ).catch(() => {});
   }, timeoutSec * MS_PER_SECOND);
 
@@ -305,10 +303,8 @@ export function streamStderr(
           break;
         }
 
-        // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
         void Promise.resolve(
           writer?.write?.({ type: "stderr", text: decoder.decode(value) })
-          // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
         ).catch(() => {});
       }
     } catch {

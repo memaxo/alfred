@@ -190,7 +190,7 @@ export async function linkRagProvenanceToReasoning(opts: {
       return;
     }
 
-    await upsertEdges(edgeSeeds as any);
+    await upsertEdges(edgeSeeds);
   } catch (_error) {}
 }
 
@@ -252,7 +252,7 @@ export async function persistKnowledge(
 
   try {
     const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
-    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const nodeMap = await upsertNodes(nodeSeeds);
     if (edgeSeeds.length === 0) {
       return;
     }
@@ -274,7 +274,7 @@ export async function persistKnowledge(
       return;
     }
 
-    await upsertEdges(edges as any);
+    await upsertEdges(edges);
   } catch (_err) {}
 }
 
@@ -322,7 +322,7 @@ export async function persistExecPlans(opts: {
 
   try {
     const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
-    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const nodeMap = await upsertNodes(nodeSeeds);
 
     const hashToRow = new Map<string, { id: string; hash: string }>();
     for (const row of nodeMap.values()) {
@@ -365,7 +365,7 @@ export async function persistExecPlans(opts: {
     }
 
     if (edgeSeeds.length > 0) {
-      await upsertEdges(edgeSeeds as any);
+      await upsertEdges(edgeSeeds);
     }
   } catch (_error) {}
 }
@@ -465,7 +465,7 @@ export async function persistReasoning(
     }
 
     const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
-    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const nodeMap = await upsertNodes(nodeSeeds);
     const hashToRow = new Map<string, { id: string; hash: string }>();
     for (const row of nodeMap.values()) {
       hashToRow.set(row.hash, { id: row.id, hash: row.hash });
@@ -512,7 +512,7 @@ export async function persistReasoning(
       }
 
       if (edgeSeeds.length > 0) {
-        await upsertEdges(edgeSeeds as any);
+        await upsertEdges(edgeSeeds);
       }
     }
   } catch (_err) {}
@@ -624,7 +624,7 @@ export async function persistCodexExecution(
 
   try {
     const { upsertNodes, upsertEdges } = await import("@alfred/db/repo/graph");
-    const nodeMap = await upsertNodes(nodeSeeds as any);
+    const nodeMap = await upsertNodes(nodeSeeds);
     const hashToRow = new Map<string, { id: string; hash: string }>();
     for (const row of nodeMap.values()) {
       hashToRow.set(row.hash, { id: row.id, hash: row.hash });
@@ -666,7 +666,7 @@ export async function persistCodexExecution(
     }
 
     if (edgeSeeds.length > 0) {
-      await upsertEdges(edgeSeeds as any);
+      await upsertEdges(edgeSeeds);
     }
   } catch (_err) {}
 }

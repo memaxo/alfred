@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RenderingCapability = "webgpu" | "webgl" | "canvas2d";
 
-export interface UseCortexEngineOptions {
+export type UseCortexEngineOptions = {
   /** Enable post-processing effects */
   postProcessing?: boolean;
   /** Callback when engine is ready */
@@ -29,16 +29,16 @@ export interface UseCortexEngineOptions {
   onError?: (error: Error) => void;
   /** Auto-start render loop */
   autoStart?: boolean;
-}
+};
 
-export interface UseCortexEngineResult {
+export type UseCortexEngineResult = {
   engine: CortexEngine | null;
   capability: RenderingCapability | null;
   isReady: boolean;
   error: Error | null;
   start: () => void;
   stop: () => void;
-}
+};
 
 /**
  * Hook to manage Cortex WebGPU engine lifecycle
@@ -62,7 +62,9 @@ export function useCortexEngine(
   // Initialize engine
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || initializingRef.current) return;
+    if (!canvas || initializingRef.current) {
+      return;
+    }
 
     initializingRef.current = true;
 
@@ -73,15 +75,14 @@ export function useCortexEngine(
         setCapability(cap);
 
         if (cap !== "webgpu") {
-          // TODO: Fall back to WebGL or Canvas2D renderer
-          console.warn(`WebGPU not available, falling back to ${cap}`);
           setIsReady(true);
           return;
         }
 
         // Create engine
+        // canvas is guaranteed non-null here due to check above
         const config: CortexConfig = {
-          canvas: canvas!,
+          canvas,
           postProcessing,
         };
 
@@ -90,8 +91,8 @@ export function useCortexEngine(
 
         // Register render systems
         const orbCenter = {
-          x: canvas!.width / 2,
-          y: canvas!.height / 2,
+          x: canvas?.width / 2,
+          y: canvas?.height / 2,
         };
 
         cortex.registerSystem(new AtmosphereSystem());
@@ -114,7 +115,7 @@ export function useCortexEngine(
         }
 
         // Set initial size
-        cortex.resize(canvas!.width, canvas!.height);
+        cortex.resize(canvas?.width, canvas?.height);
 
         setEngine(cortex);
         setIsReady(true);
@@ -128,7 +129,6 @@ export function useCortexEngine(
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
         onError?.(error);
-        console.error("Cortex engine init failed:", error);
       } finally {
         initializingRef.current = false;
       }
@@ -148,7 +148,9 @@ export function useCortexEngine(
   // Handle resize
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!(canvas && engine)) return;
+    if (!(canvas && engine)) {
+      return;
+    }
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {

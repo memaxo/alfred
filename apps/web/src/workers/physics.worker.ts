@@ -39,7 +39,7 @@ let nodes: Map<string, PhysicsNode> = new Map();
 let edges: PhysicsEdge[] = [];
 const velocities: Map<string, { x: number; y: number }> = new Map();
 let isRunning = false;
-let intervalId: any = null;
+let intervalId: ReturnType<typeof setInterval> | null = null;
 
 let config: PhysicsConfig = {
   stiffness: 0.05,
@@ -75,7 +75,9 @@ function getZonePosition(type: string, radius: number) {
 // --- Simulation Loop ---
 
 function tick() {
-  if (!nodes.size) return;
+  if (!nodes.size) {
+    return;
+  }
 
   const nodesArray = Array.from(nodes.values());
   const positions = new Float32Array(nodesArray.length * 2); // [x, y, x, y...]
@@ -84,8 +86,12 @@ function tick() {
   const connectedToFocus = new Set<string>();
   if (config.focusId) {
     edges.forEach((e) => {
-      if (e.source === config.focusId) connectedToFocus.add(e.target);
-      if (e.target === config.focusId) connectedToFocus.add(e.source);
+      if (e.source === config.focusId) {
+        connectedToFocus.add(e.target);
+      }
+      if (e.target === config.focusId) {
+        connectedToFocus.add(e.source);
+      }
     });
   }
 
@@ -94,8 +100,12 @@ function tick() {
     for (let j = i + 1; j < nodesArray.length; j++) {
       const a = nodesArray[i];
       const b = nodesArray[j];
-      if (!(a && b)) continue;
-      if (a.id === config.focusId || b.id === config.focusId) continue; // Don't push anchor? actually anchor stays 0,0 but can push others
+      if (!(a && b)) {
+        continue;
+      }
+      if (a.id === config.focusId || b.id === config.focusId) {
+        continue; // Don't push anchor? actually anchor stays 0,0 but can push others
+      }
 
       const dx = a.x - b.x;
       const dy = a.y - b.y;
@@ -106,15 +116,21 @@ function tick() {
       if (config.focusId) {
         const aRel = a.id === config.focusId || connectedToFocus.has(a.id);
         const bRel = b.id === config.focusId || connectedToFocus.has(b.id);
-        if (!(aRel || bRel)) repulsion *= 3.0;
+        if (!(aRel || bRel)) {
+          repulsion *= 3.0;
+        }
       }
 
       const force = repulsion / distSq;
       const fx = (dx / Math.sqrt(distSq)) * force;
       const fy = (dy / Math.sqrt(distSq)) * force;
 
-      if (!isLocked(a.id)) addVelocity(a.id, fx, fy);
-      if (!isLocked(b.id)) addVelocity(b.id, -fx, -fy);
+      if (!isLocked(a.id)) {
+        addVelocity(a.id, fx, fy);
+      }
+      if (!isLocked(b.id)) {
+        addVelocity(b.id, -fx, -fy);
+      }
     }
   }
 
@@ -124,7 +140,9 @@ function tick() {
   for (const edge of edges) {
     const s = nodes.get(edge.source);
     const t = nodes.get(edge.target);
-    if (!(s && t)) continue;
+    if (!(s && t)) {
+      continue;
+    }
 
     const dx = t.x - s.x;
     const dy = t.y - s.y;
@@ -145,14 +163,20 @@ function tick() {
     const fx = (dx / dist) * force;
     const fy = (dy / dist) * force;
 
-    if (!isLocked(s.id)) addVelocity(s.id, fx, fy);
-    if (!isLocked(t.id)) addVelocity(t.id, -fx, -fy);
+    if (!isLocked(s.id)) {
+      addVelocity(s.id, fx, fy);
+    }
+    if (!isLocked(t.id)) {
+      addVelocity(t.id, -fx, -fy);
+    }
   }
 
   // 3. Semantic Gravity
   if (!config.focusId) {
     for (const node of nodesArray) {
-      if (isLocked(node.id)) continue;
+      if (isLocked(node.id)) {
+        continue;
+      }
       const zone = getZonePosition(node.type, config.zoneRadius);
       const dx = zone.x - node.x;
       const dy = zone.y - node.y;
@@ -162,7 +186,9 @@ function tick() {
 
   // 4. Central Gravity
   for (const node of nodesArray) {
-    if (isLocked(node.id)) continue;
+    if (isLocked(node.id)) {
+      continue;
+    }
     const gx = -node.x * config.gravity;
     const gy = -node.y * config.gravity;
     addVelocity(node.id, gx, gy);
@@ -171,7 +197,9 @@ function tick() {
   // Apply Velocity
   for (let i = 0; i < nodesArray.length; i++) {
     const node = nodesArray[i];
-    if (!node) continue;
+    if (!node) {
+      continue;
+    }
     const vel = velocities.get(node.id);
 
     if (node.id === config.focusId) {
@@ -217,7 +245,7 @@ function tick() {
 
 function isLocked(id: string) {
   const node = nodes.get(id);
-  return id === config.focusId || (node && node.isDragging);
+  return id === config.focusId || node?.isDragging;
 }
 
 function addVelocity(id: string, x: number, y: number) {
@@ -257,7 +285,9 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
           draggable: n.draggable,
           isDragging: n.isDragging,
         });
-        if (!velocities.has(n.id)) velocities.set(n.id, { x: 0, y: 0 });
+        if (!velocities.has(n.id)) {
+          velocities.set(n.id, { x: 0, y: 0 });
+        }
       });
 
       nodes = freshNodes;
@@ -289,7 +319,9 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     }
     case "STOP": {
       isRunning = false;
-      if (intervalId) clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
       break;
     }
   }

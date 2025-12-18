@@ -58,7 +58,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)(
     });
 
     it("creates tsvector from text content", async () => {
-      if (!testDb) return;
+      if (!testDb) {
+        return;
+      }
 
       const result = await testDb.db.execute(sql`
       SELECT to_tsvector('english', 'The quick brown fox jumps over the lazy dog') as vector
@@ -69,7 +71,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)(
     });
 
     it("matches tsquery against tsvector", async () => {
-      if (!testDb) return;
+      if (!testDb) {
+        return;
+      }
 
       const result = await testDb.db.execute(sql`
       SELECT to_tsvector('english', 'TypeScript authentication module with JWT tokens') 
@@ -80,7 +84,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)(
     });
 
     it("performs ranked full-text search", async () => {
-      if (!testDb) return;
+      if (!testDb) {
+        return;
+      }
 
       // Insert test documents
       await testDb.db.execute(sql`
@@ -112,7 +118,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)(
     });
 
     it("handles safe tsquery generation", async () => {
-      if (!testDb) return;
+      if (!testDb) {
+        return;
+      }
 
       // plainto_tsquery is safe against injection
       const userInput = "test' OR '1'='1";
@@ -135,7 +143,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Interval Syntax Queries", () => {
   });
 
   it("queries with interval syntax", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     const result = await testDb.db.execute(sql`
       SELECT NOW() - INTERVAL '1 hour' as one_hour_ago
@@ -145,7 +155,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Interval Syntax Queries", () => {
   });
 
   it("filters by time ranges", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     // Create temp table with timestamps
     await testDb.db.execute(sql`
@@ -173,7 +185,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Interval Syntax Queries", () => {
   });
 
   it("calculates durations with intervals", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     const result = await testDb.db.execute(sql`
       SELECT 
@@ -193,7 +207,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Vector Similarity Search", () => {
   });
 
   it("creates vector extension if available", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     try {
       await testDb.db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
@@ -210,7 +226,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Vector Similarity Search", () => {
   });
 
   it("calculates cosine similarity between vectors", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     try {
       await testDb.db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
@@ -226,7 +244,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Vector Similarity Search", () => {
   });
 
   it("creates HNSW index for fast similarity search", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     try {
       await testDb.db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
@@ -277,7 +297,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Composite Indexes", () => {
   });
 
   it("uses composite index for multi-column queries", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     // Create table with composite index
     await testDb.db.execute(sql`
@@ -315,7 +337,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Composite Indexes", () => {
   });
 
   it("partial index for sparse columns", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_partial (
@@ -356,7 +380,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Transaction Isolation", () => {
   });
 
   it("commits transaction on success", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_tx (
@@ -378,7 +404,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Transaction Isolation", () => {
   });
 
   it("rolls back transaction on error", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_rollback (
@@ -398,7 +426,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Transaction Isolation", () => {
   });
 
   it("savepoint allows partial rollback", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_savepoint (
@@ -432,7 +462,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Query Performance", () => {
   });
 
   it("simple query completes within budget", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     const start = performance.now();
 
@@ -443,7 +475,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Query Performance", () => {
   });
 
   it("indexed lookup completes within budget", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_perf (
@@ -470,7 +504,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("Query Performance", () => {
   });
 
   it("batch insert completes reasonably", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_batch (
@@ -505,7 +541,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("JSONB Operations", () => {
   });
 
   it("stores and queries JSONB data", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_jsonb (
@@ -529,7 +567,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("JSONB Operations", () => {
   });
 
   it("indexes JSONB fields", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_jsonb_idx (
@@ -555,7 +595,9 @@ describe.skipIf(!RUN_POSTGRES_TESTS)("JSONB Operations", () => {
   });
 
   it("queries JSONB arrays", async () => {
-    if (!testDb) return;
+    if (!testDb) {
+      return;
+    }
 
     await testDb.db.execute(sql`
       CREATE TEMP TABLE test_jsonb_array (

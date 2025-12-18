@@ -32,7 +32,9 @@ export function useCognitiveStateIntegration(
   }
 ) {
   useEffect(() => {
-    if (!(engine && cognitiveState)) return;
+    if (!(engine && cognitiveState)) {
+      return;
+    }
 
     // Map cognitive phase to orb state
     let orbState: OrbState = "idle";
@@ -57,6 +59,7 @@ export function useCognitiveStateIntegration(
     // Apply autonomy level to visual intensity
     const autonomy = cognitiveState.autonomyLevel ?? 0.5;
     const physiology = cognitiveState.physiology ?? {};
+    const energy = physiology.energy ?? 0.5;
 
     engine.setOrbConfig({
       center: engine.getCamera().center,
@@ -65,7 +68,7 @@ export function useCognitiveStateIntegration(
       state: orbState,
       fiberCount: Math.floor(1500 + autonomy * 500),
       segmentsPerFiber: 50,
-      rotationSpeed: Math.PI / (60 - physiology.energy! * 30),
+      rotationSpeed: Math.PI / (60 - energy * 30),
     });
 
     // Physiology affects visual parameters
@@ -105,7 +108,9 @@ export function useVoiceFFTIntegration(
   const prevLevelsRef = useRef({ low: 0, mid: 0 });
 
   useEffect(() => {
-    if (!(engine && voiceState)) return;
+    if (!(engine && voiceState)) {
+      return;
+    }
 
     // Extract frequency bands from FFT or use raw levels
     let audioLow = 0;
@@ -170,7 +175,9 @@ export function useWorkflowRuntimeIntegration(
   }
 ) {
   useEffect(() => {
-    if (!(engine && workflowState)) return;
+    if (!(engine && workflowState)) {
+      return;
+    }
 
     const { status, progress = 0 } = workflowState;
 
@@ -203,7 +210,9 @@ export function useWorkflowRuntimeIntegration(
 
   // Handle workflow events for edge/node activation
   useEffect(() => {
-    if (!(engine && workflowState?.events)) return;
+    if (!(engine && workflowState?.events)) {
+      return;
+    }
 
     // Process recent events (last 2 seconds)
     const now = Date.now();
@@ -215,11 +224,8 @@ export function useWorkflowRuntimeIntegration(
     // This would integrate with the Mindscape store to trigger edge activity
     for (const event of recentEvents) {
       if (event.edgeId) {
-        // Edge activity would be handled through useMindscapeStore.triggerEdgeActivity
-        console.debug("[Cortex] Workflow edge activity:", event.edgeId);
       }
       if (event.nodeId) {
-        console.debug("[Cortex] Workflow node activity:", event.nodeId);
       }
     }
   }, [engine, workflowState?.events]);
@@ -250,7 +256,9 @@ export function useCortexIntegrations(
  */
 export function useMouseIntegration(engine: CortexEngine | null) {
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     const handleMouseMove = (e: MouseEvent) => {
       engine.setMousePosition(e.clientX, e.clientY);
@@ -274,12 +282,13 @@ export function useThemeIntegration(
   theme: "dark" | "light" = "dark"
 ) {
   useEffect(() => {
-    if (!engine) return;
+    if (!engine) {
+      return;
+    }
 
     // Cortex is designed for dark theme
     // Light theme would require shader modifications
     if (theme === "light") {
-      console.warn("[Cortex] Light theme not fully supported");
     }
   }, [engine, theme]);
 }

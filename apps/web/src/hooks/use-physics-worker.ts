@@ -60,7 +60,9 @@ export function usePhysicsWorker({
 
   // Sync State to Worker
   useEffect(() => {
-    if (!workerRef.current) return;
+    if (!workerRef.current) {
+      return;
+    }
 
     // Transform nodes to lightweight format
     const physicsNodes: PhysicsNode[] = nodes.map((n) => ({
@@ -87,7 +89,9 @@ export function usePhysicsWorker({
 
   // Sync Focus
   useEffect(() => {
-    if (!workerRef.current) return;
+    if (!workerRef.current) {
+      return;
+    }
     workerRef.current.postMessage({
       type: "UPDATE_FOCUS",
       focusId,
@@ -96,7 +100,9 @@ export function usePhysicsWorker({
 
   // Render Loop (Main Thread)
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      return;
+    }
 
     const loop = () => {
       if (latestPositions.current.size > 0) {
@@ -104,7 +110,9 @@ export function usePhysicsWorker({
           let changed = false;
           const next = prevNodes.map((n: Node<ArtifactData>) => {
             const pos = latestPositions.current.get(n.id);
-            if (!pos) return n;
+            if (!pos) {
+              return n;
+            }
 
             // Simple threshold to avoid react updates for micro-movements
             if (
@@ -125,7 +133,9 @@ export function usePhysicsWorker({
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
     };
   }, [active, setNodes]);
 

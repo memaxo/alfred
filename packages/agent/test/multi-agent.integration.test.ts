@@ -39,22 +39,26 @@ mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   },
 }));
 
-const mergeExecutorMock = mock(async () => ({
-  status: "completed" as const,
-  mergedBranches: ["agent/run"],
-  targetBranch: "main",
-}));
+const mergeExecutorMock = mock(() =>
+  Promise.resolve({
+    status: "completed" as const,
+    mergedBranches: ["agent/run"],
+    targetBranch: "main",
+  })
+);
 
 mock.module("@alfred/agent/orchestrator/multi/merge-executor", () => ({
   executeMergePlan: mergeExecutorMock,
 }));
 
-const toolRunnerExecute = mock(async () => ({
-  stdout: "ok",
-  stderr: "",
-  exitCode: 0,
-  durationMs: 10,
-}));
+const toolRunnerExecute = mock(() =>
+  Promise.resolve({
+    stdout: "ok",
+    stderr: "",
+    exitCode: 0,
+    durationMs: 10,
+  })
+);
 
 mock.module("@alfred/agent/orchestrator/tool/runner", () => ({
   toolRunner: {
@@ -62,10 +66,12 @@ mock.module("@alfred/agent/orchestrator/tool/runner", () => ({
   },
 }));
 
-const smokeVerifyMock = mock(async () => ({
-  success: true,
-  message: "ok",
-}));
+const smokeVerifyMock = mock(() =>
+  Promise.resolve({
+    success: true,
+    message: "ok",
+  })
+);
 
 mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
   smokeTester: {
@@ -286,7 +292,7 @@ describe("multi-agent orchestrator integration", () => {
         }
       } finally {
         if (prevTarget === undefined) {
-          delete process.env.ORCH_TARGET_BRANCH;
+          process.env.ORCH_TARGET_BRANCH = undefined;
         } else {
           process.env.ORCH_TARGET_BRANCH = prevTarget;
         }

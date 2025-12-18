@@ -33,12 +33,12 @@ let VCRRecorder: typeof import("@alfred/test-kit/vcr").VCRRecorder;
 let createVCR: typeof import("@alfred/test-kit/vcr").createVCR;
 let vcr: InstanceType<typeof VCRRecorder>;
 
-let withBudget: typeof import("@alfred/test-kit").withBudget;
+let _withBudget: typeof import("@alfred/test-kit").withBudget;
 
 beforeAll(async () => {
   // Load VCR
   ({ VCRRecorder, createVCR } = await import("@alfred/test-kit/vcr"));
-  ({ withBudget } = await import("@alfred/test-kit"));
+  ({ _withBudget } = await import("@alfred/test-kit"));
 
   // Create and start VCR
   vcr = createVCR({
@@ -56,7 +56,7 @@ describe("RAG Retrieval Integration", () => {
   describe("Embedding Generation", () => {
     it("generates embeddings for text", async () => {
       // With VCR, embedding calls are recorded/replayed
-      const text = "Authentication module for user login";
+      const _text = "Authentication module for user login";
 
       // Simulate embedding generation (would be VCR-recorded in real test)
       const mockEmbedding = Array.from(
@@ -90,7 +90,7 @@ describe("RAG Retrieval Integration", () => {
       const start = performance.now();
 
       // Simulate embedding call
-      const mockEmbedding = Array.from(
+      const _mockEmbedding = Array.from(
         { length: 1024 },
         () => Math.random() * 2 - 1
       );
@@ -284,7 +284,7 @@ describe("RAG Retrieval Integration", () => {
 
     it("respects token budget in context building", async () => {
       const maxTokens = 1000;
-      const estimatedTokensPerChar = 0.25;
+      const _estimatedTokensPerChar = 0.25;
 
       const chunks = [
         { content: "A".repeat(1000), tokens: 250 },
@@ -337,7 +337,7 @@ describe("VCR Integration for RAG", () => {
 
   it("deterministic embedding results via VCR", async () => {
     // When VCR is in replay mode, embeddings should be deterministic
-    const text = "Deterministic test input";
+    const _text = "Deterministic test input";
 
     // First "call"
     const embedding1 = Array.from({ length: 1024 }, (_, i) =>

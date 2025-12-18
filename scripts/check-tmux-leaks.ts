@@ -13,7 +13,7 @@ class TmuxUnavailableError extends Error {
 type ListHandler = () => Promise<string[]>;
 
 async function listSessionsViaTmux(): Promise<string[]> {
-  let proc;
+  let proc: ReturnType<typeof spawn>;
   try {
     proc = spawn(["tmux", "list-sessions", "-F", "#{session_name}"], {
       stdout: "pipe",

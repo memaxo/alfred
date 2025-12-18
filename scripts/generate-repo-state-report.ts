@@ -255,10 +255,15 @@ function categorizeIssues(issues: LinearIssue[]) {
 
     // By priority (Linear uses 0-4, where 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
     let priorityLabel = "None";
-    if (issue.priority === 1) priorityLabel = "Urgent";
-    else if (issue.priority === 2) priorityLabel = "High";
-    else if (issue.priority === 3) priorityLabel = "Medium";
-    else if (issue.priority === 4) priorityLabel = "Low";
+    if (issue.priority === 1) {
+      priorityLabel = "Urgent";
+    } else if (issue.priority === 2) {
+      priorityLabel = "High";
+    } else if (issue.priority === 3) {
+      priorityLabel = "Medium";
+    } else if (issue.priority === 4) {
+      priorityLabel = "Low";
+    }
 
     byPriority[priorityLabel].push(issue);
   }
@@ -278,7 +283,7 @@ function findDuplicates(issues: LinearIssue[]): Array<{
     if (!seen.has(titleKey)) {
       seen.set(titleKey, []);
     }
-    seen.get(titleKey)!.push(issue);
+    seen.get(titleKey)?.push(issue);
   }
 
   for (const [title, matchingIssues] of seen.entries()) {
@@ -293,12 +298,14 @@ function findDuplicates(issues: LinearIssue[]): Array<{
   // Also check for similar descriptions
   const descMap = new Map<string, LinearIssue[]>();
   for (const issue of issues) {
-    if (!issue.description) continue;
+    if (!issue.description) {
+      continue;
+    }
     const descKey = issue.description.substring(0, 100).toLowerCase().trim();
     if (!descMap.has(descKey)) {
       descMap.set(descKey, []);
     }
-    descMap.get(descKey)!.push(issue);
+    descMap.get(descKey)?.push(issue);
   }
 
   for (const [desc, matchingIssues] of descMap.entries()) {
@@ -454,7 +461,9 @@ ${criticalMetadata.join("\n")}
 
 `;
   for (const [priority, issues] of Object.entries(categories.byPriority)) {
-    if (issues.length === 0) continue;
+    if (issues.length === 0) {
+      continue;
+    }
     report += `#### ${priority} (${issues.length})
 
 `;

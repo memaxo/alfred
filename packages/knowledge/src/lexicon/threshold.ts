@@ -86,8 +86,7 @@ async function initializeCache(): Promise<void> {
       thresholdCache.set(item.domain.toLowerCase(), item);
     }
     cacheInitialized = true;
-  } catch (error) {
-    console.warn("Failed to load domain thresholds:", error);
+  } catch (_error) {
     cacheInitialized = true; // Mark initialized to avoid retry loops
   }
 }
@@ -195,9 +194,7 @@ export async function recordCorrectClassification(
 
   // Persist asynchronously
   if (persistence) {
-    persistence.save(updated).catch((err) => {
-      console.warn("Failed to persist threshold update:", err);
-    });
+    persistence.save(updated).catch((_err) => {});
   }
 }
 
@@ -242,9 +239,7 @@ export async function recordCorrection(
 
   // Persist asynchronously
   if (persistence) {
-    persistence.save(updated).catch((err) => {
-      console.warn("Failed to persist threshold update:", err);
-    });
+    persistence.save(updated).catch((_err) => {});
   }
 }
 
@@ -298,9 +293,7 @@ export async function calibrateThresholds(
   // Persist all updates
   if (persistence) {
     for (const data of results.values()) {
-      persistence.save(data).catch((err) => {
-        console.warn("Failed to persist threshold:", err);
-      });
+      persistence.save(data).catch((_err) => {});
     }
   }
 

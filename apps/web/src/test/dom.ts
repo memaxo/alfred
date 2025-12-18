@@ -42,23 +42,35 @@ if (typeof globalThis.cancelAnimationFrame === "undefined") {
 }
 
 // Also set on window since some libraries access window.* directly
-if (typeof (window as any).requestAnimationFrame === "undefined") {
-  (window as any).requestAnimationFrame = globalThis.requestAnimationFrame;
+type WindowWithRAF = Window & {
+  requestAnimationFrame?: typeof globalThis.requestAnimationFrame;
+  cancelAnimationFrame?: typeof globalThis.cancelAnimationFrame;
+};
+
+if (typeof (window as WindowWithRAF).requestAnimationFrame === "undefined") {
+  (window as WindowWithRAF).requestAnimationFrame = globalThis.requestAnimationFrame;
 }
 
-if (typeof (window as any).cancelAnimationFrame === "undefined") {
-  (window as any).cancelAnimationFrame = globalThis.cancelAnimationFrame;
+if (typeof (window as WindowWithRAF).cancelAnimationFrame === "undefined") {
+  (window as WindowWithRAF).cancelAnimationFrame = globalThis.cancelAnimationFrame;
 }
 
 // Provide minimal canvas and resize observer shims for jsdom-based tests.
-const CanvasElementCtor = (window as any).HTMLCanvasElement
-  ? (window as any).HTMLCanvasElement
-  : (globalThis as any).HTMLCanvasElement
-    ? (globalThis as any).HTMLCanvasElement
-    : class CanvasElement extends window.HTMLElement {};
+type WindowWithCanvas = Window & {
+  HTMLCanvasElement?: typeof HTMLCanvasElement;
+};
 
-(globalThis as any).HTMLCanvasElement = CanvasElementCtor;
-(window as any).HTMLCanvasElement = CanvasElementCtor;
+type GlobalWithCanvas = typeof globalThis & {
+  HTMLCanvasElement?: typeof HTMLCanvasElement;
+};
+
+const CanvasElementCtor =
+  (window as WindowWithCanvas).HTMLCanvasElement ??
+  (globalThis as GlobalWithCanvas).HTMLCanvasElement ??
+  (class CanvasElement extends window.HTMLElement {} as typeof HTMLCanvasElement);
+
+(globalThis as GlobalWithCanvas).HTMLCanvasElement = CanvasElementCtor;
+(window as WindowWithCanvas).HTMLCanvasElement = CanvasElementCtor;
 
 const HTMLCanvasProto = CanvasElementCtor.prototype as {
   getContext?: (contextId: string, options?: unknown) => unknown;
@@ -103,7 +115,15 @@ if (!HTMLCanvasProto.toDataURL) {
   HTMLCanvasProto.toDataURL = () => "data:image/png;base64,";
 }
 
-if (typeof (globalThis as any).ResizeObserver === "undefined") {
+type GlobalWithResizeObserver = typeof globalThis & {
+  ResizeObserver?: typeof ResizeObserver;
+};
+
+type WindowWithResizeObserver = Window & {
+  ResizeObserver?: typeof ResizeObserver;
+};
+
+if (typeof (globalThis as GlobalWithResizeObserver).ResizeObserver === "undefined") {
   const ResizeObserverPolyfill = class ResizeObserver {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     observe(): void {}
@@ -111,25 +131,33 @@ if (typeof (globalThis as any).ResizeObserver === "undefined") {
     unobserve(): void {}
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     disconnect(): void {}
-  };
-  (globalThis as any).ResizeObserver = ResizeObserverPolyfill;
+  } as typeof ResizeObserver;
+  (globalThis as GlobalWithResizeObserver).ResizeObserver = ResizeObserverPolyfill;
   if (typeof window !== "undefined") {
-    (window as any).ResizeObserver = ResizeObserverPolyfill;
+    (window as WindowWithResizeObserver).ResizeObserver = ResizeObserverPolyfill;
   }
 }
 
-if (typeof (globalThis as any).screen === "undefined") {
-  const screenStub = {
+type GlobalWithScreen = typeof globalThis & {
+  screen?: Screen;
+};
+
+type WindowWithScreen = Window & {
+  screen?: Screen;
+};
+
+if (typeof (globalThis as GlobalWithScreen).screen === "undefined") {
+  const screenStub: Screen = {
     width: 1024,
     height: 768,
     availWidth: 1024,
     availHeight: 768,
     colorDepth: 24,
     pixelDepth: 24,
-  };
-  (globalThis as any).screen = screenStub;
+  } as Screen;
+  (globalThis as GlobalWithScreen).screen = screenStub;
   if (typeof window !== "undefined") {
-    (window as any).screen = screenStub;
+    (window as WindowWithScreen).screen = screenStub;
   }
 }
 
@@ -168,13 +196,21 @@ const ensureStorage = (key: "localStorage" | "sessionStorage") => {
     });
   };
 
-  if (typeof (globalThis as any)[key] === "undefined") {
+  type GlobalWithStorage = typeof globalThis & {
+    [K in typeof key]?: Storage;
+  };
+
+  type WindowWithStorage = Window & {
+    [K in typeof key]?: Storage;
+  };
+
+  if (typeof (globalThis as GlobalWithStorage)[key] === "undefined") {
     assign(globalThis);
   }
 
   if (
     typeof window !== "undefined" &&
-    typeof (window as any)[key] === "undefined"
+    typeof (window as WindowWithStorage)[key] === "undefined"
   ) {
     assign(window);
   }
@@ -210,31 +246,46 @@ if (typeof globalThis.PointerEvent === "undefined") {
       this.isPrimary = params.isPrimary ?? false;
     }
   }
-  (globalThis as any).PointerEvent = PointerEvent;
+  type GlobalWithPointerEvent = typeof globalThis & {
+    PointerEvent?: typeof PointerEvent;
+  };
+
+  type WindowWithPointerEvent = Window & {
+    PointerEvent?: typeof PointerEvent;
+  };
+
+  (globalThis as GlobalWithPointerEvent).PointerEvent = PointerEvent;
   if (typeof window !== "undefined") {
-    (window as any).PointerEvent = PointerEvent;
+    (window as WindowWithPointerEvent).PointerEvent = PointerEvent;
   }
 }
 
 // Suppress specific warnings that are noisy in tests
+// biome-ignore lint/suspicious/noConsole: test environment setup
 const originalConsoleWarn = console.warn;
+// biome-ignore lint/suspicious/noConsole: test environment setup
 const originalConsoleError = console.error;
 
 console.warn = (...args) => {
   const msg = args[0];
   if (typeof msg === "string") {
-    if (msg.includes("THREE.WebGLRenderer")) return;
-    if (msg.includes('The pseudo class ":first-child" is potentially unsafe'))
+    if (msg.includes("THREE.WebGLRenderer")) {
       return;
-    if (msg.includes('The pseudo class ":nth-child" is potentially unsafe'))
+    }
+    if (msg.includes('The pseudo class ":first-child" is potentially unsafe')) {
       return;
+    }
+    if (msg.includes('The pseudo class ":nth-child" is potentially unsafe')) {
+      return;
+    }
   }
   originalConsoleWarn(...args);
 };
 
 console.error = (...args) => {
   const msg = args[0];
-  if (typeof msg === "string" && msg.includes("Error creating WebGL context"))
+  if (typeof msg === "string" && msg.includes("Error creating WebGL context")) {
     return;
+  }
   originalConsoleError(...args);
 };

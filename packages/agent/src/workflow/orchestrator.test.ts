@@ -121,6 +121,7 @@ describe("orchestrateWorkflowStream", () => {
     createWorkflowExecutorMock.mockReturnValueOnce({
       runId: "run-123",
       summary: "ok",
+      // biome-ignore lint/suspicious/useAwait: Async generator required by type signature
       stream: (async function* () {
         yield streamedEvent;
       })(),

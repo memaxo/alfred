@@ -11,21 +11,21 @@ import {
   createTemporalState,
   type TemporalState,
 } from "./coordinate";
-import { buildStandardFrameGraph, type FrameGraph } from "./frame-graph";
+import { buildStandardFrameGraph } from "./frame-graph";
 import { LODManager } from "./lod";
 import type { Camera, GlobalUniforms, OrbConfig, RenderSystem } from "./types";
 
 /**
  * Engine configuration
  */
-export interface CortexConfig {
+export type CortexConfig = {
   /** Canvas element to render to */
   canvas: HTMLCanvasElement;
   /** Enable post-processing effects */
   postProcessing?: boolean;
   /** Custom LOD manager */
   lodManager?: LODManager;
-}
+};
 
 /**
  * Engine state
@@ -36,20 +36,18 @@ export type EngineState = "uninitialized" | "initializing" | "ready" | "error";
  * Cortex Engine - WebGPU rendering engine for ALFRED Mindscape
  */
 export class CortexEngine {
-  private canvas: HTMLCanvasElement;
+  private readonly canvas: HTMLCanvasElement;
   private device: GPUDevice | null = null;
   private context: GPUCanvasContext | null = null;
   private format: GPUTextureFormat = "bgra8unorm";
 
-  private systems: Map<string, RenderSystem> = new Map();
-  // Frame graph is constructed but execution is managed by render loop
-  private _frameGraph: FrameGraph;
+  private readonly systems: Map<string, RenderSystem> = new Map();
   private bufferPool: BufferPool | null = null;
   private uniformBuffer: UniformBuffer | null = null;
 
-  private lodManager: LODManager;
-  private camera: Camera;
-  private temporal: TemporalState;
+  private readonly lodManager: LODManager;
+  private readonly camera: Camera;
+  private readonly temporal: TemporalState;
 
   private lastFrameTime = 0;
   private running = false;
@@ -62,7 +60,7 @@ export class CortexEngine {
   private depthTexture: GPUTexture | null = null;
 
   // Global uniforms data
-  private uniforms: GlobalUniforms = {
+  private readonly uniforms: GlobalUniforms = {
     time: 0,
     deltaTime: 0,
     resolution: { x: 0, y: 0 },
@@ -86,8 +84,12 @@ export class CortexEngine {
    * Initialize WebGPU and create resources
    */
   async init(): Promise<boolean> {
-    if (this.state === "ready") return true;
-    if (this.state === "initializing") return false;
+    if (this.state === "ready") {
+      return true;
+    }
+    if (this.state === "initializing") {
+      return false;
+    }
 
     this.state = "initializing";
 
@@ -153,7 +155,6 @@ export class CortexEngine {
     } catch (err) {
       this.error = err instanceof Error ? err : new Error(String(err));
       this.state = "error";
-      console.error("Cortex Engine init failed:", err);
       return false;
     }
   }
@@ -162,7 +163,9 @@ export class CortexEngine {
    * Create render target textures
    */
   private createRenderTargets(): void {
-    if (!this.device) return;
+    if (!this.device) {
+      return;
+    }
 
     const width = this.canvas.width;
     const height = this.canvas.height;
@@ -214,9 +217,7 @@ export class CortexEngine {
     this.systems.set(system.name, system);
 
     if (this.device && this.state === "ready") {
-      system.init(this.device).catch((err) => {
-        console.error(`Failed to init system ${system.name}:`, err);
-      });
+      system.init(this.device).catch((_err) => {});
     }
   }
 
@@ -293,7 +294,9 @@ export class CortexEngine {
    * Upload uniforms to GPU
    */
   private uploadUniforms(): void {
-    if (!this.uniformBuffer) return;
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     const u = this.uniforms;
 
@@ -315,7 +318,9 @@ export class CortexEngine {
    * Render a single frame
    */
   private render(time: number): void {
-    if (!(this.device && this.context) || this.state !== "ready") return;
+    if (!(this.device && this.context) || this.state !== "ready") {
+      return;
+    }
 
     // Calculate delta time
     const dt = this.lastFrameTime > 0 ? (time - this.lastFrameTime) / 1000 : 0;
@@ -388,9 +393,10 @@ export class CortexEngine {
    * Start the render loop
    */
   start(): void {
-    if (this.running) return;
+    if (this.running) {
+      return;
+    }
     if (this.state !== "ready") {
-      console.warn("Engine not ready, call init() first");
       return;
     }
 
@@ -499,19 +505,25 @@ export function isWebGPUSupported(): boolean {
 export async function detectRenderingCapability(): Promise<
   "webgpu" | "webgl" | "canvas2d"
 > {
-  if (typeof navigator === "undefined") return "canvas2d";
+  if (typeof navigator === "undefined") {
+    return "canvas2d";
+  }
 
   if ("gpu" in navigator) {
     try {
       const adapter = await navigator.gpu.requestAdapter();
-      if (adapter) return "webgpu";
+      if (adapter) {
+        return "webgpu";
+      }
     } catch {
       // WebGPU not available
     }
   }
 
   const canvas = document.createElement("canvas");
-  if (canvas.getContext("webgl2")) return "webgl";
+  if (canvas.getContext("webgl2")) {
+    return "webgl";
+  }
 
   return "canvas2d";
 }

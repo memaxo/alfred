@@ -123,11 +123,7 @@ export class VCRRecorder {
       const loaded = await loadCassette(this.cassettePath);
       if (loaded) {
         this.cassette = loaded;
-        console.log(
-          `VCR: Loaded cassette with ${this.cassette.interactions.length} interactions`
-        );
       } else if (this.strictReplay) {
-        console.warn(`VCR: No cassette found at ${this.cassettePath}`);
       }
     }
 
@@ -135,8 +131,6 @@ export class VCRRecorder {
     this.originalFetch = globalThis.fetch;
     globalThis.fetch = this.createInterceptor();
     this.isActive = true;
-
-    console.log(`VCR: Started in ${this.mode} mode`);
   }
 
   /**
@@ -156,9 +150,6 @@ export class VCRRecorder {
     // Save cassette in record mode
     if (this.mode === "record" && this.cassette.interactions.length > 0) {
       await saveCassette(this.cassettePath, this.cassette);
-      console.log(
-        `VCR: Saved ${this.cassette.interactions.length} interactions to ${this.cassettePath}`
-      );
     }
 
     this.isActive = false;
@@ -223,7 +214,6 @@ export class VCRRecorder {
           : findInteraction(this.cassette, requestHash);
 
         if (recorded) {
-          console.log(`VCR: Replaying ${provider} request (${recorded.model})`);
           return this.createMockResponse(recorded);
         }
 
@@ -233,9 +223,6 @@ export class VCRRecorder {
               `Hash: ${requestHash}. Run with VCR_RECORD=1 to record.`
           );
         }
-
-        // Fall through to real request if not strict
-        console.warn("VCR: No recording found, making real request");
       }
 
       // Record mode - make real request and record
@@ -269,7 +256,6 @@ export class VCRRecorder {
       };
 
       addInteraction(this.cassette, interaction);
-      console.log(`VCR: Recorded ${provider} request (${interaction.model})`);
 
       return response;
     };

@@ -33,7 +33,7 @@ describe("review fixAttempts persistence", () => {
 
   // Mock workflowRepo
   const mockWorkflowRepo = {
-    getRun: mock(async (runId: string) => mockWorkflowRun),
+    getRun: mock(async (_runId: string) => mockWorkflowRun),
     updateRun: mock(async (runId: string, patch: { stateData?: unknown }) => {
       updateRunCalls.push({ runId, patch });
       if (mockWorkflowRun && patch.stateData) {
@@ -61,7 +61,7 @@ describe("review fixAttempts persistence", () => {
   });
 
   afterEach(async () => {
-    delete process.env.ORCH_TMUX_DISABLED;
+    process.env.ORCH_TMUX_DISABLED = undefined;
     restoreRunner?.();
     restoreRunner = undefined;
     toolCodex.execute = originalCodex;

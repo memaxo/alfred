@@ -729,9 +729,7 @@ export async function orchestrateWorkflowStream(
               stuck?: boolean;
               durationSeconds?: number;
             }> = Array.isArray(data.agents)
-              ? (data.agents as Array<Record<string, unknown>>).map(
-                  coerceRecord
-                )
+              ? (data.agents as Record<string, unknown>[]).map(coerceRecord)
               : [];
 
             for (const agent of agents) {

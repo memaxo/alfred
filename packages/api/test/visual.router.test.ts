@@ -100,8 +100,12 @@ const PRESET_MAXIMUM: VisualConfig = {
 // Mock @alfred/cortex
 mock.module("@alfred/cortex", () => ({
   getPreset: vi.fn((name: string): VisualConfig => {
-    if (name === "minimal") return PRESET_MINIMAL;
-    if (name === "maximum") return PRESET_MAXIMUM;
+    if (name === "minimal") {
+      return PRESET_MINIMAL;
+    }
+    if (name === "maximum") {
+      return PRESET_MAXIMUM;
+    }
     return PRESET_BALANCED;
   }),
   getDefaultPreset: vi.fn(() => PRESET_BALANCED),

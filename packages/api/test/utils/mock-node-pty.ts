@@ -11,7 +11,9 @@ mock.module("node-pty", () => ({
           return {
             dispose: () => {
               const idx = dataListeners.indexOf(fn);
-              if (idx >= 0) dataListeners.splice(idx, 1);
+              if (idx >= 0) {
+                dataListeners.splice(idx, 1);
+              }
             },
           };
         },
@@ -20,14 +22,18 @@ mock.module("node-pty", () => ({
           return {
             dispose: () => {
               const idx = exitListeners.indexOf(fn);
-              if (idx >= 0) exitListeners.splice(idx, 1);
+              if (idx >= 0) {
+                exitListeners.splice(idx, 1);
+              }
             },
           };
         },
         write: (_data: string) => {},
         resize: (_cols: number, _rows: number) => {},
         kill: () => {
-          for (const fn of exitListeners) fn();
+          for (const fn of exitListeners) {
+            fn();
+          }
         },
       };
     },

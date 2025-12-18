@@ -24,7 +24,7 @@ describe("useAssistantStream integration (without network)", () => {
   it("sends user input through the chat transport", async () => {
     const { result } = renderHook(() => useAssistantStream());
 
-    await act(async () => {
+    act(() => {
       result.current.send("Ping transport");
     });
 

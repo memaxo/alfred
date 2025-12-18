@@ -10,40 +10,39 @@ import type { EdgeData, GlobalUniforms, NodeData, OrbConfig } from "../types";
 /**
  * Canvas2D renderer configuration
  */
-export interface Canvas2DConfig {
+export type Canvas2DConfig = {
   /** Canvas element to render to */
   canvas: HTMLCanvasElement;
   /** Enable glow effects (using shadows) */
   enableGlow: boolean;
   /** Particle count (reduced for performance) */
   particleCount: number;
-}
+};
 
 /**
  * Simple particle for Canvas2D
  */
-interface Particle {
+type Particle = {
   x: number;
   y: number;
   vx: number;
   vy: number;
   life: number;
   size: number;
-}
+};
 
 /**
  * Canvas2D Fallback Renderer
  */
 export class Canvas2DRenderer {
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
-  private config: Canvas2DConfig;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly config: Canvas2DConfig;
 
   private particles: Particle[] = [];
   private nodes: NodeData[] = [];
   private edges: EdgeData[] = [];
   private orbConfig: OrbConfig | null = null;
-  private uniforms: GlobalUniforms;
+  private readonly uniforms: GlobalUniforms;
 
   private running = false;
   private lastTime = 0;
@@ -307,8 +306,10 @@ export class Canvas2DRenderer {
   /**
    * Animation loop
    */
-  private loop = (time: number): void => {
-    if (!this.running) return;
+  private readonly loop = (time: number): void => {
+    if (!this.running) {
+      return;
+    }
 
     const dt = this.lastTime > 0 ? (time - this.lastTime) / 1000 : 0;
     this.lastTime = time;
@@ -326,7 +327,9 @@ export class Canvas2DRenderer {
    * Start rendering
    */
   start(): void {
-    if (this.running) return;
+    if (this.running) {
+      return;
+    }
     this.running = true;
     this.lastTime = 0;
     requestAnimationFrame(this.loop);

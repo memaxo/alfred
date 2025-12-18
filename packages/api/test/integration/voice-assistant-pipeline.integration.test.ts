@@ -36,7 +36,7 @@ let createVCR: typeof import("@alfred/test-kit/vcr").createVCR;
 let vcr: InstanceType<typeof VCRRecorder>;
 
 // Voice fixture
-let createVoiceFixture: typeof import("@alfred/test-kit/voice/registry").createVoiceFixture;
+let _createVoiceFixture: typeof import("@alfred/test-kit/voice/registry").createVoiceFixture;
 let installVoiceTestPools: typeof import("@alfred/test-kit/voice/runtime-fixture").installVoiceTestPools;
 
 // Test utilities
@@ -47,7 +47,7 @@ beforeAll(async () => {
   ({ VCRRecorder, createVCR } = await import("@alfred/test-kit/vcr"));
 
   // Load voice fixture
-  ({ createVoiceFixture } = await import("@alfred/test-kit/voice/registry"));
+  ({ _createVoiceFixture } = await import("@alfred/test-kit/voice/registry"));
   ({ installVoiceTestPools } = await import(
     "@alfred/test-kit/voice/runtime-fixture"
   ));
@@ -70,7 +70,7 @@ afterAll(async () => {
 describe("Voice-Assistant Pipeline Integration", () => {
   let voiceFixture: Awaited<ReturnType<typeof installVoiceTestPools>> | null =
     null;
-  let caller: Awaited<ReturnType<typeof createTestCaller>>;
+  let _caller: Awaited<ReturnType<typeof createTestCaller>>;
 
   beforeEach(async () => {
     // Install deterministic voice pools
@@ -80,7 +80,7 @@ describe("Voice-Assistant Pipeline Integration", () => {
       streamingChunks: 3,
     });
 
-    caller = await createTestCaller({
+    _caller = await createTestCaller({
       userId: "voice-pipeline-test-user",
       roles: ["owner"],
       scopes: [
@@ -500,7 +500,7 @@ describe("Voice-Assistant Pipeline Integration", () => {
         );
 
         // Empty audio should not crash
-        const result = await session.processAudioChunk("", "audio/pcm", {
+        const _result = await session.processAudioChunk("", "audio/pcm", {
           sessionId: "empty-audio",
         });
 
@@ -528,9 +528,9 @@ describe("Voice-Assistant Pipeline Integration", () => {
         );
 
         // Empty text synthesis
-        let synthesisCompleted = false;
+        let _synthesisCompleted = false;
         await session.streamSynthesis("", "alloy", () => {
-          synthesisCompleted = true;
+          _synthesisCompleted = true;
         });
 
         // Session should still be usable after
@@ -581,7 +581,7 @@ describe("Voice Router Integration", () => {
 
   it("validates voice router authentication", async () => {
     // Unauthenticated caller should fail
-    const unauthCaller = await createTestCaller({
+    const _unauthCaller = await createTestCaller({
       userId: null as any, // Force unauthenticated
       roles: [],
       scopes: [],

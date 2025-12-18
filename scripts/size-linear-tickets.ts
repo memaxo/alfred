@@ -291,18 +291,34 @@ async function fetchTeam(teamName: string): Promise<LinearTeam> {
 }
 
 function priorityToString(priority: number): string {
-  if (priority === 1) return "Urgent";
-  if (priority === 2) return "High";
-  if (priority === 3) return "Medium";
-  if (priority === 4) return "Low";
+  if (priority === 1) {
+    return "Urgent";
+  }
+  if (priority === 2) {
+    return "High";
+  }
+  if (priority === 3) {
+    return "Medium";
+  }
+  if (priority === 4) {
+    return "Low";
+  }
   return "None";
 }
 
 function priorityToNumber(priority: string): number {
-  if (priority === "Urgent") return 1;
-  if (priority === "High") return 2;
-  if (priority === "Medium") return 3;
-  if (priority === "Low") return 4;
+  if (priority === "Urgent") {
+    return 1;
+  }
+  if (priority === "High") {
+    return 2;
+  }
+  if (priority === "Medium") {
+    return 3;
+  }
+  if (priority === "Low") {
+    return 4;
+  }
   return 0;
 }
 
@@ -493,31 +509,50 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
   const labels: string[] = [];
   const existingLabels = issue.labels.nodes.map((l) => l.name.toLowerCase());
 
-  if (isFeature && !existingLabels.includes("feature")) labels.push("Feature");
-  if (isBug && !existingLabels.includes("bug")) labels.push("Bug");
-  if (isTechDebt && !existingLabels.includes("tech-debt"))
+  if (isFeature && !existingLabels.includes("feature")) {
+    labels.push("Feature");
+  }
+  if (isBug && !existingLabels.includes("bug")) {
+    labels.push("Bug");
+  }
+  if (isTechDebt && !existingLabels.includes("tech-debt")) {
     labels.push("tech-debt");
-  if (isDoc && !existingLabels.includes("documentation"))
+  }
+  if (isDoc && !existingLabels.includes("documentation")) {
     labels.push("Documentation");
-  if (isInfra && !existingLabels.includes("infrastructure"))
+  }
+  if (isInfra && !existingLabels.includes("infrastructure")) {
     labels.push("Infrastructure");
-  if (isTest && !existingLabels.includes("testing")) labels.push("testing");
-  if (isEpic && !existingLabels.includes("epic")) labels.push("epic");
+  }
+  if (isTest && !existingLabels.includes("testing")) {
+    labels.push("testing");
+  }
+  if (isEpic && !existingLabels.includes("epic")) {
+    labels.push("epic");
+  }
 
   // Domain labels
-  if (title.includes("tool") && !existingLabels.includes("tools"))
+  if (title.includes("tool") && !existingLabels.includes("tools")) {
     labels.push("tools");
-  if (title.includes("workflow") && !existingLabels.includes("workflow"))
+  }
+  if (title.includes("workflow") && !existingLabels.includes("workflow")) {
     labels.push("workflow");
-  if (title.includes("voice") && !existingLabels.includes("voice"))
+  }
+  if (title.includes("voice") && !existingLabels.includes("voice")) {
     labels.push("voice");
-  if (title.includes("knowledge") && !existingLabels.includes("knowledge"))
+  }
+  if (title.includes("knowledge") && !existingLabels.includes("knowledge")) {
     labels.push("knowledge");
-  if (title.includes("ui") && !existingLabels.includes("ui")) labels.push("ui");
-  if (title.includes("api") && !existingLabels.includes("api"))
+  }
+  if (title.includes("ui") && !existingLabels.includes("ui")) {
+    labels.push("ui");
+  }
+  if (title.includes("api") && !existingLabels.includes("api")) {
     labels.push("api");
-  if (title.includes("auth") && !existingLabels.includes("auth"))
+  }
+  if (title.includes("auth") && !existingLabels.includes("auth")) {
     labels.push("auth");
+  }
 
   // POC indicators
   if (
@@ -525,12 +560,15 @@ function analyzeTicket(issue: LinearIssue): TicketUpdate {
     (priority === "High" &&
       (title.includes("core") || title.includes("critical")))
   ) {
-    if (!existingLabels.includes("poc-critical")) labels.push("poc-critical");
+    if (!existingLabels.includes("poc-critical")) {
+      labels.push("poc-critical");
+    }
   } else if (
     (priority === "Low" || isDoc || (isTechDebt && priority === "Medium")) &&
     !existingLabels.includes("post-poc")
-  )
+  ) {
     labels.push("post-poc");
+  }
 
   update.actions.size = size;
   update.actions.priority = priority;
@@ -636,7 +674,7 @@ async function updateIssue(
 
 async function verifyImplementation(
   identifier: string,
-  title: string
+  _title: string
 ): Promise<{
   isComplete: boolean;
   evidence: string;
@@ -845,7 +883,9 @@ async function main() {
 ${highPriority
   .map((issue) => {
     const update = updates.find((u) => u.ticketId === issue.id);
-    if (!update) return "";
+    if (!update) {
+      return "";
+    }
     return `### ${update.identifier}: ${update.title}
 
 - **Current**: ${update.currentState}, ${update.currentPriority}, ${update.currentEstimate || "no estimate"} pts

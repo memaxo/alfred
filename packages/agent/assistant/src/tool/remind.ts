@@ -118,7 +118,10 @@ export const toolRemind = {
         return {
           reminders: rows
             .map((row) => mapReminder(row))
-            .filter(Boolean) as any[],
+            .filter(
+              (reminder): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
+                reminder !== null
+            ),
         };
       }
       case "due": {
@@ -131,7 +134,10 @@ export const toolRemind = {
         return {
           reminders: rows
             .map((row) => mapReminder(row))
-            .filter(Boolean) as any[],
+            .filter(
+              (reminder): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
+                reminder !== null
+            ),
         };
       }
       case "complete": {

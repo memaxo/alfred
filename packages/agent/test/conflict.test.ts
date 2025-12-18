@@ -9,8 +9,10 @@ const mockWorktreeCreate = mock(
     baseRef: "HEAD",
   })
 );
-const mockWorktreeRemove = mock(async () => {});
-const mockCodexExecute = mock(async () => ({ result: "done", artifacts: [] }));
+const mockWorktreeRemove = mock(() => Promise.resolve(undefined));
+const mockCodexExecute = mock(() =>
+  Promise.resolve({ result: "done", artifacts: [] })
+);
 
 // Spy on sys.spawn
 const spawnSpy = spyOn(sys, "spawn");
@@ -20,7 +22,7 @@ mock.module("../src/orchestrator/tool/worktree.js", () => ({
   worktreeManager: {
     create: mockWorktreeCreate,
     remove: mockWorktreeRemove,
-    safeMerge: mock(async () => ({ success: true, conflictFiles: [] })),
+    safeMerge: mock(() => Promise.resolve({ success: true, conflictFiles: [] })),
   },
 }));
 

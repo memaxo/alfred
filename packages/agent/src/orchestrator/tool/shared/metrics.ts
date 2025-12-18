@@ -64,7 +64,6 @@ export function createStageRecorder(
 ): (stage: ToolErrorStage) => void {
   if (tool !== "codex") {
     // Only codex has error stage tracking currently
-    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional no-op
     return () => {};
   }
 

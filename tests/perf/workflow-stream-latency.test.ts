@@ -99,7 +99,7 @@ function mockImmediateWorkflow(delayMs = 5) {
     return;
   }
   orchestrateWorkflowStreamMock.mockImplementation(
-    async (_input, _session, callbacks) => {
+    (_input, _session, callbacks) => {
       setTimeout(() => {
         const event: WorkflowEvent = {
           type: "notice",

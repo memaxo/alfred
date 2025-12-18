@@ -142,24 +142,25 @@ type FinalActivityDraft = {
   count: number;
 };
 
-export async function mapCodexEventToLinearActivity(
+export function mapCodexEventToLinearActivity(
   event: AlfredCodexEvent,
   context: NonNullable<CodexToolInput["context"]>
 ): Promise<void> {
   const { linearSessionId, linearSpace, linearAuthz } = context;
 
   if (!(linearSessionId && linearSpace && linearAuthz)) {
-    return;
+    return Promise.resolve();
   }
 
   const pending = convertEventToPending(event);
   if (!pending) {
-    return;
+    return Promise.resolve();
   }
 
   const state = getSessionState(linearSessionId, linearSpace, linearAuthz);
   state.pending.push(pending);
   scheduleBatchFlush(linearSessionId, state);
+  return Promise.resolve();
 }
 
 function getSessionState(
@@ -258,7 +259,7 @@ type EventGroup = {
 function buildGroups(queue: PendingEvent[]): EventGroup[] {
   const groups: EventGroup[] = [];
   for (const event of queue) {
-    const last = groups[groups.length - 1];
+    const last = groups.at(-1);
     if (last && last.eventType === event.eventType) {
       last.events.push(event);
     } else {
@@ -302,7 +303,7 @@ function buildSummaryBody(
 ): string {
   switch (eventType) {
     case "thought": {
-      const last = events[events.length - 1];
+      const last = events.at(-1);
       if (!last) {
         return `${events.length} thoughts captured`;
       }
@@ -591,7 +592,6 @@ function convertEventToPending(event: AlfredCodexEvent): PendingEvent | null {
         ephemeral: true,
         raw: event,
       };
-    case "output":
     default:
       return null;
   }

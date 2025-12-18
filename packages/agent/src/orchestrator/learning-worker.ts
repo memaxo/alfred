@@ -353,8 +353,8 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       config.decayLimit
     );
     if (staleNodes.length > 0) {
-      const updates = staleNodes.map((node: any) => {
-        const props = (node.properties as Record<string, any>) || {};
+      const updates = staleNodes.map((node) => {
+        const props = (node.properties as Record<string, unknown>) || {};
         const currentConfidence =
           typeof props.confidence === "number" ? props.confidence : 1.0;
         // Apply floor to prevent underflow
@@ -382,7 +382,7 @@ async function processMemoryMaintenance(config: LearningWorkerConfig) {
       100
     );
     if (lowConfidenceNodes.length > 0) {
-      const ids = lowConfidenceNodes.map((n: any) => n.id);
+      const ids = lowConfidenceNodes.map((n) => n.id);
       const prunedCount = await archiveNodes(ids, "low_confidence");
       metrics.memoryNodesPrunedTotal.inc(prunedCount);
       logger.info("learning_worker_pruned", { count: prunedCount });
@@ -437,7 +437,7 @@ async function decaySeedNodesWithLearnedOverrides(
     const updates: Array<{ id: string; confidence: number }> = [];
 
     for (const seedNode of seedNodes) {
-      const props = (seedNode.properties as Record<string, any>) || {};
+      const props = (seedNode.properties as Record<string, unknown>) || {};
       const seedDomain = props.domain;
       const seedConfidence =
         typeof props.confidence === "number"
@@ -512,7 +512,7 @@ async function seedOntology() {
   // Upsert Edges with seed source for tracking
   const edgeSeeds = edges
     .map((k) => {
-      const rel = k.data as any;
+      const rel = k.data as { from: unknown; to: unknown; kind: string; weight?: number };
       const fromHash = knowledgeHash(rel.from);
       const toHash = knowledgeHash(rel.to);
 
@@ -533,10 +533,10 @@ async function seedOntology() {
         metadata: { source: "seed" },
       };
     })
-    .filter((e) => e !== null);
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   if (edgeSeeds.length > 0) {
-    await upsertEdges(edgeSeeds as any);
+    await upsertEdges(edgeSeeds);
   }
 }
 
@@ -634,9 +634,15 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
 
   // Generate embeddings for nodes
   const nodeLabels = mergedEntries.map((entry) => {
-    if (entry.data._ === "fact") return entry.data.content || "unknown";
-    if (entry.data._ === "insight") return entry.data.conclusion || "unknown";
-    if (entry.data._ === "pattern") return entry.data.rule || "unknown";
+    if (entry.data._ === "fact") {
+      return entry.data.content || "unknown";
+    }
+    if (entry.data._ === "insight") {
+      return entry.data.conclusion || "unknown";
+    }
+    if (entry.data._ === "pattern") {
+      return entry.data.rule || "unknown";
+    }
     return "unknown";
   });
 
@@ -659,7 +665,8 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
       kind: entry.data._,
       label: nodeLabels[i] ?? "unknown",
       properties: {
-        confidence: (entry.data as any).confidence ?? 1.0,
+        confidence:
+          (entry.data as { confidence?: number }).confidence ?? 1.0,
         source: `run:${run.id}`,
         runId: run.id,
         workflowId: run.workflowId,
@@ -677,7 +684,7 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
 
   const edgesToInsert = edges
     .map((edge) => {
-      const rel = edge.data as any;
+      const rel = edge.data as { from: unknown; to: unknown; kind: string; weight?: number };
       const map = nodeMap;
       const fromNode = map.get(`${resource}:${rel.from}`);
       const toNode = map.get(`${resource}:${rel.to}`);
@@ -698,9 +705,9 @@ async function learnFromRun(run: typeof workflowRuns.$inferSelect) {
         },
       };
     })
-    .filter((e) => e !== null);
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   if (edgesToInsert.length > 0) {
-    await upsertEdges(edgesToInsert as any);
+    await upsertEdges(edgesToInsert);
   }
 }

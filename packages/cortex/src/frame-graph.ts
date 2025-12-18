@@ -11,7 +11,7 @@ import type { FrameGraphNode } from "./types";
  * Frame graph for render pass management
  */
 export class FrameGraph {
-  private nodes: Map<string, FrameGraphNode> = new Map();
+  private readonly nodes: Map<string, FrameGraphNode> = new Map();
   private executionOrder: string[] = [];
   private dirty = true;
 
@@ -35,7 +35,9 @@ export class FrameGraph {
    * Topologically sort nodes based on dependencies
    */
   private compile(): void {
-    if (!this.dirty) return;
+    if (!this.dirty) {
+      return;
+    }
 
     // Build adjacency list
     const graph = new Map<string, Set<string>>();
@@ -51,7 +53,7 @@ export class FrameGraph {
       for (const input of node.inputs) {
         for (const other of this.nodes.values()) {
           if (other.outputs.includes(input)) {
-            graph.get(other.name)!.add(node.name);
+            graph.get(other.name)?.add(node.name);
             inDegree.set(node.name, (inDegree.get(node.name) ?? 0) + 1);
           }
         }

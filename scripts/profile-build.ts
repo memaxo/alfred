@@ -251,7 +251,9 @@ async function main(): Promise<void> {
   async function processStdout(): Promise<void> {
     while (true) {
       const { done, value } = await stdoutReader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       const text = textDecoder.decode(value);
       process.stdout.write(text);
@@ -265,7 +267,9 @@ async function main(): Promise<void> {
   async function processStderr(): Promise<void> {
     while (true) {
       const { done, value } = await stderrReader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       const text = textDecoder.decode(value);
 

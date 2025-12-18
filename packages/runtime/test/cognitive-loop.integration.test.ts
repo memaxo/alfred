@@ -70,7 +70,7 @@ describe("runCognitiveLoop integration", () => {
   it("persists input events and transitions idle -> thinking", async () => {
     const streamId = stream("input");
 
-    const result = await runCognitiveLoop!(
+    const result = await runCognitiveLoop?.(
       ctx,
       streamId,
       inputEvent("Plan day")
@@ -82,7 +82,7 @@ describe("runCognitiveLoop integration", () => {
       input: "Plan day",
     });
 
-    const events = await cognitiveRepo!.getAllEvents(streamId);
+    const events = await cognitiveRepo?.getAllEvents(streamId);
     expect(events).toHaveLength(1);
     const payload = events[0]?.payload as Record<string, unknown>;
     expect(payload.content).toBe("Plan day");
@@ -91,10 +91,10 @@ describe("runCognitiveLoop integration", () => {
   it("replays prior events so completion yields reflection", async () => {
     const streamId = stream("complete");
 
-    await runCognitiveLoop!(ctx, streamId, inputEvent("Plan trip"));
+    await runCognitiveLoop?.(ctx, streamId, inputEvent("Plan trip"));
     const outcome: Outcome = { _: "success", result: "done", duration: 42 };
 
-    const result = await runCognitiveLoop!(
+    const result = await runCognitiveLoop?.(
       ctx,
       streamId,
       completeEvent(outcome)
@@ -106,14 +106,14 @@ describe("runCognitiveLoop integration", () => {
     >;
     expect(reflectingState.outcome._).toBe("success");
 
-    const events = await cognitiveRepo!.getAllEvents(streamId);
+    const events = await cognitiveRepo?.getAllEvents(streamId);
     expect(events).toHaveLength(2);
     expect(events[1]?.type).toBe("complete");
   });
 
   it("records entropy interrupts and updates physiology", async () => {
     const streamId = stream("interrupt");
-    const firstResult = await runCognitiveLoop!(
+    const firstResult = await runCognitiveLoop?.(
       ctx,
       streamId,
       inputEvent("Investigate loop")
@@ -121,7 +121,7 @@ describe("runCognitiveLoop integration", () => {
     const firstState = firstResult.state;
 
     const interrupt = interruptEvent("loop detected");
-    const nextResult = await runCognitiveLoop!(ctx, streamId, interrupt);
+    const nextResult = await runCognitiveLoop?.(ctx, streamId, interrupt);
     const nextState = nextResult.state;
 
     expect(nextState._).toBe("thinking");
@@ -129,7 +129,7 @@ describe("runCognitiveLoop integration", () => {
       firstState.physiology.boredom
     );
 
-    const events = await cognitiveRepo!.getAllEvents(streamId);
+    const events = await cognitiveRepo?.getAllEvents(streamId);
     expect(events).toHaveLength(2);
     expect(events[1]?.type).toBe("interrupt");
   });

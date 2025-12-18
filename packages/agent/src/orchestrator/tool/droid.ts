@@ -158,7 +158,6 @@ function streamStdout(
   const reader = proc.stdout.getReader();
   const decoder = new TextDecoder();
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: stream processing requires nested logic
   (async () => {
     try {
       while (true) {
@@ -183,23 +182,17 @@ function streamStdout(
           for (const line of lines) {
             try {
               const parsed = JSON.parse(line);
-              // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
               void Promise.resolve(
                 writer?.write?.({ type: "droid", chunk: parsed })
-                // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
               ).catch(() => {});
             } catch {
-              // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
               void Promise.resolve(
                 writer?.write?.({ type: "stdout", text: line })
-                // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
               ).catch(() => {});
             }
           }
         } else {
-          // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
           void Promise.resolve(writer?.write?.({ type: "stdout", text }))
-            // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
             .catch(() => {});
         }
       }
@@ -277,10 +270,8 @@ export const toolDroid = {
     }
 
     if (accumulator.truncated) {
-      // biome-ignore lint/complexity/noVoid: fire-and-forget pattern
       void Promise.resolve(
         writer?.write?.({ type: "notice", message: "output_truncated" })
-        // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional error suppression
       ).catch(() => {});
     }
 

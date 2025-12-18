@@ -181,7 +181,7 @@ describe("getAccessMultiplier", () => {
     expect(m1000).toBeGreaterThan(m100);
 
     // The rate of increase should slow down (logarithmic)
-    const increase1 = m10 - m1;
+    const _increase1 = m10 - m1;
     const increase2 = m100 - m10;
     const increase3 = m1000 - m100;
 

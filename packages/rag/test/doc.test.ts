@@ -164,7 +164,7 @@ describe("RAG doc functions", () => {
       } finally {
         process.env.DATABASE_URL = originalDb;
         if (originalFlag === undefined) {
-          delete process.env.RAG_ENRICH_GRAPH;
+          process.env.RAG_ENRICH_GRAPH = undefined;
         } else {
           process.env.RAG_ENRICH_GRAPH = originalFlag;
         }
@@ -172,7 +172,7 @@ describe("RAG doc functions", () => {
 
       const edgeCalls = upsertEdgesMock.mock.calls;
       expect(edgeCalls.length).toBeGreaterThan(0);
-      const edges = edgeCalls[edgeCalls.length - 1]?.[0] ?? [];
+      const edges = edgeCalls.at(-1)?.[0] ?? [];
       expect(Array.isArray(edges)).toBe(true);
       expect(edges.length).toBeGreaterThan(0);
     });

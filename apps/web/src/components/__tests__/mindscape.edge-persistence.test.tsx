@@ -210,7 +210,7 @@ describe("MindscapeCanvas edge persistence", () => {
         "graph.runQuery": () => ({ nodes: [], edges: [] }),
       },
       mutations: {
-        "graph.connect": async () => {
+        "graph.connect": () => {
           throw new Error("connect_failed");
         },
       },

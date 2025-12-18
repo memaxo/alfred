@@ -24,7 +24,7 @@ export type Cassette = {
 export class CognitiveVCR {
   private readonly cassettePath: string;
   private interactions: Interaction[] = [];
-  private mode: "record" | "replay" | "passthrough";
+  private readonly mode: "record" | "replay" | "passthrough";
 
   constructor(
     cassetteName: string,
@@ -39,7 +39,9 @@ export class CognitiveVCR {
   }
 
   async load(): Promise<void> {
-    if (this.mode === "record" || this.mode === "passthrough") return;
+    if (this.mode === "record" || this.mode === "passthrough") {
+      return;
+    }
 
     try {
       const content = await readFile(this.cassettePath, "utf-8");
@@ -56,7 +58,9 @@ export class CognitiveVCR {
   }
 
   async save(): Promise<void> {
-    if (this.mode !== "record") return;
+    if (this.mode !== "record") {
+      return;
+    }
 
     const cassette: Cassette = {
       version: 1,
@@ -73,10 +77,10 @@ export class CognitiveVCR {
 
   findMatch(input: Interaction["input"]): Interaction | undefined {
     // Simple exact match on system prompt + last user message content for V1
-    const lastUserMsg = input.messages[input.messages.length - 1];
+    const lastUserMsg = input.messages.at(-1);
 
     return this.interactions.find((i) => {
-      const iLast = i.input.messages[i.input.messages.length - 1];
+      const iLast = i.input.messages.at(-1);
       return (
         JSON.stringify(lastUserMsg) === JSON.stringify(iLast) &&
         i.input.system === input.system

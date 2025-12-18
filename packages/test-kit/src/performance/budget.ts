@@ -87,7 +87,7 @@ export class BudgetExceededError extends Error {
  * ```
  */
 export async function withBudget<T>(
-  name: string,
+  _name: string,
   budgetMs: number,
   fn: () => Promise<T>
 ): Promise<BudgetResult<T>> {
@@ -97,9 +97,6 @@ export async function withBudget<T>(
   const withinBudget = durationMs <= budgetMs;
 
   if (!withinBudget) {
-    console.warn(
-      `Performance budget exceeded: "${name}" took ${durationMs.toFixed(2)}ms (budget: ${budgetMs}ms)`
-    );
   }
 
   return {

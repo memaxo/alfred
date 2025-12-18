@@ -68,7 +68,7 @@ export async function executeIngest(
       if (originalEnrichGraph !== undefined) {
         process.env.RAG_ENRICH_GRAPH = originalEnrichGraph;
       } else {
-        delete process.env.RAG_ENRICH_GRAPH;
+        process.env.RAG_ENRICH_GRAPH = undefined;
       }
     }
   }
@@ -85,13 +85,14 @@ export async function executeQuery(
   const chunks = await retrieve(query, k, threshold);
 
   // Filter by source if specified
-  const filteredChunks = input.source
+  const source = input.source;
+  const filteredChunks = source
     ? chunks.filter((chunk) => {
         const metadata = chunk.metadata as Record<string, unknown> | undefined;
         return (
-          metadata?.source === input.source ||
+          metadata?.source === source ||
           (typeof metadata?.documentId === "string" &&
-            metadata.documentId.includes(input.source!))
+            metadata.documentId.includes(source))
         );
       })
     : chunks;
@@ -131,7 +132,7 @@ export async function executeList(input: RagListInput): Promise<RagListOutput> {
   // Filter by source pattern if specified
   const filteredDocs = input.source
     ? documents.filter((doc) =>
-        doc.source.toLowerCase().includes(input.source!.toLowerCase())
+        doc.source.toLowerCase().includes(input.source?.toLowerCase())
       )
     : documents;
 

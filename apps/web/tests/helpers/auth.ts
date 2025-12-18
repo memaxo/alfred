@@ -55,12 +55,8 @@ export async function signUpTestUser(page: Page) {
   if (useRealAuth()) {
     return legacySignUp(page);
   }
-  page.on("console", (msg) => {
-    console.log(`BROWSER CONSOLE: ${msg.type().toUpperCase()} ${msg.text()}`);
-  });
-  page.on("pageerror", (err) => {
-    console.log(`BROWSER ERROR: ${err.message}`);
-  });
+  page.on("console", (_msg) => {});
+  page.on("pageerror", (_err) => {});
   const suffix = uniqueSuffix();
   const session = issueTestSession({
     name: `Mindscape Tester ${suffix}`,

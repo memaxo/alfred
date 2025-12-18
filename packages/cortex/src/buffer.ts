@@ -11,10 +11,10 @@ import type { PooledBuffer } from "./types";
  * Buffer pool for GPU resource management
  */
 export class BufferPool {
-  private device: GPUDevice;
-  private pools: Map<string, PooledBuffer[]> = new Map();
-  private inUse: Map<string, Set<GPUBuffer>> = new Map();
-  private maxPoolSize = 8;
+  private readonly device: GPUDevice;
+  private readonly pools: Map<string, PooledBuffer[]> = new Map();
+  private readonly inUse: Map<string, Set<GPUBuffer>> = new Map();
+  private readonly maxPoolSize = 8;
 
   constructor(device: GPUDevice) {
     this.device = device;
@@ -113,8 +113,8 @@ export class BufferPool {
  * Double buffer for ping-pong compute updates
  */
 export class DoubleBuffer {
-  private device: GPUDevice;
-  private buffers: [GPUBuffer, GPUBuffer];
+  private readonly device: GPUDevice;
+  private readonly buffers: [GPUBuffer, GPUBuffer];
   private currentIndex = 0;
   readonly size: number;
 
@@ -161,9 +161,9 @@ export class DoubleBuffer {
  * Handles alignment and updates for shader uniforms.
  */
 export class UniformBuffer {
-  private device: GPUDevice;
-  private buffer: GPUBuffer;
-  private data: Float32Array;
+  private readonly device: GPUDevice;
+  private readonly buffer: GPUBuffer;
+  private readonly data: Float32Array;
   private dirty = false;
 
   constructor(device: GPUDevice, sizeInFloats: number, label?: string) {
@@ -235,8 +235,8 @@ export class UniformBuffer {
  * Storage buffer for large data (particles, nodes, edges)
  */
 export class StorageBuffer {
-  private device: GPUDevice;
-  private buffer: GPUBuffer;
+  private readonly device: GPUDevice;
+  private readonly buffer: GPUBuffer;
   readonly capacity: number;
   private count = 0;
 

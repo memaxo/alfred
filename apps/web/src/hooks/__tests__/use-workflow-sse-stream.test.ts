@@ -53,7 +53,7 @@ describe("useWorkflowSseStream", () => {
       mode: "sequential" as const,
     };
 
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useWorkflowSseStream({
         input: streamInput,
         onWorkflowEvent: workflowSpy,
@@ -119,12 +119,12 @@ describe("useWorkflowSseStream", () => {
 function createMockReader(chunks: Uint8Array[]) {
   const queue = [...chunks];
   return {
-    async read() {
-      if (queue.length === 0) {
-        return { done: true, value: undefined };
+    read() {
+      const value = queue.shift();
+      if (value === undefined) {
+        return Promise.resolve({ done: true, value: undefined });
       }
-      const value = queue.shift()!;
-      return { done: false, value };
+      return Promise.resolve({ done: false, value });
     },
     cancel: () => {},
     releaseLock: () => {},

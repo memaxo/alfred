@@ -58,7 +58,7 @@ async function main() {
     // 2. Verify Linker
     // Use a known anchor concept to pass the filter in linkEntities
     const anchorConcept = "Coding"; // Must be in ANCHORS list
-    const inputEntity = "React"; // "React" -> "Frontend" -> "Coding" is in the graph from seed/tests usually
+    const _inputEntity = "React"; // "React" -> "Frontend" -> "Coding" is in the graph from seed/tests usually
     // But let's insert explicit nodes to be safe
 
     console.log(`📝 Seeding explicit path: ${entity} -> ${anchorConcept}`);
@@ -66,7 +66,7 @@ async function main() {
     const anchorEmbedding = await embedMany([anchorConcept]);
 
     // Upsert Anchor Node (must have embedding for vector search to find it as start node if direct match)
-    const nodes = await upsertNodes([
+    const _nodes = await upsertNodes([
       {
         resource: "test",
         hash: `h:${entity}`,
@@ -116,8 +116,8 @@ async function main() {
     // but my mock upsertNodes might return something else?
     // Checking repo signature... `upsertNodes` returns `Map<string, NodeRow>`. Key is `${resource}:${hash}`.
 
-    const reactId = nodeMap.get("ontology:h:react")!.id;
-    const codingId = nodeMap.get("ontology:h:coding")!.id;
+    const reactId = nodeMap.get("ontology:h:react")?.id;
+    const codingId = nodeMap.get("ontology:h:coding")?.id;
 
     // Create edge: React -> Coding
     // We need to import `upsertEdges`

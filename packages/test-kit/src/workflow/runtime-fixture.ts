@@ -498,9 +498,7 @@ export async function installWorkflowRuntimeFixture(
       } else if (action === "set-cancelled") {
         body.stateId = "state_cancelled";
       }
-      return new Response(JSON.stringify(body), {
-        headers: { "content-type": "application/json" },
-      });
+      return Response.json(body);
     },
   });
 

@@ -38,7 +38,9 @@ for (const match of metricsSource.matchAll(reExportRegex)) {
     // Handle "name as alias" syntax
     const namePart = exp.split(/\s+as\s+/)[0].trim();
     // Skip type exports
-    if (namePart.startsWith("type ")) continue;
+    if (namePart.startsWith("type ")) {
+      continue;
+    }
     if (namePart && !metricsStub[namePart]) {
       metricsStub[namePart] = createMetricStub();
     }

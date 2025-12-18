@@ -40,10 +40,10 @@ You are a News Curator.
  * 1. Extract entities from recent messages.
  * 2. Find path from entities to Anchor Concepts in the Graph.
  */
-export async function analyzeContext(
+export function analyzeContext(
   messages: Array<{ role: string; content: string }>
 ): Promise<{ domains: string[]; paths: string[][] }> {
-  return linkEntities(messages);
+  return Promise.resolve(linkEntities(messages));
 }
 
 /**

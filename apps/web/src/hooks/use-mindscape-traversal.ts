@@ -9,6 +9,9 @@ import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 type GraphNode =
   inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["nodes"][number];
 
+type GraphEdge =
+  inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["edges"][number];
+
 export function useMindscapeTraversal() {
   const { nodes, focusedNodeId, addArtifact, setEdges, edges } =
     useMindscapeStore(
@@ -48,7 +51,9 @@ export function useMindscapeTraversal() {
 
   // Merge traversal results into the graph
   useEffect(() => {
-    if (!(traversalResult && focusedDbId)) return;
+    if (!(traversalResult && focusedDbId)) {
+      return;
+    }
 
     const isConceptNode = (node: GraphNode) =>
       node.kind === "fact" &&
@@ -78,7 +83,9 @@ export function useMindscapeTraversal() {
         hgHash?: string;
       };
       const ref = nodeId.dbId ?? nodeId.hgHash ?? nodeId.uiId;
-      if (!ref) return;
+      if (!ref) {
+        return;
+      }
 
       const isConcept = isConceptNode(node);
 
@@ -89,7 +96,9 @@ export function useMindscapeTraversal() {
           n.id === `knowledge-${ref}` ||
           n.id === `concept-${ref}`
       );
-      if (exists) return;
+      if (exists) {
+        return;
+      }
 
       // Spawn new node
       const flowId = isConcept ? `concept-${ref}` : `knowledge-${ref}`;
@@ -155,28 +164,58 @@ export function useMindscapeTraversal() {
     // Currently graph.runQuery returns nodes and edges.
 
     if (traversalResult.edges) {
-      const newEdges = traversalResult.edges.map((edge: any) => {
-        const sourceKind = kindByDbId.get(edge.fromId) ?? "knowledge";
-        const targetKind = kindByDbId.get(edge.toId) ?? "knowledge";
+      const newEdges = traversalResult.edges.map((edge: GraphEdge) => {
+        // Handle both EdgeRow format (fromId/toId) and UnifiedEdge format (source.dbId/target.dbId)
+        const fromId =
+          "fromId" in edge && typeof edge.fromId === "string"
+            ? edge.fromId
+            : "source" in edge &&
+                typeof edge.source === "object" &&
+                edge.source !== null &&
+                "dbId" in edge.source &&
+                typeof edge.source.dbId === "string"
+              ? edge.source.dbId
+              : "";
+        const toId =
+          "toId" in edge && typeof edge.toId === "string"
+            ? edge.toId
+            : "target" in edge &&
+                typeof edge.target === "object" &&
+                edge.target !== null &&
+                "dbId" in edge.target &&
+                typeof edge.target.dbId === "string"
+              ? edge.target.dbId
+              : "";
 
-        const sourceFallback = `${sourceKind}-${edge.fromId}`;
-        const targetFallback = `${targetKind}-${edge.toId}`;
+        const sourceKind = kindByDbId.get(fromId) ?? "knowledge";
+        const targetKind = kindByDbId.get(toId) ?? "knowledge";
+
+        const sourceFallback = `${sourceKind}-${fromId}`;
+        const targetFallback = `${targetKind}-${toId}`;
 
         const sourceId =
-          nodes.find((n) => n.data?.graph?.dbId === edge.fromId)?.id ??
+          nodes.find((n) => n.data?.graph?.dbId === fromId)?.id ??
           sourceFallback;
         const targetId =
-          nodes.find((n) => n.data?.graph?.dbId === edge.toId)?.id ??
-          targetFallback;
+          nodes.find((n) => n.data?.graph?.dbId === toId)?.id ?? targetFallback;
+
+        const edgeId =
+          "id" in edge && typeof edge.id === "string"
+            ? edge.id
+            : `e-${fromId}-${toId}`;
+        const edgeKind =
+          "kind" in edge && typeof edge.kind === "string"
+            ? edge.kind
+            : "relates_to";
 
         return {
-          id: edge.id,
+          id: edgeId,
           source: sourceId,
           target: targetId,
           data: {
-            kind: edge.kind,
-            fromDbId: edge.fromId,
-            toDbId: edge.toId,
+            kind: edgeKind,
+            fromDbId: fromId,
+            toDbId: toId,
           },
           style: { stroke: "rgba(255, 255, 255, 0.2)" },
         };
@@ -184,7 +223,7 @@ export function useMindscapeTraversal() {
 
       // Merge edges
       const edgeMap = new Map(edges.map((e) => [e.id, e]));
-      newEdges.forEach((e: any) => edgeMap.set(e.id, e));
+      newEdges.forEach((e) => edgeMap.set(e.id, e));
       setEdges(Array.from(edgeMap.values()));
     }
   }, [

@@ -364,7 +364,9 @@ export const useMindscapeStore = create<MindscapeState>()(
         set((state) => {
           if (edges.length === state.edges.length) {
             const allMatch = edges.every((e, i) => e.id === state.edges[i]?.id);
-            if (allMatch) return state;
+            if (allMatch) {
+              return state;
+            }
           }
           return { edges };
         });
@@ -593,9 +595,9 @@ function sanitizeNodeData(node: Node<ArtifactData>): ArtifactData {
 import { hasWindow } from "@/lib/env/isomorphic";
 
 declare global {
-  interface Window {
+  type Window = {
     __MINDSCAPE_STORE__?: typeof useMindscapeStore;
-  }
+  };
 }
 
 if (hasWindow() && !window.__MINDSCAPE_STORE__) {

@@ -112,7 +112,7 @@ export class TTSPool {
       // Warmup all processes in parallel
       if (!this.useSupertonic) {
         // Don't await warmup to avoid blocking initialization
-        this.warmup().catch((err) => console.warn("TTS Warmup failed:", err));
+        this.warmup().catch((_err) => {});
       }
     } catch (error) {
       // Clean up any started processes
@@ -135,7 +135,7 @@ export class TTSPool {
         try {
           // Send warmup request but don't use the audio
           await p.wrapper.synthesize(warmupRequest);
-        } catch (e) {
+        } catch (_e) {
           // Ignore warmup errors
         }
       })

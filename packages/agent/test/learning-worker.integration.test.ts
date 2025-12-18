@@ -87,8 +87,11 @@ mock.module("@alfred/db", () => ({
     }),
     update: () => ({
       set: () => ({
-        where: async () => {
-          if (mockRuns[0]) mockRuns[0].learnedAt = new Date();
+        where: () => {
+          if (mockRuns[0]) {
+            mockRuns[0].learnedAt = new Date();
+          }
+          return Promise.resolve(undefined);
         },
       }),
     }),
@@ -103,37 +106,38 @@ mock.module("@alfred/db", () => ({
 
 // Mock Graph Repo
 mock.module("@alfred/db/repo/graph/index", () => ({
-  upsertNodes: async () => new Map([["user:hash-123", { id: "node-1" }]]),
-  upsertEdges: async () => {},
+  upsertNodes: () => Promise.resolve(new Map([["user:hash-123", { id: "node-1" }]])),
+  upsertEdges: () => Promise.resolve([]),
 
   // Decay mocks
-  findNodesForDecay: async () => [
-    { id: "node-decay-1", properties: { confidence: 1.0 } },
-  ],
-  updateNodeConfidenceBatch: async (updates: any[]) => {
+  findNodesForDecay: () =>
+    Promise.resolve([{ id: "node-decay-1", properties: { confidence: 1.0 } }]),
+  updateNodeConfidenceBatch: (updates: unknown[]) => {
     decayCalled = true;
-    decayedNodes = updates;
-    return updates.length;
+    decayedNodes = updates as Array<{ id: string; confidence: number }>;
+    return Promise.resolve(updates.length);
   },
 
   // Prune mocks
-  findNodesByConfidence: async (min: number, max: number) => {
+  findNodesByConfidence: (_min: number, max: number) => {
     // Only return nodes if we are testing pruning (max < 1.0)
     if (max < 0.5) {
-      return [{ id: "node-prune-1", properties: { confidence: 0.1 } }];
+      return Promise.resolve([
+        { id: "node-prune-1", properties: { confidence: 0.1 } },
+      ]);
     }
-    return [];
+    return Promise.resolve([]);
   },
-  archiveNodes: async (ids: string[]) => {
+  archiveNodes: (ids: string[]) => {
     pruneCalled = true;
     prunedNodeIds = ids;
-    return ids.length;
+    return Promise.resolve(ids.length);
   },
 
   // Cleanup mocks
-  deleteArchivedNodes: async () => {
+  deleteArchivedNodes: () => {
     cleanupCalled = true;
-    return 1;
+    return Promise.resolve(1);
   },
 }));
 

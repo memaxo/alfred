@@ -15,10 +15,12 @@ const placeholderHandles = new Map<string, PlaceholderHandle>();
 export class StreamNotAttachedError extends Error {
   code = "stream_not_attached" as const;
 
+  declare runId: string;
+
   constructor(runId: string) {
     super("workflow_stream_required");
     this.name = "StreamNotAttachedError";
-    (this as any).runId = runId;
+    this.runId = runId;
   }
 }
 
@@ -28,7 +30,7 @@ function createPlaceholderHandle(runId: string): PlaceholderHandle {
   const handle: PlaceholderHandle = {
     __placeholder: true,
     abortController,
-    async resume() {
+    resume() {
       throw new StreamNotAttachedError(runId);
     },
     async cancel() {

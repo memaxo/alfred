@@ -64,7 +64,7 @@ export async function emitLinearActivity(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             logger?.warn?.("linear_activity_retry", {
               type,
@@ -97,13 +97,36 @@ export async function emitLinearActivity(
   }
 }
 
+type ErrorWithRetry = {
+  retryAfterMs?: number;
+  retryAfter?: number;
+  headers?: Headers | Record<string, string>;
+  response?: {
+    headers?: Headers | Record<string, string>;
+    get?: (key: string) => string | null;
+  };
+};
+
+type ErrorWithStatusCode = {
+  statusCode?: number;
+};
+
+function getStatusCode(error: unknown): number | undefined {
+  const err = error as ErrorWithStatusCode;
+  return err?.statusCode;
+}
+
 function resolveRetryAfterMs(error: unknown): number | undefined {
+  const err = error as ErrorWithRetry;
   const candidate =
-    (error as any)?.retryAfterMs ??
-    (error as any)?.retryAfter ??
-    (error as any)?.headers?.["retry-after"] ??
-    (error as any)?.response?.headers?.get?.("retry-after") ??
-    (error as any)?.response?.headers?.["retry-after"];
+    err?.retryAfterMs ??
+    err?.retryAfter ??
+    (err?.headers instanceof Headers
+      ? err.headers.get("retry-after")
+      : err?.headers?.["retry-after"]) ??
+    (err?.response?.headers instanceof Headers
+      ? err.response.headers.get("retry-after")
+      : err?.response?.headers?.["retry-after"]);
 
   if (typeof candidate === "number" && Number.isFinite(candidate)) {
     return candidate >= 1000 ? candidate : candidate * 1000;
@@ -146,7 +169,7 @@ export async function setLinearDelegate(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
@@ -192,7 +215,7 @@ export async function setLinearStarted(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
@@ -245,7 +268,7 @@ export async function setLinearCompleted(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
@@ -302,7 +325,7 @@ export async function commentOnLinearIssue(params: {
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
@@ -353,7 +376,7 @@ export async function setLinearSessionExternalUrl(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
@@ -399,7 +422,7 @@ export async function setLinearCancelled(
         maxTimeout: 10_000,
         factor: 2,
         onFailedAttempt: async (error) => {
-          const statusCode = (error as any)?.statusCode;
+          const statusCode = getStatusCode(error);
           if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);

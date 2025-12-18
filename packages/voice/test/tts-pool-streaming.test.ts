@@ -47,7 +47,7 @@ describe("TTSPool with Supertonic Streaming", () => {
       console.log(`Total chunks: ${chunks}`);
     } finally {
       await pool.shutdown();
-      delete process.env.TTS_PROVIDER;
+      process.env.TTS_PROVIDER = undefined;
     }
   }, 30_000);
 });

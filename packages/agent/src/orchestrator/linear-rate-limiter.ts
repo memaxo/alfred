@@ -59,7 +59,7 @@ export class LinearRateLimiter {
     this.windowStart = this.initializedAt;
   }
 
-  async throttle(
+  throttle(
     category: LinearRateLimitCategory,
     options: ThrottleOptions = {}
   ): Promise<void> {
@@ -116,7 +116,7 @@ export class LinearRateLimiter {
     this.requestCount += 1;
   }
 
-  private async enforceStartupBuffer(now: number): Promise<void> {
+  private enforceStartupBuffer(now: number): void {
     if (this.startupSatisfied || this.startupBufferMs <= 0) {
       return;
     }

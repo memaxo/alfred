@@ -127,7 +127,7 @@ function VoicePickerItem({
     audioItem && player.isItemActive(audioItem.id) && player.isPlaying;
 
   const handlePreview = React.useCallback(
-    async (e: React.MouseEvent) => {
+    (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
 

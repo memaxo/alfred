@@ -27,20 +27,7 @@ import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 
 export function ChatNode({ id, data, selected }: NodeProps) {
-  // Disable complex chat logic in test mode to prevent infinite loops
-  if (import.meta.env.VITE_TEST_MODE === "true") {
-    return (
-      <MindscapeNode
-        className="flex h-[600px] w-[500px] flex-col"
-        id={id}
-        selected={selected}
-        title="Neural Stream (Test Mode)"
-      >
-        <div className="p-4 text-biolum">Chat disabled in test environment</div>
-      </MindscapeNode>
-    );
-  }
-
+  // All hooks must be called unconditionally before any early returns
   const lod = useLOD();
   useNodeFocus(id);
 
@@ -115,6 +102,20 @@ export function ChatNode({ id, data, selected }: NodeProps) {
     },
     [sendToChat, startWorkflow]
   );
+
+  // Disable complex chat logic in test mode to prevent infinite loops
+  if (import.meta.env.VITE_TEST_MODE === "true") {
+    return (
+      <MindscapeNode
+        className="flex h-[600px] w-[500px] flex-col"
+        id={id}
+        selected={selected}
+        title="Neural Stream (Test Mode)"
+      >
+        <div className="p-4 text-biolum">Chat disabled in test environment</div>
+      </MindscapeNode>
+    );
+  }
 
   // LOD 0: Tiny
   if (lod === "tiny") {

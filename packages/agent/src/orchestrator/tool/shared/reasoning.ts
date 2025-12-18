@@ -147,9 +147,7 @@ export async function persistReasoning(
       "../../../../assistant/src/graphstore"
     );
     await graphPersist(resource, traces, ctx);
-  } catch (error) {
-    console.error("[agent] Failed to persist reasoning traces", error);
-  }
+  } catch (_error) {}
 }
 
 function trimBufferToUtf8Boundary(

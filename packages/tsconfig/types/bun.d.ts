@@ -70,11 +70,11 @@ declare module "bun" {
   }
 
   namespace Spawn {
-    interface SpawnOptions<
+    type SpawnOptions<
       In extends Spawn.Writable = Spawn.Writable,
       Out extends Spawn.Readable = Spawn.Readable,
       Err extends Spawn.Readable = Spawn.Readable,
-    > {
+    > = {
       /**
        * Terminal options for pseudo-terminal (PTY) support
        * Available in Bun v1.3.5+
@@ -84,20 +84,20 @@ declare module "bun" {
         rows: number;
         data: (terminal: Terminal, data: string | Uint8Array) => void;
       };
-    }
+    };
   }
 
-  interface Subprocess<
+  type Subprocess<
     In extends Spawn.Writable = Spawn.Writable,
     Out extends Spawn.Readable = Spawn.Readable,
     Err extends Spawn.Readable = Spawn.Readable,
-  > {
+  > = {
     /**
      * Terminal instance (available when spawned with terminal option)
      * Available in Bun v1.3.5+
      */
     terminal?: Terminal;
-  }
+  };
 }
 
 // Bun.Terminal API (v1.3.5+) - Global augmentation
@@ -153,11 +153,11 @@ declare global {
     }
 
     namespace Spawn {
-      interface SpawnOptions<
+      type SpawnOptions<
         In extends Spawn.Writable = Spawn.Writable,
         Out extends Spawn.Readable = Spawn.Readable,
         Err extends Spawn.Readable = Spawn.Readable,
-      > {
+      > = {
         /**
          * Terminal options for pseudo-terminal (PTY) support
          * Available in Bun v1.3.5+
@@ -167,19 +167,19 @@ declare global {
           rows: number;
           data: (terminal: Terminal, data: string | Uint8Array) => void;
         };
-      }
+      };
     }
 
-    interface Subprocess<
+    type Subprocess<
       In extends Spawn.Writable = Spawn.Writable,
       Out extends Spawn.Readable = Spawn.Readable,
       Err extends Spawn.Readable = Spawn.Readable,
-    > {
+    > = {
       /**
        * Terminal instance (available when spawned with terminal option)
        * Available in Bun v1.3.5+
        */
       terminal?: Terminal;
-    }
+    };
   }
 }

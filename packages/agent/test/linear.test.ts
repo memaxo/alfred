@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
-const executeMock = mock(async () => ({ ok: true, id: "activity-123" }));
+const executeMock = mock(() =>
+  Promise.resolve({ ok: true, id: "activity-123" })
+);
 
 mock.module("../src/orchestrator/tool/ticket", () => ({
   toolTicket: {

@@ -208,8 +208,7 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
       const obligations = normalizeObligations(parsed.obligations);
       const resumeEvents = normalizeResumeEvents(parsed.resumeEvents);
       return { type: "obligation", runId, obligations, resumeEvents };
-    } catch (error) {
-      console.error("Failed to parse obligation payload", error);
+    } catch (_error) {
       return null;
     }
   }
@@ -222,8 +221,7 @@ function normalizeEvent(event: RawDroidStreamEvent): DroidStreamEvent | null {
         return null;
       }
       return { type: "resume", runId };
-    } catch (error) {
-      console.error("Failed to parse resume payload", error);
+    } catch (_error) {
       return null;
     }
   }

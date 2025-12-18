@@ -36,7 +36,6 @@ export class AtmosphereSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Atmosphere shader error:", message.message);
       }
     }
 
@@ -130,8 +129,10 @@ export class AtmosphereSystem implements RenderSystem {
     });
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
       this.uniformBuffer.setFloat(i, uniforms[i]);
@@ -139,7 +140,7 @@ export class AtmosphereSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(_encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     // Rendering is handled by main engine
   }
 

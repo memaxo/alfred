@@ -65,7 +65,7 @@ export class WorktreeWorkspace implements Workspace {
     await toolRunner.execute("git clean -fd", this.root);
   }
 
-  async exec(
+  exec(
     command: string,
     options?: ExecOptions,
     projectConfig?: ProjectConfig | null

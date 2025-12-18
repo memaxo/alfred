@@ -11,6 +11,7 @@
  * 6. Stops the session and exits 0 on success, non-zero on failures in default mode.
  */
 
+import type { Subprocess } from "bun";
 import { spawn } from "bun";
 import { toolSession } from "../packages/agent/src/orchestrator/tool/session";
 
@@ -30,7 +31,7 @@ function parseMode(): Mode {
 }
 
 async function tmuxAvailable(binary = "tmux") {
-  let proc;
+  let proc: Subprocess | undefined;
   try {
     proc = spawn([binary, "-V"], { stdout: "pipe", stderr: "pipe" });
   } catch {
@@ -77,7 +78,7 @@ async function runDefaultScenario() {
       },
     });
 
-    if (!(peek.output && peek.output.includes(marker))) {
+    if (!peek.output?.includes(marker)) {
       throw new Error("marker not found in tmux session output");
     }
 

@@ -19,7 +19,9 @@ const createPreferenceRow = (value = "concise") => ({
   updated: new Date(),
 });
 
-const getPreferencesMock = vi.fn(async () => [createPreferenceRow()]);
+const getPreferencesMock = vi.fn(() =>
+  Promise.resolve([createPreferenceRow()])
+);
 
 mock.module("@alfred/db/repo/user", () => ({
   getPreferences: getPreferencesMock,
@@ -45,7 +47,9 @@ const {
 beforeEach(() => {
   resetPreferenceCache();
   getPreferencesMock.mockReset();
-  getPreferencesMock.mockImplementation(async () => [createPreferenceRow()]);
+  getPreferencesMock.mockImplementation(() =>
+    Promise.resolve([createPreferenceRow()])
+  );
 });
 
 afterEach(() => {
@@ -80,7 +84,8 @@ describe("loadPreferences", () => {
         created: new Date(),
         updated: new Date(),
       },
-    ]);
+      ])
+    );
 
     const prefs = await loadPreferences("user-1");
     expect(prefs.get("response.verbosity")?.value).toBe("verbose");
@@ -129,7 +134,7 @@ describe("loadPreferences", () => {
 
 describe("loadPreferencesWithDefaults", () => {
   it("applies domain defaults without mutating the base cache", async () => {
-    getPreferencesMock.mockImplementationOnce(async () => []);
+    getPreferencesMock.mockImplementationOnce(() => Promise.resolve([]));
 
     const merged = await loadPreferencesWithDefaults("user-2", "proxmox");
     expect(merged.get("domain.proxmox.config_format")?.value).toBe("yaml");

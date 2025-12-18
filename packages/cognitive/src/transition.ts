@@ -119,9 +119,6 @@ export const applyTransition = (
     // Keep production warnings, but avoid noisy perf-test output.
     const shouldWarn = process.env.NODE_ENV !== "test";
     if (shouldWarn && durationMs > 0.1) {
-      console.warn(
-        `cognitive_budget_exceeded: transition took ${durationMs.toFixed(4)}ms`
-      );
     }
   }
 };

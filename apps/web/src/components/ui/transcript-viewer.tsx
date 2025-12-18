@@ -441,7 +441,7 @@ export {
 };
 export type { CharacterAlignmentResponseModel };
 
-function isAlignmentArray(value: unknown): value is Array<unknown> {
+function isAlignmentArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
 

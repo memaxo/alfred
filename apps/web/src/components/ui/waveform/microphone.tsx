@@ -49,7 +49,7 @@ export const MicrophoneWaveform = ({
           transitionProgressRef.current + 0.02
         );
 
-        const processingData = [];
+        const processingData: number[] = [];
         const barCount = 45;
 
         for (let i = 0; i < barCount; i++) {
@@ -133,7 +133,7 @@ export const MicrophoneWaveform = ({
       const relevantData = dataArray.slice(startFreq, endFreq);
 
       const halfLength = Math.floor(relevantData.length / 2);
-      const normalizedData = [];
+      const normalizedData: number[] = [];
 
       for (let i = halfLength - 1; i >= 0; i--) {
         const val = relevantData[i] ?? 0;

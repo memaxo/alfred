@@ -100,7 +100,11 @@ export const toolNote = {
         const offset = input.offset ?? 0;
         const rows = await getNotes(input.userId, limit, offset);
         return {
-          notes: rows.map((row) => mapNote(row)).filter(Boolean) as any[],
+          notes: rows
+            .map((row) => mapNote(row))
+            .filter((note): note is NonNullable<ReturnType<typeof mapNote>> =>
+              note !== null
+            ),
         };
       }
       case "update": {

@@ -65,7 +65,7 @@ async function getWorkflowHelpers() {
 }
 
 function formatEvent(event: string, data: unknown): Uint8Array {
-  const payload = `event: ${event}\n` + `data: ${JSON.stringify(data)}\n\n`;
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   return encoder.encode(payload);
 }
 
@@ -235,7 +235,7 @@ export async function handleWorkflowStreamRequest(
         input: parsedInput,
         transport: "sse",
         auditContext: { auto: parsedInput.auto, mode: parsedInput.mode },
-        emitObligation: async (payload: {
+        emitObligation: (payload: {
           runId: string;
           obligations: Obligation[];
           resumeEvents: string[];
@@ -269,12 +269,12 @@ export async function handleWorkflowStreamRequest(
           cleanup?.();
           close();
         },
-        onSuspended: async () => {
+        onSuspended: () => {
           h.triggerPreferenceRefresh(session.user.id, {
             reason: "workflow_stream_suspended",
           });
         },
-        onResumed: async () => {
+        onResumed: () => {
           h.triggerPreferenceRefresh(session.user.id, {
             reason: "workflow_stream_resumed",
           });

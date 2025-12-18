@@ -3,7 +3,7 @@ import { createClientOnlyFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EnergyVAD } from "@/lib/voice/vad";
 
-const getMediaStream = createClientOnlyFn(async () => {
+const getMediaStream = createClientOnlyFn((): Promise<MediaStream> => {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("media_devices_unavailable");
   }
@@ -41,16 +41,11 @@ export function useVoiceAudio() {
     if (workletNodeRef.current) {
       return { ctx, worklet: workletNodeRef.current };
     }
-    try {
-      await ctx.audioWorklet.addModule("/voice-processor.js");
-      const worklet = new AudioWorkletNode(ctx, "voice-processor");
-      worklet.connect(ctx.destination);
-      workletNodeRef.current = worklet;
-      return { ctx, worklet };
-    } catch (err) {
-      console.error("Failed to load audio worklet", err);
-      throw err;
-    }
+    await ctx.audioWorklet.addModule("/voice-processor.js");
+    const worklet = new AudioWorkletNode(ctx, "voice-processor");
+    worklet.connect(ctx.destination);
+    workletNodeRef.current = worklet;
+    return { ctx, worklet };
   }, [ensureContext]);
 
   const startCapture = useCallback(
@@ -103,7 +98,7 @@ export function useVoiceAudio() {
               audio: int16.buffer,
               mimeType: "audio/raw;codec=pcm_s16le;rate=16000",
             });
-          } catch (err) {
+          } catch (_err) {
             // ignore chunk errors
           }
         }

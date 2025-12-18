@@ -207,7 +207,7 @@ async function fallbackScan(
       if (!within(cw, resolved)) {
         continue;
       }
-      let entryStats;
+      let entryStats: Awaited<ReturnType<typeof stat>>;
       try {
         entryStats = await stat(resolved);
       } catch {

@@ -26,7 +26,9 @@ async function runSmokeTest() {
     try {
       while (true) {
         const { done, value } = await stderrReader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
         process.stderr.write(decoder.decode(value));
       }
     } catch (e) {
@@ -35,11 +37,11 @@ async function runSmokeTest() {
   })();
 
   let buffer = "";
-  const requestId = 0;
+  const _requestId = 0;
 
   // Helper to send JSON
   const send = (msg: any) => {
-    const str = JSON.stringify(msg) + "\n";
+    const str = `${JSON.stringify(msg)}\n`;
     proc.stdin.write(str);
     proc.stdin.flush();
   };
@@ -47,14 +49,18 @@ async function runSmokeTest() {
   try {
     while (true) {
       const { done, value } = await stdoutReader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+          continue;
+        }
 
         try {
           const msg = JSON.parse(line);
@@ -72,7 +78,7 @@ async function runSmokeTest() {
 
             // Send synthesis request
             console.log("Sending synthesis request...");
-            const t0 = Date.now();
+            const _t0 = Date.now();
             send({
               id: "test-1",
               type: "synthesize",
@@ -95,7 +101,7 @@ async function runSmokeTest() {
               if (msg.id === "test-1") {
                 // Test Caching
                 console.log("Testing Cache...");
-                const t1 = Date.now();
+                const _t1 = Date.now();
                 send({
                   id: "test-2",
                   type: "synthesize",
@@ -121,7 +127,7 @@ async function runSmokeTest() {
             }
             process.exit(1);
           }
-        } catch (e) {
+        } catch (_e) {
           console.error("Failed to parse line:", line);
         }
       }

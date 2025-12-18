@@ -17,10 +17,10 @@ const savedFiles = new Map<string, string>();
 mock.module("@react-native-async-storage/async-storage", () => ({
   default: {
     getItem: async (key: string) => storage.get(key) ?? null,
-    setItem: async (key: string, value: string) => {
+    setItem: (key: string, value: string) => {
       storage.set(key, value);
     },
-    removeItem: async (key: string) => {
+    removeItem: (key: string) => {
       storage.delete(key);
     },
   },
@@ -53,16 +53,16 @@ class MockSound {
     this.onUpdate?.({ isLoaded: true, didJustFinish: true });
   }
 
-  async unloadAsync() {
+  unloadAsync() {
     playbackLog.push(`unload:${this.uri}`);
   }
 }
 
 const createAsyncMock = vi
   .fn()
-  .mockImplementation(async ({ uri }: { uri: string }) => {
+  .mockImplementation(({ uri }: { uri: string }) => {
     playbackLog.push(`create:${uri}`);
-    return { sound: new MockSound(uri) };
+    return Promise.resolve({ sound: new MockSound(uri) });
   });
 
 mock.module("expo-av", () => ({
@@ -74,13 +74,15 @@ mock.module("expo-av", () => ({
 }));
 
 const writeAsStringAsyncMock = vi.fn(
-  async (uri: string, data: string, _options?: unknown) => {
+  (uri: string, data: string, _options?: unknown) => {
     writtenFiles.push(uri);
     savedFiles.set(uri, data);
+    return Promise.resolve();
   }
 );
-const deleteAsyncMock = vi.fn(async (uri: string) => {
+const deleteAsyncMock = vi.fn((uri: string) => {
   savedFiles.delete(uri);
+  return Promise.resolve();
 });
 
 mock.module("expo-file-system", () => ({
@@ -163,7 +165,7 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain(async (item) => {
+    await queueModule.drain((item) => {
       order.push(item.kind);
     });
 
@@ -180,7 +182,7 @@ describe("native voice queue + playback", () => {
       },
     });
 
-    const processor = vi.fn(async () => {
+    const processor = vi.fn(() => {
       throw new Error("transient");
     });
     await ageQueue(2000);

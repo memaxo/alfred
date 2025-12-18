@@ -39,11 +39,9 @@ export class EdgeSystem implements RenderSystem {
   private linePipeline: GPURenderPipeline | null = null;
 
   private computeBindGroup: GPUBindGroup | null = null;
-  private renderBindGroup: GPUBindGroup | null = null;
-  private lineBindGroup: GPUBindGroup | null = null;
 
   private edges: EdgeData[] = [];
-  private maxEdges: number;
+  private readonly maxEdges: number;
   private needsInit = true;
 
   constructor(maxEdges = 100) {
@@ -63,7 +61,6 @@ export class EdgeSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Edge shader error:", message.message);
       }
     }
 
@@ -243,7 +240,9 @@ export class EdgeSystem implements RenderSystem {
   }
 
   private uploadEdges(): void {
-    if (!(this.device && this.edgeBuffer)) return;
+    if (!(this.device && this.edgeBuffer)) {
+      return;
+    }
 
     const data = new Float32Array(this.maxEdges * 16); // 16 floats per edge
 
@@ -281,8 +280,10 @@ export class EdgeSystem implements RenderSystem {
     this.edgeBuffer.upload(data.buffer, this.edges.length);
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
       this.uniformBuffer.setFloat(i, uniforms[i]);
@@ -290,7 +291,7 @@ export class EdgeSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     if (!(this.computeBindGroup && this.initPipeline && this.computePipeline)) {
       return;
     }

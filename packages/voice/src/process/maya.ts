@@ -78,14 +78,16 @@ export function buildVoiceDescription(opts: {
     desc += `, ${opts.tone} tone`;
   }
 
-  return desc + ".";
+  return `${desc}.`;
 }
 
 /**
  * Resolve a voice input to a Maya1 description string.
  */
 export function resolveMayaVoice(input?: string): string {
-  if (!input) return MAYA_VOICES.DEFAULT.description;
+  if (!input) {
+    return MAYA_VOICES.DEFAULT.description;
+  }
 
   // Check if input matches a known preset key (case-insensitive)
   const upperInput = input.toUpperCase();

@@ -83,7 +83,6 @@ function WorkflowSubscription({
           setStatus("starting");
           updateArtifactData(nodeId, { status: "starting" });
         } catch (err) {
-          console.error("Failed to prepare workflow stream:", err);
           setStatus("error");
           updateArtifactData(nodeId, { status: "failed", error: String(err) });
         }
@@ -100,7 +99,7 @@ function WorkflowSubscription({
         sourceId: nodeId,
       });
 
-      const evtId = (event as any).eventId || Date.now().toString();
+      const evtId = event.eventId || Date.now().toString();
       if (processedEvents.current.has(evtId)) {
         return;
       }
@@ -124,7 +123,7 @@ function WorkflowSubscription({
       if (event.type === "data-cache-handoff") {
         recordContextReceipt(nodeId, {
           source: "handoff",
-          receipt: (event as any).receipts,
+          receipt: event.receipts,
         });
         dispatchMindscapeEvent({
           type: "context-cache",
@@ -135,9 +134,9 @@ function WorkflowSubscription({
 
       if (event.type === "context") {
         recordContextReceipt(nodeId, {
-          source: (event as any).phase ?? "context",
-          phase: (event as any).phase,
-          receipt: (event as any).receipts,
+          source: event.phase ?? "context",
+          phase: event.phase,
+          receipt: event.receipts,
         });
         dispatchMindscapeEvent({
           type: "context-cache",
@@ -147,9 +146,10 @@ function WorkflowSubscription({
       }
 
       if (event.type === "run") {
+        const runEvent = event as WorkflowEvent & { id?: string };
         updateArtifactData(nodeId, {
           status: "running",
-          runId: (event as any).id,
+          runId: runEvent.id,
         });
         setStatus("running");
         resume.close();
@@ -159,9 +159,10 @@ function WorkflowSubscription({
         setStreamInput(null);
         resume.close();
       } else if (event.type === "error") {
+        const errorEvent = event as WorkflowEvent & { message?: string };
         updateArtifactData(nodeId, {
           status: "failed",
-          error: (event as any).message,
+          error: errorEvent.message,
         });
         clearContextReceipt(nodeId);
         setStreamInput(null);
@@ -178,7 +179,6 @@ function WorkflowSubscription({
       });
     },
     onError(err) {
-      console.error("Workflow SSE stream error:", err);
       updateArtifactData(nodeId, { status: "failed", error: err.message });
       clearContextReceipt(nodeId);
       setStatus("error");
@@ -208,7 +208,9 @@ export function WorkflowManager() {
   const activeWorkflowNodes = useMindscapeStore(
     useShallow((state) =>
       state.nodes.filter((n) => {
-        if (n.type !== "workflow") return false;
+        if (n.type !== "workflow") {
+          return false;
+        }
         const data = n.data as WorkflowNodeData;
         return ["pending", "starting", "running"].includes(data.status || "");
       })

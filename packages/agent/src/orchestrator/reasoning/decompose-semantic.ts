@@ -28,7 +28,11 @@ export function analyzeDependencyGraph(
 
   // Analyze imports
   for (const file of files) {
-    const deps = graph.get(file.path)!;
+    const deps = graph.get(file.path);
+    if (!deps) {
+      // This should never happen as we initialize all entries above
+      continue;
+    }
 
     try {
       // Skip non-JS/TS files
@@ -63,13 +67,16 @@ export function analyzeDependencyGraph(
             // Bare specifier or alias
             // Check if it matches known file basename (simplified project-wide resolution)
             const basename = sourceValue.split("/").pop();
-            if (basename && fileMap.has(basename)) {
-              deps.add(fileMap.get(basename)!);
+            if (basename) {
+              const fullPath = fileMap.get(basename);
+              if (fullPath) {
+                deps.add(fullPath);
+              }
             }
           }
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Fallback or ignore parse errors
       // console.warn(`Failed to parse ${file.path}:`, e);
     }
@@ -98,16 +105,20 @@ export function clusterFeatures(
 
     if (file.includes("packages/")) {
       const match = file.match(/packages\/([^/]+)/);
-      if (match) clusterName = match[1] ?? "misc";
+      if (match) {
+        clusterName = match[1] ?? "misc";
+      }
     } else if (file.includes("apps/")) {
       const match = file.match(/apps\/([^/]+)/);
-      if (match) clusterName = match[1] ?? "misc";
+      if (match) {
+        clusterName = match[1] ?? "misc";
+      }
     }
 
     if (!clusters.has(clusterName)) {
       clusters.set(clusterName, new Set());
     }
-    clusters.get(clusterName)!.add(file);
+    clusters.get(clusterName)?.add(file);
   }
 
   // Merge clusters if strong dependencies exist?
@@ -125,8 +136,10 @@ export function decomposeSemantically(
   bundle: ContextBundle
 ): SubTask[] {
   const filesWithContent = bundle.files
-    .filter((f) => f.path && f.content)
-    .map((f) => ({ path: f.path!, content: f.content! }));
+    .filter((f): f is { path: string; content: string } =>
+      Boolean(f.path && f.content)
+    )
+    .map((f) => ({ path: f.path, content: f.content }));
 
   if (filesWithContent.length === 0) {
     return [];
@@ -144,9 +157,13 @@ export function decomposeSemantically(
     // Determine priority based on dependencies (heuristic)
     // core/db/types usually higher priority than ui/web
     let priority = 0.5;
-    if (name === "db" || name === "type" || name === "core") priority = 1.0;
-    else if (name === "api" || name === "runtime") priority = 0.9;
-    else if (name === "web" || name === "native") priority = 0.8;
+    if (name === "db" || name === "type" || name === "core") {
+      priority = 1.0;
+    } else if (name === "api" || name === "runtime") {
+      priority = 0.9;
+    } else if (name === "web" || name === "native") {
+      priority = 0.8;
+    }
 
     tasks.push({
       id,

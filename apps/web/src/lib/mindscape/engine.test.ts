@@ -44,7 +44,7 @@ describe("MindscapeEngine", () => {
     engine.destroy();
   });
 
-  test("initializes in Canvas2D mode by default (no WebGPU mock)", async () => {
+  test("initializes in Canvas2D mode by default (no WebGPU mock)", () => {
     // navigator.gpu is undefined in test env usually
     engine = new MindscapeEngine(mockCanvas);
     // We can't easily check private state, but we can check it doesn't crash

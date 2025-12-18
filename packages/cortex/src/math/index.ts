@@ -52,7 +52,9 @@ export function length(v: Vec2): number {
  */
 export function normalize(v: Vec2): Vec2 {
   const len = length(v);
-  if (len === 0) return { x: 0, y: 0 };
+  if (len === 0) {
+    return { x: 0, y: 0 };
+  }
   return { x: v.x / len, y: v.y / len };
 }
 

@@ -102,7 +102,7 @@ export const assistantRouter = router({
 
         // 1. Analyze Context & Detect Emergent Topics
         // We use the last user message for RAG query, and recent history for Topic Detection
-        const lastMessage = input.messages[input.messages.length - 1] as {
+        const lastMessage = input.messages.at(-1) as {
           role: string;
           content: string;
         };

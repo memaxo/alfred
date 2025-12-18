@@ -98,7 +98,7 @@ describe("LODManager", () => {
 
   it("setZoom returns false when LOD unchanged", () => {
     manager.setZoom(1.0);
-    const changed = manager.setZoom(1.1); // Still in same threshold
+    const _changed = manager.setZoom(1.1); // Still in same threshold
     // May or may not change depending on thresholds
   });
 

@@ -111,7 +111,12 @@ export const RecordingWaveform = ({
         streamRef.current = stream;
 
         const AudioContextClass =
-          window.AudioContext || (window as any).webkitAudioContext;
+          window.AudioContext ||
+          (
+            window as typeof window & {
+              webkitAudioContext?: typeof AudioContext;
+            }
+          ).webkitAudioContext;
         const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = fftSize;

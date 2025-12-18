@@ -343,7 +343,7 @@ async function handleLinearWebhookEvent(args: {
   }
 }
 
-async function createWorkflowCaller(
+function createWorkflowCaller(
   requestId: string,
   h: Awaited<ReturnType<typeof getHelpers>>
 ) {
@@ -356,7 +356,8 @@ async function createWorkflowCaller(
         email: "system@alfred.local",
         name: "Linear Webhook",
       },
-    } as any,
+      session: { id: `system-${requestId}` },
+    } as Parameters<typeof h.appRouter.createCaller>[0]["session"],
     runtime: {
       requestId,
       receivedAt: new Date(),

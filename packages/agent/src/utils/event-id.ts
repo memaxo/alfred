@@ -10,7 +10,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 function stableStringify(value: unknown): string {
   const seen = new WeakSet();
-  const encode = (v: unknown): any => {
+  const encode = (v: unknown): unknown => {
     if (v === null || typeof v !== "object") {
       return v;
     }

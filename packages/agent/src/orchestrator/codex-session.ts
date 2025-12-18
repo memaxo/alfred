@@ -302,11 +302,7 @@ export async function assessSessionResumeEligibility(params: {
   logWarning?: WarningLogger;
 }): Promise<SessionResumeAssessment> {
   const { session, workingDirectory, validateThread, logWarning } = params;
-  const warn: WarningLogger =
-    logWarning ??
-    ((event, context) => {
-      console.warn(event, context);
-    });
+  const warn: WarningLogger = logWarning ?? ((_event, _context) => {});
 
   if (!session) {
     return {

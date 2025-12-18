@@ -18,7 +18,7 @@ export {
 
 export { configureLinearMetrics } from "../orchestrator/linearmetrics";
 
-export async function emitLinearActivity(
+export function emitLinearActivity(
   type: LinearActivityType,
   params: LinearActivityParams
 ): Promise<{ ok: boolean; id?: string }> {

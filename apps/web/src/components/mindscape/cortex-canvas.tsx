@@ -148,12 +148,8 @@ function CortexMindscapeCanvasInner({
   // Initialize Cortex engine
   const { engine, isReady, error, capability } = useCortexEngine(canvasRef, {
     postProcessing: true,
-    onReady: () => {
-      console.log("[Cortex] Engine ready");
-    },
-    onError: (err) => {
-      console.error("[Cortex] Engine error:", err);
-    },
+    onReady: () => {},
+    onError: (_err) => {},
   });
 
   // Bridge xyflow state to Cortex GPU buffers
@@ -226,7 +222,6 @@ function CortexMindscapeCanvasInner({
   // Show fallback warning if WebGPU not supported
   useEffect(() => {
     if (capability && capability !== "webgpu") {
-      console.warn(`[Cortex] Using ${capability} fallback`);
       toast.info(`WebGPU not available. Using ${capability} rendering.`);
     }
   }, [capability]);
@@ -298,7 +293,9 @@ function CortexMindscapeCanvasInner({
             className="border-white/10 bg-void-surface/60 backdrop-blur-sm"
             maskColor="rgba(0, 0, 0, 0.6)"
             nodeColor={(node) => {
-              if (node.id === focusedNodeId) return "#00E5CC";
+              if (node.id === focusedNodeId) {
+                return "#00E5CC";
+              }
               return "#666";
             }}
           />

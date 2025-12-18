@@ -7,7 +7,7 @@
 
 import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -77,7 +77,7 @@ export const toolMemoryStats = {
     recordAssistantToolCall("memory_stats");
 
     // Build base condition
-    const conditions = [];
+    const conditions: SQL[] = [];
     if (input.resource) {
       conditions.push(eq(memoryNodes.resource, input.resource));
     }

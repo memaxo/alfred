@@ -67,7 +67,7 @@ async function run() {
   await cleanup(resource);
 }
 
-run().catch(async (error) => {
+run().catch((error) => {
   console.error("[smoke.hypergraph] failure", error);
   process.exitCode = 1;
 });

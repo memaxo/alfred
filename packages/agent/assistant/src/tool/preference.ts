@@ -67,9 +67,7 @@ export const toolPreferenceGet = {
     });
 
     const rows = await userRepo.getPreferences(input.userId);
-    const list = Array.isArray(rows)
-      ? (rows as Array<Record<string, unknown>>)
-      : [];
+    const list = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 
     const filtered = list
       .filter((row) => {

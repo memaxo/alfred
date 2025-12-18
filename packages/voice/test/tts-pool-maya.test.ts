@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TTSPool } from "../src/process/tts";
 
-describe.skip("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)", () => {
+describe("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)", () => {
   const isPackageRoot = existsSync(join(process.cwd(), "scripts/maya.py"));
   const scriptPath = isPackageRoot
     ? join(process.cwd(), "scripts/maya.py")
@@ -31,7 +31,7 @@ describe.skip("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)"
 
   it("should initialize and synthesize using Maya1", async () => {
     // Ensure we use Maya1 (not Supertonic)
-    delete process.env.TTS_PROVIDER;
+    process.env.TTS_PROVIDER = undefined;
 
     pool = new TTSPool(config, 1); // Pool size 1 for heavy model
 
@@ -47,7 +47,7 @@ describe.skip("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)"
           text: "Hello world, this is a test of the Maya voice system.",
           streaming: true,
         },
-        (chunk) => {
+        (_chunk) => {
           chunks++;
           // Maya sends chunks as they are generated
           if (chunks === 1) {

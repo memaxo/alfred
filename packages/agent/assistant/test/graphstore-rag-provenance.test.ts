@@ -19,11 +19,11 @@ mock.module("@alfred/db/repo/graph", () => ({
     ],
     edges: [],
   })),
-  findRagDocumentNode: vi.fn(async (documentId: string) => {
+  findRagDocumentNode: vi.fn((documentId: string) => {
     if (documentId !== "doc-1") {
-      return null;
+      return Promise.resolve(null);
     }
-    return {
+    return Promise.resolve({
       id: "rag-doc-1",
       resource: "user",
       kind: "rag_document",
@@ -35,11 +35,11 @@ mock.module("@alfred/db/repo/graph", () => ({
       created: new Date(),
       updated: new Date(),
       labelTsvector: null,
-    } as any;
+    } as any);
   }),
-  upsertEdges: vi.fn(async (edges: EdgeSeed[]) => {
+  upsertEdges: vi.fn((edges: EdgeSeed[]) => {
     upsertCalls.push(...edges);
-    return edges as any;
+    return Promise.resolve(edges as any);
   }),
 }));
 

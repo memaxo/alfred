@@ -11,13 +11,13 @@ import coronaShaderSource from "../shaders/corona.wgsl?raw";
 import type { OrbConfig, RenderSystem, Vec2 } from "../types";
 
 /** Corona system configuration */
-export interface CoronaSystemConfig {
+export type CoronaSystemConfig = {
   fiberCount: number;
   segmentsPerFiber: number;
   innerRadius: number;
   outerRadius: number;
   orbCenter: Vec2;
-}
+};
 
 /** Default corona configuration */
 export const DEFAULT_CORONA_CONFIG: CoronaSystemConfig = {
@@ -38,7 +38,7 @@ export class CoronaSystem implements RenderSystem {
   readonly name = "corona";
 
   private device: GPUDevice | null = null;
-  private config: CoronaSystemConfig;
+  private readonly config: CoronaSystemConfig;
 
   private fiberBuffer: StorageBuffer | null = null;
   private uniformBuffer: UniformBuffer | null = null;
@@ -72,7 +72,6 @@ export class CoronaSystem implements RenderSystem {
     const compilationInfo = await shaderModule.getCompilationInfo();
     for (const message of compilationInfo.messages) {
       if (message.type === "error") {
-        console.error("Corona shader error:", message.message);
       }
     }
 
@@ -171,8 +170,10 @@ export class CoronaSystem implements RenderSystem {
     });
   }
 
-  update(dt: number, uniforms: Float32Array): void {
-    if (!this.uniformBuffer) return;
+  update(_dt: number, uniforms: Float32Array): void {
+    if (!this.uniformBuffer) {
+      return;
+    }
 
     // Copy relevant uniforms
     for (let i = 0; i < Math.min(uniforms.length, 16); i++) {
@@ -181,7 +182,7 @@ export class CoronaSystem implements RenderSystem {
     this.uniformBuffer.upload();
   }
 
-  render(encoder: GPUCommandEncoder, target: GPUTextureView): void {
+  render(encoder: GPUCommandEncoder, _target: GPUTextureView): void {
     if (
       !(
         this.computePipeline &&
@@ -215,7 +216,9 @@ export class CoronaSystem implements RenderSystem {
 
   /** Set fiber count (triggers reallocation) */
   setFiberCount(count: number): void {
-    if (count === this.config.fiberCount || !this.device) return;
+    if (count === this.config.fiberCount || !this.device) {
+      return;
+    }
 
     this.config.fiberCount = count;
     this.totalSegments = count * this.config.segmentsPerFiber;
