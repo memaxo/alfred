@@ -9,3 +9,12 @@ export {
   type TestSession,
   type TestUser,
 } from "./session";
+
+export {
+  authTokenMocks,
+  DEFAULT_TOKEN_CLAIMS,
+  denyNextPolicyCheck,
+  installAuthTokenMock,
+  requireScopes,
+  resetAuthTokenMocks,
+} from "./token";

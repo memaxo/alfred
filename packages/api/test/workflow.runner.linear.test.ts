@@ -7,7 +7,8 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { metricsStub } from "./utils/mock-metrics";
+// Import mock-metrics first - provides base metrics/logger/ai/policy stubs
+import { createMetricStub, metricsStub } from "./utils/mock-metrics";
 
 const emitMock = mock((type: string, params: unknown) => ({
   type,
@@ -36,23 +37,23 @@ mock.module("@alfred/agent/integrations/linear", () => ({
   extractIssueIdFromSession: (sessionId: string) => sessionId,
 }));
 
+// Linear-specific metrics not covered by base metricsStub
+const linearMetrics = {
+  linearActivityEmissionsTotal: createMetricStub(),
+  linearActivityDurationSeconds: createMetricStub(),
+  linearSessionOperationsTotal: createMetricStub(),
+};
+
 mock.module("@alfred/api/metrics", () => ({
   __esModule: true,
   ...metricsStub,
-  runnerStepsTotal: { inc: vi.fn() },
-  runnerErrorsTotal: { inc: vi.fn() },
-  linearActivityEmissionsTotal: { inc: vi.fn() },
-  linearActivityDurationSeconds: { startTimer: () => () => {} },
-  linearSessionOperationsTotal: { inc: vi.fn() },
+  ...linearMetrics,
 }));
 
 mock.module("@alfred/agent/workflow/metrics", () => ({
   __esModule: true,
-  runnerStepsTotal: { inc: vi.fn() },
-  runnerErrorsTotal: { inc: vi.fn() },
-  linearActivityEmissionsTotal: { inc: vi.fn() },
-  linearActivityDurationSeconds: { startTimer: () => () => {} },
-  linearSessionOperationsTotal: { inc: vi.fn() },
+  ...metricsStub,
+  ...linearMetrics,
 }));
 
 const { runPlanV6 } = await import("@alfred/agent/workflow/runner");

@@ -2,6 +2,7 @@ export * from "./auth/index";
 export * from "./cognitive/index";
 export * from "./env/index";
 export * from "./kinetic/index";
+export * from "./logger/index";
 export * from "./performance/index";
 export * from "./physical/index";
 export * from "./redis/index";

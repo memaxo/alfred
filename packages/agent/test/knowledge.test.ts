@@ -6,11 +6,17 @@ import type {
   KnowledgeQueryInput,
 } from "../src/orchestrator/tool/knowledge/definition";
 
-// Mock dependencies before importing
-const mockRequireToolScopesAndPolicy = mock();
-mock.module("@alfred/auth/token", () => ({
-  requireToolScopesAndPolicy: mockRequireToolScopesAndPolicy,
-}));
+// Use shared test utilities - import BEFORE any other imports
+import {
+  authTokenMocks,
+  installAuthTokenMock,
+  resetAuthTokenMocks,
+} from "@alfred/test-kit/auth/token";
+import { installLoggerMock, resetLoggerMocks } from "@alfred/test-kit/logger";
+
+// Install shared mocks
+installAuthTokenMock();
+installLoggerMock();
 
 const mockExtract = mock();
 const mockToKnowledge = mock();
@@ -43,15 +49,6 @@ mock.module("@alfred/db/repo/graph", () => ({
   createCorrection: mockCreateCorrection,
 }));
 
-mock.module("@alfred/logger", () => ({
-  logger: {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-}));
-
 // Import tools after mocking
 const {
   toolKnowledgeQuery,
@@ -62,7 +59,7 @@ const {
 
 describe("Knowledge Graph Tools", () => {
   beforeEach(() => {
-    mockRequireToolScopesAndPolicy.mockReset();
+    authTokenMocks.requireToolScopesAndPolicy.mockReset();
     mockExtract.mockReset();
     mockToKnowledge.mockReset();
     mockFindNodesByKind.mockReset();
@@ -77,7 +74,7 @@ describe("Knowledge Graph Tools", () => {
     mockCreateCorrection.mockReset();
 
     // Default to allowing all policy checks
-    mockRequireToolScopesAndPolicy.mockResolvedValue({
+    authTokenMocks.requireToolScopesAndPolicy.mockResolvedValue({
       decision: { allow: true },
       claims: {
         sub: "test-user",
@@ -210,7 +207,7 @@ describe("Knowledge Graph Tools", () => {
     });
 
     it("enforces knowledge.read policy", async () => {
-      mockRequireToolScopesAndPolicy.mockRejectedValue(
+      authTokenMocks.requireToolScopesAndPolicy.mockRejectedValue(
         new Error("unauthorized")
       );
 
@@ -323,7 +320,7 @@ describe("Knowledge Graph Tools", () => {
     });
 
     it("enforces knowledge.write policy", async () => {
-      mockRequireToolScopesAndPolicy.mockRejectedValue(
+      authTokenMocks.requireToolScopesAndPolicy.mockRejectedValue(
         new Error("unauthorized")
       );
 
@@ -451,7 +448,7 @@ describe("Knowledge Graph Tools", () => {
     });
 
     it("enforces knowledge.write policy", async () => {
-      mockRequireToolScopesAndPolicy.mockRejectedValue(
+      authTokenMocks.requireToolScopesAndPolicy.mockRejectedValue(
         new Error("unauthorized")
       );
 
@@ -728,7 +725,7 @@ describe("Knowledge Graph Tools", () => {
     });
 
     it("enforces biometric elevation (passkey + elevated)", async () => {
-      mockRequireToolScopesAndPolicy.mockResolvedValue({
+      authTokenMocks.requireToolScopesAndPolicy.mockResolvedValue({
         decision: { allow: true },
         claims: {
           sub: "test-user",

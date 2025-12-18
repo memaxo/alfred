@@ -54,7 +54,11 @@ metricsStub.recordStreamEvent = vi.fn();
 metricsStub.startStreamTimer = vi.fn(() => vi.fn());
 metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
 
-export { metricsStub };
+// Workflow runner metrics commonly needed by workflow tests
+metricsStub.runnerStepsTotal = createMetricStub();
+metricsStub.runnerErrorsTotal = createMetricStub();
+
+export { metricsStub, createMetricStub };
 
 mock.module("@alfred/api/metrics", () => ({
   ...metricsStub,
@@ -108,4 +112,23 @@ export const policyStub = {
 
 mock.module("@alfred/policy", () => ({
   ...policyStub,
+}));
+
+// Logger mock - commonly needed across all test files
+export const loggerStub = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+mock.module("@alfred/logger", () => ({
+  logger: loggerStub,
+}));
+
+// Workflow metrics from @alfred/agent - needed by workflow runner tests
+mock.module("@alfred/agent/workflow/metrics", () => ({
+  __esModule: true,
+  runnerStepsTotal: createMetricStub(),
+  runnerErrorsTotal: createMetricStub(),
 }));

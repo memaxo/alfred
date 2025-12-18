@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
-import { aiStub, metricsStub } from "./utils/mock-metrics";
+// Import mock-metrics first - it provides logger, metrics, ai, and policy stubs
+import { aiStub, loggerStub, metricsStub } from "./utils/mock-metrics";
 
 type HistoryTier = "anchor" | "high" | "medium" | "low";
 
@@ -43,16 +44,6 @@ mock.module("@alfred/history", () => ({
   ...realHistory,
   buildHistoryContext: buildHistoryContextMock,
   getHistoryBudgetDefaults: () => ({}),
-}));
-
-const loggerInfoMock = vi.fn();
-mock.module("@alfred/logger", () => ({
-  logger: {
-    info: loggerInfoMock,
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
 }));
 
 const metricMocks = {
@@ -98,7 +89,7 @@ beforeEach(() => {
         },
       },
     }));
-  loggerInfoMock.mockClear();
+  loggerStub.info.mockClear();
   metricMocks.historyContextTokensTotal.inc.mockClear();
   metricMocks.historyContextTierDropsTotal.inc.mockClear();
   metricMocks.historyContextSelectionDurationSeconds.startTimer.mockClear();
@@ -180,7 +171,7 @@ describe("prepareModelMessagesForGenerate", () => {
       source: "assistant",
       tier: "low",
     });
-    expect(loggerInfoMock).toHaveBeenCalledWith(
+    expect(loggerStub.info).toHaveBeenCalledWith(
       "assistant_history_pruned_generate",
       expect.objectContaining({
         dropped: 5,
