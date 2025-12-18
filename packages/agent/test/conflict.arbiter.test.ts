@@ -73,12 +73,7 @@ describe("conflictArbiter", () => {
 
     // Restore default implementations
     mockWorktreeCreate.mockImplementation(
-      (
-        _repo: string,
-        runId: string,
-        agentId: string,
-        baseRef?: string
-      ) => {
+      (_repo: string, runId: string, agentId: string, baseRef?: string) => {
         const handle = {
           path: `/tmp/mock-worktree/${runId}/${agentId}`,
           branch: `agent/${runId}/${agentId}`,

@@ -119,7 +119,9 @@ export const toolRemind = {
           reminders: rows
             .map((row) => mapReminder(row))
             .filter(
-              (reminder): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
+              (
+                reminder
+              ): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
                 reminder !== null
             ),
         };
@@ -135,7 +137,9 @@ export const toolRemind = {
           reminders: rows
             .map((row) => mapReminder(row))
             .filter(
-              (reminder): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
+              (
+                reminder
+              ): reminder is NonNullable<ReturnType<typeof mapReminder>> =>
                 reminder !== null
             ),
         };

@@ -105,7 +105,9 @@ export const toolBook = {
           bookmarks: rows
             .map((row) => mapBookmark(row))
             .filter(
-              (bookmark): bookmark is NonNullable<ReturnType<typeof mapBookmark>> =>
+              (
+                bookmark
+              ): bookmark is NonNullable<ReturnType<typeof mapBookmark>> =>
                 bookmark !== null
             ),
         };

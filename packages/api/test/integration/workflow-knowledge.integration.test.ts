@@ -412,7 +412,11 @@ describe("Knowledge → Workflow Integration", () => {
         if (neighbors.length === 0) {
           break;
         }
-        current = neighbors[0]!;
+        const next = neighbors[0];
+        if (!next) {
+          break;
+        }
+        current = next;
         hops++;
       }
 

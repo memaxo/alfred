@@ -106,7 +106,8 @@ mock.module("@alfred/db", () => ({
 
 // Mock Graph Repo
 mock.module("@alfred/db/repo/graph/index", () => ({
-  upsertNodes: () => Promise.resolve(new Map([["user:hash-123", { id: "node-1" }]])),
+  upsertNodes: () =>
+    Promise.resolve(new Map([["user:hash-123", { id: "node-1" }]])),
   upsertEdges: () => Promise.resolve([]),
 
   // Decay mocks

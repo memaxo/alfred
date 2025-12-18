@@ -22,7 +22,9 @@ mock.module("../src/orchestrator/tool/worktree.js", () => ({
   worktreeManager: {
     create: mockWorktreeCreate,
     remove: mockWorktreeRemove,
-    safeMerge: mock(() => Promise.resolve({ success: true, conflictFiles: [] })),
+    safeMerge: mock(() =>
+      Promise.resolve({ success: true, conflictFiles: [] })
+    ),
   },
 }));
 

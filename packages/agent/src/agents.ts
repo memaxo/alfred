@@ -32,7 +32,8 @@ const assistantPrepareStep: PrepareStepFunction<AssistantTools> = ({
   if (messages.length > 40) {
     return Promise.resolve({
       messages: [messages[0], ...messages.slice(-20)].filter(
-        (msg): msg is NonNullable<typeof msg> => msg !== null && msg !== undefined
+        (msg): msg is NonNullable<typeof msg> =>
+          msg !== null && msg !== undefined
       ),
     });
   }
@@ -45,7 +46,8 @@ const orchestratorPrepareStep: PrepareStepFunction<OrchestratorTools> = ({
   if (messages.length > 60) {
     return Promise.resolve({
       messages: [messages[0], ...messages.slice(-30)].filter(
-        (msg): msg is NonNullable<typeof msg> => msg !== null && msg !== undefined
+        (msg): msg is NonNullable<typeof msg> =>
+          msg !== null && msg !== undefined
       ),
     });
   }

@@ -104,8 +104,9 @@ export const toolTimer = {
         return {
           timers: rows
             .map((row) => mapTimer(row))
-            .filter((timer): timer is NonNullable<ReturnType<typeof mapTimer>> =>
-              timer !== null
+            .filter(
+              (timer): timer is NonNullable<ReturnType<typeof mapTimer>> =>
+                timer !== null
             ),
         };
       }

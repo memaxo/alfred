@@ -84,8 +84,7 @@ describe("loadPreferences", () => {
         created: new Date(),
         updated: new Date(),
       },
-      ])
-    );
+    ]);
 
     const prefs = await loadPreferences("user-1");
     expect(prefs.get("response.verbosity")?.value).toBe("verbose");

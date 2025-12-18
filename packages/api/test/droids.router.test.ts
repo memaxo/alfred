@@ -312,9 +312,13 @@ describe("droids router", () => {
                   obligations: [],
                 },
               });
+              if (!runId) {
+                reject(new Error("runId is undefined"));
+                return;
+              }
               void caller.droid
                 .resume({
-                  runId: runId!,
+                  runId,
                   authz: "token-resumed",
                 })
                 .catch(reject);
@@ -356,6 +360,9 @@ describe("droids router", () => {
 
       const capturedRunId = Array.from(runHandlers.keys())[0];
       expect(capturedRunId).toBeDefined();
+      if (!capturedRunId) {
+        throw new Error("capturedRunId is undefined");
+      }
       requireToolScopesAndPolicyMock.mockResolvedValueOnce({
         claims: {
           elevated: true,
@@ -367,7 +374,7 @@ describe("droids router", () => {
       });
 
       const resumeResult = await caller.droid.resume({
-        runId: capturedRunId!,
+        runId: capturedRunId,
         authz: "token-resumed",
       });
 

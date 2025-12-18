@@ -192,8 +192,9 @@ function streamStdout(
             }
           }
         } else {
-          void Promise.resolve(writer?.write?.({ type: "stdout", text }))
-            .catch(() => {});
+          void Promise.resolve(writer?.write?.({ type: "stdout", text })).catch(
+            () => {}
+          );
         }
       }
     } catch {

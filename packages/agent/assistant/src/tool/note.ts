@@ -102,8 +102,9 @@ export const toolNote = {
         return {
           notes: rows
             .map((row) => mapNote(row))
-            .filter((note): note is NonNullable<ReturnType<typeof mapNote>> =>
-              note !== null
+            .filter(
+              (note): note is NonNullable<ReturnType<typeof mapNote>> =>
+                note !== null
             ),
         };
       }

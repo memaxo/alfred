@@ -48,11 +48,13 @@ type WindowWithRAF = Window & {
 };
 
 if (typeof (window as WindowWithRAF).requestAnimationFrame === "undefined") {
-  (window as WindowWithRAF).requestAnimationFrame = globalThis.requestAnimationFrame;
+  (window as WindowWithRAF).requestAnimationFrame =
+    globalThis.requestAnimationFrame;
 }
 
 if (typeof (window as WindowWithRAF).cancelAnimationFrame === "undefined") {
-  (window as WindowWithRAF).cancelAnimationFrame = globalThis.cancelAnimationFrame;
+  (window as WindowWithRAF).cancelAnimationFrame =
+    globalThis.cancelAnimationFrame;
 }
 
 // Provide minimal canvas and resize observer shims for jsdom-based tests.
@@ -123,7 +125,9 @@ type WindowWithResizeObserver = Window & {
   ResizeObserver?: typeof ResizeObserver;
 };
 
-if (typeof (globalThis as GlobalWithResizeObserver).ResizeObserver === "undefined") {
+if (
+  typeof (globalThis as GlobalWithResizeObserver).ResizeObserver === "undefined"
+) {
   const ResizeObserverPolyfill = class ResizeObserver {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     observe(): void {}
@@ -132,9 +136,11 @@ if (typeof (globalThis as GlobalWithResizeObserver).ResizeObserver === "undefine
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     disconnect(): void {}
   } as typeof ResizeObserver;
-  (globalThis as GlobalWithResizeObserver).ResizeObserver = ResizeObserverPolyfill;
+  (globalThis as GlobalWithResizeObserver).ResizeObserver =
+    ResizeObserverPolyfill;
   if (typeof window !== "undefined") {
-    (window as WindowWithResizeObserver).ResizeObserver = ResizeObserverPolyfill;
+    (window as WindowWithResizeObserver).ResizeObserver =
+      ResizeObserverPolyfill;
   }
 }
 

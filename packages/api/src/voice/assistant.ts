@@ -223,7 +223,10 @@ async function handleVoiceCognitiveEffects(params: VoiceEffectParams) {
   }
   const queue: CognitiveEffect[] = [...params.effects];
   while (queue.length) {
-    const effect = queue.shift()!;
+    const effect = queue.shift();
+    if (!effect) {
+      break;
+    }
     try {
       switch (effect.type) {
         case "generate_response": {

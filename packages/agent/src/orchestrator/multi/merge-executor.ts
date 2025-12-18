@@ -1,7 +1,7 @@
 import { sys } from "../../utils/process";
+import type { GitInput } from "../tool/git";
 import { worktreeManager } from "../tool/worktree";
 import type { MergePlan } from "./merge";
-import type { GitInput } from "../tool/git";
 
 type GitResult = {
   exitCode: number;
