@@ -377,15 +377,15 @@ jobs:
           bun run test:e2e:auto
 
       - name: Run Auth E2E
-        run: bunx playwright test apps/web/tests/auth.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        run: bunx playwright test apps/web/.tests/auth.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
         continue-on-error: true
 
       - name: Run Workflow E2E
-        run: bunx playwright test apps/web/tests/workflow-execution.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        run: bunx playwright test apps/web/.tests/workflow-execution.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
         continue-on-error: true
 
       - name: Run Settings E2E
-        run: bunx playwright test apps/web/tests/settings.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+        run: bunx playwright test apps/web/.tests/settings.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
         continue-on-error: true
 
       - name: No-DB smoke test
@@ -408,7 +408,7 @@ jobs:
 
       - name: Voice streaming session spec (serverless harness)
         run: |
-          PLAYWRIGHT_SKIP_WEB_SERVER=1 bunx playwright test apps/web/tests/voice-session.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
+          PLAYWRIGHT_SKIP_WEB_SERVER=1 bunx playwright test apps/web/.tests/voice-session.e2e.spec.ts --config apps/web/playwright.config.ts --project=e2e
 
       - name: Upload E2E test artifacts
         if: always()

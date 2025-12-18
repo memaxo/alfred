@@ -12,7 +12,7 @@ const shouldStartWebServer =
   process.env.CI !== "workflow-test";
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: "./.tests",
   timeout: 120 * 1000,
   expect: {
     timeout: 15 * 1000,

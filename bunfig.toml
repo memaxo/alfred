@@ -1,2 +1,7 @@
 [install]
 # linker = "isolated"  # having issues with Nuxt and NativeWind/Unistyles
+
+[test]
+# Playwright E2E tests live in apps/web/.tests/ (hidden directory).
+# Bun automatically excludes hidden directories from test discovery.
+# Run Playwright tests with: bunx playwright test --config apps/web/playwright.config.ts
