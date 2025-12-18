@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const executeMock = mock(() =>
   Promise.resolve({ ok: true, id: "activity-123" })
@@ -11,10 +11,16 @@ mock.module("../src/orchestrator/tool/ticket", () => ({
 }));
 
 const loggerWarnMock = mock();
+const loggerInfoMock = mock();
+const loggerErrorMock = mock();
+const loggerDebugMock = mock();
 
 mock.module("@alfred/logger", () => ({
   logger: {
     warn: loggerWarnMock,
+    info: loggerInfoMock,
+    error: loggerErrorMock,
+    debug: loggerDebugMock,
   },
 }));
 
@@ -44,9 +50,16 @@ mock.module("../src/workflow/metrics", () => ({
 const { ensureLinearTicket } = await import("../src/workflow/linear");
 
 describe("linear helpers", () => {
+  afterAll(() => {
+    mock.restore();
+  });
+
   beforeEach(() => {
     executeMock.mockReset();
     loggerWarnMock.mockReset();
+    loggerInfoMock.mockReset();
+    loggerErrorMock.mockReset();
+    loggerDebugMock.mockReset();
     metricMocks.emissionsInc.mockReset();
     metricMocks.durationStart.mockReset();
     metricMocks.durationStart.mockImplementation(() => () => {});

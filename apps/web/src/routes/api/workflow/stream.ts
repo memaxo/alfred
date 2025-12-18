@@ -21,45 +21,49 @@ const encoder = new TextEncoder();
 
 type WorkflowSuspensionHandle = ReturnType<CreateWorkflowSuspensionFn>;
 
-async function getWorkflowHelpers() {
-  const orchestratorPkg = "@alfred/agent/workflow/orchestrator";
+async function getWorkflowGatekeepers() {
+  // Keep the "decide status code" path as light as possible: we must validate,
+  // authenticate, and enforce policy before returning an SSE response.
   const schemaPkg = "@alfred/agent/workflow/schema";
-  const servicesPkg = "@alfred/agent/workflow/services";
-  const preferencePkg = "@alfred/api/preference/refresh";
   const accessPkg = "@alfred/api/workflow/access";
-  const suspensionPkg = "@alfred/api/workflow/suspension";
   const authPkg = "@alfred/auth";
-  const loggerPkg = "@alfred/logger";
 
-  const [
-    orchestrator,
-    schema,
-    services,
-    preference,
-    access,
-    suspension,
-    authMod,
-    loggerMod,
-  ] = await Promise.all([
-    import(orchestratorPkg),
+  const [schema, access, authMod] = await Promise.all([
     import(schemaPkg),
-    import(servicesPkg),
-    import(preferencePkg),
     import(accessPkg),
-    import(suspensionPkg),
     import(authPkg),
-    import(loggerPkg),
   ]);
 
   return {
-    orchestrateWorkflowStream: orchestrator.orchestrateWorkflowStream,
     workflowInput: schema.workflowInput,
+    enforceWorkflowPlanPolicy: access.enforceWorkflowPlanPolicy,
+    auth: authMod.auth,
+  };
+}
+
+async function getWorkflowStreamHelpers() {
+  // Everything below can be loaded after we've committed to an SSE 200 response.
+  const orchestratorPkg = "@alfred/agent/workflow/orchestrator";
+  const servicesPkg = "@alfred/agent/workflow/services";
+  const preferencePkg = "@alfred/api/preference/refresh";
+  const suspensionPkg = "@alfred/api/workflow/suspension";
+  const loggerPkg = "@alfred/logger";
+
+  const [orchestrator, services, preference, suspension, loggerMod] =
+    await Promise.all([
+      import(orchestratorPkg),
+      import(servicesPkg),
+      import(preferencePkg),
+      import(suspensionPkg),
+      import(loggerPkg),
+    ]);
+
+  return {
+    orchestrateWorkflowStream: orchestrator.orchestrateWorkflowStream,
     ensureObligations: services.ensureObligations,
     triggerPreferenceRefresh: preference.triggerPreferenceRefresh,
-    enforceWorkflowPlanPolicy: access.enforceWorkflowPlanPolicy,
     createWorkflowSuspension:
       suspension.createWorkflowSuspension as unknown as CreateWorkflowSuspensionFn,
-    auth: authMod.auth,
     logger: loggerMod.logger,
   };
 }
@@ -96,7 +100,7 @@ function deriveStatus(error: unknown, fallback: number): number {
 export async function handleWorkflowStreamRequest(
   request: Request
 ): Promise<Response> {
-  const h = await getWorkflowHelpers();
+  const gate = await getWorkflowGatekeepers();
 
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -105,7 +109,7 @@ export async function handleWorkflowStreamRequest(
   let parsedInput: WorkflowInputPayload;
   try {
     const body = await request.json();
-    const parsed = h.workflowInput.safeParse(body);
+    const parsed = gate.workflowInput.safeParse(body);
     if (!parsed.success) {
       return new Response(
         JSON.stringify({
@@ -129,7 +133,7 @@ export async function handleWorkflowStreamRequest(
     );
   }
 
-  const session = await h.auth.api.getSession({ headers: request.headers });
+  const session = await gate.auth.api.getSession({ headers: request.headers });
   if (!session?.user?.id) {
     return new Response(JSON.stringify({ error: "session_required" }), {
       status: 401,
@@ -139,7 +143,7 @@ export async function handleWorkflowStreamRequest(
 
   let obligations: Obligation[] = [];
   try {
-    const result = await h.enforceWorkflowPlanPolicy({
+    const result = await gate.enforceWorkflowPlanPolicy({
       request,
       session,
       input: parsedInput,
@@ -161,8 +165,8 @@ export async function handleWorkflowStreamRequest(
 
   let cleanup: (() => void) | undefined;
   let suspensionHandle: WorkflowSuspensionHandle | null = null;
-
   let closed = false;
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const send = (bytes: Uint8Array) => {
@@ -183,116 +187,123 @@ export async function handleWorkflowStreamRequest(
 
       const orchestratorSession = { user: { id: session.user.id } };
 
-      const startWorkflow = async (options?: {
-        runId?: string;
-        obligations?: Obligation[];
-      }) => {
-        cleanup?.();
-        cleanup = undefined;
-        const callbacks: OrchestratorCallbacks = {
-          triggerPreferenceRefresh: h.triggerPreferenceRefresh,
-          ensureObligations: h.ensureObligations,
-          context: {
-            policy: {
-              obligations: options?.obligations ?? [],
-            },
-          },
-          emitError: (error) => {
-            h.logger.warn("workflow_sse_emit_error", {
-              error: error instanceof Error ? error.message : String(error),
-            });
-            send(formatEvent("error", formatError(error)));
-            cleanup?.();
-            close();
-          },
-          emitNext: (event) => {
-            sendWorkflowEvent(event);
-          },
-          emitComplete: () => {
-            send(formatEvent("complete", {}));
-            cleanup?.();
-            close();
-          },
-          emitUiMessages: (messages, meta) => {
-            const payload: WorkflowSseMeta = { messages, meta };
-            send(formatEvent("ui-message", payload));
-          },
-        };
+      // Send an immediate workflow event so clients can display "connected" without
+      // waiting for orchestrator/tool imports and the first executor emission.
+      send(encoder.encode(": workflow-stream\n\n"));
+      sendWorkflowEvent({
+        type: "notice",
+        message: "workflow_stream_ready",
+      } as WorkflowEvent);
 
-        const payload = options?.runId
-          ? { ...parsedInput, runId: options.runId }
-          : parsedInput;
-
-        cleanup = await h.orchestrateWorkflowStream(
-          payload,
-          orchestratorSession,
-          callbacks
-        );
-      };
-
-      suspensionHandle = h.createWorkflowSuspension({
-        sessionUserId: session.user.id,
-        input: parsedInput,
-        transport: "sse",
-        auditContext: { auto: parsedInput.auto, mode: parsedInput.mode },
-        emitObligation: (payload: {
-          runId: string;
-          obligations: Obligation[];
-          resumeEvents: string[];
-        }) => {
-          const { runId, obligations, resumeEvents } = payload;
-          sendWorkflowEvent({
-            type: "obligation",
-            runId,
-            obligations,
-            resumeEvents,
-          } as WorkflowEvent);
-        },
-        policyCheck: async () => {
-          const refreshed = await h.enforceWorkflowPlanPolicy({
-            session,
-            input: parsedInput,
-          });
-          return refreshed.obligations;
-        },
-        startWorkflow: (options: {
-          runId: string;
-          obligations: Obligation[];
-        }) => startWorkflow(options),
-        onError: (error: unknown, info: { runId: string }) => {
-          const { runId } = info;
-          h.logger.error("workflow_resume_failed", {
-            runId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          send(formatEvent("error", formatError(error)));
-          cleanup?.();
-          close();
-        },
-        onSuspended: () => {
-          h.triggerPreferenceRefresh(session.user.id, {
-            reason: "workflow_stream_suspended",
-          });
-        },
-        onResumed: () => {
-          h.triggerPreferenceRefresh(session.user.id, {
-            reason: "workflow_stream_resumed",
-          });
-        },
-      });
-      const suspension = suspensionHandle;
-
-      const kickoff = async () => {
+      const kickoff = async (): Promise<void> => {
         try {
+          const h = await getWorkflowStreamHelpers();
+
+          const startWorkflow = async (options?: {
+            runId?: string;
+            obligations?: Obligation[];
+          }) => {
+            cleanup?.();
+            cleanup = undefined;
+            const callbacks: OrchestratorCallbacks = {
+              triggerPreferenceRefresh: h.triggerPreferenceRefresh,
+              ensureObligations: h.ensureObligations,
+              context: {
+                policy: {
+                  obligations: options?.obligations ?? [],
+                },
+              },
+              emitError: (error) => {
+                h.logger.warn("workflow_sse_emit_error", {
+                  error: error instanceof Error ? error.message : String(error),
+                });
+                send(formatEvent("error", formatError(error)));
+                cleanup?.();
+                close();
+              },
+              emitNext: (event) => {
+                sendWorkflowEvent(event);
+              },
+              emitComplete: () => {
+                send(formatEvent("complete", {}));
+                cleanup?.();
+                close();
+              },
+              emitUiMessages: (messages, meta) => {
+                const payload: WorkflowSseMeta = { messages, meta };
+                send(formatEvent("ui-message", payload));
+              },
+            };
+
+            const payload = options?.runId
+              ? { ...parsedInput, runId: options.runId }
+              : parsedInput;
+
+            cleanup = await h.orchestrateWorkflowStream(
+              payload,
+              orchestratorSession,
+              callbacks
+            );
+          };
+
+          suspensionHandle = h.createWorkflowSuspension({
+            sessionUserId: session.user.id,
+            input: parsedInput,
+            transport: "sse",
+            auditContext: { auto: parsedInput.auto, mode: parsedInput.mode },
+            emitObligation: (payload: {
+              runId: string;
+              obligations: Obligation[];
+              resumeEvents: string[];
+            }) => {
+              const { runId, obligations, resumeEvents } = payload;
+              sendWorkflowEvent({
+                type: "obligation",
+                runId,
+                obligations,
+                resumeEvents,
+              } as WorkflowEvent);
+            },
+            policyCheck: async () => {
+              const refreshed = await gate.enforceWorkflowPlanPolicy({
+                session,
+                input: parsedInput,
+              });
+              return refreshed.obligations;
+            },
+            startWorkflow: (options: {
+              runId: string;
+              obligations: Obligation[];
+            }) => startWorkflow(options),
+            onError: (error: unknown, info: { runId: string }) => {
+              const { runId } = info;
+              h.logger.error("workflow_resume_failed", {
+                runId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              send(formatEvent("error", formatError(error)));
+              cleanup?.();
+              close();
+            },
+            onSuspended: () => {
+              h.triggerPreferenceRefresh(session.user.id, {
+                reason: "workflow_stream_suspended",
+              });
+            },
+            onResumed: () => {
+              h.triggerPreferenceRefresh(session.user.id, {
+                reason: "workflow_stream_resumed",
+              });
+            },
+          });
+
+          const suspension = suspensionHandle;
           if (obligations.length > 0) {
             await suspension?.suspend(obligations);
           } else {
             await startWorkflow({ obligations: [] });
           }
         } catch (error) {
-          h.logger.error("workflow_sse_start_failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
           send(formatEvent("error", formatError(error)));
           cleanup?.();
           close();
@@ -306,14 +317,11 @@ export async function handleWorkflowStreamRequest(
         void suspensionHandle?.dispose();
         close();
       });
-
-      send(encoder.encode(": workflow-stream\n\n"));
     },
     cancel() {
       closed = true;
       cleanup?.();
       void suspensionHandle?.dispose();
-      // cleanup will be handled by orchestrator emitComplete or abort handler
     },
   });
 

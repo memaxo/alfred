@@ -450,12 +450,16 @@ export async function setLinearCancelled(
 }
 
 export function extractIssueIdFromSession(sessionId: string): string | null {
-  if (!sessionId || typeof sessionId !== "string" || sessionId.trim().length === 0) {
+  // Explicitly handle null, undefined, and non-strings
+  if (sessionId === null || sessionId === undefined) {
+    return null;
+  }
+  if (typeof sessionId !== "string") {
     return null;
   }
 
   const trimmed = sessionId.trim();
-  if (trimmed.length > 255) {
+  if (trimmed.length === 0 || trimmed.length > 255) {
     return null;
   }
 

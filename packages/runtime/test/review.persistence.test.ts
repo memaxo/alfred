@@ -1,6 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
-import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { OrchestratorContext } from "../src/orchestrator/types";
 import {
   cleanupPlanDir,
@@ -8,7 +6,7 @@ import {
   preparePlanDir,
 } from "./utils/review-helpers";
 
-// Mock workflowRepo before importing runReviewPhase to ensure dynamic imports are intercepted
+// Create mock functions BEFORE any imports that use them
 let mockWorkflowRun: {
   id: string;
   stateData: Record<string, unknown> | null;
@@ -18,23 +16,42 @@ let updateRunCalls: Array<{
   patch: { stateData?: unknown };
 }> = [];
 
-// Create mock functions that can be reset
-const createMockWorkflowRepo = () => ({
-  getRun: mock(async (_runId: string) => mockWorkflowRun),
-  updateRun: mock(async (runId: string, patch: { stateData?: unknown }) => {
-    updateRunCalls.push({ runId, patch });
-    if (mockWorkflowRun && patch.stateData) {
-      mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
-    }
-    return mockWorkflowRun;
-  }),
+const codexExecuteMock = mock(async (_input: unknown, _writer?: unknown) => {
+  // Mock implementation - actual tracking happens via mock.calls
 });
 
-mock.module("@alfred/db/repo/workflow", () => ({
-  workflowRepo: createMockWorkflowRepo(),
+const smokeVerifyMock = mock(async () => ({ success: true, message: "ok" }));
+
+const mockGetRun = mock(async (_runId: string) => mockWorkflowRun);
+const mockUpdateRun = mock(async (runId: string, patch: { stateData?: unknown }) => {
+  updateRunCalls.push({ runId, patch });
+  if (mockWorkflowRun && patch.stateData) {
+    mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+  }
+  return mockWorkflowRun;
+});
+
+// Mock modules BEFORE importing them
+mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
+  toolCodex: {
+    execute: codexExecuteMock,
+    name: "codex",
+    description: "Mock codex tool",
+    inputSchema: {},
+    outputSchema: {},
+  },
 }));
 
-const { runReviewPhase } = await import("../src/orchestrator/review");
+mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
+  smokeTester: {
+    verify: smokeVerifyMock,
+  },
+}));
+
+// Now import - these will get the mocked versions
+const { runReviewPhase, reviewWorkflowRepo } = await import(
+  "../src/orchestrator/review"
+);
 
 /**
  * ALF-13: Persist fix attempt count (Security)
@@ -45,32 +62,47 @@ const { runReviewPhase } = await import("../src/orchestrator/review");
  */
 describe("review fixAttempts persistence", () => {
   let restoreRunner: (() => void) | undefined;
-  let originalCodex: typeof toolCodex.execute;
-  let originalSmoke: typeof smokeTester.verify;
-  let mockWorkflowRepo: ReturnType<typeof createMockWorkflowRepo>;
+  let originalGetRun: typeof reviewWorkflowRepo.getRun;
+  let originalUpdateRun: typeof reviewWorkflowRepo.updateRun;
 
   beforeEach(() => {
     process.env.ORCH_TMUX_DISABLED = "1";
-    originalCodex = toolCodex.execute;
-    originalSmoke = smokeTester.verify;
+    originalGetRun = reviewWorkflowRepo.getRun;
+    originalUpdateRun = reviewWorkflowRepo.updateRun;
 
-    // Reset mock state and recreate mock
+    // Reset mock state
     mockWorkflowRun = null;
     updateRunCalls = [];
-    mockWorkflowRepo = createMockWorkflowRepo();
-    
-    // Re-mock the module with fresh mock functions
-    mock.module("@alfred/db/repo/workflow", () => ({
-      workflowRepo: mockWorkflowRepo,
-    }));
+    codexExecuteMock.mockReset();
+    smokeVerifyMock.mockReset();
+    mockGetRun.mockReset();
+    mockUpdateRun.mockReset();
+
+    // Set up default implementations
+    smokeVerifyMock.mockImplementation(async () => ({ success: true, message: "ok" }));
+    mockGetRun.mockImplementation(async (_runId: string) => mockWorkflowRun);
+    mockUpdateRun.mockImplementation(async (runId: string, patch: { stateData?: unknown }) => {
+      updateRunCalls.push({ runId, patch });
+      if (mockWorkflowRun && patch.stateData) {
+        mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+      }
+      return mockWorkflowRun;
+    });
+
+    reviewWorkflowRepo.getRun = mockGetRun;
+    reviewWorkflowRepo.updateRun = mockUpdateRun;
   });
 
   afterEach(async () => {
     process.env.ORCH_TMUX_DISABLED = undefined;
     restoreRunner?.();
     restoreRunner = undefined;
-    toolCodex.execute = originalCodex;
-    smokeTester.verify = originalSmoke;
+    reviewWorkflowRepo.getRun = originalGetRun;
+    reviewWorkflowRepo.updateRun = originalUpdateRun;
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 
   it("loads persisted fixAttempts from stateData on resume", async () => {
@@ -83,19 +115,12 @@ describe("review fixAttempts persistence", () => {
       stateData: { fixAttempts: 2 },
     };
 
-    const fixerCalls: number[] = [];
     restoreRunner = mockRunner(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
       durationMs: 1,
     }));
-
-    // Track fixer agent invocations
-    toolCodex.execute = async () => {
-      fixerCalls.push(Date.now());
-    };
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -133,7 +158,7 @@ describe("review fixAttempts persistence", () => {
 
     // With fixAttempts=2, only 1 more fix attempt should be allowed (MAX_FIX_ATTEMPTS=3)
     // The fixer runs when fixAttempts < MAX_FIX_ATTEMPTS, so at fixAttempts=2, it runs once
-    expect(fixerCalls.length).toBe(1);
+    expect(codexExecuteMock.mock.calls.length).toBe(1);
 
     // Verify escalation event was emitted after exhausting retries
     const escalationEvent = events.find((e) => e?.kind === "review-escalated");
@@ -153,19 +178,12 @@ describe("review fixAttempts persistence", () => {
       stateData: null,
     };
 
-    let fixerCallCount = 0;
     restoreRunner = mockRunner(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
       durationMs: 1,
     }));
-
-    // Fixer always "fails to fix" so we get multiple attempts
-    toolCodex.execute = async () => {
-      fixerCallCount++;
-    };
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -196,7 +214,7 @@ describe("review fixAttempts persistence", () => {
     }
 
     // With MAX_FIX_ATTEMPTS=3, we should have 3 fixer calls
-    expect(fixerCallCount).toBe(3);
+    expect(codexExecuteMock.mock.calls.length).toBe(3);
 
     // Verify updateRun was called with incrementing fixAttempts
     const stateDataUpdates = updateRunCalls
@@ -218,18 +236,12 @@ describe("review fixAttempts persistence", () => {
       stateData: { fixAttempts: 3 },
     };
 
-    const fixerCalls: number[] = [];
     restoreRunner = mockRunner(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
       durationMs: 1,
     }));
-
-    toolCodex.execute = async () => {
-      fixerCalls.push(Date.now());
-    };
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -267,7 +279,7 @@ describe("review fixAttempts persistence", () => {
 
     // At fixAttempts=3, no more fixer attempts should be made
     // (condition is fixAttempts < MAX_FIX_ATTEMPTS)
-    expect(fixerCalls.length).toBe(0);
+    expect(codexExecuteMock.mock.calls.length).toBe(0);
 
     // Verify escalation was emitted
     const escalationEvent = events.find((e) => e?.kind === "review-escalated");
@@ -284,7 +296,6 @@ describe("review fixAttempts persistence", () => {
       stateData: null,
     };
 
-    let fixerCallCount = 0;
     let checkRunCount = 0;
     restoreRunner = mockRunner(async () => {
       checkRunCount++;
@@ -294,11 +305,6 @@ describe("review fixAttempts persistence", () => {
       }
       return { stdout: "fail", stderr: "error", exitCode: 1, durationMs: 1 };
     });
-
-    toolCodex.execute = async () => {
-      fixerCallCount++;
-    };
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -330,7 +336,7 @@ describe("review fixAttempts persistence", () => {
     }
 
     // Should have run fixer at least once (defaults to fixAttempts=0)
-    expect(fixerCallCount).toBeGreaterThan(0);
+    expect(codexExecuteMock.mock.calls.length).toBeGreaterThan(0);
 
     // Verify the review eventually passed
     const resultEvent = events.find((e) => e?.kind === "review-exec-result");
@@ -345,22 +351,21 @@ describe("review fixAttempts persistence", () => {
     await preparePlanDir(runId);
 
     // Simulate repo error
-    mockWorkflowRepo.getRun.mockImplementation(async () => {
+    mockGetRun.mockImplementation(async () => {
       throw new Error("Database connection failed");
     });
+    mockUpdateRun.mockImplementation(async () => {
+      throw new Error("Database connection failed");
+    });
+    reviewWorkflowRepo.getRun = mockGetRun;
+    reviewWorkflowRepo.updateRun = mockUpdateRun;
 
-    let fixerCallCount = 0;
     restoreRunner = mockRunner(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
       durationMs: 1,
     }));
-
-    toolCodex.execute = async () => {
-      fixerCallCount++;
-    };
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -392,6 +397,6 @@ describe("review fixAttempts persistence", () => {
 
     // Despite repo error, should still run (defaulting to fixAttempts=0)
     // and attempt fixes
-    expect(fixerCallCount).toBe(3); // MAX_FIX_ATTEMPTS
+    expect(codexExecuteMock.mock.calls.length).toBe(3); // MAX_FIX_ATTEMPTS
   });
 });

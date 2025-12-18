@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 import "./utils/agent-mock";
 
 const getSessionMock = vi.fn();
@@ -23,11 +23,13 @@ mock.module("@alfred/db/repo/policy", () => ({
 const loggerInfoMock = vi.fn();
 const loggerWarnMock = vi.fn();
 const loggerErrorMock = vi.fn();
+const loggerDebugMock = vi.fn();
 mock.module("@alfred/logger", () => ({
   logger: {
     info: loggerInfoMock,
     warn: loggerWarnMock,
     error: loggerErrorMock,
+    debug: loggerDebugMock,
   },
 }));
 
@@ -39,6 +41,10 @@ afterEach(() => {
   getSessionMock.mockReset();
   evaluateMock.mockReset();
   createAuditLogMock.mockReset();
+});
+
+afterAll(() => {
+  mock.restore();
 });
 
 describe("authorizeVoiceStreamRequest", () => {

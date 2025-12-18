@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   KnowledgeConnectInput,
   KnowledgeCorrectInput,
@@ -792,4 +792,8 @@ describe("Knowledge Graph Tools", () => {
       expect(result.success).toBe(false);
     });
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

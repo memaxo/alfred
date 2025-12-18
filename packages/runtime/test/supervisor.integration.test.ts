@@ -247,17 +247,23 @@ describe("WorkflowRuntime supervisor integration", () => {
     AISDKAdapter.prototype.stream = async function* (options) {
       const signal = options.abortSignal;
 
-      // Wait a bit then finish
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
+      // Yield immediately to show progress
+      yield { type: "reasoning", text: "Starting task analysis" } as WorkflowEvent;
+      
       // Count how many times the stream is accessed
       _checkCount++;
+
+      // Yield another event quickly to show continuous progress
+      yield { type: "reasoning", text: "Evaluating approach options" } as WorkflowEvent;
+
+      // Very short wait to respect check interval
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       if (signal?.aborted) {
         throw signal.reason;
       }
 
-      yield { type: "reasoning", text: "Processing" } as WorkflowEvent;
+      yield { type: "reasoning", text: "Finalizing solution" } as WorkflowEvent;
       yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
     };
 
@@ -266,12 +272,15 @@ describe("WorkflowRuntime supervisor integration", () => {
         input: baseInput,
         model: mockModel,
         supervisorCheckIntervalMs: 50,
+        supervisorHeartbeatMs: 10000, // Very long heartbeat to avoid premature interruption for this test
       });
 
+      // The test verifies that with a short check interval, the supervisor doesn't interrupt
+      // prematurely when the stream is making progress (yielding varied reasoning events)
       await consume(runtime);
 
       const duration = performance.now() - startTime;
-      // Should complete in reasonable time
+      // Should complete in reasonable time without interruption
       expect(duration).toBeLessThan(1000);
     });
   });

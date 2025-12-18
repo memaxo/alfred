@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock, vi } from "bun:test";
 import type { UIMessage } from "@alfred/type/stream";
 import { z } from "zod";
 
@@ -45,6 +45,7 @@ mock.module("@alfred/logger", () => ({
     info: loggerInfoMock,
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -189,4 +190,8 @@ describe("handleStreamRequest history integration", () => {
     historyTierDropSpy.mockClear();
     preferenceHistoryPrunedSpy.mockClear();
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   LearnMistakeInput,
   LearnPatternInput,
@@ -382,4 +382,8 @@ describe("Learning Tools", () => {
       );
     });
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

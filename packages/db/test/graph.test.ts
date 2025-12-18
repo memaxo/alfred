@@ -1,8 +1,10 @@
-import { beforeAll, beforeEach, expect, it } from "bun:test";
+import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { sql } from "drizzle-orm";
 
 const TEST_RESOURCE = "test-resource";
+const SHOULD_RUN = Boolean(process.env.RUN_DB_TESTS);
+const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
 
 let graphRepo: typeof import("@alfred/db").graphRepo;
 let db: typeof import("@alfred/db").db;
@@ -11,12 +13,16 @@ async function resetGraph() {
   if (!db) {
     return;
   }
+  // Check if db.execute exists (Postgres only)
+  if (typeof db.execute !== "function") {
+    return;
+  }
   await db.execute(
     sql`TRUNCATE memory_edges, memory_nodes RESTART IDENTITY CASCADE`
   );
 }
 
-describePostgres("graphRepo", () => {
+describeFn("graphRepo", () => {
   beforeAll(async () => {
     requirePostgresTestEnv(
       "graphRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { sys } from "../src/utils/process"; // Import sys to spy on it
+// IMPORTANT: `conflict.ts` imports this module using the `.js` specifier.
+// Use the same specifier here so we spy on the exact same module instance.
+import { sys } from "../src/utils/process.js"; // Import sys to spy on it
 
 // Mock dependencies
 const mockWorktreeCreate = mock(

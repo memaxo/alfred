@@ -40,6 +40,27 @@ import type { OrchestratorContext } from "./types";
 
 const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
+export function hydrateTrackerState(
+  history: WorkflowEvent[] | undefined
+): TrackerState {
+  const trackerState: TrackerState = { agents: {}, waves: {} };
+  if (!history || history.length === 0) {
+    return trackerState;
+  }
+
+  const waveResults = history.filter((e) => (e as any).kind === "wave-result");
+  for (const res of waveResults) {
+    const data = (res as any).data;
+    if (data?.waveId) {
+      trackerState.waves[data.waveId] = {
+        status: data.status === "partial" ? "failed" : "completed",
+      } as any;
+    }
+  }
+
+  return trackerState;
+}
+
 function normalizeWorkingDirectory(candidate: string, workspaceRoot: string) {
   // Default to workspaceRoot if candidate is empty or undefined
   const target = candidate && candidate.trim() ? candidate : workspaceRoot;
@@ -153,21 +174,7 @@ export async function* runWaves(
   void runTDDLoop;
 
   // Phase 13: Hydration - Rebuild Tracker State
-  let trackerState: TrackerState = { agents: {}, waves: {} };
-
-  if (history) {
-    const waveResults = history.filter(
-      (e) => (e as any).kind === "wave-result"
-    );
-    for (const res of waveResults) {
-      const data = (res as any).data;
-      if (data?.waveId) {
-        trackerState.waves[data.waveId] = {
-          status: data.status === "partial" ? "failed" : "completed",
-        } as any;
-      }
-    }
-  }
+  let trackerState = hydrateTrackerState(history);
 
   const agentFileHints = new Map<string, Set<string>>();
   const agentSubTaskIds = new Map<string, string>();

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 
 const warnSpy = vi.fn();
 
@@ -72,4 +72,8 @@ describe("parseThreadEvent", () => {
     expect(result).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

@@ -1,4 +1,5 @@
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
@@ -10,6 +11,7 @@ import {
 
 const requireToolScopesAndPolicy = vi.fn();
 const loggerWarn = vi.fn();
+const loggerError = vi.fn();
 
 mock.module("@alfred/auth/token", () => ({
   requireToolScopesAndPolicy,
@@ -18,6 +20,7 @@ mock.module("@alfred/auth/token", () => ({
 mock.module("@alfred/logger", () => ({
   logger: {
     warn: loggerWarn,
+    error: loggerError,
     info: vi.fn(),
     debug: vi.fn(),
   },
@@ -42,6 +45,10 @@ describe("withPolicyApproval", () => {
 
   afterEach(() => {
     process.env.NEEDS_APPROVAL = undefined;
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 
   it("logs and records metric when policy enforcement throws", async () => {

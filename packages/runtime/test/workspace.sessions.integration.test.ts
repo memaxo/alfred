@@ -1,15 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { WorkspaceFactory } from "@alfred/agent/environment/factory";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { Workspace } from "@alfred/agent/environment/types";
-import { WorktreeWorkspace } from "@alfred/agent/environment/worktree";
-import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
-import { toolSession } from "@alfred/agent/orchestrator/tool/session";
-import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
 import {
   checkTmuxLeaks,
   __internals as leakInternals,
 } from "../../../scripts/check-tmux-leaks.ts";
-import { runReviewPhase } from "../src/orchestrator/review";
 import type { OrchestratorContext } from "../src/orchestrator/types";
 import {
   cleanupPlanDir,
@@ -17,19 +11,130 @@ import {
   preparePlanDir,
 } from "./utils/review-helpers";
 
-describe("workspace session coverage", () => {
-  const originalWorkspaceCreate = WorkspaceFactory.create;
-  const originalCodex = toolCodex.execute;
-  const originalSmoke = smokeTester.verify;
-  const originalToolSession = toolSession.execute;
+// Create mock functions BEFORE any imports
+let mockWorkflowRun: {
+  id: string;
+  stateData: Record<string, unknown> | null;
+} | null = null;
 
+const codexExecuteMock = mock(async () => {
+  throw new Error("fixer-crash");
+});
+
+const smokeVerifyMock = mock(async () => ({ success: true, message: "ok" }));
+
+const mockGetRun = mock(async (_runId: string) => mockWorkflowRun);
+const mockUpdateRun = mock(
+  async (_runId: string, _patch: { stateData?: unknown }) => mockWorkflowRun
+);
+
+const toolSessionExecuteMock = mock(
+  async ({ input }: { input: { action: string; sessionId: string } }) => {
+    return { ok: true, output: "mock" };
+  }
+);
+
+const workspaceCreateMock = mock(async () => {
+  const workspace: Workspace = {
+    id: "mock-workspace",
+    kind: "worktree",
+    root: process.cwd(),
+    initialize: async () => {},
+    cleanup: async () => {},
+    checkpoint: async () => {},
+    restore: async () => {},
+    exec: async () => ({
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
+      durationMs: 0,
+    }),
+    startSession: async () => "mock-session",
+    stopSession: async () => {},
+    listSessions: async () => [],
+  };
+  return workspace;
+});
+
+// Mock modules BEFORE importing them
+mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
+  toolCodex: {
+    execute: codexExecuteMock,
+    name: "codex",
+    description: "Mock codex tool",
+    inputSchema: {},
+    outputSchema: {},
+  },
+}));
+
+mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
+  smokeTester: {
+    verify: smokeVerifyMock,
+  },
+}));
+
+mock.module("@alfred/agent/orchestrator/tool/session", () => ({
+  toolSession: {
+    execute: toolSessionExecuteMock,
+    name: "session",
+    description: "Mock session tool",
+    inputSchema: {},
+    outputSchema: {},
+  },
+}));
+
+mock.module("@alfred/agent/environment/factory", () => ({
+  WorkspaceFactory: {
+    create: workspaceCreateMock,
+  },
+}));
+
+// Now import - these will get the mocked versions
+const { WorkspaceFactory } = await import("@alfred/agent/environment/factory");
+const { toolCodex } = await import("@alfred/agent/orchestrator/tool/codex/index");
+const { toolSession } = await import("@alfred/agent/orchestrator/tool/session");
+const { smokeTester } = await import("@alfred/agent/orchestrator/verification/smoke");
+const { WorktreeWorkspace } = await import("@alfred/agent/environment/worktree");
+const { runReviewPhase, reviewWorkflowRepo } = await import(
+  "../src/orchestrator/review"
+);
+
+describe("workspace session coverage", () => {
   let restoreRunner: (() => void) | undefined;
   const activeSessions = new Set<string>();
+  let originalGetRun: typeof reviewWorkflowRepo.getRun;
+  let originalUpdateRun: typeof reviewWorkflowRepo.updateRun;
 
   beforeEach(() => {
     process.env.ORCH_ENABLE_SESSIONS = "1";
     process.env.ORCH_TMUX_DISABLED = "1";
     leakInternals.setListHandler(async () => Array.from(activeSessions));
+    mockWorkflowRun = { id: "test-run", stateData: null };
+
+    // Store originals
+    originalGetRun = reviewWorkflowRepo.getRun;
+    originalUpdateRun = reviewWorkflowRepo.updateRun;
+
+    // Reset all mocks
+    codexExecuteMock.mockReset();
+    smokeVerifyMock.mockReset();
+    mockGetRun.mockReset();
+    mockUpdateRun.mockReset();
+    toolSessionExecuteMock.mockReset();
+    workspaceCreateMock.mockReset();
+
+    // Set up default implementations
+    codexExecuteMock.mockImplementation(async () => {
+      throw new Error("fixer-crash");
+    });
+    smokeVerifyMock.mockImplementation(async () => ({ success: true, message: "ok" }));
+    mockGetRun.mockImplementation(async (_runId: string) => mockWorkflowRun);
+    mockUpdateRun.mockImplementation(
+      async (_runId: string, _patch: { stateData?: unknown }) => mockWorkflowRun
+    );
+
+    reviewWorkflowRepo.getRun = mockGetRun;
+    reviewWorkflowRepo.updateRun = mockUpdateRun;
   });
 
   afterEach(async () => {
@@ -41,10 +146,12 @@ describe("workspace session coverage", () => {
     restoreRunner?.();
     restoreRunner = undefined;
 
-    WorkspaceFactory.create = originalWorkspaceCreate;
-    toolCodex.execute = originalCodex;
-    smokeTester.verify = originalSmoke;
-    toolSession.execute = originalToolSession;
+    reviewWorkflowRepo.getRun = originalGetRun;
+    reviewWorkflowRepo.updateRun = originalUpdateRun;
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 
   it("starts and stops fixer sessions even when the fixer crashes", async () => {
@@ -63,7 +170,7 @@ describe("workspace session coverage", () => {
       activeSessions.clear();
     });
 
-    WorkspaceFactory.create = mock(async () => {
+    workspaceCreateMock.mockImplementation(async () => {
       const workspace: Workspace = {
         id: "review-session",
         kind: "worktree",
@@ -91,12 +198,6 @@ describe("workspace session coverage", () => {
       exitCode: 1,
       durationMs: 5,
     }));
-
-    toolCodex.execute = mock(async () => {
-      throw new Error("fixer-crash");
-    });
-
-    smokeTester.verify = async () => ({ success: true, message: "ok" });
 
     const ctx: OrchestratorContext = {
       input: {
@@ -134,8 +235,8 @@ describe("workspace session coverage", () => {
     const runId = `concurrent-${Date.now().toString(36)}`;
     const sessionTracker = new Set<string>();
 
-    toolSession.execute = mock(
-      async ({ input }: Parameters<typeof toolSession.execute>[0]) => {
+    toolSessionExecuteMock.mockImplementation(
+      async ({ input }: { input: { action: string; sessionId: string } }) => {
         switch (input.action) {
           case "start": {
             sessionTracker.add(input.sessionId);

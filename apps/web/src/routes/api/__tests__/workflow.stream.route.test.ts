@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
 
 const getSessionMock = vi.fn().mockResolvedValue({ user: { id: "user-1" } });
@@ -51,6 +51,7 @@ mock.module("@alfred/logger", () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -102,6 +103,10 @@ describe("/api/workflow/stream SSE route", () => {
         return Promise.resolve(() => {});
       }
     );
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 
   it("streams workflow and ui-message events", async () => {

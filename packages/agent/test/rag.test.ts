@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type {
   RagDeleteInput,
   RagIngestInput,
@@ -422,4 +422,8 @@ describe("RAG Tools", () => {
       expect(result.success).toBe(false);
     });
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

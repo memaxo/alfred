@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 
@@ -15,6 +15,7 @@ const loggerMock = {
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
+  debug: vi.fn(),
 };
 
 mock.module("@alfred/logger", () => ({ logger: loggerMock }));
@@ -182,3 +183,7 @@ describe("orchestrateWorkflowStream", () => {
 async function flushMicrotasks() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+afterAll(() => {
+  mock.restore();
+});

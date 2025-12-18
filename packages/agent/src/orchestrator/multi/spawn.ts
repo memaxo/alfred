@@ -88,7 +88,11 @@ export function buildAgentSpec(
   // Or we assume the runtime will mutate it.
   // Let's keep cwd as repo root, and let environment flag dictate behavior in core.ts.
 
-  const dirHandle = openDirectorySecure(cwd);
+  // `cwd` is provided by the orchestrator/runtime as the workspace root for this run.
+  // Default `openDirectorySecure()` prefixes are anchored to `process.cwd()`, which
+  // breaks when the workflow runtime executes in a sandbox/tmp workspace (tests, fixtures).
+  // Treat the passed `cwd` as the allowed root for this agent spec.
+  const dirHandle = openDirectorySecure(cwd, { allowedPrefixes: [cwd] });
   const workingDirectory = dirHandle.path;
   dirHandle.close();
   const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;

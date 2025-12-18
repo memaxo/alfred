@@ -1,5 +1,7 @@
 import {
+  afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -7,38 +9,67 @@ import {
   mock,
   vi,
 } from "bun:test";
-import { workflowMetricsStub } from "@alfred/test-kit/workflow/runtime-fixture";
 
-// Mock workflow metrics BEFORE importing registry
-mock.module("@alfred/agent/workflow/metrics", () => workflowMetricsStub);
+// Create inline metric mocks to avoid module caching issues with fixture imports
+const incMock = vi.fn();
+const startTimerMock = vi.fn(() => vi.fn());
 
-// Get references to the specific metric mocks we need to assert on
-const runRegistryEventsTotalMock = workflowMetricsStub.runRegistryEventsTotal;
-const runRegistryDispatchDurationSecondsMock =
-  workflowMetricsStub.runRegistryDispatchDurationSeconds;
+const metricsMock = {
+  runRegistryEventsTotal: {
+    inc: incMock,
+    labels: vi.fn(() => ({ inc: incMock })),
+  },
+  runRegistryDispatchDurationSeconds: {
+    startTimer: startTimerMock,
+    observe: vi.fn(),
+    labels: vi.fn(() => ({ observe: vi.fn() })),
+  },
+};
 
-// Import registry AFTER mocking metrics
-import {
-  MemoryRunRegistry,
-  type ResumePayload,
-  type RunHandle,
-} from "@alfred/agent/workflow/registry";
+// Mock workflow metrics BEFORE any imports that use them
+mock.module("@alfred/agent/workflow/metrics", () => metricsMock);
 
+// Also mock logger to prevent any logging issues
 const loggerWarnMock = vi.fn();
+const loggerInfoMock = vi.fn();
+const loggerErrorMock = vi.fn();
+const loggerDebugMock = vi.fn();
 
 mock.module("@alfred/logger", () => ({
   logger: {
     warn: loggerWarnMock,
+    info: loggerInfoMock,
+    error: loggerErrorMock,
+    debug: loggerDebugMock,
   },
 }));
 
+// Types for the dynamically imported module
+type MemoryRunRegistryType = import("@alfred/agent/workflow/registry").MemoryRunRegistry;
+type ResumePayloadType = import("@alfred/agent/workflow/registry").ResumePayload;
+type RunHandleType = import("@alfred/agent/workflow/registry").RunHandle;
+
+let MemoryRunRegistry: new () => MemoryRunRegistryType;
+
 describe("MemoryRunRegistry", () => {
-  let registry: MemoryRunRegistry;
+  let registry: MemoryRunRegistryType;
+
+  beforeAll(async () => {
+    // Dynamic import AFTER mocks are set up
+    const registryModule = await import("@alfred/agent/workflow/registry");
+    MemoryRunRegistry = registryModule.MemoryRunRegistry;
+  });
 
   beforeEach(() => {
-    // Clear mocks before each test
-    runRegistryEventsTotalMock.inc.mockClear();
-    runRegistryDispatchDurationSecondsMock.startTimer.mockClear();
+    // Clear all mocks before each test
+    incMock.mockClear();
+    startTimerMock.mockClear();
+    loggerWarnMock.mockClear();
+    loggerInfoMock.mockClear();
+    loggerErrorMock.mockClear();
+    loggerDebugMock.mockClear();
+
+    // Create new registry instance for each test
     registry = new MemoryRunRegistry();
   });
 
@@ -46,10 +77,14 @@ describe("MemoryRunRegistry", () => {
     vi.restoreAllMocks();
   });
 
+  afterAll(() => {
+    mock.restore();
+  });
+
   describe("register", () => {
     it("registers a run handle", () => {
       const runId = "test-run-id";
-      const handle: RunHandle = {
+      const handle: RunHandleType = {
         resume: vi.fn().mockResolvedValue(undefined),
         cancel: vi.fn().mockResolvedValue(undefined),
         abortController: new AbortController(),
@@ -57,7 +92,7 @@ describe("MemoryRunRegistry", () => {
 
       registry.register(runId, handle);
 
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "register",
         backend: "memory",
         outcome: "ok",
@@ -68,7 +103,7 @@ describe("MemoryRunRegistry", () => {
   describe("unregister", () => {
     it("unregisters an existing run", () => {
       const runId = "test-run-id";
-      const handle: RunHandle = {
+      const handle: RunHandleType = {
         resume: vi.fn(),
         cancel: vi.fn(),
         abortController: new AbortController(),
@@ -77,7 +112,7 @@ describe("MemoryRunRegistry", () => {
       registry.register(runId, handle);
       registry.unregister(runId);
 
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "unregister",
         backend: "memory",
         outcome: "ok",
@@ -87,7 +122,7 @@ describe("MemoryRunRegistry", () => {
     it("handles unregister of non-existent run", () => {
       registry.unregister("nonexistent");
 
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "unregister",
         backend: "memory",
         outcome: "miss",
@@ -99,7 +134,7 @@ describe("MemoryRunRegistry", () => {
     it("dispatches resume to registered handle", async () => {
       const runId = "test-run-id";
       const resumeMock = vi.fn().mockResolvedValue(undefined);
-      const handle: RunHandle = {
+      const handle: RunHandleType = {
         resume: resumeMock,
         cancel: vi.fn(),
         abortController: new AbortController(),
@@ -107,7 +142,7 @@ describe("MemoryRunRegistry", () => {
 
       registry.register(runId, handle);
 
-      const payload: ResumePayload = {
+      const payload: ResumePayloadType = {
         event: "bio-authz",
         authz: "token-123",
       };
@@ -116,7 +151,7 @@ describe("MemoryRunRegistry", () => {
 
       expect(resumeMock).toHaveBeenCalledWith({ resumeData: payload });
       expect(result).toBe(true);
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "dispatch",
         backend: "memory",
         outcome: "local",
@@ -124,7 +159,7 @@ describe("MemoryRunRegistry", () => {
     });
 
     it("returns false when run not found", async () => {
-      const payload: ResumePayload = {
+      const payload: ResumePayloadType = {
         event: "bio-authz",
         authz: "token",
       };
@@ -132,7 +167,7 @@ describe("MemoryRunRegistry", () => {
       const result = await registry.dispatchResume("nonexistent", payload);
 
       expect(result).toBe(false);
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "dispatch",
         backend: "memory",
         outcome: "miss",
@@ -142,7 +177,7 @@ describe("MemoryRunRegistry", () => {
     it("handles resume errors", async () => {
       const runId = "test-run-id";
       const resumeMock = vi.fn().mockRejectedValue(new Error("resume failed"));
-      const handle: RunHandle = {
+      const handle: RunHandleType = {
         resume: resumeMock,
         cancel: vi.fn(),
         abortController: new AbortController(),
@@ -150,13 +185,13 @@ describe("MemoryRunRegistry", () => {
 
       registry.register(runId, handle);
 
-      const payload: ResumePayload = {
+      const payload: ResumePayloadType = {
         event: "bio-authz",
         authz: "token",
       };
 
       await expect(registry.dispatchResume(runId, payload)).rejects.toThrow();
-      expect(runRegistryEventsTotalMock.inc).toHaveBeenCalledWith({
+      expect(incMock).toHaveBeenCalledWith({
         event: "dispatch",
         backend: "memory",
         outcome: "error",

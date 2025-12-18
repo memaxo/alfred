@@ -13,6 +13,7 @@ import { buildFixerAgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolRunner } from "@alfred/agent/orchestrator/tool/runner";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke"; // Import smoke test
+import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
@@ -34,6 +35,17 @@ type SessionController = {
   start(attempt: number): Promise<string | null>;
   stop(sessionId: string | null): Promise<void>;
   cleanup(): Promise<void>;
+};
+
+type ReviewWorkflowRepo = {
+  getRun: typeof workflowRepo.getRun;
+  updateRun: typeof workflowRepo.updateRun;
+};
+
+// Mutable indirection so tests can patch without relying on module mock order.
+export const reviewWorkflowRepo: ReviewWorkflowRepo = {
+  getRun: workflowRepo.getRun,
+  updateRun: workflowRepo.updateRun,
 };
 
 function createSessionController(
@@ -287,6 +299,9 @@ export async function* runReviewPhase(
     reviewPlan.checks = [
       {
         id: "linear-default-tests",
+        // `@alfred/agent/orchestrator/multi/review` historically uses `kind`,
+        // but some runtime callsites/tests used `type`. Support both.
+        kind: "tests",
         type: "tests",
         description:
           "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
@@ -313,9 +328,7 @@ export async function* runReviewPhase(
       // Load persisted fixAttempts from workflow stateData
       let fixAttempts = 0;
       try {
-        const dbPkg = "@alfred/db";
-        const { workflowRepo } = await import(`${dbPkg}/repo/workflow`);
-        const workflowRun = await workflowRepo.getRun(runId);
+        const workflowRun = await reviewWorkflowRepo.getRun(runId);
         if (
           workflowRun?.stateData &&
           typeof workflowRun.stateData === "object"
@@ -354,28 +367,35 @@ export async function* runReviewPhase(
             continue;
           }
 
+          // Contract: checks may be shaped as `{ kind: "tests" }` (agent),
+          // while older runtime/test code used `{ type: "tests" }`.
+          const checkType = (check as any).type ?? (check as any).kind;
+          if (typeof checkType !== "string" || checkType.length === 0) {
+            continue;
+          }
+
           const attemptIndex = fixAttempts + 1;
           yield {
             type: "event",
             kind: "review-check",
             data: {
               id: check.id,
-              type: check.type,
+              type: checkType,
               status: "running",
               attempt: attemptIndex,
             },
           } as any;
 
           let command = "";
-          if (check.type === "static") {
+          if (checkType === "static") {
             command = "bun run typecheck";
-          } else if (check.type === "lint") {
+          } else if (checkType === "lint") {
             command = "bun run lint";
-          } else if (check.type === "tests") {
+          } else if (checkType === "tests") {
             command = buildTestCommandFromPlan(mergePlan);
-          } else if (check.type === "verify" && check.script) {
+          } else if (checkType === "verify" && (check as any).script) {
             command = `bun ${check.script}`;
-          } else if (check.type === "smoke" && projectConfig) {
+          } else if (checkType === "smoke" && projectConfig) {
             // Phase 5: Ephemeral Verification (Smoke)
             yield { type: "notice", message: "running_smoke_test" } as any;
             await updateReviewProgress(
@@ -391,7 +411,7 @@ export async function* runReviewPhase(
                 kind: "review-check",
                 data: {
                   id: check.id,
-                  type: check.type,
+                  type: checkType,
                   status: "passed",
                   attempt: attemptIndex,
                 },
@@ -414,7 +434,7 @@ export async function* runReviewPhase(
                 kind: "review-check",
                 data: {
                   id: check.id,
-                  type: check.type,
+                  type: checkType,
                   status: "failed",
                   attempt: attemptIndex,
                   evidence: result.message,
@@ -482,7 +502,7 @@ export async function* runReviewPhase(
                 kind: "review-check",
                 data: {
                   id: check.id,
-                  type: check.type,
+                  type: checkType,
                   status: "failed",
                   attempt: attemptIndex,
                   evidence: `${result.stdout}\n${result.stderr}`.slice(0, 1000),
@@ -500,7 +520,7 @@ export async function* runReviewPhase(
                 kind: "review-check",
                 data: {
                   id: check.id,
-                  type: check.type,
+                  type: checkType,
                   status: "passed",
                   attempt: attemptIndex,
                   durationMs: result.durationMs,
@@ -531,7 +551,7 @@ export async function* runReviewPhase(
               kind: "review-check",
               data: {
                 id: check.id,
-                type: check.type,
+                type: checkType,
                 status: "failed",
                 attempt: attemptIndex,
                 evidence: String(err),
@@ -699,15 +719,13 @@ export async function* runReviewPhase(
 
           // Persist fixAttempts to workflow stateData
           try {
-            const dbPkg = "@alfred/db";
-            const { workflowRepo } = await import(`${dbPkg}/repo/workflow`);
-            const workflowRun = await workflowRepo.getRun(runId);
+            const workflowRun = await reviewWorkflowRepo.getRun(runId);
             const existingStateData =
               workflowRun?.stateData &&
               typeof workflowRun.stateData === "object"
                 ? (workflowRun.stateData as Record<string, unknown>)
                 : {};
-            await workflowRepo.updateRun(runId, {
+            await reviewWorkflowRepo.updateRun(runId, {
               stateData: {
                 ...existingStateData,
                 fixAttempts,

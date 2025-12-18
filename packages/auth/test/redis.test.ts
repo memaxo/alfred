@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { getRedis, getRedisAsync, isRedisHealthy } from "../src/redis";
+import { getRedis, getRedisAsync, isRedisHealthy, resetRedisState } from "../src/redis";
 
 describe("Redis Connection Management", () => {
   const originalRedisUrl = process.env.REDIS_URL;
@@ -7,12 +7,14 @@ describe("Redis Connection Management", () => {
   const originalRetryMaxAttempts = process.env.REDIS_RETRY_MAX_ATTEMPTS;
 
   beforeEach(() => {
+    resetRedisState();
     process.env.REDIS_URL = undefined;
     process.env.REDIS_RETRY_ENABLED = undefined;
     process.env.REDIS_RETRY_MAX_ATTEMPTS = undefined;
   });
 
   afterEach(() => {
+    resetRedisState();
     if (originalRedisUrl) {
       process.env.REDIS_URL = originalRedisUrl;
     } else {

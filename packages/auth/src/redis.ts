@@ -17,8 +17,17 @@ let retryTimer: NodeJS.Timeout | null = null;
  * Called lazily to allow tests to modify env before first use.
  */
 function getRetryConfig() {
+  const nodeEnv = process.env.NODE_ENV?.toLowerCase();
+  const enabledRaw = process.env.REDIS_RETRY_ENABLED;
+  // In tests we default retries OFF unless explicitly enabled.
+  // This prevents background reconnect timers from keeping `bun test` alive.
+  const enabled =
+    enabledRaw !== undefined
+      ? enabledRaw.toLowerCase() !== "false"
+      : nodeEnv !== "test";
+
   return {
-    enabled: process.env.REDIS_RETRY_ENABLED?.toLowerCase() !== "false",
+    enabled,
     initialDelayMs: Number.parseInt(
       process.env.REDIS_RETRY_INITIAL_DELAY_MS || "100",
       10
@@ -66,13 +75,17 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
   const connectionTimeout = config.enabled ? 5000 : 1000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let newClient: RedisClient | null = null;
     try {
-      const newClient = url
+      const allowReconnect = config.enabled;
+      newClient = url
         ? new RedisClient(url, {
             connectionTimeout,
-            autoReconnect: true,
-            maxRetries: 10,
-            enableOfflineQueue: true,
+            // When retries are disabled (common in tests), do NOT allow background
+            // reconnect loops that can keep the event loop alive indefinitely.
+            autoReconnect: allowReconnect,
+            maxRetries: allowReconnect ? 10 : 0,
+            enableOfflineQueue: allowReconnect,
           } as Record<string, unknown>)
         : defaultRedis;
 
@@ -124,13 +137,19 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
 
       // Use Promise.race to enforce connection timeout
       const connectPromise = newClient.connect();
+      // If the connect promise continues after we time out and later rejects,
+      // prevent it from becoming an unhandled rejection.
+      void connectPromise.catch(() => {});
       const timeoutPromise = new Promise<never>((_, reject) => {
         const timer = setTimeout(
           () => reject(new Error("Connection timeout")),
           connectionTimeout
         );
-        // Clear timeout if connect succeeds
-        connectPromise.finally(() => clearTimeout(timer));
+        // Clear timeout when connect settles (avoid creating a rejecting `.finally()` chain)
+        connectPromise.then(
+          () => clearTimeout(timer),
+          () => clearTimeout(timer)
+        );
       });
 
       await Promise.race([connectPromise, timeoutPromise]);
@@ -146,6 +165,14 @@ async function initializeWithRetry(): Promise<RedisClient | null> {
     } catch (error) {
       lastError =
         error instanceof Error ? error : new Error(String(error ?? ""));
+
+      // Always close failed clients to avoid leaking sockets/timers.
+      // (Especially important when we timed out but the underlying connect kept running.)
+      try {
+        newClient?.close?.();
+      } catch {
+        // Ignore close errors
+      }
 
       // If retries are disabled, fail immediately
       if (!config.enabled) {

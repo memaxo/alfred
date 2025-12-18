@@ -98,7 +98,7 @@ function createAssistantDefaults() {
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
     prepareStep: assistantPrepareStep,
-  } as const;
+  };
 }
 
 function createOrchestratorDefaults() {
@@ -110,7 +110,7 @@ function createOrchestratorDefaults() {
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,
     prepareStep: orchestratorPrepareStep,
-  } as const;
+  };
 }
 
 /**

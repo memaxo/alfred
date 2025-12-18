@@ -80,6 +80,7 @@ afterAll(() => {
   process.env.DATABASE_URL = ORIGINAL_DB_URL;
   process.env.NODE_ENV = ORIGINAL_NODE_ENV;
   process.env.DB_RETRY_ENABLED = ORIGINAL_DB_RETRY_ENABLED;
+  mock.restore();
 });
 
 describe("connectWithRetry", () => {
