@@ -276,7 +276,11 @@ export const workflowRouter = router({
         }) => {
           const callbacks: OrchestratorCallbacks = {
             triggerPreferenceRefresh,
-            ensureObligations,
+            ensureObligations: (ctx: unknown) => {
+              ensureObligations(
+                ctx as { policy?: { obligations: Obligation[] } }
+              );
+            },
             context: { ...ctx, policy: { obligations: options.obligations } },
             emitError: (error) => {
               emit.error(toTRPCError(error));
@@ -521,14 +525,16 @@ export const workflowRouter = router({
         }));
       }
 
-      const nodeRecords: ReasoningNodeRecord[] = nodes.map((node) => ({
+      const nodeRecords: ReasoningNodeRecord[] = nodes.map(
+        (node: (typeof nodes)[number]) => ({
         id: node.id,
         hash: node.hash,
         label: node.label,
         properties: (node.properties as Record<string, unknown> | null) ?? null,
       }));
 
-      const edgeRecords: ReasoningEdgeRecord[] = edges.map((edge) => ({
+      const edgeRecords: ReasoningEdgeRecord[] = edges.map(
+        (edge: (typeof edges)[number]) => ({
         fromId: edge.fromId,
         toId: edge.toId,
         kind: edge.kind,
@@ -569,19 +575,24 @@ export const workflowRouter = router({
           );
 
         documents = rows
-          .map((row) => {
-            const props = (row.properties ?? null) as Record<
-              string,
-              unknown
-            > | null;
-            const documentId = props?.documentId;
-            return typeof documentId === "string" && docIds.has(documentId)
-              ? { documentId, label: row.label }
-              : null;
-          })
+          .map(
+            (
+              row: (typeof rows)[number]
+            ): { documentId: string; label: string } | null => {
+              const props = (row.properties ?? null) as Record<
+                string,
+                unknown
+              > | null;
+              const documentId = props?.documentId;
+              return typeof documentId === "string" && docIds.has(documentId)
+                ? { documentId, label: row.label }
+                : null;
+            }
+          )
           .filter(
-            (entry): entry is { documentId: string; label: string } =>
-              entry !== null
+            (
+              entry: { documentId: string; label: string } | null
+            ): entry is { documentId: string; label: string } => entry !== null
           );
       }
 

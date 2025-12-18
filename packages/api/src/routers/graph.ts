@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { loadHypergraphFromDb } from "@alfred/agent/assistant/hypergraph-bridge";
 import { db } from "@alfred/db";
-import { ensureMirrorNodes, touchNodes } from "@alfred/db/repo/graph";
+import {
+  ensureMirrorNodes,
+  touchNodes,
+} from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import {
   getExplainingDocuments,
@@ -526,7 +529,7 @@ export const graphRouter = router({
 
           if (nodeIds.length > 0) {
             // Use a microtask or immediate to detach from current stack
-            void touchNodes(nodeIds).catch((err) => {
+            void touchNodes(nodeIds).catch((err: unknown) => {
               logger.warn("graph_active_recall_failed", {
                 nodeCount: nodeIds.length,
                 error: err instanceof Error ? err.message : String(err),

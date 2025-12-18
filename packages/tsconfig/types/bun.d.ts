@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 declare module "bun" {
   export type RedisSetOptions = {
     EX?: number;
@@ -50,4 +52,134 @@ declare module "bun" {
   }
 
   export const redis: RedisClient;
+
+  // Bun.Terminal API (v1.3.5+)
+  export class Terminal {
+    constructor(options: {
+      cols: number;
+      rows: number;
+      data: (terminal: Terminal, data: string | Uint8Array) => void;
+    });
+    write(data: string): void;
+    resize(cols: number, rows: number): void;
+    close(): void;
+    setRawMode(enabled: boolean): void;
+    ref(): void;
+    unref(): void;
+    readonly closed: boolean;
+  }
+
+  namespace Spawn {
+    interface SpawnOptions<
+      In extends Spawn.Writable = Spawn.Writable,
+      Out extends Spawn.Readable = Spawn.Readable,
+      Err extends Spawn.Readable = Spawn.Readable
+    > {
+      /**
+       * Terminal options for pseudo-terminal (PTY) support
+       * Available in Bun v1.3.5+
+       */
+      terminal?: {
+        cols: number;
+        rows: number;
+        data: (terminal: Terminal, data: string | Uint8Array) => void;
+      };
+    }
+  }
+
+  interface Subprocess<
+    In extends Spawn.Writable = Spawn.Writable,
+    Out extends Spawn.Readable = Spawn.Readable,
+    Err extends Spawn.Readable = Spawn.Readable
+  > {
+    /**
+     * Terminal instance (available when spawned with terminal option)
+     * Available in Bun v1.3.5+
+     */
+    terminal?: Terminal;
+  }
+}
+
+// Bun.Terminal API (v1.3.5+) - Global augmentation
+declare global {
+  namespace Bun {
+    /**
+     * Terminal class for pseudo-terminal (PTY) support
+     * Available in Bun v1.3.5+
+     */
+    class Terminal {
+      /**
+       * Create a new Terminal instance
+       */
+      constructor(options: {
+        cols: number;
+        rows: number;
+        data: (terminal: Terminal, data: string | Uint8Array) => void;
+      });
+      /**
+       * Write data to the terminal
+       */
+      write(data: string): void;
+
+      /**
+       * Resize the terminal
+       */
+      resize(cols: number, rows: number): void;
+
+      /**
+       * Close the terminal
+       */
+      close(): void;
+
+      /**
+       * Set raw mode (for handling special keys)
+       */
+      setRawMode(enabled: boolean): void;
+
+      /**
+       * Reference the terminal (prevents process from exiting)
+       */
+      ref(): void;
+
+      /**
+       * Unreference the terminal (allows process to exit)
+       */
+      unref(): void;
+
+      /**
+       * Read-only property indicating if terminal is closed
+       */
+      readonly closed: boolean;
+    }
+
+    namespace Spawn {
+      interface SpawnOptions<
+        In extends Spawn.Writable = Spawn.Writable,
+        Out extends Spawn.Readable = Spawn.Readable,
+        Err extends Spawn.Readable = Spawn.Readable
+      > {
+        /**
+         * Terminal options for pseudo-terminal (PTY) support
+         * Available in Bun v1.3.5+
+         */
+        terminal?: {
+          cols: number;
+          rows: number;
+          data: (terminal: Terminal, data: string | Uint8Array) => void;
+        };
+      }
+    }
+
+    interface Subprocess<
+      In extends Spawn.Writable = Spawn.Writable,
+      Out extends Spawn.Readable = Spawn.Readable,
+      Err extends Spawn.Readable = Spawn.Readable
+    > {
+      /**
+       * Terminal instance (available when spawned with terminal option)
+       * Available in Bun v1.3.5+
+       */
+      terminal?: Terminal;
+    }
+  }
 }
