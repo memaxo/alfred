@@ -2,13 +2,17 @@ import { describe, expect, it } from "bun:test";
 
 import {
   type AutonomyGradient,
+  capturing,
   type CognitiveState,
+  deciding,
+  executing,
   type Event,
   idle,
   initialAutonomy,
   type Outcome,
   reflecting,
   thinking,
+  type Plan,
 } from "../src/state";
 import { applyTransition } from "../src/transition";
 
@@ -56,13 +60,13 @@ const apply = (
 ) => applyTransition(state, autonomy, event);
 
 describe("applyTransition", () => {
-  it("moves idle -> thinking on input events", () => {
+  it("moves idle -> capturing on input events", () => {
     const start = idle(Date.now());
     const result = apply(start, inputEvent("Plan lunch"));
 
-    expect(result.state._).toBe("thinking");
+    expect(result.state._).toBe("capturing");
     expect(
-      (result.state as Extract<CognitiveState, { _: "thinking" }>).about
+      (result.state as Extract<CognitiveState, { _: "capturing" }>).input
     ).toBe("Plan lunch");
     expect(result.state.physiology.energy).toBeLessThan(
       start.physiology.energy
@@ -108,5 +112,80 @@ describe("applyTransition", () => {
     expect(result.state.physiology.frustration).toBeGreaterThan(
       start.physiology.frustration
     );
+  });
+
+  it("moves idle -> capturing on input events", () => {
+    const start = idle(Date.now());
+    const result = apply(start, inputEvent("Process this"));
+
+    expect(result.state._).toBe("capturing");
+    expect(
+      (result.state as Extract<CognitiveState, { _: "capturing" }>).input
+    ).toBe("Process this");
+  });
+
+  it("moves capturing -> thinking on input events", () => {
+    const start = capturing(Date.now(), "Process this", 0.8);
+    const result = apply(start, inputEvent("Processed input"));
+
+    expect(result.state._).toBe("thinking");
+    expect(
+      (result.state as Extract<CognitiveState, { _: "thinking" }>).about
+    ).toBe("Processed input");
+  });
+
+  it("moves deciding -> executing on input with option selection", () => {
+    const plan: Plan = {
+      steps: [{ action: "test", params: {}, timeout: 1000, retryable: true }],
+      duration: 1000,
+      confidence: 0.8 as any,
+    };
+    const options = [
+      {
+        id: "option-1",
+        description: "Option 1",
+        score: 0.9,
+        plan,
+        risks: [],
+        autonomy: 0.5 as any,
+      },
+    ];
+    const start = deciding(Date.now(), options);
+    const result = apply(start, inputEvent("option-1"));
+
+    expect(result.state._).toBe("executing");
+    expect(
+      (result.state as Extract<CognitiveState, { _: "executing" }>).plan
+    ).toBe(plan);
+  });
+
+  it("moves executing -> reflecting on completion", () => {
+    const plan: Plan = {
+      steps: [{ action: "test", params: {}, timeout: 1000, retryable: true }],
+      duration: 1000,
+      confidence: 0.8 as any,
+    };
+    const start = executing(Date.now(), plan, auto);
+    const result = apply(start, completeEvent(successOutcome));
+
+    expect(result.state._).toBe("reflecting");
+    expect(
+      (result.state as Extract<CognitiveState, { _: "reflecting" }>).outcome._
+    ).toBe("success");
+  });
+
+  it("moves executing -> reflecting on interrupt", () => {
+    const plan: Plan = {
+      steps: [{ action: "test", params: {}, timeout: 1000, retryable: true }],
+      duration: 1000,
+      confidence: 0.8 as any,
+    };
+    const start = executing(Date.now(), plan, auto);
+    const result = apply(start, interruptEvent("user cancelled"));
+
+    expect(result.state._).toBe("reflecting");
+    expect(
+      (result.state as Extract<CognitiveState, { _: "reflecting" }>).outcome._
+    ).toBe("cancelled");
   });
 });

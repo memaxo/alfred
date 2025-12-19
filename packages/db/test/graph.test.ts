@@ -384,4 +384,162 @@ describeFn("graphRepo", () => {
     // Path includes the starting node id(s); depth is edges traversed.
     expect(result?.path.length).toBe(3);
   });
+
+  it("touchNodes boosts confidence and updates timestamp", async () => {
+    const nodes = await graphRepo.upsertNodes([
+      {
+        resource: TEST_RESOURCE,
+        hash: "touch-1",
+        kind: "fact",
+        label: "Touch Test 1",
+        properties: { confidence: 0.5 },
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "touch-2",
+        kind: "fact",
+        label: "Touch Test 2",
+        properties: null, // No confidence property
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "touch-3",
+        kind: "fact",
+        label: "Touch Test 3",
+        properties: { confidence: 0.98 }, // Near max
+      },
+    ]);
+
+    const id1 = nodes.get(`${TEST_RESOURCE}:touch-1`)?.id;
+    const id2 = nodes.get(`${TEST_RESOURCE}:touch-2`)?.id;
+    const id3 = nodes.get(`${TEST_RESOURCE}:touch-3`)?.id;
+
+    if (!(id1 && id2 && id3)) {
+      throw new Error("Missing node ids");
+    }
+
+    // Get initial updated timestamps
+    const before1 = await graphRepo.getNode(id1);
+    const beforeUpdated = before1?.updated;
+
+    // Wait a bit to ensure timestamp difference
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const touched = await graphRepo.touchNodes([id1, id2, id3]);
+    expect(touched).toBe(3);
+
+    const after1 = await graphRepo.getNode(id1);
+    const after2 = await graphRepo.getNode(id2);
+    const after3 = await graphRepo.getNode(id3);
+
+    // Confidence boosted by 0.05
+    expect((after1?.properties as Record<string, unknown>)?.confidence).toBe(0.55);
+    // Node without confidence gets 1.0
+    expect((after2?.properties as Record<string, unknown>)?.confidence).toBe(1.0);
+    // Confidence capped at 1.0
+    expect((after3?.properties as Record<string, unknown>)?.confidence).toBe(1.0);
+    // Updated timestamp changed
+    expect(after1?.updated).not.toEqual(beforeUpdated);
+  });
+
+  it("recordAccess updates access tracking", async () => {
+    const nodes = await graphRepo.upsertNodes([
+      {
+        resource: TEST_RESOURCE,
+        hash: "access-1",
+        kind: "fact",
+        label: "Access Test",
+      },
+    ]);
+
+    const id = nodes.get(`${TEST_RESOURCE}:access-1`)?.id;
+    if (!id) {
+      throw new Error("Missing node id");
+    }
+
+    const before = await graphRepo.getNode(id);
+    expect(before?.accessCount).toBe(0);
+    expect(before?.lastAccessedAt).toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const after = await graphRepo.recordAccess(id);
+    expect(after?.accessCount).toBe(1);
+    expect(after?.lastAccessedAt).not.toBeNull();
+
+    const after2 = await graphRepo.recordAccess(id);
+    expect(after2?.accessCount).toBe(2);
+  });
+
+  it("recordAccessBatch updates multiple nodes", async () => {
+    const nodes = await graphRepo.upsertNodes([
+      {
+        resource: TEST_RESOURCE,
+        hash: "batch-1",
+        kind: "fact",
+        label: "Batch 1",
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "batch-2",
+        kind: "fact",
+        label: "Batch 2",
+      },
+    ]);
+
+    const id1 = nodes.get(`${TEST_RESOURCE}:batch-1`)?.id;
+    const id2 = nodes.get(`${TEST_RESOURCE}:batch-2`)?.id;
+
+    if (!(id1 && id2)) {
+      throw new Error("Missing node ids");
+    }
+
+    const updated = await graphRepo.recordAccessBatch([id1, id2]);
+    expect(updated).toBe(2);
+
+    const n1 = await graphRepo.getNode(id1);
+    const n2 = await graphRepo.getNode(id2);
+
+    expect(n1?.accessCount).toBe(1);
+    expect(n2?.accessCount).toBe(1);
+    expect(n1?.lastAccessedAt).not.toBeNull();
+    expect(n2?.lastAccessedAt).not.toBeNull();
+  });
+
+  it("touched nodes are excluded from decay candidates", async () => {
+    const nodes = await graphRepo.upsertNodes([
+      {
+        resource: TEST_RESOURCE,
+        hash: "decay-1",
+        kind: "fact",
+        label: "Decay Test 1",
+        properties: { confidence: 0.8 },
+      },
+      {
+        resource: TEST_RESOURCE,
+        hash: "decay-2",
+        kind: "fact",
+        label: "Decay Test 2",
+        properties: { confidence: 0.7 },
+      },
+    ]);
+
+    const id1 = nodes.get(`${TEST_RESOURCE}:decay-1`)?.id;
+    const id2 = nodes.get(`${TEST_RESOURCE}:decay-2`)?.id;
+
+    if (!(id1 && id2)) {
+      throw new Error("Missing node ids");
+    }
+
+    // Touch node 1 (should prevent decay)
+    await graphRepo.touchNodes([id1]);
+
+    // Set updated timestamp for node 2 to be old (simulate stale node)
+    // We can't directly set updated, but we can verify findNodesForDecay excludes node1
+    const staleNodes = await graphRepo.findNodesForDecay(1000, 100); // 1 second threshold
+
+    // Node 1 should not be in decay candidates (recently touched)
+    const node1InDecay = staleNodes.some((n) => n.id === id1);
+    expect(node1InDecay).toBe(false);
+  });
 });

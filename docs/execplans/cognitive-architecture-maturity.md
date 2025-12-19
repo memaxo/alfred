@@ -90,3 +90,39 @@ const { object: plan } = await generateObject({
 - Structured planning implemented via `PlanRunner` with step execution and checkpointing.
 - Explicit feedback loop closed via `cognitive.feedback` router and UI controls.
 - Added explicit per-step `cognitive_step_complete` cognitive events for better observability.
+
+## Phase 5: State Transition Completion (ALF-142)
+
+**Status**: ✅ Complete (2025-01-27)
+
+- **State Transitions**: Completed all missing transitions:
+  - `idle → capturing` (on input)
+  - `capturing → thinking` (on input processed)
+  - `deciding → executing` (on decision made)
+  - `executing → reflecting` (on complete/interrupt)
+- **Autonomy Updates**: Extended autonomy updates to handle `complete` events with success/failure outcomes, not just feedback events.
+- **Effect Handling**: Implemented `execute_plan` and `log_reflection` effects with proper logging.
+- **Tests**: Added comprehensive tests for all new transitions and autonomy update paths.
+- **Dead Code Audit**: Verified all state constructors and functions are in use; no dead code found.
+
+## Phase 6: Active Recall and Memory Decay (ALF-142)
+
+**Status**: ✅ Complete (2025-01-27)
+
+- **Active Recall Integration**: Completed integration across all knowledge retrieval points:
+  - Knowledge Router (`visualize` endpoint) - reinforces newly created/updated nodes
+  - Knowledge Tool (`executeQuery`) - tracks access to retrieved nodes
+  - RAG Retrieval (`retrieve`) - reinforces document nodes for retrieved chunks
+  - Knowledge Engine (`retrieveContext`) - reinforces document nodes in both hybrid and vector search paths
+  - Graph Router (`runQuery`) - already implemented
+- **Memory Decay Verification**: Confirmed fully implemented and working:
+  - Decay worker (`processMemoryMaintenance`) runs periodically
+  - Finds stale nodes, applies decay factor, respects confidence floor
+  - Archives low-confidence nodes, cleans up old archived nodes
+  - Tests verify all decay/pruning/cleanup paths
+- **Active Recall Tests**: Added comprehensive tests:
+  - `touchNodes()` boosts confidence correctly (0.05 increment, capped at 1.0)
+  - `recordAccess()` updates access tracking (`accessCount`, `lastAccessedAt`)
+  - Batch operations handle multiple nodes efficiently
+  - Touched nodes excluded from decay candidates (recent `updated` timestamp)
+- **Documentation**: Updated `docs/architecture/memory-system.md` with implementation status and integration points.

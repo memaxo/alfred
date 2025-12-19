@@ -26,9 +26,14 @@ To prevent the graph from becoming stale or bloated, a decay algorithm runs peri
 
 ## Active Recall (Reinforcement)
 To counteract decay, the system implements **Active Recall**:
-- When a memory node is retrieved via Semantic Search (RAG) or Graph Traversal, it is "touched".
-- **Touching** updates the `updated_at` timestamp (resetting the decay timer) and boosts `confidence` by `0.05` (capped at 1.0).
+- When a memory node is retrieved via Semantic Search (RAG), Graph Traversal, Knowledge Queries, or Visualization, it is "touched".
+- **Touching** (`touchNodes()`) updates the `updated_at` timestamp (resetting the decay timer) and boosts `confidence` by `0.05` (capped at 1.0).
+- **Access Tracking** (`recordAccess()` / `recordAccessBatch()`) increments `access_count` and updates `last_accessed_at` for analytics.
 - This ensures that useful, frequently accessed memories remain fresh and high-confidence, while irrelevant noise fades away.
+
+**Implementation Status:** ✅ Complete
+- Integrated in: Knowledge Router (`visualize`), Knowledge Tool (`executeQuery`), RAG Retrieval (`retrieve`), Knowledge Engine (`retrieveContext`), Graph Router (`runQuery`)
+- Functions: `touchNodes()`, `recordAccess()`, `recordAccessBatch()` in `packages/db/src/repo/graph/`
 
 ## Policy Integration
 Memory confidence is exposed to the Policy Decision Point (PDP) via the `context.memoryConfidence` field. You can write policies to block high-risk actions (e.g., `deploy.create`) if they rely on low-confidence memories.

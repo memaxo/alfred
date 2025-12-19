@@ -1,6 +1,8 @@
 import { db } from "@alfred/db";
 import { upsertEdges, upsertNodes } from "@alfred/db/repo/graph";
+import { touchNodes } from "@alfred/db/repo/graph/write";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { logger } from "@alfred/logger";
 
 /** Node seed for graph upsert operations */
 type GraphNodeSeed = {
@@ -181,6 +183,21 @@ export const knowledgeRouter = router({
       }
 
       const nodeMap = await upsertNodes(nodeSeeds);
+      
+      // Active Recall: Reinforce newly created/updated nodes
+      try {
+        const nodeIds = Array.from(nodeMap.values()).map((n) => n.id);
+        if (nodeIds.length > 0) {
+          await touchNodes(nodeIds);
+        }
+      } catch (error) {
+        // Non-blocking: log but don't throw
+        logger.debug("active_recall_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          nodeCount: nodeMap.size,
+        });
+      }
+
       if (relationEntries.length > 0) {
         const idMap = new Map<string, { id: string }>();
         for (const row of nodeMap.values()) {

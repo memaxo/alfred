@@ -6,7 +6,15 @@ import type {
   Event,
   Physiology,
 } from "./state";
-import { idle, reflecting, thinking, updatePhysiology } from "./state";
+import {
+  capturing,
+  deciding,
+  executing,
+  idle,
+  reflecting,
+  thinking,
+  updatePhysiology,
+} from "./state";
 
 const entropyKeywords = ["loop", "boredom"];
 
@@ -63,9 +71,36 @@ export const applyTransition = (
       case "idle":
         if (event._ === "input") {
           result = {
+            state: capturing(
+              eventTimestamp,
+              event.content,
+              0.8,
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        }
+        break;
+
+      case "capturing":
+        if (event._ === "input") {
+          // Input processed, move to thinking
+          result = {
             state: thinking(
               eventTimestamp,
               event.content,
+              1,
+              undefined,
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        } else if (event._ === "timeout") {
+          // Timeout during capture, move to thinking anyway
+          result = {
+            state: thinking(
+              eventTimestamp,
+              state.input,
               1,
               undefined,
               nextPhysiology
@@ -86,10 +121,100 @@ export const applyTransition = (
             ),
             autonomy,
           };
+        } else if (event._ === "input") {
+          // New input while thinking - could transition to deciding if options provided
+          // For now, continue thinking with new input
+          result = {
+            state: thinking(
+              eventTimestamp,
+              event.content,
+              state.depth + 1,
+              state.reasoningTraces,
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        }
+        break;
+
+      case "deciding":
+        if (event._ === "input") {
+          // Decision made (input contains selected option ID or decision)
+          // Find the selected option or use first option
+          const selectedOption =
+            state.options.find(
+              (opt) => opt.id === event.content || opt.id.includes(event.content)
+            ) ?? state.options[0];
+          if (selectedOption) {
+            result = {
+              state: executing(
+                eventTimestamp,
+                selectedOption.plan,
+                autonomy,
+                nextPhysiology
+              ),
+              autonomy,
+            };
+          }
+        } else if (event._ === "timeout") {
+          // Decision timeout - use first option or return to thinking
+          const selectedOption = state.options[0];
+          if (selectedOption) {
+            result = {
+              state: executing(
+                eventTimestamp,
+                selectedOption.plan,
+                autonomy,
+                nextPhysiology
+              ),
+              autonomy,
+            };
+          } else {
+            result = {
+              state: thinking(
+                eventTimestamp,
+                state.options[0]?.description ?? "No options available",
+                1,
+                undefined,
+                nextPhysiology
+              ),
+              autonomy,
+            };
+          }
+        }
+        break;
+
+      case "executing":
+        if (event._ === "complete") {
+          result = {
+            state: reflecting(
+              event.outcome,
+              state.plan.steps.map((s) => s.action).join(", "),
+              event.outcome._ === "success"
+                ? String(event.outcome.result ?? "completed")
+                : event.outcome._ === "failure"
+                  ? event.outcome.error
+                  : "unknown",
+              nextPhysiology
+            ),
+            autonomy,
+          };
+        } else if (event._ === "interrupt") {
+          // Interrupt during execution - move to reflecting with cancelled outcome
+          result = {
+            state: reflecting(
+              { _: "cancelled", reason: event.reason },
+              state.plan.steps.map((s) => s.action).join(", "),
+              `interrupted: ${event.reason}`,
+              nextPhysiology
+            ),
+            autonomy,
+          };
         }
         break;
 
       case "reflecting":
+        // After reflection, return to idle
         result = {
           state: idle(eventTimestamp, nextPhysiology),
           autonomy,

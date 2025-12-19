@@ -104,13 +104,37 @@ async function handleCognitiveEffects(
           queue.push(...followUp.effects);
           break;
         }
-        case "execute_plan":
-        case "log_reflection":
-          logger.warn("cognitive_effect_unhandled", {
+        case "execute_plan": {
+          // Plan execution is handled by workflow runtime
+          // This effect indicates the cognitive system has approved execution
+          logger.info("cognitive_plan_execution_approved", {
             streamId,
-            effect,
+            planSteps: effect.plan.steps.length,
+            planConfidence: effect.plan.confidence,
           });
+          // Note: Actual plan execution happens through workflow runtime,
+          // not directly from cognitive effects. This is just logging.
           break;
+        }
+        case "log_reflection": {
+          // Log reflection outcome for learning
+          // In future, this could be sent to LearningEngine
+          logger.info("cognitive_reflection_logged", {
+            streamId,
+            outcomeType: effect.outcome._,
+            outcome:
+              effect.outcome._ === "success"
+                ? "success"
+                : effect.outcome._ === "failure"
+                  ? effect.outcome.error
+                  : effect.outcome._ === "partial"
+                    ? `partial: ${effect.outcome.completed.length} completed, ${effect.outcome.failed.length} failed`
+                    : effect.outcome.reason,
+          });
+          // Note: Full learning integration would convert Outcome to SupervisionEvent
+          // and send to LearningEngine.recordOutcome(). For now, just log.
+          break;
+        }
         default: {
           const exhaustive: never = effect;
           logger.warn("cognitive_effect_unknown", {

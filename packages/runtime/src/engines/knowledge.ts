@@ -6,8 +6,11 @@
  */
 
 import { searchChunks, searchChunksHybrid } from "@alfred/db/repo/rag";
+import { findRagDocumentNode } from "@alfred/db/repo/graph/read";
+import { touchNodes } from "@alfred/db/repo/graph/write";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import { execute, parse, semanticQuery } from "@alfred/knowledge/query";
+import { logger } from "@alfred/logger";
 import { type Chunk, embed, rerank } from "@alfred/rag";
 
 /**
@@ -126,7 +129,7 @@ export class KnowledgeEngine {
         }
       }
 
-      return results.map((row) => {
+      const chunks = results.map((row) => {
         const rawMetadata = row.metadata;
         let metadata: Record<string, unknown> | undefined;
 
@@ -146,11 +149,46 @@ export class KnowledgeEngine {
           },
         };
       });
+
+      // Active Recall: Reinforce document nodes for retrieved chunks
+      const documentIds = Array.from(
+        new Set(
+          chunks
+            .map((c) => c.metadata?.documentId)
+            .filter((id): id is string => typeof id === "string")
+        )
+      );
+
+      if (documentIds.length > 0) {
+        // Fire-and-forget to avoid latency
+        void (async () => {
+          try {
+            const nodeIds: string[] = [];
+            for (const documentId of documentIds) {
+              const node = await findRagDocumentNode(documentId);
+              if (node) {
+                nodeIds.push(node.id);
+              }
+            }
+            if (nodeIds.length > 0) {
+              await touchNodes(nodeIds);
+            }
+          } catch (error) {
+            // Non-blocking: failures don't affect retrieval
+            logger.debug("knowledge_engine_active_recall_failed", {
+              error: error instanceof Error ? error.message : String(error),
+              documentCount: documentIds.length,
+            });
+          }
+        })();
+      }
+
+      return chunks;
     }
 
-    // Fallback to pure vector search via retrieve()
+    // Fallback to pure vector search via searchChunks
     const results = await searchChunks(embedding, topK, threshold);
-    return results.map((row) => {
+    const chunks = results.map((row) => {
       const rawMetadata = row.metadata;
       let metadata: Record<string, unknown> | undefined;
 
@@ -170,5 +208,40 @@ export class KnowledgeEngine {
         },
       };
     });
+
+    // Active Recall: Reinforce document nodes for retrieved chunks
+    const documentIds = Array.from(
+      new Set(
+        chunks
+          .map((c) => c.metadata?.documentId)
+          .filter((id): id is string => typeof id === "string")
+      )
+    );
+
+    if (documentIds.length > 0) {
+      // Fire-and-forget to avoid latency
+      void (async () => {
+        try {
+          const nodeIds: string[] = [];
+          for (const documentId of documentIds) {
+            const node = await findRagDocumentNode(documentId);
+            if (node) {
+              nodeIds.push(node.id);
+            }
+          }
+          if (nodeIds.length > 0) {
+            await touchNodes(nodeIds);
+          }
+        } catch (error) {
+          // Non-blocking: failures don't affect retrieval
+          logger.debug("knowledge_engine_active_recall_failed", {
+            error: error instanceof Error ? error.message : String(error),
+            documentCount: documentIds.length,
+          });
+        }
+      })();
+    }
+
+    return chunks;
   }
 }

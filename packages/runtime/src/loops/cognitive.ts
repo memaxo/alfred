@@ -95,15 +95,15 @@ export async function runCognitiveLoop(
   recordPhysiologyMetrics(newState.physiology);
   maybeRecordEntropyEvent(incomingEvent);
 
-  // Update Autonomy if needed (e.g. on feedback)
+  // Update Autonomy based on event type
+  const now = Date.now();
   if (incomingEvent._ === "feedback") {
     const evidence = calculateEvidence(incomingEvent);
-    autonomy = updateAutonomy(
-      Date.now(),
-      newAutonomy,
-      evidence,
-      newState.physiology
-    );
+    autonomy = updateAutonomy(now, newAutonomy, evidence, newState.physiology);
+  } else if (incomingEvent._ === "complete") {
+    // Update autonomy based on execution outcome
+    const evidence = calculateOutcomeEvidence(incomingEvent.outcome);
+    autonomy = updateAutonomy(now, newAutonomy, evidence, newState.physiology);
   } else {
     autonomy = newAutonomy;
   }
@@ -144,6 +144,39 @@ function calculateEvidence(event: Event & { _: "feedback" }) {
   } as const;
 }
 
+function calculateOutcomeEvidence(outcome: Outcome) {
+  if (outcome._ === "success") {
+    return {
+      _: "success" as const,
+      task: "execution",
+      duration: outcome.duration,
+      reliability: 0.8, // High reliability for successful execution
+    };
+  } else if (outcome._ === "failure") {
+    return {
+      _: "failure" as const,
+      task: "execution",
+      error: outcome.error,
+      reliability: outcome.recoverable ? 0.6 : 0.9, // Higher reliability for non-recoverable failures
+    };
+  } else if (outcome._ === "partial") {
+    // Partial success - treat as mild success
+    return {
+      _: "success" as const,
+      task: "execution",
+      duration: 0,
+      reliability: 0.5,
+    };
+  } else {
+    // Cancelled - neutral, no autonomy change
+    return {
+      _: "override" as const,
+      reason: outcome.reason,
+      reliability: 0.1, // Very low reliability for cancelled operations
+    };
+  }
+}
+
 const recordPhysiologyMetrics = (physiology: Physiology) => {
   try {
     cognitivePhysiologyGauge.set({ metric: "energy" }, physiology.energy);
@@ -175,6 +208,16 @@ export function computeEffects(state: CognitiveState): CognitiveEffect[] {
 
   if (state._ === "thinking") {
     effects.push({ type: "generate_response", input: state.about });
+  }
+
+  if (state._ === "executing") {
+    // When executing, emit plan execution effect
+    effects.push({ type: "execute_plan", plan: state.plan });
+  }
+
+  if (state._ === "reflecting") {
+    // When reflecting, log the reflection outcome
+    effects.push({ type: "log_reflection", outcome: state.outcome });
   }
 
   return effects;

@@ -1,4 +1,6 @@
 import * as graphRepo from "@alfred/db/repo/graph/index";
+import { findRagDocumentNode } from "@alfred/db/repo/graph/read";
+import { touchNodes } from "@alfred/db/repo/graph/write";
 import * as ragRepo from "@alfred/db/repo/rag";
 import {
   EMBEDDING_DIM,
@@ -187,12 +189,19 @@ export async function retrieve(
     void (async () => {
       try {
         // Find memory nodes corresponding to these documents
-        // This assumes we created "rag_document" nodes with properties.documentId
-        // Since we don't have a direct lookup by property efficiently without index,
-        // and we only have touchNodes by ID, we'd need to look them up first.
-        // For now, we skip this step until we have a better mapping or index.
-        // Alternatively, if we stored the memory node ID in the chunk metadata, we could use it.
-      } catch (_err) {}
+        const nodeIds: string[] = [];
+        for (const documentId of documentIds) {
+          const node = await findRagDocumentNode(documentId);
+          if (node) {
+            nodeIds.push(node.id);
+          }
+        }
+        if (nodeIds.length > 0) {
+          await touchNodes(nodeIds);
+        }
+      } catch (_err) {
+        // Non-blocking: failures don't affect retrieval
+      }
     })();
   }
 

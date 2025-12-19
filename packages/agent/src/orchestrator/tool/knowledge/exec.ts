@@ -125,6 +125,20 @@ export async function executeQuery(
     properties: (item.node.properties as Record<string, unknown>) ?? undefined,
   }));
 
+  // Active Recall: Track access to retrieved nodes
+  try {
+    const nodeIds = nodes.map((n) => n.id);
+    if (nodeIds.length > 0) {
+      await graphRepo.recordAccessBatch(nodeIds);
+    }
+  } catch (error) {
+    // Non-blocking: log but don't throw
+    logger.debug("active_recall_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      nodeCount: nodes.length,
+    });
+  }
+
   // Include edges if requested
   let edges: KnowledgeQueryOutput["edges"];
   if (input.includeEdges && nodes.length > 0) {
