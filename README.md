@@ -43,7 +43,10 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
 
 - [Bun](https://bun.sh) 1.2+
 - Node.js 20+ (for tooling compatibility)
+- **Docker or Docker Desktop** (required for `bun run db:start` to run PostgreSQL)
 - PostgreSQL 16 with pgvector extension (`pgvector/pgvector:pg16` docker image recommended)
+- (Optional) [UV](https://github.com/astral-sh/uv) for Python dependency management (required for voice/embed packages)
+- (Optional) Python 3.10+ (installed via UV for voice/embed packages)
 - (Optional) Redis for biometric cache & token replay protection
 - (Optional) Laminar account/api key for tracing + eval exports
 - (Optional) [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation (Linux only) - install with `bun run install:poof`
@@ -58,13 +61,19 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
 2. **Set up environment:**
    ```bash
    cp config/env.example .env
-   # Edit .env and confirm DATABASE_URL=postgresql://alfred:alfred@localhost:5432/alfred
+   # Generate auth keys
+   bun scripts/gen-keys.ts >> .env
+   # Edit .env and set:
+   # - OPENAI_API_KEY (required for AI features)
+   # - DATABASE_URL (default: postgresql://alfred:alfred@localhost:5432/alfred)
    # (tests may override with sqlite::memory:; see README section below)
    ```
 
 3. **Start database and run migrations:**
    ```bash
+   # Ensure Docker is running (verify with: docker ps)
    bun run db:start       # Starts Postgres with pgvector
+   # Wait a few seconds for database to be ready, then:
    bun run db:migrate     # Applies migrations
    ```
 
@@ -77,6 +86,21 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
    - Web: `http://localhost:3000`
    - API: `http://localhost:3000/api`
    - Metrics: `http://localhost:3000/api/metrics`
+
+### Optional: Enable Voice & Local Embeddings
+
+**Voice Features:**
+```bash
+cd packages/voice
+bun run setup
+```
+
+**Local Embeddings:**
+```bash
+cd packages/embed
+bun run install-deps
+bun run download-model
+```
 
 ## Project Layout
 
@@ -370,12 +394,25 @@ CI runs on all three branches (`main`, `dev`, `prod`) to ensure code quality acr
 
 ## Troubleshooting
 
+### Installation Issues
+
+| Issue | Fix |
+| --- | --- |
+| `docker_compose_unavailable` | Install Docker or Docker Desktop. Verify with `docker ps` |
+| Database connection errors | Verify Docker is running: `docker ps`. Check `DATABASE_URL` in `.env` matches container settings |
+| Missing `BETTER_AUTH_SECRET` | Generate keys: `bun scripts/gen-keys.ts >> .env` |
+| Missing `OPENAI_API_KEY` | Set `OPENAI_API_KEY` in `.env` (required for AI features) |
+| `Error: eval_scorers_unavailable` | Ensure `OPENAI_API_KEY` (or other model providers) is set |
+| Postgres migration errors | Confirm the DB is running & accessible via `DATABASE_URL`. Wait a few seconds after `db:start` before running `db:migrate` |
+
+### Development Issues
+
 | Issue | Fix |
 | --- | --- |
 | `fatal: cannot find origin` | Run `git remote add origin https://github.com/<org>/alfred.git` |
 | Laminar exports failing | Check `laminar_eval_errors_total` labels, verify env keys & network access |
-| `Error: eval_scorers_unavailable` | Ensure `OPENAI_API_KEY` (or other model providers) is set |
-| Postgres migration errors | Confirm the DB is running & accessible via `DATABASE_URL` |
+| Voice/embed features not working | Install dependencies: `cd packages/voice && bun run setup` or `cd packages/embed && bun run install-deps` |
+| UV not found | Install UV: `curl -LsSf https://astral.sh/uv/install.sh | sh` |
 
 ## License
 

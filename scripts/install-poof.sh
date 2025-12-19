@@ -42,6 +42,12 @@ install_debian() {
   
   echo "Installing poof via Debian package..."
   
+  # Verify sudo access
+  if ! sudo -v; then
+    echo "Error: sudo access required for poof installation"
+    exit 1
+  fi
+  
   # Download .deb package
   curl -LO "https://github.com/jarred-sumner/poof/releases/${POOF_VERSION}/download/${deb_file}"
   
@@ -65,6 +71,12 @@ install_arch() {
   
   echo "Installing poof via Arch package..."
   
+  # Verify sudo access
+  if ! sudo -v; then
+    echo "Error: sudo access required for poof installation"
+    exit 1
+  fi
+  
   # Download .pkg.tar.xz package
   curl -LO "https://github.com/jarred-sumner/poof/releases/${POOF_VERSION}/download/${pkg_file}"
   
@@ -82,6 +94,12 @@ install_static() {
   local binary_name="poof-linux-${arch}-musl"
   
   echo "Installing poof via static binary..."
+  
+  # Verify sudo access
+  if ! sudo -v; then
+    echo "Error: sudo access required for poof installation"
+    exit 1
+  fi
   
   # Download static binary
   curl -L "https://github.com/jarred-sumner/poof/releases/${POOF_VERSION}/download/${binary_name}" -o poof

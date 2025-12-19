@@ -34,7 +34,9 @@ if (isNonEmptyArray(args)) {
   } else if (await probe("docker-compose", ["version"])) {
     process.exitCode = await run("docker-compose", args);
   } else {
-    throw new Error("docker_compose_unavailable");
+    throw new Error(
+      "docker_compose_unavailable: Install Docker or Docker Desktop to use db:start. Verify with: docker ps"
+    );
   }
 } else {
   // biome-ignore lint/suspicious/noConsole: CLI tool output.

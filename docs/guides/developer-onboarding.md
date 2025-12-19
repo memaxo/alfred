@@ -13,7 +13,10 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 
 - Bun 1.2+ installed
 - Node.js 20+ (for tooling compatibility)
+- **Docker or Docker Desktop** (required for `bun run db:start` to run PostgreSQL)
 - PostgreSQL 16 with pgvector extension
+- (Optional) [UV](https://github.com/astral-sh/uv) for Python dependency management (required for voice/embed packages)
+- (Optional) Python 3.10+ (installed via UV for voice/embed packages)
 - (Optional) Redis for biometric cache
 - (Optional) [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation (Linux only) - install with `bun run install:poof`
 
@@ -29,12 +32,18 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 2. **Configure environment:**
    ```bash
    cp config/env.example .env
-   # Edit .env with your settings
+   # Generate auth keys
+   bun scripts/gen-keys.ts >> .env
+   # Edit .env and set:
+   # - OPENAI_API_KEY (required for AI features)
+   # - DATABASE_URL (default: postgresql://alfred:alfred@localhost:5432/alfred)
    ```
 
 3. **Start database:**
    ```bash
+   # Ensure Docker is running (verify with: docker ps)
    bun run db:start       # Starts Postgres with pgvector
+   # Wait a few seconds for database to be ready, then:
    bun run db:migrate     # Applies migrations
    ```
 
@@ -218,10 +227,17 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 
 ### Common Issues
 
-**Database connection errors:**
+**Docker/Database connection errors:**
+- Verify Docker is running: `docker ps`
 - Verify Postgres is running: `bun run db:start`
-- Check `DATABASE_URL` in `.env`
-- Try: `bun run db:migrate`
+- Check `DATABASE_URL` in `.env` matches container settings (default: `postgresql://alfred:alfred@localhost:5432/alfred`)
+- Wait a few seconds after `db:start` before running `db:migrate`
+- If Docker is not installed, install Docker Desktop or Docker CLI
+
+**Missing environment variables:**
+- Generate `BETTER_AUTH_SECRET`: `bun scripts/gen-keys.ts >> .env`
+- Set `OPENAI_API_KEY` in `.env` (required for AI features)
+- Verify all required keys are set: `grep -E "(BETTER_AUTH_SECRET|OPENAI_API_KEY|DATABASE_URL)" .env`
 
 **Build failures:**
 - Run `bun run verify-build` to check for server code leakage
@@ -235,6 +251,11 @@ See `docs/guides/verification-patterns.md` for detailed verification workflow.
 - Check if `DATABASE_URL` is set (for Postgres tests)
 - Verify `RUN_DB_TESTS=1` for DB suites
 - Use `bun run test:sqlite` for fast SQLite fallback
+
+**Voice/embed features not working:**
+- Install UV: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Install voice dependencies: `cd packages/voice && bun run setup`
+- Install embed dependencies: `cd packages/embed && bun run install-deps`
 
 See `docs/guides/troubleshooting.md` for more detailed troubleshooting.
 
