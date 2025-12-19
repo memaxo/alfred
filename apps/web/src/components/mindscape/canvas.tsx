@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useMindscapeActivations } from "@/hooks/use-mindscape-activations";
+import { useLayoutSync } from "@/hooks/use-layout-sync";
 import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { hasWindow } from "@/lib/env/isomorphic";
@@ -183,6 +184,9 @@ function MindscapeCanvasInner({
 
   // Listen for global Mindscape activations
   useMindscapeActivations();
+
+  // Enable layout sync to database
+  useLayoutSync();
 
   // Enable dynamic graph traversal
   const { isFetching: isTraversing } = useMindscapeTraversal();

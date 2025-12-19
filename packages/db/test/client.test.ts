@@ -10,10 +10,6 @@ import {
 } from "bun:test";
 
 let connectMock = mock(async () => {});
-const warnMock = mock(() => {});
-const errorMock = mock(() => {});
-const debugMock = mock(() => {});
-const infoMock = mock(() => {});
 
 mock.module("pg", () => {
   class MockClient {

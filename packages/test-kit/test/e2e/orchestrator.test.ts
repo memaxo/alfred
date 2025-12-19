@@ -5,6 +5,10 @@
  * 1. Reason about a task (using VCR replay or Live LLM).
  * 2. Execute code in a real Docker sandbox.
  * 3. Produce side effects (files) that persist.
+ *
+ * NOTE: This test requires Docker daemon to be running.
+ * If Docker is not available, the test will fail with connection errors.
+ * Ensure Docker is running before executing this test.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";

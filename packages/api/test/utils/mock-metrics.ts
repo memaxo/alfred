@@ -127,8 +127,27 @@ mock.module("@alfred/logger", () => ({
 }));
 
 // Workflow metrics from @alfred/agent - needed by workflow runner tests
+// Include all metrics that are re-exported from @alfred/api/metrics
 mock.module("@alfred/agent/workflow/metrics", () => ({
   __esModule: true,
   runnerStepsTotal: createMetricStub(),
   runnerErrorsTotal: createMetricStub(),
+  runRegistryDispatchDurationSeconds: createMetricStub(),
+  runRegistryEventsTotal: createMetricStub(),
+  linearActivityDurationSeconds: createMetricStub(),
+  linearActivityEmissionsTotal: createMetricStub(),
+  linearSessionOperationsTotal: createMetricStub(),
+  linearWebhookEventsTotal: createMetricStub(),
+  linearWebhookWorkflowStartsTotal: createMetricStub(),
+  linearWebhookWorkflowCancelsTotal: createMetricStub(),
+  multiAgentAgentDurationSeconds: createMetricStub(),
+  multiAgentErrorsTotal: createMetricStub(),
+  multiAgentTasksTotal: createMetricStub(),
+  multiAgentWavesTotal: createMetricStub(),
+  replayQueriesTotal: createMetricStub(),
+  replayQueryDurationSeconds: createMetricStub(),
+  workflowProvenanceDurationSeconds: createMetricStub(),
+  workflowProvenanceEdgesTotal: createMetricStub(),
+  workflowStreamDurationSeconds: createMetricStub(),
+  workflowStreamEventsTotal: createMetricStub(),
 }));

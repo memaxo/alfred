@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { DockerSandbox } from "../../src/kinetic/sandbox";
 
+/**
+ * Docker Sandbox Tests
+ *
+ * NOTE: These tests require Docker daemon to be running.
+ * If Docker is not available, these tests will fail with connection errors.
+ * Ensure Docker is running before executing these tests.
+ */
 // Set a longer timeout for Docker operations
 describe("DockerSandbox (Kinetic Layer)", () => {
   let sandbox: DockerSandbox;

@@ -326,3 +326,12 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     }
   }
 };
+
+// Default export for Bun test environment compatibility
+// In production, Vite handles ?worker imports specially and transforms this into a Worker constructor
+// In tests, this is mocked, but we provide a basic class structure for type compatibility
+export default class PhysicsWorker {
+  postMessage() {}
+  terminate() {}
+  onmessage = null;
+}

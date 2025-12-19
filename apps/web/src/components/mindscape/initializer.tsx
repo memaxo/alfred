@@ -167,6 +167,10 @@ export function MindscapeInitializer() {
         })),
       });
 
+      if (!ensured?.refs) {
+        return;
+      }
+
       const dbIdByEntityId = new Map(
         ensured.refs.map((entry) => [entry.entity.id, entry.ref.id.dbId])
       );
@@ -242,6 +246,10 @@ export function MindscapeInitializer() {
           id: reminder.id,
         })),
       });
+
+      if (!ensured?.refs) {
+        return;
+      }
 
       const dbIdByEntityId = new Map(
         ensured.refs.map((entry) => [entry.entity.id, entry.ref.id.dbId])

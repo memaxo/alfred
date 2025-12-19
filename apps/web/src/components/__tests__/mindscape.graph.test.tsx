@@ -1,5 +1,26 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../../test/testing-library";
+
+// Mock physics worker for Bun test environment
+mock.module("@/workers/physics.worker?worker", () => ({
+  default: class MockWorker {
+    postMessage() {}
+    terminate() {}
+    onmessage = null;
+  },
+}));
+
+mock.module("@/hooks/use-physics-worker", () => ({
+  usePhysicsWorker: () => ({
+    ready: true,
+    running: false,
+    start: () => {},
+    stop: () => {},
+    addNode: () => {},
+    removeNode: () => {},
+    setFixed: () => {},
+  }),
+}));
 
 import { useMindscapeStore } from "@/store/mindscape";
 import {

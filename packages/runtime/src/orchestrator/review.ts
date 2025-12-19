@@ -349,7 +349,7 @@ export async function* runReviewPhase(
       let reviewFailures: ReviewFailureDetail[] = [];
       const startedAt = Date.now();
 
-      while (fixAttempts <= MAX_FIX_ATTEMPTS && !reviewPassed) {
+      while (fixAttempts < MAX_FIX_ATTEMPTS && !reviewPassed) {
         reviewFailures = [];
         let currentRunPassed = true;
 

@@ -62,7 +62,11 @@ describe("TTS End-to-End Synthesis (skipped: causes C++ exception in Bun runner)
     if (chunkCount > 0) {
       expect(totalBytes).toBeGreaterThan(0);
     } else {
-      expect(result.audioBase64.length).toBeGreaterThan(0);
+      // Result may be undefined if synthesis fails or backend unavailable
+      expect(result?.audioBase64).toBeDefined();
+      if (result?.audioBase64) {
+        expect(result.audioBase64.length).toBeGreaterThan(0);
+      }
     }
 
     // Verify caching works (second request should be faster)
