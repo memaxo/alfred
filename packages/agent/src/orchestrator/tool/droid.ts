@@ -3,7 +3,6 @@ import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 import type { DirectoryHandle } from "../../security/filesystem.js";
 import {
-  DEFAULT_ALLOW_PREFIXES,
   DirectoryAccessError,
   openDirectorySecure,
 } from "../../security/filesystem.js";
@@ -11,7 +10,6 @@ import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import {
   appendOutput,
   appendReasoningTrace,
-  assertAllowedDirectory,
   createOutputAccumulator,
   createTimeout,
   DEFAULT_ALLOW_PREFIXES,
@@ -20,7 +18,6 @@ import {
   isWithinBase,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
-  OUTPUT_CAP_BYTES,
   recordToolExecution,
   resolveExecutable,
   startToolTimer,

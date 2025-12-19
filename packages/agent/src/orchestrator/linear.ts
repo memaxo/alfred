@@ -65,7 +65,10 @@ export async function emitLinearActivity(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             logger?.warn?.("linear_activity_retry", {
               type,
               sessionId: params.sessionId,
@@ -170,7 +173,10 @@ export async function setLinearDelegate(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);
@@ -216,7 +222,10 @@ export async function setLinearStarted(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);
@@ -269,7 +278,10 @@ export async function setLinearCompleted(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);
@@ -326,7 +338,10 @@ export async function commentOnLinearIssue(params: {
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);
@@ -377,7 +392,10 @@ export async function setLinearSessionExternalUrl(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);
@@ -423,7 +441,10 @@ export async function setLinearCancelled(
         factor: 2,
         onFailedAttempt: async (error) => {
           const statusCode = getStatusCode(error);
-          if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
             if (statusCode === 429) {
               const retryAfterMs = resolveRetryAfterMs(error);
               await linearRateLimiter.handle429(retryAfterMs);

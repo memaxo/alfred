@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -29,15 +28,13 @@ import {
   appendOutput,
   appendReasoningTrace,
   createOutputAccumulator,
+  createReasoningAccumulator,
   createStageRecorder,
   extractReasoningText,
   getAccumulatedOutput,
-  OUTPUT_CAP_BYTES,
   persistReasoning,
   recordToolExecution,
   startToolTimer,
-  type OutputAccumulator as FinalAccumulator,
-  type ReasoningAccumulator,
   type ToolWriter,
 } from "../shared/index.js";
 import {
@@ -47,7 +44,6 @@ import {
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
-  type CodexErrorStage,
   type CodexExecuteArgs,
   type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
@@ -61,7 +57,6 @@ import {
   resolveExecutable,
 } from "./policy.js";
 import { loadCodexSdk } from "./sdk.js";
-import { truncateToBytes } from "./truncate.js";
 
 type WriterPayload = { [key: string]: unknown };
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;

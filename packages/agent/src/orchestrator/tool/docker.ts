@@ -340,11 +340,12 @@ function parseInspectPorts(raw: unknown, containerPort?: number) {
 
 function executeBuild(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle, cwd) => {
+    const tag = ensure(input.tag, "docker_tag_required");
     const contextPath = resolveDirectory(
       cwd,
       ensure(input.context, "docker_context_required")
     );
-    const args = ["build", "-t", ensure(input.tag, "docker_tag_required")];
+    const args = ["build", "-t", tag];
 
     if (input.dockerfile) {
       const dockerfilePath = resolveSubpath(cwd, input.dockerfile);
@@ -364,7 +365,7 @@ function executeBuild(input: DockerInput, writer: ToolWriter) {
       throw new Error("docker_build_failed");
     }
 
-    return { ok: true as const };
+    return { ok: true as const, details: { name: tag } };
   });
 }
 
@@ -460,7 +461,7 @@ function executeStop(input: DockerInput, writer: ToolWriter) {
       throw new Error("docker_stop_failed");
     }
 
-    return { ok: true as const };
+    return { ok: true as const, details: { name } };
   });
 }
 
@@ -479,7 +480,7 @@ function executeRemove(input: DockerInput, writer: ToolWriter) {
       throw new Error("docker_remove_failed");
     }
 
-    return { ok: true as const };
+    return { ok: true as const, details: { name } };
   });
 }
 

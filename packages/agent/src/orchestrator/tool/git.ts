@@ -110,7 +110,7 @@ const gitInputSchema = z.object({
     .optional(),
 });
 
-type GitInput = z.infer<typeof gitInputSchema>;
+export type GitInput = z.infer<typeof gitInputSchema>;
 
 type ToolWriter =
   | { write: (chunk: unknown) => Promise<void> | void }

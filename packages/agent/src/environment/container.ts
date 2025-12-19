@@ -57,7 +57,7 @@ export class ContainerWorkspace extends WorktreeWorkspace {
       },
     });
 
-    const details = res.details;
+    const details = (res as any).details;
     if (!(res.ok && details?.containerId)) {
       throw new Error(`Failed to start container: ${details?.error}`);
     }

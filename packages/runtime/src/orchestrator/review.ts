@@ -299,13 +299,11 @@ export async function* runReviewPhase(
     reviewPlan.checks = [
       {
         id: "linear-default-tests",
-        // `@alfred/agent/orchestrator/multi/review` historically uses `kind`,
-        // but some runtime callsites/tests used `type`. Support both.
-        kind: "tests",
+        // historically some runtime callsites/tests used `type`.
         type: "tests",
         description:
           "Run the project's test suite (bun test) to validate the Linear-directed workflow.",
-      },
+      } as any,
     ];
   }
 
