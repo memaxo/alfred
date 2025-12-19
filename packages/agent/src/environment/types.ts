@@ -13,9 +13,12 @@ export type ExecOptions = {
   timeoutMs?: number;
 };
 
+/** Workspace environment kind */
+export type WorkspaceKind = "host" | "worktree" | "container" | "poof";
+
 export type Workspace = {
   readonly id: string;
-  readonly kind: "host" | "worktree" | "container";
+  readonly kind: WorkspaceKind;
   readonly root: string; // Absolute path on HOST machine (for file ops)
   readonly branch?: string | null; // Active git branch when applicable
 

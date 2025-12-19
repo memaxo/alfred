@@ -1,20 +1,57 @@
-import { ContainerWorkspace } from "./container";
-import type { Workspace } from "./types";
-import { WorktreeWorkspace } from "./worktree";
+import { ContainerWorkspace } from "./container.js";
+import { PoofWorkspace } from "./poof.js";
+import type { Workspace, WorkspaceKind } from "./types.js";
+import { WorktreeWorkspace } from "./worktree.js";
+import {
+  type PoofProfileName,
+  POOF_PROFILES,
+  isPoofAvailable,
+} from "../spawn/poof.js";
+
+/** Options for workspace creation */
+export interface WorkspaceFactoryOptions {
+  authz?: string;
+  image?: string;
+  enableSessions?: boolean;
+  /** Resource profile for poof isolation */
+  poofProfile?: PoofProfileName;
+  /** Poof mode: exec (ephemeral) or run (reviewable) */
+  poofMode?: "exec" | "run";
+  /** Enable verbose poof output */
+  poofVerbose?: boolean;
+}
 
 export const WorkspaceFactory = {
   create: (
-    kind: "host" | "worktree" | "container",
+    kind: WorkspaceKind,
     id: string,
     runId: string,
     repoBase: string,
-    options?: {
-      authz?: string;
-      image?: string;
-      enableSessions?: boolean;
-    }
+    options?: WorkspaceFactoryOptions
   ): Promise<Workspace> => {
     switch (kind) {
+      case "poof": {
+        // Check if poof is available, fallback to worktree if not
+        if (!isPoofAvailable()) {
+          console.warn(
+            `poof not available (platform: ${process.platform}), falling back to worktree`
+          );
+          return Promise.resolve(
+            new WorktreeWorkspace(id, runId, repoBase, {
+              enableSessions: options?.enableSessions,
+            })
+          );
+        }
+        return Promise.resolve(
+          new PoofWorkspace(id, runId, repoBase, {
+            profile: options?.poofProfile
+              ? POOF_PROFILES[options.poofProfile]
+              : undefined,
+            mode: options?.poofMode,
+            verbose: options?.poofVerbose,
+          })
+        );
+      }
       case "container":
         return Promise.resolve(
           new ContainerWorkspace(

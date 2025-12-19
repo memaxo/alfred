@@ -1,4 +1,6 @@
+import type { WorkspaceKind } from "../../environment/types.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
+import type { PoofProfileName } from "../../spawn/poof.js";
 import type { SubTask, SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
@@ -11,11 +13,12 @@ export type AgentSpec = {
   subTaskId: SubTaskId;
   sessionId: string;
   workingDirectory: string;
-  environment: "host" | "worktree" | "container"; // New field
+  environment: WorkspaceKind;
   auto: "read" | "low" | "medium" | "high";
   mandateTDD?: boolean; // Phase 4: TDD
   model?: string;
   profile?: string;
+  poofProfile?: PoofProfileName; // Resource profile for poof isolation
   execPlanPath: string;
   context: {
     linearIssueId?: string;
@@ -34,8 +37,13 @@ export type WavePlan = {
 
 function determineEnvironment(
   _subTask: SubTask,
-  options?: { maxParallel?: number }
-): "host" | "worktree" | "container" {
+  options?: { maxParallel?: number; useIsolation?: boolean }
+): WorkspaceKind {
+  // Use poof for ephemeral isolation on Linux (lightweight alternative to containers)
+  if (process.env.ORCH_USE_POOF === "1" && process.platform === "linux") {
+    return "poof";
+  }
+
   // Phase 11: Docker Support
   // Use container for high risk tasks or explicit request
   // For now, we don't have risk analysis in SubTask yet, so we stick to worktree/host default.
@@ -63,6 +71,7 @@ export function buildAgentSpec(
     auto?: "read" | "low" | "medium" | "high";
     model?: string;
     profile?: string;
+    poofProfile?: PoofProfileName; // Resource profile for poof isolation
     maxParallel?: number; // Added
     mandateTDD?: boolean; // Phase 4
     linear?: {
@@ -111,6 +120,7 @@ export function buildAgentSpec(
     mandateTDD: options?.mandateTDD,
     model: options?.model,
     profile: options?.profile,
+    poofProfile: options?.poofProfile,
     execPlanPath,
     context: {
       linearIssueId: options?.linear?.issueId,
