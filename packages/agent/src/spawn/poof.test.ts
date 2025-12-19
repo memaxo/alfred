@@ -136,12 +136,12 @@ describe("poof", () => {
   });
 
   describe("isPoofAvailable", () => {
-    test("returns false on non-Linux platforms", () => {
-      // This test will pass on non-Linux, fail on Linux if poof not installed
-      if (process.platform !== "linux") {
+    test.skipIf(process.platform === "linux")(
+      "returns false on non-Linux platforms",
+      () => {
         expect(isPoofAvailable()).toBe(false);
       }
-    });
+    );
 
     test("caches availability result", () => {
       const first = isPoofAvailable();

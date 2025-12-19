@@ -5,7 +5,7 @@ import {
   expect,
   test,
 } from "bun:test";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
@@ -202,11 +202,13 @@ describe("diff", () => {
       mkdirSync(changesPath, { recursive: true });
       writeFileSync(path.join(changesPath, "file.txt"), "content");
 
+      // Verify directory exists before discard
+      expect(existsSync(upperDir)).toBe(true);
+
       discardUpperLayer(upperDir);
 
-      // Check that the directory no longer exists
-      const exists = await Bun.file(path.join(upperDir, "some-file")).exists();
-      expect(exists).toBe(false);
+      // Verify directory no longer exists
+      expect(existsSync(upperDir)).toBe(false);
     });
 
     test("handles non-existent directory gracefully", () => {
