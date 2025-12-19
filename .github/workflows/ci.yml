@@ -421,6 +421,65 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  poof-isolation:
+    name: Poof Isolation Tests
+    needs:
+      - changes
+      - ruler
+    if: ${{ needs.changes.outputs.lane == 'full' || needs.changes.outputs.lane == 'tests' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.5"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install poof
+        run: |
+          curl -L https://github.com/jarred-sumner/poof/releases/latest/download/poof-linux-x86_64-musl -o /tmp/poof
+          chmod +x /tmp/poof
+          sudo mv /tmp/poof /usr/local/bin/poof
+          poof --version
+
+      - name: Install fuse-overlayfs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse-overlayfs
+          # Enable user namespaces
+          sudo sysctl -w kernel.unprivileged_userns_clone=1
+
+      - name: Run poof spawn tests
+        run: bun test packages/agent/src/spawn/
+
+      - name: Verify poof availability
+        run: |
+          # Verify poof is detected as available
+          POOF_BIN=/usr/local/bin/poof bun -e "
+            const { isPoofAvailable, resolvePoofBinary } = require('./packages/agent/src/spawn/poof.ts');
+            const binary = resolvePoofBinary();
+            console.log('Poof binary:', binary);
+            console.log('Poof available:', isPoofAvailable());
+            if (!binary || !isPoofAvailable()) {
+              process.exit(1);
+            }
+          "
+
+      - name: Poof integration smoke test
+        run: |
+          # Test basic poof functionality
+          poof exec echo "Poof ephemeral mode works"
+          poof exec touch /tmp/test-file && echo "File created inside sandbox"
+          test ! -f /tmp/test-file && echo "File correctly isolated"
+        continue-on-error: true
+
   migrate-dryrun:
     name: DB Dry Run
     needs:
