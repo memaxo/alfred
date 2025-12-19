@@ -7,7 +7,16 @@ import {
   preferenceHistoryPrunedTotal,
   preferencePromptFailuresTotal,
   preferencePromptInjectionsTotal,
+  sseConnectionRateLimitHitsTotal,
+  sseConnectionsCurrent,
+  sseFirstChunkLatencySeconds,
 } from "@alfred/api/metrics";
+import {
+  createConnection,
+  getConnectionCount,
+  removeConnection,
+  updateConnectionActivity,
+} from "@alfred/api/utils/sse-connections";
 import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { auth } from "@alfred/auth";
 import * as conversationRepo from "@alfred/db/repo/conversation";
@@ -48,6 +57,11 @@ export async function handleStreamRequest(
     return new Response("Method not allowed", { status: 405 });
   }
 
+  const requestStartTime = performance.now();
+  let connectionId: string | null = null;
+  let userId: string | null = null;
+  let firstChunkSent = false;
+
   try {
     const rawBody = await request.json();
     const parsed = requestSchema.safeParse(rawBody);
@@ -68,7 +82,32 @@ export async function handleStreamRequest(
     const persistedMessageIds = new Set<string>();
 
     const session = await auth.api.getSession({ headers: request.headers });
-    const userId = session?.user?.id ?? null;
+    userId = session?.user?.id ?? null;
+
+    // Check connection limits and rate limiting
+    if (userId) {
+      const connectionResult = createConnection(userId, errorPrefix);
+      if (!connectionResult.allowed) {
+        sseConnectionRateLimitHitsTotal.labels(errorPrefix, connectionResult.reason ?? "unknown").inc();
+        return new Response(
+          JSON.stringify({
+            error: "rate_limit_exceeded",
+            reason: connectionResult.reason,
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": "60",
+            },
+          }
+        );
+      }
+      connectionId = connectionResult.connectionId;
+      // Update connection count metric (global count)
+      const globalConnectionCount = getConnectionCount();
+      sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
+    }
 
     let conversationId =
       typeof parsed.data.conversationId === "string"
@@ -192,6 +231,13 @@ export async function handleStreamRequest(
         logger.warn(`${errorPrefix}_stream_aborted`, {
           steps: steps.length,
         });
+        if (connectionId && userId) {
+          removeConnection(connectionId);
+          connectionId = null;
+          // Update connection count metric (global count)
+          const globalConnectionCount = getConnectionCount();
+          sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
+        }
       },
     });
 
@@ -200,6 +246,16 @@ export async function handleStreamRequest(
       generateMessageId: generateId,
       consumeSseStream: consumeStream,
       messageMetadata: ({ part }) => {
+        // Track first chunk latency
+        if (!firstChunkSent && part.type === "text" && part.text) {
+          firstChunkSent = true;
+          const firstChunkLatency = (performance.now() - requestStartTime) / 1000;
+          sseFirstChunkLatencySeconds.labels(errorPrefix).observe(firstChunkLatency);
+          if (connectionId) {
+            updateConnectionActivity(connectionId);
+          }
+        }
+
         const metadata: Record<string, unknown> = {
           eventType: part.type,
         };
@@ -227,6 +283,15 @@ export async function handleStreamRequest(
         return metadata;
       },
       onFinish: async ({ isAborted, messages: streamedMessages }) => {
+        // Cleanup connection
+        if (connectionId && userId) {
+          removeConnection(connectionId);
+          connectionId = null;
+          // Update connection count metric (global count)
+          const globalConnectionCount = getConnectionCount();
+          sseConnectionsCurrent.labels(errorPrefix).set(globalConnectionCount);
+        }
+
         if (!(userId && conversationId && streamedMessages?.length)) {
           return;
         }
@@ -259,6 +324,15 @@ export async function handleStreamRequest(
 
     return response;
   } catch (error) {
+    // Cleanup connection on error
+    if (connectionId && userId) {
+      removeConnection(connectionId);
+      connectionId = null;
+      // Update connection count metric
+      const connectionCount = getConnectionCount(userId);
+      sseConnectionsCurrent.labels(errorPrefix).set(connectionCount);
+    }
+
     if (error instanceof SyntaxError) {
       return new Response(JSON.stringify({ error: "invalid_json" }), {
         status: 400,

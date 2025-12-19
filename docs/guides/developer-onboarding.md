@@ -76,6 +76,31 @@ bun run test:integration
 bun run test:sqlite
 ```
 
+### Debugging
+
+ALFRED uses Bun's built-in debugger. See [Debugging Guide](./debugging.md) for full details.
+
+**Quick start:**
+```bash
+# Start dev server with debugger
+bun run dev:debug
+
+# Debug a test file
+bun run debug:test packages/api/test/router.test.ts
+
+# Debug a script
+bun run debug:script scripts/migrate.ts
+```
+
+**VS Code:**
+- Install Bun VS Code Extension
+- Press `F5` to start debugging
+- Use launch configurations in `.vscode/launch.json`
+
+**Web-based debugger:**
+- Start with `bun --inspect`
+- Open the `debug.bun.sh` URL from output
+
 ### Type Checking
 
 ```bash

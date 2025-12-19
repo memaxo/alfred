@@ -1,5 +1,16 @@
 import type { OrchestratorCallbacks } from "@alfred/agent/workflow/orchestrator";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
+import {
+  sseConnectionRateLimitHitsTotal,
+  sseConnectionsCurrent,
+  sseFirstChunkLatencySeconds,
+} from "@alfred/api/metrics";
+import {
+  createConnection,
+  getConnectionCount,
+  removeConnection,
+  updateConnectionActivity,
+} from "@alfred/api/utils/sse-connections";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
 import { createFileRoute } from "@tanstack/react-router";
@@ -101,6 +112,9 @@ export async function handleWorkflowStreamRequest(
   request: Request
 ): Promise<Response> {
   const gate = await getWorkflowGatekeepers();
+  const requestStartTime = performance.now();
+  let connectionId: string | null = null;
+  let firstChunkSent = false;
 
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -140,6 +154,28 @@ export async function handleWorkflowStreamRequest(
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  // Check connection limits and rate limiting
+  const connectionResult = createConnection(session.user.id, "workflow");
+  if (!connectionResult.allowed) {
+    sseConnectionRateLimitHitsTotal.labels("workflow", connectionResult.reason ?? "unknown").inc();
+    return new Response(
+      JSON.stringify({
+        error: "rate_limit_exceeded",
+        reason: connectionResult.reason,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": "60",
+        },
+      }
+    );
+  }
+  connectionId = connectionResult.connectionId;
+  const globalConnectionCount = getConnectionCount();
+  sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
 
   let obligations: Obligation[] = [];
   try {
@@ -182,6 +218,15 @@ export async function handleWorkflowStreamRequest(
       };
 
       const sendWorkflowEvent = (event: WorkflowEvent) => {
+        // Track first chunk latency
+        if (!firstChunkSent) {
+          firstChunkSent = true;
+          const firstChunkLatency = (performance.now() - requestStartTime) / 1000;
+          sseFirstChunkLatencySeconds.labels("workflow").observe(firstChunkLatency);
+          if (connectionId) {
+            updateConnectionActivity(connectionId);
+          }
+        }
         send(formatEvent("workflow-event", event));
       };
 
@@ -218,6 +263,11 @@ export async function handleWorkflowStreamRequest(
                   error: error instanceof Error ? error.message : String(error),
                 });
                 send(formatEvent("error", formatError(error)));
+                if (connectionId) {
+                  removeConnection(connectionId);
+                  const globalConnectionCount = getConnectionCount();
+                  sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+                }
                 cleanup?.();
                 close();
               },
@@ -226,6 +276,11 @@ export async function handleWorkflowStreamRequest(
               },
               emitComplete: () => {
                 send(formatEvent("complete", {}));
+                if (connectionId) {
+                  removeConnection(connectionId);
+                  const globalConnectionCount = getConnectionCount();
+                  sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+                }
                 cleanup?.();
                 close();
               },
@@ -313,6 +368,11 @@ export async function handleWorkflowStreamRequest(
       void kickoff();
 
       request.signal.addEventListener("abort", () => {
+        if (connectionId) {
+          removeConnection(connectionId);
+          const globalConnectionCount = getConnectionCount();
+          sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+        }
         cleanup?.();
         void suspensionHandle?.dispose();
         close();
@@ -320,6 +380,11 @@ export async function handleWorkflowStreamRequest(
     },
     cancel() {
       closed = true;
+      if (connectionId) {
+        removeConnection(connectionId);
+        const globalConnectionCount = getConnectionCount();
+        sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+      }
       cleanup?.();
       void suspensionHandle?.dispose();
     },

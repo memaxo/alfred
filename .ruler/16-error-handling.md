@@ -15,27 +15,34 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 
 3. **Error context.** Always include context about what failed (e.g., `toTRPCError(error, "failed_to_create_run")`).
 
+4. **Error message format.** Use domain-specific prefixes for all error messages:
+   - Format: `<domain>_<operation>_<reason>`
+   - Examples: `voice_stt_failed`, `workflow_start_failed`, `assistant_error`, `rag_ingest_failed`
+   - Domain: `voice`, `workflow`, `assistant`, `orchestrator`, `rag`, `knowledge`, `cognitive`, etc.
+   - Operation: `stt`, `tts`, `start`, `resume`, `cancel`, `query`, `ingest`, `extract`, etc.
+   - Reason: `failed`, `timeout`, `unauthorized`, `invalid_input`, `not_found`, etc.
+
 4. **Non-fatal errors.** Log errors even if they don't break the flow. Use structured logging with context (runId, eventType, error message).
 
-5. **Error messages.** Structure messages for clients:
+6. **Error messages.** Structure messages for clients:
    - User-facing: `"session_required"` (no internals)
    - Internal: Include IDs, context in `cause` field
    - Never expose stack traces, file paths, or internal state
 
-6. **Retry logic.** Only retry transient errors. Use exponential backoff (max 3 retries).
+7. **Retry logic.** Only retry transient errors. Use exponential backoff (max 3 retries).
 
-7. **TanStack Start errors.** Use route-level error boundaries with `errorComponent`. Call `reset()` to retry rendering.
+8. **TanStack Start errors.** Use route-level error boundaries with `errorComponent`. Call `reset()` to retry rendering.
 
-8. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
+9. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
 
-9. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
+10. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
    - Database unavailable: Return empty/null data instead of crashing
    - External services down: Skip optional features, log warnings
    - Use `isDbConnectionError()` type guard to classify DB errors
    - Wrap route handlers with try-catch for graceful degradation
    - Never throw unhandled errors during SSR (crashes entire page render)
 
-10. **Graceful degradation.** When external dependencies are unavailable:
+11. **Graceful degradation.** When external dependencies are unavailable:
     - Check availability before initializing services (`isDbAvailable()`, `isUvAvailable()`)
     - Skip non-critical services with warnings instead of errors
     - Return sensible defaults (null session, empty arrays, empty state)

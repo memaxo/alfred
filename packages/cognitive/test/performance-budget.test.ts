@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { performance } from "node:perf_hooks";
+import { benchmarkOperation } from "@alfred/test-kit";
 import {
   calculateError,
   idle,
@@ -11,23 +11,8 @@ import { applyTransition } from "../src/transition";
 
 // budget: state-transition
 
-const measureAverageMs = (
-  run: () => void,
-  iterations: number,
-  warmup: number
-): number => {
-  for (let i = 0; i < warmup; i++) {
-    run();
-  }
-  const start = performance.now();
-  for (let i = 0; i < iterations; i++) {
-    run();
-  }
-  return (performance.now() - start) / iterations;
-};
-
 describe("cognitive performance budgets", () => {
-  it("applyTransition stays under 100µs", () => {
+  it("applyTransition stays under 100µs", async () => {
     const now = Date.now();
     const state = idle(now);
     const autonomy = initialAutonomy(now);
@@ -38,31 +23,33 @@ describe("cognitive performance budgets", () => {
       ts: now,
     } as const;
 
-    const avgMs = measureAverageMs(
-      () => {
+    const stats = await benchmarkOperation(
+      "state-transition",
+      0.1, // 100µs budget
+      2000, // 2000 iterations
+      async () => {
         applyTransition(state, autonomy, event);
-      },
-      2000,
-      200
+      }
     );
 
-    expect(avgMs).toBeLessThan(0.1);
+    expect(stats.p99).toBeLessThan(0.1);
   });
 
-  it("updatePhysiology stays under 10µs", () => {
+  it("updatePhysiology stays under 10µs", async () => {
     let physiology = idle(Date.now()).physiology;
-    const avgMs = measureAverageMs(
-      () => {
+    const stats = await benchmarkOperation(
+      "physiology-update",
+      0.01, // 10µs budget
+      5000, // 5000 iterations
+      async () => {
         physiology = updatePhysiology(physiology, "step");
-      },
-      5000,
-      500
+      }
     );
 
-    expect(avgMs).toBeLessThan(0.01);
+    expect(stats.p99).toBeLessThan(0.01);
   });
 
-  it("updateAutonomy stays under 50µs", () => {
+  it("updateAutonomy stays under 50µs", async () => {
     let tick = Date.now();
     let gradient = initialAutonomy(tick);
     const evidence = {
@@ -72,31 +59,33 @@ describe("cognitive performance budgets", () => {
       reliability: 1,
     } as const;
 
-    const avgMs = measureAverageMs(
-      () => {
+    const stats = await benchmarkOperation(
+      "autonomy-update",
+      0.05, // 50µs budget
+      2000, // 2000 iterations
+      async () => {
         gradient = updateAutonomy(tick, gradient, evidence);
         tick += 1;
-      },
-      2000,
-      200
+      }
     );
 
-    expect(avgMs).toBeLessThan(0.05);
+    expect(stats.p99).toBeLessThan(0.05);
   });
 
-  it("calculateError stays under 100µs", () => {
+  it("calculateError stays under 100µs", async () => {
     const expected = "expected string value repeated to ensure work";
     const actual =
       "actual string value repeated to ensure work differs meaningfully";
 
-    const avgMs = measureAverageMs(
-      () => {
+    const stats = await benchmarkOperation(
+      "error-calculation",
+      0.1, // 100µs budget
+      2000, // 2000 iterations
+      async () => {
         calculateError(expected, actual);
-      },
-      2000,
-      200
+      }
     );
 
-    expect(avgMs).toBeLessThan(0.1);
+    expect(stats.p99).toBeLessThan(0.1);
   });
 });

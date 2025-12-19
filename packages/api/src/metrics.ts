@@ -352,6 +352,36 @@ export const voiceWebSocketPayloadTooLargeTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
+export const sseConnectionsCurrent = new client.Gauge({
+  name: "sse_connections_current",
+  help: "Current active SSE connections.",
+  labelNames: ["endpoint"] as const,
+  registers: [metricsRegistry],
+});
+
+export const sseFirstChunkLatencySeconds = new client.Histogram({
+  name: "sse_first_chunk_latency_seconds",
+  help: "Time to first chunk in SSE streams.",
+  labelNames: ["endpoint"] as const,
+  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metricsRegistry],
+});
+
+export const sseConnectionRateLimitHitsTotal = new client.Counter({
+  name: "sse_connection_rate_limit_hits_total",
+  help: "SSE connection rate limit hits.",
+  labelNames: ["endpoint", "reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const dbQueryDurationSeconds = new client.Histogram({
+  name: "db_query_duration_seconds",
+  help: "Database query duration.",
+  labelNames: ["repo", "operation"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
 export const codexLinearActivityBatchesTotal = new client.Counter({
   name: "codex_linear_activity_batches_total",
   help: "Count of Codex Linear batch processing outcomes grouped by status.",

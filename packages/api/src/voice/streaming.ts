@@ -42,8 +42,31 @@ const DEFAULT_PORT = 8788;
 const INACTIVITY_TIMEOUT_MS = 30_000;
 const CLEANUP_INTERVAL_MS = 10_000;
 const MAX_CONCURRENT_CONNECTIONS = 100;
-const MAX_CONNECTIONS_PER_MINUTE_PER_IP = 10;
-const MAX_CONNECTIONS_PER_MINUTE_PER_USER = 5;
+
+/**
+ * Rate limiting configuration for WebSocket upgrades.
+ *
+ * These limits prevent DoS attacks and resource exhaustion:
+ * - IP-based limit: Prevents a single IP from exhausting server resources
+ * - User-based limit: Prevents a single user account from abusing the service
+ *
+ * Values are conservative for voice streaming (low-frequency, high-resource operations):
+ * - 10 connections/minute per IP: Allows legitimate use while preventing abuse
+ * - 5 connections/minute per user: Prevents account-based attacks
+ *
+ * These limits are more restrictive than tRPC (1000 req/min) because:
+ * - WebSocket connections are long-lived and resource-intensive
+ * - Voice streaming requires significant CPU/memory per connection
+ * - Each connection spawns Python subprocesses for STT/TTS
+ *
+ * Configuration via environment variables:
+ * - VOICE_WS_RATE_LIMIT_PER_IP (default: 10)
+ * - VOICE_WS_RATE_LIMIT_PER_USER (default: 5)
+ */
+const MAX_CONNECTIONS_PER_MINUTE_PER_IP =
+  Number.parseInt(process.env.VOICE_WS_RATE_LIMIT_PER_IP ?? "", 10) || 10;
+const MAX_CONNECTIONS_PER_MINUTE_PER_USER =
+  Number.parseInt(process.env.VOICE_WS_RATE_LIMIT_PER_USER ?? "", 10) || 5;
 const PING_TIMEOUT_MS = 60_000;
 
 let server: ReturnType<typeof Bun.serve> | null = null;

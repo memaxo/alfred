@@ -101,6 +101,34 @@ async function collectCoverage(): Promise<Map<BudgetCategory, string[]>> {
   return coverage;
 }
 
+async function runPerformanceTests(): Promise<boolean> {
+  const files = await collectPerfTestFiles();
+
+  if (files.length === 0) {
+    console.warn("No performance test files found");
+    return true;
+  }
+
+  console.log(`Running ${files.length} performance test file(s)...`);
+
+  // Run all performance tests together
+  // Tests themselves assert budgets, so if they pass, budgets are met
+  const proc = Bun.spawn(["bun", "test", ...files], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    console.error("\nPerformance tests failed. Budget violations detected.");
+    console.error("Fix: Optimize the violating code paths or adjust budgets if justified.");
+    return false;
+  }
+
+  return true;
+}
+
 async function main(): Promise<void> {
   console.log("ALFRED Performance Budget Coverage Gate");
 
@@ -131,6 +159,16 @@ async function main(): Promise<void> {
     const files = coverage.get(category) ?? [];
     console.log(`- ${category}: ${files.length} file(s)`);
   }
+
+  // Run performance tests to verify budgets
+  console.log("\nRunning performance tests to verify budgets...");
+  const testsPassed = await runPerformanceTests();
+
+  if (!testsPassed) {
+    process.exit(1);
+  }
+
+  console.log("All performance budgets met!");
 }
 
 if (import.meta.main) {

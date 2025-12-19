@@ -27,6 +27,7 @@ import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
+import { toTRPCError } from "../utils/error";
 import { runAssistantForVoice } from "../voice/assistant";
 import { getVoicePools } from "../voice/pools";
 import {
@@ -128,19 +129,6 @@ const toTtsResource = (raw: unknown) => {
   };
 };
 
-function toTRPCError(
-  error: unknown,
-  code: TRPCError["code"] = "INTERNAL_SERVER_ERROR"
-) {
-  if (error instanceof TRPCError) {
-    return error;
-  }
-  return new TRPCError({
-    code,
-    message: error instanceof Error ? error.message : String(error),
-    cause: error,
-  });
-}
 
 export const voiceRouter = router({
   sttTranscribe: authedProcedure
@@ -161,7 +149,7 @@ export const voiceRouter = router({
         const { sttPool } = getVoicePools();
         return await transcribeLocal(sttPool, { ...input, language });
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "voice_stt_failed");
       }
     }),
 
@@ -183,7 +171,7 @@ export const voiceRouter = router({
         const { ttsPool } = getVoicePools();
         return await synthesizeLocal(ttsPool, { ...input, voice });
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "voice_tts_failed");
       }
     }),
 
@@ -319,7 +307,7 @@ export const voiceRouter = router({
         const message =
           error instanceof Error ? error.message : String(error ?? "error");
         await markVoiceSessionError(claimedSession.id, message);
-        throw toTRPCError(error);
+        throw toTRPCError(error, "voice_s2s_failed");
       }
     }),
 
@@ -331,7 +319,7 @@ export const voiceRouter = router({
       try {
         return await downloadModel(input.voiceId);
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "voice_download_failed");
       }
     }),
 
@@ -349,7 +337,7 @@ export const voiceRouter = router({
           model: "piper",
         });
       } catch (error) {
-        throw toTRPCError(error);
+        throw toTRPCError(error, "voice_preview_failed");
       }
     }),
 

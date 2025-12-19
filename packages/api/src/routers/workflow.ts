@@ -104,11 +104,21 @@ configureLinearMetrics({
   }
 })();
 
-function coerceRecord(val: unknown): Record<string, unknown> {
-  if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-    return val as Record<string, unknown>;
+const workflowInputDataSchema = z.record(z.string(), z.unknown());
+
+export function parseWorkflowInputData(
+  val: unknown
+): Record<string, unknown> {
+  if (val === null || val === undefined) {
+    return {};
   }
-  return {};
+  const result = workflowInputDataSchema.safeParse(val);
+  if (!result.success) {
+    // Log warning but return empty object for backward compatibility
+    // Invalid data will be handled gracefully downstream
+    return {};
+  }
+  return result.data;
 }
 
 export const workflowRouter = router({
@@ -285,7 +295,7 @@ export const workflowRouter = router({
             },
             context: { ...ctx, policy: { obligations: options.obligations } },
             emitError: (error) => {
-              emit.error(toTRPCError(error));
+              emit.error(toTRPCError(error, "workflow_execution_error"));
             },
             emitNext: (event) => emit.next(event),
             emitComplete: () => emit.complete(),
@@ -324,7 +334,7 @@ export const workflowRouter = router({
           startWorkflow: ({ runId, obligations }) =>
             startWorkflow({ runId, obligations }),
           onError: (error, _info) => {
-            emit.error(toTRPCError(error));
+            emit.error(toTRPCError(error, "workflow_suspension_error"));
           },
         });
 
@@ -342,7 +352,7 @@ export const workflowRouter = router({
 
             await startWorkflow({ obligations });
           } catch (error) {
-            emit.error(toTRPCError(error));
+            emit.error(toTRPCError(error, "workflow_start_failed"));
           }
         };
 
@@ -380,14 +390,14 @@ export const workflowRouter = router({
         if (!delivered) {
           throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
         }
-      } catch (error) {
+        } catch (error) {
         if (error instanceof StreamNotAttachedError) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
             message: "stream_not_attached",
           });
         }
-        throw toTRPCError(error);
+        throw toTRPCError(error, "workflow_resume_failed");
       }
       await recordAudit({
         userId: null,
@@ -478,7 +488,7 @@ export const workflowRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "access_denied" });
       }
 
-      const inputData = coerceRecord(run.inputData ?? {});
+      const inputData = parseWorkflowInputData(run.inputData);
       const resource =
         typeof inputData.cw === "string" && inputData.cw.length > 0
           ? inputData.cw
