@@ -371,7 +371,8 @@ export async function* runWaves(
       if (
         spec.environment === "worktree" ||
         spec.environment === "container" ||
-        spec.environment === "host"
+        spec.environment === "host" ||
+        spec.environment === "poof"
       ) {
         try {
           workspaceEnv = await WorkspaceFactory.create(
@@ -382,6 +383,7 @@ export async function* runWaves(
             {
               authz: input.linear?.authz,
               enableSessions: ENABLE_WORKSPACE_SESSIONS,
+              poofProfile: spec.poofProfile,
             }
           );
 
@@ -897,6 +899,37 @@ export async function* runWaves(
 
     for (const outcome of successfulAgents) {
       const spec = agentSpecs.find((s) => s.agentId === outcome.agentId);
+      
+      // Handle poof workspace changes
+      if (spec?.environment === "poof") {
+        const poofWs = activeWorkspaces.find(
+          (ws) => ws.kind === "poof" && ws.id === spec.agentId
+        );
+        if (poofWs && "applyChanges" in poofWs) {
+          try {
+            const hasChanges = await (poofWs as any).hasChanges();
+            if (hasChanges) {
+              const changes = await (poofWs as any).getChanges();
+              logger.info("poof_applying_changes", {
+                runId,
+                agentId: spec.agentId,
+                changeCount: changes.length,
+              });
+              await (poofWs as any).applyChanges();
+              yield {
+                type: "notice",
+                message: `poof_changes_applied:${spec.agentId}`,
+              } as any;
+            }
+          } catch (err) {
+            logger.error("poof_apply_changes_failed", {
+              agentId: spec.agentId,
+              error: String(err),
+            });
+          }
+        }
+      }
+      
       if (spec?.environment === "worktree") {
         const targetBranch = process.env.ORCH_TARGET_BRANCH ?? "dev";
         const sourceBranch = `agent/${runId}/${spec.agentId}`;
