@@ -9,8 +9,14 @@ import {
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import {
+  appendOutput,
+  appendReasoningTrace,
+  assertAllowedDirectory,
+  createOutputAccumulator,
   createTimeout,
+  DEFAULT_ALLOW_PREFIXES,
   DEFAULT_TIMEOUT_SEC,
+  getAccumulatedOutput,
   isWithinBase,
   MAX_TIMEOUT_SEC,
   MIN_TIMEOUT_SEC,
@@ -20,7 +26,7 @@ import {
   startToolTimer,
   streamStderr,
   type ToolWriter,
-} from "./shared";
+} from "./shared/index.js";
 
 // Regex for splitting lines - declared at module level for performance
 const LINE_SPLIT_REGEX = /\r?\n/;
@@ -149,7 +155,7 @@ function streamStdout(
   proc: ReturnType<typeof Bun.spawn>,
   input: DroidToolInput,
   writer: ToolWriter,
-  accumulator: { stdout: string; capturedBytes: number; truncated: boolean }
+  accumulator: any
 ) {
   if (!proc.stdout || typeof proc.stdout === "number") {
     return;
@@ -167,15 +173,7 @@ function streamStdout(
         }
 
         const text = decoder.decode(value);
-        accumulator.capturedBytes += Buffer.byteLength(text);
-
-        if (!accumulator.truncated) {
-          if (accumulator.capturedBytes <= OUTPUT_CAP_BYTES) {
-            accumulator.stdout += text;
-          } else {
-            accumulator.truncated = true;
-          }
-        }
+        appendOutput(accumulator, text);
 
         if (input.out === "debug") {
           const lines = text.split(LINE_SPLIT_REGEX).filter(Boolean);
@@ -201,6 +199,26 @@ function streamStdout(
       // Ignore stream read errors
     }
   })();
+}
+
+function extractDroidReasoning(chunk: any): string | null {
+  if (!chunk || typeof chunk !== "object") {
+    return null;
+  }
+
+  if (chunk.type === "message" && chunk.role === "assistant" && chunk.text) {
+    const text = chunk.text;
+    const markers = ["I'll analyze", "Let me", "Analyzing"];
+    if (markers.some((m) => text.includes(m))) {
+      return text;
+    }
+  }
+
+  if (chunk.type === "completion" && chunk.finalText) {
+    return chunk.finalText;
+  }
+
+  return null;
 }
 
 export const toolDroid = {
@@ -237,11 +255,7 @@ export const toolDroid = {
       "droid_exec_timeout"
     );
 
-    const accumulator = {
-      stdout: "",
-      capturedBytes: 0,
-      truncated: false,
-    };
+    const accumulator = createOutputAccumulator();
 
     streamStdout(proc, input, writer, accumulator);
     streamStderr(proc, writer);
@@ -277,7 +291,7 @@ export const toolDroid = {
     }
 
     return {
-      result: accumulator.stdout.trim(),
+      result: getAccumulatedOutput(accumulator),
       artifacts: [],
     };
   },
@@ -292,4 +306,6 @@ export const __internals = {
   resolveExecutable: (cmd: string) => resolveExecutable(cmd, "droid"),
   assertAllowedDirectory: (candidate: string) =>
     acquireWorkingDirectoryHandle(candidate).path,
+  appendReasoningTrace,
+  extractDroidReasoning,
 };

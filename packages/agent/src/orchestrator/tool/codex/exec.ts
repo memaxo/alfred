@@ -19,16 +19,27 @@ import type {
 } from "@openai/codex-sdk";
 import {
   persistCodexExecution,
-  persistReasoning,
 } from "../../../../assistant/src/graphstore.js";
 import {
-  recordCodexError,
-  recordCodexExecRun,
   recordCodexWriterError,
-  startCodexExecTimer,
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
 import type { CodexSessionState } from "../../codex-session.js";
+import {
+  appendOutput,
+  appendReasoningTrace,
+  createOutputAccumulator,
+  createStageRecorder,
+  extractReasoningText,
+  getAccumulatedOutput,
+  OUTPUT_CAP_BYTES,
+  persistReasoning,
+  recordToolExecution,
+  startToolTimer,
+  type OutputAccumulator as FinalAccumulator,
+  type ReasoningAccumulator,
+  type ToolWriter,
+} from "../shared/index.js";
 import {
   assessSessionResumeEligibility,
   sessionManager,
@@ -40,9 +51,7 @@ import {
   type CodexExecuteArgs,
   type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
-  OUTPUT_CAP_BYTES,
   type SandboxConfig,
-  type ToolWriter,
   validateOutputSchema,
 } from "./definition.js";
 import {
@@ -177,16 +186,6 @@ function createSafeWriter(
   };
 }
 
-function createStageRecorder() {
-  const recorded = new Set<CodexErrorStage>();
-  return (stage: CodexErrorStage) => {
-    if (!recorded.has(stage)) {
-      recorded.add(stage);
-      recordCodexError(stage);
-    }
-  };
-}
-
 function linkExternalAbortSignal(
   controller: AbortController,
   external?: AbortSignal,
@@ -212,63 +211,6 @@ function linkExternalAbortSignal(
   };
 }
 
-type FinalAccumulator = {
-  chunks: string[];
-  storedBytes: number;
-  truncated: boolean;
-};
-
-type ReasoningAccumulator = {
-  traces: Array<{ text: string; timestamp: number }>;
-  storedBytes: number;
-  truncated: boolean;
-};
-
-function appendReasoningTrace(
-  acc: ReasoningAccumulator,
-  text: string,
-  timestamp: number = Date.now()
-) {
-  const reasoningText = text?.trim();
-  if (!reasoningText) {
-    return;
-  }
-
-  const byteLength = Buffer.byteLength(reasoningText);
-  if (acc.truncated) {
-    acc.storedBytes += byteLength;
-    return;
-  }
-
-  const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
-  if (remaining <= 0) {
-    acc.truncated = true;
-    return;
-  }
-
-  const storedText =
-    byteLength <= remaining
-      ? reasoningText
-      : truncateToBytes(reasoningText, remaining);
-  const storedBytes =
-    byteLength <= remaining ? byteLength : Buffer.byteLength(storedText);
-
-  if (storedText) {
-    acc.traces.push({
-      text: storedText,
-      timestamp,
-    });
-  }
-
-  if (storedBytes > 0) {
-    acc.storedBytes += storedBytes;
-  }
-
-  if (byteLength > remaining) {
-    acc.truncated = true;
-  }
-}
-
 function formatArtifactReasoning(
   artifactSummaries: CodexArtifactSummary[]
 ): string {
@@ -280,66 +222,6 @@ function formatArtifactReasoning(
     })
     .join("\n");
   return `artifacts_collected (${artifactSummaries.length}):\n${details}`;
-}
-
-function appendFinal(acc: FinalAccumulator, chunk: string) {
-  if (!chunk) {
-    return;
-  }
-  const byteLength = Buffer.byteLength(chunk);
-  if (acc.truncated) {
-    acc.storedBytes += byteLength;
-    return;
-  }
-  const remaining = OUTPUT_CAP_BYTES - acc.storedBytes;
-  if (remaining <= 0) {
-    acc.truncated = true;
-    return;
-  }
-  if (byteLength <= remaining) {
-    acc.chunks.push(chunk);
-    acc.storedBytes += byteLength;
-    return;
-  }
-  const truncated = truncateToBytes(chunk, remaining);
-  if (truncated) {
-    acc.chunks.push(truncated);
-    acc.storedBytes += Buffer.byteLength(truncated);
-  }
-  acc.truncated = true;
-}
-
-// Removed unused helper functions: _normaliseEvent, _extractAgentMessage, _extractAggregatedOutput
-
-function extractReasoning(item: unknown): string | null {
-  if (!item || typeof item !== "object") {
-    return null;
-  }
-  const candidate = item as { text?: unknown; content?: unknown };
-
-  if (typeof candidate.text === "string") {
-    return candidate.text.trim();
-  }
-
-  if (Array.isArray(candidate.content)) {
-    const parts = candidate.content
-      .flatMap((entry) => {
-        if (typeof entry === "string") {
-          return entry;
-        }
-        if (!entry || typeof entry !== "object") {
-          return [];
-        }
-        const text = (entry as { text?: unknown }).text;
-        return typeof text === "string" ? text : [];
-      })
-      .filter((part): part is string => typeof part === "string");
-    if (parts.length > 0) {
-      return parts.join("\n").trim();
-    }
-  }
-
-  return null;
 }
 
 function emitAlfredEvents(
@@ -534,8 +416,8 @@ async function runCodexWithSdk({
   const sandbox = mapAutoToCodex(input.auto);
   const env = pickEnvCodex(input.env);
 
-  const stopTimer = startCodexExecTimer(input.auto);
-  const recordStage = createStageRecorder();
+  const stopTimer = startToolTimer("codex", input.auto);
+  const recordStage = createStageRecorder("codex");
 
   const timeoutSec = input.timeoutSec ?? DEFAULT_TIMEOUT_SEC;
   const timeoutController = new AbortController();
@@ -562,16 +444,8 @@ async function runCodexWithSdk({
     );
   }, timeoutSec * 1000);
 
-  const finalAccumulator: FinalAccumulator = {
-    chunks: [],
-    storedBytes: 0,
-    truncated: false,
-  };
-  const reasoningAccumulator: ReasoningAccumulator = {
-    traces: [],
-    storedBytes: 0,
-    truncated: false,
-  };
+  const finalAccumulator = createOutputAccumulator();
+  const reasoningAccumulator = createReasoningAccumulator();
 
   let runtimeFailure: Error | null = null;
   let threadIdFromEvents: string | undefined;
@@ -772,7 +646,7 @@ async function runCodexWithSdk({
           const alfredEvents: AlfredCodexEvent[] = [];
 
           if (item.type === "reasoning") {
-            const reasoningText = extractReasoning(item);
+            const reasoningText = extractReasoningText(item);
             if (reasoningText) {
               const timestamp = Date.now();
               appendReasoningTrace(
@@ -825,7 +699,7 @@ async function runCodexWithSdk({
           } else if (item.type === "agent_message") {
             const text = item.text;
             if (text) {
-              appendFinal(finalAccumulator, text);
+              appendOutput(finalAccumulator, text);
               void safeWriter({ type: "stdout", text }, "codex_agent_message");
               alfredEvents.push({
                 type: "output",
@@ -888,7 +762,7 @@ async function runCodexWithSdk({
 
   const hasFailure = Boolean(runtimeFailure) || didTimeout;
   const exitCode = hasFailure ? 1 : 0;
-  recordCodexExecRun(input.auto, exitCode);
+  recordToolExecution("codex", input.auto, exitCode);
 
   if (didTimeout) {
     throw new Error("codex_exec_timeout");
@@ -923,7 +797,7 @@ async function runCodexWithSdk({
     }).catch((_err) => {});
   }
 
-  const resultText = finalAccumulator.chunks.join("\n").trim();
+  const resultText = getAccumulatedOutput(finalAccumulator);
 
   persistCodexExecution(resource, {
     sessionId,

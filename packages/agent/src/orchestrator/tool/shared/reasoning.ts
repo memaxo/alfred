@@ -44,12 +44,13 @@ export function appendReasoningTrace(
   ts?: number,
   capBytes = DEFAULT_REASONING_CAP_BYTES
 ): void {
-  if (!text) {
+  const reasoningText = text?.trim();
+  if (!reasoningText) {
     return;
   }
 
   const timestamp = ts ?? Date.now();
-  const buffer = Buffer.from(text);
+  const buffer = Buffer.from(reasoningText);
   const byteLength = buffer.byteLength;
 
   if (acc.truncated) {
@@ -64,7 +65,7 @@ export function appendReasoningTrace(
   }
 
   if (byteLength <= remaining) {
-    acc.traces.push({ text, timestamp });
+    acc.traces.push({ text: reasoningText, timestamp });
     acc.storedBytes += byteLength;
   } else {
     const { text: truncatedText, usedBytes } = trimBufferToUtf8Boundary(
