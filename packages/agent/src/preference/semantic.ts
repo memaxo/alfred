@@ -155,7 +155,7 @@ function getPreferenceCentroids(): Promise<PreferenceCentroids> {
               cursor += 1;
               return embedding;
             })
-            .filter((e): e is Float32Array => e !== undefined);
+            .filter((e): e is number[] => e !== undefined && Array.isArray(e));
           const centroid = averageVectors(vectors);
           if (centroid) {
             target.set(label, centroid);

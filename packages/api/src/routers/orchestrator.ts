@@ -57,7 +57,7 @@ export const orchestratorRouter = router({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "orchestrator",
-          model: defaults.model,
+          model: defaults.model as any,
           system: defaults.instructions,
         });
         const stopWhen =
@@ -67,6 +67,7 @@ export const orchestratorRouter = router({
 
         const result = await generateText({
           ...defaults,
+          model: defaults.model as any,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,

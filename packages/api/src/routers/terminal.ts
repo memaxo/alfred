@@ -85,16 +85,17 @@ export const terminalRouter = router({
                   }
                 },
               },
-            });
+            } as any);
 
-            if (!proc.terminal) {
+            const procWithTerminal = proc as Bun.Subprocess & {
+              terminal: Bun.Terminal;
+            };
+            if (!procWithTerminal.terminal) {
               throw new Error("Terminal not available on spawned process");
             }
             sessions.set(sessionId, {
               kind: "bun",
-              proc: proc as Bun.Subprocess & {
-                terminal: Bun.Terminal;
-              },
+              proc: procWithTerminal,
               subscribers,
             });
             proc.exited.finally(() => {

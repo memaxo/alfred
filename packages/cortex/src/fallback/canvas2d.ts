@@ -37,6 +37,7 @@ type Particle = {
 export class Canvas2DRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly config: Canvas2DConfig;
+  private readonly ctx: CanvasRenderingContext2D;
 
   private particles: Particle[] = [];
   private nodes: NodeData[] = [];

@@ -149,7 +149,7 @@ Use the above context to answer the user's question if relevant.
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "assistant",
-          model: defaults.model,
+          model: defaults.model as any,
           system: systemInstruction, // Injected Persona + RAG
         });
         const stopWhen =
@@ -158,6 +158,7 @@ Use the above context to answer the user's question if relevant.
             : defaults.stopWhen;
         const result = await generateText({
           ...defaults,
+          model: defaults.model as any,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,

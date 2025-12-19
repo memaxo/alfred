@@ -42,7 +42,7 @@ export const toolRunner = {
     }
 
     // Use shell delegation to properly handle quoted arguments and complex commands
-    const env = { ...process.env, ...(projectConfig?.env ?? {}) };
+    const env = { ...process.env };
 
     const proc =
       dirHandle === null

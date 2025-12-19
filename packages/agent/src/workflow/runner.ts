@@ -586,12 +586,14 @@ export function runPlanV6(
     runId,
     summary,
     stream: generator(),
-    resume(payload: ResumePayload) {
-      if (resumeResolver) {
-        resumeResolver(payload);
-      } else {
-        resumeQueue.push(payload);
-      }
+    resume(payload: ResumePayload): Promise<void> {
+      return Promise.resolve().then(() => {
+        if (resumeResolver) {
+          resumeResolver(payload);
+        } else {
+          resumeQueue.push(payload);
+        }
+      });
     },
     cancel() {
       cancelled = true;

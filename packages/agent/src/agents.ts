@@ -67,7 +67,7 @@ let cachedOrchestratorAgent: ToolLoopAgent<OrchestratorTools> | null = null;
 
 function createAssistantConfig(): ToolLoopAgentSettings<never, AssistantTools> {
   return {
-    model: getOpenAI().chat(getModelId()),
+    model: getOpenAI().chat(getModelId()) as any,
     tools: assistantTools,
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
@@ -80,7 +80,7 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
   OrchestratorTools
 > {
   return {
-    model: getOpenAI().chat(getModelId()),
+    model: getOpenAI().chat(getModelId()) as any,
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,

@@ -18,7 +18,12 @@ import {
 } from "../assistant/src/tool/preference";
 import { toolRemind } from "../assistant/src/tool/remind";
 import { toolTimer } from "../assistant/src/tool/timer";
+import {
+  toolVoiceControl,
+  toolVoiceStatus,
+} from "../assistant/src/tool/voice";
 import { toolWebAssistant } from "../assistant/src/tool/web";
+import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolCodex } from "./orchestrator/tool/codex";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
@@ -142,6 +147,8 @@ const assistantToolSources: LegacyTool[] = [
   toolPreferenceSet,
   toolRemind,
   toolTimer,
+  toolVoiceStatus,
+  toolVoiceControl,
   toolWebAssistant,
   toolMindscapeRead,
   toolMindscapeConnect,
@@ -150,6 +157,7 @@ const assistantToolSources: LegacyTool[] = [
 
 const orchestratorToolSources: LegacyTool[] = [
   toolCodex,
+  toolCognitiveState,
   toolDocker,
   toolDroid,
   toolGit,

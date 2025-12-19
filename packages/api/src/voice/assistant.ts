@@ -145,13 +145,14 @@ export async function runAssistantForVoice(
     rawMessages: historyContext.uiMessages, // Use pruned messages
     tools: defaults.tools,
     source: "assistant",
-    model: defaults.model,
+    model: defaults.model as any,
     system: systemInstructions,
   });
 
   const assistantStart = performance.now();
   const result = await generateText({
     ...defaults,
+    model: defaults.model as any,
     system: systemInstructions,
     messages: modelMessages,
   });

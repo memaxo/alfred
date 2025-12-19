@@ -141,6 +141,8 @@ export class WebGLRenderer {
   private readonly particleData: Float32Array;
   private orbConfig: OrbConfig | null = null;
   private readonly uniforms: GlobalUniforms;
+  private nodes: NodeData[] = [];
+  private edges: EdgeData[] = [];
 
   private running = false;
   private lastTime = 0;

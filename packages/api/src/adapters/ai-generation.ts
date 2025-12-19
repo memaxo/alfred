@@ -16,7 +16,7 @@ export class DefaultAIAdapter implements AIAdapter {
   }): Promise<GenerateTextResult<Record<string, any>, never>> {
     const defaults = getAssistantAgentDefaults();
     return generateText({
-      model: defaults.model,
+      model: defaults.model as any,
       messages: params.messages,
       system: params.system,
       tools: params.tools,
@@ -30,13 +30,19 @@ export class DefaultAIAdapter implements AIAdapter {
     prompt?: string;
   }): Promise<GenerateObjectResult<T>> {
     const defaults = getAssistantAgentDefaults();
-    // @ts-expect-error - AI SDK types are strict about prompt vs messages
-    return generateObject({
-      model: defaults.model,
-      messages: params.messages,
-      system: params.system,
+    // prompt and messages are mutually exclusive in AI SDK v6
+    const callParams: any = {
+      model: defaults.model as any,
       schema: params.schema,
-      prompt: params.prompt,
-    });
+    };
+    if (params.prompt) {
+      callParams.prompt = params.prompt;
+    } else {
+      callParams.messages = params.messages;
+      if (params.system) {
+        callParams.system = params.system;
+      }
+    }
+    return generateObject(callParams);
   }
 }
