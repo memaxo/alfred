@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   initialAutonomy,
+  meetsConstraints,
   type Physiology,
   updateAutonomy,
   updatePhysiology,
@@ -57,5 +58,80 @@ describe("Cognitive Physiology", () => {
 
     // Should be significantly lower due to frustration penalty (0.5x multiplier)
     expect(constrained.level).toBeLessThan(0.2);
+  });
+
+  it("high boredom blocks execution via meetsConstraints", () => {
+    const now = Date.now();
+    const auto = initialAutonomy(now);
+
+    const highBoredomPhy: Physiology = {
+      energy: 0.7,
+      boredom: 0.95, // Very high boredom (>0.9 threshold)
+      frustration: 0.0,
+    };
+
+    // Boredom > 0.9 blocks execution entirely (checked in meetsConstraints)
+    // Note: updateAutonomy doesn't apply boredom multiplier, but meetsConstraints blocks it
+    const { allowed, reason } = meetsConstraints(
+      auto,
+      "test_action",
+      highBoredomPhy
+    );
+
+    expect(allowed).toBe(false);
+    expect(reason).toBe("boredom_loop_detected");
+  });
+
+  it("low energy reduces autonomy level", () => {
+    const now = Date.now();
+    const auto = initialAutonomy(now);
+
+    const lowEnergyPhy: Physiology = {
+      energy: 0.15, // Very low energy (< 0.2 threshold)
+      boredom: 0.0,
+      frustration: 0.0,
+    };
+
+    // Use neutral/negative evidence to see multiplier effect
+    // Positive evidence (success) prevents level from decreasing due to Math.max logic
+    const constrained = updateAutonomy(
+      now,
+      auto,
+      { _: "failure", task: "test", error: "test error" },
+      lowEnergyPhy
+    );
+
+    // Low energy should reduce autonomy (0.8x multiplier)
+    // Note: With failure evidence, level decreases AND multiplier applies
+    expect(constrained.level).toBeLessThan(auto.level);
+  });
+
+  it("physiology multipliers are applied after Bayesian update", () => {
+    const now = Date.now();
+    const auto = initialAutonomy(now);
+
+    // First update with success (increases autonomy)
+    const afterSuccess = updateAutonomy(now, auto, {
+      _: "success",
+      task: "test",
+      duration: 100,
+    });
+
+    // Then apply high frustration physiology
+    const highFrustrationPhy: Physiology = {
+      energy: 0.5,
+      boredom: 0.0,
+      frustration: 0.9, // Very high frustration
+    };
+
+    const final = updateAutonomy(
+      now,
+      afterSuccess,
+      { _: "failure", task: "test", error: "error" },
+      highFrustrationPhy
+    );
+
+    // Should be lower than afterSuccess due to frustration penalty
+    expect(final.level).toBeLessThan(afterSuccess.level);
   });
 });

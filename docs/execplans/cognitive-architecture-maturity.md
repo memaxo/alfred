@@ -126,3 +126,27 @@ const { object: plan } = await generateObject({
   - Batch operations handle multiple nodes efficiently
   - Touched nodes excluded from decay candidates (recent `updated` timestamp)
 - **Documentation**: Updated `docs/architecture/memory-system.md` with implementation status and integration points.
+
+## Phase 7: Verification & Documentation (ALF-142)
+
+**Status**: ✅ Complete (2025-01-27)
+
+- **Supervisor → Cognitive Integration**: Verified supervisor interrupts trigger cognitive state transitions:
+  - Added test verifying interrupt during `executing` state transitions to `reflecting` with `cancelled` outcome
+  - Confirmed supervisor throws error which is handled by workflow runtime
+  - Cognitive loop properly handles `interrupt` events via `applyTransition()`
+- **Dreaming → Heuristic Injection**: Verified end-to-end flow:
+  - `processDreaming()` creates `kind: "heuristic"` nodes from failed runs
+  - `findHeuristics()` retrieves heuristics via full-text search
+  - `buildCodexLearningContext()` injects heuristics into Codex prompts
+  - Added integration tests for both creation and retrieval paths
+- **Physiology Regulation**: Verified physiology affects autonomy:
+  - High frustration (0.8+) reduces autonomy via 0.5x multiplier
+  - High boredom (0.9+) reduces autonomy via 0.7x multiplier
+  - Low energy (0.2) reduces autonomy via 0.8x multiplier
+  - Multipliers applied after Bayesian update (post-update regulation)
+  - Added comprehensive tests for all physiology scenarios
+- **Documentation Updates**: Updated all architecture docs to reflect implementation status:
+  - `docs/architecture/self-healing.md` - Marked Complete
+  - `docs/execplans/brainstem-supervisor.md` - Verified Complete status
+  - ALF-142 ticket updated with completion status

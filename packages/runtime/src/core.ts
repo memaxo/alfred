@@ -11,6 +11,9 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
+import { runCognitiveLoop } from "./loops/cognitive";
+import { timestamp } from "@alfred/cognitive/state";
+import type { Event } from "@alfred/cognitive/state";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
@@ -457,6 +460,26 @@ export class WorkflowRuntime implements IWorkflowRuntime {
           runId: this.runId,
           reason: result.reason,
         });
+
+        // Bridge to cognitive loop (fire-and-forget)
+        void (async () => {
+          try {
+            const interruptEvent: Event = {
+              _: "interrupt",
+              reason: result.reason,
+              priority: 2,
+              ts: timestamp(Date.now()),
+            };
+            await runCognitiveLoop(this.runtimeContext, this.runId, interruptEvent);
+          } catch (error) {
+            logger.error("supervisor_physiology_cognitive_bridge_failed", {
+              runId: this.runId,
+              reason: result.reason,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
+
         this.failFromSupervisor(result.reason);
       }
     }, this.supervisorCheckIntervalMs);
@@ -500,6 +523,27 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         runId: this.runId,
         reason: result.reason,
       });
+
+      // Bridge to cognitive loop (fire-and-forget)
+      void (async () => {
+        try {
+          const interruptEvent: Event = {
+            _: "interrupt",
+            reason: result.reason,
+            priority: 2, // Medium priority for supervisor interrupts
+            ts: timestamp(Date.now()),
+          };
+          await runCognitiveLoop(this.runtimeContext, this.runId, interruptEvent);
+        } catch (error) {
+          // Log but don't block workflow interruption
+          logger.error("supervisor_cognitive_bridge_failed", {
+            runId: this.runId,
+            reason: result.reason,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
+
       this.failFromSupervisor(result.reason);
       throw new Error(`workflow_interrupted:${result.reason}`);
     }

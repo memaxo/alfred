@@ -358,6 +358,35 @@ describe("Workflow → Cognitive Integration", () => {
         result2.state.physiology.boredom
       );
     });
+
+    it("supervisor interrupt creates cognitive interrupt event", async () => {
+      const streamId = stream("supervisor-cognitive-bridge");
+
+      // Start cognitive processing
+      await runCognitiveLoop(ctx, streamId, inputEvent("Task that will loop"));
+
+      // Simulate supervisor detecting a loop by creating interrupt event
+      // (In real flow, supervisor would detect this and create the event)
+      const interruptEvt = interruptEvent("boredom_loop_detected");
+      const result = await runCognitiveLoop(ctx, streamId, interruptEvt);
+
+      // Verify interrupt event was persisted
+      const events = await cognitiveRepo.getAllEvents(streamId);
+      const interruptEvents = events.filter((e) => e.type === "interrupt");
+      expect(interruptEvents.length).toBeGreaterThan(0);
+
+      // Verify event payload contains reason
+      const interruptPayload = interruptEvents[0]?.payload;
+      expect(interruptPayload).toBeDefined();
+      if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+        const data = (interruptPayload as any).data;
+        expect(data.reason).toContain("boredom_loop_detected");
+        expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
+      }
+
+      // Verify physiology updated (boredom should increase)
+      expect(result.state.physiology.boredom).toBeGreaterThan(0);
+    });
   });
 
   describe("Reflection and learning", () => {

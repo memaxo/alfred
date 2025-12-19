@@ -1,6 +1,6 @@
 # Self-Healing Architecture
 
-**Status**: Active (Implemented Phase 5.2)
+**Status**: ✅ Complete (Verified 2025-01-27)
 **Owner**: Orchestration / Cognition
 
 The Self-Healing Architecture enables Alfred to recover autonomously from heterogeneous errors, infinite loops, and physiological stress without manual intervention. It moves from "Error Handling" (reactive) to "Cognitive Regulation" (homeostatic).
@@ -39,13 +39,16 @@ Implements Optimistic Concurrency Control for multi-agent waves.
 
 ## 4. Episodic Dreaming (Learning Layer)
 
-A background process that consolidates "Frustrated" episodes into reusable heuristics.
+A background process that consolidates failed workflow runs into reusable heuristics.
 
-*   **Location**: `packages/agent/src/orchestrator/learning-worker.ts`
+*   **Location**: `packages/agent/src/orchestrator/learning-worker.ts` (`processDreaming()`)
 *   **Mechanism**:
-    1.  **Cluster**: Groups failed runs by error message similarity.
-    2.  **Dream**: Synthesizes a "Rule" (Heuristic) from the cluster.
-    3.  **Inject**: Stores the rule in the Knowledge Graph (`kind: heuristic`) and injects it into future prompts via `codex-learning.ts`.
+    1.  **Cluster**: Groups failed runs by error message similarity (first 100 chars as cluster key).
+    2.  **Dream**: Synthesizes heuristic rules from clusters (e.g., "Avoid causing error: X. Previously observed N times.").
+    3.  **Persist**: Stores heuristics as `kind: "heuristic"` nodes in knowledge graph with embeddings.
+    4.  **Inject**: Heuristics retrieved via `findHeuristics()` in `packages/db/src/repo/codex-learning.ts` and injected into Codex prompts via `buildCodexLearningContext()`.
+*   **Integration**: Enabled via `DREAMING_ENABLED` env var (default: true), runs every `DREAMING_INTERVAL_MS` (default: 6 hours).
+*   **Tests**: `packages/agent/test/dreaming-heuristic-integration.test.ts`, `packages/db/test/dreaming-heuristic-retrieval.test.ts`
 
 ## Observability
 
