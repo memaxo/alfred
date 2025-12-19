@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { BrainstemSupervisor } from "@alfred/agent/orchestrator/loops/supervisor";
+import { BrainstemSupervisor } from "@alfred/cognitive/brainstem";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
@@ -69,6 +69,9 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   private readonly supervisorCheckIntervalMs: number;
   private supervisorInterruptReason: string | null = null;
   private supervisorActive = false;
+  private externalAbortHandler?: () => void;
+  private supervisorGateReject: ((error: Error) => void) | null = null;
+  private supervisorGateFired = false;
 
   constructor(options: RuntimeOptions) {
     // Validate options to catch configuration errors early
@@ -145,14 +148,31 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     // Setup cancellation listener
     if (this.signal) {
+      this.externalAbortHandler = () => {
+        this.handleExternalAbort(this.signal?.reason);
+      };
+
       if (this.signal.aborted) {
-        this.handleExternalAbort(this.signal.reason);
+        this.externalAbortHandler();
       } else {
-        this.signal.addEventListener("abort", () => {
-          this.handleExternalAbort(this.signal?.reason);
-        });
+        this.signal.addEventListener("abort", this.externalAbortHandler);
       }
     }
+  }
+
+  private createSupervisorGate(): Promise<never> {
+    this.supervisorGateFired = false;
+    return new Promise((_, reject) => {
+      this.supervisorGateReject = reject;
+    });
+  }
+
+  private tripSupervisorGate(reason: string): void {
+    if (this.supervisorGateFired) {
+      return;
+    }
+    this.supervisorGateFired = true;
+    this.supervisorGateReject?.(new Error(`workflow_interrupted:${reason}`));
   }
 
   /**
@@ -193,7 +213,41 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       interactive: this._input.interactive,
     });
 
+    const supervisorGate = this.createSupervisorGate();
+    let workflowTimeout: ReturnType<typeof setTimeout> | null = null;
+    const workflowTimeoutPromise = new Promise<never>((_, reject) => {
+      const elapsedMs = Date.now() - this.workflowStartTime;
+      const remainingMs = this.workflowTimeoutMs - elapsedMs;
+      if (remainingMs <= 0) {
+        const err = new Error("workflow_timeout");
+        this.abortRuntime(err);
+        reject(err);
+        return;
+      }
+      workflowTimeout = setTimeout(() => {
+        const err = new Error("workflow_timeout");
+        this.abortRuntime(err);
+        reject(err);
+      }, remainingMs);
+      workflowTimeout.unref?.();
+    });
+
+    // These promises can reject from timers/intervals; attach a handler early to
+    // avoid process-wide unhandled rejection warnings before the main loop races them.
+    void supervisorGate.catch(() => {});
+    void workflowTimeoutPromise.catch(() => {});
+
+    const checkWorkflowTimeout = () => {
+      if (Date.now() - this.workflowStartTime > this.workflowTimeoutMs) {
+        const err = new Error("workflow_timeout");
+        this.abortRuntime(err);
+        throw err;
+      }
+    };
+
     this.startSupervisorWatchers();
+
+    let pipelineIterator: AsyncIterator<WorkflowEvent, void, void> | null = null;
 
     try {
       // Emit run start event
@@ -219,10 +273,6 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         recordEvent(cancelledStartEvent);
         yield cancelledStartEvent;
         this.pulseSupervisor(cancelledStartEvent);
-        recordEvent({
-          type: "notice",
-          message: "workflow_cancelled_before_start",
-        } as WorkflowEvent);
         this.state.finalStatus = "cancelled";
 
         runtimeExecutionsTotal.inc({
@@ -239,13 +289,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         return;
       }
 
-      // Check for workflow timeout
-      const checkTimeout = () => {
-        if (Date.now() - this.workflowStartTime > this.workflowTimeoutMs) {
-          throw new Error("workflow_timeout");
-        }
-      };
-      checkTimeout();
+      checkWorkflowTimeout();
 
       // Initialize Pipeline
       const pipelineState: PipelineState = {
@@ -289,15 +333,21 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         return;
       }
 
-      const pipelineIterator = runner.run(this._input)[Symbol.asyncIterator]();
+      pipelineIterator = runner.run(this._input)[Symbol.asyncIterator]();
       while (true) {
-        const next = await pipelineIterator.next();
+        checkWorkflowTimeout();
+        const next = (await Promise.race([
+          pipelineIterator.next(),
+          supervisorGate,
+          workflowTimeoutPromise,
+        ])) as IteratorResult<WorkflowEvent, void>;
         if (next.done) {
           break;
         }
         recordEvent(next.value as WorkflowEvent);
         yield next.value;
         this.pulseSupervisor(next.value as WorkflowEvent);
+        checkWorkflowTimeout();
 
         if (this.state.cancelled) {
           await pipelineIterator.return?.();
@@ -344,6 +394,15 @@ export class WorkflowRuntime implements IWorkflowRuntime {
         durationMs: Date.now() - this.workflowStartTime,
       });
     } catch (error) {
+      // Ensure pipeline generators are closed when possible to avoid leaks.
+      try {
+        // If workflow ended via race/throw before iterator completion, attempt cleanup.
+        // (Calling return() on an already-finished iterator is safe.)
+        await pipelineIterator?.return?.();
+      } catch {
+        // Swallow iterator cleanup failures.
+      }
+
       const supervisorReason = this.supervisorInterruptReason;
       const isAlreadySupervisorError =
         (error instanceof Error &&
@@ -389,6 +448,16 @@ export class WorkflowRuntime implements IWorkflowRuntime {
       throw reportedError;
     } finally {
       this.stopSupervisorWatchers();
+      if (workflowTimeout) {
+        clearTimeout(workflowTimeout);
+        workflowTimeout = null;
+      }
+      this.supervisorGateReject = null;
+      this.supervisorGateFired = false;
+      if (this.signal && this.externalAbortHandler) {
+        this.signal.removeEventListener("abort", this.externalAbortHandler);
+      }
+      this.externalAbortHandler = undefined;
     }
   }
 
@@ -581,6 +650,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     if (!this.supervisorInterruptReason) {
       this.supervisorInterruptReason = reason;
     }
+    this.tripSupervisorGate(reason);
     this.abortRuntime(reason);
   }
 

@@ -77,7 +77,7 @@ describe("WorkflowRuntime", () => {
       expect(stepCompletes.length).toBe(4);
 
       // Verify phase order in step events
-      const phases = stepStarts.map((e: any) => e.phase);
+      const phases = stepStarts.map((e) => (e as { phase?: unknown }).phase);
       expect(phases).toEqual(["scan", "plan", "act", "report"]);
 
       // Should end with 100% progress
@@ -138,13 +138,47 @@ describe("WorkflowRuntime", () => {
       expect(
         events.some(
           (e) =>
-            e.type === "notice" && (e as any).message?.includes("cancelled")
+            e.type === "notice" &&
+            String((e as { message?: unknown }).message).includes("cancelled")
         )
       ).toBe(true);
 
       // Should not execute phases
       const stepStarts = events.filter((e) => e.type === "step-start");
       expect(stepStarts.length).toBe(0);
+    });
+
+    it("records cancellation notice once in eventLog when aborted before start", async () => {
+      const abortController = new AbortController();
+      abortController.abort();
+
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        signal: abortController.signal,
+      });
+
+      for await (const _event of runtime.stream) {
+        // Drain
+      }
+
+      const runtimeInternal = runtime as unknown as {
+        runtimeContext: { get: (key: string) => unknown };
+      };
+
+      const eventLog =
+        (runtimeInternal.runtimeContext.get("eventLog") as
+          | WorkflowEvent[]
+          | undefined) ?? [];
+
+      const notices = eventLog.filter((e) => {
+        if (e.type !== "notice") {
+          return false;
+        }
+        const message = (e as { message?: unknown }).message;
+        return message === "workflow_cancelled_before_start";
+      });
+      expect(notices.length).toBe(1);
     });
 
     it("handles cancellation via cancel() method during execution", async () => {
@@ -176,7 +210,9 @@ describe("WorkflowRuntime", () => {
 
       // Should emit cancellation notice
       const cancelledEvent = events.find(
-        (e) => e.type === "notice" && (e as any).message?.includes("cancelled")
+        (e) =>
+          e.type === "notice" &&
+          String((e as { message?: unknown }).message).includes("cancelled")
       );
       expect(cancelledEvent).toBeDefined();
     });
@@ -235,6 +271,63 @@ describe("WorkflowRuntime", () => {
       // Basic structure verification
       expect(events[0].type).toBe("run");
     });
+
+    it(
+      "fails with workflow_timeout when overall timeout elapses",
+      async () => {
+        const previous = AISDKAdapter.prototype.stream;
+        AISDKAdapter.prototype.stream = async function* (options: {
+          abortSignal?: AbortSignal;
+        }) {
+          const signal = options.abortSignal;
+          await new Promise<void>((_resolve, reject) => {
+            if (!signal) {
+              reject(new Error("missing abort signal"));
+              return;
+            }
+            const abortError =
+              signal.reason instanceof Error
+                ? signal.reason
+                : new Error(String(signal.reason ?? "aborted"));
+            if (signal.aborted) {
+              reject(abortError);
+              return;
+            }
+            signal.addEventListener("abort", () => reject(abortError), {
+              once: true,
+            });
+          });
+        };
+
+        const runtime = createRuntime({
+          input: baseInput,
+          model: mockModel,
+          workflowTimeoutMs: 1000,
+        });
+
+        const events: WorkflowEvent[] = [];
+        let thrown: unknown;
+        try {
+          for await (const event of runtime.stream) {
+            events.push(event);
+          }
+        } catch (error) {
+          thrown = error;
+        } finally {
+          AISDKAdapter.prototype.stream = previous;
+        }
+
+        expect(thrown).toBeDefined();
+        const msg = thrown instanceof Error ? thrown.message : String(thrown);
+        expect(msg).toContain("workflow_timeout");
+
+        const lastError = events.filter((e) => e.type === "error").at(-1);
+        expect(lastError).toBeDefined();
+        const lastErrorMessage = (lastError as { message?: unknown }).message;
+        expect(String(lastErrorMessage)).toContain("workflow_timeout");
+      },
+      5000
+    );
   });
 
   describe("Public API", () => {

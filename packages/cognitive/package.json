@@ -8,6 +8,14 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./brainstem": {
+      "types": "./dist/brainstem.d.ts",
+      "default": "./src/brainstem.ts"
+    },
+    "./entropy": {
+      "types": "./dist/entropy.d.ts",
+      "default": "./src/entropy.ts"
+    },
     "./state": {
       "types": "./dist/state.d.ts",
       "default": "./src/state.ts"
