@@ -443,11 +443,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install poof
-        run: |
-          curl -L https://github.com/jarred-sumner/poof/releases/latest/download/poof-linux-x86_64-musl -o /tmp/poof
-          chmod +x /tmp/poof
-          sudo mv /tmp/poof /usr/local/bin/poof
-          poof --version
+        run: bun run install:poof
 
       - name: Install fuse-overlayfs
         run: |

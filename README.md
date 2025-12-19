@@ -46,6 +46,7 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
 - PostgreSQL 16 with pgvector extension (`pgvector/pgvector:pg16` docker image recommended)
 - (Optional) Redis for biometric cache & token replay protection
 - (Optional) Laminar account/api key for tracing + eval exports
+- (Optional) [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation (Linux only) - install with `bun run install:poof`
 
 ## Quick Start
 

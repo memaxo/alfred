@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import type { Workspace } from "@alfred/agent/environment/types";
+import { isPoofWorkspace } from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
@@ -905,17 +906,17 @@ export async function* runWaves(
         const poofWs = activeWorkspaces.find(
           (ws) => ws.kind === "poof" && ws.id === spec.agentId
         );
-        if (poofWs && "applyChanges" in poofWs) {
+        if (poofWs && isPoofWorkspace(poofWs)) {
           try {
-            const hasChanges = await (poofWs as any).hasChanges();
+            const hasChanges = await poofWs.hasChanges();
             if (hasChanges) {
-              const changes = await (poofWs as any).getChanges();
+              const changes = await poofWs.getChanges();
               logger.info("poof_applying_changes", {
                 runId,
                 agentId: spec.agentId,
                 changeCount: changes.length,
               });
-              await (poofWs as any).applyChanges();
+              await poofWs.applyChanges();
               yield {
                 type: "notice",
                 message: `poof_changes_applied:${spec.agentId}`,

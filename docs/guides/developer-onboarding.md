@@ -15,6 +15,7 @@ This guide helps new developers get started with ALFRED quickly. It covers envir
 - Node.js 20+ (for tooling compatibility)
 - PostgreSQL 16 with pgvector extension
 - (Optional) Redis for biometric cache
+- (Optional) [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation (Linux only) - install with `bun run install:poof`
 
 ### Initial Setup
 

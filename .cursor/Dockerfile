@@ -19,7 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   pkg-config \
   docker.io \
   docker-compose \
+  fuse-overlayfs \
   && rm -rf /var/lib/apt/lists/*
+
+# Install poof for ephemeral filesystem isolation
+RUN curl -L https://github.com/jarred-sumner/poof/releases/latest/download/poof-linux-x86_64-musl -o /usr/local/bin/poof \
+  && chmod +x /usr/local/bin/poof
 
 # `fd` is packaged as `fd-find` on Debian.
 RUN if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then ln -s "$(command -v fdfind)" /usr/local/bin/fd; fi

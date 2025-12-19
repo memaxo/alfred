@@ -1,4 +1,5 @@
 import type { ProjectConfig } from "../utils/project-detector";
+import type { PoofChange } from "../spawn/diff";
 
 export type ExecResult = {
   stdout: string;
@@ -58,3 +59,14 @@ export type Workspace = {
   stopSession?(sessionId: string): Promise<void>;
   listSessions?(): Promise<string[]>;
 };
+
+/** Type guard for PoofWorkspace-specific methods */
+export function isPoofWorkspace(
+  workspace: Workspace
+): workspace is Workspace & {
+  hasChanges(): Promise<boolean>;
+  getChanges(): Promise<PoofChange[]>;
+  applyChanges(targetDir?: string): Promise<void>;
+} {
+  return workspace.kind === "poof" && "hasChanges" in workspace;
+}

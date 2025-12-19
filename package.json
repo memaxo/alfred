@@ -57,6 +57,7 @@
     "db:watch": "turbo -F @alfred/db db:watch",
     "db:stop": "turbo -F @alfred/db db:stop",
     "db:down": "turbo -F @alfred/db db:down",
+    "install:poof": "bash scripts/install-poof.sh",
     "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
     "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",
     "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts packages/api/test/workflow.capture.integration.test.ts packages/agent/test/multi/*.test.ts packages/agent/test/multi-agent.integration.test.ts",

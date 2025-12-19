@@ -25,6 +25,14 @@ Poof only works on Linux (uses kernel namespaces and overlayfs). On macOS/Window
 
 ### Installation
 
+**Recommended: Use the installation script**
+
+```bash
+bun run install:poof
+```
+
+**Manual installation:**
+
 ```bash
 # Debian / Ubuntu
 curl -LO https://github.com/jarred-sumner/poof/releases/latest/download/poof_amd64.deb
