@@ -6,7 +6,11 @@
  * embeddings to 2D positions for visualization.
  */
 
+import { cosineSimilarity } from "@alfred/embed";
 import type { Point4D, Vec2 } from "./types";
+
+// Re-export for backward compatibility
+export { cosineSimilarity };
 
 /**
  * Semantic embedding configuration
@@ -215,28 +219,6 @@ export function createSemanticPoint4D(
   };
 }
 
-/**
- * Compute similarity between two embeddings (cosine similarity)
- */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length === 0 || b.length === 0) {
-    return 0;
-  }
-
-  const n = Math.min(a.length, b.length);
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < n; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom > 0 ? dot / denom : 0;
-}
 
 /**
  * Find k nearest neighbors by semantic similarity

@@ -1,47 +1,57 @@
 import { describe, expect, it } from "bun:test";
 import { BrainstemSupervisor } from "../src/orchestrator/loops/supervisor";
-import { calculateSimilarity, detectLoop } from "../src/utils/entropy";
+import { LoopDetector } from "@alfred/cognitive";
 
 describe("Brainstem Supervisor", () => {
-  describe("Entropy Utils", () => {
-    it("calculates similarity correctly", () => {
-      expect(calculateSimilarity("hello", "hello")).toBe(1.0);
-      expect(calculateSimilarity("hello", "hella")).toBe(0.8); // 1 diff / 5
-      expect(calculateSimilarity("abc", "xyz")).toBe(0.0);
+  describe("LoopDetector (recommended)", () => {
+    it("detects exact match loops", () => {
+      const detector = new LoopDetector();
+      const thought = "I need to check file A";
+
+      let result = detector.check(thought);
+      expect(result.loop).toBe(false);
+
+      result = detector.check(thought);
+      expect(result.loop).toBe(true);
+      if (result.loop) {
+        expect(result.reason).toBe("exact_match");
+        expect(result.layer).toBe(2);
+      }
     });
 
-    it("detects immediate loops", () => {
-      const window = ["I need to check file A", "I need to check file A"];
-      expect(detectLoop(window)).toBe(true);
-    });
+    it("detects semantic loops with embeddings", () => {
+      const detector = new LoopDetector();
+      const baseEmbedding = new Array(1024).fill(0).map(() => Math.random());
+      const similarEmbedding = baseEmbedding.map((v) => v + 0.001 * Math.random());
 
-    it("detects near-duplicate loops", () => {
-      const window = [
-        "I will verify the file content",
-        "I will verify the file contents",
-      ];
-      // "content" vs "contents" -> 1 char diff. Length 30 vs 31.
-      // 1 - 1/31 ~= 0.96 > 0.8
-      expect(detectLoop(window)).toBe(true);
-    });
+      let result = detector.check("thought 1", baseEmbedding);
+      expect(result.loop).toBe(false);
 
-    it("detects ping-pong loops (A-B-A)", () => {
-      const window = ["Check status", "Status is pending", "Check status"];
-      expect(detectLoop(window)).toBe(true);
+      result = detector.check("thought 2", similarEmbedding);
+      expect(result.loop).toBe(true);
+      if (result.loop) {
+        expect(result.reason).toMatch(/^semantic_similarity:/);
+        expect(result.layer).toBe(3);
+      }
     });
 
     it("ignores valid progression", () => {
-      const window = [
+      const detector = new LoopDetector();
+      const thoughts = [
         "Check status",
         "Status is pending",
         "Wait for completion",
       ];
-      expect(detectLoop(window)).toBe(false);
+
+      for (const thought of thoughts) {
+        const result = detector.check(thought);
+        expect(result.loop).toBe(false);
+      }
     });
   });
 
   describe("Supervisor Class", () => {
-    it("triggers interrupt on loop", () => {
+    it("triggers interrupt on exact match loop", () => {
       const supervisor = new BrainstemSupervisor();
 
       supervisor.observe({ type: "thought", content: "Thinking about X" });
@@ -53,7 +63,8 @@ describe("Brainstem Supervisor", () => {
       });
       expect(result.interrupt).toBe(true);
       if (result.interrupt) {
-        expect(result.reason).toBe("boredom_loop_detected");
+        // New API uses exact_match reason
+        expect(result.reason).toBe("exact_match");
       }
     });
 
@@ -93,6 +104,18 @@ describe("Brainstem Supervisor", () => {
 
       const check = supervisor.checkPhysiology();
       expect(check.interrupt).toBe(false);
+    });
+
+    it("clears detector on clearProcess", () => {
+      const supervisor = new BrainstemSupervisor();
+      const abortController = new AbortController();
+
+      supervisor.registerProcess("test", abortController);
+      supervisor.observe({ type: "thought", content: "test" });
+      expect(supervisor.getTransitionCount()).toBe(1);
+
+      supervisor.clearProcess();
+      expect(supervisor.getTransitionCount()).toBe(0);
     });
   });
 });

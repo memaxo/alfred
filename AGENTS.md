@@ -452,7 +452,10 @@ When implementing, Alfred asks:
 8. **Tool Modularity.** Agent tools (`packages/agent/src/orchestrator/tool/*`) must be split into `definition.ts` (schemas/types), `policy.ts` (security/permissions), and `exec.ts` (runtime logic) when they require custom execution logic beyond a simple function call.
 9. **Synthesis fidelity.** `synthesize()` remains async, calls the shared embedder, and must emit contradiction objects, semantic relations, and entity-cluster insights so no caller treats it as a synchronous stub.
 10. **Physiological regulation.** The `CognitiveState` includes `Physiology` (energy, boredom, frustration). Updates to physiology must act as homeostatic regulators on `AutonomyGradient` (e.g., high frustration -> lower autonomy).
-11. **Brainstem supervision.** A deterministic `Supervisor` monitors semantic entropy and process heartbeats. Low entropy (loops) or zombie processes must trigger an `interrupt` event, forcing a state transition.
+11. **Brainstem supervision.** A deterministic `Supervisor` monitors loops and process heartbeats using `LoopDetector`. Low entropy (loops) or zombie processes trigger an `interrupt` event, forcing a state transition.
+18. **LoopDetector layering.** `LoopDetector` checks for loops in cost-ordered layers: COUNT (O(1)) → TIME (O(1)) → HASH (O(n), exact match) → QUANTIZED (O(n), embedding similarity). Embeddings are the canonical similarity measure; all other checks are cheap prefilters.
+19. **Loop detection thresholds.** Default thresholds: `maxTransitions=500`, `stallMs=60000`, `windowSize=8`, `similarityThreshold=0.92`. Override via `LoopConfig` for specific use cases.
+20. **Canonical cosineSimilarity.** Use `cosineSimilarity` from `@alfred/embed` for all embedding comparisons. Do not duplicate implementations across packages.
 12. **Conflict arbitration.** Multi-agent writes use optimistic concurrency. Merge conflicts must be resolved by spawning an `Arbiter` agent, not by failing the workflow.
 13. **Bayesian autonomy.** `AutonomyGradient` carries Beta priors (`alpha`,`beta`), updates them with reliability-weighted evidence plus decay, and derives `level` from the Beta mode with `confidence = 1 - variance`.
 14. **Post-update regulation.** Apply physiology multipliers (frustration, energy, boredom) only after the Bayesian autonomy update so the probability math stays pure.
@@ -645,27 +648,34 @@ Errors are data. Handle them explicitly, classify them correctly, and surface th
 
 3. **Error context.** Always include context about what failed (e.g., `toTRPCError(error, "failed_to_create_run")`).
 
+4. **Error message format.** Use domain-specific prefixes for all error messages:
+   - Format: `<domain>_<operation>_<reason>`
+   - Examples: `voice_stt_failed`, `workflow_start_failed`, `assistant_error`, `rag_ingest_failed`
+   - Domain: `voice`, `workflow`, `assistant`, `orchestrator`, `rag`, `knowledge`, `cognitive`, etc.
+   - Operation: `stt`, `tts`, `start`, `resume`, `cancel`, `query`, `ingest`, `extract`, etc.
+   - Reason: `failed`, `timeout`, `unauthorized`, `invalid_input`, `not_found`, etc.
+
 4. **Non-fatal errors.** Log errors even if they don't break the flow. Use structured logging with context (runId, eventType, error message).
 
-5. **Error messages.** Structure messages for clients:
+6. **Error messages.** Structure messages for clients:
    - User-facing: `"session_required"` (no internals)
    - Internal: Include IDs, context in `cause` field
    - Never expose stack traces, file paths, or internal state
 
-6. **Retry logic.** Only retry transient errors. Use exponential backoff (max 3 retries).
+7. **Retry logic.** Only retry transient errors. Use exponential backoff (max 3 retries).
 
-7. **TanStack Start errors.** Use route-level error boundaries with `errorComponent`. Call `reset()` to retry rendering.
+8. **TanStack Start errors.** Use route-level error boundaries with `errorComponent`. Call `reset()` to retry rendering.
 
-8. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
+9. **Error boundaries.** Wrap streaming components in error boundaries. Surface retry affordances.
 
-9. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
+10. **SSR error handling.** Server-side rendering must handle missing dependencies gracefully:
    - Database unavailable: Return empty/null data instead of crashing
    - External services down: Skip optional features, log warnings
    - Use `isDbConnectionError()` type guard to classify DB errors
    - Wrap route handlers with try-catch for graceful degradation
    - Never throw unhandled errors during SSR (crashes entire page render)
 
-10. **Graceful degradation.** When external dependencies are unavailable:
+11. **Graceful degradation.** When external dependencies are unavailable:
     - Check availability before initializing services (`isDbAvailable()`, `isUvAvailable()`)
     - Skip non-critical services with warnings instead of errors
     - Return sensible defaults (null session, empty arrays, empty state)

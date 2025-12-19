@@ -3,7 +3,8 @@ import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
 import type { TrackerState } from "@alfred/agent/orchestrator/multi/tracker";
 import {
   __internals,
-  detectNeedsGuidance,
+  clearAgentDetector,
+  clearAllDetectors,
   detectStuck,
   getStuckDetectionDefaults,
   updateTracker,
@@ -14,6 +15,14 @@ function emptyState(): TrackerState {
 }
 
 describe("tracker.updateTracker", () => {
+  beforeEach(() => {
+    clearAllDetectors();
+  });
+
+  afterEach(() => {
+    clearAllDetectors();
+  });
+
   it("initialises agent state on first event", () => {
     const now = Date.now();
     const state = emptyState();
@@ -38,26 +47,26 @@ describe("tracker.updateTracker", () => {
     const afterRun = updateTracker(base, {
       type: "codex/command",
       agentId: "agent-2" as AgentId,
-      command: "bun test",
+      command: "bun test src/",
       status: "running",
       ts: ts1,
     });
 
+    // Use a different command to avoid loop detection
     const afterComplete = updateTracker(afterRun, {
       type: "codex/command",
       agentId: "agent-2" as AgentId,
-      command: "bun test",
+      command: "bun test packages/",
       status: "completed",
       ts: ts2,
     });
 
     const agent = afterComplete.agents["agent-2" as AgentId];
     expect(agent.status).toBe("completed");
-    expect(agent.commands.length).toBe(2);
     expect(agent.lastEventTs).toBe(ts2);
   });
 
-  it("tracks file changes", () => {
+  it("tracks file changes via timestamps", () => {
     const base = emptyState();
     const ts = Date.now();
 
@@ -70,7 +79,7 @@ describe("tracker.updateTracker", () => {
     });
 
     const agent = next.agents["agent-3" as AgentId];
-    expect(agent.filesChanged).toContain("src/app.ts");
+    expect(agent.lastEventTs).toBe(ts);
   });
 
   it("updates notice timestamps without altering original state", () => {
@@ -86,9 +95,36 @@ describe("tracker.updateTracker", () => {
     expect(next.agents["agent-4" as AgentId]?.lastEventTs).toBe(123);
     expect(state.agents["agent-4" as AgentId]).toBeUndefined();
   });
+
+  it("detects stuck status via LoopDetector on repeated commands", () => {
+    let state = emptyState();
+    const baseTs = Date.now();
+
+    // Send same command multiple times - should trigger exact_match
+    for (let i = 0; i < 3; i++) {
+      state = updateTracker(state, {
+        type: "codex/command",
+        agentId: "agent-loop" as AgentId,
+        command: "bun test",
+        status: "running",
+        ts: baseTs + i,
+      });
+    }
+
+    const agent = state.agents["agent-loop" as AgentId];
+    expect(agent.status).toBe("stuck");
+  });
 });
 
 describe("tracker.detectStuck", () => {
+  beforeEach(() => {
+    clearAllDetectors();
+  });
+
+  afterEach(() => {
+    clearAllDetectors();
+  });
+
   it("returns false for fresh agent activity", () => {
     const now = Date.now();
     const state = updateTracker(emptyState(), {
@@ -116,86 +152,65 @@ describe("tracker.detectStuck", () => {
     expect(stuck).toBe(true);
   });
 
-  it("detects repeated commands", () => {
+  it("detects repeated thoughts via status", () => {
     let state = emptyState();
     const baseTs = Date.now();
 
-    for (let i = 0; i < 6; i += 1) {
-      state = updateTracker(state, {
-        type: "codex/command",
-        agentId: "agent-6" as AgentId,
-        command: "bun test",
-        status: "running",
-        ts: baseTs + i,
-      });
-    }
-
-    const stuck = detectStuck(state, "agent-6" as AgentId, baseTs + 10_000, {
-      maxRepeats: 5,
+    // Same thought twice should mark as stuck
+    state = updateTracker(state, {
+      type: "codex/thought",
+      agentId: "agent-6" as AgentId,
+      text: "checking the same thing",
+      ts: baseTs,
     });
-    expect(stuck).toBe(true);
+    state = updateTracker(state, {
+      type: "codex/thought",
+      agentId: "agent-6" as AgentId,
+      text: "checking the same thing",
+      ts: baseTs + 1,
+    });
+
+    // Status should be stuck from the LoopDetector
+    expect(state.agents["agent-6" as AgentId].status).toBe("stuck");
+    expect(detectStuck(state, "agent-6" as AgentId, baseTs + 10_000)).toBe(true);
   });
 
-  it("detects file flip-flops", () => {
+  it("allows varied content without marking stuck", () => {
     let state = emptyState();
     const baseTs = Date.now();
 
-    for (let i = 0; i < 5; i += 1) {
+    const thoughts = [
+      "First analysis step",
+      "Second evaluation phase",
+      "Third implementation detail",
+      "Fourth testing consideration",
+      "Fifth deployment step",
+    ];
+
+    for (let i = 0; i < thoughts.length; i++) {
       state = updateTracker(state, {
-        type: "codex/file",
-        agentId: "agent-7" as AgentId,
-        path: "src/main.ts",
-        kind: "file",
-        ts: baseTs + i,
+        type: "codex/thought",
+        agentId: "agent-varied" as AgentId,
+        text: thoughts[i],
+        ts: baseTs + i * 1000,
       });
     }
 
-    const stuck = detectStuck(state, "agent-7" as AgentId, baseTs + 10_000, {
-      maxFileFlipFlops: 4,
-    });
-    expect(stuck).toBe(true);
-  });
-});
-
-describe("tracker.detectNeedsGuidance", () => {
-  it("returns false when agent is unknown", () => {
-    const state = emptyState();
-    const needs = detectNeedsGuidance(state, "agent-x" as AgentId, [
-      "need guidance",
-    ]);
-    expect(needs).toBe(false);
-  });
-
-  it("returns false when no thoughts provided", () => {
-    const now = Date.now();
-    const state = updateTracker(emptyState(), {
-      type: "codex/thought",
-      agentId: "agent-8" as AgentId,
-      text: "thinking",
-      ts: now,
-    });
-    const needs = detectNeedsGuidance(state, "agent-8" as AgentId, []);
-    expect(needs).toBe(false);
-  });
-
-  it("detects guidance phrases in thoughts", () => {
-    const now = Date.now();
-    const state = updateTracker(emptyState(), {
-      type: "codex/thought",
-      agentId: "agent-9" as AgentId,
-      text: "I am unsure how to proceed on this change.",
-      ts: now,
-    });
-
-    const needs = detectNeedsGuidance(state, "agent-9" as AgentId, [
-      "I am UNSURE how to proceed on this change.",
-    ]);
-
-    expect(needs).toBe(true);
+    const agent = state.agents["agent-varied" as AgentId];
+    expect(agent.status).toBe("running");
+    expect(detectStuck(state, "agent-varied" as AgentId, baseTs + 10_000)).toBe(false);
   });
 });
 
 describe("tracker internals", () => {
+  beforeEach(() => {
+    clearAllDetectors();
+  });
+
+  afterEach(() => {
+    clearAllDetectors();
+  });
+
   it("normalises missing timestamps to Date.now", () => {
     const nowSpy = spyOn(Date, "now").mockReturnValue(999);
     const { normaliseTime } = __internals;
@@ -216,13 +231,15 @@ describe("getStuckDetectionDefaults", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
+    clearAllDetectors();
     // Clear relevant env vars
     process.env.STUCK_NO_PROGRESS_MS = undefined;
-    process.env.STUCK_MAX_REPEATS = undefined;
-    process.env.STUCK_MAX_FILE_FLIP_FLOPS = undefined;
+    process.env.STUCK_MAX_TRANSITIONS = undefined;
+    process.env.STUCK_SIMILARITY_THRESHOLD = undefined;
   });
 
   afterEach(() => {
+    clearAllDetectors();
     // Restore original env
     process.env = { ...originalEnv };
   });
@@ -230,8 +247,8 @@ describe("getStuckDetectionDefaults", () => {
   it("returns hardcoded defaults when env vars not set", () => {
     const defaults = getStuckDetectionDefaults();
     expect(defaults.noProgressMs).toBe(120_000);
-    expect(defaults.maxRepeats).toBe(5);
-    expect(defaults.maxFileFlipFlops).toBe(4);
+    expect(defaults.maxTransitions).toBe(200);
+    expect(defaults.similarityThreshold).toBe(0.92);
   });
 
   it("reads noProgressMs from STUCK_NO_PROGRESS_MS env var", () => {
@@ -240,32 +257,32 @@ describe("getStuckDetectionDefaults", () => {
     expect(defaults.noProgressMs).toBe(60_000);
   });
 
-  it("reads maxRepeats from STUCK_MAX_REPEATS env var", () => {
-    process.env.STUCK_MAX_REPEATS = "10";
+  it("reads maxTransitions from STUCK_MAX_TRANSITIONS env var", () => {
+    process.env.STUCK_MAX_TRANSITIONS = "100";
     const defaults = getStuckDetectionDefaults();
-    expect(defaults.maxRepeats).toBe(10);
+    expect(defaults.maxTransitions).toBe(100);
   });
 
-  it("reads maxFileFlipFlops from STUCK_MAX_FILE_FLIP_FLOPS env var", () => {
-    process.env.STUCK_MAX_FILE_FLIP_FLOPS = "8";
+  it("reads similarityThreshold from STUCK_SIMILARITY_THRESHOLD env var", () => {
+    process.env.STUCK_SIMILARITY_THRESHOLD = "0.85";
     const defaults = getStuckDetectionDefaults();
-    expect(defaults.maxFileFlipFlops).toBe(8);
-  });
-
-  it("reads all env vars when set", () => {
-    process.env.STUCK_NO_PROGRESS_MS = "300000";
-    process.env.STUCK_MAX_REPEATS = "3";
-    process.env.STUCK_MAX_FILE_FLIP_FLOPS = "2";
-    const defaults = getStuckDetectionDefaults();
-    expect(defaults.noProgressMs).toBe(300_000);
-    expect(defaults.maxRepeats).toBe(3);
-    expect(defaults.maxFileFlipFlops).toBe(2);
+    expect(defaults.similarityThreshold).toBe(0.85);
   });
 });
 
 describe("detectStuck with custom thresholds", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    clearAllDetectors();
+  });
+
+  afterEach(() => {
+    clearAllDetectors();
+    process.env = { ...originalEnv };
+  });
+
   it("uses env var defaults when no options provided", () => {
-    const originalEnv = process.env.STUCK_NO_PROGRESS_MS;
     process.env.STUCK_NO_PROGRESS_MS = "60000"; // 60s instead of 120s
 
     const now = Date.now();
@@ -277,16 +294,11 @@ describe("detectStuck with custom thresholds", () => {
     });
 
     // Should be stuck after 60s (env var threshold) but not 50s
-    expect(detectStuck(state, "agent-env" as AgentId, now + 50_000)).toBe(
-      false
-    );
+    expect(detectStuck(state, "agent-env" as AgentId, now + 50_000)).toBe(false);
     expect(detectStuck(state, "agent-env" as AgentId, now + 70_000)).toBe(true);
-
-    process.env.STUCK_NO_PROGRESS_MS = originalEnv;
   });
 
   it("explicit options override env var defaults", () => {
-    const originalEnv = process.env.STUCK_NO_PROGRESS_MS;
     process.env.STUCK_NO_PROGRESS_MS = "60000"; // 60s from env
 
     const now = Date.now();
@@ -308,8 +320,6 @@ describe("detectStuck with custom thresholds", () => {
         noProgressMs: 30_000,
       })
     ).toBe(true);
-
-    process.env.STUCK_NO_PROGRESS_MS = originalEnv;
   });
 
   it("allows longer timeout for complex tasks", () => {
@@ -335,64 +345,52 @@ describe("detectStuck with custom thresholds", () => {
       })
     ).toBe(true);
   });
+});
 
-  it("allows more repeats for iterative tasks", () => {
-    let state = emptyState();
-    const baseTs = Date.now();
-
-    // Run same command 8 times (more than default 5)
-    for (let i = 0; i < 8; i += 1) {
-      state = updateTracker(state, {
-        type: "codex/command",
-        agentId: "agent-iterative" as AgentId,
-        command: "bun test",
-        status: "running",
-        ts: baseTs + i,
-      });
-    }
-
-    // With higher repeat threshold (10), should not be stuck
-    expect(
-      detectStuck(state, "agent-iterative" as AgentId, baseTs + 10_000, {
-        maxRepeats: 10,
-      })
-    ).toBe(false);
-
-    // But with default threshold, it would be
-    expect(
-      detectStuck(state, "agent-iterative" as AgentId, baseTs + 10_000, {
-        maxRepeats: 5,
-      })
-    ).toBe(true);
+describe("clearAgentDetector", () => {
+  beforeEach(() => {
+    clearAllDetectors();
   });
 
-  it("allows more file changes for refactoring tasks", () => {
+  afterEach(() => {
+    clearAllDetectors();
+  });
+
+  it("allows same content after clearing detector", () => {
+    const thought = "repeated thought";
     let state = emptyState();
-    const baseTs = Date.now();
 
-    // Touch same file 6 times (more than default 4)
-    for (let i = 0; i < 6; i += 1) {
-      state = updateTracker(state, {
-        type: "codex/file",
-        agentId: "agent-refactor" as AgentId,
-        path: "src/main.ts",
-        kind: "file",
-        ts: baseTs + i,
-      });
-    }
+    // First occurrence
+    state = updateTracker(state, {
+      type: "codex/thought",
+      agentId: "agent-clear" as AgentId,
+      text: thought,
+      ts: Date.now(),
+    });
+    expect(state.agents["agent-clear" as AgentId].status).toBe("running");
 
-    // With higher flip-flop threshold (8), should not be stuck
-    expect(
-      detectStuck(state, "agent-refactor" as AgentId, baseTs + 10_000, {
-        maxFileFlipFlops: 8,
-      })
-    ).toBe(false);
+    // Second occurrence - should be stuck
+    state = updateTracker(state, {
+      type: "codex/thought",
+      agentId: "agent-clear" as AgentId,
+      text: thought,
+      ts: Date.now() + 1,
+    });
+    expect(state.agents["agent-clear" as AgentId].status).toBe("stuck");
 
-    // But with default threshold, it would be
-    expect(
-      detectStuck(state, "agent-refactor" as AgentId, baseTs + 10_000, {
-        maxFileFlipFlops: 4,
-      })
-    ).toBe(true);
+    // Clear detector
+    clearAgentDetector("agent-clear" as AgentId);
+
+    // Reset agent status manually for this test
+    state.agents["agent-clear" as AgentId].status = "running";
+
+    // Same content should not immediately trigger stuck after clear
+    state = updateTracker(state, {
+      type: "codex/thought",
+      agentId: "agent-clear" as AgentId,
+      text: thought,
+      ts: Date.now() + 2,
+    });
+    expect(state.agents["agent-clear" as AgentId].status).toBe("running");
   });
 });

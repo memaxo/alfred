@@ -1,3 +1,4 @@
+import { cosineSimilarity } from "@alfred/embed";
 import type { Hypergraph, NodeId } from "@alfred/knowledge";
 import {
   detectContradiction,
@@ -82,23 +83,8 @@ const lexicalSimilarity = (a: string, b: string): number => {
   return overlap / maxSize;
 };
 
-const cosineSimilarity = (a: Float32Array, b: Float32Array): number => {
-  const length = Math.min(a.length, b.length);
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < length; i++) {
-    const va = a[i] ?? 0;
-    const vb = b[i] ?? 0;
-    dot += va * vb;
-    normA += va * va;
-    normB += vb * vb;
-  }
-  if (normA === 0 || normB === 0) {
-    return 0;
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-};
+/** Convert Float32Array to number[] for cosineSimilarity */
+const toNumberArray = (arr: Float32Array): number[] => Array.from(arr);
 
 const embedFact = async (content: string): Promise<Float32Array | null> => {
   const normalized = content.trim();
@@ -262,7 +248,7 @@ export async function synthesize(
       const embedding = await embedFact(fact.content);
       if (embedding) {
         for (const [nodeId, nodeEmbedding] of embeddingEntries) {
-          const similarity = cosineSimilarity(embedding, nodeEmbedding);
+          const similarity = cosineSimilarity(toNumberArray(embedding), toNumberArray(nodeEmbedding));
           if (similarity <= SEMANTIC_SIMILARITY_THRESHOLD) {
             continue;
           }

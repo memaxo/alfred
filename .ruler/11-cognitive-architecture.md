@@ -10,7 +10,10 @@
 8. **Tool Modularity.** Agent tools (`packages/agent/src/orchestrator/tool/*`) must be split into `definition.ts` (schemas/types), `policy.ts` (security/permissions), and `exec.ts` (runtime logic) when they require custom execution logic beyond a simple function call.
 9. **Synthesis fidelity.** `synthesize()` remains async, calls the shared embedder, and must emit contradiction objects, semantic relations, and entity-cluster insights so no caller treats it as a synchronous stub.
 10. **Physiological regulation.** The `CognitiveState` includes `Physiology` (energy, boredom, frustration). Updates to physiology must act as homeostatic regulators on `AutonomyGradient` (e.g., high frustration -> lower autonomy).
-11. **Brainstem supervision.** A deterministic `Supervisor` monitors semantic entropy and process heartbeats. Low entropy (loops) or zombie processes must trigger an `interrupt` event, forcing a state transition.
+11. **Brainstem supervision.** A deterministic `Supervisor` monitors loops and process heartbeats using `LoopDetector`. Low entropy (loops) or zombie processes trigger an `interrupt` event, forcing a state transition.
+18. **LoopDetector layering.** `LoopDetector` checks for loops in cost-ordered layers: COUNT (O(1)) → TIME (O(1)) → HASH (O(n), exact match) → QUANTIZED (O(n), embedding similarity). Embeddings are the canonical similarity measure; all other checks are cheap prefilters.
+19. **Loop detection thresholds.** Default thresholds: `maxTransitions=500`, `stallMs=60000`, `windowSize=8`, `similarityThreshold=0.92`. Override via `LoopConfig` for specific use cases.
+20. **Canonical cosineSimilarity.** Use `cosineSimilarity` from `@alfred/embed` for all embedding comparisons. Do not duplicate implementations across packages.
 12. **Conflict arbitration.** Multi-agent writes use optimistic concurrency. Merge conflicts must be resolved by spawning an `Arbiter` agent, not by failing the workflow.
 13. **Bayesian autonomy.** `AutonomyGradient` carries Beta priors (`alpha`,`beta`), updates them with reliability-weighted evidence plus decay, and derives `level` from the Beta mode with `confidence = 1 - variance`.
 14. **Post-update regulation.** Apply physiology multipliers (frustration, energy, boredom) only after the Bayesian autonomy update so the probability math stays pure.

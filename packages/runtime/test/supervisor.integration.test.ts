@@ -64,8 +64,9 @@ describe("WorkflowRuntime supervisor integration", () => {
         model: mockModel,
       });
 
+      // LoopDetector uses exact_match for identical content
       await expect(consume(runtime)).rejects.toThrow(
-        /workflow_interrupted:boredom_loop_detected/
+        /workflow_interrupted:exact_match/
       );
     });
   });
@@ -125,8 +126,8 @@ describe("WorkflowRuntime supervisor integration", () => {
         model: mockModel,
       });
 
-      // Should detect the repetitive pattern and interrupt
-      await expect(consume(runtime)).rejects.toThrow(/boredom_loop_detected/);
+      // Should detect the repetitive pattern via exact_match (identical strings)
+      await expect(consume(runtime)).rejects.toThrow(/exact_match/);
     });
   });
 
@@ -235,7 +236,8 @@ describe("WorkflowRuntime supervisor integration", () => {
       } catch (error) {
         // If it throws, make sure it's not a loop detection error
         const errorMsg = error instanceof Error ? error.message : String(error);
-        expect(errorMsg).not.toContain("boredom_loop");
+        expect(errorMsg).not.toContain("exact_match");
+        expect(errorMsg).not.toContain("semantic_similarity");
       }
     });
   });

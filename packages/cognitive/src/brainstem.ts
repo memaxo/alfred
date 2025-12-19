@@ -1,7 +1,13 @@
-import { detectLoop } from "./entropy";
+/**
+ * Brainstem Supervisor
+ *
+ * Monitors cognitive processes for loops and stalls using embedding-centric detection.
+ */
+
+import { LoopDetector, type LoopConfig } from "./loop";
 
 export type SupervisorEvent =
-  | { type: "thought"; content: string }
+  | { type: "thought"; content: string; embedding?: number[] }
   | { type: "tool_call"; tool: string; input: string }
   | { type: "tool_result"; content: string };
 
@@ -9,10 +15,13 @@ export type InterruptResult =
   | { interrupt: false }
   | { interrupt: true; reason: string };
 
+export type BrainstemConfig = {
+  /** Loop detector configuration */
+  loop?: Partial<LoopConfig>;
+};
+
 export class BrainstemSupervisor {
-  private readonly thoughtWindow: string[] = [];
-  private readonly windowSize = 5;
-  private readonly loopThreshold = 0.85;
+  private readonly detector: LoopDetector;
 
   // Heartbeat state
   private activeProcess: {
@@ -23,23 +32,36 @@ export class BrainstemSupervisor {
     abortController: AbortController;
   } | null = null;
 
+  constructor(config: BrainstemConfig = {}) {
+    this.detector = new LoopDetector(config.loop);
+  }
+
+  /**
+   * Observe an event and check for loop conditions.
+   *
+   * @param event - The supervisor event to observe
+   * @returns Interrupt result if loop detected
+   */
   observe(event: SupervisorEvent): InterruptResult {
     if (event.type === "thought") {
-      this.thoughtWindow.push(event.content);
-      if (this.thoughtWindow.length > this.windowSize) {
-        this.thoughtWindow.shift();
-      }
+      const result = this.detector.check(event.content, event.embedding ?? null);
 
-      if (detectLoop(this.thoughtWindow, this.loopThreshold)) {
+      if (result.loop) {
         return {
           interrupt: true,
-          reason: "boredom_loop_detected",
+          reason: result.reason,
         };
       }
     }
+
+    // Tool calls and results pass through without loop checking
+    // (they contribute to activity but aren't checked for semantic loops)
     return { interrupt: false };
   }
 
+  /**
+   * Register a process for heartbeat monitoring.
+   */
   registerProcess(
     id: string,
     abortController: AbortController,
@@ -54,16 +76,26 @@ export class BrainstemSupervisor {
     };
   }
 
+  /**
+   * Record activity to prevent stall detection.
+   */
   heartbeat() {
     if (this.activeProcess) {
       this.activeProcess.lastActivityAt = Date.now();
     }
   }
 
+  /**
+   * Clear the active process and reset detector state.
+   */
   clearProcess() {
     this.activeProcess = null;
+    this.detector.reset();
   }
 
+  /**
+   * Check for heartbeat failures (zombie processes).
+   */
   checkPhysiology(): InterruptResult {
     if (!this.activeProcess) {
       return { interrupt: false };
@@ -81,5 +113,14 @@ export class BrainstemSupervisor {
 
     return { interrupt: false };
   }
-}
 
+  /** Get detector transition count for observability */
+  getTransitionCount(): number {
+    return this.detector.getTransitionCount();
+  }
+
+  /** Reset loop detection state without affecting heartbeat monitoring */
+  resetLoop(): void {
+    this.detector.reset();
+  }
+}

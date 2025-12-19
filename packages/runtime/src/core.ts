@@ -570,6 +570,12 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     }
     this.handleSupervisorObservation(event);
     this.supervisor.heartbeat();
+
+    // Reset loop window after each model call completes to avoid false positives
+    // across distinct phases/steps.
+    if (event.type === "finish") {
+      this.supervisor.resetLoop();
+    }
   }
 
   private handleSupervisorObservation(event: WorkflowEvent): void {

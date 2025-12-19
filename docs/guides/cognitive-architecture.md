@@ -92,8 +92,8 @@ Monitors cognitive health and interrupts loops:
 - **Physiology Checks** - Monitors frustration/boredom thresholds
 
 **Key Files:**
-- `packages/agent/src/orchestrator/loops/supervisor.ts` - `BrainstemSupervisor` class
-- `packages/agent/src/utils/entropy.ts` - Entropy calculation utilities
+- `packages/cognitive/src/brainstem.ts` - `BrainstemSupervisor` class
+- `packages/cognitive/src/loop.ts` - `LoopDetector` (COUNT → TIME → HASH → QUANTIZED)
 - `packages/runtime/src/core.ts` - Integration into `WorkflowRuntime`
 
 ## The Cognitive Loop

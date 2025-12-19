@@ -129,8 +129,8 @@ describe("Cognitive State Tool", () => {
 
       const result = await toolCognitiveState.execute({ input });
 
-      // Real applyTransition converts idle + input event -> thinking state
-      expect(result.state).toBe("thinking");
+      // Real applyTransition converts idle + input event -> capturing state
+      expect(result.state).toBe("capturing");
       expect(result.physiology.energy).toBeGreaterThanOrEqual(0);
       expect(result.physiology.energy).toBeLessThanOrEqual(1);
     });

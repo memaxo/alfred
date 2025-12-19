@@ -5,7 +5,11 @@
  * Reference: alfred-memory-review.md - "Top-K retrieval outperforms static thresholds"
  */
 
+import { cosineSimilarity } from "@alfred/embed";
 import type { NodeRow } from "./types";
+
+// Re-export for backward compatibility
+export { cosineSimilarity };
 
 /**
  * Default top-K value for retrieval operations.
@@ -42,34 +46,6 @@ export type ScoredResult<T> = {
   matchType: "exact" | "semantic" | "fuzzy" | "hybrid";
 };
 
-/**
- * Compute cosine similarity between two vectors.
- * Returns value in range [-1, 1] where 1 is most similar.
- */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length || a.length === 0) {
-    return 0;
-  }
-
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < a.length; i++) {
-    const aVal = a[i] ?? 0;
-    const bVal = b[i] ?? 0;
-    dotProduct += aVal * bVal;
-    normA += aVal * aVal;
-    normB += bVal * bVal;
-  }
-
-  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
-  if (denominator === 0) {
-    return 0;
-  }
-
-  return dotProduct / denominator;
-}
 
 /**
  * Compute relevance score for a node given a query embedding.

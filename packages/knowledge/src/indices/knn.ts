@@ -1,25 +1,15 @@
+import { cosineSimilarity } from "@alfred/embed";
 import type { NodeId } from "../hypergraph.js";
 
-const EPSILON = 1e-9;
-
+/**
+ * Compute cosine similarity for Float32Array inputs.
+ * Delegates to the canonical implementation in @alfred/embed.
+ */
 export function cosineSim(a: Float32Array, b: Float32Array): number {
   if (a.length === 0 || b.length === 0 || a.length !== b.length) {
     return 0;
   }
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    const va = a[i];
-    const vb = b[i];
-    dot += va * vb;
-    magA += va * va;
-    magB += vb * vb;
-  }
-  if (magA <= EPSILON || magB <= EPSILON) {
-    return 0;
-  }
-  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+  return cosineSimilarity(Array.from(a), Array.from(b));
 }
 
 export function knn(
@@ -31,12 +21,14 @@ export function knn(
     return [];
   }
 
+  const queryArr = Array.from(query);
   const scores: Array<{ id: NodeId; score: number }> = [];
+
   for (const entry of vectors) {
     if (entry.vec.length !== query.length) {
       continue;
     }
-    const score = cosineSim(entry.vec, query);
+    const score = cosineSimilarity(Array.from(entry.vec), queryArr);
     if (Number.isFinite(score) && score > 0) {
       scores.push({ id: entry.id, score });
     }

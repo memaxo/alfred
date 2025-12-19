@@ -212,61 +212,6 @@ describe("workflow failure modes (runtime)", () => {
     });
   });
 
-  it("persists agent_needs_guidance notices", async () => {
-    const mockRunId = "guidance-run";
-    const events: WorkflowEvent[] = [
-      { type: "run", id: mockRunId } as WorkflowEvent,
-      {
-        type: "event",
-        kind: "data-subtasks",
-        data: [{ id: "T1" }],
-      } as any,
-      {
-        type: "notice",
-        message: "agent_needs_guidance",
-      } as WorkflowEvent,
-    ];
-
-    const mockExecutor = {
-      runId: mockRunId,
-      summary: "guidance scenario",
-      stream: (async function* () {
-        for (const ev of events) {
-          yield ev;
-        }
-      })(),
-      resume: vi.fn(),
-      cancel: vi.fn(),
-    };
-
-    workflowRuntimeMocks.createRuntime.mockReturnValue(mockExecutor);
-    workflowRepoMocks.createRun.mockResolvedValue({ id: mockRunId } as any);
-    workflowRepoMocks.appendEvent.mockResolvedValue({} as any);
-    workflowRepoMocks.updateRun.mockResolvedValue({} as any);
-    runRegistryMocks.register.mockResolvedValue(undefined);
-    runRegistryMocks.unregister.mockResolvedValue(undefined);
-
-    const observable = await caller.workflow.stream({
-      requirement: "need guidance",
-    });
-    const subscription = toObservable(observable);
-
-    await new Promise<void>((resolve, reject) => {
-      subscription.subscribe({
-        next: () => {},
-        error: reject,
-        complete: resolve,
-      });
-    });
-
-    const guidanceCall = workflowRepoMocks.appendEvent.mock.calls.find(
-      (c) =>
-        c[0]?.eventType === "notice" &&
-        (c[0]?.eventData as any)?.data?.message === "agent_needs_guidance"
-    );
-    expect(guidanceCall).toBeTruthy();
-  });
-
   it("records merge-conflict metrics when merge-conflict event is emitted", async () => {
     const mockRunId = "conflict-run";
     const events: WorkflowEvent[] = [

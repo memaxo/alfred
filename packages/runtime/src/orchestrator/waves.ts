@@ -21,7 +21,6 @@ import {
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import {
-  detectNeedsGuidance,
   detectStuck,
   getStuckDetectionDefaults,
   type StuckDetectionOptions,
@@ -523,21 +522,6 @@ export async function* runWaves(
                   text: inner.content ?? "",
                   ts,
                 });
-                const needsGuidance = detectNeedsGuidance(
-                  trackerState,
-                  spec.agentId as any,
-                  [inner.content ?? ""]
-                );
-                if (needsGuidance) {
-                  const agentState = trackerState.agents[spec.agentId as any];
-                  if (agentState) {
-                    agentState.status = "paused";
-                  }
-                  bufferedEvents.push({
-                    type: "notice",
-                    message: "agent_needs_guidance",
-                  } as any);
-                }
               } else if (inner.type === "command") {
                 trackerState = updateTracker(trackerState, {
                   type: "codex/command",

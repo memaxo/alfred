@@ -270,6 +270,11 @@ async function processDreaming() {
   }
 }
 
+// Test-only exports (keep runtime surface lean)
+export const __internals = {
+  processDreaming,
+};
+
 /**
  * Learn domain classification from user correction.
  * Creates high-confidence domain association node in the graph.

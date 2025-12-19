@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, vi } from "bun:test";
+import { afterAll, describe, expect, it, mock, vi } from "bun:test";
 import type { EdgeSeed } from "../src/graphstore";
 
 const upsertCalls: EdgeSeed[] = [];
@@ -49,10 +49,19 @@ describe("graphstore RAG provenance linking", () => {
   it("creates explains edges between RAG document nodes and reasoning nodes", async () => {
     upsertCalls.length = 0;
 
+    const originalDbUrl = process.env.DATABASE_URL;
+    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
+
     await linkRagProvenanceToReasoning({
       runtimeResource: "runtime:test-provenance",
       executionId: "exec-1",
     });
+
+    if (originalDbUrl === undefined) {
+      process.env.DATABASE_URL = undefined;
+    } else {
+      process.env.DATABASE_URL = originalDbUrl;
+    }
 
     expect(upsertCalls.length).toBe(1);
     const edge = upsertCalls[0];
@@ -65,4 +74,8 @@ describe("graphstore RAG provenance linking", () => {
     expect(edge.toId).toBe("reasoning-1");
     expect(edge.metadata?.documentId).toBe("doc-1");
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

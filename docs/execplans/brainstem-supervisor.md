@@ -9,10 +9,10 @@ Agents often get stuck in loops (low semantic entropy) or wait indefinitely for 
 ## Architecture
 
 ### 1. Semantic Entropy Monitor
-A stream monitoring utility that calculates the information density of the agent's output window.
-- **Location**: `packages/agent/src/orchestrator/streams/entropy.ts`
-- **Metric**: Levenshtein Ratio or Jaccard Similarity over a sliding window (last N=3 thoughts).
-- **Trigger**: If `Similarity(Current, Previous) > 0.9` for 3 consecutive turns -> **BOREDOM_INTERRUPT**.
+A fast, deterministic loop detector for agent output windows.
+- **Location**: `packages/cognitive/src/loop.ts` (`LoopDetector`)
+- **Metric**: Cost-ordered layers: COUNT → TIME → HASH → QUANTIZED (embedding similarity).
+- **Trigger**: Emits an interrupt reason like `exact_match` or `semantic_similarity:*` when repetition/loops are detected.
 
 ### 2. Active Process Heartbeats
 Replace passive `await` for subprocesses with an active heartbeat monitor.
@@ -33,8 +33,8 @@ When a monitor triggers, we must inject a signal into the cognitive loop.
 
 ## Implementation Steps
 
-1.  ✅ **Entropy Utility**: Create `packages/agent/src/utils/entropy.ts` with string similarity functions (`detectLoop`, `jaccardSimilarity`).
-2.  ✅ **Supervisor Loop**: In `packages/agent/src/orchestrator/loops/`, create a `Supervisor` class (`BrainstemSupervisor`) that holds the state of active monitors.
+1.  ✅ **LoopDetector**: Implemented in `packages/cognitive/src/loop.ts` with embedding-centric similarity and cheap prefilters.
+2.  ✅ **Supervisor Loop**: `BrainstemSupervisor` uses `LoopDetector` for loop detection and retains heartbeat monitoring.
 3.  ✅ **Integration**: Integrated into `WorkflowRuntime` (`packages/runtime/src/core.ts`):
     - Supervisor instantiated in runtime constructor
     - `observe()` method called for thought events

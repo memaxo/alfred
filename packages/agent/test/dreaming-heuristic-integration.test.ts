@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { randomUUID } from "node:crypto";
 
 // Mock DB
@@ -34,7 +34,8 @@ mock.module("@alfred/rag", () => ({
 }));
 
 // Import after mocks
-const { processDreaming } = await import("../src/orchestrator/learning-worker");
+const { __internals } = await import("../src/orchestrator/learning-worker");
+const { processDreaming } = __internals;
 
 describe("Dreaming → Heuristic Integration", () => {
   beforeEach(() => {
@@ -124,4 +125,8 @@ describe("Dreaming → Heuristic Integration", () => {
     expect(embedArgs[0].length).toBeGreaterThan(0);
     expect(typeof embedArgs[0][0]).toBe("string"); // Rule is a string
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

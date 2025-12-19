@@ -1,3 +1,4 @@
+import { LoopDetector } from "@alfred/cognitive";
 import type { SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
 
@@ -8,10 +9,10 @@ import type { AgentId, WaveId } from "./spawn";
 export type StuckDetectionOptions = {
   /** Time in milliseconds without events before agent is considered stuck (default: 120000) */
   noProgressMs?: number;
-  /** Number of repeated identical commands that indicates stuck state (default: 5) */
-  maxRepeats?: number;
-  /** Number of times the same file can be modified before considered flip-flopping (default: 4) */
-  maxFileFlipFlops?: number;
+  /** Maximum transitions before agent is considered stuck (default: 200) */
+  maxTransitions?: number;
+  /** Similarity threshold for semantic loop detection (default: 0.92) */
+  similarityThreshold?: number;
 };
 
 /**
@@ -24,10 +25,12 @@ export function getStuckDetectionDefaults(): Required<StuckDetectionOptions> {
       process.env.STUCK_NO_PROGRESS_MS ?? "120000",
       10
     ),
-    maxRepeats: Number.parseInt(process.env.STUCK_MAX_REPEATS ?? "5", 10),
-    maxFileFlipFlops: Number.parseInt(
-      process.env.STUCK_MAX_FILE_FLIP_FLOPS ?? "4",
+    maxTransitions: Number.parseInt(
+      process.env.STUCK_MAX_TRANSITIONS ?? "200",
       10
+    ),
+    similarityThreshold: Number.parseFloat(
+      process.env.STUCK_SIMILARITY_THRESHOLD ?? "0.92"
     ),
   };
 }
@@ -41,7 +44,7 @@ export type AgentStatus =
   | "paused";
 
 export type AgentEvent =
-  | { type: "codex/thought"; agentId: AgentId; text: string; ts: number }
+  | { type: "codex/thought"; agentId: AgentId; text: string; ts: number; embedding?: number[] }
   | {
       type: "codex/command";
       agentId: AgentId;
@@ -62,9 +65,6 @@ export type TrackerAgentState = {
   subTaskId: SubTaskId;
   status: AgentStatus;
   lastEventTs: number;
-  commands: string[];
-  filesChanged: string[];
-  loopScore: number;
 };
 
 export type TrackerWaveState = {
@@ -76,14 +76,28 @@ export type TrackerState = {
   waves: Record<WaveId, TrackerWaveState>;
 };
 
+// Per-agent loop detectors (not serialized with state)
+const agentDetectors = new Map<AgentId, LoopDetector>();
+
+function getOrCreateDetector(agentId: AgentId, opts?: StuckDetectionOptions): LoopDetector {
+  let detector = agentDetectors.get(agentId);
+  if (!detector) {
+    const defaults = getStuckDetectionDefaults();
+    detector = new LoopDetector({
+      maxTransitions: opts?.maxTransitions ?? defaults.maxTransitions,
+      stallMs: opts?.noProgressMs ?? defaults.noProgressMs,
+      similarityThreshold: opts?.similarityThreshold ?? defaults.similarityThreshold,
+      windowSize: 8,
+    });
+    agentDetectors.set(agentId, detector);
+  }
+  return detector;
+}
+
 function cloneState(state: TrackerState): TrackerState {
   const agents: Record<AgentId, TrackerAgentState> = {};
   for (const [id, value] of Object.entries(state.agents)) {
-    agents[id as AgentId] = {
-      ...value,
-      commands: [...value.commands],
-      filesChanged: [...value.filesChanged],
-    };
+    agents[id as AgentId] = { ...value };
   }
 
   const waves: Record<WaveId, TrackerWaveState> = {};
@@ -111,9 +125,6 @@ function ensureAgent(
     subTaskId: subTaskId ?? ("" as SubTaskId),
     status: "created",
     lastEventTs: ts ?? 0,
-    commands: [],
-    filesChanged: [],
-    loopScore: 0,
   };
 }
 
@@ -130,54 +141,63 @@ export function updateTracker(
 ): TrackerState {
   const next = cloneState(state);
   const ts = normaliseTime(event.ts);
+  const detector = getOrCreateDetector(event.agentId);
 
   switch (event.type) {
     case "codex/thought": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) {
-        break;
-      }
+      if (!agent) break;
+
       agent.status = agent.status === "created" ? "running" : agent.status;
       agent.lastEventTs = ts;
-      agent.loopScore = Math.max(0, agent.loopScore - 0.1);
+
+      // Check for loops via detector
+      const result = detector.check(event.text, event.embedding ?? null);
+      if (result.loop) {
+        agent.status = "stuck";
+      }
       break;
     }
     case "codex/command": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) {
-        break;
-      }
+      if (!agent) break;
+
       agent.lastEventTs = ts;
-      agent.commands.push(event.command);
-      if (event.status === "completed") {
+
+      // Check for command loops via detector
+      const result = detector.check(event.command, null);
+      if (result.loop) {
+        agent.status = "stuck";
+      } else if (event.status === "completed") {
         agent.status = "completed";
       } else if (event.status === "failed") {
         agent.status = "failed";
       } else if (agent.status === "created") {
         agent.status = "running";
       }
-      agent.loopScore += 1;
       break;
     }
     case "codex/file": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) {
-        break;
-      }
+      if (!agent) break;
+
       agent.lastEventTs = ts;
-      agent.filesChanged.push(event.path);
-      agent.loopScore += 0.5;
+
+      // Check for file path loops via detector
+      const result = detector.check(event.path, null);
+      if (result.loop) {
+        agent.status = "stuck";
+      }
       break;
     }
     case "notice": {
       ensureAgent(next, event.agentId, undefined, ts);
       const agent = next.agents[event.agentId];
-      if (!agent) {
-        break;
-      }
+      if (!agent) break;
+
       agent.lastEventTs = ts;
       break;
     }
@@ -186,6 +206,15 @@ export function updateTracker(
   return next;
 }
 
+/**
+ * Detect if an agent is stuck using the LoopDetector.
+ *
+ * Checks:
+ * 1. Time-based: no events for too long
+ * 2. Transition count exceeded
+ * 3. Exact content repetition (hash)
+ * 4. Semantic similarity (embeddings)
+ */
 export function detectStuck(
   state: TrackerState,
   agentId: AgentId,
@@ -197,72 +226,48 @@ export function detectStuck(
     return false;
   }
 
+  // Check if already marked as stuck
+  if (agent.status === "stuck") {
+    return true;
+  }
+
   const defaults = getStuckDetectionDefaults();
   const noProgressMs = opts?.noProgressMs ?? defaults.noProgressMs;
-  const maxRepeats = opts?.maxRepeats ?? defaults.maxRepeats;
-  const maxFileFlipFlops = opts?.maxFileFlipFlops ?? defaults.maxFileFlipFlops;
 
-  // 1) Time-based: no events for too long
+  // Time-based check (separate from LoopDetector for external timestamp)
   if (now - agent.lastEventTs > noProgressMs) {
     return true;
   }
 
-  // 2) Command repetition: last N commands identical
-  if (agent.commands.length >= maxRepeats) {
-    const tail = agent.commands.slice(-maxRepeats);
-    const first = tail[0];
-    if (first && tail.every((cmd) => cmd === first)) {
-      return true;
-    }
-  }
-
-  // 3) File flip-flops: same file touched too many times
-  if (agent.filesChanged.length > 0) {
-    const counts = new Map<string, number>();
-    for (const path of agent.filesChanged) {
-      counts.set(path, (counts.get(path) ?? 0) + 1);
-    }
-    for (const value of counts.values()) {
-      if (value > maxFileFlipFlops) {
-        return true;
-      }
-    }
-  }
-
+  // Detector-based checks happen during updateTracker
+  // If status is stuck, detector already found a loop
   return false;
 }
 
-export function detectNeedsGuidance(
-  state: TrackerState,
-  agentId: AgentId,
-  thoughts: string[]
-): boolean {
-  const agent = state.agents[agentId];
-  if (!agent) {
-    return false;
+/**
+ * Clear detector state for an agent (call when agent completes or is reset).
+ */
+export function clearAgentDetector(agentId: AgentId): void {
+  const detector = agentDetectors.get(agentId);
+  if (detector) {
+    detector.reset();
+    agentDetectors.delete(agentId);
   }
+}
 
-  if (!Array.isArray(thoughts) || thoughts.length === 0) {
-    return false;
+/**
+ * Clear all agent detectors (call when workflow completes).
+ */
+export function clearAllDetectors(): void {
+  for (const detector of agentDetectors.values()) {
+    detector.reset();
   }
-
-  const text = thoughts.join(" ").toLowerCase();
-
-  const patterns = [
-    "unsure how to proceed",
-    "not sure how to proceed",
-    "need guidance",
-    "need clarification",
-    "uncertain about next step",
-    "waiting for instructions",
-    "awaiting approval",
-  ];
-
-  return patterns.some((p) => text.includes(p));
+  agentDetectors.clear();
 }
 
 export const __internals = {
   cloneState,
   ensureAgent,
   normaliseTime,
+  getOrCreateDetector,
 };
