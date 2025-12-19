@@ -36,6 +36,7 @@ const mockUpsertEdges = mock();
 const mockUpdateNode = mock();
 const mockArchiveNodes = mock();
 const mockCreateCorrection = mock();
+const mockRecordAccessBatch = mock();
 mock.module("@alfred/db/repo/graph", () => ({
   findNodesByKind: mockFindNodesByKind,
   getNode: mockGetNode,
@@ -47,6 +48,7 @@ mock.module("@alfred/db/repo/graph", () => ({
   updateNode: mockUpdateNode,
   archiveNodes: mockArchiveNodes,
   createCorrection: mockCreateCorrection,
+  recordAccessBatch: mockRecordAccessBatch,
 }));
 
 // Import tools after mocking
@@ -72,6 +74,7 @@ describe("Knowledge Graph Tools", () => {
     mockUpdateNode.mockReset();
     mockArchiveNodes.mockReset();
     mockCreateCorrection.mockReset();
+    mockRecordAccessBatch.mockReset().mockResolvedValue(0);
 
     // Default to allowing all policy checks
     authTokenMocks.requireToolScopesAndPolicy.mockResolvedValue({
@@ -157,6 +160,78 @@ describe("Knowledge Graph Tools", () => {
         authz: "Bearer test-token",
       };
 
+      const result = await toolKnowledgeQuery.execute({ input });
+
+      expect(result.nodes).toHaveLength(1);
+      expect(result.nodes[0].id).toBe("node-1");
+    });
+
+    it("calls recordAccessBatch for active recall after retrieving nodes", async () => {
+      const mockNodes = [
+        {
+          id: "node-1",
+          resource: "user",
+          hash: "hash-1",
+          kind: "fact",
+          label: "Test fact 1",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+        {
+          id: "node-2",
+          resource: "user",
+          hash: "hash-2",
+          kind: "fact",
+          label: "Test fact 2",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      mockFindNodesByKind.mockResolvedValue(mockNodes);
+      mockRecordAccessBatch.mockResolvedValue(2);
+
+      const input: KnowledgeQueryInput = {
+        query: "test",
+        limit: 10,
+        authz: "Bearer test-token",
+      };
+
+      const result = await toolKnowledgeQuery.execute({ input });
+
+      expect(result.nodes).toHaveLength(2);
+      // Verify recordAccessBatch was called with node IDs
+      expect(mockRecordAccessBatch).toHaveBeenCalled();
+      const callArgs = mockRecordAccessBatch.mock.calls[0];
+      expect(callArgs[0]).toEqual(["node-1", "node-2"]);
+    });
+
+    it("handles recordAccessBatch failure gracefully", async () => {
+      const mockNodes = [
+        {
+          id: "node-1",
+          resource: "user",
+          hash: "hash-1",
+          kind: "fact",
+          label: "Test fact",
+          properties: {},
+          created: new Date(),
+          updated: new Date(),
+        },
+      ];
+
+      mockFindNodesByKind.mockResolvedValue(mockNodes);
+      mockRecordAccessBatch.mockRejectedValue(new Error("DB error"));
+
+      const input: KnowledgeQueryInput = {
+        query: "test",
+        limit: 10,
+        authz: "Bearer test-token",
+      };
+
+      // Should still succeed despite recordAccessBatch failure
       const result = await toolKnowledgeQuery.execute({ input });
 
       expect(result.nodes).toHaveLength(1);

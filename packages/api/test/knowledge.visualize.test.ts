@@ -3,7 +3,7 @@ process.env.DATABASE_URL = "sqlite::memory:";
 process.env.DISABLE_TRPC_METRICS = "1";
 process.env.DISABLE_METRICS_HOOKS = "1";
 
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import "./utils/mock-hypergraph";
 import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
@@ -169,5 +169,59 @@ describe("knowledge.visualize (sqlite)", () => {
       n.label.toLowerCase().includes("spacex")
     );
     expect(spacexNodes.length).toBeLessThanOrEqual(1);
+  });
+
+  it("calls touchNodes after upsertNodes for active recall", async () => {
+    const caller = createCaller();
+    const resource = `test-active-recall-${Date.now()}`;
+
+    // Spy on touchNodes (works with both sqlite and postgres)
+    const graphWrite = await import("@alfred/db/repo/graph/write");
+    const touchNodesSpy = vi.spyOn(graphWrite, "touchNodes").mockResolvedValue(0);
+
+    const result = await caller.visualize({
+      resource,
+      text: "Apple makes iPhones. Microsoft makes Windows.",
+      limit: 10,
+    });
+
+    // Verify nodes were created
+    expect(result.nodes.length).toBeGreaterThan(0);
+
+    // Verify touchNodes was called with node IDs
+    expect(touchNodesSpy).toHaveBeenCalled();
+    const callArgs = touchNodesSpy.mock.calls[0];
+    expect(callArgs[0]).toBeInstanceOf(Array);
+    expect(callArgs[0].length).toBeGreaterThan(0);
+    // Verify all IDs are strings (UUIDs)
+    for (const id of callArgs[0]) {
+      expect(typeof id).toBe("string");
+      expect(id.length).toBeGreaterThan(0);
+    }
+
+    touchNodesSpy.mockRestore();
+  });
+
+  it("handles touchNodes failure gracefully", async () => {
+    const caller = createCaller();
+    const resource = `test-active-recall-error-${Date.now()}`;
+
+    // Mock touchNodes to fail
+    const graphWrite = await import("@alfred/db/repo/graph/write");
+    const touchNodesSpy = vi
+      .spyOn(graphWrite, "touchNodes")
+      .mockRejectedValueOnce(new Error("DB error"));
+
+    // Should still succeed despite touchNodes failure
+    const result = await caller.visualize({
+      resource,
+      text: "Test text",
+      limit: 10,
+    });
+
+    expect(result.nodes).toBeDefined();
+    expect(result.meta).toBeDefined();
+
+    touchNodesSpy.mockRestore();
   });
 });
