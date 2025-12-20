@@ -10,7 +10,7 @@ import {
   semanticQuery as hyperSemantic,
   parse as parseQuery,
 } from "@alfred/knowledge/query";
-import { retrieve as ragRetrieve } from "@alfred/rag";
+import { embed as ragEmbed, retrieve as ragRetrieve } from "@alfred/rag";
 import type { UnifiedEdge, UnifiedNode, UnifiedNodeKind } from "./unified.js";
 
 type DbNode = typeof memoryNodes.$inferSelect;
@@ -163,21 +163,26 @@ async function runSemantic(
     context.graph.embeddingCount() > 0 &&
     query.preferRag !== true
   ) {
-    const ids = hyperSemantic(query.text, context.graph, topK);
-    const semanticNodes: UnifiedNode[] = [];
-    const nodeSet = new Set<string>();
-    for (const id of ids) {
-      if (nodeSet.has(id)) {
-        continue;
+    try {
+      const embedding = Float32Array.from(await ragEmbed(query.text));
+      const ids = hyperSemantic(query.text, context.graph, topK, { embedding });
+      const semanticNodes: UnifiedNode[] = [];
+      const nodeSet = new Set<string>();
+      for (const id of ids) {
+        if (nodeSet.has(id)) {
+          continue;
+        }
+        const knowledge = context.graph.get(id as NodeId);
+        if (!knowledge) {
+          continue;
+        }
+        semanticNodes.push(mapKnowledgeNode(id as string, knowledge));
+        nodeSet.add(id as string);
       }
-      const knowledge = context.graph.get(id as NodeId);
-      if (!knowledge) {
-        continue;
-      }
-      semanticNodes.push(mapKnowledgeNode(id as string, knowledge));
-      nodeSet.add(id as string);
+      return { nodes: semanticNodes };
+    } catch {
+      // Fall through to RAG
     }
-    return { nodes: semanticNodes };
   }
 
   const chunks = await ragRetrieve(query.text, topK);

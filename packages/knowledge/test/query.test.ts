@@ -49,17 +49,6 @@ describe("execute", () => {
 });
 
 describe("semanticQuery", () => {
-  it("returns nodes whose content matches query terms", () => {
-    const graph = empty();
-    const alpha = graph.add(fact("Launch alpha build", 0.9, "log"));
-    graph.add(fact("Review beta plan", 0.6, "log"));
-
-    const results = semanticQuery("alpha build", graph, 5);
-
-    expect(results.length).toBeGreaterThan(0);
-    expect(results[0]).toBe(alpha);
-  });
-
   it("prefers embedding KNN results when available", () => {
     const graph = empty();
     const alpha = graph.add(fact("Alpha", 0.9, "src"));

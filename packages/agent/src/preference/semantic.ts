@@ -1,3 +1,4 @@
+import { cosineSimilarity } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import type {
@@ -72,23 +73,14 @@ export type PreferenceScores = {
 };
 
 type PreferenceCentroids = {
-  verbosity: Map<ResponseVerbosity, Float32Array>;
-  tone: Map<ResponseTone, Float32Array>;
-  format: Map<ResponseFormat, Float32Array>;
+  verbosity: Map<ResponseVerbosity, number[]>;
+  tone: Map<ResponseTone, number[]>;
+  format: Map<ResponseFormat, number[]>;
 };
 
 let centroidPromise: Promise<PreferenceCentroids> | null = null;
 
-function normalizeVector(vector: number[]): Float32Array {
-  let magnitude = 0;
-  for (const value of vector) {
-    magnitude += value * value;
-  }
-  magnitude = Math.sqrt(magnitude) || 1;
-  return Float32Array.from(vector.map((value) => value / magnitude));
-}
-
-function averageVectors(vectors: number[][]): Float32Array | null {
+function averageVectors(vectors: number[][]): number[] | null {
   if (!vectors.length) {
     return null;
   }
@@ -106,21 +98,7 @@ function averageVectors(vectors: number[][]): Float32Array | null {
       acc[i] = current + (vector[i] ?? 0);
     }
   }
-  return normalizeVector(acc.map((value) => value / vectors.length));
-}
-
-function cosine(a: Float32Array, b: Float32Array): number {
-  let dot = 0;
-  const len = Math.min(a.length, b.length);
-  for (let i = 0; i < len; i += 1) {
-    // i is guaranteed to be within bounds due to loop condition
-    const aVal = a[i];
-    const bVal = b[i];
-    if (aVal !== undefined && bVal !== undefined) {
-      dot += aVal * bVal;
-    }
-  }
-  return dot;
+  return acc.map((value) => value / vectors.length);
 }
 
 function getPreferenceCentroids(): Promise<PreferenceCentroids> {
@@ -143,7 +121,7 @@ function getPreferenceCentroids(): Promise<PreferenceCentroids> {
 
       const attach = <T extends string>(
         entries: Record<T, string[]>,
-        target: Map<T, Float32Array>
+        target: Map<T, number[]>
       ) => {
         for (const [label, samples] of Object.entries(entries) as [
           T,
@@ -177,7 +155,7 @@ function getPreferenceCentroids(): Promise<PreferenceCentroids> {
   return centroidPromise;
 }
 
-async function embedSamples(samples: string[]): Promise<Float32Array | null> {
+async function embedSamples(samples: string[]): Promise<number[] | null> {
   const sanitized = samples
     .map((text) => text.trim())
     .filter((text) => text.length > 0)
@@ -199,13 +177,13 @@ async function embedSamples(samples: string[]): Promise<Float32Array | null> {
 }
 
 function rankScores<T extends string>(
-  vector: Float32Array,
-  centroids: Map<T, Float32Array>
+  vector: number[],
+  centroids: Map<T, number[]>
 ): Array<{ label: T; score: number }> {
   return Array.from(centroids.entries())
     .map(([label, centroid]) => ({
       label,
-      score: cosine(vector, centroid),
+      score: cosineSimilarity(vector, centroid),
     }))
     .sort((a, b) => b.score - a.score);
 }
@@ -251,12 +229,12 @@ export async function detectToneSemantic(
 
 export function buildPreferenceEmbedding(
   samples: string[]
-): Promise<Float32Array | null> {
+): Promise<number[] | null> {
   return embedSamples(samples);
 }
 
 export async function computePreferenceScores(
-  embedding: Float32Array
+  embedding: number[]
 ): Promise<PreferenceScores> {
   const centroids = await getPreferenceCentroids();
   return {

@@ -4,6 +4,7 @@
  */
 
 import { EMBEDDING_DIM } from "@alfred/embed";
+import { createHash } from "node:crypto";
 import { BTreeIndex } from "./indices/btree.js";
 import { IntervalTree } from "./indices/interval-tree.js";
 import { RTreeND } from "./indices/rtree.js";
@@ -59,7 +60,7 @@ export const timestamp = (n: number): Timestamp => {
 
 export const nodeFromHash = (hash: string): NodeId => nodeId(hash);
 
-export const knowledgeHash = (k: Knowledge): string => {
+const knowledgeHashInput = (k: Knowledge): string => {
   let s = `${k._}:`;
   switch (k._) {
     case "fact":
@@ -75,10 +76,14 @@ export const knowledgeHash = (k: Knowledge): string => {
       s += k.examples.join(",") + k.rule;
       break;
   }
-  return hashString(s);
+  return s;
 };
 
-const hashString = (input: string): string => {
+export const knowledgeHash = (k: Knowledge): string => {
+  return hashString(knowledgeHashInput(k));
+};
+
+const hashStringLegacy = (input: string): string => {
   let h = 2_166_136_261;
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i);
@@ -86,6 +91,9 @@ const hashString = (input: string): string => {
   }
   return h.toString(36);
 };
+
+const hashString = (input: string): string =>
+  createHash("sha256").update(input).digest("hex");
 
 // HAMT (Hash Array Mapped Trie) for O(1) content addressing
 class HAMT<V> {
@@ -209,6 +217,63 @@ export class Hypergraph {
     return nodeRef;
   }
 
+  /**
+   * Inserts a node using an explicit persisted hash.
+   * Intended for loaders that must preserve stable IDs across hash upgrades.
+   */
+  hydrate(hash: string, k: Knowledge): NodeId {
+    const id = nodeId(hash);
+    const existing = this.nodes.get(hash);
+    this.nodes.set(hash, k);
+
+    const isNew = !existing;
+    if (isNew) {
+      switch (k._) {
+        case "fact":
+          this.temporal.insert({ start: k.ts, end: k.ts, id });
+          this.ordered.insert(k.content, id);
+          break;
+        case "relation": {
+          if (!this.edges.has(k.from)) {
+            this.edges.set(k.from, new Set());
+          }
+          this.edges.get(k.from)?.add(k.to);
+
+          if (!this.inbound.has(k.to)) {
+            this.inbound.set(k.to, new Set());
+          }
+          this.inbound.get(k.to)?.add(k.from);
+
+          const outboundKind = this.ensureKindBucket(
+            this.edgesByKind,
+            k.kind,
+            k.from
+          );
+          outboundKind.add(k.to);
+
+          const inboundKind = this.ensureKindBucket(
+            this.inboundByKind,
+            k.kind,
+            k.to
+          );
+          inboundKind.add(k.from);
+          break;
+        }
+        case "insight":
+          break;
+        case "pattern":
+          break;
+      }
+    }
+
+    if (isNew) {
+      this.nodeCount++;
+    }
+    this.modCount++;
+
+    return id;
+  }
+
   get(id: NodeId): Knowledge | undefined {
     return this.nodes.get(id);
   }
@@ -314,7 +379,16 @@ export class Hypergraph {
   }
 
   private contentAddress(k: Knowledge): string {
-    return knowledgeHash(k);
+    const input = knowledgeHashInput(k);
+    const v2 = hashString(input);
+    if (this.nodes.get(v2)) {
+      return v2;
+    }
+    const v1 = hashStringLegacy(input);
+    if (this.nodes.get(v1)) {
+      return v1;
+    }
+    return v2;
   }
 
   private ensureKindBucket(

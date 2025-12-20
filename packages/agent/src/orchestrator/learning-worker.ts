@@ -73,9 +73,6 @@ export type LearningWorkerConfig = {
   cleanupAgeMs: number;
   decayLimit: number;
   confidenceFloor: number;
-  // Episodic Dreaming
-  dreamingEnabled: boolean;
-  dreamingIntervalMs: number;
 };
 
 const DEFAULT_CONFIG: LearningWorkerConfig = {
@@ -102,17 +99,10 @@ const DEFAULT_CONFIG: LearningWorkerConfig = {
   ), // 30 days
   decayLimit: 1000,
   confidenceFloor: 0.01,
-  // Episodic Dreaming
-  dreamingEnabled: process.env.DREAMING_ENABLED !== "false",
-  dreamingIntervalMs: Number.parseInt(
-    process.env.DREAMING_INTERVAL_MS || "21600000",
-    10
-  ), // 6 hours
 };
 
 let learningInterval: NodeJS.Timeout | null = null;
 let lastMaintenanceTime = 0;
-let lastDreamingTime = 0;
 
 export function startLearningWorker(
   config: Partial<LearningWorkerConfig> = {}
@@ -141,15 +131,6 @@ export function startLearningWorker(
           lastMaintenanceTime = now;
         }
       }
-
-      // 3. Run Episodic Dreaming (if enabled)
-      if (finalConfig.dreamingEnabled) {
-        const now = Date.now();
-        if (now - lastDreamingTime > finalConfig.dreamingIntervalMs) {
-          await processDreaming();
-          lastDreamingTime = now;
-        }
-      }
     } catch (error) {
       logger.error("learning_worker_error", {
         error: error instanceof Error ? error.message : String(error),
@@ -176,104 +157,6 @@ export function stopLearningWorker() {
     learningInterval = null;
   }
 }
-
-async function processDreaming() {
-  logger.debug("learning_worker_dreaming_started");
-
-  try {
-    // 1. Fetch failed runs from last 24 hours
-    const failedRuns = await db
-      .select({
-        id: workflowRuns.id,
-        errorMessage: workflowRuns.errorMessage,
-      })
-      .from(workflowRuns)
-      .where(
-        and(
-          eq(workflowRuns.status, "failed"),
-          sql`${workflowRuns.completedAt} > NOW() - INTERVAL '24 hours'`,
-          sql`${workflowRuns.errorMessage} IS NOT NULL`
-        )
-      )
-      .limit(100);
-
-    if (failedRuns.length === 0) {
-      logger.debug("learning_worker_dreaming_no_failures");
-      return;
-    }
-
-    // 2. Cluster by error message (simple exact match or prefix)
-    const clusters = new Map<string, { count: number; sample: string }>();
-
-    for (const run of failedRuns) {
-      const msg = run.errorMessage || "Unknown error";
-      // Normalize: strip random IDs or timestamps if possible.
-      // For MVP, just use the first 100 chars as a naive cluster key.
-      const key = msg.substring(0, 100);
-
-      const existing = clusters.get(key) || { count: 0, sample: msg };
-      existing.count++;
-      clusters.set(key, existing);
-    }
-
-    // 3. Generate Heuristics
-    const heuristics: Array<{
-      label: string;
-      rule: string;
-      trigger: string;
-      count: number;
-    }> = [];
-
-    for (const [key, cluster] of clusters.entries()) {
-      // Only dream about repeated failures or major ones
-      if (cluster.count >= 1) {
-        heuristics.push({
-          label: `Heuristic: Avoid ${key.substring(0, 30)}...`,
-          rule: `Avoid causing error: "${cluster.sample}". Previously observed ${cluster.count} times.`,
-          trigger: cluster.sample,
-          count: cluster.count,
-        });
-      }
-    }
-
-    if (heuristics.length === 0) {
-      return;
-    }
-
-    // 4. Persist Heuristics
-    // Generate embeddings for the "rule" so it can be retrieved contextually
-    const embeddings = await embedMany(heuristics.map((h) => h.rule));
-
-    const nodesToUpsert = heuristics.map((h, i) => ({
-      resource: "system",
-      hash: createHash("sha256").update(h.trigger).digest("hex"),
-      kind: "heuristic",
-      label: h.label,
-      properties: {
-        rule: h.rule,
-        trigger: h.trigger,
-        count: h.count,
-        confidence: 0.8, // High confidence in observed failures
-        source: "dreamer",
-      },
-      embedding: embeddings[i],
-    }));
-
-    await upsertNodes(nodesToUpsert);
-    logger.info("learning_worker_dreaming_complete", {
-      created: heuristics.length,
-    });
-  } catch (error) {
-    logger.warn("learning_worker_dreaming_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-// Test-only exports (keep runtime surface lean)
-export const __internals = {
-  processDreaming,
-};
 
 /**
  * Learn domain classification from user correction.

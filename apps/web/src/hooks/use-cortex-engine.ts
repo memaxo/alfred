@@ -8,7 +8,6 @@ import {
   type CortexConfig,
   CortexEngine,
   detectRenderingCapability,
-  isWebGPUSupported,
 } from "@alfred/cortex";
 import { AtmosphereSystem } from "@alfred/cortex/systems/atmosphere";
 import { CoronaSystem } from "@alfred/cortex/systems/corona";
@@ -67,6 +66,8 @@ export function useCortexEngine(
     }
 
     initializingRef.current = true;
+    setError(null);
+    setIsReady(false);
 
     async function init() {
       try {
@@ -75,6 +76,7 @@ export function useCortexEngine(
         setCapability(cap);
 
         if (cap !== "webgpu") {
+          setError(new Error(`cortex_webgpu_required:${cap}`));
           setIsReady(true);
           return;
         }
@@ -128,6 +130,7 @@ export function useCortexEngine(
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
+        setIsReady(true);
         onError?.(error);
       } finally {
         initializingRef.current = false;
@@ -186,17 +189,4 @@ export function useCortexEngine(
     start,
     stop,
   };
-}
-
-/**
- * Check if WebGPU is supported (without initializing)
- */
-export function useWebGPUSupport(): boolean {
-  const [supported, setSupported] = useState(false);
-
-  useEffect(() => {
-    setSupported(isWebGPUSupported());
-  }, []);
-
-  return supported;
 }

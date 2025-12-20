@@ -1,6 +1,10 @@
 import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
+import { desc, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
+
+const NODE_LIMIT = 200;
+const EDGE_LIMIT = 2000;
 
 export const toolMindscapeRead = {
   name: "mindscape_read",
@@ -13,24 +17,54 @@ export const toolMindscapeRead = {
       .describe("Optional search query to filter nodes by label"),
   }),
   execute: async ({ query }: { query?: string }) => {
-    // In a real implementation, this might query the active Mindscape state via a shared store or DB
-    // For now, we'll query the DB representation which is the source of truth for persistent nodes
-    const nodes = await db.select().from(memoryNodes);
-    const edges = await db.select().from(memoryEdges);
+    const normalizedQuery = query?.trim();
+    const pattern = normalizedQuery ? `%${normalizedQuery}%` : null;
 
-    // Filter if query provided
-    const filteredNodes = query
-      ? nodes.filter((n) => n.label.toLowerCase().includes(query.toLowerCase()))
-      : nodes;
+    const nodes = await (pattern
+      ? db
+          .select({
+            id: memoryNodes.id,
+            label: memoryNodes.label,
+            kind: memoryNodes.kind,
+          })
+          .from(memoryNodes)
+          .where(sql`${memoryNodes.label} ilike ${pattern}`)
+          .orderBy(desc(memoryNodes.updated), desc(memoryNodes.created))
+          .limit(NODE_LIMIT)
+      : db
+          .select({
+            id: memoryNodes.id,
+            label: memoryNodes.label,
+            kind: memoryNodes.kind,
+          })
+          .from(memoryNodes)
+          .orderBy(desc(memoryNodes.updated), desc(memoryNodes.created))
+          .limit(NODE_LIMIT));
+
+    const ids = nodes.map((node) => node.id);
+    const edges =
+      ids.length === 0
+        ? []
+        : await db
+            .select({
+              from: memoryEdges.fromId,
+              to: memoryEdges.toId,
+              kind: memoryEdges.kind,
+            })
+            .from(memoryEdges)
+            .where(
+              or(
+                inArray(memoryEdges.fromId, ids as [string, ...string[]]),
+                inArray(memoryEdges.toId, ids as [string, ...string[]])
+              )
+            )
+            .orderBy(desc(memoryEdges.created))
+            .limit(EDGE_LIMIT);
 
     return {
-      nodes: filteredNodes.map((n) => ({
-        id: n.id,
-        label: n.label,
-        kind: n.kind,
-      })),
-      edges: edges.map((e) => ({ from: e.fromId, to: e.toId, kind: e.kind })),
-      count: filteredNodes.length,
+      nodes,
+      edges,
+      count: nodes.length,
     };
   },
 };

@@ -18,6 +18,14 @@ mock.module("@alfred/runtime", () => ({
   createRuntime: createRuntimeMock,
 }));
 
+mock.module("@alfred/embed", () => ({
+  embedMany: async () => [
+    [1, 0, 0],
+    [1, 0, 0],
+  ],
+  cosineSimilarity: () => 1,
+}));
+
 mock.module("@alfred/policy", () => ({
   evaluate: evaluateMock,
   registerCacheObs: vi.fn(),

@@ -1,4 +1,5 @@
 import type { Event } from "@alfred/cognitive/state";
+import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { logger } from "@alfred/logger";
 import type { CognitiveEffect } from "@alfred/runtime";
 import { runAssistantGeneration, runCognitiveLoop } from "@alfred/runtime";
@@ -38,6 +39,35 @@ const buildContext = (raw: unknown, ctx: Context) => {
   };
 };
 
+async function computeFeedbackSimilarity(
+  expected: string,
+  actual: string
+): Promise<number | null> {
+  if (expected === actual) {
+    return 1;
+  }
+  if (expected.length === 0 || actual.length === 0) {
+    return 0;
+  }
+
+  try {
+    const vectors = await embedMany([expected, actual]);
+    const expectedVec = vectors[0];
+    const actualVec = vectors[1];
+    if (!(expectedVec && actualVec)) {
+      return null;
+    }
+
+    const sim = cosineSimilarity(expectedVec, actualVec);
+    return Math.max(0, Math.min(1, sim));
+  } catch (error) {
+    logger.warn("cognitive_feedback_similarity_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 export const cognitiveRouter = router({
   feedback: authedProcedure
     .use(
@@ -47,10 +77,15 @@ export const cognitiveRouter = router({
     )
     .input(feedbackInput)
     .mutation(async ({ ctx, input }) => {
+      const expected = input.expected.trim();
+      const actual = (input.actual ?? "").trim();
+      const similarity = await computeFeedbackSimilarity(expected, actual);
+
       const event: Event = {
         _: "feedback",
-        expected: input.expected,
-        actual: input.actual ?? "",
+        expected,
+        actual,
+        similarity: similarity ?? undefined,
         ts: (input.ts ?? Date.now()) as any,
       };
 

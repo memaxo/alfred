@@ -21,9 +21,11 @@ const noop = () => {};
 mock.module("../src/metrics.js", () => ({
   recordCodexError: noop,
   recordCodexExecRun: noop,
+  recordDroidExecRun: noop,
   recordCodexWriterError: noop,
   recordCodexSessionViolation: noop,
   startCodexExecTimer: () => noop,
+  startDroidExecTimer: () => noop,
   startCodexSessionValidationTimer: () => () => {},
 }));
 

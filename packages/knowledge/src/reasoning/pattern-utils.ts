@@ -14,29 +14,11 @@ const anchorByPattern = new Map<
   ][]
 );
 
-const centroidCache = new Map<ReasoningPattern, Promise<Float32Array>>();
-
-const normalizeVector = (vector: number[]): Float32Array => {
-  let magnitude = 0;
-  for (const value of vector) {
-    magnitude += value * value;
-  }
-  magnitude = Math.sqrt(magnitude) || 1;
-  return Float32Array.from(vector.map((value) => value / magnitude));
-};
-
-export const cosine = (a: Float32Array, b: Float32Array): number => {
-  let dot = 0;
-  const len = Math.min(a.length, b.length);
-  for (let i = 0; i < len; i += 1) {
-    dot += a[i]! * b[i]!;
-  }
-  return dot;
-};
+const centroidCache = new Map<ReasoningPattern, Promise<number[]>>();
 
 export async function getPatternCentroid(
   pattern: ReasoningPattern
-): Promise<Float32Array> {
+): Promise<number[]> {
   if (!centroidCache.has(pattern)) {
     const anchor = anchorByPattern.get(pattern);
     if (!anchor) {
@@ -51,7 +33,7 @@ export async function getPatternCentroid(
           if (!vector) {
             throw new Error(`Failed to embed pattern anchor ${anchor.label}`);
           }
-          return normalizeVector(vector);
+          return vector;
         })
         .catch((error) => {
           centroidCache.delete(pattern);
@@ -65,7 +47,7 @@ export async function getPatternCentroid(
 
 export async function embedTextSamples(
   texts: string[]
-): Promise<Float32Array[]> {
+): Promise<number[][]> {
   const sanitized = texts
     .map((text) => text.trim())
     .filter((text) => text.length > 0);
@@ -76,9 +58,7 @@ export async function embedTextSamples(
 
   try {
     const vectors = await embedMany(sanitized);
-    return vectors
-      .filter((vector): vector is number[] => Array.isArray(vector))
-      .map((vector) => normalizeVector(vector));
+    return vectors.filter((vector): vector is number[] => Array.isArray(vector));
   } catch (error) {
     logger.warn("knowledge_reasoning_embed_failed", {
       error: error instanceof Error ? error.message : String(error),

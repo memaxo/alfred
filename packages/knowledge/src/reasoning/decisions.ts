@@ -1,8 +1,8 @@
 import nlp from "compromise";
 import type { KnowledgeEntry } from "../extractor";
+import { cosineSimilarity } from "@alfred/embed";
 import { fact, type Knowledge, knowledgeHash } from "../hypergraph";
 import {
-  cosine,
   embedTextSamples,
   getPatternCentroid,
   scoreToConfidence,
@@ -42,7 +42,7 @@ export async function deriveDecisionFacts(
       return;
     }
 
-    const similarity = cosine(embedding, centroid);
+    const similarity = cosineSimilarity(embedding, centroid);
     if (similarity < MIN_SIMILARITY) {
       return;
     }

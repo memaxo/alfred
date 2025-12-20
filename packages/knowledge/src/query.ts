@@ -3,7 +3,6 @@
  * Pure functional query evaluation (AC-3 + MRV backtracking)
  */
 
-import nlp from "compromise";
 import type { Hypergraph, Knowledge, NodeId } from "./hypergraph.js";
 import { knn } from "./indices/knn.js";
 import { measureSync } from "./metrics.js";
@@ -34,7 +33,7 @@ export type Query = {
 export type Binding = Map<Variable, string>;
 export type Result = Map<Variable, string>;
 export type SemanticQueryOptions = {
-  embedding?: Float32Array;
+  embedding: Float32Array;
   maxKnnNodes?: number;
 };
 
@@ -143,13 +142,13 @@ const executeInternal = (query: Query, graph: Hypergraph): Result[] => {
 };
 
 /**
- * Semantic query fallback when exact match fails
+ * Semantic natural-language query (embedding required)
  */
 export const semanticQuery = (
   naturalLanguage: string,
   graph: Hypergraph,
   limit = 10,
-  options?: SemanticQueryOptions
+  options: SemanticQueryOptions
 ): NodeId[] =>
   measureSync("knowledge.query.semantic", SEMANTIC_BUDGET_MS, () =>
     semanticQueryInternal(naturalLanguage, graph, limit, options)
@@ -159,85 +158,40 @@ const semanticQueryInternal = (
   naturalLanguage: string,
   graph: Hypergraph,
   limit: number,
-  options?: SemanticQueryOptions
+  options: SemanticQueryOptions
 ): NodeId[] => {
   const seen = new Set<string>();
   const ordered: NodeId[] = [];
 
-  const embedding = options?.embedding;
-  const maxKnnNodes = options?.maxKnnNodes ?? 10_000;
-  if (
-    embedding &&
-    graph.embeddingCount &&
-    graph.embeddingCount() > 0 &&
-    graph.embeddingCount() <= maxKnnNodes
-  ) {
-    const vectors = Array.from(graph.embeddingEntries()).map(([id, vec]) => ({
-      id,
-      vec,
-    }));
-    const knnResults = knn(vectors, embedding, limit);
-    for (const id of knnResults) {
-      const key = String(id);
-      if (!seen.has(key)) {
-        ordered.push(id);
-        seen.add(key);
-        if (ordered.length >= limit) {
-          return ordered.slice(0, limit);
-        }
-      }
-    }
+  void naturalLanguage;
+
+  const embedding = options.embedding;
+  const maxKnnNodes = options.maxKnnNodes ?? 10_000;
+
+  if (!graph.embeddingCount || graph.embeddingCount() <= 0) {
+    return [];
   }
-
-  const terms = extractQueryTerms(naturalLanguage);
-
-  if (terms.length === 0) {
+  if (graph.embeddingCount() > maxKnnNodes) {
     return [];
   }
 
-  const scores = new Map<NodeId, number>();
-  for (const [id, node] of graph.entries()) {
-    const content = getNodeContent(node).toLowerCase();
-    let score = 0;
-    for (const term of terms) {
-      if (content.includes(term)) {
-        score += 1;
-      }
-    }
-    if (score > 0) {
-      scores.set(id, score);
-    }
-  }
-
-  const textRanked = Array.from(scores.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => id);
-
-  for (const id of textRanked) {
+  const vectors = Array.from(graph.embeddingEntries()).map(([id, vec]) => ({
+    id,
+    vec,
+  }));
+  const knnResults = knn(vectors, embedding, limit);
+  for (const id of knnResults) {
     const key = String(id);
-    if (seen.has(key)) {
-      continue;
-    }
-    ordered.push(id);
-    seen.add(key);
-    if (ordered.length >= limit) {
-      break;
+    if (!seen.has(key)) {
+      ordered.push(id);
+      seen.add(key);
+      if (ordered.length >= limit) {
+        return ordered.slice(0, limit);
+      }
     }
   }
 
   return ordered.slice(0, limit);
-};
-
-/**
- * Pattern matching placeholder
- */
-export const match = (
-  pattern: string,
-  graph: Hypergraph
-): Array<{ node: NodeId; bindings: Map<string, string> }> => {
-  void pattern;
-  void graph;
-  return [];
 };
 
 const parseWhereClauses = (whereString: string): Clause[] => {
@@ -752,28 +706,6 @@ function readStringProp(
   const value = props[key];
   return typeof value === "string" ? value : fallback;
 }
-
-const extractQueryTerms = (naturalLanguage: string): string[] => {
-  const doc = nlp(naturalLanguage);
-  const unique = new Set<string>();
-
-  const addTerms = (terms: string[]) => {
-    for (const term of terms) {
-      const normalized = term.trim().toLowerCase();
-      if (normalized.length > 2) {
-        unique.add(normalized);
-      }
-    }
-  };
-
-  addTerms(doc.nouns().out("array"));
-  addTerms(doc.verbs().out("array"));
-  addTerms(doc.people().out("array"));
-  addTerms(doc.organizations().out("array"));
-  addTerms(doc.topics().out("array"));
-
-  return Array.from(unique);
-};
 
 export const builder = {
   facts: (predicate: string): Query => ({

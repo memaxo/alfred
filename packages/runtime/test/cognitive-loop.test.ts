@@ -17,6 +17,7 @@ mock.module("@alfred/db", () => {
 });
 
 import type { Event } from "@alfred/cognitive/state";
+import { idle, initialAutonomy } from "@alfred/cognitive/state";
 import { cognitiveRepo } from "@alfred/db";
 import { runCognitiveLoop } from "../src/loops/cognitive";
 
@@ -87,6 +88,7 @@ describe("Cognitive Loop", () => {
       _: "feedback",
       expected: "A",
       actual: "B", // Negative feedback
+      similarity: 0.1,
       ts: Date.now() as any,
     };
 
@@ -97,6 +99,89 @@ describe("Cognitive Loop", () => {
     );
 
     expect(state).toBeDefined();
+  });
+
+  it("maps feedback similarity to autonomy evidence monotonically", async () => {
+    const ctx = {};
+    const baseAuto = initialAutonomy(0);
+    const baseState = idle(0);
+
+    // @ts-expect-error - dynamically overriding mock function
+    cognitiveRepo.getLatestSnapshot = async () => ({
+      streamId: "test-stream-auto",
+      state: { ...baseState, autonomy: baseAuto } as any,
+      lastEventId: "event-1",
+      createdAt: new Date(0),
+    });
+    // @ts-expect-error - dynamically overriding mock function
+    cognitiveRepo.getEventsSince = async () => [];
+
+    const positive: Event = {
+      _: "feedback",
+      expected: "expected",
+      actual: "actual",
+      similarity: 0.9,
+      ts: Date.now() as any,
+    };
+    const negative: Event = {
+      _: "feedback",
+      expected: "expected",
+      actual: "actual",
+      similarity: 0.1,
+      ts: Date.now() as any,
+    };
+
+    const positiveResult = await runCognitiveLoop(
+      ctx as any,
+      "test-stream-auto-pos",
+      positive
+    );
+    const negativeResult = await runCognitiveLoop(
+      ctx as any,
+      "test-stream-auto-neg",
+      negative
+    );
+
+    const baseLevel = Number(baseAuto.level);
+    const posLevel = Number((positiveResult.state as any).autonomy?.level);
+    const negLevel = Number((negativeResult.state as any).autonomy?.level);
+
+    expect(posLevel).toBeGreaterThan(baseLevel);
+    expect(negLevel).toBeLessThan(baseLevel);
+  });
+
+  it("clamps feedback similarity and keeps autonomy within [0, 1]", async () => {
+    const ctx = {};
+    const baseAuto = initialAutonomy(0);
+    const baseState = idle(0);
+
+    // @ts-expect-error - dynamically overriding mock function
+    cognitiveRepo.getLatestSnapshot = async () => ({
+      streamId: "test-stream-auto-clamp",
+      state: { ...baseState, autonomy: baseAuto } as any,
+      lastEventId: "event-1",
+      createdAt: new Date(0),
+    });
+    // @ts-expect-error - dynamically overriding mock function
+    cognitiveRepo.getEventsSince = async () => [];
+
+    const event: Event = {
+      _: "feedback",
+      expected: "expected",
+      actual: "actual",
+      similarity: 5,
+      ts: Date.now() as any,
+    };
+
+    const result = await runCognitiveLoop(
+      ctx as any,
+      "test-stream-auto-clamp",
+      event
+    );
+
+    const level = Number((result.state as any).autonomy?.level);
+    expect(level).toBeGreaterThanOrEqual(0);
+    expect(level).toBeLessThanOrEqual(1);
   });
 
   it("updates autonomy on complete with success outcome", async () => {

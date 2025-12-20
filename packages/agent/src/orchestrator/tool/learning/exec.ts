@@ -4,6 +4,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { cosineSimilarity, embedMany } from "@alfred/embed";
 import { supervise } from "@alfred/learning/self_supervision";
 import { logger } from "@alfred/logger";
 import type { KnowledgeInsight } from "@alfred/type/knowledge";
@@ -40,12 +41,6 @@ const INSIGHT_ERROR_THRESHOLD = 0.15;
 const RULE_MAX_LEN = 240;
 
 /**
- * Timeout for LLM refinement calls (milliseconds).
- * Prevents hanging on slow or unresponsive LLM APIs.
- */
-const LLM_REFINEMENT_TIMEOUT_MS = 10_000;
-
-/**
  * Clamps a numeric value to the range [0, 1].
  */
 function clamp01(value: number): number {
@@ -53,63 +48,10 @@ function clamp01(value: number): number {
 }
 
 /**
- * Tokenizes text into lowercase word tokens.
- * Optimized for large inputs by using Set operations.
- */
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
-}
-
-/**
- * Computes Jaccard distance (1 - similarity) between two strings.
- * Optimized for large inputs using Set intersection.
- *
- * @param expected - Expected outcome text
- * @param actual - Actual outcome text
- * @returns Error value in range [0, 1] where 0 = identical, 1 = completely different
- */
-function jaccardError(expected: string, actual: string): number {
-  const eTokens = tokenize(expected);
-  const aTokens = tokenize(actual);
-
-  // Early return for empty cases
-  if (eTokens.length === 0 && aTokens.length === 0) {
-    return 0;
-  }
-  if (eTokens.length === 0 || aTokens.length === 0) {
-    return 1;
-  }
-
-  // Use Sets for O(1) lookup - more efficient than array iteration
-  const eSet = new Set(eTokens);
-  const aSet = new Set(aTokens);
-
-  // Compute intersection efficiently
-  let inter = 0;
-  // Iterate over smaller set for better performance
-  const smallerSet = eSet.size <= aSet.size ? eSet : aSet;
-  const largerSet = eSet.size <= aSet.size ? aSet : eSet;
-
-  for (const token of smallerSet) {
-    if (largerSet.has(token)) {
-      inter += 1;
-    }
-  }
-
-  const union = eSet.size + aSet.size - inter;
-  const similarity = union === 0 ? 0 : inter / union;
-  return clamp01(1 - similarity);
-}
-
-/**
  * Computes prediction error between expected and actual outcomes.
  * Returns 0 if no expected value is provided.
  */
-function computePredictionError(input: LearnRecordInput): number {
+async function computePredictionError(input: LearnRecordInput): Promise<number> {
   const expected = input.expected?.trim();
   if (!expected) {
     return 0;
@@ -118,7 +60,23 @@ function computePredictionError(input: LearnRecordInput): number {
   if (expected === actual) {
     return 0;
   }
-  return jaccardError(expected, actual);
+  try {
+    const vectors = await embedMany([expected, actual]);
+    const expectedVec = vectors[0];
+    const actualVec = vectors[1];
+    if (!(expectedVec && actualVec)) {
+      return 1;
+    }
+
+    const similarity = cosineSimilarity(expectedVec, actualVec);
+    const sim01 = clamp01(Math.max(0, similarity));
+    return clamp01(1 - sim01);
+  } catch (error) {
+    logger.warn("learning_prediction_error_embed_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return 1;
+  }
 }
 
 /**
@@ -149,125 +107,6 @@ function buildHeuristicRule(input: LearnPatternInput): string {
     ? `[${domain}] ${input.description}`
     : input.description;
   return truncate(`${headline.trim()} (tools: ${seq})`, RULE_MAX_LEN);
-}
-
-/**
- * Builds the prompt for LLM rule refinement.
- */
-function buildRefinementPrompt(args: {
-  description: string;
-  toolSequence: string[];
-  context: Record<string, unknown> | undefined;
-  domain: string | undefined;
-}): string {
-  const safeContext = redactObject(args.context) as
-    | Record<string, unknown>
-    | undefined;
-  return [
-    "You are extracting a reusable operational pattern for an agent.",
-    "Write ONE concise rule (imperative voice).",
-    "No markdown. No prefacing.",
-    "",
-    `Domain: ${args.domain ?? "(none)"}`,
-    `Description: ${redactSecrets(args.description)}`,
-    `Tool sequence: ${args.toolSequence.map(redactSecrets).join(" -> ")}`,
-    `Context (JSON): ${safeContext ? JSON.stringify(safeContext).slice(0, 2000) : "{}"}`,
-  ].join("\n");
-}
-
-/**
- * Creates OpenAI client with configuration from environment variables.
- */
-async function createOpenAIClient() {
-  const openaiModule = await import("@ai-sdk/openai");
-  const { createOpenAI } = openaiModule;
-
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("openai_api_key_missing");
-  }
-
-  return createOpenAI({
-    apiKey,
-    ...(process.env.OPENAI_BASE_URL
-      ? { baseURL: process.env.OPENAI_BASE_URL }
-      : {}),
-    ...(process.env.OPENAI_ORGANIZATION
-      ? { organization: process.env.OPENAI_ORGANIZATION }
-      : process.env.OPENAI_ORG
-        ? { organization: process.env.OPENAI_ORG }
-        : {}),
-  });
-}
-
-/**
- * Attempts to refine a pattern rule using an LLM.
- * Falls back to null if LLM is disabled, unavailable, or times out.
- *
- * @param args - Pattern description, tool sequence, context, and domain
- * @returns Refined rule string or null if refinement failed/disabled
- */
-async function maybeRefineRuleWithLlm(args: {
-  description: string;
-  toolSequence: string[];
-  context: Record<string, unknown> | undefined;
-  domain: string | undefined;
-}): Promise<string | null> {
-  if (process.env.LEARN_PATTERN_LLM_ENABLED?.trim() !== "true") {
-    return null;
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
-    return null;
-  }
-
-  try {
-    const [{ generateObject }, { z }] = await Promise.all([
-      import("ai"),
-      import("zod"),
-    ]);
-
-    const openai = await createOpenAIClient();
-
-    const schema = z.object({
-      rule: z
-        .string()
-        .min(1)
-        .max(RULE_MAX_LEN)
-        .describe("A concise, reusable rule capturing the pattern."),
-    });
-
-    const prompt = buildRefinementPrompt(args);
-    const modelId = process.env.LEARN_PATTERN_MODEL?.trim() || "gpt-4o-mini";
-
-    // Add timeout to prevent hanging on slow/unresponsive APIs
-    const refinementPromise = generateObject({
-      model: openai.chat(modelId) as Parameters<
-        typeof generateObject
-      >[0]["model"],
-      schema,
-      prompt,
-      temperature: 0,
-    });
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
-        () => reject(new Error("llm_refinement_timeout")),
-        LLM_REFINEMENT_TIMEOUT_MS
-      );
-    });
-
-    const result = await Promise.race([refinementPromise, timeoutPromise]);
-    const candidate = result.object.rule.trim();
-    return candidate.length > 0 ? truncate(candidate, RULE_MAX_LEN) : null;
-  } catch (error) {
-    logger.debug("learn_pattern_llm_refine_failed", {
-      error: error instanceof Error ? error.message : String(error),
-      domain: args.domain,
-    });
-    return null;
-  }
 }
 
 /**
@@ -315,7 +154,7 @@ export async function executeLearnRecord(args: {
   const graphRepo = await import(graphPkg);
 
   const resource = `runtime:${args.input.workflowId}`;
-  const error = computePredictionError(args.input);
+  const error = await computePredictionError(args.input);
 
   const safeExpected = args.input.expected
     ? redactSecrets(args.input.expected)
@@ -452,17 +291,8 @@ export async function executeLearnPattern(args: {
 
   const resource = "user";
   const heuristicRule = buildHeuristicRule(args.input);
-
-  const refined =
-    (await maybeRefineRuleWithLlm({
-      description: args.input.description,
-      toolSequence: args.input.toolSequence,
-      context: args.input.context,
-      domain: args.input.domain,
-    })) ?? null;
-
-  const rule = refined ?? heuristicRule;
-  const source = refined ? "llm" : "heuristic";
+  const rule = heuristicRule;
+  const source = "heuristic";
 
   const safeTools = normalizeToolSequence(args.input.toolSequence).map(
     redactSecrets

@@ -30,6 +30,13 @@ mock.module("@alfred/learning/self_supervision", () => ({
   supervise: mockSupervise,
 }));
 
+const mockEmbedMany = mock();
+const mockCosineSimilarity = mock();
+mock.module("@alfred/embed", () => ({
+  embedMany: mockEmbedMany,
+  cosineSimilarity: mockCosineSimilarity,
+}));
+
 const { toolLearnMistake, toolLearnPattern, toolLearnRecord } = await import(
   "../src/orchestrator/tool/learning"
 );
@@ -39,6 +46,8 @@ describe("Learning Tools", () => {
     resetAuthTokenMocks();
     mockUpsertNodes.mockReset();
     mockSupervise.mockReset();
+    mockEmbedMany.mockReset();
+    mockCosineSimilarity.mockReset();
 
     mockRequireToolScopesAndPolicy.mockResolvedValue({
       decision: { allow: true },
@@ -54,6 +63,12 @@ describe("Learning Tools", () => {
       new Map([["user:any", { id: "node-1" }]])
     );
     mockSupervise.mockReturnValue(null);
+
+    mockEmbedMany.mockResolvedValue([
+      [1, 0, 0],
+      [0, 1, 0],
+    ]);
+    mockCosineSimilarity.mockReturnValue(0);
   });
 
   describe("learn_record", () => {
@@ -240,117 +255,6 @@ describe("Learning Tools", () => {
           resource: { kind: "learning", id: "git" },
         })
       );
-    });
-
-    it("uses LLM refinement when enabled and API key available", async () => {
-      const originalEnv = process.env.LEARN_PATTERN_LLM_ENABLED;
-      const originalApiKey = process.env.OPENAI_API_KEY;
-      const originalModel = process.env.LEARN_PATTERN_MODEL;
-
-      try {
-        process.env.LEARN_PATTERN_LLM_ENABLED = "true";
-        process.env.OPENAI_API_KEY = "test-key";
-        process.env.LEARN_PATTERN_MODEL = "gpt-4o-mini";
-
-        const mockGenerateObject = mock();
-        const mockChat = mock(() => ({}));
-        const mockCreateOpenAI = mock(() => ({
-          chat: mockChat,
-        }));
-
-        // Mock modules before importing the tool
-        mock.module("ai", () => ({
-          generateObject: mockGenerateObject,
-        }));
-        mock.module("@ai-sdk/openai", () => ({
-          createOpenAI: mockCreateOpenAI,
-        }));
-
-        mockGenerateObject.mockResolvedValue({
-          object: { rule: "Use git status before deploying to staging" },
-        });
-
-        mockUpsertNodes.mockResolvedValueOnce(
-          new Map([["user:any", { id: "pattern-llm-1" }]])
-        );
-
-        const input: LearnPatternInput = {
-          description: "Deploy to staging",
-          toolSequence: ["git_status", "deploy"],
-          confidence: 0.9,
-          domain: "git",
-          authz: "Bearer token",
-        };
-
-        // Execute with mocked modules
-        const result = await toolLearnPattern.execute({ input });
-
-        expect(result.patternId).toBe("pattern-llm-1");
-        // Note: LLM refinement happens inside maybeRefineRuleWithLlm which is called
-        // during execution. The mock should be called if LLM is enabled.
-        // However, due to module caching, this test verifies the fallback behavior works.
-      } finally {
-        process.env.LEARN_PATTERN_LLM_ENABLED = originalEnv;
-        process.env.OPENAI_API_KEY = originalApiKey;
-        if (originalModel) {
-          process.env.LEARN_PATTERN_MODEL = originalModel;
-        } else {
-          process.env.LEARN_PATTERN_MODEL = undefined;
-        }
-      }
-    });
-
-    it("falls back to heuristic when LLM refinement times out", async () => {
-      const originalEnv = process.env.LEARN_PATTERN_LLM_ENABLED;
-      const originalApiKey = process.env.OPENAI_API_KEY;
-
-      try {
-        process.env.LEARN_PATTERN_LLM_ENABLED = "true";
-        process.env.OPENAI_API_KEY = "test-key";
-
-        const mockGenerateObject = mock();
-        const mockCreateOpenAI = mock(() => ({
-          chat: mock(() => ({})),
-        }));
-
-        mock.module("ai", () => ({
-          generateObject: mockGenerateObject,
-        }));
-        mock.module("@ai-sdk/openai", () => ({
-          createOpenAI: mockCreateOpenAI,
-        }));
-
-        // Simulate timeout
-        mockGenerateObject.mockImplementation(
-          () =>
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("timeout")), 100)
-            )
-        );
-
-        mockUpsertNodes.mockResolvedValueOnce(
-          new Map([["user:any", { id: "pattern-heuristic-1" }]])
-        );
-
-        const input: LearnPatternInput = {
-          description: "Deploy to staging",
-          toolSequence: ["git_status", "deploy"],
-          confidence: 0.9,
-          domain: "git",
-          authz: "Bearer token",
-        };
-
-        // Re-import to pick up mocked modules
-        const { toolLearnPattern: toolLearnPatternReloaded } = await import(
-          "../src/orchestrator/tool/learning"
-        );
-        const result = await toolLearnPatternReloaded.execute({ input });
-
-        expect(result.patternId).toBe("pattern-heuristic-1");
-      } finally {
-        process.env.LEARN_PATTERN_LLM_ENABLED = originalEnv;
-        process.env.OPENAI_API_KEY = originalApiKey;
-      }
     });
   });
 

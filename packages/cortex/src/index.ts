@@ -46,8 +46,6 @@ export {
   detectRenderingCapability,
   isWebGPUSupported,
 } from "./engine";
-// Fallback renderers
-export * from "./fallback";
 // Frame graph
 export {
   buildStandardFrameGraph,

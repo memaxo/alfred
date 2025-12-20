@@ -74,7 +74,7 @@ export function extractEntries(
       if (!knowledge) {
         continue;
       }
-      entries.push({ hash: knowledgeHash(knowledge), data: knowledge });
+      entries.push({ hash: String(id), data: knowledge });
     }
     return entries;
   });
@@ -110,14 +110,14 @@ export async function loadHypergraph(
     for (const node of nodes) {
       const knowledge = deserializeNode(node);
       if (knowledge) {
-        graph.add(knowledge);
+        graph.hydrate(node.hash, knowledge);
       }
     }
 
     for (const relation of relations) {
       const knowledge = deserializeRelation(relation);
       if (knowledge) {
-        graph.add(knowledge);
+        graph.hydrate(relation.hash, knowledge);
       }
     }
 
@@ -155,7 +155,7 @@ export function startAutoPersist(
     for (const id of ids) {
       const knowledge = graph.get(id);
       if (knowledge) {
-        entries.push({ hash: knowledgeHash(knowledge), data: knowledge });
+        entries.push({ hash: String(id), data: knowledge });
       }
       processedIds.push(id);
     }

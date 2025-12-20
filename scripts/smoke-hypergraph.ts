@@ -44,7 +44,16 @@ async function run() {
   const restored = empty();
   await loadHypergraphFromDb(resource, restored);
 
-  const results = semanticQuery("alpha", restored, 5);
+  const vecA = new Float32Array(3);
+  vecA[0] = 1;
+  const vecB = new Float32Array(3);
+  vecB[1] = 1;
+  restored.setEmbedding(alpha, vecA);
+  restored.setEmbedding(beta, vecB);
+
+  const queryVec = new Float32Array(3);
+  queryVec[0] = 1;
+  const results = semanticQuery("alpha", restored, 5, { embedding: queryVec });
   if (!results.includes(alpha)) {
     throw new Error(
       `Smoke query failed; expected Alpha in results: ${results}`

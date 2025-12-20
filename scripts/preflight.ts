@@ -11,6 +11,7 @@
 
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { findForbiddenArtifacts } from "./check-artifacts";
 
 const ROOT_DIR = resolve(import.meta.dir, "..");
 const PACKAGES_DIR = join(ROOT_DIR, "packages");
@@ -151,6 +152,23 @@ async function checkGracefulDegradation(): Promise<void> {
   }
 }
 
+async function checkGeneratedArtifacts(): Promise<void> {
+  try {
+    const hits = await findForbiddenArtifacts();
+    addResult(
+      "No generated artifacts in packages/*/src",
+      hits.length === 0,
+      hits.length === 0 ? undefined : `Found ${hits.length} forbidden file(s)`
+    );
+  } catch (error) {
+    addResult(
+      "No generated artifacts in packages/*/src",
+      false,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+}
+
 async function main(): Promise<void> {
   console.log("Running pre-flight checks...\n");
 
@@ -158,6 +176,7 @@ async function main(): Promise<void> {
   await checkSSRCompatibility();
   await checkCriticalFiles();
   await checkGracefulDegradation();
+  await checkGeneratedArtifacts();
 
   console.log("\n--- Summary ---");
   const passed = results.filter((r) => r.passed).length;

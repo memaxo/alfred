@@ -193,7 +193,17 @@ export type Event =
       ts: Timestamp;
     }
   | { _: "timeout"; deadline: Timestamp }
-  | { _: "feedback"; expected: string; actual: string; ts: Timestamp }
+  | {
+      _: "feedback";
+      expected: string;
+      actual: string;
+      /**
+       * Optional semantic similarity in range [0,1] between expected and actual.
+       * Computed at the boundary layer (e.g., API) so the runtime loop stays pure.
+       */
+      similarity?: number;
+      ts: Timestamp;
+    }
   | { _: "interrupt"; reason: string; priority: 1 | 2 | 3; ts: Timestamp }
   | { _: "complete"; outcome: Outcome; ts: Timestamp };
 

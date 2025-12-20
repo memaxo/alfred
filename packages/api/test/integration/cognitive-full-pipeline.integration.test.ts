@@ -153,21 +153,30 @@ describe("Cognitive Full Pipeline Integration", () => {
   });
 
   describe("State Transitions", () => {
-    it("transitions idle → thinking on input", async () => {
+    it("transitions idle → capturing → thinking on inputs", async () => {
       const streamId = stream("idle-thinking");
 
-      const result = await runCognitiveLoop(
+      const result1 = await runCognitiveLoop(
         ctx,
         streamId,
         inputEvent("Plan the day")
       );
 
-      expect(result.state._).toBe("thinking");
+      expect(result1.state._).toBe("capturing");
+      expect(result1.effects).toHaveLength(0);
+
+      const result2 = await runCognitiveLoop(
+        ctx,
+        streamId,
+        inputEvent("Plan the day")
+      );
+
+      expect(result2.state._).toBe("thinking");
       expect(
-        (result.state as Extract<CognitiveState, { _: "thinking" }>).about
+        (result2.state as Extract<CognitiveState, { _: "thinking" }>).about
       ).toBe("Plan the day");
-      expect(result.effects).toHaveLength(1);
-      expect(result.effects[0]).toMatchObject({
+      expect(result2.effects).toHaveLength(1);
+      expect(result2.effects[0]).toMatchObject({
         type: "generate_response",
         input: "Plan the day",
       });
@@ -177,6 +186,7 @@ describe("Cognitive Full Pipeline Integration", () => {
       const streamId = stream("thinking-reflecting");
 
       // First, get to thinking state
+      await runCognitiveLoop(ctx, streamId, inputEvent("Analyze data"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Analyze data"));
 
       // Then complete
@@ -197,6 +207,7 @@ describe("Cognitive Full Pipeline Integration", () => {
 
       // Get to thinking
       await runCognitiveLoop(ctx, streamId, inputEvent("First task"));
+      await runCognitiveLoop(ctx, streamId, inputEvent("First task"));
 
       // Complete to reflecting
       await runCognitiveLoop(ctx, streamId, completeEvent(successOutcome));
@@ -212,7 +223,7 @@ describe("Cognitive Full Pipeline Integration", () => {
       expect(result.state._).toBe("idle");
     });
 
-    it("handles complete flow: idle → thinking → reflecting → idle", async () => {
+    it("handles complete flow: idle → capturing → thinking → reflecting → idle", async () => {
       const streamId = stream("complete-flow");
       const stateHistory: string[] = [];
 
@@ -220,10 +231,15 @@ describe("Cognitive Full Pipeline Integration", () => {
       const start = idle(now());
       stateHistory.push(start._);
 
-      // Input → thinking
+      // Input → capturing
       const result1 = await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
       stateHistory.push(result1.state._);
-      expect(result1.state._).toBe("thinking");
+      expect(result1.state._).toBe("capturing");
+
+      // Input → thinking
+      const result1b = await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
+      stateHistory.push(result1b.state._);
+      expect(result1b.state._).toBe("thinking");
 
       // Complete → reflecting
       const result2 = await runCognitiveLoop(
@@ -238,7 +254,13 @@ describe("Cognitive Full Pipeline Integration", () => {
       const result3 = await runCognitiveLoop(ctx, streamId, inputEvent("Next"));
       stateHistory.push(result3.state._);
 
-      expect(stateHistory).toEqual(["idle", "thinking", "reflecting", "idle"]);
+      expect(stateHistory).toEqual([
+        "idle",
+        "capturing",
+        "thinking",
+        "reflecting",
+        "idle",
+      ]);
     });
   });
 
@@ -432,8 +454,8 @@ describe("Cognitive Full Pipeline Integration", () => {
         interruptEvent("supervisor_intervention", 2)
       );
 
-      // Should remain in thinking with updated physiology
-      expect(result.state._).toBe("thinking");
+      // Interrupt does not advance capturing → thinking
+      expect(result.state._).toBe("capturing");
     });
 
     it("records entropy-high interrupts in events", async () => {
@@ -509,6 +531,7 @@ describe("Cognitive Full Pipeline Integration", () => {
       const streamId = stream("outcome-success");
 
       await runCognitiveLoop(ctx, streamId, inputEvent("Successful task"));
+      await runCognitiveLoop(ctx, streamId, inputEvent("Successful task"));
       const result = await runCognitiveLoop(
         ctx,
         streamId,
@@ -524,6 +547,7 @@ describe("Cognitive Full Pipeline Integration", () => {
     it("handles failure outcome", async () => {
       const streamId = stream("outcome-failure");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Failing task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Failing task"));
       const result = await runCognitiveLoop(
         ctx,
@@ -541,6 +565,7 @@ describe("Cognitive Full Pipeline Integration", () => {
       const streamId = stream("outcome-partial");
 
       await runCognitiveLoop(ctx, streamId, inputEvent("Partial task"));
+      await runCognitiveLoop(ctx, streamId, inputEvent("Partial task"));
       const result = await runCognitiveLoop(
         ctx,
         streamId,
@@ -556,6 +581,7 @@ describe("Cognitive Full Pipeline Integration", () => {
     it("handles cancelled outcome", async () => {
       const streamId = stream("outcome-cancelled");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Cancelled task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Cancelled task"));
       const result = await runCognitiveLoop(
         ctx,
@@ -574,6 +600,7 @@ describe("Cognitive Full Pipeline Integration", () => {
     it("generates generate_response effect in thinking state", async () => {
       const streamId = stream("effect-generate");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Query"));
       const result = await runCognitiveLoop(ctx, streamId, inputEvent("Query"));
 
       expect(result.effects).toHaveLength(1);
@@ -581,9 +608,10 @@ describe("Cognitive Full Pipeline Integration", () => {
       expect((result.effects[0] as any).input).toBe("Query");
     });
 
-    it("generates no effects in reflecting state", async () => {
+    it("generates log_reflection effect in reflecting state", async () => {
       const streamId = stream("effect-reflecting");
 
+      await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
       await runCognitiveLoop(ctx, streamId, inputEvent("Task"));
       const result = await runCognitiveLoop(
         ctx,
@@ -591,9 +619,10 @@ describe("Cognitive Full Pipeline Integration", () => {
         completeEvent(successOutcome)
       );
 
-      // Reflecting state may have log_reflection effect or none
-      // Current implementation doesn't generate effects in reflecting
       expect(result.state._).toBe("reflecting");
+      expect(result.effects).toEqual([
+        { type: "log_reflection", outcome: successOutcome },
+      ]);
     });
   });
 

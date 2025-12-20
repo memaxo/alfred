@@ -1,11 +1,7 @@
-import { exec } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { promisify } from "node:util";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
-
-const execAsync = promisify(exec);
 
 const reflectInputSchema = z.object({
   authz: z.string().optional(),
@@ -104,20 +100,11 @@ export const toolReflect = {
     const updated = await appendRule(targetFile, input.learnings);
 
     if (updated) {
-      // Regenerate AGENTS.md
-      try {
-        await execAsync("bun run ruler:apply");
-      } catch (e) {
-        return {
-          success: false,
-          message: `Failed to apply rules: ${e instanceof Error ? e.message : String(e)}`,
-        };
-      }
-
       return {
         success: true,
         fileUpdated: targetFile,
-        message: "Learnings codified and AGENTS.md updated.",
+        message:
+          "Learnings codified. Run `bun run ruler:apply` to regenerate AGENTS.md and editor rules.",
       };
     }
 

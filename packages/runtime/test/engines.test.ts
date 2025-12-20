@@ -65,8 +65,8 @@ describe("KnowledgeEngine", () => {
     expect(Array.isArray(results)).toBe(true);
   });
 
-  it("executes semantic query", () => {
-    const results = engine.semanticQuery("test query", graph, 5);
+  it("executes semantic query", async () => {
+    const results = await engine.semanticQuery("test query", graph, 5);
     expect(Array.isArray(results)).toBe(true);
   });
 

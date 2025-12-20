@@ -108,6 +108,11 @@ export async function runCognitiveLoop(
     autonomy = newAutonomy;
   }
 
+  const stateWithAutonomy: SnapshotState = {
+    ...(newState as SnapshotState),
+    autonomy,
+  };
+
   // 3. Persist
   const envelope = wrapEventEnvelope({
     id: crypto.randomUUID(),
@@ -126,21 +131,28 @@ export async function runCognitiveLoop(
 
   const effects = computeEffects(newState);
 
-  return { state: newState, effects };
+  return { state: stateWithAutonomy, effects };
 }
 
 function calculateEvidence(event: Event & { _: "feedback" }) {
-  // Simple heuristic: if expected === actual, it's positive.
-  // If not, it's negative.
-  // In a real system, we might parse the diff or use an LLM to judge.
-  const positive = event.expected === event.actual;
+  const simRaw = event.similarity;
+  if (typeof simRaw !== "number" || !Number.isFinite(simRaw)) {
+    return {
+      _: "feedback",
+      positive: false,
+      strength: 0,
+      reliability: 0,
+    } as const;
+  }
 
-  // Strength could be derived from how emphatic the user was, or magnitude of error
-  // Defaulting to 0.5
+  const similarity = Math.max(0, Math.min(1, simRaw));
+  const positive = similarity >= 0.5;
+  const strength = Math.max(0, Math.min(1, Math.abs(similarity - 0.5) * 2));
+
   return {
     _: "feedback",
     positive,
-    strength: 0.5,
+    strength,
   } as const;
 }
 
@@ -150,31 +162,31 @@ function calculateOutcomeEvidence(outcome: Outcome) {
       _: "success" as const,
       task: "execution",
       duration: outcome.duration,
-      reliability: 0.8, // High reliability for successful execution
     };
-  } else if (outcome._ === "failure") {
+  }
+  if (outcome._ === "failure") {
     return {
       _: "failure" as const,
       task: "execution",
       error: outcome.error,
-      reliability: outcome.recoverable ? 0.6 : 0.9, // Higher reliability for non-recoverable failures
-    };
-  } else if (outcome._ === "partial") {
-    // Partial success - treat as mild success
-    return {
-      _: "success" as const,
-      task: "execution",
-      duration: 0,
-      reliability: 0.5,
-    };
-  } else {
-    // Cancelled - neutral, no autonomy change
-    return {
-      _: "override" as const,
-      reason: outcome.reason,
-      reliability: 0.1, // Very low reliability for cancelled operations
     };
   }
+  if (outcome._ === "partial") {
+    const total = outcome.completed.length + outcome.failed.length;
+    const ratio = total > 0 ? outcome.completed.length / total : 0.5;
+    return {
+      _: "feedback" as const,
+      positive: ratio >= 0.5,
+      strength: Math.max(0, Math.min(1, Math.abs(ratio - 0.5) * 2)),
+    };
+  }
+
+  // Cancelled - explicit no-op (no autonomy change)
+  return {
+    _: "override" as const,
+    reason: outcome.reason,
+    reliability: 0,
+  };
 }
 
 const recordPhysiologyMetrics = (physiology: Physiology) => {

@@ -29,12 +29,8 @@ describe("extractEntries", () => {
     const entries = extractEntries(graph);
 
     expect(entries).toHaveLength(2);
-    expect(entries.map((entry) => entry.hash)).toContain(
-      knowledgeHash(graph.get(first) as Knowledge)
-    );
-    expect(entries.map((entry) => entry.hash)).toContain(
-      knowledgeHash(graph.get(second) as Knowledge)
-    );
+    expect(entries.map((entry) => entry.hash)).toContain(String(first));
+    expect(entries.map((entry) => entry.hash)).toContain(String(second));
   });
 
   it("respects onlyDirty filter", () => {
@@ -46,13 +42,8 @@ describe("extractEntries", () => {
 
     const entries = extractEntries(graph, { onlyDirty: true });
 
-    const baselineKnowledge = graph.get(baseline);
-    if (!baselineKnowledge) {
-      throw new Error("baseline missing");
-    }
-
     expect(entries).toHaveLength(1);
-    expect(entries[0].hash).not.toBe(knowledgeHash(baselineKnowledge));
+    expect(entries.map((entry) => entry.hash)).not.toContain(String(baseline));
   });
 });
 
@@ -76,11 +67,7 @@ describe("persistHypergraph", () => {
     const hashes = persistFn.mock.calls[1][1].map(
       (entry: { hash: string }) => entry.hash
     );
-    const thirdKnowledge = graph.get(third);
-    if (!thirdKnowledge) {
-      throw new Error("third missing");
-    }
-    expect(hashes).toContain(knowledgeHash(thirdKnowledge));
+    expect(hashes).toContain(String(third));
   });
 });
 

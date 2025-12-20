@@ -54,7 +54,7 @@ describe("rerank telemetry", () => {
       docCount: sampleDocs.length,
       model: "rerank-v3.5",
     });
-    expect(results).toHaveLength(sampleDocs.length);
+    expect(results).toHaveLength(0);
   });
 
   it("passes telemetry success details when Cohere returns results", async () => {
@@ -98,6 +98,6 @@ describe("rerank telemetry", () => {
       error: failure,
       docCount: sampleDocs.length,
     });
-    expect(results).toHaveLength(sampleDocs.length);
+    expect(results).toHaveLength(0);
   });
 });

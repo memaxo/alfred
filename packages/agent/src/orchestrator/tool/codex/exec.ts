@@ -555,7 +555,7 @@ async function runCodexWithSdk({
     }
 
     // Inject learning context from similar past executions
-    if (process.env.CODEX_LEARNING_ENABLED === "true") {
+    try {
       const { buildCodexLearningContext } = await import(
         "@alfred/db/repo/codex-learning"
       );
@@ -567,6 +567,10 @@ async function runCodexWithSdk({
       if (learningContext) {
         enrichedPrompt = `${learningContext}\n\n${enrichedPrompt}`;
       }
+    } catch (error) {
+      logger.debug("codex_learning_context_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     const streamed = await thread.runStreamed(enrichedPrompt, turnOptions);

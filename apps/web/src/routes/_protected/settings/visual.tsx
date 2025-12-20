@@ -2,7 +2,6 @@
  * Visual Settings Page
  *
  * User-friendly visual configuration with presets and simplified controls.
- * For full parameter access, use /demo/cortex.
  */
 
 import { PRESET_METADATA } from "@alfred/cortex";
@@ -12,7 +11,7 @@ import {
   type VisualPreset,
 } from "@alfred/type";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, ExternalLink, Palette } from "lucide-react";
+import { ArrowLeft, Check, Palette } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { ClientOnly } from "@/components/ai-elements/client-only";
@@ -43,7 +42,7 @@ function VisualSettings() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Initialize Cortex engine for preview
-  const { engine, isReady } = useCortexEngine(canvasRef, {
+  const { engine, isReady, capability, error } = useCortexEngine(canvasRef, {
     postProcessing: true,
     autoStart: true,
   });
@@ -123,8 +122,31 @@ function VisualSettings() {
             </span>
           </div>
         )}
+        {isReady && !engine && capability !== "webgpu" && (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+            <div className="space-y-2">
+              <div className="font-semibold text-biolum text-sm">
+                WebGPU not available
+              </div>
+              <div className="text-biolum-dim text-xs">
+                Live preview requires WebGPU. Your device reported{" "}
+                {capability?.toUpperCase() ?? "UNKNOWN"} support.
+              </div>
+            </div>
+          </div>
+        )}
+        {isReady && error && capability === "webgpu" && (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+            <div className="space-y-2">
+              <div className="font-semibold text-biolum text-sm">
+                Preview failed to initialize
+              </div>
+              <div className="text-biolum-dim text-xs">{error.message}</div>
+            </div>
+          </div>
+        )}
         <div className="absolute right-3 bottom-3 rounded-full border border-white/10 bg-void-surface/80 px-3 py-1 text-biolum-dim text-xs backdrop-blur-sm">
-          Live Preview
+          Live Preview (WebGPU)
         </div>
       </div>
 
@@ -290,25 +312,6 @@ function VisualSettings() {
         </section>
       )}
 
-      {/* Developer Tools Link */}
-      <section className="rounded-2xl border border-white/10 bg-void-surface/40 p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h3 className="font-semibold text-biolum">Advanced Controls</h3>
-            <p className="text-biolum-dim text-sm">
-              Need more control? Access all visual parameters in the developer
-              demo.
-            </p>
-          </div>
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-void-surface/50 px-4 py-2 text-biolum-dim text-sm transition-colors hover:border-biolum/30 hover:text-biolum"
-            to="/demo/cortex"
-          >
-            Open Demo
-            <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-          </Link>
-        </div>
-      </section>
     </div>
   );
 }

@@ -29,14 +29,25 @@ export class KnowledgeEngine {
   }
 
   /**
-   * Semantic natural language query with fallback
+   * Semantic natural language query (embedding required)
    */
-  semanticQuery(
+  async semanticQuery(
     naturalLanguage: string,
     graph: Hypergraph,
     topK = 5
-  ): unknown[] {
-    return semanticQuery(naturalLanguage, graph, topK);
+  ): Promise<unknown[]> {
+    if (!graph.embeddingCount || graph.embeddingCount() <= 0) {
+      return [];
+    }
+    try {
+      const embedding = Float32Array.from(await embed(naturalLanguage));
+      return semanticQuery(naturalLanguage, graph, topK, { embedding });
+    } catch (error) {
+      logger.debug("knowledge_engine_semantic_query_embed_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
   }
 
   /**
@@ -107,19 +118,24 @@ export class KnowledgeEngine {
             model: "rerank-v3.5",
           });
 
-          const rerankScoreMap = new Map(
-            rerankResults.map((item) => [item.id, item.score])
-          );
+          if (rerankResults.length > 0) {
+            const rerankScoreMap = new Map(
+              rerankResults.map((item) => [item.id, item.score])
+            );
 
-          results = results.map((row) => {
-            const rerankScore = rerankScoreMap.get(row.id) ?? 0;
-            // Fusion: 0.7 * hybrid + 0.3 * rerank
-            const finalScore = row.score * 0.7 + rerankScore * 0.3;
-            return { ...row, score: finalScore };
-          });
+            results = results.map((row) => {
+              const rerankScore = rerankScoreMap.get(row.id);
+              if (rerankScore === undefined) {
+                return row;
+              }
+              // Fusion: 0.7 * hybrid + 0.3 * rerank
+              const finalScore = row.score * 0.7 + rerankScore * 0.3;
+              return { ...row, score: finalScore };
+            });
 
-          // Sort by new score
-          results.sort((a, b) => b.score - a.score);
+            // Sort by new score
+            results.sort((a, b) => b.score - a.score);
+          }
 
           // Limit to topK
           results = results.slice(0, topK);

@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gt } from "drizzle-orm";
-import { db } from "../client";
+import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { db, getDbDriver } from "../client";
 import { cognitiveEvents, cognitiveSnapshots } from "../schema/cognitive";
 
 /**
@@ -88,28 +88,39 @@ export async function getAllEvents(
 export async function findActivePlans(): Promise<
   (typeof cognitiveSnapshots.$inferSelect)[]
 > {
-  // Get the latest snapshot for each stream
-  // distinctOn is available in drizzle-orm/pg-core
-  const snapshots = await db
-    .select()
+  const driver = getDbDriver();
+  const executing = "executing";
+
+  const latestByStream = db
+    .select({
+      streamId: cognitiveSnapshots.streamId,
+      createdAt: sql`max(${cognitiveSnapshots.createdAt})`.as("created_at"),
+    })
     .from(cognitiveSnapshots)
+    .groupBy(cognitiveSnapshots.streamId)
+    .as("latest");
+
+  const statePredicate =
+    driver === "postgres"
+      ? sql`${cognitiveSnapshots.state} ->> '_' = ${executing}`
+      : sql`json_extract(${cognitiveSnapshots.state}, '$._') = ${executing}`;
+
+  return db
+    .select({
+      id: cognitiveSnapshots.id,
+      streamId: cognitiveSnapshots.streamId,
+      state: cognitiveSnapshots.state,
+      lastEventId: cognitiveSnapshots.lastEventId,
+      createdAt: cognitiveSnapshots.createdAt,
+    })
+    .from(cognitiveSnapshots)
+    .innerJoin(
+      latestByStream,
+      and(
+        eq(cognitiveSnapshots.streamId, latestByStream.streamId),
+        eq(cognitiveSnapshots.createdAt, latestByStream.createdAt)
+      )
+    )
+    .where(statePredicate)
     .orderBy(desc(cognitiveSnapshots.createdAt));
-
-  // Filter for executing state in memory (simpler than complex SQL for now)
-  // Group by streamId to get latest
-  const latestByStream = new Map<string, (typeof snapshots)[0]>();
-
-  for (const snap of snapshots) {
-    if (!latestByStream.has(snap.streamId)) {
-      latestByStream.set(snap.streamId, snap);
-    }
-  }
-
-  // Type for cognitive state discriminant
-  type StateDiscriminant = { _?: string };
-
-  return Array.from(latestByStream.values()).filter((snap) => {
-    const state = snap.state as StateDiscriminant;
-    return state._ === "executing";
-  });
 }

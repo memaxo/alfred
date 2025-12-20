@@ -83,7 +83,19 @@ describeFn("hypergraph persistence integration", () => {
     expect(rehydrated.get(alpha)?.content).toContain("Alpha project");
     expect(rehydrated.neighbors(alpha)).toContain(beta);
 
-    const semanticHits = semanticQuery("alpha project", rehydrated, 5);
+    const vecA = new Float32Array(3);
+    vecA[0] = 1;
+    const vecB = new Float32Array(3);
+    vecB[1] = 1;
+    rehydrated.setEmbedding(alpha, vecA);
+    rehydrated.setEmbedding(beta, vecB);
+
+    const queryVec = new Float32Array(3);
+    queryVec[0] = 0.99;
+    queryVec[1] = 0.01;
+    const semanticHits = semanticQuery("alpha project", rehydrated, 5, {
+      embedding: queryVec,
+    });
     expect(semanticHits).toContain(alpha);
   });
 

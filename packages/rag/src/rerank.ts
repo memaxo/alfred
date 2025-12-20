@@ -37,7 +37,7 @@ export type RerankResult = {
 
 /**
  * Reranks documents using Cohere API.
- * Gated by COHERE_API_KEY env var - returns original order if not configured.
+ * Gated by COHERE_API_KEY env var - returns [] if not configured.
  *
  * Note: Currently uses manual API calls. Will migrate to AI SDK v6 rerank()
  * when @ai-sdk/cohere adds rerankingModel() support.
@@ -51,13 +51,6 @@ export async function rerank({
 }: RerankOptions): Promise<RerankResult[]> {
   const apiKey = process.env.COHERE_API_KEY;
   const docCount = documents.length;
-  const fallback = () =>
-    documents.slice(0, topN).map((doc, index) => ({
-      id: doc.id,
-      text: doc.text,
-      score: 1.0 - index * 0.01,
-      index,
-    }));
 
   if (!apiKey) {
     telemetry?.onSuccess?.({
@@ -66,7 +59,7 @@ export async function rerank({
       docCount,
       durationMs: 0,
     });
-    return fallback();
+    return [];
   }
 
   const baseUrl = process.env.COHERE_BASE_URL ?? "https://api.cohere.ai";
@@ -141,6 +134,6 @@ export async function rerank({
       docCount,
       error,
     });
-    return fallback();
+    return [];
   }
 }

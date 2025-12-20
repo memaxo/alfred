@@ -16,7 +16,6 @@ import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
-import { Route as DemoCortexRouteImport } from './routes/demo/cortex'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
@@ -37,7 +36,6 @@ import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assista
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
 import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
-import { Route as ProtectedDevEdgesRouteImport } from './routes/_protected/dev/edges'
 import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -72,11 +70,6 @@ const HealthzDepsRoute = HealthzDepsRouteImport.update({
 const DocsSplatRoute = DocsSplatRouteImport.update({
   id: '/docs/$',
   path: '/docs/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoCortexRoute = DemoCortexRouteImport.update({
-  id: '/demo/cortex',
-  path: '/demo/cortex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -180,11 +173,6 @@ const ProtectedExperimentalTuneRoute =
     path: '/experimental/tune',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedDevEdgesRoute = ProtectedDevEdgesRouteImport.update({
-  id: '/dev/edges',
-  path: '/dev/edges',
-  getParentRoute: () => ProtectedRoute,
-} as any)
 const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
   id: '/voice',
   path: '/voice',
@@ -204,11 +192,9 @@ export interface FileRoutesByFullPath {
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
-  '/dev/edges': typeof ProtectedDevEdgesRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
@@ -235,11 +221,9 @@ export interface FileRoutesByTo {
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
-  '/dev/edges': typeof ProtectedDevEdgesRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
@@ -268,11 +252,9 @@ export interface FileRoutesById {
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
   '/api/metrics': typeof ApiMetricsRoute
   '/api/search': typeof ApiSearchRoute
-  '/demo/cortex': typeof DemoCortexRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
-  '/_protected/dev/edges': typeof ProtectedDevEdgesRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
@@ -301,11 +283,9 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
-    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/admin/voice'
-    | '/dev/edges'
     | '/experimental/tune'
     | '/settings/visual'
     | '/workflow/$runId'
@@ -332,11 +312,9 @@ export interface FileRouteTypes {
     | '/voice-s2s'
     | '/api/metrics'
     | '/api/search'
-    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/admin/voice'
-    | '/dev/edges'
     | '/experimental/tune'
     | '/settings/visual'
     | '/workflow/$runId'
@@ -364,11 +342,9 @@ export interface FileRouteTypes {
     | '/_protected/voice-s2s'
     | '/api/metrics'
     | '/api/search'
-    | '/demo/cortex'
     | '/docs/$'
     | '/healthz/deps'
     | '/_protected/admin/voice'
-    | '/_protected/dev/edges'
     | '/_protected/experimental/tune'
     | '/_protected/settings/visual'
     | '/_protected/workflow/$runId'
@@ -391,7 +367,6 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ApiMetricsRoute: typeof ApiMetricsRoute
   ApiSearchRoute: typeof ApiSearchRoute
-  DemoCortexRoute: typeof DemoCortexRoute
   DocsSplatRoute: typeof DocsSplatRoute
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
@@ -453,13 +428,6 @@ declare module '@tanstack/react-router' {
       path: '/docs/$'
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/cortex': {
-      id: '/demo/cortex'
-      path: '/demo/cortex'
-      fullPath: '/demo/cortex'
-      preLoaderRoute: typeof DemoCortexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -602,13 +570,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExperimentalTuneRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/dev/edges': {
-      id: '/_protected/dev/edges'
-      path: '/dev/edges'
-      fullPath: '/dev/edges'
-      preLoaderRoute: typeof ProtectedDevEdgesRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
     '/_protected/admin/voice': {
       id: '/_protected/admin/voice'
       path: '/voice'
@@ -649,7 +610,6 @@ interface ProtectedRouteChildren {
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedTimerRoute: typeof ProtectedTimerRoute
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
-  ProtectedDevEdgesRoute: typeof ProtectedDevEdgesRoute
   ProtectedExperimentalTuneRoute: typeof ProtectedExperimentalTuneRoute
   ProtectedWorkflowRunIdRoute: typeof ProtectedWorkflowRunIdRoute
 }
@@ -661,7 +621,6 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedTimerRoute: ProtectedTimerRoute,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
-  ProtectedDevEdgesRoute: ProtectedDevEdgesRoute,
   ProtectedExperimentalTuneRoute: ProtectedExperimentalTuneRoute,
   ProtectedWorkflowRunIdRoute: ProtectedWorkflowRunIdRoute,
 }
@@ -689,7 +648,6 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ApiMetricsRoute: ApiMetricsRoute,
   ApiSearchRoute: ApiSearchRoute,
-  DemoCortexRoute: DemoCortexRoute,
   DocsSplatRoute: DocsSplatRoute,
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
