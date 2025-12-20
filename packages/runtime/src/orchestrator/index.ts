@@ -1,3 +1,5 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
@@ -6,7 +8,7 @@ import { runConflictPhase } from "./conflict";
 import { runMergeAnalysis, runMergePhase } from "./merge";
 import { runReviewPhase } from "./review";
 import type { OrchestratorContext, ProjectConfig } from "./types";
-import { runWaves } from "./waves";
+import { runWaves, type WavesResult } from "./waves";
 
 export async function* runOrchestrator(
   input: RuntimeInput,
@@ -33,11 +35,12 @@ export async function* runOrchestrator(
     userId,
   };
 
-  // Phase A: Multi-Agent Waves
-  // Decompose task, plan waves, and execute agents in parallel
-  const wavesResult = yield* runWaves(ctx);
-
+  let wavesResult: WavesResult | null = null;
   try {
+    // Phase A: Multi-Agent Waves
+    // Decompose task, plan waves, and execute agents in parallel
+    wavesResult = yield* runWaves(ctx);
+
     if (
       wavesResult.aborted ||
       wavesResult.escalated ||
@@ -76,7 +79,8 @@ export async function* runOrchestrator(
 
     return; // Placeholder for result type
   } finally {
-    for (const ws of wavesResult.activeWorkspaces) {
+    const workspaces = wavesResult?.activeWorkspaces ?? [];
+    for (const ws of workspaces) {
       try {
         await ws.cleanup();
       } catch (error) {
@@ -88,10 +92,16 @@ export async function* runOrchestrator(
     }
 
     try {
-      const { worktreeManager } = await import(
-        "@alfred/agent/orchestrator/tool/worktree"
-      );
-      await worktreeManager.cleanup(workspace, runId);
+      const isGitWorkspace = await fs
+        .stat(path.join(workspace, ".git"))
+        .then(() => true)
+        .catch(() => false);
+      if (isGitWorkspace) {
+        const { worktreeManager } = await import(
+          "@alfred/agent/orchestrator/tool/worktree"
+        );
+        await worktreeManager.cleanup(workspace, runId);
+      }
     } catch (error) {
       logger.warn("worktree_cleanup_failed", {
         runId,

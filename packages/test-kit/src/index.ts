@@ -8,5 +8,6 @@ export * from "./physical/index";
 export * from "./redis/index";
 export * from "./sandbox/index";
 export * from "./vcr/index";
+export * from "./codex/index";
 export * from "./voice/index";
 export * from "./workflow/runtime-fixture";

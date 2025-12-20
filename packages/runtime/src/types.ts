@@ -47,6 +47,7 @@ export type RuntimeInput = {
   mode?: "sequential" | "parallel";
   interactive?: boolean; // Phase 12: Interactive Mode
   linear?: {
+    issueId?: string;
     sessionId: string;
     space: string;
     authz: string;
@@ -161,6 +162,7 @@ export const runtimeInputSchema = z.object({
   interactive: z.boolean().optional(),
   linear: z
     .object({
+      issueId: z.string().min(1).optional(),
       sessionId: z.string().min(1),
       space: z.string().min(1),
       authz: z.string().min(1),

@@ -34,6 +34,7 @@ import {
   assessSessionResumeEligibility,
   sessionManager,
 } from "../../codex-session.js";
+import { buildPoofArgs, getPoofBinary, POOF_PROFILES } from "../../../spawn/poof.js";
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
@@ -42,6 +43,7 @@ import {
   DEFAULT_TIMEOUT_SEC,
   validateOutputSchema,
 } from "./definition.js";
+import { CodexRunRecorder } from "./record.js";
 import {
   assertAllowedDirectory,
   mapAutoToCodex,
@@ -71,6 +73,11 @@ const DISCONNECT_ERROR_PATTERNS = [
   "websocket is not open",
   "cannot write to closed stream",
 ];
+
+function isWithinDir(base: string, target: string): boolean {
+  const rel = path.relative(base, target);
+  return rel === "" || !(rel.startsWith("..") || path.isAbsolute(rel));
+}
 
 function isDisconnectError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -345,6 +352,37 @@ async function runCodexWithCodex({
   const sandbox = mapAutoToCodex(input.auto);
   const env = pickEnvCodex(input.env);
 
+  const sessionId = input.sessionId?.trim();
+  const sessionOwnerId = input.userId?.trim();
+  if (sessionId && !sessionOwnerId) {
+    throw new Error("codex_session_user_required");
+  }
+
+  const recorder = await CodexRunRecorder.start({
+    userId: sessionOwnerId,
+    sessionId,
+    threadId: undefined,
+    auto: input.auto,
+    model: input.model,
+    profile: input.profile,
+    environmentKind: input.poofUpperDir
+      ? "poof"
+      : input.containerId
+        ? "container"
+        : "host",
+    workingDirectory: resolvedCw,
+    workspaceRoot: process.env.ORCH_WORKSPACE_ROOT,
+    dockerContainerId: input.containerId,
+    dockerImage: process.env.ORCH_DOCKER_IMAGE,
+    poofUpperDir: input.poofUpperDir,
+    poofProfile: input.poofProfile,
+    outputSchema:
+      input.outputSchema && validateOutputSchema(input.outputSchema)
+        ? input.outputSchema
+        : null,
+  });
+  recorder.recordWriterChunk({ type: "notice", message: "codex_run_started" });
+
   const stopTimer = startToolTimer("codex", input.auto);
   const recordStage = createStageRecorder("codex");
 
@@ -358,7 +396,19 @@ async function runCodexWithCodex({
       abortedByExternalSignal = true;
     }
   );
-  const safeWriter = createSafeWriter(writer, () => timeoutController.abort());
+  const writerWithRecording: ToolWriter = {
+    write: (payload: unknown) => {
+      try {
+        recorder.recordWriterChunk(payload);
+      } catch {
+        // ignore
+      }
+      return Promise.resolve(writer?.write?.(payload));
+    },
+  };
+  const safeWriter = createSafeWriter(writerWithRecording, () =>
+    timeoutController.abort()
+  );
   let didTimeout = false;
   const timer = setNodeTimeout(() => {
     didTimeout = true;
@@ -382,9 +432,6 @@ async function runCodexWithCodex({
 
   const codexBin = resolveCodexBin();
   const threadValidator = resolveThreadValidator();
-
-  const sessionId = input.sessionId?.trim();
-  const sessionOwnerId = input.userId?.trim();
   let existingSession: CodexSessionState | undefined;
   if (sessionId) {
     if (!sessionOwnerId) {
@@ -504,7 +551,107 @@ async function runCodexWithCodex({
       });
     }
 
+    const dockerBin = input.containerId ? resolveExecutable("docker") : undefined;
+    const poofUpperDir = input.poofUpperDir?.trim();
+    const poofMode = input.poofMode ?? "run";
+    const poofProfile =
+      input.poofProfile && input.poofProfile in POOF_PROFILES
+        ? POOF_PROFILES[input.poofProfile]
+        : POOF_PROFILES.standard;
+
+    const poofBin = poofUpperDir ? getPoofBinary() : undefined;
+    const poofUpperResolved = poofUpperDir ? path.resolve(poofUpperDir) : undefined;
+    if (poofUpperResolved) {
+      const tmpBase = path.resolve(os.tmpdir());
+      if (!isWithinDir(tmpBase, poofUpperResolved)) {
+        throw new Error("poof_upper_dir_invalid");
+      }
+    }
+
     const spawn: SpawnFn = ({ cmd, args, env: childEnv }) => {
+      if (dockerBin && input.containerId) {
+        const containerCw = input.containerCw?.trim();
+        if (containerCw && !containerCw.startsWith("/workspace")) {
+          throw new Error("codex_container_cwd_invalid");
+        }
+        const dockerWorkdir = containerCw && containerCw.length > 0 ? containerCw : "/workspace";
+        const envKeys = Object.keys(childEnv ?? {}).filter((k) => k !== "PATH");
+        const dockerArgs = [
+          "exec",
+          "--workdir",
+          dockerWorkdir,
+          ...envKeys.flatMap((k) => ["-e", k]),
+          input.containerId,
+          "codex",
+          ...args,
+        ];
+        const proc = spawnWithSecureCwd({
+          cwdHandle,
+          cmd: dockerBin,
+          args: dockerArgs,
+          env: childEnv,
+          stdout: "pipe",
+          stderr: "pipe",
+          stdin: "ignore",
+        });
+
+        return {
+          stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
+          stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
+          exited: proc.exited,
+          kill: (signal) => {
+            if (typeof signal === "number") {
+              proc.kill(signal);
+              return;
+            }
+            if (typeof signal === "string") {
+              proc.kill(signal as NodeJS.Signals);
+              return;
+            }
+            proc.kill();
+          },
+        };
+      }
+
+      if (poofBin && poofUpperResolved) {
+        const poofArgs = [
+          ...buildPoofArgs({
+            mode: poofMode,
+            upperDir: poofUpperResolved,
+            profile: poofProfile,
+          }),
+          "--",
+          cmd,
+          ...args,
+        ];
+        const proc = spawnWithSecureCwd({
+          cwdHandle,
+          cmd: poofBin,
+          args: poofArgs,
+          env: childEnv,
+          stdout: "pipe",
+          stderr: "pipe",
+          stdin: "ignore",
+        });
+
+        return {
+          stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
+          stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
+          exited: proc.exited,
+          kill: (signal) => {
+            if (typeof signal === "number") {
+              proc.kill(signal);
+              return;
+            }
+            if (typeof signal === "string") {
+              proc.kill(signal as NodeJS.Signals);
+              return;
+            }
+            proc.kill();
+          },
+        };
+      }
+
       const proc = spawnWithSecureCwd({
         cwdHandle,
         cmd,
@@ -516,10 +663,8 @@ async function runCodexWithCodex({
       });
 
       return {
-        stdout:
-          typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
-        stderr:
-          typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
+        stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
+        stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
         exited: proc.exited,
         kill: (signal) => {
           if (typeof signal === "number") {
@@ -553,11 +698,13 @@ async function runCodexWithCodex({
       onStderr: (text) =>
         safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
     })) {
+      recorder.recordThreadEvent(event);
       switch (event.type) {
         case "thread.started": {
           const id = event.thread_id;
           if (typeof id === "string" && id.length > 0) {
             threadIdFromEvents = id;
+            recorder.setThreadId(id);
           }
           break;
         }
@@ -721,14 +868,29 @@ async function runCodexWithCodex({
     }
   } catch (error) {
     if (didTimeout) {
+      await recorder.finalizeError({
+        exitCode: 1,
+        errorCode: "timeout",
+        errorMessage: "codex_exec_timeout",
+      });
       throw new Error("codex_exec_timeout");
     }
     if (timeoutController.signal.aborted && abortedByExternalSignal) {
+      await recorder.finalizeError({
+        exitCode: null,
+        errorCode: "aborted",
+        errorMessage: "codex_exec_aborted",
+      });
       throw new Error("codex_exec_aborted");
     }
     if (!(runtimeFailure || timeoutController.signal.aborted)) {
       recordStage("spawn");
     }
+    await recorder.finalizeError({
+      exitCode: 1,
+      errorCode: "execution_failed",
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   } finally {
     unlinkExternalAbort();
@@ -741,10 +903,20 @@ async function runCodexWithCodex({
   recordToolExecution("codex", input.auto, exitCode);
 
   if (didTimeout) {
+    await recorder.finalizeError({
+      exitCode: 1,
+      errorCode: "timeout",
+      errorMessage: "codex_exec_timeout",
+    });
     throw new Error("codex_exec_timeout");
   }
 
   if (runtimeFailure) {
+    await recorder.finalizeError({
+      exitCode: 1,
+      errorCode: "execution_failed",
+      errorMessage: runtimeFailure.message,
+    });
     throw runtimeFailure;
   }
 
@@ -787,13 +959,24 @@ async function runCodexWithCodex({
     if (!sessionOwnerId) {
       throw new Error("codex_session_user_required");
     }
-    await sessionManager.createSession(
-      sessionId,
-      threadId,
-      resolvedCw,
-      sessionOwnerId
-    );
+    try {
+      await sessionManager.createSession(sessionId, threadId, resolvedCw, sessionOwnerId);
+    } catch (error) {
+      await recorder.finalizeError({
+        exitCode: 1,
+        errorCode: "session_persist_failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
+
+  await recorder.finalizeSuccess({
+    resultText,
+    artifacts: artifacts.length > 0 ? artifacts : [],
+    structuredOutput: null,
+    structuredOutputStatus: "skipped",
+  });
 
   return {
     result: resultText,

@@ -169,7 +169,7 @@ export function decomposeSemantically(
       id,
       title: `Implement ${name} changes`,
       requirement,
-      deps: [], // TODO: Infer task dependencies from file graph
+      deps: [],
       priority,
       acceptance: [`${name} changes implemented and verified`],
       filesHint: Array.from(files)

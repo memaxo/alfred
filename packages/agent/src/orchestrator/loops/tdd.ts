@@ -3,7 +3,7 @@ import { logger } from "@alfred/logger";
 import type { Workspace } from "../../environment/types";
 import { openDirectorySecure } from "../../security/filesystem.js";
 import type { ProjectConfig } from "../../utils/project-detector";
-import { toolCodex } from "../tool/codex";
+import { toolCodex } from "../tool/codex/index";
 import { toolRunner } from "../tool/runner";
 
 export type TDDContext = {
@@ -14,7 +14,10 @@ export type TDDContext = {
   requirement: string;
   auto: "low" | "medium" | "high";
   model?: string;
+  authz?: string;
+  signal?: AbortSignal;
   containerId?: string;
+  containerCw?: string;
   context?: Record<string, unknown>;
   userId?: string;
 };
@@ -34,7 +37,10 @@ export async function runTDDLoop(
     requirement,
     auto,
     model,
+    authz,
+    signal,
     containerId,
+    containerCw,
   } = context;
 
   const cwdHandle = openDirectorySecure(workingDirectory);
@@ -68,11 +74,14 @@ export async function runTDDLoop(
         cw: resolvedWorkingDirectory,
         sessionId: `${sessionId}:tdd`, // Separate session
         containerId,
+        containerCw,
         model,
+        authz,
         context: context.context,
         userId: context.userId,
       },
       writer,
+      signal,
     });
 
     // Verify Test Fails

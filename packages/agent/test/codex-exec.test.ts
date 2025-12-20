@@ -1,8 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 type ThreadEvent = { type: string; [key: string]: unknown };
 
 let pendingEvents: ThreadEvent[] = [];
+let shouldInvokeSpawn = false;
+let observedSpawnCmd: string | null = null;
+let observedSpawnArgs: string[] | null = null;
 
 function setMockEvents(events: ThreadEvent[]) {
   pendingEvents = events;
@@ -10,16 +16,25 @@ function setMockEvents(events: ThreadEvent[]) {
 
 const noop = () => {};
 
-mock.module("../src/metrics.js", () => ({
-  recordCodexError: noop,
-  recordCodexExecRun: noop,
-  recordDroidExecRun: noop,
-  recordCodexWriterError: noop,
-  recordCodexSessionViolation: noop,
-  startCodexExecTimer: () => noop,
-  startDroidExecTimer: () => noop,
-  startCodexSessionValidationTimer: () => () => {},
-}));
+const spawnWithSecureCwdMock = mock(
+  ({
+    cmd,
+    args,
+  }: {
+    cmd: string;
+    args: string[];
+    env?: Record<string, string>;
+  }) => {
+    observedSpawnCmd = cmd;
+    observedSpawnArgs = args;
+    return {
+      stdout: null,
+      stderr: null,
+      exited: Promise.resolve(0),
+      kill: () => {},
+    };
+  }
+);
 
 const assessSessionResumeEligibilityMock = mock(() =>
   Promise.resolve({
@@ -45,8 +60,23 @@ mock.module("../src/orchestrator/codex-session.js", () => ({
 const definitionModule = await import("../src/orchestrator/tool/codex/definition.ts");
 mock.module("../src/orchestrator/tool/codex/definition.js", () => definitionModule);
 
+// Capture docker exec args when container mode is active.
+mock.module("../src/security/secure-spawn.js", () => ({
+  spawnWithSecureCwd: (...args: Parameters<typeof spawnWithSecureCwdMock>) =>
+    spawnWithSecureCwdMock(...args),
+}));
+
 mock.module("@alfred/codex", () => ({
-  runStreamed: async function* () {
+  runStreamed: async function* (opts: {
+    cmd: string;
+    env?: Record<string, string>;
+    spawn?: (args: { cmd: string; args: string[]; env?: Record<string, string> }) => unknown;
+  }) {
+    if (shouldInvokeSpawn) {
+      // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
+      // This lets tests assert docker `--workdir` behavior deterministically.
+      await opts.spawn?.({ cmd: opts.cmd, args: ["--version"], env: opts.env });
+    }
     for (const event of pendingEvents) {
       yield { ...event };
     }
@@ -67,6 +97,10 @@ beforeEach(() => {
   getSessionMock.mockImplementation(() => undefined);
   createSessionMock.mockReset();
   createSessionMock.mockImplementation(() => undefined);
+  shouldInvokeSpawn = false;
+  observedSpawnCmd = null;
+  observedSpawnArgs = null;
+  spawnWithSecureCwdMock.mockClear();
 
   // Avoid depending on an installed codex binary during tests.
   process.env.CODEX_BIN = process.env.CODEX_BIN ?? "/usr/bin/true";
@@ -74,6 +108,10 @@ beforeEach(() => {
 
 afterEach(() => {
   pendingEvents = [];
+});
+
+afterAll(() => {
+  mock.restore();
 });
 
 describe("executeWithCodex artifacts", () => {
@@ -135,6 +173,47 @@ describe("executeWithCodex artifacts", () => {
     const summary = result.reasoning?.at(-1)?.text ?? "";
     expect(summary).toContain("artifacts_collected");
     expect(summary).toContain("src/app.ts");
+  });
+});
+
+describe("executeWithCodex container workdir", () => {
+  it("uses containerCw as docker exec --workdir when provided", async () => {
+    // Provide a fake docker binary in PATH so resolveExecutable("docker") succeeds.
+    const binDir = await mkdtemp(path.join(tmpdir(), "codex-docker-bin-"));
+    const prevPath = process.env.PATH;
+    try {
+      const dockerPath = path.join(binDir, "docker");
+      await writeFile(dockerPath, "#!/bin/sh\nexit 0\n", "utf8");
+      await chmod(dockerPath, 0o755);
+
+      process.env.PATH = `${binDir}${path.delimiter}${prevPath ?? ""}`;
+
+      shouldInvokeSpawn = true;
+      setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
+      await executeWithCodex({
+        input: {
+          action: "exec",
+          prompt: "noop",
+          auto: "read",
+          out: "text",
+          cw: process.cwd(),
+          containerId: "container-123",
+          containerCw: "/workspace/.agent/worktrees/run/agent",
+        },
+      });
+
+      expect(spawnWithSecureCwdMock).toHaveBeenCalled();
+      expect(observedSpawnCmd).toBeTruthy();
+      expect(observedSpawnArgs).toBeTruthy();
+      expect(observedSpawnArgs).toContain("exec");
+      expect(observedSpawnArgs).toContain("--workdir");
+      expect(observedSpawnArgs).toContain("/workspace/.agent/worktrees/run/agent");
+      expect(observedSpawnArgs).toContain("container-123");
+    } finally {
+      process.env.PATH = prevPath;
+      await rm(binDir, { recursive: true, force: true });
+    }
   });
 });
 

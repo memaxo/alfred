@@ -42,6 +42,10 @@ const workspaceFactoryCreate = mock(
   })
 );
 
+const worktreeSafeMerge = mock(
+  async () => ({ success: true, conflictFiles: [] }) as const
+);
+
 mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
   toolCodex: {
     execute: codexExecute,
@@ -54,37 +58,9 @@ mock.module("@alfred/agent/environment/factory", () => ({
   },
 }));
 
-mock.module("@alfred/agent/orchestrator/multi/decompose", () => ({
-  decomposeTask: () => [
-    {
-      id: "task-main",
-      title: "Main Task",
-      requirement: "Fix issue",
-      deps: [],
-      priority: 1,
-      acceptance: ["Tests passing"],
-      filesHint: ["src"],
-    },
-  ],
-}));
-
-mock.module("@alfred/agent/orchestrator/multi/spawn", () => ({
-  planWaves: () => [{ id: "wave_0", agents: ["task-main"], dependsOn: [] }],
-  buildAgentSpec: () => ({
-    agentId: "run-1:task-main",
-    subTaskId: "task-main",
-    sessionId: "run-1:task-main",
-    workingDirectory: "",
-    environment: "worktree",
-    auto: "low",
-    execPlanPath: ".agent/plans/run-1/task-main.md",
-    context: { relevantFiles: ["src/task.ts"] },
-  }),
-}));
-
 mock.module("@alfred/agent/orchestrator/tool/worktree", () => ({
   worktreeManager: {
-    safeMerge: async () => ({ success: true, conflictFiles: [] }),
+    safeMerge: worktreeSafeMerge,
     cleanup: async () => {},
   },
 }));
@@ -103,7 +79,7 @@ const tempDirs: string[] = [];
 
 afterEach(async () => {
   codexExecute.mockReset();
-  workspaceFactoryCreate.mockReset();
+  workspaceFactoryCreate.mockClear();
   while (tempDirs.length) {
     const dir = tempDirs.pop();
     if (dir) {
@@ -144,11 +120,16 @@ describe("runWaves execution", () => {
 
     expect(result.aborted).toBe(false);
     expect(codexExecute).toHaveBeenCalledTimes(1);
+    expect(worktreeSafeMerge).toHaveBeenCalledTimes(0);
     const prompt = (codexExecute.mock.calls[0]?.[0]?.input?.prompt ??
       "") as string;
-    expect(prompt).toContain(".agent/plans/run-1/task-main.md");
+    const [outcome] = (result.allAgentOutcomes as Array<{ agentId: string }>) ?? [];
+    expect(outcome).toBeTruthy();
+    const subTaskId = outcome.agentId.split(":")[1];
+    expect(subTaskId).toBeTruthy();
+    expect(prompt).toContain(`.agent/plans/run-1/${subTaskId}.md`);
     const hints = result.agentFileHints as Map<string, Set<string>>;
-    expect(hints.get("run-1:task-main")?.has("src/task.ts")).toBe(true);
+    expect(hints.get(outcome.agentId)?.has("src/task.ts")).toBe(true);
     expect(
       events.some(
         (event) =>
@@ -157,8 +138,137 @@ describe("runWaves execution", () => {
       )
     ).toBe(true);
 
-    const planPath = path.join(workspace, ".agent/plans/run-1/task-main.md");
+    const planPath = path.join(workspace, `.agent/plans/run-1/${subTaskId}.md`);
     const planContent = await readFile(planPath, "utf8");
     expect(planContent).toContain("ExecPlan");
   });
+
+  it(
+    "executes multiple agents concurrently within a wave",
+    async () => {
+      const prev = process.env.ORCHESTRATOR_MAX_PARALLEL;
+      process.env.ORCHESTRATOR_MAX_PARALLEL = "2";
+      const controller = new AbortController();
+
+      try {
+        let started = 0;
+        let resolveBothStarted: (() => void) | null = null;
+        const bothStarted = new Promise<void>((resolve) => {
+          resolveBothStarted = resolve;
+        });
+
+        const abortPromise = (signal: AbortSignal | undefined) =>
+          new Promise<never>((_resolve, reject) => {
+            if (!signal) {
+              return;
+            }
+            if (signal.aborted) {
+              reject(new Error("aborted"));
+              return;
+            }
+            signal.addEventListener(
+              "abort",
+              () => {
+                reject(new Error("aborted"));
+              },
+              { once: true }
+            );
+          });
+
+        codexExecute.mockImplementation(
+          async ({ writer, signal }: { writer: any; signal?: AbortSignal }) => {
+            started += 1;
+            if (started === 2) {
+              resolveBothStarted?.();
+            }
+            await Promise.race([bothStarted, abortPromise(signal)]);
+            await writer.write({
+              type: "stdout",
+              event: {
+                type: "thought",
+                content: "done",
+                timestamp: Date.now(),
+              },
+            });
+          }
+        );
+
+        const workspace = await mkdtemp(path.join(tmpdir(), "waves-par-"));
+        tempDirs.push(workspace);
+
+        const requirement = "Parallel wave test";
+        const ctx = {
+          input: { requirement, auto: "low", workspace },
+          runId: "run-par",
+          signal: controller.signal,
+          workspace,
+          scanContext: {
+            requirement,
+            receipts: {},
+            bundle: {
+              maxTokens: 2000,
+              estimatedTokens: 0,
+              files: [
+                {
+                  path: "packages/api/src/router.ts",
+                  startLine: 1,
+                  endLine: 10,
+                  tokens: 10,
+                  content: "export const api = 1;",
+                },
+                {
+                  path: "apps/web/src/app.tsx",
+                  startLine: 1,
+                  endLine: 10,
+                  tokens: 10,
+                  content: "export const web = 2;",
+                },
+              ],
+              links: undefined,
+              note: "integration",
+            },
+            totalTokens: 0,
+          },
+        } as any;
+
+        const iterator = runWaves(ctx);
+        const drain = (async () => {
+          while (true) {
+            const next = await iterator.next();
+            if (next.done) {
+              return next.value;
+            }
+          }
+        })();
+
+        try {
+          await Promise.race([
+            bothStarted,
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error("expected_concurrent_agents")),
+                500
+              )
+            ),
+          ]);
+        } catch (error) {
+          controller.abort();
+          await drain.catch(() => {});
+          throw error;
+        }
+
+        expect(started).toBe(2);
+      expect(worktreeSafeMerge).toHaveBeenCalledTimes(0);
+        await drain;
+      } finally {
+        controller.abort();
+        if (prev === undefined) {
+          process.env.ORCHESTRATOR_MAX_PARALLEL = undefined;
+        } else {
+          process.env.ORCHESTRATOR_MAX_PARALLEL = prev;
+        }
+      }
+    },
+    5000
+  );
 });

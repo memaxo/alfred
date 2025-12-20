@@ -25,6 +25,7 @@ import {
 import { toolWebAssistant } from "../assistant/src/tool/web";
 import { toolCognitiveState } from "./orchestrator/tool/cognitive";
 import { toolCodex } from "./orchestrator/tool/codex";
+import { toolCodexlog } from "./orchestrator/tool/codexlog";
 import { toolDocker } from "./orchestrator/tool/docker";
 import { toolDroid } from "./orchestrator/tool/droid";
 import { toolGit } from "./orchestrator/tool/git";
@@ -157,6 +158,7 @@ const assistantToolSources: LegacyTool[] = [
 
 const orchestratorToolSources: LegacyTool[] = [
   toolCodex,
+  toolCodexlog,
   toolCognitiveState,
   toolDocker,
   toolDroid,

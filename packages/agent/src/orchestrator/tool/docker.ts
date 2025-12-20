@@ -67,12 +67,14 @@ const dockerInputSchema = z.object({
   action: z.enum([
     "build",
     "run",
+    "start",
     "stop",
     "rm",
     "inspect",
     "logs",
     "wait",
     "exec.probe",
+    "exec",
   ]),
   cw: z.string().optional(),
   context: z.string().optional(),
@@ -100,6 +102,9 @@ const dockerInputSchema = z.object({
     .min(MIN_TIMEOUT_SEC)
     .max(MAX_TIMEOUT_SEC)
     .optional(),
+  cmd: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  workingDirectory: z.string().optional(),
 });
 
 type DockerInput = z.infer<typeof dockerInputSchema>;
@@ -446,6 +451,25 @@ function executeRun(input: DockerInput, writer: ToolWriter) {
   });
 }
 
+function executeStart(input: DockerInput, writer: ToolWriter) {
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
+
+    const result = await runDocker({
+      args: ["start", name],
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    if (result.exitCode !== 0) {
+      throw new Error("docker_start_failed");
+    }
+
+    return { ok: true as const, details: { name } };
+  });
+}
+
 function executeStop(input: DockerInput, writer: ToolWriter) {
   return withCwdHandle(input.cw, async (cwdHandle) => {
     const name = ensure(input.name, "docker_name_required");
@@ -507,10 +531,26 @@ function executeInspect(input: DockerInput, writer: ToolWriter) {
     }
 
     const ports = parseInspectPorts(parsed, input.containerPort);
+    const first = Array.isArray(parsed) ? parsed[0] : undefined;
+    let containerId: string | undefined;
+    let running: boolean | undefined;
+    if (first && typeof first === "object") {
+      const record = first as Record<string, unknown>;
+      if (typeof record.Id === "string") {
+        containerId = record.Id;
+      }
+      const state = record.State;
+      if (state && typeof state === "object") {
+        const stateRecord = state as Record<string, unknown>;
+        if (typeof stateRecord.Running === "boolean") {
+          running = stateRecord.Running;
+        }
+      }
+    }
 
     return {
       ok: true as const,
-      details: { ports },
+      details: { ports, containerId, running },
     };
   });
 }
@@ -641,37 +681,89 @@ async function executeProbe(input: DockerInput, writer: ToolWriter) {
   }
 }
 
+async function executeExec(input: DockerInput, writer: ToolWriter) {
+  return withCwdHandle(input.cw, async (cwdHandle) => {
+    const name = ensure(input.name, "docker_name_required");
+    const cmd = ensure(input.cmd, "docker_exec_cmd_required");
+
+    const args = ["exec"];
+
+    if (input.workingDirectory) {
+      args.push("-w", input.workingDirectory);
+    }
+
+    if (input.env) {
+      for (const [key, value] of Object.entries(input.env)) {
+        args.push("-e", `${key}=${value}`);
+      }
+    }
+
+    // Interactive mode if needed? For now just exec.
+    // We might want -i if we need stdin, but toolCodex usually handles streams.
+    // Using -i allows stdin to be piped if runDocker supports it.
+    // runDocker currently has stdin: "ignore".
+    // For batch exec it's fine.
+
+    args.push(name);
+    args.push(cmd);
+    if (input.args) {
+      args.push(...input.args);
+    }
+
+    const result = await runDocker({
+      args,
+      cwdHandle,
+      writer,
+      timeoutSec: input.timeoutSec ?? DEFAULT_TIMEOUT_SEC,
+    });
+
+    return {
+      ok: true as const,
+      details: {
+        name,
+        exitCode: result.exitCode,
+        text: result.stdout,
+        error: result.stderr || undefined,
+        truncated: result.truncated,
+      },
+    };
+  });
+}
+
+const dockerOutputSchema = z.object({
+  ok: z.boolean(),
+  details: z
+    .object({
+      name: z.string().optional(),
+      containerId: z.string().optional(),
+      running: z.boolean().optional(),
+      containerPort: z.number().optional(),
+      hostPort: z.number().nullable().optional(),
+      ports: z.array(z.object({ host: z.number(), container: z.number() })).optional(),
+      exitCode: z.number().optional(),
+      text: z.string().optional(),
+      error: z.string().optional(),
+      truncated: z.boolean().optional(),
+      status: z.number().optional(),
+      body: z.string().optional(),
+    })
+    .optional(),
+});
+
+export type DockerToolOutput = z.infer<typeof dockerOutputSchema>;
+
 export const toolDocker = {
   name: "docker",
   description: "Manage local Docker containers for preview deployments.",
   inputSchema: dockerInputSchema,
-  outputSchema: z.object({
-    ok: z.boolean(),
-    details: z
-      .object({
-        name: z.string().optional(),
-        containerId: z.string().optional(),
-        containerPort: z.number().optional(),
-        hostPort: z.number().nullable().optional(),
-        ports: z
-          .array(z.object({ host: z.number(), container: z.number() }))
-          .optional(),
-        exitCode: z.number().optional(),
-        text: z.string().optional(),
-        error: z.string().optional(),
-        truncated: z.boolean().optional(),
-        status: z.number().optional(),
-        body: z.string().optional(),
-      })
-      .optional(),
-  }),
+  outputSchema: dockerOutputSchema,
   execute: async ({
     input,
     writer,
   }: {
     input: DockerInput;
     writer?: { write: (chunk: unknown) => Promise<void> | void };
-  }) => {
+  }): Promise<DockerToolOutput> => {
     await enforcePolicy(input);
 
     switch (input.action) {
@@ -679,6 +771,8 @@ export const toolDocker = {
         return executeBuild(input, writer);
       case "run":
         return executeRun(input, writer);
+      case "start":
+        return executeStart(input, writer);
       case "stop":
         return executeStop(input, writer);
       case "rm":
@@ -691,6 +785,8 @@ export const toolDocker = {
         return executeWait(input, writer);
       case "exec.probe":
         return executeProbe(input, writer);
+      case "exec":
+        return executeExec(input, writer);
       default:
         throw new Error("docker_action_not_supported");
     }

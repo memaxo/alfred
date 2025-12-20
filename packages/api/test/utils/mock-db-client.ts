@@ -35,6 +35,17 @@ const defaultConversationRow = {
 };
 
 export const dbModuleStub = {
+  codexRunRepo: {
+    createRun: vi.fn(),
+    getRun: vi.fn().mockResolvedValue(null),
+    getLatestRunBySession: vi.fn().mockResolvedValue(null),
+    listRuns: vi.fn().mockResolvedValue([]),
+    finalizeRun: vi.fn().mockResolvedValue(null),
+    appendEventsBatch: vi.fn().mockResolvedValue({ inserted: 0 }),
+    listEvents: vi.fn().mockResolvedValue([]),
+    searchEvents: vi.fn().mockResolvedValue([]),
+    pruneOldRuns: vi.fn().mockResolvedValue({ deletedRuns: 0, deletedEvents: 0 }),
+  },
   deployRepo: {
     listDeployments: vi.fn().mockResolvedValue([]),
     getDeploymentById: vi.fn().mockResolvedValue(null),
@@ -140,6 +151,7 @@ const dbAbs = new URL("../../../db/src/index.ts", import.meta.url).pathname;
 const realDb = await import(dbAbs);
 mock.module("@alfred/db", () => ({
   ...realDb,
+  codexRunRepo: dbModuleStub.codexRunRepo,
   userRepo: dbModuleStub.userRepo,
   deployRepo: dbModuleStub.deployRepo,
   linearRepo: dbModuleStub.linearRepo,
@@ -152,6 +164,8 @@ mock.module("@alfred/db/repo/deploy", () => dbModuleStub.deployRepo);
 mock.module("@alfred/db/src/repo/deploy", () => dbModuleStub.deployRepo);
 mock.module("@alfred/db/repo/linear", () => dbModuleStub.linearRepo);
 mock.module("@alfred/db/src/repo/linear", () => dbModuleStub.linearRepo);
+mock.module("@alfred/db/repo/codex-run", () => dbModuleStub.codexRunRepo);
+mock.module("@alfred/db/src/repo/codex-run", () => dbModuleStub.codexRunRepo);
 
 // No-op policy audit logging during tests
 mock.module("@alfred/db/repo/policy", () => ({

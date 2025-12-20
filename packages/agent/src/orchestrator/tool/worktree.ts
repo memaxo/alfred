@@ -239,6 +239,7 @@ export const worktreeManager = {
     const addResult = await runGit(repoRoot, [
       "worktree",
       "add",
+      "--relative",
       "-b",
       branch,
       wtPath,

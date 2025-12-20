@@ -16,6 +16,8 @@
     "./redis": "./src/redis/index.ts",
     "./vcr": "./src/vcr/index.ts",
     "./vcr/*": "./src/vcr/*",
+    "./codex": "./src/codex/index.ts",
+    "./codex/*": "./src/codex/*",
     "./voice": "./src/voice/index.ts",
     "./voice/*": "./src/voice/*",
     "./voice/runtime-fixture": "./src/voice/runtime-fixture.ts",

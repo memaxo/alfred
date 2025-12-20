@@ -270,7 +270,7 @@ export async function* runReviewPhase(
   ctx: OrchestratorContext,
   mergePlan: any
 ): AsyncGenerator<WorkflowEvent, void, void> {
-  const { input, runId, workspace, projectConfig } = ctx; // Destructure projectConfig
+  const { input, runId, workspace, projectConfig, authz, signal, userId } = ctx; // Destructure projectConfig
 
   const reviewPlan = buildReviewPlan({
     files: mergePlan.expectedFiles ?? [],
@@ -669,6 +669,7 @@ export async function* runReviewPhase(
                   sessionId: fixerSpec.sessionId,
                   model: fixerSpec.model,
                   profile: fixerSpec.profile,
+                  authz,
                   context: {
                     linearSessionId: fixerSpec.context.linearSessionId,
                     linearSpace: fixerSpec.context.linearSpace,
@@ -676,8 +677,10 @@ export async function* runReviewPhase(
                     linearIssueId: fixerSpec.context.linearIssueId,
                     relevantFiles: fixerSpec.context.relevantFiles,
                   },
+                  userId,
                 },
                 writer,
+                signal,
               });
             } finally {
               await sessionController?.stop(fixerSessionId);

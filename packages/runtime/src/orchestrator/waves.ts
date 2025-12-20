@@ -2,8 +2,10 @@ import { realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
-import type { Workspace } from "@alfred/agent/environment/types";
-import { isPoofWorkspace } from "@alfred/agent/environment/types";
+import {
+  isContainerWorkspace,
+  type Workspace,
+} from "@alfred/agent/environment/types";
 import { runTDDLoop } from "@alfred/agent/orchestrator/loops/tdd";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
@@ -35,6 +37,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import { ContextBuilder } from "../context";
+import { AsyncQueue, pLimit } from "../utils/concurrency";
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { OrchestratorContext } from "./types";
 
@@ -156,6 +159,501 @@ async function appendDecisionEntry(
   );
 }
 
+// Extracted Agent Runner
+type RunAgentOptions = {
+  spec: AgentSpec;
+  runId: string;
+  workspace: string;
+  workspaceRoot: string;
+  subTaskById: Map<string, SubTask>;
+  projectConfig: OrchestratorContext["projectConfig"];
+  activeWorkspaces: Workspace[];
+  agentFileHints: Map<string, Set<string>>;
+  rootExecPlanPath: string;
+  signal: AbortSignal;
+  authz?: string;
+  userId?: string;
+  trackerStateRef: { current: TrackerState };
+  queue: AsyncQueue<WorkflowEvent>;
+};
+
+async function runAgent({
+  spec,
+  runId,
+  workspace,
+  workspaceRoot,
+  subTaskById,
+  projectConfig,
+  activeWorkspaces,
+  agentFileHints,
+  rootExecPlanPath,
+  signal,
+  authz,
+  userId,
+  trackerStateRef,
+  queue,
+}: RunAgentOptions) {
+  spec.workingDirectory = normalizeWorkingDirectory(
+    spec.workingDirectory,
+    workspaceRoot
+  );
+  if (signal.aborted) {
+    throw new DOMException("Phase aborted", "AbortError");
+  }
+
+  const task = subTaskById.get(spec.subTaskId);
+
+  // Hybrid Tier: Handle Worktree/Container Environment via WorkspaceFactory
+  let workspaceEnv: Workspace | undefined;
+  let containerId: string | undefined;
+  let containerCw: string | undefined;
+  let poofUpperDir: string | undefined;
+  let poofProfile: "minimal" | "standard" | "intensive" | undefined;
+  let poofMode: "exec" | "run" | undefined;
+
+  if (
+    spec.environment === "worktree" ||
+    spec.environment === "container" ||
+    spec.environment === "host" ||
+    spec.environment === "poof"
+  ) {
+    try {
+      workspaceEnv = await WorkspaceFactory.create(
+        spec.environment,
+        spec.agentId,
+        runId,
+        workspace,
+        {
+          authz,
+          enableSessions: ENABLE_WORKSPACE_SESSIONS,
+          poofProfile: spec.poofProfile,
+        }
+      );
+
+      await workspaceEnv.initialize();
+      activeWorkspaces.push(workspaceEnv);
+      spec.workingDirectory = normalizeWorkingDirectory(
+        workspaceEnv.root,
+        workspaceRoot
+      );
+
+      logger.info("workspace_created", {
+        runId,
+        agentId: spec.agentId,
+        kind: spec.environment,
+        root: workspaceEnv.root,
+      });
+
+      if (isContainerWorkspace(workspaceEnv)) {
+        containerId = workspaceEnv.containerId;
+        containerCw = workspaceEnv.containerCw;
+      }
+      if (spec.environment === "poof" && workspaceEnv?.kind === "poof") {
+        const poof = workspaceEnv as any;
+        poofUpperDir = poof.upperDir ?? poof.getUpperDir?.() ?? undefined;
+        poofMode = poof.mode;
+        const name = poof.profile?.name;
+        poofProfile =
+          name === "minimal" || name === "standard" || name === "intensive"
+            ? name
+            : undefined;
+      }
+    } catch (error) {
+      logger.warn("workspace_creation_failed", {
+        runId,
+        agentId: spec.agentId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Abort this agent? Or continue on host?
+      // Continue implies running in main repo, which might be dangerous.
+      // For now, we proceed (fallback to spec.workingDirectory which was repo root).
+    }
+  }
+
+  const execPlanRelativePath = spec.execPlanPath;
+  const execPlanAbsolutePath = path.resolve(
+    workspace,
+    execPlanRelativePath
+  );
+  const dir = path.dirname(execPlanAbsolutePath);
+  await fs.mkdir(dir, { recursive: true });
+
+  try {
+    await fs.access(execPlanAbsolutePath);
+  } catch {
+    if (task) {
+      const skeleton = generateSubtaskExecPlanSkeleton(task, runId);
+      await fs.writeFile(execPlanAbsolutePath, skeleton, "utf8");
+    }
+  }
+  
+  // No need to set agentPlanPaths here as it was local map in runWaves, but we can't update local map easily.
+  // Actually agentPlanPaths was used only for logging stuck status in runWaves?
+  // We can just use execPlanAbsolutePath.
+
+  const execPlanPromptPath = execPlanRelativePath;
+
+  if (execPlanAbsolutePath) {
+    await appendPlanProgressEntry(
+      execPlanAbsolutePath,
+      `Agent ${spec.agentId} started ${task?.title ?? spec.subTaskId}.`,
+      false
+    );
+  }
+
+  const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const escalationFile = `ESCALATION-${safeAgentId}.md`;
+
+  const promptLines = [
+    "You are a coding agent executing a single subtask ExecPlan.",
+    "",
+    `ExecPlan path: ${execPlanPromptPath}`,
+    "",
+    "Instructions:",
+    "- Read the ExecPlan file at the given path.",
+    "- Update the Progress and Decision Log sections as you work.",
+    "- Make small, idempotent edits to both the ExecPlan and the code.",
+    "- Prefer minimal, safe changes that can be retried without harm.",
+    `- If you encounter a blocking issue that requires re-planning (e.g. missing dependency, wrong architecture), write a file named '${escalationFile}' with the reason and exit.`,
+    "- At the end, summarise what you changed.",
+  ];
+
+  if (task) {
+    promptLines.push("");
+    promptLines.push("Subtask requirement:");
+    promptLines.push(task.requirement);
+    if (task.acceptance.length > 0) {
+      promptLines.push("");
+      promptLines.push("Acceptance criteria:");
+      for (const criterion of task.acceptance) {
+        promptLines.push(`- ${criterion}`);
+      }
+    }
+    if (task.filesHint.length > 0) {
+      promptLines.push("");
+      promptLines.push("Suggested focus areas:");
+      for (const prefix of task.filesHint) {
+        promptLines.push(`- ${prefix}`);
+      }
+    }
+  }
+
+  const prompt = promptLines.join("\n");
+
+  const writer = {
+    write: async (chunk: unknown) => {
+      const payload = chunk as { type?: string; event?: unknown };
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+      const type = (payload as any).type;
+
+      if (type === "stdout" || type === "stderr") {
+        const inner = (payload as any).event as
+          | {
+              type?: string;
+              content?: string;
+              timestamp?: number;
+              command?: string;
+              status?: string;
+              path?: string;
+              kind?: string;
+            }
+          | undefined;
+        if (inner && typeof inner.type === "string") {
+          const ts =
+            typeof inner.timestamp === "number" &&
+            Number.isFinite(inner.timestamp)
+              ? inner.timestamp
+              : Date.now();
+          if (inner.type === "thought") {
+            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+              type: "codex/thought",
+              agentId: spec.agentId,
+              text: inner.content ?? "",
+              ts,
+            });
+          } else if (inner.type === "command") {
+            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+              type: "codex/command",
+              agentId: spec.agentId,
+              command: inner.command ?? "",
+              status:
+                inner.status === "failed"
+                  ? "failed"
+                  : inner.status === "completed"
+                    ? "completed"
+                    : "running",
+              ts,
+            });
+          } else if (inner.type === "artifact") {
+            const filePath = inner.path ?? "";
+            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+              type: "codex/file",
+              agentId: spec.agentId,
+              path: filePath,
+              kind: inner.kind ?? "file",
+              ts,
+            });
+            if (filePath) {
+              let set = agentFileHints.get(spec.agentId);
+              if (!set) {
+                set = new Set<string>();
+                agentFileHints.set(spec.agentId, set);
+              }
+              set.add(filePath);
+            }
+          }
+        }
+        queue.enqueue({
+          type: "event",
+          kind: "codex_event",
+          data: payload,
+        } as any);
+      } else if (type === "notice") {
+        queue.enqueue({
+          type: "notice",
+          message: (payload as any).message ?? "codex_notice",
+        } as any);
+      }
+    },
+  } as const;
+
+  // Phase 4: Test-Driven Development Loop
+  // If mandated, we first force the agent to write a failing test.
+  if (spec.mandateTDD && projectConfig) {
+    const task = subTaskById.get(spec.subTaskId);
+    queue.enqueue({ type: "notice", message: "tdd_test_generation_started" } as any);
+
+    await runTDDLoop(
+      {
+        agentId: spec.agentId,
+        sessionId: spec.sessionId,
+        workingDirectory: spec.workingDirectory,
+        execPlanPath: spec.execPlanPath,
+        requirement: task?.requirement ?? "",
+        auto: spec.auto === "read" ? "low" : spec.auto,
+        model: spec.model,
+        authz,
+        signal,
+        containerId,
+        containerCw,
+        context: spec.context,
+        userId,
+      },
+      projectConfig,
+      workspaceEnv,
+      writer
+    );
+  }
+
+  const startedAt = Date.now();
+
+  // Checkpoint before execution
+  if (workspaceEnv) {
+    try {
+      await workspaceEnv.checkpoint("pre-agent");
+    } catch (err) {
+      logger.warn("checkpoint_failed", {
+        agentId: spec.agentId,
+        error: String(err),
+      });
+    }
+  }
+
+  let escalationReason: string | undefined;
+  let status = "completed";
+  let stuck = false;
+  let durationSeconds = 0;
+
+  try {
+    await toolCodex.execute({
+      input: {
+        action: "exec",
+        prompt,
+        out: "text",
+        auto: spec.auto,
+        cw: spec.workingDirectory,
+        sessionId: spec.sessionId,
+        containerId,
+        containerCw,
+        poofUpperDir,
+        poofProfile,
+        poofMode,
+        model: spec.model,
+        profile: spec.profile,
+        authz,
+        context: {
+          linearSessionId: spec.context.linearSessionId,
+          linearSpace: spec.context.linearSpace,
+          linearAuthz: spec.context.linearAuthz,
+          linearIssueId: spec.context.linearIssueId,
+          relevantFiles: spec.context.relevantFiles,
+        },
+        userId,
+      },
+      writer,
+      signal,
+    });
+  } catch (error: any) {
+    // Handle Supervisor Interrupts
+    if (String(error).includes("codex_exec_interrupted")) {
+      logger.warn("agent_interrupted_by_supervisor", {
+        agentId: spec.agentId,
+        error: String(error),
+      });
+      queue.enqueue({
+        type: "notice",
+        message: `agent_interrupted: ${String(error)}`,
+      } as any);
+
+      // Always restore checkpoint on interrupt
+      if (workspaceEnv) {
+        try {
+          await workspaceEnv.restore("pre-agent");
+        } catch (restoreErr) {
+          logger.error("restore_failed_on_interrupt", {
+            agentId: spec.agentId,
+            error: String(restoreErr),
+          });
+        }
+      }
+
+      // Mark agent as interrupted
+      const interruptFinishedAt = Date.now();
+      const interruptDurationSeconds = Math.max(
+        0,
+        (interruptFinishedAt - startedAt) / 1000
+      );
+      return {
+        agentId: spec.agentId,
+        stuck: false,
+        status: "interrupted",
+        durationSeconds: interruptDurationSeconds,
+        role: "codex",
+      };
+    }
+
+    // Restore on crash (non-interrupt errors)
+    const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
+      formatCodexRuntimeError(error);
+    queue.enqueue({
+      type: "notice",
+      message: userMessage,
+    } as any);
+    logger.error("codex_agent_failed", {
+      agentId: spec.agentId,
+      error: rawMessage,
+      code,
+      needsElevation,
+      limitExceeded,
+    });
+
+    if (workspaceEnv) {
+      logger.warn("agent_crashed_restoring_checkpoint", {
+        agentId: spec.agentId,
+      });
+      try {
+        await workspaceEnv.restore("pre-agent");
+      } catch (restoreErr) {
+        logger.error("restore_failed", {
+          agentId: spec.agentId,
+          error: String(restoreErr),
+        });
+      }
+    }
+
+    // We don't re-throw here to allow other agents to continue? 
+    // Wait, original code re-threw non-interrupt errors.
+    // "throw error;"
+    // If we throw, Promise.all rejects?
+    // We should probably catch and return a failed outcome.
+    status = "failed";
+  }
+
+  const finishedAt = Date.now();
+
+  // Use stuck detection thresholds from project config or env var defaults
+  const stuckOpts: StuckDetectionOptions =
+    projectConfig?.stuckDetection ?? getStuckDetectionDefaults();
+  stuck = detectStuck(
+    trackerStateRef.current,
+    spec.agentId as any,
+    Date.now(),
+    stuckOpts
+  );
+  const trackerAgent = trackerStateRef.current.agents[spec.agentId as any];
+  if (status !== "failed") {
+    status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
+  }
+  durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
+
+  if (execPlanAbsolutePath) {
+    const statusLabel = stuck ? "stuck" : status;
+    const durationLabel = durationSeconds.toFixed(1);
+    await appendPlanProgressEntry(
+      execPlanAbsolutePath,
+      `Agent ${spec.agentId} ${statusLabel} in ${durationLabel}s.`,
+      !stuck && status === "completed"
+    );
+    if (stuck || status === "failed") {
+      await appendDecisionEntry(
+        execPlanAbsolutePath,
+        `Agent flagged ${statusLabel}`,
+        "Runtime detected the agent did not complete cleanly."
+      );
+    }
+  }
+
+  // Check for Escalation
+  try {
+    const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const escalationFile = `ESCALATION-${safeAgentId}.md`;
+    const escalationPath = path.join(spec.workingDirectory, escalationFile);
+    const escalationContent = await fs.readFile(escalationPath, "utf8");
+    if (escalationContent.trim().length > 0) {
+      escalationReason = escalationContent;
+      logger.warn("agent_escalated", {
+        agentId: spec.agentId,
+        reason: escalationReason,
+      });
+
+      if (execPlanAbsolutePath) {
+        await appendDecisionEntry(
+          execPlanAbsolutePath,
+          "Escalated",
+          escalationReason
+        );
+      }
+      await appendDecisionEntry(
+        rootExecPlanPath,
+        `Subtask ${spec.subTaskId} escalated`,
+        escalationReason,
+        `Agent ${spec.agentId}`
+      );
+    }
+  } catch {
+    // No escalation file found
+  }
+
+  const hints = agentFileHints.get(spec.agentId);
+  return {
+    agentId: spec.agentId,
+    stuck,
+    status,
+    durationSeconds,
+    role: "codex",
+    escalation: escalationReason,
+    result: {
+      summary: "codex agent execution",
+      artifacts: [],
+      changes: hints ? Array.from(hints) : [],
+      notes: [],
+      branch: workspaceEnv?.branch ?? undefined,
+    },
+  };
+}
+
 export async function* runWaves(
   ctx: OrchestratorContext
 ): AsyncGenerator<WorkflowEvent, WavesResult, void> {
@@ -175,14 +673,11 @@ export async function* runWaves(
 
   // Phase 13: Hydration - Rebuild Tracker State
   let trackerState = hydrateTrackerState(history);
+  const trackerStateRef = { current: trackerState };
 
   const agentFileHints = new Map<string, Set<string>>();
   const agentSubTaskIds = new Map<string, string>();
   const activeWorkspaces: Workspace[] = [];
-  const agentPlanPaths = new Map<
-    string,
-    { absolute: string; relative: string }
-  >();
   const rootExecPlanPath = path.resolve(
     workspace,
     `.agent/plans/${runId}.root.md`
@@ -236,7 +731,7 @@ export async function* runWaves(
   if (subTasks.length === 0) {
     yield { type: "notice", message: "no_subtasks_to_execute" } as any;
     return {
-      trackerState,
+      trackerState: trackerStateRef.current,
       allAgentOutcomes: [],
       agentFileHints,
       activeWorkspaces,
@@ -246,10 +741,13 @@ export async function* runWaves(
   }
 
   const subTaskById = new Map<string, SubTask>(subTasks.map((t) => [t.id, t]));
-  const maxParallel = Number.parseInt(
+  const maxParallelRaw = Number.parseInt(
     process.env.ORCHESTRATOR_MAX_PARALLEL || "2",
     10
   );
+  const maxParallel = Number.isFinite(maxParallelRaw)
+    ? Math.max(1, maxParallelRaw)
+    : 2;
   const waves: WavePlan[] = planWaves(subTasks, { maxParallel });
 
   if (waves.length === 0) {
@@ -281,7 +779,7 @@ export async function* runWaves(
     }
 
     // Hydration check for wave
-    if (trackerState.waves[wave.id]?.status === "completed") {
+    if (trackerStateRef.current.waves[wave.id]?.status === "completed") {
       logger.info("wave_hydrated_skipping", { waveId: wave.id });
       yield {
         type: "notice",
@@ -308,10 +806,11 @@ export async function* runWaves(
           return null;
         }
         const spec = buildAgentSpec(task, runId, workspace, {
-          auto: input.auto as any,
+          auto: input.auto,
+          maxParallel,
           linear: input.linear
             ? {
-                issueId: undefined,
+                issueId: input.linear.issueId,
                 sessionId: input.linear.sessionId,
                 space: input.linear.space,
                 authz: input.linear.authz,
@@ -339,471 +838,83 @@ export async function* runWaves(
       false
     );
 
-    const waveEvents: WorkflowEvent[] = [];
+    trackerStateRef.current.waves[wave.id] = { status: "running" };
 
-    trackerState.waves[wave.id] = { status: "running" };
+    // Concurrent Execution using pLimit and AsyncQueue
+    const queue = new AsyncQueue<WorkflowEvent>();
+    const limit = pLimit(maxParallel);
 
-    const agentOutcomes: Array<{
-      agentId: string;
-      stuck: boolean;
-      status: string;
-      durationSeconds: number;
-      role: string;
-      result?: any;
-      escalation?: string;
-    }> = [];
-
-    for (const spec of agentSpecs) {
-      spec.workingDirectory = normalizeWorkingDirectory(
-        spec.workingDirectory,
-        workspaceRoot
-      );
-      if (signal.aborted) {
-        throw new DOMException("Phase aborted", "AbortError");
-      }
-
-      const task = subTaskById.get(spec.subTaskId);
-
-      // Hybrid Tier: Handle Worktree/Container Environment via WorkspaceFactory
-      let workspaceEnv: Workspace | undefined;
-      let containerId: string | undefined;
-
-      if (
-        spec.environment === "worktree" ||
-        spec.environment === "container" ||
-        spec.environment === "host" ||
-        spec.environment === "poof"
-      ) {
+    const agentPromises = agentSpecs.map((spec) =>
+      limit(async () => {
         try {
-          workspaceEnv = await WorkspaceFactory.create(
-            spec.environment,
-            spec.agentId,
+          return await runAgent({
+            spec,
             runId,
             workspace,
-            {
-              authz: input.linear?.authz,
-              enableSessions: ENABLE_WORKSPACE_SESSIONS,
-              poofProfile: spec.poofProfile,
-            }
-          );
-
-          await workspaceEnv.initialize();
-          activeWorkspaces.push(workspaceEnv);
-          spec.workingDirectory = normalizeWorkingDirectory(
-            workspaceEnv.root,
-            workspaceRoot
-          );
-
-          logger.info("workspace_created", {
-            runId,
-            agentId: spec.agentId,
-            kind: spec.environment,
-            root: workspaceEnv.root,
+            workspaceRoot,
+            subTaskById,
+            projectConfig,
+            activeWorkspaces,
+            agentFileHints,
+            rootExecPlanPath,
+            signal,
+            authz,
+            userId,
+            trackerStateRef,
+            queue,
           });
-
-          if (spec.environment === "container") {
-            // Extract containerId from ContainerWorkspace
-            containerId = (workspaceEnv as any).containerId;
-          }
         } catch (error) {
-          logger.warn("workspace_creation_failed", {
+          logger.error("agent_unhandled_error", {
             runId,
             agentId: spec.agentId,
             error: error instanceof Error ? error.message : String(error),
           });
-          // Abort this agent? Or continue on host?
-          // Continue implies running in main repo, which might be dangerous.
-          // For now, we proceed (fallback to spec.workingDirectory which was repo root).
-        }
-      }
-
-      const execPlanRelativePath = spec.execPlanPath;
-      const execPlanAbsolutePath = path.resolve(
-        workspace,
-        execPlanRelativePath
-      );
-      const dir = path.dirname(execPlanAbsolutePath);
-      await fs.mkdir(dir, { recursive: true });
-
-      try {
-        await fs.access(execPlanAbsolutePath);
-      } catch {
-        if (task) {
-          const skeleton = generateSubtaskExecPlanSkeleton(task, runId);
-          await fs.writeFile(execPlanAbsolutePath, skeleton, "utf8");
-        }
-      }
-      agentPlanPaths.set(spec.agentId, {
-        absolute: execPlanAbsolutePath,
-        relative: execPlanRelativePath,
-      });
-
-      const execPlanPromptPath = execPlanRelativePath;
-
-      if (execPlanAbsolutePath) {
-        await appendPlanProgressEntry(
-          execPlanAbsolutePath,
-          `Agent ${spec.agentId} started ${task?.title ?? spec.subTaskId}.`,
-          false
-        );
-      }
-
-      const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const escalationFile = `ESCALATION-${safeAgentId}.md`;
-
-      const promptLines = [
-        "You are a coding agent executing a single subtask ExecPlan.",
-        "",
-        `ExecPlan path: ${execPlanPromptPath}`,
-        "",
-        "Instructions:",
-        "- Read the ExecPlan file at the given path.",
-        "- Update the Progress and Decision Log sections as you work.",
-        "- Make small, idempotent edits to both the ExecPlan and the code.",
-        "- Prefer minimal, safe changes that can be retried without harm.",
-        `- If you encounter a blocking issue that requires re-planning (e.g. missing dependency, wrong architecture), write a file named '${escalationFile}' with the reason and exit.`,
-        "- At the end, summarise what you changed.",
-      ];
-
-      if (task) {
-        promptLines.push("");
-        promptLines.push("Subtask requirement:");
-        promptLines.push(task.requirement);
-        if (task.acceptance.length > 0) {
-          promptLines.push("");
-          promptLines.push("Acceptance criteria:");
-          for (const criterion of task.acceptance) {
-            promptLines.push(`- ${criterion}`);
-          }
-        }
-        if (task.filesHint.length > 0) {
-          promptLines.push("");
-          promptLines.push("Suggested focus areas:");
-          for (const prefix of task.filesHint) {
-            promptLines.push(`- ${prefix}`);
-          }
-        }
-      }
-
-      const prompt = promptLines.join("\n");
-
-      const bufferedEvents: WorkflowEvent[] = [];
-
-      const writer = {
-        write: async (chunk: unknown) => {
-          const payload = chunk as { type?: string; event?: unknown };
-          if (!payload || typeof payload !== "object") {
-            return;
-          }
-          const type = (payload as any).type;
-
-          if (type === "stdout" || type === "stderr") {
-            const inner = (payload as any).event as
-              | {
-                  type?: string;
-                  content?: string;
-                  timestamp?: number;
-                  command?: string;
-                  status?: string;
-                  path?: string;
-                  kind?: string;
-                }
-              | undefined;
-            if (inner && typeof inner.type === "string") {
-              const ts =
-                typeof inner.timestamp === "number" &&
-                Number.isFinite(inner.timestamp)
-                  ? inner.timestamp
-                  : Date.now();
-              if (inner.type === "thought") {
-                trackerState = updateTracker(trackerState, {
-                  type: "codex/thought",
-                  agentId: spec.agentId,
-                  text: inner.content ?? "",
-                  ts,
-                });
-              } else if (inner.type === "command") {
-                trackerState = updateTracker(trackerState, {
-                  type: "codex/command",
-                  agentId: spec.agentId,
-                  command: inner.command ?? "",
-                  status:
-                    inner.status === "failed"
-                      ? "failed"
-                      : inner.status === "completed"
-                        ? "completed"
-                        : "running",
-                  ts,
-                });
-              } else if (inner.type === "artifact") {
-                const filePath = inner.path ?? "";
-                trackerState = updateTracker(trackerState, {
-                  type: "codex/file",
-                  agentId: spec.agentId,
-                  path: filePath,
-                  kind: inner.kind ?? "file",
-                  ts,
-                });
-                if (filePath) {
-                  let set = agentFileHints.get(spec.agentId);
-                  if (!set) {
-                    set = new Set<string>();
-                    agentFileHints.set(spec.agentId, set);
-                  }
-                  set.add(filePath);
-                }
-              }
-            }
-            bufferedEvents.push({
-              type: "event",
-              kind: "codex_event",
-              data: payload,
-            } as any);
-          } else if (type === "notice") {
-            bufferedEvents.push({
-              type: "notice",
-              message: (payload as any).message ?? "codex_notice",
-            } as any);
-          }
-        },
-      } as const;
-
-      // Phase 4: Test-Driven Development Loop
-      // If mandated, we first force the agent to write a failing test.
-      if (spec.mandateTDD && projectConfig) {
-        const task = subTaskById.get(spec.subTaskId);
-        yield { type: "notice", message: "tdd_test_generation_started" } as any;
-
-        await runTDDLoop(
-          {
-            agentId: spec.agentId,
-            sessionId: spec.sessionId,
-            workingDirectory: spec.workingDirectory,
-            execPlanPath: spec.execPlanPath,
-            requirement: task?.requirement ?? "",
-            auto: spec.auto as any,
-            model: spec.model,
-            containerId,
-            context: spec.context,
-            userId,
-          },
-          projectConfig,
-          workspaceEnv,
-          writer
-        );
-      }
-
-      const startedAt = Date.now();
-
-      // Checkpoint before execution
-      if (workspaceEnv) {
-        try {
-          await workspaceEnv.checkpoint("pre-agent");
-        } catch (err) {
-          logger.warn("checkpoint_failed", {
-            agentId: spec.agentId,
-            error: String(err),
-          });
-        }
-      }
-
-      try {
-        await toolCodex.execute({
-          input: {
-            action: "exec",
-            prompt,
-            out: "text",
-            auto: spec.auto,
-            cw: spec.workingDirectory,
-            sessionId: spec.sessionId,
-            containerId,
-            model: spec.model,
-            profile: spec.profile,
-            authz, // Pass authz from context
-            context: {
-              linearSessionId: spec.context.linearSessionId,
-              linearSpace: spec.context.linearSpace,
-              linearAuthz: spec.context.linearAuthz,
-              linearIssueId: spec.context.linearIssueId,
-              relevantFiles: spec.context.relevantFiles,
-            },
-            userId,
-          },
-          writer,
-        });
-      } catch (error: any) {
-        // Handle Supervisor Interrupts
-        if (String(error).includes("codex_exec_interrupted")) {
-          logger.warn("agent_interrupted_by_supervisor", {
-            agentId: spec.agentId,
-            error: String(error),
-          });
-          bufferedEvents.push({
+          queue.enqueue({
             type: "notice",
-            message: `agent_interrupted: ${String(error)}`,
+            message: `agent_failed_unhandled:${spec.agentId}`,
           } as any);
-
-          // Always restore checkpoint on interrupt
-          if (workspaceEnv) {
-            try {
-              await workspaceEnv.restore("pre-agent");
-            } catch (restoreErr) {
-              logger.error("restore_failed_on_interrupt", {
-                agentId: spec.agentId,
-                error: String(restoreErr),
-              });
-            }
-          }
-
-          // Mark agent as interrupted
-          const interruptFinishedAt = Date.now();
-          const interruptDurationSeconds = Math.max(
-            0,
-            (interruptFinishedAt - startedAt) / 1000
-          );
-          agentOutcomes.push({
+          return {
             agentId: spec.agentId,
             stuck: false,
-            status: "interrupted",
-            durationSeconds: interruptDurationSeconds,
+            status: "failed",
+            durationSeconds: 0,
             role: "codex",
-          });
-
-          hasInterruptedAgents = true;
-
-          // Break agent loop if signal aborted
-          if (ctx.signal.aborted) {
-            break;
-          }
-
-          // Skip normal completion flow for interrupted agents
-          continue;
+            escalation: undefined,
+            result: {
+              summary: "agent failed (unhandled error)",
+              artifacts: [],
+              changes: [],
+              notes: [],
+            },
+          } as any;
         }
+      })
+    );
 
-        // Restore on crash (non-interrupt errors)
-        const { userMessage, rawMessage, code, needsElevation, limitExceeded } =
-          formatCodexRuntimeError(error);
-        bufferedEvents.push({
-          type: "notice",
-          message: userMessage,
-        } as any);
-        logger.error("codex_agent_failed", {
-          agentId: spec.agentId,
-          error: rawMessage,
-          code,
-          needsElevation,
-          limitExceeded,
-        });
+    // Don't await promises yet; let them run and push events.
+    const allAgentsDone = Promise.all(agentPromises).finally(() => {
+      queue.close();
+    });
 
-        if (workspaceEnv) {
-          logger.warn("agent_crashed_restoring_checkpoint", {
-            agentId: spec.agentId,
-          });
-          try {
-            await workspaceEnv.restore("pre-agent");
-          } catch (restoreErr) {
-            logger.error("restore_failed", {
-              agentId: spec.agentId,
-              error: String(restoreErr),
-            });
-          }
+    // Stream events from queue
+    for await (const ev of queue) {
+      yield ev;
+    }
+
+    const agentOutcomes = await allAgentsDone;
+
+    // Process outcomes
+    for (const outcome of agentOutcomes) {
+        if (outcome.status === "interrupted") {
+            hasInterruptedAgents = true;
         }
-
-        // Re-throw non-interrupt errors
-        throw error;
-      }
-
-      const finishedAt = Date.now();
-
-      for (const ev of bufferedEvents) {
-        yield ev;
-        waveEvents.push(ev);
-      }
-
-      // Use stuck detection thresholds from project config or env var defaults
-      const stuckOpts: StuckDetectionOptions =
-        projectConfig?.stuckDetection ?? getStuckDetectionDefaults();
-      const stuck = detectStuck(
-        trackerState,
-        spec.agentId as any,
-        Date.now(),
-        stuckOpts
-      );
-      const trackerAgent = trackerState.agents[spec.agentId as any];
-      const status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
-      const durationSeconds = Math.max(0, (finishedAt - startedAt) / 1000);
-
-      if (execPlanAbsolutePath) {
-        const statusLabel = stuck ? "stuck" : status;
-        const durationLabel = durationSeconds.toFixed(1);
-        await appendPlanProgressEntry(
-          execPlanAbsolutePath,
-          `Agent ${spec.agentId} ${statusLabel} in ${durationLabel}s.`,
-          !stuck && status === "completed"
-        );
-        if (stuck || status === "failed") {
-          await appendDecisionEntry(
-            execPlanAbsolutePath,
-            `Agent flagged ${statusLabel}`,
-            "Runtime detected the agent did not complete cleanly."
-          );
+        if (outcome.escalation) {
+            escalationTrigger = { reason: outcome.escalation };
         }
-      }
-
-      // Check for Escalation
-      let escalationReason: string | undefined;
-      try {
-        const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
-        const escalationFile = `ESCALATION-${safeAgentId}.md`;
-        const escalationPath = path.join(spec.workingDirectory, escalationFile);
-        const escalationContent = await fs.readFile(escalationPath, "utf8");
-        if (escalationContent.trim().length > 0) {
-          escalationReason = escalationContent;
-          logger.warn("agent_escalated", {
-            agentId: spec.agentId,
-            reason: escalationReason,
-          });
-
-          escalationTrigger = { reason: escalationReason };
-
-          if (execPlanAbsolutePath) {
-            await appendDecisionEntry(
-              execPlanAbsolutePath,
-              "Escalated",
-              escalationReason
-            );
-          }
-          await appendDecisionEntry(
-            rootExecPlanPath,
-            `Subtask ${spec.subTaskId} escalated`,
-            escalationReason,
-            `Agent ${spec.agentId}`
-          );
-        }
-      } catch {
-        // No escalation file found
-      }
-
-      const hints = agentFileHints.get(spec.agentId);
-      agentOutcomes.push({
-        agentId: spec.agentId,
-        stuck,
-        status,
-        durationSeconds,
-        role: "codex",
-        escalation: escalationReason,
-        result: {
-          summary: "codex agent execution",
-          artifacts: [],
-          changes: hints ? Array.from(hints) : [],
-          notes: [],
-          branch: workspaceEnv?.branch ?? undefined,
-        },
-      });
     }
 
     const anyStuck = agentOutcomes.some((o) => o.stuck);
-    trackerState.waves[wave.id] = {
+    trackerStateRef.current.waves[wave.id] = {
       status: anyStuck ? "failed" : "completed",
     } as any;
 
@@ -875,126 +986,6 @@ export async function* runWaves(
       break;
     }
 
-    // Wave Merge & Arbitration Phase
-    // For agents that succeeded in worktrees, try to merge their branches.
-    // If conflict, spawn Arbiter.
-    const successfulAgents = agentOutcomes.filter(
-      (o) => o.status === "completed" && !o.stuck
-    );
-
-    for (const outcome of successfulAgents) {
-      const spec = agentSpecs.find((s) => s.agentId === outcome.agentId);
-      
-      // Handle poof workspace changes
-      if (spec?.environment === "poof") {
-        const poofWs = activeWorkspaces.find(
-          (ws) => ws.kind === "poof" && ws.id === spec.agentId
-        );
-        if (poofWs && isPoofWorkspace(poofWs)) {
-          try {
-            const hasChanges = await poofWs.hasChanges();
-            if (hasChanges) {
-              const changes = await poofWs.getChanges();
-              logger.info("poof_applying_changes", {
-                runId,
-                agentId: spec.agentId,
-                changeCount: changes.length,
-              });
-              await poofWs.applyChanges();
-              yield {
-                type: "notice",
-                message: `poof_changes_applied:${spec.agentId}`,
-              } as any;
-            }
-          } catch (err) {
-            logger.error("poof_apply_changes_failed", {
-              agentId: spec.agentId,
-              error: String(err),
-            });
-          }
-        }
-      }
-      
-      if (spec?.environment === "worktree") {
-        const targetBranch = process.env.ORCH_TARGET_BRANCH ?? "dev";
-        const sourceBranch = `agent/${runId}/${spec.agentId}`;
-
-        try {
-          const { worktreeManager } = await import(
-            "@alfred/agent/orchestrator/tool/worktree"
-          );
-          const mergeCheck = await worktreeManager.safeMerge(
-            workspace,
-            targetBranch,
-            sourceBranch,
-            { runId }
-          );
-
-          if (mergeCheck.success) {
-            const proc = Bun.spawn(["git", "merge", sourceBranch], {
-              cwd: workspace,
-            });
-            await proc.exited;
-          } else {
-            logger.warn("merge_conflict_detected", {
-              runId,
-              agentId: spec.agentId,
-              files: mergeCheck.conflictFiles,
-            });
-
-            yield {
-              type: "notice",
-              message: `merge_conflict_detected:${spec.agentId}`,
-            } as any;
-
-            const { conflictArbiter } = await import(
-              "@alfred/agent/orchestrator/conflict"
-            );
-            const resolution = await conflictArbiter.resolve(
-              workspace,
-              runId,
-              targetBranch,
-              sourceBranch,
-              authz,
-              userId
-            );
-
-            if (resolution.status === "resolved") {
-              logger.info("arbiter_resolved_conflict", {
-                runId,
-                agentId: spec.agentId,
-                resolutionBranch: resolution.resolvedBranch,
-              });
-              yield {
-                type: "notice",
-                message: `arbiter_resolved:${spec.agentId}`,
-              } as any;
-
-              const proc = Bun.spawn(
-                ["git", "merge", resolution.resolvedBranch],
-                { cwd: workspace }
-              );
-              await proc.exited;
-            } else {
-              logger.error("arbiter_failed_resolution", {
-                runId,
-                agentId: spec.agentId,
-                reason: resolution.reason,
-              });
-              yield {
-                type: "notice",
-                message: `arbiter_failed:${spec.agentId}`,
-              } as any;
-            }
-          }
-        } catch (err) {
-          logger.error("merge_check_failed", {
-            agentId: spec.agentId,
-            error: String(err),
-          });
-        }
-      }
-    }
   }
 
   if (abortedWave) {
@@ -1025,7 +1016,7 @@ export async function* runWaves(
   }
 
   return {
-    trackerState,
+    trackerState: trackerStateRef.current,
     allAgentOutcomes,
     agentFileHints,
     activeWorkspaces,

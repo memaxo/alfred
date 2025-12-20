@@ -7,6 +7,7 @@ import {
 } from "@alfred/agent/orchestrator/tool/codex/definition";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { codexRunRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -310,6 +311,56 @@ function createCodexStreamObservable({
   });
 }
 
+async function requireOwnedRun(args: {
+  runId: string;
+  userId: string;
+}): Promise<Awaited<ReturnType<typeof codexRunRepo.getRun>>> {
+  const run = await codexRunRepo.getRun(args.runId);
+  if (!run) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "codex_run_not_found" });
+  }
+  if (run.userId !== args.userId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "codex_run_forbidden" });
+  }
+  return run;
+}
+
+const codexListRunsInputSchema = z.object({
+  status: z.enum(["running", "completed", "failed", "cancelled"]).optional(),
+  sessionId: z.string().min(1).max(255).optional(),
+  threadId: z.string().min(1).max(255).optional(),
+  environmentKind: z.enum(["host", "worktree", "container", "poof"]).optional(),
+  startedAfter: z.string().datetime().optional(),
+  startedBefore: z.string().datetime().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).max(10_000).optional(),
+});
+
+const codexGetRunInputSchema = z.object({
+  runId: z.string().uuid(),
+});
+
+const codexEventsInputSchema = z.object({
+  runId: z.string().uuid(),
+  order: z.enum(["asc", "desc"]).optional(),
+  limit: z.number().int().min(1).max(5000).optional(),
+  afterSeq: z.number().int().min(0).optional(),
+});
+
+const codexSearchEventsInputSchema = z.object({
+  query: z.string().min(1).max(2000),
+  runId: z.string().uuid().optional(),
+  eventTypes: z.array(z.string().min(1).max(100)).max(20).optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+  offset: z.number().int().min(0).max(10_000).optional(),
+});
+
+const codexStreamEventsInputSchema = z.object({
+  runId: z.string().uuid(),
+  afterSeq: z.number().int().min(0).optional(),
+  pollMs: z.number().int().min(200).max(5000).optional(),
+});
+
 const codexProcedures = {
   run: authedProcedure
     .input(codexRunInputSchema)
@@ -392,6 +443,130 @@ const codexProcedures = {
 
       const timeoutSec = input.timeoutSec ?? ELEVATED_TIMEOUT_THRESHOLD_SEC;
       return createCodexStreamObservable({ input, timeoutSec, userId });
+    }),
+
+  listRuns: authedProcedure
+    .input(codexListRunsInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      const startedAfter = input.startedAfter ? new Date(input.startedAfter) : undefined;
+      const startedBefore = input.startedBefore ? new Date(input.startedBefore) : undefined;
+      return codexRunRepo.listRuns({
+        userId,
+        status: input.status,
+        sessionId: input.sessionId,
+        threadId: input.threadId,
+        environmentKind: input.environmentKind,
+        startedAfter,
+        startedBefore,
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
+
+  getRun: authedProcedure.input(codexGetRunInputSchema).query(async ({ input, ctx }) => {
+    const userId = ctx.session?.user?.id;
+    if (!userId) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+    }
+    return requireOwnedRun({ runId: input.runId, userId });
+  }),
+
+  events: authedProcedure
+    .input(codexEventsInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      await requireOwnedRun({ runId: input.runId, userId });
+      return codexRunRepo.listEvents({
+        runId: input.runId,
+        order: input.order,
+        limit: input.limit,
+        afterSeq: input.afterSeq,
+      });
+    }),
+
+  searchEvents: authedProcedure
+    .input(codexSearchEventsInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      if (input.runId) {
+        await requireOwnedRun({ runId: input.runId, userId });
+      }
+      return codexRunRepo.searchEvents({
+        userId,
+        query: input.query,
+        runId: input.runId,
+        eventTypes: input.eventTypes,
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
+
+  streamEvents: authedProcedure
+    .input(codexStreamEventsInputSchema)
+    .subscription(({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        return observable((emit) => {
+          emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+          return () => {};
+        });
+      }
+
+      return observable<{ type: "event"; event: unknown }>((emit) => {
+        let cancelled = false;
+        let lastSeq = input.afterSeq ?? 0;
+
+        const poll = async () => {
+          try {
+            await requireOwnedRun({ runId: input.runId, userId });
+            const rows = await codexRunRepo.listEvents({
+              runId: input.runId,
+              order: "asc",
+              afterSeq: lastSeq,
+              limit: 2000,
+            });
+            for (const row of rows) {
+              lastSeq = Math.max(lastSeq, row.seq);
+              emit.next({ type: "event", event: row });
+            }
+          } catch (error) {
+            const { sanitized, correlationId, trpcCode, cause } = buildCodexErrorResponse(
+              error,
+              "codex_stream_events_failed"
+            );
+            emit.error(
+              new TRPCError({
+                code: trpcCode,
+                message: formatCodexErrorMessage(sanitized, correlationId),
+                cause,
+              })
+            );
+          }
+        };
+
+        void poll();
+        const interval = setInterval(() => {
+          if (cancelled) {
+            return;
+          }
+          void poll();
+        }, input.pollMs ?? 500);
+
+        return () => {
+          cancelled = true;
+          clearInterval(interval);
+        };
+      });
     }),
 };
 

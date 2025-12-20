@@ -230,6 +230,10 @@ export const codexInputSchema = z.object({
   sessionId: z.string().min(1).max(255).optional(),
   userId: z.string().optional(), // Injected server-side identity for session binding
   containerId: z.string().optional(), // Phase 11: Docker support
+  containerCw: z.string().min(1).max(2048).optional(),
+  poofUpperDir: z.string().min(1).max(1024).optional(),
+  poofProfile: z.enum(["minimal", "standard", "intensive"]).optional(),
+  poofMode: z.enum(["exec", "run"]).optional(),
   outputSchema: z
     .union([z.boolean(), z.record(z.string(), z.unknown())])
     .optional(),

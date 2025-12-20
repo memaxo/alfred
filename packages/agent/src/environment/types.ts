@@ -60,6 +60,25 @@ export type Workspace = {
   listSessions?(): Promise<string[]>;
 };
 
+export type ContainerWorkspace = Workspace & {
+  readonly kind: "container";
+  /** Docker container identifier (or name) used for execution. */
+  readonly containerId: string;
+  /** Stable container name for this run. */
+  readonly containerName: string;
+  /** Working directory inside the container corresponding to `root`. */
+  readonly containerCw: string;
+};
+
+export function isContainerWorkspace(workspace: Workspace): workspace is ContainerWorkspace {
+  return (
+    workspace.kind === "container" &&
+    "containerId" in workspace &&
+    "containerName" in workspace &&
+    "containerCw" in workspace
+  );
+}
+
 /** Type guard for PoofWorkspace-specific methods */
 export function isPoofWorkspace(
   workspace: Workspace

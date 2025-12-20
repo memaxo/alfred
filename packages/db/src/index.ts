@@ -16,6 +16,7 @@ export {
   requireSqliteDriver,
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
+export * as codexRunRepo from "./repo/codex-run";
 export * as codexLearningRepo from "./repo/codex-learning";
 export * as codexSessionRepo from "./repo/codex-session";
 export * as cognitiveRepo from "./repo/cognitive";

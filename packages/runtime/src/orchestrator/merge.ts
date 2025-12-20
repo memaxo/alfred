@@ -11,48 +11,58 @@ import {
 import { executeMergePlan } from "@alfred/agent/orchestrator/multi/merge-executor";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
+import { isPoofWorkspace } from "@alfred/agent/environment/types";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { OrchestratorContext } from "./types";
 import type { WavesResult } from "./waves";
 
-async function runGitCommand(
-  cwd: string,
-  args: string[]
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
-    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
-    proc.exited,
-  ]);
-
-  return {
-    exitCode,
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-  };
+async function isGitWorkspace(workspace: string): Promise<boolean> {
+  try {
+    await fs.stat(path.join(workspace, ".git"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-async function resolveTargetBranch(workspace: string): Promise<string> {
+async function resolveTargetBranch(
+  workspace: string,
+  authz: string | undefined
+): Promise<string> {
   const forced = process.env.ORCH_TARGET_BRANCH?.trim();
   if (forced) {
     return forced;
   }
-  const res = await runGitCommand(workspace, [
-    "rev-parse",
-    "--abbrev-ref",
-    "HEAD",
-  ]);
-  if (res.exitCode === 0 && res.stdout && res.stdout !== "HEAD") {
-    return res.stdout;
+  if (!(await isGitWorkspace(workspace))) {
+    return "dev";
   }
+
+  try {
+    const status = await toolGit.execute({
+      input: {
+        action: "status",
+        cw: workspace,
+        authz,
+        timeoutSec: 30,
+      },
+    });
+    const raw = status.details?.status ?? "";
+    for (const line of raw.split(/\r?\n/)) {
+      if (line.startsWith("# branch.head ")) {
+        const head = line.slice("# branch.head ".length).trim();
+        if (head && head !== "(detached)" && head !== "(unknown)") {
+          return head;
+        }
+      }
+    }
+  } catch (error) {
+    logger.warn("merge_target_branch_probe_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   return "dev";
 }
 
@@ -64,8 +74,8 @@ export async function* runMergePhase(
   { mergePlan: any; conflictScanResult: any },
   void
 > {
-  const { input, runId, workspace } = ctx;
-  const { allAgentOutcomes, agentFileHints } = wavesResult;
+  const { runId, workspace, authz } = ctx;
+  const { allAgentOutcomes, agentFileHints, activeWorkspaces } = wavesResult;
 
   const mergeOutcomes = allAgentOutcomes.map((outcome) => ({
     agentId: outcome.agentId,
@@ -79,6 +89,38 @@ export async function* runMergePhase(
     },
   }));
 
+  // Apply poof overlay changes into the main workspace before merge execution.
+  // This keeps runWaves pure with respect to repository state and consolidates
+  // all "apply changes" behavior into merge/review phases.
+  for (const ws of activeWorkspaces) {
+    if (ws.kind !== "poof" || !isPoofWorkspace(ws)) {
+      continue;
+    }
+    try {
+      const hasChanges = await ws.hasChanges();
+      if (!hasChanges) {
+        continue;
+      }
+      const changes = await ws.getChanges();
+      logger.info("poof_applying_changes", {
+        runId,
+        agentId: ws.id,
+        changeCount: changes.length,
+      });
+      await ws.applyChanges();
+      yield {
+        type: "notice",
+        message: `poof_changes_applied:${ws.id}`,
+      } as any;
+    } catch (error) {
+      logger.error("poof_apply_changes_failed", {
+        runId,
+        agentId: ws.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   // Add fallback for Tier 1 agents
   for (const o of mergeOutcomes) {
     if (!o.result.changes || o.result.changes.length === 0) {
@@ -89,7 +131,7 @@ export async function* runMergePhase(
     }
   }
 
-  const targetBranch = await resolveTargetBranch(workspace);
+  const targetBranch = await resolveTargetBranch(workspace, authz);
   const mergePlan = buildMergePlan(mergeOutcomes as any, { targetBranch });
 
   logger.info("multi_agent_merge_plan", {
@@ -102,7 +144,11 @@ export async function* runMergePhase(
   });
 
   // Phase 9: Automated Merge Execution
-  if (mergePlan.branches && mergePlan.branches.length > 0) {
+  if (
+    mergePlan.branches &&
+    mergePlan.branches.length > 0 &&
+    (await isGitWorkspace(workspace))
+  ) {
     yield { type: "notice", message: "merge_execution_started" } as any;
 
     const mergeResult = await executeMergePlan(
@@ -117,7 +163,7 @@ export async function* runMergePhase(
         },
       },
       {
-        authz: input.linear?.authz,
+        authz,
         runId,
       }
     ).catch((err) => {
@@ -181,7 +227,7 @@ export async function* runMergeAnalysis(
   ctx: OrchestratorContext,
   mergePlan: any
 ): AsyncGenerator<WorkflowEvent, void, void> {
-  const { runId, workspace } = ctx;
+  const { runId, workspace, authz, signal, userId } = ctx;
 
   yield {
     type: "event",
@@ -254,9 +300,12 @@ export async function* runMergeAnalysis(
           sessionId: `${runId}:merge`,
           model: undefined,
           profile: undefined,
+          authz,
           context: {},
+          userId,
         },
         writer,
+        signal,
       });
 
       const finishedAt = Date.now();

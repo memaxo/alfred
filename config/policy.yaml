@@ -152,6 +152,7 @@ scopes:
   - workflow.plan
   - droid.exec
   - droid.read
+  - codex.read
   - git.read
   - git.write
   - proxmox.read
