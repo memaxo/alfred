@@ -10,7 +10,7 @@ import {
   toolOutputSchema,
   validateOutputSchema,
 } from "./definition.js";
-import { buildTurnOptions, executeWithSdk } from "./exec.js";
+import { buildTurnOptions, executeWithCodex } from "./exec.js";
 import {
   enforcePolicy,
   mapAutoToCodex,
@@ -21,7 +21,6 @@ import {
 export type {
   AlfredCodexEvent,
   CodexArtifactSummary,
-  CodexBackend,
   CodexErrorStage,
   CodexExecuteArgs,
   CodexToolInput,
@@ -46,8 +45,7 @@ export const toolCodex = {
     signal?: AbortSignal;
   }) => {
     await enforcePolicy(input);
-    // Simplify: Always use SDK backend as CLI is legacy
-    return executeWithSdk({ input, writer, signal });
+    return executeWithCodex({ input, writer, signal });
   },
 };
 

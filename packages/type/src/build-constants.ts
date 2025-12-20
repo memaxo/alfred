@@ -1,9 +1,16 @@
-/// <reference path="./build-constants.d.ts" />
-
 /**
  * Build-time constants utility
  * Provides typed access to build metadata injected at compile time
  */
+
+// These constants are injected at build time by the bundler/packager.
+// They are optional at runtime (development), so we always guard with typeof checks.
+declare const BUILD_VERSION: string;
+declare const BUILD_TIME: string;
+declare const GIT_COMMIT: string;
+declare const GIT_BRANCH: string;
+declare const NODE_ENV: "development" | "production" | "test";
+declare const BUILD_TARGET: string;
 
 export type BuildInfo = {
   version: string;

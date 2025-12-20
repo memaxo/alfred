@@ -194,6 +194,7 @@
       "dependencies": {
         "@ai-sdk/openai": "^2.0.49",
         "@alfred/auth": "workspace:*",
+        "@alfred/codex": "workspace:*",
         "@alfred/cognitive": "workspace:*",
         "@alfred/db": "workspace:*",
         "@alfred/knowledge": "workspace:*",
@@ -204,7 +205,6 @@
         "@alfred/type": "workspace:*",
         "@linear/sdk": "^53.0.0",
         "@lmnr-ai/lmnr": "^0.7.4",
-        "@openai/codex-sdk": "^0.61.0",
         "lru-cache": "^11.0.1",
         "oxc-parser": "^0.98.0",
         "p-retry": "6.2.0",
@@ -256,6 +256,18 @@
       },
       "peerDependencies": {
         "typescript": "^5",
+      },
+    },
+    "packages/codex": {
+      "name": "@alfred/codex",
+      "version": "0.1.0",
+      "dependencies": {
+        "@alfred/logger": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*",
       },
     },
     "packages/cognitive": {
@@ -496,17 +508,6 @@
         "react-dom": "^18.2.0 || ^19.0.0",
       },
     },
-    "packages/util": {
-      "name": "@alfred/util",
-      "version": "0.0.0",
-      "dependencies": {
-        "nanoid": "^5.0.9",
-      },
-      "devDependencies": {
-        "@alfred/tsconfig": "workspace:*",
-        "typescript": "^5.7.2",
-      },
-    },
     "packages/voice": {
       "name": "@alfred/voice",
       "version": "0.0.1",
@@ -565,6 +566,8 @@
 
     "@alfred/auth": ["@alfred/auth@workspace:packages/auth"],
 
+    "@alfred/codex": ["@alfred/codex@workspace:packages/codex"],
+
     "@alfred/cognitive": ["@alfred/cognitive@workspace:packages/cognitive"],
 
     "@alfred/cortex": ["@alfred/cortex@workspace:packages/cortex"],
@@ -600,8 +603,6 @@
     "@alfred/type": ["@alfred/type@workspace:packages/type"],
 
     "@alfred/ui": ["@alfred/ui@workspace:packages/ui"],
-
-    "@alfred/util": ["@alfred/util@workspace:packages/util"],
 
     "@alfred/voice": ["@alfred/voice@workspace:packages/voice"],
 
@@ -1142,8 +1143,6 @@
     "@oozcitak/url": ["@oozcitak/url@3.0.0", "", { "dependencies": { "@oozcitak/infra": "^2.0.2", "@oozcitak/util": "^10.0.0" } }, "sha512-ZKfET8Ak1wsLAiLWNfFkZc/BraDccuTJKR6svTYc7sVjbR+Iu0vtXdiDMY4o6jaFl5TW2TlS7jbLl4VovtAJWQ=="],
 
     "@oozcitak/util": ["@oozcitak/util@10.0.0", "", {}, "sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA=="],
-
-    "@openai/codex-sdk": ["@openai/codex-sdk@0.61.0", "", {}, "sha512-HUGrN9UQ1S3fgTHBi1ffhDA2zXaVVx5BDlZ3hzNazsTa3zl1dn+BY68r5ouDykzqpBOU646TccLAqBZl8dOZeg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 

@@ -1,144 +1,29 @@
-# Codex SDK
+# Codex runner (Rust CLI JSONL)
 
-Embed the Codex agent in your workflows and apps.
+ALFRED runs Codex via the Rust `codex` CLI in non-interactive JSONL mode (`codex exec --json`).
 
-The TypeScript SDK wraps the bundled `codex` binary. It spawns the CLI and exchanges JSONL events over stdin/stdout.
+The in-repo surface for typed events is `@alfred/codex` (server-only): it owns the `ThreadEvent` / `ThreadItem` schemas and exports a small runner that consumes Codex’s JSONL stream.
 
-## Installation
+## Preferred entry point (ALFRED)
 
-```bash
-npm install @openai/codex-sdk
-```
+Use the orchestrator tool (`@alfred/agent/orchestrator/tool/codex`) rather than calling Codex directly. It enforces:
 
-Requires Node.js 18+.
+- secure working directory handles (no string `cwd`)
+- env allowlists (`CODEX_ENV_ALLOWLIST`, `MCP_ENV_ALLOWLIST`)
+- session binding (`sessionId` + `userId` + working directory)
+- stable UI streaming chunks (`stdout`, `stderr`, `notice`, `codex_event`)
 
-## Quickstart
+## Low-level API (internal)
 
-```typescript
-import { Codex } from "@openai/codex-sdk";
+`@alfred/codex` is intended for internal use. It requires callers to provide a spawn function so ALFRED can enforce **secure cwd** semantics (see `packages/agent/src/security/secure-spawn.ts`).
 
-const codex = new Codex();
-const thread = codex.startThread();
-const turn = await thread.run("Diagnose the test failure and propose a fix");
+`runStreamed()` yields typed Codex events:
 
-console.log(turn.finalResponse);
-console.log(turn.items);
-```
+- `thread.started`
+- `turn.started`, `turn.completed`, `turn.failed`
+- `item.started`, `item.updated`, `item.completed`
+- `error`
 
-Call `run()` repeatedly on the same `Thread` instance to continue that conversation.
+## Structured output
 
-```typescript
-const nextTurn = await thread.run("Implement the fix");
-```
-
-### Streaming responses
-
-`run()` buffers events until the turn finishes. To react to intermediate progress—tool calls, streaming responses, and file change notifications—use `runStreamed()` instead, which returns an async generator of structured events.
-
-```typescript
-const { events } = await thread.runStreamed("Diagnose the test failure and propose a fix");
-
-for await (const event of events) {
-  switch (event.type) {
-    case "item.completed":
-      console.log("item", event.item);
-      break;
-    case "turn.completed":
-      console.log("usage", event.usage);
-      break;
-  }
-}
-```
-
-### Structured output
-
-The Codex agent can produce a JSON response that conforms to a specified schema. The schema can be provided for each turn as a plain JSON object.
-
-```typescript
-const schema = {
-  type: "object",
-  properties: {
-    summary: { type: "string" },
-    status: { type: "string", enum: ["ok", "action_required"] },
-  },
-  required: ["summary", "status"],
-  additionalProperties: false,
-} as const;
-
-const turn = await thread.run("Summarize repository status", { outputSchema: schema });
-console.log(turn.finalResponse);
-```
-
-You can also create a JSON schema from a [Zod schema](https://github.com/colinhacks/zod) using the [`zod-to-json-schema`](https://www.npmjs.com/package/zod-to-json-schema) package and setting the `target` to `"openAi"`.
-
-```typescript
-const schema = z.object({
-  summary: z.string(),
-  status: z.enum(["ok", "action_required"]),
-});
-
-const turn = await thread.run("Summarize repository status", {
-  outputSchema: zodToJsonSchema(schema, { target: "openAi" }),
-});
-console.log(turn.finalResponse);
-```
-
-### Attaching images
-
-Provide structured input entries when you need to include images alongside text. Text entries are concatenated into the final prompt while image entries are passed to the Codex CLI via `--image`.
-
-```typescript
-const turn = await thread.run([
-  { type: "text", text: "Describe these screenshots" },
-  { type: "local_image", path: "./ui.png" },
-  { type: "local_image", path: "./diagram.jpg" },
-]);
-```
-
-### Resuming an existing thread
-
-Threads are persisted in `~/.codex/sessions`. If you lose the in-memory `Thread` object, reconstruct it with `resumeThread()` and keep going.
-
-```typescript
-const savedThreadId = process.env.CODEX_THREAD_ID!;
-const thread = codex.resumeThread(savedThreadId);
-await thread.run("Implement the fix");
-```
-
-### Session lifecycle and directory binding
-
-ALFRED binds every `sessionId` to both the initiating user and the working directory that was active when the session started. When you pass `sessionId` and `userId` into the Codex tool:
-
-- The orchestrator only resumes a thread if the stored `workingDirectory` matches the current resolved directory.
-- Legacy sessions without a recorded directory or missing threads are treated as invalid and force a new thread.
-- When the SDK exposes `validateThread()`, ALFRED will additionally confirm the underlying Codex thread still exists before resuming.
-- If any validation fails, Codex emits a `codex_session_thread_reset` notice describing the reason (e.g., `directory-mismatch` or `thread-invalid`) and starts a fresh thread instead of resuming.
-
-To avoid unexpected resets, always send the same absolute working directory and user identifier that were used when the session was created.
-
-### Working directory controls
-
-Codex runs in the current working directory by default. To avoid unrecoverable errors, Codex requires the working directory to be a Git repository. You can skip the Git repository check by passing the `skipGitRepoCheck` option when creating a thread.
-
-```typescript
-const thread = codex.startThread({
-  workingDirectory: "/path/to/project",
-  skipGitRepoCheck: true,
-});
-```
-
-### Controlling the Codex CLI environment
-
-By default, the Codex CLI inherits the Node.js process environment. Provide the optional `env` parameter when instantiating the
-`Codex` client to fully control which variables the CLI receives—useful for sandboxed hosts like Electron apps.
-
-```typescript
-const codex = new Codex({
-  env: {
-    PATH: "/usr/local/bin",
-  },
-});
-```
-
-The SDK still injects its required variables (such as `OPENAI_BASE_URL` and `CODEX_API_KEY`) on top of the environment you
-provide.
+When you pass `outputSchema` (a JSON Schema object or `true`), `@alfred/codex` writes a temporary schema file and runs Codex with `--output-schema <path>`, relying on Codex’s native validation.

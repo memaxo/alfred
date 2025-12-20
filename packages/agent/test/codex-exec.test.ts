@@ -8,14 +8,6 @@ function setMockEvents(events: ThreadEvent[]) {
   pendingEvents = events;
 }
 
-function createEventStream(events: ThreadEvent[]) {
-  return (function* () {
-    for (const event of events) {
-      yield event;
-    }
-  })();
-}
-
 const noop = () => {};
 
 mock.module("../src/metrics.js", () => ({
@@ -31,59 +23,37 @@ mock.module("../src/metrics.js", () => ({
 
 const assessSessionResumeEligibilityMock = mock(() =>
   Promise.resolve({
-    canResume: false,
-    reason: "missing-session",
+    canResume: false as const,
+    reason: "missing-session" as const,
   })
 );
 
-const getSessionMock = mock(() => undefined as any);
-const createSessionMock = mock(() => {});
+const getSessionMock = mock(() => undefined);
+const createSessionMock = mock(() => undefined);
 
 mock.module("../src/orchestrator/codex-session.js", () => ({
   assessSessionResumeEligibility: assessSessionResumeEligibilityMock,
   sessionManager: {
     getSession: (...args: Parameters<typeof getSessionMock>) =>
       getSessionMock(...args),
-    createSession: (
-      ...args: Parameters<typeof createSessionMock>
-    ): ReturnType<typeof createSessionMock> => createSessionMock(...args),
+    createSession: (...args: Parameters<typeof createSessionMock>) =>
+      createSessionMock(...args),
   },
 }));
 
-const definitionModule = await import(
-  "../src/orchestrator/tool/codex/definition.ts"
-);
-mock.module(
-  "../src/orchestrator/tool/codex/definition.js",
-  () => definitionModule
-);
+// Ensure the exec.ts dependency on definition.js is resolved to the TS module.
+const definitionModule = await import("../src/orchestrator/tool/codex/definition.ts");
+mock.module("../src/orchestrator/tool/codex/definition.js", () => definitionModule);
 
-mock.module("@openai/codex-sdk", () => {
-  class MockThread {
-    id = "thread-mock";
-
-    runStreamed() {
-      const events = pendingEvents.map((event) => ({ ...event }));
-      return {
-        events: createEventStream(events),
-      };
+mock.module("@alfred/codex", () => ({
+  runStreamed: async function* () {
+    for (const event of pendingEvents) {
+      yield { ...event };
     }
-  }
+  },
+}));
 
-  class Codex {
-    startThread() {
-      return new MockThread();
-    }
-
-    resumeThread() {
-      return new MockThread();
-    }
-  }
-
-  return { Codex };
-});
-
-const { executeWithSdk } = await import(
+const { executeWithCodex } = await import(
   "@alfred/agent/orchestrator/tool/codex/exec"
 );
 
@@ -94,12 +64,19 @@ beforeEach(() => {
     reason: "missing-session",
   });
   getSessionMock.mockReset();
-  getSessionMock.mockImplementation(() => {});
+  getSessionMock.mockImplementation(() => undefined);
   createSessionMock.mockReset();
-  createSessionMock.mockImplementation(() => {});
+  createSessionMock.mockImplementation(() => undefined);
+
+  // Avoid depending on an installed codex binary during tests.
+  process.env.CODEX_BIN = process.env.CODEX_BIN ?? "/usr/bin/true";
 });
 
-describe("executeWithSdk artifacts", () => {
+afterEach(() => {
+  pendingEvents = [];
+});
+
+describe("executeWithCodex artifacts", () => {
   const originalCodexKey = process.env.CODEX_API_KEY;
 
   beforeEach(() => {
@@ -107,7 +84,6 @@ describe("executeWithSdk artifacts", () => {
   });
 
   afterEach(() => {
-    pendingEvents = [];
     if (originalCodexKey === undefined) {
       process.env.CODEX_API_KEY = undefined;
     } else {
@@ -121,6 +97,7 @@ describe("executeWithSdk artifacts", () => {
       {
         type: "item.completed",
         item: {
+          id: "item-1",
           type: "agent_message",
           text: "File update complete",
         },
@@ -128,16 +105,18 @@ describe("executeWithSdk artifacts", () => {
       {
         type: "item.completed",
         item: {
+          id: "item-2",
           type: "file_change",
+          status: "completed",
           changes: [
-            { path: "src/app.ts", kind: "modified" },
-            { path: "README.md", kind: "created" },
+            { path: "src/app.ts", kind: "update" },
+            { path: "README.md", kind: "add" },
           ],
         },
       },
     ]);
 
-    const result = await executeWithSdk({
+    const result = await executeWithCodex({
       input: {
         action: "exec",
         prompt: "summarize updates",
@@ -148,23 +127,25 @@ describe("executeWithSdk artifacts", () => {
     });
 
     expect(result.artifacts).toEqual([
-      { path: "src/app.ts", kind: "modified" },
-      { path: "README.md", kind: "created" },
+      { path: "src/app.ts", kind: "update" },
+      { path: "README.md", kind: "add" },
     ]);
 
     expect(result.reasoning).toBeDefined();
-    const summary = result.reasoning?.[result.reasoning.length - 1]?.text ?? "";
+    const summary = result.reasoning?.at(-1)?.text ?? "";
     expect(summary).toContain("artifacts_collected");
     expect(summary).toContain("src/app.ts");
   });
 });
 
-describe("executeWithSdk session security", () => {
+describe("executeWithCodex session security", () => {
   const cwd = process.cwd();
 
   it("throws when sessionId is provided without a userId", async () => {
+    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
     await expect(
-      executeWithSdk({
+      executeWithCodex({
         input: {
           action: "exec",
           prompt: "ls",
@@ -184,8 +165,10 @@ describe("executeWithSdk session security", () => {
       throw new Error("codex_session_forbidden");
     });
 
+    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
     await expect(
-      executeWithSdk({
+      executeWithCodex({
         input: {
           action: "exec",
           prompt: "resume",
@@ -202,8 +185,9 @@ describe("executeWithSdk session security", () => {
   });
 
   it("binds new sessions to the requesting user", async () => {
-    const createSpy = createSessionMock;
-    await executeWithSdk({
+    setMockEvents([{ type: "thread.started", thread_id: "thread-created" }]);
+
+    await executeWithCodex({
       input: {
         action: "exec",
         prompt: "new session",
@@ -215,9 +199,9 @@ describe("executeWithSdk session security", () => {
       },
     });
 
-    expect(createSpy).toHaveBeenCalledWith(
+    expect(createSessionMock).toHaveBeenCalledWith(
       "fresh-session",
-      expect.any(String),
+      "thread-created",
       cwd,
       "owner-123"
     );

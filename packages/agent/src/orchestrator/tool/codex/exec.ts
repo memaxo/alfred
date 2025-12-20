@@ -6,16 +6,8 @@ import {
   setTimeout as setNodeTimeout,
 } from "node:timers";
 import { logger } from "@alfred/logger";
-import type {
-  ApprovalMode,
-  Codex as CodexInstance,
-  SandboxMode,
-  Thread,
-  ThreadEvent,
-  ThreadItem,
-  ThreadOptions,
-  TurnOptions,
-} from "@openai/codex-sdk";
+import { runStreamed } from "@alfred/codex";
+import type { SpawnFn, ThreadItem } from "@alfred/codex";
 import {
   persistCodexExecution,
 } from "../../../../assistant/src/graphstore.js";
@@ -24,6 +16,7 @@ import {
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
 import type { CodexSessionState } from "../../codex-session.js";
+import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import {
   appendOutput,
   appendReasoningTrace,
@@ -47,7 +40,6 @@ import {
   type CodexExecuteArgs,
   type CodexToolInput,
   DEFAULT_TIMEOUT_SEC,
-  type SandboxConfig,
   validateOutputSchema,
 } from "./definition.js";
 import {
@@ -56,7 +48,6 @@ import {
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
-import { loadCodexSdk } from "./sdk.js";
 
 type WriterPayload = { [key: string]: unknown };
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
@@ -231,31 +222,16 @@ function emitAlfredEvents(
   }
 }
 
-function buildThreadOptions(
-  input: CodexToolInput,
-  resolvedCw: string,
-  sandbox: SandboxConfig
-): ThreadOptions {
-  const options: ThreadOptions = {
-    sandboxMode: sandbox.sandbox as SandboxMode,
-    workingDirectory: resolvedCw,
-    approvalPolicy: sandbox.approval as ApprovalMode,
-  };
-
-  if (input.model) {
-    options.model = input.model;
-  }
-
-  return options;
-}
+export type CodexTurnOptions = {
+  signal: AbortSignal;
+  outputSchema?: unknown;
+};
 
 export function buildTurnOptions(
   input: CodexToolInput,
   signal: AbortSignal
-): TurnOptions {
-  const options: TurnOptions = {
-    signal,
-  };
+): CodexTurnOptions {
+  const options: CodexTurnOptions = { signal };
 
   if (input.outputSchema) {
     if (!validateOutputSchema(input.outputSchema)) {
@@ -267,53 +243,34 @@ export function buildTurnOptions(
   return options;
 }
 
-async function createCodexClient(
-  env: Record<string, string>
-): Promise<CodexInstance> {
-  const options: {
-    env: Record<string, string>;
-    codexPathOverride?: string;
-  } = {
-    env,
-  };
-
-  const codexBin = process.env.CODEX_BIN?.trim();
-  if (codexBin && codexBin.length > 0) {
-    const resolved = resolveExecutable(codexBin);
-    options.codexPathOverride = resolved;
+function resolveCodexBin(): string {
+  const override = process.env.CODEX_BIN?.trim();
+  if (override) {
+    return resolveExecutable(override);
   }
 
-  const { Codex } = await loadCodexSdk();
-  return new Codex(options);
+  const candidates = [
+    path.resolve(process.cwd(), ".cache", "codex", "bin", "codex"),
+    path.resolve(process.cwd(), "vendor", "codex", "target", "release", "codex"),
+    path.resolve(process.cwd(), "vendor", "codex", "target", "debug", "codex"),
+    "codex",
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return resolveExecutable(candidate);
+    } catch {
+      // continue
+    }
+  }
+
+  throw new Error("codex_binary_not_found");
 }
 
 type ThreadValidator = (threadId: string) => Promise<boolean>;
 
-function resolveThreadValidator(
-  codex: CodexInstance
-): ThreadValidator | undefined {
-  const maybeValidate = (
-    codex as CodexInstance & {
-      validateThread?: (id: string) => Promise<boolean> | boolean;
-    }
-  ).validateThread;
-
-  if (typeof maybeValidate === "function") {
-    return async (threadId: string) => {
-      try {
-        const result = await maybeValidate.call(codex, threadId);
-        return result !== false;
-      } catch (error) {
-        logger.warn("codex_thread_validation_failed", {
-          threadId,
-          err: error instanceof Error ? error.message : String(error),
-        });
-        return false;
-      }
-    };
-  }
-
-  return createFilesystemThreadValidator();
+function resolveThreadValidator(): ThreadValidator | undefined {
+  return createFilesystemThreadValidator(process.env.CODEX_HOME);
 }
 
 function resolveCodexSessionsDir(): string | null {
@@ -365,43 +322,20 @@ function createFilesystemThreadValidator(
 
 type AllowedDirectoryHandle = ReturnType<typeof assertAllowedDirectory>;
 
-function ensureDirectoryHandle(
-  handle: AllowedDirectoryHandle | string
-): AllowedDirectoryHandle {
-  if (
-    handle &&
-    typeof handle === "object" &&
-    typeof (handle as AllowedDirectoryHandle).path === "string" &&
-    typeof (handle as AllowedDirectoryHandle).close === "function"
-  ) {
-    return handle as AllowedDirectoryHandle;
-  }
-
-  const derivedPath =
-    typeof handle === "string" ? handle : (handle as { path?: unknown })?.path;
-
-  return {
-    fd: -1,
-    path: typeof derivedPath === "string" ? derivedPath : process.cwd(),
-    close: () => {},
-  } as AllowedDirectoryHandle;
-}
-
-export async function executeWithSdk({
+export async function executeWithCodex({
   input,
   writer,
   signal,
 }: CodexExecuteArgs) {
-  const rawHandle = assertAllowedDirectory(input.cw ?? process.cwd());
-  const cwdHandle = ensureDirectoryHandle(rawHandle);
+  const cwdHandle = assertAllowedDirectory(input.cw ?? process.cwd());
   try {
-    return await runCodexWithSdk({ input, writer, signal, cwdHandle });
+    return await runCodexWithCodex({ input, writer, signal, cwdHandle });
   } finally {
     cwdHandle.close();
   }
 }
 
-async function runCodexWithSdk({
+async function runCodexWithCodex({
   input,
   writer,
   signal,
@@ -446,9 +380,8 @@ async function runCodexWithSdk({
   let threadIdFromEvents: string | undefined;
   const artifacts: CodexArtifactSummary[] = [];
 
-  const codex = await createCodexClient(env);
-  const threadOptions = buildThreadOptions(input, resolvedCw, sandbox);
-  const threadValidator = resolveThreadValidator(codex);
+  const codexBin = resolveCodexBin();
+  const threadValidator = resolveThreadValidator();
 
   const sessionId = input.sessionId?.trim();
   const sessionOwnerId = input.userId?.trim();
@@ -465,7 +398,6 @@ async function runCodexWithSdk({
     existingSession = undefined;
   }
 
-  let thread: Thread;
   const stopSessionValidationTimer = startCodexSessionValidationTimer();
 
   const SESSION_VALIDATION_TIMEOUT_MS = 5000;
@@ -515,29 +447,28 @@ async function runCodexWithSdk({
     }
   }
 
-  stopSessionValidationTimer({
-    outcome: resumeAssessment.canResume
-      ? "resume"
-      : (resumeAssessment.reason ?? "unknown"),
-  });
+  const resumeOutcome = resumeAssessment.canResume
+    ? "resume"
+    : resumeAssessment.reason;
+  stopSessionValidationTimer({ outcome: resumeOutcome });
 
-  if (resumeAssessment.canResume) {
-    thread = codex.resumeThread(
-      resumeAssessment.session.threadId,
-      threadOptions
+  const resumeThreadId = resumeAssessment.canResume
+    ? resumeAssessment.session.threadId
+    : undefined;
+
+  const resumeReason = resumeAssessment.canResume
+    ? undefined
+    : resumeAssessment.reason;
+
+  if (!resumeThreadId && existingSession?.threadId) {
+    void safeWriter(
+      {
+        type: "notice",
+        message: "codex_session_thread_reset",
+        reason: resumeReason,
+      },
+      "codex_session_thread_reset"
     );
-  } else {
-    if (existingSession?.threadId) {
-      void safeWriter(
-        {
-          type: "notice",
-          message: "codex_session_thread_reset",
-          reason: resumeAssessment.reason,
-        },
-        "codex_session_thread_reset"
-      );
-    }
-    thread = codex.startThread(threadOptions);
   }
 
   try {
@@ -573,9 +504,55 @@ async function runCodexWithSdk({
       });
     }
 
-    const streamed = await thread.runStreamed(enrichedPrompt, turnOptions);
+    const spawn: SpawnFn = ({ cmd, args, env: childEnv }) => {
+      const proc = spawnWithSecureCwd({
+        cwdHandle,
+        cmd,
+        args,
+        env: childEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+        stdin: "ignore",
+      });
 
-    for await (const event of streamed.events as AsyncGenerator<ThreadEvent>) {
+      return {
+        stdout:
+          typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
+        stderr:
+          typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
+        exited: proc.exited,
+        kill: (signal) => {
+          if (typeof signal === "number") {
+            proc.kill(signal);
+            return;
+          }
+          if (typeof signal === "string") {
+            proc.kill(signal as NodeJS.Signals);
+            return;
+          }
+          proc.kill();
+        },
+      };
+    };
+
+    for await (const event of runStreamed({
+      cmd: codexBin,
+      prompt: enrichedPrompt,
+      env,
+      spawn,
+      model: input.model,
+      profile: input.profile,
+      sandbox: sandbox.sandbox,
+      approval: sandbox.approval,
+      outputSchema: turnOptions.outputSchema as unknown as
+        | boolean
+        | Record<string, unknown>
+        | undefined,
+      resumeThreadId,
+      signal: turnOptions.signal,
+      onStderr: (text) =>
+        safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
+    })) {
       switch (event.type) {
         case "thread.started": {
           const id = event.thread_id;
@@ -614,7 +591,7 @@ async function runCodexWithSdk({
           }
           logger.error("codex_turn_failed", {
             detail,
-            threadId: thread.id ?? threadIdFromEvents,
+            threadId: threadIdFromEvents,
             stage: "turn.failed",
           });
           void safeWriter(
@@ -631,7 +608,7 @@ async function runCodexWithSdk({
           }
           logger.error("codex_stream_error", {
             detail,
-            threadId: thread.id ?? threadIdFromEvents,
+            threadId: threadIdFromEvents,
             stage: "stream.error",
           });
           void safeWriter(
@@ -786,7 +763,7 @@ async function runCodexWithSdk({
   }
 
   const resource = resolvedCw;
-  const threadId = thread.id ?? threadIdFromEvents;
+  const threadId = threadIdFromEvents;
   if (reasoningAccumulator.traces.length > 0) {
     const executionId = input.sessionId ?? threadId ?? resource;
     persistReasoning(resource, reasoningAccumulator.traces, {

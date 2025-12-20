@@ -18,7 +18,7 @@ import type {
   TurnFailedEvent,
   TurnStartedEvent,
   WebSearchItem,
-} from "@openai/codex-sdk";
+} from "@alfred/codex";
 import Ajv from "ajv";
 import Ajv2019 from "ajv/dist/2019";
 import Ajv2020 from "ajv/dist/2020";
@@ -571,8 +571,6 @@ export type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";
   approval: "on-request";
 };
-
-export type CodexBackend = "cli" | "sdk";
 
 export type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";
 

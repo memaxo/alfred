@@ -158,7 +158,7 @@ Cover at least:
 
 3. **Codex integration**
    - How `toolCodex` works:
-     - Differences between **CLI path** (`codex exec` via Bun.spawn) and **SDK path** (`@openai/codex-sdk`).
+     - Execution path: `codex exec --json` (Rust CLI) spawned with secure cwd handles (no SDK backend).
      - How approval/sandbox are configured from `auto` (read/low/medium/high).
      - How Codex threads are managed via `CodexSessionManager`.
    - What events Codex emits and how ALFRED consumes them:

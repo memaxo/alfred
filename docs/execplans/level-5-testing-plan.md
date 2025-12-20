@@ -52,7 +52,7 @@ packages/test-kit/
 
 2.  **Integration**:
     *   Update `toolCodex` to accept an external `containerId` or `Socket` provided by the test runner.
-    *   Remove `RUNTIME_DISABLE_CODEX` hacks in favor of `RUNTIME_CODEX_BACKEND="docker"`.
+    *   Avoid backend selection hacks; if containerized Codex execution is required, make it an explicit orchestrator feature (not a runtime backend toggle).
 
 ## Phase 2: The Cognitive Layer (Unmocking Intelligence)
 

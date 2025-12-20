@@ -329,10 +329,8 @@ Two execution paths:
   - Maps “auto” to sandbox: read → read-only; low/medium/high → workspace-write; approvals on-request. For medium/high, policy enforcement requires elevated mfa=passkey (requireToolScopesAndPolicy).
   - Records metrics: codexExecRunsTotal, codexExecDurationSeconds, codexErrorsTotal.
 
-- SDK path:
-  - Uses @openai/codex-sdk; creates Codex(), startThread/resumeThread + runStreamed(prompt,…).
-  - Emits the same event handling shape (ThreadEvent) but without JSON line decoding.
-  - Reasoning, command, artifacts are collected similarly.
+- Legacy SDK path (removed):
+  - ALFRED no longer depends on an SDK backend for Codex execution; the tool runs the Rust `codex` CLI JSONL stream exclusively.
   - Thread management via CodexSessionManager caches sessionId → threadId.
 
 Common behaviors:

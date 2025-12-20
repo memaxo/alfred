@@ -25,6 +25,8 @@
       "@alfred/api/*": ["packages/api/src/*"],
       "@alfred/auth": ["packages/auth/src/index.ts"],
       "@alfred/auth/*": ["packages/auth/src/*"],
+      "@alfred/codex": ["packages/codex/src/index.ts"],
+      "@alfred/codex/*": ["packages/codex/src/*"],
       "@alfred/db": ["packages/db/src/index.ts"],
       "@alfred/db/*": ["packages/db/src/*"],
       "@alfred/history": ["packages/history/src/index.ts"],

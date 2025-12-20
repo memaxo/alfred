@@ -6,9 +6,10 @@ import type { UIMessage } from "@alfred/type/stream";
 
 const DOMAIN_NAMES = ["general", "proxmox", "git", "docker", "kubernetes"] as const;
 const DOMAIN_SET = new Set<string>(DOMAIN_NAMES);
-const EMBED_DOMAINS: DomainName[] = ["proxmox", "git", "docker", "kubernetes"];
+type EmbedDomain = Exclude<DomainName, "general">;
+const EMBED_DOMAINS = ["proxmox", "git", "docker", "kubernetes"] as const satisfies ReadonlyArray<EmbedDomain>;
 
-const DOMAIN_PROTOTYPES: Record<Exclude<DomainName, "general">, string[]> = {
+const DOMAIN_PROTOTYPES: Record<EmbedDomain, string[]> = {
   proxmox: [
     "Proxmox: manage VMs, LXC containers, vmid, cluster, storage, snapshots.",
     "Proxmox: pve, qemu, lxc, node, pool, backups, networking bridges.",

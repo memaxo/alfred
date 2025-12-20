@@ -19,6 +19,7 @@
     { "path": "../metrics" },
     { "path": "../db" },
     { "path": "../rag" },
+    { "path": "../codex" },
     { "path": "../voice" }
   ]
 }

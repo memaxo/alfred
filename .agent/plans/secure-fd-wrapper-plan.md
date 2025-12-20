@@ -13,11 +13,11 @@ Target: ALFRED itself. Today, high-privilege tools (git, docker, droid, generic 
 - [x] (2025-11-27 23:38Z) Added `packages/agent/src/security/secure-spawn.ts` with wrapper resolution, on-demand compilation, and env plumbing.
 - [x] (2025-11-27 23:55Z) Swapped runner/git/docker/droid to `spawnWithSecureCwd` and documented the legacy `prepareCwdFromHandle` caveat.
 - [x] (2025-11-28 00:05Z) Updated `secure-working-directory.test.ts` to assert wrapper/FD behavior and verified via `bun test test/secure-working-directory.test.ts`.
-- [ ] (2025-11-28 00:12Z) Full `bun test` run blocked by missing optional deps (`@openai/codex-sdk`) and pre-existing suite failures; rerun end-to-end once those modules are available.
+- [ ] (2025-11-28 00:12Z) Full `bun test` run blocked by missing optional deps and pre-existing suite failures; rerun end-to-end once the suite is green.
 
 ## Surprises & Discoveries
 
-- Observation: Full `bun test` currently fails before our changes execute because several suites depend on optional modules that are absent locally (e.g., `@openai/codex-sdk`) and other pre-existing issues (missing `/repo`, preference prompts). Evidence: `cd packages/agent && bun test` at 2025-11-28 00:12Z raised `Cannot find module '@openai/codex-sdk'` plus downstream cascading failures in unrelated suites.
+- Observation: Full `bun test` historically failed before our changes executed because several suites depended on optional modules and other pre-existing issues (missing `/repo`, preference prompts). Evidence: `cd packages/agent && bun test` at 2025-11-28 00:12Z raised missing-module errors plus downstream cascading failures in unrelated suites.
 
 ## Decision Log
 

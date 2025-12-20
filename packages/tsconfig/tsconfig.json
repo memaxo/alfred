@@ -28,6 +28,8 @@
       "@alfred/ui/*": ["../ui/src/*"],
       "@alfred/type/*": ["../type/src/*"],
       "@alfred/agent/*": ["../agent/src/*"],
+      "@alfred/codex": ["../codex/src/index.ts"],
+      "@alfred/codex/*": ["../codex/src/*"],
       "@alfred/cognitive/*": ["../cognitive/src/*"],
       "@alfred/knowledge/*": ["../knowledge/src/*"],
       "@alfred/learning/*": ["../learning/src/*"],

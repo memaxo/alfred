@@ -14,12 +14,12 @@ The system is designed for high scalability and reliability, featuring:
 ## 2. Agent Execution Engines
 
 ### 2.1 Codex Agent (`packages/agent/**/tool/codex`)
-The Codex agent serves as the primary "thinking" engine, wrapping the `@openai/codex-sdk`.
+The Codex agent serves as the primary "thinking" engine, wrapping the Rust `codex` CLI.
 
-*   **Execution Modes**:
-    *   **SDK Mode**: Direct usage of the Node.js SDK.
-    *   **CLI Mode**: Spawns a local `codex` binary.
-    *   **Docker Mode**: Executes `codex` inside a container (`docker exec`) for high-risk tasks.
+*   **Execution path**:
+    *   Spawns `codex exec --json` (newline-delimited JSON events) with secure working-directory handles.
+    *   No SDK dependency and no silent stub fallback.
+    *   `containerId` exists as a future hook, but the current implementation runs locally.
 *   **Autonomy Levels**: Supports `read`, `low`, `medium`, and `high` autonomy. Higher levels require biometric elevation (Passkey) enforced by `packages/auth`.
 *   **Sandboxing**: Maps autonomy levels to Codex sandbox policies (`read-only` vs `workspace-write`) and approval modes.
 

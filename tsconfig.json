@@ -3,6 +3,7 @@
   "files": [],
   "references": [
     { "path": "packages/rag" },
+    { "path": "packages/codex" },
     { "path": "packages/type" },
     { "path": "packages/policy" },
     { "path": "packages/auth" },

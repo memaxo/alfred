@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it per `.agent/PLANS.md` so another
 
 ## Purpose / Big Picture
 
-These changes target ALFRED itself. We need SQLite graph traversal so local dev and CI can run without Postgres, an automated pipeline to sync `.ts` sources with the `.js` artifacts that the Codex toolchain imports, a Codex SDK stub so tests do not depend on the real `@openai/codex-sdk`, smarter entity-linking heuristics to skip unnecessary embeddings, broader emergent-behavior fixtures to keep personas current, and documentation describing how to regenerate the JS artifacts. After finishing, a developer running in SQLite-only mode can execute real graph traversals, CI/pre-commit will fail if `.js` artifacts drift, tests no longer warn about missing Codex metrics hooks, heuristics avoid needless embedding calls for obvious anchors, persona fixtures cover Politics/News/AI, and the README explains how and when to run the sync script.
+These changes target ALFRED itself. We need SQLite graph traversal so local dev and CI can run without Postgres, an automated pipeline to sync `.ts` sources with the `.js` artifacts that the Codex toolchain imports, a single hard-backed Codex execution path (no silent stubs; tests mock the runner boundary), smarter entity-linking heuristics to skip unnecessary embeddings, broader emergent-behavior fixtures to keep personas current, and documentation describing how to regenerate the JS artifacts. After finishing, a developer running in SQLite-only mode can execute real graph traversals, CI/pre-commit will fail if `.js` artifacts drift, heuristics avoid needless embedding calls for obvious anchors, persona fixtures cover Politics/News/AI, and the README explains how and when to run the sync script.
 
 ## Progress
 
@@ -27,8 +27,8 @@ These changes target ALFRED itself. We need SQLite graph traversal so local dev 
 - Decision: Force-add the new ExecPlan under `.agent/plans/<runId>` while keeping the existing ignore rules intact.
   Rationale: `.agent/plans/*/` ignores nested folders, so `git add -f` is required to persist the mandated plan structure without broadening ignore scope.
   Date/Author: 2025-11-27 / Codex
-- Decision: Load `@openai/codex-sdk` lazily with a stub fallback so missing SDKs no longer break imports or spam `metrics_agent_hooks_disabled`.
-  Rationale: Tests and API metrics import `@alfred/agent` even when the SDK isn't installed; a cached loader with a minimal `Codex` shim keeps behavior deterministic without forcing the real dependency.
+- Decision: Keep Codex execution on a single Rust-backed CLI path and keep tests deterministic by mocking the runner boundary.
+  Rationale: Avoid brittle optional dependencies and remove silent “fake success” behavior.
   Date/Author: 2025-11-27 / Codex
 
 ## Outcomes & Retrospective
@@ -40,7 +40,7 @@ These changes target ALFRED itself. We need SQLite graph traversal so local dev 
 The work spans several packages:
 - `packages/db/src/repo/graph/traverse.ts` currently issues Postgres recursive CTEs unconditionally. When `isSqliteDriver()` is true, `db.execute(sql`...`) fails, so sqlite runs stub out traversal logic. We must add a JS BFS path that uses Drizzle queries against `memory_nodes`/`memory_edges`.
 - `packages/agent/src/**/*.ts` exports are consumed as `.js` by Codex runtimes (e.g., `packages/agent/src/orchestrator/tool/git.ts` imports `./approval.js`). The repo keeps hand-generated `.js` siblings that drift. No tooling ensures they match, and CI/pre-commit do not regenerate them.
-- `packages/agent/src/orchestrator/tool/codex/exec.ts` imports classes from `@openai/codex-sdk` directly. When that package is missing or unavailable, simply importing `@alfred/agent` fails which trips `metrics_agent_hooks_disabled`. We need a safe loader that falls back to a stub implementation for tests.
+- `packages/agent/src/orchestrator/tool/codex/exec.ts` historically depended on a Codex SDK package, which made the package import brittle when the dependency was missing. The current direction should be a single Rust-backed execution path (Codex CLI JSONL) and tests that mock the runner boundary instead of stubbing Codex.
 - `packages/agent/src/services/entity-linker.ts` always calls `embedMany`, even when heuristics already indicate anchor matches (e.g., explicit references to React or “Politics”). This wastes latency.
 - `packages/agent/test/emergent-behavior.test.ts` keeps a fixture map with only Coding/Security/AI coverage. Persona assertions only cover Coding/Security. We need fixtures/testing for Politics, News, and AI anchors so heuristics remain validated.
 - `packages/agent/README.md` lacks instructions for regenerating `.js` artifacts, producing on-boarding churn.
@@ -53,8 +53,8 @@ The work spans several packages:
 2. **JS artifact sync tooling**
    - Create `scripts/tools/sync-js.ts` (or similar) that enumerates `.ts` files with sibling `.js` files (within `packages/agent/src` and any other required roots), runs `sucrase` with the `typescript` transform, and overwrites the `.js` files deterministically. Cache metadata (e.g., using `Promise.all`). Add `sucrase` to the root devDependencies. Wire `package.json` scripts: `"tools:sync-js": "bun scripts/tools/sync-js.ts"`. Update `.husky/pre-commit` to run the sync before stashing/formatting and re-stage affected `.js` files. Update the `ci` script to run `bun run tools:sync-js` and fail if it produces diffs (`git diff --exit-code`).
 
-3. **Codex SDK stub loader**
-   - Add `packages/agent/src/orchestrator/tool/codex/sdk.ts` exporting `loadCodexSdk` that attempts to `import("@openai/codex-sdk")` and falls back to an in-repo stub (with simple `Codex`/`Thread` classes) when the import fails or when `process.env.CODEX_SDK_STUB === "1"`. Update `exec.ts` (and any other Codex-focused modules) to `await loadCodexSdk()` inside `createCodexClient`. Ensure the stub emits deterministic events so `executeWithSdk` stays functional, and log once when the stub activates. Generate `.js` siblings for the new module.
+3. **Codex execution strategy**
+   - Prefer a single hard-backed execution path for Codex (no silent stubs). If Codex is unavailable, fail with a clear error and keep tests deterministic by mocking the runner boundary instead of stubbing Codex itself.
 
 4. **Entity-linking heuristics and fixtures**
    - Introduce a heuristics map (keywords → anchor labels) inside `entity-linker.ts`, including anchors for Coding, Security, AI, Politics, and News. Before calling `embedMany`, partition candidates: those covered by heuristics skip embeddings; others share a single `embedMany` call. Handle partial embedding failures without double-counting metrics. Update `packages/agent/test/emergent-behavior.test.ts` to cover Politics/News/AI fixtures and assert that embeddings are skipped for obvious anchors (via mock expectations).

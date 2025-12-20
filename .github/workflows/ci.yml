@@ -32,6 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Select lane
         id: meta
@@ -173,6 +174,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -197,6 +199,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -221,6 +224,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -245,6 +249,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -351,6 +356,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -433,6 +439,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -505,6 +512,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1

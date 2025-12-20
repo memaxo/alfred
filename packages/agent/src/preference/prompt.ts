@@ -33,7 +33,7 @@ export async function buildPreferenceSystemPrompt(
 
   let domain = context?.domain ?? null;
   if (!domain && context?.toolNames?.length) {
-    domain = detectDomain([], context.toolNames) ?? null;
+    domain = (await detectDomain([], context.toolNames)) ?? null;
   }
 
   try {

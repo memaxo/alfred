@@ -268,6 +268,9 @@ bun run dev:web
 
 Codex can replace the default droid executor once the CLI is installed locally. Follow these steps:
 
+0. (Optional) If you plan to build the Codex CLI from source, initialize the vendored submodule:
+   `git submodule update --init --recursive` (see `vendor/codex`).
+   Then build it with `bun run codex:build` and set `CODEX_BIN=.cache/codex/bin/codex`.
 1. Install the Codex CLI (see `docs/codex-cli/install.md`) and ensure it is on your `PATH`.
 2. Provide credentials via `CODEX_API_KEY`. If you only have `OPENAI_API_KEY`, leave `ORCH_CODEX_ALLOW_OPENAI_KEY=1` so the orchestrator forwards it.
 3. Enable the executor by setting `ORCH_EXECUTOR=codex` in your environment. Optional helpers: `ORCH_EXECUTOR_FALLBACK=1` to auto-fallback to droid on spawn/runtime failures and `ORCH_EXECUTOR_SHADOW=1` to dual-run during testing.
