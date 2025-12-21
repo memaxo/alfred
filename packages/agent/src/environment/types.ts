@@ -1,5 +1,4 @@
 import type { ProjectConfig } from "../utils/project-detector";
-import type { PoofChange } from "../spawn/diff";
 
 export type ExecResult = {
   stdout: string;
@@ -14,8 +13,23 @@ export type ExecOptions = {
   timeoutMs?: number;
 };
 
-/** Workspace environment kind */
-export type WorkspaceKind = "host" | "worktree" | "container" | "poof";
+/**
+ * Workspace environment kind.
+ *
+ * Production builds use "container" only.
+ * Development builds with feature flags can include legacy types.
+ *
+ * Build commands:
+ *   Production: bun build ./src/index.ts --outdir ./dist
+ *   Development: bun build --feature=LEGACY_WORKTREE --feature=LEGACY_POOF ./src/index.ts
+ */
+export type WorkspaceKind = "container" | "worktree" | "poof" | "host";
+
+/**
+ * Production-only workspace kind (container isolation).
+ * Use this type when you want to enforce container-only at compile time.
+ */
+export type ProductionWorkspaceKind = "container";
 
 export type Workspace = {
   readonly id: string;
@@ -24,12 +38,12 @@ export type Workspace = {
   readonly branch?: string | null; // Active git branch when applicable
 
   /**
-   * Prepare the environment (e.g. git worktree add, docker run)
+   * Prepare the environment (e.g. docker run)
    */
   initialize(): Promise<void>;
 
   /**
-   * Destroy the environment (e.g. git worktree remove, docker rm)
+   * Destroy the environment (e.g. docker rm)
    */
   cleanup(): Promise<void>;
 
@@ -79,7 +93,10 @@ export function isContainerWorkspace(workspace: Workspace): workspace is Contain
   );
 }
 
-/** Type guard for PoofWorkspace-specific methods */
+/**
+ * Type guard for PoofWorkspace-specific methods.
+ * Only available when built with --feature=LEGACY_POOF.
+ */
 export function isPoofWorkspace(
   workspace: Workspace
 ): workspace is Workspace & {
@@ -89,3 +106,13 @@ export function isPoofWorkspace(
 } {
   return workspace.kind === "poof" && "hasChanges" in workspace;
 }
+
+/**
+ * Poof change type (legacy).
+ * Only used when built with --feature=LEGACY_POOF.
+ */
+export type PoofChange = {
+  path: string;
+  type: "added" | "modified" | "deleted";
+  isDirectory: boolean;
+};

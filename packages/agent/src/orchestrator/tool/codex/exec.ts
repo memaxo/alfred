@@ -5,6 +5,7 @@ import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
+import { feature } from "bun:bundle";
 import { logger } from "@alfred/logger";
 import { runStreamed } from "@alfred/codex";
 import type { SpawnFn, ThreadItem } from "@alfred/codex";
@@ -34,7 +35,6 @@ import {
   assessSessionResumeEligibility,
   sessionManager,
 } from "../../codex-session.js";
-import { buildPoofArgs, getPoofBinary, POOF_PROFILES } from "../../../spawn/poof.js";
 import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
@@ -552,19 +552,31 @@ async function runCodexWithCodex({
     }
 
     const dockerBin = input.containerId ? resolveExecutable("docker") : undefined;
-    const poofUpperDir = input.poofUpperDir?.trim();
-    const poofMode = input.poofMode ?? "run";
-    const poofProfile =
-      input.poofProfile && input.poofProfile in POOF_PROFILES
-        ? POOF_PROFILES[input.poofProfile]
-        : POOF_PROFILES.standard;
 
-    const poofBin = poofUpperDir ? getPoofBinary() : undefined;
-    const poofUpperResolved = poofUpperDir ? path.resolve(poofUpperDir) : undefined;
-    if (poofUpperResolved) {
-      const tmpBase = path.resolve(os.tmpdir());
-      if (!isWithinDir(tmpBase, poofUpperResolved)) {
-        throw new Error("poof_upper_dir_invalid");
+    // Feature-flagged poof initialization (tree-shaken in production builds)
+    let poofBin: string | undefined;
+    let poofUpperResolved: string | undefined;
+    let poofMode: "exec" | "run" = "run";
+    let poofProfile: { name: string; memory?: string; pids?: number; timeout?: number } | undefined;
+    let buildPoofArgsFn: typeof import("../../../spawn/poof.js").buildPoofArgs | undefined;
+
+    if (feature("LEGACY_POOF")) {
+      const poofUpperDir = input.poofUpperDir?.trim();
+      if (poofUpperDir) {
+        const poofModule = await import("../../../spawn/poof.js");
+        buildPoofArgsFn = poofModule.buildPoofArgs;
+        poofMode = input.poofMode ?? "run";
+        poofProfile =
+          input.poofProfile && input.poofProfile in poofModule.POOF_PROFILES
+            ? poofModule.POOF_PROFILES[input.poofProfile as keyof typeof poofModule.POOF_PROFILES]
+            : poofModule.POOF_PROFILES.standard;
+
+        poofBin = poofModule.getPoofBinary();
+        poofUpperResolved = path.resolve(poofUpperDir);
+        const tmpBase = path.resolve(os.tmpdir());
+        if (!isWithinDir(tmpBase, poofUpperResolved)) {
+          throw new Error("poof_upper_dir_invalid");
+        }
       }
     }
 
@@ -613,9 +625,11 @@ async function runCodexWithCodex({
         };
       }
 
-      if (poofBin && poofUpperResolved) {
+      // Feature-flagged poof spawn path (tree-shaken in production builds)
+      // This block is only compiled when built with --feature=LEGACY_POOF
+      if (feature("LEGACY_POOF") && poofBin && poofUpperResolved && poofProfile && buildPoofArgsFn) {
         const poofArgs = [
-          ...buildPoofArgs({
+          ...buildPoofArgsFn({
             mode: poofMode,
             upperDir: poofUpperResolved,
             profile: poofProfile,

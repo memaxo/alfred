@@ -5,7 +5,7 @@
  *
  * Verifies:
  * - real codex streaming execution completes (non-interactive, never hangs)
- * - artifacts are created inside an isolated workspace (worktree/container/poof)
+ * - artifacts are created inside an isolated workspace (Docker container)
  * - resume semantics work (same session/thread across 2 prompts)
  * - codex_runs + codex_events are persisted and searchable in Postgres
  *
@@ -157,16 +157,6 @@ function checkCodexBinaryAvailable(): string {
   );
 }
 
-function resolveWorkspaceKind(): "worktree" | "container" | "poof" {
-  if (process.platform === "linux" && process.env.ORCH_USE_POOF === "1") {
-    return "poof";
-  }
-  if (process.env.ORCH_USE_CONTAINERS === "1") {
-    return "container";
-  }
-  return "worktree";
-}
-
 async function main() {
   console.log("=== Codex Live Verification ===\n");
 
@@ -177,10 +167,16 @@ async function main() {
 
   // Live verification must be non-interactive; otherwise Codex can block waiting
   // for approval prompts in a headless context.
-  if (!process.env.ORCH_CODEX_APPROVAL) {
+  const existingApproval = process.env.ORCH_CODEX_APPROVAL;
+  if (!existingApproval) {
     process.env.ORCH_CODEX_APPROVAL = "never";
+    console.log("✓ Non-interactive mode enabled (ORCH_CODEX_APPROVAL=never)");
+  } else {
+    console.log(`✓ Using configured approval mode (ORCH_CODEX_APPROVAL=${existingApproval})`);
+    if (existingApproval !== "never") {
+      console.log("  NOTE: codex exec mode ignores non-'never' approval modes; prompts will not appear");
+    }
   }
-  console.log("✓ Non-interactive mode enabled (ORCH_CODEX_APPROVAL=never)");
 
   // Step 1: Check Codex binary availability first (fast, no network)
   const codexBin = checkCodexBinaryAvailable();
@@ -195,7 +191,7 @@ async function main() {
   requiredEnv("AGENT_ED25519_PUBLIC_PEM");
   console.log("✓ Ed25519 signing keys present");
 
-  // Step 4: Docker availability (required for Postgres)
+  // Step 4: Docker availability (required for container isolation and Postgres)
   console.log("\nChecking Docker...");
   await checkDockerAvailable();
   console.log("✓ Docker daemon running");
@@ -212,8 +208,10 @@ async function main() {
   console.log("\n=== Starting Live Verification ===\n");
 
   const repoRoot = process.cwd();
-  const kind = resolveWorkspaceKind();
   const dockerImage = process.env.ORCH_DOCKER_IMAGE;
+  
+  // Always use container isolation (production standard)
+  const kind = "container" as const;
   console.log(`Workspace isolation: ${kind}`);
 
   const userId = process.env.CODEX_LIVE_USER_ID?.trim() || "codex-live-user";
@@ -250,8 +248,6 @@ async function main() {
     repoRoot,
     kind,
     dockerImage,
-    poofProfile: "standard",
-    poofMode: "run",
   });
 
   const artifactPath = path.join(ws.root, "codex_live_artifact.txt");
@@ -428,4 +424,3 @@ if (import.meta.main) {
     process.exit(1);
   });
 }
-

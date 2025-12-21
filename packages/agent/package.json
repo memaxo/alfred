@@ -5,7 +5,9 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc -b",
-    "build": "tsc -b --emitDeclarationOnly"
+    "build": "tsc -b --emitDeclarationOnly",
+    "build:bundle": "bun build ./src/index.ts --outdir ./dist/bundle --target=bun",
+    "build:bundle:dev": "bun build --feature=LEGACY_WORKTREE --feature=LEGACY_POOF ./src/index.ts --outdir ./dist/bundle-dev --target=bun"
   },
   "exports": {
     ".": {

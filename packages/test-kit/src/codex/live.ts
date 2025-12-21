@@ -6,8 +6,16 @@ import {
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 
-export type CodexLiveWorkspaceKind = "worktree" | "container" | "poof" | "host";
+/**
+ * Workspace kind for Codex live testing.
+ * Production uses container isolation only.
+ */
+export type CodexLiveWorkspaceKind = "container";
 
+/**
+ * Codex live workspace configuration.
+ * Contains workspace instance and container-specific metadata.
+ */
 export type CodexLiveWorkspace = {
   id: string;
   runId: string;
@@ -16,9 +24,6 @@ export type CodexLiveWorkspace = {
   workspace: Workspace;
   containerId?: string;
   containerCw?: string;
-  poofUpperDir?: string;
-  poofProfile?: "minimal" | "standard" | "intensive";
-  poofMode?: "exec" | "run";
 };
 
 export type CodexLiveChunk = unknown;
@@ -29,14 +34,17 @@ export type CodexLiveRunResult = {
   chunks: CodexLiveChunk[];
 };
 
+/**
+ * Create a Codex live workspace for testing.
+ *
+ * Uses Docker container isolation (production standard).
+ */
 export async function createCodexLiveWorkspace(options: {
   repoRoot: string;
   kind: CodexLiveWorkspaceKind;
   id?: string;
   runId?: string;
   dockerImage?: string;
-  poofProfile?: "minimal" | "standard" | "intensive";
-  poofMode?: "exec" | "run";
 }): Promise<CodexLiveWorkspace> {
   const runId = options.runId ?? randomUUID();
   const id = options.id ?? `codex-live-${runId}`;
@@ -48,42 +56,34 @@ export async function createCodexLiveWorkspace(options: {
     options.repoRoot,
     {
       image: options.dockerImage,
-      poofProfile: options.poofProfile,
-      poofMode: options.poofMode ?? "run",
     }
   );
   await ws.initialize();
 
-  const kind = options.kind;
   const containerId = isContainerWorkspace(ws) ? ws.containerId : undefined;
   const containerCw = isContainerWorkspace(ws) ? ws.containerCw : undefined;
-  const poofUpperDir = ws.kind === "poof" ? (ws as any).upperDir ?? undefined : undefined;
-  const poofMode = ws.kind === "poof" ? (ws as any).mode ?? undefined : undefined;
-  const poofProfileName =
-    ws.kind === "poof" ? ((ws as any).profile?.name as unknown) : undefined;
-  const poofProfile =
-    poofProfileName === "minimal" || poofProfileName === "standard" || poofProfileName === "intensive"
-      ? poofProfileName
-      : undefined;
 
   return {
     id,
     runId,
-    kind,
+    kind: options.kind,
     root: ws.root,
     workspace: ws,
     containerId,
     containerCw,
-    poofUpperDir,
-    poofProfile,
-    poofMode,
   };
 }
 
+/**
+ * Clean up a Codex live workspace.
+ */
 export async function cleanupCodexLiveWorkspace(ws: CodexLiveWorkspace): Promise<void> {
   await ws.workspace.cleanup();
 }
 
+/**
+ * Run Codex in a live workspace for testing.
+ */
 export async function runCodexLiveInWorkspace(options: {
   workspace: CodexLiveWorkspace;
   authz: string;
@@ -107,9 +107,6 @@ export async function runCodexLiveInWorkspace(options: {
       sessionId: options.sessionId,
       containerId: options.workspace.containerId,
       containerCw: options.workspace.containerCw,
-      poofUpperDir: options.workspace.poofUpperDir,
-      poofProfile: options.workspace.poofProfile,
-      poofMode: options.workspace.poofMode,
       model: options.model,
       profile: options.profile,
       authz: options.authz,
@@ -129,4 +126,3 @@ export async function runCodexLiveInWorkspace(options: {
     chunks,
   };
 }
-

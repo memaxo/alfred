@@ -1,25 +1,52 @@
 import path from "node:path";
 import { toolDocker } from "../orchestrator/tool/docker";
 import type { ProjectConfig } from "../utils/project-detector";
-import type { ExecOptions, ExecResult } from "./types";
-import { WorktreeWorkspace } from "./worktree";
+import type { ExecOptions, ExecResult, Workspace } from "./types";
 
-export class ContainerWorkspace extends WorktreeWorkspace {
-  override readonly kind = "container";
+/**
+ * ContainerWorkspace - Docker-based agent execution environment.
+ *
+ * Provides complete isolation via Docker containers:
+ * - Repository mounted at /workspace via volume
+ * - Git operations executed inside container
+ * - Resource limits (CPU, memory) enforced by Docker
+ * - No host-side worktrees required
+ *
+ * Container ownership: 1 container per workflow run, shared by all agents.
+ */
+export class ContainerWorkspace implements Workspace {
+  readonly kind = "container" as const;
   private _containerId: string | null = null;
   private readonly _containerName: string;
 
   constructor(
-    id: string,
-    runId: string,
-    repoBase: string,
+    readonly id: string,
+    readonly runId: string,
+    readonly repoBase: string,
     readonly image = process.env.ORCH_DOCKER_IMAGE || "node:18-slim",
     readonly authz?: string,
-    enableSessions?: boolean
+    // Sessions not implemented for container workspaces
+    _enableSessions?: boolean
   ) {
-    super(id, runId, repoBase, { enableSessions });
-    // Shared container per run
+    void _enableSessions; // Unused - sessions require tmux in container
+    // Shared container per run - all agents in this run share the same container
     this._containerName = `alfred-runtime-${runId.replace(/[^a-zA-Z0-9]/g, "-")}`;
+  }
+
+  /**
+   * Workspace root on the host filesystem.
+   * For container workspaces, this is the mounted repository root.
+   */
+  get root(): string {
+    return this.repoBase;
+  }
+
+  /**
+   * Git branch - not tracked for container workspaces.
+   * Git operations happen inside the container, not on the host.
+   */
+  get branch(): string | null {
+    return null;
   }
 
   get containerName(): string {
@@ -33,23 +60,22 @@ export class ContainerWorkspace extends WorktreeWorkspace {
     return this._containerId;
   }
 
+  /**
+   * Working directory inside the container.
+   * Maps host repoBase to /workspace inside container.
+   */
   get containerCw(): string {
-    const relativePath = path.relative(this.repoBase, this.root);
-    const safeRelative =
-      relativePath === "" || !(relativePath.startsWith("..") || path.isAbsolute(relativePath))
-        ? relativePath
-        : "";
-    const relativePosix = safeRelative.split(path.sep).join(path.posix.sep);
-    return relativePosix.length > 0
-      ? path.posix.join("/workspace", relativePosix)
-      : "/workspace";
+    return "/workspace";
   }
 
+  /**
+   * Initialize the container workspace.
+   *
+   * Creates or reuses a shared container for this workflow run.
+   * The repository is mounted at /workspace via Docker volume.
+   */
   async initialize(): Promise<void> {
-    // 1. Create worktree first (Host isolation)
-    await super.initialize();
-
-    // 2. Find or start shared container
+    // Check if container already exists (shared by other agents in this run)
     let inspectResult:
       | Awaited<ReturnType<typeof toolDocker.execute>>
       | undefined;
@@ -66,6 +92,7 @@ export class ContainerWorkspace extends WorktreeWorkspace {
       inspectResult = undefined;
     }
 
+    // Container exists - reuse it
     if (inspectResult?.ok && inspectResult.details?.containerId) {
       this._containerId = inspectResult.details.containerId;
       if (inspectResult.details.running === false) {
@@ -81,8 +108,7 @@ export class ContainerWorkspace extends WorktreeWorkspace {
       return;
     }
 
-    // We mount the entire repoBase to /workspace so that all worktrees (which are under repoBase) are accessible.
-    // .agent/worktrees/<runId>/<agentId> -> /workspace/.agent/worktrees/<runId>/<agentId>
+    // Create new container with repository mounted at /workspace
     try {
       const started = await toolDocker.execute({
         input: {
@@ -104,9 +130,11 @@ export class ContainerWorkspace extends WorktreeWorkspace {
         return;
       }
     } catch {
-      // Likely already created by another workspace; fall through to retry inspect.
+      // Likely race condition - another agent created the container
+      // Fall through to retry inspect
     }
 
+    // Retry inspect after potential race condition
     const retryInspect = await toolDocker.execute({
       input: {
         action: "inspect",
@@ -134,36 +162,59 @@ export class ContainerWorkspace extends WorktreeWorkspace {
     throw new Error("docker_container_start_failed");
   }
 
+  /**
+   * Clean up the container workspace.
+   *
+   * Removes the shared container. In multi-agent scenarios, the first
+   * cleanup call removes the container - subsequent calls are no-ops.
+   */
   async cleanup(): Promise<void> {
-    // 1. Try to kill container (best effort)
-    // In shared mode, the first cleanup might kill it for others if we are not careful.
-    // However, cleanup is typically called at the end of the run.
-    // If called concurrently, subsequent calls will fail to stop/rm, which we ignore.
-    if (this._containerName) {
-      try {
-        await toolDocker.execute({
-          input: {
-            action: "rm",
-            name: this._containerName,
-            authz: this.authz,
-            cw: this.repoBase,
-          },
-        });
-      } catch {
-        // ignore - likely already removed or in use
-      }
-      this._containerId = null;
+    if (!this._containerName) {
+      return;
     }
-    // 2. Kill worktree
-    await super.cleanup();
+
+    try {
+      await toolDocker.execute({
+        input: {
+          action: "rm",
+          name: this._containerName,
+          authz: this.authz,
+          cw: this.repoBase,
+        },
+      });
+    } catch {
+      // Container already removed or in use by another agent - ignore
+    }
+
+    this._containerId = null;
   }
 
-  exec(
+  /**
+   * Create a checkpoint (git tag) inside the container.
+   */
+  async checkpoint(label: string): Promise<void> {
+    const tagName = `checkpoint/${this.runId}/${this.id}/${label}`;
+    await this.execGit(["tag", "-f", tagName]);
+  }
+
+  /**
+   * Restore to a checkpoint (git reset) inside the container.
+   */
+  async restore(label: string): Promise<void> {
+    const tagName = `checkpoint/${this.runId}/${this.id}/${label}`;
+    await this.execGit(["reset", "--hard", tagName]);
+    await this.execGit(["clean", "-fd"]);
+  }
+
+  /**
+   * Execute a command inside the container.
+   */
+  async exec(
     command: string,
     options?: ExecOptions,
     projectConfig?: ProjectConfig | null
   ): Promise<ExecResult> {
-    // Resolve command via projectConfig
+    // Resolve command via projectConfig (e.g., "test" -> "npm test")
     let finalCommand = command;
     if (projectConfig) {
       if (command === "test") {
@@ -177,33 +228,63 @@ export class ContainerWorkspace extends WorktreeWorkspace {
       }
     }
 
-    // Calculate working directory relative to repoBase
-    // Host: this.root (worktree path)
-    // Container mount: /workspace
-    // We need the relative path from repoBase to this.root
+    // Calculate working directory inside container
+    const workingDirectory = options?.cwd
+      ? path.posix.join(this.containerCw, options.cwd)
+      : this.containerCw;
+
     const startedAt = Date.now();
 
-    return toolDocker
-      .execute({
-        input: {
-          action: "exec",
-          name: this._containerName, // Use name instead of ID for stability
-          cmd: "sh",
-          args: ["-c", finalCommand],
-          workingDirectory: this.containerCw,
-          env: options?.env,
-          authz: this.authz,
-          timeoutSec: options?.timeoutMs
-            ? Math.ceil(options.timeoutMs / 1000)
-            : undefined,
-          cw: this.repoBase,
-        },
-      })
-      .then((result) => ({
-        stdout: result.details?.text ?? "",
-        stderr: result.details?.error ?? "",
-        exitCode: result.details?.exitCode ?? 0,
-        durationMs: Date.now() - startedAt,
-      }));
+    const result = await toolDocker.execute({
+      input: {
+        action: "exec",
+        name: this._containerName,
+        cmd: "sh",
+        args: ["-c", finalCommand],
+        workingDirectory,
+        env: options?.env,
+        authz: this.authz,
+        timeoutSec: options?.timeoutMs
+          ? Math.ceil(options.timeoutMs / 1000)
+          : undefined,
+        cw: this.repoBase,
+      },
+    });
+
+    return {
+      stdout: result.details?.text ?? "",
+      stderr: result.details?.error ?? "",
+      exitCode: result.details?.exitCode ?? 0,
+      durationMs: Date.now() - startedAt,
+    };
   }
+
+  /**
+   * Execute a git command inside the container.
+   */
+  private async execGit(args: string[]): Promise<ExecResult> {
+    const startedAt = Date.now();
+
+    const result = await toolDocker.execute({
+      input: {
+        action: "exec",
+        name: this._containerName,
+        cmd: "git",
+        args,
+        workingDirectory: this.containerCw,
+        authz: this.authz,
+        cw: this.repoBase,
+      },
+    });
+
+    return {
+      stdout: result.details?.text ?? "",
+      stderr: result.details?.error ?? "",
+      exitCode: result.details?.exitCode ?? 0,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  // Session methods are not supported in container workspaces
+  // Sessions require tmux which may not be available in all container images
 }

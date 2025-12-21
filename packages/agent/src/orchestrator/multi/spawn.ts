@@ -1,12 +1,18 @@
+import { feature } from "bun:bundle";
 import type { WorkspaceKind } from "../../environment/types.js";
 import { openDirectorySecure } from "../../security/filesystem.js";
-import type { PoofProfileName } from "../../spawn/poof.js";
 import type { SubTask, SubTaskId } from "./decompose";
 import { buildFixerSubTask } from "./review";
 
 export type AgentId = string;
 
 export type WaveId = string;
+
+/**
+ * Poof profile name type (legacy).
+ * Only used when built with --feature=LEGACY_POOF.
+ */
+type PoofProfileName = "minimal" | "standard" | "intensive";
 
 export type AgentSpec = {
   agentId: AgentId;
@@ -18,7 +24,8 @@ export type AgentSpec = {
   mandateTDD?: boolean; // Phase 4: TDD
   model?: string;
   profile?: string;
-  poofProfile?: PoofProfileName; // Resource profile for poof isolation
+  /** Resource profile for poof isolation (legacy, only with --feature=LEGACY_POOF) */
+  poofProfile?: PoofProfileName;
   execPlanPath: string;
   context: {
     linearIssueId?: string;
@@ -35,32 +42,32 @@ export type WavePlan = {
   dependsOn: WaveId[];
 };
 
+/**
+ * Determine the execution environment for an agent.
+ *
+ * Production builds always use Docker containers.
+ * Development builds with feature flags can use legacy isolation methods.
+ */
 function determineEnvironment(
   _subTask: SubTask,
-  options?: { maxParallel?: number; useIsolation?: boolean }
+  _options?: { maxParallel?: number; useIsolation?: boolean }
 ): WorkspaceKind {
-  // Use poof for ephemeral isolation on Linux (lightweight alternative to containers)
-  if (process.env.ORCH_USE_POOF === "1" && process.platform === "linux") {
-    return "poof";
+  // Feature-flagged legacy path: poof isolation (Linux only)
+  if (feature("LEGACY_POOF")) {
+    if (process.env.ORCH_USE_POOF === "1" && process.platform === "linux") {
+      return "poof";
+    }
   }
 
-  // Phase 11: Docker Support
-  // Use container for high risk tasks or explicit request
-  // For now, we don't have risk analysis in SubTask yet, so we stick to worktree/host default.
-  // But we allow override via options/env if we want to test it.
-  if (process.env.ORCH_USE_CONTAINERS === "1") {
-    return "container";
+  // Feature-flagged legacy path: git worktree isolation
+  if (feature("LEGACY_WORKTREE")) {
+    if (process.env.ORCH_USE_WORKTREE === "1") {
+      return "worktree";
+    }
   }
 
-  // Simple heuristic:
-  // If we run >1 agent in parallel, use worktrees to avoid file contention.
-  // If priority is 1 (backend/core), maybe host is fine if it's the only one?
-  // Safest default for multi-agent is worktree.
-
-  if ((options?.maxParallel ?? 1) > 1) {
-    return "worktree";
-  }
-  return "host";
+  // Production default: Docker container isolation
+  return "container";
 }
 
 export function buildAgentSpec(
@@ -71,8 +78,8 @@ export function buildAgentSpec(
     auto?: "read" | "low" | "medium" | "high";
     model?: string;
     profile?: string;
-    poofProfile?: PoofProfileName; // Resource profile for poof isolation
-    maxParallel?: number; // Added
+    poofProfile?: PoofProfileName; // Resource profile for poof isolation (legacy)
+    maxParallel?: number;
     mandateTDD?: boolean; // Phase 4
     linear?: {
       issueId?: string;
@@ -86,16 +93,8 @@ export function buildAgentSpec(
   const agentId: AgentId = `${runId}:${subTask.id}`;
   const sessionId = agentId;
 
-  // Environment determination
+  // Environment determination - always "container" in production
   const environment = determineEnvironment(subTask, options);
-
-  // NOTE: The workingDirectory here is the *base*.
-  // The runtime will append the worktree path if environment is worktree.
-  // But AgentSpec typically carries the *actual* cwd the agent should use.
-  // We will let the runtime resolve the final path because it manages the worktree creation.
-  // So we keep 'cwd' as the repo root here, and the runtime handles the switch?
-  // Or we assume the runtime will mutate it.
-  // Let's keep cwd as repo root, and let environment flag dictate behavior in core.ts.
 
   // `cwd` is provided by the orchestrator/runtime as the workspace root for this run.
   // Default `openDirectorySecure()` prefixes are anchored to `process.cwd()`, which
@@ -105,10 +104,6 @@ export function buildAgentSpec(
   const workingDirectory = dirHandle.path;
   dirHandle.close();
   const execPlanPath = `.agent/plans/${runId}/${subTask.id}.md`;
-
-  // Phase 8: Escalation Signal
-  // const _escalationPrompt =
-  //   "\n\nIf you encounter a blocking issue that prevents you from completing the task (e.g., missing dependencies, API key issues, architectural flaws), CREATE a file named 'ESCALATION.md' in your working directory describing the problem, and then EXIT with code 0.";
 
   return {
     agentId,
@@ -129,11 +124,6 @@ export function buildAgentSpec(
       linearAuthz: options?.linear?.authz,
       relevantFiles: subTask.filesHint,
     },
-    // We don't have a 'prompt' field in AgentSpec directly, it's constructed in waves.ts.
-    // Wait, AgentSpec is just config. The prompt is built in runWaves.
-    // So we shouldn't add it here, or we should add a field for 'additionalInstructions'.
-    // But AgentSpec doesn't have it.
-    // I should update runWaves to include this instruction.
   };
 }
 
