@@ -31,6 +31,23 @@ type DirectoryAssertOptions = {
   noFollowSymlinks?: boolean;
 };
 
+function resolveCodexApproval(): SandboxConfig["approval"] {
+  const raw = process.env.ORCH_CODEX_APPROVAL?.trim();
+  if (!raw) {
+    return "on-request";
+  }
+  if (
+    raw === "untrusted" ||
+    raw === "on-failure" ||
+    raw === "on-request" ||
+    raw === "never"
+  ) {
+    return raw;
+  }
+  logger.warn("codex_approval_invalid", { value: raw });
+  return "on-request";
+}
+
 export function assertAllowedDirectory(
   candidate: string,
   options?: DirectoryAssertOptions
@@ -60,7 +77,9 @@ export function assertAllowedDirectory(
 }
 
 export function mapAutoToCodex(auto: CodexToolInput["auto"]): SandboxConfig {
-  return auto === "read" ? DEFAULT_SANDBOX : WRITE_SANDBOX;
+  const approval = resolveCodexApproval();
+  const base = auto === "read" ? DEFAULT_SANDBOX : WRITE_SANDBOX;
+  return { sandbox: base.sandbox, approval };
 }
 
 export function pickEnvCodex(custom: Record<string, string> | undefined) {

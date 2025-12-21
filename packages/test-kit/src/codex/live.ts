@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { Workspace } from "@alfred/agent/environment/types";
+import {
+  isContainerWorkspace,
+  type Workspace,
+} from "@alfred/agent/environment/types";
 import { WorkspaceFactory } from "@alfred/agent/environment/factory";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 
@@ -12,6 +15,7 @@ export type CodexLiveWorkspace = {
   root: string;
   workspace: Workspace;
   containerId?: string;
+  containerCw?: string;
   poofUpperDir?: string;
   poofProfile?: "minimal" | "standard" | "intensive";
   poofMode?: "exec" | "run";
@@ -51,7 +55,8 @@ export async function createCodexLiveWorkspace(options: {
   await ws.initialize();
 
   const kind = options.kind;
-  const containerId = ws.kind === "container" ? (ws as any).containerId : undefined;
+  const containerId = isContainerWorkspace(ws) ? ws.containerId : undefined;
+  const containerCw = isContainerWorkspace(ws) ? ws.containerCw : undefined;
   const poofUpperDir = ws.kind === "poof" ? (ws as any).upperDir ?? undefined : undefined;
   const poofMode = ws.kind === "poof" ? (ws as any).mode ?? undefined : undefined;
   const poofProfileName =
@@ -68,6 +73,7 @@ export async function createCodexLiveWorkspace(options: {
     root: ws.root,
     workspace: ws,
     containerId,
+    containerCw,
     poofUpperDir,
     poofProfile,
     poofMode,
@@ -87,6 +93,7 @@ export async function runCodexLiveInWorkspace(options: {
   model?: string;
   profile?: string;
   timeoutSec?: number;
+  signal?: AbortSignal;
 }): Promise<CodexLiveRunResult> {
   const chunks: CodexLiveChunk[] = [];
 
@@ -99,18 +106,21 @@ export async function runCodexLiveInWorkspace(options: {
       cw: options.workspace.root,
       sessionId: options.sessionId,
       containerId: options.workspace.containerId,
+      containerCw: options.workspace.containerCw,
       poofUpperDir: options.workspace.poofUpperDir,
       poofProfile: options.workspace.poofProfile,
       poofMode: options.workspace.poofMode,
       model: options.model,
       profile: options.profile,
       authz: options.authz,
+      timeoutSec: options.timeoutSec,
     },
     writer: {
       write: (chunk: unknown) => {
         chunks.push(chunk);
       },
     },
+    signal: options.signal,
   });
 
   return {

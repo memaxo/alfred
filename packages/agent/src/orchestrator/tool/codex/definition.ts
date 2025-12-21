@@ -573,7 +573,7 @@ export type CodexExecuteArgs = {
 
 export type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";
-  approval: "on-request";
+  approval: "untrusted" | "on-failure" | "on-request" | "never";
 };
 
 export type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";

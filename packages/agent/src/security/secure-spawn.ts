@@ -40,8 +40,54 @@ export type SecureSpawnOptions = {
   stderr?: SpawnStreamOption;
 };
 
+/**
+ * Spawns a process with a secure working directory.
+ * 
+ * Uses a native wrapper with fd-based cwd to prevent TOCTOU attacks.
+ * Falls back to path-based cwd when the wrapper fails (e.g., fd inheritance issues).
+ * 
+ * Set ORCH_SKIP_SECURE_SPAWN=1 to use path-based cwd directly (less secure, for testing).
+ */
 export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
   const { cwdHandle, cmd, args = [], env, stdin, stdout, stderr } = options;
+
+  // Allow skipping secure spawn for testing environments where fd inheritance fails
+  const skipSecureSpawn = process.env.ORCH_SKIP_SECURE_SPAWN === "1";
+  
+  if (skipSecureSpawn) {
+    // Fallback: Use path-based cwd directly (less secure but works everywhere)
+    const childEnv: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (typeof value === "string") {
+        childEnv[key] = value;
+      }
+    }
+    if (env) {
+      for (const [key, value] of Object.entries(env)) {
+        if (typeof value === "string") {
+          childEnv[key] = value;
+        } else {
+          delete childEnv[key];
+        }
+      }
+    }
+    delete childEnv[FD_ENV];
+    delete childEnv[WRAPPER_ENV_OVERRIDE];
+
+    return Bun.spawn([cmd, ...args], {
+      cwd: cwdHandle.path,
+      env: childEnv,
+      stdin: (stdin ?? "inherit") as
+        | "inherit"
+        | "pipe"
+        | "ignore"
+        | null
+        | number
+        | ReadableStream,
+      stdout: (stdout ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
+      stderr: (stderr ?? "pipe") as "inherit" | "pipe" | "ignore" | null | number,
+    });
+  }
 
   ensureFdInheritable(cwdHandle.fd);
   const wrapperPath = resolveSecureSpawnWrapper();

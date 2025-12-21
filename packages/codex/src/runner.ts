@@ -164,9 +164,13 @@ export async function* runStreamed(
       argv.push("--sandbox", sandbox);
     }
 
-    if (approval) {
-      argv.push("--ask-for-approval", approval);
+    // Handle approval modes - codex CLI v0.63+ changed from --ask-for-approval to flags
+    if (approval === "never") {
+      // --full-auto enables automatic execution with sandbox
+      argv.push("--full-auto");
     }
+    // For "on-request", "on-failure", "untrusted" - default codex behavior is interactive
+    // which will prompt unless --full-auto is set
 
     if (model) {
       argv.push("--model", model);
