@@ -1,5 +1,11 @@
 # Poof Integration Guide
 
+> **DEPRECATED**: This guide documents legacy poof integration which has been replaced by Docker container isolation. Poof code paths are only available when building with `--feature=LEGACY_POOF` flag. Production builds use Docker containers exclusively.
+>
+> See the Docker Container Standardization plan for migration details.
+
+---
+
 ## Overview
 
 ALFRED integrates with [poof](https://github.com/Jarred-Sumner/poof) for ephemeral filesystem isolation during multi-agent wave execution. Poof provides lightweight sandboxing using Linux overlayfs and namespaces, enabling:
@@ -238,6 +244,6 @@ docker run --device /dev/fuse --security-opt seccomp=unconfined ubuntu:22.04 bas
 
 ## Related Documentation
 
-- [Agent Waves Orchestration](./agent-waves-orchestration.md)
-- [Workflow Orchestration](./workflow-orchestration.md)
-- [Security and Autonomy](./security-and-autonomy.md)
+- [Agent Waves Orchestration](../guides/agent-waves-orchestration.md)
+- [Workflow Orchestration](../guides/workflow-orchestration.md)
+- [Security and Autonomy](../guides/security-and-autonomy.md)

@@ -1,21 +1,23 @@
 # Poof Isolation Patterns
 
-1. **Linux-only guard.** Always check `isPoofAvailable()` before using poof features. Fall back to worktree isolation on non-Linux platforms.
+> **DEPRECATED**: Poof isolation is legacy. Production uses Docker containers exclusively. Poof code is only available when built with `--feature=LEGACY_POOF`. See `.ruler/37-bun-feature-flags.md` for feature flag patterns.
 
-2. **Resource profiles.** Use predefined profiles (`minimal`, `standard`, `intensive`) from `POOF_PROFILES` instead of hardcoding limits. Custom profiles should be rare and documented.
+1. **Feature flag guard.** All poof code paths must be wrapped in `feature("LEGACY_POOF")` guards for tree-shaking in production builds.
 
-3. **Upper directory lifecycle.** Always clean up upper directories via `cleanupUpperDir()` or `workspace.cleanup()`. Orphan upper directories waste disk space.
+2. **Linux-only guard.** Check `isPoofAvailable()` before using poof features. Fall back to container isolation on non-Linux platforms.
 
-4. **Non-interactive mode.** Always use `--upper=<dir>` flag when spawning poof in automated contexts to skip the interactive y/n/d prompt.
+3. **Resource profiles.** Use predefined profiles (`minimal`, `standard`, `intensive`) from `POOF_PROFILES` instead of hardcoding limits.
 
-5. **Exit code handling.** Check for `isPoofTimeout()` (exit 124) and `isCommandNotFound()` (exit 127) after spawn. These indicate resource limits or missing binaries.
+4. **Upper directory lifecycle.** Always clean up upper directories via `cleanupUpperDir()` or `workspace.cleanup()`.
 
-6. **Sandbox detection.** Use `isInsideSandbox()` to detect when code runs inside poof. Avoid nested poof calls.
+5. **Non-interactive mode.** Always use `--upper=<dir>` flag when spawning poof in automated contexts.
 
-7. **Change review flow.** For coder agents, capture changes with `parseUpperLayer()`, review with `formatChanges()`, then apply with `applyUpperLayer()`. Never auto-apply without review in production.
+6. **Exit code handling.** Check for `isPoofTimeout()` (exit 124) and `isCommandNotFound()` (exit 127) after spawn.
 
-8. **Wave handoff.** Use `WaveHandoff` to track changes across parallel agents. Call `detectConflicts()` before applying changes from multiple agents to the same files.
+7. **Sandbox detection.** Use `isInsideSandbox()` to detect when code runs inside poof. Avoid nested poof calls.
 
-9. **Network not isolated.** Remember poof does NOT isolate network access. Agents can still make HTTP requests. Use policy enforcement for network-sensitive operations.
+8. **Change review flow.** Capture changes with `parseUpperLayer()`, review with `formatChanges()`, then apply with `applyUpperLayer()`.
 
-10. **Docker compatibility.** When running in Docker, ensure `--device /dev/fuse --security-opt seccomp=unconfined` flags or `--cap-add=SYS_ADMIN`. Test with `poof exec echo test` before relying on isolation.
+9. **Network not isolated.** Poof does NOT isolate network access. Use policy enforcement for network-sensitive operations.
+
+10. **Docker compatibility.** When running in Docker, ensure `--device /dev/fuse --security-opt seccomp=unconfined` flags.
