@@ -403,6 +403,9 @@ async function main() {
       process.exit(1);
     }
   }
+
+  // Explicitly exit to close DB connection pool
+  process.exit(0);
 }
 
 if (import.meta.main) {
