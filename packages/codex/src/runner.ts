@@ -164,13 +164,21 @@ export async function* runStreamed(
       argv.push("--sandbox", sandbox);
     }
 
-    // Handle approval modes - codex CLI v0.63+ changed from --ask-for-approval to flags
+    // Handle approval modes for `codex exec` (non-interactive/headless mode).
+    //
+    // IMPORTANT: `codex exec` only supports `--full-auto` flag, NOT `--ask-for-approval`.
+    // The `--ask-for-approval` flag is only available in TUI (interactive) mode.
+    //
+    // `codex exec` defaults to AskForApproval::Never internally, meaning it will never
+    // prompt for user approval regardless of what we pass. The `--full-auto` flag
+    // additionally sets SandboxMode::WorkspaceWrite (allowing file modifications).
+    //
+    // Approval mode mapping for exec:
+    // - "never" → --full-auto (automatic execution with workspace writes)
+    // - "untrusted", "on-failure", "on-request" → no flag (exec ignores these; use TUI for prompts)
     if (approval === "never") {
-      // --full-auto enables automatic execution with sandbox
       argv.push("--full-auto");
     }
-    // For "on-request", "on-failure", "untrusted" - default codex behavior is interactive
-    // which will prompt unless --full-auto is set
 
     if (model) {
       argv.push("--model", model);
