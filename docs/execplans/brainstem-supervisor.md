@@ -53,6 +53,7 @@ When a monitor triggers, we must inject a signal into the cognitive loop.
 - **Repetitive Success**: Sometimes doing the same thing 5 times is correct (e.g., batch processing). We need "Semantic" entropy, not just string equality.
 
 ## Verification
-- **Test**: `packages/agent/test/supervisor.test.ts`
-- **Scenario 1 (Loop)**: Mock agent emitting "Thinking..." 5 times. Expect interrupt.
-- **Scenario 2 (Hang)**: Mock tool sleeping for 120s. Expect kill at 60s.
+- **Unit Tests**: `packages/cognitive/test/brainstem-loop.integration.test.ts` - Comprehensive loop detection and heartbeat tests
+- **Integration Tests**: `packages/runtime/test/supervisor.integration.test.ts` - End-to-end workflow integration including cognitive bridge verification
+- **Cognitive Bridge**: Verified `handleSupervisorObservation()` and `checkPhysiology()` both call `runCognitiveLoop()` with interrupt events (`packages/runtime/src/core.ts:581-625`)
+- **Status**: ✅ Complete - All components verified working end-to-end

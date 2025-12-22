@@ -203,6 +203,126 @@ describe("WorkflowRuntime supervisor integration", () => {
     });
   });
 
+  it("verifies supervisor interrupt triggers cognitive loop", async () => {
+    // Test that supervisor interrupt actually calls runCognitiveLoop and persists interrupt event
+    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
+    
+    const { cognitiveRepo } = await import("@alfred/db");
+    const { randomUUID } = await import("crypto");
+    const runId = randomUUID();
+
+    AISDKAdapter.prototype.stream = async function* () {
+      // Emit repeated identical reasoning to trigger loop detection
+      for (let i = 0; i < 6; i++) {
+        yield {
+          type: "reasoning",
+          text: "Repeating the same thought",
+        } as WorkflowEvent;
+      }
+      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        runId,
+      });
+
+      try {
+        await consume(runtime);
+        expect.fail("Should have thrown interrupt error");
+      } catch (error) {
+        // Verify error is interrupt-related
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        expect(errorMsg).toContain("workflow_interrupted");
+        
+        // Wait a bit for async cognitive loop to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        
+        // Verify interrupt event was persisted to cognitive events
+        const cognitiveEvents = await cognitiveRepo.getAllEvents(runId);
+        const interruptEvents = cognitiveEvents.filter((e) => e.type === "interrupt");
+        
+        // Should have at least one interrupt event from supervisor
+        expect(interruptEvents.length).toBeGreaterThan(0);
+        
+        // Verify interrupt event has correct structure
+        const interruptPayload = interruptEvents[0]?.payload;
+        expect(interruptPayload).toBeDefined();
+        if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+          const data = (interruptPayload as any).data;
+          expect(data.reason).toBeDefined();
+          expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
+        }
+      }
+    });
+  });
+
+  it("verifies heartbeat failure triggers cognitive loop", async () => {
+    // Test that heartbeat timeout calls runCognitiveLoop and persists interrupt event
+    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
+    
+    const { cognitiveRepo } = await import("@alfred/db");
+    const { randomUUID } = await import("crypto");
+    const runId = randomUUID();
+
+    AISDKAdapter.prototype.stream = async function* (options) {
+      const signal = options.abortSignal;
+      // Emit one event then stall (simulating zombie process)
+      yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+      
+      // Wait indefinitely until aborted
+      await new Promise<never>((_, reject) => {
+        if (signal?.aborted) {
+          reject(signal.reason);
+          return;
+        }
+        signal?.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      });
+    };
+
+    await runWithExecutionEnv(async () => {
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        runId,
+        supervisorHeartbeatMs: 100,
+        supervisorCheckIntervalMs: 20,
+      });
+
+      try {
+        await consume(runtime);
+        expect.fail("Should have thrown heartbeat failure error");
+      } catch (error) {
+        // Verify error is heartbeat-related
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        expect(errorMsg).toContain("heartbeat_failed");
+        
+        // Wait a bit for async cognitive loop to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        
+        // Verify interrupt event was persisted to cognitive events
+        const cognitiveEvents = await cognitiveRepo.getAllEvents(runId);
+        const interruptEvents = cognitiveEvents.filter((e) => e.type === "interrupt");
+        
+        // Should have at least one interrupt event from supervisor
+        expect(interruptEvents.length).toBeGreaterThan(0);
+        
+        // Verify interrupt event has heartbeat failure reason
+        const interruptPayload = interruptEvents[0]?.payload;
+        expect(interruptPayload).toBeDefined();
+        if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+          const data = (interruptPayload as any).data;
+          expect(data.reason).toContain("process_heartbeat_failed");
+          expect(data.priority).toBe(2);
+        }
+      }
+    });
+  });
+
   it("handles multiple reasoning traces correctly", async () => {
     // Test that distinct reasoning traces don't trigger false positives
     AISDKAdapter.prototype.stream = async function* () {
