@@ -35,7 +35,7 @@ import { getToolToken } from "@/lib/token";
 import { createBrowserTrpcProxyClient } from "@/lib/trpc-client";
 import { useMindscapeStore } from "@/store/mindscape";
 import { droidNodeDataSchema } from "@/store/mindscape.schemas";
-import { useLOD, useNodeFocus } from "../lod";
+import { useLOD, useNodeFocus } from "@/lib/mindscape/lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 

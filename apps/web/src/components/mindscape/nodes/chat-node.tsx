@@ -22,7 +22,7 @@ import { useMindscapeExecutor } from "@/hooks/use-mindscape-executor";
 import { useMindscapeStore } from "@/store/mindscape";
 import type { MindscapeUiMessage } from "@/store/mindscape.schemas";
 import { chatNodeDataSchema } from "@/store/mindscape.schemas";
-import { useLOD, useNodeFocus } from "../lod";
+import { useLOD, useNodeFocus } from "@/lib/mindscape/lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 

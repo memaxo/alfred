@@ -1,7 +1,7 @@
 import type { NodeProps } from "@xyflow/react";
 import { Box } from "lucide-react";
 import { CodeBlock } from "@/components/ai-elements/code-block";
-import { useLOD, useNodeFocus } from "../lod";
+import { useLOD, useNodeFocus } from "@/lib/mindscape/lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 

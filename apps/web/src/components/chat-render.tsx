@@ -30,9 +30,16 @@ import { Plan } from "./plan";
 import { Task } from "./task";
 import { Think } from "./think";
 
+type TaskData = {
+  id: string;
+  title: string;
+  status: "pending" | "running" | "completed" | "error";
+  progress?: number;
+};
+
 function isPlanData(data: unknown): data is {
   requirement: string;
-  tasks: Task[];
+  tasks: TaskData[];
 } {
   if (!data || typeof data !== "object") {
     return false;
@@ -56,12 +63,7 @@ function isPlanData(data: unknown): data is {
   );
 }
 
-function isTaskData(data: unknown): data is {
-  id: string;
-  title: string;
-  status: "pending" | "running" | "completed" | "error";
-  progress?: number;
-} {
+function isTaskData(data: unknown): data is TaskData {
   if (!data || typeof data !== "object") {
     return false;
   }

@@ -1,5 +1,6 @@
-import { BaseEdge, type EdgeProps, getSmoothStepPath } from "@xyflow/react";
+import { BaseEdge, getSmoothStepPath } from "@xyflow/react";
 import { useMindscapeStore } from "@/store/mindscape";
+import type { MindscapeEdgeProps } from "./nodes/types";
 
 export function LivingEdge({
   id,
@@ -11,7 +12,8 @@ export function LivingEdge({
   targetPosition,
   style = {},
   markerEnd,
-}: EdgeProps) {
+  data, // Now typed via MindscapeEdgeProps
+}: MindscapeEdgeProps) {
   const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -28,11 +30,23 @@ export function LivingEdge({
   const isActive = activeEdges.has(id);
   const isHighlighted = highlightedEdgeIds.has(id);
 
+  // Use edge data for dynamic styling
+  const kind = data?.kind;
+  
   // Define the "living" style
   let stroke = style.stroke ?? "rgba(255, 255, 255, 0.2)";
   let strokeWidth = style.strokeWidth ?? 1;
   let animation = style.animation;
   let strokeDasharray = style.strokeDasharray;
+
+  // Style based on kind
+  if (kind === "explains") {
+    strokeDasharray = "4 2";
+    strokeWidth = 1.5;
+    stroke = "rgba(16, 185, 129, 0.6)"; // Emerald-500
+  } else if (kind === "mentions") {
+    stroke = "rgba(99, 102, 241, 0.4)"; // Indigo-500
+  }
 
   if (isHighlighted) {
     stroke = "#818cf8"; // Indigo-400

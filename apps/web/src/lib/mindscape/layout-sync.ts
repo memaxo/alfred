@@ -170,7 +170,7 @@ class LayoutSyncService {
    */
   private async loadFromDb() {
     if (!this.userId) {
-      return;
+      return null;
     }
 
     if (!this.syncClient) {

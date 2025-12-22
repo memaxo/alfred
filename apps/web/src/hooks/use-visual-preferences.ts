@@ -5,12 +5,11 @@
  * to the Cortex rendering engine.
  */
 
+import type { CortexEngine } from "@alfred/cortex";
 import {
-  applyVisualConfig,
-  type CortexEngine,
   getDefaultPreset,
   getPreset,
-} from "@alfred/cortex";
+} from "@alfred/cortex/presets";
 import type {
   VisualConfig,
   VisualConfigUpdate,
@@ -90,9 +89,15 @@ export function useVisualPreferences(
 
   // Apply config to engine when it changes
   useEffect(() => {
-    if (engine && autoApply) {
-      applyVisualConfig(engine, localConfig);
+    async function apply() {
+      if (engine && autoApply) {
+        // Using variable-based dynamic import to prevent static analysis bundling
+        const configPkg = "@alfred/cortex/config";
+        const { applyVisualConfig } = await import(configPkg);
+        applyVisualConfig(engine, localConfig);
+      }
     }
+    apply();
   }, [engine, localConfig, autoApply]);
 
   // Update local config immediately for responsiveness
@@ -103,7 +108,10 @@ export function useVisualPreferences(
 
       // Optimistic engine update
       if (engine && autoApply) {
-        applyVisualConfig(engine, config);
+        const configPkg = "@alfred/cortex/config";
+        import(configPkg).then(({ applyVisualConfig }) => {
+          applyVisualConfig(engine, config);
+        });
       }
     },
     [engine, autoApply]
@@ -131,7 +139,10 @@ export function useVisualPreferences(
 
         // Optimistic engine update
         if (engine && autoApply) {
-          applyVisualConfig(engine, updated);
+          const configPkg = "@alfred/cortex/config";
+          import(configPkg).then(({ applyVisualConfig }) => {
+            applyVisualConfig(engine, updated);
+          });
         }
 
         return updated;
@@ -150,7 +161,10 @@ export function useVisualPreferences(
 
       // Optimistic engine update
       if (engine && autoApply) {
-        applyVisualConfig(engine, config);
+        const configPkg = "@alfred/cortex/config";
+        import(configPkg).then(({ applyVisualConfig }) => {
+          applyVisualConfig(engine, config);
+        });
       }
 
       // Auto-save preset changes
@@ -169,7 +183,10 @@ export function useVisualPreferences(
 
     // Apply to engine
     if (engine && autoApply) {
-      applyVisualConfig(engine, defaultConfig);
+      const configPkg = "@alfred/cortex/config";
+      import(configPkg).then(({ applyVisualConfig }) => {
+        applyVisualConfig(engine, defaultConfig);
+      });
     }
 
     // Reset on server
@@ -215,7 +232,10 @@ export function useVisualPreferences(
 
         // Apply to engine
         if (engine && autoApply) {
-          applyVisualConfig(engine, parsed.config);
+          const configPkg = "@alfred/cortex/config";
+          import(configPkg).then(({ applyVisualConfig }) => {
+            applyVisualConfig(engine, parsed.config);
+          });
         }
 
         return true;

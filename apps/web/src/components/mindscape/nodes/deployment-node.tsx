@@ -11,7 +11,7 @@ import { getToolToken } from "@/lib/token";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { deploymentNodeDataSchema } from "@/store/mindscape.schemas";
 import { trpc } from "@/utils/trpc";
-import { useLOD, useNodeFocus } from "../lod";
+import { useLOD, useNodeFocus } from "@/lib/mindscape/lod";
 import { MindscapeNode } from "./mindscape-node";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";
 

@@ -69,6 +69,11 @@ function getBuildConstants(): Record<string, string> {
   // NODE_ENV
   constants.NODE_ENV = JSON.stringify(process.env.NODE_ENV || "development");
 
+  // WebGPU Gating
+  constants["import.meta.env.VITE_MINDSCAPE_WEBGPU"] = JSON.stringify(
+    process.env.VITE_MINDSCAPE_WEBGPU || "1"
+  );
+
   return constants;
 }
 

@@ -203,6 +203,84 @@ export const artifactNodeDataSchema = baseArtifactDataSchema;
 export const orbNodeDataSchema = baseArtifactDataSchema;
 
 /**
+ * Node data types inferred from Zod schemas.
+ */
+export type CodeNodeData = z.infer<typeof codeNodeDataSchema> & { type: "code" };
+export type ChatNodeData = z.infer<typeof chatNodeDataSchema> & { type: "chat" };
+export type WorkflowNodeData = z.infer<typeof workflowNodeDataSchema> & { type: "workflow" };
+export type TicketNodeData = z.infer<typeof ticketNodeDataSchema> & { type: "ticket" };
+export type ReminderNodeData = z.infer<typeof reminderNodeDataSchema> & { type: "reminder" };
+export type NoteNodeData = z.infer<typeof noteNodeDataSchema> & { type: "note" };
+export type TimerNodeData = z.infer<typeof timerNodeDataSchema> & { type: "timer" };
+export type BookmarkNodeData = z.infer<typeof bookmarkNodeDataSchema> & { type: "bookmark" };
+export type TodoNodeData = z.infer<typeof todoNodeDataSchema> & { type: "todo" };
+export type SettingsNodeData = z.infer<typeof settingsNodeDataSchema> & { type: "settings" };
+export type PrivacyNodeData = z.infer<typeof privacyNodeDataSchema> & { type: "privacy" };
+export type ProfileNodeData = z.infer<typeof profileNodeDataSchema> & { type: "profile" };
+export type IntegrationsNodeData = z.infer<typeof integrationsNodeDataSchema> & { type: "integrations" };
+export type WorkflowListNodeData = z.infer<typeof workflowListNodeDataSchema> & { type: "workflowlist" };
+export type DeploymentNodeData = z.infer<typeof deploymentNodeDataSchema> & { type: "deployment" };
+export type TerminalNodeData = z.infer<typeof terminalNodeDataSchema> & { type: "terminal" };
+export type ArtifactNodeData = z.infer<typeof artifactNodeDataSchema> & { type: "artifact" };
+export type OrbNodeData = z.infer<typeof orbNodeDataSchema> & { type: "orb" };
+export type KnowledgeNodeData = z.infer<typeof knowledgeNodeDataSchema> & { type: "knowledge" };
+export type ConceptNodeData = z.infer<typeof conceptNodeDataSchema> & { type: "concept" };
+export type DroidNodeData = z.infer<typeof droidNodeDataSchema> & { type: "droid" };
+
+/**
+ * All possible artifact node types.
+ */
+export type ArtifactType =
+  | "chat"
+  | "workflow"
+  | "terminal"
+  | "droid"
+  | "note"
+  | "reminder"
+  | "ticket"
+  | "code"
+  | "timer"
+  | "bookmark"
+  | "todo"
+  | "settings"
+  | "privacy"
+  | "profile"
+  | "integrations"
+  | "workflowlist"
+  | "deployment"
+  | "artifact"
+  | "orb"
+  | "knowledge"
+  | "concept";
+
+/**
+ * Discriminated union of all artifact data types.
+ * The 'type' field determines which schema applies.
+ */
+export type ArtifactData =
+  | CodeNodeData
+  | ChatNodeData
+  | WorkflowNodeData
+  | TicketNodeData
+  | ReminderNodeData
+  | NoteNodeData
+  | TimerNodeData
+  | BookmarkNodeData
+  | TodoNodeData
+  | SettingsNodeData
+  | PrivacyNodeData
+  | ProfileNodeData
+  | IntegrationsNodeData
+  | WorkflowListNodeData
+  | DeploymentNodeData
+  | DroidNodeData
+  | TerminalNodeData
+  | ArtifactNodeData
+  | OrbNodeData
+  | KnowledgeNodeData
+  | ConceptNodeData;
+
+/**
  * Discriminated union schema for all artifact data types.
  * Validates node data based on the 'type' field.
  */

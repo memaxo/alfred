@@ -63,7 +63,7 @@ export function createMockStream(
         if (!event) {
           throw new Error("stream_queue_error");
         }
-        return event;
+        return Promise.resolve(event);
       }
       return new Promise<StreamEvent>((resolve, reject) => {
         const timer = setTimeout(() => {

@@ -4,6 +4,7 @@ import type {
   VoiceClient,
   VoiceSessionDescriptor,
 } from "@alfred/voice/types";
+import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 import { trpc } from "@/utils/trpc";
@@ -123,7 +124,7 @@ export function useVoiceSessionWeb() {
       const prefsCodec = prefs?.find((p) => p.key === "voice.codec")?.value as
         | string
         | undefined;
-      const codec: string = prefsCodec || sessionCodec || "mp3";
+      const codec = (prefsCodec || sessionCodec || "mp3") as VoiceStreamCodec;
 
       const client = await protocol.connect({
         surface: "web",

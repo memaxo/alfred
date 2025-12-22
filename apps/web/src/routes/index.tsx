@@ -3,7 +3,7 @@ import { Activity, Mic, MicOff, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ScrambleText } from "@/components/scramble-text";
 import { useVoiceSessionWeb } from "@/hooks/use-voice-session-web";
-import { MindscapeEngine } from "@/lib/mindscape/engine";
+import type { MindscapeEngine } from "@/lib/mindscape/gpu/engine";
 
 // Temporary fix: inline mock loader or use getInitialMindscapeFrame if that's what it should be
 import { getInitialMindscapeFrame } from "@/lib/mindscape/initial-frame.server";
@@ -134,14 +134,22 @@ function Mindscape() {
     }
 
     // Initialize the engine - Takes over the DOM
-    engineRef.current = new MindscapeEngine(canvasRef.current);
+    async function initEngine() {
+      if (!canvasRef.current) return;
+      
+      // Using variable-based dynamic import to prevent static analysis bundling
+      const enginePkg = "@/lib/mindscape/gpu/engine";
+      const { MindscapeEngine } = await import(enginePkg);
+      engineRef.current = new MindscapeEngine(canvasRef.current);
+      
+      // Trigger fade in after a brief moment to allow engine to render first frame
+      setIsLoaded(true);
+    }
 
-    // Trigger fade in after a brief moment to allow engine to render first frame
-    const timer = setTimeout(() => setIsLoaded(true), 100);
+    initEngine();
 
     return () => {
       engineRef.current?.destroy();
-      clearTimeout(timer);
     };
   }, []);
 

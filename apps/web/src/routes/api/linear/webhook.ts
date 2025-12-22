@@ -357,7 +357,7 @@ function createWorkflowCaller(
         name: "Linear Webhook",
       },
       session: { id: `system-${requestId}` },
-    } as Parameters<typeof h.appRouter.createCaller>[0]["session"],
+    } as any,
     runtime: {
       requestId,
       receivedAt: new Date(),

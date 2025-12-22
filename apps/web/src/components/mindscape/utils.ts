@@ -2,6 +2,9 @@
  * Mindscape Visualization Utilities
  */
 
+// Note: This file contains duplicate implementations of utility functions also found in @alfred/knowledge
+// We should eventually import them from there, but for now we keep them here for component isolation.
+
 /**
  * Returns Tailwind classes for the confidence visual treatment.
  * - High (> 0.8): Full opacity

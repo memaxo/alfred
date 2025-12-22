@@ -7,8 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@xyflow/react";
 import { layoutSyncService } from "@/lib/mindscape/layout-sync";
-import type { Node } from "@xyflow/react";
-import type { ArtifactData } from "@/store/mindscape";
+import type { ArtifactNode } from "@/components/mindscape/nodes/types";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
@@ -20,8 +19,8 @@ import { trpc } from "@/utils/trpc";
 export function useLayoutSync() {
   const { data: session } = authClient.useSession();
   const userId = session?.user?.id;
-  const nodes = useStore((state) => state.nodeInternals);
-  const prevNodesRef = useRef<Map<string, Node<ArtifactData>>>(new Map());
+  const nodes = useStore((state) => state.nodes) as ArtifactNode[];
+  const prevNodesRef = useRef<Map<string, ArtifactNode>>(new Map());
   const isInitializedRef = useRef(false);
   
   // Get tRPC mutations
@@ -41,7 +40,7 @@ export function useLayoutSync() {
         await setPreferenceMutation.mutateAsync(input);
       },
       getPreferences: async () => {
-        return getPreferencesQuery.data ?? [];
+        return getPreferencesQuery.data as any;
       },
     });
     isInitializedRef.current = true;
@@ -60,7 +59,7 @@ export function useLayoutSync() {
       return;
     }
 
-    const currentNodes = new Map(nodes);
+    const currentNodes = new Map<string, ArtifactNode>(nodes.map(n => [n.id, n]));
     const prevNodes = prevNodesRef.current;
 
     // Detect position changes

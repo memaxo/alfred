@@ -1,5 +1,5 @@
-import { CELL_HEIGHT, CELL_WIDTH, GLYPH_SET, signalToCharIndex } from "./math";
-import { MindscapeRenderer } from "./renderer";
+import { CELL_HEIGHT, CELL_WIDTH, GLYPH_SET, signalToCharIndex } from "../math";
+import type { MindscapeRenderer } from "./renderer";
 
 interface NavigatorWithBattery extends Navigator {
   getBattery?: () => Promise<{
@@ -10,6 +10,14 @@ interface NavigatorWithBattery extends Navigator {
   }>;
 }
 
+/**
+ * MindscapeEngine handles the core visual loop for the landing page.
+ * It supports both WebGPU (via MindscapeRenderer) and Canvas2D fallbacks.
+ * 
+ * Compile-time gating:
+ * When VITE_MINDSCAPE_WEBGPU is not "1", WebGPU initialization is skipped
+ * and the renderer module (containing WGSL) is not loaded.
+ */
 export class MindscapeEngine {
   private readonly canvas: HTMLCanvasElement;
   private context: GPUCanvasContext | CanvasRenderingContext2D | null = null;
@@ -108,18 +116,22 @@ export class MindscapeEngine {
   }
 
   async init() {
-    if (navigator.gpu) {
+    // 1. Check for WebGPU flag (Vite compile-time gating)
+    // Using direct import.meta.env check for dead code elimination
+    if (import.meta.env.VITE_MINDSCAPE_WEBGPU === "1" && navigator.gpu) {
       try {
         const adapter = await navigator.gpu.requestAdapter({
           powerPreference: "high-performance",
         });
         if (adapter) {
           const device = await adapter.requestDevice();
-          this.initWebGPU(device);
+          await this.initWebGPU(device);
           this.handleResize();
           return;
         }
-      } catch (_e) {}
+      } catch (_e) {
+        console.warn("[Mindscape] WebGPU initialization failed, falling back to Canvas2D");
+      }
     }
 
     // Fallback to 2D Canvas
@@ -127,7 +139,7 @@ export class MindscapeEngine {
     this.handleResize();
   }
 
-  private initWebGPU(device: GPUDevice) {
+  private async initWebGPU(device: GPUDevice) {
     this.isWebGPU = true;
     const ctx = this.canvas.getContext("webgpu");
 
@@ -137,23 +149,33 @@ export class MindscapeEngine {
     }
     this.context = ctx;
 
-    this.renderer = new MindscapeRenderer(device, this.canvas, ctx);
-
-    // Phase 7: Pre-warm shader
+    // 2. Dynamic import of renderer to isolate WGSL and WebGPU code
+    // Using variable-based dynamic import to prevent static analysis bundling
     try {
-      this.renderer.render(
-        0,
-        this.mouse,
-        0,
-        0,
-        this.currentParams.f1,
-        this.currentParams.f2,
-        this.currentParams.f3,
-        this.currentParams.tint_h,
-        this.currentParams.tint_c,
-        this.currentParams.flow_speed
-      );
-    } catch (_e) {}
+      const rendererPkg = "./renderer";
+      const { MindscapeRenderer } = await import(rendererPkg);
+      this.renderer = new MindscapeRenderer(device, this.canvas, ctx);
+
+      // Phase 7: Pre-warm shader
+      if (this.renderer) {
+        this.renderer.render(
+          0,
+          this.mouse,
+          0,
+          0,
+          this.currentParams.f1,
+          this.currentParams.f2,
+          this.currentParams.f3,
+          this.currentParams.tint_h,
+          this.currentParams.tint_c,
+          this.currentParams.flow_speed
+        );
+      }
+    } catch (e) {
+      console.error("[Mindscape] Failed to load WebGPU renderer:", e);
+      this.initCanvas2D();
+      return;
+    }
 
     this.start();
   }

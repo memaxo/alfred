@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createCacheSlice } from "./mindscape/cache";
-import { createContextSlice } from "./mindscape/context";
-import { createGraphSlice } from "./mindscape/graph";
-import { persistOptions } from "./mindscape/persist";
-import type { MindscapeState } from "./mindscape/types";
+import { createCacheSlice } from "./cache";
+import { createContextSlice } from "./context";
+import { createGraphSlice } from "./graph";
+import { persistOptions } from "./persist";
+import type { MindscapeState } from "./types";
 
 export const useMindscapeStore = create<MindscapeState>()(
   persist(
@@ -29,6 +29,5 @@ if (hasWindow() && !window.__MINDSCAPE_STORE__) {
   window.__MINDSCAPE_STORE__ = useMindscapeStore;
 }
 
-export * from "./mindscape/types";
-export * from "./mindscape/cache";
-export * from "./mindscape.schemas";
+export * from "./types";
+export * from "./cache";

@@ -4,17 +4,10 @@
  * Manages the lifecycle of the Cortex WebGPU rendering engine.
  */
 
-import {
-  type CortexConfig,
+import type {
+  CortexConfig,
   CortexEngine,
-  detectRenderingCapability,
 } from "@alfred/cortex";
-import { AtmosphereSystem } from "@alfred/cortex/systems/atmosphere";
-import { CoronaSystem } from "@alfred/cortex/systems/corona";
-import { EdgeSystem } from "@alfred/cortex/systems/edges";
-import { NodeSystem } from "@alfred/cortex/systems/nodes";
-import { ParticleSystem } from "@alfred/cortex/systems/particles";
-import { PostProcessSystem } from "@alfred/cortex/systems/postprocess";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RenderingCapability = "webgpu" | "webgl" | "canvas2d";
@@ -71,8 +64,43 @@ export function useCortexEngine(
 
     async function init() {
       try {
+        // 1. Check for WebGPU flag (Vite compile-time gating)
+        if (import.meta.env.VITE_MINDSCAPE_WEBGPU !== "1") {
+          setError(new Error("cortex_webgpu_disabled"));
+          setIsReady(true);
+          return;
+        }
+
+        // 2. Dynamic import of Cortex modules to prevent WebGPU code leakage
+        // Using variable-based dynamic imports to prevent static analysis bundling
+        const cortexPkg = "@alfred/cortex";
+        const atmospherePkg = "@alfred/cortex/systems/atmosphere";
+        const coronaPkg = "@alfred/cortex/systems/corona";
+        const edgesPkg = "@alfred/cortex/systems/edges";
+        const nodesPkg = "@alfred/cortex/systems/nodes";
+        const particlesPkg = "@alfred/cortex/systems/particles";
+        const postprocessPkg = "@alfred/cortex/systems/postprocess";
+
+        const [
+          { CortexEngine, detectRenderingCapability },
+          { AtmosphereSystem },
+          { CoronaSystem },
+          { EdgeSystem },
+          { NodeSystem },
+          { ParticleSystem },
+          { PostProcessSystem },
+        ] = await Promise.all([
+          import(cortexPkg),
+          import(atmospherePkg),
+          import(coronaPkg),
+          import(edgesPkg),
+          import(nodesPkg),
+          import(particlesPkg),
+          import(postprocessPkg),
+        ]);
+
         // Detect capability
-        const cap = await detectRenderingCapability();
+        const cap = (await detectRenderingCapability()) as RenderingCapability;
         setCapability(cap);
 
         if (cap !== "webgpu") {
@@ -84,7 +112,7 @@ export function useCortexEngine(
         // Create engine
         // canvas is guaranteed non-null here due to check above
         const config: CortexConfig = {
-          canvas,
+          canvas: canvas as HTMLCanvasElement,
           postProcessing,
         };
 
@@ -93,8 +121,8 @@ export function useCortexEngine(
 
         // Register render systems
         const orbCenter = {
-          x: canvas?.width / 2,
-          y: canvas?.height / 2,
+          x: (canvas?.width ?? 0) / 2,
+          y: (canvas?.height ?? 0) / 2,
         };
 
         cortex.registerSystem(new AtmosphereSystem());
@@ -117,7 +145,11 @@ export function useCortexEngine(
         }
 
         // Set initial size
-        cortex.resize(canvas?.width, canvas?.height);
+        if (canvas) {
+          const w = canvas.width ?? 0;
+          const h = canvas.height ?? 0;
+          cortex.resize(w, h);
+        }
 
         setEngine(cortex);
         setIsReady(true);

@@ -117,26 +117,29 @@ export function AudioPlayerProvider<TData = unknown>({
   const [paused, setPaused] = useState(true);
   const [playbackRate, setPlaybackRateState] = useState<number>(1);
 
-  const setActiveItem = useCallback((item: AudioPlayerItem<TData> | null) => {
-    if (!audioRef.current) {
-      return;
-    }
+  const setActiveItem = useCallback(
+    async (item: AudioPlayerItem<TData> | null) => {
+      if (!audioRef.current) {
+        return;
+      }
 
-    if (item?.id === itemRef.current?.id) {
-      return;
-    }
-    itemRef.current = item;
-    const currentRate = audioRef.current.playbackRate;
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    if (item === null) {
-      audioRef.current.removeAttribute("src");
-    } else {
-      audioRef.current.src = item.src;
-    }
-    audioRef.current.load();
-    audioRef.current.playbackRate = currentRate;
-  }, []);
+      if (item?.id === itemRef.current?.id) {
+        return;
+      }
+      itemRef.current = item;
+      const currentRate = audioRef.current.playbackRate;
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      if (item === null) {
+        audioRef.current.removeAttribute("src");
+      } else {
+        audioRef.current.src = item.src;
+      }
+      audioRef.current.load();
+      audioRef.current.playbackRate = currentRate;
+    },
+    []
+  );
 
   const play = useCallback(
     async (item?: AudioPlayerItem<TData> | null) => {

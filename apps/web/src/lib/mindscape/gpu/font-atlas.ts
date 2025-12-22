@@ -1,4 +1,4 @@
-import { GLYPH_SET } from "./math";
+import { GLYPH_SET } from "../math";
 
 export type FontAtlas = {
   texture: GPUTexture | OffscreenCanvas;

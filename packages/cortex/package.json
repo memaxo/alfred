@@ -19,6 +19,14 @@
       "types": "./dist/coordinate.d.ts",
       "default": "./src/coordinate.ts"
     },
+    "./presets": {
+      "types": "./dist/presets.d.ts",
+      "default": "./src/presets.ts"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./src/config.ts"
+    },
     "./systems/*": {
       "types": "./dist/systems/*.d.ts",
       "default": "./src/systems/*.ts"

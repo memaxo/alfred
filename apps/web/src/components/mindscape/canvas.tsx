@@ -24,6 +24,8 @@ import { useLayoutSync } from "@/hooks/use-layout-sync";
 import { useMindscapeTraversal } from "@/hooks/use-mindscape-traversal";
 import { usePhysicsWorker } from "@/hooks/use-physics-worker";
 import { hasWindow } from "@/lib/env/isomorphic";
+import { clearSearchParams } from "@/lib/mindscape/url";
+import type { NodeIdRef } from "@/lib/mindscape/graph";
 import {
   type ArtifactData,
   type KnowledgeNodeData,
@@ -71,9 +73,6 @@ import { MindscapeWorkflowDrawer } from "./workflow-drawer";
 
 type RouterOutputs = inferRouterOutputs<TRPCAppRouter>;
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
-
-// Helper type for accessing UnifiedNodeRef properties safely
-type NodeIdRef = { uiId?: string; dbId?: string; hgHash?: string };
 
 // Wrap each node component with error boundary
 // Note: Using 'any' here because ReactFlow's internal NodeProps type system
@@ -821,25 +820,4 @@ function MindscapeCanvasInner({
       />
     </>
   );
-}
-
-function clearSearchParams(keys: string[]) {
-  if (!hasWindow()) {
-    return;
-  }
-
-  const url = new URL(window.location.href);
-  let changed = false;
-
-  keys.forEach((key) => {
-    if (url.searchParams.has(key)) {
-      url.searchParams.delete(key);
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    const next = `${url.pathname}${url.search}${url.hash}`;
-    window.history.replaceState(window.history.state, "", next);
-  }
 }

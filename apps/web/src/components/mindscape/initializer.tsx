@@ -3,6 +3,15 @@ import { nanoid } from "nanoid";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
+  type NodeIdRef,
+  extractGraphNodeIds,
+  extractNodeProperties,
+  deriveConfidence,
+  deriveWorkflowRunId,
+  mapGraphEdgeToFlow,
+  buildDbIdToFlowIdMap,
+} from "@/lib/mindscape/graph";
+import {
   type ArtifactData,
   type KnowledgeNodeData,
   useMindscapeStore,
@@ -15,12 +24,6 @@ type NoteListItem = RouterOutputs["note"]["list"][number];
 type DueReminderItem = RouterOutputs["remind"]["due"][number];
 type GraphEdge = RouterOutputs["graph"]["getEdges"][number];
 type GraphNode = RouterOutputs["graph"]["runQuery"]["nodes"][number];
-
-// Helper type for accessing UnifiedNodeRef properties safely
-type NodeIdRef = { uiId?: string; dbId?: string; hgHash?: string };
-
-const GRAPH_DBID_PATTERN =
-  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
 
 export function MindscapeInitializer() {
   const { nodes, addArtifact, autoLayout, setEdges, cacheRagDoc } =
@@ -35,16 +38,7 @@ export function MindscapeInitializer() {
     );
 
   const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes]);
-  const graphNodeIds = useMemo(() => {
-    const ids: string[] = [];
-    for (const node of nodes) {
-      const dbId = node.data?.graph?.dbId;
-      if (typeof dbId === "string" && GRAPH_DBID_PATTERN.test(dbId)) {
-        ids.push(dbId);
-      }
-    }
-    return Array.from(new Set(ids));
-  }, [nodes]);
+  const graphNodeIds = useMemo(() => extractGraphNodeIds(nodes), [nodes]);
 
   const { data: notes } = trpc.note.list.useQuery({ limit: 5 });
   const { data: reminders } = trpc.remind.due.useQuery({});
@@ -395,27 +389,9 @@ export function MindscapeInitializer() {
         return;
       }
 
-      // ... props extraction ...
-      const props = (node.properties ?? {}) as Record<string, unknown>;
-      const confidence =
-        typeof props.confidence === "number"
-          ? props.confidence
-          : typeof props.accuracy === "number"
-            ? props.accuracy
-            : undefined;
-      const archived =
-        typeof props.archived === "string" ? props.archived : undefined;
-      const summary =
-        typeof props.content === "string" ? props.content : undefined;
-      const runId =
-        typeof props.executionId === "string" && props.executionId.length > 0
-          ? props.executionId
-          : typeof props.runId === "string" && props.runId.length > 0
-            ? props.runId
-            : typeof props.workflowRunId === "string" &&
-                props.workflowRunId.length > 0
-              ? props.workflowRunId
-              : undefined;
+      const props = extractNodeProperties(node.properties);
+      const confidence = deriveConfidence(props);
+      const runId = deriveWorkflowRunId(props);
 
       // Tertiary tier: radius 500, distributed around bottom quadrant
       const tertiaryRadius = tierConfig.tertiary.radius;
@@ -434,9 +410,9 @@ export function MindscapeInitializer() {
           type: "knowledge",
           label: node.label,
           kind: node.kind,
-          summary,
+          summary: props.content,
           confidence,
-          archived,
+          archived: props.archived,
           source: "runtime",
           runId,
           graph: {
@@ -519,44 +495,10 @@ export function MindscapeInitializer() {
     }
   }, [ragResult, nodeIds, addArtifact, autoLayout, cacheRagDoc]);
 
-  const dbIdToFlowId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const node of nodes) {
-      const dbId = node.data?.graph?.dbId;
-      if (typeof dbId === "string" && dbId.length > 0) {
-        map.set(dbId, node.id);
-      }
-    }
-    return map;
-  }, [nodes]);
+  const dbIdToFlowId = useMemo(() => buildDbIdToFlowIdMap(nodes), [nodes]);
 
   const mapEdgeToFlow = useCallback(
-    (edge: GraphEdge) => {
-      const source = dbIdToFlowId.get(edge.fromId);
-      const target = dbIdToFlowId.get(edge.toId);
-      if (!(source && target)) {
-        return null;
-      }
-      const isExplains = edge.kind === "explains";
-      return {
-        id: edge.id,
-        source,
-        target,
-        animated: !isExplains,
-        data: {
-          kind: edge.kind,
-          fromDbId: edge.fromId,
-          toDbId: edge.toId,
-        },
-        style: isExplains
-          ? {
-              stroke: "rgba(16, 185, 129, 0.6)",
-              strokeDasharray: "4 2",
-              strokeWidth: 1.5,
-            }
-          : { stroke: "rgba(255, 255, 255, 0.2)" },
-      };
-    },
+    (edge: GraphEdge) => mapGraphEdgeToFlow(edge, dbIdToFlowId),
     [dbIdToFlowId]
   );
 

@@ -33,9 +33,12 @@ import { type ContextActionId, getActionsForNode } from "@/config/actions";
 import { MINDSCAPE_CONFIG } from "@/config/mindscape";
 import { useCommandUsage } from "@/hooks/use-command-usage";
 import { PrefixTrie } from "@/lib/trie";
+import { useShallow } from "zustand/react/shallow";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 import type { MindscapeSpawnType } from "./spawn";
+
+import type { ArtifactNode as MNode, ArtifactEdge as MEdge } from "./nodes/types";
 
 type NoteData = Extract<ArtifactData, { type: "note" }>;
 type KnowledgeData = Extract<ArtifactData, { type: "knowledge" }>;
@@ -156,15 +159,25 @@ export function MindscapeCommandPalette({
 }: MindscapeCommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
-  const addArtifact = useMindscapeStore((state) => state.addArtifact);
-  const removeArtifact = useMindscapeStore((state) => state.removeArtifact);
-  const updateArtifactData = useMindscapeStore(
-    (state) => state.updateArtifactData
+  const {
+    focusedNodeId,
+    addArtifact,
+    removeArtifact,
+    updateArtifactData,
+    nodes: currentNodes,
+    edges,
+    setEdges,
+  } = useMindscapeStore(
+    useShallow((state) => ({
+      focusedNodeId: state.focusedNodeId,
+      addArtifact: state.addArtifact as (node: MNode) => void,
+      removeArtifact: state.removeArtifact,
+      updateArtifactData: state.updateArtifactData,
+      nodes: state.nodes as MNode[],
+      edges: state.edges as MEdge[],
+      setEdges: state.setEdges as (edges: MEdge[]) => void,
+    }))
   );
-  const currentNodes = useMindscapeStore((state) => state.nodes);
-  const edges = useMindscapeStore((state) => state.edges);
-  const setEdges = useMindscapeStore((state) => state.setEdges);
   const { getUsage, recordUsage } = useCommandUsage();
   const { mutateAsync: visualizeKnowledge } =
     trpc.knowledge.visualize.useMutation();
@@ -184,7 +197,7 @@ export function MindscapeCommandPalette({
       return [];
     }
     // Type is already ArtifactType from the discriminated union
-    return getActionsForNode(type);
+    return getActionsForNode(type as any);
   }, [focusedNode]);
 
   // Initialize Trie for O(K) lookups

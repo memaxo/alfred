@@ -4,7 +4,7 @@
  * User-friendly visual configuration with presets and simplified controls.
  */
 
-import { PRESET_METADATA } from "@alfred/cortex";
+import { PRESET_METADATA } from "@alfred/cortex/presets";
 import {
   COLOR_PALETTES,
   type ColorPalette,
@@ -135,13 +135,17 @@ function VisualSettings() {
             </div>
           </div>
         )}
-        {isReady && error && capability === "webgpu" && (
+        {isReady && error && (capability === "webgpu" || error.message === "cortex_webgpu_disabled") && (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
             <div className="space-y-2">
               <div className="font-semibold text-biolum text-sm">
-                Preview failed to initialize
+                {error.message === "cortex_webgpu_disabled" ? "WebGPU Disabled" : "Preview failed to initialize"}
               </div>
-              <div className="text-biolum-dim text-xs">{error.message}</div>
+              <div className="text-biolum-dim text-xs">
+                {error.message === "cortex_webgpu_disabled" 
+                  ? "WebGPU is disabled in the build configuration." 
+                  : error.message}
+              </div>
             </div>
           </div>
         )}

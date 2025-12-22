@@ -247,7 +247,7 @@ export async function handleStreamRequest(
       consumeSseStream: consumeStream,
       messageMetadata: ({ part }) => {
         // Track first chunk latency
-        if (!firstChunkSent && part.type === "text" && part.text) {
+        if (!firstChunkSent && (part.type === ("text" as any) || part.type === "text-delta") && (part as any).text) {
           firstChunkSent = true;
           const firstChunkLatency = (performance.now() - requestStartTime) / 1000;
           sseFirstChunkLatencySeconds.labels(errorPrefix).observe(firstChunkLatency);

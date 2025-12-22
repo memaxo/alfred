@@ -9,8 +9,6 @@ import { type TRPCAppRouter, trpc } from "@/utils/trpc";
 type GraphNode =
   inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["nodes"][number];
 
-type GraphEdge =
-  inferRouterOutputs<TRPCAppRouter>["graph"]["runQuery"]["edges"][number];
 
 export function useMindscapeTraversal() {
   const { nodes, focusedNodeId, addArtifact, setEdges, edges } =
@@ -164,7 +162,8 @@ export function useMindscapeTraversal() {
     // Currently graph.runQuery returns nodes and edges.
 
     if (traversalResult.edges) {
-      const newEdges = traversalResult.edges.map((edge: GraphEdge) => {
+      // Type-safe mapping that handles both EdgeRow and UnifiedEdge formats
+      const newEdges = (traversalResult.edges as unknown as Array<Record<string, unknown>>).map((edge) => {
         // Handle both EdgeRow format (fromId/toId) and UnifiedEdge format (source.dbId/target.dbId)
         const fromId =
           "fromId" in edge && typeof edge.fromId === "string"

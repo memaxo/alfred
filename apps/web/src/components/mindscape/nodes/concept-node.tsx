@@ -1,6 +1,6 @@
 import { Brain, Network } from "lucide-react";
 import type { ConceptNodeData } from "@/store/mindscape";
-import { useLOD, useNodeFocus } from "../lod";
+import { useLOD, useNodeFocus } from "@/lib/mindscape/lod";
 import type { MindscapeNodeProps } from "../types";
 import { getConfidenceStyle } from "../utils";
 import { NodeLODSmall, NodeLODTiny } from "./shared-lod";

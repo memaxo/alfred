@@ -32,7 +32,7 @@ export function ScrambleText({
           .join("")
       );
 
-      if (iteration >= text.length) {
+      if (iteration >= text.length && interval) {
         clearInterval(interval);
       }
 

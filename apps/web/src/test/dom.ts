@@ -252,17 +252,10 @@ if (typeof globalThis.PointerEvent === "undefined") {
       this.isPrimary = params.isPrimary ?? false;
     }
   }
-  type GlobalWithPointerEvent = typeof globalThis & {
-    PointerEvent?: typeof PointerEvent;
-  };
 
-  type WindowWithPointerEvent = Window & {
-    PointerEvent?: typeof PointerEvent;
-  };
-
-  (globalThis as GlobalWithPointerEvent).PointerEvent = PointerEvent;
+  (globalThis as any).PointerEvent = PointerEvent;
   if (typeof window !== "undefined") {
-    (window as WindowWithPointerEvent).PointerEvent = PointerEvent;
+    (window as any).PointerEvent = PointerEvent;
   }
 }
 

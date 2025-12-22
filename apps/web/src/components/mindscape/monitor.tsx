@@ -123,7 +123,7 @@ function WorkflowSubscription({
       if (event.type === "data-cache-handoff") {
         recordContextReceipt(nodeId, {
           source: "handoff",
-          receipt: event.receipts,
+          receipt: event.receipts as any,
         });
         dispatchMindscapeEvent({
           type: "context-cache",
@@ -134,9 +134,9 @@ function WorkflowSubscription({
 
       if (event.type === "context") {
         recordContextReceipt(nodeId, {
-          source: event.phase ?? "context",
-          phase: event.phase,
-          receipt: event.receipts,
+          source: (event.phase as any) ?? "context",
+          phase: event.phase as any,
+          receipt: event.receipts as any,
         });
         dispatchMindscapeEvent({
           type: "context-cache",
