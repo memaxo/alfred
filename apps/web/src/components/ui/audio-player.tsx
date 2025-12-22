@@ -67,7 +67,7 @@ type AudioPlayerApi<TData = unknown> = {
   isBuffering: boolean;
   playbackRate: number;
   isItemActive: (id: string | number | null) => boolean;
-  setActiveItem: (item: AudioPlayerItem<TData> | null) => Promise<void>;
+  setActiveItem: (item: AudioPlayerItem<TData> | null) => void;
   play: (item?: AudioPlayerItem<TData> | null) => Promise<void>;
   pause: () => void;
   seek: (time: number) => void;
@@ -118,7 +118,7 @@ export function AudioPlayerProvider<TData = unknown>({
   const [playbackRate, setPlaybackRateState] = useState<number>(1);
 
   const setActiveItem = useCallback(
-    async (item: AudioPlayerItem<TData> | null) => {
+    (item: AudioPlayerItem<TData> | null) => {
       if (!audioRef.current) {
         return;
       }

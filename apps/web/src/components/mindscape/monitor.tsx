@@ -1,6 +1,7 @@
 import type {
   Obligation,
   ObligationResumeEvent,
+  SearchReceipt,
   WorkflowEvent,
 } from "@alfred/type";
 import { useEffect, useRef, useState } from "react";
@@ -121,9 +122,14 @@ function WorkflowSubscription({
       }
 
       if (event.type === "data-cache-handoff") {
+        // Extract receipts with type assertion after type guard
+        const handoffEvent = event as WorkflowEvent & {
+          type: "data-cache-handoff";
+          receipts?: SearchReceipt;
+        };
         recordContextReceipt(nodeId, {
           source: "handoff",
-          receipt: event.receipts as any,
+          receipt: handoffEvent.receipts,
         });
         dispatchMindscapeEvent({
           type: "context-cache",
@@ -133,10 +139,16 @@ function WorkflowSubscription({
       }
 
       if (event.type === "context") {
+        // Extract phase and receipts with type assertion after type guard
+        const contextEvent = event as WorkflowEvent & {
+          type: "context";
+          phase: "scan" | "web" | "bundle";
+          receipts?: SearchReceipt;
+        };
         recordContextReceipt(nodeId, {
-          source: (event.phase as any) ?? "context",
-          phase: event.phase as any,
-          receipt: event.receipts as any,
+          source: "scan",
+          phase: contextEvent.phase,
+          receipt: contextEvent.receipts,
         });
         dispatchMindscapeEvent({
           type: "context-cache",

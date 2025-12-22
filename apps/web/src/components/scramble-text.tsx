@@ -17,14 +17,14 @@ export function ScrambleText({
 
   useEffect(() => {
     let iteration = 0;
-    let interval: ReturnType<typeof setInterval> | null = null;
+    const interval = setInterval(() => {
+      const revealedCount = Math.floor(iteration);
 
-    interval = setInterval(() => {
-      setDisplay((_prev) =>
+      setDisplay(
         text
           .split("")
-          .map((_letter, index) => {
-            if (index < iteration) {
+          .map((_, index) => {
+            if (index < revealedCount) {
               return text[index];
             }
             return GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
@@ -32,11 +32,12 @@ export function ScrambleText({
           .join("")
       );
 
-      if (iteration >= text.length && interval) {
+      iteration += 1 / 3;
+
+      // Use Math.ceil to handle floating-point precision issues
+      if (Math.ceil(iteration) > text.length) {
         clearInterval(interval);
       }
-
-      iteration += 1 / 3;
     }, speed);
 
     return () => clearInterval(interval);

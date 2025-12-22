@@ -192,12 +192,12 @@ export function MindscapeCommandPalette({
     if (!focusedNode) {
       return [];
     }
-    const type = focusedNode.type || (focusedNode.data as ArtifactData).type;
-    if (!type) {
+    // ArtifactData.type is a discriminated union key, guaranteed to be ArtifactType
+    const artifactType = focusedNode.data.type;
+    if (!artifactType) {
       return [];
     }
-    // Type is already ArtifactType from the discriminated union
-    return getActionsForNode(type as any);
+    return getActionsForNode(artifactType);
   }, [focusedNode]);
 
   // Initialize Trie for O(K) lookups
