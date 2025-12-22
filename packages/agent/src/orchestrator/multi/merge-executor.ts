@@ -1,6 +1,9 @@
-import { sys } from "../../utils/process";
 import type { GitInput } from "../tool/git";
 import { worktreeManager } from "../tool/worktree";
+import { conflictArbiter } from "../conflict.js";
+import type { DirectoryHandle } from "../../security/filesystem.js";
+import { openDirectorySecure } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import type { MergePlan } from "./merge";
 
 type GitResult = {
@@ -9,16 +12,26 @@ type GitResult = {
   stderr: string;
 };
 
-async function runGitCommand(cwd: string, args: string[]): Promise<GitResult> {
-  const proc = sys.spawn(["git", ...args], {
-    cwd,
+async function runGitCommand(
+  cwdHandle: DirectoryHandle,
+  args: string[]
+): Promise<GitResult> {
+  const proc = spawnWithSecureCwd({
+    cwdHandle,
+    cmd: "git",
+    args,
     stdout: "pipe",
     stderr: "pipe",
+    stdin: "ignore",
   });
 
   const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
-    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
+    proc.stdout && typeof proc.stdout !== "number"
+      ? new Response(proc.stdout).text()
+      : Promise.resolve(""),
+    proc.stderr && typeof proc.stderr !== "number"
+      ? new Response(proc.stderr).text()
+      : Promise.resolve(""),
     proc.exited,
   ]);
 
@@ -29,20 +42,31 @@ async function runGitCommand(cwd: string, args: string[]): Promise<GitResult> {
   };
 }
 
-async function detectCurrentBranch(cwd: string) {
-  const res = await runGitCommand(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
+async function detectCurrentBranch(cwdHandle: DirectoryHandle) {
+  const res = await runGitCommand(cwdHandle, [
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD",
+  ]);
   if (res.exitCode === 0 && res.stdout) {
     return res.stdout === "HEAD" ? "dev" : res.stdout;
   }
   return "dev";
 }
 
-async function ensureBranchCheckedOut(cwd: string, branch: string) {
-  const res = await runGitCommand(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
+async function ensureBranchCheckedOut(
+  cwdHandle: DirectoryHandle,
+  branch: string
+) {
+  const res = await runGitCommand(cwdHandle, [
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD",
+  ]);
   if (res.exitCode === 0 && res.stdout === branch) {
     return;
   }
-  const checkout = await runGitCommand(cwd, ["checkout", branch]);
+  const checkout = await runGitCommand(cwdHandle, ["checkout", branch]);
   if (checkout.exitCode !== 0) {
     throw new Error(
       `Unable to checkout ${branch}: ${checkout.stderr || checkout.stdout}`
@@ -75,65 +99,133 @@ export async function executeMergePlan(
   workspace: string,
   git: GitTool,
   writer?: ToolWriter,
-  options?: { authz?: string; runId?: string }
-): Promise<MergeResult> {
-  if (!plan.branches || plan.branches.length === 0) {
-    return {
-      status: "completed",
-      mergedBranches: [],
-      targetBranch: plan.targetBranch ?? (await detectCurrentBranch(workspace)),
-    };
+  options?: {
+    authz?: string;
+    runId?: string;
+    userId?: string;
+    auto?: "read" | "low" | "medium" | "high";
   }
+): Promise<MergeResult> {
+  const cwdHandle = openDirectorySecure(workspace, {
+    allowedPrefixes: [workspace],
+  });
+  const resolvedCw = cwdHandle.path;
+  try {
+    if (!plan.branches || plan.branches.length === 0) {
+      return {
+        status: "completed",
+        mergedBranches: [],
+        targetBranch:
+          plan.targetBranch ?? (await detectCurrentBranch(cwdHandle)),
+      };
+    }
 
-  const targetBranch =
-    plan.targetBranch ?? (await detectCurrentBranch(workspace));
-  await ensureBranchCheckedOut(workspace, targetBranch);
+    const targetBranch =
+      plan.targetBranch ?? (await detectCurrentBranch(cwdHandle));
+    await ensureBranchCheckedOut(cwdHandle, targetBranch);
 
-  const merged: string[] = [];
+    const merged: string[] = [];
 
-  for (const branch of plan.branches) {
-    try {
-      const preview = await worktreeManager.safeMerge(
-        workspace,
-        targetBranch,
-        branch,
-        { runId: options?.runId }
-      );
-      if (!preview.success) {
+    for (const branch of plan.branches) {
+      try {
+        const preview = await worktreeManager.safeMerge(
+          resolvedCw,
+          targetBranch,
+          branch,
+          { runId: options?.runId }
+        );
+        if (!preview.success) {
+          const runId = options?.runId;
+          const shouldArbitrate =
+            (options?.auto === "medium" || options?.auto === "high") &&
+            typeof runId === "string" &&
+            runId.length > 0;
+
+          if (!shouldArbitrate) {
+            return {
+              status: "conflict",
+              mergedBranches: merged,
+              targetBranch,
+              conflictBranch: branch,
+              conflictFiles: preview.conflictFiles,
+            };
+          }
+
+          const resolution = await conflictArbiter.resolve(
+            resolvedCw,
+            runId,
+            targetBranch,
+            branch,
+            options.authz,
+            options.userId,
+            options.auto === "high" ? "high" : "medium"
+          );
+
+          if (resolution.status !== "resolved") {
+            return {
+              status: "conflict",
+              mergedBranches: merged,
+              targetBranch,
+              conflictBranch: branch,
+              conflictFiles: preview.conflictFiles,
+              error: `arbiter_failed:${resolution.reason}`,
+            };
+          }
+
+          const mergeResult = await git.execute({
+            input: {
+              action: "merge",
+              ref: resolution.resolvedBranch,
+              cw: resolvedCw,
+              authz: options?.authz,
+              // Allow fast-forward to the arbiter's merge commit.
+              noFF: false,
+            },
+            writer,
+          });
+
+          if (!mergeResult.ok) {
+            return {
+              status: "failed",
+              mergedBranches: merged,
+              targetBranch,
+              conflictBranch: branch,
+              error: "arbiter_merge_failed",
+            };
+          }
+
+          merged.push(branch);
+          continue;
+        }
+
+        await git.execute({
+          input: {
+            action: "merge",
+            ref: branch,
+            cw: resolvedCw,
+            authz: options?.authz,
+          },
+          writer,
+        });
+        merged.push(branch);
+      } catch (error: unknown) {
         return {
-          status: "conflict",
+          status: "failed",
           mergedBranches: merged,
           targetBranch,
           conflictBranch: branch,
-          conflictFiles: preview.conflictFiles,
+          error:
+            error instanceof Error
+              ? error.message
+              : typeof error === "string"
+                ? error
+                : String(error),
         };
       }
-
-      await git.execute({
-        input: {
-          action: "merge",
-          ref: branch,
-          cw: workspace,
-          authz: options?.authz,
-        },
-        writer,
-      });
-      merged.push(branch);
-    } catch (error: unknown) {
-      return {
-        status: "failed",
-        mergedBranches: merged,
-        targetBranch,
-        conflictBranch: branch,
-        error:
-          error instanceof Error
-            ? error.message
-            : typeof error === "string"
-              ? error
-              : String(error),
-      };
     }
-  }
 
-  return { status: "completed", mergedBranches: merged, targetBranch };
+    return { status: "completed", mergedBranches: merged, targetBranch };
+  } finally {
+    cwdHandle.close();
+  }
 }

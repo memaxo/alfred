@@ -74,7 +74,7 @@ export async function* runMergePhase(
   { mergePlan: any; conflictScanResult: any },
   void
 > {
-  const { runId, workspace, authz } = ctx;
+  const { runId, workspace, authz, input, userId } = ctx;
   const { allAgentOutcomes, agentFileHints, activeWorkspaces } = wavesResult;
 
   const mergeOutcomes = allAgentOutcomes.map((outcome) => ({
@@ -165,6 +165,8 @@ export async function* runMergePhase(
       {
         authz,
         runId,
+        userId,
+        auto: input.auto,
       }
     ).catch((err) => {
       logger.error("merge_execution_error", { error: String(err) });
@@ -184,10 +186,24 @@ export async function* runMergePhase(
         message: "merge_execution_conflict",
         branch: mergeResult.conflictBranch,
         files: mergeResult.conflictFiles,
+        reason: mergeResult.error,
       } as any;
+      if (mergeResult.error?.startsWith("arbiter_failed:")) {
+        yield {
+          type: "error",
+          message: "merge_execution_conflict_arbiter_failed",
+          branch: mergeResult.conflictBranch,
+          files: mergeResult.conflictFiles,
+          reason: mergeResult.error,
+        } as any;
+      }
     } else {
       logger.warn("merge_execution_failed", { error: mergeResult.error });
-      yield { type: "error", message: "merge_execution_failed" } as any;
+      yield {
+        type: "error",
+        message: "merge_execution_failed",
+        reason: mergeResult.error,
+      } as any;
     }
   }
 

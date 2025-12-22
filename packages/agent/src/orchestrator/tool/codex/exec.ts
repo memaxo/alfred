@@ -551,6 +551,21 @@ async function runCodexWithCodex({
       });
     }
 
+    // Inject heuristic context from past failures/corrections (user-scoped)
+    try {
+      const { buildCodexHeuristicContext } = await import(
+        "@alfred/db/repo/codex-learning"
+      );
+      const heuristicContext = await buildCodexHeuristicContext(input.prompt, 1200);
+      if (heuristicContext) {
+        enrichedPrompt = `${heuristicContext}\n\n${enrichedPrompt}`;
+      }
+    } catch (error) {
+      logger.debug("codex_heuristic_context_skipped", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     const dockerBin = input.containerId ? resolveExecutable("docker") : undefined;
 
     // Feature-flagged poof initialization (tree-shaken in production builds)

@@ -7,34 +7,13 @@ type ThreadEvent = { type: string; [key: string]: unknown };
 
 let pendingEvents: ThreadEvent[] = [];
 let shouldInvokeSpawn = false;
-let observedSpawnCmd: string | null = null;
-let observedSpawnArgs: string[] | null = null;
+let observedPrompt: string | null = null;
 
 function setMockEvents(events: ThreadEvent[]) {
   pendingEvents = events;
 }
 
 const noop = () => {};
-
-const spawnWithSecureCwdMock = mock(
-  ({
-    cmd,
-    args,
-  }: {
-    cmd: string;
-    args: string[];
-    env?: Record<string, string>;
-  }) => {
-    observedSpawnCmd = cmd;
-    observedSpawnArgs = args;
-    return {
-      stdout: null,
-      stderr: null,
-      exited: Promise.resolve(0),
-      kill: () => {},
-    };
-  }
-);
 
 const assessSessionResumeEligibilityMock = mock(() =>
   Promise.resolve({
@@ -60,27 +39,43 @@ mock.module("../src/orchestrator/codex-session.js", () => ({
 const definitionModule = await import("../src/orchestrator/tool/codex/definition.ts");
 mock.module("../src/orchestrator/tool/codex/definition.js", () => definitionModule);
 
-// Capture docker exec args when container mode is active.
-mock.module("../src/security/secure-spawn.js", () => ({
-  spawnWithSecureCwd: (...args: Parameters<typeof spawnWithSecureCwdMock>) =>
-    spawnWithSecureCwdMock(...args),
-}));
-
 mock.module("@alfred/codex", () => ({
   runStreamed: async function* (opts: {
     cmd: string;
+    prompt: string;
     env?: Record<string, string>;
     spawn?: (args: { cmd: string; args: string[]; env?: Record<string, string> }) => unknown;
   }) {
+    observedPrompt = opts.prompt;
     if (shouldInvokeSpawn) {
       // Exercise the tool-provided spawn wrapper (docker/poof/host selection).
       // This lets tests assert docker `--workdir` behavior deterministically.
-      await opts.spawn?.({ cmd: opts.cmd, args: ["--version"], env: opts.env });
+      const spawned = opts.spawn?.({ cmd: opts.cmd, args: ["--version"], env: opts.env });
+      if (
+        spawned &&
+        typeof spawned === "object" &&
+        "exited" in spawned &&
+        (spawned as { exited?: unknown }).exited instanceof Promise
+      ) {
+        await (spawned as { exited: Promise<unknown> }).exited;
+      }
     }
     for (const event of pendingEvents) {
       yield { ...event };
     }
   },
+}));
+
+const buildCodexLearningContextMock = mock(() => Promise.resolve<string | null>(null));
+const buildCodexHeuristicContextMock = mock(() => Promise.resolve<string | null>(null));
+
+mock.module("@alfred/db/repo/codex-learning", () => ({
+  buildCodexLearningContext: (
+    ...args: Parameters<typeof buildCodexLearningContextMock>
+  ) => buildCodexLearningContextMock(...args),
+  buildCodexHeuristicContext: (
+    ...args: Parameters<typeof buildCodexHeuristicContextMock>
+  ) => buildCodexHeuristicContextMock(...args),
 }));
 
 const { executeWithCodex } = await import(
@@ -98,9 +93,11 @@ beforeEach(() => {
   createSessionMock.mockReset();
   createSessionMock.mockImplementation(() => undefined);
   shouldInvokeSpawn = false;
-  observedSpawnCmd = null;
-  observedSpawnArgs = null;
-  spawnWithSecureCwdMock.mockClear();
+  observedPrompt = null;
+  buildCodexLearningContextMock.mockReset();
+  buildCodexLearningContextMock.mockResolvedValue(null);
+  buildCodexHeuristicContextMock.mockReset();
+  buildCodexHeuristicContextMock.mockResolvedValue(null);
 
   // Avoid depending on an installed codex binary during tests.
   process.env.CODEX_BIN = process.env.CODEX_BIN ?? "/usr/bin/true";
@@ -176,6 +173,35 @@ describe("executeWithCodex artifacts", () => {
   });
 });
 
+describe("executeWithCodex prompt enrichment", () => {
+  it("prepends heuristics context ahead of similar executions context", async () => {
+    buildCodexLearningContextMock.mockResolvedValue("SIMILAR_CONTEXT");
+    buildCodexHeuristicContextMock.mockResolvedValue("HEURISTICS_CONTEXT");
+
+    setMockEvents([{ type: "thread.started", thread_id: "thread-event" }]);
+
+    const prompt = "resolve merge conflict markers";
+    await executeWithCodex({
+      input: {
+        action: "exec",
+        prompt,
+        auto: "read",
+        out: "text",
+        cw: process.cwd(),
+      },
+    });
+
+    expect(observedPrompt).toBeTruthy();
+    const finalPrompt = observedPrompt ?? "";
+    expect(finalPrompt).toContain("HEURISTICS_CONTEXT");
+    expect(finalPrompt).toContain("SIMILAR_CONTEXT");
+    expect(finalPrompt).toContain(prompt);
+    expect(finalPrompt.indexOf("HEURISTICS_CONTEXT")).toBeLessThan(
+      finalPrompt.indexOf("SIMILAR_CONTEXT")
+    );
+  });
+});
+
 describe("executeWithCodex container workdir", () => {
   it("uses containerCw as docker exec --workdir when provided", async () => {
     // Provide a fake docker binary in PATH so resolveExecutable("docker") succeeds.
@@ -183,7 +209,12 @@ describe("executeWithCodex container workdir", () => {
     const prevPath = process.env.PATH;
     try {
       const dockerPath = path.join(binDir, "docker");
-      await writeFile(dockerPath, "#!/bin/sh\nexit 0\n", "utf8");
+      const argsPath = path.join(binDir, "args.txt");
+      await writeFile(
+        dockerPath,
+        `#!/bin/sh\nprintf '%s\\n' \"$@\" > \"${argsPath}\"\nexit 0\n`,
+        "utf8"
+      );
       await chmod(dockerPath, 0o755);
 
       process.env.PATH = `${binDir}${path.delimiter}${prevPath ?? ""}`;
@@ -203,13 +234,11 @@ describe("executeWithCodex container workdir", () => {
         },
       });
 
-      expect(spawnWithSecureCwdMock).toHaveBeenCalled();
-      expect(observedSpawnCmd).toBeTruthy();
-      expect(observedSpawnArgs).toBeTruthy();
-      expect(observedSpawnArgs).toContain("exec");
-      expect(observedSpawnArgs).toContain("--workdir");
-      expect(observedSpawnArgs).toContain("/workspace/.agent/worktrees/run/agent");
-      expect(observedSpawnArgs).toContain("container-123");
+      const argsText = await Bun.file(argsPath).text();
+      expect(argsText).toContain("exec");
+      expect(argsText).toContain("--workdir");
+      expect(argsText).toContain("/workspace/.agent/worktrees/run/agent");
+      expect(argsText).toContain("container-123");
     } finally {
       process.env.PATH = prevPath;
       await rm(binDir, { recursive: true, force: true });

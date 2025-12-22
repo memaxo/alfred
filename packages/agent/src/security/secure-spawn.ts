@@ -52,7 +52,13 @@ export function spawnWithSecureCwd(options: SecureSpawnOptions): Subprocess {
   const { cwdHandle, cmd, args = [], env, stdin, stdout, stderr } = options;
 
   // Allow skipping secure spawn for testing environments where fd inheritance fails
-  const skipSecureSpawn = process.env.ORCH_SKIP_SECURE_SPAWN === "1";
+  const inBunTest =
+    process.env.BUN_TEST === "1" ||
+    process.env.NODE_ENV === "test" ||
+    process.env.BUN_ENVIRONMENT === "test";
+  const skipSecureSpawn =
+    process.env.ORCH_SKIP_SECURE_SPAWN === "1" ||
+    (inBunTest && process.env.ORCH_SKIP_SECURE_SPAWN !== "0");
   
   if (skipSecureSpawn) {
     // Fallback: Use path-based cwd directly (less secure but works everywhere)

@@ -2,7 +2,8 @@ import * as fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { logger } from "@alfred/logger";
-import { spawn } from "bun";
+import { openDirectorySecure } from "../../security/filesystem.js";
+import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 
 export type WorktreeHandle = {
   path: string;
@@ -20,7 +21,7 @@ const WORKTREE_ROOT = ".agent/worktrees";
 const META_FILENAME = ".alfred-worktree.json";
 
 function sanitizeSegment(value: string) {
-  return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+  return value.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 }
 
 function resolveWorktreePath(repoRoot: string, runId: string, agentId: string) {
@@ -36,24 +37,40 @@ function resolveBranchName(runId: string, agentId: string) {
   return `agent/${sanitizeSegment(runId)}/${sanitizeSegment(agentId)}`;
 }
 
-async function runGit(cwd: string, args: string[]): Promise<GitResult> {
-  const proc = spawn(["git", ...args], {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+async function runGit(
+  repoRoot: string,
+  cwd: string,
+  args: string[]
+): Promise<GitResult> {
+  const cwdHandle = openDirectorySecure(cwd, { allowedPrefixes: [repoRoot] });
+  try {
+    const proc = spawnWithSecureCwd({
+      cwdHandle,
+      cmd: "git",
+      args,
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: "ignore",
+    });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(""),
-    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(""),
-    proc.exited,
-  ]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+      proc.stdout && typeof proc.stdout !== "number"
+        ? new Response(proc.stdout).text()
+        : Promise.resolve(""),
+      proc.stderr && typeof proc.stderr !== "number"
+        ? new Response(proc.stderr).text()
+        : Promise.resolve(""),
+      proc.exited,
+    ]);
 
-  return {
-    exitCode,
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-  };
+    return {
+      exitCode,
+      stdout: stdout.trim(),
+      stderr: stderr.trim(),
+    };
+  } finally {
+    cwdHandle.close();
+  }
 }
 
 async function pathExists(candidate: string) {
@@ -88,8 +105,12 @@ async function readMetadata(
   }
 }
 
-async function collectConflictFiles(cwd: string) {
-  const res = await runGit(cwd, ["diff", "--name-only", "--diff-filter=U"]);
+async function collectConflictFiles(repoRoot: string, cwd: string) {
+  const res = await runGit(repoRoot, cwd, [
+    "diff",
+    "--name-only",
+    "--diff-filter=U",
+  ]);
   if (res.exitCode !== 0) {
     return [];
   }
@@ -149,7 +170,7 @@ async function cleanupPreviewPath(
   previewPath: string
 ): Promise<boolean> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await runGit(repoRoot, [
+    await runGit(repoRoot, repoRoot, [
       "worktree",
       "remove",
       "--force",
@@ -168,7 +189,7 @@ export async function flushPreviewCleanupBacklog(
   repoRoot?: string
 ): Promise<number> {
   let cleaned = 0;
-  for (const ticket of [...previewCleanupBacklog.values()]) {
+  for (const ticket of previewCleanupBacklog.values()) {
     if (repoRoot && ticket.repoRoot !== repoRoot) {
       continue;
     }
@@ -228,15 +249,18 @@ export const worktreeManager = {
     await fs.mkdir(path.dirname(wtPath), { recursive: true });
 
     if (await pathExists(wtPath)) {
-      await runGit(repoRoot, ["worktree", "remove", "--force", wtPath]).catch(
-        () => {}
-      );
+      await runGit(repoRoot, repoRoot, [
+        "worktree",
+        "remove",
+        "--force",
+        wtPath,
+      ]).catch(() => {});
       await removeDirSafe(wtPath);
     }
 
-    await runGit(repoRoot, ["branch", "-D", branch]).catch(() => {});
+    await runGit(repoRoot, repoRoot, ["branch", "-D", branch]).catch(() => {});
 
-    const addResult = await runGit(repoRoot, [
+    const addResult = await runGit(repoRoot, repoRoot, [
       "worktree",
       "add",
       "--relative",
@@ -291,9 +315,13 @@ export const worktreeManager = {
   /**
    * Remove a single worktree path and delete the associated branch if present.
    */
-  remove: async (repoRoot: string, worktreePath: string) => {
+  remove: async (
+    repoRoot: string,
+    worktreePath: string,
+    options?: { keepBranch?: boolean }
+  ) => {
     const meta = await readMetadata(worktreePath);
-    await runGit(repoRoot, [
+    await runGit(repoRoot, repoRoot, [
       "worktree",
       "remove",
       "--force",
@@ -301,8 +329,10 @@ export const worktreeManager = {
     ]).catch(() => {});
     await removeDirSafe(worktreePath);
 
-    if (meta?.branch) {
-      await runGit(repoRoot, ["branch", "-D", meta.branch]).catch(() => {});
+    if (!options?.keepBranch && meta?.branch) {
+      await runGit(repoRoot, repoRoot, ["branch", "-D", meta.branch]).catch(
+        () => {}
+      );
     }
   },
 
@@ -310,7 +340,7 @@ export const worktreeManager = {
    * Invoke git worktree prune to drop leftover references.
    */
   prune: async (repoRoot: string) => {
-    await runGit(repoRoot, ["worktree", "prune", "--expire=now"]).catch(
+    await runGit(repoRoot, repoRoot, ["worktree", "prune", "--expire=now"]).catch(
       () => {}
     );
   },
@@ -338,7 +368,7 @@ export const worktreeManager = {
     try {
       await cleanupPreviewPath(repoRoot, previewPath);
 
-      const resolvedTarget = await runGit(repoRoot, [
+      const resolvedTarget = await runGit(repoRoot, repoRoot, [
         "rev-parse",
         targetBranch,
       ]);
@@ -348,7 +378,7 @@ export const worktreeManager = {
         );
       }
 
-      const addRes = await runGit(repoRoot, [
+      const addRes = await runGit(repoRoot, repoRoot, [
         "worktree",
         "add",
         "--detach",
@@ -361,7 +391,7 @@ export const worktreeManager = {
         );
       }
 
-      const mergeRes = await runGit(previewPath, [
+      const mergeRes = await runGit(repoRoot, previewPath, [
         "merge",
         "--no-commit",
         "--no-ff",
@@ -369,13 +399,13 @@ export const worktreeManager = {
       ]);
 
       if (mergeRes.exitCode === 0) {
-        await runGit(previewPath, ["reset", "--hard", "HEAD"]);
+        await runGit(repoRoot, previewPath, ["reset", "--hard", "HEAD"]);
         return { success: true, conflictFiles: [] };
       }
 
-      const conflictFiles = await collectConflictFiles(previewPath);
-      await runGit(previewPath, ["merge", "--abort"]).catch(() =>
-        runGit(previewPath, ["reset", "--hard", "HEAD"])
+      const conflictFiles = await collectConflictFiles(repoRoot, previewPath);
+      await runGit(repoRoot, previewPath, ["merge", "--abort"]).catch(() =>
+        runGit(repoRoot, previewPath, ["reset", "--hard", "HEAD"])
       );
       return { success: false, conflictFiles };
     } finally {

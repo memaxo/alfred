@@ -26,6 +26,7 @@ import { deriveDecisionFacts } from "@alfred/knowledge/reasoning/decisions";
 import { logger } from "@alfred/logger";
 import { embedMany } from "@alfred/rag";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { buildDreamHeuristic } from "./dreaming.js";
 
 // Mock metrics if package not available (for tests or circular dep avoidance)
 const mockHistogram = { startTimer: () => () => {} };
@@ -122,6 +123,9 @@ export function startLearningWorker(
     try {
       // 1. Learn from new runs
       await processUnlearnedRuns(finalConfig.batchSize);
+
+      // 1b. Dream on failed runs to produce heuristics
+      await processFailedRuns(finalConfig.batchSize);
 
       // 2. Run memory maintenance periodically (if enabled)
       if (finalConfig.decayEnabled) {
@@ -471,6 +475,55 @@ async function processUnlearnedRuns(limit: number) {
       // We intentionally don't mark as learned so it retries (or we could add a retry count)
       // For now, simple skip to avoid infinite loops on poison pills?
       // Ideally we'd have a 'learning_attempts' column, but for MVP let's log and skip.
+    }
+  }
+}
+
+async function processFailedRuns(limit: number) {
+  const runs = await db
+    .select()
+    .from(workflowRuns)
+    .where(and(eq(workflowRuns.status, "failed"), isNull(workflowRuns.dreamedAt)))
+    .orderBy(desc(workflowRuns.created))
+    .limit(limit);
+
+  if (runs.length === 0) {
+    return;
+  }
+
+  logger.debug("dreaming_worker_processing", { count: runs.length });
+
+  for (const run of runs) {
+    try {
+      const outcome = buildDreamHeuristic({
+        runId: run.id,
+        workflowId: run.workflowId,
+        inputData: run.inputData ?? undefined,
+        stateData: run.stateData ?? undefined,
+        errorMessage: run.errorMessage ?? null,
+      });
+
+      if (outcome.status === "emit") {
+        await upsertNodes([
+          {
+            resource: "user",
+            hash: outcome.seed.hash,
+            kind: "heuristic",
+            label: outcome.seed.label,
+            properties: outcome.seed.properties,
+          },
+        ]);
+      }
+
+      await db
+        .update(workflowRuns)
+        .set({ dreamedAt: new Date() })
+        .where(eq(workflowRuns.id, run.id));
+    } catch (error) {
+      logger.warn("dreaming_worker_run_failed", {
+        runId: run.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

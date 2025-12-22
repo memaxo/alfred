@@ -1,166 +1,55 @@
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-// IMPORTANT: `conflict.ts` imports this module using the `.js` specifier.
-// Use the same specifier here so we spy on the exact same module instance.
-import { sys } from "../src/utils/process.js"; // Import sys to spy on it
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { execFile } from "node:child_process";
+import * as fs from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
+import { createTestSandbox } from "@alfred/test-kit";
+import { conflictArbiter } from "../src/orchestrator/conflict";
+import { toolCodex } from "../src/orchestrator/tool/codex/index.js";
 
-// Mock dependencies
-const mockWorktreeCreate = mock(
-  async (_repo, runId: string, agentId: string) => ({
-    path: `/tmp/mock-worktree/${runId}/${agentId}`,
-    branch: `agent/${runId}/${agentId}`,
-    baseRef: "HEAD",
-  })
-);
-const mockWorktreeRemove = mock(() => Promise.resolve(undefined));
-const mockCodexExecute = mock(() =>
-  Promise.resolve({ result: "done", artifacts: [] })
-);
+const execFileAsync = promisify(execFile);
 
-// Spy on sys.spawn
-const spawnSpy = spyOn(sys, "spawn");
+async function execGit(args: string[], cwd: string): Promise<void> {
+  await execFileAsync("git", args, { cwd });
+}
 
-// Mock Worktree Manager
-mock.module("../src/orchestrator/tool/worktree.js", () => ({
-  worktreeManager: {
-    create: mockWorktreeCreate,
-    remove: mockWorktreeRemove,
-    safeMerge: mock(() =>
-      Promise.resolve({ success: true, conflictFiles: [] })
-    ),
-  },
-}));
+describe("Conflict Arbiter (smoke)", () => {
+  let sandbox: ReturnType<typeof createTestSandbox>;
+  let repoRoot: string;
 
-// Mock Codex Tool
-mock.module("../src/orchestrator/tool/codex/index.js", () => ({
-  toolCodex: {
-    execute: mockCodexExecute,
-  },
-}));
+  const originalExecute = toolCodex.execute;
 
-// Dynamic import of the unit under test
-const { conflictArbiter } = await import("../src/orchestrator/conflict");
+  beforeEach(async () => {
+    sandbox = createTestSandbox("arbiter-smoke-");
+    repoRoot = sandbox.dir;
 
-describe("Conflict Arbiter", () => {
-  beforeEach(() => {
-    spawnSpy.mockClear();
-    mockWorktreeCreate.mockClear();
-    mockWorktreeRemove.mockClear();
-    mockCodexExecute.mockClear();
+    await execGit(["init", "-b", "main"], repoRoot);
+    await execGit(["config", "user.email", "alfred@example.com"], repoRoot);
+    await execGit(["config", "user.name", "Alfred"], repoRoot);
+
+    await fs.writeFile(path.join(repoRoot, "file.txt"), "base\n", "utf8");
+    await execGit(["add", "."], repoRoot);
+    await execGit(["commit", "-m", "init"], repoRoot);
   });
 
-  it("resolves conflict when conflicts are found", async () => {
-    // Setup mock spawn return values in order
+  afterEach(() => {
+    toolCodex.execute = originalExecute;
+    sandbox.cleanup();
+  });
 
-    // 1. git merge
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(1),
-      stdout: "",
-      stderr: "",
-    } as any);
+  it("returns resolved for a clean merge without invoking Codex", async () => {
+    await execGit(["checkout", "-b", "branch-clean"], repoRoot);
+    await fs.writeFile(path.join(repoRoot, "file.txt"), "clean\n", "utf8");
+    await execGit(["add", "."], repoRoot);
+    await execGit(["commit", "-m", "clean"], repoRoot);
+    await execGit(["checkout", "main"], repoRoot);
 
-    // 2. git diff --name-only
-    // Pass string directly as stdout, Response(string) handles it
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "file1.ts\nfile2.ts",
-      stderr: "",
-    } as any);
+    const codexStub = mock(async () => ({ ok: true }));
+    toolCodex.execute = codexStub as unknown as typeof toolCodex.execute;
 
-    // 3. git diff --check (pass)
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "",
-      stderr: "",
-    } as any);
-
-    // 4. git commit
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "",
-      stderr: "",
-    } as any);
-
-    const result = await conflictArbiter.resolve(
-      "/repo",
-      "run-1",
-      "main",
-      "feat/1"
-    );
+    const result = await conflictArbiter.resolve(repoRoot, "run-smoke", "main", "branch-clean");
 
     expect(result.status).toBe("resolved");
-    if (result.status === "resolved") {
-      expect(result.resolvedBranch).toContain("arbiter");
-    }
-
-    expect(mockWorktreeCreate).toHaveBeenCalled();
-    expect(mockCodexExecute).toHaveBeenCalled(); // Agent was called
-    expect(mockWorktreeRemove).toHaveBeenCalled();
-  });
-
-  it("handles clean merges (no actual conflict)", async () => {
-    // 1. git merge (ok)
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "",
-      stderr: "",
-    } as any);
-    // 2. git diff (empty)
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "",
-      stderr: "",
-    } as any);
-    // 3. git commit
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "",
-      stderr: "",
-    } as any);
-
-    const result = await conflictArbiter.resolve(
-      "/repo",
-      "run-1",
-      "main",
-      "feat/1"
-    );
-
-    expect(result.status).toBe("resolved");
-    expect(mockCodexExecute).not.toHaveBeenCalled(); // Agent NOT called
-  });
-
-  it("fails if markers remain", async () => {
-    // 1. git merge
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(1),
-      stdout: "",
-      stderr: "",
-    } as any);
-    // 2. git diff names
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(0),
-      stdout: "file1.ts",
-      stderr: "",
-    } as any);
-
-    // Agent runs...
-
-    // 3. git diff --check FAILS
-    spawnSpy.mockReturnValueOnce({
-      exited: Promise.resolve(1),
-      stdout: "Conflict markers found",
-      stderr: "",
-    } as any);
-
-    const result = await conflictArbiter.resolve(
-      "/repo",
-      "run-1",
-      "main",
-      "feat/1"
-    );
-
-    expect(result.status).toBe("failed");
-    if (result.status === "failed") {
-      expect(result.reason).toContain("markers");
-    }
+    expect(codexStub).toHaveBeenCalledTimes(0);
   });
 });

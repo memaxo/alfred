@@ -1,9 +1,11 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import {
   startLearningWorker,
   stopLearningWorker,
 } from "../src/orchestrator/learning-worker";
+import { memoryNodes } from "@alfred/db/schema/graph";
+import { workflowRuns } from "@alfred/db/schema/workflow";
 
 // Mock extraction to avoid NLU overhead in integration test
 mock.module("@alfred/knowledge/extractor", () => ({
@@ -52,6 +54,8 @@ let pruneCalled = false;
 let cleanupCalled = false;
 let decayedNodes: any[] = [];
 let prunedNodeIds: string[] = [];
+let workflowSelectIndex = 0;
+let upsertedSeeds: any[] = [];
 
 const resetMockState = () => {
   mockRuns = [
@@ -64,6 +68,20 @@ const resetMockState = () => {
       stateData: { result: "world" },
       completedAt: new Date(),
       learnedAt: null,
+      dreamedAt: null,
+      errorMessage: null,
+    },
+    {
+      id: randomUUID(),
+      userId: "user-1",
+      workflowId: "test-flow",
+      status: "failed",
+      inputData: { prompt: "merge conflict markers" },
+      stateData: { tool: "git.merge" },
+      completedAt: null,
+      learnedAt: null,
+      dreamedAt: null,
+      errorMessage: "merge conflict markers found",
     },
   ];
   decayCalled = false;
@@ -71,43 +89,77 @@ const resetMockState = () => {
   cleanupCalled = false;
   decayedNodes = [];
   prunedNodeIds = [];
+  workflowSelectIndex = 0;
+  upsertedSeeds = [];
 };
 
 // Mock DB
 mock.module("@alfred/db", () => ({
   db: {
     select: () => ({
-      from: () => ({
+      from: (table: unknown) => ({
         where: () => ({
           orderBy: () => ({
-            limit: async () => mockRuns,
+            limit: async () => {
+              if (table === workflowRuns) {
+                const idx = workflowSelectIndex;
+                workflowSelectIndex += 1;
+                if (idx % 2 === 0) {
+                  return mockRuns.filter(
+                    (run) => run.status === "completed" && run.learnedAt === null
+                  );
+                }
+                return mockRuns.filter(
+                  (run) => run.status === "failed" && run.dreamedAt === null
+                );
+              }
+              if (table === memoryNodes) {
+                return [];
+              }
+              return [];
+            },
           }),
+          limit: async () => {
+            if (table === workflowRuns) {
+              return mockRuns;
+            }
+            return [];
+          },
         }),
       }),
     }),
     update: () => ({
-      set: () => ({
+      set: (patch: Record<string, unknown>) => ({
         where: () => {
-          if (mockRuns[0]) {
-            mockRuns[0].learnedAt = new Date();
+          if ("learnedAt" in patch) {
+            const target = mockRuns.find(
+              (run) => run.status === "completed" && run.learnedAt === null
+            );
+            if (target) {
+              target.learnedAt = new Date();
+            }
+          }
+          if ("dreamedAt" in patch) {
+            const target = mockRuns.find(
+              (run) => run.status === "failed" && run.dreamedAt === null
+            );
+            if (target) {
+              target.dreamedAt = new Date();
+            }
           }
           return Promise.resolve(undefined);
         },
       }),
     }),
   },
-  workflowRuns: {
-    status: { name: "status" },
-    learnedAt: { name: "learnedAt" },
-    completedAt: { name: "completedAt" },
-    id: { name: "id" },
-  },
 }));
 
 // Mock Graph Repo
 mock.module("@alfred/db/repo/graph/index", () => ({
-  upsertNodes: () =>
-    Promise.resolve(new Map([["user:hash-123", { id: "node-1" }]])),
+  upsertNodes: (seeds: unknown[]) => {
+    upsertedSeeds.push(...(seeds as any[]));
+    return Promise.resolve(new Map([["user:hash-123", { id: "node-1" }]]));
+  },
   upsertEdges: () => Promise.resolve([]),
 
   // Decay mocks
@@ -165,6 +217,15 @@ describe("Learning Worker Integration", () => {
     startLearningWorker({ intervalMs: 50, batchSize: 1 });
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(mockRuns[0].learnedAt).not.toBeNull();
+  });
+
+  test("worker dreams on failed run and marks it dreamed", async () => {
+    startLearningWorker({ intervalMs: 50, batchSize: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(mockRuns[1].dreamedAt).not.toBeNull();
+    const heuristicSeed = upsertedSeeds.find((seed) => (seed as any).kind === "heuristic");
+    expect(heuristicSeed).toBeTruthy();
+    expect((heuristicSeed as any).resource).toBe("user");
   });
 
   test("worker runs maintenance cycle and triggers decay", async () => {
@@ -236,5 +297,9 @@ describe("Learning Worker Integration", () => {
     expect(mockRuns[0].learnedAt).not.toBeNull();
     // Maintenance happened?
     expect(decayCalled).toBe(true);
+  });
+
+  afterAll(() => {
+    mock.restore();
   });
 });
