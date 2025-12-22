@@ -60,7 +60,10 @@ Success is demonstrated by:
   - Added missing type exports to `mindscape.schemas.ts` (ArtifactData, node types, ArtifactType)
   - Updated `lod.ts` to re-export hooks from `lib/mindscape/lod.ts`
   - Fixed type incompatibilities between ArtifactNode and React Flow's Node type
-- [ ] Phase 5: Deprecations/removals (explicit approval required)
+- [x] Phase 5: Deprecations/removals (complete - no changes needed)
+  - Audited all 20 node types
+  - All nodes actively used with distinct purposes
+  - No deprecation candidates identified
 
 ## Surprises & Discoveries
 
@@ -86,9 +89,40 @@ Success is demonstrated by:
 
 5. **LOD hooks re-export**: `components/mindscape/lod.ts` now re-exports from `lib/mindscape/lod.ts` instead of being a placeholder, enabling simpler imports from components.
 
+### Phase 5 Decision (2025-12-21)
+
+1. **No deprecations needed**: Audited all 20 node types. All serve distinct purposes and are actively used. Non-spawnable nodes (terminal, code, ticket, knowledge, orb) are intentionally excluded from `mindscapeSpawnTypes` as they're created programmatically.
+
 ## Outcomes & Retrospective
 
-(To be filled at milestones)
+### Completed (2025-12-21)
+
+**What was delivered:**
+- WebGPU code isolated in `lib/mindscape/gpu/` with compile-time gating
+- Store modularized into focused slices (cache, context, graph, persist)
+- Domain helpers extracted for pure graph/URL operations
+- Type system aligned with React Flow 12 generics
+- Build verification script for WebGPU-free builds
+
+**Key metrics:**
+- 57 files changed, 1771 insertions, 1395 deletions (net simplification)
+- 12 tests pass in lib/mindscape
+- TypeScript compilation clean
+- No deprecated nodes (all 20 actively used)
+
+**What worked well:**
+- Phased approach allowed incremental validation
+- Keeping tests green throughout prevented regressions
+- Type exports to `mindscape.schemas.ts` broke circular dependencies cleanly
+
+**What was harder than expected:**
+- React Flow type variance issues required simplifying `ArtifactNode` type
+- Phase 3 store modularization inadvertently broke type exports
+- Phase 2 node standardization caused test failures (partially reverted)
+
+**Future considerations:**
+- Add tests for `graph.ts` and `url.ts` helpers
+- Consider completing Phase 2 node standardization with proper test fixtures
 
 ## Context and Orientation
 
