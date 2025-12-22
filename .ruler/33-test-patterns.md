@@ -27,3 +27,9 @@
 9. **Use WorkflowTestHarness.** For workflow integration tests, use `WorkflowTestHarness` from `@alfred/api/test/utils/workflow-server` which handles session patching, header construction, and cleanup.
 
 10. **withWorkflowHarness pattern.** Prefer `withWorkflowHarness(async (harness) => { ... })` for automatic cleanup over manual harness construction.
+
+## Mock Isolation
+
+11. **Avoid global `mock.module` for shared infra.** Do not `mock.module()` security/worktree helpers (e.g. `secure-spawn`, filesystem) in tests; prefer fake binaries or input injection so unrelated test files do not break when Bun runs tests concurrently.
+
+12. **Do not toggle process env globally.** Avoid setting shared env vars (e.g. `ORCH_SKIP_SECURE_SPAWN`) in tests; if unavoidable, restore in the same `describe` and prefer per-test overrides.

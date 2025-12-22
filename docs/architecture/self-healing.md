@@ -56,6 +56,7 @@ Automatic heuristic generation from failed workflow runs.
     3.  **Automatic Dreaming**: ✅ Complete - `processFailedRuns()` analyzes failed runs (`status = "failed"`, `dreamedAt IS NULL`) and persists `kind="heuristic"` nodes under `resource="user"` with stable hash deduplication.
 *   **Integration**:
     *   Failed-run heuristics are injected into Codex prompts via `buildCodexHeuristicContext()` (`packages/db/src/repo/codex-learning.ts`) alongside the existing similar-executions context.
+*   **Details**: See `docs/architecture/learning.md`.
 
 ## Observability
 
