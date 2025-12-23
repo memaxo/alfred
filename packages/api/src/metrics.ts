@@ -1,25 +1,22 @@
-// External metric hooks (agent/policy) are wired lazily below to keep tests light
+/**
+ * Metrics Aggregator
+ *
+ * This module re-exports metrics from domain packages and provides
+ * centralized lazy hook wiring for cross-package metric registration.
+ */
 
 import { logger } from "@alfred/logger";
 import { metricsRegistry } from "@alfred/metrics/registry";
-import client from "prom-client";
 
 export { metricsRegistry };
-export {
-  fineTuneRunDurationSeconds,
-  fineTuneRunsTotal,
-  fineTuneSamplesTotal,
-  fineTuneTokensTotal,
-} from "@alfred/tune";
 
+// Registry deduplication patch (prevents double-registration in hot reload)
 const metricsRegistryPatchKey = Symbol.for("alfred.metrics.registry.dedupe");
-
 if (
   !(globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey]
 ) {
   const originalRegisterMetric =
     metricsRegistry.registerMetric.bind(metricsRegistry);
-
   const patchedRegisterMetric: typeof metricsRegistry.registerMetric = (
     metric
   ) => {
@@ -29,837 +26,31 @@ if (
     }
     return originalRegisterMetric(metric);
   };
-
   metricsRegistry.registerMetric = patchedRegisterMetric;
   (globalThis as Record<string | symbol, unknown>)[metricsRegistryPatchKey] =
     true;
 }
 
-export const trpcRequestsTotal = new client.Counter({
-  name: "trpc_requests_total",
-  help: "Count of tRPC requests by procedure and type.",
-  labelNames: ["procedure", "type"] as const,
-  registers: [metricsRegistry],
-});
-
-export const trpcRequestErrorsTotal = new client.Counter({
-  name: "trpc_request_errors_total",
-  help: "Count of failed tRPC requests by procedure, type, and code.",
-  labelNames: ["procedure", "type", "code"] as const,
-  registers: [metricsRegistry],
-});
-
-export const trpcRequestDurationSeconds = new client.Histogram({
-  name: "trpc_request_duration_seconds",
-  help: "Duration of tRPC requests in seconds.",
-  labelNames: ["procedure", "type"] as const,
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export const healthChecksTotal = new client.Counter({
-  name: "health_checks_total",
-  help: "Count of health check invocations by target and status.",
-  labelNames: ["target", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const policyDecisionsTotal = new client.Counter({
-  name: "policy_decisions_total",
-  help: "Count of policy decisions grouped by action and decision.",
-  labelNames: ["action", "decision"] as const,
-  registers: [metricsRegistry],
-});
-
-export const policyObligationsTotal = new client.Counter({
-  name: "policy_obligations_total",
-  help: "Count of policy obligations emitted by action.",
-  labelNames: ["action", "obligation"] as const,
-  registers: [metricsRegistry],
-});
-
-export const workflowObligationSuspensionsTotal = new client.Counter({
-  name: "workflow_obligation_suspensions_total",
-  help: "Count of workflow suspensions grouped by transport, result, and obligation type.",
-  labelNames: ["transport", "result", "obligation"] as const,
-  registers: [metricsRegistry],
-});
-
-export const workflowObligationDurationSeconds = new client.Histogram({
-  name: "workflow_obligation_duration_seconds",
-  help: "Duration of workflow suspensions grouped by transport and result.",
-  labelNames: ["transport", "result"] as const,
-  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
-  registers: [metricsRegistry],
-});
-
-export const workflowSuspensionCleanupTotal = new client.Counter({
-  name: "workflow_suspension_cleanup_total",
-  help: "Count of workflow suspensions cleaned up grouped by result.",
-  labelNames: ["result"] as const,
-  registers: [metricsRegistry],
-});
-
-import * as workflowMetrics from "@alfred/agent/workflow/metrics";
-
-export const linearActivityDurationSeconds =
-  workflowMetrics.linearActivityDurationSeconds;
-export const linearActivityEmissionsTotal =
-  workflowMetrics.linearActivityEmissionsTotal;
-export const linearSessionOperationsTotal =
-  workflowMetrics.linearSessionOperationsTotal;
-export const linearWebhookEventsTotal =
-  workflowMetrics.linearWebhookEventsTotal;
-export const linearWebhookWorkflowCancelsTotal =
-  workflowMetrics.linearWebhookWorkflowCancelsTotal;
-export const linearWebhookWorkflowStartsTotal =
-  workflowMetrics.linearWebhookWorkflowStartsTotal;
-export const multiAgentAgentDurationSeconds =
-  workflowMetrics.multiAgentAgentDurationSeconds;
-export const multiAgentErrorsTotal = workflowMetrics.multiAgentErrorsTotal;
-export const multiAgentTasksTotal = workflowMetrics.multiAgentTasksTotal;
-export const multiAgentWavesTotal = workflowMetrics.multiAgentWavesTotal;
-export const replayQueriesTotal = workflowMetrics.replayQueriesTotal;
-export const replayQueryDurationSeconds =
-  workflowMetrics.replayQueryDurationSeconds;
-export const runnerErrorsTotal = workflowMetrics.runnerErrorsTotal;
-export const runnerStepsTotal = workflowMetrics.runnerStepsTotal;
-export const runRegistryDispatchDurationSeconds =
-  workflowMetrics.runRegistryDispatchDurationSeconds;
-export const runRegistryEventsTotal = workflowMetrics.runRegistryEventsTotal;
-export const workflowProvenanceDurationSeconds =
-  workflowMetrics.workflowProvenanceDurationSeconds;
-export const workflowProvenanceEdgesTotal =
-  workflowMetrics.workflowProvenanceEdgesTotal;
-export const workflowStreamDurationSeconds =
-  workflowMetrics.workflowStreamDurationSeconds;
-export const workflowStreamEventsTotal =
-  workflowMetrics.workflowStreamEventsTotal;
-
-// decompositionTruncatedTotal, linearRateLimitTotal, linearRateLimitWaitSeconds,
-// linearRateLimitRetryAfterTotal are now in @alfred/metrics/shared and re-exported below
-
-export const graphQueriesTotal = new client.Counter({
-  name: "graph_queries_total",
-  help: "Count of graph queries grouped by kind and resource.",
-  labelNames: ["kind", "resource"] as const,
-  registers: [metricsRegistry],
-});
-
-export const graphQueryDurationSeconds = new client.Histogram({
-  name: "graph_query_duration_seconds",
-  help: "Duration of graph queries in seconds grouped by kind.",
-  labelNames: ["kind"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const graphRagHitsTotal = new client.Counter({
-  name: "graph_rag_hits_total",
-  help: "Count of active RAG hits grouped by source.",
-  labelNames: ["source"] as const,
-  registers: [metricsRegistry],
-});
-
-export const graphRagEmptyTotal = new client.Counter({
-  name: "graph_rag_empty_total",
-  help: "Count of active RAG queries that returned zero results.",
-  registers: [metricsRegistry],
-});
-
-export const graphContextDurationSeconds = new client.Histogram({
-  name: "graph_context_duration_seconds",
-  help: "Duration of context graph queries (Active RAG) in seconds.",
-  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const pdpCacheHitsTotal = new client.Counter({
-  name: "pdp_cache_hits_total",
-  help: "Count of policy cache hits and misses.",
-  labelNames: ["result"] as const,
-  registers: [metricsRegistry],
-});
-
-export const droidExecRunsTotal = new client.Counter({
-  name: "droid_exec_runs_total",
-  help: "Count of droid exec runs grouped by autonomy level and exit code.",
-  labelNames: ["auto", "exit_code"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const droidExecDurationSeconds = new client.Histogram({
-  name: "droid_exec_duration_seconds",
-  help: "Duration of droid exec runs in seconds.",
-  labelNames: ["auto"] as const,
-  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
-  registers: [metricsRegistry],
-});
-
-export const droidPendingRunsGauge = new client.Gauge({
-  name: "droid_pending_runs",
-  help: "Current count of pending droid executions awaiting obligations.",
-  registers: [metricsRegistry],
-});
-
-export const droidPendingCleanupTotal = new client.Counter({
-  name: "droid_pending_cleanup_total",
-  help: "Count of pending droid runs cleaned up grouped by result.",
-  labelNames: ["result"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const codexExecRunsTotal = new client.Counter({
-  name: "codex_exec_runs_total",
-  help: "Count of Codex exec runs grouped by autonomy level and exit code.",
-  labelNames: ["auto", "exit_code"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const codexExecDurationSeconds = new client.Histogram({
-  name: "codex_exec_duration_seconds",
-  help: "Duration of Codex exec runs in seconds.",
-  labelNames: ["auto"] as const,
-  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const codexErrorsTotal = new client.Counter({
-  name: "codex_errors_total",
-  help: "Count of Codex executor errors grouped by stage.",
-  labelNames: ["stage"] as const,
-  registers: [metricsRegistry],
-});
-
-export const codexSessionValidationDurationSeconds = new client.Histogram({
-  name: "codex_session_validation_duration_seconds",
-  help: "Duration spent validating whether a Codex session can resume.",
-  labelNames: ["outcome"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-// codexSessionValidationTimeoutTotal is now in @alfred/metrics/shared and re-exported below
-
-export const codexSessionContinuityTotal = new client.Counter({
-  name: "codex_session_continuity_total",
-  help: "Count of Codex session continuity events (resume success/failure).",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const codexStructuredOutputValidationTotal = new client.Counter({
-  name: "codex_structured_output_validation_total",
-  help: "Count of structured output validation results.",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-export const codexLinearIntegrationLatencySeconds = new client.Histogram({
-  name: "codex_linear_integration_latency_seconds",
-  help: "Latency from Codex event emission to Linear activity creation.",
-  labelNames: ["event_type"] as const,
-  buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
-  registers: [metricsRegistry],
-});
-
-export const codexLinearActivitiesEmittedTotal = new client.Counter({
-  name: "codex_linear_activities_emitted_total",
-  help: "Count of Codex-originated Linear activities grouped by type and mode.",
-  labelNames: ["type", "mode"] as const,
-  registers: [metricsRegistry],
-});
-
-export const codexLinearActivitiesDroppedTotal = new client.Counter({
-  name: "codex_linear_activities_dropped_total",
-  help: "Count of Codex events dropped due to rate limiting grouped by reason.",
-  labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketConnectionsCurrent = new client.Gauge({
-  name: "voice_websocket_connections_current",
-  help: "Current active WebSocket connections for voice streaming.",
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketSendFailuresTotal = new client.Counter({
-  name: "voice_websocket_send_failures_total",
-  help: "Total WebSocket send failures grouped by reason.",
-  labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketUpgradeRateLimitHitsTotal = new client.Counter({
-  name: "voice_websocket_upgrade_rate_limit_hits_total",
-  help: "Count of WebSocket upgrade requests rejected due to rate limiting.",
-  labelNames: ["type"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketConnectionRejectedTotal = new client.Counter({
-  name: "voice_websocket_connection_rejected_total",
-  help: "Count of WebSocket connections rejected due to limits.",
-  labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketMessageLatencySeconds = new client.Histogram({
-  name: "voice_websocket_message_latency_seconds",
-  help: "Latency of WebSocket message processing in seconds.",
-  labelNames: ["message_type"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketBinaryChunkSizeBytes = new client.Histogram({
-  name: "voice_websocket_binary_chunk_size_bytes",
-  help: "Size of binary audio chunks received via WebSocket.",
-  buckets: [256, 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65_536],
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketUpgradeDurationSeconds = new client.Histogram({
-  name: "voice_websocket_upgrade_duration_seconds",
-  help: "Duration of WebSocket upgrade process in seconds.",
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketBackpressureEventsTotal = new client.Counter({
-  name: "voice_websocket_backpressure_events_total",
-  help: "Count of backpressure events on WebSocket connections.",
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketPingTimeoutTotal = new client.Counter({
-  name: "voice_websocket_ping_timeout_total",
-  help: "Count of WebSocket connections closed due to ping timeout.",
-  registers: [metricsRegistry],
-});
-
-export const voiceWebSocketPayloadTooLargeTotal = new client.Counter({
-  name: "voice_websocket_payload_too_large_total",
-  help: "Count of WebSocket messages rejected due to payload size limit.",
-  registers: [metricsRegistry],
-});
-
-export const sseConnectionsCurrent = new client.Gauge({
-  name: "sse_connections_current",
-  help: "Current active SSE connections.",
-  labelNames: ["endpoint"] as const,
-  registers: [metricsRegistry],
-});
-
-export const sseFirstChunkLatencySeconds = new client.Histogram({
-  name: "sse_first_chunk_latency_seconds",
-  help: "Time to first chunk in SSE streams.",
-  labelNames: ["endpoint"] as const,
-  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [metricsRegistry],
-});
-
-export const sseConnectionRateLimitHitsTotal = new client.Counter({
-  name: "sse_connection_rate_limit_hits_total",
-  help: "SSE connection rate limit hits.",
-  labelNames: ["endpoint", "reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const dbQueryDurationSeconds = new client.Histogram({
-  name: "db_query_duration_seconds",
-  help: "Database query duration.",
-  labelNames: ["repo", "operation"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const codexLinearActivityBatchesTotal = new client.Counter({
-  name: "codex_linear_activity_batches_total",
-  help: "Count of Codex Linear batch processing outcomes grouped by status.",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const evalRunsTotal = new client.Counter({
-  name: "eval_runs_total",
-  help: "Count of evaluation runs grouped by agent and status.",
-  labelNames: ["agent", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const evalDurationSeconds = new client.Histogram({
-  name: "eval_duration_seconds",
-  help: "Duration of evaluation runs in seconds.",
-  labelNames: ["agent"] as const,
-  buckets: [1, 5, 10, 30, 60, 120, 300, 600, 900, 1800],
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const evalScoresTotal = new client.Counter({
-  name: "eval_scores_total",
-  help: "Count of evaluation scores persisted per scorer.",
-  labelNames: ["scorer"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const evalFailuresTotal = new client.Counter({
-  name: "eval_failures_total",
-  help: "Count of evaluation scoring failures grouped by scorer and reason.",
-  labelNames: ["scorer", "reason"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const laminarEvalDatapointsTotal = new client.Counter({
-  name: "laminar_eval_datapoints_total",
-  help: "Count of Laminar datapoint operations by status.",
-  labelNames: ["status"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const laminarEvalErrorsTotal = new client.Counter({
-  name: "laminar_eval_errors_total",
-  help: "Count of Laminar export errors grouped by stage.",
-  labelNames: ["stage"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const compressionCyclesTotal = new client.Counter({
-  name: "compression_cycles_total",
-  help: "Count of compression worker cycles grouped by outcome.",
-  labelNames: ["outcome"] as const,
-  registers: [metricsRegistry],
-});
-
-export const mindscapeRagCacheEventsTotal = new client.Counter({
-  name: "mindscape_rag_cache_events_total",
-  help: "Count of Mindscape RAG cache events grouped by event type.",
-  labelNames: ["event"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const compressionCycleDurationSeconds = new client.Histogram({
-  name: "compression_cycle_duration_seconds",
-  help: "Duration of compression worker cycles in seconds grouped by outcome.",
-  labelNames: ["outcome"] as const,
-  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const compressionNodesUpdatedTotal = new client.Counter({
-  name: "compression_nodes_updated_total",
-  help: "Count of nodes updated by the compression worker grouped by operation.",
-  labelNames: ["operation"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const webhookEventsTotal = new client.Counter({
-  name: "webhook_events_total",
-  help: "Count of webhook events grouped by type.",
-  labelNames: ["type"] as const,
-  registers: [metricsRegistry],
-});
-
-export const webhookErrorsTotal = new client.Counter({
-  name: "webhook_errors_total",
-  help: "Count of webhook handler errors grouped by stage.",
-  labelNames: ["stage"] as const,
-  registers: [metricsRegistry],
-});
-
-export const rateLimitHitsTotal = new client.Counter({
-  name: "rate_limit_hits_total",
-  help: "Count of rate limit hits grouped by procedure.",
-  labelNames: ["procedure"] as const,
-  registers: [metricsRegistry],
-});
-
-export const assistantToolCallsTotal = new client.Counter({
-  name: "assistant_tool_calls_total",
-  help: "Count of assistant tool invocations grouped by tool name.",
-  labelNames: ["tool"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-export const assistantEscalationsTotal = new client.Counter({
-  name: "assistant_escalations_total",
-  help: "Count of assistant escalations grouped by kind.",
-  labelNames: ["kind"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const policyCheckFailuresTotal = new client.Counter({
-  name: "policy_check_failures_total",
-  help: "Count of tool policy enforcement failures grouped by tool.",
-  labelNames: ["tool"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const memoryUpdatesTotal = new client.Counter({
-  name: "memory_updates_total",
-  help: "Count of memory updates grouped by kind and source.",
-  labelNames: ["kind", "source"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const memoryForgetsTotal = new client.Counter({
-  name: "memory_forgets_total",
-  help: "Count of memory forget operations grouped by scope.",
-  labelNames: ["scope"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-export const preferenceHistoryPrunedTotal = new client.Counter({
-  name: "preference_history_pruned_total",
-  help: "Count of preference history prune events grouped by source.",
-  labelNames: ["source"] as const,
-  registers: [metricsRegistry],
-});
-
-export const preferenceCacheInvalidationsTotal = new client.Counter({
-  name: "preference_cache_invalidations_total",
-  help: "Count of preference cache invalidations grouped by reason.",
-  labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const preferenceRefreshTotal = new client.Counter({
-  name: "preference_refresh_total",
-  help: "Count of preference refresh triggers grouped by reason.",
-  labelNames: ["reason"] as const,
-  registers: [metricsRegistry],
-});
-
-export const preferencePromptInjectionsTotal = new client.Counter({
-  name: "preference_prompt_injections_total",
-  help: "Count of preference prompt injections grouped by source.",
-  labelNames: ["source"] as const,
-  registers: [metricsRegistry],
-});
-
-export const preferencePromptFailuresTotal = new client.Counter({
-  name: "preference_prompt_failures_total",
-  help: "Count of preference prompt build failures grouped by source.",
-  labelNames: ["source"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * Classification metrics for emergent learning system
- * Tracks source of domain classifications (learned vs static vs seed)
- */
-export const classificationSourceTotal = new client.Counter({
-  name: "alfred_classification_source_total",
-  help: "Count of domain classifications grouped by domain and source.",
-  labelNames: ["domain", "source"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * Classification accuracy tracking
- * Tracks user confirmations vs corrections for learning effectiveness
- */
-export const classificationAccuracyTotal = new client.Counter({
-  name: "alfred_classification_accuracy_total",
-  help: "Count of classification outcomes (confirmed vs corrected).",
-  labelNames: ["domain", "outcome"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * Classification latency histogram
- * Tracks performance of domain classification operations
- */
-export const classificationDurationSeconds = new client.Histogram({
-  name: "alfred_classification_duration_seconds",
-  help: "Duration of domain classification operations in seconds.",
-  labelNames: ["method"] as const,
-  buckets: [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
-  registers: [metricsRegistry],
-});
-
-/**
- * Domain cache statistics
- * Tracks cache hits/misses for learned domain associations
- */
-export const domainCacheHitsTotal = new client.Counter({
-  name: "alfred_domain_cache_hits_total",
-  help: "Count of domain cache hits and misses.",
-  labelNames: ["result"] as const,
-  registers: [metricsRegistry],
-});
-
-// ============================================================================
-// Memory System Enhancement Metrics (alfred-memory-review.md implementation)
-// ============================================================================
-
-/**
- * Int8 quantization statistics
- * Tracks embeddings quantized and storage savings
- */
-export const embeddingQuantizationsTotal = new client.Counter({
-  name: "alfred_embedding_quantizations_total",
-  help: "Count of embedding quantization operations by status.",
-  labelNames: ["status"] as const, // "success" | "error" | "skipped"
-  registers: [metricsRegistry],
-});
-
-export const embeddingStorageSavedBytes = new client.Counter({
-  name: "alfred_embedding_storage_saved_bytes",
-  help: "Total bytes saved through int8 quantization.",
-  registers: [metricsRegistry],
-});
-
-/**
- * Adaptive decay statistics
- * Tracks how access frequency affects decay
- */
-export const adaptiveDecayOperationsTotal = new client.Counter({
-  name: "alfred_adaptive_decay_operations_total",
-  help: "Count of adaptive decay operations by outcome.",
-  labelNames: ["outcome"] as const, // "decayed" | "retained" | "pruned"
-  registers: [metricsRegistry],
-});
-
-export const nodeAccessCountHistogram = new client.Histogram({
-  name: "alfred_node_access_count",
-  help: "Distribution of node access counts.",
-  buckets: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000],
-  registers: [metricsRegistry],
-});
-
-/**
- * Domain threshold calibration statistics
- * Tracks how thresholds adapt based on corrections
- */
-export const domainThresholdCalibrationTotal = new client.Counter({
-  name: "alfred_domain_threshold_calibrations_total",
-  help: "Count of domain threshold calibration events by domain.",
-  labelNames: ["domain"] as const,
-  registers: [metricsRegistry],
-});
-
-export const domainThresholdGauge = new client.Gauge({
-  name: "alfred_domain_threshold",
-  help: "Current override threshold per domain.",
-  labelNames: ["domain"] as const,
-  registers: [metricsRegistry],
-});
-
-export const domainAccuracyGauge = new client.Gauge({
-  name: "alfred_domain_accuracy",
-  help: "Current classification accuracy per domain.",
-  labelNames: ["domain"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * DSA-BFS traversal statistics
- * Tracks similarity-aware graph traversal performance
- */
-export const dsaBfsTraversalsTotal = new client.Counter({
-  name: "alfred_dsa_bfs_traversals_total",
-  help: "Count of DSA-BFS traversal operations by outcome.",
-  labelNames: ["outcome"] as const, // "found" | "not_found" | "early_termination"
-  registers: [metricsRegistry],
-});
-
-export const dsaBfsExpansionsHistogram = new client.Histogram({
-  name: "alfred_dsa_bfs_expansions",
-  help: "Distribution of node expansions per DSA-BFS traversal.",
-  buckets: [1, 5, 10, 25, 50, 100, 200, 500],
-  registers: [metricsRegistry],
-});
-
-export const dsaBfsDurationSeconds = new client.Histogram({
-  name: "alfred_dsa_bfs_duration_seconds",
-  help: "Duration of DSA-BFS traversal operations.",
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-/**
- * CRAG retrieval evaluation statistics
- * Tracks retrieval quality decisions
- */
-export const cragEvaluationsTotal = new client.Counter({
-  name: "alfred_crag_evaluations_total",
-  help: "Count of CRAG evaluations by action decision.",
-  labelNames: ["action"] as const, // "use" | "refine" | "fallback"
-  registers: [metricsRegistry],
-});
-
-export const cragScoreHistogram = new client.Histogram({
-  name: "alfred_crag_score",
-  help: "Distribution of CRAG evaluation scores.",
-  buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
-  registers: [metricsRegistry],
-});
-
-/**
- * Concept drift detection statistics
- * Tracks ADWIN drift detection events
- */
-export const conceptDriftDetectionsTotal = new client.Counter({
-  name: "alfred_concept_drift_detections_total",
-  help: "Count of concept drift detection events by domain.",
-  labelNames: ["domain"] as const,
-  registers: [metricsRegistry],
-});
-
-export const conceptDriftWindowSize = new client.Gauge({
-  name: "alfred_concept_drift_window_size",
-  help: "Current ADWIN window size per domain.",
-  labelNames: ["domain"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * Bi-temporal edge statistics
- * Tracks soft deletes and historical queries
- */
-export const bitemporalEdgeOperationsTotal = new client.Counter({
-  name: "alfred_bitemporal_edge_operations_total",
-  help: "Count of bi-temporal edge operations by type.",
-  labelNames: ["operation"] as const, // "create" | "soft_delete" | "supersede"
-  registers: [metricsRegistry],
-});
-
-export const bitemporalHistoricalQueriesTotal = new client.Counter({
-  name: "alfred_bitemporal_historical_queries_total",
-  help: "Count of historical graph queries.",
-  registers: [metricsRegistry],
-});
-
-// ============================================================================
-// End Memory System Enhancement Metrics
-// ============================================================================
-
-// ============================================================================
-// Memory Tools Metrics
-// ============================================================================
-
-export const memoryToolCallsTotal = new client.Counter({
-  name: "alfred_memory_tool_calls_total",
-  help: "Count of memory tool calls by tool name and status.",
-  labelNames: ["tool", "status"] as const, // "success" | "error"
-  registers: [metricsRegistry],
-});
-
-export const memorySearchLatencySeconds = new client.Histogram({
-  name: "alfred_memory_search_latency_seconds",
-  help: "Latency of memory search operations.",
-  buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
-  registers: [metricsRegistry],
-});
-
-export const memorySearchResultsCount = new client.Histogram({
-  name: "alfred_memory_search_results_count",
-  help: "Number of results returned by memory search operations.",
-  buckets: [0, 1, 5, 10, 20, 50, 100],
-  registers: [metricsRegistry],
-});
-
-export const memoryTraverseDepth = new client.Histogram({
-  name: "alfred_memory_traverse_depth",
-  help: "Depth reached during memory graph traversal.",
-  buckets: [1, 2, 3, 4, 5],
-  registers: [metricsRegistry],
-});
-
-export const memoryBoostsTotal = new client.Counter({
-  name: "alfred_memory_boosts_total",
-  help: "Count of memory boost operations.",
-  registers: [metricsRegistry],
-});
-
-export const memoryRemovalsTotal = new client.Counter({
-  name: "alfred_memory_removals_total",
-  help: "Count of memory removal operations by type.",
-  labelNames: ["type"] as const, // "archived" | "deleted"
-  registers: [metricsRegistry],
-});
-
-// ============================================================================
-// End Memory Tools Metrics
-// ============================================================================
-
-export const redisCommandsTotal = new client.Counter({
-  name: "redis_commands_total",
-  help: "Count of Redis commands executed grouped by operation.",
-  labelNames: ["operation"] as const,
-  registers: [metricsRegistry],
-});
-
-export const historyContextTokensTotal = new client.Counter({
-  name: "history_context_tokens_total",
-  help: "Total tokens considered by history selection grouped by source, model, and action.",
-  labelNames: ["source", "model", "action"] as const,
-  registers: [metricsRegistry],
-});
-
-export const historyContextTierDropsTotal = new client.Counter({
-  name: "history_context_tier_drops_total",
-  help: "Count of dropped messages grouped by source and tier.",
-  labelNames: ["source", "tier"] as const,
-  registers: [metricsRegistry],
-});
-
-export const historyContextSelectionDurationSeconds = new client.Histogram({
-  name: "history_context_selection_duration_seconds",
-  help: "Duration of token-aware history selection grouped by source.",
-  labelNames: ["source"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
-  registers: [metricsRegistry],
-});
-
-export const historySummarizationsTotal = new client.Counter({
-  name: "history_summarizations_total",
-  help: "Count of history summarization events grouped by source and reason.",
-  labelNames: ["source", "reason"] as const,
-  registers: [metricsRegistry],
-});
-
-// wired via lazy hooks
-
-// Re-export shared metrics from @alfred/metrics for backward compatibility
+// API-local metrics
+export * from "./metrics/index";
+
+// Re-export from domain packages
+export {
+  fineTuneRunDurationSeconds,
+  fineTuneRunsTotal,
+  fineTuneSamplesTotal,
+  fineTuneTokensTotal,
+} from "@alfred/tune";
+
+export * from "@alfred/agent/workflow/metrics";
+export * from "@alfred/db";
+export * from "@alfred/history";
+export * from "@alfred/knowledge/metrics";
+export * from "@alfred/policy";
+export * from "@alfred/runtime/metrics";
+export * from "@alfred/voice/metrics";
+
+// Re-export shared metrics
 export {
   codexSessionValidationTimeoutTotal,
   cognitiveEntropyEventsTotal,
@@ -879,27 +70,23 @@ export {
   redisConnectionStatus,
   redisReconnectionAttemptsTotal,
 } from "@alfred/metrics/shared";
-export {
-  recordVoiceStt,
-  recordVoiceTts,
-  type VoiceMetricStatus,
-  voiceProcessHealth,
-  voiceQueueDepthCurrent,
-  voiceQueueDrainDurationSeconds,
-  voiceSessionJitterMillis,
-  voiceSessionPacketLossTotal,
-  voiceSessionRttMillis,
-  voiceStreamEventsTotal,
-  voiceStreamLatencySeconds,
-  voiceSttDurationSeconds,
-  voiceSttTotal,
-  voiceTranscodeDurationSeconds,
-  voiceTtsDurationSeconds,
-  voiceTtsTotal,
-} from "@alfred/voice/metrics";
 
-// memoryMaintenanceDurationSeconds, memoryNodesDecayedTotal, memoryNodesPrunedTotal,
-// memoryNodesCleanedTotal are now in @alfred/metrics/shared and re-exported above
+// Assistant metrics
+import client from "prom-client";
+
+export const assistantToolCallsTotal = new client.Counter({
+  name: "assistant_tool_calls_total",
+  help: "Count of assistant tool invocations grouped by tool name.",
+  labelNames: ["tool"] as const,
+  registers: [metricsRegistry],
+});
+
+export const assistantEscalationsTotal = new client.Counter({
+  name: "assistant_escalations_total",
+  help: "Count of assistant escalations grouped by kind.",
+  labelNames: ["kind"] as const,
+  registers: [metricsRegistry],
+});
 
 export const assistantGenerateDurationSeconds = new client.Histogram({
   name: "assistant_generate_duration_seconds",
@@ -914,83 +101,35 @@ export const assistantGenerateRequestsTotal = new client.Counter({
   registers: [metricsRegistry],
 });
 
-export const orchestratorGenerateDurationSeconds = new client.Histogram({
-  name: "orchestrator_generate_duration_seconds",
-  help: "Duration of orchestrator generation in seconds.",
-  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
-  registers: [metricsRegistry],
-});
-
-export const orchestratorGenerateRequestsTotal = new client.Counter({
-  name: "orchestrator_generate_requests_total",
-  help: "Total number of orchestrator generation requests.",
-  registers: [metricsRegistry],
-});
-
-// ============================================================================
-// Poof Isolation Metrics
-// ============================================================================
-
-export const poofExecutionsTotal = new client.Counter({
-  name: "poof_executions_total",
-  help: "Count of poof isolated executions grouped by mode and status.",
-  labelNames: ["mode", "status"] as const, // mode: "exec"|"run", status: "success"|"timeout"|"error"
-  registers: [metricsRegistry],
-});
-
-export const poofExecutionDurationSeconds = new client.Histogram({
-  name: "poof_execution_duration_seconds",
-  help: "Duration of poof isolated executions in seconds.",
-  labelNames: ["mode", "profile"] as const,
-  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
-  registers: [metricsRegistry],
-});
-
-export const poofChangesTotal = new client.Counter({
-  name: "poof_changes_total",
-  help: "Count of file changes captured by poof isolation.",
-  labelNames: ["type"] as const, // "added" | "modified" | "deleted"
-  registers: [metricsRegistry],
-});
-
-export const poofChangesAppliedTotal = new client.Counter({
-  name: "poof_changes_applied_total",
-  help: "Count of poof changes applied to the host filesystem.",
-  labelNames: ["status"] as const, // "success" | "error" | "conflict"
-  registers: [metricsRegistry],
-});
-
-export const poofTimeoutsTotal = new client.Counter({
-  name: "poof_timeouts_total",
-  help: "Count of poof executions that timed out.",
-  labelNames: ["profile"] as const,
-  registers: [metricsRegistry],
-});
-
-export const poofWorkspaceCheckpointsTotal = new client.Counter({
-  name: "poof_workspace_checkpoints_total",
-  help: "Count of poof workspace checkpoint operations.",
-  labelNames: ["operation"] as const, // "create" | "restore" | "discard"
-  registers: [metricsRegistry],
-});
-
-export const poofWaveHandoffConflictsTotal = new client.Counter({
-  name: "poof_wave_handoff_conflicts_total",
-  help: "Count of conflicts detected during poof wave handoffs.",
-  registers: [metricsRegistry],
-});
-
-// ============================================================================
-// End Poof Isolation Metrics
-// ============================================================================
-
-// Physiology Metrics are now in @alfred/metrics/shared and re-exported above
-
-// Lazily wire external metric hooks (agent/policy) to avoid heavy imports in tests
+// Lazy hook wiring for cross-package metrics
 if (process.env.DISABLE_METRICS_HOOKS !== "1") {
   (async () => {
     try {
       const agent = await import("@alfred/agent");
+      const {
+        droidExecRunsTotal,
+        droidExecDurationSeconds,
+      } = await import("@alfred/agent/orchestrator/tool/droid");
+      const {
+        codexExecRunsTotal,
+        codexExecDurationSeconds,
+        codexErrorsTotal,
+        codexSessionValidationDurationSeconds,
+      } = await import("@alfred/agent/orchestrator/tool/codex");
+      const {
+        evalRunsTotal,
+        evalDurationSeconds,
+        evalScoresTotal,
+        evalFailuresTotal,
+        laminarEvalDatapointsTotal,
+        laminarEvalErrorsTotal,
+      } = await import("@alfred/agent/eval");
+      const {
+        compressionCyclesTotal,
+        compressionCycleDurationSeconds,
+        compressionNodesUpdatedTotal,
+      } = await import("@alfred/runtime/metrics");
+
       agent.registerDroidExecCounter?.(droidExecRunsTotal);
       agent.registerDroidExecHistogram?.(droidExecDurationSeconds);
       agent.registerCodexExecCounter?.(codexExecRunsTotal);
@@ -1015,9 +154,6 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       agent.registerCompressionNodeCounter?.(compressionNodesUpdatedTotal);
       agent.registerAssistantToolCounter?.(assistantToolCallsTotal);
       agent.registerAssistantEscalationCounter?.(assistantEscalationsTotal);
-      agent.registerPolicyCheckFailureCounter?.(policyCheckFailuresTotal);
-      agent.registerMemoryUpdatesCounter?.(memoryUpdatesTotal);
-      agent.registerMemoryForgetsCounter?.(memoryForgetsTotal);
     } catch (error) {
       logger.warn("metrics_agent_hooks_disabled", {
         reason: error instanceof Error ? error.message : String(error),
@@ -1029,6 +165,11 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       const { registerClassificationMetrics } = await import(
         "@alfred/knowledge/lexicon/domains"
       );
+      const {
+        classificationSourceTotal,
+        domainCacheHitsTotal,
+        classificationDurationSeconds,
+      } = await import("@alfred/knowledge/metrics");
       registerClassificationMetrics({
         recordSource: (
           domain: string,
@@ -1048,8 +189,10 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
         reason: error instanceof Error ? error.message : String(error),
       });
     }
+
     try {
       const policy = await import("@alfred/policy");
+      const { pdpCacheHitsTotal } = await import("@alfred/policy");
       policy.registerCacheObs?.((result: string) => {
         try {
           pdpCacheHitsTotal.inc({ result });

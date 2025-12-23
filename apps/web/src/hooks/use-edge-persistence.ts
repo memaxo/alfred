@@ -31,7 +31,7 @@ export function useEdgePersistence(): UseEdgePersistenceResult {
       // Fallback to store state if onConnect is undefined (e.g., after persistence rehydration)
       const storeOnConnect = onConnect ?? useMindscapeStore.getState().onConnect;
       if (!storeOnConnect) {
-        console.error("onConnect is not available in Mindscape store");
+        toast.error("Connection handler not available. Please refresh the page.");
         return;
       }
 

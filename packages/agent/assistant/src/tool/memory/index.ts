@@ -6,6 +6,7 @@
  * and conversation history.
  */
 
+export * from "./metrics";
 export { type ToolMemoryBoost, toolMemoryBoost } from "./boost";
 // Re-export embedding utilities
 export { embedQuery, embedTexts, normalizeEmbedding } from "./embed";

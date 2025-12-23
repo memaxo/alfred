@@ -155,3 +155,107 @@ export const runtimeSafetyClassificationDurationSeconds = new client.Histogram({
   buckets: [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25],
   registers: [metricsRegistry],
 });
+
+// Workflow obligation metrics
+export const workflowObligationSuspensionsTotal = new client.Counter({
+  name: "workflow_obligation_suspensions_total",
+  help: "Count of workflow suspensions grouped by transport, result, and obligation type.",
+  labelNames: ["transport", "result", "obligation"] as const,
+  registers: [metricsRegistry],
+});
+
+export const workflowObligationDurationSeconds = new client.Histogram({
+  name: "workflow_obligation_duration_seconds",
+  help: "Duration of workflow suspensions grouped by transport and result.",
+  labelNames: ["transport", "result"] as const,
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
+  registers: [metricsRegistry],
+});
+
+export const workflowSuspensionCleanupTotal = new client.Counter({
+  name: "workflow_suspension_cleanup_total",
+  help: "Count of workflow suspensions cleaned up grouped by result.",
+  labelNames: ["result"] as const,
+  registers: [metricsRegistry],
+});
+
+// Orchestrator generation metrics
+export const orchestratorGenerateDurationSeconds = new client.Histogram({
+  name: "orchestrator_generate_duration_seconds",
+  help: "Duration of orchestrator generation in seconds.",
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+  registers: [metricsRegistry],
+});
+
+export const orchestratorGenerateRequestsTotal = new client.Counter({
+  name: "orchestrator_generate_requests_total",
+  help: "Total number of orchestrator generation requests.",
+  registers: [metricsRegistry],
+});
+
+// Compression metrics
+export const compressionCyclesTotal = new client.Counter({
+  name: "compression_cycles_total",
+  help: "Count of compression worker cycles grouped by outcome.",
+  labelNames: ["outcome"] as const,
+  registers: [metricsRegistry],
+});
+
+export const compressionCycleDurationSeconds = new client.Histogram({
+  name: "compression_cycle_duration_seconds",
+  help: "Duration of compression worker cycles in seconds grouped by outcome.",
+  labelNames: ["outcome"] as const,
+  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+  registers: [metricsRegistry],
+});
+
+export const compressionNodesUpdatedTotal = new client.Counter({
+  name: "compression_nodes_updated_total",
+  help: "Count of nodes updated by the compression worker grouped by operation.",
+  labelNames: ["operation"] as const,
+  registers: [metricsRegistry],
+});
+
+// Hook registration for lazy wiring
+let compressionCycleCounter: typeof compressionCyclesTotal | undefined;
+let compressionCycleHistogram: {
+  startTimer: () => () => void;
+} | undefined;
+let compressionNodeCounter: typeof compressionNodesUpdatedTotal | undefined;
+
+export function registerCompressionCycleCounter(
+  counter: typeof compressionCyclesTotal
+) {
+  compressionCycleCounter = counter;
+}
+
+export function registerCompressionCycleHistogram(histogram: {
+  startTimer: () => () => void;
+}) {
+  compressionCycleHistogram = histogram;
+}
+
+export function registerCompressionNodeCounter(
+  counter: typeof compressionNodesUpdatedTotal
+) {
+  compressionNodeCounter = counter;
+}
+
+export function recordCompressionCycle(outcome: string) {
+  compressionCycleCounter?.inc({ outcome });
+  compressionCyclesTotal.inc({ outcome });
+}
+
+export function startCompressionCycleTimer() {
+  const externalDone = compressionCycleHistogram?.startTimer();
+  const localDone = compressionCycleDurationSeconds.startTimer();
+  return (outcome: string) => {
+    externalDone?.();
+    localDone({ outcome });
+  };
+}
+
+export function recordCompressionNodesUpdated(operation: string, count = 1) {
+  compressionNodeCounter?.inc({ operation }, count);
+  compressionNodesUpdatedTotal.inc({ operation }, count);
+}

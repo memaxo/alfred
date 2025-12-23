@@ -3,6 +3,7 @@
  * Drizzle client, schemas, and repositories
  */
 
+export * from "./metrics";
 export {
   createDrizzleClient,
   createPgClient,

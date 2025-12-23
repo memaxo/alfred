@@ -201,3 +201,71 @@ export const voiceSessionRttMillis = ensureHistogram({
   buckets: [10, 20, 50, 100, 200, 500, 1000],
   registers: [metricsRegistry],
 });
+
+// WebSocket metrics
+export const voiceWebSocketConnectionsCurrent = ensureGauge({
+  name: "voice_websocket_connections_current",
+  help: "Current active WebSocket connections for voice streaming.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketSendFailuresTotal = ensureCounter({
+  name: "voice_websocket_send_failures_total",
+  help: "Total WebSocket send failures grouped by reason.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketUpgradeRateLimitHitsTotal = ensureCounter({
+  name: "voice_websocket_upgrade_rate_limit_hits_total",
+  help: "Count of WebSocket upgrade requests rejected due to rate limiting.",
+  labelNames: ["type"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketConnectionRejectedTotal = ensureCounter({
+  name: "voice_websocket_connection_rejected_total",
+  help: "Count of WebSocket connections rejected due to limits.",
+  labelNames: ["reason"] as const,
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketMessageLatencySeconds = ensureHistogram({
+  name: "voice_websocket_message_latency_seconds",
+  help: "Latency of WebSocket message processing in seconds.",
+  labelNames: ["message_type"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketBinaryChunkSizeBytes = ensureHistogram({
+  name: "voice_websocket_binary_chunk_size_bytes",
+  help: "Size of binary audio chunks received via WebSocket.",
+  buckets: [256, 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65_536],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketUpgradeDurationSeconds = ensureHistogram({
+  name: "voice_websocket_upgrade_duration_seconds",
+  help: "Duration of WebSocket upgrade process in seconds.",
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketBackpressureEventsTotal = ensureCounter({
+  name: "voice_websocket_backpressure_events_total",
+  help: "Count of backpressure events on WebSocket connections.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketPingTimeoutTotal = ensureCounter({
+  name: "voice_websocket_ping_timeout_total",
+  help: "Count of WebSocket connections closed due to ping timeout.",
+  registers: [metricsRegistry],
+});
+
+export const voiceWebSocketPayloadTooLargeTotal = ensureCounter({
+  name: "voice_websocket_payload_too_large_total",
+  help: "Count of WebSocket messages rejected due to payload size limit.",
+  registers: [metricsRegistry],
+});

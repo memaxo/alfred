@@ -30,6 +30,7 @@ export type {
 export { codexInputSchema, toolOutputSchema } from "./definition.js";
 
 export { CodexError, type CodexErrorStage, type CodexErrorCode } from "./error.js";
+export * from "./metrics.js";
 export { createCodexSpawn } from "./spawn-process.js";
 export { processThreadEvent, formatArtifactReasoning } from "./event-processor.js";
 
