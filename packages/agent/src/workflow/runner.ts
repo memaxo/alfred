@@ -8,7 +8,7 @@ import {
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
-} from "../integrations/linear";
+} from "../orchestrator/linear";
 
 // Lazy metrics loader to avoid heavy deps during unit tests
 type RunnerCounters = {

@@ -1,4 +1,4 @@
-import { configureLinearMetrics } from "@alfred/agent/integrations/linear";
+import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
 import { recordAudit } from "@alfred/agent/utils/audit";
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";

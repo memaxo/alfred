@@ -89,7 +89,7 @@ mock.module("../../src/workflow/linear", () => ({
     .mockResolvedValue({ linear: undefined, ticket: null }),
 }));
 
-mock.module("../../src/integrations/linear", () => ({
+mock.module("../../src/orchestrator/linear", () => ({
   commentOnLinearIssue: vi.fn().mockResolvedValue(undefined),
   emitLinearActivity: vi.fn().mockResolvedValue({ ok: true }),
   extractIssueIdFromSession: vi.fn().mockReturnValue(null),

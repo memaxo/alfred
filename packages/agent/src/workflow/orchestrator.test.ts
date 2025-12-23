@@ -45,7 +45,7 @@ mock.module("./linear", () => ({
     .mockResolvedValue({ linear: undefined, ticket: null }),
 }));
 
-mock.module("../integrations/linear", () => ({
+mock.module("../orchestrator/linear", () => ({
   commentOnLinearIssue: vi.fn().mockResolvedValue(undefined),
   emitLinearActivity: vi.fn().mockResolvedValue({ ok: true }),
   extractIssueIdFromSession: vi.fn().mockReturnValue(null),

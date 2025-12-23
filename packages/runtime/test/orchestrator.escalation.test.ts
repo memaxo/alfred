@@ -125,7 +125,7 @@ mock.module("@alfred/agent/orchestrator/tool/worktree", () => ({
   worktreeManager: mockWorktreeManager,
 }));
 
-mock.module("@alfred/agent/integrations/linear", () => ({
+mock.module("@alfred/agent/orchestrator/linear", () => ({
   emitLinearActivity: mockEmitLinearActivity,
   extractIssueIdFromSession: (sessionId: string) =>
     sessionId.includes(":") ? sessionId.split(":")[0] : sessionId,

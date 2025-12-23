@@ -12,7 +12,7 @@ async function getHelpers() {
   const loggerPkg = "@alfred/logger";
   const runtimeContextPkg = "@alfred/type/runtime-context";
   const linearWebhooksPkgName = "@linear/sdk/webhooks";
-  const linearIntegrationPkg = "@alfred/agent/integrations/linear";
+  const linearIntegrationPkg = "@alfred/agent/orchestrator/linear";
 
   const [
     api,

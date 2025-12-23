@@ -9,7 +9,7 @@ import {
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
-} from "../integrations/linear";
+} from "../orchestrator/linear";
 import type { ReviewCheckStatus } from "./review-gate";
 
 type LinearConfig = {

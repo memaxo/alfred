@@ -11,7 +11,7 @@ const linearMocks = {
   setLinearStarted: vi.fn(),
 };
 
-mock.module("../../src/integrations/linear", () => linearMocks);
+mock.module("../../src/orchestrator/linear", () => linearMocks);
 
 import { installLoggerMock, loggerMocks } from "@alfred/test-kit/logger";
 installLoggerMock();

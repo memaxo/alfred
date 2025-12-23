@@ -25,7 +25,7 @@ const delegateMock = mock(async () => {});
 const startedMock = mock(async () => ({ stateId: "state-id" }));
 const externalUrlMock = mock(async () => {});
 
-mock.module("@alfred/agent/integrations/linear", () => ({
+mock.module("@alfred/agent/orchestrator/linear", () => ({
   __esModule: true,
   emitLinearActivity: emitLinearActivityStub,
   setLinearDelegate: delegateMock,

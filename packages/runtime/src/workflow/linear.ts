@@ -8,7 +8,7 @@ import {
   setLinearDelegate,
   setLinearSessionExternalUrl,
   setLinearStarted,
-} from "@alfred/agent/integrations/linear";
+} from "@alfred/agent/orchestrator/linear";
 import type { ReviewCheckStatus } from "@alfred/agent/workflow/review-gate";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import { logger } from "@alfred/logger";
