@@ -1,0 +1,46 @@
+{
+  "name": "@alfred/protocol",
+  "version": "0.1.0",
+  "description": "Agent protocol schemas for ALFRED - thread events, items, and ACP-compatible types",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "default": "./src/events.ts"
+    },
+    "./items": {
+      "types": "./dist/items.d.ts",
+      "default": "./src/items.ts"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "default": "./src/session.ts"
+    },
+    "./acp": {
+      "types": "./dist/acp.d.ts",
+      "default": "./src/acp.ts"
+    },
+    "./metadata": {
+      "types": "./dist/metadata.d.ts",
+      "default": "./src/metadata.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b --pretty false",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "typescript": "*"
+  }
+}

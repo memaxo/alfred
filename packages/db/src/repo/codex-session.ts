@@ -1,4 +1,4 @@
-import { and, eq, lte } from "drizzle-orm";
+import { and, desc, eq, gt, lte } from "drizzle-orm";
 
 import { db } from "../client.js";
 import {
@@ -78,4 +78,38 @@ export async function cleanupExpiredSessions(
     .where(lte(codexSessions.expiresAt, now))
     .returning({ id: codexSessions.id });
   return rows.length;
+}
+
+export type ListSessionsOptions = {
+  userId: string;
+  status?: "active" | "completed" | "failed";
+  limit?: number;
+  offset?: number;
+};
+
+export async function listSessions(
+  options: ListSessionsOptions
+): Promise<CodexSession[]> {
+  const { userId, status, limit = 50, offset = 0 } = options;
+  const now = new Date();
+
+  const conditions = [eq(codexSessions.userId, userId)];
+
+  // Only filter by expiry for active sessions or when no status specified
+  // This allows querying historical completed/failed sessions
+  if (!status || status === "active") {
+    conditions.push(gt(codexSessions.expiresAt, now));
+  }
+
+  if (status) {
+    conditions.push(eq(codexSessions.status, status));
+  }
+
+  return db
+    .select()
+    .from(codexSessions)
+    .where(and(...conditions))
+    .orderBy(desc(codexSessions.lastAccessedAt))
+    .limit(limit)
+    .offset(offset);
 }

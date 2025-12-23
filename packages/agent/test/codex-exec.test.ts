@@ -315,3 +315,129 @@ describe("executeWithCodex session security", () => {
     );
   });
 });
+
+describe("executeWithCodex metadata and sessionState", () => {
+  const cwd = process.cwd();
+
+  it("returns metadata in the result", async () => {
+    setMockEvents([
+      { type: "thread.started", thread_id: "thread-meta-123" },
+      { type: "turn.started" },
+      {
+        type: "turn.completed",
+        usage: {
+          input_tokens: 150,
+          cached_input_tokens: 25,
+          output_tokens: 200,
+        },
+      },
+    ]);
+
+    const result = await executeWithCodex({
+      input: {
+        action: "exec",
+        prompt: "test metadata",
+        auto: "medium",
+        out: "text",
+        cw: cwd,
+      },
+    });
+
+    expect(result.metadata).toBeDefined();
+    expect(result.metadata?.agentName).toBe("codex");
+    expect(result.metadata?.threadId).toBe("thread-meta-123");
+    expect(result.metadata?.autonomyLevel).toBe("medium");
+    expect(result.metadata?.tokenUsage).toEqual({
+      inputTokens: 150,
+      outputTokens: 200,
+      cachedInputTokens: 25,
+    });
+    expect(result.metadata?.turnDurationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("returns sessionState in the result", async () => {
+    assessSessionResumeEligibilityMock.mockResolvedValue({
+      canResume: false,
+      reason: "missing-session",
+    });
+    setMockEvents([
+      { type: "thread.started", thread_id: "thread-session-456" },
+    ]);
+
+    const result = await executeWithCodex({
+      input: {
+        action: "exec",
+        prompt: "test session state",
+        auto: "low",
+        out: "text",
+        cw: cwd,
+        sessionId: "session-xyz",
+        userId: "user-abc",
+      },
+    });
+
+    expect(result.sessionState).toBeDefined();
+    expect(result.sessionState?.sessionId).toBe("session-xyz");
+    expect(result.sessionState?.threadId).toBe("thread-session-456");
+    // canResume is based on whether we have a valid threadId, not the resume eligibility check
+    expect(result.sessionState?.canResume).toBe(true);
+    // isResumed is false since the session wasn't actually resumed (no prior session)
+    expect(result.sessionState?.isResumed).toBe(false);
+  });
+
+  it("returns isResumed true when session was resumed", async () => {
+    assessSessionResumeEligibilityMock.mockResolvedValue({
+      canResume: true,
+      session: {
+        sessionId: "resumable-session",
+        userId: "user-resume",
+        threadId: "existing-thread",
+        workingDirectory: cwd,
+        status: "active" as const,
+        createdAt: new Date(),
+        lastAccessedAt: new Date(),
+        expiresAt: new Date(Date.now() + 86400000),
+      },
+    });
+    setMockEvents([
+      { type: "thread.started", thread_id: "existing-thread" },
+    ]);
+
+    const result = await executeWithCodex({
+      input: {
+        action: "exec",
+        prompt: "resume session",
+        auto: "low",
+        out: "text",
+        cw: cwd,
+        sessionId: "resumable-session",
+        userId: "user-resume",
+      },
+    });
+
+    expect(result.sessionState).toBeDefined();
+    expect(result.sessionState?.sessionId).toBe("resumable-session");
+    expect(result.sessionState?.isResumed).toBe(true);
+    expect(result.sessionState?.canResume).toBe(true);
+  });
+
+  it("handles missing token usage gracefully", async () => {
+    setMockEvents([
+      { type: "thread.started", thread_id: "thread-no-usage" },
+    ]);
+
+    const result = await executeWithCodex({
+      input: {
+        action: "exec",
+        prompt: "no usage data",
+        auto: "read",
+        out: "text",
+        cw: cwd,
+      },
+    });
+
+    expect(result.metadata).toBeDefined();
+    expect(result.metadata?.agentName).toBe("codex");
+    expect(result.metadata?.tokenUsage).toBeUndefined();
+  });
+});

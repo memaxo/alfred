@@ -19,6 +19,12 @@ import type {
   TurnStartedEvent,
   WebSearchItem,
 } from "@alfred/codex";
+import {
+  agentMetadataSchema,
+  responseSessionStateSchema,
+  type AgentMetadata,
+  type ResponseSessionState,
+} from "@alfred/protocol";
 import Ajv from "ajv";
 import Ajv2019 from "ajv/dist/2019";
 import Ajv2020 from "ajv/dist/2020";
@@ -269,7 +275,11 @@ export const toolOutputSchema = z.object({
       })
     )
     .optional(),
+  metadata: agentMetadataSchema.optional(),
+  sessionState: responseSessionStateSchema.optional(),
 });
+
+export type { AgentMetadata, ResponseSessionState };
 
 export type AlfredCodexEvent =
   | {

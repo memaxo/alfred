@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
+    { "path": "packages/protocol" },
     { "path": "packages/rag" },
     { "path": "packages/codex" },
     { "path": "packages/type" },

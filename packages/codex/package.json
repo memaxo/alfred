@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",
+    "@alfred/protocol": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

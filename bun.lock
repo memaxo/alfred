@@ -202,6 +202,7 @@
         "@alfred/logger": "workspace:*",
         "@alfred/metrics": "workspace:*",
         "@alfred/policy": "workspace:*",
+        "@alfred/protocol": "workspace:*",
         "@alfred/type": "workspace:*",
         "@linear/sdk": "^53.0.0",
         "@lmnr-ai/lmnr": "^0.7.4",
@@ -263,6 +264,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@alfred/logger": "workspace:*",
+        "@alfred/protocol": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -406,6 +408,17 @@
       "devDependencies": {
         "@alfred/tsconfig": "workspace:*",
         "typescript": "^5.7.2",
+      },
+    },
+    "packages/protocol": {
+      "name": "@alfred/protocol",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*",
       },
     },
     "packages/rag": {
@@ -589,6 +602,8 @@
     "@alfred/metrics": ["@alfred/metrics@workspace:packages/metrics"],
 
     "@alfred/policy": ["@alfred/policy@workspace:packages/policy"],
+
+    "@alfred/protocol": ["@alfred/protocol@workspace:packages/protocol"],
 
     "@alfred/rag": ["@alfred/rag@workspace:packages/rag"],
 

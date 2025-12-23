@@ -12,6 +12,7 @@
   "references": [
     { "path": "../auth" },
     { "path": "../policy" },
+    { "path": "../protocol" },
     { "path": "../type" },
     { "path": "../cognitive" },
     { "path": "../knowledge" },

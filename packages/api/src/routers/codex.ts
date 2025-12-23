@@ -7,7 +7,8 @@ import {
 } from "@alfred/agent/orchestrator/tool/codex/definition";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
-import { codexRunRepo } from "@alfred/db";
+import { sessionManager } from "@alfred/agent/orchestrator/codex-session";
+import { codexRunRepo, codexSessionRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -361,6 +362,20 @@ const codexStreamEventsInputSchema = z.object({
   pollMs: z.number().int().min(200).max(5000).optional(),
 });
 
+const codexListSessionsInputSchema = z.object({
+  status: z.enum(["active", "completed", "failed"]).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).max(10_000).optional(),
+});
+
+const codexGetSessionInputSchema = z.object({
+  sessionId: z.string().min(1).max(255),
+});
+
+const codexTerminateSessionInputSchema = z.object({
+  sessionId: z.string().min(1).max(255),
+});
+
 const codexProcedures = {
   run: authedProcedure
     .input(codexRunInputSchema)
@@ -567,6 +582,52 @@ const codexProcedures = {
           clearInterval(interval);
         };
       });
+    }),
+
+  // Session management procedures
+  listSessions: authedProcedure
+    .input(codexListSessionsInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      return codexSessionRepo.listSessions({
+        userId,
+        status: input.status,
+        limit: input.limit,
+        offset: input.offset,
+      });
+    }),
+
+  getSession: authedProcedure
+    .input(codexGetSessionInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      const session = await sessionManager.getSession(input.sessionId, userId);
+      if (!session) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "codex_session_not_found" });
+      }
+      return session;
+    }),
+
+  terminateSession: authedProcedure
+    .input(codexTerminateSessionInputSchema)
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+      }
+      // Verify ownership before terminating
+      const session = await codexSessionRepo.getSession(input.sessionId, userId);
+      if (!session) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "codex_session_not_found" });
+      }
+      await sessionManager.terminateSession(input.sessionId);
+      return { success: true };
     }),
 };
 

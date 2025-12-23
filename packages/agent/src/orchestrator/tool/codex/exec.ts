@@ -430,6 +430,14 @@ async function runCodexWithCodex({
   let threadIdFromEvents: string | undefined;
   const artifacts: CodexArtifactSummary[] = [];
 
+  // Metadata tracking
+  let turnStartTime: number | undefined;
+  let tokenUsage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens?: number;
+  } | undefined;
+
   const codexBin = resolveCodexBin();
   const threadValidator = resolveThreadValidator();
   let existingSession: CodexSessionState | undefined;
@@ -738,6 +746,7 @@ async function runCodexWithCodex({
           break;
         }
         case "turn.started": {
+          turnStartTime = Date.now();
           void safeWriter(
             {
               type: "notice",
@@ -749,6 +758,13 @@ async function runCodexWithCodex({
         }
         case "turn.completed": {
           const usage = event.usage;
+          if (usage) {
+            tokenUsage = {
+              inputTokens: usage.input_tokens,
+              outputTokens: usage.output_tokens,
+              cachedInputTokens: usage.cached_input_tokens,
+            };
+          }
           void safeWriter(
             {
               type: "notice",
@@ -1007,6 +1023,34 @@ async function runCodexWithCodex({
     structuredOutputStatus: "skipped",
   });
 
+  // Build metadata
+  const turnDurationMs = turnStartTime
+    ? Date.now() - turnStartTime
+    : undefined;
+
+  const metadata = {
+    agentName: "codex" as const,
+    threadId,
+    sessionId,
+    turnDurationMs,
+    tokenUsage,
+    resumedFromThread: Boolean(resumeThreadId),
+    workingDirectory: resolvedCw,
+    autonomyLevel: input.auto,
+    modelUsed: input.model,
+  };
+
+  // Build session state
+  const sessionState = sessionId
+    ? {
+        sessionId,
+        threadId: threadId ?? "",
+        canResume: Boolean(threadId),
+        isResumed: Boolean(resumeThreadId),
+        resumeReason: !threadId ? "no_thread_id" : undefined,
+      }
+    : undefined;
+
   return {
     result: resultText,
     artifacts: artifacts.length > 0 ? artifacts : undefined,
@@ -1014,6 +1058,8 @@ async function runCodexWithCodex({
       reasoningAccumulator.traces.length > 0
         ? reasoningAccumulator.traces
         : undefined,
+    metadata,
+    sessionState,
   };
 }
 
