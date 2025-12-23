@@ -8,6 +8,7 @@ const ROOT = resolve(import.meta.dir, "..");
 const ALLOWLIST = new Set([
   "packages/auth/src/better-auth-tanstack-start.d.ts",
   "packages/cortex/src/wgsl.d.ts",
+  "packages/agent/src/bun-bundle.d.ts",
 ]);
 
 const FORBIDDEN_GLOBS = [

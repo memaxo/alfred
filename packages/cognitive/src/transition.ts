@@ -120,6 +120,12 @@ export const applyTransition = (
             ),
             autonomy,
           };
+        } else if (event._ === "interrupt") {
+          // Interrupt while thinking should break the loop and return to idle.
+          result = {
+            state: idle(eventTimestamp, nextPhysiology),
+            autonomy,
+          };
         } else if (event._ === "input") {
           // New input while thinking - could transition to deciding if options provided
           // For now, continue thinking with new input

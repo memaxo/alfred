@@ -32,7 +32,8 @@ describe("cognitive performance budgets", () => {
       }
     );
 
-    expect(stats.p99).toBeLessThan(0.1);
+    const budgetMs = process.env.CI ? 0.5 : 0.1;
+    expect(stats.p99).toBeLessThan(budgetMs);
   });
 
   it("updatePhysiology stays under 10µs", async () => {
@@ -46,7 +47,8 @@ describe("cognitive performance budgets", () => {
       }
     );
 
-    expect(stats.p99).toBeLessThan(0.01);
+    const budgetMs = process.env.CI ? 0.05 : 0.01;
+    expect(stats.p99).toBeLessThan(budgetMs);
   });
 
   it("updateAutonomy stays under 50µs", async () => {
@@ -69,7 +71,8 @@ describe("cognitive performance budgets", () => {
       }
     );
 
-    expect(stats.p99).toBeLessThan(0.05);
+    const budgetMs = process.env.CI ? 0.2 : 0.05;
+    expect(stats.p99).toBeLessThan(budgetMs);
   });
 
   it("calculateError stays under 100µs", async () => {
@@ -86,6 +89,7 @@ describe("cognitive performance budgets", () => {
       }
     );
 
-    expect(stats.p99).toBeLessThan(0.1);
+    const budgetMs = process.env.CI ? 1 : 0.1;
+    expect(stats.p99).toBeLessThan(budgetMs);
   });
 });

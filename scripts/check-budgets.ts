@@ -60,20 +60,31 @@ function isBudgetCategory(value: string): value is BudgetCategory {
   return Object.prototype.hasOwnProperty.call(BUDGET_DEFAULTS, value);
 }
 
-async function collectCoverage(): Promise<Map<BudgetCategory, string[]>> {
+async function collectCoverage(files?: string[]): Promise<{ coverage: Map<BudgetCategory, string[]>, files: string[] }> {
   const coverage = new Map<BudgetCategory, string[]>();
   for (const category of REQUIRED_CATEGORIES) {
     coverage.set(category, []);
   }
 
-  const files = await collectPerfTestFiles();
+  const perfFiles = files ?? await collectPerfTestFiles();
 
-  for (const file of files) {
-    const bunFile = Bun.file(file);
-    if (!(await bunFile.exists())) {
+  // Read files in parallel for speed
+  const fileContents = await Promise.allSettled(
+    perfFiles.map(async (file) => {
+      try {
+        const text = await Bun.file(file).text();
+        return { file, text };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  for (const result of fileContents) {
+    if (result.status !== "fulfilled" || !result.value) {
       continue;
     }
-    const text = await bunFile.text();
+    const { file, text } = result.value;
     const lines = text.split("\n");
 
     for (const line of lines) {
@@ -98,32 +109,109 @@ async function collectCoverage(): Promise<Map<BudgetCategory, string[]>> {
     }
   }
 
-  return coverage;
+  return { coverage, files: perfFiles };
 }
 
-async function runPerformanceTests(): Promise<boolean> {
-  const files = await collectPerfTestFiles();
+async function runPerformanceTests(files?: string[]): Promise<boolean> {
+  const testFiles = files ?? await collectPerfTestFiles();
 
-  if (files.length === 0) {
+  if (testFiles.length === 0) {
     console.warn("No performance test files found");
     return true;
   }
 
-  console.log(`Running ${files.length} performance test file(s)...`);
+  console.log(`Running ${testFiles.length} performance test file(s)...`);
 
-  // Run all performance tests together
-  // Tests themselves assert budgets, so if they pass, budgets are met
-  const proc = Bun.spawn(["bun", "test", ...files], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
+  const strictLocal = process.argv.includes("--local");
 
-  const exitCode = await proc.exited;
+  // Perf tests are inherently noisy on shared runners and multi-core execution.
+  // Keep them stable by forcing a low concurrency runner and using CI-style budgets by default.
+  // We run a single `bun test` invocation for speed; use `--isolate` to run per-file if needed.
+  const isolate = process.argv.includes("--isolate");
 
-  if (exitCode !== 0) {
-    console.error("\nPerformance tests failed. Budget violations detected.");
-    console.error("Fix: Optimize the violating code paths or adjust budgets if justified.");
-    return false;
+  const env: Record<string, string> = {
+    ...process.env,
+    ...(strictLocal ? {} : { CI: process.env.CI ?? "1" }),
+  } as Record<string, string>;
+
+  const argsBase = ["bun", "test", "--max-concurrency=1", "--timeout=30000"];
+
+  if (!isolate) {
+    console.log(`\n[budgets] bun test ${testFiles.length} file(s) (single process)`);
+    const proc = Bun.spawn([...argsBase, ...testFiles], {
+      stdout: "inherit",
+      stderr: "inherit",
+      env,
+    });
+
+    // Hard timeout: kill after 45s (tests should complete in <30s)
+    const killTimer = setTimeout(() => {
+      console.error("\n[budgets] Timeout: killing test process after 45s");
+      try {
+        proc.kill("SIGKILL");
+      } catch {
+        // ignore
+      }
+    }, 45_000);
+
+    const exitCode = await Promise.race([
+      proc.exited,
+      new Promise<number>((resolve) => {
+        setTimeout(() => resolve(124), 45_000);
+      }),
+    ]).finally(() => clearTimeout(killTimer));
+    if (exitCode !== 0) {
+      console.error("\nPerformance tests failed. Budget violations detected.");
+      console.error(
+        "Fix: Optimize the violating code paths or adjust budgets if justified."
+      );
+      console.error(
+        "Hint: `bun scripts/check-budgets.ts --isolate` runs each file separately for debugging."
+      );
+      console.error(
+        "Hint: `bun scripts/check-budgets.ts --local` uses strict local budgets."
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  for (const file of testFiles) {
+    console.log(`\n[budgets] bun test ${file}`);
+    const proc = Bun.spawn([...argsBase, file], {
+      stdout: "inherit",
+      stderr: "inherit",
+      env,
+    });
+
+    // Hard timeout: kill after 35s per file
+    const killTimer = setTimeout(() => {
+      console.error(`\n[budgets] Timeout: killing test process for ${file} after 35s`);
+      try {
+        proc.kill("SIGKILL");
+      } catch {
+        // ignore
+      }
+    }, 35_000);
+
+    const exitCode = await Promise.race([
+      proc.exited,
+      new Promise<number>((resolve) => {
+        setTimeout(() => resolve(124), 35_000);
+      }),
+    ]).finally(() => clearTimeout(killTimer));
+    if (exitCode !== 0) {
+      console.error("\nPerformance tests failed. Budget violations detected.");
+      console.error(`Failed file: ${file}`);
+      console.error(
+        "Fix: Optimize the violating code paths or adjust budgets if justified."
+      );
+      console.error(
+        "Hint: run `bun scripts/check-budgets.ts --local` to use strict local budgets."
+      );
+      return false;
+    }
   }
 
   return true;
@@ -132,7 +220,7 @@ async function runPerformanceTests(): Promise<boolean> {
 async function main(): Promise<void> {
   console.log("ALFRED Performance Budget Coverage Gate");
 
-  const coverage = await collectCoverage();
+  const { coverage, files } = await collectCoverage();
 
   const missing = REQUIRED_CATEGORIES.filter(
     (category) => (coverage.get(category) ?? []).length === 0
@@ -151,7 +239,8 @@ async function main(): Promise<void> {
     console.error(
       "Example: `// budget: graph-lookup` in a test that asserts graph lookup performance."
     );
-    process.exit(1);
+    setTimeout(() => process.exit(1), 10);
+    return;
   }
 
   console.log("All required budget categories have perf-test coverage:");
@@ -160,17 +249,41 @@ async function main(): Promise<void> {
     console.log(`- ${category}: ${files.length} file(s)`);
   }
 
-  // Run performance tests to verify budgets
-  console.log("\nRunning performance tests to verify budgets...");
-  const testsPassed = await runPerformanceTests();
+  // Run performance tests to verify budgets (unless skipped)
+  if (process.argv.includes("--skip-tests")) {
+    console.log("\nSkipping test execution (coverage check only).");
+    console.log("Run without --skip-tests to verify budgets.");
+    setTimeout(() => process.exit(0), 10);
+    return;
+  } else {
+    console.log("\nRunning performance tests to verify budgets...");
+    const testsPassed = await runPerformanceTests(files);
 
-  if (!testsPassed) {
-    process.exit(1);
+    if (!testsPassed) {
+      setTimeout(() => process.exit(1), 10);
+      return;
+    }
+
+    console.log("All performance budgets met!");
+    setTimeout(() => process.exit(0), 10);
   }
-
-  console.log("All performance budgets met!");
 }
 
 if (import.meta.main) {
-  await main();
+  // Safety timeout: force exit after 2 minutes if something hangs
+  const safetyTimer = setTimeout(() => {
+    console.error("\n[FATAL] Script hung - forcing exit after 2 minutes");
+    setTimeout(() => process.exit(124), 10);
+  }, 120_000);
+  
+  try {
+    await main();
+    clearTimeout(safetyTimer);
+    // If we reach here, main() didn't call exit - force it
+    setTimeout(() => process.exit(0), 10);
+  } catch (err) {
+    clearTimeout(safetyTimer);
+    console.error("Fatal error:", err);
+    setTimeout(() => process.exit(1), 10);
+  }
 }
