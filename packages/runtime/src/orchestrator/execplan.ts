@@ -1,0 +1,90 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import {
+  appendDecisionLogEntry,
+  applyProgressUpdate,
+} from "@alfred/agent/orchestrator/multi/execplan";
+import { logger } from "@alfred/logger";
+
+/**
+ * Safely read, mutate, and write an ExecPlan markdown file.
+ * Creates parent directories if needed. No-op if mutation returns unchanged content.
+ */
+export async function mutateExecPlanFile(
+  filePath: string,
+  mutate: (markdown: string) => string
+): Promise<void> {
+  let current = "";
+  try {
+    current = await fs.readFile(filePath, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      logger.warn("execplan_read_failed", {
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    try {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+    } catch (mkdirErr) {
+      logger.warn("execplan_dir_failed", {
+        path: filePath,
+        error: mkdirErr instanceof Error ? mkdirErr.message : String(mkdirErr),
+      });
+      return;
+    }
+  }
+
+  const updated = mutate(current);
+  if (updated === current) {
+    return;
+  }
+  try {
+    await fs.writeFile(filePath, updated, "utf8");
+  } catch (error) {
+    logger.warn("execplan_write_failed", {
+      path: filePath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Append a progress entry to an ExecPlan file.
+ */
+export async function appendPlanProgressEntry(
+  filePath: string,
+  message: string,
+  completed: boolean
+): Promise<void> {
+  const timestampIso = new Date().toISOString();
+  await mutateExecPlanFile(filePath, (markdown) =>
+    applyProgressUpdate(markdown, {
+      timestampIso,
+      message,
+      completed,
+    })
+  );
+}
+
+/**
+ * Append a decision log entry to an ExecPlan file.
+ */
+export async function appendDecisionEntry(
+  filePath: string,
+  decision: string,
+  rationale?: string,
+  note?: string
+): Promise<void> {
+  const timestampIso = new Date().toISOString();
+  await mutateExecPlanFile(filePath, (markdown) =>
+    appendDecisionLogEntry(markdown, {
+      decision,
+      rationale,
+      note,
+      dateIso: timestampIso,
+      author: "runtime",
+    })
+  );
+}

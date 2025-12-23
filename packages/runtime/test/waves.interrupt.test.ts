@@ -4,7 +4,7 @@ import type { WavesResult } from "../src/orchestrator/waves";
 describe("runWaves interrupt handling", () => {
   it("WavesResult type includes interrupted field", () => {
     const result: WavesResult = {
-      trackerState: {} as any,
+      trackerContext: {} as any,
       allAgentOutcomes: [
         {
           agentId: "test-agent",
@@ -26,7 +26,7 @@ describe("runWaves interrupt handling", () => {
 
   it("interrupted status propagates correctly", () => {
     const result: WavesResult = {
-      trackerState: {} as any,
+      trackerContext: {} as any,
       allAgentOutcomes: [
         {
           agentId: "agent-1",
