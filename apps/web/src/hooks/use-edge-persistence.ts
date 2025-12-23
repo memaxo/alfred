@@ -28,11 +28,18 @@ export function useEdgePersistence(): UseEdgePersistenceResult {
 
   const onConnectPersisting = useCallback<OnConnect>(
     async (connection) => {
+      // Fallback to store state if onConnect is undefined (e.g., after persistence rehydration)
+      const storeOnConnect = onConnect ?? useMindscapeStore.getState().onConnect;
+      if (!storeOnConnect) {
+        console.error("onConnect is not available in Mindscape store");
+        return;
+      }
+
       const beforeEdges = useMindscapeStore.getState().edges;
       const beforeCount = beforeEdges.length;
 
       // Apply optimistic update
-      onConnect(connection);
+      storeOnConnect(connection);
 
       const afterEdges = useMindscapeStore.getState().edges;
       const added = afterEdges.slice(beforeCount);

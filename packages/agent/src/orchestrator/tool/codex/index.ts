@@ -5,6 +5,7 @@ import {
 } from "../../../security/filesystem.js";
 import { withPolicyApproval } from "../approval.js";
 import {
+  type CodexExecuteArgs,
   type CodexToolInput,
   codexInputSchema,
   toolOutputSchema,
@@ -24,7 +25,6 @@ export type {
   CodexExecuteArgs,
   CodexToolInput,
   SandboxConfig,
-  ToolWriter,
 } from "./definition.js";
 
 export { codexInputSchema, toolOutputSchema } from "./definition.js";
@@ -38,15 +38,7 @@ export const toolCodex = {
   description: "Run the OpenAI Codex CLI in sandboxed, non-interactive mode.",
   inputSchema: codexInputSchema,
   outputSchema: toolOutputSchema,
-  execute: async ({
-    input,
-    writer,
-    signal,
-  }: {
-    input: CodexToolInput;
-    writer?: { write: (chunk: unknown) => Promise<void> | void };
-    signal?: AbortSignal;
-  }) => {
+  execute: async ({ input, writer, signal }: CodexExecuteArgs) => {
     await enforcePolicy(input);
     return executeWithCodex({ input, writer, signal });
   },

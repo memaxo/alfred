@@ -1,6 +1,7 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 import { redactEventData, redactSecrets } from "../../utils/redaction.js";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 import * as codexRunRepo from "@alfred/db/repo/codex-run";
 
@@ -144,7 +145,7 @@ export const toolCodexlog = {
     "Query durable Codex run logs (runs, events, artifacts, reasoning) for debugging and observability.",
   inputSchema: codexlogInputSchema,
   outputSchema: codexlogOutputSchema,
-  async execute({ input }: { input: CodexlogInput }) {
+  async execute({ input }: ToolExecuteArgs<CodexlogInput>) {
     const { claims } = await requireToolScopesAndPolicy(
       input.authz,
       ["codex.read"],

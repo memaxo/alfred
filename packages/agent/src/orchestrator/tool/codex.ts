@@ -25,6 +25,7 @@ import {
   streamStderr,
   type ToolWriter,
 } from "./shared";
+import type { CodexExecuteArgs } from "./codex/definition.js";
 
 const MCP_ENV_ALLOWLIST = new Set([
   "CONTEXT7_API_KEY",
@@ -95,11 +96,6 @@ const toolOutputSchema = z.object({
     )
     .optional(),
 });
-
-export type CodexExecuteArgs = {
-  input: CodexToolInput;
-  writer?: ToolWriter;
-};
 
 type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";
