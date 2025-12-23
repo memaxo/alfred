@@ -1,5 +1,6 @@
 import { spawn } from "bun";
 import { z } from "zod";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 function tmuxDisabled() {
   return process.env.ORCH_TMUX_DISABLED === "1";
@@ -70,7 +71,7 @@ export const toolSession = {
     output: z.string().optional(),
     sessions: z.array(z.string()).optional(),
   }),
-  execute: async ({ input }: { input: SessionToolInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<SessionToolInput>) => {
     const { action, sessionId } = input;
 
     switch (action) {

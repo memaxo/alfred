@@ -1,6 +1,7 @@
 import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
 
@@ -707,7 +708,7 @@ export const toolWeb = {
     "Perform read-only web searches and content fetches for context gathering.",
   inputSchema: webInputSchema,
   outputSchema: webOutputSchema,
-  execute: async ({ input }: { input: WebInput }): Promise<WebOutput> => {
+  execute: async ({ input }: ToolExecuteArgs<WebInput>): Promise<WebOutput> => {
     await enforcePolicy(input);
 
     const resolvedProvider = resolveProvider(

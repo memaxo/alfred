@@ -10,10 +10,11 @@ import type {
 import { ingestCodeFiles } from "../../utils/rag-ingest.js";
 import { toolCodex } from "../tool/codex";
 import { toolDroid } from "../tool/droid";
+import type { ToolWriter } from "../tool/shared/context.js";
 import { toolWeb } from "../tool/web";
 import { createTokenEstimator } from "../util/token";
 
-type Writer = { write: (chunk: unknown) => Promise<void> | void } | undefined;
+type Writer = ToolWriter;
 
 const DEFAULT_EXTS = [".ts", ".tsx", ".js", ".jsx", ".json", ".md"];
 const DEFAULT_IGNORE = [

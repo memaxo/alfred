@@ -22,6 +22,7 @@ import {
   resolveExecutable,
   startToolTimer,
   streamStderr,
+  type ToolExecuteContext,
   type ToolWriter,
 } from "./shared/index.js";
 
@@ -58,10 +59,7 @@ const toolOutputSchema = z.object({
     .optional(),
 });
 
-export type DroidExecuteArgs = {
-  input: DroidToolInput;
-  writer?: ToolWriter;
-};
+export type DroidExecuteArgs = ToolExecuteContext<DroidToolInput>;
 
 function buildFlags(input: DroidToolInput) {
   const flags = ["exec", "-o", input.out];

@@ -571,15 +571,9 @@ export function parseThreadEvent(payload: unknown): ThreadEvent | null {
   return null;
 }
 
-export type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
+import type { ToolExecuteContext } from "../shared/context.js";
 
-export type CodexExecuteArgs = {
-  input: CodexToolInput;
-  writer?: ToolWriter;
-  signal?: AbortSignal;
-};
+export type CodexExecuteArgs = ToolExecuteContext<CodexToolInput>;
 
 export type SandboxConfig = {
   sandbox: "read-only" | "workspace-write";

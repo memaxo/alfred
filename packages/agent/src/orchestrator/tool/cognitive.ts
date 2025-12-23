@@ -16,6 +16,7 @@ import { cognitiveRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { z } from "zod";
 import { withPolicyApproval } from "./approval.js";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 // ============================================================================
 // Schemas
@@ -295,7 +296,7 @@ export const toolCognitiveState = {
     "Query current cognitive state including physiology (energy, boredom, frustration) and autonomy level. Returns state machine state, physiological metrics, and autonomy gradient with Beta prior.",
   inputSchema: cognitiveStateInputSchema,
   outputSchema: cognitiveStateOutputSchema,
-  execute: async ({ input }: { input: CognitiveStateInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<CognitiveStateInput>) => {
     await enforceCognitiveStatePolicy(input);
     return executeCognitiveState(input);
   },

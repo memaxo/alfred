@@ -3,6 +3,7 @@
  * Exposes explicit learning/feedback capabilities as agent tools.
  */
 
+import type { ToolExecuteArgs } from "../shared/context.js";
 import { withPolicyApproval } from "../approval.js";
 import type {
   LearnMistakeInput,
@@ -56,7 +57,7 @@ export const toolLearnRecord = {
     "Record a workflow outcome (expected vs actual) to improve future behavior. Persists a learning outcome and optional insights to the knowledge graph.",
   inputSchema: learnRecordInputSchema,
   outputSchema: learnRecordOutputSchema,
-  execute: async ({ input }: { input: LearnRecordInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<LearnRecordInput>) => {
     const { userId } = await enforceLearnRecordPolicy(input);
     return executeLearnRecord({ input, userId });
   },
@@ -98,7 +99,7 @@ export const toolLearnPattern = {
     "Store a successful tool sequence as a reusable pattern. Optionally refines a concise rule using a fast/low-cost language model when available.",
   inputSchema: learnPatternInputSchema,
   outputSchema: learnPatternOutputSchema,
-  execute: async ({ input }: { input: LearnPatternInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<LearnPatternInput>) => {
     const { userId } = await enforceLearnPatternPolicy(input);
     return executeLearnPattern({ input, userId });
   },
@@ -141,7 +142,7 @@ export const toolLearnMistake = {
     "Record a mistake and its correction for future avoidance. Persists a heuristic-style rule into the knowledge graph.",
   inputSchema: learnMistakeInputSchema,
   outputSchema: learnMistakeOutputSchema,
-  execute: async ({ input }: { input: LearnMistakeInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<LearnMistakeInput>) => {
     const { userId } = await enforceLearnMistakePolicy(input);
     return executeLearnMistake({ input, userId });
   },

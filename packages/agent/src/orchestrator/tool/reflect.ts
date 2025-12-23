@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 const reflectInputSchema = z.object({
   authz: z.string().optional(),
@@ -93,7 +94,7 @@ export const toolReflect = {
     fileUpdated: z.string().optional(),
     message: z.string(),
   }),
-  execute: async ({ input }: { input: ReflectInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<ReflectInput>) => {
     await enforcePolicy(input);
 
     const targetFile = await getTargetFile(input.domain);

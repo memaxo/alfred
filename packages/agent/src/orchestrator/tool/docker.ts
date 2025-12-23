@@ -14,6 +14,7 @@ import {
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval } from "./approval.js";
+import type { ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -108,10 +109,6 @@ const dockerInputSchema = z.object({
 });
 
 type DockerInput = z.infer<typeof dockerInputSchema>;
-
-type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
 
 async function enforcePolicy(input: DockerInput) {
   const scopes =

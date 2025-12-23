@@ -1,5 +1,31 @@
 # Agent Client Protocol (ACP) vs ALFRED Agent Runner Analysis
 
+## Status: SDK Integrated
+
+**Last Updated:** December 2025  
+**SDK Version:** @agentclientprotocol/sdk@0.12.0  
+**Schema Version:** v0.10.4
+
+ALFRED now integrates the official ACP TypeScript SDK. The `@alfred/protocol` package re-exports SDK types, connection classes, and protocol constants while maintaining backwards compatibility with existing ALFRED code.
+
+### Quick Start
+
+```typescript
+// Use SDK types directly
+import {
+  AgentSideConnection,
+  ClientSideConnection,
+  PROTOCOL_VERSION,
+  type SessionUpdate,
+  type Plan,
+} from "@alfred/protocol";
+
+// Or use ALFRED adapters for autonomy mapping
+import { mapAutonomyToAcpMode, mapAcpModeToAutonomy } from "@alfred/protocol";
+```
+
+---
+
 ## Executive Summary
 
 The Agent Client Protocol (ACP) is an open standard designed to standardize communication between code editors (clients) and AI coding agents. ALFRED implements a different approach through direct subprocess execution with tool-specific protocol parsing. This report compares both approaches and identifies potential integration opportunities.
@@ -340,6 +366,53 @@ Create an adapter that:
 6. **Full ACP Client Implementation**: Make ALFRED a first-class ACP client capable of using any ACP agent interchangeably.
 
 7. **ACP Server Mode**: Expose ALFRED as an ACP agent for IDE integration.
+
+---
+
+## SDK Integration Details
+
+### What's Integrated (December 2025)
+
+**Package:** `@agentclientprotocol/sdk@0.12.0`
+
+**Re-exported from `@alfred/protocol`:**
+
+| Category | Exports |
+|----------|---------|
+| **Connection Classes** | `AgentSideConnection`, `ClientSideConnection`, `TerminalHandle`, `RequestError` |
+| **Protocol Constants** | `AGENT_METHODS`, `CLIENT_METHODS`, `PROTOCOL_VERSION` (v1) |
+| **Session Types** | `SessionId`, `SessionInfo`, `SessionNotification`, `SessionUpdate`, `SessionCapabilities` |
+| **Content Types** | `ContentBlock`, `ContentChunk`, `TextContent`, `ImageContent`, `AudioContent`, `EmbeddedResource` |
+| **Tool Types** | `ToolCall`, `ToolCallContent`, `ToolCallId`, `AcpToolKind`, `AcpToolCallStatus`, `ToolCallUpdate` |
+| **Plan Types** | `Plan`, `PlanEntry`, `PlanEntryPriority`, `PlanEntryStatus` |
+| **Terminal Types** | `CreateTerminalRequest/Response`, `TerminalOutputRequest/Response`, etc. |
+| **File System Types** | `ReadTextFileRequest/Response`, `WriteTextFileRequest/Response` |
+| **MCP Types** | `McpServer`, `McpServerStdio`, `McpServerHttp`, `McpServerSse`, `McpCapabilities` |
+
+**ALFRED Adapters:**
+
+```typescript
+// Convert ALFRED autonomy to ACP mode
+mapAutonomyToAcpMode("high") // → { id: "code", name: "Code", ... }
+
+// Convert ACP mode back to ALFRED autonomy
+mapAcpModeToAutonomy("code") // → "high"
+```
+
+**Legacy Schemas (Deprecated):**
+
+The following are still exported for backwards compatibility but marked deprecated:
+- `toolCallStatusSchema` → Use `AcpToolCallStatus`
+- `toolKindSchema` → Use `AcpToolKind`
+- `permissionOptionKindSchema` → Use `AcpPermissionOptionKind`
+- `sessionModeSchema` → Use `AcpSessionMode`
+- `stopReasonSchema` → Use `AcpStopReason`
+
+### What's NOT Integrated
+
+- **Zod Schemas**: The SDK generates Zod schemas but doesn't export them from the main entry. ALFRED's existing Zod schemas remain authoritative for validation.
+- **JSON-RPC Transport**: The SDK provides `ndJsonStream` but ALFRED uses subprocess spawning with NDJSON parsing.
+- **Interactive Permissions**: ACP's permission system is designed for IDE prompts; ALFRED uses policy-based pre-flight checks.
 
 ---
 

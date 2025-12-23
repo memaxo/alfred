@@ -3,6 +3,7 @@
  * Exposes RAG capabilities as agent tools for document ingestion and retrieval
  */
 
+import type { ToolExecuteArgs } from "../shared/context.js";
 import { withPolicyApproval } from "../approval.js";
 import {
   type RagDeleteInput,
@@ -65,7 +66,7 @@ export const toolRagIngest = {
     "Save documents to the RAG system for later semantic retrieval. Use for persisting documentation, articles, or any text content.",
   inputSchema: ragIngestInputSchema,
   outputSchema: ragIngestOutputSchema,
-  execute: async ({ input }: { input: RagIngestInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<RagIngestInput>) => {
     await enforceIngestPolicy(input);
     return executeIngest(input);
   },
@@ -105,7 +106,7 @@ export const toolRagQuery = {
     "Semantic search over the document collection. Returns relevant chunks with similarity scores.",
   inputSchema: ragQueryInputSchema,
   outputSchema: ragQueryOutputSchema,
-  execute: async ({ input }: { input: RagQueryInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<RagQueryInput>) => {
     await enforceQueryPolicy(input);
     return executeQuery(input);
   },
@@ -142,7 +143,7 @@ export const toolRagList = {
     "List documents in the RAG system. Returns document metadata with chunk counts.",
   inputSchema: ragListInputSchema,
   outputSchema: ragListOutputSchema,
-  execute: async ({ input }: { input: RagListInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<RagListInput>) => {
     await enforceListPolicy(input);
     return executeList(input);
   },
@@ -176,7 +177,7 @@ export const toolRagDelete = {
     "Remove documents from the RAG system. Requires confirmation flag and elevated authorization.",
   inputSchema: ragDeleteInputSchema,
   outputSchema: ragDeleteOutputSchema,
-  execute: async ({ input }: { input: RagDeleteInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<RagDeleteInput>) => {
     await enforceDeletePolicy(input);
     return executeDelete(input);
   },

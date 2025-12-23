@@ -3,6 +3,7 @@ import { linearRepo } from "@alfred/db";
 import { LinearClient } from "@linear/sdk";
 import { z } from "zod";
 import { withPolicyApproval } from "./approval.js";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 const { getLinearByWorkspace } = linearRepo;
 
@@ -365,7 +366,7 @@ export const toolTicket = {
     url: z.string().optional(),
     stateId: z.string().optional(),
   }),
-  execute: async ({ input }: { input: TicketInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<TicketInput>) => {
     await enforcePolicy(input);
 
     const installation = await getLinearByWorkspace(input.space);

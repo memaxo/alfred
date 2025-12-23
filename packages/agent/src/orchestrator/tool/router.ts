@@ -1,5 +1,6 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
+import type { ToolExecuteArgs } from "./shared/context.js";
 
 const routerInputSchema = z.object({
   action: z.enum(["register", "update", "remove"]),
@@ -120,7 +121,7 @@ export const toolRouter = {
   outputSchema: z.object({
     ok: z.boolean(),
   }),
-  execute: async ({ input }: { input: RouterInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<RouterInput>) => {
     await enforcePolicy(input);
     return executeCaddy(input);
   },

@@ -3,6 +3,7 @@
  * Exposes knowledge graph capabilities as agent tools
  */
 
+import type { ToolExecuteArgs } from "../shared/context.js";
 import { withPolicyApproval } from "../approval.js";
 import {
   type KnowledgeConnectInput,
@@ -65,7 +66,7 @@ export const toolKnowledgeQuery = {
     "Search the knowledge graph using natural language. Returns facts, insights, and patterns related to the query.",
   inputSchema: knowledgeQueryInputSchema,
   outputSchema: knowledgeQueryOutputSchema,
-  execute: async ({ input }: { input: KnowledgeQueryInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<KnowledgeQueryInput>) => {
     await enforceQueryPolicy(input);
     return executeQuery(input);
   },
@@ -103,7 +104,7 @@ export const toolKnowledgeExtract = {
     "Extract and persist knowledge from text. Identifies facts, entities, and relations to store in the knowledge graph.",
   inputSchema: knowledgeExtractInputSchema,
   outputSchema: knowledgeExtractOutputSchema,
-  execute: async ({ input }: { input: KnowledgeExtractInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<KnowledgeExtractInput>) => {
     await enforceExtractPolicy(input);
     return executeExtract(input);
   },
@@ -144,7 +145,7 @@ export const toolKnowledgeConnect = {
     "Create a connection between two nodes in the knowledge graph. Use to establish relationships like 'relates_to', 'blocks', 'depends_on', 'is_a', or 'part_of'.",
   inputSchema: knowledgeConnectInputSchema,
   outputSchema: knowledgeConnectOutputSchema,
-  execute: async ({ input }: { input: KnowledgeConnectInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<KnowledgeConnectInput>) => {
     await enforceConnectPolicy(input);
     return executeConnect(input);
   },
@@ -182,7 +183,7 @@ export const toolKnowledgeCorrect = {
     "Correct errors in the knowledge graph by updating a node/edge or archiving an incorrect fact. Requires elevated (passkey) authorization for safety.",
   inputSchema: knowledgeCorrectInputSchema,
   outputSchema: knowledgeCorrectOutputSchema,
-  execute: async ({ input }: { input: KnowledgeCorrectInput }) => {
+  execute: async ({ input }: ToolExecuteArgs<KnowledgeCorrectInput>) => {
     const { userId } = await enforceCorrectPolicy(input);
     return executeCorrect(input, userId);
   },

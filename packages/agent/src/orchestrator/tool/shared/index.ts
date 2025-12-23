@@ -6,6 +6,12 @@
  * just pure functions following codebase rules.
  */
 
+// Context types (unified execute signature)
+export {
+  type ToolExecuteArgs,
+  type ToolExecuteContext,
+  type ToolWriter,
+} from "./context";
 // Metrics utilities
 export {
   createStageRecorder,
@@ -41,5 +47,4 @@ export {
   safeRealpath,
   streamStderr,
   type TimeoutContext,
-  type ToolWriter,
 } from "./subprocess";

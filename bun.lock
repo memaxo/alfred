@@ -414,6 +414,7 @@
       "name": "@alfred/protocol",
       "version": "0.1.0",
       "dependencies": {
+        "@agentclientprotocol/sdk": "^0.12.0",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -558,6 +559,8 @@
   },
   "packages": {
     "@0no-co/graphql.web": ["@0no-co/graphql.web@1.2.0", "", { "peerDependencies": { "graphql": "^14.0.0 || ^15.0.0 || ^16.0.0" }, "optionalPeers": ["graphql"] }, "sha512-/1iHy9TTr63gE1YcR5idjx8UREz1s0kFhydf3bBLCXyqjhkIc6igAzTOx3zPifCwFR87tsh/4Pa9cNts6d2otw=="],
+
+    "@agentclientprotocol/sdk": ["@agentclientprotocol/sdk@0.12.0", "", { "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-V8uH/KK1t7utqyJmTA7y7DzKu6+jKFIXM+ZVouz8E55j8Ej2RV42rEvPKn3/PpBJlliI5crcGk1qQhZ7VwaepA=="],
 
     "@ai-sdk/cohere": ["@ai-sdk/cohere@2.0.20", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.18" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-rRD9oQYoMzFmBcA+8OyDjw5CNBHs9ssvGbSCy81DroSuOYQOk8dAKu27vY4P/eQ8nfIFtXvSGdCizjtv1yQfiA=="],
 

@@ -17,6 +17,8 @@ import {
   setTimeout as setNodeTimeout,
 } from "node:timers";
 
+import type { ToolWriter } from "./context.js";
+
 // Time constants
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
@@ -222,11 +224,6 @@ export function appendOutput(
 export function getAccumulatedOutput(acc: OutputAccumulator): string {
   return acc.chunks.join("\n").trim();
 }
-
-/** Writer interface for streaming tool output */
-export type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
 
 /**
  * Timeout context for managing subprocess timeout

@@ -74,10 +74,21 @@ function normalisePrefix(path: string): string {
   return path.slice(0, idx);
 }
 
+/**
+ * FNV-1a hash for fast task ID generation.
+ * Chosen for speed and good distribution on short strings.
+ * Faster than SHA-256 for this use case.
+ */
 function stableId(seed: string): SubTaskId {
-  const { createHash } = require("node:crypto");
-  const hash = createHash("sha256").update(seed).digest("hex");
-  return `T${hash.slice(0, 8)}`;
+  // FNV-1a hash (32-bit)
+  let h = 2_166_136_261; // FNV offset basis
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = (h * 16_777_619) >>> 0; // FNV prime, ensure unsigned 32-bit
+  }
+  // Convert to hex and take first 8 characters (matching previous format)
+  const hex = h.toString(16).padStart(8, "0");
+  return `T${hex}`;
 }
 
 function uniq(items: string[]): string[] {

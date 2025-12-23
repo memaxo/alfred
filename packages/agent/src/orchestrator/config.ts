@@ -1,27 +1,5 @@
 import { DEFAULT_COMPRESSION_CONFIG } from "@alfred/knowledge/compression";
-
-const toInt = (value: string | undefined, fallback: number): number => {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const toFloat = (value: string | undefined, fallback: number): number => {
-  const parsed = Number.parseFloat(value ?? "");
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const coerceBool = (value: string | undefined, fallback: boolean): boolean => {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === "1" || value.toLowerCase() === "true") {
-    return true;
-  }
-  if (value === "0" || value.toLowerCase() === "false") {
-    return false;
-  }
-  return fallback;
-};
+import { coerceBool, toFloat, toInt } from "../utils/coerce";
 
 export const reasoningConfig = {
   extraction: {
