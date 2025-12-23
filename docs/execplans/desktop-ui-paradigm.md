@@ -2778,7 +2778,8 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Lint passes | ✅ | Biome check with all safe fixes applied |
 | 2025-12-23 | 1 | Build passes | ✅ | `bun run build` succeeds |
 | 2025-12-23 | 1 | Layout functions generic | ✅ | `layout.ts`, `layout-semantic.ts` now work with any node data type |
-| | 1 | Update all imports | ⬜ | Gradual migration from mindscape → desktop |
+| 2025-12-23 | 1 | Compatibility layer | ✅ | `store/compat.ts` provides mindscape-compatible aliases for desktop store |
+| | 1 | Migrate individual components | ⬜ | Node-by-node migration as part of Phase 3 route consolidation |
 | | 2 | Install TanStack DB | ⬜ | |
 | | 2 | Create noteCollection | ⬜ | |
 | | 2 | Migrate NoteWindow | ⬜ | |
@@ -2796,8 +2797,9 @@ TanStack DB Collections (Data Layer)
 | Date | Phase | Discovery | Impact | Resolution |
 |------|-------|-----------|--------|------------|
 | 2025-12-23 | 1 | Existing nodes depend heavily on `useMindscapeStore` | Medium | Created parallel desktop store; registry references existing nodes for now |
-| 2025-12-23 | 1 | Layout functions typed to `ArtifactData` | Low | Cast via `as any` temporarily; will update layout.ts types in Phase 2 |
+| 2025-12-23 | 1 | Layout functions typed to `ArtifactData` | Low | Fixed: made functions generic with `NodeData` type constraint |
 | 2025-12-23 | 1 | Pre-existing type errors in packages/api metrics | None | Unrelated to desktop; noted but not blocking |
+| 2025-12-23 | 1 | Node components tightly coupled to mindscape | Medium | Created compat layer; full migration deferred to Phase 3 |
 
 ---
 
