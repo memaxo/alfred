@@ -1,4 +1,5 @@
 import type { GitInput } from "../tool/git";
+import type { ToolWriter } from "../tool/shared/context.js";
 import { worktreeManager } from "../tool/worktree";
 import { conflictArbiter } from "../conflict.js";
 import type { DirectoryHandle } from "../../security/filesystem.js";
@@ -83,15 +84,15 @@ export type MergeResult = {
   error?: string;
 };
 
-type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
-
 export type GitTool = {
   execute(args: {
     input: GitInput;
     writer?: ToolWriter;
   }): Promise<{ ok: boolean; details?: unknown }>;
+};
+
+export type ConflictArbiterLike = {
+  resolve: typeof conflictArbiter.resolve;
 };
 
 export async function executeMergePlan(
@@ -104,6 +105,7 @@ export async function executeMergePlan(
     runId?: string;
     userId?: string;
     auto?: "read" | "low" | "medium" | "high";
+    arbiter?: ConflictArbiterLike;
   }
 ): Promise<MergeResult> {
   const cwdHandle = openDirectorySecure(workspace, {
@@ -151,7 +153,8 @@ export async function executeMergePlan(
             };
           }
 
-          const resolution = await conflictArbiter.resolve(
+          const arbiter = options.arbiter ?? conflictArbiter;
+          const resolution = await arbiter.resolve(
             resolvedCw,
             runId,
             targetBranch,

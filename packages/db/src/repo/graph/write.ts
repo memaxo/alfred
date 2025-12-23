@@ -3,6 +3,7 @@ import { db } from "../../client";
 import { memoryEdges, memoryNodes } from "../../schema/graph";
 import { sanitizeContextText, sanitizeGraphValue } from "../sanitize";
 import { getNode } from "./read";
+import { findPath } from "./traverse";
 import type { EdgeRow, EdgeSeed, NodeInsert, NodeRow, NodeSeed } from "./types";
 import { sanitize, uniqSeeds } from "./utils";
 
@@ -348,6 +349,59 @@ export async function createEdge(
   }
 
   return row;
+}
+
+/**
+ * Detect if adding an edge would create a cycle in the dependency graph.
+ * Only checks for "blocks" and "depends_on" edge types.
+ */
+async function detectCycle(
+  resource: string,
+  fromId: string,
+  toId: string,
+  kind: string
+): Promise<boolean> {
+  // Only check cycle-prone edge types
+  if (kind !== "blocks" && kind !== "depends_on") {
+    return false;
+  }
+
+  // Check if toId can already reach fromId (would create a cycle)
+  const path = await findPath(toId, fromId, 10, resource);
+  return path.length > 0;
+}
+
+/**
+ * Create an edge with cycle detection for dependency edges.
+ * Returns { edge: null, cycle: true } if the edge would create a cycle.
+ */
+export async function createEdgeWithCycleCheck(
+  resource: string,
+  hash: string,
+  fromId: string,
+  toId: string,
+  kind: string,
+  weight = 1.0,
+  metadata?: unknown
+): Promise<{ edge: EdgeRow | null; cycle: boolean }> {
+  // For dependency-type edges, check for cycles
+  if (kind === "blocks" || kind === "depends_on") {
+    const wouldCycle = await detectCycle(resource, fromId, toId, kind);
+    if (wouldCycle) {
+      return { edge: null, cycle: true };
+    }
+  }
+
+  const edge = await createEdge(
+    resource,
+    hash,
+    fromId,
+    toId,
+    kind,
+    weight,
+    metadata
+  );
+  return { edge, cycle: false };
 }
 
 export async function deleteEdge(edgeId: string): Promise<number> {

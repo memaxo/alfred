@@ -170,114 +170,118 @@ export function planWaves(
     byId.set(task.id, task);
   }
 
-  const graph = buildDepGraph(subTasks);
-  const inDegree = computeInDegree(graph);
+  // Build immutable copy of deps and reverse adjacency list
+  const deps = new Map<SubTaskId, Set<SubTaskId>>();
+  const dependents = new Map<SubTaskId, SubTaskId[]>();
+  const inDegree = new Map<SubTaskId, number>();
 
-  const ready: SubTaskId[] = [];
-  for (const [id, degree] of inDegree.entries()) {
-    if (degree === 0) {
-      ready.push(id);
+  for (const task of subTasks) {
+    deps.set(task.id, new Set(task.deps));
+    inDegree.set(task.id, task.deps.length);
+    if (!dependents.has(task.id)) {
+      dependents.set(task.id, []);
+    }
+    for (const dep of task.deps) {
+      const list = dependents.get(dep) ?? [];
+      list.push(task.id);
+      dependents.set(dep, list);
     }
   }
 
-  // Stable order: higher priority first, then id.
-  const sortReady = () => {
-    ready.sort((a, b) => {
-      const ta = byId.get(a);
-      const tb = byId.get(b);
-      if (!(ta && tb)) {
-        return 0;
-      }
-      const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
-      if (diff !== 0) {
-        return diff;
-      }
-      return a.localeCompare(b);
-    });
+  // Comparator for stable priority ordering
+  const compareTasks = (a: SubTaskId, b: SubTaskId): number => {
+    const ta = byId.get(a);
+    const tb = byId.get(b);
+    if (!(ta && tb)) return 0;
+    const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
+    return diff !== 0 ? diff : a.localeCompare(b);
   };
 
-  sortReady();
+  // Initialize ready queue with zero in-degree tasks
+  let readyQueue: SubTaskId[] = [];
+  for (const [id, degree] of inDegree.entries()) {
+    if (degree === 0) {
+      readyQueue.push(id);
+    }
+  }
+  readyQueue.sort(compareTasks);
 
   const waves: WavePlan[] = [];
   const scheduled = new Set<SubTaskId>();
+  const taskToWave = new Map<SubTaskId, WaveId>();
 
   let waveIndex = 0;
-  while (ready.length > 0) {
+  let readyIndex = 0;
+
+  while (readyIndex < readyQueue.length) {
     const currentWaveTasks: SubTaskId[] = [];
-    while (ready.length > 0 && currentWaveTasks.length < maxParallel) {
-      const id = ready.shift();
-      if (!id) {
-        break;
-      }
-      if (scheduled.has(id)) {
-        continue;
-      }
+
+    // Collect up to maxParallel tasks from current ready queue
+    while (
+      readyIndex < readyQueue.length &&
+      currentWaveTasks.length < maxParallel
+    ) {
+      const id = readyQueue[readyIndex++]!;
+      if (scheduled.has(id)) continue;
       currentWaveTasks.push(id);
       scheduled.add(id);
     }
 
-    if (currentWaveTasks.length === 0) {
-      break;
-    }
+    if (currentWaveTasks.length === 0) break;
 
     const waveId = `wave_${waveIndex}`;
-    const dependsOn: WaveId[] = [];
+
+    // Compute wave dependencies using original deps (immutable)
+    const dependsOnSet = new Set<WaveId>();
     for (const taskId of currentWaveTasks) {
-      const deps = graph.get(taskId);
-      if (!deps) {
-        continue;
-      }
-      for (const dep of deps) {
-        const depWave = waves.find((w) => w.agents.includes(dep));
-        if (
-          depWave &&
-          depWave.id !== waveId &&
-          !dependsOn.includes(depWave.id)
-        ) {
-          dependsOn.push(depWave.id);
+      taskToWave.set(taskId, waveId);
+      const taskDeps = deps.get(taskId);
+      if (!taskDeps) continue;
+      for (const dep of taskDeps) {
+        const depWave = taskToWave.get(dep);
+        if (depWave && depWave !== waveId) {
+          dependsOnSet.add(depWave);
         }
       }
     }
 
-    waves.push({ id: waveId, agents: currentWaveTasks, dependsOn });
-    waveIndex += 1;
+    waves.push({
+      id: waveId,
+      agents: currentWaveTasks,
+      dependsOn: Array.from(dependsOnSet),
+    });
+    waveIndex++;
 
-    // Decrement in-degree for neighbours whose deps are now satisfied.
+    // Collect newly ready tasks using reverse adjacency
+    const newReady: SubTaskId[] = [];
     for (const taskId of currentWaveTasks) {
-      for (const [node, deps] of graph.entries()) {
-        if (deps.has(taskId)) {
-          deps.delete(taskId);
-          const degree = deps.size;
-          if (degree === 0 && !scheduled.has(node)) {
-            ready.push(node);
-          }
+      const taskDependents = dependents.get(taskId) ?? [];
+      for (const dependent of taskDependents) {
+        const degree = (inDegree.get(dependent) ?? 1) - 1;
+        inDegree.set(dependent, degree);
+        if (degree === 0 && !scheduled.has(dependent)) {
+          newReady.push(dependent);
         }
       }
     }
 
-    sortReady();
+    // Rebuild ready queue with remaining + new items
+    if (newReady.length > 0 || readyIndex < readyQueue.length) {
+      const remaining = readyQueue.slice(readyIndex).filter((id) => !scheduled.has(id));
+      readyQueue = [...remaining, ...newReady].sort(compareTasks);
+      readyIndex = 0;
+    }
   }
 
+  // Handle cycles or missing nodes
   if (scheduled.size !== byId.size) {
-    // Cycles or missing nodes; fall back to single wave preserving priority.
     const remaining: SubTaskId[] = [];
     for (const [id] of byId.entries()) {
       if (!scheduled.has(id)) {
         remaining.push(id);
       }
     }
-    remaining.sort((a, b) => {
-      const ta = byId.get(a);
-      const tb = byId.get(b);
-      if (!(ta && tb)) {
-        return 0;
-      }
-      const diff = (tb.priority ?? 0) - (ta.priority ?? 0);
-      if (diff !== 0) {
-        return diff;
-      }
-      return a.localeCompare(b);
-    });
+    remaining.sort(compareTasks);
     if (remaining.length > 0) {
       waves.push({ id: `wave_${waveIndex}`, agents: remaining, dependsOn: [] });
     }

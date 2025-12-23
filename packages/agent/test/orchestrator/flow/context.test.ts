@@ -1,4 +1,5 @@
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
@@ -133,4 +134,8 @@ describe("gatherCodeContext cache handoff", () => {
     expect(secondPayload?.receipts).toEqual(firstPayload?.receipts);
     expect(firstPayload?.receipts?.code?.[0]?.path).toBe("src/context.ts");
   });
+});
+
+afterAll(() => {
+  mock.restore();
 });

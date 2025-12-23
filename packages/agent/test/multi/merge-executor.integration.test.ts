@@ -1,8 +1,12 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { promisify } from "node:util";
 import { createTestSandbox } from "@alfred/test-kit";
+import {
+  type ConflictArbiterLike,
+  executeMergePlan,
+} from "../../src/orchestrator/multi/merge-executor";
 
 const execFileAsync = promisify(execFile);
 
@@ -63,16 +67,10 @@ const resolveImpl = async (
 
 const conflictResolveMock = mock(resolveImpl);
 
-mock.module("../../src/orchestrator/conflict.js", () => ({
-  conflictArbiter: {
-    resolve: (...args: Parameters<typeof conflictResolveMock>) =>
-      conflictResolveMock(...args),
-  },
-}));
-
-const { executeMergePlan } = await import(
-  "../../src/orchestrator/multi/merge-executor"
-);
+const mockArbiter: ConflictArbiterLike = {
+  resolve: (...args: Parameters<typeof conflictResolveMock>) =>
+    conflictResolveMock(...args) as any,
+};
 
 describe("executeMergePlan conflict arbiter integration", () => {
   let sandbox: ReturnType<typeof createTestSandbox>;
@@ -120,7 +118,7 @@ describe("executeMergePlan conflict arbiter integration", () => {
       repoRoot,
       makeGitTool() as any,
       undefined,
-      { runId: "run-merge-1", auto: "medium" }
+      { runId: "run-merge-1", auto: "medium", arbiter: mockArbiter }
     );
 
     expect(result.status).toBe("completed");
@@ -170,7 +168,7 @@ describe("executeMergePlan conflict arbiter integration", () => {
       repoRoot,
       makeGitTool() as any,
       undefined,
-      { runId: "run-merge-2", auto: "high" }
+      { runId: "run-merge-2", auto: "high", arbiter: mockArbiter }
     );
 
     expect(result.status).toBe("conflict");
@@ -180,8 +178,4 @@ describe("executeMergePlan conflict arbiter integration", () => {
     const content = await readText(`${repoRoot}/conflict.txt`);
     expect(content).toBe("line1\nline2-branch1\n");
   });
-});
-
-afterAll(() => {
-  mock.restore();
 });

@@ -1,6 +1,11 @@
 import { LoopDetector } from "@alfred/cognitive";
-import type { SubTaskId } from "./decompose";
+import type { SubTask, SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
+
+// Reverse dependency index: maps a task ID to the set of tasks that depend on it
+const blockedBy = new Map<SubTaskId, Set<SubTaskId>>();
+// Forward dependency index: maps a task ID to its dependencies
+const dependsOn = new Map<SubTaskId, Set<SubTaskId>>();
 
 /**
  * Configuration options for stuck detection thresholds.
@@ -265,9 +270,117 @@ export function clearAllDetectors(): void {
   agentDetectors.clear();
 }
 
+/**
+ * Register task dependencies for blocking propagation.
+ * Call this at workflow start with the decomposed tasks.
+ */
+export function registerDependencies(tasks: SubTask[]): void {
+  blockedBy.clear();
+  dependsOn.clear();
+
+  for (const task of tasks) {
+    dependsOn.set(task.id, new Set(task.deps));
+
+    for (const dep of task.deps) {
+      const blocked = blockedBy.get(dep) ?? new Set();
+      blocked.add(task.id);
+      blockedBy.set(dep, blocked);
+    }
+  }
+}
+
+/**
+ * Clear the dependency index (call when workflow completes).
+ */
+export function clearDependencyIndex(): void {
+  blockedBy.clear();
+  dependsOn.clear();
+}
+
+/**
+ * Get tasks that are blocked by the given task.
+ */
+export function getBlockedTasks(taskId: SubTaskId): SubTaskId[] {
+  return Array.from(blockedBy.get(taskId) ?? []);
+}
+
+/**
+ * Check if all dependencies of a task are completed.
+ */
+export function areAllDepsCompleted(
+  state: TrackerState,
+  taskId: SubTaskId
+): boolean {
+  const deps = dependsOn.get(taskId);
+  if (!deps || deps.size === 0) {
+    return true;
+  }
+
+  for (const depId of deps) {
+    // Find the agent for this task
+    const agentEntry = Object.entries(state.agents).find(
+      ([_, agent]) => agent.subTaskId === depId
+    );
+    if (!agentEntry) {
+      return false;
+    }
+    const [_, agent] = agentEntry;
+    if (agent.status !== "completed") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Propagate completion of a task to unblock dependent tasks.
+ * Returns the list of tasks that are now unblocked and ready to run.
+ */
+export function propagateCompletion(
+  state: TrackerState,
+  completedTaskId: SubTaskId
+): { unblockedTasks: SubTaskId[]; state: TrackerState } {
+  const next = cloneState(state);
+  const unblocked: SubTaskId[] = [];
+
+  const dependents = blockedBy.get(completedTaskId) ?? new Set();
+
+  for (const dependentId of dependents) {
+    // Find the agent for this dependent task
+    const agentEntry = Object.entries(next.agents).find(
+      ([_, agent]) => agent.subTaskId === dependentId
+    );
+
+    if (!agentEntry) {
+      continue;
+    }
+
+    const [agentId, agent] = agentEntry;
+
+    // Only unblock if paused/created and all deps are now complete
+    if (agent.status !== "paused" && agent.status !== "created") {
+      continue;
+    }
+
+    if (areAllDepsCompleted(next, dependentId)) {
+      unblocked.push(dependentId);
+      // Mark as ready to run (status will be updated when execution starts)
+      next.agents[agentId as AgentId] = {
+        ...agent,
+        status: "created",
+      };
+    }
+  }
+
+  return { unblockedTasks: unblocked, state: next };
+}
+
 export const __internals = {
   cloneState,
   ensureAgent,
   normaliseTime,
   getOrCreateDetector,
+  blockedBy,
+  dependsOn,
 };

@@ -14,6 +14,7 @@ import {
 } from "../../security/filesystem.js";
 import { spawnWithSecureCwd } from "../../security/secure-spawn.js";
 import { withPolicyApproval } from "./approval.js";
+import type { ToolWriter } from "./shared/context.js";
 
 const OUTPUT_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB
 const DEFAULT_TIMEOUT_SEC = 15 * 60;
@@ -112,10 +113,6 @@ const gitInputSchema = z.object({
 
 export type GitInput = z.infer<typeof gitInputSchema>;
 
-type ToolWriter =
-  | { write: (chunk: unknown) => Promise<void> | void }
-  | undefined;
-
 const READ_ONLY_ACTIONS = new Set<GitInput["action"]>([
   "status",
   "diff",
@@ -151,7 +148,7 @@ async function runGit({
 }: {
   cwdHandle: DirectoryHandle;
   args: string[];
-  writer: ToolWriter;
+  writer?: ToolWriter;
   timeoutSec: number;
 }) {
   const command = resolveExecutable("git");

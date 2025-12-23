@@ -717,3 +717,79 @@ export async function getReasoningChain(args: {
 
   return { nodes: normalizedNodes, edges: normalizedEdges };
 }
+
+/**
+ * Get all nodes reachable from a starting node via edges of a specific kind.
+ * Returns the transitive closure of dependencies.
+ */
+export async function getTransitiveClosure(
+  nodeId: string,
+  kind: string,
+  maxDepth = 10,
+  resource?: string
+): Promise<string[]> {
+  if (isSqliteDriver()) {
+    return getTransitiveClosureSqlite(nodeId, kind, maxDepth, resource);
+  }
+
+  const resourceFilter = resource ? sql`AND e.resource = ${resource}` : sql``;
+  const kindFilter = sql`AND e.kind = ${kind}`;
+
+  const query = sql<{ node_id: string }>`
+    WITH RECURSIVE closure (node_id, depth) AS (
+      SELECT ${nodeId}::uuid AS node_id, 0 AS depth
+      
+      UNION ALL
+      
+      SELECT e.to_id, closure.depth + 1
+      FROM memory_edges e
+      JOIN closure ON closure.node_id = e.from_id
+      WHERE closure.depth < ${maxDepth}
+        ${kindFilter}
+        ${resourceFilter}
+    )
+    SELECT DISTINCT node_id
+    FROM closure
+    WHERE node_id != ${nodeId}::uuid
+  `;
+
+  const result = await db.execute(query);
+  return (result.rows ?? []).map((row) => String((row as { node_id: string }).node_id));
+}
+
+async function getTransitiveClosureSqlite(
+  nodeId: string,
+  kind: string,
+  maxDepth: number,
+  resource?: string
+): Promise<string[]> {
+  const context = await loadGraphContext(resource);
+  const visited = new Set<string>();
+  const queue: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
+
+  visited.add(nodeId);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || current.depth >= maxDepth) {
+      continue;
+    }
+
+    const neighbors = context.adjacency.get(current.id);
+    if (!neighbors) {
+      continue;
+    }
+
+    for (const neighborId of neighbors) {
+      if (visited.has(neighborId)) {
+        continue;
+      }
+
+      visited.add(neighborId);
+      queue.push({ id: neighborId, depth: current.depth + 1 });
+    }
+  }
+
+  visited.delete(nodeId);
+  return Array.from(visited);
+}

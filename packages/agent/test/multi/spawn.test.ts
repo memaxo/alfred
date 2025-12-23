@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
   __internals,
@@ -17,6 +20,15 @@ const makeTask = (id: string, deps: string[] = [], priority = 1): SubTask => ({
 });
 
 const originalUseContainers = process.env.ORCH_USE_CONTAINERS;
+let testDir: string;
+
+beforeAll(() => {
+  testDir = mkdtempSync(join(tmpdir(), "spawn-test-"));
+});
+
+afterAll(() => {
+  rmSync(testDir, { recursive: true, force: true });
+});
 
 afterEach(() => {
   if (originalUseContainers === undefined) {
@@ -28,7 +40,7 @@ afterEach(() => {
 
 describe("buildAgentSpec", () => {
   it("derives exec plan path and context metadata", () => {
-    const spec = buildAgentSpec(makeTask("sub-1"), "run-123", "/repo", {
+    const spec = buildAgentSpec(makeTask("sub-1"), "run-123", testDir, {
       auto: "medium",
       linear: {
         issueId: "ISS-1",
@@ -44,19 +56,21 @@ describe("buildAgentSpec", () => {
     expect(spec.context.relevantFiles).toEqual([]);
     expect(spec.context.linearSessionId).toBe("LIN-1");
     expect(spec.context.linearSpace).toBe("focus");
-    expect(spec.environment).toBe("host");
+    // Production default is container isolation
+    expect(spec.environment).toBe("container");
   });
 
-  it("uses worktrees when parallelism exceeds one", () => {
-    const spec = buildAgentSpec(makeTask("sub-2"), "run-456", "/repo", {
+  it("uses container isolation by default", () => {
+    const spec = buildAgentSpec(makeTask("sub-2"), "run-456", testDir, {
       maxParallel: 4,
     });
-    expect(spec.environment).toBe("worktree");
+    // Production default is always container, regardless of parallelism
+    expect(spec.environment).toBe("container");
   });
 
-  it("switches to containers when ORCH_USE_CONTAINERS=1", () => {
+  it("confirms container environment with ORCH_USE_CONTAINERS=1", () => {
     process.env.ORCH_USE_CONTAINERS = "1";
-    const spec = buildAgentSpec(makeTask("sub-3"), "run-789", "/repo");
+    const spec = buildAgentSpec(makeTask("sub-3"), "run-789", testDir);
     expect(spec.environment).toBe("container");
   });
 });

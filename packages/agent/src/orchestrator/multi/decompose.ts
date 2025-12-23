@@ -75,13 +75,9 @@ function normalisePrefix(path: string): string {
 }
 
 function stableId(seed: string): SubTaskId {
-  // Deterministic, cheap hash; not cryptographic.
-  let h1 = 0x81_1c_9d_c5;
-  for (let i = 0; i < seed.length; i += 1) {
-    h1 ^= seed.charCodeAt(i) & 0xff;
-    h1 = (h1 * 0x01_00_01_93) >>> 0;
-  }
-  return `T${(h1 >>> 0).toString(16)}`;
+  const { createHash } = require("node:crypto");
+  const hash = createHash("sha256").update(seed).digest("hex");
+  return `T${hash.slice(0, 8)}`;
 }
 
 function uniq(items: string[]): string[] {
@@ -117,6 +113,42 @@ function truncateSubtasksIfNeeded(
   metric?.inc({ reason });
 
   return truncated;
+}
+
+/**
+ * Validate and fix task dependencies.
+ * Removes invalid deps (unknown IDs, self-references) and logs warnings.
+ */
+function validateAndFixDependencies(tasks: SubTask[]): SubTask[] {
+  const ids = new Set(tasks.map((t) => t.id));
+  const warnings: string[] = [];
+
+  const fixed = tasks.map((task) => {
+    const validDeps: SubTaskId[] = [];
+
+    for (const dep of task.deps) {
+      if (dep === task.id) {
+        warnings.push(`Task ${task.id} has self-dependency`);
+        continue;
+      }
+      if (!ids.has(dep)) {
+        warnings.push(`Task ${task.id} references unknown dep: ${dep}`);
+        continue;
+      }
+      validDeps.push(dep);
+    }
+
+    if (validDeps.length !== task.deps.length) {
+      return { ...task, deps: validDeps };
+    }
+    return task;
+  });
+
+  if (warnings.length > 0) {
+    logger.warn("decompose_invalid_deps", { errors: warnings });
+  }
+
+  return fixed;
 }
 
 export function decomposeTask(
@@ -155,7 +187,9 @@ export function decomposeTask(
         context.bundle
       );
       if (semanticTasks.length > 0) {
-        return truncateSubtasksIfNeeded(semanticTasks, "semantic");
+        return validateAndFixDependencies(
+          truncateSubtasksIfNeeded(semanticTasks, "semantic")
+        );
       }
     } catch (_e) {
       // Fallback to legacy bucket heuristic if semantic fails
@@ -312,7 +346,7 @@ export function decomposeTask(
 
   result.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
 
-  return truncateSubtasksIfNeeded(result, "bucket");
+  return validateAndFixDependencies(truncateSubtasksIfNeeded(result, "bucket"));
 }
 
 export const __internals = {

@@ -486,3 +486,60 @@ export function extractIssueIdFromSession(sessionId: string): string | null {
 
   return trimmed;
 }
+
+export async function createLinearBlockingRelation(params: {
+  space: string;
+  blockingIssueId: string;
+  blockedIssueId: string;
+  authz: string;
+}): Promise<{ ok: boolean; id?: string }> {
+  const metrics = getLinearMetrics();
+  metrics.linearSessionOperationsTotal.inc({ operation: "add_relation" });
+  try {
+    return await pRetry(
+      async () => {
+        await linearRateLimiter.throttle("session", {
+          requireStartupBuffer: false,
+        });
+        const input = {
+          space: params.space,
+          action: "add-relation" as const,
+          issueId: params.blockingIssueId,
+          relatedIssueId: params.blockedIssueId,
+          relationType: "blocks" as const,
+          authz: params.authz,
+        };
+
+        const result = await toolTicket.execute({ input });
+        return { ok: result.ok, id: result.id };
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10_000,
+        factor: 2,
+        onFailedAttempt: async (error) => {
+          const statusCode = getStatusCode(error);
+          if (
+            statusCode &&
+            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
+          ) {
+            if (statusCode === 429) {
+              const retryAfterMs = resolveRetryAfterMs(error);
+              await linearRateLimiter.handle429(retryAfterMs);
+            }
+            return;
+          }
+          throw new AbortError(error);
+        },
+      }
+    );
+  } catch (error) {
+    logger?.warn?.("linear_add_relation_failed", {
+      blockingIssueId: params.blockingIssueId,
+      blockedIssueId: params.blockedIssueId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false };
+  }
+}

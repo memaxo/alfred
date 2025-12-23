@@ -21,6 +21,8 @@ const ticketInputSchema = z.object({
     "activity.response",
     "activity.error",
     "session.external-url",
+    "add-relation",
+    "remove-relation",
   ]),
   teamId: z.string().optional(),
   issueId: z.string().optional(),
@@ -32,6 +34,10 @@ const ticketInputSchema = z.object({
   parameter: z.string().optional(),
   result: z.string().optional(),
   ephemeral: z.boolean().optional(),
+  relationType: z
+    .enum(["blocks", "duplicate", "related", "similar"])
+    .optional(),
+  relatedIssueId: z.string().optional(),
   authz: z.string().optional(),
 });
 
@@ -293,6 +299,62 @@ async function runSessionExternalUrl(client: LinearClient, input: TicketInput) {
   return { ok: true, id: sessionId, url };
 }
 
+async function runAddRelation(client: LinearClient, input: TicketInput) {
+  const issueId = ensure(input.issueId, "ticket_issue_required");
+  const relatedIssueId = ensure(
+    input.relatedIssueId,
+    "ticket_related_issue_required"
+  );
+  const relationType = input.relationType ?? "related";
+
+  // Linear SDK expects IssueRelationType enum but accepts lowercase strings
+  const response = await client.createIssueRelation({
+    issueId,
+    relatedIssueId,
+    type: relationType as unknown as Parameters<
+      typeof client.createIssueRelation
+    >[0]["type"],
+  });
+
+  if (!response.success) {
+    throw new Error("ticket_add_relation_failed");
+  }
+
+  const relation = response.issueRelation
+    ? await response.issueRelation
+    : null;
+  return { ok: true, id: relation?.id ?? undefined };
+}
+
+async function runRemoveRelation(client: LinearClient, input: TicketInput) {
+  const issueId = ensure(input.issueId, "ticket_issue_required");
+  const relatedIssueId = ensure(
+    input.relatedIssueId,
+    "ticket_related_issue_required"
+  );
+
+  const issue = await client.issue(issueId);
+  if (!issue) {
+    throw new Error("ticket_issue_not_found");
+  }
+
+  const relations = await issue.relations();
+  const targetRelation = relations.nodes.find(
+    (rel) => rel.relatedIssueId === relatedIssueId
+  );
+
+  if (!targetRelation) {
+    return { ok: true, id: undefined };
+  }
+
+  const response = await client.deleteIssueRelation(targetRelation.id);
+  if (!response.success) {
+    throw new Error("ticket_remove_relation_failed");
+  }
+
+  return { ok: true, id: targetRelation.id };
+}
+
 export const toolTicket = {
   name: "ticket",
   description: "Create or update Linear issues with policy enforcement.",
@@ -363,6 +425,10 @@ export const toolTicket = {
         });
       case "session.external-url":
         return runSessionExternalUrl(client, input);
+      case "add-relation":
+        return runAddRelation(client, input);
+      case "remove-relation":
+        return runRemoveRelation(client, input);
       default:
         throw new Error("ticket_action_not_supported");
     }
