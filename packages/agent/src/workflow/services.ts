@@ -7,7 +7,6 @@ import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { runPlanV6 } from "./runner";
 
 // Type for the runtime executor (defined here to avoid circular dependency)
 type RuntimeExecutor = {
@@ -18,14 +17,25 @@ type RuntimeExecutor = {
   cancel: () => Promise<void>;
 };
 
+// Common workflow executor type returned by createWorkflowExecutor
+// The resume payload type varies between RuntimeExecutor and RunPlanV6
+// so we use a generic type with a default of unknown
+export type WorkflowExecutor = {
+  runId: string;
+  summary: string;
+  stream: AsyncGenerator<WorkflowEvent, void, void>;
+  // biome-ignore lint/suspicious/noExplicitAny: Resume payload varies between executor types
+  resume: (payload: any) => Promise<void>;
+  cancel: () => void | Promise<void>;
+};
+
 // Dynamic import to avoid circular dependency with @alfred/runtime
 // Using a variable to prevent TypeScript from statically analyzing the import
 async function getCreateRuntime(): Promise<(opts: unknown) => RuntimeExecutor> {
   const modulePath = "@alfred/runtime";
-  // biome-ignore lint/security/noGlobalEval: Required to prevent TypeScript static analysis
-  const runtime = await (eval(`import("${modulePath}")`) as Promise<{
+  const runtime = (await import(modulePath)) as {
     createRuntime: (opts: unknown) => RuntimeExecutor;
-  }>);
+  };
   return runtime.createRuntime;
 }
 
@@ -99,74 +109,50 @@ export const workflowInput = z.object({
 
 export type WorkflowInputPayload = z.infer<typeof workflowInput>;
 
-export function shouldUseWorkflowRuntime(): boolean {
-  return process.env.USE_WORKFLOW_RUNTIME === "true";
-}
-
 export async function createWorkflowExecutor(
   input: z.infer<typeof workflowInput>,
   abortController: AbortController,
   history?: WorkflowEvent[],
   runtimeContext?: RuntimeContext<Record<string, unknown>>
-) {
-  if (shouldUseWorkflowRuntime()) {
-    const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
-    const createRuntime = await getCreateRuntime();
+): Promise<WorkflowExecutor> {
+  const model = openai(process.env.OPENAI_MODEL_PLAN ?? "gpt-4o");
+  const createRuntime = await getCreateRuntime();
 
-    return createRuntime({
-      input: {
-        requirement: input.requirement,
-        auto: input.auto,
-        workspace: input.workspace,
-        repoBase: input.repoBase,
-        mode: input.mode,
-        interactive: input.interactive,
-        context: input.context,
-        linear:
-          input.linear?.sessionId && input.authzLinear
-            ? {
-                sessionId: input.linear.sessionId,
-                space: input.linear.space,
-                authz: input.authzLinear,
-              }
-            : undefined,
-      },
-      model,
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-      runId: input.runId, // Pass runId if resuming
-      history, // Pass history if resuming
-      runtimeContext,
-    });
-  }
-  return runPlanV6(
-    {
+  return createRuntime({
+    input: {
       requirement: input.requirement,
       auto: input.auto,
       workspace: input.workspace,
       repoBase: input.repoBase,
       mode: input.mode,
+      interactive: input.interactive,
       context: input.context,
-      ...(input.linear?.sessionId && input.authzLinear
-        ? {
-            linear: {
+      linear:
+        input.linear?.sessionId && input.authzLinear
+          ? {
               sessionId: input.linear.sessionId,
               space: input.linear.space,
               authz: input.authzLinear,
-            },
-          }
-        : {}),
+            }
+          : undefined,
     },
-    {
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-    }
-  );
+    model,
+    signal: abortController.signal,
+    stepTimeoutMs: 5 * 60 * 1000,
+    workflowTimeoutMs: 30 * 60 * 1000,
+    runId: input.runId,
+    history,
+    runtimeContext,
+  });
 }
 
-export const mapWorkflowResource = (raw: unknown) => {
+type WorkflowResourceDescriptor = {
+  kind: "workflow";
+  id: string;
+  attrs: Record<string, unknown>;
+};
+
+export const mapWorkflowResource = (raw: unknown): WorkflowResourceDescriptor => {
   const input = raw as Partial<z.infer<typeof workflowInput>>;
   return {
     kind: "workflow" as const,
@@ -178,7 +164,7 @@ export const mapWorkflowResource = (raw: unknown) => {
   };
 };
 
-export const mapWorkflowRunResource = (raw: unknown) => {
+export const mapWorkflowRunResource = (raw: unknown): WorkflowResourceDescriptor => {
   const input = raw as { runId?: string };
   return {
     kind: "workflow" as const,
@@ -187,25 +173,8 @@ export const mapWorkflowRunResource = (raw: unknown) => {
   };
 };
 
-export function coerceRecord(value: unknown): Record<string, unknown> {
-  if (!value) {
-    return {};
-  }
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return typeof parsed === "object" && parsed !== null
-        ? (parsed as Record<string, unknown>)
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  if (typeof value === "object") {
-    return value as Record<string, unknown>;
-  }
-  return {};
-}
+// Re-export from canonical location for backward compatibility
+export { coerceRecord } from "../utils/coerce";
 
 function requiresBiometric(obligations: Obligation[] | undefined): boolean {
   if (!obligations || obligations.length === 0) {

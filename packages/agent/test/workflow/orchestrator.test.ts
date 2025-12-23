@@ -31,6 +31,26 @@ const metricsMock = {
 
 mock.module("../../src/workflow/metrics", () => metricsMock);
 
+mock.module("../../src/workflow/metrics-recorder", () => ({
+  recordMultiAgentEvent: vi.fn(),
+}));
+
+mock.module("../../src/workflow/event-persistence", () => ({
+  persistEventSafe: vi.fn().mockImplementation((_runId, event) => 
+    Promise.resolve({ eventId: `${event.type}-id`, eventType: event.type, uiMessages: null })
+  ),
+}));
+
+mock.module("../../src/workflow/linear-activity", () => ({
+  LinearActivityService: class {
+    bootstrap = vi.fn().mockResolvedValue(undefined);
+    completeSuccess = vi.fn().mockResolvedValue(undefined);
+    completeFailure = vi.fn().mockResolvedValue(undefined);
+    emitError = vi.fn().mockResolvedValue(undefined);
+    isFailureNotified = false;
+  },
+}));
+
 mock.module("../../src/workflow/provenance", () => ({
   workflowProvenance: vi.fn().mockResolvedValue(undefined),
 }));
@@ -100,32 +120,41 @@ mock.module("../../src/utils/redaction", () => ({
   redactEventData: (event: WorkflowEvent) => event,
 }));
 
-const reviewGateInstances: Array<{
+const reviewGateManagerInstances: Array<{
   isSatisfied: vi.Mock;
   recordCheck: vi.Mock;
   applyPlan: vi.Mock;
   summary: vi.Mock;
   requireAtLeast: vi.Mock;
   serialize: vi.Mock;
-  restore: vi.Mock;
+  restoreFromRun: vi.Mock;
+  persistState: vi.Mock;
+  recordEscalation: vi.Mock;
+  getEscalationReason: vi.Mock;
 }> = [];
 
-mock.module("../../src/workflow/review-gate", () => ({
-  ReviewGate: class {
+mock.module("../../src/workflow/review-gate-manager", () => ({
+  ReviewGateManager: class {
     applyPlan = vi.fn();
     recordCheck = vi.fn();
     summary = vi.fn(() => [] as any[]);
     isSatisfied = vi.fn(() => true);
     requireAtLeast = vi.fn();
     serialize = vi.fn(() => ({
-      checks: [],
-      planInitialized: false,
-      planRequired: false,
-      minimumRequired: 0,
+      reviewGate: {
+        checks: [],
+        planInitialized: false,
+        planRequired: false,
+        minimumRequired: 0,
+      },
+      reviewEscalation: null,
     }));
-    restore = vi.fn();
+    restoreFromRun = vi.fn().mockResolvedValue(undefined);
+    persistState = vi.fn().mockResolvedValue(undefined);
+    recordEscalation = vi.fn().mockReturnValue({ metricKind: "review_fixer_exhausted" });
+    getEscalationReason = vi.fn().mockReturnValue(undefined);
     constructor() {
-      reviewGateInstances.push(this);
+      reviewGateManagerInstances.push(this);
     }
   },
 }));
@@ -137,7 +166,7 @@ const { orchestrateWorkflowStream } = await import(
 describe("workflow orchestrator self-correction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    reviewGateInstances.length = 0;
+    reviewGateManagerInstances.length = 0;
   });
 
   it("passes through fixer events when review retries succeed", async () => {
@@ -227,7 +256,7 @@ describe("workflow orchestrator self-correction", () => {
       cancel: vi.fn(),
     });
 
-    reviewGateInstances.length = 0;
+    reviewGateManagerInstances.length = 0;
 
     const emitError = vi.fn();
 
@@ -296,9 +325,10 @@ describe("workflow orchestrator self-correction", () => {
       }
     );
 
-    const gate = reviewGateInstances[0];
+    const gate = reviewGateManagerInstances[0];
     if (gate) {
       gate.isSatisfied.mockReturnValue(false);
+      gate.getEscalationReason.mockReturnValue("fixer_exhausted");
     }
 
     await flushMicrotasks();
@@ -373,7 +403,7 @@ describe("workflow orchestrator self-correction", () => {
 describe("workflow orchestrator review gate persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    reviewGateInstances.length = 0;
+    reviewGateManagerInstances.length = 0;
   });
 
   it("persists ReviewGate state to stateData on suspend", async () => {
@@ -426,28 +456,12 @@ describe("workflow orchestrator review gate persistence", () => {
 
     await flushMicrotasks();
 
-    const gate = reviewGateInstances[0];
-    if (gate) {
-      gate.serialize.mockReturnValue(serializedState);
-    }
-
     // Wait for async markSuspended to complete
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    // Verify serialize was called
-    expect(gate?.serialize).toHaveBeenCalled();
-
-    // Verify updateRun was called with stateData containing reviewGate
-    const updateCalls = workflowRepoMocks.updateRun.mock.calls;
-    const stateDataCall = updateCalls.find(
-      ([runId, data]: [string, any]) =>
-        runId === "run-suspend" && data.stateData !== undefined
-    );
-
-    expect(stateDataCall).toBeTruthy();
-    if (stateDataCall) {
-      expect(stateDataCall[1].stateData).toHaveProperty("reviewGate");
-    }
+    // Verify persistState was called on ReviewGateManager
+    const gate = reviewGateManagerInstances[0];
+    expect(gate?.persistState).toHaveBeenCalled();
   });
 
   it("restores ReviewGate state from stateData on resume", async () => {
@@ -505,12 +519,9 @@ describe("workflow orchestrator review gate persistence", () => {
 
     await flushMicrotasks();
 
-    // Verify getRun was called to fetch the workflow state
-    expect(workflowRepoMocks.getRun).toHaveBeenCalledWith("run-resume");
-
-    // Verify restore was called with the stored state
-    const gate = reviewGateInstances[0];
-    expect(gate?.restore).toHaveBeenCalledWith(storedReviewGateState);
+    // Verify restoreFromRun was called
+    const gate = reviewGateManagerInstances[0];
+    expect(gate?.restoreFromRun).toHaveBeenCalledWith("run-resume");
   });
 
   it("handles missing stateData gracefully on resume", async () => {
@@ -555,9 +566,9 @@ describe("workflow orchestrator review gate persistence", () => {
     // Should not error when stateData is missing
     expect(emitError).not.toHaveBeenCalled();
 
-    // restore should not be called since there's no reviewGate in stateData
-    const gate = reviewGateInstances[0];
-    expect(gate?.restore).not.toHaveBeenCalled();
+    // restoreFromRun should still be called (manager handles missing data internally)
+    const gate = reviewGateManagerInstances[0];
+    expect(gate?.restoreFromRun).toHaveBeenCalledWith("run-no-state");
   });
 
   it("persists reviewEscalation along with reviewGate state on suspend", async () => {
@@ -610,21 +621,12 @@ describe("workflow orchestrator review gate persistence", () => {
     // Wait for async operations to complete
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    // Verify updateRun was called with stateData containing reviewEscalation
-    const updateCalls = workflowRepoMocks.updateRun.mock.calls;
-    const stateDataCall = updateCalls.find(
-      ([runId, data]: [string, any]) =>
-        runId === "run-escalate-suspend" && data.stateData !== undefined
-    );
+    // Verify persistState was called on ReviewGateManager (which handles reviewEscalation)
+    const gate = reviewGateManagerInstances[0];
+    expect(gate?.persistState).toHaveBeenCalled();
 
-    expect(stateDataCall).toBeTruthy();
-    if (stateDataCall) {
-      expect(stateDataCall[1].stateData).toHaveProperty("reviewEscalation");
-      expect(stateDataCall[1].stateData.reviewEscalation).toMatchObject({
-        reason: "fixer_exhausted",
-        attempts: 3,
-      });
-    }
+    // Also verify recordEscalation was called with the escalation data
+    expect(gate?.recordEscalation).toHaveBeenCalled();
   });
 });
 

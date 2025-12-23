@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SearchReceipt, WorkflowEvent } from "@alfred/type";
 import type { UIMessage } from "@alfred/type/stream";
+import { coerceNonEmptyString } from "./coerce";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -411,6 +412,4 @@ function getToolOutput(shape: ToolResultShape): unknown {
   return;
 }
 
-function coerceNonEmptyString(value?: string | null): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
+
