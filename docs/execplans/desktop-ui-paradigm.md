@@ -2777,6 +2777,7 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Typecheck passes | ✅ | New desktop code compiles cleanly |
 | 2025-12-23 | 1 | Lint passes | ✅ | Biome check with all safe fixes applied |
 | 2025-12-23 | 1 | Build passes | ✅ | `bun run build` succeeds |
+| 2025-12-23 | 1 | Layout functions generic | ✅ | `layout.ts`, `layout-semantic.ts` now work with any node data type |
 | | 1 | Update all imports | ⬜ | Gradual migration from mindscape → desktop |
 | | 2 | Install TanStack DB | ⬜ | |
 | | 2 | Create noteCollection | ⬜ | |

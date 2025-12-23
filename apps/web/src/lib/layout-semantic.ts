@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
-import type { ArtifactData } from "@/store/mindscape";
+
+type NodeData = { type?: string; [key: string]: unknown };
 
 export type SemanticLayoutOptions = {
   anchorId?: string;
@@ -47,11 +48,11 @@ function getZonePosition(type: string, radius: number): Vector {
   };
 }
 
-export function layoutSemantic(
-  nodes: Node<ArtifactData>[],
+export function layoutSemantic<T extends NodeData>(
+  nodes: Node<T>[],
   edges: Edge[],
   options: SemanticLayoutOptions = {}
-): Node<ArtifactData>[] {
+): Node<T>[] {
   if (nodes.length <= 1) {
     return nodes;
   }

@@ -1,13 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
-import type { ArtifactData } from "@/store/mindscape";
 import { layoutSemantic, type SemanticLayoutOptions } from "./layout-semantic";
 
-// Simple concentric layout
-export function getLayoutedElements(
-  nodes: Node<ArtifactData>[],
+type NodeData = { type?: string; label?: string; [key: string]: unknown };
+
+export function getLayoutedElements<T extends NodeData>(
+  nodes: Node<T>[],
   _edges: Edge[],
   centerId = "singularity"
-) {
+): Node<T>[] {
   const center = { x: 0, y: 0 };
   const orbitSpacing = 400;
 
@@ -24,12 +24,7 @@ export function getLayoutedElements(
       )
   );
 
-  // Helper to layout a group in a circle/arc
-  const layoutGroup = (
-    group: Node<ArtifactData>[],
-    radius: number,
-    startAngle = 0
-  ) => {
+  const layoutGroup = (group: Node<T>[], radius: number, startAngle = 0) => {
     if (group.length === 0) {
       return [];
     }
@@ -79,10 +74,10 @@ export function getLayoutedElements(
   ];
 }
 
-export function getSemanticLayoutedElements(
-  nodes: Node<ArtifactData>[],
+export function getSemanticLayoutedElements<T extends NodeData>(
+  nodes: Node<T>[],
   edges: Edge[],
   options?: SemanticLayoutOptions
-): Node<ArtifactData>[] {
+): Node<T>[] {
   return layoutSemantic(nodes, edges, options);
 }

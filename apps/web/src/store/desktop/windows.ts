@@ -114,10 +114,10 @@ export const createWindowSlice: StateCreator<
     const shouldUseSemantic =
       edges.length > 0 || windows.some((w) => Boolean(w.data?.resourceRef));
     const layoutedWindows = shouldUseSemantic
-      ? getSemanticLayoutedElements(windows as any, edges, {
+      ? getSemanticLayoutedElements(windows, edges, {
           focusId: focusedWindowId,
         })
-      : getLayoutedElements(windows as any, edges);
-    set({ windows: layoutedWindows as DesktopState["windows"] });
+      : getLayoutedElements(windows, edges);
+    set({ windows: layoutedWindows });
   },
 });
