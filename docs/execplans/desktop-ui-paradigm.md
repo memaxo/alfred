@@ -2780,9 +2780,11 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Layout functions generic | ✅ | `layout.ts`, `layout-semantic.ts` now work with any node data type |
 | 2025-12-23 | 1 | Compatibility layer | ✅ | `store/compat.ts` provides mindscape-compatible aliases for desktop store |
 | | 1 | Migrate individual components | ⬜ | Node-by-node migration as part of Phase 3 route consolidation |
-| | 2 | Install TanStack DB | ⬜ | |
-| | 2 | Create noteCollection | ⬜ | |
-| | 2 | Migrate NoteWindow | ⬜ | |
+| 2025-12-23 | 2 | Install TanStack DB | ✅ | @tanstack/react-db v0.1.60, @tanstack/query-db-collection v1.0.12 |
+| 2025-12-23 | 2 | Create resource schemas | ✅ | note, reminder, thread, workflow, edge schemas in collections/schemas.ts |
+| 2025-12-23 | 2 | Create noteCollection | ✅ | Optimistic insert/update/delete with tRPC persistence |
+| 2025-12-23 | 2 | Create reminderCollection | ✅ | Optimistic insert/fire/delete with tRPC persistence |
+| | 2 | Migrate NoteWindow | ⬜ | Replace direct tRPC with useLiveQuery |
 | | 3 | Delete WebGPU | ⬜ | |
 | | 3 | Route consolidation | ⬜ | |
 | | 4 | Subscription protocol | ⬜ | |
@@ -2800,6 +2802,8 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Layout functions typed to `ArtifactData` | Low | Fixed: made functions generic with `NodeData` type constraint |
 | 2025-12-23 | 1 | Pre-existing type errors in packages/api metrics | None | Unrelated to desktop; noted but not blocking |
 | 2025-12-23 | 1 | Node components tightly coupled to mindscape | Medium | Created compat layer; full migration deferred to Phase 3 |
+| 2025-12-23 | 2 | No conversation/thread tRPC router exists | Low | threadCollection deferred; requires API work first |
+| 2025-12-23 | 2 | TanStack DB API differs from initial assumptions | Low | Fixed: use collection.insert/update/delete with onInsert/onUpdate/onDelete handlers |
 
 ---
 
@@ -2821,6 +2825,8 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | Fixed enum for edge kinds | Simplicity for MVP; can extend later | Architecture |
 | 2025-12-23 | TanStack DB beta risk accepted | Pin version; git revert if breaking changes | Risk Mitigation |
 | 2025-12-23 | No feature flags | Immediate removal of dead code; git revert for recovery | ALFRED Principle |
+| 2025-12-23 | Collections use onInsert/onUpdate/onDelete handlers | TanStack DB queryCollectionOptions pattern with refetch on mutation complete | Architecture |
+| 2025-12-23 | createOptimisticAction for UI-initiated mutations | Separate actions for insert/update/delete with immediate optimistic state | Architecture |
 
 ---
 
