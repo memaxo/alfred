@@ -22,7 +22,6 @@ import {
   deriveWorkflowTitle,
   ensureWorkflowConversation,
   persistWorkflowMessages,
-  shouldUseWorkflowRuntime,
 } from "./executor";
 import { loadHistory } from "./history";
 import { createLifecycle } from "./lifecycle";
@@ -139,7 +138,6 @@ export async function orchestrateWorkflowStream(
     let runId: string | null = null;
     const persistedMessageKeys = new Set<string>();
     let workflowConversationId: string | null = null;
-    const useRuntime = shouldUseWorkflowRuntime();
     const reasonTraces: ReasonTrace[] = [];
     let linearIssueUrlFromCreation: string | null = null;
     const reviewGate = new ReviewGate();
@@ -311,7 +309,7 @@ export async function orchestrateWorkflowStream(
       recordEvent("run");
 
       for await (const event of executor.stream) {
-        observeEvent({ event, reviewGate, useRuntime, reasonTraces });
+        observeEvent({ event, reviewGate, reasonTraces });
 
         const persisted = await persistStreamEvent({
           event,
@@ -332,7 +330,7 @@ export async function orchestrateWorkflowStream(
         }
       }
 
-      if (!cancelled && useRuntime && runId && reasonTraces.length > 0) {
+      if (!cancelled && runId && reasonTraces.length > 0) {
         try {
           const resource =
             typeof input.cw === "string" && input.cw.length > 0

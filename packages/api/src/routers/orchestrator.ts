@@ -1,6 +1,6 @@
 import { getOrchestratorAgentDefaults } from "@alfred/agent";
 import { TRPCError } from "@trpc/server";
-import { stepCountIs } from "ai";
+import { stepCountIs, type LanguageModel } from "ai";
 import { z } from "zod";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
@@ -53,11 +53,12 @@ export const orchestratorRouter = router({
       orchestratorGenerateRequestsTotal.inc({ status: "started" });
       try {
         const defaults = getOrchestratorAgentDefaults();
+        const model = defaults.model as LanguageModel;
         const modelMessages = await prepareModelMessagesForGenerate({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "orchestrator",
-          model: defaults.model as any,
+          model,
           system: defaults.instructions,
         });
         const stopWhen =
@@ -67,7 +68,7 @@ export const orchestratorRouter = router({
 
         const result = await generateText({
           ...defaults,
-          model: defaults.model as any,
+          model,
           messages: modelMessages,
           toolChoice: input.toolChoice,
           stopWhen,

@@ -1,6 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { tool } from "ai";
-import type { ZodTypeAny } from "zod";
+import { tool, type Tool } from "ai";
+import type { z, ZodTypeAny } from "zod";
 
 import { toolBook } from "../assistant/src/tool/book";
 import { toolFocus } from "../assistant/src/tool/focus";
@@ -52,15 +52,21 @@ import { toolSession } from "./orchestrator/tool/session";
 import { toolTicket } from "./orchestrator/tool/ticket";
 import { toolWeb } from "./orchestrator/tool/web";
 
+// Base type for legacy tools - uses any for execute to maintain compatibility
+// with existing tools that have varying signatures (some wrap input, some don't)
 type LegacyTool = {
   name: string;
   description: string;
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
+  // biome-ignore lint/suspicious/noExplicitAny: Legacy tools have varying execute signatures
   execute: (args: any) => any;
 };
 
-type ToolMap = Record<string, ReturnType<typeof tool>>;
+// Type for the wrapped tool - preserves schema information through the AI SDK tool() function
+type WrappedTool = Tool<z.infer<ZodTypeAny>, z.infer<ZodTypeAny>>;
+
+type ToolMap = Record<string, Tool>;
 
 const DEFAULT_MODEL_ID = "openai/gpt-4o-mini";
 
@@ -111,23 +117,20 @@ export function getOpenAI() {
   return cachedOpenAI;
 }
 
-export function wrapLegacyToolToAISDK<TLegacy extends LegacyTool>(
-  legacy: TLegacy
-) {
+export function wrapLegacyToolToAISDK(legacy: LegacyTool): WrappedTool {
   const outputSchema = legacy.outputSchema;
 
   const wrapped = tool({
     description: legacy.description,
     inputSchema: legacy.inputSchema,
     ...(outputSchema ? { outputSchema } : {}),
-    async execute(input) {
-      type ExecuteArgs = Parameters<TLegacy["execute"]>[0];
-      const args = { input } as ExecuteArgs;
+    async execute(input: z.infer<typeof legacy.inputSchema>) {
+      const args = { input };
       return await legacy.execute(args);
     },
   });
 
-  return wrapped as unknown as ReturnType<typeof tool>;
+  return wrapped as WrappedTool;
 }
 
 function wrapAll(tools: LegacyTool[]): ToolMap {

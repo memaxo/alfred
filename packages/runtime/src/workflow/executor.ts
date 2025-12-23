@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
-import { runPlanV6 } from "@alfred/agent/workflow/runner";
 import type { workflowInput } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
@@ -12,76 +11,44 @@ import type { LanguageModel } from "ai";
 import type { z } from "zod";
 import { createRuntime } from "../core";
 
-export function shouldUseWorkflowRuntime(): boolean {
-  return process.env.USE_WORKFLOW_RUNTIME === "true";
-}
-
 export function createWorkflowExecutor(
   input: z.infer<typeof workflowInput>,
   abortController: AbortController,
   history?: WorkflowEvent[],
   runtimeContext?: RuntimeContext<Record<string, unknown>>
 ) {
-  if (shouldUseWorkflowRuntime()) {
-    // NEW: Use @alfred/runtime
-    // Cast model type to resolve version mismatch between @ai-sdk/openai (v2.0.0 provider)
-    // and ai package (v3.0.0-beta.24 provider). Runtime behavior is compatible.
-    const model = openai(
-      process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
-    ) as unknown as LanguageModel;
+  // Cast model type to resolve version mismatch between @ai-sdk/openai (v2.0.0 provider)
+  // and ai package (v3.0.0-beta.24 provider). Runtime behavior is compatible.
+  const model = openai(
+    process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
+  ) as unknown as LanguageModel;
 
-    return createRuntime({
-      input: {
-        requirement: input.requirement,
-        auto: input.auto,
-        workspace: input.workspace,
-        repoBase: input.repoBase,
-        mode: input.mode,
-        interactive: input.interactive,
-        context: input.context,
-        linear:
-          input.linear?.sessionId && input.authzLinear
-            ? {
-                sessionId: input.linear.sessionId,
-                space: input.linear.space,
-                authz: input.authzLinear,
-              }
-            : undefined,
-      },
-      model,
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-      runId: input.runId, // Pass runId if resuming
-      history, // Pass history if resuming
-      runtimeContext,
-    });
-  }
-  // EXISTING: Use deprecated runPlanV6 (Recovery not supported)
-  return runPlanV6(
-    {
+  return createRuntime({
+    input: {
       requirement: input.requirement,
       auto: input.auto,
       workspace: input.workspace,
       repoBase: input.repoBase,
       mode: input.mode,
+      interactive: input.interactive,
       context: input.context,
-      ...(input.linear?.sessionId && input.authzLinear
-        ? {
-            linear: {
+      linear:
+        input.linear?.sessionId && input.authzLinear
+          ? {
               sessionId: input.linear.sessionId,
               space: input.linear.space,
               authz: input.authzLinear,
-            },
-          }
-        : {}),
+            }
+          : undefined,
     },
-    {
-      signal: abortController.signal,
-      stepTimeoutMs: 5 * 60 * 1000,
-      workflowTimeoutMs: 30 * 60 * 1000,
-    }
-  );
+    model,
+    signal: abortController.signal,
+    stepTimeoutMs: 5 * 60 * 1000,
+    workflowTimeoutMs: 30 * 60 * 1000,
+    runId: input.runId,
+    history,
+    runtimeContext,
+  });
 }
 
 export function coerceRecord(value: unknown): Record<string, unknown> {

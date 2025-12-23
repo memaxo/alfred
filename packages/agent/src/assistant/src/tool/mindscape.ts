@@ -2,23 +2,25 @@ import { db } from "@alfred/db";
 import { memoryEdges, memoryNodes } from "@alfred/db/schema/graph";
 import { z } from "zod";
 
+const mindscapeReadInputSchema = z.object({
+  query: z
+    .string()
+    .optional()
+    .describe("Optional search query to filter nodes by label"),
+});
+
+type MindscapeReadInput = z.infer<typeof mindscapeReadInputSchema>;
+
 export const toolMindscapeRead = {
   name: "mindscape_read",
   description:
     "Read the current state of the Mindscape (nodes and connections). Use this to understand the spatial layout of knowledge.",
-  inputSchema: z.object({
-    query: z
-      .string()
-      .optional()
-      .describe("Optional search query to filter nodes by label"),
-  }),
-  execute: async ({ query }: { query?: string }) => {
-    // In a real implementation, this might query the active Mindscape state via a shared store or DB
-    // For now, we'll query the DB representation which is the source of truth for persistent nodes
+  inputSchema: mindscapeReadInputSchema,
+  execute: async ({ input }: { input: MindscapeReadInput }) => {
+    const { query } = input;
     const nodes = await db.select().from(memoryNodes);
     const edges = await db.select().from(memoryEdges);
 
-    // Filter if query provided
     const filteredNodes = query
       ? nodes.filter((n) => n.label.toLowerCase().includes(query.toLowerCase()))
       : nodes;
@@ -35,23 +37,20 @@ export const toolMindscapeRead = {
   },
 };
 
+const mindscapeConnectInputSchema = z.object({
+  fromId: z.string().describe("ID of the source node"),
+  toId: z.string().describe("ID of the target node"),
+  kind: z.enum(["relates_to", "blocks", "depends_on"]).default("relates_to"),
+});
+
+type MindscapeConnectInput = z.infer<typeof mindscapeConnectInputSchema>;
+
 export const toolMindscapeConnect = {
   name: "mindscape_connect",
   description: "Connect two nodes in the Mindscape with a directed edge.",
-  inputSchema: z.object({
-    fromId: z.string().describe("ID of the source node"),
-    toId: z.string().describe("ID of the target node"),
-    kind: z.enum(["relates_to", "blocks", "depends_on"]).default("relates_to"),
-  }),
-  execute: async ({
-    fromId,
-    toId,
-    kind,
-  }: {
-    fromId: string;
-    toId: string;
-    kind: "relates_to" | "blocks" | "depends_on";
-  }) => {
+  inputSchema: mindscapeConnectInputSchema,
+  execute: async ({ input }: { input: MindscapeConnectInput }) => {
+    const { fromId, toId, kind } = input;
     const [edge] = await db
       .insert(memoryEdges)
       .values({

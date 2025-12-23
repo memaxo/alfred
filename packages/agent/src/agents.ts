@@ -1,5 +1,6 @@
 import {
   type InferAgentUIMessage,
+  type LanguageModel,
   type PrepareStepFunction,
   stepCountIs,
   ToolLoopAgent,
@@ -7,6 +8,9 @@ import {
 } from "ai";
 
 import { buildAssistantTools, buildTools, getModelId, getOpenAI } from "./v6";
+
+// Type-safe model accessor that returns LanguageModel
+type AgentModel = LanguageModel;
 
 const ASSISTANT_MAX_STEPS = 12;
 const ORCHESTRATOR_MAX_STEPS = 12;
@@ -67,7 +71,7 @@ let cachedOrchestratorAgent: ToolLoopAgent<OrchestratorTools> | null = null;
 
 function createAssistantConfig(): ToolLoopAgentSettings<never, AssistantTools> {
   return {
-    model: getOpenAI().chat(getModelId()) as any,
+    model: getOpenAI().chat(getModelId()) as AgentModel,
     tools: assistantTools,
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
@@ -80,7 +84,7 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
   OrchestratorTools
 > {
   return {
-    model: getOpenAI().chat(getModelId()) as any,
+    model: getOpenAI().chat(getModelId()) as AgentModel,
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,

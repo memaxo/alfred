@@ -20,13 +20,9 @@ function coerceNonEmptyString(val: unknown): string | null {
 }
 
 function maybeCaptureReasoning(args: {
-  useRuntime: boolean;
   event: WorkflowEvent;
   reasonTraces: ReasonTrace[];
 }): void {
-  if (!args.useRuntime) {
-    return;
-  }
   if (args.event.type !== "reasoning") {
     return;
   }
@@ -47,7 +43,6 @@ function maybeCaptureReasoning(args: {
 export function observeEvent(args: {
   event: WorkflowEvent;
   reviewGate: ReviewGate;
-  useRuntime: boolean;
   reasonTraces: ReasonTrace[];
 }): void {
   try {
@@ -185,7 +180,6 @@ export function observeEvent(args: {
 
   try {
     maybeCaptureReasoning({
-      useRuntime: args.useRuntime,
       event: args.event,
       reasonTraces: args.reasonTraces,
     });
