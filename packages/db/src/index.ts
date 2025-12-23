@@ -14,6 +14,7 @@ export {
   isSqliteDriver,
   requirePostgresDriver,
   requireSqliteDriver,
+  shutdownDb,
 } from "./client";
 export * as assistantRepo from "./repo/assistant";
 export * as codexRunRepo from "./repo/codex-run";

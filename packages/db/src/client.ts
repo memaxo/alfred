@@ -261,6 +261,8 @@ export function createPgPool(
   });
 }
 
+let defaultPool: Pool | null = null;
+
 export function createDrizzleClient(source?: PgSource): NodePgDatabase {
   const connectionString = resolveConnectionString(undefined, {
     allowMockSqlite: true,
@@ -273,7 +275,21 @@ export function createDrizzleClient(source?: PgSource): NodePgDatabase {
 
   dbDriver = "postgres";
   const pg = source ?? createPgPool({ connectionString });
+  if (!source && pg instanceof Pool) {
+    defaultPool = pg;
+  }
   return drizzlePostgres(pg);
 }
 
 export const db: NodePgDatabase = createDrizzleClient();
+
+/**
+ * Shuts down the default database pool if it exists.
+ * Useful for tests to ensure the process exits promptly.
+ */
+export async function shutdownDb(): Promise<void> {
+  if (defaultPool) {
+    await defaultPool.end();
+    defaultPool = null;
+  }
+}

@@ -7,15 +7,17 @@ import {
   expect,
   it,
 } from "bun:test";
-import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { sql } from "drizzle-orm";
+import { shutdownApiServices } from "../src/init";
+import { shutdownVoicePools } from "../src/voice/pools";
 import { resetAgentMocks } from "./utils/agent-mock";
 import { closeTestDb, createTestDb } from "./utils/db";
 
-const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
-const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
+const SHOULD_RUN =
+  process.env.RUN_DB_TESTS === "1" && Boolean(process.env.DATABASE_URL);
+const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 const TEST_USER = "api-assistant-test-user";
 let appRouter: typeof import("@alfred/api/routers/index").appRouter;
@@ -62,9 +64,11 @@ function createCaller() {
 
 describeFn("assistant routers", () => {
   beforeAll(async () => {
-    requirePostgresTestEnv(
-      "assistant router tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
-    );
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        "assistant router tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+      );
+    }
     const [{ appRouter: router }] = await Promise.all([
       import("@alfred/api/routers/index"),
     ]);
@@ -84,6 +88,11 @@ describeFn("assistant routers", () => {
     if (testDbHarness) {
       await closeTestDb(testDbHarness);
     }
+    shutdownApiServices();
+    await shutdownVoicePools();
+    // Ensure the default pool created by importing `@alfred/api` (and thus `@alfred/db`) is closed.
+    const { shutdownDb } = await import("@alfred/db");
+    await shutdownDb();
   });
 
   it("creates and lists notes for the authenticated user", async () => {

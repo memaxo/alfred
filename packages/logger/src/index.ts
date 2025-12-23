@@ -12,11 +12,13 @@ export type LogContext = {
 export type LoggerConfig = {
   service: string;
   level?: LogLevel;
+  environment?: string;
 };
 
 let config: LoggerConfig = {
   service: "alfred",
   level: "info",
+  environment: process.env.NODE_ENV,
 };
 
 /**
@@ -29,15 +31,16 @@ export function configure(newConfig: Partial<LoggerConfig>) {
 
 function formatMessage(level: LogLevel, message: string, context?: LogContext) {
   const timestamp = new Date().toISOString();
+  const environment = config.environment ?? process.env.NODE_ENV;
 
   // In production, we want structured JSON
-  if (process.env.NODE_ENV !== "development") {
+  if (environment !== "development") {
     return JSON.stringify({
       timestamp,
       level,
       message,
       service: config.service,
-      environment: process.env.NODE_ENV,
+      environment,
       ...context,
     });
   }

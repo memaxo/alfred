@@ -14,7 +14,7 @@ mock.module("@discordjs/opus", () => ({
 }));
 
 // Mock external voice process pools to avoid native/process dependencies in tests.
-mock.module("@alfred/voice/process/stt_pool", () => ({
+mock.module("@alfred/voice/process/stt", () => ({
   STTPool: class {
     start() {}
     stop() {}
@@ -32,7 +32,7 @@ mock.module("@alfred/voice/process/stt_pool", () => ({
   ProcessConfig: {} as any,
 }));
 
-mock.module("@alfred/voice/process/tts_pool", () => ({
+mock.module("@alfred/voice/process/tts", () => ({
   TTSPool: class {
     start() {}
     stop() {}

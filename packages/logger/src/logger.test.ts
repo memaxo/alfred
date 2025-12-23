@@ -12,12 +12,11 @@ describe("logger", () => {
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
-    process.env.NODE_ENV = originalEnv;
   });
 
   describe("JSON formatting (non-development)", () => {
     beforeEach(() => {
-      process.env.NODE_ENV = "production";
+      configure({ environment: "production" });
     });
 
     it("should log info message as JSON", () => {
@@ -48,7 +47,7 @@ describe("logger", () => {
 
   describe("Pretty printing (development)", () => {
     beforeEach(() => {
-      process.env.NODE_ENV = "development";
+      configure({ environment: "development" });
     });
 
     it("should log readable string prefix", () => {
@@ -72,7 +71,7 @@ describe("logger", () => {
 
   describe("Levels", () => {
     beforeEach(() => {
-      process.env.NODE_ENV = "production";
+      configure({ environment: "production" });
     });
 
     it("should support debug", () => {
@@ -102,7 +101,7 @@ describe("logger", () => {
 
   describe("Configuration", () => {
     beforeEach(() => {
-      process.env.NODE_ENV = "production";
+      configure({ environment: "production" });
     });
 
     it("should update service name", () => {

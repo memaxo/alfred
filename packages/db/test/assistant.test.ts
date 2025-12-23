@@ -1,8 +1,8 @@
-import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
 
-const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
+const SHOULD_RUN =
+  process.env.RUN_DB_TESTS === "1" && Boolean(process.env.DATABASE_URL);
 const TEST_USER = "assistant-test-user";
 
 let assistantRepo: typeof import("@alfred/db").assistantRepo;
@@ -17,13 +17,15 @@ async function resetAssistantTables() {
   );
 }
 
-const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
+const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 describeFn("assistantRepo", () => {
   beforeAll(async () => {
-    requirePostgresTestEnv(
-      "assistantRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
-    );
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        "assistantRepo tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
+      );
+    }
     const mod = await import("@alfred/db");
     assistantRepo = mod.assistantRepo;
     db = mod.db;
@@ -31,6 +33,12 @@ describeFn("assistantRepo", () => {
 
   beforeEach(async () => {
     await resetAssistantTables();
+  });
+
+  afterAll(async () => {
+    // Ensure the default pool created by importing `@alfred/db` is closed so Bun exits.
+    const { shutdownDb } = await import("@alfred/db");
+    await shutdownDb();
   });
 
   it("creates and lists notes in descending update order", async () => {

@@ -140,7 +140,7 @@ export function initApiServices(): void {
           error: error instanceof Error ? error.message : String(error),
         });
       });
-  }, cleanupIntervalMs);
+  }, cleanupIntervalMs).unref();
   logger.info("worktree_preview_cleanup_interval_started", {
     cleanupIntervalMs,
     cleanupRoot,

@@ -429,7 +429,7 @@ export function startVoiceStreamingPrototype(): void {
         }
       }
     }
-  }, CLEANUP_INTERVAL_MS);
+  }, CLEANUP_INTERVAL_MS).unref();
 
   logger.info("voice_stream_proto_listening", {
     port,

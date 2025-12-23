@@ -1,13 +1,9 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
-import {
-  analyzeContext,
-  getPersonaInstruction,
-} from "@alfred/agent/assistant/src/adapter";
 import { getModelSpec } from "@alfred/agent/models";
-import { KnowledgeEngine } from "@alfred/runtime/engines/knowledge";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
+import { buildAssistantContext } from "../ai/assistant-context";
 import { generateText, persistResult } from "../ai/generate";
 import { prepareModelMessagesForGenerate } from "../ai/messages";
 import { cloneRuntimeContext } from "../context";
@@ -100,50 +96,11 @@ export const assistantRouter = router({
       try {
         const defaults = getAssistantAgentDefaults();
 
-        // 1. Analyze Context & Detect Emergent Topics
-        // We use the last user message for RAG query, and recent history for Topic Detection
-        const lastMessage = input.messages.at(-1) as {
-          role: string;
-          content: string;
-        };
-        const query =
-          lastMessage?.role === "user" ? String(lastMessage.content) : "";
-
-        let systemInstruction = String(defaults.instructions);
-        let ragContext = "";
-        let detectedDomains: string[] = [];
-
-        // Only analyze if we have a query
-        if (query) {
-          const analysis = await analyzeContext(input.messages as any[]);
-          detectedDomains = analysis.domains;
-          const persona = getPersonaInstruction(detectedDomains);
-          if (persona) {
-            systemInstruction += `\n\n${persona}`;
-          }
-        }
-
-        // 2. Perform Graph-Enhanced RAG (if semantic recall is requested or default)
-        // For now, we default to RAG if input.memory.semanticRecall is present OR topK > 0
-        const recallOpts = input.memory?.semanticRecall;
-        if (query && recallOpts) {
-          const engine = new KnowledgeEngine();
-          const chunks = await engine.retrieveContext(query, {
-            topK: recallOpts.topK ?? 5,
-            boostConcepts: detectedDomains,
-            useHybrid: true,
-          });
-
-          if (chunks.length > 0) {
-            ragContext = `
-<context_documents>
-${chunks.map((c) => `<document>\n${c.content}\n</document>`).join("\n")}
-</context_documents>
-Use the above context to answer the user's question if relevant.
-`;
-            systemInstruction += `\n\n${ragContext}`;
-          }
-        }
+        const { systemInstruction } = await buildAssistantContext({
+          messages: input.messages,
+          memory: input.memory,
+          baseInstructions: String(defaults.instructions),
+        });
 
         const modelMessages = await prepareModelMessagesForGenerate({
           rawMessages: input.messages,

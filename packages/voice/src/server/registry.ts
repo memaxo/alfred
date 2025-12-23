@@ -63,7 +63,7 @@ export class VoiceRegistry {
           this.removeSession(sessionId);
         }
       }
-    }, 60_000); // Check every minute
+    }, 60_000).unref(); // Check every minute
   }
 
   shutdown(): void {

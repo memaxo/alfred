@@ -94,11 +94,11 @@ describe("applyTransition", () => {
     );
   });
 
-  it("marks entropy-high interrupts by increasing boredom", () => {
+  it("marks entropy-high interrupts by increasing boredom and returning to idle", () => {
     const start = thinking(Date.now(), "loop");
     const result = apply(start, interruptEvent("loop detected"));
 
-    expect(result.state._).toBe("thinking");
+    expect(result.state._).toBe("idle");
     expect(result.state.physiology.boredom).toBeGreaterThan(
       start.physiology.boredom
     );

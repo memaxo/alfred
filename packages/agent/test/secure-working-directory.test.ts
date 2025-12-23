@@ -76,12 +76,14 @@ beforeEach(() => {
     claims: { elevated: true, mfa: "passkey" },
   });
   process.env.ORCH_SECURE_SPAWN_WRAPPER = process.execPath;
+  process.env.ORCH_SKIP_SECURE_SPAWN = "0";
 });
 
 afterEach(() => {
   process.env.DROID_BIN = undefined;
   process.env.DOCKER_BIN = undefined;
   process.env.ORCH_SECURE_SPAWN_WRAPPER = undefined;
+  process.env.ORCH_SKIP_SECURE_SPAWN = undefined;
 });
 
 /**
