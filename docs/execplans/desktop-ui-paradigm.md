@@ -2767,10 +2767,15 @@ TanStack DB Collections (Data Layer)
 | Date | Phase | Item | Status | Notes |
 |------|-------|------|--------|-------|
 | 2025-12-23 | 0 | ExecPlan v2.0 complete | ✅ | Post AI review, ready for execution |
-| | 1 | Rename store files | ⬜ | |
-| | 1 | Split store layout-only | ⬜ | |
-| | 1 | Create WindowFrame | ⬜ | |
-| | 1 | Move node → windows | ⬜ | |
+| 2025-12-23 | 1 | Create store/desktop/ structure | ✅ | New types, windows, viewport, dock, persist slices |
+| 2025-12-23 | 1 | Create store/desktop.ts | ✅ | Layout-only Zustand store with persistence |
+| 2025-12-23 | 1 | Create store/desktop.schemas.ts | ✅ | 12 window types (reduced from 21) |
+| 2025-12-23 | 1 | Create WindowFrame | ✅ | Shared window chrome with tier styling |
+| 2025-12-23 | 1 | Create components/windows/ | ✅ | Shared: lod, focus, error-boundary, lod-views |
+| 2025-12-23 | 1 | Create registry.ts (12 types) | ✅ | References existing nodes, wraps with error boundary |
+| 2025-12-23 | 1 | Create components/desktop/ | ✅ | Desktop, Canvas, Dock components |
+| 2025-12-23 | 1 | Typecheck passes | ✅ | New desktop code compiles cleanly |
+| | 1 | Update all imports | ⬜ | Gradual migration from mindscape → desktop |
 | | 2 | Install TanStack DB | ⬜ | |
 | | 2 | Create noteCollection | ⬜ | |
 | | 2 | Migrate NoteWindow | ⬜ | |
@@ -2787,7 +2792,9 @@ TanStack DB Collections (Data Layer)
 
 | Date | Phase | Discovery | Impact | Resolution |
 |------|-------|-----------|--------|------------|
-| | | (None yet) | | |
+| 2025-12-23 | 1 | Existing nodes depend heavily on `useMindscapeStore` | Medium | Created parallel desktop store; registry references existing nodes for now |
+| 2025-12-23 | 1 | Layout functions typed to `ArtifactData` | Low | Cast via `as any` temporarily; will update layout.ts types in Phase 2 |
+| 2025-12-23 | 1 | Pre-existing type errors in packages/api metrics | None | Unrelated to desktop; noted but not blocking |
 
 ---
 
