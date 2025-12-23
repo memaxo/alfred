@@ -2775,6 +2775,8 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Create registry.ts (12 types) | ✅ | References existing nodes, wraps with error boundary |
 | 2025-12-23 | 1 | Create components/desktop/ | ✅ | Desktop, Canvas, Dock components |
 | 2025-12-23 | 1 | Typecheck passes | ✅ | New desktop code compiles cleanly |
+| 2025-12-23 | 1 | Lint passes | ✅ | Biome check with all safe fixes applied |
+| 2025-12-23 | 1 | Build passes | ✅ | `bun run build` succeeds |
 | | 1 | Update all imports | ⬜ | Gradual migration from mindscape → desktop |
 | | 2 | Install TanStack DB | ⬜ | |
 | | 2 | Create noteCollection | ⬜ | |
