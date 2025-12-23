@@ -8,6 +8,7 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
+import type { AiAdapter } from "./adapters/ai";
 import { z } from "zod";
 
 /**
@@ -93,6 +94,12 @@ export type RuntimeOptions = {
 
   /** Authorization token for tool execution */
   authz?: string;
+
+  /**
+   * Optional AI adapter factory (primarily for deterministic tests).
+   * When omitted, phases construct `AISDKAdapter` directly.
+   */
+  createAiAdapter?: (runId: string) => AiAdapter;
 
   /** Expected heartbeat frequency for supervisor interrupts (default: 60s) */
   supervisorHeartbeatMs?: number;

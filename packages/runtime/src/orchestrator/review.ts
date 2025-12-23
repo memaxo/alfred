@@ -37,6 +37,14 @@ type SessionController = {
   cleanup(): Promise<void>;
 };
 
+export type ReviewDeps = {
+  sessionsEnabled?: boolean;
+  workspaceCreate?: typeof WorkspaceFactory.create;
+  runCommand?: typeof toolRunner.execute;
+  smokeVerify?: typeof smokeTester.verify;
+  codexExecute?: typeof toolCodex.execute;
+};
+
 type ReviewWorkflowRepo = {
   getRun: typeof workflowRepo.getRun;
   updateRun: typeof workflowRepo.updateRun;
@@ -50,13 +58,14 @@ export const reviewWorkflowRepo: ReviewWorkflowRepo = {
 
 function createSessionController(
   runId: string,
-  repoBase: string
+  repoBase: string,
+  createWorkspace: typeof WorkspaceFactory.create
 ): SessionController {
   let workspacePromise: Promise<Workspace | null> | null = null;
 
   const ensureWorkspace = async () => {
     if (!workspacePromise) {
-      workspacePromise = WorkspaceFactory.create(
+      workspacePromise = createWorkspace(
         "worktree",
         `review-${runId}`,
         runId,
@@ -268,7 +277,8 @@ function buildTestCommandFromPlan(mergePlan: any): string {
 
 export async function* runReviewPhase(
   ctx: OrchestratorContext,
-  mergePlan: any
+  mergePlan: any,
+  deps?: ReviewDeps
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const { input, runId, workspace, projectConfig, authz, signal, userId } = ctx; // Destructure projectConfig
 
@@ -288,9 +298,16 @@ export async function* runReviewPhase(
       ).slice(0, 50)
     : [];
 
-  const sessionController = reviewSessionsEnabled()
-    ? createSessionController(runId, workspace)
+  const sessionController = (deps?.sessionsEnabled ?? reviewSessionsEnabled())
+    ? createSessionController(
+        runId,
+        workspace,
+        deps?.workspaceCreate ?? WorkspaceFactory.create
+      )
     : null;
+  const runCommand = deps?.runCommand ?? toolRunner.execute;
+  const smokeVerify = deps?.smokeVerify ?? smokeTester.verify;
+  const codexExecute = deps?.codexExecute ?? toolCodex.execute;
 
   if (
     (!reviewPlan.checks || reviewPlan.checks.length === 0) &&
@@ -402,7 +419,7 @@ export async function* runReviewPhase(
               "running",
               "smoke-test"
             );
-            const result = await smokeTester.verify(workspace, projectConfig);
+            const result = await smokeVerify(workspace, projectConfig);
             if (result.success) {
               yield {
                 type: "event",
@@ -458,7 +475,7 @@ export async function* runReviewPhase(
               data: { tool: "runner", command },
             } as any;
 
-            const result = await toolRunner.execute(
+            const result = await runCommand(
               command,
               workspace,
               60_000,
@@ -659,7 +676,7 @@ export async function* runReviewPhase(
                 fixerSessionId = await sessionController.start(fixAttempts + 1);
               }
 
-              await toolCodex.execute({
+              await codexExecute({
                 input: {
                   action: "exec",
                   prompt,

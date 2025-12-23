@@ -9,10 +9,8 @@ import {
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
 
-const { AISDKAdapter } = await import("../src/adapters/ai");
 const { createRuntime } = await import("../src/core");
 
-const baselineStream = AISDKAdapter.prototype.stream;
 const originalDisableCodex = process.env.RUNTIME_DISABLE_CODEX;
 const originalTestOrch = process.env.RUNTIME_TEST_ORCHESTRATION;
 
@@ -26,15 +24,9 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   beforeEach(() => {
     mockModel = {} as LanguageModel;
-    AISDKAdapter.prototype.stream = baselineStream;
-  });
-
-  afterEach(() => {
-    AISDKAdapter.prototype.stream = baselineStream;
   });
 
   afterAll(() => {
-    AISDKAdapter.prototype.stream = baselineStream;
     if (originalDisableCodex === undefined) {
       process.env.RUNTIME_DISABLE_CODEX = undefined;
     } else {
@@ -48,20 +40,23 @@ describe("WorkflowRuntime supervisor integration", () => {
   });
 
   it("interrupts reasoning loops", async () => {
-    AISDKAdapter.prototype.stream = async function* () {
-      for (let i = 0; i < 6; i++) {
-        yield {
-          type: "reasoning",
-          text: "Repeating the same plan",
-        } as WorkflowEvent;
-      }
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+    const createAiAdapter = () => ({
+      async *stream() {
+        for (let i = 0; i < 6; i++) {
+          yield {
+            type: "reasoning",
+            text: "Repeating the same plan",
+          } as WorkflowEvent;
+        }
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
       });
 
       // LoopDetector uses exact_match for identical content
@@ -72,31 +67,34 @@ describe("WorkflowRuntime supervisor integration", () => {
   });
 
   it("aborts when heartbeat stalls", async () => {
-    AISDKAdapter.prototype.stream = async function* (options) {
-      const signal = options.abortSignal;
-      await new Promise<never>((_, reject) => {
-        if (!signal) {
-          reject(new Error("missing abort signal"));
-          return;
-        }
-        const abortError =
-          signal.reason instanceof Error
-            ? signal.reason
-            : new Error(String(signal.reason ?? "aborted"));
-        if (signal.aborted) {
-          reject(abortError);
-          return;
-        }
-        signal.addEventListener("abort", () => reject(abortError), {
-          once: true,
+    const createAiAdapter = () => ({
+      async *stream(options: { abortSignal?: AbortSignal }) {
+        const signal = options.abortSignal;
+        await new Promise<never>((_, reject) => {
+          if (!signal) {
+            reject(new Error("missing abort signal"));
+            return;
+          }
+          const abortError =
+            signal.reason instanceof Error
+              ? signal.reason
+              : new Error(String(signal.reason ?? "aborted"));
+          if (signal.aborted) {
+            reject(abortError);
+            return;
+          }
+          signal.addEventListener("abort", () => reject(abortError), {
+            once: true,
+          });
         });
-      });
-    };
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
         supervisorHeartbeatMs: 150,
         supervisorCheckIntervalMs: 20,
       });
@@ -109,21 +107,24 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   it("detects low entropy (semantic loops)", async () => {
     // Test that repeated similar outputs trigger entropy detection
-    AISDKAdapter.prototype.stream = async function* () {
-      // Emit nearly identical reasoning traces
-      for (let i = 0; i < 5; i++) {
-        yield {
-          type: "reasoning",
-          text: "Analyzing the same pattern repeatedly",
-        } as WorkflowEvent;
-      }
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+    const createAiAdapter = () => ({
+      async *stream() {
+        // Emit nearly identical reasoning traces
+        for (let i = 0; i < 5; i++) {
+          yield {
+            type: "reasoning",
+            text: "Analyzing the same pattern repeatedly",
+          } as WorkflowEvent;
+        }
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
       });
 
       // Should detect the repetitive pattern via exact_match (identical strings)
@@ -135,29 +136,32 @@ describe("WorkflowRuntime supervisor integration", () => {
     // Test that supervisor detects when process makes no progress
     let eventCount = 0;
 
-    AISDKAdapter.prototype.stream = async function* (options) {
-      const signal = options.abortSignal;
+    const createAiAdapter = () => ({
+      async *stream(options: { abortSignal?: AbortSignal }) {
+        const signal = options.abortSignal;
 
-      // Emit one event then stall
-      yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
-      eventCount++;
+        // Emit one event then stall
+        yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+        eventCount++;
 
-      // Wait indefinitely (simulating a zombie process)
-      await new Promise<never>((_, reject) => {
-        if (signal?.aborted) {
-          reject(signal.reason);
-          return;
-        }
-        signal?.addEventListener("abort", () => reject(signal.reason), {
-          once: true,
+        // Wait indefinitely (simulating a zombie process)
+        await new Promise<never>((_, reject) => {
+          if (signal?.aborted) {
+            reject(signal.reason);
+            return;
+          }
+          signal?.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          });
         });
-      });
-    };
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
         supervisorHeartbeatMs: 100,
         supervisorCheckIntervalMs: 20,
       });
@@ -171,22 +175,25 @@ describe("WorkflowRuntime supervisor integration", () => {
     // Test that interrupt events are properly typed and propagated
     const events: WorkflowEvent[] = [];
 
-    AISDKAdapter.prototype.stream = async function* () {
-      for (let i = 0; i < 6; i++) {
-        const event = {
-          type: "reasoning",
-          text: `Loop iteration ${i}`,
-        } as WorkflowEvent;
-        events.push(event);
-        yield event;
-      }
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+    const createAiAdapter = () => ({
+      async *stream() {
+        for (let i = 0; i < 6; i++) {
+          const event = {
+            type: "reasoning",
+            text: `Loop iteration ${i}`,
+          } as WorkflowEvent;
+          events.push(event);
+          yield event;
+        }
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
       });
 
       try {
@@ -205,28 +212,29 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   it("verifies supervisor interrupt triggers cognitive loop", async () => {
     // Test that supervisor interrupt actually calls runCognitiveLoop and persists interrupt event
-    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
-    
     const { cognitiveRepo } = await import("@alfred/db");
     const { randomUUID } = await import("crypto");
     const runId = randomUUID();
 
-    AISDKAdapter.prototype.stream = async function* () {
-      // Emit repeated identical reasoning to trigger loop detection
-      for (let i = 0; i < 6; i++) {
-        yield {
-          type: "reasoning",
-          text: "Repeating the same thought",
-        } as WorkflowEvent;
-      }
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+    const createAiAdapter = () => ({
+      async *stream() {
+        // Emit repeated identical reasoning to trigger loop detection
+        for (let i = 0; i < 6; i++) {
+          yield {
+            type: "reasoning",
+            text: "Repeating the same thought",
+          } as WorkflowEvent;
+        }
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
         runId,
+        createAiAdapter,
       });
 
       try {
@@ -261,34 +269,35 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   it("verifies heartbeat failure triggers cognitive loop", async () => {
     // Test that heartbeat timeout calls runCognitiveLoop and persists interrupt event
-    process.env.DATABASE_URL = process.env.DATABASE_URL ?? "sqlite::memory:";
-    
     const { cognitiveRepo } = await import("@alfred/db");
     const { randomUUID } = await import("crypto");
     const runId = randomUUID();
 
-    AISDKAdapter.prototype.stream = async function* (options) {
-      const signal = options.abortSignal;
-      // Emit one event then stall (simulating zombie process)
-      yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
-      
-      // Wait indefinitely until aborted
-      await new Promise<never>((_, reject) => {
-        if (signal?.aborted) {
-          reject(signal.reason);
-          return;
-        }
-        signal?.addEventListener("abort", () => reject(signal.reason), {
-          once: true,
+    const createAiAdapter = () => ({
+      async *stream(options: { abortSignal?: AbortSignal }) {
+        const signal = options.abortSignal;
+        // Emit one event then stall (simulating zombie process)
+        yield { type: "reasoning", text: "Starting..." } as WorkflowEvent;
+
+        // Wait indefinitely until aborted
+        await new Promise<never>((_, reject) => {
+          if (signal?.aborted) {
+            reject(signal.reason);
+            return;
+          }
+          signal?.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          });
         });
-      });
-    };
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
         runId,
+        createAiAdapter,
         supervisorHeartbeatMs: 100,
         supervisorCheckIntervalMs: 20,
       });
@@ -325,28 +334,31 @@ describe("WorkflowRuntime supervisor integration", () => {
 
   it("handles multiple reasoning traces correctly", async () => {
     // Test that distinct reasoning traces don't trigger false positives
-    AISDKAdapter.prototype.stream = async function* () {
-      const distinctReasons = [
-        "First: Analyzing user requirements",
-        "Second: Designing architecture",
-        "Third: Planning implementation",
-        "Fourth: Considering edge cases",
-        "Fifth: Finalizing approach",
-      ];
+    const createAiAdapter = () => ({
+      async *stream() {
+        const distinctReasons = [
+          "First: Analyzing user requirements",
+          "Second: Designing architecture",
+          "Third: Planning implementation",
+          "Fourth: Considering edge cases",
+          "Fifth: Finalizing approach",
+        ];
 
-      for (const text of distinctReasons) {
-        yield {
-          type: "reasoning",
-          text,
-        } as WorkflowEvent;
-      }
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+        for (const text of distinctReasons) {
+          yield {
+            type: "reasoning",
+            text,
+          } as WorkflowEvent;
+        }
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
       });
 
       // Should NOT throw - distinct reasoning traces should be allowed
@@ -366,33 +378,45 @@ describe("WorkflowRuntime supervisor integration", () => {
     let _checkCount = 0;
     const startTime = performance.now();
 
-    AISDKAdapter.prototype.stream = async function* (options) {
-      const signal = options.abortSignal;
+    const createAiAdapter = () => ({
+      async *stream(options: { abortSignal?: AbortSignal }) {
+        const signal = options.abortSignal;
 
-      // Yield immediately to show progress
-      yield { type: "reasoning", text: "Starting task analysis" } as WorkflowEvent;
-      
-      // Count how many times the stream is accessed
-      _checkCount++;
+        // Yield immediately to show progress
+        yield {
+          type: "reasoning",
+          text: "Starting task analysis",
+        } as WorkflowEvent;
 
-      // Yield another event quickly to show continuous progress
-      yield { type: "reasoning", text: "Evaluating approach options" } as WorkflowEvent;
+        // Count how many times the stream is accessed
+        _checkCount++;
 
-      // Very short wait to respect check interval
-      await new Promise((resolve) => setTimeout(resolve, 10));
+        // Yield another event quickly to show continuous progress
+        yield {
+          type: "reasoning",
+          text: "Evaluating approach options",
+        } as WorkflowEvent;
 
-      if (signal?.aborted) {
-        throw signal.reason;
-      }
+        // Very short wait to respect check interval
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
-      yield { type: "reasoning", text: "Finalizing solution" } as WorkflowEvent;
-      yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
-    };
+        if (signal?.aborted) {
+          throw signal.reason;
+        }
+
+        yield {
+          type: "reasoning",
+          text: "Finalizing solution",
+        } as WorkflowEvent;
+        yield { type: "finish", finishReason: "stop" } as WorkflowEvent;
+      },
+    });
 
     await runWithExecutionEnv(async () => {
       const runtime = createRuntime({
         input: baseInput,
         model: mockModel,
+        createAiAdapter,
         supervisorCheckIntervalMs: 50,
         supervisorHeartbeatMs: 10000, // Very long heartbeat to avoid premature interruption for this test
       });

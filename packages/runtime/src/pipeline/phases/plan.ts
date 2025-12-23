@@ -5,13 +5,15 @@ import type { ExecutionContext } from "../../context";
 import { executePlanPhase } from "../../phases/plan";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
+import type { AiAdapter } from "../../adapters/ai";
 
 export class PlanPhase implements Phase<RuntimeInput, void> {
   readonly id = "plan";
 
   constructor(
     private readonly runId: string,
-    private readonly model: LanguageModel
+    private readonly model: LanguageModel,
+    private readonly createAiAdapter?: (runId: string) => AiAdapter
   ) {}
 
   async *run(
@@ -35,7 +37,8 @@ export class PlanPhase implements Phase<RuntimeInput, void> {
         this.runId,
         signal,
         this.model,
-        cachedContext ?? undefined
+        cachedContext ?? undefined,
+        this.createAiAdapter ? { createAiAdapter: this.createAiAdapter } : undefined
       );
 
       let planSummary: string | null | undefined;

@@ -4,7 +4,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel, Tool } from "ai";
-import { AISDKAdapter } from "../adapters/ai";
+import { AISDKAdapter, type AiAdapter } from "../adapters/ai";
 import type { ExecutionContext } from "../context";
 import { runOrchestrator } from "../orchestrator";
 import type { RuntimeInput } from "../types";
@@ -15,7 +15,7 @@ export type ActResult = {
 };
 
 type ActPhaseDeps = {
-  createAiAdapter?: (runId: string) => AISDKAdapter;
+  createAiAdapter?: (runId: string) => AiAdapter;
   buildToolset?: () => Record<string, Tool>;
   runOrchestratorFn?: typeof runOrchestrator;
 };

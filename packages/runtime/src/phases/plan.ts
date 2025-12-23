@@ -8,7 +8,7 @@ import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { UIMessage } from "@alfred/type/stream";
 import type { LanguageModel } from "ai";
-import { AISDKAdapter } from "../adapters/ai";
+import { AISDKAdapter, type AiAdapter } from "../adapters/ai";
 import type { ExecutionContext } from "../context";
 import { ContextBuilder } from "../context";
 import type { RuntimeInput } from "../types";
@@ -107,7 +107,10 @@ export async function* executePlanPhase(
   runId: string,
   signal: AbortSignal,
   model: LanguageModel,
-  prebuiltContext?: ExecutionContext | null
+  prebuiltContext?: ExecutionContext | null,
+  deps?: {
+    createAiAdapter?: (runId: string) => AiAdapter;
+  }
 ): AsyncGenerator<WorkflowEvent, string | null, void> {
   yield { type: "notice", message: "planning_started" } as WorkflowEvent;
 
@@ -268,7 +271,9 @@ export async function* executePlanPhase(
     });
   }
 
-  const aiAdapter = new AISDKAdapter({ runId });
+  const createAiAdapter =
+    deps?.createAiAdapter ?? ((id: string) => new AISDKAdapter({ runId: id }));
+  const aiAdapter = createAiAdapter(runId);
   const planningMessages = buildPlanMessages(runId, input, context, subTasks);
   let planSummary = "";
 

@@ -7,11 +7,10 @@ import {
   it,
 } from "bun:test";
 import type { CognitiveState, Event, Outcome } from "@alfred/cognitive/state";
+import { timestamp } from "@alfred/cognitive/state";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import { resetCognitiveTables } from "./utils/cognitive-fixtures";
 
-const originalDatabaseUrl = process.env.DATABASE_URL;
-process.env.DATABASE_URL = "sqlite::memory:";
 if (!process.env.BUN_TEST) {
   process.env.BUN_TEST = "1";
 }
@@ -29,7 +28,7 @@ const ctx = new RuntimeContext([["scanContext", null]]);
 const now = () => Date.now();
 const withTimestamp = <T extends Record<string, unknown>>(event: T) => ({
   ...event,
-  ts: now(),
+  ts: timestamp(now()),
 });
 
 const inputEvent = (content: string): Event =>
@@ -38,6 +37,12 @@ const inputEvent = (content: string): Event =>
     content,
     source: "user",
     ...withTimestamp({}),
+  }) as Event;
+
+const timeoutEvent = (deadline: number): Event =>
+  ({
+    _: "timeout",
+    deadline: timestamp(deadline),
   }) as Event;
 
 const completeEvent = (outcome: Outcome): Event =>
@@ -64,26 +69,34 @@ describe("runCognitiveLoop integration", () => {
 
   afterAll(async () => {
     await resetCognitiveTables();
-    process.env.DATABASE_URL = originalDatabaseUrl;
   });
 
   it("persists input events and transitions idle -> thinking", async () => {
     const streamId = stream("input");
 
-    const result = await runCognitiveLoop?.(
+    // Idle -> Input -> Capturing
+    const result1 = await runCognitiveLoop?.(
       ctx,
       streamId,
       inputEvent("Plan day")
     );
-    expect(result.state._).toBe("thinking");
-    expect(result.effects).toHaveLength(1);
-    expect(result.effects[0]).toMatchObject({
+    expect(result1.state._).toBe("capturing");
+
+    // Capturing -> Timeout -> Thinking
+    const result2 = await runCognitiveLoop?.(
+      ctx,
+      streamId,
+      timeoutEvent(now() + 1000)
+    );
+    expect(result2.state._).toBe("thinking");
+    expect(result2.effects).toHaveLength(1);
+    expect(result2.effects[0]).toMatchObject({
       type: "generate_response",
       input: "Plan day",
     });
 
     const events = await cognitiveRepo?.getAllEvents(streamId);
-    expect(events).toHaveLength(1);
+    expect(events).toHaveLength(2);
     const payload = events[0]?.payload as Record<string, unknown>;
     const eventData = payload.data as Record<string, unknown>;
     expect(eventData.content).toBe("Plan day");
@@ -92,9 +105,14 @@ describe("runCognitiveLoop integration", () => {
   it("replays prior events so completion yields reflection", async () => {
     const streamId = stream("complete");
 
+    // Idle -> Input -> Capturing
     await runCognitiveLoop?.(ctx, streamId, inputEvent("Plan trip"));
+    // Capturing -> Timeout -> Thinking
+    await runCognitiveLoop?.(ctx, streamId, timeoutEvent(now() + 1000));
+
     const outcome: Outcome = { _: "success", result: "done", duration: 42 };
 
+    // Thinking -> Complete -> Reflecting
     const result = await runCognitiveLoop?.(
       ctx,
       streamId,
@@ -108,30 +126,36 @@ describe("runCognitiveLoop integration", () => {
     expect(reflectingState.outcome._).toBe("success");
 
     const events = await cognitiveRepo?.getAllEvents(streamId);
-    expect(events).toHaveLength(2);
-    expect(events[1]?.type).toBe("complete");
+    expect(events).toHaveLength(3);
+    expect(events[2]?.type).toBe("complete");
   });
 
   it("records entropy interrupts and updates physiology", async () => {
     const streamId = stream("interrupt");
+    // Idle -> Input -> Capturing
+    await runCognitiveLoop?.(ctx, streamId, inputEvent("Investigate loop"));
+    // Capturing -> Timeout -> Thinking
     const firstResult = await runCognitiveLoop?.(
       ctx,
       streamId,
-      inputEvent("Investigate loop")
+      timeoutEvent(now() + 1000)
     );
     const firstState = firstResult.state;
 
     const interrupt = interruptEvent("loop detected");
+    // Thinking -> Interrupt -> Idle (with updated physiology)
     const nextResult = await runCognitiveLoop?.(ctx, streamId, interrupt);
     const nextState = nextResult.state;
 
-    expect(nextState._).toBe("thinking");
+    // Interrupt while thinking returns to idle (not thinking)
+    // But verify the boredom increased
+    expect(nextState._).toBe("idle");
     expect(nextState.physiology.boredom).toBeGreaterThan(
       firstState.physiology.boredom
     );
 
     const events = await cognitiveRepo?.getAllEvents(streamId);
-    expect(events).toHaveLength(2);
-    expect(events[1]?.type).toBe("interrupt");
+    expect(events).toHaveLength(3);
+    expect(events[2]?.type).toBe("interrupt");
   });
 });

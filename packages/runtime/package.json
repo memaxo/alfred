@@ -7,7 +7,7 @@
     "build": "tsc -b",
     "dev": "echo 'Skipping runtime dev watch'",
     "typecheck": "tsc -b --pretty false",
-    "test": "bun test"
+    "test": "bun test --max-concurrency=1"
   },
   "exports": {
     ".": {

@@ -68,6 +68,22 @@ const VERIFY_RULES: VerifyRule[] = [
   },
 ];
 
+function findRepoRoot(start: string): string {
+  let dir = start;
+  while (true) {
+    const bunLock = path.join(dir, "bun.lock");
+    const turbo = path.join(dir, "turbo.json");
+    if (existsSync(bunLock) && existsSync(turbo)) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return start;
+    }
+    dir = parent;
+  }
+}
+
 export type ReviewFailureDetail = {
   command?: string;
   output?: string;
@@ -208,6 +224,7 @@ export function generateFixerExecPlanSkeleton(args: {
 
 function selectVerifyChecks(files: string[]): ReviewCheck[] {
   const matches = new Map<string, ReviewCheck>();
+  const repoRoot = findRepoRoot(process.cwd());
 
   for (const file of files) {
     for (const rule of VERIFY_RULES) {
@@ -216,7 +233,7 @@ function selectVerifyChecks(files: string[]): ReviewCheck[] {
       }
       const scriptPath = path.isAbsolute(rule.script)
         ? rule.script
-        : path.resolve(process.cwd(), rule.script);
+        : path.resolve(repoRoot, rule.script);
       if (!existsSync(scriptPath)) {
         continue;
       }

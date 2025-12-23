@@ -1,8 +1,11 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
+import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
+import { randomUUID } from "node:crypto";
 import type { OrchestratorContext } from "../src/orchestrator/types";
+import { reviewWorkflowRepo, runReviewPhase } from "../src/orchestrator/review";
 import {
   cleanupPlanDir,
-  mockRunner,
   preparePlanDir,
 } from "./utils/review-helpers";
 
@@ -21,6 +24,12 @@ const codexExecuteMock = mock(async (_input: unknown, _writer?: unknown) => {
 });
 
 const smokeVerifyMock = mock(async () => ({ success: true, message: "ok" }));
+const runCommandMock = mock(async () => ({
+  stdout: "",
+  stderr: "",
+  exitCode: 0,
+  durationMs: 0,
+}));
 
 const mockGetRun = mock(async (_runId: string) => mockWorkflowRun);
 const mockUpdateRun = mock(async (runId: string, patch: { stateData?: unknown }) => {
@@ -31,28 +40,6 @@ const mockUpdateRun = mock(async (runId: string, patch: { stateData?: unknown })
   return mockWorkflowRun;
 });
 
-// Mock modules BEFORE importing them
-mock.module("@alfred/agent/orchestrator/tool/codex/index", () => ({
-  toolCodex: {
-    execute: codexExecuteMock,
-    name: "codex",
-    description: "Mock codex tool",
-    inputSchema: {},
-    outputSchema: {},
-  },
-}));
-
-mock.module("@alfred/agent/orchestrator/verification/smoke", () => ({
-  smokeTester: {
-    verify: smokeVerifyMock,
-  },
-}));
-
-// Now import - these will get the mocked versions
-const { runReviewPhase, reviewWorkflowRepo } = await import(
-  "../src/orchestrator/review"
-);
-
 /**
  * ALF-13: Persist fix attempt count (Security)
  *
@@ -61,25 +48,35 @@ const { runReviewPhase, reviewWorkflowRepo } = await import(
  * suspend/resume cycles.
  */
 describe("review fixAttempts persistence", () => {
-  let restoreRunner: (() => void) | undefined;
   let originalGetRun: typeof reviewWorkflowRepo.getRun;
   let originalUpdateRun: typeof reviewWorkflowRepo.updateRun;
+  let originalCodexExecute: typeof toolCodex.execute;
+  let originalSmokeVerify: typeof smokeTester.verify;
 
   beforeEach(() => {
     process.env.ORCH_TMUX_DISABLED = "1";
     originalGetRun = reviewWorkflowRepo.getRun;
     originalUpdateRun = reviewWorkflowRepo.updateRun;
+    originalCodexExecute = toolCodex.execute;
+    originalSmokeVerify = smokeTester.verify;
 
     // Reset mock state
     mockWorkflowRun = null;
     updateRunCalls = [];
     codexExecuteMock.mockReset();
     smokeVerifyMock.mockReset();
+    runCommandMock.mockReset();
     mockGetRun.mockReset();
     mockUpdateRun.mockReset();
 
     // Set up default implementations
     smokeVerifyMock.mockImplementation(async () => ({ success: true, message: "ok" }));
+    runCommandMock.mockImplementation(async () => ({
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
+      durationMs: 0,
+    }));
     mockGetRun.mockImplementation(async (_runId: string) => mockWorkflowRun);
     mockUpdateRun.mockImplementation(async (runId: string, patch: { stateData?: unknown }) => {
       updateRunCalls.push({ runId, patch });
@@ -91,22 +88,25 @@ describe("review fixAttempts persistence", () => {
 
     reviewWorkflowRepo.getRun = mockGetRun;
     reviewWorkflowRepo.updateRun = mockUpdateRun;
+
+    toolCodex.execute = codexExecuteMock;
+    smokeTester.verify = smokeVerifyMock;
   });
 
   afterEach(async () => {
     process.env.ORCH_TMUX_DISABLED = undefined;
-    restoreRunner?.();
-    restoreRunner = undefined;
     reviewWorkflowRepo.getRun = originalGetRun;
     reviewWorkflowRepo.updateRun = originalUpdateRun;
+    toolCodex.execute = originalCodexExecute;
+    smokeTester.verify = originalSmokeVerify;
   });
 
   afterAll(() => {
-    mock.restore();
+    // Avoid `mock.module()` so this suite remains order-independent across files.
   });
 
   it("loads persisted fixAttempts from stateData on resume", async () => {
-    const runId = `review-persist-${Date.now().toString(36)}`;
+    const runId = `review-persist-${randomUUID()}`;
     await preparePlanDir(runId);
 
     // Simulate a resumed workflow with 2 prior fix attempts
@@ -115,7 +115,7 @@ describe("review fixAttempts persistence", () => {
       stateData: { fixAttempts: 2 },
     };
 
-    restoreRunner = mockRunner(async () => ({
+    runCommandMock.mockImplementation(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
@@ -148,7 +148,11 @@ describe("review fixAttempts persistence", () => {
       data?: unknown;
     }> = [];
     try {
-      const generator = runReviewPhase(ctx, mergePlan);
+      const generator = runReviewPhase(ctx, mergePlan, {
+        runCommand: runCommandMock,
+        codexExecute: codexExecuteMock,
+        smokeVerify: smokeVerifyMock,
+      });
       for await (const event of generator) {
         events.push(event as (typeof events)[number]);
       }
@@ -169,7 +173,7 @@ describe("review fixAttempts persistence", () => {
   });
 
   it("persists fixAttempts to stateData after each fix attempt", async () => {
-    const runId = `review-persist-write-${Date.now().toString(36)}`;
+    const runId = `review-persist-write-${randomUUID()}`;
     await preparePlanDir(runId);
 
     // Start fresh (no prior attempts)
@@ -178,7 +182,7 @@ describe("review fixAttempts persistence", () => {
       stateData: null,
     };
 
-    restoreRunner = mockRunner(async () => ({
+    runCommandMock.mockImplementation(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
@@ -205,7 +209,11 @@ describe("review fixAttempts persistence", () => {
     };
 
     try {
-      const generator = runReviewPhase(ctx, mergePlan);
+      const generator = runReviewPhase(ctx, mergePlan, {
+        runCommand: runCommandMock,
+        codexExecute: codexExecuteMock,
+        smokeVerify: smokeVerifyMock,
+      });
       for await (const _ of generator) {
         // Consume all events
       }
@@ -227,7 +235,7 @@ describe("review fixAttempts persistence", () => {
   });
 
   it("respects MAX_FIX_ATTEMPTS across suspend/resume cycles", async () => {
-    const runId = `review-max-attempts-${Date.now().toString(36)}`;
+    const runId = `review-max-attempts-${randomUUID()}`;
     await preparePlanDir(runId);
 
     // Simulate workflow already at max attempts
@@ -236,7 +244,7 @@ describe("review fixAttempts persistence", () => {
       stateData: { fixAttempts: 3 },
     };
 
-    restoreRunner = mockRunner(async () => ({
+    runCommandMock.mockImplementation(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
@@ -269,7 +277,11 @@ describe("review fixAttempts persistence", () => {
       data?: unknown;
     }> = [];
     try {
-      const generator = runReviewPhase(ctx, mergePlan);
+      const generator = runReviewPhase(ctx, mergePlan, {
+        runCommand: runCommandMock,
+        codexExecute: codexExecuteMock,
+        smokeVerify: smokeVerifyMock,
+      });
       for await (const event of generator) {
         events.push(event as (typeof events)[number]);
       }
@@ -287,7 +299,7 @@ describe("review fixAttempts persistence", () => {
   });
 
   it("handles missing stateData gracefully (defaults to 0)", async () => {
-    const runId = `review-no-state-${Date.now().toString(36)}`;
+    const runId = `review-no-state-${randomUUID()}`;
     await preparePlanDir(runId);
 
     // Workflow exists but has no stateData
@@ -297,9 +309,9 @@ describe("review fixAttempts persistence", () => {
     };
 
     let checkRunCount = 0;
-    restoreRunner = mockRunner(async () => {
+    runCommandMock.mockImplementation(async () => {
       checkRunCount++;
-      // Pass on second run to verify we get initial attempt + 1 retry
+      // Pass once we've burned through initial checks + 1 retry cycle.
       if (checkRunCount > 4) {
         return { stdout: "ok", stderr: "", exitCode: 0, durationMs: 1 };
       }
@@ -327,7 +339,11 @@ describe("review fixAttempts persistence", () => {
 
     const events: Array<{ type?: string; kind?: string; data?: unknown }> = [];
     try {
-      const generator = runReviewPhase(ctx, mergePlan);
+      const generator = runReviewPhase(ctx, mergePlan, {
+        runCommand: runCommandMock,
+        codexExecute: codexExecuteMock,
+        smokeVerify: smokeVerifyMock,
+      });
       for await (const event of generator) {
         events.push(event as (typeof events)[number]);
       }
@@ -347,7 +363,7 @@ describe("review fixAttempts persistence", () => {
   });
 
   it("handles workflowRepo errors gracefully", async () => {
-    const runId = `review-repo-error-${Date.now().toString(36)}`;
+    const runId = `review-repo-error-${randomUUID()}`;
     await preparePlanDir(runId);
 
     // Simulate repo error
@@ -360,7 +376,7 @@ describe("review fixAttempts persistence", () => {
     reviewWorkflowRepo.getRun = mockGetRun;
     reviewWorkflowRepo.updateRun = mockUpdateRun;
 
-    restoreRunner = mockRunner(async () => ({
+    runCommandMock.mockImplementation(async () => ({
       stdout: "fail",
       stderr: "error",
       exitCode: 1,
@@ -387,7 +403,11 @@ describe("review fixAttempts persistence", () => {
     };
 
     try {
-      const generator = runReviewPhase(ctx, mergePlan);
+      const generator = runReviewPhase(ctx, mergePlan, {
+        runCommand: runCommandMock,
+        codexExecute: codexExecuteMock,
+        smokeVerify: smokeVerifyMock,
+      });
       for await (const _ of generator) {
         // Consume all events
       }

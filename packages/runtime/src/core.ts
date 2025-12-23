@@ -14,6 +14,7 @@ import type { LanguageModel } from "ai";
 import { runCognitiveLoop } from "./loops/cognitive";
 import { timestamp } from "@alfred/cognitive/state";
 import type { Event } from "@alfred/cognitive/state";
+import type { AiAdapter } from "./adapters/ai";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
@@ -68,12 +69,14 @@ export class WorkflowRuntime implements IWorkflowRuntime {
   private readonly supervisorHeartbeatMs: number;
   private readonly supervisorCheckIntervalMs: number;
   private supervisorInterruptReason: string | null = null;
+  private readonly createAiAdapter?: (runId: string) => AiAdapter;
   private supervisorActive = false;
   private externalAbortHandler?: () => void;
   private supervisorGateReject: ((error: Error) => void) | null = null;
   private supervisorGateFired = false;
 
   constructor(options: RuntimeOptions) {
+    const createAiAdapter = options.createAiAdapter;
     // Validate options to catch configuration errors early
     const validated = validateRuntimeOptions(options);
 
@@ -97,6 +100,7 @@ export class WorkflowRuntime implements IWorkflowRuntime {
     this.supervisorCheckIntervalMs =
       validated.supervisorCheckIntervalMs ??
       DEFAULT_SUPERVISOR_CHECK_INTERVAL_MS;
+    this.createAiAdapter = createAiAdapter;
 
     // Initialize runtime state
     this.state = {
@@ -300,8 +304,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
       const runner = new PipelineRunner(pipelineState)
         .register(new ScanPhase(this.runId))
-        .register(new PlanPhase(this.runId, this.model))
-        .register(new ActPhase(this.runId, this.model))
+        .register(new PlanPhase(this.runId, this.model, this.createAiAdapter))
+        .register(new ActPhase(this.runId, this.model, this.createAiAdapter))
         .register(new ReportPhase());
 
       const checkCancelled = function* (this: WorkflowRuntime) {

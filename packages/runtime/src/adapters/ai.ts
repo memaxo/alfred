@@ -33,6 +33,10 @@ export type StreamOptions = {
   maxTokens?: number;
 };
 
+export type AiAdapter = {
+  stream(options: StreamOptions): AsyncGenerator<WorkflowEvent, void, void>;
+};
+
 /**
  * AISDKAdapter wraps AI SDK streamText and maps events to WorkflowEvent
  *
