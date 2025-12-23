@@ -2,9 +2,8 @@
 // Full Linear integration lives in the API layer and DB repos.
 
 import { logger } from "@alfred/logger";
-import pRetry, { AbortError } from "p-retry";
-import { linearRateLimiter } from "./linear-rate-limiter";
 import { getLinearMetrics } from "./linearmetrics";
+import { withLinearRetry } from "./linear-retry";
 import { toolTicket } from "./tool/ticket";
 
 export type LinearActivityType = "thought" | "action" | "response" | "error";
@@ -34,9 +33,8 @@ export async function emitLinearActivity(
   const metrics = getLinearMetrics();
   const stopTimer = metrics.linearActivityDurationSeconds.startTimer({ type });
   try {
-    const result = await pRetry(
+    const result = await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle(type);
         const action = `activity.${type}` as
           | "activity.thought"
           | "activity.action"
@@ -55,34 +53,13 @@ export async function emitLinearActivity(
           ephemeral: params.ephemeral,
         };
 
-        const result = await toolTicket.execute({ input });
-        return { ok: result.ok, id: result.id };
+        const res = await toolTicket.execute({ input });
+        return { ok: res.ok, id: res.id };
       },
       {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            logger?.warn?.("linear_activity_retry", {
-              type,
-              sessionId: params.sessionId,
-              attempt: error.attemptNumber,
-              retriesLeft: error.retriesLeft,
-            });
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
+        category: type,
+        logPrefix: "linear_activity",
+        logContext: { type, sessionId: params.sessionId },
       }
     );
     metrics.linearActivityEmissionsTotal.inc({ type, status: "success" });
@@ -100,62 +77,14 @@ export async function emitLinearActivity(
   }
 }
 
-type ErrorWithRetry = {
-  retryAfterMs?: number;
-  retryAfter?: number;
-  headers?: Headers | Record<string, string>;
-  response?: {
-    headers?: Headers | Record<string, string>;
-    get?: (key: string) => string | null;
-  };
-};
-
-type ErrorWithStatusCode = {
-  statusCode?: number;
-};
-
-function getStatusCode(error: unknown): number | undefined {
-  const err = error as ErrorWithStatusCode;
-  return err?.statusCode;
-}
-
-function resolveRetryAfterMs(error: unknown): number | undefined {
-  const err = error as ErrorWithRetry;
-  const candidate =
-    err?.retryAfterMs ??
-    err?.retryAfter ??
-    (err?.headers instanceof Headers
-      ? err.headers.get("retry-after")
-      : err?.headers?.["retry-after"]) ??
-    (err?.response?.headers instanceof Headers
-      ? err.response.headers.get("retry-after")
-      : err?.response?.headers?.["retry-after"]);
-
-  if (typeof candidate === "number" && Number.isFinite(candidate)) {
-    return candidate >= 1000 ? candidate : candidate * 1000;
-  }
-
-  if (typeof candidate === "string" && candidate.trim().length > 0) {
-    const parsed = Number.parseInt(candidate.trim(), 10);
-    if (!Number.isNaN(parsed)) {
-      return parsed >= 1000 ? parsed : parsed * 1000;
-    }
-  }
-
-  return;
-}
-
 export async function setLinearDelegate(
   params: LinearSessionParams
 ): Promise<void> {
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "delegate" });
   try {
-    await pRetry(
+    await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "set-delegate" as const,
@@ -163,29 +92,9 @@ export async function setLinearDelegate(
           delegateId: params.delegateId,
           authz: params.authz,
         };
-
         await toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
   } catch (error) {
     logger?.warn?.("linear_delegate_failed", {
@@ -201,46 +110,19 @@ export async function setLinearStarted(
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "state" });
   try {
-    const result = await pRetry(
+    const result = await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "set-started" as const,
           issueId: params.issueId,
           authz: params.authz,
         };
-
-        return await toolTicket.execute({ input });
+        return toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
-    const resolved = result as {
-      ok: boolean;
-      id?: string;
-      stateId?: string;
-    };
+    const resolved = result as { ok: boolean; id?: string; stateId?: string };
     return { stateId: resolved.stateId ?? "state_unknown" };
   } catch (error) {
     logger?.warn?.("linear_started_failed", {
@@ -257,46 +139,19 @@ export async function setLinearCompleted(
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "completed" });
   try {
-    const result = await pRetry(
+    const result = await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "set-completed" as const,
           issueId: params.issueId,
           authz: params.authz,
         };
-
-        return await toolTicket.execute({ input });
+        return toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
-    const resolved = result as {
-      ok: boolean;
-      id?: string;
-      stateId?: string;
-    };
+    const resolved = result as { ok: boolean; id?: string; stateId?: string };
     return { stateId: resolved.stateId ?? "state_unknown" };
   } catch (error) {
     logger?.warn?.("linear_completed_failed", {
@@ -316,11 +171,8 @@ export async function commentOnLinearIssue(params: {
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "comment" });
   try {
-    await pRetry(
+    await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "comment" as const,
@@ -328,29 +180,9 @@ export async function commentOnLinearIssue(params: {
           description: params.body,
           authz: params.authz,
         };
-
         await toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
   } catch (error) {
     logger?.warn?.("linear_comment_failed", {
@@ -370,11 +202,8 @@ export async function setLinearSessionExternalUrl(
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "external_url" });
   try {
-    await pRetry(
+    await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space,
           action: "session.external-url" as const,
@@ -382,29 +211,9 @@ export async function setLinearSessionExternalUrl(
           url,
           authz,
         };
-
         await toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
   } catch (error) {
     logger?.warn?.("linear_external_url_failed", {
@@ -420,46 +229,19 @@ export async function setLinearCancelled(
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "cancelled" });
   try {
-    const result = await pRetry(
+    const result = await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "set-cancelled" as const,
           issueId: params.issueId,
           authz: params.authz,
         };
-
-        return await toolTicket.execute({ input });
+        return toolTicket.execute({ input });
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
-    const resolved = result as {
-      ok: boolean;
-      id?: string;
-      stateId?: string;
-    };
+    const resolved = result as { ok: boolean; id?: string; stateId?: string };
     return { stateId: resolved.stateId ?? "state_unknown" };
   } catch (error) {
     logger?.warn?.("linear_cancelled_failed", {
@@ -496,11 +278,8 @@ export async function createLinearBlockingRelation(params: {
   const metrics = getLinearMetrics();
   metrics.linearSessionOperationsTotal.inc({ operation: "add_relation" });
   try {
-    return await pRetry(
+    return await withLinearRetry(
       async () => {
-        await linearRateLimiter.throttle("session", {
-          requireStartupBuffer: false,
-        });
         const input = {
           space: params.space,
           action: "add-relation" as const,
@@ -509,30 +288,10 @@ export async function createLinearBlockingRelation(params: {
           relationType: "blocks" as const,
           authz: params.authz,
         };
-
         const result = await toolTicket.execute({ input });
         return { ok: result.ok, id: result.id };
       },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        maxTimeout: 10_000,
-        factor: 2,
-        onFailedAttempt: async (error) => {
-          const statusCode = getStatusCode(error);
-          if (
-            statusCode &&
-            (statusCode === 429 || (statusCode >= 500 && statusCode < 600))
-          ) {
-            if (statusCode === 429) {
-              const retryAfterMs = resolveRetryAfterMs(error);
-              await linearRateLimiter.handle429(retryAfterMs);
-            }
-            return;
-          }
-          throw new AbortError(error);
-        },
-      }
+      { category: "session", requireStartupBuffer: false }
     );
   } catch (error) {
     logger?.warn?.("linear_add_relation_failed", {
