@@ -1,10 +1,10 @@
 # Desktop UI Paradigm: Comprehensive Design Document
 
-> **Status:** Planning Phase  
+> **Status:** Ready for Execution  
 > **Owner:** Frontend Architecture  
 > **Created:** 2025-12-23  
 > **Last Updated:** 2025-12-23  
-> **Revision:** 2.0 (Post Genius AI Review)
+> **Revision:** 2.1 (Execution-Ready)
 
 ---
 
@@ -29,7 +29,12 @@
 17. [Open Questions & Decisions](#17-open-questions--decisions)
 18. [Research Areas](#18-research-areas)
 19. [Implementation Phases](#19-implementation-phases)
-20. [Success Criteria](#20-success-criteria)
+20. [Testing Strategy](#201-testing-strategy) ← **NEW**
+21. [Success Criteria](#22-success-criteria)
+22. [Progress](#progress) ← **NEW**
+23. [Surprises & Discoveries](#surprises--discoveries) ← **NEW**
+24. [Decision Log](#decision-log) ← **NEW**
+25. [Outcomes & Retrospective](#outcomes--retrospective) ← **NEW**
 
 ---
 
@@ -1870,7 +1875,7 @@ See Section 15 for detailed removal manifest.
 | `lib/mindscape/gpu/engine.ts` | ~400 | WebGPU engine unused |
 | `lib/mindscape/gpu/*.ts` | ~400 | Supporting WebGPU files |
 | `components/mindscape/initializer.tsx` | 542 | Polling replaced by subscription |
-| `components/mindscape/detail-panel.tsx` | 526 | Context-lens pattern deprecated |
+| `components/mindscape/detail-panel.tsx` | 526 | Context-lens pattern removed |
 | `hooks/use-physics-worker.ts` | 144 | Always disabled |
 
 ### 15.2 Files to Refactor
@@ -1978,15 +1983,15 @@ if (import.meta.env.VITE_TEST_MODE === "true") {
 | Edge metadata | Add source, confidence, scope | AI: needed for provenance and debugging |
 | Structural edges | Add contains/member_of/part_of | AI: needed for grouping and scale |
 
-### 17.2 Pending
+### 17.2 Decided (UX & Behavior)
 
-| Question | Options | Recommendation |
-|----------|---------|----------------|
-| Dock Location | Bottom / Left / Both | Bottom (macOS style) |
-| Window Resizing | Free / Snap to Grid | Snap to 50px grid |
-| Tiling Mode | None / Optional / Forced | Optional via modifier key |
-| Multi-window per resource | Yes / No | Yes (one note, many windows) |
-| Edge kind extensibility | Fixed enum / Plugin registry | Fixed enum for now |
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| Dock Location | Bottom | macOS style; consistent with spatial metaphor; leaves sides free for future panels |
+| Window Resizing | Snap to 50px grid | Prevents visual chaos; easier alignment; improves layout predictability |
+| Tiling Mode | Optional via ⌥+drag | Power users can tile; default is freeform; avoids forced constraints |
+| Multi-window per resource | Yes | One note can have multiple views (edit, preview); matches desktop OS behavior |
+| Edge kind extensibility | Fixed enum | Simplicity for MVP; avoid plugin complexity; can extend enum later if needed |
 
 ### 17.3 Decided Against (AI Guidance)
 
@@ -1996,6 +2001,32 @@ if (import.meta.env.VITE_TEST_MODE === "true") {
 | Storing messages in Zustand | Too large; blocks serialization; schema migration pain |
 | N subscriptions per node | Doesn't scale; connection overhead |
 | Unifying Window/Resource | Forces persistence semantics on ephemeral UI |
+
+### 17.4 Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation | Recovery |
+|------|------------|--------|------------|----------|
+| **TanStack DB Beta Breaking Changes** | Medium | High | Pin version, monitor changelog, avoid undocumented APIs | Git revert to pre-TanStack DB commit |
+| **Performance Regression** | Low | High | Add performance budget tests in Phase 5; profile before each merge | Git revert specific optimization commits |
+| **Backend Subscription Changes** | Medium | Medium | Design cursor protocol first (Section 10); implement backend in parallel | Git revert subscription changes |
+| **localStorage Corruption** | Low | Medium | Version schema (`desktop-layout-v1`); add migration logic | Clear localStorage, reinitialize from backend |
+| **React Flow Version Incompatibility** | Low | Low | Already on v12.9.3; avoid bleeding-edge features | Pin version, defer upgrades |
+
+**Recovery Strategy:**
+
+All recovery is via `git revert` to the last known good commit. No feature flags, no dual implementations.
+
+1. **Phase 1-2 Recovery:** `git revert` to pre-rename commits.
+2. **Phase 3-4 Recovery:** `git revert` route and WebGPU deletion commits.
+3. **Phase 5 Recovery:** `git revert` specific performance optimization commits.
+
+**Go/No-Go Criteria:**
+
+- Phase 1 → Phase 2: All tests pass, no type errors
+- Phase 2 → Phase 3: Notes CRUD works via TanStack DB in isolation
+- Phase 3 → Phase 4: Desktop route loads <1s, all windows spawn correctly
+- Phase 4 → Phase 5: Subscriptions resume after disconnect, no data loss
+- Phase 5 → Production: 200 nodes @ 60fps verified, localStorage <50KB
 
 ---
 
@@ -2572,9 +2603,58 @@ TanStack DB Collections (Data Layer)
 
 ---
 
-## 21. Success Criteria
+## 20.1 Testing Strategy
 
-### 20.1 Functional Requirements
+### Unit Tests
+
+| Component | Test Focus | Location |
+|-----------|------------|----------|
+| `useDesktopStore` | Slice actions, persistence serialization | `apps/web/src/store/__tests__/desktop.test.ts` |
+| `WindowFrame` | Rendering, LOD transitions, focus/dim states | `apps/web/src/components/windows/shared/__tests__/` |
+| Collections | Insert/update/delete, optimistic rollback, schema validation | `apps/web/src/collections/__tests__/` |
+| `useLOD` | Zoom thresholds, state transitions | `apps/web/src/hooks/__tests__/use-lod.test.ts` |
+
+### Integration Tests
+
+| Scenario | Test Focus | Location |
+|----------|------------|----------|
+| Note CRUD via collection | TanStack DB → tRPC → Backend round-trip | `apps/web/src/collections/__tests__/note.integration.test.ts` |
+| Subscription reconnect | Cursor resume, snapshot fallback | `packages/api/test/routers/graph.test.ts` |
+| Window spawn from Dock | Store update → React Flow node creation | `apps/web/src/components/desktop/__tests__/dock.integration.test.ts` |
+
+### E2E Tests (Playwright)
+
+| Flow | Test Focus | Location |
+|------|------------|----------|
+| Desktop load | Auth → Route → Canvas renders <1s | `tests/e2e/desktop-load.spec.ts` |
+| Note creation | Dock click → Window spawns → Type → Save → Persist | `tests/e2e/note-crud.spec.ts` |
+| 200 node scale | Spawn 200 windows → Pan/zoom → FPS >30 | `tests/e2e/scale.spec.ts` |
+| Subscription recovery | Disconnect WS → Reconnect → State intact | `tests/e2e/subscription-recovery.spec.ts` |
+
+### Performance Tests
+
+| Test | Metric | Threshold | Tool |
+|------|--------|-----------|------|
+| Window spawn | Time to render | <10ms | `performance.now()` |
+| 100 node pan | Frame time | <16ms (60fps) | Chrome DevTools |
+| Collection query | Query latency | <5ms | TanStack DB devtools |
+| localStorage size | Total bytes | <50KB | `JSON.stringify().length` |
+
+### Test Execution by Phase
+
+| Phase | Required Tests | Go/No-Go |
+|-------|---------------|----------|
+| Phase 1 | Unit: store slices, type checks pass | All green |
+| Phase 2 | Unit: collections; Integration: note CRUD | Notes persist correctly |
+| Phase 3 | E2E: desktop load, dock spawn | Route loads <1s |
+| Phase 4 | Integration: subscription reconnect | Cursor resume works |
+| Phase 5 | E2E: scale test; Performance: all metrics | 200 nodes @ 60fps |
+
+---
+
+## 22. Success Criteria
+
+### 22.1 Functional Requirements
 
 - [ ] Single route (`/`) loads authenticated Desktop
 - [ ] Dock displays and spawns all window types
@@ -2585,7 +2665,7 @@ TanStack DB Collections (Data Layer)
 - [ ] Voice input works via WebSocket
 - [ ] Edges persist to backend via collection
 
-### 20.2 Non-Functional Requirements
+### 22.2 Non-Functional Requirements
 
 | Metric | Target |
 |--------|--------|
@@ -2597,7 +2677,7 @@ TanStack DB Collections (Data Layer)
 | localStorage size | < 50KB |
 | Subscription reconnect | < 1s with cursor resume |
 
-### 20.3 Architecture Requirements
+### 22.3 Architecture Requirements
 
 - [ ] Zustand only stores layout state (no resource data)
 - [ ] TanStack DB collections for all persisted resources
@@ -2606,7 +2686,7 @@ TanStack DB Collections (Data Layer)
 - [ ] No dual-authority (Zustand + backend competing)
 - [ ] Edge degradation at zoom < 0.3
 
-### 20.4 Code Quality
+### 22.4 Code Quality
 
 - [ ] No `// TODO` comments in production code
 - [ ] No `console.log` statements
@@ -2677,6 +2757,86 @@ TanStack DB Collections (Data Layer)
 1. Source-of-Truth Matrix (Section 5)
 2. Subscription Protocol Contract (Section 10)
 3. Performance Patterns (Section 12)
+
+---
+
+## Progress
+
+> Track completed items as implementation proceeds.
+
+| Date | Phase | Item | Status | Notes |
+|------|-------|------|--------|-------|
+| 2025-12-23 | 0 | ExecPlan v2.0 complete | ✅ | Post AI review, ready for execution |
+| | 1 | Rename store files | ⬜ | |
+| | 1 | Split store layout-only | ⬜ | |
+| | 1 | Create WindowFrame | ⬜ | |
+| | 1 | Move node → windows | ⬜ | |
+| | 2 | Install TanStack DB | ⬜ | |
+| | 2 | Create noteCollection | ⬜ | |
+| | 2 | Migrate NoteWindow | ⬜ | |
+| | 3 | Delete WebGPU | ⬜ | |
+| | 3 | Route consolidation | ⬜ | |
+| | 4 | Subscription protocol | ⬜ | |
+| | 5 | Performance optimization | ⬜ | |
+
+---
+
+## Surprises & Discoveries
+
+> Document unexpected findings during implementation.
+
+| Date | Phase | Discovery | Impact | Resolution |
+|------|-------|-----------|--------|------------|
+| | | (None yet) | | |
+
+---
+
+## Decision Log
+
+> Consolidate all decisions with rationale and date.
+
+| Date | Decision | Rationale | Made By |
+|------|----------|-----------|---------|
+| 2025-12-23 | Window Instance ↔ Resource ontology | AI recommended; clearer separation than App/Entity | AI Review |
+| 2025-12-23 | Layout-first (local), Backend-first (resources) | Avoids dual-authority problem; biggest risk identified by AI | AI Review |
+| 2025-12-23 | Zustand (layout) + TanStack DB (resources) | Purpose-built sync; transaction IDs prevent echo | AI Review |
+| 2025-12-23 | localStorage <50KB budget | Avoid size limits, blocking serialization, schema migration pain | AI Review |
+| 2025-12-23 | Single WS, multiplexed, cursor-based subscriptions | Scalable; N subscriptions per node doesn't scale | AI Review |
+| 2025-12-23 | Dock at bottom | macOS style; consistent with spatial metaphor | UX Decision |
+| 2025-12-23 | Snap to 50px grid | Prevents visual chaos; easier alignment | UX Decision |
+| 2025-12-23 | Tiling optional via ⌥+drag | Power users can tile; default is freeform | UX Decision |
+| 2025-12-23 | Multi-window per resource: Yes | Matches desktop OS behavior | UX Decision |
+| 2025-12-23 | Fixed enum for edge kinds | Simplicity for MVP; can extend later | Architecture |
+| 2025-12-23 | TanStack DB beta risk accepted | Pin version; git revert if breaking changes | Risk Mitigation |
+| 2025-12-23 | No feature flags | Immediate removal of dead code; git revert for recovery | ALFRED Principle |
+
+---
+
+## Outcomes & Retrospective
+
+> To be completed post-implementation.
+
+### Outcomes
+
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| Entry Points | 1 (`/`) | | ⬜ |
+| Node Types | 12 | | ⬜ |
+| Dead Code Lines Removed | ~1,966 | | ⬜ |
+| Time to Interactive | <1s | | ⬜ |
+| Max Nodes @ 60fps | 200+ | | ⬜ |
+| localStorage Size | <50KB | | ⬜ |
+
+### Retrospective
+
+**What went well:**
+- (To be filled)
+
+**What could be improved:**
+- (To be filled)
+
+**Lessons learned:**
+- (To be filled)
 
 ---
 
