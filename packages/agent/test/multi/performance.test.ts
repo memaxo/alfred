@@ -2,7 +2,10 @@ import { describe, expect, it } from "bun:test";
 import { performance } from "node:perf_hooks";
 import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
 import type { AgentId } from "@alfred/agent/orchestrator/multi/spawn";
-import { updateTracker } from "@alfred/agent/orchestrator/multi/tracker";
+import {
+  createTrackerContext,
+  updateTrackerWithContext,
+} from "@alfred/agent/orchestrator/multi/tracker";
 import type { ContextBundle } from "@alfred/type/plan";
 
 // budget: plan-generation
@@ -34,12 +37,12 @@ describe("multi-agent performance budgets", () => {
     expect(avg).toBeLessThan(5); // <5ms per decomposition
   });
 
-  it("updates tracker state in under 1ms per event", () => {
+  it("updates tracker context in under 1ms per event", () => {
     const events = 1000;
-    let state = { agents: {}, waves: {} };
+    let ctx = createTrackerContext([]);
     const start = performance.now();
     for (let i = 0; i < events; i += 1) {
-      state = updateTracker(state, {
+      ctx = updateTrackerWithContext(ctx, {
         type: "codex/command",
         agentId: "agent-perf" as AgentId,
         command: `bun test ${i}`,

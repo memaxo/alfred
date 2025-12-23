@@ -23,11 +23,10 @@ import {
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import {
-  detectStuck,
-  getStuckDetectionDefaults,
-  type StuckDetectionOptions,
-  type TrackerState,
-  updateTracker,
+  type TrackerContext,
+  createTrackerContext,
+  updateTrackerWithContext,
+  detectStuckWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 // import { BrainstemSupervisor } from "../../loops/supervisor.js";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
@@ -43,26 +42,34 @@ import type { OrchestratorContext } from "./types";
 
 const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
-export function hydrateTrackerState(
-  history: WorkflowEvent[] | undefined
-): TrackerState {
-  const trackerState: TrackerState = { agents: {}, waves: {} };
+/**
+ * Hydrate tracker context from workflow history.
+ * Creates a TrackerContext with dependencies initialized from subtasks.
+ */
+export function hydrateTrackerContext(
+  history: WorkflowEvent[] | undefined,
+  subTasks: SubTask[]
+): TrackerContext {
+  const ctx = createTrackerContext(subTasks);
+
   if (!history || history.length === 0) {
-    return trackerState;
+    return ctx;
   }
 
   const waveResults = history.filter((e) => (e as any).kind === "wave-result");
   for (const res of waveResults) {
     const data = (res as any).data;
     if (data?.waveId) {
-      trackerState.waves[data.waveId] = {
+      ctx.state.waves[data.waveId] = {
         status: data.status === "partial" ? "failed" : "completed",
       } as any;
     }
   }
 
-  return trackerState;
+  return ctx;
 }
+
+
 
 function normalizeWorkingDirectory(candidate: string, workspaceRoot: string) {
   // Default to workspaceRoot if candidate is empty or undefined
@@ -76,7 +83,7 @@ function normalizeWorkingDirectory(candidate: string, workspaceRoot: string) {
 }
 
 export type WavesResult = {
-  trackerState: TrackerState;
+  trackerContext: TrackerContext;
   allAgentOutcomes: any[];
   agentFileHints: Map<string, Set<string>>;
   activeWorkspaces: Workspace[];
@@ -173,7 +180,7 @@ type RunAgentOptions = {
   signal: AbortSignal;
   authz?: string;
   userId?: string;
-  trackerStateRef: { current: TrackerState };
+  trackerContextRef: { current: TrackerContext };
   queue: AsyncQueue<WorkflowEvent>;
 };
 
@@ -190,7 +197,7 @@ async function runAgent({
   signal,
   authz,
   userId,
-  trackerStateRef,
+  trackerContextRef,
   queue,
 }: RunAgentOptions) {
   spec.workingDirectory = normalizeWorkingDirectory(
@@ -367,14 +374,14 @@ async function runAgent({
               ? inner.timestamp
               : Date.now();
           if (inner.type === "thought") {
-            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
               type: "codex/thought",
               agentId: spec.agentId,
               text: inner.content ?? "",
               ts,
             });
           } else if (inner.type === "command") {
-            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
               type: "codex/command",
               agentId: spec.agentId,
               command: inner.command ?? "",
@@ -388,7 +395,7 @@ async function runAgent({
             });
           } else if (inner.type === "artifact") {
             const filePath = inner.path ?? "";
-            trackerStateRef.current = updateTracker(trackerStateRef.current, {
+            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
               type: "codex/file",
               agentId: spec.agentId,
               path: filePath,
@@ -573,16 +580,13 @@ async function runAgent({
 
   const finishedAt = Date.now();
 
-  // Use stuck detection thresholds from project config or env var defaults
-  const stuckOpts: StuckDetectionOptions =
-    projectConfig?.stuckDetection ?? getStuckDetectionDefaults();
-  stuck = detectStuck(
-    trackerStateRef.current,
+  // Use context-aware stuck detection
+  stuck = detectStuckWithContext(
+    trackerContextRef.current,
     spec.agentId as any,
-    Date.now(),
-    stuckOpts
+    Date.now()
   );
-  const trackerAgent = trackerStateRef.current.agents[spec.agentId as any];
+  const trackerAgent = trackerContextRef.current.state.agents[spec.agentId as any];
   if (status !== "failed") {
     status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
   }
@@ -671,10 +675,6 @@ export async function* runWaves(
   } = ctx;
   void runTDDLoop;
 
-  // Phase 13: Hydration - Rebuild Tracker State
-  let trackerState = hydrateTrackerState(history);
-  const trackerStateRef = { current: trackerState };
-
   const agentFileHints = new Map<string, Set<string>>();
   const agentSubTaskIds = new Map<string, string>();
   const activeWorkspaces: Workspace[] = [];
@@ -731,7 +731,7 @@ export async function* runWaves(
   if (subTasks.length === 0) {
     yield { type: "notice", message: "no_subtasks_to_execute" } as any;
     return {
-      trackerState: trackerStateRef.current,
+      trackerContext: createTrackerContext([]),
       allAgentOutcomes: [],
       agentFileHints,
       activeWorkspaces,
@@ -739,6 +739,10 @@ export async function* runWaves(
       interrupted: false,
     };
   }
+
+  // Phase 13: Hydration - Create tracker context with subtask dependencies
+  const trackerContext = hydrateTrackerContext(history, subTasks);
+  const trackerContextRef = { current: trackerContext };
 
   const subTaskById = new Map<string, SubTask>(subTasks.map((t) => [t.id, t]));
   const maxParallelRaw = Number.parseInt(
@@ -779,7 +783,7 @@ export async function* runWaves(
     }
 
     // Hydration check for wave
-    if (trackerStateRef.current.waves[wave.id]?.status === "completed") {
+    if (trackerContextRef.current.state.waves[wave.id]?.status === "completed") {
       logger.info("wave_hydrated_skipping", { waveId: wave.id });
       yield {
         type: "notice",
@@ -838,7 +842,7 @@ export async function* runWaves(
       false
     );
 
-    trackerStateRef.current.waves[wave.id] = { status: "running" };
+    trackerContextRef.current.state.waves[wave.id] = { status: "running" };
 
     // Concurrent Execution using pLimit and AsyncQueue
     const queue = new AsyncQueue<WorkflowEvent>();
@@ -860,7 +864,7 @@ export async function* runWaves(
             signal,
             authz,
             userId,
-            trackerStateRef,
+            trackerContextRef,
             queue,
           });
         } catch (error) {
@@ -914,7 +918,7 @@ export async function* runWaves(
     }
 
     const anyStuck = agentOutcomes.some((o) => o.stuck);
-    trackerStateRef.current.waves[wave.id] = {
+    trackerContextRef.current.state.waves[wave.id] = {
       status: anyStuck ? "failed" : "completed",
     } as any;
 
@@ -1016,7 +1020,7 @@ export async function* runWaves(
   }
 
   return {
-    trackerState: trackerStateRef.current,
+    trackerContext: trackerContextRef.current,
     allAgentOutcomes,
     agentFileHints,
     activeWorkspaces,

@@ -2,11 +2,6 @@ import { LoopDetector } from "@alfred/cognitive";
 import type { SubTask, SubTaskId } from "./decompose";
 import type { AgentId, WaveId } from "./spawn";
 
-// Reverse dependency index: maps a task ID to the set of tasks that depend on it
-const blockedBy = new Map<SubTaskId, Set<SubTaskId>>();
-// Forward dependency index: maps a task ID to its dependencies
-const dependsOn = new Map<SubTaskId, Set<SubTaskId>>();
-
 /**
  * Configuration options for stuck detection thresholds.
  * All thresholds can be tuned per-workflow or via environment variables.
@@ -81,20 +76,102 @@ export type TrackerState = {
   waves: Record<WaveId, TrackerWaveState>;
 };
 
-// Per-agent loop detectors (not serialized with state)
-const agentDetectors = new Map<AgentId, LoopDetector>();
+/**
+ * Encapsulated tracker context for a single workflow.
+ * Contains all state needed for tracking agent progress and dependencies.
+ */
+export type TrackerContext = {
+  state: TrackerState;
+  /** Reverse dependency index: task ID → tasks that depend on it */
+  blockedBy: Map<SubTaskId, Set<SubTaskId>>;
+  /** Forward dependency index: task ID → its dependencies */
+  dependsOn: Map<SubTaskId, Set<SubTaskId>>;
+  /** Per-agent loop detectors */
+  detectors: Map<AgentId, LoopDetector>;
+  /** Stuck detection options */
+  options: Required<StuckDetectionOptions>;
+};
 
-function getOrCreateDetector(agentId: AgentId, opts?: StuckDetectionOptions): LoopDetector {
-  let detector = agentDetectors.get(agentId);
+/**
+ * Create a new tracker context for a workflow.
+ * Initializes dependency indices from subtasks.
+ */
+export function createTrackerContext(
+  tasks: SubTask[],
+  options?: StuckDetectionOptions
+): TrackerContext {
+  const defaults = getStuckDetectionDefaults();
+  const blockedBy = new Map<SubTaskId, Set<SubTaskId>>();
+  const dependsOn = new Map<SubTaskId, Set<SubTaskId>>();
+
+  for (const task of tasks) {
+    dependsOn.set(task.id, new Set(task.deps));
+    for (const dep of task.deps) {
+      const blocked = blockedBy.get(dep) ?? new Set();
+      blocked.add(task.id);
+      blockedBy.set(dep, blocked);
+    }
+  }
+
+  return {
+    state: { agents: {}, waves: {} },
+    blockedBy,
+    dependsOn,
+    detectors: new Map(),
+    options: {
+      noProgressMs: options?.noProgressMs ?? defaults.noProgressMs,
+      maxTransitions: options?.maxTransitions ?? defaults.maxTransitions,
+      similarityThreshold: options?.similarityThreshold ?? defaults.similarityThreshold,
+    },
+  };
+}
+
+/**
+ * Clone a tracker context (deep copy of mutable state).
+ */
+export function cloneTrackerContext(ctx: TrackerContext): TrackerContext {
+  return {
+    state: cloneState(ctx.state),
+    blockedBy: new Map(Array.from(ctx.blockedBy.entries()).map(([k, v]) => [k, new Set(v)])),
+    dependsOn: new Map(Array.from(ctx.dependsOn.entries()).map(([k, v]) => [k, new Set(v)])),
+    detectors: ctx.detectors, // Detectors are mutable singletons, shared intentionally
+    options: { ...ctx.options },
+  };
+}
+
+/**
+ * Reset a tracker context (clear all state but keep options).
+ */
+export function resetTrackerContext(ctx: TrackerContext): TrackerContext {
+  for (const detector of ctx.detectors.values()) {
+    detector.reset();
+  }
+  return {
+    state: { agents: {}, waves: {} },
+    blockedBy: new Map(),
+    dependsOn: new Map(),
+    detectors: new Map(),
+    options: ctx.options,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getOrCreateDetector(
+  ctx: TrackerContext,
+  agentId: AgentId
+): LoopDetector {
+  let detector = ctx.detectors.get(agentId);
   if (!detector) {
-    const defaults = getStuckDetectionDefaults();
     detector = new LoopDetector({
-      maxTransitions: opts?.maxTransitions ?? defaults.maxTransitions,
-      stallMs: opts?.noProgressMs ?? defaults.noProgressMs,
-      similarityThreshold: opts?.similarityThreshold ?? defaults.similarityThreshold,
+      maxTransitions: ctx.options.maxTransitions,
+      stallMs: ctx.options.noProgressMs,
+      similarityThreshold: ctx.options.similarityThreshold,
       windowSize: 8,
     });
-    agentDetectors.set(agentId, detector);
+    ctx.detectors.set(agentId, detector);
   }
   return detector;
 }
@@ -140,24 +217,30 @@ function normaliseTime(ts: number | undefined): number {
   return ts;
 }
 
-export function updateTracker(
-  state: TrackerState,
+// ─────────────────────────────────────────────────────────────────────────────
+// Context-aware tracker functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Update tracker state within a context.
+ */
+export function updateTrackerWithContext(
+  ctx: TrackerContext,
   event: AgentEvent
-): TrackerState {
-  const next = cloneState(state);
+): TrackerContext {
+  const next = cloneTrackerContext(ctx);
   const ts = normaliseTime(event.ts);
-  const detector = getOrCreateDetector(event.agentId);
+  const detector = getOrCreateDetector(next, event.agentId);
 
   switch (event.type) {
     case "codex/thought": {
-      ensureAgent(next, event.agentId, undefined, ts);
-      const agent = next.agents[event.agentId];
+      ensureAgent(next.state, event.agentId, undefined, ts);
+      const agent = next.state.agents[event.agentId];
       if (!agent) break;
 
       agent.status = agent.status === "created" ? "running" : agent.status;
       agent.lastEventTs = ts;
 
-      // Check for loops via detector
       const result = detector.check(event.text, event.embedding ?? null);
       if (result.loop) {
         agent.status = "stuck";
@@ -165,13 +248,12 @@ export function updateTracker(
       break;
     }
     case "codex/command": {
-      ensureAgent(next, event.agentId, undefined, ts);
-      const agent = next.agents[event.agentId];
+      ensureAgent(next.state, event.agentId, undefined, ts);
+      const agent = next.state.agents[event.agentId];
       if (!agent) break;
 
       agent.lastEventTs = ts;
 
-      // Check for command loops via detector
       const result = detector.check(event.command, null);
       if (result.loop) {
         agent.status = "stuck";
@@ -185,13 +267,12 @@ export function updateTracker(
       break;
     }
     case "codex/file": {
-      ensureAgent(next, event.agentId, undefined, ts);
-      const agent = next.agents[event.agentId];
+      ensureAgent(next.state, event.agentId, undefined, ts);
+      const agent = next.state.agents[event.agentId];
       if (!agent) break;
 
       agent.lastEventTs = ts;
 
-      // Check for file path loops via detector
       const result = detector.check(event.path, null);
       if (result.loop) {
         agent.status = "stuck";
@@ -199,8 +280,8 @@ export function updateTracker(
       break;
     }
     case "notice": {
-      ensureAgent(next, event.agentId, undefined, ts);
-      const agent = next.agents[event.agentId];
+      ensureAgent(next.state, event.agentId, undefined, ts);
+      const agent = next.state.agents[event.agentId];
       if (!agent) break;
 
       agent.lastEventTs = ts;
@@ -212,113 +293,53 @@ export function updateTracker(
 }
 
 /**
- * Detect if an agent is stuck using the LoopDetector.
- *
- * Checks:
- * 1. Time-based: no events for too long
- * 2. Transition count exceeded
- * 3. Exact content repetition (hash)
- * 4. Semantic similarity (embeddings)
+ * Detect if an agent is stuck.
  */
-export function detectStuck(
-  state: TrackerState,
+export function detectStuckWithContext(
+  ctx: TrackerContext,
   agentId: AgentId,
-  now: number,
-  opts?: StuckDetectionOptions
+  now: number
 ): boolean {
-  const agent = state.agents[agentId];
+  const agent = ctx.state.agents[agentId];
   if (!agent) {
     return false;
   }
 
-  // Check if already marked as stuck
   if (agent.status === "stuck") {
     return true;
   }
 
-  const defaults = getStuckDetectionDefaults();
-  const noProgressMs = opts?.noProgressMs ?? defaults.noProgressMs;
-
-  // Time-based check (separate from LoopDetector for external timestamp)
-  if (now - agent.lastEventTs > noProgressMs) {
+  if (now - agent.lastEventTs > ctx.options.noProgressMs) {
     return true;
   }
 
-  // Detector-based checks happen during updateTracker
-  // If status is stuck, detector already found a loop
   return false;
 }
 
 /**
- * Clear detector state for an agent (call when agent completes or is reset).
+ * Get tasks blocked by a given task.
  */
-export function clearAgentDetector(agentId: AgentId): void {
-  const detector = agentDetectors.get(agentId);
-  if (detector) {
-    detector.reset();
-    agentDetectors.delete(agentId);
-  }
-}
-
-/**
- * Clear all agent detectors (call when workflow completes).
- */
-export function clearAllDetectors(): void {
-  for (const detector of agentDetectors.values()) {
-    detector.reset();
-  }
-  agentDetectors.clear();
-}
-
-/**
- * Register task dependencies for blocking propagation.
- * Call this at workflow start with the decomposed tasks.
- */
-export function registerDependencies(tasks: SubTask[]): void {
-  blockedBy.clear();
-  dependsOn.clear();
-
-  for (const task of tasks) {
-    dependsOn.set(task.id, new Set(task.deps));
-
-    for (const dep of task.deps) {
-      const blocked = blockedBy.get(dep) ?? new Set();
-      blocked.add(task.id);
-      blockedBy.set(dep, blocked);
-    }
-  }
-}
-
-/**
- * Clear the dependency index (call when workflow completes).
- */
-export function clearDependencyIndex(): void {
-  blockedBy.clear();
-  dependsOn.clear();
-}
-
-/**
- * Get tasks that are blocked by the given task.
- */
-export function getBlockedTasks(taskId: SubTaskId): SubTaskId[] {
-  return Array.from(blockedBy.get(taskId) ?? []);
+export function getBlockedTasksWithContext(
+  ctx: TrackerContext,
+  taskId: SubTaskId
+): SubTaskId[] {
+  return Array.from(ctx.blockedBy.get(taskId) ?? []);
 }
 
 /**
  * Check if all dependencies of a task are completed.
  */
-export function areAllDepsCompleted(
-  state: TrackerState,
+export function areAllDepsCompletedWithContext(
+  ctx: TrackerContext,
   taskId: SubTaskId
 ): boolean {
-  const deps = dependsOn.get(taskId);
+  const deps = ctx.dependsOn.get(taskId);
   if (!deps || deps.size === 0) {
     return true;
   }
 
   for (const depId of deps) {
-    // Find the agent for this task
-    const agentEntry = Object.entries(state.agents).find(
+    const agentEntry = Object.entries(ctx.state.agents).find(
       ([_, agent]) => agent.subTaskId === depId
     );
     if (!agentEntry) {
@@ -334,21 +355,20 @@ export function areAllDepsCompleted(
 }
 
 /**
- * Propagate completion of a task to unblock dependent tasks.
- * Returns the list of tasks that are now unblocked and ready to run.
+ * Propagate task completion to unblock dependent tasks.
+ * Returns updated context and list of unblocked tasks.
  */
-export function propagateCompletion(
-  state: TrackerState,
+export function propagateCompletionWithContext(
+  ctx: TrackerContext,
   completedTaskId: SubTaskId
-): { unblockedTasks: SubTaskId[]; state: TrackerState } {
-  const next = cloneState(state);
+): { unblockedTasks: SubTaskId[]; ctx: TrackerContext } {
+  const next = cloneTrackerContext(ctx);
   const unblocked: SubTaskId[] = [];
 
-  const dependents = blockedBy.get(completedTaskId) ?? new Set();
+  const dependents = next.blockedBy.get(completedTaskId) ?? new Set();
 
   for (const dependentId of dependents) {
-    // Find the agent for this dependent task
-    const agentEntry = Object.entries(next.agents).find(
+    const agentEntry = Object.entries(next.state.agents).find(
       ([_, agent]) => agent.subTaskId === dependentId
     );
 
@@ -358,22 +378,44 @@ export function propagateCompletion(
 
     const [agentId, agent] = agentEntry;
 
-    // Only unblock if paused/created and all deps are now complete
     if (agent.status !== "paused" && agent.status !== "created") {
       continue;
     }
 
-    if (areAllDepsCompleted(next, dependentId)) {
+    if (areAllDepsCompletedWithContext(next, dependentId)) {
       unblocked.push(dependentId);
-      // Mark as ready to run (status will be updated when execution starts)
-      next.agents[agentId as AgentId] = {
+      next.state.agents[agentId as AgentId] = {
         ...agent,
         status: "created",
       };
     }
   }
 
-  return { unblockedTasks: unblocked, state: next };
+  return { unblockedTasks: unblocked, ctx: next };
+}
+
+/**
+ * Clear detector for an agent within context.
+ */
+export function clearAgentDetectorWithContext(
+  ctx: TrackerContext,
+  agentId: AgentId
+): void {
+  const detector = ctx.detectors.get(agentId);
+  if (detector) {
+    detector.reset();
+    ctx.detectors.delete(agentId);
+  }
+}
+
+/**
+ * Clear all detectors within context.
+ */
+export function clearAllDetectorsWithContext(ctx: TrackerContext): void {
+  for (const detector of ctx.detectors.values()) {
+    detector.reset();
+  }
+  ctx.detectors.clear();
 }
 
 export const __internals = {
@@ -381,6 +423,4 @@ export const __internals = {
   ensureAgent,
   normaliseTime,
   getOrCreateDetector,
-  blockedBy,
-  dependsOn,
 };
