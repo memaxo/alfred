@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { TTSPool } from "../src/process/tts";
 
-describe("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)", () => {
+describe.skip("TTSPool with Maya1 (skipped: causes C++ exception in Bun runner)", () => {
   const isPackageRoot = existsSync(join(process.cwd(), "scripts/maya.py"));
   const scriptPath = isPackageRoot
     ? join(process.cwd(), "scripts/maya.py")

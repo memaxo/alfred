@@ -81,7 +81,7 @@
     "db:down": "bun scripts/compose.ts down",
     "test": "bun test",
     "test:postgres": "RUN_DB_TESTS=1 bun test",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
     "@alfred/logger": "workspace:*",

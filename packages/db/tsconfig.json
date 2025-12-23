@@ -6,6 +6,7 @@
     "sourceMap": false,
     "outDir": "dist",
     "rootDir": "src",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
     "composite": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false

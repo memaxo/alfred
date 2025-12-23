@@ -77,7 +77,7 @@ describeFn("Memory Decay Integration", () => {
 
     // Manually set updated timestamp to be old (simulate stale nodes)
     await db.execute(
-      sql`UPDATE memory_nodes SET updated_at = NOW() - INTERVAL '2 days' WHERE id = ANY(${sql.raw(`ARRAY['${id1}', '${id2}']::uuid[]`)}`)`
+      sql`UPDATE memory_nodes SET updated_at = NOW() - INTERVAL '2 days' WHERE id = ANY(${sql.raw(`ARRAY['${id1}', '${id2}']::uuid[]`)})`
     );
 
     // Run decay logic directly (simulating processMemoryMaintenance)
@@ -191,8 +191,11 @@ describeFn("Memory Decay Integration", () => {
     const node = await graphRepo.getNode(id);
     const props = node?.properties as Record<string, unknown> | null;
 
-    // Node should be archived (properties.archived = true)
-    expect(props?.archived).toBe(true);
+    // Node should be archived (properties.archived = timestamp string)
+    const archived = props?.archived;
+    expect(typeof archived).toBe("string");
+    expect(Number.isNaN(Date.parse(archived as string))).toBe(false);
+    expect(props?.archiveReason).toBe("low_confidence");
   });
 
   it("does not decay recently touched nodes", async () => {
@@ -225,17 +228,17 @@ describeFn("Memory Decay Integration", () => {
     expect(nodeInDecay).toBe(false);
 
     // Verify node is not in decay candidates
-    const staleNodes = await findNodesForDecay(24 * 60 * 60 * 1000, 1000);
-    const nodeInDecay = staleNodes.some((n) => n.id === id);
-    expect(nodeInDecay).toBe(false);
+    const staleNodesFinal = await findNodesForDecay(24 * 60 * 60 * 1000, 1000);
+    const nodeInDecayFinal = staleNodesFinal.some((n) => n.id === id);
+    expect(nodeInDecayFinal).toBe(false);
 
     // Run decay logic - node should not be included
     const before = await graphRepo.getNode(id);
     const confBefore = (before?.properties as Record<string, unknown>)
       ?.confidence as number;
 
-    // Only decay nodes that are in staleNodes (which excludes our touched node)
-    const updates = staleNodes.map((node) => {
+    // Only decay nodes that are in staleNodesFinal (which excludes our touched node)
+    const updates = staleNodesFinal.map((node) => {
       const props = (node.properties as Record<string, unknown>) || {};
       const currentConfidence =
         typeof props.confidence === "number" ? props.confidence : 1.0;

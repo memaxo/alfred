@@ -1,6 +1,6 @@
 import "bun";
 import { stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import YAML from "yaml";
 import { z } from "zod";
 import type { Obligation, PolicyDocument } from "./types";
@@ -135,10 +135,32 @@ function dedupeObligations(values: Obligation[]): Obligation[] {
   return result;
 }
 
+/**
+ * Searches for the policy file starting from the current directory
+ * and moving up the tree until it finds one or reaches the root.
+ */
+async function findPolicyFile(path: string): Promise<string> {
+  let currentDir = process.cwd();
+  while (true) {
+    const resolvedPath = resolve(currentDir, path);
+    try {
+      await stat(resolvedPath);
+      return resolvedPath;
+    } catch {
+      const parentDir = dirname(currentDir);
+      if (parentDir === currentDir) {
+        // Reached root
+        throw new Error(`Policy file not found: ${path}`);
+      }
+      currentDir = parentDir;
+    }
+  }
+}
+
 export async function loadPolicy(
   path: string = DEFAULT_POLICY_PATH
 ): Promise<PolicyDocument> {
-  const resolvedPath = resolve(process.cwd(), path);
+  const resolvedPath = await findPolicyFile(path);
   const stats = await stat(resolvedPath);
 
   if (cache && cache.path === resolvedPath && cache.mtimeMs === stats.mtimeMs) {

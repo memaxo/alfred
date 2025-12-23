@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { spawn } from "bun";
 
 // Low-level integration test for the Python factory
-describe("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
+describe.skip("TTS Factory Integration (skipped: causes C++ exception in Bun runner)", () => {
   const scriptPath = join(process.cwd(), "packages/voice/python/tts");
   const venvPython = join(process.cwd(), "packages/voice/.venv/bin/python");
   const hasVenv = existsSync(venvPython);
