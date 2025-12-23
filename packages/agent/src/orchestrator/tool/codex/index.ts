@@ -21,7 +21,6 @@ import {
 export type {
   AlfredCodexEvent,
   CodexArtifactSummary,
-  CodexErrorStage,
   CodexExecuteArgs,
   CodexToolInput,
   SandboxConfig,
@@ -29,6 +28,10 @@ export type {
 } from "./definition.js";
 
 export { codexInputSchema, toolOutputSchema } from "./definition.js";
+
+export { CodexError, type CodexErrorStage, type CodexErrorCode } from "./error.js";
+export { createCodexSpawn } from "./spawn-process.js";
+export { processThreadEvent, formatArtifactReasoning } from "./event-processor.js";
 
 export const toolCodex = {
   name: "codex",

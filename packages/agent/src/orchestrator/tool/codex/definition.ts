@@ -586,8 +586,6 @@ export type SandboxConfig = {
   approval: "untrusted" | "on-failure" | "on-request" | "never";
 };
 
-export type CodexErrorStage = "spawn" | "timeout" | "parse" | "runtime";
-
 export {
   DEFAULT_TIMEOUT_SEC,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,

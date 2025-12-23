@@ -1,3 +1,12 @@
+/**
+ * Codex execution
+ *
+ * Async patterns:
+ * - Fire-and-forget promises use: void safeWriter(...)
+ * - Catch-ignored promises must log: .catch(err => logger.debug("...", { err }))
+ * - OUTPUT_CAP_BYTES enforced incrementally via appendOutput()
+ */
+
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -5,10 +14,8 @@ import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import { feature } from "bun:bundle";
 import { logger } from "@alfred/logger";
 import { runStreamed } from "@alfred/codex";
-import type { SpawnFn, ThreadItem } from "@alfred/codex";
 import {
   persistCodexExecution,
 } from "../../../../assistant/src/graphstore.js";
@@ -17,14 +24,12 @@ import {
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
 import type { CodexSessionState } from "../../codex-session.js";
-import { spawnWithSecureCwd } from "../../../security/secure-spawn.js";
 import {
   appendOutput,
   appendReasoningTrace,
   createOutputAccumulator,
   createReasoningAccumulator,
   createStageRecorder,
-  extractReasoningText,
   getAccumulatedOutput,
   persistReasoning,
   recordToolExecution,
@@ -50,6 +55,13 @@ import {
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
+import { CodexError } from "./error.js";
+import { createCodexSpawn } from "./spawn-process.js";
+import {
+  formatArtifactReasoning,
+  processThreadEvent,
+  type EventProcessorContext,
+} from "./event-processor.js";
 
 type WriterPayload = { [key: string]: unknown };
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
@@ -73,11 +85,6 @@ const DISCONNECT_ERROR_PATTERNS = [
   "websocket is not open",
   "cannot write to closed stream",
 ];
-
-function isWithinDir(base: string, target: string): boolean {
-  const rel = path.relative(base, target);
-  return rel === "" || !(rel.startsWith("..") || path.isAbsolute(rel));
-}
 
 function isDisconnectError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -148,10 +155,10 @@ function createSafeWriter(
 
       if (isDisconnect && shouldLog) {
         lastDisconnectWarnAt = now;
-        logger.debug("Codex writer disconnect", { ...logContext, err: error });
+        logger.debug("codex_writer_disconnect", { ...logContext, err: error });
       } else if (!isDisconnect && shouldLog) {
         lastWriteWarnAt = now;
-        logger.warn("Codex writer write error", { ...logContext, err: error });
+        logger.warn("codex_writer_error", { ...logContext, err: error });
       }
 
       if (
@@ -159,10 +166,7 @@ function createSafeWriter(
         !warnedAboutDisconnect
       ) {
         warnedAboutDisconnect = true;
-        logger.warn(
-          "Codex writer failures exceed threshold; client may be disconnected",
-          { totalFailures }
-        );
+        logger.warn("codex_writer_threshold_exceeded", { totalFailures });
       }
 
       if (
@@ -170,9 +174,7 @@ function createSafeWriter(
         writerHealthy
       ) {
         writerHealthy = false;
-        logger.warn("Codex writer unhealthy; aborting Codex execution", {
-          consecutiveFailures,
-        });
+        logger.warn("codex_writer_unhealthy_abort", { consecutiveFailures });
         abortExecution();
       }
     }
@@ -204,26 +206,10 @@ function linkExternalAbortSignal(
   };
 }
 
-function formatArtifactReasoning(
-  artifactSummaries: CodexArtifactSummary[]
-): string {
-  const details = artifactSummaries
-    .map((artifact) => {
-      const kind = artifact.kind || "file";
-      const path = artifact.path || "(unknown)";
-      return `- ${kind} ${path}`;
-    })
-    .join("\n");
-  return `artifacts_collected (${artifactSummaries.length}):\n${details}`;
-}
-
 function emitAlfredEvents(
   writeFn: SafeWriter,
   events: AlfredCodexEvent[]
 ): void {
-  if (events.length === 0) {
-    return;
-  }
   for (const event of events) {
     void writeFn({ type: "codex_event", event }, "codex_event");
   }
@@ -242,7 +228,7 @@ export function buildTurnOptions(
 
   if (input.outputSchema) {
     if (!validateOutputSchema(input.outputSchema)) {
-      throw new Error("invalid_output_schema");
+      throw CodexError.parse("invalid_output_schema");
     }
     options.outputSchema = input.outputSchema;
   }
@@ -271,7 +257,7 @@ function resolveCodexBin(): string {
     }
   }
 
-  throw new Error("codex_binary_not_found");
+  throw CodexError.spawn("codex_binary_not_found");
 }
 
 type ThreadValidator = (threadId: string) => Promise<boolean>;
@@ -317,7 +303,7 @@ function createFilesystemThreadValidator(
       if (code === "ENOENT") {
         return false;
       }
-      logger.warn("codex_thread_validation_fs_error", {
+      logger.warn("codex_thread_validation_error", {
         threadId,
         path: filePath,
         err: error instanceof Error ? error.message : String(error),
@@ -355,7 +341,7 @@ async function runCodexWithCodex({
   const sessionId = input.sessionId?.trim();
   const sessionOwnerId = input.userId?.trim();
   if (sessionId && !sessionOwnerId) {
-    throw new Error("codex_session_user_required");
+    throw CodexError.session("codex_session_user_required");
   }
 
   const recorder = await CodexRunRecorder.start({
@@ -396,12 +382,13 @@ async function runCodexWithCodex({
       abortedByExternalSignal = true;
     }
   );
+
   const writerWithRecording: ToolWriter = {
     write: (payload: unknown) => {
       try {
         recorder.recordWriterChunk(payload);
-      } catch {
-        // ignore
+      } catch (err) {
+        logger.debug("codex_recorder_error", { err });
       }
       return Promise.resolve(writer?.write?.(payload));
     },
@@ -409,16 +396,14 @@ async function runCodexWithCodex({
   const safeWriter = createSafeWriter(writerWithRecording, () =>
     timeoutController.abort()
   );
+
   let didTimeout = false;
   const timer = setNodeTimeout(() => {
     didTimeout = true;
     recordStage("timeout");
     timeoutController.abort();
     void safeWriter(
-      {
-        type: "notice",
-        message: "codex_exec_timeout",
-      },
+      { type: "notice", message: "codex_exec_timeout" },
       "codex_exec_timeout_notice"
     );
   }, timeoutSec * 1000);
@@ -430,7 +415,6 @@ async function runCodexWithCodex({
   let threadIdFromEvents: string | undefined;
   const artifacts: CodexArtifactSummary[] = [];
 
-  // Metadata tracking
   let turnStartTime: number | undefined;
   let tokenUsage: {
     inputTokens: number;
@@ -443,7 +427,7 @@ async function runCodexWithCodex({
   let existingSession: CodexSessionState | undefined;
   if (sessionId) {
     if (!sessionOwnerId) {
-      throw new Error("codex_session_user_required");
+      throw CodexError.session("codex_session_user_required");
     }
     existingSession = await sessionManager.getSession(
       sessionId,
@@ -474,10 +458,7 @@ async function runCodexWithCodex({
 
   let resumeAssessment:
     | Awaited<typeof validationPromise>
-    | {
-        canResume: false;
-        reason: "timeout";
-      };
+    | { canResume: false; reason: "timeout" };
 
   try {
     resumeAssessment = await Promise.race([validationPromise, timeoutPromise]);
@@ -492,14 +473,9 @@ async function runCodexWithCodex({
       sessionId: existingSession?.sessionId,
       workingDirectory: resolvedCw,
     });
-    try {
-      const { codexSessionValidationTimeoutTotal } = await import(
-        "@alfred/metrics/shared"
-      );
-      codexSessionValidationTimeoutTotal.inc();
-    } catch {
-      // Metrics not available
-    }
+    import("@alfred/metrics/shared")
+      .then((m) => m.codexSessionValidationTimeoutTotal.inc())
+      .catch((err) => logger.debug("codex_metrics_import_error", { err }));
   }
 
   const resumeOutcome = resumeAssessment.canResume
@@ -528,17 +504,12 @@ async function runCodexWithCodex({
 
   try {
     if (timeoutController.signal.aborted && abortedByExternalSignal) {
-      throw new Error("codex_exec_aborted");
+      throw CodexError.runtime("codex_exec_aborted");
     }
 
     const turnOptions = buildTurnOptions(input, timeoutController.signal);
 
-    // Inject Linear context if provided
     let enrichedPrompt = input.prompt;
-    if (input.context?.linearIssueId) {
-      // const { injectLinearContext } = await import("../codex-linear.js");
-      // enrichedPrompt = injectLinearContext(input.prompt, input.context);
-    }
 
     // Inject learning context from similar past executions
     try {
@@ -555,166 +526,33 @@ async function runCodexWithCodex({
       }
     } catch (error) {
       logger.debug("codex_learning_context_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        err: error instanceof Error ? error.message : String(error),
       });
     }
 
-    // Inject heuristic context from past failures/corrections (user-scoped)
+    // Inject heuristic context from past failures/corrections
     try {
       const { buildCodexHeuristicContext } = await import(
         "@alfred/db/repo/codex-learning"
       );
-      const heuristicContext = await buildCodexHeuristicContext(input.prompt, 1200);
+      const heuristicContext = await buildCodexHeuristicContext(
+        input.prompt,
+        1200
+      );
       if (heuristicContext) {
         enrichedPrompt = `${heuristicContext}\n\n${enrichedPrompt}`;
       }
     } catch (error) {
       logger.debug("codex_heuristic_context_skipped", {
-        error: error instanceof Error ? error.message : String(error),
+        err: error instanceof Error ? error.message : String(error),
       });
     }
 
-    const dockerBin = input.containerId ? resolveExecutable("docker") : undefined;
+    const spawn = await createCodexSpawn(input, cwdHandle);
 
-    // Feature-flagged poof initialization (tree-shaken in production builds)
-    let poofBin: string | undefined;
-    let poofUpperResolved: string | undefined;
-    let poofMode: "exec" | "run" = "run";
-    let poofProfile: { name: string; memory?: string; pids?: number; timeout?: number } | undefined;
-    let buildPoofArgsFn: typeof import("../../../spawn/poof.js").buildPoofArgs | undefined;
-
-    if (feature("LEGACY_POOF")) {
-      const poofUpperDir = input.poofUpperDir?.trim();
-      if (poofUpperDir) {
-        const poofModule = await import("../../../spawn/poof.js");
-        buildPoofArgsFn = poofModule.buildPoofArgs;
-        poofMode = input.poofMode ?? "run";
-        poofProfile =
-          input.poofProfile && input.poofProfile in poofModule.POOF_PROFILES
-            ? poofModule.POOF_PROFILES[input.poofProfile as keyof typeof poofModule.POOF_PROFILES]
-            : poofModule.POOF_PROFILES.standard;
-
-        poofBin = poofModule.getPoofBinary();
-        poofUpperResolved = path.resolve(poofUpperDir);
-        const tmpBase = path.resolve(os.tmpdir());
-        if (!isWithinDir(tmpBase, poofUpperResolved)) {
-          throw new Error("poof_upper_dir_invalid");
-        }
-      }
-    }
-
-    const spawn: SpawnFn = ({ cmd, args, env: childEnv }) => {
-      if (dockerBin && input.containerId) {
-        const containerCw = input.containerCw?.trim();
-        if (containerCw && !containerCw.startsWith("/workspace")) {
-          throw new Error("codex_container_cwd_invalid");
-        }
-        const dockerWorkdir = containerCw && containerCw.length > 0 ? containerCw : "/workspace";
-        const envKeys = Object.keys(childEnv ?? {}).filter((k) => k !== "PATH");
-        const dockerArgs = [
-          "exec",
-          "--workdir",
-          dockerWorkdir,
-          ...envKeys.flatMap((k) => ["-e", k]),
-          input.containerId,
-          "codex",
-          ...args,
-        ];
-        const proc = spawnWithSecureCwd({
-          cwdHandle,
-          cmd: dockerBin,
-          args: dockerArgs,
-          env: childEnv,
-          stdout: "pipe",
-          stderr: "pipe",
-          stdin: "ignore",
-        });
-
-        return {
-          stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
-          stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
-          exited: proc.exited,
-          kill: (signal) => {
-            if (typeof signal === "number") {
-              proc.kill(signal);
-              return;
-            }
-            if (typeof signal === "string") {
-              proc.kill(signal as NodeJS.Signals);
-              return;
-            }
-            proc.kill();
-          },
-        };
-      }
-
-      // Feature-flagged poof spawn path (tree-shaken in production builds)
-      // This block is only compiled when built with --feature=LEGACY_POOF
-      if (feature("LEGACY_POOF") && poofBin && poofUpperResolved && poofProfile && buildPoofArgsFn) {
-        const poofArgs = [
-          ...buildPoofArgsFn({
-            mode: poofMode,
-            upperDir: poofUpperResolved,
-            profile: poofProfile,
-          }),
-          "--",
-          cmd,
-          ...args,
-        ];
-        const proc = spawnWithSecureCwd({
-          cwdHandle,
-          cmd: poofBin,
-          args: poofArgs,
-          env: childEnv,
-          stdout: "pipe",
-          stderr: "pipe",
-          stdin: "ignore",
-        });
-
-        return {
-          stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
-          stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
-          exited: proc.exited,
-          kill: (signal) => {
-            if (typeof signal === "number") {
-              proc.kill(signal);
-              return;
-            }
-            if (typeof signal === "string") {
-              proc.kill(signal as NodeJS.Signals);
-              return;
-            }
-            proc.kill();
-          },
-        };
-      }
-
-      const proc = spawnWithSecureCwd({
-        cwdHandle,
-        cmd,
-        args,
-        env: childEnv,
-        stdout: "pipe",
-        stderr: "pipe",
-        stdin: "ignore",
-      });
-
-      return {
-        stdout: typeof proc.stdout === "number" ? null : (proc.stdout ?? null),
-        stderr: typeof proc.stderr === "number" ? null : (proc.stderr ?? null),
-        exited: proc.exited,
-        kill: (signal) => {
-          if (typeof signal === "number") {
-            proc.kill(signal);
-            return;
-          }
-          if (typeof signal === "string") {
-            proc.kill(signal as NodeJS.Signals);
-            return;
-          }
-          proc.kill();
-        },
-      };
+    const eventContext: EventProcessorContext = {
+      outputDebug: input.out === "debug",
+      reasoningAccumulator,
     };
 
     for await (const event of runStreamed({
@@ -733,182 +571,93 @@ async function runCodexWithCodex({
       resumeThreadId,
       signal: turnOptions.signal,
       onStderr: (text) =>
-        safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
+        void safeWriter({ type: "stderr", text }, "codex_stderr_chunk"),
     })) {
       recorder.recordThreadEvent(event);
-      switch (event.type) {
-        case "thread.started": {
-          const id = event.thread_id;
-          if (typeof id === "string" && id.length > 0) {
-            threadIdFromEvents = id;
-            recorder.setThreadId(id);
-          }
-          break;
+
+      const processed = processThreadEvent(event, eventContext);
+
+      if (processed.threadId) {
+        threadIdFromEvents = processed.threadId;
+        recorder.setThreadId(processed.threadId);
+      }
+
+      if (processed.turnStarted) {
+        turnStartTime = Date.now();
+        void safeWriter(
+          { type: "notice", message: "codex_turn_started" },
+          "codex_turn_started_notice"
+        );
+      }
+
+      if (processed.turnCompleted) {
+        if (processed.tokenUsage) {
+          tokenUsage = processed.tokenUsage;
         }
-        case "turn.started": {
-          turnStartTime = Date.now();
+        void safeWriter(
+          {
+            type: "notice",
+            message: "codex_turn_completed",
+            usage: processed.tokenUsage,
+          },
+          "codex_turn_completed_notice"
+        );
+      }
+
+      if (processed.error) {
+        if (!runtimeFailure) {
+          runtimeFailure = CodexError.runtime(processed.error.message);
+          recordStage("runtime");
+        }
+        logger.error("codex_event_error", {
+          detail: processed.error.message,
+          threadId: threadIdFromEvents,
+          stage: processed.error.stage,
+        });
+        void safeWriter(
+          { type: "stderr", text: `Codex error: ${processed.error.message}` },
+          "codex_error"
+        );
+      }
+
+      if (processed.reasoning) {
+        appendReasoningTrace(
+          reasoningAccumulator,
+          processed.reasoning,
+          Date.now()
+        );
+        if (eventContext.outputDebug) {
           void safeWriter(
-            {
-              type: "notice",
-              message: "codex_turn_started",
-            },
-            "codex_turn_started_notice"
+            { type: "reasoning", text: processed.reasoning },
+            "codex_reasoning"
           );
-          break;
         }
-        case "turn.completed": {
-          const usage = event.usage;
-          if (usage) {
-            tokenUsage = {
-              inputTokens: usage.input_tokens,
-              outputTokens: usage.output_tokens,
-              cachedInputTokens: usage.cached_input_tokens,
-            };
-          }
-          void safeWriter(
-            {
-              type: "notice",
-              message: "codex_turn_completed",
-              usage,
-            },
-            "codex_turn_completed_notice"
-          );
-          break;
-        }
-        case "turn.failed": {
-          const detail = event.error?.message ?? "codex_turn_failed";
-          if (!runtimeFailure) {
-            runtimeFailure = new Error(`codex_exec_failed:${detail}`);
-            recordStage("runtime");
-          }
-          logger.error("codex_turn_failed", {
-            detail,
-            threadId: threadIdFromEvents,
-            stage: "turn.failed",
-          });
-          void safeWriter(
-            { type: "stderr", text: "Codex turn failed." },
-            "codex_turn_failed"
-          );
-          break;
-        }
-        case "error": {
-          const detail = event.message ?? "codex_stream_error";
-          if (!runtimeFailure) {
-            runtimeFailure = new Error(`codex_exec_failed:${detail}`);
-            recordStage("runtime");
-          }
-          logger.error("codex_stream_error", {
-            detail,
-            threadId: threadIdFromEvents,
-            stage: "stream.error",
-          });
-          void safeWriter(
-            { type: "stderr", text: "Codex reported an error." },
-            "codex_stream_error"
-          );
-          break;
-        }
-        case "item.completed": {
-          const item: ThreadItem = event.item;
-          const alfredEvents: AlfredCodexEvent[] = [];
+      }
 
-          if (item.type === "reasoning") {
-            const reasoningText = extractReasoningText(item);
-            if (reasoningText) {
-              const timestamp = Date.now();
-              appendReasoningTrace(
-                reasoningAccumulator,
-                reasoningText,
-                timestamp
-              );
+      if (processed.outputChunk) {
+        appendOutput(finalAccumulator, processed.outputChunk);
+        void safeWriter(
+          { type: "stdout", text: processed.outputChunk },
+          "codex_output"
+        );
+      }
 
-              if (input.out === "debug") {
-                void safeWriter(
-                  {
-                    type: "reasoning",
-                    text: reasoningText,
-                  },
-                  "codex_reasoning"
-                );
-              }
+      if (processed.artifacts) {
+        for (const artifact of processed.artifacts) {
+          artifacts.push(artifact);
+        }
+      }
 
-              alfredEvents.push({
-                type: "thought",
-                content: reasoningText,
-                timestamp,
-              });
+      emitAlfredEvents(safeWriter, processed.alfredEvents);
+
+      if (input.context && processed.alfredEvents.length > 0) {
+        import("../codex-linear.js")
+          .then(async ({ mapCodexEventToLinearActivity }) => {
+            for (const alfredEvent of processed.alfredEvents) {
+              await mapCodexEventToLinearActivity(alfredEvent, input.context!);
             }
-          } else if (item.type === "command_execution") {
-            const output = item.aggregated_output;
-            const status: "running" | "completed" | "failed" =
-              item.status === "in_progress"
-                ? "running"
-                : item.status === "failed"
-                  ? "failed"
-                  : "completed";
-
-            alfredEvents.push({
-              type: "command",
-              command: item.command,
-              status,
-            });
-
-            if (output) {
-              void safeWriter(
-                { type: "stdout", text: output },
-                "codex_command_output"
-              );
-              alfredEvents.push({
-                type: "output",
-                content: output,
-              });
-            }
-          } else if (item.type === "agent_message") {
-            const text = item.text;
-            if (text) {
-              appendOutput(finalAccumulator, text);
-              void safeWriter({ type: "stdout", text }, "codex_agent_message");
-              alfredEvents.push({
-                type: "output",
-                content: text,
-              });
-            }
-          } else if (item.type === "file_change") {
-            const changes = item.changes;
-            for (const change of changes) {
-              if (!change?.path) {
-                continue;
-              }
-              artifacts.push({
-                path: change.path,
-                kind: change.kind,
-              });
-              alfredEvents.push({
-                type: "artifact",
-                path: change.path,
-                kind: "file",
-              });
-            }
-          }
-
-          emitAlfredEvents(safeWriter, alfredEvents);
-
-          // Emit to Linear if context available
-          if (input.context && alfredEvents.length > 0) {
-            const { mapCodexEventToLinearActivity } = await import(
-              "../codex-linear.js"
-            );
-            for (const alfredEvent of alfredEvents) {
-              void mapCodexEventToLinearActivity(alfredEvent, input.context);
-            }
-          }
-          break;
-        }
-        default: {
-          // ignore other event types
-          break;
-        }
+          })
+          .catch((err) => logger.debug("codex_linear_emit_error", { err }));
       }
     }
   } catch (error) {
@@ -918,7 +667,7 @@ async function runCodexWithCodex({
         errorCode: "timeout",
         errorMessage: "codex_exec_timeout",
       });
-      throw new Error("codex_exec_timeout");
+      throw CodexError.timeout();
     }
     if (timeoutController.signal.aborted && abortedByExternalSignal) {
       await recorder.finalizeError({
@@ -926,7 +675,7 @@ async function runCodexWithCodex({
         errorCode: "aborted",
         errorMessage: "codex_exec_aborted",
       });
-      throw new Error("codex_exec_aborted");
+      throw CodexError.runtime("codex_exec_aborted");
     }
     if (!(runtimeFailure || timeoutController.signal.aborted)) {
       recordStage("spawn");
@@ -953,7 +702,7 @@ async function runCodexWithCodex({
       errorCode: "timeout",
       errorMessage: "codex_exec_timeout",
     });
-    throw new Error("codex_exec_timeout");
+    throw CodexError.timeout();
   }
 
   if (runtimeFailure) {
@@ -987,7 +736,7 @@ async function runCodexWithCodex({
       threadId,
       executionId,
       auto: input.auto,
-    }).catch((_err) => {});
+    }).catch((err) => logger.debug("codex_persist_reasoning_error", { err }));
   }
 
   const resultText = getAccumulatedOutput(finalAccumulator);
@@ -998,14 +747,19 @@ async function runCodexWithCodex({
     auto: input.auto,
     result: resultText,
     artifacts,
-  }).catch((_err) => {});
+  }).catch((err) => logger.debug("codex_persist_execution_error", { err }));
 
   if (sessionId && threadId && !existingSession) {
     if (!sessionOwnerId) {
-      throw new Error("codex_session_user_required");
+      throw CodexError.session("codex_session_user_required");
     }
     try {
-      await sessionManager.createSession(sessionId, threadId, resolvedCw, sessionOwnerId);
+      await sessionManager.createSession(
+        sessionId,
+        threadId,
+        resolvedCw,
+        sessionOwnerId
+      );
     } catch (error) {
       await recorder.finalizeError({
         exitCode: 1,
@@ -1023,7 +777,6 @@ async function runCodexWithCodex({
     structuredOutputStatus: "skipped",
   });
 
-  // Build metadata
   const turnDurationMs = turnStartTime
     ? Date.now() - turnStartTime
     : undefined;
@@ -1040,7 +793,6 @@ async function runCodexWithCodex({
     modelUsed: input.model,
   };
 
-  // Build session state
   const sessionState = sessionId
     ? {
         sessionId,
