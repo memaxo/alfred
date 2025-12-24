@@ -29,18 +29,28 @@ function sanitizeWindowData(data: WindowData): WindowData {
 
 export const persistOptions: PersistOptions<DesktopState> = {
   name: DESKTOP_STORAGE_ID,
-  version: 1,
+  version: 2,
   partialize: (state) =>
     ({
+      // Layout state (persisted)
       windows: state.windows.map(sanitizeWindowForPersist),
       edges: state.edges.filter((e) => !e.data?.scope),
       focusedWindowId: state.focusedWindowId,
       isSpaceMode: state.isSpaceMode,
       dockPins: state.dockPins,
+      // Context/feedback state (persisted, small footprint)
+      contextCache: state.contextCache,
+      feedbackByWindow: state.feedbackByWindow,
+      // Note: ragDocCache is NOT persisted - it's ephemeral and can be large
     }) as unknown as DesktopState,
   migrate: (persistedState, version) => {
-    if (version === 0) {
-      return persistedState as DesktopState;
+    if (version === 1) {
+      // Migration from v1: add empty context/feedback
+      return {
+        ...(persistedState as DesktopState),
+        contextCache: {},
+        feedbackByWindow: {},
+      };
     }
     return persistedState as DesktopState;
   },

@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCacheSlice } from "./desktop/cache";
+import { createContextSlice } from "./desktop/context";
 import { createDockSlice } from "./desktop/dock";
 import { persistOptions } from "./desktop/persist";
 import type { DesktopState } from "./desktop/types";
@@ -12,6 +14,8 @@ export const useDesktopStore = create<DesktopState>()(
       ...createWindowSlice(...a),
       ...createViewportSlice(...a),
       ...createDockSlice(...a),
+      ...createCacheSlice(...a),
+      ...createContextSlice(...a),
     }),
     persistOptions
   )

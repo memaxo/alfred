@@ -123,4 +123,21 @@ export type DockSlice = {
   ) => string;
 };
 
-export type DesktopState = WindowSlice & ViewportSlice & DockSlice;
+// Re-export slice types from their modules
+export type { CacheSlice, CachedRagDocEntry, RagDocCacheStats } from "./cache";
+export type {
+  ContextSlice,
+  ContextCacheEntry,
+  FeedbackEntry,
+  FeedbackIntent,
+} from "./context";
+
+// Import for DesktopState composition
+import type { CacheSlice } from "./cache";
+import type { ContextSlice } from "./context";
+
+export type DesktopState = WindowSlice &
+  ViewportSlice &
+  DockSlice &
+  CacheSlice &
+  ContextSlice;
