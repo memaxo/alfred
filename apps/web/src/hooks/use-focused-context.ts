@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-import type { ArtifactData } from "@/store/mindscape";
-import { useMindscapeStore } from "@/store/mindscape";
+import { useDesktopStore, type WindowData } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -50,10 +49,10 @@ type FocusedContext = ContextState & {
 };
 
 export function useFocusedContext(): FocusedContext {
-  const focusedNodeId = useMindscapeStore((state) => state.focusedNodeId);
-  const nodes = useMindscapeStore((state) => state.nodes);
-  const edges = useMindscapeStore((state) => state.edges);
-  const contextCache = useMindscapeStore((state) => state.contextCache);
+  const focusedWindowId = useDesktopStore((state) => state.focusedWindowId);
+  const windows = useDesktopStore((state) => state.windows);
+  const edges = useDesktopStore((state) => state.edges);
+  const contextCache = useDesktopStore((state) => state.contextCache);
 
   const [localContext, setLocalContext] = useState<ContextState>({
     content: null,
@@ -64,46 +63,45 @@ export function useFocusedContext(): FocusedContext {
     ragDocuments: [],
   });
 
-  // Logic: If focused node is Chat, try to find a connected "Topic" node.
-  // Otherwise, use the focused node itself.
-  const effectiveNodeId = useMemo(() => {
-    if (!focusedNodeId) {
+  // Logic: If focused window is Chat, try to find a connected "Topic" window.
+  // Otherwise, use the focused window itself.
+  const effectiveWindowId = useMemo(() => {
+    if (!focusedWindowId) {
       return null;
     }
-    const node = nodes.find((n) => n.id === focusedNodeId);
-    if (!node) {
+    const window = windows.find((w) => w.id === focusedWindowId);
+    if (!window) {
       return null;
     }
 
-    if (node.type === "chat") {
+    if (window.data?.type === "chat") {
       // Look for connected edges
       const connectedEdge = edges.find(
-        (e) => e.source === focusedNodeId || e.target === focusedNodeId
+        (e) => e.source === focusedWindowId || e.target === focusedWindowId
       );
 
       if (connectedEdge) {
-        // Prioritize the *other* node
+        // Prioritize the *other* window
         const otherId =
-          connectedEdge.source === focusedNodeId
+          connectedEdge.source === focusedWindowId
             ? connectedEdge.target
             : connectedEdge.source;
-        // Avoid jumping to another chat or orb if possible, but for now just take the first neighbor
         return otherId;
       }
     }
-    return focusedNodeId;
-  }, [focusedNodeId, nodes, edges]);
+    return focusedWindowId;
+  }, [focusedWindowId, windows, edges]);
 
-  const focusedNode = nodes.find((n) => n.id === effectiveNodeId);
+  const focusedWindow = windows.find((w) => w.id === effectiveWindowId);
   const focusedGraphNodeId = useMemo(() => {
-    const data = focusedNode?.data as ArtifactData | undefined;
+    const data = focusedWindow?.data as (WindowData & { graph?: { dbId?: string } }) | undefined;
     const dbId = data?.graph?.dbId;
     return typeof dbId === "string" && dbId.length > 0 ? dbId : null;
-  }, [focusedNode]);
+  }, [focusedWindow]);
 
-  // 1. Extract local data from the node immediately
+  // 1. Extract local data from the window immediately
   useEffect(() => {
-    if (!focusedNode) {
+    if (!focusedWindow) {
       setLocalContext({
         content: null,
         nodeType: null,
@@ -115,7 +113,7 @@ export function useFocusedContext(): FocusedContext {
       return;
     }
 
-    const data = focusedNode.data as ArtifactData;
+    const data = focusedWindow.data as WindowData & Record<string, unknown>;
     let content = "";
 
     // Type-safe access using discriminated union checks or 'in' operator
@@ -133,7 +131,7 @@ export function useFocusedContext(): FocusedContext {
 
     if ("messages" in data && Array.isArray(data.messages)) {
       // Extract text from last 3 messages using AI SDK v6 parts structure
-      const recent = data.messages
+      const recent = (data.messages as Array<{ parts?: Array<{ type: string; text?: string }> }>)
         .slice(-3)
         .map((m) => {
           // Handle AI SDK v6 parts array
@@ -160,29 +158,29 @@ export function useFocusedContext(): FocusedContext {
 
     setLocalContext({
       content: content.trim() || null,
-      nodeType: focusedNode.type || "unknown",
+      nodeType: data.type || "unknown",
       label,
       isLoading: false,
       isError: false,
       ragDocuments: [],
     });
-  }, [focusedNode]);
+  }, [focusedWindow]);
 
-  // 2. "Active RAG" - Fetch related context for complex nodes
-  const focusedArtifact = focusedNode?.data as ArtifactData | undefined;
-  const focusedLabel = coerceString(focusedArtifact?.label);
+  // 2. "Active RAG" - Fetch related context for complex windows
+  const focusedData = focusedWindow?.data as (WindowData & Record<string, unknown>) | undefined;
+  const focusedLabel = coerceString(focusedData?.label);
   const focusedSummary =
-    focusedArtifact && "summary" in focusedArtifact
-      ? coerceString(focusedArtifact.summary)
+    focusedData && "summary" in focusedData
+      ? coerceString(focusedData.summary)
       : null;
   const focusedDescription =
-    focusedArtifact && "description" in focusedArtifact
-      ? coerceString(focusedArtifact.description)
+    focusedData && "description" in focusedData
+      ? coerceString(focusedData.description)
       : null;
 
   const shouldFetchRag = Boolean(
-    focusedNode &&
-      (focusedNode.type === "knowledge" || focusedNode.type === "concept") &&
+    focusedWindow &&
+      (focusedData?.type === "knowledge" || focusedData?.type === "concept") &&
       focusedLabel
   );
 
@@ -234,7 +232,7 @@ export function useFocusedContext(): FocusedContext {
   );
 
   // Highlight graph edges involved in the context
-  const setHighlightedEdges = useMindscapeStore(
+  const setHighlightedEdges = useDesktopStore(
     (state) => state.setHighlightedEdges
   );
   useEffect(() => {
@@ -260,8 +258,8 @@ export function useFocusedContext(): FocusedContext {
   // 3. Merge local context with Active RAG results
   return useMemo(() => {
     const contextEntry =
-      effectiveNodeId && contextCache
-        ? contextCache[effectiveNodeId]
+      effectiveWindowId && contextCache
+        ? contextCache[effectiveWindowId]
         : undefined;
     const contextSnapshot: ContextSnapshot | null = contextEntry
       ? {
@@ -409,6 +407,6 @@ export function useFocusedContext(): FocusedContext {
     focusedGraphNodeId,
     contextBudget,
     contextCache,
-    effectiveNodeId,
+    effectiveWindowId,
   ]);
 }
