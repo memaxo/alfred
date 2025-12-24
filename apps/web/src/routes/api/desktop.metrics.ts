@@ -7,7 +7,7 @@ const payloadSchema = z.object({
   evictions: z.number().int().nonnegative().optional(),
 });
 
-export const Route = createFileRoute("/api/mindscape/metrics")({
+export const Route = createFileRoute("/api/desktop/metrics")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
@@ -39,16 +39,18 @@ export const Route = createFileRoute("/api/mindscape/metrics")({
         }
 
         const metricsPkg = "@alfred/api/metrics";
-        const { mindscapeRagCacheEventsTotal } = await import(metricsPkg);
+        // Use mindscapeRagCacheEventsTotal for backwards compatibility until renamed in @alfred/api
+        const { mindscapeRagCacheEventsTotal: desktopRagCacheEventsTotal } =
+          await import(metricsPkg);
 
         if (hits > 0) {
-          mindscapeRagCacheEventsTotal.labels("hit").inc(hits);
+          desktopRagCacheEventsTotal.labels("hit").inc(hits);
         }
         if (misses > 0) {
-          mindscapeRagCacheEventsTotal.labels("miss").inc(misses);
+          desktopRagCacheEventsTotal.labels("miss").inc(misses);
         }
         if (evictions > 0) {
-          mindscapeRagCacheEventsTotal.labels("eviction").inc(evictions);
+          desktopRagCacheEventsTotal.labels("eviction").inc(evictions);
         }
 
         return new Response(null, { status: 204 });

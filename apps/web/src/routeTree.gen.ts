@@ -27,8 +27,8 @@ import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/l
 import { Route as ApiWorkflowStreamRouteImport } from './routes/api/workflow/stream'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as ApiOrchestratorSplatRouteImport } from './routes/api/orchestrator/$'
-import { Route as ApiMindscapeMetricsRouteImport } from './routes/api/mindscape.metrics'
 import { Route as ApiLinearWebhookRouteImport } from './routes/api/linear/webhook'
+import { Route as ApiDesktopMetricsRouteImport } from './routes/api/desktop.metrics'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
@@ -126,14 +126,14 @@ const ApiOrchestratorSplatRoute = ApiOrchestratorSplatRouteImport.update({
   path: '/api/orchestrator/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMindscapeMetricsRoute = ApiMindscapeMetricsRouteImport.update({
-  id: '/api/mindscape/metrics',
-  path: '/api/mindscape/metrics',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiLinearWebhookRoute = ApiLinearWebhookRouteImport.update({
   id: '/api/linear/webhook',
   path: '/api/linear/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesktopMetricsRoute = ApiDesktopMetricsRouteImport.update({
+  id: '/api/desktop/metrics',
+  path: '/api/desktop/metrics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -194,8 +194,8 @@ export interface FileRoutesByFullPath {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
-  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
@@ -222,8 +222,8 @@ export interface FileRoutesByTo {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
-  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
@@ -252,8 +252,8 @@ export interface FileRoutesById {
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
   '/api/assistant/$': typeof ApiAssistantSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/desktop/metrics': typeof ApiDesktopMetricsRoute
   '/api/linear/webhook': typeof ApiLinearWebhookRoute
-  '/api/mindscape/metrics': typeof ApiMindscapeMetricsRoute
   '/api/orchestrator/$': typeof ApiOrchestratorSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
@@ -282,8 +282,8 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/desktop/metrics'
     | '/api/linear/webhook'
-    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/api/workflow/stream'
@@ -310,8 +310,8 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/desktop/metrics'
     | '/api/linear/webhook'
-    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/api/workflow/stream'
@@ -339,8 +339,8 @@ export interface FileRouteTypes {
     | '/api/assistant-agent/$'
     | '/api/assistant/$'
     | '/api/auth/$'
+    | '/api/desktop/metrics'
     | '/api/linear/webhook'
-    | '/api/mindscape/metrics'
     | '/api/orchestrator/$'
     | '/api/trpc/$'
     | '/api/workflow/stream'
@@ -358,8 +358,8 @@ export interface RootRouteChildren {
   ApiAssistantAgentSplatRoute: typeof ApiAssistantAgentSplatRoute
   ApiAssistantSplatRoute: typeof ApiAssistantSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDesktopMetricsRoute: typeof ApiDesktopMetricsRoute
   ApiLinearWebhookRoute: typeof ApiLinearWebhookRoute
-  ApiMindscapeMetricsRoute: typeof ApiMindscapeMetricsRoute
   ApiOrchestratorSplatRoute: typeof ApiOrchestratorSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
   ApiWorkflowStreamRoute: typeof ApiWorkflowStreamRoute
@@ -494,18 +494,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrchestratorSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/mindscape/metrics': {
-      id: '/api/mindscape/metrics'
-      path: '/api/mindscape/metrics'
-      fullPath: '/api/mindscape/metrics'
-      preLoaderRoute: typeof ApiMindscapeMetricsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/linear/webhook': {
       id: '/api/linear/webhook'
       path: '/api/linear/webhook'
       fullPath: '/api/linear/webhook'
       preLoaderRoute: typeof ApiLinearWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/desktop/metrics': {
+      id: '/api/desktop/metrics'
+      path: '/api/desktop/metrics'
+      fullPath: '/api/desktop/metrics'
+      preLoaderRoute: typeof ApiDesktopMetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -631,8 +631,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistantAgentSplatRoute: ApiAssistantAgentSplatRoute,
   ApiAssistantSplatRoute: ApiAssistantSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDesktopMetricsRoute: ApiDesktopMetricsRoute,
   ApiLinearWebhookRoute: ApiLinearWebhookRoute,
-  ApiMindscapeMetricsRoute: ApiMindscapeMetricsRoute,
   ApiOrchestratorSplatRoute: ApiOrchestratorSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
   ApiWorkflowStreamRoute: ApiWorkflowStreamRoute,
