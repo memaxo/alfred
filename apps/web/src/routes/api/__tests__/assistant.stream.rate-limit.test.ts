@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { auth } from "@alfred/auth";
 import {
   clearAllConnections,
   getConnectionCount,
 } from "@alfred/api/utils/sse-connections";
+import type { auth } from "@alfred/auth";
 import { createTestSession } from "@alfred/test-kit/auth";
 
 // Mock the stream handler dependencies
@@ -73,14 +73,18 @@ describe("SSE stream rate limiting", () => {
     // For now, we'll test the connection utility directly
 
     // Test that connection creation works
-    const { createConnection } = await import("@alfred/api/utils/sse-connections");
+    const { createConnection } = await import(
+      "@alfred/api/utils/sse-connections"
+    );
     const result = createConnection("test-user-1", "assistant");
     expect(result.allowed).toBe(true);
     expect(getConnectionCount("test-user-1")).toBe(1);
   });
 
   it("enforces rate limit after threshold", async () => {
-    const { createConnection } = await import("@alfred/api/utils/sse-connections");
+    const { createConnection } = await import(
+      "@alfred/api/utils/sse-connections"
+    );
 
     // Create 10 connections (rate limit)
     const connections = [];
@@ -89,7 +93,9 @@ describe("SSE stream rate limiting", () => {
       expect(result.allowed).toBe(true);
       connections.push(result.connectionId);
       // Remove immediately to test rate limit, not connection limit
-      const { removeConnection } = await import("@alfred/api/utils/sse-connections");
+      const { removeConnection } = await import(
+        "@alfred/api/utils/sse-connections"
+      );
       removeConnection(result.connectionId);
     }
 
@@ -100,7 +106,9 @@ describe("SSE stream rate limiting", () => {
   });
 
   it("enforces per-user connection limit", async () => {
-    const { createConnection } = await import("@alfred/api/utils/sse-connections");
+    const { createConnection } = await import(
+      "@alfred/api/utils/sse-connections"
+    );
 
     // Create 5 connections (per-user limit)
     const connections = [];

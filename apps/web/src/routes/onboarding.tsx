@@ -53,7 +53,7 @@ function OnboardingRoute() {
       });
 
       toast.success("Welcome to ALFRED!");
-      navigate({ to: "/mindscape" });
+      navigate({ to: "/" });
     } catch (_error) {
       toast.error("Failed to complete onboarding. Please try again.");
     }

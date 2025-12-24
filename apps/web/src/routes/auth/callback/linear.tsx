@@ -28,7 +28,7 @@ function CallbackComponent() {
       setStatus("error");
       setErrorMessage(search.error);
       setTimeout(() => {
-        navigate({ to: "/mindscape" });
+        navigate({ to: "/" });
         toast.error("Failed to connect Linear");
       }, 2000);
       return;
@@ -40,7 +40,7 @@ function CallbackComponent() {
       setStatus("error");
       setErrorMessage("missing_params");
       setTimeout(() => {
-        navigate({ to: "/mindscape" });
+        navigate({ to: "/" });
         toast.error("Missing OAuth parameters");
       }, 2000);
       return;
@@ -51,7 +51,7 @@ function CallbackComponent() {
       .then(() => {
         setStatus("success");
         setTimeout(() => {
-          navigate({ to: "/mindscape" });
+          navigate({ to: "/" });
           toast.success("Linear connected successfully");
         }, 1000);
       })
@@ -61,7 +61,7 @@ function CallbackComponent() {
           error instanceof Error ? error.message : "oauth_callback_failed";
         setErrorMessage(message);
         setTimeout(() => {
-          navigate({ to: "/mindscape" });
+          navigate({ to: "/" });
           toast.error(message);
         }, 2000);
       });

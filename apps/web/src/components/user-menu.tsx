@@ -88,7 +88,7 @@ export default function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Button asChild className="w-full" variant="outline">
-            <Link to="/mindscape">Mindscape</Link>
+            <Link to="/">Mindscape</Link>
           </Button>
         </DropdownMenuItem>
       </DropdownMenuContent>

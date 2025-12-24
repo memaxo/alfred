@@ -12,11 +12,11 @@ const mindscapeSearchSchema = z.object({
   ragDoc: z.string().uuid().optional(),
 });
 
-export const Route = createFileRoute("/_protected/mindscape")({
-  ssr: false, // Uses ReactFlow and WebGPU - browser-only
+export const Route = createFileRoute("/_protected/")({
+  ssr: false, // Uses ReactFlow - browser-only
   component: MindscapeRoute,
   validateSearch: mindscapeSearchSchema,
-  loader: () => getInitialMindscapeFrame(), // Keep loader for data fetching
+  loader: () => getInitialMindscapeFrame(),
 });
 
 function MindscapeRoute() {
@@ -27,7 +27,7 @@ function MindscapeRoute() {
       <MindscapeCanvas
         onRagDocNavigate={(documentId) =>
           navigate({
-            to: "/mindscape",
+            to: "/",
             search: (prev: Record<string, unknown>) => ({
               ...prev,
               ragDoc: documentId,

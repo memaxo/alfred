@@ -51,7 +51,7 @@ export function WorkflowDetailModal({
   const reasoningError = reasoningQuery.isError ? reasoningQuery.error : null;
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
-      to: "/mindscape",
+      to: "/",
       search: (prev: Record<string, unknown>) => ({
         ...prev,
         ragDoc: documentId,

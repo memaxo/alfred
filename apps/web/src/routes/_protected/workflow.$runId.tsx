@@ -70,10 +70,7 @@ function WorkflowRunRoute() {
         <p className="text-biolum-dim text-sm">
           {runQuery.error?.message ?? "Unknown error"}
         </p>
-        <Button
-          onClick={() => navigate({ to: "/mindscape" })}
-          variant="secondary"
-        >
+        <Button onClick={() => navigate({ to: "/" })} variant="secondary">
           Return to Mindscape
         </Button>
       </div>
@@ -86,7 +83,7 @@ function WorkflowRunRoute() {
   const reasoningError = reasoningQuery.isError ? reasoningQuery.error : null;
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
-      to: "/mindscape",
+      to: "/",
       search: (prev: Record<string, unknown>) => ({
         ...prev,
         ragDoc: documentId,
@@ -100,7 +97,7 @@ function WorkflowRunRoute() {
         <Dialog
           onOpenChange={(isOpen) => {
             if (!isOpen) {
-              navigate({ to: "/mindscape" });
+              navigate({ to: "/" });
             }
           }}
           open
@@ -109,7 +106,7 @@ function WorkflowRunRoute() {
             <div className="flex items-center justify-between border-white/5 border-b px-6 py-4">
               <Button
                 className="text-biolum-dim hover:text-biolum"
-                onClick={() => navigate({ to: "/mindscape" })}
+                onClick={() => navigate({ to: "/" })}
                 variant="ghost"
               >
                 ← Back to Mindscape
@@ -134,7 +131,7 @@ function WorkflowRunRoute() {
                 footer={
                   <Button
                     className="rounded-full"
-                    onClick={() => navigate({ to: "/mindscape" })}
+                    onClick={() => navigate({ to: "/" })}
                     variant="outline"
                   >
                     Close
@@ -156,7 +153,7 @@ function WorkflowRunRoute() {
         onNavigateFull={() => setDrawer(false)}
         onNavigateToMindscape={(documentId) =>
           navigate({
-            to: "/mindscape",
+            to: "/",
             search: (prev: Record<string, unknown>) => ({
               ...prev,
               ragDoc: documentId,

@@ -13,7 +13,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as ProtectedRouteImport } from './routes/_protected'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
 import { Route as HealthzDepsRouteImport } from './routes/healthz/deps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
@@ -21,7 +21,6 @@ import { Route as ApiMetricsRouteImport } from './routes/api/metrics'
 import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice-s2s'
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
-import { Route as ProtectedMindscapeRouteImport } from './routes/_protected/mindscape'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
 import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
@@ -57,10 +56,10 @@ const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const HealthzDepsRoute = HealthzDepsRouteImport.update({
   id: '/deps',
@@ -95,11 +94,6 @@ const ProtectedTimerRoute = ProtectedTimerRouteImport.update({
 const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedMindscapeRoute = ProtectedMindscapeRouteImport.update({
-  id: '/mindscape',
-  path: '/mindscape',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
@@ -180,13 +174,11 @@ const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
-  '/mindscape': typeof ProtectedMindscapeRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -194,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/': typeof ProtectedIndexRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -209,13 +202,11 @@ export interface FileRoutesByFullPath {
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
   '/drive': typeof ProtectedDriveRoute
-  '/mindscape': typeof ProtectedMindscapeRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
   '/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -223,6 +214,7 @@ export interface FileRoutesByTo {
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/': typeof ProtectedIndexRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -239,14 +231,12 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_protected': typeof ProtectedRouteWithChildren
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
   '/_protected/drive': typeof ProtectedDriveRoute
-  '/_protected/mindscape': typeof ProtectedMindscapeRoute
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/timer': typeof ProtectedTimerRoute
   '/_protected/voice-s2s': typeof ProtectedVoiceS2sRoute
@@ -254,6 +244,7 @@ export interface FileRoutesById {
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
+  '/_protected/': typeof ProtectedIndexRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
   '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
@@ -271,13 +262,11 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/healthz'
     | '/login'
     | '/onboarding'
     | '/admin'
     | '/drive'
-    | '/mindscape'
     | '/settings'
     | '/timer'
     | '/voice-s2s'
@@ -285,6 +274,7 @@ export interface FileRouteTypes {
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/'
     | '/admin/voice'
     | '/experimental/tune'
     | '/settings/visual'
@@ -300,13 +290,11 @@ export interface FileRouteTypes {
     | '/auth/callback/linear'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/healthz'
     | '/login'
     | '/onboarding'
     | '/admin'
     | '/drive'
-    | '/mindscape'
     | '/settings'
     | '/timer'
     | '/voice-s2s'
@@ -314,6 +302,7 @@ export interface FileRouteTypes {
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/'
     | '/admin/voice'
     | '/experimental/tune'
     | '/settings/visual'
@@ -329,14 +318,12 @@ export interface FileRouteTypes {
     | '/auth/callback/linear'
   id:
     | '__root__'
-    | '/'
     | '/_protected'
     | '/healthz'
     | '/login'
     | '/onboarding'
     | '/_protected/admin'
     | '/_protected/drive'
-    | '/_protected/mindscape'
     | '/_protected/settings'
     | '/_protected/timer'
     | '/_protected/voice-s2s'
@@ -344,6 +331,7 @@ export interface FileRouteTypes {
     | '/api/search'
     | '/docs/$'
     | '/healthz/deps'
+    | '/_protected/'
     | '/_protected/admin/voice'
     | '/_protected/experimental/tune'
     | '/_protected/settings/visual'
@@ -360,7 +348,6 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   ProtectedRoute: typeof ProtectedRouteWithChildren
   HealthzRoute: typeof HealthzRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -409,12 +396,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_protected/': {
+      id: '/_protected/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ProtectedIndexRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/healthz/deps': {
       id: '/healthz/deps'
@@ -463,13 +450,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ProtectedSettingsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/mindscape': {
-      id: '/_protected/mindscape'
-      path: '/mindscape'
-      fullPath: '/mindscape'
-      preLoaderRoute: typeof ProtectedMindscapeRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/drive': {
@@ -606,10 +586,10 @@ const ProtectedSettingsRouteWithChildren =
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
   ProtectedDriveRoute: typeof ProtectedDriveRoute
-  ProtectedMindscapeRoute: typeof ProtectedMindscapeRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedTimerRoute: typeof ProtectedTimerRoute
   ProtectedVoiceS2sRoute: typeof ProtectedVoiceS2sRoute
+  ProtectedIndexRoute: typeof ProtectedIndexRoute
   ProtectedExperimentalTuneRoute: typeof ProtectedExperimentalTuneRoute
   ProtectedWorkflowRunIdRoute: typeof ProtectedWorkflowRunIdRoute
 }
@@ -617,10 +597,10 @@ interface ProtectedRouteChildren {
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
   ProtectedDriveRoute: ProtectedDriveRoute,
-  ProtectedMindscapeRoute: ProtectedMindscapeRoute,
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedTimerRoute: ProtectedTimerRoute,
   ProtectedVoiceS2sRoute: ProtectedVoiceS2sRoute,
+  ProtectedIndexRoute: ProtectedIndexRoute,
   ProtectedExperimentalTuneRoute: ProtectedExperimentalTuneRoute,
   ProtectedWorkflowRunIdRoute: ProtectedWorkflowRunIdRoute,
 }
@@ -641,7 +621,6 @@ const HealthzRouteWithChildren =
   HealthzRoute._addFileChildren(HealthzRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   ProtectedRoute: ProtectedRouteWithChildren,
   HealthzRoute: HealthzRouteWithChildren,
   LoginRoute: LoginRoute,

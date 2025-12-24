@@ -158,7 +158,9 @@ export async function handleWorkflowStreamRequest(
   // Check connection limits and rate limiting
   const connectionResult = createConnection(session.user.id, "workflow");
   if (!connectionResult.allowed) {
-    sseConnectionRateLimitHitsTotal.labels("workflow", connectionResult.reason ?? "unknown").inc();
+    sseConnectionRateLimitHitsTotal
+      .labels("workflow", connectionResult.reason ?? "unknown")
+      .inc();
     return new Response(
       JSON.stringify({
         error: "rate_limit_exceeded",
@@ -221,8 +223,11 @@ export async function handleWorkflowStreamRequest(
         // Track first chunk latency
         if (!firstChunkSent) {
           firstChunkSent = true;
-          const firstChunkLatency = (performance.now() - requestStartTime) / 1000;
-          sseFirstChunkLatencySeconds.labels("workflow").observe(firstChunkLatency);
+          const firstChunkLatency =
+            (performance.now() - requestStartTime) / 1000;
+          sseFirstChunkLatencySeconds
+            .labels("workflow")
+            .observe(firstChunkLatency);
           if (connectionId) {
             updateConnectionActivity(connectionId);
           }
@@ -266,7 +271,9 @@ export async function handleWorkflowStreamRequest(
                 if (connectionId) {
                   removeConnection(connectionId);
                   const globalConnectionCount = getConnectionCount();
-                  sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+                  sseConnectionsCurrent
+                    .labels("workflow")
+                    .set(globalConnectionCount);
                 }
                 cleanup?.();
                 close();
@@ -279,7 +286,9 @@ export async function handleWorkflowStreamRequest(
                 if (connectionId) {
                   removeConnection(connectionId);
                   const globalConnectionCount = getConnectionCount();
-                  sseConnectionsCurrent.labels("workflow").set(globalConnectionCount);
+                  sseConnectionsCurrent
+                    .labels("workflow")
+                    .set(globalConnectionCount);
                 }
                 cleanup?.();
                 close();

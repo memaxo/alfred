@@ -1,10 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import UserMenu from "./user-menu";
 
-const links = [
-  { to: "/", label: "Home" },
-  { to: "/mindscape", label: "Mindscape" },
-] as const;
+const links = [{ to: "/", label: "Mindscape" }] as const;
 
 export default function Header() {
   return (

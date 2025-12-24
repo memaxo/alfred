@@ -135,20 +135,25 @@ function VisualSettings() {
             </div>
           </div>
         )}
-        {isReady && error && (capability === "webgpu" || error.message === "cortex_webgpu_disabled") && (
-          <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-            <div className="space-y-2">
-              <div className="font-semibold text-biolum text-sm">
-                {error.message === "cortex_webgpu_disabled" ? "WebGPU Disabled" : "Preview failed to initialize"}
-              </div>
-              <div className="text-biolum-dim text-xs">
-                {error.message === "cortex_webgpu_disabled" 
-                  ? "WebGPU is disabled in the build configuration." 
-                  : error.message}
+        {isReady &&
+          error &&
+          (capability === "webgpu" ||
+            error.message === "cortex_webgpu_disabled") && (
+            <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+              <div className="space-y-2">
+                <div className="font-semibold text-biolum text-sm">
+                  {error.message === "cortex_webgpu_disabled"
+                    ? "WebGPU Disabled"
+                    : "Preview failed to initialize"}
+                </div>
+                <div className="text-biolum-dim text-xs">
+                  {error.message === "cortex_webgpu_disabled"
+                    ? "WebGPU is disabled in the build configuration."
+                    : error.message}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
         <div className="absolute right-3 bottom-3 rounded-full border border-white/10 bg-void-surface/80 px-3 py-1 text-biolum-dim text-xs backdrop-blur-sm">
           Live Preview (WebGPU)
         </div>
@@ -315,7 +320,6 @@ function VisualSettings() {
           </div>
         </section>
       )}
-
     </div>
   );
 }
