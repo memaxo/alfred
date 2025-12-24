@@ -29,12 +29,33 @@ export async function openCommandPalette(page: Page) {
 }
 
 export async function spawnNode(page: Page, label: string) {
+  // Try sidebar spawn button first (most reliable)
+  const sidebarButton = page.getByRole("button", { name: `+ ${label}` });
+  if ((await sidebarButton.count()) > 0 && (await sidebarButton.isVisible())) {
+    await sidebarButton.click();
+    await page.waitForTimeout(500);
+    return;
+  }
+
+  // Fall back to command palette
   await openCommandPalette(page);
   const dialog = page.getByRole("dialog");
-  // Click the command item matching the label
-  const item = dialog.locator("[cmdk-item]").filter({ hasText: label }).first();
-  await item.click();
-  await expect(dialog).toBeHidden();
+
+  // Type the label to filter
+  const input = dialog.getByRole("textbox");
+  await input.fill(label);
+  await page.waitForTimeout(300);
+
+  // Click the first filtered result using aria-selected or data attribute
+  const selectedItem = dialog.locator('[aria-selected="true"], [data-selected="true"]').first();
+  if ((await selectedItem.count()) > 0) {
+    await selectedItem.click();
+  } else {
+    // Fallback: press ArrowDown then Enter
+    await input.press("ArrowDown");
+    await input.press("Enter");
+  }
+  await expect(dialog).toBeHidden({ timeout: 5000 });
 }
 
 export function latestNode(page: Page, type: string): Locator {

@@ -80,11 +80,29 @@ export function countWindows(page: Page, type: string): Promise<number> {
 }
 
 /**
- * Close a window by clicking its close button.
+ * Close a window by clicking its close/discard button.
  */
 export async function closeWindow(window: Locator) {
+  // Try close button first
   const closeButton = window.getByRole("button", { name: /close/i });
-  await closeButton.click();
+  if ((await closeButton.count()) > 0) {
+    await closeButton.click();
+    return;
+  }
+
+  // Try discard button (for note windows in edit mode)
+  const discardButton = window.getByRole("button", { name: /discard/i });
+  if ((await discardButton.count()) > 0) {
+    await discardButton.click();
+    return;
+  }
+
+  // Try clicking the X icon in the header
+  const header = window.locator('[class*="header"], [class*="title"]').first();
+  const closeIcon = header.locator("img, svg").last();
+  if ((await closeIcon.count()) > 0) {
+    await closeIcon.click();
+  }
 }
 
 /**
