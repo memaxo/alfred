@@ -2745,6 +2745,80 @@ TanStack DB Collections (Data Layer)
 
 **Deliverable:** Single paradigm codebase (desktop only).
 
+### Phase 8: Store Consolidation & Polish (Week 10)
+
+**Goal:** Complete migration of chat-related hooks from mindscape store to desktop store, add command palette, and finalize E2E coverage.
+
+**Audit Findings (2025-12-24):**
+
+The following files still import from mindscape store:
+- `hooks/use-chat-logic.ts` - node resolution, edge/node activity
+- `hooks/use-mindscape-activations.ts` - event bus for animations
+- `hooks/use-focused-context.ts` - focused node, context cache
+- `store/mindscape/` - 6 files (~8KB total)
+- `lib/mindscape/telemetry.ts` - cache metrics
+
+**Tasks:**
+
+#### P8.1: Add Context/Cache Slices to Desktop Store
+- [ ] Create `store/desktop/context.ts` with `contextCache`, `recordContextReceipt`, `clearContextReceipt`
+- [ ] Create `store/desktop/cache.ts` with `ragDocCache`, `ragDocCacheStats`, cache actions
+- [ ] Move `lib/mindscape/telemetry.ts` → `lib/desktop/telemetry.ts`
+- [ ] Add `feedbackByWindow` for workflow feedback tracking
+
+#### P8.2: Create Desktop Command Palette
+- [ ] Create `components/desktop/command-palette.tsx`
+- [ ] Wire ⌘+K shortcut in desktop canvas
+- [ ] Filter actions by focused window type
+- [ ] Support spawn, focus, delete, pin actions
+- [ ] Integrate with desktop store actions
+
+#### P8.3: Migrate use-focused-context to Desktop
+- [ ] Update imports from mindscape → desktop store
+- [ ] Change `focusedNodeId` → `focusedWindowId`
+- [ ] Update node lookups to use `windows` instead of `nodes`
+- [ ] Update tests in `use-focused-context.test.tsx`
+
+#### P8.4: Migrate use-mindscape-activations to Desktop
+- [ ] Rename to `use-desktop-activations.ts`
+- [ ] Update to use desktop store's `triggerEdgeActivity`
+- [ ] Keep event bus pattern for decoupled triggers
+- [ ] Add `triggerWindowActivity` for window animations
+
+#### P8.5: Update use-chat-logic to Desktop Store
+- [ ] Import `useDesktopStore` instead of `useMindscapeStore`
+- [ ] Update `resolveId` to use desktop windows
+- [ ] Update activation dispatching to use desktop events
+
+#### P8.6: Delete Mindscape Store Entirely
+- [ ] Delete `store/mindscape/` (6 files)
+- [ ] Delete `store/mindscape.ts`
+- [ ] Delete `store/mindscape.schemas.ts`
+- [ ] Delete `lib/mindscape/telemetry.ts`
+- [ ] Update any remaining imports
+- [ ] Estimated: -1,500 lines
+
+#### P8.7: Add Deep Linking for Desktop
+- [ ] Add search params: `windowId`, `spawn`, `resourceRef`
+- [ ] On load: focus window by ID or spawn by type
+- [ ] Support resource references: `?spawn=note&ref=uuid`
+- [ ] Preserve workflow route behavior
+
+#### P8.8: E2E Test Coverage Expansion
+- [ ] Fix 4 skipped tests in desktop specs
+- [ ] Add tests for command palette actions
+- [ ] Add tests for context/cache behavior
+- [ ] Add tests for deep linking
+- [ ] Target: 20+ desktop E2E tests
+
+#### P8.9: Performance Validation
+- [ ] Create stress test with 200+ windows
+- [ ] Validate 60fps pan/zoom
+- [ ] Measure localStorage size under load
+- [ ] Profile memory usage
+
+**Deliverable:** Complete desktop system with no mindscape dependencies.
+
 ---
 
 ## 20.1 Testing Strategy
