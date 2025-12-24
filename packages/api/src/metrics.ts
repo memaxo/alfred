@@ -44,11 +44,35 @@ export {
 
 export * from "@alfred/agent/workflow/metrics";
 export * from "@alfred/db";
+export {
+  historyContextTierDropsTotal,
+  historyContextTokensTotal,
+} from "@alfred/history";
 export * from "@alfred/history";
 export * from "@alfred/knowledge/metrics";
 export * from "@alfred/policy";
 export * from "@alfred/runtime/metrics";
 export * from "@alfred/voice/metrics";
+
+// Tool metrics
+export {
+  droidExecRunsTotal,
+  droidExecDurationSeconds,
+  droidPendingCleanupTotal,
+  droidPendingRunsGauge,
+} from "@alfred/agent/orchestrator/tool/droid/metrics";
+
+export {
+  codexExecRunsTotal,
+  codexExecDurationSeconds,
+  codexErrorsTotal,
+  codexSessionValidationDurationSeconds,
+  codexLinearActivitiesDroppedTotal,
+  codexLinearActivitiesEmittedTotal,
+  codexLinearActivityBatchesTotal,
+  codexLinearIntegrationLatencySeconds,
+  codexSessionContinuityTotal,
+} from "@alfred/agent/orchestrator/tool/codex/metrics";
 
 // Re-export shared metrics
 export {
@@ -109,13 +133,13 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
       const {
         droidExecRunsTotal,
         droidExecDurationSeconds,
-      } = await import("@alfred/agent/orchestrator/tool/droid");
+      } = await import("@alfred/agent/orchestrator/tool/droid/metrics");
       const {
         codexExecRunsTotal,
         codexExecDurationSeconds,
         codexErrorsTotal,
         codexSessionValidationDurationSeconds,
-      } = await import("@alfred/agent/orchestrator/tool/codex");
+      } = await import("@alfred/agent/orchestrator/tool/codex/metrics");
       const {
         evalRunsTotal,
         evalDurationSeconds,

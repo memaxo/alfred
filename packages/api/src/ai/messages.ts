@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import type { LanguageModel, ModelMessage, Tool } from "ai";
 import { validateUIMessages } from "ai";
 import {
-  historyContextSelectionDurationSeconds,
+  runtimeHistorySelectionDurationSeconds,
   historyContextTierDropsTotal,
   historyContextTokensTotal,
 } from "../metrics";
@@ -41,7 +41,7 @@ export async function prepareModelMessagesForGenerate({
       })) as UIMessage[];
       const modelId = resolveModelId(model);
       const stopHistoryTimer =
-        historyContextSelectionDurationSeconds.startTimer({ source });
+        runtimeHistorySelectionDurationSeconds.startTimer({ source });
       const historyContext = await buildHistoryContext({
         messages: validated,
         modelId,

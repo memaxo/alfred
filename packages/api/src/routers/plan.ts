@@ -1,19 +1,21 @@
+import { parseIntent } from "@alfred/plan";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc.js";
-import { parseIntent } from "@alfred/plan/intent";
-import { TRPCError } from "@trpc/server";
 
 /**
  * planRouter: Handles AI-native workflow planning requests
  */
 export const planRouter = router({
   parseIntent: authedProcedure
-    .input(z.object({
-      input: z.string().min(1).max(500),
-      source: z.enum(["voice", "chat", "api"]).default("chat"),
-      workspace: z.string().optional(),
-      codebase: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        input: z.string().min(1).max(500),
+        source: z.enum(["voice", "chat", "api"]).default("chat"),
+        workspace: z.string().optional(),
+        codebase: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
@@ -33,7 +35,6 @@ export const planRouter = router({
 
         return result;
       } catch (error) {
-        console.error("Failed to parse intent:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_intent_parse_failed",

@@ -1,8 +1,12 @@
-import { generateObject } from "ai";
-import { getOpenAI, getModelId } from "@alfred/agent/v6";
-import { intentParserOutputSchema } from "./schema.js";
-import type { WorkflowIntent, ClarificationQuestion, Pattern } from "./types.js";
 import { randomUUID } from "node:crypto";
+import { getModelId, getOpenAI } from "@alfred/agent/v6";
+import { generateObject } from "ai";
+import { intentParserOutputSchema } from "./schema.js";
+import type {
+  ClarificationQuestion,
+  Pattern,
+  WorkflowIntent,
+} from "./types.js";
 
 /**
  * parseIntent: Parse natural language input into structured WorkflowIntent objects
@@ -27,6 +31,7 @@ export async function parseIntent(
 > {
   const model = getOpenAI()(getModelId());
   
+  // biome-ignore lint/suspicious/noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
   const result = await generateObject({
     model: model as any,
     schema: intentParserOutputSchema,
@@ -61,7 +66,7 @@ export async function parseIntent(
 
   // Handle Multi-Intent
   if (output.multiIntent.split && output.multiIntent.parts.length > 1) {
-    const intents = output.multiIntent.parts.map((part) => 
+    const intents = output.multiIntent.parts.map((part) =>
       createIntentObject(part, context)
     );
     return { type: "multiIntent", intents };
@@ -69,18 +74,20 @@ export async function parseIntent(
 
   // Handle Ambiguity
   if (output.ambiguity.score > 0.7 && output.ambiguity.questions.length > 0) {
-    const questions: ClarificationQuestion[] = output.ambiguity.questions.map((q) => ({
-      id: randomUUID(),
-      question: q.question,
-      options: q.options,
-      required: true,
-    }));
+    const questions: ClarificationQuestion[] = output.ambiguity.questions.map(
+      (q) => ({
+        id: randomUUID(),
+        question: q.question,
+        options: q.options,
+        required: true,
+      })
+    );
     return { type: "clarification", questions };
   }
 
   // Single Intent
   const intent = createIntentObject(output.description, context);
-  
+
   // Attach ambiguity if it's below the threshold but still noteworthy
   if (output.ambiguity.score > 0) {
     intent.ambiguity = {

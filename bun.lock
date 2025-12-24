@@ -228,6 +228,7 @@
         "@alfred/db": "workspace:*",
         "@alfred/logger": "workspace:*",
         "@alfred/metrics": "workspace:*",
+        "@alfred/plan": "workspace:*",
         "@alfred/runtime": "workspace:*",
         "@alfred/tune": "workspace:*",
         "@alfred/voice": "workspace:*",
@@ -393,6 +394,22 @@
         "@alfred/logger": "workspace:*",
         "@alfred/type": "workspace:*",
         "prom-client": "^15.1.3",
+      },
+      "devDependencies": {
+        "@alfred/tsconfig": "workspace:*",
+        "typescript": "^5.7.2",
+      },
+    },
+    "packages/plan": {
+      "name": "@alfred/plan",
+      "version": "0.0.0",
+      "dependencies": {
+        "@alfred/agent": "workspace:*",
+        "@alfred/db": "workspace:*",
+        "@alfred/knowledge": "workspace:*",
+        "@alfred/type": "workspace:*",
+        "ai": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@alfred/tsconfig": "workspace:*",
@@ -605,6 +622,8 @@
     "@alfred/logger": ["@alfred/logger@workspace:packages/logger"],
 
     "@alfred/metrics": ["@alfred/metrics@workspace:packages/metrics"],
+
+    "@alfred/plan": ["@alfred/plan@workspace:packages/plan"],
 
     "@alfred/policy": ["@alfred/policy@workspace:packages/policy"],
 

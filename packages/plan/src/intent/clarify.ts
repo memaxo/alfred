@@ -14,9 +14,13 @@ export function clarifyIntent(
     ...intent,
     description: `${intent.description} (Clarification: ${response})`,
     // Remove the answered question
-    ambiguity: intent.ambiguity ? {
-      ...intent.ambiguity,
-      questions: intent.ambiguity.questions.filter((q) => q.id !== questionId),
-    } : undefined,
+    ambiguity: intent.ambiguity
+      ? {
+          ...intent.ambiguity,
+          questions: intent.ambiguity.questions.filter(
+            (q) => q.id !== questionId
+          ),
+        }
+      : undefined,
   };
 }
