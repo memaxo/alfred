@@ -126,7 +126,7 @@ export function createNoteCollection(
       // Return id as context for mutationFn
       return id;
     },
-    mutationFn: async (_input, id) => {
+    mutationFn: async (id) => {
       await trpcClient.note.delete.mutate({ id });
       await collection.utils.refetch();
     },

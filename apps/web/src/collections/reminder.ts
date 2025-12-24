@@ -93,7 +93,7 @@ export function createReminderCollection(
       // Return id as context for mutationFn
       return id;
     },
-    mutationFn: async (_input, id) => {
+    mutationFn: async (id) => {
       await trpcClient.remind.fire.mutate({ id });
       await collection.utils.refetch();
     },
@@ -106,7 +106,7 @@ export function createReminderCollection(
       // Return id as context for mutationFn
       return id;
     },
-    mutationFn: async (_input, id) => {
+    mutationFn: async (id) => {
       await trpcClient.remind.delete.mutate({ id });
       await collection.utils.refetch();
     },
