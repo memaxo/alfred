@@ -46,7 +46,7 @@ async function legacySignUp(page: Page) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: /sign up/i }).click();
-  await page.waitForURL(/\/mindscape$/);
+  await page.waitForURL(/\/$/);
   await expect(page.locator(".react-flow")).toBeVisible({ timeout: 60_000 });
   return { name, email, password };
 }
@@ -59,11 +59,11 @@ export async function signUpTestUser(page: Page) {
   page.on("pageerror", (_err) => {});
   const suffix = uniqueSuffix();
   const session = issueTestSession({
-    name: `Mindscape Tester ${suffix}`,
-    email: `mindscape+${suffix}@example.com`,
+    name: `Desktop Tester ${suffix}`,
+    email: `desktop+${suffix}@example.com`,
   });
   await primeBrowserSession(page, session);
-  await page.goto("/mindscape", { waitUntil: "domcontentloaded" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".react-flow")).toBeVisible({ timeout: 60_000 });
   return {
     name: session.user.name,
