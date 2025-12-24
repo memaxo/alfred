@@ -1,5 +1,44 @@
 # Documentation Changelog
 
+## 2025-12-24 — Desktop UI Paradigm Implementation
+
+Major refactor of the frontend architecture to a spatial operating system model:
+
+**Route Consolidation:**
+- Deleted WebGPU landing page (`routes/index.tsx`, ~236 lines)
+- Deleted `lib/mindscape/gpu/` folder (~1,351 lines)
+- Moved Mindscape from `/mindscape` to `/` (root protected route)
+- Removed Cmd+M toggle shortcut (single entry point)
+
+**Store Architecture (`store/desktop/`):**
+- `types.ts` - WindowInstance, WindowData, DesktopEdge types (12 window types)
+- `windows.ts` - Window CRUD with React Flow integration
+- `viewport.ts` - Focus, zoom, space mode management
+- `dock.ts` - Pinned types and window spawning
+- `persist.ts` - Layout-only localStorage (<50KB budget)
+- `selectors.ts` - Memoized selectors for derived state
+
+**Data Layer:**
+- TanStack DB collections (`collections/note.ts`, `collections/reminder.ts`)
+- Optimistic mutations with `createOptimisticAction` pattern
+- Subscription protocol (`lib/subscription/manager.ts`) - multiplexed WebSocket with cursor-based resume
+
+**Performance:**
+- `lib/desktop/performance.ts` - Storage budget monitoring, edge degradation
+- `useVisibleEdges` hook for zoom-aware edge filtering
+- LOD (Level of Detail) system for node rendering
+
+**Testing:**
+- 80 unit tests (store, selectors, performance, schemas, collections, subscriptions)
+- 13 E2E tests passing (smoke, window lifecycle, dock integration)
+
+**Documentation:**
+- Updated `.ruler/30-mindscape.md` with desktop store patterns
+- Updated `docs/architecture/mindscape.md` with new architecture
+- Updated `docs/execplans/desktop-ui-paradigm.md` with completion status
+
+---
+
 ## 2025-12-05 — Explicit Memory Tools for Agent
 
 - Implemented 8 explicit memory tools giving the agent direct control over the knowledge graph:

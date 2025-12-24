@@ -1,19 +1,37 @@
 # Mindscape Architecture
 
-1. **LOD Polymorphism.** All graph nodes must use `useLOD()` to implement four distinct render states (tiny/small/medium/full). Tiny/small states must minimize DOM depth (no complex sub-trees) to ensure 60fps performance with 1000+ nodes.
+## Desktop Store Architecture
 
-2. **Focus Gravity.** Nodes must subscribe to `useNodeFocus()` to apply visual suppression (blur/grayscale/scale-down) when another node is active. The focused node must visually dominate the viewport as a "modal-less modal."
+1. **Store slices.** Desktop state is managed in `store/desktop/` with four slices: `windows.ts` (window CRUD), `viewport.ts` (focus, zoom), `dock.ts` (pins, spawning), `persist.ts` (localStorage). Import via `useDesktopStore` from `store/desktop`.
 
-3. **Contextual Commands.** Register actions in `config/actions.ts` with `validNodeTypes`. The Command Palette must filter actions based on the currently focused node ID to provide a context-aware interface.
+2. **Window types.** 12 window types defined in `store/desktop/types.ts`: chat, note, reminder, timer, bookmark, todo, workflow, droid, settings, privacy, profile, integrations. Register new types in `components/windows/registry.tsx`.
 
-4. **Algorithmic Isolation.** Keep physics (layout) and search (trie) logic in pure TypeScript files (`lib/*.ts`) separate from React components. This ensures core logic is unit-testable even if the DOM environment is unstable.
+3. **Selectors pattern.** Use memoized selectors from `store/desktop/selectors.ts` for derived state: `selectWindows`, `selectWindowById`, `selectEdgesForWindow`, `selectFocusedWindow`, `selectStats`. Never compute derived state inline.
 
-5. **Event-Driven Activations.** Use `dispatchMindscapeEvent` to visualize system activity. Never manipulate `activeEdges` directly from functional components. Visualization must be a side effect of real events (Reality-Driven UI).
+4. **Storage budget.** Layout persistence must stay under 50KB in localStorage. Use `getLayoutStorageSize()` from `lib/desktop/performance.ts` to monitor. Store positions and minimal metadata only, never content.
 
-6. **Context Trace.** Visually highlight graph edges involved in active context retrieval ("Cognitive Pulse") to show the user *why* the system knows about dependencies.
+## Rendering & Performance
 
-7. **Concept node spawning.** When spawning concept nodes from graph traversal or visualization, use radial positioning around the parent node: `angle = (index / totalNodes) * 2 * Math.PI`, `x = parentPos.x + radius * Math.cos(angle)`, `y = parentPos.y + radius * Math.sin(angle)`. Use `MINDSCAPE_CONFIG.SPAWN_RADIUS` constant from `@/config/mindscape` for consistent spacing.
+5. **LOD Polymorphism.** All nodes use `useLOD()` for four render states (tiny/small/medium/full). Tiny/small states minimize DOM depth for 60fps with 1000+ nodes.
 
-8. **Edge deduplication.** When merging edges from visualization results, use `Map<string, Edge>` keyed by edge ID to prevent duplicates. Merge new edges into existing edge map before calling `setEdges(Array.from(edgeMap.values()))`.
+6. **Edge degradation.** Use `useVisibleEdges()` hook for automatic edge filtering by zoom level: <0.3 hides all, 0.3-0.6 shows important only, >0.6 shows all with labels.
 
-9. **Async action error handling.** Command palette actions that call async tRPC mutations must wrap execution in try-catch blocks. Surface errors via toast notifications (`toast.error()`) and log with structured context (`console.error("action_failed", error)`). Never silently swallow errors from async actions.
+7. **Focus gravity.** Nodes subscribe to `useNodeFocus()` for visual suppression when another node is active. Focused node dominates viewport as "modal-less modal."
+
+## Data Layer
+
+8. **TanStack DB collections.** Resource persistence uses collections in `collections/`: `noteCollection`, `reminderCollection`. Collections provide optimistic updates via `createOptimisticAction` pattern.
+
+9. **Subscription protocol.** Real-time sync via `lib/subscription/manager.ts`. Multiplexed WebSocket with cursor-based resume. Use `useGraphSubscription` and `useWorkflowSubscription` hooks.
+
+## UI Patterns
+
+10. **Contextual commands.** Register actions in `config/actions.ts` with `validNodeTypes`. Command Palette (Ctrl+K) filters by focused node.
+
+11. **Window spawning.** Use `spawn(type)` from dock slice. Singletons (chat, settings) focus existing; others create new. Position offset prevents overlap.
+
+12. **Event-driven activations.** Use `dispatchMindscapeEvent` for visualization. Never manipulate `activeEdges` directly. Visualization derives from real events (Reality-Driven UI).
+
+13. **Edge deduplication.** When merging edges, use `Map<string, Edge>` keyed by ID to prevent duplicates before `setEdges()`.
+
+14. **Async error handling.** Command palette async actions must use try-catch. Surface errors via `toast.error()` and log with context.

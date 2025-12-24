@@ -1,42 +1,94 @@
 # Mindscape Architecture
 
-## Visualization Philosophy
+> **Route:** `/` (protected root route, previously `/mindscape`)
 
-Mindscape adheres to the **Reality-Driven UI** principle. Visualization must derive strictly from real system state or events. "Simulation" modes, mock data generators, and fake actions are strictly forbidden in production components.
+## Overview
+
+Mindscape is the spatial canvas UI built on React Flow. It renders windows as draggable nodes with semantic edges connecting related resources. The architecture follows **Reality-Driven UI** - visualization derives strictly from real system state, never from simulation or mock data.
+
+## Store Architecture
+
+State management uses Zustand with four slices in `store/desktop/`:
+
+| Slice | Purpose | Key Actions |
+|-------|---------|-------------|
+| `windows.ts` | Window CRUD, React Flow nodes | `addWindow`, `removeWindow`, `updateWindow` |
+| `viewport.ts` | Focus, zoom, space mode | `setFocusedWindow`, `setViewport` |
+| `dock.ts` | Pinned types, spawning | `spawn`, `pin`, `unpin` |
+| `persist.ts` | localStorage (<50KB budget) | Auto-persisted via middleware |
+
+**Usage:**
+```typescript
+import { useDesktopStore } from "@/store/desktop";
+const { spawn, windows } = useDesktopStore();
+```
+
+## Window Types
+
+12 window types registered in `components/windows/registry.tsx`:
+
+| Tier | Types | Behavior |
+|------|-------|----------|
+| Primary | chat, droid | Singleton, prominent glow |
+| Secondary | workflow, workflowlist, note, reminder, todo | Multi-instance allowed |
+| Tertiary | settings, privacy, profile, integrations, timer, bookmark | Singleton, subtle styling |
+
+## Data Persistence
+
+### TanStack DB Collections
+
+Resource data persists via collections in `collections/`:
+- `noteCollection` - Notes with optimistic CRUD
+- `reminderCollection` - Reminders with fire/delete
+
+Collections use `createOptimisticAction` for instant UI updates with server reconciliation.
+
+### Real-Time Sync
+
+`lib/subscription/manager.ts` provides multiplexed WebSocket:
+- Cursor-based resume after disconnect
+- Automatic reconnection with exponential backoff
+- Hooks: `useGraphSubscription`, `useWorkflowSubscription`
+
+## Performance
+
+### LOD (Level of Detail)
+
+Nodes implement four render states via `useLOD()`:
+- **tiny** (<0.3 zoom): Colored dot only
+- **small** (0.3-0.5): Icon + label
+- **medium** (0.5-0.8): Compact content
+- **full** (>0.8): Complete UI
+
+### Edge Degradation
+
+`useVisibleEdges()` filters edges by zoom:
+- <0.3: Hide all edges
+- 0.3-0.6: Show `context` and `relates_to` only
+- >0.6: Show all with labels
+
+### Storage Budget
+
+Layout persistence capped at 50KB. Monitor with `getLayoutStorageSize()` from `lib/desktop/performance.ts`.
 
 ## Event-Driven Activations
 
-Visual activity in the graph (glowing edges, pulsing nodes) is driven by a unified event bus. This decouples the visualization layer (Mindscape) from the functional layers (Voice, Chat, Workflow).
+Visual activity (glowing edges, pulsing nodes) driven by unified event bus:
 
-### Event Bus API
+- **Hook:** `useMindscapeActivations()` (consume)
+- **Dispatcher:** `dispatchMindscapeEvent(event)` (produce)
 
-- **Hook:** `useMindscapeActivations()` (consumes events)
-- **Dispatcher:** `dispatchMindscapeEvent(event)` (produces events)
+| Event Type | Trigger | Visual Effect |
+|------------|---------|---------------|
+| `voice-input` | VAD active | Pulse User → VoiceSession |
+| `tool-call` | Tool execution | Pulse Chat → ToolNode |
+| `rag-retrieval` | Docs retrieved | Pulse KnowledgeNode |
+| `workflow-step` | Workflow event | Pulse WorkflowNode |
+| `context-cache` | Cache hit | Highlight cached edges |
 
-### Event Types
+## UI Patterns
 
-| Type | Trigger | Visual Effect |
-| :--- | :--- | :--- |
-| `voice-input` | User VAD active | Pulse `User` → `VoiceSession` |
-| `voice-output` | System TTS playing | Pulse `VoiceSession` → `User` |
-| `tool-call` | Tool execution started | Pulse `Chat` → `ToolNode` |
-| `rag-retrieval` | Documents retrieved | Pulse `KnowledgeNode` (output) |
-| `workflow-step` | Workflow event received | Pulse `WorkflowNode` (output) |
-
-### Implementation Pattern
-
-To visualize a new system activity:
-1.  Locate the functional component/hook where the activity occurs.
-2.  Import `dispatchMindscapeEvent` from `@/hooks/use-mindscape-activations`.
-3.  Dispatch an event with `sourceId` and/or `targetId`.
-4.  The `MindscapeCanvas` will automatically visualize the activation.
-
-## Core Components
-
-1. **LOD Polymorphism.** All graph nodes must use `useLOD()` to implement four distinct render states (tiny/small/medium/full). Tiny/small states must minimize DOM depth (no complex sub-trees) to ensure 60fps performance with 1000+ nodes.
-
-2. **Focus Gravity.** Nodes must subscribe to `useNodeFocus()` to apply visual suppression (blur/grayscale/scale-down) when another node is active. The focused node must visually dominate the viewport as a "modal-less modal."
-
-3. **Contextual Commands.** Register actions in `config/actions.ts` with `validNodeTypes`. The Command Palette must filter actions based on the currently focused node ID to provide a context-aware interface.
-
-4. **Algorithmic Isolation.** Keep physics (layout) and search (trie) logic in pure TypeScript files (`lib/*.ts`) separate from React components. This ensures core logic is unit-testable even if the DOM environment is unstable.
+1. **Command Palette** (Ctrl+K): Context-filtered actions based on focused node
+2. **Window Spawning**: Dock `spawn(type)` with position offset to prevent overlap
+3. **Focus Gravity**: Unfocused nodes blur/scale-down when another is active
+4. **Edge Deduplication**: Use `Map<string, Edge>` keyed by ID before `setEdges()`
