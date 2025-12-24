@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { Edge, Node } from "@xyflow/react";
-import type { ArtifactData } from "@/store/mindscape";
+import type { WindowData } from "@/store/desktop";
 import { layoutSemantic } from "./layout-semantic";
 
 describe("layoutSemantic", () => {
   it("should return nodes unchanged if empty or single", () => {
-    const nodes: Node<ArtifactData>[] = [];
+    const nodes: Node<WindowData>[] = [];
     const edges: Edge[] = [];
 
     const result = layoutSemantic(nodes, edges);
@@ -16,7 +16,7 @@ describe("layoutSemantic", () => {
   });
 
   it("should position nodes around anchor", () => {
-    const nodes: Node<ArtifactData>[] = [
+    const nodes: Node<WindowData>[] = [
       { id: "singularity", position: { x: 0, y: 0 }, data: {} as any },
       { id: "node1", position: { x: 100, y: 100 }, data: {} as any },
     ];
@@ -31,7 +31,7 @@ describe("layoutSemantic", () => {
   });
 
   it("should respect focus gravity", () => {
-    const nodes: Node<ArtifactData>[] = [
+    const nodes: Node<WindowData>[] = [
       { id: "node1", position: { x: 0, y: 0 }, data: {} as any }, // Focused
       { id: "node2", position: { x: 500, y: 0 }, data: {} as any }, // Connected
       { id: "node3", position: { x: 500, y: 500 }, data: {} as any }, // Unconnected
@@ -75,7 +75,7 @@ describe("layoutSemantic", () => {
   });
 
   it("should maintain performance budget for 100 nodes", () => {
-    const nodes: Node<ArtifactData>[] = Array.from({ length: 100 }, (_, i) => ({
+    const nodes: Node<WindowData>[] = Array.from({ length: 100 }, (_, i) => ({
       id: `node-${i}`,
       position: { x: Math.random() * 1000, y: Math.random() * 1000 },
       data: { type: "note" } as any,

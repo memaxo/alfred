@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, jest } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { useMindscapeStore } from "@/store/mindscape";
+import { useDesktopStore } from "@/store/desktop";
 import {
   createTestQueryClient,
   createTestTrpcClient,
@@ -14,10 +14,10 @@ import { useFocusedContext } from "../use-focused-context";
 
 describe("useFocusedContext", () => {
   beforeEach(() => {
-    useMindscapeStore.setState({
-      nodes: [],
+    useDesktopStore.setState({
+      windows: [],
       edges: [],
-      focusedNodeId: null,
+      focusedWindowId: null,
       ragDocCache: {},
       ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
       contextCache: {},
@@ -56,7 +56,7 @@ describe("useFocusedContext", () => {
     });
   });
 
-  it("returns local context for simple nodes (Note) without triggering RAG", async () => {
+  it("returns local context for simple windows (Note) without triggering RAG", async () => {
     const runQuerySpy = jest.fn();
     const wrapper = createWrapper({
       queries: {
@@ -65,16 +65,16 @@ describe("useFocusedContext", () => {
       },
     });
 
-    useMindscapeStore.setState({
-      nodes: [
+    useDesktopStore.setState({
+      windows: [
         {
           id: "note-1",
           type: "note",
-          data: { type: "note", label: "My Note", content: "Note content" },
+          data: { type: "note", label: "My Note", content: "Note content", viewMode: "full" },
           position: { x: 0, y: 0 },
         } as any,
       ],
-      focusedNodeId: "note-1",
+      focusedWindowId: "note-1",
       ragDocCache: {},
       ragDocCacheStats: { hits: 0, misses: 0, evictions: 0 },
       contextCache: {},
@@ -93,13 +93,13 @@ describe("useFocusedContext", () => {
     expect(runQuerySpy).not.toHaveBeenCalled();
   });
 
-  it("triggers Active RAG for Knowledge nodes and merges semantic + structural results", async () => {
+  it("triggers Active RAG for Knowledge windows and merges semantic + structural results", async () => {
     const runQuerySpy = jest.fn(() => ({
       nodes: [
         // Semantic Match
         {
           id: "rag-1",
-          kind: "note", // Default kind
+          kind: "note",
           data: { label: "Related Doc", summary: "Relevant info from RAG." },
         },
         // Structural Match
@@ -116,13 +116,13 @@ describe("useFocusedContext", () => {
     const wrapper = createWrapper({
       queries: {
         "graph.runQuery": runQuerySpy,
-        "assistant.getConfig": () => ({ contextWindow: 10_000 }), // Small window to test budgeting if needed
+        "assistant.getConfig": () => ({ contextWindow: 10_000 }),
       },
     });
 
     const graphDbId = "123e4567-e89b-12d3-a456-426614174000";
-    useMindscapeStore.setState({
-      nodes: [
+    useDesktopStore.setState({
+      windows: [
         {
           id: "know-1",
           type: "knowledge",
@@ -130,12 +130,13 @@ describe("useFocusedContext", () => {
             type: "knowledge",
             label: "Quantum Physics",
             summary: "Study of small things.",
+            viewMode: "full",
             graph: { resource: "user", dbId: graphDbId },
           },
           position: { x: 0, y: 0 },
         } as any,
       ],
-      focusedNodeId: "know-1",
+      focusedWindowId: "know-1",
     });
 
     const { result } = renderHook(() => useFocusedContext(), { wrapper });
