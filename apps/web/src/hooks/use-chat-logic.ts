@@ -2,7 +2,7 @@ import type { AssistantUIMessage } from "@alfred/agent";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
-import { useMindscapeStore } from "@/store/mindscape";
+import { useDesktopStore } from "@/store/desktop";
 
 type UseChatLogicProps = {
   initialAgent?: "assistant" | "orchestrator";
@@ -10,8 +10,8 @@ type UseChatLogicProps = {
   initialConversationId?: string | null;
 };
 
+import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { useFocusedContext } from "@/hooks/use-focused-context";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
 
 export function useChatLogic({
   initialAgent = "assistant",
@@ -48,14 +48,14 @@ export function useChatLogic({
           const data = JSON.parse(header);
           if (data && Array.isArray(data.paths)) {
             const paths = data.paths as string[][];
-            const state = useMindscapeStore.getState();
+            const state = useDesktopStore.getState();
 
-            // Helper to resolve DB ID to UI Node ID
+            // Helper to resolve DB ID to UI Window ID
             const resolveId = (dbId: string) => {
-              const node = state.nodes.find(
-                (n) => n.data?.graph?.dbId === dbId || n.id === dbId
+              const window = state.windows.find(
+                (w) => w.data?.resourceRef?.id === dbId || w.id === dbId
               );
-              return node?.id;
+              return window?.id;
             };
 
             // Visualize each path sequentially
@@ -69,15 +69,18 @@ export function useChatLogic({
                   return;
                 }
 
-                // Pulse the node
+                // Pulse the window's connected edges
                 setTimeout(
                   () => {
-                    state.triggerNodeActivity(uiId, "processing");
+                    dispatchDesktopEvent({
+                      type: "context-cache",
+                      sourceId: uiId,
+                    });
                   },
                   pathDelay + i * 150
                 );
 
-                // If there is a next node, pulse the edge
+                // If there is a next node, pulse the edge between them
                 if (i < path.length - 1) {
                   const nextNodeId = path[i + 1];
                   const nextUiId = nextNodeId
@@ -86,7 +89,7 @@ export function useChatLogic({
                   if (nextUiId) {
                     setTimeout(
                       () => {
-                        dispatchMindscapeEvent({
+                        dispatchDesktopEvent({
                           type: "rag-retrieval",
                           sourceId: uiId,
                           targetId: nextUiId,

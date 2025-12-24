@@ -6,7 +6,7 @@ import type {
 } from "@alfred/voice/types";
 import type { VoiceStreamCodec } from "@alfred/type/voice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
+import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { trpc } from "@/utils/trpc";
 import { useVoiceAudio } from "./use-voice-audio";
 import { useVoiceProtocol } from "./use-voice-protocol";
@@ -56,7 +56,7 @@ export function useVoiceSessionWeb() {
       audio.playAudio(floatData);
 
       // Visualize TTS Output
-      dispatchMindscapeEvent({
+      dispatchDesktopEvent({
         type: "voice-output",
         sourceId: "voice-session",
         targetId: "user",
@@ -138,10 +138,10 @@ export function useVoiceSessionWeb() {
         client,
         () => {
           // Speech Start (Barge-in handled in useVoiceAudio + protocol interrupt)
-          dispatchMindscapeEvent({
+          dispatchDesktopEvent({
             type: "voice-input",
-            sourceId: "user", // Assumes UserNode is "user"
-            targetId: "voice-session", // Assumes VoiceSessionNode is "voice-session" (if exists) or pulsing "user" output
+            sourceId: "user",
+            targetId: "voice-session",
           });
         },
         () => {

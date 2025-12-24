@@ -18,7 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { dispatchMindscapeEvent } from "@/hooks/use-mindscape-activations";
+import { dispatchDesktopEvent } from "@/hooks/use-desktop-activations";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
 
@@ -85,13 +85,13 @@ export const ToolHeader = ({
   ...props
 }: ToolHeaderProps) => {
   useEffect(() => {
-    // Dispatch mindscape event on state changes
+    // Dispatch desktop event on state changes
     // Specifically when tool is running (input-available) or awaiting approval
     if (state === "input-available" || state === "approval-requested") {
-      dispatchMindscapeEvent({
+      dispatchDesktopEvent({
         type: "tool-call",
-        targetId: `tool-${type}`, // Assumes tool nodes are prefixed with "tool-"
-        sourceId: "chat", // Assumes chat node is "chat" (or active chat)
+        targetId: `tool-${type}`,
+        sourceId: "chat",
       });
     }
   }, [state, type]);
