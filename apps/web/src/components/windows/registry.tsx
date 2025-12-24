@@ -1,20 +1,19 @@
 import type { NodeTypes } from "@xyflow/react";
 import type { ComponentType } from "react";
 import { LivingEdge } from "@/components/mindscape/living-edge";
-import { ChatNode } from "@/components/mindscape/nodes/chat-node";
-import { ConceptNode } from "@/components/mindscape/nodes/concept-node";
-import { IntegrationsNode } from "@/components/mindscape/nodes/integrations-node";
-import { KnowledgeNode } from "@/components/mindscape/nodes/knowledge-node";
-import { SettingsNode } from "@/components/mindscape/nodes/settings-node";
-import { TodoNode } from "@/components/mindscape/nodes/todo-node";
-import { WorkflowListNode } from "@/components/mindscape/nodes/workflow-list-node";
-import { WorkflowNode } from "@/components/mindscape/nodes/workflow-node";
 import type { WindowType } from "@/store/desktop/types";
+import { ChatWindow } from "./chat";
+import { ConceptWindow } from "./concept";
 import { DroidWindow } from "./droid";
+import { IntegrationsWindow } from "./integrations";
+import { KnowledgeWindow } from "./knowledge";
 import { NoteWindow } from "./note";
 import { ReminderWindow } from "./reminder";
+import { SettingsWindow } from "./settings";
 import { WindowErrorBoundary } from "./shared/error-boundary";
 import { TerminalWindow } from "./terminal";
+import { TodoWindow } from "./todo";
+import { WorkflowListWindow, WorkflowWindow } from "./workflow";
 
 function wrapWithErrorBoundary<T extends { id: string }>(
   Component: ComponentType<T>
@@ -29,18 +28,18 @@ function wrapWithErrorBoundary<T extends { id: string }>(
 }
 
 export const windowTypes: NodeTypes = {
-  chat: wrapWithErrorBoundary(ChatNode),
+  chat: wrapWithErrorBoundary(ChatWindow),
   terminal: wrapWithErrorBoundary(TerminalWindow),
   droid: wrapWithErrorBoundary(DroidWindow),
   note: wrapWithErrorBoundary(NoteWindow),
   reminder: wrapWithErrorBoundary(ReminderWindow),
-  todo: wrapWithErrorBoundary(TodoNode),
-  workflow: wrapWithErrorBoundary(WorkflowNode),
-  workflowlist: wrapWithErrorBoundary(WorkflowListNode),
-  settings: wrapWithErrorBoundary(SettingsNode),
-  integrations: wrapWithErrorBoundary(IntegrationsNode),
-  knowledge: wrapWithErrorBoundary(KnowledgeNode),
-  concept: wrapWithErrorBoundary(ConceptNode),
+  todo: wrapWithErrorBoundary(TodoWindow),
+  workflow: wrapWithErrorBoundary(WorkflowWindow),
+  workflowlist: wrapWithErrorBoundary(WorkflowListWindow),
+  settings: wrapWithErrorBoundary(SettingsWindow),
+  integrations: wrapWithErrorBoundary(IntegrationsWindow),
+  knowledge: wrapWithErrorBoundary(KnowledgeWindow),
+  concept: wrapWithErrorBoundary(ConceptWindow),
 };
 
 export const edgeTypes = {
