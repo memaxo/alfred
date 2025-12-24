@@ -1311,11 +1311,14 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-12-23 | 0 | ExecPlan v1.0 created | ✅ | Initial architecture |
 | 2025-12-23 | 0 | Current state analysis | ✅ | ALFRED has 80% of infrastructure |
 | 2025-12-24 | 0 | Linear Project & Issues created | ✅ | 30 issues created across 6 phases |
+| 2025-12-24 | 1 | Create @alfred/plan package scaffold | ✅ | P1-1 implemented with core types + schemas |
+| 2025-12-24 | 1 | Intent parser with clarification tool | ✅ | P1-2 implemented with AI SDK v6 + tRPC |
 | 2025-01-27 | 0 | Desktop system review | ✅ | Aligned with Desktop UI Paradigm v3; see review doc |
 | 2025-01-27 | 0 | Comprehensive gap analysis | ✅ | See `ai-native-workflow-gap-analysis.md` for detailed component-by-component gaps |
-| | 1 | Intent parser | ⬜ | |
-| | 1 | Research aggregator | ⬜ | |
-| | 1 | Plan generator | ⬜ | |
+| 2025-12-24 | 1 | Intent parser | ✅ | P1-2 implementation complete |
+| 2025-12-24 | 1 | Research aggregator | ⬜ | |
+| 2025-12-24 | 1 | Plan generator | ⬜ | |
+| 2025-12-24 | 1 | @alfred/plan package scaffold | ✅ | P1-1 implementation complete |
 | | 2 | Optional plan selection/evaluator | ⬜ | |
 | | 2 | Pattern storage (SQL) | ⬜ | |
 | | 3 | Pattern learner | ⬜ | |

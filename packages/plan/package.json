@@ -1,0 +1,60 @@
+{
+  "name": "@alfred/plan",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./intent": {
+      "types": "./dist/intent/index.d.ts",
+      "default": "./src/intent/index.ts"
+    },
+    "./research": {
+      "types": "./dist/research/index.d.ts",
+      "default": "./src/research/index.ts"
+    },
+    "./generate": {
+      "types": "./dist/generate/index.d.ts",
+      "default": "./src/generate/index.ts"
+    },
+    "./evaluate": {
+      "types": "./dist/evaluate/index.d.ts",
+      "default": "./src/evaluate/index.ts"
+    },
+    "./pattern": {
+      "types": "./dist/pattern/index.d.ts",
+      "default": "./src/pattern/index.ts"
+    },
+    "./serialize": {
+      "types": "./dist/serialize/index.d.ts",
+      "default": "./src/serialize/index.ts"
+    },
+    "./project": {
+      "types": "./dist/project/index.d.ts",
+      "default": "./src/project/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "lint": "biome check .",
+    "check-types": "tsc --noEmit",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@alfred/agent": "workspace:*",
+    "@alfred/knowledge": "workspace:*",
+    "@alfred/db": "workspace:*",
+    "@alfred/type": "workspace:*",
+    "zod": "catalog:",
+    "ai": "catalog:"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

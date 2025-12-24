@@ -23,7 +23,6 @@ import {
   resolveExecutable,
   startToolTimer,
   streamStderr,
-  type ToolWriter,
 } from "./shared";
 import type { CodexExecuteArgs } from "./codex/definition.js";
 

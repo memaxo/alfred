@@ -98,7 +98,6 @@ packages/voice/.venv/
 
 # Agent plans and database data
 core
-.agent/plans/
 docker/postgres/data
 tmp-policy-test/
 

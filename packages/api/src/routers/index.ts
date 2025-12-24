@@ -15,6 +15,7 @@ import { knowledgeRouter } from "./knowledge";
 import { linearRouter } from "./linear";
 import { noteRouter } from "./note";
 import { orchestratorRouter } from "./orchestrator";
+import { planRouter } from "./plan";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
 import { profileRouter } from "./profile";
@@ -56,6 +57,7 @@ export const appRouter = router({
   linear: linearRouter,
   assistant: assistantRouter,
   orchestrator: orchestratorRouter,
+  plan: planRouter,
   profile: profileRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,

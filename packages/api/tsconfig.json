@@ -16,6 +16,7 @@
     { "path": "../agent" },
     { "path": "../history" },
     { "path": "../metrics" },
+    { "path": "../plan" },
     { "path": "../runtime" },
     { "path": "../voice" }
   ]
