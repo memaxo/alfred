@@ -74,7 +74,7 @@ export type WorkflowEventPayload =
   | { action: "run_failed"; runId: string; error: string }
   | { action: "step"; runId: string; event: WorkflowStepEvent };
 
-export type WorkflowEvent = SubscriptionEvent<WorkflowEventPayload>;
+export type WorkflowSubscriptionEvent = SubscriptionEvent<WorkflowEventPayload>;
 
 /**
  * Multiplexed stream message envelope.
