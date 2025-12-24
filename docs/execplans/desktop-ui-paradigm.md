@@ -1,6 +1,6 @@
 # Desktop UI Paradigm: Comprehensive Design Document
 
-> **Status:** Phases 1-5 Complete, Phase 6 (Window Replacement) In Progress  
+> **Status:** Phases 1-6 Complete, Phase 7 (Mindscape Deprecation) Pending  
 > **Owner:** Frontend Architecture  
 > **Created:** 2025-12-23  
 > **Last Updated:** 2025-12-24  
@@ -2952,6 +2952,13 @@ TanStack DB Collections (Data Layer)
 | 2025-12-24 | 6 | Compat layer removed | ✅ | Deleted store/compat.ts, clean separation |
 | 2025-12-24 | 6 | Paradigm clarification | ✅ | Documented Fat Nodes vs Thin Windows in Section 1.5 |
 | 2025-12-24 | 6 | ExecPlan v3.0 | ✅ | Updated phases, added Phase 6-7, corrected strategy |
+| 2025-12-24 | 6 | Create all 12 window components | ✅ | ~3,025 lines: Note, Reminder, Terminal, Droid, Chat, Workflow, WorkflowList, Todo, Settings, Integrations, Knowledge, Concept |
+| 2025-12-24 | 6 | Delete mindscape/nodes | ✅ | -5,600 lines: 25 node files removed |
+| 2025-12-24 | 6 | Delete mindscape/registry.tsx | ✅ | Replaced by windows/registry.tsx |
+| 2025-12-24 | 6 | Delete orphaned hooks | ✅ | use-mindscape-executor.ts, use-mindscape-stream.ts |
+| 2025-12-24 | 6 | Delete orphaned LOD/utils | ✅ | mindscape/lod.ts, lib/mindscape/lod.ts, mindscape/utils.ts |
+| 2025-12-24 | 6 | Update imports | ✅ | canvas.tsx, command-palette.tsx, living-edge.tsx, use-deep-links.ts |
+| 2025-12-24 | 6 | **Net code reduction** | ✅ | **-2,850 lines** (added 3,025, removed 5,875) |
 
 ---
 
@@ -3010,8 +3017,10 @@ TanStack DB Collections (Data Layer)
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
 | Entry Points | 1 (`/`) | 1 (`/`) | ✅ |
-| Node Types | 12 | 12 | ✅ |
-| Dead Code Lines Removed | ~1,966 | ~1,587 (WebGPU) | ✅ |
+| Window Types | 12 | 12 (all implemented) | ✅ |
+| Dead Code Lines Removed | ~2,500 | ~5,875 (nodes + orphans) | ✅ |
+| New Window Code | - | ~3,025 lines | ✅ |
+| Net Code Change | Reduction | **-2,850 lines** | ✅ |
 | Time to Interactive | <1s | <1s (no WebGPU init) | ✅ |
 | Max Nodes @ 60fps | 200+ | TBD (perf tests pending) | ⬜ |
 | localStorage Size | <50KB | <50KB (monitored) | ✅ |
