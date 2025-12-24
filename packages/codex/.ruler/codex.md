@@ -1,5 +1,9 @@
-# Codex Standards
+# Codex & Memory Standards
 
-1. **Context Management.** Codex handles long-term context compression and retrieval. Use `compressContext()` for aging threads.
+1. **The Forgetting Curve.** Nodes decay exponentially (`MEMORY_DECAY_FACTOR`). Nodes below `MEMORY_PRUNE_CONFIDENCE` are archived.
 
-2. **Summarization.** Always use the `summarize()` helper to generate thread-level snapshots before eviction.
+2. **Active Recall.** Retrieving memory via RAG or Graph traversal must "touch" nodes (`touchNodes()`), resetting the decay timer and boosting confidence by `0.05`.
+
+3. **Context Management.** Codex handles long-term context compression. Use `summarize()` snapshots before thread eviction.
+
+4. **Policy Integration.** Expose `memoryConfidence` to the PDP. High-risk actions should block if they rely on low-confidence memories.

@@ -8,3 +8,7 @@
 1. **Chunking.** Use sentence-aware chunking (max 512 tokens).
 
 2. **Hybrid Search.** Combine vector similarity with full-text search for optimal recall.
+
+3. **Graph Enrichment.** When `RAG_ENRICH_GRAPH=1`, extraction should persist `explains` edges from `rag_document` anchors to reasoning nodes.
+
+4. **Provenance.** Maintain RAG document IDs in workflow reasoning events to trace structural knowledge origins.

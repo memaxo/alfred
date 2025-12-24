@@ -1,4 +1,9 @@
-# Knowledge Graph Patterns
+## System Anatomy
+
+- **In-memory Hypergraph.** Pure in-memory state with dirty tracking and AC-3/MRV query execution.
+- **Persistence Flow.** Agent/runtime capture Facts/Relations/Insights; flush to `memory_nodes`/`memory_edges` under specific resource scopes (e.g., `runtime:<runId>`).
+
+## Knowledge Graph Patterns
 
 1. **Emergent Intelligence.** Derive classification and intent from graph topology (distance to Anchor Nodes) rather than probabilistic classifiers. Intelligence emerges from connection density, not model predictions.
 
