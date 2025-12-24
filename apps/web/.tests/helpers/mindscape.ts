@@ -29,17 +29,11 @@ export async function openCommandPalette(page: Page) {
 }
 
 export async function spawnNode(page: Page, label: string) {
-  if (label.startsWith("New ")) {
-    const buttonName = label.replace(/^New /, "+ ");
-    const button = page.getByRole("button", { name: buttonName, exact: true });
-    await expect(button).toBeVisible();
-    await button.click();
-    return;
-  }
-
   await openCommandPalette(page);
   const dialog = page.getByRole("dialog");
-  await dialog.getByText(label, { exact: true }).click();
+  // Click the command item matching the label
+  const item = dialog.locator("[cmdk-item]").filter({ hasText: label }).first();
+  await item.click();
   await expect(dialog).toBeHidden();
 }
 

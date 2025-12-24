@@ -1,24 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
-import { countWindows, getWindow, navigateToDesktop } from "./helpers/desktop";
-import { spawnNode } from "./helpers/mindscape";
+import { countWindows, getWindow } from "./helpers/desktop";
+import { openCommandPalette, spawnNode } from "./helpers/mindscape";
 
 test.describe("Desktop dock integration", () => {
   test.beforeEach(async ({ page }) => {
     await signUpTestUser(page);
-    await navigateToDesktop(page);
   });
 
-  test("dock panel is visible", async ({ page }) => {
-    // Look for dock buttons (spawn buttons)
-    const newNoteButton = page.getByRole("button", { name: "+ Note" });
-    await expect(newNoteButton).toBeVisible();
+  test("command palette opens with Ctrl+K", async ({ page }) => {
+    await openCommandPalette(page);
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
   });
 
-  test("spawning from dock creates window", async ({ page }) => {
+  test("spawning via command palette creates window", async ({ page }) => {
     const initialCount = await countWindows(page, "note");
 
-    await spawnNode(page, "New Note");
+    await spawnNode(page, "Note");
 
     const newCount = await countWindows(page, "note");
     expect(newCount).toBe(initialCount + 1);
@@ -26,11 +25,11 @@ test.describe("Desktop dock integration", () => {
 
   test("can spawn different window types", async ({ page }) => {
     // Spawn note
-    await spawnNode(page, "New Note");
+    await spawnNode(page, "Note");
     await expect(getWindow(page, "note")).toBeVisible();
 
     // Spawn reminder
-    await spawnNode(page, "New Reminder");
+    await spawnNode(page, "Reminder");
     await expect(getWindow(page, "reminder")).toBeVisible();
   });
 
@@ -42,16 +41,7 @@ test.describe("Desktop dock integration", () => {
     expect(initialChatCount).toBeGreaterThanOrEqual(1);
 
     // Try to spawn another chat via command palette
-    const cmdK = page.keyboard.press("Control+K");
-    await cmdK;
-
-    const dialog = page.getByRole("dialog");
-    if (await dialog.isVisible()) {
-      const chatOption = dialog.getByText("Chat", { exact: true });
-      if (await chatOption.isVisible()) {
-        await chatOption.click();
-      }
-    }
+    await spawnNode(page, "Chat");
 
     // Should still have same number of chat windows (singleton)
     const newChatCount = await countWindows(page, "chat");
@@ -59,7 +49,7 @@ test.describe("Desktop dock integration", () => {
   });
 
   test("spawned windows appear in viewport", async ({ page }) => {
-    await spawnNode(page, "New Note");
+    await spawnNode(page, "Note");
 
     const noteWindow = getWindow(page, "note").last();
     const box = await noteWindow.boundingBox();
@@ -75,11 +65,11 @@ test.describe("Desktop dock integration", () => {
   });
 
   test("multiple spawns offset windows to avoid overlap", async ({ page }) => {
-    await spawnNode(page, "New Note");
+    await spawnNode(page, "Note");
     const firstWindow = getWindow(page, "note").last();
     const firstBox = await firstWindow.boundingBox();
 
-    await spawnNode(page, "New Note");
+    await spawnNode(page, "Note");
     const secondWindow = getWindow(page, "note").last();
     const secondBox = await secondWindow.boundingBox();
 
