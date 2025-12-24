@@ -1,6 +1,9 @@
 import type { PersistOptions } from "zustand/middleware";
 import type { DesktopState, WindowData, WindowInstance } from "./types";
 
+/** Shared storage identifier for desktop layout persistence */
+export const DESKTOP_STORAGE_ID = "desktop-layout-v1";
+
 function sanitizeWindowForPersist(window: WindowInstance): WindowInstance {
   return {
     id: window.id,
@@ -25,7 +28,7 @@ function sanitizeWindowData(data: WindowData): WindowData {
 }
 
 export const persistOptions: PersistOptions<DesktopState> = {
-  name: "desktop-layout-v1",
+  name: DESKTOP_STORAGE_ID,
   version: 1,
   partialize: (state) =>
     ({

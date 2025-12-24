@@ -11,10 +11,12 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { edgeTypes, windowTypes } from "@/components/windows/registry";
+import { useVisibleEdges } from "@/hooks/use-visible-edges";
 import { useDesktopStore } from "@/store/desktop";
+import { selectWindows } from "@/store/desktop/selectors";
 
 type DesktopCanvasProps = Omit<
   ReactFlowProps,
@@ -32,28 +34,21 @@ export function DesktopCanvas(props: DesktopCanvasProps) {
 }
 
 function DesktopCanvasInner({
-  onWorkflowNavigate,
+  onWorkflowNavigate: _onWorkflowNavigate,
   ...props
 }: DesktopCanvasProps) {
-  const {
-    windows,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    addWindow,
-    focusWindow,
-  } = useDesktopStore(
-    useShallow((state) => ({
-      windows: state.windows,
-      edges: state.edges,
-      onNodesChange: state.onNodesChange,
-      onEdgesChange: state.onEdgesChange,
-      onConnect: state.onConnect,
-      addWindow: state.addWindow,
-      focusWindow: state.focusWindow,
-    }))
-  );
+  const windows = useDesktopStore(selectWindows);
+  const visibleEdges = useVisibleEdges();
+  const { onNodesChange, onEdgesChange, onConnect, addWindow, focusWindow } =
+    useDesktopStore(
+      useShallow((state) => ({
+        onNodesChange: state.onNodesChange,
+        onEdgesChange: state.onEdgesChange,
+        onConnect: state.onConnect,
+        addWindow: state.addWindow,
+        focusWindow: state.focusWindow,
+      }))
+    );
 
   const reactFlow = useReactFlow();
 
@@ -73,11 +68,6 @@ function DesktopCanvasInner({
       });
     },
     [focusWindow, reactFlow]
-  );
-
-  const { visibleWindows, visibleEdges } = useMemo(
-    () => ({ visibleWindows: windows, visibleEdges: edges }),
-    [windows, edges]
   );
 
   useEffect(() => {
@@ -110,7 +100,7 @@ function DesktopCanvasInner({
         }}
         maxZoom={4}
         minZoom={0.1}
-        nodes={visibleWindows}
+        nodes={windows}
         nodeTypes={windowTypes}
         onConnect={onConnect}
         onEdgesChange={onEdgesChange}
