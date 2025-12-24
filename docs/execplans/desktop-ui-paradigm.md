@@ -1,10 +1,10 @@
 # Desktop UI Paradigm: Comprehensive Design Document
 
-> **Status:** Phases 1-9 Complete  
+> **Status:** Phases 1-5 Complete, Phase 6 (Window Replacement) In Progress  
 > **Owner:** Frontend Architecture  
 > **Created:** 2025-12-23  
 > **Last Updated:** 2025-12-24  
-> **Revision:** 2.2 (Implementation Complete)
+> **Revision:** 3.0 (Paradigm Clarification)
 
 ---
 
@@ -76,6 +76,96 @@ Transform the frontend into a **Spatial Operating System** where:
 | Time to Interactive | ~3.5s (WebGPU init) | <1s |
 | Max Supported Nodes | ~50 (before lag) | 200+ |
 | localStorage Size | Unbounded | <50KB (layout only) |
+
+### 1.5 Critical Paradigm Insight (Revision 3.0)
+
+> **Discovery:** Mindscape and Desktop are fundamentally different data architectures, not just naming conventions. Migration requires **replacement**, not refactoring.
+
+#### The Two Paradigms
+
+| Aspect | Mindscape (Old) | Desktop (New) |
+|--------|-----------------|---------------|
+| **Data Model** | Fat nodes with embedded data | Thin windows with external data |
+| **Source of Truth** | Zustand store holds everything | Collections/API hold domain data |
+| **Node Data** | 21 discriminated types (ArtifactData) | Simple WindowData (type + ref) |
+| **Persistence** | Store syncs to backend | Windows reference persisted resources |
+| **Example** | `NoteNode.data = { title, content, tags }` | `NoteWindow.resourceRef → noteCollection` |
+
+#### Visual Comparison
+
+```
+MINDSCAPE (Fat Nodes - Canvas as Database)
+┌─────────────────────────────────────────────────────────┐
+│                    Zustand Store                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │ NoteNode    │  │ ChatNode    │  │ WorkflowNode│     │
+│  │ ─────────── │  │ ─────────── │  │ ─────────── │     │
+│  │ noteId      │  │ messages[]  │  │ runId       │     │
+│  │ title       │  │ error       │  │ status      │     │
+│  │ content     │  │ threadId    │  │ requirement │     │
+│  │ tags[]      │  │             │  │ plan        │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│                                                         │
+│  Nodes ARE the data. Store IS the source of truth.     │
+└─────────────────────────────────────────────────────────┘
+
+DESKTOP (Thin Windows - Windows into Data)
+┌─────────────────────────────────────────────────────────┐
+│                    Desktop Store                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │ Window      │  │ Window      │  │ Window      │     │
+│  │ ─────────── │  │ ─────────── │  │ ─────────── │     │
+│  │ type: note  │  │ type: chat  │  │ type: wflow │     │
+│  │ ref: abc123 │  │ ref: xyz789 │  │ ref: run456 │     │
+│  │ viewMode    │  │ viewMode    │  │ viewMode    │     │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
+│         │                │                │             │
+│  Windows are VIEWS. They point to data elsewhere.      │
+└─────────┼────────────────┼────────────────┼─────────────┘
+          │                │                │
+          ▼                ▼                ▼
+┌─────────────────────────────────────────────────────────┐
+│              Collections / API (Source of Truth)        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │noteCollection│ │threadCollection│ │ workflowAPI │    │
+│  │ id: abc123  │  │ id: xyz789  │  │ id: run456  │     │
+│  │ title       │  │ messages[]  │  │ status      │     │
+│  │ content     │  │             │  │ events[]    │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### Why Migration Failed
+
+The initial approach tried to create a compatibility layer to bridge Mindscape → Desktop:
+
+```typescript
+// FAILED: Compat layer tried to map incompatible types
+useMindscapeStore → useDesktopStore  
+ArtifactData → WindowData  // 21 rich types → 1 simple type
+```
+
+This failed because:
+1. **Type mismatch**: `ArtifactData` has 50+ fields across 21 types; `WindowData` has 4 fields
+2. **Data location**: Nodes expect `data.title`, windows expect to fetch from collection
+3. **Render pattern**: Nodes render embedded data, windows fetch then render
+
+#### Correct Migration Strategy
+
+**Don't migrate nodes to windows. Build new windows that replace nodes.**
+
+```typescript
+// OLD: NoteNode expects data IN the node
+function NoteNode({ data }: { data: NoteNodeData }) {
+  return <div>{data.title}</div>  // Data is HERE (embedded)
+}
+
+// NEW: NoteWindow fetches data EXTERNALLY
+function NoteWindow({ data }: { data: WindowData }) {
+  const note = useNote(data.resourceRef.id)  // Data is THERE (collection)
+  return <div>{note.title}</div>
+}
+```
 
 ---
 
@@ -2534,72 +2624,126 @@ TanStack DB Collections (Data Layer)
 
 ## 20. Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+> **Revision 3.0 Update:** Phases 1-5 are complete. Phase 6 is the new window replacement phase.
+
+### Phase 1: Foundation (Week 1) ✅ COMPLETE
 
 **Goal:** Establish new file structure and types without breaking existing functionality.
 
-- [ ] Rename store files (`mindscape` → `desktop`)
-- [ ] Split store into layout-only (no resource data)
-- [ ] Create `WindowFrame` wrapper component
-- [ ] Move node components to `windows/` folder
-- [ ] Create simplified `registry.ts`
-- [ ] Update all imports
+- [x] Create `store/desktop/` structure (windows, viewport, dock, persist slices)
+- [x] Create layout-only Zustand store with persistence
+- [x] Create `WindowFrame` wrapper component
+- [x] Create `components/windows/` structure with shared components
+- [x] Create simplified `registry.ts` (12 types)
+- [x] Create `components/desktop/` (Desktop, Canvas, Dock)
 
-**Deliverable:** App compiles and runs with new file structure, layout-only Zustand.
+**Deliverable:** Desktop store and components compile alongside existing mindscape.
 
-### Phase 2: TanStack DB Integration (Week 2)
+### Phase 2: TanStack DB Integration (Week 2) ✅ COMPLETE
 
 **Goal:** Backend-first resource management with optimistic UI.
 
-- [ ] Install `@tanstack/react-db` and `@tanstack/query-db-collection`
-- [ ] Create shared `QueryClient` instance for collections
-- [ ] Create `noteCollection` with tRPC integration (`queryCollectionOptions`)
-- [ ] Create `reminderCollection`
-- [ ] Create `threadCollection` (chat)
-- [ ] Create `edgeCollection`
-- [ ] Migrate `NoteWindow` to use `useLiveQuery`
-- [ ] Add `SchemaValidationError`/`DuplicateKeyError` handling
+- [x] Install `@tanstack/react-db` and `@tanstack/query-db-collection`
+- [x] Create resource schemas (note, reminder, thread, workflow, edge)
+- [x] Create `noteCollection` with tRPC integration
+- [x] Create `reminderCollection`
+- [ ] Create `threadCollection` (chat) - Deferred: needs thread API
+- [ ] Create `edgeCollection` - Deferred: needs edge API
 
-**Deliverable:** Notes CRUD via TanStack DB collection with optimistic updates.
+**Deliverable:** Collections ready for window integration.
 
-### Phase 3: Route Consolidation (Week 3)
+### Phase 3: Route Consolidation (Week 3) ✅ COMPLETE
 
 **Goal:** Single entry point, no WebGPU.
 
-- [ ] Delete WebGPU engine and landing page
-- [ ] Move `/mindscape` to `/` (protected index)
-- [ ] Create `Dock` component
-- [ ] Create `Desktop` root component
-- [ ] Wire up command palette
-- [ ] Migrate remaining windows to collections
+- [x] Delete WebGPU engine and landing page (~1,587 lines)
+- [x] Move `/mindscape` to `/` (protected index)
+- [x] Update all navigation references
+- [x] Remove Cmd+M shortcut
 
-**Deliverable:** App loads directly to Desktop canvas with TanStack DB.
+**Deliverable:** App loads directly to canvas (still using mindscape store).
 
-### Phase 4: Subscription Protocol (Week 4)
+### Phase 4: Subscription Protocol (Week 4) ✅ COMPLETE
 
-**Goal:** Cursor-based real-time sync, no polling.
+**Goal:** Cursor-based real-time sync infrastructure.
 
-- [ ] Implement cursor-based subscription protocol
-- [ ] Add snapshot vs delta logic
-- [ ] Create `subscriptionManager` for single WS
-- [ ] Wire collections to subscription updates
-- [ ] Delete `MindscapeInitializer`
-- [ ] Verify localStorage size <50KB
+- [x] Create subscription types in `@alfred/type`
+- [x] Create `subscriptionManager` for single WS with multiplexing
+- [x] Create subscription hooks (useSubscription, useGraphSubscription)
+- [ ] Wire collections to subscription updates - Blocked: needs backend work
 
-**Deliverable:** Real-time graph updates via cursor-based subscription.
+**Deliverable:** Subscription infrastructure ready.
 
-### Phase 5: Performance & Polish (Week 5)
+### Phase 5: Performance & Testing (Week 5) ✅ COMPLETE
 
-**Goal:** Scale to 200+ nodes at 60fps.
+**Goal:** Performance utilities and test coverage.
 
-- [ ] Implement state normalization (Map-based store)
-- [ ] Add edge degradation at low zoom
-- [ ] Create layout Web Worker
-- [ ] Implement per-window subscriptions
-- [ ] Performance profiling (200 nodes target)
-- [ ] Update tests and documentation
+- [x] Create performance utilities (edge degradation, storage budget)
+- [x] Create memoized store selectors
+- [x] Create `useVisibleEdges` hook
+- [x] Create `StorageMonitor` component
+- [x] Write 80 unit tests (store, selectors, performance, schemas)
+- [x] Write 13 E2E tests (smoke, window, dock)
 
-**Deliverable:** Production-ready Desktop UI.
+**Deliverable:** Performance infrastructure and test coverage.
+
+### Phase 6: Window Replacement (Weeks 6-8) 🔄 IN PROGRESS
+
+**Goal:** Build new windows that use collections, then deprecate mindscape nodes.
+
+> **Key Insight:** Don't migrate existing nodes. Build new windows from scratch that fetch data from collections.
+
+#### 6.1 NoteWindow (Validates Pattern)
+- [ ] Create `components/windows/note/note-window.tsx`
+- [ ] Use `useLiveQuery` from `noteCollection`
+- [ ] Handle create/edit/delete via collection mutations
+- [ ] Wire to desktop store for spawning
+- [ ] Test alongside existing NoteNode
+
+#### 6.2 ReminderWindow
+- [ ] Create `components/windows/reminder/reminder-window.tsx`
+- [ ] Use `useLiveQuery` from `reminderCollection`
+- [ ] Handle fire/snooze/delete actions
+
+#### 6.3 ChatWindow
+- [ ] Create `threadCollection` with thread API
+- [ ] Create `components/windows/chat/chat-window.tsx`
+- [ ] Use `useLiveQuery` for messages
+- [ ] Wire to streaming for new messages
+
+#### 6.4 WorkflowWindow
+- [ ] Create `components/windows/workflow/workflow-window.tsx`
+- [ ] Use workflow API for run data
+- [ ] Use SSE for event streaming
+
+#### 6.5 Remaining Windows
+- [ ] TodoWindow
+- [ ] SettingsWindow
+- [ ] IntegrationsWindow
+- [ ] KnowledgeWindow
+- [ ] ConceptWindow
+- [ ] TerminalWindow
+- [ ] DroidWindow
+
+#### 6.6 Feature Parity Validation
+- [ ] All window types functional
+- [ ] Desktop route usable as primary interface
+- [ ] Performance: 200 nodes @ 60fps
+
+**Deliverable:** Complete set of desktop windows using collection pattern.
+
+### Phase 7: Mindscape Deprecation (Week 9)
+
+**Goal:** Remove old mindscape code once desktop is feature-complete.
+
+- [ ] Remove `components/mindscape/nodes/` (17 files)
+- [ ] Remove `store/mindscape/` (5 files)
+- [ ] Remove `store/mindscape.ts`
+- [ ] Remove `store/mindscape.schemas.ts`
+- [ ] Update registry to use only new windows
+- [ ] Final cleanup and documentation
+
+**Deliverable:** Single paradigm codebase (desktop only).
 
 ---
 
@@ -2804,6 +2948,10 @@ TanStack DB Collections (Data Layer)
 | 2025-12-24 | 9 | E2E smoke tests | ✅ | 4 tests: canvas load, controls, default chat, routes |
 | 2025-12-24 | 9 | E2E window tests | ✅ | 5 pass, 2 skip: spawn, focus, drag, close |
 | 2025-12-24 | 9 | E2E dock tests | ✅ | 4 pass, 2 skip: palette, spawn types, viewport |
+| 2025-12-24 | 6 | Compat layer attempt | ❌ | Failed: type mismatch, paradigm incompatibility |
+| 2025-12-24 | 6 | Compat layer removed | ✅ | Deleted store/compat.ts, clean separation |
+| 2025-12-24 | 6 | Paradigm clarification | ✅ | Documented Fat Nodes vs Thin Windows in Section 1.5 |
+| 2025-12-24 | 6 | ExecPlan v3.0 | ✅ | Updated phases, added Phase 6-7, corrected strategy |
 
 ---
 
@@ -2819,6 +2967,10 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 1 | Node components tightly coupled to mindscape | Medium | Created compat layer; full migration deferred to Phase 3 |
 | 2025-12-23 | 2 | No conversation/thread tRPC router exists | Low | threadCollection deferred; requires API work first |
 | 2025-12-23 | 2 | TanStack DB API differs from initial assumptions | Low | Fixed: use collection.insert/update/delete with onInsert/onUpdate/onDelete handlers |
+| 2025-12-24 | 6 | **CRITICAL: Fat Nodes vs Thin Windows paradigm mismatch** | **High** | Compat layer approach abandoned. New strategy: build replacement windows from scratch. See Section 1.5 |
+| 2025-12-24 | 6 | ArtifactData (21 types, 50+ fields) incompatible with WindowData (4 fields) | High | Don't unify types. Desktop windows fetch data externally via collections |
+| 2025-12-24 | 6 | Node render pattern (`data.title`) incompatible with window pattern (`useNote().title`) | High | Build new window components, don't refactor existing nodes |
+| 2025-12-24 | 6 | Compat layer complexity exploded trying to bridge paradigms | High | Deleted compat.ts. Clean separation: mindscape components use mindscape store, desktop components use desktop store |
 
 ---
 
@@ -2842,6 +2994,10 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | No feature flags | Immediate removal of dead code; git revert for recovery | ALFRED Principle |
 | 2025-12-23 | Collections use onInsert/onUpdate/onDelete handlers | TanStack DB queryCollectionOptions pattern with refetch on mutation complete | Architecture |
 | 2025-12-23 | createOptimisticAction for UI-initiated mutations | Separate actions for insert/update/delete with immediate optimistic state | Architecture |
+| 2025-12-24 | **Abandon compat layer approach** | Compat layer added complexity without value; paradigms fundamentally incompatible | Architecture |
+| 2025-12-24 | **Build replacement windows, don't migrate nodes** | Fat Nodes (embedded data) vs Thin Windows (external data) are incompatible patterns | Architecture |
+| 2025-12-24 | Keep mindscape and desktop stores separate | No bridge needed; mindscape → mindscape store, desktop → desktop store | Architecture |
+| 2025-12-24 | Windows fetch data via collections, not store | Desktop windows use `useLiveQuery` from collections, not Zustand selectors | Architecture |
 
 ---
 
