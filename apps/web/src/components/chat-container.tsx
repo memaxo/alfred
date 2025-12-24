@@ -20,7 +20,7 @@ import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
 } from "@/components/cognitive-feedback/dialog";
-import { ContextLens } from "@/components/mindscape/context-lens";
+import { ContextLens } from "@/components/shared/context-lens";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";

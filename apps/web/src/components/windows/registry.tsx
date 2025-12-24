@@ -1,6 +1,6 @@
 import type { NodeTypes } from "@xyflow/react";
 import type { ComponentType } from "react";
-import { LivingEdge } from "@/components/mindscape/living-edge";
+import { LivingEdge } from "@/components/shared/living-edge";
 import type { WindowType } from "@/store/desktop/types";
 import { ChatWindow } from "./chat";
 import { ConceptWindow } from "./concept";

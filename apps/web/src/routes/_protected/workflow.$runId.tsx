@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { MindscapeWorkflowDrawer } from "@/components/mindscape/workflow-drawer";
+import { MindscapeWorkflowDrawer } from "@/components/shared/workflow-drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";

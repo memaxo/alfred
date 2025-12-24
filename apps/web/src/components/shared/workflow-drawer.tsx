@@ -13,7 +13,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { WorkflowDetailContent } from "@/components/workflow-detail-modal";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { formatRelativeTime } from "@/lib/time";
-import { useMindscapeStore } from "@/store/mindscape";
 import { trpc } from "@/utils/trpc";
 
 type MindscapeWorkflowDrawerProps = {
@@ -171,10 +170,10 @@ function WorkflowDrawerBody({
     return runId ?? "";
   }, [runId, runQuery.data]);
 
-  const recordFeedback = useMindscapeStore((state) => state.recordFeedback);
-  const workflowFeedback = useMindscapeStore((state) =>
-    runId ? state.feedbackByNode[runId] : undefined
-  );
+  const [submittedFeedback, setSubmittedFeedback] = useState<{
+    intent: "positive" | "negative";
+    updatedAt: number;
+  } | null>(null);
   const [feedbackDraft, setFeedbackDraft] =
     useState<CognitiveFeedbackDraft | null>(null);
   const {
@@ -229,7 +228,7 @@ function WorkflowDrawerBody({
           | "mindscape"
           | "voice",
       });
-      recordFeedback(runId, feedbackDraft.intent);
+      setSubmittedFeedback({ intent: feedbackDraft.intent, updatedAt: Date.now() });
       toast.success("Workflow feedback recorded.");
       setFeedbackDraft(null);
       resetFeedback();
@@ -249,13 +248,13 @@ function WorkflowDrawerBody({
           </p>
           <p className="font-mono text-biolum text-xs">{headerMono}</p>
           <p className="text-biolum-dim text-xs capitalize">{statusLabel}</p>
-          {workflowFeedback ? (
+          {submittedFeedback ? (
             <p className="text-[10px] text-biolum-faint uppercase tracking-wide">
-              {workflowFeedback.intent === "positive"
+              {submittedFeedback.intent === "positive"
                 ? "Marked accurate"
                 : "Needs revision"}
               {" · "}
-              {formatRelativeTime(new Date(workflowFeedback.updatedAt))}
+              {formatRelativeTime(new Date(submittedFeedback.updatedAt))}
             </p>
           ) : null}
         </div>
