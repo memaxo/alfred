@@ -9,8 +9,12 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CollectionsProvider } from "@/collections";
 import { handleAuthError } from "@/lib/auth-error-handler";
-import { createBrowserTrpcClient } from "@/lib/trpc-client";
+import {
+  createBrowserTrpcClient,
+  createBrowserTrpcProxyClient,
+} from "@/lib/trpc-client";
 import { routeTree } from "./routeTree.gen";
 import { trpc } from "./utils/trpc";
 
@@ -42,6 +46,7 @@ export const queryClient = new QueryClient({
 });
 
 const trpcClient = createBrowserTrpcClient();
+const trpcProxyClient = createBrowserTrpcProxyClient();
 
 export const getRouter = () => {
   const router = createTanStackRouter({
@@ -55,7 +60,12 @@ export const getRouter = () => {
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          {children}
+          <CollectionsProvider
+            queryClient={queryClient}
+            trpcClient={trpcProxyClient}
+          >
+            {children}
+          </CollectionsProvider>
         </trpc.Provider>
       </QueryClientProvider>
     ),
@@ -64,6 +74,7 @@ export const getRouter = () => {
 };
 
 declare module "@tanstack/react-router" {
+  // biome-ignore lint/nursery/useConsistentTypeDefinitions: Module augmentation requires interface for declaration merging
   interface Register {
     router: ReturnType<typeof getRouter>;
   }
