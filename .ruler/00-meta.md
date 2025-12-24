@@ -37,15 +37,9 @@ When writing complex features or significant refactors, use an ExecPlan (as desc
 
 ## Rule Conciseness
 
-1. **Keep rules short.** Each rule should be a single sentence or brief bullet point. Avoid verbose explanations, code examples, and reference sections that bloat AGENTS.md.
-
-2. **No examples sections.** Remove code examples, migration checklists, file location lists, testing requirements, and related rules sections. Essential patterns can be mentioned inline within rules.
-
-3. **Condense verbose rules.** When a rule exceeds 3 lines, break it into numbered sub-points or condense to essential information only.
-
-4. **Remove redundancy.** If a concept appears in multiple files, consolidate it. Cross-reference only when necessary.
-
-5. **Exception: critical patterns.** Short inline code snippets (≤5 lines) are allowed when the pattern is error-prone and the snippet prevents common mistakes. Use sparingly.
+1. **Keep rules short.** Use a single sentence or brief bullet. No examples, explanations, or checklists.
+2. **Remove redundancy.** Consolidate concepts across files.
+3. **Exception.** Snippets ≤ 5 lines allowed only for error-prone patterns.
 
 ## Code Search Tools
 

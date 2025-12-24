@@ -24,13 +24,9 @@ Performance emerges from simplicity, not complexity. Pure functions eliminate si
 
 3. **Zero allocations in hot loops.** Reuse buffers, avoid spreading arrays, prefer `for` loops over `map`/`filter` when performance matters. Profile allocations before optimizing.
 
-4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. If a function needs external services, it belongs in a boundary layer. Pure functions take data, return data.
+4. **No dependency injection.** Pass dependencies as direct imports, not `deps` objects. Pure functions take data, return data. Callbacks (e.g., `onComplete`) are permitted.
 
-   **Clarification:** This bans DI containers and `{ db, logger, cache, ... }` parameter objects—not callbacks. Passing a function as a parameter (e.g., `onComplete`) is fine when the caller controls when effects happen.
-
-5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns unless abstraction reduces complexity. If you can't name the abstraction in one word, it's premature.
-
-   **AI anti-patterns to avoid:** `ServiceManager`, `HandlerFactory`, `ProviderRegistry`, `AbstractBaseProcessor`, `ConfigurableMiddlewareChain`. These add indirection without value. Write the direct implementation first; extract only when duplication exceeds the 80% threshold (rule 12).
+5. **Avoid premature abstraction.** Prefer direct function calls over interfaces, factories, or strategy patterns. Write direct implementations first; extract only when duplication exceeds 80% (rule 12).
 
 6. **Defaults over configuration.** Hardcode sensible defaults (timeouts, limits, retries). Only expose configuration when the default fails in practice. Single-user apps don't need feature flags for core functionality.
 

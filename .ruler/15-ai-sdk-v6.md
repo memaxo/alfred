@@ -54,27 +54,7 @@ Always use native AI SDK v6 functionality. Never duplicate or reimplement AI SDK
 
 ## ALFRED's Custom UIMessage Format
 
-ALFRED intentionally deviates from AI SDK v6's native `ToolUIPart` format for persistence and validation benefits:
+ALFRED uses explicit `type: "tool-call"` and `type: "tool-result"` discriminants for persistence and validation benefits. These use `input`/`output` properties (matching v6 naming) but separate the call from the result.
 
-**AI SDK v6 Native Format:**
-- Tool parts use `type: "tool-${toolName}"` (e.g., `tool-weather`)
-- Single part represents entire tool lifecycle with `state` property
-- Rich state machine: `input-streaming` → `input-available` → `approval-requested` → `output-available`
-
-**ALFRED's Custom Format (`@alfred/type/stream.zod.ts`):**
-- Explicit `type: "tool-call"` and `type: "tool-result"` discriminants
-- Separate parts for call and result (easier to persist/query)
-- Uses `input`/`output` properties (matches v6 naming)
-
-**Why the deviation:**
-1. **Persistence simplicity** - Static type discriminants are easier to index/query
-2. **Serialization determinism** - Explicit types serialize predictably
-3. **Validation clarity** - Zod discriminated unions work cleanly
-4. **History reconstruction** - Separate parts make replay straightforward
-
-**Type guard implications:**
-- TypeScript's AI SDK types don't include ALFRED's custom part types
-- Type guards must accept `unknown` and return explicit predicates
-- Use `as unknown as ToolCallPart` after guards with explanatory comments
-- See `@alfred/ui/chat/parts.ts` for canonical type guards
+Type guards must accept `unknown` and return explicit predicates (use `as unknown as ToolCallPart` after guards). See `@alfred/ui/chat/parts.ts` for reference.
 

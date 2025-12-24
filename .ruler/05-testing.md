@@ -1,31 +1,21 @@
 # Testing Standards
 
-1. **Bun test runner.** All packages run specs with `bun test` (Bun’s built-in runner). Author suites with `bun:test` APIs and keep coverage on every repo, router, and scheduler path, including Laminar fallbacks for eval flows.
-2. **Integration smoke tests.** API routers should ship with request-level tests that exercise auth guards, scope requirements, and representative payloads.
-3. **No implicit globals.** Tests must stub environment variables explicitly within the test file. Restore originals in `afterEach`.
-4. **DB tests.** Use ephemeral schemas or transactions to keep tests isolated. Reset tables between cases.
-5. **UI tests.** Critical screens (notes, reminders) require component-level tests verifying optimistic updates and error handling. Use React Testing Library.
-6. **Automation.** Add new test commands to Turbo pipelines when you create packages so CI can run them consistently. Pair them with `tsc -b` checks (`bun run typecheck` or package-local `npm run typecheck`) so type errors surface alongside failing tests.
-7. **Shared DB harness.** When a suite touches Postgres, instantiate connections through `createTestDb`/`closeTestDb` (`packages/api/test/utils/db.ts`). Use that Drizzle client to truncate tables between tests so no connections or data leak across cases.
-8. **Real integration and e2e.** Prefer end-to-end and integration tests that exercise real boundaries (DB, routers, schedulers, UI flows) over narrow unit tests that only mock behaviour.
-9. **Verification scripts.** Create standalone `scripts/test-<domain>.ts` for subsystems relying on native, hardware, or external environments (voice, docker, gpu) to verify integration health outside the test runner.
-10. **Level 4 Verification.** Verification scripts (`scripts/verify-*.ts`) must exercise real binaries and infrastructure without mocks; ensure rigorous cleanup of side effects.
-11. **Interaction Testing.** Prefer Playwright E2E tests for complex interactions (drag-and-drop, zoom, keyboard shortcuts) over React Testing Library. Only use unit tests for pure logic and simple component rendering.
-12. **Production Build Verification.** Maintain a `scripts/verify-build.ts` script that builds the application and scans client bundles for forbidden strings (e.g., "postgres", "drizzle-orm", "openai") to detect server code leakage. Run this in CI.
-13. **E2E Isolation.** E2E tests must run on dynamically allocated ephemeral ports to support concurrent execution. Never rely on hardcoded ports (e.g., 3000) in test scripts. Pass the allocated port via environment variables to the test runner.
-14. **Mock native modules.** Mock unstable native/WASM dependencies (e.g., `onnxruntime`, `piper-wasm`) in unit tests to prevent runner crashes. Use `mock.module` with precise paths.
-15. **Mindscape harness first.** Before writing Playwright scenarios for Mindscape suspend/resume flows, add deterministic component or integration tests that drive the zustand store plus stream harness so suspend/biometric/resume transitions stay reproducible.
-16. **Mock auth in Playwright.** Playwright specs that hit Better Auth (e.g., `/api/auth/get-session`, `/api/auth/sign-up/email`) must mock those endpoints so test runs never depend on Postgres availability.
-17. **Canonical fixtures.** Integration/E2E suites must import deterministic helpers from `@alfred/test-kit` instead of inventing bespoke mocks—use `voice/runtime-fixture` for STT/TTS pools and `workflow/runtime-fixture` for runtime + Linear tests, pass custom transcripts/chunks through fixture options, and always clean up via `restore()`/`stop()` so `@alfred/voice`, `@alfred/runtime`, and workflow metrics stay real.
-18. **Fixture-driven tests.** Any test that touches `VoiceRegistry`, pools, or the streaming prototype must install the shared fixture from `@alfred/test-kit/voice/runtime-fixture`, letting the real WebSocket server run while only configuring transcripts/chunks via fixture options and cleaning up with `restore()`/`stop()`—never replace `@alfred/voice` modules with ad-hoc mocks.
-19. **Autonomy properties.** Cognitive autonomy suites must assert monotonic reactions to consecutive successes/failures, zero-effect when reliability is 0, and `[0,1]` clamps across stress loops.
+1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsc -b` for type checks in CI.
 
-20. **Build verification CI.** Run `scripts/verify-build.ts` in CI before deploying to catch server code leakage. The script builds the web app and scans client bundles for forbidden strings (`drizzle-orm`, `postgres`, `@alfred/db`, `openai`, etc.).
-21. **Test sandbox isolation.** Tests that create temporary files MUST use `os.tmpdir()` via `createTestSandbox()` from `@alfred/test-kit`. Never use `path.join(process.cwd(), "tmp")` or write to repository directories. The only exception is security boundary tests (see rule 22).
-22. **Security boundary tests.** Tests for `openDirectorySecure()` and `assertAllowedDirectory()` must use directories inside `process.cwd()` because that's the security invariant being validated. Document this exception with a comment block and ensure `afterAll` cleanup removes test fixtures.
-23. **Venv protection.** Tests must never write to `packages/*/.*venv*/` directories. Use isolated temp directories for any venv-related fixtures. Verify venv integrity in CI if tests touch Python resolution logic.
-24. **Test cleanup guarantees.** Use `createTrackedSandbox()` for automatic cleanup on process exit, or ensure `afterAll`/`afterEach` hooks remove all created directories. Failed tests must not leave artifacts in the repository.
-25. **Redis mock import order.** Import `@alfred/test-kit/redis` BEFORE any other imports in test files that touch Redis-dependent code. Bun's module resolution requires mocks to be installed before dependent modules load.
-26. **Stable DB stubs.** Import `packages/api/test/utils/mock-db-client` at the top of router tests to get consistent repo mocks. Customize behavior via `Object.assign(dbModuleStub.<repo>, { method: mock(...) })` instead of re-mocking the entire module.
-27. **Metrics auto-stubbing.** Import `packages/api/test/utils/mock-metrics` to auto-stub all metrics exports and the `ai` module. This prevents tests from needing ad-hoc metric mocks.
-28. **Router test helpers.** Use factory functions from `packages/api/test/utils/router-helpers` (`mockWorkflowRepo()`, `mockRunRegistry()`, `mockGenerateText()`) that return mock objects for direct assertion access.
+2. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
+
+3. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
+
+4. **Canonical Fixtures.** Use `@alfred/test-kit` (e.g., `voice/runtime-fixture`, `workflow/runtime-fixture`) instead of bespoke mocks for pools, registries, or streaming. Always call cleanup (`restore()`/`stop()`).
+
+5. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
+
+6. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
+
+7. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
+
+8. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
+
+9. **E2E Isolation.** Run E2E tests on dynamically allocated ephemeral ports passed via environment variables to support concurrency.
+
+10. **Autonomy and Logic.** Assert monotonic reactions, zero-effect on zero-reliability, and `[0,1]` clamps in cognitive suites.

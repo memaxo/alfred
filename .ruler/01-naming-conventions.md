@@ -45,64 +45,12 @@
 
 ## Cognitive Domain Terminology
 
-### State Types (use as prefixes/suffixes)
-- `idle` - Waiting state
-- `thinking` - Processing/analyzing
-- `deciding` - Choosing between options
-- `acting` - Executing plan
-- `learning` - Self-supervision active
-
-### Knowledge Types
-- `fact` - Atomic knowledge unit
-- `relation` - Connection between facts
-- `insight` - Derived knowledge
-- `query` - Knowledge request
-- `graph` - Knowledge structure
-
-### Performance Indicators
-- `hot` - Performance critical path
-- `cold` - Rarely accessed
-- `cache` - Memoized results
-- `index` - Search optimization
-
-### Tool Categories
-- `sense` - Input tools (web, voice)
-- `think` - Processing tools (plan, analyze)
-- `act` - Output tools (execute, respond)
-- `learn` - Improvement tools (feedback, correct)
-
-## File Examples
-
-```
-packages/
-  cognitive/
-    state.ts          # CognitiveState type definitions
-    transition.hot.ts # State machine (performance critical)
-    flows.ts          # Capture/Synthesis/Execution/Reflection
-  knowledge/
-    graph.ts          # Hypergraph implementation
-    query.hot.ts      # Query engine (performance critical)
-    index.ts          # HAMT/BTree/RTree indices
-  learning/
-    supervise.ts      # Self-supervision loop
-    mistake.ts        # Error ledger
-  metrics/
-    performance.ts    # Nanosecond timing
-    cognitive.ts      # Load tracking
-```
+State: `idle`, `thinking`, `deciding`, `acting`, `learning`.
+Knowledge: `fact`, `relation`, `insight`, `query`, `graph`.
+Performance: `hot`, `cold`, `cache`, `index`.
+Tools: `sense`, `think`, `act`, `learn`.
 
 ## Naming Performance Requirements
 
-- Function names: max 20 characters
-- Variable names: max 15 characters  
-- No allocations in name lookups (use interned strings where possible)
-- Prefer single character names in hot loops: `i`, `n`, `k`, `v`
-- Use numeric suffixes instead of descriptive ones in performance code: `state1`, `state2` not `oldState`, `newState`
-
-## Banned Patterns
-
-- ❌ `createUserAccount` → ✅ `account`
-- ❌ `processKnowledgeGraph` → ✅ `graph`
-- ❌ `CognitiveStateManager` → ✅ `cognitive`
-- ❌ `PerformanceMonitoringService` → ✅ `metrics`
-- ❌ `async_await_handler` → ✅ `handle`
+- Names: Functions ≤ 20 chars, variables ≤ 15 chars.
+- Hot loops: No allocations in lookups; use single chars (`i`, `n`, `k`, `v`) and numeric suffixes (`state1`).
