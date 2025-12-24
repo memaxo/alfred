@@ -35,10 +35,9 @@ import { useCommandUsage } from "@/hooks/use-command-usage";
 import { PrefixTrie } from "@/lib/trie";
 import { useShallow } from "zustand/react/shallow";
 import { type ArtifactData, useMindscapeStore } from "@/store/mindscape";
+import type { ArtifactNode as MNode, ArtifactEdge as MEdge } from "@/store/mindscape/types";
 import { trpc } from "@/utils/trpc";
 import type { MindscapeSpawnType } from "./spawn";
-
-import type { ArtifactNode as MNode, ArtifactEdge as MEdge } from "./nodes/types";
 
 type NoteData = Extract<ArtifactData, { type: "note" }>;
 type KnowledgeData = Extract<ArtifactData, { type: "knowledge" }>;

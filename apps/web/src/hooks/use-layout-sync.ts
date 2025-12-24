@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@xyflow/react";
 import { layoutSyncService } from "@/lib/mindscape/layout-sync";
-import type { ArtifactNode } from "@/components/mindscape/nodes/types";
+import type { ArtifactNode } from "@/store/mindscape/types";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 

@@ -1,11 +1,15 @@
 import type { SearchReceipt } from "@alfred/type";
 import type {
+  Edge,
+  Node,
   OnConnect,
   OnEdgesChange,
   OnNodesChange,
 } from "@xyflow/react";
-import type { ArtifactNode, ArtifactEdge } from "@/components/mindscape/nodes/types";
 import type { ArtifactData, KnowledgeNodeData } from "../mindscape.schemas";
+
+export type ArtifactNode = Node<ArtifactData>;
+export type ArtifactEdge = Edge;
 
 export type CachedRagDocEntry = {
   data: KnowledgeNodeData;

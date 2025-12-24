@@ -33,7 +33,7 @@ import {
   KnowledgeFilterPanel,
   RagCacheStatsPanel,
 } from "./panels";
-import { nodeTypes, edgeTypes } from "./registry";
+import { windowTypes as nodeTypes, edgeTypes } from "@/components/windows/registry";
 import type { MindscapeSearchParams } from "./spawn";
 import { MindscapeWorkflowDrawer } from "./workflow-drawer";
 

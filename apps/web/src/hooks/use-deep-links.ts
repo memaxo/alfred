@@ -20,7 +20,7 @@ import {
   type MindscapeSpawnType,
   singletonSpawnTypes,
 } from "@/components/mindscape/spawn";
-import { nodeTypes } from "@/components/mindscape/registry.tsx";
+import { windowTypes as nodeTypes } from "@/components/windows/registry";
 
 export type UseDeepLinksOptions = {
   searchParams?: MindscapeSearchParams;

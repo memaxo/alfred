@@ -1,6 +1,8 @@
+import type { EdgeProps } from "@xyflow/react";
 import { BaseEdge, getSmoothStepPath } from "@xyflow/react";
 import { useMindscapeStore } from "@/store/mindscape";
-import type { MindscapeEdgeProps } from "./nodes/types";
+
+type MindscapeEdgeProps = EdgeProps;
 
 export function LivingEdge({
   id,
