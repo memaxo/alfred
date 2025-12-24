@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { DesktopCanvas } from "./canvas";
 import { Dock } from "./dock";
+import { StorageMonitor } from "./storage-monitor";
 
 type DesktopProps = {
   children?: ReactNode;
@@ -16,6 +17,7 @@ export function Desktop({ children, onWorkflowNavigate }: DesktopProps) {
         <Dock />
         {children}
       </DesktopCanvas>
+      <StorageMonitor />
     </div>
   );
 }
