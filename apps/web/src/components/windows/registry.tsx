@@ -3,18 +3,18 @@ import type { ComponentType } from "react";
 import { LivingEdge } from "@/components/mindscape/living-edge";
 import { ChatNode } from "@/components/mindscape/nodes/chat-node";
 import { ConceptNode } from "@/components/mindscape/nodes/concept-node";
-import { DroidNode } from "@/components/mindscape/nodes/droid-node";
 import { IntegrationsNode } from "@/components/mindscape/nodes/integrations-node";
 import { KnowledgeNode } from "@/components/mindscape/nodes/knowledge-node";
-import { NoteNode } from "@/components/mindscape/nodes/note-node";
-import { ReminderNode } from "@/components/mindscape/nodes/reminder-node";
 import { SettingsNode } from "@/components/mindscape/nodes/settings-node";
-import { TerminalNode } from "@/components/mindscape/nodes/terminal-node";
 import { TodoNode } from "@/components/mindscape/nodes/todo-node";
 import { WorkflowListNode } from "@/components/mindscape/nodes/workflow-list-node";
 import { WorkflowNode } from "@/components/mindscape/nodes/workflow-node";
 import type { WindowType } from "@/store/desktop/types";
+import { DroidWindow } from "./droid";
+import { NoteWindow } from "./note";
+import { ReminderWindow } from "./reminder";
 import { WindowErrorBoundary } from "./shared/error-boundary";
+import { TerminalWindow } from "./terminal";
 
 function wrapWithErrorBoundary<T extends { id: string }>(
   Component: ComponentType<T>
@@ -30,10 +30,10 @@ function wrapWithErrorBoundary<T extends { id: string }>(
 
 export const windowTypes: NodeTypes = {
   chat: wrapWithErrorBoundary(ChatNode),
-  terminal: wrapWithErrorBoundary(TerminalNode),
-  droid: wrapWithErrorBoundary(DroidNode),
-  note: wrapWithErrorBoundary(NoteNode),
-  reminder: wrapWithErrorBoundary(ReminderNode),
+  terminal: wrapWithErrorBoundary(TerminalWindow),
+  droid: wrapWithErrorBoundary(DroidWindow),
+  note: wrapWithErrorBoundary(NoteWindow),
+  reminder: wrapWithErrorBoundary(ReminderWindow),
   todo: wrapWithErrorBoundary(TodoNode),
   workflow: wrapWithErrorBoundary(WorkflowNode),
   workflowlist: wrapWithErrorBoundary(WorkflowListNode),
