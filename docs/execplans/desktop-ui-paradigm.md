@@ -2792,7 +2792,13 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 4 | Subscription types | ✅ | @alfred/type/subscription with cursor-based events |
 | 2025-12-23 | 4 | Subscription manager | ✅ | Single WebSocket, multiplexed streams, auto-reconnect |
 | 2025-12-23 | 4 | Subscription hooks | ✅ | useSubscription, useGraphSubscription, useWorkflowSubscription |
-| | 5 | Performance optimization | ⬜ | |
+| 2025-12-24 | 5 | Performance utilities | ✅ | getLayoutStorageSize, filterEdgesByZoom, debounce/throttle |
+| 2025-12-24 | 5 | Store selectors | ✅ | Memoized selectors for windows, edges, viewport |
+| 2025-12-24 | 5 | Edge degradation hook | ✅ | useVisibleEdges with zoom-aware filtering |
+| 2025-12-24 | 5 | Storage monitor | ✅ | Dev-only localStorage budget display |
+| 2025-12-24 | 6 | Bug fix | ✅ | WorkflowEvent → WorkflowSubscriptionEvent collision |
+| 2025-12-24 | 7 | Barrel exports | ✅ | lib/desktop, store/desktop exports |
+| 2025-12-24 | 7 | StorageMonitor wiring | ✅ | Added to Desktop component |
 
 ---
 
