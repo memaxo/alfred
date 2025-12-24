@@ -70,8 +70,15 @@ export function createReminderCollection(
         created: new Date().toISOString(),
         updated: new Date().toISOString(),
       });
+      // Return input for mutationFn
+      return input;
     },
-    mutationFn: async () => {
+    mutationFn: async (input) => {
+      await trpcClient.remind.create.mutate({
+        title: input.title,
+        description: input.description ?? undefined,
+        due: input.due,
+      });
       await collection.utils.refetch();
     },
   });
@@ -83,8 +90,10 @@ export function createReminderCollection(
         draft.status = "fired";
         draft.updated = new Date().toISOString();
       });
+      // Return id as context for mutationFn
+      return id;
     },
-    mutationFn: async (id) => {
+    mutationFn: async (_input, id) => {
       await trpcClient.remind.fire.mutate({ id });
       await collection.utils.refetch();
     },
@@ -94,8 +103,11 @@ export function createReminderCollection(
   const deleteReminder = createOptimisticAction<string>({
     onMutate: (id) => {
       collection.delete(id);
+      // Return id as context for mutationFn
+      return id;
     },
-    mutationFn: async () => {
+    mutationFn: async (_input, id) => {
+      await trpcClient.remind.delete.mutate({ id });
       await collection.utils.refetch();
     },
   });

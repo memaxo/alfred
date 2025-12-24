@@ -77,8 +77,15 @@ export function createNoteCollection(
         updated: new Date().toISOString(),
         ...note,
       });
+      // Return note for mutationFn
+      return note;
     },
-    mutationFn: async () => {
+    mutationFn: async (note) => {
+      await trpcClient.note.create.mutate({
+        title: note.title ?? undefined,
+        content: note.content,
+        tags: note.tags ?? undefined,
+      });
       await collection.utils.refetch();
     },
   });
@@ -98,8 +105,16 @@ export function createNoteCollection(
         }
         draft.updated = new Date().toISOString();
       });
+      // Return input for mutationFn
+      return input;
     },
-    mutationFn: async () => {
+    mutationFn: async (input) => {
+      await trpcClient.note.update.mutate({
+        id: input.id,
+        title: input.title ?? undefined,
+        content: input.content ?? undefined,
+        tags: input.tags ?? undefined,
+      });
       await collection.utils.refetch();
     },
   });
@@ -108,8 +123,11 @@ export function createNoteCollection(
   const deleteNote = createOptimisticAction<string>({
     onMutate: (id) => {
       collection.delete(id);
+      // Return id as context for mutationFn
+      return id;
     },
-    mutationFn: async () => {
+    mutationFn: async (_input, id) => {
+      await trpcClient.note.delete.mutate({ id });
       await collection.utils.refetch();
     },
   });

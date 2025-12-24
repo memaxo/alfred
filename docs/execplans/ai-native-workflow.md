@@ -3,8 +3,9 @@
 > **Status:** Planned  
 > **Owner:** Runtime Architecture  
 > **Created:** 2025-12-23  
-> **Last Updated:** 2025-12-23  
-> **Linear:** [AI-Native Workflow System](https://linear.app/alfred-ops/project/ai-native-workflow-system-3795d0f5e59a)
+> **Last Updated:** 2025-01-27  
+> **Linear:** [AI-Native Workflow System](https://linear.app/alfred-ops/project/ai-native-workflow-system-3795d0f5e59a)  
+> **Related:** [Gap Analysis](./ai-native-workflow-gap-analysis.md) | [Orchestrator UI Patterns](../strategy/orchestrator-ui-patterns.md)
 
 ---
 
@@ -37,15 +38,16 @@ This system leverages ALFRED's existing infrastructure (orchestrator phases, wor
 5. [The Complete Workflow](#the-complete-workflow-detailed)
 6. [Implementation Priority](#implementation-priority)
 7. [Current State Analysis](#current-state-analysis)
-8. [Open Questions & Decisions](#open-questions--decisions)
-9. [Risk Assessment](#risk-assessment)
-10. [DevOps Integration](#devops-integration)
-11. [Cognitive Integration](#cognitive-integration)
-12. [Testing Strategy](#testing-strategy)
-13. [Success Criteria](#success-criteria)
-14. [Progress](#progress)
-15. [Surprises & Discoveries](#surprises--discoveries)
-16. [Phased Implementation Plan](#phased-implementation-plan)
+8. [Gap Analysis](#gap-analysis) ← **NEW**
+9. [Open Questions & Decisions](#open-questions--decisions)
+10. [Risk Assessment](#risk-assessment)
+11. [DevOps Integration](#devops-integration)
+12. [Cognitive Integration](#cognitive-integration)
+13. [Testing Strategy](#testing-strategy)
+14. [Success Criteria](#success-criteria)
+15. [Progress](#progress)
+16. [Surprises & Discoveries](#surprises--discoveries)
+17. [Phased Implementation Plan](#phased-implementation-plan)
     - [Phase 1: Intent & Research](#phase-1-intent--research)
     - [Phase 2: Planning & Evaluation](#phase-2-planning--evaluation)
     - [Phase 3: Execution Integration](#phase-3-execution-integration)
@@ -82,23 +84,38 @@ Transform ALFRED's workflow system into an **AI-native orchestration engine** wh
 - AI **learns** patterns from successful outcomes
 - Users **approve/iterate** via visual canvas (web/mobile)
 
-### Key Insight: ALFRED Already Has Most of This
+### Key Insight: ALFRED Already Has Most Execution Infrastructure
 
 | Component | ALFRED Status | New Work Required |
 |-----------|---------------|-------------------|
+| **Execution Infrastructure** | | |
 | Task decomposition | ✅ `decomposeTask()` | Wrap with Phase grouping |
-| Wave planning | ✅ `planWaves()` | None |
+| Wave planning | ✅ `planWaves()` | Convert from `StructuredPlan.phases` |
 | Agent execution | ✅ `runAgent()` | None |
 | Workspace isolation | ✅ `WorkspaceFactory` (Docker) | None |
 | Merge/conflict | ✅ `runMergePhase()` | None |
 | Review | ✅ `runReviewPhase()` | None |
-| **Intent parsing** | ❌ Missing | NEW: ~100 lines |
-| **External research** | ❌ Missing | NEW: ~150 lines |
-| **Best-of-N evaluation** | ❌ Missing | NEW: ~100 lines |
-| **Pattern learning** | 🟡 Partial | NEW: ~100 lines |
-| **Visual builder** | ❌ Missing | NEW: React Flow canvas |
+| Context building | ✅ `ContextBuilder` | Structure as `ResearchResult` |
+| Web research | ✅ `gatherWebContext()` | Aggregate into `ResearchResult` |
+| Code research | ✅ `gatherCodeContext()` | Aggregate into `ResearchResult` |
+| **Planning Infrastructure** | | |
+| Intent parsing | ❌ Missing | NEW: `WorkflowIntent` type + parser (~200 lines) |
+| Research aggregation | 🟡 Partial | Structure as `ResearchResult` (~100 lines) |
+| Plan generation | ❌ Missing | NEW: `StructuredPlan` + phase grouping (~300 lines) |
+| Plan evaluation | ❌ Missing | NEW: Verification-first + optional judges (~200 lines) |
+| Plan persistence | ❌ Missing | NEW: `workflow_plans` table + approval gate (~150 lines) |
+| **Pattern Learning** | | |
+| Pattern extraction | 🟡 Partial | Tool sequences exist; workflow patterns missing (~200 lines) |
+| Pattern matching | ❌ Missing | NEW: Semantic + structural matching (~150 lines) |
+| Pattern storage | 🟡 Partial | Knowledge graph exists; SQL table missing (~100 lines) |
+| **UI Components** | | |
+| Visual builder | ❌ Missing | NEW: React Flow canvas + components (~500 lines) |
+| Plan viewer | ❌ Missing | NEW: Plan display component (~200 lines) |
+| Approval controls | ❌ Missing | NEW: Approve/reject/iterate UI (~100 lines) |
 
-**Estimated new code:** ~2k–6k LOC + tests + UI (order-of-magnitude; policy + persistence + UX dominate)
+**Estimated new code:** ~2.2k–3.5k LOC core + ~800 LOC UI + tests + migrations (revised estimate based on gap analysis)
+
+**Note:** Execution infrastructure is ~80% complete. Planning infrastructure is ~10% complete. See [Gap Analysis](#gap-analysis) for detailed breakdown.
 
 ---
 
@@ -249,32 +266,79 @@ function extractPatterns(
 
 ## ALFRED's Implementation Architecture
 
-### New Packages/Modules Needed
+### New Package: `@alfred/plan`
 
+**Status:** ❌ **NOT YET CREATED** - This is the foundation package for all planning work.
+
+**Proposed Structure** (matches Proposal 1):
 ```
 packages/
-├── plan/                        # NEW: AI-native planning + workflow primitives
-│   ├── intent/                  # Natural language → structured plan
-│   │   ├── parser.ts            # Parse voice/chat to intent
-│   │   ├── research.ts          # External + internal research
-│   │   └── planner.ts           # Generate phased PRD
-│   ├── graph/                   # Execution graph generation
-│   │   ├── generate.ts          # Intent → ExecutionGraph
-│   │   ├── optimize.ts          # Topological sort, parallelism
-│   │   └── adaptive.ts          # Runtime graph modification
-│   ├── execution/               # Multi-agent execution
-│   │   ├── waves.ts             # Agent wave orchestration
-│   │   ├── isolation.ts         # Worktrees, containers
-│   │   └── merge.ts             # Code integration
-│   ├── evaluation/              # Best-of-N judging
-│   │   ├── judges.ts            # AI evaluator configs
-│   │   ├── criteria.ts          # Evaluation criteria
-│   │   └── aggregate.ts         # Combine judge scores
-│   └── learning/                # Pattern extraction
-│       ├── extract.ts           # Execution → Pattern
-│       ├── match.ts             # Intent → Pattern lookup
-│       └── refine.ts            # Pattern improvement
+├── plan/                           # NEW: AI-Native Planning Package
+│   ├── src/
+│   │   ├── index.ts                # Public exports
+│   │   ├── types.ts                # Phase, StructuredPlan, WorkflowPattern, PlanEvaluation
+│   │   │
+│   │   ├── intent/                 # Intent extraction (NL → structured)
+│   │   │   ├── index.ts
+│   │   │   ├── parser.ts           # Voice/chat → WorkflowIntent
+│   │   │   ├── classify.ts         # Intent classification
+│   │   │   └── schema.ts           # Zod schemas for intent
+│   │   │
+│   │   ├── research/               # External + internal research
+│   │   │   ├── index.ts
+│   │   │   ├── external.ts         # Web search, docs lookup (wraps existing gatherWebContext)
+│   │   │   ├── internal.ts          # Codebase scan, pattern lookup (wraps existing gatherCodeContext)
+│   │   │   ├── aggregate.ts        # Combine research sources into ResearchResult
+│   │   │   └── schema.ts            # ResearchResult schema
+│   │   │
+│   │   ├── generate/               # Plan generation
+│   │   │   ├── index.ts
+│   │   │   ├── phased.ts           # Intent → StructuredPlan (Phased PRD)
+│   │   │   ├── variant.ts          # Generate N plan variants (optional)
+│   │   │   ├── prompt.ts           # LLM prompts for plan gen
+│   │   │   └── template.ts         # Template-based plan scaffolding
+│   │   │
+│   │   ├── evaluate/               # Best-of-N evaluation
+│   │   │   ├── index.ts
+│   │   │   ├── judge.ts            # AI judge definitions (optional)
+│   │   │   ├── criteria.ts         # Evaluation criteria
+│   │   │   ├── aggregate.ts        # Combine judge scores
+│   │   │   └── verify.ts           # Verification-first (typecheck/tests/build)
+│   │   │
+│   │   ├── pattern/                # Pattern learning & matching
+│   │   │   ├── index.ts
+│   │   │   ├── extract.ts          # Success → WorkflowPattern
+│   │   │   ├── match.ts            # Intent → relevant patterns
+│   │   │   ├── refine.ts           # Pattern improvement over time
+│   │   │   ├── store.ts            # Pattern persistence (SQL + graph)
+│   │   │   └── conventions.ts      # Convention extraction & learning
+│   │   │
+│   │   ├── serialize/              # YAML/JSON serialization
+│   │   │   ├── index.ts
+│   │   │   ├── json.ts             # JSON marshaling (canonical)
+│   │   │   ├── yaml.ts             # YAML export/import (optional; gated)
+│   │   │   └── validate.ts         # Schema validation
+│   │   │
+│   │   └── project/                # Project resolution & Linear sync
+│   │       ├── index.ts
+│   │       ├── resolve.ts          # Auto-detect from workspace path
+│   │       └── linear.ts            # Linear Project sync
+│   │
+│   ├── test/
+│   │   ├── intent.test.ts
+│   │   ├── research.test.ts
+│   │   ├── generate.test.ts
+│   │   ├── evaluate.test.ts
+│   │   └── pattern.test.ts
+│   │
+│   └── package.json                # @alfred/plan
 ```
+
+**Note:** This structure reuses existing infrastructure:
+- `research/external.ts` wraps `packages/runtime/src/context.ts` `gatherWebContext()`
+- `research/internal.ts` wraps `packages/runtime/src/context.ts` `gatherCodeContext()`
+- `generate/phased.ts` wraps `packages/agent/src/orchestrator/multi/decompose.ts` `decomposeTask()`
+- `pattern/store.ts` extends `packages/knowledge/src/hypergraph.ts` pattern storage
 
 ### Integration with Existing Architecture
 
@@ -283,10 +347,14 @@ packages/
 Current orchestrator is already stable and test-covered:
 `Phase A: runWaves → Phase B: runMergePhase → Phase C: runConflictPhase → Phase D: runMergeAnalysis → Phase E: runReviewPhase`.
 
-Instead of inventing a new “phases/” directory, implement these conceptual steps **inside Phase A**:
-- **Research**: extend `ContextBuilder` (already exists) to incorporate external research + pattern lookup when allowed
-- **Plan/evaluate**: optional best-of-N plan variant generation that produces an improved “effective requirement” and/or higher quality `SubTask[]`
-- **Allocate**: derive `WavePlan` from `SubTask[]` (already exists via `planWaves()`)
+**Integration Strategy:** Add planning phases **before** Phase A (runWaves):
+- **Pre-Phase: Intent & Research** - Parse intent, aggregate research (new `@alfred/plan` package)
+- **Pre-Phase: Plan Generation** - Generate `StructuredPlan` with phases (new `@alfred/plan` package)
+- **Pre-Phase: Plan Approval** - User approves plan, creates workflow run
+- **Phase A: Plan → WavePlan Conversion** - Convert `StructuredPlan.phases` to `WavePlan[]` (adapter layer)
+- **Phase A: runWaves** - Execute waves (existing, unchanged)
+
+**Key Insight:** Planning happens **before** workflow execution starts. The plan is persisted, approved, then converted to execution format.
 
 **2. Extend `packages/agent/` for Agent Types**
 
@@ -310,25 +378,50 @@ type AgentConfig = {
 };
 ```
 
-**3. Extend `packages/knowledge/` for Patterns**
+**3. Pattern Storage: Hybrid Approach (SQL + Knowledge Graph)**
+
+**Current State:**
+- `packages/knowledge/src/hypergraph.ts` - Supports pattern storage in knowledge graph
+- `packages/agent/src/orchestrator/tool/learning/exec.ts` - `executeLearnPattern()` stores tool sequence patterns
+- **Missing:** Workflow pattern storage (different from tool sequence patterns)
+
+**Proposed Approach:**
+- **SQL table** (`workflow_patterns`) for fast queries, project scoping, confidence tracking
+- **Knowledge graph** for semantic search and relationship discovery
+- **Dual storage:** Patterns stored in both SQL (primary) and graph (semantic)
 
 ```typescript
-// packages/knowledge/src/patterns/
+// NEW: packages/db/src/schema/pattern.ts
+export const workflowPatterns = pgTable("workflow_patterns", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id),
+  trigger: text("trigger").notNull(), // Semantic trigger
+  planTemplate: jsonb("plan_template").notNull(), // StructuredPlan template
+  successRate: real("success_rate").notNull(),
+  avgDurationMs: integer("avg_duration_ms").notNull(),
+  usageCount: integer("usage_count").default(0),
+  confidence: real("confidence").notNull(),
+  status: text("status").default("active"), // 'active' | 'quarantined' | 'trusted'
+  knowledgeNodeId: uuid("knowledge_node_id"), // Link to hypergraph
+  created: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  lastUsed: timestamp("last_used_at", { withTimezone: true }),
+});
 
-type WorkflowPattern = MemoryNode & {
-  type: "workflow_pattern";
-  properties: {
-    trigger: string;           // When to use
-    structure: ExecutionGraph; // What to do
-    successRate: number;       // Historical success
-    avgDuration: number;       // How long it takes
-    refinementCount: number;   // How many times improved
-  };
-};
-
-// Store patterns in the hypergraph
-async function storePattern(pattern: WorkflowPattern): Promise<void>;
-async function findPatterns(intent: string): Promise<WorkflowPattern[]>;
+// packages/plan/src/pattern/store.ts
+export async function storePattern(pattern: WorkflowPattern): Promise<void> {
+  // 1. Store in SQL (primary)
+  await db.insert(workflowPatterns).values(pattern);
+  
+  // 2. Store in knowledge graph (semantic)
+  await graphRepo.upsertNodes([{
+    resource: `project:${pattern.projectId}`,
+    kind: "pattern",
+    label: pattern.trigger,
+    properties: { ...pattern },
+  }]);
+}
 ```
 
 ### Visual Representation in Desktop UI
@@ -358,6 +451,8 @@ export const workflowWindowDataSchema = baseWindowDataSchema.extend({
 ├── (existing) plan/task/tool renderers
 └── (optional) canvas subview (ReactFlow) for phase dependencies
 ```
+
+**Note:** For execution visualization (streaming output, progress tracking, error panels), see `docs/strategy/orchestrator-ui-patterns.md` which defines specialized UI components for technical operations. The workflow window integrates these patterns for real-time execution feedback.
 
 ---
 
@@ -815,9 +910,12 @@ export type PlanEvaluation = {
 **No.** Here's why:
 
 1. **Only 4 new types** — `Phase`, `StructuredPlan`, `WorkflowPattern`, `PlanEvaluation`
-2. **New code is not “650 lines”** — persistence, policy, UI, and tests dominate; treat early estimates as order-of-magnitude
-3. **Reuses ALL existing infrastructure** — waves, agents, workspaces, merge, review
-4. **Deferred complexity** — visual builder starts read-only
+2. **New code estimate:** ~2.2k–3.5k LOC core + ~800 LOC UI + tests + migrations (revised based on gap analysis)
+3. **Reuses ALL existing infrastructure** — waves, agents, workspaces, merge, review, context building
+4. **Deferred complexity** — visual builder starts read-only, best-of-N evaluation is optional
+5. **Execution infrastructure is 80% complete** — Only planning infrastructure needs to be built
+
+**Key Insight:** The gap analysis shows execution infrastructure is strong (~80%). Planning infrastructure is weak (~10%) but can be built incrementally by wrapping existing components.
 
 **The "standard 2025 spec-driven approach" is simply:**
 ```
@@ -848,12 +946,16 @@ packages/runtime/src/orchestrator/
 
 **Existing Phase Pipeline:**
 ```
-Phase A: runWaves()        → Decompose task, plan waves, execute agents
+Phase A: runWaves()        → Build context, decompose task, plan waves, execute agents
 Phase B: runMergePhase()   → Merge execution, conflict detection
 Phase C: runConflictPhase() → Conflict analysis and resolution
 Phase D: runMergeAnalysis() → Merge analysis
 Phase E: runReviewPhase()   → Review and self-correction
 ```
+
+**Note:** Currently, `runWaves()` calls `decomposeTask()` internally (line 104). For AI-native workflows, planning happens **before** execution starts:
+1. **Pre-execution:** Intent → Research → Plan Generation → Plan Approval
+2. **Execution:** Plan → WavePlan conversion → Phase A (runWaves) → Phase B-E (unchanged)
 
 ### Existing Types We Can Reuse
 
@@ -900,14 +1002,88 @@ const WorkspaceFactory = {
 
 ### Existing Pattern Storage (Partial)
 
+**What Exists:**
+- `packages/knowledge/src/hypergraph.ts` - Knowledge graph supports pattern storage
+- `packages/agent/src/orchestrator/tool/learning/exec.ts` - `executeLearnPattern()` stores tool sequence patterns
+- `packages/agent/src/orchestrator/learning-worker.ts` - `learnFromRun()` extracts facts from workflows
+
+**What's Missing:**
+- `WorkflowPattern` type (different from tool sequence patterns)
+- `workflow_patterns` SQL table for fast queries and project scoping
+- Pattern matching for workflow intents
+- Pattern extraction from successful `StructuredPlan` executions
+
 ```typescript
-// packages/knowledge/src/hypergraph.ts
+// EXISTS: packages/knowledge/src/hypergraph.ts
 type Knowledge =
   | { _: "fact"; ... }
   | { _: "relation"; ... }
   | { _: "insight"; ... }
   | { _: "pattern"; examples: NodeId[]; rule: string; accuracy: number };
+
+// EXISTS: Tool sequence patterns
+// packages/agent/src/orchestrator/tool/learning/exec.ts
+export async function executeLearnPattern(args: {
+  input: LearnPatternInput;
+  userId: string;
+}): Promise<LearnPatternOutput>;
+
+// MISSING: Workflow patterns
+// packages/plan/src/pattern/extract.ts
+export type WorkflowPattern = {
+  id: string;
+  trigger: string;
+  planTemplate: Omit<StructuredPlan, "id" | "intent">;
+  successRate: number;
+  avgDurationMs: number;
+  usageCount: number;
+  projectId?: string;
+};
 ```
+
+---
+
+## Gap Analysis
+
+> **Comprehensive Gap Analysis:** See [`ai-native-workflow-gap-analysis.md`](./ai-native-workflow-gap-analysis.md) for detailed component-by-component analysis.
+
+### Quick Summary
+
+**Overall Completion:** ~35% of required components exist (mostly partial implementations)
+
+**Key Findings:**
+
+| Category | Status | Critical Gaps |
+|----------|--------|---------------|
+| **Execution Infrastructure** | ✅ 80% | Minor gaps in context handoff |
+| **Planning Infrastructure** | ❌ 10% | Missing `@alfred/plan` package, `StructuredPlan` type, plan persistence |
+| **Pattern Learning** | 🟡 30% | Tool sequence patterns exist, workflow patterns missing |
+| **UI Components** | ❌ 5% | Basic workflow window exists, no plan visualization |
+| **Database Schema** | ❌ 0% | Missing `workflow_plans`, `projects`, `workflow_patterns` tables |
+
+**Critical Path (Must-Have Before Execution):**
+
+1. `@alfred/plan` package scaffold
+2. `StructuredPlan` type definition
+3. Plan → WavePlan conversion adapter
+4. Plan persistence (`workflow_plans` table)
+5. Plan approval endpoint
+
+**High-Value Additions:**
+
+- Project entity (enables pattern scoping)
+- Pattern extraction (enables learning)
+- Pattern matching (enables reuse)
+- Canvas view (enables visualization)
+
+**See Full Analysis:** [`ai-native-workflow-gap-analysis.md`](./ai-native-workflow-gap-analysis.md) contains:
+- Component-by-component status (31 components analyzed)
+- Code examples showing what exists vs what's missing
+- Database schema gaps
+- API router gaps
+- Type system gaps
+- Integration gaps
+- Recommended implementation order
 
 ---
 
@@ -1135,6 +1311,8 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-12-23 | 0 | ExecPlan v1.0 created | ✅ | Initial architecture |
 | 2025-12-23 | 0 | Current state analysis | ✅ | ALFRED has 80% of infrastructure |
 | 2025-12-24 | 0 | Linear Project & Issues created | ✅ | 30 issues created across 6 phases |
+| 2025-01-27 | 0 | Desktop system review | ✅ | Aligned with Desktop UI Paradigm v3; see review doc |
+| 2025-01-27 | 0 | Comprehensive gap analysis | ✅ | See `ai-native-workflow-gap-analysis.md` for detailed component-by-component gaps |
 | | 1 | Intent parser | ⬜ | |
 | | 1 | Research aggregator | ⬜ | |
 | | 1 | Plan generator | ⬜ | |
@@ -1540,21 +1718,208 @@ packages/runtime/src/orchestrator/
 // We extend it with `planId` and `view` to support plan viewing and an optional canvas view.
 ```
 
-### Data flow (tRPC + TanStack Query)
+### Resource Reference Pattern
 
-Plans (and approvals) should be persisted server-side and fetched via tRPC hooks.
-For UI optimism, follow existing web patterns:
-- **Collections**: `apps/web/src/collections/*` uses `@tanstack/react-db` + `@tanstack/query-db-collection` over tRPC client calls
-- **Queries**: standard TanStack Query invalidation / `setQueryData` as needed
+**Question:** Should `planId` be a direct field or part of `resourceRef`?
 
-### Optional canvas view (React Flow) inside the Desktop workflow window
+**Decision:** Plans are persisted resources (stored in `workflow_plans` table), so they should use `resourceRef` pattern for consistency. However, since plans are conceptually part of a workflow run, we use `planId` as a direct field for simplicity, with the understanding that:
+
+- Plans are persisted resources (source of truth: Postgres `workflow_plans` table)
+- Plans can exist independently of workflow runs (draft plans before approval)
+- `planId` references the plan resource; `runId` references the execution resource
+- Both can coexist: a window can show a plan (`planId`) and its execution (`runId`)
+
+**Extended Schema:**
+```typescript
+export const workflowWindowDataSchema = baseWindowDataSchema.extend({
+  type: z.literal("workflow"),
+  // Existing fields...
+  messages: z.array(uiMessageSchema).optional(),
+  status: z.enum(["Idle", "running", "completed", "failed", "pending", "starting"]).optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  requirement: z.string().optional(),
+  runId: z.string().optional(), // Workflow execution resource
+  auto: z.enum(["read", "low", "medium", "high"]).optional(),
+  
+  // NEW fields for plan viewer/canvas
+  planId: z.string().uuid().optional(), // Plan resource (persisted in workflow_plans table)
+  view: z.enum(["plan", "canvas", "timeline"]).optional(), // Transient UI state (could use draft instead)
+  
+  // Optional: explicit resourceRef for future extensibility
+  resourceRef: z.object({
+    type: z.enum(["workflow_run", "plan"]),
+    id: z.string().uuid(),
+  }).optional(),
+});
+```
+
+### Source-of-Truth Matrix
+
+Following the desktop paradigm's source-of-truth matrix (see `docs/execplans/desktop-ui-paradigm.md` Section 5):
+
+| Data Type | Source of Truth | Local Cache | Sync Strategy |
+|-----------|----------------|-------------|---------------|
+| **Layout State** | | | |
+| Window positions | Zustand | localStorage | None (UI-only) |
+| Window sizes | Zustand | localStorage | None (UI-only) |
+| Canvas zoom/pan | Zustand | `WindowData.draft` | None (UI-only) |
+| **Domain Resources** | | | |
+| Workflow plans | Postgres (`workflow_plans`) | TanStack DB Collection | Optimistic mutation |
+| Workflow runs | Postgres (`workflow_runs`) | TanStack DB Collection | tRPC subscription |
+| Workflow events | Postgres (`workflow_events`) | (streamed, not cached) | WebSocket stream |
+| **Ephemeral State** | | | |
+| Canvas node positions | `WindowData.draft` | Memory | None (ephemeral) |
+| View mode ("plan" \| "canvas" \| "timeline") | `WindowData.view` | Memory | None (ephemeral) |
+| Draft plan edits | `WindowData.draft` | Memory | Explicit save |
+
+**Key Principle:** Layout state (positions, sizes, view mode) lives locally. Domain resources (plans, runs, events) are backend-first with optimistic UI updates.
+
+### Data Flow (tRPC + TanStack Query + WebSocket)
+
+**Initial Fetch:**
+- Plans fetched via TanStack Query (`trpc.plan.get.useQuery`)
+- Collections use `@tanstack/react-db` + `@tanstack/query-db-collection` for optimistic mutations
+- Standard TanStack Query invalidation / `setQueryData` for updates
+
+**Real-Time Streaming:**
+- **WebSocket subscription** for workflow execution events (plan generation, wave progress, agent output)
+- Single WebSocket connection per client with multiplexed streams (see `apps/web/src/lib/subscription/manager.ts`)
+- Cursor-based resume for long-running operations
+- Stream ID: `workflow:{runId}` for execution events, `plan:{planId}` for plan generation events
+
+**Example:**
+```typescript
+// apps/web/src/components/windows/workflow/workflow-window.tsx
+
+import { useSubscription } from "@/lib/subscription/hooks";
+import { trpc } from "@/lib/trpc-client";
+
+export function WorkflowWindow({ id, data }: { id: string; data: WorkflowWindowData }) {
+  // Initial fetch via TanStack Query
+  const { data: plan } = trpc.plan.get.useQuery(
+    { planId: data.planId! },
+    { enabled: !!data.planId }
+  );
+  
+  // Real-time execution events via WebSocket
+  const { status, lastEvent } = useSubscription(
+    `workflow:${data.runId}`,
+    (event) => {
+      // Handle workflow events: wave-start, agent-complete, merge-progress, etc.
+      updateWorkflowState(event);
+    },
+    { enabled: !!data.runId }
+  );
+  
+  // Plan generation events (if generating)
+  const { lastEvent: planEvent } = useSubscription(
+    `plan:${data.planId}`,
+    (event) => {
+      // Handle plan events: plan-variant, plan-selected, etc.
+      updatePlanState(event);
+    },
+    { enabled: !!data.planId && !plan }
+  );
+  
+  // ... render logic
+}
+```
+
+**Reference:** See desktop paradigm Section 10 (Subscription Protocol Contract) and `apps/web/src/lib/subscription/` for implementation patterns.
+
+### Window Lifecycle
+
+**Spawning:**
+- Windows spawned programmatically when plan is created or workflow starts
+- Example: `spawnWindow({ type: "workflow", planId: plan.id, runId: run.id })`
+- Can also be spawned from Dock or Command Palette
+
+**Focus/Activation:**
+- Window receives focus when plan is approved or workflow status changes
+- Active execution windows auto-focus on critical events (errors, completion)
+
+**Persistence:**
+- Layout state (position, size) persists in Zustand + localStorage
+- Resource state (plan, run) persists in Postgres
+- Windows can persist after workflow completion for review/history
+
+**Cleanup:**
+- Optional auto-close on completion (configurable per workflow)
+- Manual dismissal via window controls
+- Historical workflows remain accessible via `workflowlist` window
+
+**Window Tier:**
+- Active execution: `primary` tier (visual prominence)
+- Completed workflows: `secondary` tier
+- Historical/archived: `tertiary` tier
+
+### Canvas Subview (React Flow)
+
+**Important:** Canvas is a **subview within the workflow window**, not a separate window type.
 
 ```typescript
-// apps/web/src/components/windows/workflow/canvas.tsx
-//
-// Add a `view` selector ("plan" | "canvas" | "timeline") and render a canvas subview when requested.
-// Keep canvas state local to the node (or in `WindowData.draft` if we want persistence later).
+// apps/web/src/components/windows/workflow/workflow-window.tsx
+
+export function WorkflowWindow({ id, data }: { id: string; data: WorkflowWindowData }) {
+  const view = data.view ?? "plan"; // Default to plan view
+  
+  return (
+    <WindowFrame>
+      {/* View selector */}
+      <ViewTabs>
+        <Tab onClick={() => updateView("plan")}>Plan</Tab>
+        <Tab onClick={() => updateView("canvas")}>Canvas</Tab>
+        <Tab onClick={() => updateView("timeline")}>Timeline</Tab>
+      </ViewTabs>
+      
+      {/* Render subview based on view mode */}
+      {view === "plan" && <PlanViewer plan={plan} />}
+      {view === "canvas" && <PlanCanvas plan={plan} />}
+      {view === "timeline" && <ExecutionTimeline run={run} />}
+    </WindowFrame>
+  );
+}
+
+// Canvas state can live in WindowData.draft for persistence
+function PlanCanvas({ plan }: { plan: StructuredPlan }) {
+  const [nodes, setNodes] = useState(() => phasesToNodes(plan.phases));
+  const [edges, setEdges] = useState(() => dependenciesToEdges(plan.phases));
+  
+  // Save canvas state to draft on changes
+  useEffect(() => {
+    updateWindow(id, {
+      draft: { canvasNodes: nodes, canvasEdges: edges },
+    });
+  }, [nodes, edges]);
+  
+  return <ReactFlow nodes={nodes} edges={edges} />;
+}
 ```
+
+**Canvas Features:**
+- Phases render as nodes with status indicators
+- Dependencies render as animated edges
+- Read-only initially (Phase 5), editable later (Phase 5-5)
+- Zoom/pan state persists in `WindowData.draft`
+
+### Orchestrator UI Patterns Integration
+
+Workflow execution requires specialized UI patterns for technical operations. See `docs/strategy/orchestrator-ui-patterns.md` for:
+
+- **StreamingTerminal** component for Codex/Docker output streaming
+- **ProgressWindow** for long-running operations (Docker builds, Proxmox VM creation)
+- **WorkflowTimeline** component for phase/task visualization (already described in orchestrator patterns)
+- **ErrorPanel** for failure visualization and debugging
+- **ResourceMonitor** for Docker container/Proxmox VM resource usage
+
+**Alignment:**
+- Workflow execution events stream via WebSocket (matches StreamingTerminal pattern)
+- Phase progress tracked via WorkflowTimeline component
+- Agent output streams to terminal-like UI (Codex stdout/stderr)
+- Errors surface in ErrorPanel with context and retry controls
+
+**Reference:** See `docs/strategy/orchestrator-ui-patterns.md` Sections 1-8 for component specifications and integration patterns.
 
 ---
 
@@ -3035,6 +3400,10 @@ export function ProjectSelector({ onSelect }: { onSelect: (id: string) => void }
 | 2025-12-23 | Project-scoped patterns | Filter patterns by project_id first; prevent cross-project pollution | Architecture |
 | 2025-12-23 | Convention learning | Accumulate project-specific rules from successful workflows | Architecture |
 | 2025-12-23 | Linear Project integration | Link ALFRED Projects to Linear Projects for bi-directional navigation | Architecture |
+| 2025-01-27 | Resource reference pattern | Use `planId` as direct field; plans are persisted resources but conceptually part of workflow runs | Architecture |
+| 2025-01-27 | Subscription protocol | Use WebSocket streaming for real-time execution events; single connection with multiplexed streams | Architecture |
+| 2025-01-27 | Canvas as subview | Canvas is a subview within workflow window, not a separate window type; state in `WindowData.draft` | Architecture |
+| 2025-01-27 | Orchestrator UI patterns | Integrate StreamingTerminal, ProgressWindow, WorkflowTimeline, ErrorPanel components | Architecture |
 
 ---
 
@@ -3817,7 +4186,7 @@ System degrades gracefully.
 | 7 | **No semantic conflict detection** | TBD | Low | 1 week |
 | 8 | **No cost tracking/limits** | [ALF-303](https://linear.app/alfred-ops/issue/ALF-303) | Low | 2 days |
 
-**Total new work estimate (revised):** ~4 weeks, not 2 weeks as originally stated.
+**Total new work estimate (revised):** ~6-8 weeks for core planning infrastructure, ~2-3 weeks for UI, ~1-2 weeks for optimizations. Total: ~9-13 weeks for full implementation (revised based on gap analysis).
 
 ---
 
