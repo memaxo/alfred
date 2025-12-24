@@ -1,6 +1,6 @@
 # Desktop UI Paradigm: Comprehensive Design Document
 
-> **Status:** Phases 1-6 Complete, Phase 7 (Mindscape Deprecation) Pending  
+> **Status:** Phases 1-7 Complete  
 > **Owner:** Frontend Architecture  
 > **Created:** 2025-12-23  
 > **Last Updated:** 2025-12-24  
@@ -2959,6 +2959,10 @@ TanStack DB Collections (Data Layer)
 | 2025-12-24 | 6 | Delete orphaned LOD/utils | ✅ | mindscape/lod.ts, lib/mindscape/lod.ts, mindscape/utils.ts |
 | 2025-12-24 | 6 | Update imports | ✅ | canvas.tsx, command-palette.tsx, living-edge.tsx, use-deep-links.ts |
 | 2025-12-24 | 6 | **Net code reduction** | ✅ | **-2,850 lines** (added 3,025, removed 5,875) |
+| 2025-12-24 | 7 | Migrate / route to Desktop | ✅ | Route now uses DesktopCanvas instead of MindscapeCanvas |
+| 2025-12-24 | 7 | Move essential components | ✅ | living-edge, context-lens, workflow-drawer → shared/ |
+| 2025-12-24 | 7 | Delete mindscape infrastructure | ✅ | components/mindscape/, 6 hooks, 8 lib files, tests |
+| 2025-12-24 | 7 | **Phase 7 total deletion** | ✅ | **-8,775 lines** (50 files) |
 
 ---
 
@@ -3018,9 +3022,10 @@ TanStack DB Collections (Data Layer)
 |--------|--------|--------|--------|
 | Entry Points | 1 (`/`) | 1 (`/`) | ✅ |
 | Window Types | 12 | 12 (all implemented) | ✅ |
-| Dead Code Lines Removed | ~2,500 | ~5,875 (nodes + orphans) | ✅ |
+| Dead Code Removed (Phase 6) | ~2,500 | ~5,875 (nodes + orphans) | ✅ |
+| Dead Code Removed (Phase 7) | - | ~8,775 (mindscape infra) | ✅ |
 | New Window Code | - | ~3,025 lines | ✅ |
-| Net Code Change | Reduction | **-2,850 lines** | ✅ |
+| **Total Net Code Change** | Reduction | **-11,625 lines** | ✅ |
 | Time to Interactive | <1s | <1s (no WebGPU init) | ✅ |
 | Max Nodes @ 60fps | 200+ | TBD (perf tests pending) | ⬜ |
 | localStorage Size | <50KB | <50KB (monitored) | ✅ |
