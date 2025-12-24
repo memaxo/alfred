@@ -26,7 +26,9 @@ export type ResourceType =
   | "thread"
   | "workflow_run"
   | "preference"
-  | "integration";
+  | "integration"
+  | "knowledge"
+  | "concept";
 
 export type ViewMode = "compact" | "full" | "maximized";
 
@@ -131,13 +133,20 @@ export type {
   FeedbackEntry,
   FeedbackIntent,
 } from "./context";
+export type {
+  KnowledgeSlice,
+  KnowledgeNode,
+  KnowledgeEdge,
+} from "./knowledge";
 
 // Import for DesktopState composition
 import type { CacheSlice } from "./cache";
 import type { ContextSlice } from "./context";
+import type { KnowledgeSlice } from "./knowledge";
 
 export type DesktopState = WindowSlice &
   ViewportSlice &
   DockSlice &
   CacheSlice &
-  ContextSlice;
+  ContextSlice &
+  KnowledgeSlice;
