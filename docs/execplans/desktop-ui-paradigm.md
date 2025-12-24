@@ -2747,77 +2747,155 @@ TanStack DB Collections (Data Layer)
 
 ### Phase 8: Store Consolidation & Polish (Week 10)
 
-**Goal:** Complete migration of chat-related hooks from mindscape store to desktop store, add command palette, and finalize E2E coverage.
+**Goal:** Complete migration of all mindscape dependencies to desktop store, add command palette, integrate knowledge visualization, and finalize E2E coverage.
 
-**Audit Findings (2025-12-24):**
+**Comprehensive Audit (2025-12-24):**
 
-The following files still import from mindscape store:
-- `hooks/use-chat-logic.ts` - node resolution, edge/node activity
-- `hooks/use-mindscape-activations.ts` - event bus for animations
-- `hooks/use-focused-context.ts` - focused node, context cache
-- `store/mindscape/` - 6 files (~8KB total)
-- `lib/mindscape/telemetry.ts` - cache metrics
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MINDSCAPE DEPENDENCIES REMAINING                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Store Layer:                                                               │
+│  ├── store/mindscape/ (6 files, ~8KB)                                       │
+│  ├── store/mindscape.ts                                                     │
+│  ├── store/mindscape.schemas.ts (ArtifactType, ArtifactData)               │
+│  └── lib/mindscape/telemetry.ts                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Hooks (import useMindscapeStore or dispatchMindscapeEvent):                │
+│  ├── hooks/use-chat-logic.ts (node resolution, activation dispatch)         │
+│  ├── hooks/use-focused-context.ts (focusedNodeId, nodes, edges, cache)      │
+│  ├── hooks/use-mindscape-activations.ts (event bus for animations)          │
+│  └── hooks/use-voice-session-web.ts (dispatchMindscapeEvent)                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Components:                                                                │
+│  └── components/ai-elements/tool.tsx (dispatchMindscapeEvent)               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Config:                                                                    │
+│  ├── config/actions.ts (imports ArtifactType)                               │
+│  └── config/mindscape.ts (SPAWN_RADIUS, TIER_RADII)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Routes:                                                                    │
+│  └── routes/api/mindscape.metrics.ts (RAG cache metrics endpoint)           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Missing Integrations:                                                      │
+│  ├── Knowledge visualization (trpc.knowledge.visualize → spawn windows)     │
+│  ├── Command palette for desktop                                            │
+│  └── Deep linking (?windowId, ?spawn, ?resourceRef)                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 **Tasks:**
 
-#### P8.1: Add Context/Cache Slices to Desktop Store
-- [ ] Create `store/desktop/context.ts` with `contextCache`, `recordContextReceipt`, `clearContextReceipt`
-- [ ] Create `store/desktop/cache.ts` with `ragDocCache`, `ragDocCacheStats`, cache actions
+#### P8.1: Add Context/Cache/Feedback Slices to Desktop Store
+- [ ] Create `store/desktop/context.ts`:
+  - `contextCache: Record<string, ContextCacheEntry>`
+  - `recordContextReceipt(windowId, entry)`
+  - `clearContextReceipt(windowId)`
+- [ ] Create `store/desktop/cache.ts`:
+  - `ragDocCache: Record<string, CachedRagDocEntry>`
+  - `ragDocCacheStats: { hits, misses, evictions }`
+  - `cacheRagDoc`, `evictRagDoc`, `recordRagDocCacheHit/Miss`
+- [ ] Add `feedbackByWindow: Record<string, FeedbackEntry>` + `recordFeedback`
 - [ ] Move `lib/mindscape/telemetry.ts` → `lib/desktop/telemetry.ts`
-- [ ] Add `feedbackByWindow` for workflow feedback tracking
+- [ ] Update desktop store index to include new slices
 
 #### P8.2: Create Desktop Command Palette
 - [ ] Create `components/desktop/command-palette.tsx`
 - [ ] Wire ⌘+K shortcut in desktop canvas
-- [ ] Filter actions by focused window type
-- [ ] Support spawn, focus, delete, pin actions
-- [ ] Integrate with desktop store actions
+- [ ] Define actions in `config/desktop-actions.ts` (replace `config/actions.ts`)
+- [ ] Filter actions by focused window type (`WindowType` instead of `ArtifactType`)
+- [ ] Support actions: spawn, focus, delete, pin, visualize, ask, retry
+- [ ] Integrate with desktop store: `spawnWindow`, `removeWindow`, `focusWindow`
 
 #### P8.3: Migrate use-focused-context to Desktop
-- [ ] Update imports from mindscape → desktop store
+- [ ] Import `useDesktopStore` instead of `useMindscapeStore`
 - [ ] Change `focusedNodeId` → `focusedWindowId`
-- [ ] Update node lookups to use `windows` instead of `nodes`
-- [ ] Update tests in `use-focused-context.test.tsx`
+- [ ] Change `nodes` → `windows`, `state.nodes` → `state.windows`
+- [ ] Update `contextCache` access to use desktop store
+- [ ] Update tests in `hooks/__tests__/use-focused-context.test.tsx`
 
-#### P8.4: Migrate use-mindscape-activations to Desktop
-- [ ] Rename to `use-desktop-activations.ts`
+#### P8.4: Rename use-mindscape-activations → use-desktop-activations
+- [ ] Rename file to `hooks/use-desktop-activations.ts`
+- [ ] Rename exports: `dispatchMindscapeEvent` → `dispatchDesktopEvent`
+- [ ] Rename types: `MindscapeEvent` → `DesktopActivationEvent`
 - [ ] Update to use desktop store's `triggerEdgeActivity`
-- [ ] Keep event bus pattern for decoupled triggers
-- [ ] Add `triggerWindowActivity` for window animations
+- [ ] Add `triggerWindowActivity(windowId, type)` for window animations
+- [ ] Update all callers (4 files)
 
 #### P8.5: Update use-chat-logic to Desktop Store
 - [ ] Import `useDesktopStore` instead of `useMindscapeStore`
-- [ ] Update `resolveId` to use desktop windows
-- [ ] Update activation dispatching to use desktop events
+- [ ] Update `resolveId` to search `windows` array by `resourceRef.id` or `window.id`
+- [ ] Update `x-mindscape-activation` header parsing to dispatch desktop events
+- [ ] Rename header to `x-desktop-activation` (coordinate with backend)
 
-#### P8.6: Delete Mindscape Store Entirely
-- [ ] Delete `store/mindscape/` (6 files)
+#### P8.6: Update use-voice-session-web
+- [ ] Import `dispatchDesktopEvent` instead of `dispatchMindscapeEvent`
+- [ ] Update event types for voice-input/voice-output
+
+#### P8.7: Update components/ai-elements/tool.tsx
+- [ ] Import `dispatchDesktopEvent` instead of `dispatchMindscapeEvent`
+- [ ] Update event dispatch for tool-call events
+
+#### P8.8: Migrate Config Files
+- [ ] Create `config/desktop-actions.ts` with `WindowType` instead of `ArtifactType`
+- [ ] Delete `config/actions.ts` (old)
+- [ ] Rename `config/mindscape.ts` → `config/desktop.ts`
+- [ ] Update `MINDSCAPE_CONFIG` → `DESKTOP_CONFIG`
+
+#### P8.9: Rename API Route
+- [ ] Rename `routes/api/mindscape.metrics.ts` → `routes/api/desktop.metrics.ts`
+- [ ] Update metric name `mindscapeRagCacheEventsTotal` → `desktopRagCacheEventsTotal`
+- [ ] Update telemetry.ts to POST to new endpoint
+
+#### P8.10: Add Knowledge Graph Visualization
+- [ ] Add `spawnKnowledgeGraph(result)` action to desktop store:
+  ```typescript
+  spawnKnowledgeGraph: (result: { nodes: VisualizeNode[], edges: VisualizeEdge[] }) => {
+    // For each node: spawnWindow("knowledge" | "concept", { resourceRef, ...data })
+    // For each edge: addEdge({ source, target, data: { kind } })
+  }
+  ```
+- [ ] Add "Visualize Knowledge" command to command palette
+- [ ] Connect to `trpc.knowledge.visualize.mutate({ text })`
+- [ ] Auto-layout spawned knowledge windows using semantic layout
+
+#### P8.11: Delete Mindscape Store Entirely
+- [ ] Delete `store/mindscape/` (6 files: cache.ts, context.ts, graph.ts, index.ts, persist.ts, types.ts)
 - [ ] Delete `store/mindscape.ts`
 - [ ] Delete `store/mindscape.schemas.ts`
 - [ ] Delete `lib/mindscape/telemetry.ts`
-- [ ] Update any remaining imports
-- [ ] Estimated: -1,500 lines
+- [ ] Delete `config/actions.ts` (replaced by desktop-actions.ts)
+- [ ] Delete `config/mindscape.ts` (replaced by desktop.ts)
+- [ ] Estimated: **-2,500 lines**
 
-#### P8.7: Add Deep Linking for Desktop
-- [ ] Add search params: `windowId`, `spawn`, `resourceRef`
-- [ ] On load: focus window by ID or spawn by type
-- [ ] Support resource references: `?spawn=note&ref=uuid`
-- [ ] Preserve workflow route behavior
+#### P8.12: Add Deep Linking for Desktop
+- [ ] Add search params to route: `windowId`, `spawn`, `resourceRef`
+- [ ] On load: focus window by `windowId` if provided
+- [ ] On load: spawn window by `spawn` type with optional `resourceRef`
+- [ ] Support URLs like `/?spawn=note&resourceRef=uuid`
+- [ ] Preserve workflow route behavior (`/workflow/$runId`)
 
-#### P8.8: E2E Test Coverage Expansion
-- [ ] Fix 4 skipped tests in desktop specs
-- [ ] Add tests for command palette actions
-- [ ] Add tests for context/cache behavior
+#### P8.13: E2E Test Coverage Expansion
+- [ ] Fix 4 skipped tests in desktop specs (command palette, persistence, multi-spawn)
+- [ ] Add tests for command palette actions (spawn, delete, focus)
+- [ ] Add tests for knowledge visualization flow
 - [ ] Add tests for deep linking
-- [ ] Target: 20+ desktop E2E tests
+- [ ] Add tests for context/cache behavior
+- [ ] Target: **25+ desktop E2E tests**
 
-#### P8.9: Performance Validation
+#### P8.14: Performance Validation
 - [ ] Create stress test with 200+ windows
-- [ ] Validate 60fps pan/zoom
-- [ ] Measure localStorage size under load
-- [ ] Profile memory usage
+- [ ] Validate 60fps pan/zoom at scale
+- [ ] Measure localStorage size under load (<50KB)
+- [ ] Profile memory usage (<150MB for 100 windows)
+- [ ] Validate subscription reconnect (<1s)
 
-**Deliverable:** Complete desktop system with no mindscape dependencies.
+**Deliverable:** Complete desktop system with zero mindscape dependencies, full knowledge integration, and comprehensive test coverage.
+
+**Estimated Impact:**
+- Lines deleted: ~2,500
+- Lines added: ~800 (new slices, command palette, actions)
+- Net change: **-1,700 lines**
 
 ---
 
