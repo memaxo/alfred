@@ -2789,7 +2789,9 @@ TanStack DB Collections (Data Layer)
 | 2025-12-23 | 3 | Delete gpu folder | ✅ | Removed lib/mindscape/gpu/ (~1,351 lines) |
 | 2025-12-23 | 3 | Route consolidation | ✅ | /mindscape → /, all navigations updated |
 | 2025-12-23 | 3 | Remove Cmd+M shortcut | ✅ | No longer needed with single entry point |
-| | 4 | Subscription protocol | ⬜ | |
+| 2025-12-23 | 4 | Subscription types | ✅ | @alfred/type/subscription with cursor-based events |
+| 2025-12-23 | 4 | Subscription manager | ✅ | Single WebSocket, multiplexed streams, auto-reconnect |
+| 2025-12-23 | 4 | Subscription hooks | ✅ | useSubscription, useGraphSubscription, useWorkflowSubscription |
 | | 5 | Performance optimization | ⬜ | |
 
 ---
