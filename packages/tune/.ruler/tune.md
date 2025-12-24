@@ -1,0 +1,5 @@
+# Model Tuning
+
+1. **Dataset Generation.** Use `createTrainingSet()` to export event history for fine-tuning.
+
+2. **Eval Integration.** Every tuned model must be validated against the `eval_datasets`.

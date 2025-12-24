@@ -1,0 +1,5 @@
+# RAG Ingestion & Retrieval
+
+1. **Chunking.** Use sentence-aware chunking (max 512 tokens).
+
+2. **Hybrid Search.** Combine vector similarity with full-text search for optimal recall.

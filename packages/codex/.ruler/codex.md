@@ -1,0 +1,5 @@
+# Codex Standards
+
+1. **Context Management.** Codex handles long-term context compression and retrieval. Use `compressContext()` for aging threads.
+
+2. **Summarization.** Always use the `summarize()` helper to generate thread-level snapshots before eviction.

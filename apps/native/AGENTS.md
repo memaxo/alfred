@@ -10,3 +10,13 @@
 3. **Styling.** Prefer NativeWind utility classes. Keep shared styling tokens in a single file to match the web design system where practical.
 4. **Platform APIs.** Gate platform-specific capabilities (`Notifications`, `Camera`) behind permission checks and feature flags.
 5. **File naming.** Follow the single-word rule for screens and components (e.g. `home.tsx`, `remind.tsx`).
+
+
+
+<!-- Source: .ruler/native.md -->
+
+# Native App (Expo) Standards
+
+1. **Platform Parity.** Maintain feature parity with the web app while using native-first components (e.g., `FlashList`).
+
+2. **Auth Sync.** Use the Better Auth Expo plugin for secure session persistence across native reloads.

@@ -1,0 +1,11 @@
+# Logging Standards
+
+1. **Structured Logging.** Always use the shared `logger` from `@alfred/logger`. Use JSON format in production and pretty-printing in development.
+
+2. **Contextual Metadata.** Include relevant IDs (`runId`, `userId`, `workflowId`) in the log context object instead of string-interpolating them into the message.
+
+3. **No PII/Secrets.** Never log passwords, tokens, API keys, or personally identifiable information. Redact sensitive data at the source.
+
+4. **Levels.** Use `debug` for high-volume tracing, `info` for major events, `warn` for non-fatal issues, and `error` for system failures.
+
+5. **Configuration.** Call `logger.configure()` once at application startup to set the service name and environment.

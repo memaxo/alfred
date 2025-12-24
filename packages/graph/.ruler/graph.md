@@ -1,0 +1,5 @@
+# Graph (Hypergraph) Standards
+
+1. **Atomic Knowledge.** Store knowledge as nodes and edges in the hypergraph. Use `upsertNodes()` and `upsertEdges()`.
+
+2. **Traversal.** Use Recursive CTEs for graph traversal. Keep lookups < 1ms.

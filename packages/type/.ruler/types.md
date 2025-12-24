@@ -1,0 +1,9 @@
+# Type Safety & Schemas
+
+1. **Shared DTOs.** Define all cross-layer data transfer objects in `@alfred/type`. Never re-declare models in apps.
+
+2. **Zod Validation.** Use Zod for runtime schema validation of all external inputs. Export schemas as `<name>Schema` and types as `z.infer<typeof <name>Schema>`.
+
+3. **Pure Type Files.** Files ending in `.types.ts` must contain zero runtime code (only `type` and `interface` declarations).
+
+4. **JSONB Handling.** Use `as any` for complex JSONB fields in Drizzle, but document the expected structure via TypeScript interfaces.
