@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 export type BookmarkPaneItem = {
   id: string;
   title: string | null;
+  description?: string | null;
   url: string;
   tags: string[] | null;
   createdAt: string | null;

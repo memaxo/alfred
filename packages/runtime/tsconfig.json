@@ -26,6 +26,7 @@
     { "path": "../db" },
     { "path": "../metrics" },
     { "path": "../plan" },
-    { "path": "../agent" }
+    { "path": "../agent" },
+    { "path": "../rag" }
   ]
 }

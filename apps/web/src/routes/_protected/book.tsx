@@ -6,17 +6,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { 
-  Bookmark, 
-  Loader2, 
-  Plus, 
-  Tag, 
-  Trash2, 
-  Globe, 
-  Search,
-  ExternalLink,
-  Calendar
-} from "lucide-react";
+import { Globe, Loader2, Plus, Search, Tag } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PaneLayout } from "@/components/pane-layout";
@@ -27,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/utils/trpc";
 import { BookmarkPane, type BookmarkPaneItem } from "@alfred/ui";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_protected/book")({
   component: BookRoute,

@@ -5,6 +5,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "outDir": "dist",
+    "rootDir": "src",
     "composite": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"]

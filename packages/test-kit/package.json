@@ -33,9 +33,12 @@
     "@alfred/agent": "workspace:*",
     "@alfred/api": "workspace:*",
     "@alfred/db": "workspace:*",
+    "@alfred/logger": "workspace:*",
     "@alfred/runtime": "workspace:*",
     "@alfred/type": "workspace:*",
     "@alfred/voice": "workspace:*",
+    "ai": "catalog:",
+    "jose": "^6.0.11",
     "testcontainers": "^10.16.0",
     "zod": "^3.24.1"
   },

@@ -18,6 +18,15 @@
     { "path": "packages/embed" },
     { "path": "packages/metrics" },
     { "path": "packages/tune" },
-    { "path": "packages/plan" }
+    { "path": "packages/plan" },
+    { "path": "packages/cognitive" },
+    { "path": "packages/cortex" },
+    { "path": "packages/knowledge" },
+    { "path": "packages/learning" },
+    { "path": "packages/logger" },
+    { "path": "packages/test-kit" },
+    { "path": "packages/ui" },
+    { "path": "apps/web" },
+    { "path": "apps/native" }
   ]
 }

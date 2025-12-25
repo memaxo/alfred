@@ -20,16 +20,22 @@
     }
   },
   "dependencies": {
+    "@ai-sdk/openai": "catalog:",
+    "@alfred/agent": "workspace:*",
     "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
+    "@alfred/history": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",
+    "@alfred/rag": "workspace:*",
     "@alfred/type": "workspace:*",
-    "@alfred/agent": "workspace:*",
+    "@trpc/server": "catalog:",
     "ai": "catalog:",
+    "drizzle-orm": "catalog:",
+    "prom-client": "^15.1.3",
     "zod": "catalog:"
   },
   "devDependencies": {
