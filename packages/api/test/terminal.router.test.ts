@@ -1,14 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { TRPCError } from "@trpc/server";
 import { toObservable } from "./utils/stream";
 import { createTestCaller } from "./utils/trpc";
+import { nodePtySpawnMock } from "./utils/mock-node-pty";
 
 describe("terminal router", () => {
   let caller: Awaited<ReturnType<typeof createTestCaller>>;
   const originalPlatform = process.platform;
+  const bun = Bun as unknown as { spawn: (...args: unknown[]) => Bun.Subprocess };
+
+  type TerminalSpawnOptions = {
+    terminal?: {
+      cols?: number;
+      rows?: number;
+      data?: (term: unknown, data: string | Uint8Array) => void;
+    };
+  };
+
+  const pendingExit = () => new Promise<number>(() => {});
 
   beforeEach(async () => {
     caller = await createTestCaller();
+    nodePtySpawnMock.mockClear();
     // Reset platform for each test
     Object.defineProperty(process, "platform", {
       value: originalPlatform,
@@ -44,18 +57,22 @@ describe("terminal router", () => {
           resize: vi.fn(),
           close: vi.fn(),
         },
-        exited: Promise.resolve(0),
+        exited: pendingExit(),
         kill: vi.fn(),
       };
 
-      vi.spyOn(Bun, "spawn").mockImplementation((_cmd, options) => {
+      const spawnImpl: unknown = (...args: unknown[]) => {
+        const options =
+          (args.length > 1 ? args[1] : args[0]) as TerminalSpawnOptions | undefined;
         if (options?.terminal?.data) {
           _dataCallback = options.terminal.data;
-          // Simulate adding subscriber
           subscribers.add(() => {});
         }
         return mockProc as unknown as Bun.Subprocess;
-      });
+      };
+      vi
+        .spyOn(bun, "spawn")
+        .mockImplementation(spawnImpl as typeof bun.spawn);
 
       const result = await caller.terminal.createSession({
         cols: 80,
@@ -63,7 +80,7 @@ describe("terminal router", () => {
       });
 
       expect(result.sessionId).toBeDefined();
-      expect(Bun.spawn).toHaveBeenCalledWith(
+      expect(bun.spawn).toHaveBeenCalledWith(
         expect.arrayContaining([expect.any(String)]),
         expect.objectContaining({
           terminal: expect.objectContaining({
@@ -82,9 +99,13 @@ describe("terminal router", () => {
         configurable: true,
       });
 
-      Bun.spawn = vi.fn().mockImplementation(() => {
+      const spawnSpy = vi.fn().mockImplementation(() => {
         throw new Error("PTY not available");
       });
+      const throwImpl: unknown = (..._args: unknown[]) => spawnSpy();
+      vi
+        .spyOn(bun, "spawn")
+        .mockImplementation(throwImpl as typeof bun.spawn);
 
       const result = await caller.terminal.createSession({
         cols: 80,
@@ -93,7 +114,8 @@ describe("terminal router", () => {
 
       expect(result.sessionId).toBeDefined();
       // Should have attempted Bun.spawn first
-      expect(Bun.spawn).toHaveBeenCalled();
+      expect(bun.spawn).toHaveBeenCalled();
+      expect(nodePtySpawnMock).toHaveBeenCalled();
     });
 
     it("uses node-pty on Windows", async () => {
@@ -103,7 +125,7 @@ describe("terminal router", () => {
         configurable: true,
       });
 
-      const spawnSpy = vi.spyOn(Bun, "spawn").mockImplementation(() => {
+      const spawnSpy = vi.spyOn(bun, "spawn").mockImplementation(() => {
         throw new Error("Should not be called on Windows");
       });
 
@@ -115,26 +137,35 @@ describe("terminal router", () => {
       expect(result.sessionId).toBeDefined();
       // Bun.spawn should not be called on Windows (falls back to node-pty)
       expect(spawnSpy).not.toHaveBeenCalled();
+      expect(nodePtySpawnMock).toHaveBeenCalled();
       spawnSpy.mockRestore();
     });
 
     it("returns PRECONDITION_FAILED when no PTY backend available", async () => {
       Object.defineProperty(process, "platform", {
-        value: "win32",
+        value: "linux",
         writable: true,
         configurable: true,
       });
 
-      // On Windows, if node-pty is unavailable, should return PRECONDITION_FAILED
-      // We can't easily mock dynamic imports, so we'll test the error path differently
-      // by ensuring the error message matches when both backends fail
-      // Note: This test assumes node-pty mock is available via mock-node-pty.ts
-      // To test true unavailability, we'd need to temporarily disable the mock
-      // For now, we verify the error handling structure exists
+      // Ensure Bun PTY path also fails so we reach node-pty fallback.
+      const bunFailImpl: unknown = (..._args: unknown[]) => {
+        throw new Error("Bun PTY unavailable");
+      };
+      vi
+        .spyOn(bun, "spawn")
+        .mockImplementation(bunFailImpl as typeof bun.spawn);
 
-      // This test verifies the error path exists; actual unavailability testing
-      // would require more complex mocking setup that's not worth the complexity
-      expect(true).toBe(true); // Placeholder - error path is tested in integration
+      // Create a caller without the global node-pty test mock, and force node-pty to be unusable.
+      mock.module("node-pty", () => ({ default: {} }));
+      const { createTestCallerNoPty } = await import("./utils/trpc-nopty");
+      const noPtyCaller = await createTestCallerNoPty();
+
+      await expect(
+        noPtyCaller.terminal.createSession({ cols: 80, rows: 24 })
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+      });
     });
   });
 
@@ -157,16 +188,21 @@ describe("terminal router", () => {
           resize: vi.fn(),
           close: vi.fn(),
         },
-        exited: Promise.resolve(0),
+        exited: pendingExit(),
         kill: vi.fn(),
       };
 
-      Bun.spawn = vi.fn().mockImplementation((_cmd, options) => {
+      const bunSpawnImpl: unknown = (...args: unknown[]) => {
+        const options =
+          (args.length > 1 ? args[1] : args[0]) as TerminalSpawnOptions | undefined;
         if (options?.terminal?.data) {
           dataCallback = options.terminal.data;
         }
         return mockProc as unknown as Bun.Subprocess;
-      });
+      };
+      vi
+        .spyOn(bun, "spawn")
+        .mockImplementation(bunSpawnImpl as typeof bun.spawn);
 
       const { sessionId } = await caller.terminal.createSession({
         cols: 80,
@@ -196,8 +232,8 @@ describe("terminal router", () => {
         }, 10);
       });
 
-      // Should have received at least the test output
-      expect(chunks.length).toBeGreaterThanOrEqual(0);
+      expect(chunks).toContain("test output");
+      await caller.terminal.kill({ sessionId });
     });
 
     it("emits NOT_FOUND for invalid sessionId", async () => {
@@ -218,8 +254,13 @@ describe("terminal router", () => {
         });
       });
 
-      expect(error).toBeInstanceOf(TRPCError);
-      expect(error?.code).toBe("NOT_FOUND");
+      if (!error) {
+        throw new Error("Expected subscription to error");
+      }
+      if (!(error instanceof TRPCError)) {
+        throw new Error("Expected TRPCError");
+      }
+      expect(error.code).toBe("NOT_FOUND");
     });
   });
 
@@ -239,12 +280,12 @@ describe("terminal router", () => {
 
       const mockProc = {
         terminal: mockTerminal,
-        exited: Promise.resolve(0),
+        exited: pendingExit(),
         kill: vi.fn(),
       };
 
       const spawnSpy = vi
-        .spyOn(Bun, "spawn")
+        .spyOn(bun, "spawn")
         .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({
@@ -258,6 +299,7 @@ describe("terminal router", () => {
       await caller.terminal.write({ sessionId, data: "test input" });
 
       expect(mockTerminal.write).toHaveBeenCalledWith("test input");
+      await caller.terminal.kill({ sessionId });
       spawnSpy.mockRestore();
     });
 
@@ -293,12 +335,12 @@ describe("terminal router", () => {
 
       const mockProc = {
         terminal: mockTerminal,
-        exited: Promise.resolve(0),
+        exited: pendingExit(),
         kill: vi.fn(),
       };
 
       const spawnSpy = vi
-        .spyOn(Bun, "spawn")
+        .spyOn(bun, "spawn")
         .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({
@@ -312,6 +354,7 @@ describe("terminal router", () => {
       await caller.terminal.resize({ sessionId, cols: 120, rows: 40 });
 
       expect(mockTerminal.resize).toHaveBeenCalledWith(120, 40);
+      await caller.terminal.kill({ sessionId });
       spawnSpy.mockRestore();
     });
 
@@ -342,12 +385,12 @@ describe("terminal router", () => {
       const mockKill = vi.fn();
       const mockProc = {
         terminal: mockTerminal,
-        exited: Promise.resolve(0),
+        exited: pendingExit(),
         kill: mockKill,
       };
 
       const spawnSpy = vi
-        .spyOn(Bun, "spawn")
+        .spyOn(bun, "spawn")
         .mockImplementation(() => mockProc as unknown as Bun.Subprocess);
 
       const { sessionId } = await caller.terminal.createSession({

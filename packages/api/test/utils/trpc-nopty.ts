@@ -1,8 +1,8 @@
 /**
- * tRPC createCaller test utility
- * Reusable helper for creating authenticated tRPC callers in tests
+ * tRPC createCaller test utility (no node-pty mock)
+ *
+ * Use this only for tests that need to validate node-pty absence paths.
  */
-
 process.env.OPENAI_API_KEY = "test";
 
 import "./mock-bun-bundle";
@@ -10,11 +10,8 @@ import "./mock-metrics";
 import "./mock-db-client";
 import "./mock-voice";
 import "./mock-hypergraph";
-import "./mock-node-pty";
 import { createTestSession } from "@alfred/test-kit/auth";
 import { RuntimeContext } from "@alfred/type/runtime-context";
-
-// type RouterInputs = inferRouterInputs<TRPCAppRouter>;
 
 type CreateCallerOptions = {
   userId?: string;
@@ -24,10 +21,6 @@ type CreateCallerOptions = {
   obligations?: string[];
 };
 
-/**
- * Creates a test tRPC caller with authenticated session.
- * Use this utility in all API router tests for consistent setup.
- */
 type RuntimeBundle = {
   userId: string | null;
   roles: string[];
@@ -85,7 +78,7 @@ function createRuntimeBundle(options: {
   return { runtime, runtimeContext, userId, roles, scopes };
 }
 
-export async function createTestCaller(options: CreateCallerOptions = {}) {
+export async function createTestCallerNoPty(options: CreateCallerOptions = {}) {
   const bundle = createRuntimeBundle({
     userId: options.userId ?? "test-user",
     roles: options.roles,
@@ -117,15 +110,3 @@ export async function createTestCaller(options: CreateCallerOptions = {}) {
   } as unknown as Parameters<typeof mod.appRouter.createCaller>[0]);
 }
 
-export async function createUnauthedCaller() {
-  const bundle = createRuntimeBundle({
-    userId: null,
-  });
-  const mod = await import("@alfred/api/routers/index");
-  return mod.appRouter.createCaller({
-    session: null,
-    runtime: bundle.runtime,
-    runtimeContext: bundle.runtimeContext,
-    policy: { obligations: [] },
-  } as unknown as Parameters<typeof mod.appRouter.createCaller>[0]);
-}

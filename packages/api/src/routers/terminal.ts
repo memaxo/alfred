@@ -113,20 +113,38 @@ export const terminalRouter = router({
 
         // 2) Fallback to node-pty (optional dependency)
         const ptyBackend = await getPty();
-        if (!ptyBackend) {
+        type PtyBackend = {
+          spawn: (
+            file: string,
+            args: string[],
+            options: {
+              name: string;
+              cols: number;
+              rows: number;
+              cwd?: string;
+              env: Record<string, string>;
+            }
+          ) => NodePtySession["pty"];
+        };
+        const backend =
+          ptyBackend &&
+          typeof (ptyBackend as { spawn?: unknown }).spawn === "function"
+            ? (ptyBackend as PtyBackend)
+            : null;
+        if (!backend) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
             message: "Terminal functionality is unavailable on this server",
           });
         }
 
-        const pty = ptyBackend.spawn(shell, [], {
+        const pty: NodePtySession["pty"] = backend.spawn(shell, [], {
           name: "xterm-color",
           cols: input.cols,
           rows: input.rows,
           cwd: input.cwd || process.env.HOME,
           env: process.env as Record<string, string>,
-        });
+        }) as NodePtySession["pty"];
 
         sessions.set(sessionId, { kind: "node-pty", pty });
         pty.onExit(() => {

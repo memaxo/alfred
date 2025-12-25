@@ -1,21 +1,51 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
 
 // Security: Only allow access within the project root
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = path.resolve(process.cwd());
+const PROJECT_ROOT_REAL = realpathSync(PROJECT_ROOT);
 
-function validatePath(requestedPath: string) {
-  const resolvedPath = path.resolve(PROJECT_ROOT, requestedPath);
+function isWithinProjectRoot(candidatePath: string): boolean {
+  const rel = path.relative(PROJECT_ROOT_REAL, candidatePath);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
 
-  // Ensure the path is within the project root
-  if (!resolvedPath.startsWith(PROJECT_ROOT)) {
+function validateResolvedPath(resolvedPath: string) {
+  if (!isWithinProjectRoot(resolvedPath)) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Access denied: Path is outside the project root.",
     });
+  }
+}
+
+function validatePathForRead(requestedPath: string) {
+  const resolvedPath = path.resolve(PROJECT_ROOT_REAL, requestedPath);
+  validateResolvedPath(resolvedPath);
+
+  if (existsSync(resolvedPath)) {
+    const real = realpathSync(resolvedPath);
+    validateResolvedPath(real);
+  }
+  return resolvedPath;
+}
+
+function validatePathForWrite(requestedPath: string) {
+  const resolvedPath = path.resolve(PROJECT_ROOT_REAL, requestedPath);
+  validateResolvedPath(resolvedPath);
+
+  const parent = path.dirname(resolvedPath);
+  if (existsSync(parent)) {
+    const parentReal = realpathSync(parent);
+    validateResolvedPath(parentReal);
+  }
+
+  if (existsSync(resolvedPath)) {
+    const real = realpathSync(resolvedPath);
+    validateResolvedPath(real);
   }
 
   return resolvedPath;
@@ -26,7 +56,7 @@ export const fsRouter = router({
     .input(z.object({ path: z.string() }))
     .query(({ input }) => {
       try {
-        const filePath = validatePath(input.path);
+        const filePath = validatePathForRead(input.path);
 
         if (!existsSync(filePath)) {
           throw new TRPCError({
@@ -60,7 +90,7 @@ export const fsRouter = router({
     .input(z.object({ path: z.string(), content: z.string() }))
     .mutation(({ input }) => {
       try {
-        const filePath = validatePath(input.path);
+        const filePath = validatePathForWrite(input.path);
         writeFileSync(filePath, input.content, "utf-8");
         return { success: true };
       } catch (error) {

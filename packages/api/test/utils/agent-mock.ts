@@ -83,6 +83,8 @@ mock.module("@alfred/agent", async () => {
 // so tests don't pull in the full tool catalog (and its AI SDK dependencies).
 mock.module("@alfred/agent/v6", () => ({
   buildTools,
+  getOpenAI,
+  getModelId,
 }));
 
 export function resetAgentMocks() {
