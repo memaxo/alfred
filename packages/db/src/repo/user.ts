@@ -255,10 +255,10 @@ export async function listFacts(
   return rows;
 }
 
-export async function deleteFact(factId: string): Promise<number> {
+export async function deleteFact(userId: string, factId: string): Promise<number> {
   const rows = await db
     .delete(facts)
-    .where(eq(facts.id, factId))
+    .where(and(eq(facts.userId, userId), eq(facts.id, factId)))
     .returning({ id: facts.id });
   return rows.length;
 }

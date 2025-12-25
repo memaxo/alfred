@@ -36,16 +36,16 @@ const metricsMiddleware = t.middleware(async ({ path, type, next }) => {
   const labels = { procedure: path ?? "unknown", type };
   const m = await getMetrics();
   const stopTimer =
-    m?.trpcRequestDurationSeconds.startTimer(labels) ?? (() => {});
+    m?.trpcRequestDurationSeconds?.startTimer(labels) ?? (() => {});
 
   try {
     const result = await next();
-    m?.trpcRequestsTotal.inc(labels);
+    m?.trpcRequestsTotal?.inc(labels);
     return result;
   } catch (error) {
     const code = error instanceof TRPCError ? error.code : "UNKNOWN";
-    m?.trpcRequestsTotal.inc(labels);
-    m?.trpcRequestErrorsTotal.inc({ ...labels, code });
+    m?.trpcRequestsTotal?.inc(labels);
+    m?.trpcRequestErrorsTotal?.inc({ ...labels, code });
     throw error;
   } finally {
     stopTimer();
@@ -110,7 +110,7 @@ export const rateLimit = t.middleware(async ({ path, next }) => {
   // Increment and check limit
   if (++requestCount > getLimitPerMinute()) {
     const m = await getMetrics();
-    m?.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
+    m?.rateLimitHitsTotal?.inc({ procedure: path ?? "unknown" });
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS" as TRPCError["code"],
       message: "rate_limited",

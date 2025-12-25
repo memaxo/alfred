@@ -3,6 +3,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Obligation } from "@alfred/type";
 
+// Bun stable does not expose a runtime "bun:bundle" module, but several packages
+// import it to access compile-time feature flags. In tests, provide a safe stub
+// so routers can import without failing module resolution.
+mock.module("bun:bundle", () => ({
+  feature: (_name: string) => false,
+}));
+mock.module("bundle", () => ({
+  feature: (_name: string) => false,
+}));
+
 const createMetricStub = () => ({
   inc: vi.fn(),
   dec: vi.fn(),
@@ -58,6 +68,43 @@ metricsStub.getMetricsSnapshot = vi.fn(() => "metrics");
 metricsStub.runnerStepsTotal = createMetricStub();
 metricsStub.runnerErrorsTotal = createMetricStub();
 
+// Commonly imported policy enforcement metrics come from star re-exports in
+// `src/metrics.ts` (via `export * from "@alfred/policy"`). Provide explicit stubs
+// so any router importing `requirePolicy` can load in tests.
+metricsStub.policyDecisionsTotal ??= createMetricStub();
+metricsStub.policyObligationsTotal ??= createMetricStub();
+
+// Common router imports from "../metrics" (relative path). These are used across
+// routers that are loaded when constructing the full app router in tests.
+metricsStub.workflowObligationDurationSeconds ??= createMetricStub();
+metricsStub.workflowObligationSuspensionsTotal ??= createMetricStub();
+metricsStub.graphContextDurationSeconds ??= createMetricStub();
+metricsStub.graphQueriesTotal ??= createMetricStub();
+metricsStub.graphQueryDurationSeconds ??= createMetricStub();
+metricsStub.graphRagEmptyTotal ??= createMetricStub();
+metricsStub.graphRagHitsTotal ??= createMetricStub();
+metricsStub.assistantGenerateDurationSeconds ??= createMetricStub();
+metricsStub.assistantGenerateRequestsTotal ??= createMetricStub();
+metricsStub.orchestratorGenerateDurationSeconds ??= createMetricStub();
+metricsStub.orchestratorGenerateRequestsTotal ??= createMetricStub();
+metricsStub.cognitiveFeedbackSubmissionsTotal ??= createMetricStub();
+metricsStub.preferenceCacheInvalidationsTotal ??= createMetricStub();
+metricsStub.preferenceRefreshTotal ??= createMetricStub();
+metricsStub.preferenceHistoryPrunedTotal ??= createMetricStub();
+metricsStub.workflowSuspensionCleanupTotal ??= createMetricStub();
+metricsStub.droidPendingCleanupTotal ??= createMetricStub();
+metricsStub.droidPendingRunsGauge ??= createMetricStub();
+metricsStub.runtimeHistorySelectionDurationSeconds ??= createMetricStub();
+metricsStub.historyContextTierDropsTotal ??= createMetricStub();
+metricsStub.historyContextTokensTotal ??= createMetricStub();
+metricsStub.voiceWebSocketBackpressureEventsTotal ??= createMetricStub();
+metricsStub.voiceWebSocketConnectionRejectedTotal ??= createMetricStub();
+metricsStub.voiceWebSocketConnectionsCurrent ??= createMetricStub();
+metricsStub.voiceWebSocketPingTimeoutTotal ??= createMetricStub();
+metricsStub.voiceWebSocketSendFailuresTotal ??= createMetricStub();
+metricsStub.voiceWebSocketUpgradeDurationSeconds ??= createMetricStub();
+metricsStub.voiceWebSocketUpgradeRateLimitHitsTotal ??= createMetricStub();
+
 export { metricsStub, createMetricStub };
 
 mock.module("@alfred/api/metrics", () => ({
@@ -66,6 +113,14 @@ mock.module("@alfred/api/metrics", () => ({
 
 // Some modules import via source path; mock that too.
 mock.module("@alfred/api/src/metrics", () => ({
+  ...metricsStub,
+}));
+
+// Some internal modules import the aggregator via a relative path ("../metrics").
+// Mock the resolved file path as well to avoid export-star issues when other
+// packages are mocked.
+const apiMetricsAbs = new URL("../../src/metrics.ts", import.meta.url).pathname;
+mock.module(apiMetricsAbs, () => ({
   ...metricsStub,
 }));
 
