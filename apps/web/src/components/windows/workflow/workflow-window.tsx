@@ -25,6 +25,7 @@ import { useDesktopStore } from "@/store/desktop";
 import { WorkflowCanvas } from "./workflow-canvas";
 import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
 
+import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
@@ -75,6 +76,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     windowData.mode ?? "sequential"
   );
 
+  const { data: session } = authClient.useSession();
   const updateWindow = useDesktopStore((s) => s.updateWindow);
 
   const generatePlan = trpc.plan.generate.useMutation({
@@ -90,15 +92,42 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     },
   });
 
-  const handleGenerate = (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleGenerate = (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (!requirementDraft.trim()) {
       toast.error("Requirement is required");
       return;
     }
+
+    if (!session?.user?.id) {
+      toast.error("User session required");
+      return;
+    }
+
     generatePlan.mutate({
       intent: {
+        id: crypto.randomUUID(),
         description: requirementDraft.trim(),
+        source: "chat",
+        userId: session.user.id,
+        timestamp: new Date(),
+        context: {
+          existingPatterns: [],
+          constraints: [],
+        },
+      },
+      research: {
+        external: [],
+        internal: {
+          existingCode: [],
+          patterns: [],
+          conventions: [],
+        },
+        metadata: {
+          totalSources: 0,
+          tokenCount: 0,
+          researchDurationMs: 0,
+        },
       },
       options: {
         maxPhases: 5,
@@ -146,7 +175,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
 
   const handleRevise = () => {
     // For now, just regenerate. Ideally we'd pass feedback.
-    handleGenerate(new Event('submit') as any);
+    handleGenerate();
   };
 
   const toggleView = () => {

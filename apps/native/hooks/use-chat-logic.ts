@@ -3,6 +3,7 @@ import { useCallback, useState, useMemo, useEffect } from "react";
 import { useVoiceSessionNative } from "@/lib/voice/session";
 import { trpcClient } from "@/utils/trpc";
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@alfred/logger";
 
 export type AgentType = "assistant" | "orchestrator";
 
@@ -37,7 +38,7 @@ export function useChatLogic() {
     api: apiEndpoint,
     headers,
     onError: (err) => {
-      console.error("Chat error:", err);
+      logger.error("chat_error", { error: err });
     },
   });
 

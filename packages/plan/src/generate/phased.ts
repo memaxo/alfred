@@ -95,7 +95,7 @@ async function enrichPhasesWithAI(
 ): Promise<Phase[]> {
   try {
     const { object } = await generateObject({
-      model: getOpenAI()(getModelId()) as any,
+      model: getOpenAI()(getModelId()),
       schema: z.object({
         phases: z.array(
           z.object({

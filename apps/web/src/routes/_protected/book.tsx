@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/utils/trpc";
-import { BookmarkPane } from "@alfred/ui";
+import { BookmarkPane, type BookmarkPaneItem } from "@alfred/ui";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_protected/book")({
@@ -204,8 +204,8 @@ function BookPane() {
     [deleteBookmark]
   );
 
-  const filteredItems = useMemo(() => {
-    let items = bookmarksQuery.data ?? [];
+  const filteredItems = useMemo<BookmarkPaneItem[]>(() => {
+    let items = (bookmarksQuery.data ?? []) as BookmarkPaneItem[];
     
     if (filterTag) {
       const ft = filterTag.toLowerCase();
@@ -261,7 +261,7 @@ function BookPane() {
       </div>
 
       <BookmarkPane 
-        items={filteredItems as any} 
+        items={filteredItems} 
         onDelete={handleDelete}
       />
 
