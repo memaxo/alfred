@@ -213,6 +213,32 @@ describe("preference router", () => {
       expect(result).toEqual({ updated: 1 });
     });
 
+    it("validates input schema", async () => {
+      // Missing messageId
+      await expect(
+        caller.preference.updateFromFeedback({
+          messageId: "",
+          preferenceUpdates: { "response.verbosity": "concise" },
+        } as any)
+      ).rejects.toThrow();
+
+      // Empty preferenceUpdates
+      await expect(
+        caller.preference.updateFromFeedback({
+          messageId: "msg-1",
+          preferenceUpdates: {},
+        })
+      ).rejects.toThrow();
+
+      // Invalid preference key
+      await expect(
+        caller.preference.updateFromFeedback({
+          messageId: "msg-1",
+          preferenceUpdates: { "": "value" },
+        })
+      ).rejects.toThrow();
+    });
+
     it("throws when message not found", async () => {
       getMessageMock.mockResolvedValue(null);
 

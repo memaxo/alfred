@@ -58,4 +58,47 @@ export type PatternSearchResult = WorkflowPattern & {
   score: number;
 };
 
-export async function searchPatterns(\n  embedding: number[],\n  limit = 10,\n  threshold = 0.7,\n  projectId?: string\n): Promise<PatternSearchResult[]> {\n  const embeddingArrayExpr = `ARRAY[${embedding.join(\",\")}]`;\n\n  return await db.transaction(async (tx) => {\n    const rows = await tx\n      .select({\n        id: workflowPatterns.id,\n        userId: workflowPatterns.userId,\n        projectId: workflowPatterns.projectId,\n        trigger: workflowPatterns.trigger,\n        planTemplate: workflowPatterns.planTemplate,\n        successRate: workflowPatterns.successRate,\n        avgDurationMs: workflowPatterns.avgDurationMs,\n        usageCount: workflowPatterns.usageCount,\n        knowledgeNodeId: workflowPatterns.knowledgeNodeId,\n        createdAt: workflowPatterns.createdAt,\n        updatedAt: workflowPatterns.updatedAt,\n        embedding: workflowPatterns.embedding,\n        score: projectId\n          ? sql<number>`(1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)) * (CASE WHEN project_id = ${projectId} THEN 1.0 ELSE 0.8 END)`\n          : sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,\n      })\n      .from(workflowPatterns)\n      .where(\n        and(\n          eq(workflowPatterns.status, \"active\"),\n          isNotNull(workflowPatterns.embedding)\n        )\n      )\n      .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)\n      .limit(limit * 2);\n\n    const filtered = rows.filter(\n      (row) => Number.isFinite(row.score) && row.score >= threshold\n    );\n\n    return filtered.slice(0, limit) as PatternSearchResult[];\n  });\n}\n
+export async function searchPatterns(
+  embedding: number[],
+  limit = 10,
+  threshold = 0.7,
+  projectId?: string
+): Promise<PatternSearchResult[]> {
+  const embeddingArrayExpr = `ARRAY[${embedding.join(",")}]`;
+
+  return await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: workflowPatterns.id,
+        userId: workflowPatterns.userId,
+        projectId: workflowPatterns.projectId,
+        trigger: workflowPatterns.trigger,
+        planTemplate: workflowPatterns.planTemplate,
+        successRate: workflowPatterns.successRate,
+        avgDurationMs: workflowPatterns.avgDurationMs,
+        usageCount: workflowPatterns.usageCount,
+        knowledgeNodeId: workflowPatterns.knowledgeNodeId,
+        createdAt: workflowPatterns.createdAt,
+        updatedAt: workflowPatterns.updatedAt,
+        embedding: workflowPatterns.embedding,
+        score: projectId
+          ? sql<number>`(1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)) * (CASE WHEN project_id = ${projectId} THEN 1.0 ELSE 0.8 END)`
+          : sql<number>`1 - (embedding <=> ${sql.raw(embeddingArrayExpr)}::vector)`,
+      })
+      .from(workflowPatterns)
+      .where(
+        and(
+          eq(workflowPatterns.status, "active"),
+          isNotNull(workflowPatterns.embedding)
+        )
+      )
+      .orderBy(sql`embedding <=> ${sql.raw(embeddingArrayExpr)}::vector ASC`)
+      .limit(limit * 2);
+
+    const filtered = rows.filter(
+      (row) => Number.isFinite(row.score) && row.score >= threshold
+    );
+
+    return filtered.slice(0, limit) as PatternSearchResult[];
+  });
+}

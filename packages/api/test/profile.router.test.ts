@@ -113,5 +113,28 @@ describe("profile router", () => {
         })
       ).rejects.toThrow();
     });
+
+    it("validates input schema", async () => {
+      // Invalid email
+      await expect(
+        caller.profile.update({
+          email: "not-an-email",
+        })
+      ).rejects.toThrow();
+
+      // Empty name
+      await expect(
+        caller.profile.update({
+          name: "",
+        })
+      ).rejects.toThrow();
+
+      // Too long name (max 256)
+      await expect(
+        caller.profile.update({
+          name: "a".repeat(257),
+        })
+      ).rejects.toThrow();
+    });
   });
 });

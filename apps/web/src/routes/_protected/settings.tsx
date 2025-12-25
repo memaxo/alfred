@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Palette, Volume2 } from "lucide-react";
+import { ChevronRight, Palette, Shield, User, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -90,10 +90,22 @@ function SettingsRoute() {
       {/* Quick Navigation */}
       <div className="space-y-3">
         <SettingsLink
+          description="Manage your personal information and profile"
+          icon={<User className="h-5 w-5" strokeWidth={1.5} />}
+          title="Profile"
+          to="/settings/profile"
+        />
+        <SettingsLink
           description="Customize Mindscape visual effects and performance"
           icon={<Palette className="h-5 w-5" strokeWidth={1.5} />}
           title="Visual Appearance"
           to="/settings/visual"
+        />
+        <SettingsLink
+          description="Manage your data privacy and autonomy levels"
+          icon={<Shield className="h-5 w-5" strokeWidth={1.5} />}
+          title="Privacy"
+          to="/settings/privacy"
         />
       </div>
 
