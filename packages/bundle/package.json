@@ -1,0 +1,23 @@
+{
+  "name": "bundle",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "devDependencies": {
+    "@alfred/tsconfig": "workspace:*",
+    "@types/node": "*",
+    "typescript": "*"
+  }
+}
+
