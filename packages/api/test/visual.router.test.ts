@@ -14,7 +14,8 @@ import {
   mock,
   vi,
 } from "bun:test";
-import type { VisualConfig } from "@alfred/type";
+import { assertAuthGuard } from "@alfred/test-kit/router";
+import type { VisualConfig } from "@alfred/type/visual";
 import { dbModuleStub } from "./utils/mock-db-client";
 import { mockPolicyAudit, setupTestEnv } from "./utils/router-helpers";
 
@@ -438,52 +439,34 @@ describe("visual router", () => {
       const unauthedCaller = await createUnauthedCaller();
 
       // getConfig
-      await expect(unauthedCaller.visual.getConfig()).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      await assertAuthGuard(() => unauthedCaller.visual.getConfig());
 
       // setConfig
-      await expect(
-        unauthedCaller.visual.setConfig(PRESET_BALANCED)
-      ).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      await assertAuthGuard(() => unauthedCaller.visual.setConfig(PRESET_BALANCED));
 
       // updateConfig
-      await expect(
+      await assertAuthGuard(() =>
         unauthedCaller.visual.updateConfig({ particles: { count: 5000 } })
-      ).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      );
 
       // setPreset
-      await expect(
+      await assertAuthGuard(() =>
         unauthedCaller.visual.setPreset({ preset: "minimal" })
-      ).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      );
 
       // resetToDefault
-      await expect(
-        unauthedCaller.visual.resetToDefault()
-      ).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      await assertAuthGuard(() => unauthedCaller.visual.resetToDefault());
 
       // exportConfig
-      await expect(unauthedCaller.visual.exportConfig()).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      await assertAuthGuard(() => unauthedCaller.visual.exportConfig());
 
       // importConfig
-      await expect(
+      await assertAuthGuard(() =>
         unauthedCaller.visual.importConfig({
           version: 1,
           config: PRESET_BALANCED,
         })
-      ).rejects.toMatchObject({
-        code: "UNAUTHORIZED",
-      });
+      );
     });
   });
 });

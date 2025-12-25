@@ -9,7 +9,10 @@ import { DockerSandbox } from "../../src/kinetic/sandbox";
  * Ensure Docker is running before executing these tests.
  */
 // Set a longer timeout for Docker operations
-describe("DockerSandbox (Kinetic Layer)", () => {
+const SHOULD_RUN = process.env.RUN_DOCKER_TESTS === "1";
+const describeFn = SHOULD_RUN ? describe : describe.skip;
+
+describeFn("DockerSandbox (Kinetic Layer)", () => {
   let sandbox: DockerSandbox;
 
   beforeAll(async () => {

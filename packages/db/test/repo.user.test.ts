@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { describePostgres, requirePostgresTestEnv } from "@alfred/db/testing";
 import { EMBEDDING_DIM } from "@alfred/embed";
-import { sql } from "drizzle-orm";
+import { resetTables } from "@alfred/test-kit/repo";
 
 const SHOULD_RUN = process.env.RUN_DB_TESTS === "1";
 const describeFn = SHOULD_RUN ? describePostgres : describe.skip;
@@ -15,9 +15,12 @@ async function resetUserTables() {
   if (!db) {
     return;
   }
-  await db.execute(
-    sql`TRUNCATE user_profiles, user_preferences, user_facts, user_events RESTART IDENTITY CASCADE`
-  );
+  await resetTables(db, [
+    "user_profiles",
+    "user_preferences",
+    "user_facts",
+    "user_events",
+  ]);
 }
 
 function makeVector(seed: number) {

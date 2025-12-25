@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { sql } from "drizzle-orm";
+import { resetTables } from "@alfred/test-kit/repo";
 
 const SHOULD_RUN =
   process.env.RUN_DB_TESTS === "1" && Boolean(process.env.DATABASE_URL);
@@ -12,9 +12,13 @@ async function resetAssistantTables() {
   if (!db) {
     return;
   }
-  await db.execute(
-    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
-  );
+  await resetTables(db, [
+    "assistant_tasks",
+    "assistant_notes",
+    "assistant_reminders",
+    "assistant_bookmarks",
+    "assistant_timers",
+  ]);
 }
 
 const describeFn = SHOULD_RUN ? describe : describe.skip;

@@ -85,7 +85,11 @@ const createVCRModel = (vcr: CognitiveVCR) => {
   };
 };
 
-describe("Level 5 E2E: Orchestrator", () => {
+const SHOULD_RUN =
+  process.env.RUN_LEVEL5_E2E === "1" && process.env.RUN_DOCKER_TESTS === "1";
+const describeFn = SHOULD_RUN ? describe : describe.skip;
+
+describeFn("Level 5 E2E: Orchestrator", () => {
   let sandbox: DockerSandbox;
   let vcr: CognitiveVCR;
   let token: string;

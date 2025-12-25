@@ -7,6 +7,7 @@ import {
   mock,
   vi,
 } from "bun:test";
+import { assertConcurrencyGuard, createMockTime } from "@alfred/test-kit/scheduler";
 import {
   startReminderScheduler,
   stopReminderScheduler,
@@ -56,11 +57,12 @@ describe("ReminderScheduler", () => {
     it("starts when SCHED_REMIND is set to 1", async () => {
       process.env.SCHED_REMIND = "1";
       getDueRemindersAllMock.mockResolvedValue([]);
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
 
       startReminderScheduler({
         intervalMs: 100,
         logger: loggerMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
+        now: time.now,
       });
 
       // Wait for first tick
@@ -106,13 +108,14 @@ describe("ReminderScheduler", () => {
       markReminderFiredMock.mockResolvedValue(1);
 
       const onFireMock = vi.fn().mockResolvedValue(undefined);
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
 
       startReminderScheduler({
         intervalMs: 100,
         batchSize: 100,
         logger: loggerMock,
         onFire: onFireMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
+        now: time.now,
       });
 
       // Wait for first tick
@@ -136,11 +139,12 @@ describe("ReminderScheduler", () => {
 
     it("handles empty reminder list", async () => {
       getDueRemindersAllMock.mockResolvedValue([]);
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
 
       startReminderScheduler({
         intervalMs: 100,
         logger: loggerMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
+        now: time.now,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -158,38 +162,22 @@ describe("ReminderScheduler", () => {
     });
 
     it("skips tick if previous run is still in progress", async () => {
-      let resolveFirstTick: () => void;
-      const firstTickPromise = new Promise<void>((resolve) => {
-        resolveFirstTick = resolve;
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
+      await assertConcurrencyGuard({
+        tickSpy: getDueRemindersAllMock,
+        blockedResult: [],
+        startScheduler: () => {
+          startReminderScheduler({
+            intervalMs: 50,
+            logger: loggerMock,
+            now: time.now,
+          });
+        },
+        stopScheduler: () => {
+          stopReminderScheduler();
+        },
+        waitMs: { first: 60, second: 60, settle: 20 },
       });
-
-      getDueRemindersAllMock.mockImplementation(async () => {
-        await firstTickPromise;
-        return [];
-      });
-
-      startReminderScheduler({
-        intervalMs: 50,
-        logger: loggerMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
-      });
-
-      // Trigger first tick
-      await new Promise((resolve) => setTimeout(resolve, 60));
-
-      // Trigger second tick while first is still running (should be scheduled)
-      await new Promise((resolve) => setTimeout(resolve, 60));
-
-      // Should have been called once, second call should be skipped
-      // Note: The scheduler uses setTimeout, so we need to wait a bit more
-      await new Promise((resolve) => setTimeout(resolve, 20));
-
-      expect(getDueRemindersAllMock).toHaveBeenCalledTimes(1);
-      // The warning may not be logged if the second tick hasn't fired yet
-      // but the concurrency guard should prevent it
-
-      resolveFirstTick?.();
-      stopReminderScheduler();
     });
   });
 
@@ -201,11 +189,12 @@ describe("ReminderScheduler", () => {
     it("logs errors and continues running", async () => {
       const error = new Error("Database error");
       getDueRemindersAllMock.mockRejectedValueOnce(error);
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
 
       startReminderScheduler({
         intervalMs: 100,
         logger: loggerMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
+        now: time.now,
       });
 
       // Wait for first tick (error)
@@ -233,11 +222,12 @@ describe("ReminderScheduler", () => {
 
     it("stops scheduler and cleans up timers", async () => {
       getDueRemindersAllMock.mockResolvedValue([]);
+      const time = createMockTime(new Date("2025-01-27T12:00:00Z"));
 
       startReminderScheduler({
         intervalMs: 100,
         logger: loggerMock,
-        now: () => new Date("2025-01-27T12:00:00Z"),
+        now: time.now,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 50));

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import type { Obligation } from "@alfred/type";
+import { assertPolicyEnforced } from "@alfred/test-kit/router";
 
 const createAuditLogMock = vi.fn().mockResolvedValue(undefined);
 mock.module("@alfred/db/repo/policy", () => ({
@@ -75,6 +76,7 @@ describe("enforceWorkflowPlanPolicy", () => {
       enforceWorkflowPlanPolicy({ session: baseSession, input: baseInput })
     ).rejects.toMatchObject({ message: "policy_denied", statusCode: 403 });
 
+    await assertPolicyEnforced({ action: "workflow.plan", evaluate: evaluateMock });
     expect(createAuditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({ decision: "deny" })
     );
@@ -93,10 +95,10 @@ describe("enforceWorkflowPlanPolicy", () => {
     });
 
     expect(result).toEqual({ obligations: [bioObligation] });
+    await assertPolicyEnforced({ action: "workflow.plan", evaluate: evaluateMock });
     expect(consumeRouteRateLimitMock).toHaveBeenCalledWith(
-      "user-1",
       "workflow.stream",
-      "subscription"
+      "user-1"
     );
     expect(createAuditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({ decision: "allow" })

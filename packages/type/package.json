@@ -55,6 +55,10 @@
       "types": "./dist/policy.d.ts",
       "default": "./src/policy.ts"
     },
+    "./visual": {
+      "types": "./dist/visual.d.ts",
+      "default": "./src/visual.ts"
+    },
     "./ai-adapter": {
       "types": "./dist/ai-adapter.d.ts",
       "default": "./src/ai-adapter.ts"

@@ -7,9 +7,8 @@ import {
   expect,
   it,
 } from "bun:test";
-import { createTestSession } from "@alfred/test-kit/auth";
-import { RuntimeContext } from "@alfred/type/runtime-context";
-import { sql } from "drizzle-orm";
+import { resetTables } from "@alfred/test-kit/repo";
+import { createAuthedCaller } from "@alfred/test-kit/router";
 import { shutdownApiServices } from "../src/init";
 import { shutdownVoicePools } from "../src/voice/pools";
 import { resetAgentMocks } from "./utils/agent-mock";
@@ -20,46 +19,23 @@ const SHOULD_RUN =
 const describeFn = SHOULD_RUN ? describe : describe.skip;
 
 const TEST_USER = "api-assistant-test-user";
-let appRouter: typeof import("@alfred/api/routers/index").appRouter;
 let testDbHarness: Awaited<ReturnType<typeof createTestDb>>;
 
 async function resetAssistantTables() {
   if (!testDbHarness) {
     return;
   }
-  await testDbHarness.db.execute(
-    sql`TRUNCATE assistant_tasks, assistant_notes, assistant_reminders, assistant_bookmarks, assistant_timers RESTART IDENTITY CASCADE`
-  );
+  await resetTables(testDbHarness.db, [
+    "assistant_tasks",
+    "assistant_notes",
+    "assistant_reminders",
+    "assistant_bookmarks",
+    "assistant_timers",
+  ]);
 }
 
-function createCaller() {
-  const receivedAt = new Date();
-  const runtime = {
-    requestId: "test-request",
-    receivedAt,
-    method: "POST",
-    url: "http://localhost/test",
-    ip: null,
-    forwardedFor: [] as string[],
-    userAgent: null,
-    referer: null,
-  };
-  const runtimeContext = new RuntimeContext([
-    ["requestId", runtime.requestId],
-    ["receivedAt", receivedAt.toISOString()],
-    ["method", runtime.method],
-    ["url", runtime.url],
-    ["ip", runtime.ip],
-    ["forwardedFor", runtime.forwardedFor],
-    ["userId", TEST_USER],
-    ["scanContext", null],
-  ]);
-  const session = createTestSession({ id: TEST_USER });
-  return appRouter.createCaller({
-    session,
-    runtime,
-    runtimeContext,
-  } as Parameters<typeof appRouter.createCaller>[0]);
+async function createCaller() {
+  return createAuthedCaller(TEST_USER, { roles: [], scopes: [] });
 }
 
 describeFn("assistant routers", () => {
@@ -69,10 +45,6 @@ describeFn("assistant routers", () => {
         "assistant router tests require Postgres. Set DATABASE_URL and RUN_DB_TESTS=1."
       );
     }
-    const [{ appRouter: router }] = await Promise.all([
-      import("@alfred/api/routers/index"),
-    ]);
-    appRouter = router;
     testDbHarness = await createTestDb();
   });
 
@@ -96,7 +68,7 @@ describeFn("assistant routers", () => {
   });
 
   it("creates and lists notes for the authenticated user", async () => {
-    const caller = createCaller();
+    const caller = await createCaller();
     await caller.note.create({ content: "hello router", title: "Greeting" });
 
     const notes = await caller.note.list({});
@@ -106,7 +78,7 @@ describeFn("assistant routers", () => {
   });
 
   it("creates reminders and returns due reminders", async () => {
-    const caller = createCaller();
+    const caller = await createCaller();
     const now = new Date();
     const past = new Date(now.getTime() - 60_000);
 
@@ -121,7 +93,7 @@ describeFn("assistant routers", () => {
   });
 
   it("creates timers and marks them completed", async () => {
-    const caller = createCaller();
+    const caller = await createCaller();
     const timer = await caller.timer.create({
       duration: 30,
       label: "Router timer",

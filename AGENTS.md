@@ -160,7 +160,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 1. **Runner and Coverage.** Use `bun test` for all packages. Maintain coverage for repos, routers, and schedulers. Use `tsc -b` for type checks in CI.
 
-2. **Database Isolation.** Use ephemeral schemas, transactions, or `createTestDb`/`closeTestDb`. Reset tables between cases; no implicit globals or shared state.
+2. **Database Isolation.** Use `@alfred/test-kit/repo` (`createIsolatedDb`, `resetTables`) or ephemeral schemas/transactions. Reset tables between cases; no implicit globals or shared state.
 
 3. **UI and E2E.** Use React Testing Library for logic/simple components and Playwright for complex interactions (drag-and-drop, focus). Mock auth (`Better Auth`) and use `VITE_TEST_MODE=true` for heavy visualizations.
 
@@ -168,7 +168,7 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 5. **Sandbox and Cleanup.** Use `createTestSandbox()` or `os.tmpdir()` for temporary files. Never write to `packages/*/.*venv*/` or repository directories (except security boundary tests inside `process.cwd()`). Ensure `afterAll` hooks remove artifacts.
 
-6. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
+6. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Prefer `@alfred/test-kit/router` (`createAuthedCaller`, `assertAuthGuard`, `assertPolicyEnforced`) and `@alfred/test-kit/scheduler` (`createMockTime`, `assertConcurrencyGuard`) over bespoke setup; use `mock-db-client`/`mock-metrics` where needed.
 
 7. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
@@ -560,6 +560,31 @@ ExecPlans must accurately reflect implementation status. When verifying features
 6. **Naming convention.** Use `LEGACY_*` for deprecated features, `DEBUG` for debug-only code, explicit platform names for platform-specific features.
 
 7. **Runtime vs compile-time.** Feature flags are compile-time only. Use environment variables for runtime configuration.
+
+
+
+<!-- Source: .ruler/38-workflow-learning.md -->
+
+# Workflow Learning Patterns
+
+## Core Principle
+Every workflow execution is a learning opportunity. The system must automatically capture successes, failures, and conventions to improve future planning and execution accuracy.
+
+## Rules
+
+1. **Terminal learning triggers.** Automatically trigger pattern and convention extraction upon workflow terminal states (completed/failed). Learning must be asynchronous and non-blocking to the primary workflow finalization.
+
+2. **Execution aggregation.** Collect and aggregate `agent-handoff` events across all waves to generate high-fidelity execution summaries. Use these summaries instead of initial intents for learning modules to ensure fidelity to actual implementation.
+
+3. **Pattern vs Anti-Pattern.** Store successful plans as `WorkflowPattern` templates. Store failed plans as anti-patterns with associated failure reasons to enable proactive avoidance in future generations.
+
+4. **Contextual retrieval weights.** Prioritize in-project patterns during semantic matching. Use a 1.0x weight for same-project matches and 0.8x for cross-project fallbacks to maintain architectural consistency.
+
+5. **Convention refinement.** Persist project-specific naming, structural, and architectural conventions extracted from successful runs into `projects.config`. Refine existing conventions incrementally rather than overwriting.
+
+6. **Pattern lifecycle.** Implement automatic confidence decay for unused patterns (retire after 30 days) and quarantine for patterns with low success rates (<30% after 5 uses).
+
+7. **Vector search performance.** Perform vector similarity matches directly in SQL using `pgvector` operators (`<=>`) to maintain <10ms retrieval latency. Use `CASE` expressions for contextual weighting within the query.
 
 
 

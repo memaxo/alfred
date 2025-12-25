@@ -6,6 +6,12 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./router": "./src/router/index.ts",
+    "./router/*": "./src/router/*",
+    "./repo": "./src/repo/index.ts",
+    "./repo/*": "./src/repo/*",
+    "./scheduler": "./src/scheduler/index.ts",
+    "./scheduler/*": "./src/scheduler/*",
     "./kinetic": "./src/kinetic/index.ts",
     "./cognitive": "./src/cognitive/index.ts",
     "./physical": "./src/physical/index.ts",
@@ -30,6 +36,8 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "drizzle-orm": "catalog:",
+    "pg": "^8.16.3",
     "testcontainers": "^10.16.0",
     "zod": "^3.24.1"
   },
@@ -41,6 +49,7 @@
     "@alfred/type": "workspace:*",
     "@alfred/voice": "workspace:*",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.15.5",
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
