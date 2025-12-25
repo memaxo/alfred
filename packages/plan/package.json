@@ -49,6 +49,7 @@
     "@alfred/agent": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/db": "workspace:*",
+    "@alfred/runtime": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/type": "workspace:*",
     "zod": "catalog:",

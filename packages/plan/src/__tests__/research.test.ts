@@ -90,6 +90,15 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
 
     return { web: [] };
   },
+  gatherCodeContext: async () => ({
+    code: [],
+    summary: "No files found",
+  }),
+  buildContextBundle: async () => ({
+    maxTokens: 24000,
+    estimatedTokens: 0,
+    files: [],
+  }),
 }));
 
 mock.module("@alfred/agent/orchestrator/tool/web", () => ({

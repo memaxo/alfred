@@ -13,6 +13,7 @@
     { "path": "../type" },
     { "path": "../agent" },
     { "path": "../knowledge" },
-    { "path": "../db" }
+    { "path": "../db" },
+    { "path": "../runtime" }
   ]
 }

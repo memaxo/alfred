@@ -3,6 +3,7 @@ import { toolWeb } from "@alfred/agent/orchestrator/tool/web";
 import { logger } from "@alfred/logger";
 import type { WorkflowIntent } from "../intent/types.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
+import { gatherInternalResearch } from "./internal.js";
 import { calculateReliability, calculateRelevance } from "./score.js";
 import type {
   ResearchOptions,
@@ -193,8 +194,12 @@ export async function gatherFullResearch(
 ): Promise<ResearchResult> {
   const startTime = Date.now();
 
-  // If we're using deep research, we might want to call toolWeb directly to get the ID and context
+  // 1. Gather external research
   const external = await gatherExternalResearch(intent, options);
+
+  // 2. Gather internal research (codebase, patterns, conventions)
+  const internal = await gatherInternalResearch(intent);
+
   const durationMs = Date.now() - startTime;
 
   // Calculate approximate token count (rough estimate: 4 chars per token)
@@ -208,11 +213,7 @@ export async function gatherFullResearch(
 
   return {
     external,
-    internal: {
-      existingCode: [],
-      patterns: [],
-      conventions: [],
-    },
+    internal,
     metadata: {
       totalSources: external.length,
       tokenCount,

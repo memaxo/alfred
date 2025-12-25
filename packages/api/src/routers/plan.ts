@@ -1,6 +1,7 @@
 import {
   gatherExternalResearch,
   gatherFullResearch,
+  gatherInternalResearch,
   parseIntent,
   researchOptionsSchema,
   workflowIntentSchema,
@@ -100,6 +101,51 @@ export const planRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_research_external_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Internal research aggregator (returns codebase, patterns, conventions)
+   */
+  internalResearch: authedProcedure
+    .input(
+      z.object({
+        intent: workflowIntentSchema,
+        projectId: z.string().optional(),
+        options: z
+          .object({
+            maxFiles: z.number().int().min(1).max(50).optional(),
+            includePatterns: z.boolean().optional(),
+            includeConventions: z.boolean().optional(),
+          })
+          .optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      // Validate that intent.userId matches authenticated user
+      validateIntentUserId(input.intent, userId);
+
+      try {
+        const results = await gatherInternalResearch(
+          input.intent,
+          input.projectId,
+          input.options
+        );
+        return results;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_research_internal_failed",
           cause: error,
         });
       }
