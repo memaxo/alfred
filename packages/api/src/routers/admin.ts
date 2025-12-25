@@ -4,6 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../trpc";
 import { getVoicePools } from "../voice/pools";
 import { collectVoiceTelemetry } from "../voice/telemetry";
+import { collectPerformanceTelemetry } from "../performance/telemetry";
 
 type SessionRecord = {
   id?: string;
@@ -46,6 +47,11 @@ export const adminRouter = router({
         telemetry,
       };
     }
+  }),
+
+  getPerformanceStats: protectedProcedure.query(async ({ ctx }) => {
+    await ensureRecentBiometric(ctx.session);
+    return collectPerformanceTelemetry();
   }),
 
   restartVoicePool: protectedProcedure

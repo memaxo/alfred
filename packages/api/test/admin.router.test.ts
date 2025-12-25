@@ -36,6 +36,28 @@ const telemetrySnapshot = {
   packetLossTotal: 0,
 };
 const collectVoiceTelemetryMock = vi.fn().mockResolvedValue(telemetrySnapshot);
+const collectPerformanceTelemetryMock = vi.fn().mockResolvedValue({
+  generatedAt: Date.now(),
+  graph: {
+    queriesTotal: 10,
+    queryLatency: { average: 0.1, p50: 0.05, p95: 0.2, count: 10, unit: "seconds" },
+    contextLatency: { average: 0.2, p50: 0.1, p95: 0.4, count: 5, unit: "seconds" },
+    ragHits: 8,
+    ragEmpty: 2,
+  },
+  assistant: {
+    requestsTotal: 5,
+    generateLatency: { average: 1.5, p50: 1.2, p95: 2.5, count: 5, unit: "seconds" },
+  },
+  tools: {
+    droidRunsTotal: 3,
+    droidDuration: { average: 2.0, p50: 1.8, p95: 3.5, count: 3, unit: "seconds" },
+  },
+  system: {
+    healthChecksTotal: 100,
+    cognitiveFeedbackTotal: 12,
+  },
+});
 
 mock.module("@alfred/auth/biometric", () => ({
   requireRecentBiometric: requireRecentBiometricMock,
@@ -48,6 +70,10 @@ mock.module("../src/voice/pools", () => ({
 
 mock.module("../src/voice/telemetry", () => ({
   collectVoiceTelemetry: collectVoiceTelemetryMock,
+}));
+
+mock.module("../src/performance/telemetry", () => ({
+  collectPerformanceTelemetry: collectPerformanceTelemetryMock,
 }));
 
 const createPoolMocks = () => {
@@ -167,6 +193,23 @@ describe("admin router", () => {
       ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
       expect(requireRecentBiometricMock).not.toHaveBeenCalled();
       expect(getVoicePoolsMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getPerformanceStats", () => {
+    it("returns performance telemetry after biometric check", async () => {
+      const result = await caller.admin.getPerformanceStats();
+
+      expect(requireRecentBiometricMock).toHaveBeenCalledTimes(1);
+      expect(collectPerformanceTelemetryMock).toHaveBeenCalledTimes(1);
+      expect(result).toHaveProperty("graph");
+      expect(result.graph.queriesTotal).toBe(10);
+    });
+
+    it("requires biometric validation", async () => {
+      requireRecentBiometricMock.mockRejectedValue(new Error("forbidden"));
+
+      await expect(caller.admin.getPerformanceStats()).rejects.toThrow();
     });
   });
 

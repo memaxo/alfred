@@ -6,7 +6,7 @@ import {
   MessageContent,
 } from "@/components/ui/message";
 
-type AssistantPart = AssistantUIMessage["parts"][number];
+export type AssistantPart = AssistantUIMessage["parts"][number];
 
 export function ChatMessage({
   role,

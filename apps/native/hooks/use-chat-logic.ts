@@ -9,6 +9,7 @@ export type AgentType = "assistant" | "orchestrator";
 
 export function useChatLogic() {
   const [currentAgent, setCurrentAgent] = useState<AgentType>("assistant");
+  const { data: session } = authClient.useSession();
   
   const apiEndpoint = useMemo(() => {
     return `${process.env.EXPO_PUBLIC_SERVER_URL}/api/${currentAgent}`;
@@ -21,7 +22,7 @@ export function useChatLogic() {
       h["Cookie"] = cookies;
     }
     return h;
-  }, []);
+  }, [session]);
 
   const {
     messages,

@@ -23,6 +23,7 @@ export function useChatLogic({
     "assistant" | "orchestrator"
   >(initialAgent);
   const contextsRef = useRef<Map<string, AssistantUIMessage[]>>(new Map());
+  const pendingReloadRef = useRef(false);
   const apiBase =
     currentAgent === "assistant" ? "/api/assistant" : "/api/orchestrator";
 
@@ -112,6 +113,14 @@ export function useChatLogic({
     initialMessages,
     initialConversationId,
   });
+
+  // Handle pending reload after message edit
+  useEffect(() => {
+    if (pendingReloadRef.current && status !== "streaming") {
+      pendingReloadRef.current = false;
+      reload();
+    }
+  }, [messages, status, reload]);
 
   const {
     isRecording,
@@ -217,12 +226,10 @@ export function useChatLogic({
 
       setMessages([...newMessages, editedMessage]);
 
-      // Trigger regeneration after a short delay to ensure state update
-      setTimeout(() => {
-        reload();
-      }, 0);
+      // Trigger regeneration in useEffect after state sync
+      pendingReloadRef.current = true;
     },
-    [currentAgent, messages, setMessages, reload]
+    [currentAgent, messages, setMessages]
   );
 
   return {

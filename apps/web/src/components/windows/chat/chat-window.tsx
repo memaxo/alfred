@@ -16,7 +16,7 @@ import {
 import { MessageActions } from "@/components/chat/message-actions";
 import { renderPart } from "@/components/chat-render";
 import { Button } from "@/components/ui/button";
-import { ChatMessage } from "@/components/ui/chat-message";
+import { ChatMessage, type AssistantPart } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import {
   SmallCard,
@@ -100,7 +100,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
               ? handleRegenerate
               : undefined
           }
-          role={message.role as any}
+          role={message.role as AssistantUIMessage["role"]}
         />
       );
     },
@@ -234,10 +234,10 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
                 return (
                   <ChatMessage
                     actions={renderMessageActions(message as AssistantUIMessage)}
-                    content={message.parts as any}
+                    content={message.parts as AssistantPart[]}
                     key={message.id}
                     renderPart={renderPart}
-                    role={message.role as any}
+                    role={message.role as AssistantUIMessage["role"]}
                   />
                 );
               })

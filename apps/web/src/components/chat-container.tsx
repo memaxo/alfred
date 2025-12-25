@@ -23,7 +23,7 @@ import {
 } from "@/components/cognitive-feedback/dialog";
 import { ContextLens } from "@/components/shared/context-lens";
 import { Button } from "@/components/ui/button";
-import { ChatMessage } from "@/components/ui/chat-message";
+import { ChatMessage, type AssistantPart } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
@@ -146,7 +146,7 @@ export function ChatContainer({
               ? handleRegenerate
               : undefined
           }
-          role={message.role as any}
+          role={message.role as AssistantUIMessage["role"]}
         />
       );
     },
@@ -235,8 +235,8 @@ export function ChatContainer({
       return (
         <div className="px-4">
           <ChatMessage
-            role={message.role as any}
-            content={message.parts as any}
+            role={message.role as AssistantUIMessage["role"]}
+            content={message.parts as AssistantPart[]}
             renderPart={partRenderer}
             actions={renderMessageActions(message)}
           />
