@@ -1,9 +1,9 @@
 // packages/api/src/routers/project.ts
 import { projectRepo } from "@alfred/db";
-import { detectProject } from "@alfred/plan";
+import { detectProject, linkLinearProject } from "@alfred/plan";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
-import { TRPCError } from "@trpc/server";
 
 export const projectRouter = router({
   /**
@@ -21,6 +21,50 @@ export const projectRouter = router({
       }
 
       return await detectProject(input.workspace, userId);
+    }),
+
+  /**
+   * Link an ALFRED Project to a Linear Project
+   */
+  linkLinear: authedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        linearProjectId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      const project = await projectRepo.getProjectById(input.projectId);
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "project_not_found",
+        });
+      }
+
+      if (project.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "project_access_denied",
+        });
+      }
+
+      try {
+        return await linkLinearProject(input.projectId, input.linearProjectId);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error instanceof Error ? error.message : "linear_link_failed",
+        });
+      }
     }),
 
   /**

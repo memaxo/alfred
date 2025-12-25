@@ -44,7 +44,11 @@ export async function updateProjectLastActive(id: string): Promise<void> {
  * Get project by ID
  */
 export async function getProjectById(id: string): Promise<Project | null> {
-  const [row] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+  const [row] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, id))
+    .limit(1);
   return row ?? null;
 }
 
@@ -53,13 +57,13 @@ export async function getProjectById(id: string): Promise<Project | null> {
  */
 export async function updateProjectConventions(
   id: string,
-  conventions: any[]
+  conventions: unknown[]
 ): Promise<void> {
   await db
     .update(projects)
-    .set({ 
+    .set({
       conventions,
-      updatedAt: sql`NOW()` as unknown as Date
+      updatedAt: sql`NOW()` as unknown as Date,
     })
     .where(eq(projects.id, id));
 }
@@ -68,11 +72,33 @@ export async function updateProjectConventions(
  * Get all projects for a user
  */
 export async function getProjectsByUserId(userId: string): Promise<Project[]> {
-  return db
+  return await db
     .select()
     .from(projects)
     .where(eq(projects.userId, userId))
     .orderBy(projects.name);
+}
+
+/**
+ * Update project
+ */
+export async function updateProject(
+  id: string,
+  data: Partial<Omit<Project, "id" | "userId" | "createdAt">>
+): Promise<Project> {
+  const [row] = await db
+    .update(projects)
+    .set({
+      ...data,
+      updatedAt: sql`NOW()` as unknown as Date,
+    })
+    .where(eq(projects.id, id))
+    .returning();
+
+  if (!row) {
+    throw new Error("project_update_failed");
+  }
+  return row;
 }
 
 /**
@@ -84,9 +110,9 @@ export async function updateProjectConfig(
 ): Promise<void> {
   await db
     .update(projects)
-    .set({ 
+    .set({
       config,
-      updatedAt: sql`NOW()` as unknown as Date
+      updatedAt: sql`NOW()` as unknown as Date,
     })
     .where(eq(projects.id, id));
 }

@@ -1,4 +1,6 @@
-import { configureLinearMetrics } from "@alfred/agent/orchestrator/linearmetrics";
+import {
+  configureLinearMetrics,
+} from "@alfred/agent/orchestrator/linearmetrics";
 import { recordAudit } from "@alfred/agent/utils/audit";
 import { unwrapEventEnvelope } from "@alfred/agent/utils/envelope";
 import { ensureLinearTicket } from "@alfred/agent/workflow/linear";
@@ -42,6 +44,7 @@ import {
   codexLinearIntegrationLatencySeconds,
   codexSessionContinuityTotal,
 } from "@alfred/api/metrics";
+import { syncOnWorkflowStart } from "@alfred/plan";
 import { ensureMirrorNodes } from "@alfred/db/repo/graph/write";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import type {
@@ -186,6 +189,11 @@ export const workflowRouter = router({
           linearIssueId,
           linearIssueUrl,
         });
+
+        // Trigger Linear metadata sync if project is associated
+        if (input.projectId) {
+          void syncOnWorkflowStart(input.projectId, executor.runId);
+        }
 
         await ensureMirrorNodes("user", [
           {

@@ -8,6 +8,7 @@ const policyObligationSchema = z.object({
 
 export const workflowInput = z.object({
   runId: z.string().optional(), // Added for recovery/join
+  projectId: z.string().uuid().optional(), // ALFRED Project ID
   requirement: z.string().min(1),
   auto: z.enum(["read", "low", "medium", "high"]).default("low"),
   mode: z.enum(["sequential", "parallel"]).default("sequential"),

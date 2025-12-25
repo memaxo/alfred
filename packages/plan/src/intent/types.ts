@@ -37,6 +37,7 @@ export type WorkflowIntent = {
   userId: string;
   timestamp: Date;
   context: {
+    projectId?: string; // Associated ALFRED project
     codebase?: string; // Repository context
     workspace?: string; // Workspace path
     existingPatterns: Pattern[]; // What ALFRED has learned
