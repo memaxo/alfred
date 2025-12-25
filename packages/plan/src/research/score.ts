@@ -2,6 +2,8 @@
  * Reliability scoring logic for external research sources
  */
 
+import { detectFrameworkVersion } from "./filter.js";
+
 const DOMAIN_AUTHORITY: Record<string, number> = {
   "react.dev": 1.0,
   "nextjs.org": 1.0,
@@ -54,8 +56,23 @@ export function calculateReliability(params: {
   }
 
   // 4. Framework version match (optional boost)
-  // This logic depends on version detection which might be handled elsewhere,
-  // but we can add placeholders for boosts here if version is passed.
+  if (params.projectFrameworks) {
+    const detected = detectFrameworkVersion(params.content);
+    if (detected) {
+      for (const [name, version] of Object.entries(params.projectFrameworks)) {
+        if (detected.toLowerCase().includes(name.toLowerCase())) {
+          if (detected.includes(version)) {
+            score += 0.2; // Exact match boost
+          } else {
+            const major = version.split(".")[0];
+            if (detected.includes(` ${major}.`)) {
+              score += 0.1; // Major version match boost
+            }
+          }
+        }
+      }
+    }
+  }
 
   return Math.min(Math.max(score, 0), 1);
 }
@@ -75,12 +92,20 @@ export function calculateRelevance(
   let matches = 0;
   const terms = query.split(/\s+/).filter((t) => t.length > 3);
 
-  if (terms.length === 0) return 0.5;
+  if (terms.length === 0) {
+    return 0.5;
+  }
 
   for (const term of terms) {
-    if (title.includes(term)) matches += 2; // Title matches count double
-    if (summary.includes(term)) matches += 1;
-    if (content.includes(term)) matches += 0.5;
+    if (title.includes(term)) {
+      matches += 2; // Title matches count double
+    }
+    if (summary.includes(term)) {
+      matches += 1;
+    }
+    if (content.includes(term)) {
+      matches += 0.5;
+    }
   }
 
   const maxPossible = terms.length * 3.5;

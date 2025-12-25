@@ -5,6 +5,8 @@ import type { ToolExecuteArgs } from "./shared/context.js";
 import {
   exaSearch,
   exaGetContents,
+  exaResearch,
+  exaPollResearch,
   hasExaApiKey,
   type ExaSearchOptions,
 } from "./exa.js";
@@ -70,7 +72,7 @@ const exaContextSchema = z.union([
 
 const exaConfigSchema = z
   .object({
-    type: z.enum(["auto", "neural", "keyword"]).optional(),
+    type: z.enum(["auto", "neural", "keyword", "fast", "deep"]).optional(),
     category: z.string().optional(),
     livecrawl: z.enum(["never", "fallback", "always", "preferred"]).optional(),
     text: exaTextSchema.optional(),
@@ -83,13 +85,21 @@ const exaConfigSchema = z
   })
   .strict();
 
+const exaResearchSchema = z.object({
+  instructions: z.string().min(10).describe("Research instructions/query"),
+  outputSchema: z.record(z.string(), z.any()).optional().describe("Expected JSON output schema"),
+  model: z.enum(["exa-research", "exa-research-gpt-4o"]).optional(),
+  numResults: z.number().int().min(1).max(50).optional(),
+});
+
 const webInputSchema = z.object({
-  action: z.enum(["search", "fetch"]),
+  action: z.enum(["search", "fetch", "research"]),
   q: z.string().min(3).optional(),
   url: z.string().url().optional(),
   topK: z.number().int().min(1).max(10).optional(),
   provider: z.enum(["ddg", "serpapi", "tavily", "exa"]).optional(),
   exa: exaConfigSchema.optional(),
+  research: exaResearchSchema.optional(),
   authz: z.string().optional(),
   timeoutSec: z.number().int().min(5).max(60).optional(),
 });
@@ -129,12 +139,16 @@ const webSearchResultWithSubpagesSchema: z.ZodType<WebSearchResultType> =
 
 const webOutputSchema = z.object({
   ok: z.boolean(),
-  action: z.enum(["search", "fetch"]),
+  action: z.enum(["search", "fetch", "research"]),
   provider: z.enum(["ddg", "serpapi", "tavily", "exa"]).optional(),
   // Exa response metadata
   searchType: z.enum(["auto", "neural", "keyword", "fast", "deep"]).optional(),
   context: z.string().optional(), // LLM-optimized combined content
   results: z.array(webSearchResultWithSubpagesSchema).optional(),
+  // Research specific fields
+  researchId: z.string().optional(),
+  researchStatus: z.enum(["completed", "failed", "processing"]).optional(),
+  researchData: z.any().optional(),
   details: z
     .object({
       url: z.string(),
@@ -733,6 +747,40 @@ export const toolWeb = {
             results: fallback.results,
           } satisfies WebOutput;
         }
+        throw error;
+      }
+    }
+
+    if (input.action === "research") {
+      if (resolvedProvider !== "exa") {
+        throw new Error("web_research_only_available_with_exa");
+      }
+      if (!input.research) {
+        throw new Error("web_research_config_required");
+      }
+
+      try {
+        const { researchId } = await exaResearch({
+          instructions: input.research.instructions,
+          outputSchema: input.research.outputSchema,
+          model: input.research.model,
+          numResults: input.research.numResults,
+        });
+
+        // For now, we poll until completion as the tool is expected to return data
+        const result = await exaPollResearch(researchId);
+
+        return {
+          ok: true,
+          action: "research",
+          provider: "exa",
+          researchId,
+          researchStatus: result.status,
+          researchData: result.data,
+          results: result.results,
+          cost: result.costDollars ? { total: result.costDollars.total } : undefined,
+        } satisfies WebOutput;
+      } catch (error) {
         throw error;
       }
     }

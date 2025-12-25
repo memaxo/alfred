@@ -116,6 +116,24 @@ export type ExaContentsResponse = {
   costDollars?: ExaCost;
 };
 
+/**
+ * Exa research response envelope
+ */
+export type ExaResearchResponse = {
+  researchId: string;
+};
+
+/**
+ * Exa research result envelope (after polling)
+ */
+export type ExaResearchResult = {
+  researchId: string;
+  status: "completed" | "failed" | "processing";
+  results?: ExaSearchResult[];
+  data?: any; // Structured output from outputSchema
+  costDollars?: ExaCost;
+};
+
 // Zod Schemas for runtime validation
 
 export const exaCategorySchema = z.enum([
@@ -215,5 +233,17 @@ export const exaContentsResponseSchema = z.object({
       })
     )
     .optional(),
+  costDollars: exaCostSchema.optional(),
+});
+
+export const exaResearchResponseSchema = z.object({
+  researchId: z.string(),
+});
+
+export const exaResearchResultSchema = z.object({
+  researchId: z.string(),
+  status: z.enum(["completed", "failed", "processing"]),
+  results: z.array(exaSearchResultSchema).optional(),
+  data: z.any().optional(),
   costDollars: exaCostSchema.optional(),
 });

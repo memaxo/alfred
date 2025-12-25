@@ -6,7 +6,13 @@
  */
 
 import Exa from "exa-js";
-import type { ExaCost, ExaSearchResult, ExaSearchType } from "@alfred/type";
+import type {
+  ExaCost,
+  ExaResearchResponse,
+  ExaResearchResult,
+  ExaSearchResult,
+  ExaSearchType,
+} from "@alfred/type";
 
 let cachedClient: Exa | null = null;
 
@@ -42,7 +48,8 @@ type ExaCategory =
   | "tweet"
   | "personal site"
   | "linkedin profile"
-  | "financial report";
+  | "financial report"
+  | "people";
 
 // Text options for SDK
 type TextOptions = { maxCharacters?: number; includeHtmlTags?: boolean };
@@ -63,7 +70,7 @@ type SummaryOptions = { query?: string };
 export type ExaSearchOptions = {
   numResults?: number;
   type?: ExaSearchType;
-  category?: string;
+  category?: ExaCategory | string;
   includeDomains?: string[];
   excludeDomains?: string[];
   startPublishedDate?: string;
@@ -72,7 +79,7 @@ export type ExaSearchOptions = {
   endCrawlDate?: string;
   includeText?: string[];
   excludeText?: string[];
-  // Content options (true or options object, undefined/false = disabled)
+  // Content options (under 'contents' in v2)
   text?: boolean | TextOptions;
   highlights?: boolean | HighlightsOptions;
   summary?: boolean | SummaryOptions;
@@ -82,6 +89,20 @@ export type ExaSearchOptions = {
   subpages?: number;
   subpageTarget?: string | string[];
   livecrawl?: "never" | "fallback" | "always" | "preferred";
+};
+
+/**
+ * Options for Exa research
+ */
+export type ExaResearchOptions = {
+  model?: "exa-research" | "exa-research-gpt-4o";
+  instructions: string;
+  outputSchema?: Record<string, any>;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  startPublishedDate?: string;
+  endPublishedDate?: string;
+  numResults?: number;
 };
 
 /**
@@ -114,120 +135,27 @@ export async function exaSearch(
 }> {
   const client = getExaClient();
 
-  // Determine if we need contents
-  const needsContents =
+  // Determine if we need contents (v2 uses 'contents' object)
+  const contents =
     options.text ||
     options.highlights ||
     options.summary ||
     options.context ||
-    options.subpages;
+    options.subpages
+      ? {
+          text: toSdkOption(options.text),
+          highlights: toSdkOption(options.highlights),
+          summary: toSdkOption(options.summary),
+          subpages: options.subpages,
+          subpageTarget: options.subpageTarget,
+          livecrawl: options.livecrawl,
+        }
+      : undefined;
 
   // Validate category is a known Exa category
   const category = options.category as ExaCategory | undefined;
 
-  if (needsContents) {
-    // Use searchAndContents for content retrieval
-    // We use `as any` here because the SDK's generic types are complex
-    // and we handle the fields safely below
-    const response = await client.searchAndContents(query, {
-      numResults: options.numResults ?? 10,
-      type: options.type ?? "auto",
-      category,
-      includeDomains: options.includeDomains,
-      excludeDomains: options.excludeDomains,
-      startPublishedDate: options.startPublishedDate,
-      endPublishedDate: options.endPublishedDate,
-      startCrawlDate: options.startCrawlDate,
-      endCrawlDate: options.endCrawlDate,
-      includeText: options.includeText,
-      excludeText: options.excludeText,
-      text: toSdkOption(options.text),
-      highlights: toSdkOption(options.highlights),
-      summary: toSdkOption(options.summary),
-      subpages: options.subpages,
-      subpageTarget: options.subpageTarget,
-      livecrawl: options.livecrawl,
-    } as Record<string, unknown>);
-
-    // Cast results to access all potential fields
-    type ResultWithContents = {
-      id: string;
-      url: string;
-      title?: string | null;
-      author?: string | null;
-      publishedDate?: string | null;
-      score?: number;
-      image?: string | null;
-      favicon?: string | null;
-      text?: string | null;
-      highlights?: string[];
-      highlightScores?: number[];
-      summary?: string | null;
-      subpages?: Array<{
-        id?: string;
-        url: string;
-        title?: string | null;
-        author?: string | null;
-        publishedDate?: string | null;
-        text?: string | null;
-        summary?: string | null;
-        highlights?: string[];
-        highlightScores?: number[];
-      }>;
-      extras?: {
-        links?: string[];
-        imageLinks?: string[];
-      };
-    };
-
-    const rawResults = (response.results ?? []) as ResultWithContents[];
-
-    // Normalize results
-    const results: NormalizedExaResult[] = rawResults.map((result) => ({
-      id: result.id,
-      url: result.url,
-      title: result.title ?? undefined,
-      author: result.author ?? undefined,
-      publishedDate: result.publishedDate ?? undefined,
-      score: result.score,
-      image: result.image ?? undefined,
-      favicon: result.favicon ?? undefined,
-      text: result.text ?? undefined,
-      highlights: result.highlights,
-      highlightScores: result.highlightScores,
-      summary: result.summary ?? undefined,
-      subpages: result.subpages?.map((sub) => ({
-        id: sub.id,
-        url: sub.url,
-        title: sub.title ?? undefined,
-        author: sub.author ?? undefined,
-        publishedDate: sub.publishedDate ?? undefined,
-        text: sub.text ?? undefined,
-        summary: sub.summary ?? undefined,
-        highlights: sub.highlights,
-        highlightScores: sub.highlightScores,
-      })),
-      extras: result.extras
-        ? {
-            links: result.extras.links,
-            imageLinks: result.extras.imageLinks,
-          }
-        : undefined,
-      // Generate snippet from available content
-      snippet: generateSnippet(result),
-    }));
-
-    const responseAny = response as Record<string, unknown>;
-
-    return {
-      results,
-      searchType: responseAny.searchType as ExaSearchType | undefined,
-      context: responseAny.context as string | undefined,
-      cost: responseAny.costDollars as ExaCost | undefined,
-    };
-  }
-
-  // Basic search without contents
+  // v2 search unified search and contents
   const response = await client.search(query, {
     numResults: options.numResults ?? 10,
     type: options.type ?? "auto",
@@ -240,24 +168,84 @@ export async function exaSearch(
     endCrawlDate: options.endCrawlDate,
     includeText: options.includeText,
     excludeText: options.excludeText,
-  });
+    ...(contents ? { contents } : {}),
+  } as any);
 
-  const results: NormalizedExaResult[] = (response.results ?? []).map(
-    (result) => ({
-      id: result.id,
-      url: result.url,
-      title: result.title ?? undefined,
-      author: result.author ?? undefined,
-      publishedDate: result.publishedDate ?? undefined,
-      score: result.score,
-    })
-  );
+  // Cast results to access potential fields (SDK v2 structure)
+  type ResultWithContents = {
+    id: string;
+    url: string;
+    title?: string | null;
+    author?: string | null;
+    publishedDate?: string | null;
+    score?: number;
+    image?: string | null;
+    favicon?: string | null;
+    text?: string | null;
+    highlights?: string[];
+    highlightScores?: number[];
+    summary?: string | null;
+    subpages?: Array<{
+      id?: string;
+      url: string;
+      title?: string | null;
+      author?: string | null;
+      publishedDate?: string | null;
+      text?: string | null;
+      summary?: string | null;
+      highlights?: string[];
+      highlightScores?: number[];
+    }>;
+    extras?: {
+      links?: string[];
+      imageLinks?: string[];
+    };
+  };
+
+  const rawResults = (response.results ?? []) as ResultWithContents[];
+
+  // Normalize results
+  const results: NormalizedExaResult[] = rawResults.map((result) => ({
+    id: result.id,
+    url: result.url,
+    title: result.title ?? undefined,
+    author: result.author ?? undefined,
+    publishedDate: result.publishedDate ?? undefined,
+    score: result.score,
+    image: result.image ?? undefined,
+    favicon: result.favicon ?? undefined,
+    text: result.text ?? undefined,
+    highlights: result.highlights,
+    highlightScores: result.highlightScores,
+    summary: result.summary ?? undefined,
+    subpages: result.subpages?.map((sub) => ({
+      id: sub.id,
+      url: sub.url,
+      title: sub.title ?? undefined,
+      author: sub.author ?? undefined,
+      publishedDate: sub.publishedDate ?? undefined,
+      text: sub.text ?? undefined,
+      summary: sub.summary ?? undefined,
+      highlights: sub.highlights,
+      highlightScores: sub.highlightScores,
+    })),
+    extras: result.extras
+      ? {
+          links: result.extras.links,
+          imageLinks: result.extras.imageLinks,
+        }
+      : undefined,
+    // Generate snippet from available content
+    snippet: generateSnippet(result),
+  }));
+
+  const responseAny = response as any;
 
   return {
     results,
-    cost: (response as Record<string, unknown>).costDollars as
-      | ExaCost
-      | undefined,
+    searchType: responseAny.searchType as ExaSearchType | undefined,
+    context: responseAny.context as string | undefined,
+    cost: responseAny.costDollars as ExaCost | undefined,
   };
 }
 
@@ -389,8 +377,53 @@ export async function exaFindSimilar(
 
   return {
     results,
-    cost: (response as Record<string, unknown>).costDollars as
-      | ExaCost
-      | undefined,
+    cost: (response as any).costDollars as ExaCost | undefined,
+  };
+}
+
+/**
+ * Perform Exa research using the research endpoint
+ */
+export async function exaResearch(
+  options: ExaResearchOptions
+): Promise<ExaResearchResponse> {
+  const client = getExaClient();
+
+  // research.create returns an object with researchId
+  const response = await (client as any).research.create({
+    model: options.model ?? "exa-research",
+    instructions: options.instructions,
+    outputSchema: options.outputSchema,
+    includeDomains: options.includeDomains,
+    excludeDomains: options.excludeDomains,
+    startPublishedDate: options.startPublishedDate,
+    endPublishedDate: options.endPublishedDate,
+    numResults: options.numResults,
+  });
+
+  return {
+    researchId: response.researchId,
+  };
+}
+
+/**
+ * Poll Exa research until finished
+ */
+export async function exaPollResearch(
+  researchId: string
+): Promise<ExaResearchResult> {
+  const client = getExaClient();
+
+  const result = await (client as any).research.pollUntilFinished(researchId);
+
+  return {
+    researchId,
+    status: result.status,
+    results: result.results?.map((r: any) => ({
+      ...r,
+      snippet: generateSnippet(r),
+    })),
+    data: result.data,
+    costDollars: result.costDollars,
   };
 }

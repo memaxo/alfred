@@ -79,7 +79,7 @@
     "@alfred/metrics": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
-    "exa-js": "^1.5.14",
+    "exa-js": "^2.0.12",
     "@linear/sdk": "^53.0.0",
     "@lmnr-ai/lmnr": "^0.7.4",
     "lru-cache": "^11.0.1",

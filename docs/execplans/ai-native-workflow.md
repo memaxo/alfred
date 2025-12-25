@@ -1316,7 +1316,7 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-01-27 | 0 | Desktop system review | ✅ | Aligned with Desktop UI Paradigm v3; see review doc |
 | 2025-01-27 | 0 | Comprehensive gap analysis | ✅ | See `ai-native-workflow-gap-analysis.md` for detailed component-by-component gaps |
 | 2025-12-24 | 1 | Intent parser | ✅ | P1-2 implementation complete |
-| 2025-12-24 | 1 | Research aggregator | ✅ | P1-3 implementation complete (External Research) |
+| 2025-12-24 | 1 | Research aggregator (v2) | ✅ | P1-3 updated with Exa SDK v2 native research capabilities |
 | 2025-12-24 | 1 | Plan generator | ⬜ | |
 | 2025-12-24 | 1 | @alfred/plan package scaffold | ✅ | P1-1 implementation complete |
 | | 2 | Optional plan selection/evaluator | ⬜ | |
@@ -1341,6 +1341,7 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-12-23 | Docker warm pool doesn't exist | Cold start 5-15s impacts UX | Deferred to Phase 6 (optimization) |
 | 2025-12-23 | No Project container exists | Patterns pollute across codebases; conventions not accumulated | Added Project entity with auto-detection (P1-6, P1-7) |
 | 2025-12-23 | ProjectConfig is runtime-only | Technical config not persisted or linked to workflows | Elevate to Project entity, persist in DB |
+| 2025-12-24 | Exa SDK v2 released | Replaces manual research aggregation logic | Upgraded exa-js to v2.0.12, added native research support in toolWeb and research aggregator |
 
 ---
 

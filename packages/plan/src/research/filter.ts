@@ -28,8 +28,6 @@ export function detectFrameworkVersion(content: string): string | undefined {
       return `${name} ${match[1]}`;
     }
   }
-
-  return undefined;
 }
 
 /**

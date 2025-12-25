@@ -1,4 +1,6 @@
 import { gatherWebContext } from "@alfred/agent/orchestrator/flow/context";
+import { toolWeb } from "@alfred/agent/orchestrator/tool/web";
+import { logger } from "@alfred/logger";
 import type { WorkflowIntent } from "../intent/types.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
 import { calculateReliability, calculateRelevance } from "./score.js";
@@ -97,7 +99,8 @@ function transformToResearchSource(
 /**
  * Gather external research context for a workflow intent
  *
- * Wraps existing web search infrastructure and transforms it into structured ResearchResult
+ * Wraps existing web search infrastructure and transforms it into structured ResearchResult.
+ * If searchType is 'deep', it uses Exa's research endpoint for high-quality structured data.
  */
 export async function gatherExternalResearch(
   intent: WorkflowIntent,
@@ -106,6 +109,44 @@ export async function gatherExternalResearch(
   const maxResults = options?.maxResults ?? 5;
   const minReliability = options?.minReliability ?? 0.5;
   const dateFilter = options?.dateFilter ?? "recent";
+
+  // If deep research is requested and we have Exa, use the research action
+  const hasExa = Boolean(
+    process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0
+  );
+
+  if (options?.searchType === "deep" && hasExa) {
+    try {
+      const researchOutput = await toolWeb.execute({
+        input: {
+          action: "research",
+          provider: "exa",
+          authz: intent.userId,
+          research: {
+            instructions: `Research the following requirement for an AI-native workflow: "${intent.description}".
+Gather high-quality documentation, code examples, and best practices.
+Identify specific framework versions and compatibility constraints.`,
+            numResults: maxResults,
+          },
+        },
+      });
+
+      if (researchOutput.ok && researchOutput.results) {
+        return researchOutput.results.map((source) =>
+          transformToResearchSource(
+            source as Parameters<typeof transformToResearchSource>[0],
+            intent.description
+          )
+        );
+      }
+    } catch (error) {
+      // Fallback to regular search on error
+      logger.error("deep_research_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        intentId: intent.id,
+      });
+    }
+  }
 
   // 1. Gather web context using existing agent infrastructure
   const webReceipt = await gatherWebContext({
@@ -151,6 +192,8 @@ export async function gatherFullResearch(
   options?: ResearchOptions
 ): Promise<ResearchResult> {
   const startTime = Date.now();
+
+  // If we're using deep research, we might want to call toolWeb directly to get the ID and context
   const external = await gatherExternalResearch(intent, options);
   const durationMs = Date.now() - startTime;
 
@@ -174,7 +217,7 @@ export async function gatherFullResearch(
       totalSources: external.length,
       tokenCount,
       researchDurationMs: durationMs,
-      // searchType and context would come from the web receipt if available
+      searchType: options?.searchType,
     },
   };
 }

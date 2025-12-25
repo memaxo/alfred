@@ -31,8 +31,8 @@ export async function parseIntent(
 > {
   const model = getOpenAI()(getModelId());
   
-  // biome-ignore lint/suspicious/noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
   const result = await generateObject({
+    // biome-ignore lint/suspicious/noExplicitAny: AI SDK version mismatch across monorepo packages requires cast
     model: model as any,
     schema: intentParserOutputSchema,
     prompt: `

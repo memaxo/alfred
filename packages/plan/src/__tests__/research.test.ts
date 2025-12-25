@@ -3,6 +3,7 @@ import { describe, expect, it, mock } from "bun:test";
 // Mock @alfred/agent with enhanced Exa fields
 mock.module("@alfred/agent/orchestrator/flow/context", () => ({
   gatherWebContext: async ({ requirement }: { requirement: string }) => {
+    await Promise.resolve(); // satisfy lint
     const today = new Date();
     const lastYear = new Date();
     lastYear.setFullYear(today.getFullYear() - 1);
@@ -34,6 +35,7 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
                 title: "React 18 Upgrade Guide",
                 summary: "Step-by-step guide to upgrade to React 18",
                 author: "React Team",
+                publishedDate: dateStr,
               },
             ],
           },
@@ -72,11 +74,13 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
                 summary: "Quick start guide for TanStack Router",
                 highlights: ["Type-safe routing"],
                 highlightScores: [0.92],
+                publishedDate: dateStr,
               },
               {
                 url: "https://tanstack.com/router/api",
                 title: "API Reference",
                 summary: "Complete API documentation",
+                publishedDate: dateStr,
               },
             ],
           },
@@ -85,6 +89,32 @@ mock.module("@alfred/agent/orchestrator/flow/context", () => ({
     }
 
     return { web: [] };
+  },
+}));
+
+mock.module("@alfred/agent/orchestrator/tool/web", () => ({
+  toolWeb: {
+    execute: async ({ input }: { input: any }) => {
+      await Promise.resolve(); // satisfy lint
+      if (input.action === "research") {
+        return {
+          ok: true,
+          action: "research",
+          researchId: "test-research-id",
+          results: [
+            {
+              url: "https://exa.ai/research/result",
+              title: "Deep Research Result",
+              summary: "High quality research summary from Exa v2",
+              score: 0.99,
+              publishedDate: new Date().toISOString(),
+              author: "Exa Researcher",
+            },
+          ],
+        };
+      }
+      return { ok: false };
+    },
   },
 }));
 
@@ -248,10 +278,10 @@ describe("Research Aggregator", () => {
         r.source.includes("react.dev")
       );
       expect(reactDoc).toBeDefined();
-      expect(reactDoc!.author).toBe("React Team");
-      expect(reactDoc!.highlights).toBeDefined();
-      expect(reactDoc!.highlights!.length).toBeGreaterThan(0);
-      expect(reactDoc!.highlightScores).toBeDefined();
+      expect(reactDoc?.author).toBe("React Team");
+      expect(reactDoc?.highlights).toBeDefined();
+      expect(reactDoc?.highlights?.length).toBeGreaterThan(0);
+      expect(reactDoc?.highlightScores).toBeDefined();
     });
 
     it("should preserve extracted links from Exa", async () => {
@@ -259,8 +289,8 @@ describe("Research Aggregator", () => {
       const reactDoc = results.find((r) =>
         r.source.includes("react.dev")
       );
-      expect(reactDoc!.links).toBeDefined();
-      expect(reactDoc!.links).toContain("https://github.com/facebook/react");
+      expect(reactDoc?.links).toBeDefined();
+      expect(reactDoc?.links).toContain("https://github.com/facebook/react");
     });
 
     it("should transform subpages into nested ResearchSource", async () => {
@@ -268,10 +298,28 @@ describe("Research Aggregator", () => {
       const reactDoc = results.find((r) =>
         r.source.includes("react.dev")
       );
-      expect(reactDoc!.subpages).toBeDefined();
-      expect(reactDoc!.subpages!.length).toBeGreaterThan(0);
-      expect(reactDoc!.subpages![0].title).toBe("React 18 Upgrade Guide");
-      expect(reactDoc!.subpages![0].reliability).toBeDefined();
+      expect(reactDoc?.subpages).toBeDefined();
+      expect(reactDoc?.subpages?.length).toBeGreaterThan(0);
+      expect(reactDoc?.subpages?.[0].title).toBe("React 18 Upgrade Guide");
+      expect(reactDoc?.subpages?.[0].reliability).toBeDefined();
+    });
+
+    it("should use deep research when searchType is 'deep'", async () => {
+      // Temporarily set EXA_API_KEY for the test
+      const originalKey = process.env.EXA_API_KEY;
+      process.env.EXA_API_KEY = "test-key";
+
+      try {
+        const results = await gatherExternalResearch(mockIntent, {
+          searchType: "deep",
+        });
+
+        expect(results.length).toBeGreaterThan(0);
+        expect(results[0].title).toBe("Deep Research Result");
+        expect(results[0].author).toBe("Exa Researcher");
+      } finally {
+        process.env.EXA_API_KEY = originalKey;
+      }
     });
   });
 
@@ -468,20 +516,20 @@ describe("Research Aggregator", () => {
       );
 
       expect(tanstackDoc).toBeDefined();
-      expect(tanstackDoc!.subpages).toBeDefined();
-      expect(tanstackDoc!.subpages!.length).toBe(2);
+      expect(tanstackDoc?.subpages).toBeDefined();
+      expect(tanstackDoc?.subpages?.length).toBe(2);
 
       // Check first subpage
-      const gettingStarted = tanstackDoc!.subpages!.find((s) =>
+      const gettingStarted = tanstackDoc?.subpages?.find((s) =>
         s.source.includes("getting-started")
       );
       expect(gettingStarted).toBeDefined();
-      expect(gettingStarted!.title).toBe("Getting Started");
-      expect(gettingStarted!.highlights).toContain("Type-safe routing");
+      expect(gettingStarted?.title).toBe("Getting Started");
+      expect(gettingStarted?.highlights).toContain("Type-safe routing");
 
       // Subpages should also have calculated scores
-      expect(gettingStarted!.reliability).toBeDefined();
-      expect(gettingStarted!.relevanceScore).toBeDefined();
+      expect(gettingStarted?.reliability).toBeDefined();
+      expect(gettingStarted?.relevanceScore).toBeDefined();
     });
   });
 });

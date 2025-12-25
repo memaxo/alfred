@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WorkflowIntent } from "./types.js";
 
 /**
  * Zod schema for ClarificationQuestion
@@ -26,9 +27,19 @@ export const constraintSchema = z.object({
 });
 
 /**
+ * Zod schema for Pattern
+ */
+export const patternSchema = z.object({
+  id: z.string().uuid().or(z.string()),
+  trigger: z.string(),
+  planTemplate: z.unknown(),
+  confidence: z.number().min(0).max(1),
+});
+
+/**
  * Zod schema for WorkflowIntent
  */
-export const workflowIntentSchema: z.ZodType<any> = z.object({
+export const workflowIntentSchema: z.ZodType<WorkflowIntent> = z.object({
   id: z.string().uuid().or(z.string()),
   description: z.string().min(1),
   source: z.enum(["voice", "chat", "api"]),
@@ -42,7 +53,7 @@ export const workflowIntentSchema: z.ZodType<any> = z.object({
   context: z.object({
     codebase: z.string().optional(),
     workspace: z.string().optional(),
-    existingPatterns: z.array(z.unknown()), // Pattern validation deferred
+    existingPatterns: z.array(patternSchema),
     constraints: z.array(constraintSchema),
   }),
   ambiguity: z
