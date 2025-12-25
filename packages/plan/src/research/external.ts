@@ -2,6 +2,7 @@ import { gatherWebContext } from "@alfred/agent/orchestrator/flow/context";
 import { toolWeb } from "@alfred/agent/orchestrator/tool/web";
 import { logger } from "@alfred/logger";
 import type { WorkflowIntent } from "../intent/types.js";
+import { aggregateResearch } from "./aggregate.js";
 import { applyDateFilter, detectFrameworkVersion } from "./filter.js";
 import { gatherInternalResearch } from "./internal.js";
 import { calculateReliability, calculateRelevance } from "./score.js";
@@ -184,41 +185,25 @@ Identify specific framework versions and compatibility constraints.`,
 }
 
 /**
- * Gather full research result with metadata
+ * Gather full research result with metadata and aggregation
  *
- * Returns the complete ResearchResult structure including metadata
+ * Returns the complete ResearchResult structure including metadata,
+ * deduplicated and prioritized.
  */
 export async function gatherFullResearch(
   intent: WorkflowIntent,
   options?: ResearchOptions
 ): Promise<ResearchResult> {
-  const startTime = Date.now();
-
   // 1. Gather external research
   const external = await gatherExternalResearch(intent, options);
 
   // 2. Gather internal research (codebase, patterns, conventions)
   const internal = await gatherInternalResearch(intent);
 
-  const durationMs = Date.now() - startTime;
-
-  // Calculate approximate token count (rough estimate: 4 chars per token)
-  const tokenCount = external.reduce((sum, source) => {
-    const textLength =
-      source.title.length +
-      source.summary.length +
-      (source.highlights?.join(" ").length ?? 0);
-    return sum + Math.ceil(textLength / 4);
-  }, 0);
-
-  return {
-    external,
-    internal,
-    metadata: {
-      totalSources: external.length,
-      tokenCount,
-      researchDurationMs: durationMs,
-      searchType: options?.searchType,
-    },
-  };
+  // 3. Aggregate into unified result
+  return aggregateResearch(external, internal, {
+    maxTokens: 8000,
+    deduplicate: true,
+    prioritize: "balanced",
+  });
 }
