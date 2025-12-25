@@ -150,6 +150,7 @@ export const dbModuleStub = {
 const dbAbs = new URL("../../../db/src/index.ts", import.meta.url).pathname;
 const realDb = await import(dbAbs);
 mock.module("@alfred/db", () => ({
+  __esModule: true,
   ...realDb,
   codexRunRepo: dbModuleStub.codexRunRepo,
   userRepo: dbModuleStub.userRepo,

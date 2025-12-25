@@ -417,6 +417,7 @@
         "@alfred/db": "workspace:*",
         "@alfred/knowledge": "workspace:*",
         "@alfred/logger": "workspace:*",
+        "@alfred/runtime": "workspace:*",
         "@alfred/type": "workspace:*",
         "ai": "catalog:",
         "yaml": "^2.7.0",

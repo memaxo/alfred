@@ -69,8 +69,11 @@ export const privacyRouter = router({
 
   deleteFact: authedProcedure
     .use(
-      requirePolicy("privacy.purge", (input, ctx) =>
-        mapPrivacyResource(input, ctx)
+      requirePolicy(
+        "privacy.purge",
+        (input, ctx) => mapPrivacyResource(input, ctx),
+        undefined,
+        { handleObligations: "passThrough" }
       )
     )
     .input(privacyFactDeleteSchema)
@@ -85,7 +88,8 @@ export const privacyRouter = router({
 
       ensureObligations(ctx);
 
-      const removed = Number(await userRepo.deleteFact(input.id)) || 0;
+      const removed =
+        Number(await userRepo.deleteFact(session.user.id, input.id)) || 0;
       if (removed > 0) {
         recordMemoryForget(input.scope ?? "fact");
       }
