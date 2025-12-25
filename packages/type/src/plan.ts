@@ -85,29 +85,66 @@ export const droidArtifactSchema = z.object({
 
 export type DroidArtifact = z.infer<typeof droidArtifactSchema>;
 
-export const searchReceiptItemSchema = z.object({
+/**
+ * Search receipt item base schema (non-recursive fields)
+ */
+const searchReceiptItemBaseSchema = z.object({
   id: z.string(),
   kind: z.enum(["code", "web"]),
+  // File-related fields (for code kind)
   path: z.string().optional(),
+  bytes: z.number().optional(),
+  tokens: z.number().optional(),
+  // URL-related fields (for web kind)
   url: z.string().optional(),
   title: z.string().optional(),
   score: z.number(),
   reason: z.string().optional(),
   snippet: z.string().optional(),
-  bytes: z.number().optional(),
-  tokens: z.number().optional(),
   publishedDate: z.string().optional(),
   image: z.string().optional(),
   favicon: z.string().optional(),
+  // Exa-specific fields
+  author: z.string().optional(),
+  highlights: z.array(z.string()).optional(),
+  highlightScores: z.array(z.number()).optional(),
+  summary: z.string().optional(), // AI-generated summary (distinct from snippet)
+  links: z.array(z.string()).optional(), // Extracted outbound links
 });
 
-export type SearchReceiptItem = z.infer<typeof searchReceiptItemSchema>;
+/**
+ * Search receipt item with recursive subpages support
+ */
+export const searchReceiptItemSchema: z.ZodType<SearchReceiptItem> =
+  searchReceiptItemBaseSchema.extend({
+    subpages: z.lazy(() => z.array(searchReceiptItemSchema)).optional(),
+  });
 
+/**
+ * Search receipt item type
+ */
+export type SearchReceiptItem = z.infer<typeof searchReceiptItemBaseSchema> & {
+  subpages?: SearchReceiptItem[];
+};
+
+/**
+ * Search receipt schema with Exa metadata
+ */
 export const searchReceiptSchema = z.object({
   code: z.array(searchReceiptItemSchema),
   web: z.array(searchReceiptItemSchema).optional(),
   created: z.date(),
   summary: z.string().optional(),
+  // Exa metadata
+  searchType: z.enum(["auto", "neural", "keyword", "fast", "deep"]).optional(),
+  context: z.string().optional(), // LLM-optimized combined content
+  cost: z
+    .object({
+      total: z.number(),
+      search: z.number().optional(),
+      contents: z.number().optional(),
+    })
+    .optional(),
 });
 
 export type SearchReceipt = z.infer<typeof searchReceiptSchema>;

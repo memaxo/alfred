@@ -72,6 +72,10 @@
       "types": "./dist/query.hot.d.ts",
       "default": "./src/query.hot.ts"
     },
+    "./metrics": {
+      "types": "./dist/metrics.d.ts",
+      "default": "./src/metrics.ts"
+    },
     "./reasoning/causality": {
       "types": "./dist/reasoning/causality.d.ts",
       "default": "./src/reasoning/causality.ts"

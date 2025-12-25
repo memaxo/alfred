@@ -8,6 +8,8 @@ export * from "./build-constants";
 // Cognitive domain types
 export * from "./cognitive";
 export * from "./envelope";
+// Exa API types
+export * from "./exa";
 export * from "./envelope.zod";
 export * from "./guards";
 export * from "./history";

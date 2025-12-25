@@ -80,6 +80,7 @@ export type WorkflowSubscriptionEvent = SubscriptionEvent<WorkflowEventPayload>;
  * Multiplexed stream message envelope.
  */
 export type StreamEnvelope<T = unknown> = {
+  type: "event";
   streamId: string;
   event: SubscriptionEvent<T>;
 };

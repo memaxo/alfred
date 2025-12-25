@@ -45,6 +45,11 @@
       "default": "./src/workflow/*.ts",
       "types": "./src/workflow/*.ts"
     },
+    "./eval/metrics": {
+      "bun": "./src/eval/metrics.ts",
+      "default": "./src/eval/metrics.ts",
+      "types": "./src/eval/metrics.ts"
+    },
     "./assistant/src/adapter": {
       "bun": "./src/assistant/src/adapter.ts",
       "default": "./src/assistant/src/adapter.ts",
@@ -74,6 +79,7 @@
     "@alfred/metrics": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
+    "exa-js": "^1.5.14",
     "@linear/sdk": "^53.0.0",
     "@lmnr-ai/lmnr": "^0.7.4",
     "lru-cache": "^11.0.1",

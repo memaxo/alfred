@@ -763,7 +763,21 @@ async function getTransitiveClosureSqlite(
   maxDepth: number,
   resource?: string
 ): Promise<string[]> {
-  const context = await loadGraphContext(resource);
+  // Load edges filtered by kind (matching Postgres behavior)
+  const edgeQuery = resource
+    ? db
+        .select()
+        .from(memoryEdges)
+        .where(and(eq(memoryEdges.kind, kind), eq(memoryEdges.resource, resource)))
+    : db.select().from(memoryEdges).where(eq(memoryEdges.kind, kind));
+  const edges = await edgeQuery;
+
+  // Build adjacency map only for edges of the specified kind
+  const adjacency = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    addNeighbor(adjacency, edge.fromId, edge.toId);
+  }
+
   const visited = new Set<string>();
   const queue: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
 
@@ -775,7 +789,7 @@ async function getTransitiveClosureSqlite(
       continue;
     }
 
-    const neighbors = context.adjacency.get(current.id);
+    const neighbors = adjacency.get(current.id);
     if (!neighbors) {
       continue;
     }

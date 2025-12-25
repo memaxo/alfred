@@ -147,7 +147,7 @@ if (process.env.DISABLE_METRICS_HOOKS !== "1") {
         evalFailuresTotal,
         laminarEvalDatapointsTotal,
         laminarEvalErrorsTotal,
-      } = await import("@alfred/agent/eval");
+      } = await import("@alfred/agent/eval/metrics");
       const {
         compressionCyclesTotal,
         compressionCycleDurationSeconds,

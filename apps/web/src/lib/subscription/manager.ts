@@ -96,28 +96,48 @@ class SubscriptionManager {
   }
 
   private handleMessage(message: ServerMessage): void {
-    if ("streamId" in message && message.streamId) {
+    // Type-safe narrowing: check type first to properly narrow the union
+    if (message.type === "event") {
+      // StreamEnvelope has both type and streamId
       const sub = this.streams.get(message.streamId);
       if (!sub) {
         return;
       }
-
-      if (message.type === "subscribed") {
-        sub.status = "connected";
-        sub.cursor = message.cursor;
-        sub.onStatus?.("connected");
-      } else if (message.type === "unsubscribed") {
-        this.streams.delete(message.streamId);
-      } else if (message.type === "error") {
-        sub.status = "error";
-        sub.onStatus?.("error");
-      } else if ("event" in message) {
-        // Stream envelope with event
-        sub.cursor = message.event.cursor;
-        sub.handler(message.event);
-      }
-    } else if (message.type === "error") {
+      sub.cursor = message.event.cursor;
+      sub.handler(message.event);
+      return;
     }
+
+    if (message.type === "subscribed") {
+      const sub = this.streams.get(message.streamId);
+      if (!sub) {
+        return;
+      }
+      sub.status = "connected";
+      sub.cursor = message.cursor;
+      sub.onStatus?.("connected");
+      return;
+    }
+
+    if (message.type === "unsubscribed") {
+      this.streams.delete(message.streamId);
+      return;
+    }
+
+    if (message.type === "error") {
+      if (message.streamId) {
+        const sub = this.streams.get(message.streamId);
+        if (sub) {
+          sub.status = "error";
+          sub.onStatus?.("error");
+        }
+      }
+      // Global errors (without streamId) are silently logged
+      return;
+    }
+
+    // Unknown message type - log for debugging but don't crash
+    console.warn("Unknown message type received:", message);
   }
 
   private sendSubscribe(streamId: string, cursor: string | null): void {

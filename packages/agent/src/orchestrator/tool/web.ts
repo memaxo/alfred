@@ -2,6 +2,12 @@ import { clearTimeout, setTimeout as scheduleTimeout } from "node:timers";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
 import type { ToolExecuteArgs } from "./shared/context.js";
+import {
+  exaSearch,
+  exaGetContents,
+  hasExaApiKey,
+  type ExaSearchOptions,
+} from "./exa.js";
 
 type WebProvider = "ddg" | "serpapi" | "tavily" | "exa";
 
@@ -11,9 +17,7 @@ type CostInfo = {
   contents?: number;
 };
 
-const HAS_EXA = Boolean(
-  process.env.EXA_API_KEY && process.env.EXA_API_KEY.trim().length > 0
-);
+const HAS_EXA = hasExaApiKey();
 const DEFAULT_SEARCH_PROVIDER = (process.env.ORCH_WEB_PROVIDER ??
   (HAS_EXA ? "exa" : "ddg")) as WebProvider;
 const DEFAULT_TOPK = 5;
@@ -22,10 +26,6 @@ const MAX_FETCH_BYTES = Number(process.env.WEB_FETCH_MAX_BYTES ?? 200_000);
 const USER_AGENT =
   process.env.WEB_TOOL_USER_AGENT ??
   "Mozilla/5.0 (compatible; Alfred-Orchestrator/1.0; +https://github.com/factoryagency/alfred)";
-const EXA_BASE_URL = process.env.EXA_BASE_URL ?? "https://api.exa.ai";
-const EXA_TIMEOUT_MS = Number.isFinite(Number(process.env.EXA_TIMEOUT_MS))
-  ? Number(process.env.EXA_TIMEOUT_MS)
-  : 20_000;
 
 const exaTextSchema = z.union([
   z.boolean(),
@@ -96,23 +96,45 @@ const webInputSchema = z.object({
 
 type WebInput = z.infer<typeof webInputSchema>;
 
+/**
+ * Web search result item schema with Exa-aligned fields
+ */
+const webSearchResultSchema = z.object({
+  url: z.string(),
+  title: z.string().optional(),
+  snippet: z.string().optional(),
+  score: z.number().optional(),
+  publishedDate: z.string().optional(),
+  image: z.string().optional(),
+  favicon: z.string().optional(),
+  // Exa-specific fields
+  author: z.string().optional(),
+  highlights: z.array(z.string()).optional(),
+  highlightScores: z.array(z.number()).optional(),
+  summary: z.string().optional(),
+  links: z.array(z.string()).optional(),
+});
+
+/**
+ * Recursive subpage schema (same structure as result)
+ */
+type WebSearchResultType = z.infer<typeof webSearchResultSchema> & {
+  subpages?: WebSearchResultType[];
+};
+
+const webSearchResultWithSubpagesSchema: z.ZodType<WebSearchResultType> =
+  webSearchResultSchema.extend({
+    subpages: z.lazy(() => z.array(webSearchResultWithSubpagesSchema)).optional(),
+  });
+
 const webOutputSchema = z.object({
   ok: z.boolean(),
   action: z.enum(["search", "fetch"]),
   provider: z.enum(["ddg", "serpapi", "tavily", "exa"]).optional(),
-  results: z
-    .array(
-      z.object({
-        url: z.string(),
-        title: z.string().optional(),
-        snippet: z.string().optional(),
-        score: z.number().optional(),
-        publishedDate: z.string().optional(),
-        image: z.string().optional(),
-        favicon: z.string().optional(),
-      })
-    )
-    .optional(),
+  // Exa response metadata
+  searchType: z.enum(["auto", "neural", "keyword", "fast", "deep"]).optional(),
+  context: z.string().optional(), // LLM-optimized combined content
+  results: z.array(webSearchResultWithSubpagesSchema).optional(),
   details: z
     .object({
       url: z.string(),
@@ -144,31 +166,6 @@ const exaCache = new Map<
   }
 >();
 const EXA_CACHE_TTL_MS = 60_000;
-
-function getExaHeaders() {
-  const key = process.env.EXA_API_KEY;
-  if (!key) {
-    throw new Error("web_exa_missing_api_key");
-  }
-  return {
-    "content-type": "application/json",
-    "x-api-key": key,
-    "user-agent": USER_AGENT,
-  } satisfies Record<string, string>;
-}
-
-function createTimeoutController(timeoutSec?: number) {
-  const controller = new AbortController();
-  const ms = Math.min(
-    (timeoutSec ?? DEFAULT_TIMEOUT_SEC) * 1000,
-    EXA_TIMEOUT_MS
-  );
-  const timer = scheduleTimeout(() => controller.abort(), ms);
-  return {
-    signal: controller.signal,
-    cancel: () => clearTimeout(timer),
-  };
-}
 
 async function enforcePolicy(input: WebInput) {
   await requireToolScopesAndPolicy(input.authz, ["web.read"], {
@@ -362,8 +359,13 @@ async function performExaSearch(
   query: string,
   topK: number,
   exaOpts: ExaConfig | undefined,
-  timeoutSec?: number
-): Promise<{ results: WebOutput["results"]; cost?: CostInfo }> {
+  _timeoutSec?: number
+): Promise<{
+  results: WebOutput["results"];
+  cost?: CostInfo;
+  searchType?: WebOutput["searchType"];
+  context?: string;
+}> {
   if (!HAS_EXA) {
     throw new Error("web_exa_missing_api_key");
   }
@@ -377,196 +379,171 @@ async function performExaSearch(
     }
   }
 
-  const { signal, cancel } = createTimeoutController(timeoutSec);
-  try {
-    const fetchCount = Math.min(10, Math.max(topK + 2, topK));
-    const queryTokens = extractQueryTokens(query);
+  const fetchCount = Math.min(10, Math.max(topK + 2, topK));
+  const queryTokens = extractQueryTokens(query);
 
-    const body: Record<string, unknown> = {
-      query,
-      type: exaOpts?.type ?? "auto",
-      numResults: fetchCount,
-      contents: exaOpts?.text ?? false,
-      liveCrawl: exaOpts?.livecrawl ?? "fallback",
-    };
+  // Build SDK options
+  const sdkOptions: ExaSearchOptions = {
+    numResults: fetchCount,
+    type: exaOpts?.type as ExaSearchOptions["type"],
+    category: exaOpts?.category,
+    livecrawl: exaOpts?.livecrawl,
+    text: exaOpts?.text,
+    highlights: exaOpts?.highlights,
+    summary: exaOpts?.summary,
+    subpages: exaOpts?.subpages,
+    subpageTarget: exaOpts?.subpageTarget,
+    context: exaOpts?.context,
+  };
 
-    if (exaOpts?.category) {
-      body.category = exaOpts.category;
-    }
-    if (exaOpts?.highlights) {
-      body.highlights = exaOpts.highlights;
-    }
-    if (exaOpts?.summary) {
-      body.summary = exaOpts.summary;
-    }
-    if (typeof exaOpts?.subpages === "number") {
-      body.subpages = exaOpts.subpages;
-    }
-    if (exaOpts?.subpageTarget) {
-      body.subpageTarget = exaOpts.subpageTarget;
-    }
-    if (exaOpts?.extras) {
-      body.extras = exaOpts.extras;
-    }
-    if (typeof exaOpts?.context !== "undefined") {
-      body.context = exaOpts.context;
-    }
+  // Use SDK for search
+  const { results: sdkResults, searchType, context, cost } = await exaSearch(
+    query,
+    sdkOptions
+  );
 
-    const response = await fetch(`${EXA_BASE_URL}/search`, {
-      method: "POST",
-      headers: getExaHeaders(),
-      signal,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`web_exa_failed:${response.status}:${text}`);
-    }
-
-    const payload = (await response.json()) as {
-      results?: Array<{
-        id?: string;
-        url: string;
-        title?: string;
-        highlights?: string[];
-        highlightScores?: number[];
-        summary?: string;
-        text?: string;
-        score?: number;
-        publishedDate?: string;
-        imageUrl?: string;
-        faviconUrl?: string;
-      }>;
-      cost?: CostInfo;
-    };
-
-    const scoredResults = (payload.results ?? [])
-      .slice(0, fetchCount)
-      .map((entry, index) => {
-        const snippetSource =
-          entry.summary ??
-          (Array.isArray(entry.highlights) && entry.highlights.length > 0
-            ? entry.highlights[0]
-            : entry.text);
-        const relevance = scoreExaResult({
-          entry,
-          queryTokens,
-          index,
-        });
-        return {
-          entry,
-          snippet: compressSnippet(snippetSource ?? undefined),
-          relevance,
-          index,
-        };
-      })
-      .sort((a, b) => {
-        if (b.relevance !== a.relevance) {
-          return b.relevance - a.relevance;
-        }
-        return a.index - b.index;
-      })
-      .slice(0, topK);
-
-    const results = scoredResults.map((item) => ({
-      url: item.entry.url,
-      title: item.entry.title ?? item.entry.url,
-      snippet: item.snippet,
-      score: item.relevance,
-      publishedDate: item.entry.publishedDate,
-      image: item.entry.imageUrl,
-      favicon: item.entry.faviconUrl,
-    }));
-
-    if (exaOpts?.livecrawl !== "always") {
-      exaCache.set(cacheKey, {
-        results,
-        cost: payload.cost,
-        expires: Date.now() + EXA_CACHE_TTL_MS,
+  const scoredResults = sdkResults
+    .slice(0, fetchCount)
+    .map((entry, index) => {
+      const snippetSource = entry.summary ?? entry.highlights?.[0] ?? entry.text;
+      const relevance = scoreExaResult({
+        entry: {
+          score: entry.score,
+          highlightScores: entry.highlightScores,
+          title: entry.title,
+          summary: entry.summary,
+          highlights: entry.highlights,
+          text: entry.text,
+        },
+        queryTokens,
+        index,
       });
-    }
+      return {
+        entry,
+        snippet: compressSnippet(snippetSource ?? entry.snippet),
+        relevance,
+        index,
+      };
+    })
+    .sort((a, b) => {
+      if (b.relevance !== a.relevance) {
+        return b.relevance - a.relevance;
+      }
+      return a.index - b.index;
+    })
+    .slice(0, topK);
 
-    return { results, cost: payload.cost };
-  } finally {
-    cancel();
+  // Transform subpages recursively
+  function transformSubpage(sub: {
+    url: string;
+    title?: string;
+    author?: string;
+    publishedDate?: string;
+    summary?: string;
+    highlights?: string[];
+    highlightScores?: number[];
+    text?: string;
+  }): WebSearchResultType {
+    return {
+      url: sub.url,
+      title: sub.title,
+      author: sub.author,
+      publishedDate: sub.publishedDate,
+      summary: sub.summary,
+      highlights: sub.highlights,
+      highlightScores: sub.highlightScores,
+      snippet: compressSnippet(sub.summary ?? sub.highlights?.[0] ?? sub.text),
+    };
   }
+
+  const results: WebSearchResultType[] = scoredResults.map((item) => ({
+    url: item.entry.url,
+    title: item.entry.title ?? item.entry.url,
+    snippet: item.snippet,
+    score: item.relevance,
+    publishedDate: item.entry.publishedDate,
+    image: item.entry.image,
+    favicon: item.entry.favicon,
+    // Preserve Exa-specific fields
+    author: item.entry.author,
+    highlights: item.entry.highlights,
+    highlightScores: item.entry.highlightScores,
+    summary: item.entry.summary,
+    links: item.entry.extras?.links,
+    subpages: item.entry.subpages?.map(transformSubpage),
+  }));
+
+  if (exaOpts?.livecrawl !== "always") {
+    exaCache.set(cacheKey, {
+      results,
+      cost: cost as CostInfo | undefined,
+      expires: Date.now() + EXA_CACHE_TTL_MS,
+    });
+  }
+
+  return {
+    results,
+    cost: cost as CostInfo | undefined,
+    searchType: searchType as WebOutput["searchType"],
+    context,
+  };
 }
 
 async function performExaContents(
   url: string,
   exaOpts: ExaConfig | undefined,
-  timeoutSec?: number
+  _timeoutSec?: number
 ): Promise<{ details: WebOutput["details"]; cost?: CostInfo }> {
   if (!HAS_EXA) {
     throw new Error("web_exa_missing_api_key");
   }
-  const { signal, cancel } = createTimeoutController(timeoutSec);
-  try {
-    const maxCharacters = (() => {
-      if (
-        typeof exaOpts?.text === "object" &&
-        typeof exaOpts.text.maxCharacters === "number"
-      ) {
-        return Math.min(exaOpts.text.maxCharacters, MAX_FETCH_BYTES);
-      }
-      if (
-        typeof exaOpts?.context === "object" &&
-        typeof exaOpts.context.maxCharacters === "number"
-      ) {
-        return Math.min(exaOpts.context.maxCharacters, MAX_FETCH_BYTES);
-      }
-      return Math.min(5000, MAX_FETCH_BYTES);
-    })();
 
-    const body: Record<string, unknown> = {
-      urls: [url],
-      text:
-        typeof exaOpts?.text === "undefined" ? { maxCharacters } : exaOpts.text,
-      summary: exaOpts?.summary,
-      liveCrawl: exaOpts?.livecrawl ?? "fallback",
-    };
-
-    const response = await fetch(`${EXA_BASE_URL}/contents`, {
-      method: "POST",
-      headers: getExaHeaders(),
-      signal,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`web_exa_contents_failed:${response.status}:${text}`);
+  const maxCharacters = (() => {
+    if (
+      typeof exaOpts?.text === "object" &&
+      typeof exaOpts.text.maxCharacters === "number"
+    ) {
+      return Math.min(exaOpts.text.maxCharacters, MAX_FETCH_BYTES);
     }
+    if (
+      typeof exaOpts?.context === "object" &&
+      typeof exaOpts.context.maxCharacters === "number"
+    ) {
+      return Math.min(exaOpts.context.maxCharacters, MAX_FETCH_BYTES);
+    }
+    return Math.min(5000, MAX_FETCH_BYTES);
+  })();
 
-    const payload = (await response.json()) as {
-      contents?: Array<{
-        url: string;
-        text?: string;
-        summary?: string;
-        status?: number;
-        contentType?: string;
-      }>;
-      cost?: CostInfo;
-    };
+  // Build text options for SDK
+  const textOpts =
+    typeof exaOpts?.text === "undefined"
+      ? { maxCharacters }
+      : typeof exaOpts.text === "boolean"
+        ? exaOpts.text
+        : { maxCharacters: exaOpts.text.maxCharacters ?? maxCharacters };
 
-    const first = payload.contents?.[0];
-    const text = first?.text ?? first?.summary ?? "";
-    const truncated = text.length >= maxCharacters;
+  // Use SDK for content fetching
+  const { contents, cost } = await exaGetContents([url], {
+    text: textOpts,
+    highlights: exaOpts?.highlights,
+    summary: exaOpts?.summary,
+    livecrawl: exaOpts?.livecrawl,
+  });
 
-    return {
-      details: {
-        url,
-        status: first?.status ?? 200,
-        contentType: first?.contentType ?? "text/plain",
-        text,
-        truncated,
-      },
-      cost: payload.cost,
-    };
-  } finally {
-    cancel();
-  }
+  const first = contents[0];
+  const text = first?.text ?? first?.summary ?? "";
+  const truncated = text.length >= maxCharacters;
+
+  return {
+    details: {
+      url,
+      status: 200,
+      contentType: "text/plain",
+      text,
+      truncated,
+    },
+    cost: cost as CostInfo | undefined,
+  };
 }
 
 async function performSearch(
@@ -579,6 +556,8 @@ async function performSearch(
   results: WebOutput["results"];
   cost?: CostInfo;
   provider: WebProvider;
+  searchType?: WebOutput["searchType"];
+  context?: string;
 }> {
   switch (provider) {
     case "exa":
@@ -721,17 +700,20 @@ export const toolWeb = {
         throw new Error("web_search_query_required");
       }
       try {
-        const { results, cost, provider } = await performSearch(
-          query,
-          input.topK ?? DEFAULT_TOPK,
-          resolvedProvider,
-          input.exa,
-          input.timeoutSec
-        );
+        const { results, cost, provider, searchType, context } =
+          await performSearch(
+            query,
+            input.topK ?? DEFAULT_TOPK,
+            resolvedProvider,
+            input.exa,
+            input.timeoutSec
+          );
         return {
           ok: true,
           action: "search",
           provider,
+          searchType,
+          context,
           results,
           cost,
         } satisfies WebOutput;

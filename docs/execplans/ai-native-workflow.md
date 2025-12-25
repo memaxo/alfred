@@ -1316,7 +1316,7 @@ Use `installWorkflowRuntimeFixture` from `@alfred/test-kit/workflow/runtime-fixt
 | 2025-01-27 | 0 | Desktop system review | ✅ | Aligned with Desktop UI Paradigm v3; see review doc |
 | 2025-01-27 | 0 | Comprehensive gap analysis | ✅ | See `ai-native-workflow-gap-analysis.md` for detailed component-by-component gaps |
 | 2025-12-24 | 1 | Intent parser | ✅ | P1-2 implementation complete |
-| 2025-12-24 | 1 | Research aggregator | ⬜ | |
+| 2025-12-24 | 1 | Research aggregator | ✅ | P1-3 implementation complete (External Research) |
 | 2025-12-24 | 1 | Plan generator | ⬜ | |
 | 2025-12-24 | 1 | @alfred/plan package scaffold | ✅ | P1-1 implementation complete |
 | | 2 | Optional plan selection/evaluator | ⬜ | |
@@ -1375,7 +1375,7 @@ Total: 30 tickets across 6 phases
 |----|--------|-------|------|-------------|---------------------|--------------|--------|
 | P1-1 | [ALF-276](https://linear.app/alfred-ops/issue/ALF-276) | Create `@alfred/plan` package scaffold | Story | Initialize new package with types, schemas, exports | Package builds, exports `Phase`, `StructuredPlan`, `WorkflowPattern`, `PlanEvaluation` types | None | `plan`, `foundation` |
 | P1-2 | [ALF-277](https://linear.app/alfred-ops/issue/ALF-277) | Intent parser with clarification tool | Story | Parse voice/chat to `WorkflowIntent`, detect ambiguity, emit clarification requests | Intent parsed from 5 test phrases; ambiguous input triggers clarification (max 3); multi-intent split working | P1-1 | `plan`, `intent` |
-| P1-3 | [ALF-278](https://linear.app/alfred-ops/issue/ALF-278) | External research aggregator | Story | Integrate web search (Exa/DDG), docs lookup, source scoring | Web search returns top 5 results with source reliability scores; date filtering applied | P1-1 | `plan`, `research` |
+| P1-3 | [ALF-278](https://linear.app/alfred-ops/issue/ALF-278) | External research aggregator | Story | Integrate web search (Exa/DDG), docs lookup, source scoring | Web search returns top 5 results with source reliability scores; date filtering applied | ✅ | `plan`, `research` |
 | P1-4 | [ALF-279](https://linear.app/alfred-ops/issue/ALF-279) | Internal research (codebase + patterns) | Story | Semantic code search, import analysis, pattern lookup (stub) | Codebase context includes relevant files, detected conventions; pattern lookup returns empty gracefully | P1-1 | `plan`, `research` |
 | P1-5 | [ALF-280](https://linear.app/alfred-ops/issue/ALF-280) | Research aggregation & context builder | Story | Combine external + internal research into `ResearchResult` | Combined context under token limit; sources deduplicated; research completes in <10s | P1-3, P1-4 | `plan`, `research` |
 | P1-6 | [ALF-281](https://linear.app/alfred-ops/issue/ALF-281) | Project entity & auto-detection | Story | Create `projects` table, auto-detect from workspace path, basic CRUD | Project auto-created from workspace; unique per user+workspace; config detected | P1-1 | `plan`, `project` |
