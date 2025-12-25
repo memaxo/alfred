@@ -259,6 +259,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Setup Voice Dependencies
+        run: cd packages/voice && bun run setup:ci
+        continue-on-error: true
+
       - name: Performance budget coverage gate
         run: bun run check:budgets
 

@@ -16,7 +16,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
 import { MessageActions } from "@/components/chat/message-actions";
-import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,

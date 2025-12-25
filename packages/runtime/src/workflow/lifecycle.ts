@@ -2,6 +2,7 @@ import { recordAudit } from "@alfred/agent/utils/audit";
 import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as workflowRepo from "@alfred/db/repo/workflow";
 import { logger } from "@alfred/logger";
+import type { StructuredPlan } from "@alfred/plan";
 
 export type Lifecycle = {
   closeTimer: (status: "ok" | "error" | "cancel") => void;
@@ -164,8 +165,19 @@ export function createLifecycle(args: {
               const { planRepo } = await import("@alfred/db");
               const savedPlan = await planRepo.getPlanById(planId);
               if (savedPlan) {
-                const { extractPatternFromRun } = await import("@alfred/plan");
-                const { type StructuredPlan } = await import("@alfred/plan");
+                const { structuredPlanSchema } = await import("@alfred/plan");
+                const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
+                if (!parsed.success) {
+                  logger.warn("pattern_extraction_plan_invalid", {
+                    runId,
+                    planId,
+                  });
+                  return;
+                }
+                const plan = parsed.data as StructuredPlan;
+                const { extractPatternFromRun } = await import(
+                  "@alfred/plan/pattern"
+                );
                 await extractPatternFromRun(
                   {
                     id: run.id,
@@ -175,13 +187,13 @@ export function createLifecycle(args: {
                     created: run.created,
                     completedAt: run.completedAt,
                   },
-                  savedPlan.plan as StructuredPlan
+                  plan
                 );
 
                 // Trigger Convention Learning
                 if (run.projectId) {
                   const { learnProjectConventions } = await import(
-                    "@alfred/plan"
+                    "@alfred/plan/project"
                   );
                   await learnProjectConventions(
                     {
@@ -274,10 +286,19 @@ export function createLifecycle(args: {
                 const { planRepo } = await import("@alfred/db");
                 const savedPlan = await planRepo.getPlanById(planId);
                 if (savedPlan) {
+                  const { structuredPlanSchema } = await import("@alfred/plan");
+                  const parsed = structuredPlanSchema.safeParse(savedPlan.plan);
+                  if (!parsed.success) {
+                    logger.warn("anti_pattern_extraction_plan_invalid", {
+                      runId,
+                      planId,
+                    });
+                    return;
+                  }
+                  const plan = parsed.data as StructuredPlan;
                   const { extractAntiPatternFromRun } = await import(
-                    "@alfred/plan"
+                    "@alfred/plan/pattern"
                   );
-                  const { type StructuredPlan } = await import("@alfred/plan");
                   await extractAntiPatternFromRun(
                     {
                       id: run.id,
@@ -287,8 +308,9 @@ export function createLifecycle(args: {
                       created: run.created,
                       completedAt: run.completedAt,
                     },
-                    savedPlan.plan as StructuredPlan,
-                    summary ?? error instanceof Error ? error.message : String(error)
+                    plan,
+                    summary ??
+                      (error instanceof Error ? error.message : String(error))
                   );
                 }
               }

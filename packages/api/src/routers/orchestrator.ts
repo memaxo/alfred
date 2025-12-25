@@ -54,12 +54,16 @@ export const orchestratorRouter = router({
       try {
         const defaults = getOrchestratorAgentDefaults();
         const model = defaults.model as LanguageModel;
+        const system =
+          typeof defaults.instructions === "string"
+            ? defaults.instructions
+            : JSON.stringify(defaults.instructions);
         const modelMessages = await prepareModelMessagesForGenerate({
           rawMessages: input.messages,
           tools: defaults.tools,
           source: "orchestrator",
           model,
-          system: defaults.instructions,
+          system,
         });
         const stopWhen =
           typeof input.maxSteps === "number"

@@ -38,18 +38,38 @@ export const phaseSchema = z.object({
  * Zod schema for StructuredPlan
  */
 export const structuredPlanSchema = z.object({
-  id: z.string().uuid().or(z.string()),
+  id: z.string(),
   title: z.string().min(1),
   intent: z.string().min(1),
   workspace: z.string().optional(),
   phases: z.array(phaseSchema),
-  waves: z.array(z.any()).optional(), // WavePlan validation deferred
+  waves: z
+    .array(
+      z.object({
+        id: z.string(),
+        agents: z.array(z.string()),
+        dependsOn: z.array(z.string()),
+        agentType: z.string().optional(),
+        isolation: z.enum(["container", "worktree"]).optional(),
+        phaseId: z.string().optional(),
+      })
+    )
+    .optional(),
   resources: z.object({
     agentCount: z.number().min(1),
     strategy: z.enum(["sequential", "parallel", "mixed", "topological"]),
-    isolation: z.enum(["container", "worktree", "none"]),
+    isolation: z.enum(["container", "worktree"]),
   }),
-  evaluationCriteria: z.array(z.any()),
+  evaluationCriteria: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        name: z.string(),
+        weight: z.number(),
+        threshold: z.string(),
+      }),
+    ])
+  ),
 });
 
 /**

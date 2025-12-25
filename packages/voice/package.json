@@ -9,7 +9,7 @@
     "dev": "tsc -b -w",
     "build": "tsc -b",
     "typecheck": "tsc -b",
-    "test": "bun test",
+    "test": "bun test src test",
     "install-deps": "bash scripts/install.sh",
     "download-models": "uv run python scripts/download.py",
     "verify": "uv run python scripts/download.py --verify-only",

@@ -43,13 +43,12 @@
     "dev": "tsc -b -w",
     "lint": "biome check .",
     "check-types": "tsc --noEmit",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "@alfred/agent": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/db": "workspace:*",
-    "@alfred/runtime": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/type": "workspace:*",
     "zod": "catalog:",

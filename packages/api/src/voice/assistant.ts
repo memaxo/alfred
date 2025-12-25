@@ -118,7 +118,10 @@ export async function runAssistantForVoice(
   const focusState = await getUserFocusState(input.userId);
   const cognitiveContext = formatCognitiveContext(focusState);
 
-  let systemInstructions = defaults.instructions;
+  let systemInstructions =
+    typeof defaults.instructions === "string"
+      ? defaults.instructions
+      : JSON.stringify(defaults.instructions);
   if (cognitiveContext) {
     systemInstructions += `\n\n${cognitiveContext}`;
   }

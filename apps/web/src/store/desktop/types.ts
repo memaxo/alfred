@@ -43,7 +43,7 @@ export type WindowData = {
   resourceRef?: ResourceRef;
   viewMode: ViewMode;
   draft?: unknown;
-};
+} & Record<string, unknown>;
 
 export type WindowInstance = Node<WindowData>;
 

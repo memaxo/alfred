@@ -8,6 +8,7 @@ import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { workflowInput, type WorkflowInputPayload } from "./schema.js";
+export type { WorkflowInputPayload };
 
 // Type for the runtime executor (defined here to avoid circular dependency)
 type RuntimeExecutor = {

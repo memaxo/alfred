@@ -149,7 +149,11 @@ export async function upsertNodes(
   return map;
 }
 
-export type MirrorEntityKind = "note" | "reminder" | "workflow_run";
+export type MirrorEntityKind =
+  | "note"
+  | "reminder"
+  | "workflow_run"
+  | "workflow_pattern";
 
 export type MirrorEntitySeed = {
   kind: MirrorEntityKind;
@@ -166,6 +170,12 @@ function getMirrorHash(seed: { kind: MirrorEntityKind; id: string }): string {
       return `reminder:${seed.id}`;
     case "workflow_run":
       return `workflowrun:${seed.id}`;
+    case "workflow_pattern":
+      return `workflowpattern:${seed.id}`;
+    default: {
+      const _exhaustive: never = seed.kind;
+      throw new Error(`mirror_entity_kind_invalid:${_exhaustive}`);
+    }
   }
 }
 

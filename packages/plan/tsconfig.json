@@ -1,8 +1,10 @@
 {
   "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "./dist",
     "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/plan.tsbuildinfo",
     "declaration": true,
     "declarationMap": false,
     "composite": true
@@ -13,7 +15,6 @@
     { "path": "../type" },
     { "path": "../agent" },
     { "path": "../knowledge" },
-    { "path": "../db" },
-    { "path": "../runtime" }
+    { "path": "../db" }
   ]
 }

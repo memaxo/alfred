@@ -1,6 +1,5 @@
 import { planRepo, workflowRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
-import { convertPlanToWavePlan } from "@alfred/runtime";
 import type { WorkflowPlan } from "@alfred/db/schema/plan";
 
 /**
@@ -68,9 +67,6 @@ export async function rejectPlan(
 }
 
 async function createWorkflowRun(plan: WorkflowPlan): Promise<string> {
-  // Convert StructuredPlan → WavePlan (P3-1)
-  const wavePlan = await convertPlanToWavePlan(plan.plan as any);
-
   // Create workflow run in DB
   // Note: We're reusing the plan ID as the base for the run ID or generating a new one
   const runId = crypto.randomUUID();
@@ -86,7 +82,6 @@ async function createWorkflowRun(plan: WorkflowPlan): Promise<string> {
     inputData: {
       planId: plan.id,
       intent: plan.intent,
-      wavePlan,
     },
   });
 

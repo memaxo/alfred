@@ -25,6 +25,7 @@
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",
+    "@alfred/plan": "workspace:*",
     "@alfred/policy": "workspace:*",
     "@alfred/type": "workspace:*",
     "@alfred/agent": "workspace:*",

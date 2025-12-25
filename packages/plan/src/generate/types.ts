@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Phase, StructuredPlan } from "../types.js";
+import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
 
 /**
  * AgentType: The type of agent assigned to a phase
@@ -47,19 +48,39 @@ export const phaseSchema = z.object({
  * StructuredPlan: The final output of the phased plan generator
  */
 export const structuredPlanSchema = z.object({
-  id: z.string().uuid().or(z.string()),
+  id: z.string(),
   title: z.string(),
   intent: z.string(),
   workspace: z.string().optional(), // Workspace path for checks
   phases: z.array(phaseSchema),
-  waves: z.array(z.unknown()).optional(),
+  waves: z
+    .array(
+      z.object({
+        id: z.string(),
+        agents: z.array(z.string()),
+        dependsOn: z.array(z.string()),
+        agentType: z.string().optional(),
+        isolation: z.enum(["container", "worktree"]).optional(),
+        phaseId: z.string().optional(),
+      }) satisfies z.ZodType<WavePlan>
+    )
+    .optional(),
   resources: z.object({
     agentCount: z.number(),
     strategy: z.enum(["sequential", "parallel", "mixed", "topological"]),
-    isolation: z.enum(["container", "worktree", "none"]),
+    isolation: z.enum(["container", "worktree"]),
   }),
-  evaluationCriteria: z.array(z.any()), // More flexible criteria
-});
+  evaluationCriteria: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        name: z.string(),
+        weight: z.number(),
+        threshold: z.string(),
+      }),
+    ])
+  ),
+}) satisfies z.ZodType<StructuredPlan>;
 
 export type GeneratePlanOptions = {
   maxPhases?: number;

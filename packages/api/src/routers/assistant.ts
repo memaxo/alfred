@@ -1,5 +1,6 @@
 import { getAssistantAgentDefaults } from "@alfred/agent";
 import { getModelSpec } from "@alfred/agent/models";
+import { getModelId } from "@alfred/agent/v6";
 import { TRPCError } from "@trpc/server";
 import { stepCountIs } from "ai";
 import { z } from "zod";
@@ -77,9 +78,7 @@ function mapResource(raw: unknown) {
 
 export const assistantRouter = router({
   getConfig: authedProcedure.query(async () => {
-    const defaults = getAssistantAgentDefaults();
-    const modelId = defaults.model.modelId;
-    const spec = getModelSpec(modelId);
+    const spec = getModelSpec(getModelId());
     return {
       modelId: spec.id,
       contextWindow: spec.contextWindow,

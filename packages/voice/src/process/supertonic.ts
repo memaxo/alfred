@@ -97,6 +97,15 @@ class TextToSpeech {
     this.sampleRate = cfgs.ae.sample_rate;
   }
 
+  async release() {
+    await Promise.all([
+      this.dpOrt.release(),
+      this.textEncOrt.release(),
+      this.vectorEstOrt.release(),
+      this.vocoderOrt.release(),
+    ]);
+  }
+
   private async _infer(
     textList: string[],
     style: Style,
@@ -594,6 +603,16 @@ export class SupertonicTTS {
     } catch (error) {
       throw new Error(`Failed to load voice ${voiceFilename}: ${error}`);
     }
+  }
+
+  async shutdown(): Promise<void> {
+    if (this.textToSpeech) {
+      await this.textToSpeech.release();
+      this.textToSpeech = null;
+    }
+    this.voiceCache.clear();
+    this.currentStyle = null;
+    this.initialized = false;
   }
 
   async synthesize(
