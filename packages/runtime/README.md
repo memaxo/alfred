@@ -88,7 +88,7 @@ The runtime detects stuck agents using three heuristics that can be tuned via en
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STUCK_NO_PROGRESS_MS` | `120000` | Time without events before agent is stuck (ms) |
+| `STUCK_NO_PROGRESS_MS` | `60000` | Time without events before agent is stuck (ms) |
 | `STUCK_MAX_REPEATS` | `5` | Consecutive identical commands before stuck |
 | `STUCK_MAX_FILE_FLIP_FLOPS` | `4` | Same file modifications before stuck |
 
