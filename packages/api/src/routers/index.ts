@@ -19,6 +19,7 @@ import { planRouter } from "./plan";
 import { preferenceRouter } from "./preference";
 import { privacyRouter } from "./privacy";
 import { profileRouter } from "./profile";
+import { projectRouter } from "./project";
 import { remindRouter } from "./remind";
 import { terminalRouter } from "./terminal";
 import { timerRouter } from "./timer";
@@ -59,6 +60,7 @@ export const appRouter = router({
   orchestrator: orchestratorRouter,
   plan: planRouter,
   profile: profileRouter,
+  project: projectRouter,
   preference: preferenceRouter,
   privacy: privacyRouter,
   visual: visualRouter,

@@ -28,6 +28,7 @@ export * as evalRepo from "./repo/eval";
 export * as graphRepo from "./repo/graph";
 export * as linearRepo from "./repo/linear";
 export * as policyRepo from "./repo/policy";
+export * as projectRepo from "./repo/project";
 export * as ragRepo from "./repo/rag";
 // Export repositories as namespaces
 export * as userRepo from "./repo/user";
@@ -41,6 +42,7 @@ export * as evalSchema from "./schema/eval";
 export * as graphSchema from "./schema/graph";
 export * as linearSchema from "./schema/linear";
 export * as policySchema from "./schema/policy";
+export * as projectSchema from "./schema/project";
 export * as ragSchema from "./schema/rag";
 // Schemas are exposed under namespaces to avoid duplicate export collisions.
 export * as userSchema from "./schema/user";
