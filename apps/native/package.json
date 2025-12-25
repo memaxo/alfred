@@ -50,6 +50,7 @@
     "better-auth": "catalog:",
     "@better-auth/expo": "1.4.7",
     "@alfred/api": "workspace:*",
+    "@alfred/ui": "workspace:*",
     "expo-av": "~16.0.7",
     "expo-background-fetch": "~14.0.7",
     "expo-task-manager": "~13.1.6"
