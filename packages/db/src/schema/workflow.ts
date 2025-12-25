@@ -4,10 +4,16 @@
  */
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { projects } from "./project";
 
 export const workflowRuns = pgTable("workflow_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
+  planId: uuid("plan_id"), // Link to structured plan
+  requirement: text("requirement"), // Copy of intent/requirement
   workflowId: text("workflow_id").notNull(),
   status: text("status").notNull().default("running"), // 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
   inputData: jsonb("input_data"),

@@ -378,43 +378,68 @@ export const workflowRouter = router({
     .input(
       z.object({
         runId: z.string().min(1),
-        event: z.enum([
-          "deploy-authz",
-          "linear-authz",
-          "bio-authz",
-          "mfa-authz",
-          "human-authz",
-        ]),
-        authz: z.string().min(1),
+        clarificationId: z.string().uuid().optional(), // New: resume from clarification
+        response: z.string().optional(), // New: response to clarification
+        event: z
+          .enum([
+            "deploy-authz",
+            "linear-authz",
+            "bio-authz",
+            "mfa-authz",
+            "human-authz",
+          ])
+          .optional(),
+        authz: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      try {
-        const delivered = await runRegistry.dispatchResume(input.runId, {
-          event: input.event,
-          authz: input.authz,
-        });
-
-        if (!delivered) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
-        }
-        } catch (error) {
-        if (error instanceof StreamNotAttachedError) {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message: "stream_not_attached",
-          });
-        }
-        throw toTRPCError(error, "workflow_resume_failed");
+      // Handle clarification resume
+      if (input.clarificationId && input.response) {
+        const { resumeWorkflowAfterClarification } = await import(
+          "@alfred/runtime/orchestrator/resume"
+        );
+        await resumeWorkflowAfterClarification(
+          input.runId,
+          input.clarificationId,
+          input.response
+        );
+        return { ok: true };
       }
-      await recordAudit({
-        userId: null,
-        action: "workflow.resume",
-        resource: { kind: "workflow", id: input.runId },
-        decision: "allow",
-        context: { event: input.event },
+
+      // Handle existing obligation resume
+      if (input.event && input.authz) {
+        try {
+          const delivered = await runRegistry.dispatchResume(input.runId, {
+            event: input.event,
+            authz: input.authz,
+          });
+
+          if (!delivered) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "run_not_found" });
+          }
+        } catch (error) {
+          if (error instanceof StreamNotAttachedError) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "stream_not_attached",
+            });
+          }
+          throw toTRPCError(error, "workflow_resume_failed");
+        }
+        await recordAudit({
+          userId: null,
+          action: "workflow.resume",
+          resource: { kind: "workflow", id: input.runId },
+          decision: "allow",
+          context: { event: input.event },
+        });
+        return { ok: true };
+      }
+
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "invalid_resume_payload",
       });
-      return { ok: true };
     }),
 
   get: authedProcedure

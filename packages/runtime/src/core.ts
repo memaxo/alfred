@@ -7,14 +7,14 @@
 
 import { randomUUID } from "node:crypto";
 import { BrainstemSupervisor } from "@alfred/cognitive/brainstem";
+import type { Event } from "@alfred/cognitive/state";
+import { timestamp } from "@alfred/cognitive/state";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
-import { runCognitiveLoop } from "./loops/cognitive";
-import { timestamp } from "@alfred/cognitive/state";
-import type { Event } from "@alfred/cognitive/state";
 import type { AiAdapter } from "./adapters/ai";
+import { runCognitiveLoop } from "./loops/cognitive";
 import {
   runtimeExecutionDurationSeconds,
   runtimeExecutionsTotal,
@@ -251,7 +251,8 @@ export class WorkflowRuntime implements IWorkflowRuntime {
 
     this.startSupervisorWatchers();
 
-    let pipelineIterator: AsyncIterator<WorkflowEvent, void, void> | null = null;
+    let pipelineIterator: AsyncIterator<WorkflowEvent, void, void> | null =
+      null;
 
     try {
       // Emit run start event
@@ -543,7 +544,11 @@ export class WorkflowRuntime implements IWorkflowRuntime {
               priority: 2,
               ts: timestamp(Date.now()),
             };
-            await runCognitiveLoop(this.runtimeContext, this.runId, interruptEvent);
+            await runCognitiveLoop(
+              this.runtimeContext,
+              this.runId,
+              interruptEvent
+            );
           } catch (error) {
             logger.error("supervisor_physiology_cognitive_bridge_failed", {
               runId: this.runId,
@@ -612,7 +617,11 @@ export class WorkflowRuntime implements IWorkflowRuntime {
             priority: 2, // Medium priority for supervisor interrupts
             ts: timestamp(Date.now()),
           };
-          await runCognitiveLoop(this.runtimeContext, this.runId, interruptEvent);
+          await runCognitiveLoop(
+            this.runtimeContext,
+            this.runId,
+            interruptEvent
+          );
         } catch (error) {
           // Log but don't block workflow interruption
           logger.error("supervisor_cognitive_bridge_failed", {

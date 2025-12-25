@@ -1,6 +1,6 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
-import { CheckCircle, Loader2, Workflow } from "lucide-react";
+import { CheckCircle, Loader2, Workflow, LayoutGrid, List, Check, X, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -22,6 +22,10 @@ import {
 } from "@/components/windows/shared";
 import { deriveActions } from "@/hooks/use-assistant-stream";
 import { useDesktopStore } from "@/store/desktop";
+import { WorkflowCanvas } from "./workflow-canvas";
+import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
+
+import { trpc } from "@/utils/trpc";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
 
@@ -43,6 +47,8 @@ const workflowWindowDataSchema = z.object({
   status: z.string().optional(),
   messages: z.array(z.unknown()).optional(),
   runId: z.string().optional(),
+  plan: structuredPlanSchema.optional(),
+  activeView: z.enum(["list", "canvas"]).default("list").optional(),
 });
 
 export function WorkflowWindow({ id, data, selected }: NodeProps) {
@@ -56,6 +62,8 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   const messages = (windowData.messages ?? []) as AssistantUIMessage[];
   const status = windowData.status ?? "Idle";
   const hasRun = Boolean(windowData.runId || windowData.resourceRef?.id);
+  const plan = windowData.plan as StructuredPlan | undefined;
+  const activeView = windowData.activeView ?? "list";
 
   const [requirementDraft, setRequirementDraft] = useState(
     windowData.requirement ?? ""
@@ -68,6 +76,90 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   );
 
   const updateWindow = useDesktopStore((s) => s.updateWindow);
+
+  const generatePlan = trpc.plan.generate.useMutation({
+    onSuccess: (generatedPlan) => {
+      updateWindow(id, {
+        plan: generatedPlan,
+        activeView: "canvas",
+      });
+      toast.success("Plan generated successfully");
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate plan: ${error.message}`);
+    },
+  });
+
+  const handleGenerate = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!requirementDraft.trim()) {
+      toast.error("Requirement is required");
+      return;
+    }
+    generatePlan.mutate({
+      intent: {
+        description: requirementDraft.trim(),
+      },
+      options: {
+        maxPhases: 5,
+        preferParallel: mode === "parallel",
+      },
+    });
+  };
+
+  const approvePlan = trpc.plan.approve.useMutation({
+    onSuccess: (result) => {
+      updateWindow(id, {
+        runId: result.runId,
+        status: "running",
+        activeView: "list",
+      });
+      toast.success("Plan approved. Execution started.");
+    },
+    onError: (error) => {
+      toast.error(`Failed to approve plan: ${error.message}`);
+    },
+  });
+
+  const rejectPlan = trpc.plan.reject.useMutation({
+    onSuccess: () => {
+      updateWindow(id, {
+        plan: null,
+        activeView: "list",
+      });
+      toast.info("Plan rejected.");
+    },
+    onError: (error) => {
+      toast.error(`Failed to reject plan: ${error.message}`);
+    },
+  });
+
+  const handleApprove = () => {
+    if (!plan) return;
+    approvePlan.mutate({ planId: plan.id });
+  };
+
+  const handleReject = () => {
+    if (!plan) return;
+    rejectPlan.mutate({ planId: plan.id });
+  };
+
+  const handleRevise = () => {
+    // For now, just regenerate. Ideally we'd pass feedback.
+    handleGenerate(new Event('submit') as any);
+  };
+
+  const toggleView = () => {
+    updateWindow(id, {
+      activeView: activeView === "list" ? "canvas" : "list",
+    });
+  };
+
+  const handlePlanChange = (updatedPlan: StructuredPlan) => {
+    updateWindow(id, {
+      plan: updatedPlan,
+    });
+  };
 
   useEffect(() => {
     if (windowData.requirement && windowData.requirement !== requirementDraft) {
@@ -139,9 +231,26 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   }
 
   const headerIcon = (
-    <Workflow
-      className={`h-4 w-4 ${status === "running" ? "animate-spin text-biolum" : "text-biolum-dim"}`}
-    />
+    <div className="flex items-center gap-1">
+      {plan && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-biolum-dim hover:text-biolum"
+          onClick={toggleView}
+          title={activeView === "list" ? "Switch to Canvas" : "Switch to List"}
+        >
+          {activeView === "list" ? (
+            <LayoutGrid className="h-3.5 w-3.5" />
+          ) : (
+            <List className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      )}
+      <Workflow
+        className={`h-4 w-4 ${status === "running" ? "animate-spin text-biolum" : "text-biolum-dim"}`}
+      />
+    </div>
   );
 
   return (
@@ -150,102 +259,166 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
       id={id}
       selected={selected}
       title={windowData.label ?? "Workflow"}
-      width={480}
+      width={activeView === "canvas" ? 800 : 480}
+      height={activeView === "canvas" ? 600 : undefined}
       windowType="workflow"
     >
-      <div className="flex flex-col gap-3 p-4">
-        {hasRun ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className={`font-medium text-sm ${statusBadgeClass}`}>
-                {status}
-              </span>
-              {windowData.requirement && (
-                <span className="max-w-[200px] truncate text-biolum-faint text-xs">
-                  {windowData.requirement}
-                </span>
-              )}
-            </div>
-            <ScrollArea className="h-[250px]">
-              <div className="space-y-2">
-                {completedActions.map((action) => (
-                  <div
-                    className="flex items-start gap-2 rounded border border-white/10 bg-white/5 p-2"
-                    key={action.id}
-                  >
-                    <CheckCircle className="mt-0.5 h-4 w-4 text-emerald-400" />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-white">
-                        {action.name}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {activeAction && (
-                  <div className="flex items-start gap-2 rounded border border-biolum/30 bg-biolum/10 p-2">
-                    <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-biolum" />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-white">
-                        {activeAction.name}
-                      </div>
-                      <div className="mt-1 text-biolum-dim text-xs">
-                        Running...
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {actions.length === 0 && (
-                  <div className="py-4 text-center text-biolum-faint text-sm">
-                    {status === "pending"
-                      ? "Waiting to start..."
-                      : "No actions yet"}
-                  </div>
-                )}
+      <div className="flex flex-col h-full overflow-hidden relative">
+        {activeView === "canvas" && plan ? (
+          <div className="flex-1 min-h-0">
+            <WorkflowCanvas plan={plan} onPlanChange={handlePlanChange} />
+            
+            {!hasRun && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-void-surface/80 backdrop-blur-xl border border-white/10 p-2 rounded-xl flex items-center gap-2 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
+                  onClick={handleReject}
+                  disabled={rejectPlan.isLoading}
+                >
+                  <X className="w-3.5 h-3.5 mr-2" />
+                  Discard
+                </Button>
+                <div className="w-px h-4 bg-white/10" />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-biolum-dim hover:text-biolum hover:bg-biolum/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
+                  onClick={handleRevise}
+                  disabled={generatePlan.isLoading}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-2 ${generatePlan.isLoading ? 'animate-spin' : ''}`} />
+                  Iterate
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="bg-biolum hover:bg-biolum-bright text-void font-black h-9 px-6 rounded-lg text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--biolum-rgb),0.4)]"
+                  onClick={handleApprove}
+                  disabled={approvePlan.isLoading}
+                >
+                  {approvePlan.isLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 mr-2" />
+                  )}
+                  Approve Plan
+                </Button>
               </div>
-            </ScrollArea>
+            )}
           </div>
         ) : (
-          <form className="flex flex-col gap-3" onSubmit={handleStart}>
-            <Textarea
-              className="min-h-[100px] resize-none"
-              onChange={(e) => setRequirementDraft(e.target.value)}
-              placeholder="What should the workflow accomplish?"
-              value={requirementDraft}
-            />
-            <div className="flex items-center gap-2">
-              <Select
-                onValueChange={(v) => setAutoLevel(v as AutoLevel)}
-                value={autoLevel}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Auto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {autoOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                onValueChange={(v) => setMode(v as "sequential" | "parallel")}
-                value={mode}
-              >
-                <SelectTrigger className="w-[110px]">
-                  <SelectValue placeholder="Mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sequential">Sequential</SelectItem>
-                  <SelectItem value="parallel">Parallel</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-3 p-4">
+            {hasRun ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className={`font-medium text-sm ${statusBadgeClass}`}>
+                    {status}
+                  </span>
+                  {windowData.requirement && (
+                    <span className="max-w-[200px] truncate text-biolum-faint text-xs">
+                      {windowData.requirement}
+                    </span>
+                  )}
+                </div>
+                <ScrollArea className="h-[250px]">
+                  <div className="space-y-2">
+                    {completedActions.map((action) => (
+                      <div
+                        className="flex items-start gap-2 rounded border border-white/10 bg-white/5 p-2"
+                        key={action.id}
+                      >
+                        <CheckCircle className="mt-0.5 h-4 w-4 text-emerald-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-white">
+                            {action.name}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {activeAction && (
+                      <div className="flex items-start gap-2 rounded border border-biolum/30 bg-biolum/10 p-2">
+                        <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-biolum" />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-white">
+                            {activeAction.name}
+                          </div>
+                          <div className="mt-1 text-biolum-dim text-xs">
+                            Running...
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {actions.length === 0 && (
+                      <div className="py-4 text-center text-biolum-faint text-sm">
+                        {status === "pending"
+                          ? "Waiting to start..."
+                          : "No actions yet"}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            ) : (
+              <form className="flex flex-col gap-3" onSubmit={handleStart}>
+                <Textarea
+                  className="min-h-[100px] resize-none"
+                  onChange={(e) => setRequirementDraft(e.target.value)}
+                  placeholder="What should the workflow accomplish?"
+                  value={requirementDraft}
+                />
+                <div className="flex items-center gap-2">
+                  <Select
+                    onValueChange={(v) => setAutoLevel(v as AutoLevel)}
+                    value={autoLevel}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="Auto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {autoOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    onValueChange={(v) => setMode(v as "sequential" | "parallel")}
+                    value={mode}
+                  >
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue placeholder="Mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sequential">Sequential</SelectItem>
+                      <SelectItem value="parallel">Parallel</SelectItem>
+                    </SelectContent>
+                  </Select>
               <div className="flex-1" />
-              <Button size="sm" type="submit">
-                Start
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generatePlan.isLoading}
+                >
+                  {generatePlan.isLoading ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : (
+                    <LayoutGrid className="mr-2 h-3 w-3" />
+                  )}
+                  Generate Plan
+                </Button>
+                <Button size="sm" type="submit">
+                  Start
+                </Button>
+              </div>
             </div>
           </form>
+        )}
+      </div>
         )}
       </div>
     </WindowFrame>

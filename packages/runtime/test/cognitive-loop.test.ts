@@ -9,7 +9,7 @@ mock.module("@alfred/db", () => {
   return {
     cognitiveRepo: {
       getAllEvents: async () => [], // Default empty
-      getLatestSnapshot: async () => undefined, // No snapshot by default
+      getLatestSnapshot: async () => {}, // No snapshot by default
       getEventsSince: async () => [], // No events since snapshot
       appendEvent: async () => ({}),
     },

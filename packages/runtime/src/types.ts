@@ -8,8 +8,8 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
-import type { AiAdapter } from "./adapters/ai";
 import { z } from "zod";
+import type { AiAdapter } from "./adapters/ai";
 
 /**
  * Resume payload for in-flight authorization
@@ -43,6 +43,7 @@ export type PhaseConfig = {
 export type RuntimeInput = {
   requirement: string;
   auto: "read" | "low" | "medium" | "high";
+  planId?: string; // New: Optional plan ID for phased execution
   workspace?: string;
   repoBase?: string;
   mode?: "sequential" | "parallel";
@@ -163,6 +164,7 @@ export type WorkflowRuntime = {
 export const runtimeInputSchema = z.object({
   requirement: z.string().min(1, "Requirement must not be empty"),
   auto: z.enum(["read", "low", "medium", "high"]),
+  planId: z.string().uuid().optional(),
   workspace: z.string().optional(),
   repoBase: z.string().optional(),
   mode: z.enum(["sequential", "parallel"]).optional(),

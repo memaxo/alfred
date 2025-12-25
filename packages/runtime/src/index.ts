@@ -31,8 +31,9 @@ export {
   runtimePhaseDurationSeconds,
   runtimePhasesTotal,
 } from "./metrics";
+export { convertPlanToWavePlan } from "./orchestrator/convert.js";
+export * from "./orchestrator/index.js";
 export type { TraceSpan } from "./tracing";
-
 // Export tracing support
 export { RuntimeTracer } from "./tracing";
 export type {

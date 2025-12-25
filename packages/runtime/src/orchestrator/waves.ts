@@ -12,17 +12,32 @@ import {
   planWaves,
 } from "@alfred/agent/orchestrator/multi/spawn";
 import {
-  type TrackerContext,
   createTrackerContext,
+  type TrackerContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { ContextBuilder } from "../context";
 import { AsyncQueue, pLimit } from "../utils/concurrency";
-import { runAgent, type AgentOutcome } from "./agent";
-import { appendPlanProgressEntry, appendDecisionEntry } from "./execplan";
+import { type AgentOutcome, runAgent } from "./agent";
+import { detectClarification } from "./clarify.js";
+import { convertPlanToWavePlan } from "./convert.js";
+import {
+  makeAgentCompleteEvent,
+  makeAgentStartEvent,
+  makePhaseCompleteEvent,
+  makePhaseProgressEvent,
+  makePhaseStartEvent,
+  makePlanSelectedEvent,
+  makeWaveCompleteEvent,
+  makeWaveStartEvent,
+} from "./events.js";
+import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
+import { flattenPhases } from "./flatten.js";
+import { formatHandoffPrompt, generateHandoff } from "./handoff.js";
 import { hydrateTrackerContext } from "./hydrate";
-import type { OrchestratorContext } from "./types";
+import { suspendWorkflowForClarification } from "./suspend.js";
+import type { AgentHandoff, OrchestratorContext } from "./types";
 
 export type WavesResult = {
   trackerContext: TrackerContext;
@@ -30,6 +45,7 @@ export type WavesResult = {
   agentFileHints: Map<string, Set<string>>;
   activeWorkspaces: Workspace[];
   aborted: boolean;
+  suspended?: boolean;
   interrupted?: boolean;
   escalated?: boolean;
   escalationReason?: string;
@@ -100,29 +116,6 @@ export async function* runWaves(
     ctx.scanContext = context;
   }
 
-  // Decompose into subtasks
-  const subTasks: SubTask[] = decomposeTask(input.requirement, {
-    requirement: effectiveRequirement,
-    bundle: context.bundle,
-  });
-
-  if (subTasks.length === 0) {
-    yield { type: "notice", message: "no_subtasks_to_execute" } as any;
-    return {
-      trackerContext: createTrackerContext([]),
-      allAgentOutcomes: [],
-      agentFileHints,
-      activeWorkspaces,
-      aborted: false,
-      interrupted: false,
-    };
-  }
-
-  // Hydrate tracker context with subtask dependencies
-  const trackerContext = hydrateTrackerContext(history, subTasks);
-  const trackerContextRef = { current: trackerContext };
-
-  const subTaskById = new Map<string, SubTask>(subTasks.map((t) => [t.id, t]));
   const maxParallelRaw = Number.parseInt(
     process.env.ORCHESTRATOR_MAX_PARALLEL || "2",
     10
@@ -130,14 +123,62 @@ export async function* runWaves(
   const maxParallel = Number.isFinite(maxParallelRaw)
     ? Math.max(1, maxParallelRaw)
     : 2;
-  const waves: WavePlan[] = planWaves(subTasks, { maxParallel });
 
-  if (waves.length === 0) {
+  // Decompose into subtasks or use pre-planned subtasks
+  let subTasks: SubTask[];
+  let waves: WavePlan[];
+
+  if (ctx.plan) {
+    // Phased Planning Path
+    subTasks = flattenPhases(ctx.plan.phases);
+    waves = convertPlanToWavePlan(ctx.plan);
+
+    yield {
+      type: "notice",
+      message: "waves_using_phased_plan",
+      data: { planId: ctx.plan.id, phaseCount: ctx.plan.phases.length },
+    } as any;
+  } else {
+    // Legacy/Generic Path
+    subTasks = decomposeTask(input.requirement, {
+      requirement: effectiveRequirement,
+      bundle: context.bundle,
+    });
+
+    if (subTasks.length === 0) {
+      yield { type: "notice", message: "no_subtasks_to_execute" } as any;
+      return {
+        trackerContext: createTrackerContext([]),
+        allAgentOutcomes: [],
+        agentFileHints,
+        activeWorkspaces,
+        aborted: false,
+        interrupted: false,
+      };
+    }
+
+    waves = planWaves(subTasks, { maxParallel });
+  }
+
+  if (waves.length === 0 && subTasks.length > 0) {
     waves.push({
       id: "wave_0",
       agents: subTasks.map((t) => t.id),
       dependsOn: [],
     });
+  }
+
+  // Hydrate tracker context with subtask dependencies
+  const trackerContext = hydrateTrackerContext(history, subTasks);
+  const trackerContextRef = { current: trackerContext };
+  const subTaskById = new Map<string, SubTask>(subTasks.map((t) => [t.id, t]));
+
+  // Track started phases
+  const startedPhases = new Set<string>();
+  const completedPhases = new Set<string>();
+
+  if (ctx.plan) {
+    yield makePlanSelectedEvent(ctx.plan);
   }
 
   // Track aggregate failure rates for abort heuristics
@@ -153,14 +194,39 @@ export async function* runWaves(
   let hasInterruptedAgents = false;
 
   const allAgentOutcomes: AgentOutcome[] = [];
+  let previousHandoff: AgentHandoff | null = null;
+
+  // Track progress per phase
+  const phaseProgress = new Map<string, number>(); // phaseId -> completed tasks count
+  const phaseTotalTasks = new Map<string, number>(); // phaseId -> total tasks count
+
+  if (ctx.plan) {
+    for (const phase of ctx.plan.phases) {
+      phaseTotalTasks.set(phase.id, phase.tasks.length);
+      phaseProgress.set(phase.id, 0);
+    }
+  }
 
   for (const wave of waves) {
     if (signal.aborted) {
       throw new DOMException("Phase aborted", "AbortError");
     }
 
+    const phaseId = wave.phaseId;
+    if (ctx.plan && phaseId && !startedPhases.has(phaseId)) {
+      const phase = ctx.plan.phases.find((p) => p.id === phaseId);
+      if (phase) {
+        yield makePhaseStartEvent(phaseId, phase);
+        startedPhases.add(phaseId);
+      }
+    }
+
+    yield makeWaveStartEvent(wave.id);
+
     // Skip already completed waves (hydration)
-    if (trackerContextRef.current.state.waves[wave.id]?.status === "completed") {
+    if (
+      trackerContextRef.current.state.waves[wave.id]?.status === "completed"
+    ) {
       logger.info("wave_hydrated_skipping", { waveId: wave.id });
       yield {
         type: "notice",
@@ -189,6 +255,11 @@ export async function* runWaves(
         const spec = buildAgentSpec(task, runId, workspace, {
           auto: input.auto,
           maxParallel,
+          agentType: wave.agentType,
+          handoff: previousHandoff
+            ? formatHandoffPrompt(previousHandoff)
+            : undefined,
+          clarifications: (input as any).clarifications,
           linear: input.linear
             ? {
                 issueId: input.linear.issueId,
@@ -213,6 +284,10 @@ export async function* runWaves(
       },
     } as any;
 
+    for (const spec of agentSpecs) {
+      yield makeAgentStartEvent(spec.agentId, phaseId ?? "");
+    }
+
     await appendPlanProgressEntry(
       rootExecPlanPath,
       `Wave ${wave.id} started with ${agentSpecs.length} agent(s).`,
@@ -230,6 +305,7 @@ export async function* runWaves(
         try {
           return await runAgent({
             spec,
+            phaseId,
             runId,
             workspace,
             workspaceRoot,
@@ -256,6 +332,7 @@ export async function* runWaves(
           } as any);
           return {
             agentId: spec.agentId,
+            phaseId,
             stuck: false,
             status: "failed",
             durationSeconds: 0,
@@ -282,6 +359,43 @@ export async function* runWaves(
     }
 
     const agentOutcomes = await allAgentsDone;
+
+    // Check for clarifications
+    for (const outcome of agentOutcomes) {
+      const clarification = await detectClarification(outcome, ctx);
+      if (clarification) {
+        await suspendWorkflowForClarification(runId, clarification);
+        yield {
+          type: "event",
+          kind: "clarification-requested",
+          data: clarification,
+        } as any;
+        return {
+          trackerContext: trackerContextRef.current,
+          allAgentOutcomes,
+          agentFileHints,
+          activeWorkspaces,
+          aborted: false,
+          interrupted: false,
+          suspended: true,
+        } as any;
+      }
+    }
+
+    for (const outcome of agentOutcomes) {
+      yield makeAgentCompleteEvent(outcome.agentId, phaseId ?? "", outcome);
+
+      // Increment phase progress
+      if (phaseId && phaseProgress.has(phaseId)) {
+        const current = phaseProgress.get(phaseId) ?? 0;
+        const total = phaseTotalTasks.get(phaseId) ?? 1;
+        const next = current + 1;
+        phaseProgress.set(phaseId, next);
+        yield makePhaseProgressEvent(phaseId, Math.min(1.0, next / total));
+      }
+    }
+
+    yield makeWaveCompleteEvent(wave.id);
 
     // Process outcomes
     for (const outcome of agentOutcomes) {
@@ -346,6 +460,45 @@ export async function* runWaves(
     totalFailedOrStuck += waveFailedOrStuck;
 
     allAgentOutcomes.push(...agentOutcomes);
+
+    // Check for phase completion
+    if (ctx.plan && phaseId && !completedPhases.has(phaseId)) {
+      const allWavesForPhase = waves.filter((w) => w.phaseId === phaseId);
+      const allCompleted = allWavesForPhase.every(
+        (w) =>
+          w.id === wave.id ||
+          trackerContextRef.current.state.waves[w.id]?.status === "completed"
+      );
+
+      if (allCompleted) {
+        const outcomesForPhase = allAgentOutcomes.filter(
+          (o) => o.phaseId === phaseId
+        );
+
+        yield makePhaseCompleteEvent(phaseId, {
+          status: anyStuck ? "partial" : "completed",
+          outcomes: outcomesForPhase,
+        });
+        completedPhases.add(phaseId);
+      }
+    }
+
+    // Generate handoff for next wave
+    const nextWave = waves[waves.indexOf(wave) + 1];
+    if (nextWave) {
+      previousHandoff = await generateHandoff(
+        wave.id,
+        nextWave.id,
+        agentOutcomes,
+        workspace
+      );
+
+      yield {
+        type: "event",
+        kind: "agent-handoff",
+        data: previousHandoff,
+      } as any;
+    }
 
     const waveFailRate = waveTotal > 0 ? waveFailedOrStuck / waveTotal : 0;
     const overallFailRate =

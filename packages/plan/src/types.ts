@@ -22,7 +22,7 @@ export type Phase = {
   tasks: SubTask[];
   dependsOn: string[];
   estimatedDurationMs: number;
-  agentType: "codex" | "droid" | "claude-code" | "research" | "review";
+  agentType: "codex" | "droid" | "claude-code" | "research" | "review" | "orchestrator";
 };
 
 /**
@@ -32,18 +32,19 @@ export type StructuredPlan = {
   id: string;
   title: string;
   intent: string; // Original user request
+  workspace?: string; // Optional workspace path
   phases: Phase[];
   waves?: WavePlan[]; // Generated from phases
   resources: {
     agentCount: number;
-    strategy: "sequential" | "parallel" | "topological";
+    strategy: "sequential" | "parallel" | "topological" | "mixed";
     isolation: "container" | "worktree";
   };
   evaluationCriteria: Array<{
     name: string;
     weight: number;
     threshold: string;
-  }>;
+  }> | string[];
 };
 
 /**

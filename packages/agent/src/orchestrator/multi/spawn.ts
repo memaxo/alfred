@@ -23,6 +23,7 @@ export type AgentSpec = {
   auto: "read" | "low" | "medium" | "high";
   mandateTDD?: boolean; // Phase 4: TDD
   model?: string;
+  agentType?: string; // New: Agent role (e.g. codex, research)
   profile?: string;
   /** Resource profile for poof isolation (legacy, only with --feature=LEGACY_POOF) */
   poofProfile?: PoofProfileName;
@@ -33,6 +34,8 @@ export type AgentSpec = {
     linearSpace?: string;
     linearAuthz?: string;
     relevantFiles?: string[];
+    handoff?: string; // New: Textual handoff from previous wave
+    clarifications?: Array<{ response: string }>; // New: User clarifications
   };
 };
 
@@ -40,6 +43,9 @@ export type WavePlan = {
   id: WaveId;
   agents: SubTaskId[];
   dependsOn: WaveId[];
+  agentType?: string;
+  isolation?: "container" | "worktree";
+  phaseId?: string;
 };
 
 /**
@@ -77,10 +83,13 @@ export function buildAgentSpec(
   options?: {
     auto?: "read" | "low" | "medium" | "high";
     model?: string;
+    agentType?: string;
     profile?: string;
     poofProfile?: PoofProfileName; // Resource profile for poof isolation (legacy)
     maxParallel?: number;
     mandateTDD?: boolean; // Phase 4
+    handoff?: string;
+    clarifications?: Array<{ response: string }>;
     linear?: {
       issueId?: string;
       sessionId?: string;
@@ -114,6 +123,7 @@ export function buildAgentSpec(
     auto,
     mandateTDD: options?.mandateTDD,
     model: options?.model,
+    agentType: options?.agentType,
     profile: options?.profile,
     poofProfile: options?.poofProfile,
     execPlanPath,
@@ -123,6 +133,8 @@ export function buildAgentSpec(
       linearSpace: options?.linear?.space,
       linearAuthz: options?.linear?.authz,
       relevantFiles: subTask.filesHint,
+      handoff: options?.handoff,
+      clarifications: options?.clarifications,
     },
   };
 }
@@ -158,7 +170,10 @@ export function buildFixerAgentSpec(args: {
 
 export function planWaves(
   subTasks: SubTask[],
-  options?: { maxParallel?: number }
+  options?: {
+    maxParallel?: number;
+    dependencies?: Map<SubTaskId, SubTaskId[]>;
+  }
 ): WavePlan[] {
   const maxParallel = Math.max(1, options?.maxParallel ?? 2);
   if (subTasks.length === 0) {
@@ -176,12 +191,13 @@ export function planWaves(
   const inDegree = new Map<SubTaskId, number>();
 
   for (const task of subTasks) {
-    deps.set(task.id, new Set(task.deps));
-    inDegree.set(task.id, task.deps.length);
+    const taskDeps = options?.dependencies?.get(task.id) ?? task.deps;
+    deps.set(task.id, new Set(taskDeps));
+    inDegree.set(task.id, taskDeps.length);
     if (!dependents.has(task.id)) {
       dependents.set(task.id, []);
     }
-    for (const dep of task.deps) {
+    for (const dep of taskDeps) {
       const list = dependents.get(dep) ?? [];
       list.push(task.id);
       dependents.set(dep, list);

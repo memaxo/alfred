@@ -17,6 +17,9 @@ type WorkflowEventInsert = typeof workflowEvents.$inferInsert;
 export async function createRun(args: {
   id?: string;
   userId: string;
+  projectId?: string;
+  planId?: string;
+  requirement?: string;
   workflowId: string;
   status?: WorkflowStatus;
   inputData?: unknown;
@@ -33,6 +36,9 @@ export async function createRun(args: {
     .values({
       id: args.id,
       userId: args.userId,
+      projectId: args.projectId,
+      planId: args.planId,
+      requirement: args.requirement,
       workflowId: args.workflowId,
       status: args.status ?? "running",
       inputData: args.inputData as WorkflowRunInsert["inputData"],
@@ -52,6 +58,7 @@ export async function updateRun(
   runId: string,
   patch: Partial<{
     status: WorkflowStatus;
+    inputData: unknown;
     stateData: unknown;
     errorMessage: string | null;
     suspendedAt: Date | null;
@@ -67,6 +74,11 @@ export async function updateRun(
     .update(workflowRuns)
     .set({
       ...(patch.status ? { status: patch.status } : {}),
+      ...(Object.hasOwn(patch, "inputData")
+        ? {
+            inputData: patch.inputData as WorkflowRunInsert["inputData"],
+          }
+        : {}),
       ...(Object.hasOwn(patch, "stateData")
         ? {
             stateData: patch.stateData as WorkflowRunInsert["stateData"],

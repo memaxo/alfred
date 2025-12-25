@@ -13,7 +13,10 @@ import {
 const tempDirs: string[] = [];
 
 async function createTempDir(): Promise<string> {
-  const dir = path.join(tmpdir(), `hydrate-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = path.join(
+    tmpdir(),
+    `hydrate-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   await mkdir(dir, { recursive: true });
   tempDirs.push(dir);
   return realpathSync(dir);
@@ -59,7 +62,9 @@ describe("normalizeWorkingDirectory", () => {
     const workspaceRoot = await createTempDir();
     const outsideDir = await createTempDir();
 
-    expect(() => normalizeWorkingDirectory(outsideDir, workspaceRoot)).toThrow();
+    expect(() =>
+      normalizeWorkingDirectory(outsideDir, workspaceRoot)
+    ).toThrow();
   });
 
   it("throws on symlink escape attempt", async () => {
@@ -69,7 +74,9 @@ describe("normalizeWorkingDirectory", () => {
 
     await symlink(outsideDir, symlinkPath);
 
-    expect(() => normalizeWorkingDirectory(symlinkPath, workspaceRoot)).toThrow();
+    expect(() =>
+      normalizeWorkingDirectory(symlinkPath, workspaceRoot)
+    ).toThrow();
   });
 });
 

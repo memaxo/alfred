@@ -272,62 +272,58 @@ describe("WorkflowRuntime", () => {
       expect(events[0].type).toBe("run");
     });
 
-    it(
-      "fails with workflow_timeout when overall timeout elapses",
-      async () => {
-        const previous = AISDKAdapter.prototype.stream;
-        AISDKAdapter.prototype.stream = async function* (options: {
-          abortSignal?: AbortSignal;
-        }) {
-          const signal = options.abortSignal;
-          await new Promise<void>((_resolve, reject) => {
-            if (!signal) {
-              reject(new Error("missing abort signal"));
-              return;
-            }
-            const abortError =
-              signal.reason instanceof Error
-                ? signal.reason
-                : new Error(String(signal.reason ?? "aborted"));
-            if (signal.aborted) {
-              reject(abortError);
-              return;
-            }
-            signal.addEventListener("abort", () => reject(abortError), {
-              once: true,
-            });
-          });
-        };
-
-        const runtime = createRuntime({
-          input: baseInput,
-          model: mockModel,
-          workflowTimeoutMs: 1000,
-        });
-
-        const events: WorkflowEvent[] = [];
-        let thrown: unknown;
-        try {
-          for await (const event of runtime.stream) {
-            events.push(event);
+    it("fails with workflow_timeout when overall timeout elapses", async () => {
+      const previous = AISDKAdapter.prototype.stream;
+      AISDKAdapter.prototype.stream = async function* (options: {
+        abortSignal?: AbortSignal;
+      }) {
+        const signal = options.abortSignal;
+        await new Promise<void>((_resolve, reject) => {
+          if (!signal) {
+            reject(new Error("missing abort signal"));
+            return;
           }
-        } catch (error) {
-          thrown = error;
-        } finally {
-          AISDKAdapter.prototype.stream = previous;
+          const abortError =
+            signal.reason instanceof Error
+              ? signal.reason
+              : new Error(String(signal.reason ?? "aborted"));
+          if (signal.aborted) {
+            reject(abortError);
+            return;
+          }
+          signal.addEventListener("abort", () => reject(abortError), {
+            once: true,
+          });
+        });
+      };
+
+      const runtime = createRuntime({
+        input: baseInput,
+        model: mockModel,
+        workflowTimeoutMs: 1000,
+      });
+
+      const events: WorkflowEvent[] = [];
+      let thrown: unknown;
+      try {
+        for await (const event of runtime.stream) {
+          events.push(event);
         }
+      } catch (error) {
+        thrown = error;
+      } finally {
+        AISDKAdapter.prototype.stream = previous;
+      }
 
-        expect(thrown).toBeDefined();
-        const msg = thrown instanceof Error ? thrown.message : String(thrown);
-        expect(msg).toContain("workflow_timeout");
+      expect(thrown).toBeDefined();
+      const msg = thrown instanceof Error ? thrown.message : String(thrown);
+      expect(msg).toContain("workflow_timeout");
 
-        const lastError = events.filter((e) => e.type === "error").at(-1);
-        expect(lastError).toBeDefined();
-        const lastErrorMessage = (lastError as { message?: unknown }).message;
-        expect(String(lastErrorMessage)).toContain("workflow_timeout");
-      },
-      5000
-    );
+      const lastError = events.filter((e) => e.type === "error").at(-1);
+      expect(lastError).toBeDefined();
+      const lastErrorMessage = (lastError as { message?: unknown }).message;
+      expect(String(lastErrorMessage)).toContain("workflow_timeout");
+    }, 5000);
   });
 
   describe("Public API", () => {

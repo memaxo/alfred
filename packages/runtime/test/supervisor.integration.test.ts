@@ -1,11 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
+import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { LanguageModel } from "ai";
 
@@ -213,7 +206,7 @@ describe("WorkflowRuntime supervisor integration", () => {
   it("verifies supervisor interrupt triggers cognitive loop", async () => {
     // Test that supervisor interrupt actually calls runCognitiveLoop and persists interrupt event
     const { cognitiveRepo } = await import("@alfred/db");
-    const { randomUUID } = await import("crypto");
+    const { randomUUID } = await import("node:crypto");
     const runId = randomUUID();
 
     const createAiAdapter = () => ({
@@ -244,21 +237,27 @@ describe("WorkflowRuntime supervisor integration", () => {
         // Verify error is interrupt-related
         const errorMsg = error instanceof Error ? error.message : String(error);
         expect(errorMsg).toContain("workflow_interrupted");
-        
+
         // Wait a bit for async cognitive loop to complete
         await new Promise((resolve) => setTimeout(resolve, 100));
-        
+
         // Verify interrupt event was persisted to cognitive events
         const cognitiveEvents = await cognitiveRepo.getAllEvents(runId);
-        const interruptEvents = cognitiveEvents.filter((e) => e.type === "interrupt");
-        
+        const interruptEvents = cognitiveEvents.filter(
+          (e) => e.type === "interrupt"
+        );
+
         // Should have at least one interrupt event from supervisor
         expect(interruptEvents.length).toBeGreaterThan(0);
-        
+
         // Verify interrupt event has correct structure
         const interruptPayload = interruptEvents[0]?.payload;
         expect(interruptPayload).toBeDefined();
-        if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+        if (
+          interruptPayload &&
+          typeof interruptPayload === "object" &&
+          "data" in interruptPayload
+        ) {
           const data = (interruptPayload as any).data;
           expect(data.reason).toBeDefined();
           expect(data.priority).toBe(2); // Supervisor interrupts use priority 2
@@ -270,7 +269,7 @@ describe("WorkflowRuntime supervisor integration", () => {
   it("verifies heartbeat failure triggers cognitive loop", async () => {
     // Test that heartbeat timeout calls runCognitiveLoop and persists interrupt event
     const { cognitiveRepo } = await import("@alfred/db");
-    const { randomUUID } = await import("crypto");
+    const { randomUUID } = await import("node:crypto");
     const runId = randomUUID();
 
     const createAiAdapter = () => ({
@@ -309,21 +308,27 @@ describe("WorkflowRuntime supervisor integration", () => {
         // Verify error is heartbeat-related
         const errorMsg = error instanceof Error ? error.message : String(error);
         expect(errorMsg).toContain("heartbeat_failed");
-        
+
         // Wait a bit for async cognitive loop to complete
         await new Promise((resolve) => setTimeout(resolve, 100));
-        
+
         // Verify interrupt event was persisted to cognitive events
         const cognitiveEvents = await cognitiveRepo.getAllEvents(runId);
-        const interruptEvents = cognitiveEvents.filter((e) => e.type === "interrupt");
-        
+        const interruptEvents = cognitiveEvents.filter(
+          (e) => e.type === "interrupt"
+        );
+
         // Should have at least one interrupt event from supervisor
         expect(interruptEvents.length).toBeGreaterThan(0);
-        
+
         // Verify interrupt event has heartbeat failure reason
         const interruptPayload = interruptEvents[0]?.payload;
         expect(interruptPayload).toBeDefined();
-        if (interruptPayload && typeof interruptPayload === "object" && "data" in interruptPayload) {
+        if (
+          interruptPayload &&
+          typeof interruptPayload === "object" &&
+          "data" in interruptPayload
+        ) {
           const data = (interruptPayload as any).data;
           expect(data.reason).toContain("process_heartbeat_failed");
           expect(data.priority).toBe(2);
@@ -418,7 +423,7 @@ describe("WorkflowRuntime supervisor integration", () => {
         model: mockModel,
         createAiAdapter,
         supervisorCheckIntervalMs: 50,
-        supervisorHeartbeatMs: 10000, // Very long heartbeat to avoid premature interruption for this test
+        supervisorHeartbeatMs: 10_000, // Very long heartbeat to avoid premature interruption for this test
       });
 
       // The test verifies that with a short check interval, the supervisor doesn't interrupt

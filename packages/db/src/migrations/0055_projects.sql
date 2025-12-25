@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS projects (
   last_active_at TIMESTAMPTZ,
   
   UNIQUE(user_id, workspace),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_projects_user_workspace ON projects(user_id, workspace);

@@ -1,11 +1,11 @@
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { LanguageModel } from "ai";
+import type { AiAdapter } from "../../adapters/ai";
 import type { ExecutionContext } from "../../context";
 import { executeActPhase } from "../../phases/act";
 import type { RuntimeInput } from "../../types";
 import type { Phase, PhaseResult } from "../types";
-import type { AiAdapter } from "../../adapters/ai";
 
 export class ActPhase implements Phase<RuntimeInput, void> {
   readonly id = "act";
@@ -49,7 +49,9 @@ export class ActPhase implements Phase<RuntimeInput, void> {
         scanContext ?? undefined,
         planSummary ?? undefined,
         userId,
-        this.createAiAdapter ? { createAiAdapter: this.createAiAdapter } : undefined
+        this.createAiAdapter
+          ? { createAiAdapter: this.createAiAdapter }
+          : undefined
       );
       let result: { escalated: boolean; reason?: string } | undefined;
 

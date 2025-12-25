@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isPoofWorkspace } from "@alfred/agent/environment/types";
 import {
   aggregateConflictMarkers,
   countConflictMarkers,
@@ -11,7 +12,6 @@ import {
 import { executeMergePlan } from "@alfred/agent/orchestrator/multi/merge-executor";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolGit } from "@alfred/agent/orchestrator/tool/git";
-import { isPoofWorkspace } from "@alfred/agent/environment/types";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
@@ -74,8 +74,12 @@ export async function* runMergePhase(
   { mergePlan: any; conflictScanResult: any },
   void
 > {
-  const { runId, workspace, authz, input, userId } = ctx;
+  const { runId, workspace, authz, input, userId, plan } = ctx;
   const { allAgentOutcomes, agentFileHints, activeWorkspaces } = wavesResult;
+  const planId = plan?.id ?? runId;
+
+  yield { type: "merge-start", planId } as any;
+  yield { type: "merge-progress", planId, progress: 0.1 } as any;
 
   const mergeOutcomes = allAgentOutcomes.map((outcome) => ({
     agentId: outcome.agentId,
@@ -134,6 +138,8 @@ export async function* runMergePhase(
   const targetBranch = await resolveTargetBranch(workspace, authz);
   const mergePlan = buildMergePlan(mergeOutcomes as any, { targetBranch });
 
+  yield { type: "merge-progress", planId, progress: 0.3 } as any;
+
   logger.info("multi_agent_merge_plan", {
     runId,
     expectedFiles: mergePlan.expectedFiles ?? [],
@@ -150,6 +156,7 @@ export async function* runMergePhase(
     (await isGitWorkspace(workspace))
   ) {
     yield { type: "notice", message: "merge_execution_started" } as any;
+    yield { type: "merge-progress", planId, progress: 0.5 } as any;
 
     const mergeResult = await executeMergePlan(
       mergePlan,
@@ -235,6 +242,15 @@ export async function* runMergePhase(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+
+  yield {
+    type: "merge-complete",
+    planId,
+    result: {
+      status: "completed",
+      conflicts: conflictScanResult?.totalMarkers ?? 0,
+    },
+  } as any;
 
   return { mergePlan, conflictScanResult };
 }

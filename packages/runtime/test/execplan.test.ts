@@ -3,15 +3,18 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  mutateExecPlanFile,
-  appendPlanProgressEntry,
   appendDecisionEntry,
+  appendPlanProgressEntry,
+  mutateExecPlanFile,
 } from "../src/orchestrator/execplan";
 
 const tempDirs: string[] = [];
 
 async function createTempDir(): Promise<string> {
-  const dir = path.join(tmpdir(), `execplan-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = path.join(
+    tmpdir(),
+    `execplan-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   await mkdir(dir, { recursive: true });
   tempDirs.push(dir);
   return dir;
@@ -42,7 +45,9 @@ describe("mutateExecPlanFile", () => {
     const filePath = path.join(dir, "plan.md");
     await writeFile(filePath, "# Plan\n\nOriginal content");
 
-    await mutateExecPlanFile(filePath, (md) => md.replace("Original", "Updated"));
+    await mutateExecPlanFile(filePath, (md) =>
+      md.replace("Original", "Updated")
+    );
 
     const content = await readFile(filePath, "utf8");
     expect(content).toBe("# Plan\n\nUpdated content");
@@ -103,7 +108,12 @@ describe("appendDecisionEntry", () => {
     const filePath = path.join(dir, "plan.md");
     await writeFile(filePath, "# Plan\n\n## Decision Log\n\n");
 
-    await appendDecisionEntry(filePath, "Refactor API", "Cleaner code", "Agent alpha");
+    await appendDecisionEntry(
+      filePath,
+      "Refactor API",
+      "Cleaner code",
+      "Agent alpha"
+    );
 
     const content = await readFile(filePath, "utf8");
     expect(content).toContain("Refactor API");

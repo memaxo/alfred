@@ -1,6 +1,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { planRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
+import type { StructuredPlan } from "@alfred/plan";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import type { ExecutionContext } from "../context";
 import type { RuntimeInput } from "../types";
@@ -9,6 +11,14 @@ import { runMergeAnalysis, runMergePhase } from "./merge";
 import { runReviewPhase } from "./review";
 import type { OrchestratorContext, ProjectConfig } from "./types";
 import { runWaves, type WavesResult } from "./waves";
+
+export { assignAgentTypes, setIsolation } from "./agents.js";
+export { convertPlanToWavePlan } from "./convert.js";
+export { buildDependencyMap } from "./dependencies.js";
+export { flattenPhases } from "./flatten.js";
+export * from "./types.js";
+export type { WavesResult } from "./waves.js";
+export { runWaves } from "./waves.js";
 
 export async function* runOrchestrator(
   input: RuntimeInput,
@@ -22,6 +32,16 @@ export async function* runOrchestrator(
   userId?: string
 ): AsyncGenerator<WorkflowEvent, void, void> {
   const workspace = input.workspace ?? process.cwd();
+
+  // Load plan if planId is provided
+  let plan: StructuredPlan | null = null;
+  if (input.planId) {
+    const savedPlan = await planRepo.getPlanById(input.planId);
+    if (savedPlan) {
+      plan = savedPlan.plan as StructuredPlan;
+    }
+  }
+
   const ctx: OrchestratorContext = {
     input,
     runId,
@@ -33,6 +53,7 @@ export async function* runOrchestrator(
     authz,
     scanContext,
     userId,
+    plan,
   };
 
   let wavesResult: WavesResult | null = null;
@@ -44,8 +65,15 @@ export async function* runOrchestrator(
     if (
       wavesResult.aborted ||
       wavesResult.escalated ||
-      wavesResult.interrupted
+      wavesResult.interrupted ||
+      wavesResult.suspended
     ) {
+      if (wavesResult.suspended) {
+        yield {
+          type: "notice",
+          message: "workflow_suspended_waiting_for_clarification",
+        } as WorkflowEvent;
+      }
       if (wavesResult.escalated) {
         yield {
           type: "notice",

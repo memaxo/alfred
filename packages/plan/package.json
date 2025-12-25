@@ -53,7 +53,8 @@
     "@alfred/logger": "workspace:*",
     "@alfred/type": "workspace:*",
     "zod": "catalog:",
-    "ai": "catalog:"
+    "ai": "catalog:",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",

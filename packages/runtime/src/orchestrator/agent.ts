@@ -10,19 +10,16 @@ import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import { generateSubtaskExecPlanSkeleton } from "@alfred/agent/orchestrator/multi/execplan";
 import type { AgentSpec } from "@alfred/agent/orchestrator/multi/spawn";
 import {
+  detectStuckWithContext,
   type TrackerContext,
   updateTrackerWithContext,
-  detectStuckWithContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { logger } from "@alfred/logger";
 import type { WorkflowEvent } from "@alfred/type/plan";
 import { formatCodexRuntimeError } from "../utils/codex-error";
 import type { AsyncQueue } from "../utils/concurrency";
-import {
-  appendPlanProgressEntry,
-  appendDecisionEntry,
-} from "./execplan";
+import { appendDecisionEntry, appendPlanProgressEntry } from "./execplan";
 import { normalizeWorkingDirectory } from "./hydrate";
 import type { ProjectConfig } from "./types";
 
@@ -30,6 +27,7 @@ const ENABLE_WORKSPACE_SESSIONS = process.env.ORCH_ENABLE_SESSIONS !== "0";
 
 export type RunAgentOptions = {
   spec: AgentSpec;
+  phaseId?: string; // New
   runId: string;
   workspace: string;
   workspaceRoot: string;
@@ -47,6 +45,7 @@ export type RunAgentOptions = {
 
 export type AgentOutcome = {
   agentId: string;
+  phaseId?: string; // New
   stuck: boolean;
   status: string;
   durationSeconds: number;
@@ -67,6 +66,7 @@ export type AgentOutcome = {
  */
 export async function runAgent({
   spec,
+  phaseId,
   runId,
   workspace,
   workspaceRoot,
@@ -182,7 +182,16 @@ export async function runAgent({
   const safeAgentId = spec.agentId.replace(/[^a-zA-Z0-9.-]/g, "_");
   const escalationFile = `ESCALATION-${safeAgentId}.md`;
 
-  const prompt = buildAgentPrompt(spec, task, execPlanPromptPath, escalationFile);
+  const clarifications = (spec.context as any)?.clarifications as
+    | Array<{ response: string }>
+    | undefined;
+  const prompt = buildAgentPrompt(
+    spec,
+    task,
+    execPlanPromptPath,
+    escalationFile,
+    clarifications
+  );
 
   const writer = createAgentWriter(
     spec,
@@ -193,7 +202,10 @@ export async function runAgent({
 
   // Phase 4: Test-Driven Development Loop
   if (spec.mandateTDD && projectConfig) {
-    queue.enqueue({ type: "notice", message: "tdd_test_generation_started" } as any);
+    queue.enqueue({
+      type: "notice",
+      message: "tdd_test_generation_started",
+    } as any);
 
     await runTDDLoop(
       {
@@ -295,10 +307,11 @@ export async function runAgent({
       );
       return {
         agentId: spec.agentId,
+        phaseId,
         stuck: false,
         status: "interrupted",
         durationSeconds: interruptDurationSeconds,
-        role: "codex",
+        role: spec.agentType ?? "codex",
       };
     }
 
@@ -342,7 +355,8 @@ export async function runAgent({
     spec.agentId as any,
     Date.now()
   );
-  const trackerAgent = trackerContextRef.current.state.agents[spec.agentId as any];
+  const trackerAgent =
+    trackerContextRef.current.state.agents[spec.agentId as any];
   if (status !== "failed") {
     status = trackerAgent?.status ?? (stuck ? "stuck" : "completed");
   }
@@ -397,10 +411,11 @@ export async function runAgent({
   const hints = agentFileHints.get(spec.agentId);
   return {
     agentId: spec.agentId,
+    phaseId,
     stuck,
     status,
     durationSeconds,
-    role: "codex",
+    role: spec.agentType ?? "codex",
     escalation: escalationReason,
     result: {
       summary: "codex agent execution",
@@ -413,10 +428,11 @@ export async function runAgent({
 }
 
 function buildAgentPrompt(
-  _spec: AgentSpec,
+  spec: AgentSpec,
   task: SubTask | undefined,
   execPlanPromptPath: string,
-  escalationFile: string
+  escalationFile: string,
+  clarifications?: Array<{ response: string }>
 ): string {
   const promptLines = [
     "You are a coding agent executing a single subtask ExecPlan.",
@@ -448,6 +464,18 @@ function buildAgentPrompt(
       promptLines.push("Suggested focus areas:");
       for (const prefix of task.filesHint) {
         promptLines.push(`- ${prefix}`);
+      }
+    }
+    if (spec.context.handoff) {
+      promptLines.push("");
+      promptLines.push("Context from previous steps:");
+      promptLines.push(spec.context.handoff);
+    }
+    if (clarifications && clarifications.length > 0) {
+      promptLines.push("");
+      promptLines.push("User clarifications:");
+      for (const c of clarifications) {
+        promptLines.push(`- ${c.response}`);
       }
     }
   }
@@ -488,34 +516,43 @@ function createAgentWriter(
               ? inner.timestamp
               : Date.now();
           if (inner.type === "thought") {
-            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
-              type: "codex/thought",
-              agentId: spec.agentId,
-              text: inner.content ?? "",
-              ts,
-            });
+            trackerContextRef.current = updateTrackerWithContext(
+              trackerContextRef.current,
+              {
+                type: "codex/thought",
+                agentId: spec.agentId,
+                text: inner.content ?? "",
+                ts,
+              }
+            );
           } else if (inner.type === "command") {
-            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
-              type: "codex/command",
-              agentId: spec.agentId,
-              command: inner.command ?? "",
-              status:
-                inner.status === "failed"
-                  ? "failed"
-                  : inner.status === "completed"
-                    ? "completed"
-                    : "running",
-              ts,
-            });
+            trackerContextRef.current = updateTrackerWithContext(
+              trackerContextRef.current,
+              {
+                type: "codex/command",
+                agentId: spec.agentId,
+                command: inner.command ?? "",
+                status:
+                  inner.status === "failed"
+                    ? "failed"
+                    : inner.status === "completed"
+                      ? "completed"
+                      : "running",
+                ts,
+              }
+            );
           } else if (inner.type === "artifact") {
             const filePath = inner.path ?? "";
-            trackerContextRef.current = updateTrackerWithContext(trackerContextRef.current, {
-              type: "codex/file",
-              agentId: spec.agentId,
-              path: filePath,
-              kind: inner.kind ?? "file",
-              ts,
-            });
+            trackerContextRef.current = updateTrackerWithContext(
+              trackerContextRef.current,
+              {
+                type: "codex/file",
+                agentId: spec.agentId,
+                path: filePath,
+                kind: inner.kind ?? "file",
+                ts,
+              }
+            );
             if (filePath) {
               let set = agentFileHints.get(spec.agentId);
               if (!set) {

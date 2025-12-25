@@ -122,6 +122,7 @@ export async function createWorkflowExecutor(
     input: {
       requirement: input.requirement,
       auto: input.auto,
+      planId: (input as any).planId, // Pass planId if present
       workspace: input.workspace,
       repoBase: input.repoBase,
       mode: input.mode,

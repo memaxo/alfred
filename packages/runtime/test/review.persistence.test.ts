@@ -1,13 +1,18 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
+import { randomUUID } from "node:crypto";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
 import { smokeTester } from "@alfred/agent/orchestrator/verification/smoke";
-import { randomUUID } from "node:crypto";
-import type { OrchestratorContext } from "../src/orchestrator/types";
 import { reviewWorkflowRepo, runReviewPhase } from "../src/orchestrator/review";
-import {
-  cleanupPlanDir,
-  preparePlanDir,
-} from "./utils/review-helpers";
+import type { OrchestratorContext } from "../src/orchestrator/types";
+import { cleanupPlanDir, preparePlanDir } from "./utils/review-helpers";
 
 // Create mock functions BEFORE any imports that use them
 let mockWorkflowRun: {
@@ -32,13 +37,15 @@ const runCommandMock = mock(async () => ({
 }));
 
 const mockGetRun = mock(async (_runId: string) => mockWorkflowRun);
-const mockUpdateRun = mock(async (runId: string, patch: { stateData?: unknown }) => {
-  updateRunCalls.push({ runId, patch });
-  if (mockWorkflowRun && patch.stateData) {
-    mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+const mockUpdateRun = mock(
+  async (runId: string, patch: { stateData?: unknown }) => {
+    updateRunCalls.push({ runId, patch });
+    if (mockWorkflowRun && patch.stateData) {
+      mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+    }
+    return mockWorkflowRun;
   }
-  return mockWorkflowRun;
-});
+);
 
 /**
  * ALF-13: Persist fix attempt count (Security)
@@ -70,7 +77,10 @@ describe("review fixAttempts persistence", () => {
     mockUpdateRun.mockReset();
 
     // Set up default implementations
-    smokeVerifyMock.mockImplementation(async () => ({ success: true, message: "ok" }));
+    smokeVerifyMock.mockImplementation(async () => ({
+      success: true,
+      message: "ok",
+    }));
     runCommandMock.mockImplementation(async () => ({
       stdout: "",
       stderr: "",
@@ -78,13 +88,18 @@ describe("review fixAttempts persistence", () => {
       durationMs: 0,
     }));
     mockGetRun.mockImplementation(async (_runId: string) => mockWorkflowRun);
-    mockUpdateRun.mockImplementation(async (runId: string, patch: { stateData?: unknown }) => {
-      updateRunCalls.push({ runId, patch });
-      if (mockWorkflowRun && patch.stateData) {
-        mockWorkflowRun.stateData = patch.stateData as Record<string, unknown>;
+    mockUpdateRun.mockImplementation(
+      async (runId: string, patch: { stateData?: unknown }) => {
+        updateRunCalls.push({ runId, patch });
+        if (mockWorkflowRun && patch.stateData) {
+          mockWorkflowRun.stateData = patch.stateData as Record<
+            string,
+            unknown
+          >;
+        }
+        return mockWorkflowRun;
       }
-      return mockWorkflowRun;
-    });
+    );
 
     reviewWorkflowRepo.getRun = mockGetRun;
     reviewWorkflowRepo.updateRun = mockUpdateRun;

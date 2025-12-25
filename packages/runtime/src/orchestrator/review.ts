@@ -298,13 +298,14 @@ export async function* runReviewPhase(
       ).slice(0, 50)
     : [];
 
-  const sessionController = (deps?.sessionsEnabled ?? reviewSessionsEnabled())
-    ? createSessionController(
-        runId,
-        workspace,
-        deps?.workspaceCreate ?? WorkspaceFactory.create
-      )
-    : null;
+  const sessionController =
+    (deps?.sessionsEnabled ?? reviewSessionsEnabled())
+      ? createSessionController(
+          runId,
+          workspace,
+          deps?.workspaceCreate ?? WorkspaceFactory.create
+        )
+      : null;
   const runCommand = deps?.runCommand ?? toolRunner.execute;
   const smokeVerify = deps?.smokeVerify ?? smokeTester.verify;
   const codexExecute = deps?.codexExecute ?? toolCodex.execute;

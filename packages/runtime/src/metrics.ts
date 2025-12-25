@@ -218,9 +218,11 @@ export const compressionNodesUpdatedTotal = new client.Counter({
 
 // Hook registration for lazy wiring
 let compressionCycleCounter: typeof compressionCyclesTotal | undefined;
-let compressionCycleHistogram: {
-  startTimer: () => () => void;
-} | undefined;
+let compressionCycleHistogram:
+  | {
+      startTimer: () => () => void;
+    }
+  | undefined;
 let compressionNodeCounter: typeof compressionNodesUpdatedTotal | undefined;
 
 export function registerCompressionCycleCounter(

@@ -1,16 +1,37 @@
 import { z } from "zod";
 
 /**
+ * SubTask: A single unit of work within a phase
+ * Based on @alfred/agent/orchestrator/multi/decompose.ts
+ */
+export const subTaskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  requirement: z.string(),
+  deps: z.array(z.string()),
+  priority: z.number(),
+  acceptance: z.array(z.string()),
+  filesHint: z.array(z.string()),
+});
+
+/**
  * Zod schema for Phase
  */
 export const phaseSchema = z.object({
   id: z.string().uuid().or(z.string()),
   name: z.string().min(1),
   description: z.string(),
-  tasks: z.array(z.unknown()), // SubTask validation deferred to @alfred/agent
+  tasks: z.array(subTaskSchema),
   dependsOn: z.array(z.string()),
   estimatedDurationMs: z.number().min(0),
-  agentType: z.enum(["codex", "droid", "claude-code", "research", "review"]),
+  agentType: z.enum([
+    "codex",
+    "droid",
+    "claude-code",
+    "research",
+    "review",
+    "orchestrator",
+  ]),
 });
 
 /**
@@ -20,20 +41,15 @@ export const structuredPlanSchema = z.object({
   id: z.string().uuid().or(z.string()),
   title: z.string().min(1),
   intent: z.string().min(1),
+  workspace: z.string().optional(),
   phases: z.array(phaseSchema),
-  waves: z.array(z.unknown()).optional(), // WavePlan validation deferred to @alfred/agent
+  waves: z.array(z.any()).optional(), // WavePlan validation deferred
   resources: z.object({
     agentCount: z.number().min(1),
-    strategy: z.enum(["sequential", "parallel", "topological"]),
-    isolation: z.enum(["container", "worktree"]),
+    strategy: z.enum(["sequential", "parallel", "mixed", "topological"]),
+    isolation: z.enum(["container", "worktree", "none"]),
   }),
-  evaluationCriteria: z.array(
-    z.object({
-      name: z.string(),
-      weight: z.number().min(0).max(1),
-      threshold: z.string(),
-    })
-  ),
+  evaluationCriteria: z.array(z.any()),
 });
 
 /**

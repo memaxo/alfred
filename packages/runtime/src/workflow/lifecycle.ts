@@ -9,13 +9,14 @@ export type Lifecycle = {
   isCompleted: () => boolean;
   markCancelled: (runId: string | null) => Promise<void>;
   markSuspended: (runId: string | null) => Promise<void>;
-  markCompleted: (runId: string | null) => Promise<void>;
+  markCompleted: (runId: string | null, summary?: string) => Promise<void>;
   markFailed: (args: {
     runId: string | null;
     error: unknown;
     input: Pick<WorkflowInputPayload, "auto" | "mode">;
     notifyLinearFailure: (reason: string) => Promise<void>;
     emitError: (error: unknown) => void;
+    summary?: string;
   }) => Promise<void>;
 };
 
@@ -120,7 +121,7 @@ export function createLifecycle(args: {
     emitCompleteOnce();
   };
 
-  const markCompleted = async (runId: string | null) => {
+  const markCompleted = async (runId: string | null, summary?: string) => {
     if (!runId) {
       return;
     }
@@ -132,6 +133,8 @@ export function createLifecycle(args: {
       await workflowRepo.updateRun(runId, {
         status: "completed",
         completedAt: new Date(),
+        // Store summary in stateData for later retrieval if needed
+        stateData: summary ? { executionSummary: summary } : undefined,
       });
       await recordAudit({
         userId: args.userId,
@@ -148,6 +151,63 @@ export function createLifecycle(args: {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+
+    // Trigger Pattern Learning (Success)
+    if (runId) {
+      void (async () => {
+        try {
+          const run = await workflowRepo.getRun(runId);
+          if (run?.status === "completed") {
+            const inputData = run.inputData as Record<string, unknown>;
+            const planId = inputData?.planId as string | undefined;
+            if (planId) {
+              const { planRepo } = await import("@alfred/db");
+              const savedPlan = await planRepo.getPlanById(planId);
+              if (savedPlan) {
+                const { extractPatternFromRun } = await import("@alfred/plan");
+                const { type StructuredPlan } = await import("@alfred/plan");
+                await extractPatternFromRun(
+                  {
+                    id: run.id,
+                    userId: run.userId,
+                    status: run.status,
+                    projectId: run.projectId,
+                    created: run.created,
+                    completedAt: run.completedAt,
+                  },
+                  savedPlan.plan as StructuredPlan
+                );
+
+                // Trigger Convention Learning
+                if (run.projectId) {
+                  const { learnProjectConventions } = await import(
+                    "@alfred/plan"
+                  );
+                  await learnProjectConventions(
+                    {
+                      id: run.id,
+                      userId: run.userId,
+                      status: run.status,
+                      projectId: run.projectId,
+                      created: run.created,
+                      completedAt: run.completedAt,
+                    },
+                    run.projectId,
+                    summary ?? savedPlan.intent ?? ""
+                  );
+                }
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn("pattern_extraction_failed", {
+            runId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
+    }
+
     args.recordEvent("complete");
     closeTimer("ok");
     emitCompleteOnce();
@@ -159,6 +219,7 @@ export function createLifecycle(args: {
     input,
     notifyLinearFailure,
     emitError,
+    summary,
   }) => {
     if (finalizeState) {
       return;
@@ -199,7 +260,46 @@ export function createLifecycle(args: {
         await workflowRepo.updateRun(runId, {
           status: "failed",
           errorMessage: error instanceof Error ? error.message : String(error),
+          stateData: summary ? { executionSummary: summary } : undefined,
         });
+
+        // Trigger Anti-Pattern Learning (Failure)
+        void (async () => {
+          try {
+            const run = await workflowRepo.getRun(runId);
+            if (run?.status === "failed") {
+              const inputData = run.inputData as Record<string, unknown>;
+              const planId = inputData?.planId as string | undefined;
+              if (planId) {
+                const { planRepo } = await import("@alfred/db");
+                const savedPlan = await planRepo.getPlanById(planId);
+                if (savedPlan) {
+                  const { extractAntiPatternFromRun } = await import(
+                    "@alfred/plan"
+                  );
+                  const { type StructuredPlan } = await import("@alfred/plan");
+                  await extractAntiPatternFromRun(
+                    {
+                      id: run.id,
+                      userId: run.userId,
+                      status: run.status,
+                      projectId: run.projectId,
+                      created: run.created,
+                      completedAt: run.completedAt,
+                    },
+                    savedPlan.plan as StructuredPlan,
+                    summary ?? error instanceof Error ? error.message : String(error)
+                  );
+                }
+              }
+            }
+          } catch (err) {
+            logger.warn("anti_pattern_extraction_failed", {
+              runId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        })();
       } catch (updateError) {
         logger.warn("workflow_error_status_update_failed", {
           runId,

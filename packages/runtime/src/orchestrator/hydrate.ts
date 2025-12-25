@@ -1,7 +1,7 @@
 import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
 import {
-  type TrackerContext,
   createTrackerContext,
+  type TrackerContext,
 } from "@alfred/agent/orchestrator/multi/tracker";
 import { openDirectorySecure } from "@alfred/agent/security/filesystem";
 import type { WorkflowEvent } from "@alfred/type/plan";
@@ -41,7 +41,7 @@ export function normalizeWorkingDirectory(
   candidate: string,
   workspaceRoot: string
 ): string {
-  const target = candidate && candidate.trim() ? candidate : workspaceRoot;
+  const target = candidate?.trim() ? candidate : workspaceRoot;
   const handle = openDirectorySecure(target, {
     allowedPrefixes: [workspaceRoot],
   });

@@ -1,12 +1,12 @@
 // packages/db/src/schema/project.ts
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { users } from "./user";
+import { user } from "./auth";
 
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   workspace: text("workspace").notNull(),

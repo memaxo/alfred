@@ -143,6 +143,7 @@ export async function orchestrateWorkflowStream(
     const reviewGate = new ReviewGate();
     let linearFailureNotified = false;
     let executorRunId: string | null = null;
+    const handoffs: Array<{ summary: string; [key: string]: unknown }> = [];
 
     if (input.linear?.sessionId) {
       reviewGate.requireAtLeast(1);
@@ -185,8 +186,8 @@ export async function orchestrateWorkflowStream(
       await lifecycle.markSuspended(runId);
     };
 
-    const markCompleted = async () => {
-      await lifecycle.markCompleted(runId);
+    const markCompleted = async (summary?: string) => {
+      await lifecycle.markCompleted(runId, summary);
     };
 
     try {
@@ -311,6 +312,11 @@ export async function orchestrateWorkflowStream(
       for await (const event of executor.stream) {
         observeEvent({ event, reviewGate, reasonTraces });
 
+        // Collect handoffs for final learning summary
+        if (event.type === "event" && (event as any).kind === "agent-handoff") {
+          handoffs.push((event as any).data);
+        }
+
         const persisted = await persistStreamEvent({
           event,
           runId: runId ?? executor.runId,
@@ -379,18 +385,32 @@ export async function orchestrateWorkflowStream(
         });
       }
 
-      await markCompleted();
+      // Generate final execution summary for learning
+      let finalSummary: string | undefined;
+      if (handoffs.length > 0) {
+        finalSummary = handoffs.map((h) => h.summary).join(" ");
+      }
+
+      await markCompleted(finalSummary);
     } catch (error) {
       if (cancelled) {
         await markCancelled();
         return;
       }
+
+      // Generate failure summary if possible
+      let failureSummary: string | undefined;
+      if (handoffs.length > 0) {
+        failureSummary = handoffs.map((h) => h.summary).join(" ");
+      }
+
       await lifecycle.markFailed({
         runId,
         error,
         input,
         notifyLinearFailure,
         emitError: callbacks.emitError,
+        summary: failureSummary,
       });
     } finally {
       try {

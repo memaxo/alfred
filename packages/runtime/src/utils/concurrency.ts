@@ -33,8 +33,8 @@ export function pLimit(concurrency: number) {
     }
   };
 
-  const enqueue = <T>(fn: () => Promise<T>): Promise<T> => {
-    return new Promise<T>((resolve, reject) => {
+  const enqueue = <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
       const job = () => run(fn, resolve, reject);
 
       if (activeCount < limit) {
@@ -43,7 +43,6 @@ export function pLimit(concurrency: number) {
         queue.push(job);
       }
     });
-  };
 
   return enqueue;
 }
@@ -52,8 +51,10 @@ export function pLimit(concurrency: number) {
  * A simple async queue for producing/consuming events.
  */
 export class AsyncQueue<T> {
-  private queue: T[] = [];
-  private resolvers: ((value: IteratorResult<T, undefined>) => void)[] = [];
+  private readonly queue: T[] = [];
+  private readonly resolvers: ((
+    value: IteratorResult<T, undefined>
+  ) => void)[] = [];
   private closed = false;
 
   enqueue(value: T) {

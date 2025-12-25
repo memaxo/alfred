@@ -5,9 +5,9 @@
  * Provides runtime context around knowledge queries
  */
 
-import { searchChunks, searchChunksHybrid } from "@alfred/db/repo/rag";
 import { findRagDocumentNode } from "@alfred/db/repo/graph/read";
 import { touchNodes } from "@alfred/db/repo/graph/write";
+import { searchChunks, searchChunksHybrid } from "@alfred/db/repo/rag";
 import type { Hypergraph } from "@alfred/knowledge/hypergraph";
 import { execute, parse, semanticQuery } from "@alfred/knowledge/query";
 import { logger } from "@alfred/logger";

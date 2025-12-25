@@ -1,12 +1,22 @@
 import {
+  agentTypeSchema,
+  approvePlan,
+  critiquePlan,
+  evaluatePlanDeterministic,
+  exportPlanToYAML,
   gatherExternalResearch,
   gatherFullResearch,
   gatherInternalResearch,
+  generatePlan,
   parseIntent,
+  rejectPlan,
   researchOptionsSchema,
+  researchResultSchema,
+  structuredPlanSchema,
   workflowIntentSchema,
   type WorkflowIntent,
 } from "@alfred/plan";
+import { planRepo } from "@alfred/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc.js";
@@ -180,6 +190,244 @@ export const planRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "plan_research_full_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Phased plan generator
+   */
+  generate: authedProcedure
+    .input(
+      z.object({
+        intent: workflowIntentSchema,
+        research: researchResultSchema,
+        options: z
+          .object({
+            maxPhases: z.number().int().min(1).max(10).optional(),
+            preferParallel: z.boolean().optional(),
+            agentTypes: z.array(agentTypeSchema).optional(),
+          })
+          .optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      // Validate that intent.userId matches authenticated user
+      validateIntentUserId(input.intent, userId);
+
+      try {
+        const plan = await generatePlan(
+          input.intent,
+          input.research,
+          input.options
+        );
+        return plan;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_generation_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Plan critique and revision
+   */
+  critique: authedProcedure
+    .input(
+      z.object({
+        plan: structuredPlanSchema,
+        intent: workflowIntentSchema,
+        research: researchResultSchema,
+        options: z
+          .object({
+            maxRevisions: z.number().int().min(1).max(5).optional(),
+          })
+          .optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      // Validate that intent.userId matches authenticated user
+      validateIntentUserId(input.intent, userId);
+
+      try {
+        const result = await critiquePlan(
+          input.plan,
+          input.intent,
+          input.research,
+          input.options
+        );
+        return result;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_critique_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Deterministic plan evaluation
+   */
+  evaluate: authedProcedure
+    .input(
+      z.object({
+        plan: structuredPlanSchema,
+        options: z
+          .object({
+            checks: z
+              .array(z.enum(["typecheck", "test", "lint", "build"]))
+              .optional(),
+          })
+          .optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        const evaluation = await evaluatePlanDeterministic(
+          input.plan,
+          input.options
+        );
+        return evaluation;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_evaluation_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Persist a plan
+   */
+  create: authedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid().optional(),
+        intent: z.string(),
+        plan: structuredPlanSchema,
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        return await planRepo.createPlan({
+          userId,
+          projectId: input.projectId,
+          intent: input.intent,
+          plan: input.plan as any,
+          status: "pending",
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_persist_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Approve and execute a plan
+   */
+  approve: authedProcedure
+    .input(z.object({ planId: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        return await approvePlan(input.planId, userId);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error instanceof Error ? error.message : "plan_approval_failed",
+        });
+      }
+    }),
+
+  /**
+   * Reject a plan
+   */
+  reject: authedProcedure
+    .input(
+      z.object({
+        planId: z.string().uuid(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+
+      try {
+        return await rejectPlan(input.planId, userId, input.reason);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_rejection_failed",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Export plan to YAML
+   */
+  exportYAML: authedProcedure
+    .input(z.object({ plan: structuredPlanSchema }))
+    .query(async ({ input }) => {
+      try {
+        return exportPlanToYAML(input.plan);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "plan_export_failed",
           cause: error,
         });
       }

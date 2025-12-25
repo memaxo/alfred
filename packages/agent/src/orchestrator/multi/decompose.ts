@@ -25,6 +25,7 @@ export type SubTask = {
   priority: number;
   acceptance: string[];
   filesHint: string[];
+  metadata?: Record<string, unknown>;
 };
 
 export type DecomposeContext = {

@@ -24,7 +24,15 @@ export const workflowIntentSchema: z.ZodType<any> = z.object({
 });
 ```
 
-## Phase 2: Planning (Upcoming)
-- **Research**: Aggregating information from the codebase and external sources.
+## Phase 2: Planning
+Located in `@alfred/plan/generate`.
+- **Research**: Aggregating information from the codebase (`gatherCodeContext`) and external sources (Exa v2 Aggregator).
 - **Generation**: Creating `StructuredPlan` objects with `Phases` and `SubTasks`.
-- **Evaluation**: Best-of-N selection based on defined criteria.
+- **Evaluation**: Verification-first evaluation using deterministic checks (typecheck, tests, build) and LLM critiques.
+
+## Phase 3: Visual Management
+Located in `apps/web/src/components/windows/workflow/`.
+- **Canvas Visualization**: Interactive DAG rendering using React Flow.
+- **Pre-execution Review**: Manual approval gate for all generated plans.
+- **Interactive Editing**: Support for drag-and-drop dependency management and phase refinement.
+- **State Sync**: Real-time synchronization between visual edits and the underlying `StructuredPlan` schema.

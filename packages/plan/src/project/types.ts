@@ -1,16 +1,14 @@
 // packages/plan/src/project/types.ts
-import type { Project } from "@alfred/db/schema/project";
+export type { NewProject, Project } from "@alfred/db/schema/project";
 
-export type { Project, NewProject } from "@alfred/db/schema/project";
-
-export type ProjectFramework = 
-  | "react" 
-  | "nextjs" 
-  | "tanstack" 
-  | "expo" 
-  | "express" 
-  | "hono" 
-  | "fastify" 
+export type ProjectFramework =
+  | "react"
+  | "nextjs"
+  | "tanstack"
+  | "expo"
+  | "express"
+  | "hono"
+  | "fastify"
   | "unknown";
 
 export type PackageManager = "bun" | "npm" | "yarn" | "pnpm";

@@ -371,4 +371,13 @@ export type WorkflowEvent =
       receipts?: SearchReceipt;
       bundle?: ContextBundle;
     })
+  | (WorkflowEventBase & { type: "plan-selected"; plan: unknown })
+  | (WorkflowEventBase & { type: "phase-start"; phaseId: string; phase: unknown })
+  | (WorkflowEventBase & { type: "phase-complete"; phaseId: string; result: unknown })
+  | (WorkflowEventBase & { type: "phase-progress"; phaseId: string; progress: number })
+  | (WorkflowEventBase & { type: "agent-start"; agentId: string; phaseId: string })
+  | (WorkflowEventBase & { type: "agent-complete"; agentId: string; phaseId: string; result: unknown })
+  | (WorkflowEventBase & { type: "wave-start"; waveId: string })
+  | (WorkflowEventBase & { type: "wave-complete"; waveId: string })
+  | (WorkflowEventBase & { type: "agent-handoff"; data: unknown })
   | (WorkflowEventBase & { type: string; [key: string]: unknown });
