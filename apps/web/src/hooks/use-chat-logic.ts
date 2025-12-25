@@ -32,8 +32,10 @@ export function useChatLogic({
     status,
     error,
     send,
+    reload,
     clear,
     hydrate,
+    setMessages,
     addToolResult,
   } = useAssistantStream({
     api: apiBase,
@@ -183,6 +185,46 @@ export function useChatLogic({
     }
   }, [isRecording, startRecording, stopRecording]);
 
+  const handleRegenerate = useCallback(() => {
+    if (currentAgent !== "assistant") {
+      return;
+    }
+    reload();
+  }, [currentAgent, reload]);
+
+  const handleEdit = useCallback(
+    (messageId: string, newText: string) => {
+      if (currentAgent !== "assistant") {
+        return;
+      }
+
+      const index = messages.findIndex((m) => m.id === messageId);
+      if (index === -1) {
+        return;
+      }
+
+      const message = messages[index];
+      if (message.role !== "user") {
+        return;
+      }
+
+      // Update the message and remove subsequent ones
+      const newMessages = messages.slice(0, index);
+      const editedMessage: AssistantUIMessage = {
+        ...message,
+        parts: [{ type: "text", text: newText }],
+      };
+
+      setMessages([...newMessages, editedMessage]);
+
+      // Trigger regeneration after a short delay to ensure state update
+      setTimeout(() => {
+        reload();
+      }, 0);
+    },
+    [currentAgent, messages, setMessages, reload]
+  );
+
   return {
     currentAgent,
     messages,
@@ -193,6 +235,8 @@ export function useChatLogic({
     voiceError,
     isRecording,
     handleSend,
+    handleRegenerate,
+    handleEdit,
     handleAgentChange,
     toggleVoice,
     clear,

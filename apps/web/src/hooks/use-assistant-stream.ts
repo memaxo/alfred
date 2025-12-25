@@ -32,8 +32,10 @@ export type UseAssistantStreamReturn = {
   status: string;
   error: Error | null;
   send: (text: string) => void;
+  reload: () => void;
   clear: () => void;
   hydrate: (messages: AssistantUIMessage[]) => void;
+  setMessages: (messages: AssistantUIMessage[]) => void;
   conversationId: string | null;
   addToolResult: (result: { toolCallId: string; result: unknown }) => void;
 };
@@ -216,6 +218,10 @@ export function useAssistantStream(
     [chat]
   );
 
+  const reload = useCallback(() => {
+    void chat.reload();
+  }, [chat]);
+
   const clear = useCallback(() => {
     chat.setMessages([]);
     chat.clearError();
@@ -224,6 +230,13 @@ export function useAssistantStream(
   const hydrate = useCallback(
     (messages: AssistantUIMessage[]) => {
       // Cast for AI SDK compatibility
+      chat.setMessages(messages as Parameters<typeof chat.setMessages>[0]);
+    },
+    [chat]
+  );
+
+  const setMessages = useCallback(
+    (messages: AssistantUIMessage[]) => {
       chat.setMessages(messages as Parameters<typeof chat.setMessages>[0]);
     },
     [chat]
@@ -246,8 +259,10 @@ export function useAssistantStream(
     status: chat.status,
     error: chat.error ?? null,
     send,
+    reload,
     clear,
     hydrate,
+    setMessages,
     conversationId,
     addToolResult,
   };

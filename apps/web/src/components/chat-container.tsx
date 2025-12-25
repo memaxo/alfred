@@ -15,16 +15,21 @@ import { Chat } from "@alfred/ui";
 import { useCallback, useMemo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
+import { MessageActions } from "@/components/chat/message-actions";
 import { CognitiveFeedbackControls } from "@/components/cognitive-feedback/controls";
 import {
   CognitiveFeedbackDialog,
   type CognitiveFeedbackDraft,
 } from "@/components/cognitive-feedback/dialog";
 import { ContextLens } from "@/components/shared/context-lens";
+import { Button } from "@/components/ui/button";
+import { ChatMessage } from "@/components/ui/chat-message";
+import { Textarea } from "@/components/ui/textarea";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
 import { useCognitiveFeedback } from "@/hooks/use-cognitive-feedback";
 import { useFocusedContext } from "@/hooks/use-focused-context";
+import { getMessageText } from "@/utils/message";
 import { Actions } from "./actions";
 import { createPartRenderer } from "./chat-render";
 import { Connect } from "./connect";
@@ -60,11 +65,16 @@ export function ChatContainer({
     activeActions,
     handleAgentChange,
     clear,
+    handleEdit,
+    handleRegenerate,
   } = useChatLogic({
     initialAgent: agent,
     initialMessages,
     initialConversationId,
   });
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+
   const [feedbackDraft, setFeedbackDraft] =
     useState<CognitiveFeedbackDraft | null>(null);
   const {
@@ -94,24 +104,60 @@ export function ChatContainer({
     []
   );
 
+  const startEditing = useCallback((message: AssistantUIMessage) => {
+    setEditingMessageId(message.id);
+    setEditText(getMessageText(message));
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingMessageId(null);
+    setEditText("");
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (editingMessageId && editText.trim()) {
+      handleEdit(editingMessageId, editText.trim());
+      setEditingMessageId(null);
+      setEditText("");
+    }
+  }, [editingMessageId, editText, handleEdit]);
+
   const renderMessageActions = useCallback(
     (message: UIMessage) => {
-      if (message.role !== "assistant") {
-        return null;
-      }
+      const isAssistant = message.role === "assistant";
+      const isUser = message.role === "user";
+
       return (
-        <CognitiveFeedbackControls
-          disabled={feedbackStatus === "pending"}
-          onNegative={() =>
-            handleFeedbackIntent(message as AssistantUIMessage, "negative")
+        <MessageActions
+          disabled={status === "streaming" || feedbackStatus === "pending"}
+          onEdit={isUser ? () => startEditing(message as AssistantUIMessage) : undefined}
+          onNegative={
+            isAssistant
+              ? () => handleFeedbackIntent(message as AssistantUIMessage, "negative")
+              : undefined
           }
-          onPositive={() =>
-            handleFeedbackIntent(message as AssistantUIMessage, "positive")
+          onPositive={
+            isAssistant
+              ? () => handleFeedbackIntent(message as AssistantUIMessage, "positive")
+              : undefined
           }
+          onRegenerate={
+            isAssistant && messages[messages.length - 1]?.id === message.id
+              ? handleRegenerate
+              : undefined
+          }
+          role={message.role as any}
         />
       );
     },
-    [feedbackStatus, handleFeedbackIntent]
+    [
+      status,
+      feedbackStatus,
+      startEditing,
+      handleFeedbackIntent,
+      messages,
+      handleRegenerate,
+    ]
   );
 
   const handleFeedbackClose = useCallback(
@@ -150,6 +196,61 @@ export function ChatContainer({
       }
     },
     [feedbackDraft, resetFeedback, submitFeedback]
+  );
+
+  const renderMessage = useCallback(
+    (_index: number, message: UIMessage) => {
+      const isEditing = editingMessageId === message.id;
+
+      if (isEditing) {
+        return (
+          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-secondary/20 mb-4 mx-4">
+            <Textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="min-h-[100px] bg-background"
+              placeholder="Edit your message..."
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={cancelEditing}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={saveEdit}
+                disabled={!editText.trim()}
+              >
+                Save & Regenerate
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="px-4">
+          <ChatMessage
+            role={message.role as any}
+            content={message.parts as any}
+            renderPart={partRenderer}
+            actions={renderMessageActions(message)}
+          />
+        </div>
+      );
+    },
+    [
+      editingMessageId,
+      editText,
+      cancelEditing,
+      saveEdit,
+      partRenderer,
+      renderMessageActions,
+    ]
   );
 
   return (
@@ -205,8 +306,7 @@ export function ChatContainer({
                       : "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
-                renderMessageActions={renderMessageActions}
-                renderPart={partRenderer}
+                itemContent={renderMessage}
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
@@ -260,15 +360,3 @@ const getStreamId = (message: AssistantUIMessage): string | undefined => {
   }
   return typeof message.id === "string" ? message.id : undefined;
 };
-
-const getMessageText = (message: AssistantUIMessage): string =>
-  message.parts
-    .map((part) => {
-      if (part.type === "text") {
-        return part.text;
-      }
-      return null;
-    })
-    .filter((text): text is string => typeof text === "string")
-    .join("\n")
-    .trim();

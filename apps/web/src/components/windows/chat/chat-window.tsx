@@ -1,7 +1,7 @@
 import type { AssistantUIMessage } from "@alfred/agent";
 import type { NodeProps } from "@xyflow/react";
 import { MessageSquare, Mic } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
   Conversation,
@@ -13,9 +13,11 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
+import { MessageActions } from "@/components/chat/message-actions";
 import { renderPart } from "@/components/chat-render";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
+import { Textarea } from "@/components/ui/textarea";
 import {
   SmallCard,
   TinyDot,
@@ -24,6 +26,7 @@ import {
 } from "@/components/windows/shared";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import { useDesktopStore } from "@/store/desktop";
+import { getMessageText } from "@/utils/message";
 
 const chatWindowDataSchema = z.object({
   type: z.literal("chat"),
@@ -53,11 +56,56 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
   const {
     messages,
     handleSend: sendToChat,
+    handleRegenerate,
+    handleEdit,
     hydrate,
     isRecording,
     toggleVoice,
+    status,
     error,
   } = useChatLogic({ initialAgent: "assistant" });
+
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const startEditing = useCallback((message: AssistantUIMessage) => {
+    setEditingMessageId(message.id);
+    setEditText(getMessageText(message));
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingMessageId(null);
+    setEditText("");
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (editingMessageId && editText.trim()) {
+      handleEdit(editingMessageId, editText.trim());
+      setEditingMessageId(null);
+      setEditText("");
+    }
+  }, [editingMessageId, editText, handleEdit]);
+
+  const renderMessageActions = useCallback(
+    (message: AssistantUIMessage) => {
+      const isAssistant = message.role === "assistant";
+      const isUser = message.role === "user";
+
+      return (
+        <MessageActions
+          disabled={status === "streaming"}
+          onEdit={isUser ? () => startEditing(message) : undefined}
+          onRegenerate={
+            isAssistant && messages[messages.length - 1]?.id === message.id
+              ? handleRegenerate
+              : undefined
+          }
+          role={message.role as any}
+        />
+      );
+    },
+    [status, startEditing, messages, handleRegenerate]
+  );
 
   useEffect(() => {
     if (error && windowData.error !== error.message) {
@@ -147,14 +195,52 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
                 Start a conversation...
               </p>
             ) : (
-              messages.map((message) => (
-                <ChatMessage
-                  content={message.parts}
-                  key={message.id}
-                  renderPart={renderPart}
-                  role={message.role}
-                />
-              ))
+              messages.map((message) => {
+                const isEditing = editingMessageId === message.id;
+
+                if (isEditing) {
+                  return (
+                    <div
+                      className="flex flex-col gap-2 p-3 border border-white/10 rounded-lg bg-white/5 mb-4"
+                      key={message.id}
+                    >
+                      <Textarea
+                        autoFocus
+                        className="min-h-[80px] bg-transparent border-white/10 text-sm"
+                        onChange={(e) => setEditText(e.target.value)}
+                        placeholder="Edit your message..."
+                        value={editText}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={cancelEditing}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          disabled={!editText.trim()}
+                          onClick={saveEdit}
+                          size="sm"
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <ChatMessage
+                    actions={renderMessageActions(message as AssistantUIMessage)}
+                    content={message.parts as any}
+                    key={message.id}
+                    renderPart={renderPart}
+                    role={message.role as any}
+                  />
+                );
+              })
             )}
           </ConversationContent>
         </Conversation>

@@ -350,7 +350,7 @@ export const planRouter = router({
           userId,
           projectId: input.projectId,
           intent: input.intent,
-          plan: input.plan as any,
+          plan: input.plan,
           status: "pending",
         });
       } catch (error) {

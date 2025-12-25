@@ -267,7 +267,7 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
             <label className="text-[10px] uppercase text-biolum-dim font-bold tracking-widest ml-1">Agent Type</label>
             <Select 
               value={selectedPhase.agentType} 
-              onValueChange={(v) => updatePhase(selectedPhase.id, { agentType: v as any })}
+              onValueChange={(v) => updatePhase(selectedPhase.id, { agentType: v as Phase['agentType'] })}
             >
               <SelectTrigger className="bg-white/5 border-white/10 text-sm h-8">
                 <SelectValue />

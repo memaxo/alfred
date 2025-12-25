@@ -212,7 +212,13 @@ export async function createMessage(
       metadata: message.metadata ?? null,
       id: message.id,
     })
-    .onConflictDoNothing({ target: messages.id })
+    .onConflictDoUpdate({
+      target: messages.id,
+      set: {
+        parts: (message.parts ?? []) as UIMessage["parts"],
+        metadata: message.metadata ?? null,
+      },
+    })
     .returning();
 
   return row ?? null;
@@ -236,6 +242,32 @@ export async function getMessages(
   }
 
   return getMessagesStmt.execute({ conversationId });
+}
+
+export async function deleteMessagesAfter(
+  userId: string,
+  conversationId: string,
+  messageId: string
+): Promise<void> {
+  const convo = await getConversation(conversationId, userId);
+  if (!convo) {
+    return;
+  }
+
+  const message = await getMessage(messageId, userId);
+  if (!message) {
+    return;
+  }
+
+  await db
+    .delete(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.userId, userId),
+        sql`${messages.created} > ${message.created}`
+      )
+    );
 }
 
 export function messageRowToUIMessage(row: MessageRow): UIMessage {

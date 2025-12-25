@@ -127,6 +127,20 @@ export async function handleStreamRequest(
     };
 
     if (userId && conversationId) {
+      // If we have messages, we should ensure the DB matches the incoming state.
+      // This handles cases like message editing or regeneration where the client
+      // might have removed some messages from the end of the history.
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.id) {
+          await conversationRepo.deleteMessagesAfter(
+            userId,
+            conversationId,
+            lastMessage.id
+          );
+        }
+      }
+
       const persisted = await persistMessages({
         conversationId,
         userId,

@@ -12,10 +12,12 @@ export function ChatMessage({
   role,
   content,
   renderPart,
+  actions,
 }: {
   role: AssistantUIMessage["role"] | "user";
   content: string | AssistantPart[];
   renderPart?: (part: AssistantPart, message: AssistantUIMessage) => ReactNode;
+  actions?: ReactNode;
 }) {
   if (role === "system") {
     return null;
@@ -24,21 +26,33 @@ export function ChatMessage({
   return (
     <BaseMessage from={role === "assistant" ? "assistant" : "user"}>
       {role === "assistant" && <MessageAvatar name="AL" src="/alfred.png" />}
-      <MessageContent variant={role === "user" ? "contained" : "flat"}>
-        {Array.isArray(content)
-          ? content.map((part, i) => (
-              <div key={i}>
-                {renderPart
-                  ? renderPart(part, {
-                      id: "temp",
-                      role: role as AssistantUIMessage["role"],
-                      parts: content,
-                    })
-                  : JSON.stringify(part)}
-              </div>
-            ))
-          : content}
-      </MessageContent>
+      <div className="flex flex-col gap-2">
+        <MessageContent variant={role === "user" ? "contained" : "flat"}>
+          {Array.isArray(content)
+            ? content.map((part, i) => (
+                <div key={i}>
+                  {renderPart
+                    ? renderPart(part, {
+                        id: "temp",
+                        role: role as AssistantUIMessage["role"],
+                        parts: content,
+                      })
+                    : JSON.stringify(part)}
+                </div>
+              ))
+            : content}
+        </MessageContent>
+        {actions && (
+          <div
+            className={cn(
+              "flex",
+              role === "assistant" ? "justify-start" : "justify-end"
+            )}
+          >
+            {actions}
+          </div>
+        )}
+      </div>
       {role === "user" && <MessageAvatar name="ME" src="/user.png" />}
     </BaseMessage>
   );

@@ -181,6 +181,9 @@ export const workflowRouter = router({
         await workflowRepo.createRun({
           id: executor.runId,
           userId: session.user.id,
+          projectId: input.projectId,
+          planId: input.planId,
+          requirement: input.requirement,
           workflowId: "plan",
           status: "running",
           inputData: storedInput,
@@ -395,15 +398,19 @@ export const workflowRouter = router({
     .mutation(async ({ input }) => {
       // Handle clarification resume
       if (input.clarificationId && input.response) {
-        const { resumeWorkflowAfterClarification } = await import(
-          "@alfred/runtime/orchestrator/resume"
-        );
-        await resumeWorkflowAfterClarification(
-          input.runId,
-          input.clarificationId,
-          input.response
-        );
-        return { ok: true };
+        try {
+          const { resumeWorkflowAfterClarification } = await import(
+            "@alfred/runtime/orchestrator/resume"
+          );
+          await resumeWorkflowAfterClarification(
+            input.runId,
+            input.clarificationId,
+            input.response
+          );
+          return { ok: true };
+        } catch (error) {
+          throw toTRPCError(error, "workflow_resume_failed");
+        }
       }
 
       // Handle existing obligation resume
