@@ -47,6 +47,43 @@ for (const match of metricsSource.matchAll(reExportRegex)) {
   }
 }
 
+/**
+ * The API metrics module re-exports a large set of metrics via `export * from ...`
+ * (e.g. runtime, db). Bun's module mocking resolves these imports to the same
+ * file path, so missing names here will crash module initialization for routers
+ * that import metrics via `../metrics`.
+ *
+ * To keep this stub lightweight (no runtime imports), we scrape exported const
+ * names from the upstream metrics source files and add metric-shaped stubs.
+ */
+const extraMetricSources = [
+  // API-local metrics (re-exported via `./metrics/index`)
+  new URL("../../src/metrics/trpc.ts", import.meta.url).pathname,
+  new URL("../../src/metrics/health.ts", import.meta.url).pathname,
+  new URL("../../src/metrics/sse.ts", import.meta.url).pathname,
+  new URL("../../src/metrics/webhook.ts", import.meta.url).pathname,
+  new URL("../../src/metrics/preference.ts", import.meta.url).pathname,
+  // Runtime metrics (includes orchestrator metrics)
+  new URL("../../../runtime/src/metrics.ts", import.meta.url).pathname,
+  // DB metrics (includes graph metrics)
+  new URL("../../../db/src/metrics.ts", import.meta.url).pathname,
+  // Policy metrics (used by policy enforcement middleware)
+  new URL("../../../policy/src/metrics.ts", import.meta.url).pathname,
+  // Knowledge and voice expose metrics packages used by routers
+  new URL("../../../knowledge/src/metrics.ts", import.meta.url).pathname,
+  new URL("../../../voice/src/metrics.ts", import.meta.url).pathname,
+];
+
+for (const filePath of extraMetricSources) {
+  const src = readFileSync(filePath, "utf8");
+  for (const match of src.matchAll(exportConstRegex)) {
+    const name = match[1];
+    if (name && !metricsStub[name]) {
+      metricsStub[name] = createMetricStub();
+    }
+  }
+}
+
 metricsStub.metricsRegistry = {};
 metricsStub.recordVoiceStt = vi.fn();
 metricsStub.recordVoiceTts = vi.fn();

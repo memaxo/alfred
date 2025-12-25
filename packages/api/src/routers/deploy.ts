@@ -83,7 +83,11 @@ const mapPreviewResource = (raw: unknown) => mapDeployResource(raw, "preview");
 const mapPromoteResource = (raw: unknown) => mapDeployResource(raw, "prod");
 const mapRemoveResource = (raw: unknown) => mapDeployResource(raw, "remove");
 const mapHealthResource = (raw: unknown) => {
-  const data = raw as { app?: string; apps?: string[]; preview?: boolean };
+  const data = (raw && typeof raw === "object" ? raw : {}) as {
+    app?: string;
+    apps?: string[];
+    preview?: boolean;
+  };
   let firstApp = "all";
   if (typeof data.app === "string") {
     firstApp = data.app;
