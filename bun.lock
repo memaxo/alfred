@@ -35,6 +35,8 @@
       "dependencies": {
         "@ai-sdk/react": "catalog:",
         "@alfred/api": "workspace:*",
+        "@alfred/logger": "workspace:*",
+        "@alfred/ui": "workspace:*",
         "@better-auth/expo": "1.4.7",
         "@expo/vector-icons": "^15.0.2",
         "@g4rb4g3/react-native-carplay": "^2.7.5",
@@ -409,8 +411,10 @@
         "@alfred/db": "workspace:*",
         "@alfred/knowledge": "workspace:*",
         "@alfred/logger": "workspace:*",
+        "@alfred/runtime": "workspace:*",
         "@alfred/type": "workspace:*",
         "ai": "catalog:",
+        "yaml": "^2.7.0",
         "zod": "catalog:",
       },
       "devDependencies": {
