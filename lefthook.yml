@@ -2,7 +2,9 @@ pre-push:
   parallel: true
   commands:
     typecheck:
-      run: bunx turbo typecheck --filter='[origin/main...HEAD]'
+      run: |
+        BASE=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/dev")
+        bunx turbo typecheck --filter="[${BASE}...HEAD]"
       fail_text: "Type errors found - push blocked"
     
     lint:
@@ -13,7 +15,9 @@ pre-push:
       # Lint issues warn but don't block push
       
     tests:
-      run: bunx turbo test --filter='[origin/main...HEAD]' --concurrency=4
+      run: |
+        BASE=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/dev")
+        bunx turbo test --filter="[${BASE}...HEAD]" --concurrency=4
       fail_text: "Tests failed - push blocked"
 
 pre-commit:
