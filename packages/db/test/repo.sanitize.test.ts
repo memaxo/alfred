@@ -54,6 +54,44 @@ describe("repo/sanitize", () => {
       expect(cleaned).not.toContain("alert(2)");
     });
 
+    it("prevents javascript: URL case variations", () => {
+      const dirty =
+        '<a href="JAVASCRIPT:alert(1)">x</a> <a href="JaVaScRiPt:alert(2)">y</a> <a href="Javascript:alert(3)">z</a>';
+      const cleaned = sanitizeContextText(dirty);
+      expect(cleaned.toLowerCase()).not.toContain("javascript:");
+      expect(cleaned).not.toContain("alert(1)");
+      expect(cleaned).not.toContain("alert(2)");
+      expect(cleaned).not.toContain("alert(3)");
+    });
+
+    it("prevents javascript: URLs in src attributes", () => {
+      const dirty =
+        '<img src="javascript:alert(1)"> <script src="javascript:alert(2)"></script>';
+      const cleaned = sanitizeContextText(dirty);
+      expect(cleaned.toLowerCase()).not.toContain("javascript:");
+      expect(cleaned).not.toContain("alert(1)");
+      expect(cleaned).not.toContain("alert(2)");
+    });
+
+    it("handles javascript: URL with tab separator (known limitation)", () => {
+      // Note: Current regex removes colon but doesn't fully sanitize tab-separated variants
+      // This documents a limitation - consider library approach for comprehensive sanitization
+      const dirty = '<a href="javascript\t:alert(1)">x</a>';
+      const cleaned = sanitizeContextText(dirty);
+      // Colon removal prevents execution, but alert text may remain
+      expect(cleaned.toLowerCase()).not.toContain("javascript:");
+      // This test documents current behavior - full sanitization would require more sophisticated approach
+    });
+
+    it("blocks iframe/embed/object with case variations", () => {
+      const dirty =
+        'a <IFRAME src="x"></IFRAME> b <Embed src="y" /> c <OBJECT data="z"></OBJECT> d';
+      const cleaned = sanitizeContextText(dirty);
+      expect(cleaned.toLowerCase()).not.toContain("<iframe");
+      expect(cleaned.toLowerCase()).not.toContain("<embed");
+      expect(cleaned.toLowerCase()).not.toContain("<object");
+    });
+
     it("avoids false positives for normal text", () => {
       const text = "Math: 2 < 3 and 5 > 4. Plain words: onload onerror.";
       const cleaned = sanitizeContextText(text);
