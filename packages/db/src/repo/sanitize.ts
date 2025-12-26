@@ -27,12 +27,36 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   return proto === Object.prototype || proto === null;
 };
 
+const SCRIPT_TAG_RE = /<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi;
+const SCRIPT_SELF_CLOSING_RE = /<\s*script\b[^>]*\/\s*>/gi;
+const BLOCKED_TAG_RE =
+  /<\s*(iframe|embed|object)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi;
+const BLOCKED_TAG_SELF_CLOSING_RE = /<\s*(iframe|embed|object)\b[^>]*\/\s*>/gi;
+const EVENT_HANDLER_ATTR_RE =
+  /\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+const JS_URL_ATTR_QUOTED_RE =
+  /\b(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi;
+const JS_URL_ATTR_UNQUOTED_RE = /\b(href|src)\s*=\s*javascript:[^\s>]+/gi;
+const JS_URL_MARKDOWN_RE = /\]\(\s*javascript:[^)]+\)/gi;
+const JAVASCRIPT_SCHEME_RE = /javascript\s*:/gi;
+
 export function sanitizeContextText(text: string): string {
   if (!text) {
     return "";
   }
 
   let cleaned = text.replace(/\r\n?/g, "\n");
+
+  cleaned = cleaned
+    .replace(SCRIPT_TAG_RE, "")
+    .replace(SCRIPT_SELF_CLOSING_RE, "")
+    .replace(BLOCKED_TAG_RE, "")
+    .replace(BLOCKED_TAG_SELF_CLOSING_RE, "")
+    .replace(EVENT_HANDLER_ATTR_RE, "")
+    .replace(JS_URL_ATTR_QUOTED_RE, '$1=""')
+    .replace(JS_URL_ATTR_UNQUOTED_RE, '$1=""')
+    .replace(JS_URL_MARKDOWN_RE, "]()")
+    .replace(JAVASCRIPT_SCHEME_RE, "javascript");
 
   for (const pattern of DELIMITER_PATTERNS) {
     cleaned = cleaned.replace(pattern, "");
