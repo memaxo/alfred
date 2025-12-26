@@ -1,10 +1,14 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useSearch,
+} from "@tanstack/react-router";
 import { z } from "zod";
 import { ClientOnly } from "@/components/ai-elements/client-only";
 import { Desktop } from "@/components/desktop/desktop";
 import {
-  useDesktopDeeplinks,
   type DesktopSearchParams,
+  useDesktopDeeplinks,
 } from "@/hooks/use-desktop-deeplinks";
 import { useKnowledgeVisualize } from "@/hooks/use-knowledge-visualize";
 import { useDesktopStore } from "@/store/desktop";
@@ -14,6 +18,7 @@ const searchSchema = z.object({
   spawn: z.string().optional(),
   resourceType: z.string().optional(),
   resourceId: z.string().optional(),
+  ragDoc: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_protected/")({

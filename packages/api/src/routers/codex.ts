@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sessionManager } from "@alfred/agent/orchestrator/codex-session";
 import {
   alfredCodexEventSchema,
   ELEVATED_TIMEOUT_THRESHOLD_SEC,
@@ -7,7 +8,6 @@ import {
 } from "@alfred/agent/orchestrator/tool/codex/definition";
 import type { AlfredCodexEvent } from "@alfred/agent/orchestrator/tool/codex/index";
 import { toolCodex } from "@alfred/agent/orchestrator/tool/codex/index";
-import { sessionManager } from "@alfred/agent/orchestrator/codex-session";
 import { codexRunRepo, codexSessionRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { TRPCError } from "@trpc/server";
@@ -264,7 +264,10 @@ function createCodexStreamObservable({
                   });
                   break;
                 case "codex_event":
-                  emit.next({ type: "codex_event", event: parsed.event });
+                  emit.next({
+                    type: "codex_event",
+                    event: parsed.event as AlfredCodexEvent,
+                  });
                   break;
                 default:
                   break;
@@ -422,7 +425,7 @@ const codexProcedures = {
               }
 
               if (parsed.type === "codex_event") {
-                events.push(parsed.event);
+                events.push(parsed.event as AlfredCodexEvent);
               }
             },
           },
@@ -465,10 +468,17 @@ const codexProcedures = {
     .query(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
-      const startedAfter = input.startedAfter ? new Date(input.startedAfter) : undefined;
-      const startedBefore = input.startedBefore ? new Date(input.startedBefore) : undefined;
+      const startedAfter = input.startedAfter
+        ? new Date(input.startedAfter)
+        : undefined;
+      const startedBefore = input.startedBefore
+        ? new Date(input.startedBefore)
+        : undefined;
       return codexRunRepo.listRuns({
         userId,
         status: input.status,
@@ -482,20 +492,28 @@ const codexProcedures = {
       });
     }),
 
-  getRun: authedProcedure.input(codexGetRunInputSchema).query(async ({ input, ctx }) => {
-    const userId = ctx.session?.user?.id;
-    if (!userId) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
-    }
-    return requireOwnedRun({ runId: input.runId, userId });
-  }),
+  getRun: authedProcedure
+    .input(codexGetRunInputSchema)
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.session?.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
+      }
+      return requireOwnedRun({ runId: input.runId, userId });
+    }),
 
   events: authedProcedure
     .input(codexEventsInputSchema)
     .query(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       await requireOwnedRun({ runId: input.runId, userId });
       return codexRunRepo.listEvents({
@@ -511,7 +529,10 @@ const codexProcedures = {
     .query(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       if (input.runId) {
         await requireOwnedRun({ runId: input.runId, userId });
@@ -532,7 +553,9 @@ const codexProcedures = {
       const userId = ctx.session?.user?.id;
       if (!userId) {
         return observable((emit) => {
-          emit.error(new TRPCError({ code: "UNAUTHORIZED", message: "session_required" }));
+          emit.error(
+            new TRPCError({ code: "UNAUTHORIZED", message: "session_required" })
+          );
           return () => {};
         });
       }
@@ -555,10 +578,8 @@ const codexProcedures = {
               emit.next({ type: "event", event: row });
             }
           } catch (error) {
-            const { sanitized, correlationId, trpcCode, cause } = buildCodexErrorResponse(
-              error,
-              "codex_stream_events_failed"
-            );
+            const { sanitized, correlationId, trpcCode, cause } =
+              buildCodexErrorResponse(error, "codex_stream_events_failed");
             emit.error(
               new TRPCError({
                 code: trpcCode,
@@ -590,7 +611,10 @@ const codexProcedures = {
     .query(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       return codexSessionRepo.listSessions({
         userId,
@@ -605,11 +629,17 @@ const codexProcedures = {
     .query(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       const session = await sessionManager.getSession(input.sessionId, userId);
       if (!session) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "codex_session_not_found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "codex_session_not_found",
+        });
       }
       return session;
     }),
@@ -619,12 +649,21 @@ const codexProcedures = {
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session?.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "session_required" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "session_required",
+        });
       }
       // Verify ownership before terminating
-      const session = await codexSessionRepo.getSession(input.sessionId, userId);
+      const session = await codexSessionRepo.getSession(
+        input.sessionId,
+        userId
+      );
       if (!session) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "codex_session_not_found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "codex_session_not_found",
+        });
       }
       await sessionManager.terminateSession(input.sessionId);
       return { success: true };

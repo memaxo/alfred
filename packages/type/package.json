@@ -19,6 +19,14 @@
       "types": "./dist/personal.d.ts",
       "default": "./src/personal.ts"
     },
+    "./envelope": {
+      "types": "./dist/envelope.d.ts",
+      "default": "./src/envelope.ts"
+    },
+    "./envelope.zod": {
+      "types": "./dist/envelope.zod.d.ts",
+      "default": "./src/envelope.zod.ts"
+    },
     "./stream": {
       "types": "./dist/stream.d.ts",
       "default": "./src/stream.ts"

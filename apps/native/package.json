@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@g4rb4g3/react-native-carplay": "^2.7.5",
@@ -49,6 +50,7 @@
     "@ai-sdk/react": "catalog:",
     "better-auth": "catalog:",
     "@better-auth/expo": "1.4.7",
+    "@better-auth/passkey": "1.4.7",
     "@alfred/api": "workspace:*",
     "@alfred/ui": "workspace:*",
     "@alfred/logger": "workspace:*",

@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
-import { useDesktopStore, type WindowType, type ResourceType } from "@/store/desktop";
+import {
+  type ResourceType,
+  useDesktopStore,
+  type WindowType,
+} from "@/store/desktop";
 
 export type DesktopSearchParams = {
   windowId?: string;
   spawn?: WindowType;
   resourceType?: ResourceType;
   resourceId?: string;
+  ragDoc?: string;
 };
 
 const VALID_WINDOW_TYPES: WindowType[] = [
@@ -117,7 +122,9 @@ export function useDesktopDeeplinks(params: DesktopSearchParams) {
   }, [paramsKey, windows, focusWindow, spawnWindow, params]);
 }
 
-function resourceTypeToWindowType(resourceType: ResourceType): WindowType | null {
+function resourceTypeToWindowType(
+  resourceType: ResourceType
+): WindowType | null {
   const mapping: Partial<Record<ResourceType, WindowType>> = {
     note: "note",
     reminder: "reminder",
@@ -144,7 +151,7 @@ export function createDesktopDeeplink(
   }
 ): string {
   const url = new URL(base);
-  
+
   if (options.windowId) {
     url.searchParams.set("windowId", options.windowId);
   }
@@ -157,6 +164,6 @@ export function createDesktopDeeplink(
   if (options.resourceId) {
     url.searchParams.set("resourceId", options.resourceId);
   }
-  
+
   return url.toString();
 }

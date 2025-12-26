@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { openai } from "@ai-sdk/openai";
-import type { workflowInput } from "@alfred/agent/workflow/schema";
+import type { WorkflowInputPayload } from "@alfred/agent/workflow/schema";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { logger } from "@alfred/logger";
 import type { Obligation, WorkflowEvent } from "@alfred/type";
@@ -8,44 +8,47 @@ import type { RuntimeContext } from "@alfred/type/runtime-context";
 import type { UIMessage } from "@alfred/type/stream";
 import { TRPCError } from "@trpc/server";
 import type { LanguageModel } from "ai";
-import type { z } from "zod";
 import { createRuntime } from "../core";
+import type { RuntimeInput } from "../types";
 
 export function createWorkflowExecutor(
-  input: z.infer<typeof workflowInput>,
+  inputParam: WorkflowInputPayload,
   abortController: AbortController,
   history?: WorkflowEvent[],
   runtimeContext?: RuntimeContext<Record<string, unknown>>
 ) {
-  // Cast model type to resolve version mismatch between @ai-sdk/openai (v2.0.0 provider)
-  // and ai package (v3.0.0-beta.24 provider). Runtime behavior is compatible.
+  // Cast model type to resolve version mismatch between @ai-sdk/openai and ai package
+  // that can occur due to multiple versions of @ai-sdk/provider in the tree.
   const model = openai(
     process.env.OPENAI_MODEL_PLAN ?? "gpt-4o"
   ) as unknown as LanguageModel;
 
+  const runtimeInput: RuntimeInput = {
+    requirement: inputParam.requirement,
+    auto: inputParam.auto,
+    workspace: inputParam.workspace,
+    repoBase: inputParam.repoBase,
+    mode: inputParam.mode,
+    interactive: inputParam.interactive,
+    context: inputParam.context,
+    planId: inputParam.planId,
+    linear:
+      inputParam.linear?.sessionId && inputParam.authzLinear
+        ? {
+            sessionId: inputParam.linear.sessionId,
+            space: inputParam.linear.space,
+            authz: inputParam.authzLinear,
+            issueId: inputParam.linear.issueId,
+          }
+        : undefined,
+  };
   return createRuntime({
-    input: {
-      requirement: input.requirement,
-      auto: input.auto,
-      workspace: input.workspace,
-      repoBase: input.repoBase,
-      mode: input.mode,
-      interactive: input.interactive,
-      context: input.context,
-      linear:
-        input.linear?.sessionId && input.authzLinear
-          ? {
-              sessionId: input.linear.sessionId,
-              space: input.linear.space,
-              authz: input.authzLinear,
-            }
-          : undefined,
-    },
+    input: runtimeInput,
     model,
     signal: abortController.signal,
     stepTimeoutMs: 5 * 60 * 1000,
     workflowTimeoutMs: 30 * 60 * 1000,
-    runId: input.runId,
+    runId: inputParam.runId,
     history,
     runtimeContext,
   });
@@ -58,14 +61,16 @@ export function coerceRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value);
-      return typeof parsed === "object" && parsed !== null
+      return typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
         ? (parsed as Record<string, unknown>)
         : {};
     } catch {
       return {};
     }
   }
-  if (typeof value === "object") {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
   return {};
@@ -75,12 +80,13 @@ function requiresBiometric(obligations: Obligation[] | undefined): boolean {
   if (!obligations || obligations.length === 0) {
     return false;
   }
-  return obligations.some(
-    (obligation) =>
-      obligation.type === "biometric" ||
-      (typeof obligation.metadata?.code === "string" &&
-        obligation.metadata.code === "requireBio")
-  );
+  return obligations.some((obligation) => {
+    if (obligation.type === "biometric") {
+      return true;
+    }
+    const metadata = obligation.metadata as Record<string, unknown> | null;
+    return metadata?.code === "requireBio";
+  });
 }
 
 export function ensureObligations(ctx: {
@@ -129,7 +135,7 @@ export function ensureUuid(value: string | undefined, seed: string): string {
 }
 
 export function createRequirementMessage(
-  input: z.infer<typeof workflowInput>,
+  input: WorkflowInputPayload,
   runId: string
 ): UIMessage {
   const workflowMessageKey = `${runId}:requirement`;
@@ -179,6 +185,17 @@ export async function ensureWorkflowConversation(options: {
   }
 }
 
+type WorkflowMetadata = {
+  workflowMessageKey?: string;
+  auto?: string;
+  workspace?: string | null;
+  repoBase?: string | null;
+  createdAt?: string;
+  workflowEventType?: string;
+  workflowEventId?: string;
+  [key: string]: unknown;
+};
+
 export async function persistWorkflowMessages(options: {
   userId: string;
   conversationId: string;
@@ -205,15 +222,13 @@ export async function persistWorkflowMessages(options: {
     if (!original) {
       continue;
     }
-    const metadataObject = (original.metadata ?? {}) as {
-      workflowMessageKey?: unknown;
-      [key: string]: unknown;
-    };
+
+    const metadata = (original.metadata ?? {}) as WorkflowMetadata;
 
     const metadataKey =
-      typeof metadataObject.workflowMessageKey === "string" &&
-      metadataObject.workflowMessageKey.length > 0
-        ? metadataObject.workflowMessageKey
+      typeof metadata.workflowMessageKey === "string" &&
+      metadata.workflowMessageKey.length > 0
+        ? metadata.workflowMessageKey
         : null;
 
     const dedupeKey = baseId
@@ -238,7 +253,7 @@ export async function persistWorkflowMessages(options: {
       id: messageId,
       parts: Array.isArray(original.parts) ? original.parts : [],
       metadata: {
-        ...metadataObject,
+        ...metadata,
         workflowMessageKey: metadataKey ?? dedupeKey,
         ...(eventType ? { workflowEventType: eventType } : {}),
         ...(eventId ? { workflowEventId: eventId } : {}),

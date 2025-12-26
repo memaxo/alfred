@@ -23,12 +23,12 @@ export function getOpenAI() {
     } as unknown as ReturnType<typeof createGatewayProvider>;
   }
 
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is required");
+  }
   cachedGateway = createGatewayProvider({
-    providers: {
-      openai: {
-        apiKey: process.env.OPENAI_API_KEY,
-      },
-    },
+    apiKey,
   });
 
   return cachedGateway;

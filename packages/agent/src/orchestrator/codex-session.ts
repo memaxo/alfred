@@ -243,7 +243,7 @@ export class CodexSessionManager {
 
 export const sessionManager = new CodexSessionManager();
 
-let cleanupHandle: NodeJS.Timeout | null = null;
+let cleanupHandle: ReturnType<typeof setInterval> | null = null;
 
 export function startCodexSessionCleanupWorker(
   config: { intervalMs?: number } = {}

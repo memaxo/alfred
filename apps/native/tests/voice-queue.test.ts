@@ -165,7 +165,7 @@ describe("native voice queue + playback", () => {
 
     await ageQueue(2000);
 
-    await queueModule.drain((item) => {
+    await queueModule.drain(async (item) => {
       order.push(item.kind);
     });
 
@@ -209,7 +209,10 @@ describe("native voice queue + playback", () => {
     }
     const snapshot = await snapshotQueue();
     expect(snapshot).toHaveLength(50);
-    expect(snapshot[0]?.payload.audioBase64).toBe("chunk-5");
+    const firstItem = snapshot[0];
+    if (firstItem && "audioBase64" in firstItem.payload) {
+      expect(firstItem.payload.audioBase64).toBe("chunk-5");
+    }
   });
 
   it("serializes playback using expo-av mocks", async () => {

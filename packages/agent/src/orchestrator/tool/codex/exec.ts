@@ -14,16 +14,18 @@ import {
   clearTimeout as clearNodeTimeout,
   setTimeout as setNodeTimeout,
 } from "node:timers";
-import { logger } from "@alfred/logger";
 import { runStreamed } from "@alfred/codex";
-import {
-  persistCodexExecution,
-} from "../../../../assistant/src/graphstore.js";
+import { logger } from "@alfred/logger";
+import { persistCodexExecution } from "../../../../assistant/src/graphstore.js";
 import {
   recordCodexWriterError,
   startCodexSessionValidationTimer,
 } from "../../../metrics.js";
 import type { CodexSessionState } from "../../codex-session.js";
+import {
+  assessSessionResumeEligibility,
+  sessionManager,
+} from "../../codex-session.js";
 import {
   appendOutput,
   appendReasoningTrace,
@@ -37,10 +39,6 @@ import {
   type ToolWriter,
 } from "../shared/index.js";
 import {
-  assessSessionResumeEligibility,
-  sessionManager,
-} from "../../codex-session.js";
-import {
   type AlfredCodexEvent,
   type CodexArtifactSummary,
   type CodexExecuteArgs,
@@ -48,20 +46,20 @@ import {
   DEFAULT_TIMEOUT_SEC,
   validateOutputSchema,
 } from "./definition.js";
-import { CodexRunRecorder } from "./record.js";
+import { CodexError } from "./error.js";
+import {
+  type EventProcessorContext,
+  formatArtifactReasoning,
+  processThreadEvent,
+} from "./event-processor.js";
 import {
   assertAllowedDirectory,
   mapAutoToCodex,
   pickEnvCodex,
   resolveExecutable,
 } from "./policy.js";
-import { CodexError } from "./error.js";
+import { CodexRunRecorder } from "./record.js";
 import { createCodexSpawn } from "./spawn-process.js";
-import {
-  formatArtifactReasoning,
-  processThreadEvent,
-  type EventProcessorContext,
-} from "./event-processor.js";
 
 type WriterPayload = { [key: string]: unknown };
 type SafeWriter = (payload: WriterPayload, context: string) => Promise<void>;
@@ -244,7 +242,14 @@ function resolveCodexBin(): string {
 
   const candidates = [
     path.resolve(process.cwd(), ".cache", "codex", "bin", "codex"),
-    path.resolve(process.cwd(), "vendor", "codex", "target", "release", "codex"),
+    path.resolve(
+      process.cwd(),
+      "vendor",
+      "codex",
+      "target",
+      "release",
+      "codex"
+    ),
     path.resolve(process.cwd(), "vendor", "codex", "target", "debug", "codex"),
     "codex",
   ];
@@ -416,11 +421,13 @@ async function runCodexWithCodex({
   const artifacts: CodexArtifactSummary[] = [];
 
   let turnStartTime: number | undefined;
-  let tokenUsage: {
-    inputTokens: number;
-    outputTokens: number;
-    cachedInputTokens?: number;
-  } | undefined;
+  let tokenUsage:
+    | {
+        inputTokens: number;
+        outputTokens: number;
+        cachedInputTokens?: number;
+      }
+    | undefined;
 
   const codexBin = resolveCodexBin();
   const threadValidator = resolveThreadValidator();
@@ -446,7 +453,7 @@ async function runCodexWithCodex({
     validateThread: threadValidator,
   });
 
-  let timeoutHandle: NodeJS.Timeout | null = null;
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<{
     canResume: false;
     reason: "timeout";
@@ -777,9 +784,7 @@ async function runCodexWithCodex({
     structuredOutputStatus: "skipped",
   });
 
-  const turnDurationMs = turnStartTime
-    ? Date.now() - turnStartTime
-    : undefined;
+  const turnDurationMs = turnStartTime ? Date.now() - turnStartTime : undefined;
 
   const metadata = {
     agentName: "codex" as const,
@@ -799,7 +804,7 @@ async function runCodexWithCodex({
         threadId: threadId ?? "",
         canResume: Boolean(threadId),
         isResumed: Boolean(resumeThreadId),
-        resumeReason: !threadId ? "no_thread_id" : undefined,
+        resumeReason: threadId ? undefined : "no_thread_id",
       }
     : undefined;
 

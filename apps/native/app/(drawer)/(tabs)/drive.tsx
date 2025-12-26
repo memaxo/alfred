@@ -119,9 +119,9 @@ export default function DriveScreen() {
   }, [voice]);
 
   const processPendingItem = useCallback(
-    async (item: PendingItem) => {
+    async (item: PendingItem): Promise<void> => {
       try {
-        return await processQueueItem(item, voice);
+        await processQueueItem(item, voice);
       } catch (error) {
         logError("voice QueueDrain process", error);
         throw error;

@@ -1,43 +1,42 @@
 import { useChat } from "@ai-sdk/react";
-import { useCallback, useState, useMemo, useEffect } from "react";
+import { logger } from "@alfred/logger";
+import { DefaultChatTransport } from "ai";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { authClient } from "@/lib/auth-client";
 import { useVoiceSessionNative } from "@/lib/voice/session";
 import { trpcClient } from "@/utils/trpc";
-import { authClient } from "@/lib/auth-client";
-import { logger } from "@alfred/logger";
 
 export type AgentType = "assistant" | "orchestrator";
 
 export function useChatLogic() {
   const [currentAgent, setCurrentAgent] = useState<AgentType>("assistant");
   const { data: session } = authClient.useSession();
-  
-  const apiEndpoint = useMemo(() => {
-    return `${process.env.EXPO_PUBLIC_SERVER_URL}/api/${currentAgent}`;
-  }, [currentAgent]);
+
+  const apiEndpoint = useMemo(
+    () => `${process.env.EXPO_PUBLIC_SERVER_URL}/api/${currentAgent}`,
+    [currentAgent]
+  );
 
   const headers = useMemo(() => {
     const h: Record<string, string> = {};
     const cookies = authClient.getCookie();
     if (cookies) {
-      h["Cookie"] = cookies;
+      h.Cookie = cookies;
     }
     return h;
   }, [session]);
 
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    setMessages,
-    append,
-    reload,
-    stop,
-  } = useChat({
-    api: apiEndpoint,
-    headers,
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: apiEndpoint,
+        headers,
+      }),
+    [apiEndpoint, headers]
+  );
+
+  const chat = useChat({
+    transport,
     onError: (err) => {
       logger.error("chat_error", { error: err });
     },
@@ -50,13 +49,10 @@ export function useChatLogic() {
     if (voice.stream?.status === "idle" && voice.stream.transcript) {
       const text = voice.stream.transcript.trim();
       if (text.length > 0) {
-        append({
-          role: "user",
-          content: text,
-        });
+        chat.sendMessage({ text });
       }
     }
-  }, [voice.stream?.status, voice.stream?.transcript, append]);
+  }, [voice.stream?.status, voice.stream?.transcript, chat]);
 
   const toggleVoice = useCallback(async () => {
     if (voice.stream?.isActive) {
@@ -67,28 +63,27 @@ export function useChatLogic() {
   }, [voice]);
 
   const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, [setMessages]);
+    chat.setMessages([]);
+  }, [chat]);
 
-  const handleSend = useCallback((text: string) => {
-    append({
-      role: "user",
-      content: text,
-    });
-  }, [append]);
+  const handleSend = useCallback(
+    (text: string) => {
+      chat.sendMessage({ text });
+    },
+    [chat]
+  );
 
   return {
-    messages,
-    input,
-    isLoading,
-    error,
+    messages: chat.messages,
+    isLoading: chat.status === "streaming" || chat.status === "submitted",
+    error: chat.error,
     currentAgent,
     setAgent: setCurrentAgent,
     handleSend,
     toggleVoice,
     isRecording: voice.stream?.isActive,
     clearMessages,
-    stop,
-    reload,
+    stop: chat.stop,
+    reload: chat.regenerate,
   };
 }

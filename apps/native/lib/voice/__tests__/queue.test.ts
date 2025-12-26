@@ -58,7 +58,7 @@ describe("voice queue", () => {
     });
 
     await ageQueue(2000);
-    const processor = vi.fn(async () => {});
+    const processor = vi.fn(async (_item: PendingItem) => {});
     await drain(async (item) => {
       await processor(item);
     });

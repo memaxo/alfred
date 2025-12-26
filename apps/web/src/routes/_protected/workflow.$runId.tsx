@@ -84,9 +84,10 @@ function WorkflowRunRoute() {
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
       to: "/",
-      search: (prev: Record<string, unknown>) => ({
+      search: (prev: any) => ({
         ...prev,
-        ragDoc: documentId,
+        resourceType: "knowledge",
+        resourceId: documentId,
       }),
     });
   };
@@ -154,9 +155,10 @@ function WorkflowRunRoute() {
         onNavigateToMindscape={(documentId) =>
           navigate({
             to: "/",
-            search: (prev: Record<string, unknown>) => ({
+            search: (prev: any) => ({
               ...prev,
-              ragDoc: documentId,
+              resourceType: "knowledge",
+              resourceId: documentId,
             }),
           })
         }

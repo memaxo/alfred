@@ -275,8 +275,8 @@ export const toolOutputSchema = z.object({
       })
     )
     .optional(),
-  metadata: agentMetadataSchema.optional(),
-  sessionState: responseSessionStateSchema.optional(),
+  metadata: (agentMetadataSchema as any).optional(),
+  sessionState: (responseSessionStateSchema as any).optional(),
 });
 
 export type { AgentMetadata, ResponseSessionState };
@@ -353,11 +353,12 @@ const normalizeAggregatedOutput = (
   return typeof value === "string" ? value : "";
 };
 
-const commandExecutionItemSchema: z.ZodType<CommandExecutionItem> =
-  commandExecutionItemSchemaBase.transform((item) => ({
+const commandExecutionItemSchema = commandExecutionItemSchemaBase.transform(
+  (item): CommandExecutionItem => ({
     ...item,
     aggregated_output: normalizeAggregatedOutput(item.aggregated_output),
-  }));
+  })
+);
 
 const fileChangeItemSchema: z.ZodType<FileChangeItem> = z
   .object({
@@ -377,7 +378,7 @@ const fileChangeItemSchema: z.ZodType<FileChangeItem> = z
   })
   .passthrough();
 
-const mcpToolCallItemSchema: z.ZodType<McpToolCallItem> = z
+const mcpToolCallItemSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("mcp_tool_call"),
@@ -393,7 +394,7 @@ const mcpToolCallItemSchema: z.ZodType<McpToolCallItem> = z
     error: z.object({ message: z.string() }).optional(),
     status: z.enum(["in_progress", "completed", "failed"]),
   })
-  .passthrough();
+  .passthrough() as z.ZodType<McpToolCallItem>;
 
 const webSearchItemSchema: z.ZodType<WebSearchItem> = z
   .object({

@@ -52,9 +52,10 @@ export function WorkflowDetailModal({
   const handleNavigateToMindscape = (documentId: string) => {
     navigate({
       to: "/",
-      search: (prev: Record<string, unknown>) => ({
+      search: (prev: any) => ({
         ...prev,
-        ragDoc: documentId,
+        resourceType: "knowledge",
+        resourceId: documentId,
       }),
     });
     onClose();

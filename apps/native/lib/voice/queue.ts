@@ -43,11 +43,11 @@ export async function enqueue(
   item: Omit<PendingItem, "ts" | "retryCount">
 ): Promise<void> {
   const items = await readQueue();
-  const newItem: PendingItem = {
+  const newItem = {
     ...item,
     ts: Date.now(),
     retryCount: 0,
-  };
+  } as PendingItem;
   items.push(newItem);
   while (items.length > LIMIT) {
     items.shift();

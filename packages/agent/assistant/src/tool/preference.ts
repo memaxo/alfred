@@ -11,7 +11,7 @@ import { invalidatePreferenceCache } from "../../../src/preference/loader";
 
 const preferenceGetInputSchema = z.object({
   userId: z.string().min(1),
-  key: preferenceKeySchema.optional(),
+  key: (preferenceKeySchema as any).optional(),
   domain: z.string().min(1).optional(),
   authz: z.string().optional(),
 });
@@ -95,8 +95,8 @@ export const toolPreferenceGet = {
 
 const preferenceSetInputSchema = z.object({
   userId: z.string().min(1),
-  key: preferenceKeySchema,
-  value: preferenceValueSchema,
+  key: preferenceKeySchema as any,
+  value: preferenceValueSchema as any,
   confidence: z.number().min(0).max(1).optional(),
   source: z.enum(["explicit", "inferred"]).optional(),
   authz: z.string().optional(),

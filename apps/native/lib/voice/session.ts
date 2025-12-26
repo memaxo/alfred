@@ -1,13 +1,14 @@
 import { markVoice } from "@alfred/metrics/performance";
 import type { VoiceStreamCodec } from "@alfred/type/voice";
+import type { PlatformAdapter } from "@alfred/voice";
 import { wrapPCM16AsWavBase64 } from "@alfred/voice/audio";
-import type { PlatformAdapter, VoiceSession } from "@alfred/voice/session";
 import { createVoiceSession, VoiceSessionError } from "@alfred/voice/session";
 import { VoiceStreamClient } from "@alfred/voice/stream";
 import { createVoiceClient } from "@alfred/voice/transport";
 import type {
   SpeechToSpeechRequest,
   SttRequest,
+  TtsRequest,
   VoiceSessionDescriptor,
   VoiceSessionSurface,
 } from "@alfred/voice/types";
@@ -196,11 +197,11 @@ export function useVoiceSessionNative(
 
   const adapter: PlatformAdapter = useMemo(
     () => ({
-      configureSession: ({ background }) =>
-        configureAudioSession(Audio, { background }),
+      configureSession: (options?: { background?: boolean }) =>
+        configureAudioSession(Audio, { background: options?.background }),
       startCapture: () => captureRef.current.start(),
       stopCapture: () => captureRef.current.stop(),
-      play: (base64, mimeType) => playBase64(base64, mimeType),
+      play: (base64: string, mimeType: string) => playBase64(base64, mimeType),
     }),
     [captureRef]
   );
@@ -290,7 +291,7 @@ export function useVoiceSessionNative(
   );
 
   const speak = useCallback(
-    async (opts: Parameters<VoiceSession["speak"]>[0]) => {
+    async (opts: TtsRequest) => {
       try {
         await session.speak(opts);
       } catch (error) {
@@ -660,7 +661,7 @@ export function useVoiceSessionNative(
     throw new Error("voice_streaming_unavailable");
   };
 
-  const stopFallback = () => {
+  const stopFallback = async () => {
     // ignore
   };
 
