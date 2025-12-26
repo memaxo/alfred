@@ -7,7 +7,7 @@ import type { AgentId, WaveId } from "./spawn";
  * All thresholds can be tuned per-workflow or via environment variables.
  */
 export type StuckDetectionOptions = {
-  /** Time in milliseconds without events before agent is considered stuck (default: 120000) */
+  /** Time in milliseconds without events before agent is considered stuck (default: 60000) */
   noProgressMs?: number;
   /** Maximum transitions before agent is considered stuck (default: 200) */
   maxTransitions?: number;
@@ -22,7 +22,7 @@ export type StuckDetectionOptions = {
 export function getStuckDetectionDefaults(): Required<StuckDetectionOptions> {
   return {
     noProgressMs: Number.parseInt(
-      process.env.STUCK_NO_PROGRESS_MS ?? "120000",
+      process.env.STUCK_NO_PROGRESS_MS ?? "60000",
       10
     ),
     maxTransitions: Number.parseInt(

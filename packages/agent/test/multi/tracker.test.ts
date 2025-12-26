@@ -224,7 +224,7 @@ describe("getStuckDetectionDefaults", () => {
 
   it("returns hardcoded defaults when env vars not set", () => {
     const defaults = getStuckDetectionDefaults();
-    expect(defaults.noProgressMs).toBe(120_000);
+    expect(defaults.noProgressMs).toBe(60_000);
     expect(defaults.maxTransitions).toBe(200);
     expect(defaults.similarityThreshold).toBe(0.92);
   });
