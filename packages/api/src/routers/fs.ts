@@ -15,6 +15,14 @@ import { authedProcedure, router } from "../trpc";
 // Security: Only allow access within the project root
 const PROJECT_ROOT = realpathSync.native(process.cwd());
 
+function getPolicyPath(raw: unknown): string {
+  if (!raw || typeof raw !== "object") {
+    return "unknown";
+  }
+  const maybePath = (raw as Record<string, unknown>).path;
+  return typeof maybePath === "string" ? maybePath : "unknown";
+}
+
 function isWithinRoot(root: string, candidate: string): boolean {
   const rel = path.relative(root, candidate);
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
@@ -84,10 +92,9 @@ export const fsRouter = router({
   read: authedProcedure
     .use(
       requirePolicy("fs.read", (raw) => {
-        const input = raw as { path?: unknown };
         return {
           kind: "file",
-          id: typeof input.path === "string" ? input.path : "unknown",
+          id: getPolicyPath(raw),
         };
       })
     )
@@ -128,10 +135,9 @@ export const fsRouter = router({
   write: authedProcedure
     .use(
       requirePolicy("fs.write", (raw) => {
-        const input = raw as { path?: unknown };
         return {
           kind: "file",
-          id: typeof input.path === "string" ? input.path : "unknown",
+          id: getPolicyPath(raw),
         };
       })
     )
