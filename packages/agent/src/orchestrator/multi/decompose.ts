@@ -1,6 +1,9 @@
 import { logger } from "@alfred/logger";
-import type { ContextBundle, SubTask, SubTaskId, DecomposeContext } from "@alfred/type/plan";
+import type { DecomposeContext, SubTask, SubTaskId } from "@alfred/type/plan";
 import { decomposeSemantically } from "../reasoning/decompose-semantic";
+
+// Re-export types for backward compatibility with existing imports from ./decompose
+export type { SubTask, SubTaskId, DecomposeContext };
 
 const MAX_SUBTASKS =
   Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;
