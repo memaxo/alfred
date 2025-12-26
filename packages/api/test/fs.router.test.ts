@@ -83,6 +83,23 @@ describe("fs router (security boundaries)", () => {
     });
   });
 
+  it("rejects writes through broken symlinks pointing outside project root", async () => {
+    const caller = await createTestCaller();
+    const brokenLinkPath = path.join(tmpRoot, "broken-link");
+    // Create a broken symlink pointing to a non-existent path outside project root
+    symlinkSync("/nonexistent/outside/path", brokenLinkPath);
+
+    await expect(
+      caller.fs.write({
+        path: relFromRoot(brokenLinkPath),
+        content: "should be rejected",
+      })
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: expect.stringContaining("symlink"),
+    });
+  });
+
   it("still allows regular (non-symlink) files inside root", async () => {
     const caller = await createTestCaller();
     const filePath = path.join(tmpRoot, "plain.txt");

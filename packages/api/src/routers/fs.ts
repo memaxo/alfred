@@ -30,18 +30,23 @@ export const fsRouter = router({
     .input(z.object({ path: z.string() }))
     .query(async ({ input }) => {
       try {
-        const resolvedPath = resolveWithinProjectRoot(input.path);
-        const file = Bun.file(resolvedPath);
+        const filePath = validateExistingFilePath(input.path);
 
-        if (!(await file.exists())) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "File not found",
-          });
+        // Check file type first (statSync works on directories too)
+        let stats;
+        try {
+          stats = statSync(filePath);
+        } catch (error) {
+          const err = error as NodeJS.ErrnoException;
+          if (err.code === "ENOENT") {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "File not found",
+            });
+          }
+          throw error;
         }
 
-        const filePath = validateExistingFilePath(input.path);
-        const stats = statSync(filePath);
         if (!stats.isFile()) {
           throw new TRPCError({
             code: "BAD_REQUEST",

@@ -60,11 +60,26 @@ export function validateWriteFilePath(requestedPath: string): string {
     });
   }
 
-  if (existsSync(resolvedPath) && lstatSync(resolvedPath).isSymbolicLink()) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Access denied: Refusing to write through a symlink.",
-    });
+  // Check for symlinks regardless of target existence (catches broken symlinks)
+  // lstatSync() works on symlinks even if the target doesn't exist
+  try {
+    if (lstatSync(resolvedPath).isSymbolicLink()) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Access denied: Refusing to write through a symlink.",
+      });
+    }
+  } catch (error) {
+    // If lstatSync throws and it's not a TRPCError we just threw, re-throw
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+    // If path doesn't exist at all (ENOENT), that's fine - we can create a new file
+    // Other errors (permission denied, etc.) should propagate
+    const err = error as NodeJS.ErrnoException;
+    if (err.code !== "ENOENT") {
+      throw error;
+    }
   }
 
   return resolvedPath;

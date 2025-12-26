@@ -391,22 +391,21 @@ export async function runAgent({
           agentId: spec.agentId,
           reason: escalationReason,
         });
-      }
-    }
 
-      if (execPlanAbsolutePath) {
+        if (execPlanAbsolutePath) {
+          await appendDecisionEntry(
+            execPlanAbsolutePath,
+            "Escalated",
+            escalationReason
+          );
+        }
         await appendDecisionEntry(
-          execPlanAbsolutePath,
-          "Escalated",
-          escalationReason
+          rootExecPlanPath,
+          `Subtask ${spec.subTaskId} escalated`,
+          escalationReason,
+          `Agent ${spec.agentId}`
         );
       }
-      await appendDecisionEntry(
-        rootExecPlanPath,
-        `Subtask ${spec.subTaskId} escalated`,
-        escalationReason,
-        `Agent ${spec.agentId}`
-      );
     }
   } catch {
     // No escalation file found
