@@ -84,8 +84,8 @@ export const terminalRouter = router({
                     }
                   }
                 },
-              },
-            } as any);
+              } satisfies Bun.Spawn.SpawnOptions["terminal"],
+            });
 
             const procWithTerminal = proc as Bun.Subprocess & {
               terminal: Bun.Terminal;
