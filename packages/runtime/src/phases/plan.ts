@@ -21,7 +21,7 @@ async function ensureExecPlanFile(filePath: string, content: string) {
       throw error;
     }
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, content, "utf8");
+    await Bun.write(filePath, content);
   }
 }
 

@@ -170,8 +170,6 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 6. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
 
-7. **Test Infrastructure Helpers.** Use `@alfred/test-kit/router`, `@alfred/test-kit/repo`, and `@alfred/test-kit/scheduler` for consistent test patterns. See `docs/testing/patterns.md` for examples. These helpers reduce boilerplate by 70% and enforce security/performance standards.
-
 7. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
 8. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
@@ -422,6 +420,11 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 5. **Bun.serve for HTTP servers.** Use `Bun.serve` for all HTTP server implementations instead of Node.js `http` or `express`; leverage its native performance, Web-standard APIs, and built-in WebSocket support.
 
 6. **Bun.file for file operations.** Always use `Bun.file` and `Bun.write` for file I/O instead of Node.js `fs`; they provide better performance and `Blob`-compatible interfaces.
+   - Reading: `await Bun.file(path).text()` replaces `readFileSync(path, "utf-8")` or `await readFile(path, "utf8")`
+   - Writing: `await Bun.write(path, content)` replaces `writeFileSync(path, content, "utf-8")` or `await writeFile(path, content, "utf8")`
+   - Existence: `await Bun.file(path).exists()` replaces `existsSync(path)`
+   - JSON: `await Bun.file(path).json()` replaces `JSON.parse(await readFile(path, "utf-8"))`
+   - Use Node.js `fs` only for directory operations (`mkdir`, `readdir`) and metadata (`statSync`, `lstatSync`, `realpathSync`) as Bun doesn't provide native APIs for these yet.
 
 7. **TypeScript configuration.** Configure `tsconfig.json` with `module: "Preserve"`, `allowImportingTsExtensions: true`, and `verbatimModuleSyntax: true` for Bun projects; these settings enable native TypeScript execution and extensioned imports.
 

@@ -226,8 +226,11 @@ export async function* runMergePhase(
     for (const rel of expectedFiles) {
       const abs = path.resolve(workspace, rel);
       try {
-        const content = await fs.readFile(abs, "utf8");
-        counts[rel] = countConflictMarkers(content);
+        const file = Bun.file(abs);
+        if (await file.exists()) {
+          const content = await file.text();
+          counts[rel] = countConflictMarkers(content);
+        }
       } catch {
         // Ignore unreadable or missing files
       }
@@ -276,7 +279,7 @@ export async function* runMergeAnalysis(
       await fs.access(mergeExecPlanPath);
     } catch {
       const skeleton = generateMergeExecPlanSkeleton(runId, mergePlan);
-      await fs.writeFile(mergeExecPlanPath, skeleton, "utf8");
+      await Bun.write(mergeExecPlanPath, skeleton);
     }
 
     const promptLines = [

@@ -23,6 +23,11 @@ Bun provides native, high-performance APIs that outperform Node.js compatibility
 5. **Bun.serve for HTTP servers.** Use `Bun.serve` for all HTTP server implementations instead of Node.js `http` or `express`; leverage its native performance, Web-standard APIs, and built-in WebSocket support.
 
 6. **Bun.file for file operations.** Always use `Bun.file` and `Bun.write` for file I/O instead of Node.js `fs`; they provide better performance and `Blob`-compatible interfaces.
+   - Reading: `await Bun.file(path).text()` replaces `readFileSync(path, "utf-8")` or `await readFile(path, "utf8")`
+   - Writing: `await Bun.write(path, content)` replaces `writeFileSync(path, content, "utf-8")` or `await writeFile(path, content, "utf8")`
+   - Existence: `await Bun.file(path).exists()` replaces `existsSync(path)`
+   - JSON: `await Bun.file(path).json()` replaces `JSON.parse(await readFile(path, "utf-8"))`
+   - Use Node.js `fs` only for directory operations (`mkdir`, `readdir`) and metadata (`statSync`, `lstatSync`, `realpathSync`) as Bun doesn't provide native APIs for these yet.
 
 7. **TypeScript configuration.** Configure `tsconfig.json` with `module: "Preserve"`, `allowImportingTsExtensions: true`, and `verbatimModuleSyntax: true` for Bun projects; these settings enable native TypeScript execution and extensioned imports.
 

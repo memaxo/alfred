@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
 import { z } from "zod";
@@ -60,7 +59,12 @@ function getTargetFile(domain?: string): string {
 async function appendRule(filePath: string, rules: string[]) {
   let content = "";
   try {
-    content = await readFile(filePath, "utf-8");
+    const file = Bun.file(filePath);
+    if (await file.exists()) {
+      content = await file.text();
+    } else {
+      content = "# Learned Rules\n\n";
+    }
   } catch {
     content = "# Learned Rules\n\n";
   }
@@ -77,7 +81,7 @@ async function appendRule(filePath: string, rules: string[]) {
       content += "\n\n## Learned Rules\n";
     }
     content += `\n${newContent}`;
-    await writeFile(filePath, content, "utf-8");
+    await Bun.write(filePath, content);
     return true;
   }
 

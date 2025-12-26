@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as ort from "onnxruntime-node";
 
@@ -487,10 +486,8 @@ export class SupertonicTTS {
 
     try {
       // Load configuration
-      const cfgsData = await readFile(
-        join(this.config.modelPath, "tts.json"),
-        "utf-8"
-      );
+      const cfgsFile = Bun.file(join(this.config.modelPath, "tts.json"));
+      const cfgsData = await cfgsFile.text();
       const cfgs = JSON.parse(cfgsData) as TTSConfig;
 
       // Load models
@@ -516,10 +513,10 @@ export class SupertonicTTS {
       ]);
 
       // Load text processor
-      const indexerData = await readFile(
-        join(this.config.modelPath, "unicode_indexer.json"),
-        "utf-8"
+      const indexerFile = Bun.file(
+        join(this.config.modelPath, "unicode_indexer.json")
       );
+      const indexerData = await indexerFile.text();
       const indexer = JSON.parse(indexerData) as UnicodeIndexer;
       const textProcessor = new UnicodeProcessor(indexer);
 
@@ -570,7 +567,8 @@ export class SupertonicTTS {
     }
 
     try {
-      const voiceData = await readFile(fullPath, "utf-8");
+      const voiceFile = Bun.file(fullPath);
+      const voiceData = await voiceFile.text();
       const voiceStyle = JSON.parse(voiceData);
 
       const bsz = 1;

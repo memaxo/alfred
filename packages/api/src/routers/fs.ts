@@ -1,9 +1,4 @@
-import {
-  existsSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { statSync } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -33,11 +28,12 @@ export const fsRouter = router({
       })
     )
     .input(z.object({ path: z.string() }))
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       try {
         const resolvedPath = resolveWithinProjectRoot(input.path);
+        const file = Bun.file(resolvedPath);
 
-        if (!existsSync(resolvedPath)) {
+        if (!(await file.exists())) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "File not found",
@@ -53,7 +49,7 @@ export const fsRouter = router({
           });
         }
 
-        const content = readFileSync(filePath, "utf-8");
+        const content = await Bun.file(filePath).text();
         return { content };
       } catch (error) {
         if (error instanceof TRPCError) {
@@ -76,10 +72,10 @@ export const fsRouter = router({
       })
     )
     .input(z.object({ path: z.string(), content: z.string() }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       try {
         const filePath = validateWriteFilePath(input.path);
-        writeFileSync(filePath, input.content, "utf-8");
+        await Bun.write(filePath, input.content);
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) {

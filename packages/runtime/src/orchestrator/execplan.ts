@@ -1,4 +1,4 @@
-import * as fs from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import * as path from "node:path";
 import {
   appendDecisionLogEntry,
@@ -16,7 +16,10 @@ export async function mutateExecPlanFile(
 ): Promise<void> {
   let current = "";
   try {
-    current = await fs.readFile(filePath, "utf8");
+    const file = Bun.file(filePath);
+    if (await file.exists()) {
+      current = await file.text();
+    }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
       logger.warn("execplan_read_failed", {
@@ -26,7 +29,7 @@ export async function mutateExecPlanFile(
       return;
     }
     try {
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await mkdir(path.dirname(filePath), { recursive: true });
     } catch (mkdirErr) {
       logger.warn("execplan_dir_failed", {
         path: filePath,
@@ -41,7 +44,7 @@ export async function mutateExecPlanFile(
     return;
   }
   try {
-    await fs.writeFile(filePath, updated, "utf8");
+    await Bun.write(filePath, updated);
   } catch (error) {
     logger.warn("execplan_write_failed", {
       path: filePath,

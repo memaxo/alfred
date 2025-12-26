@@ -161,7 +161,8 @@ async function updateReviewProgress(
   status: "running" | "passed" | "failed",
   note: string
 ) {
-  const content = await fs.readFile(filePath, "utf8");
+  const file = Bun.file(filePath);
+  const content = await file.text();
   const pattern = new RegExp(`- \\[[ x]\\] \\[${escapeRegExp(checkId)}\\].*`);
   const stamp = new Date().toISOString();
   const label =
@@ -180,11 +181,12 @@ async function updateReviewProgress(
     );
   }
 
-  await fs.writeFile(filePath, updated, "utf8");
+  await Bun.write(filePath, updated);
 }
 
 async function appendReviewOutcome(filePath: string, message: string) {
-  const content = await fs.readFile(filePath, "utf8");
+  const file = Bun.file(filePath);
+  const content = await file.text();
   const marker = "## Outcomes & Retrospective";
   const idx = content.indexOf(marker);
   if (idx === -1) {
@@ -193,11 +195,12 @@ async function appendReviewOutcome(filePath: string, message: string) {
   const before = content.slice(0, idx + marker.length);
   const after = content.slice(idx + marker.length);
   const entry = `\n\n- ${message}\n`;
-  await fs.writeFile(filePath, before + entry + after, "utf8");
+  await Bun.write(filePath, before + entry + after);
 }
 
 async function appendReviewDecision(filePath: string, entry: string) {
-  const content = await fs.readFile(filePath, "utf8");
+  const file = Bun.file(filePath);
+  const content = await file.text();
   const marker = "## Decision Log";
   const idx = content.indexOf(marker);
   if (idx === -1) {
@@ -206,7 +209,7 @@ async function appendReviewDecision(filePath: string, entry: string) {
   const before = content.slice(0, idx + marker.length);
   const after = content.slice(idx + marker.length);
   const logEntry = `\n\n- ${entry}\n`;
-  await fs.writeFile(filePath, before + logEntry + after, "utf8");
+  await Bun.write(filePath, before + logEntry + after);
 }
 
 async function createDebuggerExecPlan(
@@ -254,7 +257,7 @@ async function createDebuggerExecPlan(
     "- Document findings in this file's Decision Log and update review.md once resolved.",
   ];
 
-  await fs.writeFile(filePath, lines.join("\n"), "utf8");
+  await Bun.write(filePath, lines.join("\n"));
   return filePath;
 }
 
@@ -620,7 +623,7 @@ export async function* runReviewPhase(
               failures: reviewFailures,
               relevantFiles: reviewFocusFiles,
             });
-            await fs.writeFile(fixerExecPlanPath, fixerPlan, "utf8");
+            await Bun.write(fixerExecPlanPath, fixerPlan);
 
             const promptLines = [
               "You are a Self-Correction 'Fixer' Agent.",

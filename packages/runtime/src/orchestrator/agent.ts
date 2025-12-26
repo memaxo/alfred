@@ -165,7 +165,7 @@ export async function runAgent({
   } catch {
     if (task) {
       const skeleton = generateSubtaskExecPlanSkeleton(task, runId);
-      await fs.writeFile(execPlanAbsolutePath, skeleton, "utf8");
+      await Bun.write(execPlanAbsolutePath, skeleton);
     }
   }
 
@@ -382,13 +382,17 @@ export async function runAgent({
   // Check for Escalation
   try {
     const escalationPath = path.join(spec.workingDirectory, escalationFile);
-    const escalationContent = await fs.readFile(escalationPath, "utf8");
-    if (escalationContent.trim().length > 0) {
-      escalationReason = escalationContent;
-      logger.warn("agent_escalated", {
-        agentId: spec.agentId,
-        reason: escalationReason,
-      });
+    const escalationFileObj = Bun.file(escalationPath);
+    if (await escalationFileObj.exists()) {
+      const escalationContent = await escalationFileObj.text();
+      if (escalationContent.trim().length > 0) {
+        escalationReason = escalationContent;
+        logger.warn("agent_escalated", {
+          agentId: spec.agentId,
+          reason: escalationReason,
+        });
+      }
+    }
 
       if (execPlanAbsolutePath) {
         await appendDecisionEntry(

@@ -32,7 +32,7 @@ export async function* runConflictPhase(
           runId,
           conflictScanResult
         );
-        await fs.writeFile(conflictExecPlanPath, skeleton, "utf8");
+        await Bun.write(conflictExecPlanPath, skeleton);
       }
 
       const promptLines = [
@@ -178,7 +178,7 @@ export async function* runConflictPhase(
           "- [ ] (pending) Resolution started.",
         ].join("\n");
 
-        await fs.writeFile(resolutionExecPlanPath, skeleton, "utf8");
+        await Bun.write(resolutionExecPlanPath, skeleton);
       } catch (_e) {
         // Ignore
       }
