@@ -4,16 +4,30 @@ import type { Context } from "./context";
 export const t = initTRPC.context<Context>().create();
 
 // Lazy metrics wiring to keep test environment light and avoid import-time side effects
+type TrpcLabels = {
+  procedure: string;
+  type: string;
+};
+type TrpcErrorLabels = TrpcLabels & { code: string };
+type RateLimitLabels = { procedure: string };
 type Metrics = {
-  trpcRequestDurationSeconds: { startTimer: (labels: any) => () => void };
-  trpcRequestErrorsTotal: { inc: (labels: any) => void };
-  trpcRequestsTotal: { inc: (labels: any) => void };
-  rateLimitHitsTotal: { inc: (labels: any) => void };
+  trpcRequestDurationSeconds: { startTimer: (labels: TrpcLabels) => () => void };
+  trpcRequestErrorsTotal: { inc: (labels: TrpcErrorLabels) => void };
+  trpcRequestsTotal: { inc: (labels: TrpcLabels) => void };
+  rateLimitHitsTotal: { inc: (labels: RateLimitLabels) => void };
 };
 let metricsRef: Metrics | null = null;
-async function getMetrics(): Promise<Metrics | null> {
+
+const noopMetrics: Metrics = {
+  trpcRequestDurationSeconds: { startTimer: () => () => {} },
+  trpcRequestErrorsTotal: { inc: () => {} },
+  trpcRequestsTotal: { inc: () => {} },
+  rateLimitHitsTotal: { inc: () => {} },
+};
+
+async function getMetrics(): Promise<Metrics> {
   if (process.env.DISABLE_TRPC_METRICS === "1") {
-    return null;
+    return noopMetrics;
   }
   if (metricsRef) {
     return metricsRef;
@@ -25,27 +39,26 @@ async function getMetrics(): Promise<Metrics | null> {
       trpcRequestErrorsTotal: m.trpcRequestErrorsTotal,
       trpcRequestsTotal: m.trpcRequestsTotal,
       rateLimitHitsTotal: m.rateLimitHitsTotal,
-    } as Metrics;
+    };
     return metricsRef;
   } catch (_err) {
-    return null;
+    return noopMetrics;
   }
 }
 
 const metricsMiddleware = t.middleware(async ({ path, type, next }) => {
   const labels = { procedure: path ?? "unknown", type };
   const m = await getMetrics();
-  const stopTimer =
-    m?.trpcRequestDurationSeconds.startTimer(labels) ?? (() => {});
+  const stopTimer = m.trpcRequestDurationSeconds.startTimer(labels);
 
   try {
     const result = await next();
-    m?.trpcRequestsTotal.inc(labels);
+    m.trpcRequestsTotal.inc(labels);
     return result;
   } catch (error) {
     const code = error instanceof TRPCError ? error.code : "UNKNOWN";
-    m?.trpcRequestsTotal.inc(labels);
-    m?.trpcRequestErrorsTotal.inc({ ...labels, code });
+    m.trpcRequestsTotal.inc(labels);
+    m.trpcRequestErrorsTotal.inc({ ...labels, code });
     throw error;
   } finally {
     stopTimer();
@@ -110,7 +123,7 @@ export const rateLimit = t.middleware(async ({ path, next }) => {
   // Increment and check limit
   if (++requestCount > getLimitPerMinute()) {
     const m = await getMetrics();
-    m?.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
+    m.rateLimitHitsTotal.inc({ procedure: path ?? "unknown" });
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS" as TRPCError["code"],
       message: "rate_limited",

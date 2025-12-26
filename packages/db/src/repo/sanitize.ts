@@ -1,23 +1,124 @@
+const MAX_INPUT_LENGTH = 20_000;
 const MAX_SANITIZED_LENGTH = 2000;
-const INJECTION_PATTERNS: RegExp[] = [
-  /ignore\s+previous/gi,
-  /ignore\s+all\s+prior/gi,
-  /disregard\s+above/gi,
-  /forget\s+(?:earlier|everything)/gi,
-  /reset\s+the\s+instructions/gi,
-  /override\s+.*instructions/gi,
-  /stop\s+following\s+the\s+instructions/gi,
-  /ignore\s+this\s+conversation/gi,
+
+const INJECTION_PHRASES = [
+  "ignore previous",
+  "ignore all prior",
+  "disregard above",
+  "forget earlier",
+  "forget everything",
+  "reset the instructions",
+  "stop following the instructions",
+  "ignore this conversation",
+  "override instructions",
 ];
-const DELIMITER_PATTERNS: RegExp[] = [
-  /\[End Past Context]/gi,
-  /\[Past Execution Context]/gi,
-  /\[End Context]/gi,
-  /\[End/gi,
-  /\[Start/gi,
-  /CONTEXT_START_[0-9a-f]+/gi,
-  /CONTEXT_END_[0-9a-f]+/gi,
+
+const DELIMITER_TOKENS = [
+  "[End Past Context]",
+  "[Past Execution Context]",
+  "[End Context]",
 ];
+
+function removeAllCaseInsensitive(input: string, needle: string): string {
+  if (!needle) {
+    return input;
+  }
+  const lowerNeedle = needle.toLowerCase();
+  const lower = input.toLowerCase();
+  let i = 0;
+  let last = 0;
+  const out: string[] = [];
+  while (true) {
+    const idx = lower.indexOf(lowerNeedle, i);
+    if (idx === -1) {
+      break;
+    }
+    out.push(input.slice(last, idx));
+    i = idx + needle.length;
+    last = i;
+  }
+  if (out.length === 0) {
+    return input;
+  }
+  out.push(input.slice(last));
+  return out.join("");
+}
+
+function stripHtml(input: string): string {
+  const s = input;
+  const lower = s.toLowerCase();
+  const out: string[] = [];
+
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch !== "<") {
+      out.push(ch);
+      i += 1;
+      continue;
+    }
+
+    // HTML comment: <!-- ... -->
+    if (lower.startsWith("<!--", i)) {
+      const end = lower.indexOf("-->", i + 4);
+      i = end === -1 ? s.length : end + 3;
+      continue;
+    }
+
+    // Parse tag name for block stripping.
+    let j = i + 1;
+    if (j < s.length && (s[j] === "/" || s[j] === "!")) {
+      j += 1;
+    }
+    while (j < s.length) {
+      const c = s[j];
+      if (c === " " || c === "\n" || c === "\t" || c === "\r") {
+        j += 1;
+        continue;
+      }
+      break;
+    }
+    const nameStart = j;
+    while (j < s.length) {
+      const c = lower[j];
+      if (c >= "a" && c <= "z") {
+        j += 1;
+        continue;
+      }
+      break;
+    }
+    const tag = lower.slice(nameStart, j);
+    const isClosing = lower.startsWith("</", i);
+
+    // Block tags: remove tag + contents.
+    if (!isClosing) {
+      if (
+        tag === "script" ||
+        tag === "style" ||
+        tag === "iframe" ||
+        tag === "object" ||
+        tag === "embed"
+      ) {
+        const closeIdx = lower.indexOf(`</${tag}`, j);
+        if (closeIdx === -1) {
+          // No closing tag: skip until the end of this tag.
+          const gt = lower.indexOf(">", j);
+          i = gt === -1 ? s.length : gt + 1;
+          continue;
+        }
+        const closeGt = lower.indexOf(">", closeIdx + 2 + tag.length);
+        i = closeGt === -1 ? s.length : closeGt + 1;
+        continue;
+      }
+    }
+
+    // Non-block tags: remove the tag itself.
+    const gt = lower.indexOf(">", j);
+    i = gt === -1 ? s.length : gt + 1;
+  }
+
+  return out.join("");
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== "object") {
@@ -32,20 +133,26 @@ export function sanitizeContextText(text: string): string {
     return "";
   }
 
-  let cleaned = text.replace(/\r\n?/g, "\n");
+  const capped = text.length > MAX_INPUT_LENGTH ? text.slice(0, MAX_INPUT_LENGTH) : text;
+  let cleaned = capped.replace(/\r\n?/g, "\n");
 
-  for (const pattern of DELIMITER_PATTERNS) {
-    cleaned = cleaned.replace(pattern, "");
+  // XSS hardening: strip HTML tags and comments. (See docs/implementation/sanitize.md for rationale.)
+  cleaned = stripHtml(cleaned);
+
+  for (const token of DELIMITER_TOKENS) {
+    cleaned = removeAllCaseInsensitive(cleaned, token);
   }
 
   cleaned = cleaned
-    .replace(/<!--/g, "(")
-    .replace(/-->/g, ")")
     .replace(/\[/g, "(")
     .replace(/\]/g, ")");
 
-  for (const pattern of INJECTION_PATTERNS) {
-    cleaned = cleaned.replace(pattern, "");
+  // Remove randomized context delimiters produced by codex-learning.
+  cleaned = removeAllCaseInsensitive(cleaned, "CONTEXT_START_");
+  cleaned = removeAllCaseInsensitive(cleaned, "CONTEXT_END_");
+
+  for (const phrase of INJECTION_PHRASES) {
+    cleaned = removeAllCaseInsensitive(cleaned, phrase);
   }
 
   cleaned = cleaned.replace(/[\t ]+/g, " ");
