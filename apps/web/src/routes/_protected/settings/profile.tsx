@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/utils/trpc";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_protected/settings/profile")({
   component: ProfileSettingsPage,

@@ -22,7 +22,9 @@ import { Route as ProtectedVoiceS2sRouteImport } from './routes/_protected/voice
 import { Route as ProtectedTimerRouteImport } from './routes/_protected/timer'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as ProtectedDriveRouteImport } from './routes/_protected/drive'
+import { Route as ProtectedBookRouteImport } from './routes/_protected/book'
 import { Route as ProtectedAdminRouteImport } from './routes/_protected/admin'
+import { Route as ProtectedAdminIndexRouteImport } from './routes/_protected/admin/index'
 import { Route as AuthCallbackLinearRouteImport } from './routes/auth/callback/linear'
 import { Route as ApiWorkflowStreamRouteImport } from './routes/api/workflow/stream'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
@@ -34,8 +36,11 @@ import { Route as ApiAssistantSplatRouteImport } from './routes/api/assistant/$'
 import { Route as ApiAssistantAgentSplatRouteImport } from './routes/api/assistant-agent/$'
 import { Route as ProtectedWorkflowRunIdRouteImport } from './routes/_protected/workflow.$runId'
 import { Route as ProtectedSettingsVisualRouteImport } from './routes/_protected/settings/visual'
+import { Route as ProtectedSettingsProfileRouteImport } from './routes/_protected/settings/profile'
+import { Route as ProtectedSettingsPrivacyRouteImport } from './routes/_protected/settings/privacy'
 import { Route as ProtectedExperimentalTuneRouteImport } from './routes/_protected/experimental/tune'
 import { Route as ProtectedAdminVoiceRouteImport } from './routes/_protected/admin/voice'
+import { Route as ProtectedAdminMetricsRouteImport } from './routes/_protected/admin/metrics'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -101,10 +106,20 @@ const ProtectedDriveRoute = ProtectedDriveRouteImport.update({
   path: '/drive',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedBookRoute = ProtectedBookRouteImport.update({
+  id: '/book',
+  path: '/book',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedAdminIndexRoute = ProtectedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProtectedAdminRoute,
 } as any)
 const AuthCallbackLinearRoute = AuthCallbackLinearRouteImport.update({
   id: '/auth/callback/linear',
@@ -161,6 +176,18 @@ const ProtectedSettingsVisualRoute = ProtectedSettingsVisualRouteImport.update({
   path: '/visual',
   getParentRoute: () => ProtectedSettingsRoute,
 } as any)
+const ProtectedSettingsProfileRoute =
+  ProtectedSettingsProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => ProtectedSettingsRoute,
+  } as any)
+const ProtectedSettingsPrivacyRoute =
+  ProtectedSettingsPrivacyRouteImport.update({
+    id: '/privacy',
+    path: '/privacy',
+    getParentRoute: () => ProtectedSettingsRoute,
+  } as any)
 const ProtectedExperimentalTuneRoute =
   ProtectedExperimentalTuneRouteImport.update({
     id: '/experimental/tune',
@@ -172,12 +199,18 @@ const ProtectedAdminVoiceRoute = ProtectedAdminVoiceRouteImport.update({
   path: '/voice',
   getParentRoute: () => ProtectedAdminRoute,
 } as any)
+const ProtectedAdminMetricsRoute = ProtectedAdminMetricsRouteImport.update({
+  id: '/metrics',
+  path: '/metrics',
+  getParentRoute: () => ProtectedAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof ProtectedAdminRouteWithChildren
+  '/book': typeof ProtectedBookRoute
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -187,8 +220,11 @@ export interface FileRoutesByFullPath {
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/': typeof ProtectedIndexRoute
+  '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
+  '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -200,12 +236,13 @@ export interface FileRoutesByFullPath {
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
+  '/admin/': typeof ProtectedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/healthz': typeof HealthzRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/admin': typeof ProtectedAdminRouteWithChildren
+  '/book': typeof ProtectedBookRoute
   '/drive': typeof ProtectedDriveRoute
   '/settings': typeof ProtectedSettingsRouteWithChildren
   '/timer': typeof ProtectedTimerRoute
@@ -215,8 +252,11 @@ export interface FileRoutesByTo {
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/': typeof ProtectedIndexRoute
+  '/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/admin/voice': typeof ProtectedAdminVoiceRoute
   '/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/settings/privacy': typeof ProtectedSettingsPrivacyRoute
+  '/settings/profile': typeof ProtectedSettingsProfileRoute
   '/settings/visual': typeof ProtectedSettingsVisualRoute
   '/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -228,6 +268,7 @@ export interface FileRoutesByTo {
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
+  '/admin': typeof ProtectedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -236,6 +277,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_protected/admin': typeof ProtectedAdminRouteWithChildren
+  '/_protected/book': typeof ProtectedBookRoute
   '/_protected/drive': typeof ProtectedDriveRoute
   '/_protected/settings': typeof ProtectedSettingsRouteWithChildren
   '/_protected/timer': typeof ProtectedTimerRoute
@@ -245,8 +287,11 @@ export interface FileRoutesById {
   '/docs/$': typeof DocsSplatRoute
   '/healthz/deps': typeof HealthzDepsRoute
   '/_protected/': typeof ProtectedIndexRoute
+  '/_protected/admin/metrics': typeof ProtectedAdminMetricsRoute
   '/_protected/admin/voice': typeof ProtectedAdminVoiceRoute
   '/_protected/experimental/tune': typeof ProtectedExperimentalTuneRoute
+  '/_protected/settings/privacy': typeof ProtectedSettingsPrivacyRoute
+  '/_protected/settings/profile': typeof ProtectedSettingsProfileRoute
   '/_protected/settings/visual': typeof ProtectedSettingsVisualRoute
   '/_protected/workflow/$runId': typeof ProtectedWorkflowRunIdRoute
   '/api/assistant-agent/$': typeof ApiAssistantAgentSplatRoute
@@ -258,6 +303,7 @@ export interface FileRoutesById {
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/api/workflow/stream': typeof ApiWorkflowStreamRoute
   '/auth/callback/linear': typeof AuthCallbackLinearRoute
+  '/_protected/admin/': typeof ProtectedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,6 +312,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/admin'
+    | '/book'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -275,8 +322,11 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/healthz/deps'
     | '/'
+    | '/admin/metrics'
     | '/admin/voice'
     | '/experimental/tune'
+    | '/settings/privacy'
+    | '/settings/profile'
     | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -288,12 +338,13 @@ export interface FileRouteTypes {
     | '/api/trpc/$'
     | '/api/workflow/stream'
     | '/auth/callback/linear'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/healthz'
     | '/login'
     | '/onboarding'
-    | '/admin'
+    | '/book'
     | '/drive'
     | '/settings'
     | '/timer'
@@ -303,8 +354,11 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/healthz/deps'
     | '/'
+    | '/admin/metrics'
     | '/admin/voice'
     | '/experimental/tune'
+    | '/settings/privacy'
+    | '/settings/profile'
     | '/settings/visual'
     | '/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -316,6 +370,7 @@ export interface FileRouteTypes {
     | '/api/trpc/$'
     | '/api/workflow/stream'
     | '/auth/callback/linear'
+    | '/admin'
   id:
     | '__root__'
     | '/_protected'
@@ -323,6 +378,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/_protected/admin'
+    | '/_protected/book'
     | '/_protected/drive'
     | '/_protected/settings'
     | '/_protected/timer'
@@ -332,8 +388,11 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/healthz/deps'
     | '/_protected/'
+    | '/_protected/admin/metrics'
     | '/_protected/admin/voice'
     | '/_protected/experimental/tune'
+    | '/_protected/settings/privacy'
+    | '/_protected/settings/profile'
     | '/_protected/settings/visual'
     | '/_protected/workflow/$runId'
     | '/api/assistant-agent/$'
@@ -345,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/trpc/$'
     | '/api/workflow/stream'
     | '/auth/callback/linear'
+    | '/_protected/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -459,12 +519,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDriveRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/book': {
+      id: '/_protected/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof ProtectedBookRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/admin': {
       id: '/_protected/admin'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof ProtectedAdminRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/admin/': {
+      id: '/_protected/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof ProtectedAdminIndexRouteImport
+      parentRoute: typeof ProtectedAdminRoute
     }
     '/auth/callback/linear': {
       id: '/auth/callback/linear'
@@ -543,6 +617,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSettingsVisualRouteImport
       parentRoute: typeof ProtectedSettingsRoute
     }
+    '/_protected/settings/profile': {
+      id: '/_protected/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof ProtectedSettingsProfileRouteImport
+      parentRoute: typeof ProtectedSettingsRoute
+    }
+    '/_protected/settings/privacy': {
+      id: '/_protected/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof ProtectedSettingsPrivacyRouteImport
+      parentRoute: typeof ProtectedSettingsRoute
+    }
     '/_protected/experimental/tune': {
       id: '/_protected/experimental/tune'
       path: '/experimental/tune'
@@ -557,15 +645,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAdminVoiceRouteImport
       parentRoute: typeof ProtectedAdminRoute
     }
+    '/_protected/admin/metrics': {
+      id: '/_protected/admin/metrics'
+      path: '/metrics'
+      fullPath: '/admin/metrics'
+      preLoaderRoute: typeof ProtectedAdminMetricsRouteImport
+      parentRoute: typeof ProtectedAdminRoute
+    }
   }
 }
 
 interface ProtectedAdminRouteChildren {
+  ProtectedAdminMetricsRoute: typeof ProtectedAdminMetricsRoute
   ProtectedAdminVoiceRoute: typeof ProtectedAdminVoiceRoute
+  ProtectedAdminIndexRoute: typeof ProtectedAdminIndexRoute
 }
 
 const ProtectedAdminRouteChildren: ProtectedAdminRouteChildren = {
+  ProtectedAdminMetricsRoute: ProtectedAdminMetricsRoute,
   ProtectedAdminVoiceRoute: ProtectedAdminVoiceRoute,
+  ProtectedAdminIndexRoute: ProtectedAdminIndexRoute,
 }
 
 const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
@@ -573,10 +672,14 @@ const ProtectedAdminRouteWithChildren = ProtectedAdminRoute._addFileChildren(
 )
 
 interface ProtectedSettingsRouteChildren {
+  ProtectedSettingsPrivacyRoute: typeof ProtectedSettingsPrivacyRoute
+  ProtectedSettingsProfileRoute: typeof ProtectedSettingsProfileRoute
   ProtectedSettingsVisualRoute: typeof ProtectedSettingsVisualRoute
 }
 
 const ProtectedSettingsRouteChildren: ProtectedSettingsRouteChildren = {
+  ProtectedSettingsPrivacyRoute: ProtectedSettingsPrivacyRoute,
+  ProtectedSettingsProfileRoute: ProtectedSettingsProfileRoute,
   ProtectedSettingsVisualRoute: ProtectedSettingsVisualRoute,
 }
 
@@ -585,6 +688,7 @@ const ProtectedSettingsRouteWithChildren =
 
 interface ProtectedRouteChildren {
   ProtectedAdminRoute: typeof ProtectedAdminRouteWithChildren
+  ProtectedBookRoute: typeof ProtectedBookRoute
   ProtectedDriveRoute: typeof ProtectedDriveRoute
   ProtectedSettingsRoute: typeof ProtectedSettingsRouteWithChildren
   ProtectedTimerRoute: typeof ProtectedTimerRoute
@@ -596,6 +700,7 @@ interface ProtectedRouteChildren {
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAdminRoute: ProtectedAdminRouteWithChildren,
+  ProtectedBookRoute: ProtectedBookRoute,
   ProtectedDriveRoute: ProtectedDriveRoute,
   ProtectedSettingsRoute: ProtectedSettingsRouteWithChildren,
   ProtectedTimerRoute: ProtectedTimerRoute,

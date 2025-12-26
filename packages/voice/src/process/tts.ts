@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { Process, type ProcessConfig } from "./base";
 import { Maya } from "./maya";
-import { SupertonicTTS as Supertonic } from "./supertonic";
+import type { SupertonicTTS } from "./supertonic";
 
 // Re-export ProcessConfig for use in other packages
 export type { ProcessConfig };
@@ -32,7 +32,7 @@ export class TTSPool {
     wrapper: Maya;
     active: boolean;
   }> = [];
-  private supertonic: Supertonic | null = null;
+  private supertonic: SupertonicTTS | null = null;
   private readonly config: ProcessConfig;
   private readonly poolSize: number;
   private _activeCount = 0;
@@ -72,7 +72,8 @@ export class TTSPool {
           modelsDir = join(process.cwd(), "models/supertonic");
         }
 
-        this.supertonic = new Supertonic({
+        const { SupertonicTTS } = await import("./supertonic");
+        this.supertonic = new SupertonicTTS({
           modelPath: modelsDir,
           defaultVoice: "M1.json", // Default to Male 1
         });
@@ -258,7 +259,8 @@ export class TTSPool {
   }
 
   async shutdown(): Promise<void> {
-    if (this.useSupertonic) {
+    if (this.useSupertonic && this.supertonic) {
+      await this.supertonic.shutdown();
       this.supertonic = null;
     } else {
       await Promise.all(this.processes.map((p) => p.process.shutdown()));

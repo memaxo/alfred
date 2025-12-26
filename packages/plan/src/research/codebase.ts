@@ -1,4 +1,4 @@
-import { ContextBuilder } from "@alfred/runtime/context";
+import { gatherCodeContext } from "@alfred/agent/orchestrator/flow/context";
 import { logger } from "@alfred/logger";
 
 /**
@@ -11,18 +11,15 @@ export async function gatherCodebaseContext(options: {
   topK?: number;
 }): Promise<string[]> {
   try {
-    const contextBuilder = new ContextBuilder();
-    // ContextBuilder.build() handles gatherCodeContext internally
-    const context = await contextBuilder.build({
+    const receipt = await gatherCodeContext({
       requirement: options.requirement,
-      workspace: options.workspace,
+      cw: options.workspace ?? process.cwd(),
       topK: options.topK ?? 10,
+      authz: undefined,
     });
 
-    // Transform receipts -> ResearchResult.internal.existingCode
-    // filter(Boolean) to ensure we only return strings
-    return (context.receipts.code || [])
-      .map((f) => f.path)
+    return (receipt.code ?? [])
+      .map((item) => item.path)
       .filter((p): p is string => typeof p === "string");
   } catch (error) {
     logger.error("codebase_research_failed", {

@@ -22,7 +22,7 @@ export const workflowPatterns = pgTable("workflow_patterns", {
     onDelete: "cascade",
   }),
   trigger: text("trigger").notNull(),
-  embedding: vector("embedding", { dimensions: 1024 }), // Use explicit dimension for now
+  embedding: vector("embedding", { dimensions: EMBEDDING_DIM }),
   planTemplate: jsonb("plan_template").notNull(),
   successRate: numeric("success_rate", { precision: 5, scale: 4 })
     .notNull()

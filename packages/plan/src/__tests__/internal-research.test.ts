@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { ContextBuilder } from "@alfred/runtime/context";
+import * as flowctx from "@alfred/agent/orchestrator/flow/context";
 import * as semantic from "@alfred/agent/orchestrator/reasoning/decompose-semantic";
 import * as patterns from "../research/patterns.js";
 import * as conventions from "../research/conventions.js";
@@ -15,13 +15,18 @@ describe("Internal Research", () => {
 
   beforeEach(() => {
     // Use spyOn instead of mock.module to avoid global mock leakage
-    buildSpy = spyOn(ContextBuilder.prototype, "build").mockResolvedValue({
-      receipts: {
-        code: [
-          { path: "packages/api/src/routers/plan.ts" },
-          { path: "packages/plan/src/research/internal.ts" },
-        ],
-      },
+    buildSpy = spyOn(flowctx, "gatherCodeContext").mockResolvedValue({
+      code: [
+        { id: "1", kind: "code", path: "packages/api/src/routers/plan.ts", score: 1 },
+        {
+          id: "2",
+          kind: "code",
+          path: "packages/plan/src/research/internal.ts",
+          score: 1,
+        },
+      ],
+      created: new Date(),
+      summary: "stub",
     } as any);
 
     analyzeImportsSpy = spyOn(semantic, "analyzeImports").mockResolvedValue({
@@ -93,8 +98,8 @@ describe("Internal Research", () => {
   });
 
   describe("Error Handling", () => {
-    it("should return empty results if ContextBuilder fails", async () => {
-      buildSpy.mockRejectedValue(new Error("Context build failed"));
+    it("should return empty results if gatherCodeContext fails", async () => {
+      buildSpy.mockRejectedValue(new Error("gather failed"));
 
       const result = await gatherInternalResearch(mockIntent);
 

@@ -260,18 +260,23 @@ export async function runAssistantGeneration(
   // };
 
   try {
+    const system =
+      typeof defaults.instructions === "string"
+        ? defaults.instructions
+        : JSON.stringify(defaults.instructions);
+
     // For now, we reconstruct the messages array.
     // In future, we should fetch conversation history properly or rely on the adapter
     // to handle history if it's stateful (though the adapter interface is stateless).
     const messages: ModelMessage[] = [
-      { role: "system", content: defaults.instructions },
+      { role: "system", content: system },
       { role: "user", content: input },
     ];
 
     // Use the injected AI adapter
     const result = await ctx.ai.generateText({
       messages,
-      system: defaults.instructions,
+      system,
       tools: defaults.tools,
     });
 

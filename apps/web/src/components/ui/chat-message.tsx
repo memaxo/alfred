@@ -5,6 +5,7 @@ import {
   MessageAvatar,
   MessageContent,
 } from "@/components/ui/message";
+import { cn } from "@/lib/utils";
 
 export type AssistantPart = AssistantUIMessage["parts"][number];
 

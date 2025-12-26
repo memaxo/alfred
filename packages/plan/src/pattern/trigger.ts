@@ -6,7 +6,7 @@ import { getOpenAI, getModelId } from "@alfred/agent/v6";
  */
 export async function extractTrigger(intent: string): Promise<string> {
   const result = await generateText({
-    model: getOpenAI()(getModelId()) as any,
+    model: getOpenAI()(getModelId()),
     prompt: `Extract a short semantic trigger phrase (kebab-case) from this intent: "${intent}"
     
 Examples:
@@ -16,7 +16,7 @@ Examples:
 - "Create user profile page" → "create-page"
 
 Trigger:`,
-    maxTokens: 20,
+    maxOutputTokens: 20,
   });
 
   return result.text.trim().toLowerCase();

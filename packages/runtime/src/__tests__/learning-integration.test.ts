@@ -94,7 +94,7 @@ describe("End-to-End Learning Lifecycle", () => {
       plan: { intent: "test" },
     }) as any);
 
-    const stop = await orchestrateWorkflowStream(mockInput, mockSession, mockCallbacks);
+    await orchestrateWorkflowStream(mockInput, mockSession, mockCallbacks);
     
     // Wait for async task to complete
     await new Promise(resolve => setTimeout(resolve, 200));

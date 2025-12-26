@@ -20,5 +20,11 @@
   "include": ["src/**/*"],
   "files": ["../../node_modules/bun-types/test.d.ts"],
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../db" }, { "path": "../metrics" }, { "path": "../type" }]
+  "references": [
+    { "path": "../db" },
+    { "path": "../embed" },
+    { "path": "../logger" },
+    { "path": "../metrics" },
+    { "path": "../type" }
+  ]
 }

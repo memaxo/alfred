@@ -71,7 +71,7 @@ let cachedOrchestratorAgent: ToolLoopAgent<OrchestratorTools> | null = null;
 
 function createAssistantConfig(): ToolLoopAgentSettings<never, AssistantTools> {
   return {
-    model: getOpenAI().chat(getModelId()) as AgentModel,
+    model: getOpenAI().languageModel(getModelId()) as AgentModel,
     tools: assistantTools,
     instructions: assistantInstructions,
     stopWhen: assistantStopWhen,
@@ -84,7 +84,7 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
   OrchestratorTools
 > {
   return {
-    model: getOpenAI().chat(getModelId()) as AgentModel,
+    model: getOpenAI().languageModel(getModelId()) as AgentModel,
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
     stopWhen: orchestratorStopWhen,
@@ -93,10 +93,10 @@ function createOrchestratorConfig(): ToolLoopAgentSettings<
 }
 
 // Lazy defaults - model is a getter to defer OpenAI client initialization
-function createAssistantDefaults() {
+function createAssistantDefaults(): ToolLoopAgentSettings<never, AssistantTools> {
   return {
     get model() {
-      return getOpenAI().chat(getModelId());
+      return getOpenAI().languageModel(getModelId());
     },
     tools: assistantTools,
     instructions: assistantInstructions,
@@ -105,10 +105,13 @@ function createAssistantDefaults() {
   };
 }
 
-function createOrchestratorDefaults() {
+function createOrchestratorDefaults(): ToolLoopAgentSettings<
+  never,
+  OrchestratorTools
+> {
   return {
     get model() {
-      return getOpenAI().chat(getModelId());
+      return getOpenAI().languageModel(getModelId());
     },
     tools: orchestratorTools,
     instructions: orchestratorInstructions,
@@ -159,11 +162,17 @@ export const orchestratorAgent = {
   },
 } as ToolLoopAgent<OrchestratorTools>;
 
-export function getAssistantAgentDefaults() {
+export function getAssistantAgentDefaults(): ToolLoopAgentSettings<
+  never,
+  AssistantTools
+> {
   return createAssistantDefaults();
 }
 
-export function getOrchestratorAgentDefaults() {
+export function getOrchestratorAgentDefaults(): ToolLoopAgentSettings<
+  never,
+  OrchestratorTools
+> {
   return createOrchestratorDefaults();
 }
 

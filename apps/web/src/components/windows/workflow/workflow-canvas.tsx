@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   useNodesState,
   useEdgesState,
@@ -9,7 +10,7 @@ import {
   Handle,
   Position,
   addEdge,
-  Connection,
+  type Connection,
   type Node,
   type Edge,
 } from '@xyflow/react';
@@ -41,7 +42,7 @@ const AGENT_ICONS = {
   'claude-code': <Terminal className="w-3 h-3" />,
 };
 
-const PhaseNode = ({ data, id, selected }: { data: Phase; id: string; selected?: boolean }) => {
+const PhaseNode = ({ data, selected }: { data: Phase; selected?: boolean }) => {
   return (
     <div className={`rounded-xl border ${selected ? 'border-biolum shadow-[0_0_15px_rgba(var(--biolum-rgb),0.3)]' : 'border-white/10'} bg-void-surface/80 p-4 shadow-xl backdrop-blur-md min-w-[220px] group hover:border-biolum/40 transition-all relative`}>
       <Handle type="target" position={Position.Top} className="w-2 h-2 bg-biolum border-none" />
@@ -109,7 +110,7 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
     return edges;
   }, [plan.phases]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, _setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -220,7 +221,7 @@ export function WorkflowCanvas({ plan, onPlanChange }: WorkflowCanvasProps) {
           nodeTypes={nodeTypes}
           fitView
         >
-          <Background color="#222" gap={20} variant="dots" />
+          <Background color="#222" gap={20} variant={BackgroundVariant.Dots} />
           <Controls showInteractive={false} className="bg-void-surface border-white/10" />
           <Panel position="top-right" className="flex flex-col gap-2">
             <div className="bg-void-surface/60 backdrop-blur-md border border-white/10 p-2 rounded-lg flex items-center gap-3 px-3 shadow-2xl">

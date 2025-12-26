@@ -1,5 +1,5 @@
 import type { AssistantUIMessage } from "@alfred/agent";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAssistantStream } from "@/hooks/use-assistant-stream";
 import { useVoiceCapture } from "@/hooks/use-voice-capture";
 import { useDesktopStore } from "@/store/desktop";
@@ -213,6 +213,9 @@ export function useChatLogic({
       }
 
       const message = messages[index];
+      if (!message) {
+        return;
+      }
       if (message.role !== "user") {
         return;
       }

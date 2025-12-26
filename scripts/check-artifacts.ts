@@ -16,6 +16,10 @@ const FORBIDDEN_GLOBS = [
   "packages/*/src/**/*.js.map",
   "packages/*/src/**/*.d.ts",
   "packages/*/src/**/*.d.ts.map",
+  "packages/*/*/src/**/*.js",
+  "packages/*/*/src/**/*.js.map",
+  "packages/*/*/src/**/*.d.ts",
+  "packages/*/*/src/**/*.d.ts.map",
 ] as const;
 
 function normalizePath(rel: string): string {

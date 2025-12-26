@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Activity,
-  BarChart3,
   Brain,
   Cpu,
   Database,
@@ -13,7 +12,6 @@ import { useEffect, useState } from "react";
 import {
   AreaChart,
   Badge,
-  Card,
   Flex,
   Grid,
   Metric,
@@ -34,6 +32,24 @@ import { Button } from "@/components/ui/button";
 const REFRESH_INTERVAL_MS = 5000;
 const MAX_HISTORY_POINTS = 20;
 
+type TremorColor = "emerald" | "blue" | "amber" | "red";
+
+type HistoryPoint = {
+  time: string;
+  graphQueries: number;
+  assistantRequests: number;
+  droidRuns: number;
+  graphLatency: number;
+  assistantLatency: number;
+};
+
+type LatencySummary = {
+  p50?: number | null;
+  p95?: number | null;
+  average?: number | null;
+  count?: number | null;
+};
+
 export const Route = createFileRoute("/_protected/admin/metrics")({
   component: MetricsDashboardRoute,
 });
@@ -42,10 +58,8 @@ function MetricsDashboardRoute() {
   return <MetricsDashboardView />;
 }
 
-type PerformanceStats = ReturnType<typeof trpc.admin.getPerformanceStats.useQuery>["data"];
-
 export function MetricsDashboardView() {
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
   const { data: stats, isLoading, refetch, isRefetching } = trpc.admin.getPerformanceStats.useQuery(undefined, {
     refetchInterval: REFRESH_INTERVAL_MS,
   });
@@ -215,30 +229,10 @@ export function MetricsDashboardView() {
 
           <TabPanel>
              <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                <LatencyCard
-                  title="Graph Query"
-                  summary={stats.graph.queryLatency}
-                  color="emerald"
-                  budget={0.001} // 1ms
-                />
-                <LatencyCard
-                  title="Graph Context"
-                  summary={stats.graph.contextLatency}
-                  color="blue"
-                  budget={0.01} // 10ms
-                />
-                <LatencyCard
-                  title="Assistant Gen"
-                  summary={stats.assistant.generateLatency}
-                  color="blue"
-                  budget={2.0} // 2s (assumed)
-                />
-                <LatencyCard
-                  title="Droid Exec"
-                  summary={stats.tools.droidDuration}
-                  color="amber"
-                  budget={5.0} // 5s (assumed)
-                />
+                <LatencyCard title="Graph Query" summary={stats.graph.queryLatency} budget={0.001} />
+                <LatencyCard title="Graph Context" summary={stats.graph.contextLatency} budget={0.01} />
+                <LatencyCard title="Assistant Gen" summary={stats.assistant.generateLatency} budget={2.0} />
+                <LatencyCard title="Droid Exec" summary={stats.tools.droidDuration} budget={5.0} />
              </div>
           </TabPanel>
         </TabPanels>
@@ -264,7 +258,7 @@ function StatCard({ title, metric, icon, subtext }: { title: string; metric: str
   );
 }
 
-function ProgressBarValue({ label, value, max, color }: { label: string; value: number; max: number; color: any }) {
+function ProgressBarValue({ label, value, max, color }: { label: string; value: number; max: number; color: TremorColor }) {
   return (
     <div className="w-full">
       <Flex>
@@ -276,9 +270,9 @@ function ProgressBarValue({ label, value, max, color }: { label: string; value: 
   );
 }
 
-function LatencyCard({ title, summary, color, budget }: { title: string; summary: any; color: any; budget?: number }) {
-  const formatValue = (v: number | null) => v !== null ? `${v.toFixed(3)}s` : "—";
-  const isOverBudget = budget !== undefined && summary.p50 !== null && summary.p50 > budget;
+function LatencyCard({ title, summary, budget }: { title: string; summary: LatencySummary; budget?: number }) {
+  const formatValue = (v: number | null | undefined) => (v !== null && v !== undefined ? `${v.toFixed(3)}s` : "—");
+  const isOverBudget = budget !== undefined && summary.p50 !== null && summary.p50 !== undefined && summary.p50 > budget;
   
   return (
     <VoidCard className={isOverBudget ? "ring-2 ring-red-500/50" : ""}>
@@ -305,7 +299,7 @@ function LatencyCard({ title, summary, color, budget }: { title: string; summary
         </Flex>
         <Flex>
           <Text>Samples</Text>
-          <Text className="text-biolum">{summary.count}</Text>
+          <Text className="text-biolum">{summary.count ?? "—"}</Text>
         </Flex>
       </div>
     </VoidCard>

@@ -219,7 +219,7 @@ export function useAssistantStream(
   );
 
   const reload = useCallback(() => {
-    void chat.reload();
+    void chat.regenerate();
   }, [chat]);
 
   const clear = useCallback(() => {

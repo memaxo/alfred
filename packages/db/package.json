@@ -84,6 +84,7 @@
     "typecheck": "tsc -b --emitDeclarationOnly --pretty false"
   },
   "dependencies": {
+    "@alfred/embed": "workspace:*",
     "@alfred/logger": "workspace:*",
     "@alfred/metrics": "workspace:*",
     "@alfred/type": "workspace:*",

@@ -1,4 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createGatewayProvider } from "@ai-sdk/gateway";
 import { tool, type Tool } from "ai";
 import type { z, ZodTypeAny } from "zod";
 
@@ -70,7 +70,7 @@ type ToolMap = Record<string, Tool>;
 
 const DEFAULT_MODEL_ID = "openai/gpt-4o-mini";
 
-let cachedOpenAI: ReturnType<typeof createOpenAI> | null = null;
+let cachedGateway: ReturnType<typeof createGatewayProvider> | null = null;
 
 function firstEnv(...keys: string[]) {
   for (const key of keys) {
@@ -89,32 +89,30 @@ export function getModelId(): string {
 }
 
 export function getOpenAI() {
-  if (cachedOpenAI) {
-    return cachedOpenAI;
+  if (cachedGateway) {
+    return cachedGateway;
   }
 
   // Test override: allow empty client in tests if key is missing
   if (process.env.NODE_ENV === "test" && !firstEnv("OPENAI_API_KEY")) {
     return {
-      chat: () => ({}),
-    } as unknown as ReturnType<typeof createOpenAI>;
+      languageModel: () => ({}),
+    } as unknown as ReturnType<typeof createGatewayProvider>;
   }
 
-  const apiKey = firstEnv("OPENAI_API_KEY");
+  const apiKey = firstEnv("AI_GATEWAY_API_KEY", "OPENAI_API_KEY");
   if (!apiKey) {
-    throw new Error("openai_api_key_missing");
+    throw new Error("ai_gateway_api_key_missing");
   }
 
-  const baseURL = firstEnv("OPENAI_BASE_URL");
-  const organization = firstEnv("OPENAI_ORGANIZATION", "OPENAI_ORG");
+  const baseURL = firstEnv("AI_GATEWAY_BASE_URL", "OPENAI_BASE_URL");
 
-  cachedOpenAI = createOpenAI({
+  cachedGateway = createGatewayProvider({
     apiKey,
     ...(baseURL ? { baseURL } : {}),
-    ...(organization ? { organization } : {}),
   });
 
-  return cachedOpenAI;
+  return cachedGateway;
 }
 
 export function wrapLegacyToolToAISDK(legacy: LegacyTool): WrappedTool {

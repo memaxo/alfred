@@ -30,6 +30,8 @@
     "check": "biome check --write .",
     "lint": "bunx biome check .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --nested",
+    "generate": "turbo gen",
+    "boundaries": "turbo boundaries",
     "ruler:verify": "bunx @intellectronica/ruler@latest apply --no-gitignore --nested && git diff --exit-code",
     "setup": "bun install && turbo run setup",
     "verify:build": "bun scripts/verify-build.ts",

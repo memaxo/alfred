@@ -20,7 +20,7 @@ export async function revisePlan(
 
   try {
     const { object } = await generateObject({
-      model: getOpenAI()(getModelId()) as any,
+      model: getOpenAI()(getModelId()),
       schema: structuredPlanSchema,
       prompt: buildRevisionPrompt(plan, critique, intent),
     });

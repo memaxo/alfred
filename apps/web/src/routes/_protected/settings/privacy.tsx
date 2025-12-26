@@ -13,7 +13,6 @@ import { PrivacyControls } from "@/components/privacy-controls";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/utils/trpc";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_protected/settings/privacy")({
   component: PrivacySettingsPage,

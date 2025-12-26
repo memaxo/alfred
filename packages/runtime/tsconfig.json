@@ -1,6 +1,7 @@
 {
   "extends": "@alfred/tsconfig/tsconfig.json",
   "compilerOptions": {
+    "rootDir": "./src",
     "outDir": "./dist",
     "types": ["node"],
     "moduleResolution": "bundler",
@@ -24,6 +25,8 @@
     { "path": "../history" },
     { "path": "../db" },
     { "path": "../metrics" },
-    { "path": "../agent" }
+    { "path": "../plan" },
+    { "path": "../agent" },
+    { "path": "../rag" }
   ]
 }

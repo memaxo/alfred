@@ -170,6 +170,8 @@ Tools: `sense`, `think`, `act`, `learn`.
 
 6. **Mocking Standards.** Mock native/WASM modules and external APIs. Import `@alfred/test-kit/redis` first. Use `mock-db-client`, `mock-metrics`, and `router-helpers` for stable, auto-stubbed repos and metrics.
 
+7. **Test Infrastructure Helpers.** Use `@alfred/test-kit/router`, `@alfred/test-kit/repo`, and `@alfred/test-kit/scheduler` for consistent test patterns. See `docs/testing/patterns.md` for examples. These helpers reduce boilerplate by 70% and enforce security/performance standards.
+
 7. **Integration Strategy.** Prefer tests exercising real boundaries (DB, routers, flows) over narrow unit mocks. Use standalone verification scripts (`scripts/verify-*.ts`) for native/hardware integrations.
 
 8. **Build Verification.** Run `scripts/verify-build.ts` in CI to scan client bundles for forbidden server-only strings (`postgres`, `drizzle-orm`, `openai`).
@@ -560,6 +562,31 @@ ExecPlans must accurately reflect implementation status. When verifying features
 6. **Naming convention.** Use `LEGACY_*` for deprecated features, `DEBUG` for debug-only code, explicit platform names for platform-specific features.
 
 7. **Runtime vs compile-time.** Feature flags are compile-time only. Use environment variables for runtime configuration.
+
+
+
+<!-- Source: .ruler/38-workflow-learning.md -->
+
+# Workflow Learning Patterns
+
+## Core Principle
+Every workflow execution is a learning opportunity. The system must automatically capture successes, failures, and conventions to improve future planning and execution accuracy.
+
+## Rules
+
+1. **Terminal learning triggers.** Automatically trigger pattern and convention extraction upon workflow terminal states (completed/failed). Learning must be asynchronous and non-blocking to the primary workflow finalization.
+
+2. **Execution aggregation.** Collect and aggregate `agent-handoff` events across all waves to generate high-fidelity execution summaries. Use these summaries instead of initial intents for learning modules to ensure fidelity to actual implementation.
+
+3. **Pattern vs Anti-Pattern.** Store successful plans as `WorkflowPattern` templates. Store failed plans as anti-patterns with associated failure reasons to enable proactive avoidance in future generations.
+
+4. **Contextual retrieval weights.** Prioritize in-project patterns during semantic matching. Use a 1.0x weight for same-project matches and 0.8x for cross-project fallbacks to maintain architectural consistency.
+
+5. **Convention refinement.** Persist project-specific naming, structural, and architectural conventions extracted from successful runs into `projects.config`. Refine existing conventions incrementally rather than overwriting.
+
+6. **Pattern lifecycle.** Implement automatic confidence decay for unused patterns (retire after 30 days) and quarantine for patterns with low success rates (<30% after 5 uses).
+
+7. **Vector search performance.** Perform vector similarity matches directly in SQL using `pgvector` operators (`<=>`) to maintain <10ms retrieval latency. Use `CASE` expressions for contextual weighting within the query.
 
 
 

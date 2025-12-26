@@ -282,7 +282,7 @@ export async function orchestrateWorkflowStream(
       if (input.runId) {
         runId = input.runId;
         outerRunId = runId;
-        await workflowRepo.updateRun(runId, { status: "running" });
+        await workflowRepo.updateRun(input.runId, { status: "running" });
       } else {
         runId = executor.runId;
         outerRunId = runId;
@@ -343,11 +343,17 @@ export async function orchestrateWorkflowStream(
         }
       }
 
+      // After this point runId is guaranteed to be set
+      const activeRunId = runId;
+      if (!activeRunId) {
+        throw new Error("workflow_run_id_not_found");
+      }
+
       // Setup conversation
       try {
         const { conversation, created } = await ensureWorkflowConversation({
           userId: session.user.id,
-          workflowId: runId,
+          workflowId: activeRunId,
           title: deriveWorkflowTitle(input.requirement),
         });
         workflowConversationId = conversation.id;
@@ -355,11 +361,11 @@ export async function orchestrateWorkflowStream(
           const persisted = await persistWorkflowMessages({
             userId: session.user.id,
             conversationId: conversation.id,
-            messages: [createRequirementMessage(input, runId)],
+            messages: [createRequirementMessage(input, activeRunId)],
             persistedKeys: persistedMessageKeys,
-            runId,
+            runId: activeRunId,
             eventType: "workflow.requirement",
-            eventId: runId,
+            eventId: activeRunId,
           });
           if (persisted > 0) {
             refreshPreferences("workflow_requirement");
@@ -367,13 +373,13 @@ export async function orchestrateWorkflowStream(
         }
       } catch (error) {
         logger.warn("workflow_conversation_init_failed", {
-          runId,
+          runId: activeRunId,
           error: error instanceof Error ? error.message : String(error),
         });
       }
 
       // Register run handle for resume/cancel
-      await registerRunHandle(runId, {
+      await registerRunHandle(activeRunId, {
         resume: async ({ resumeData }) => {
           if (cancelled) return;
           await executor.resume(resumeData);
@@ -389,7 +395,7 @@ export async function orchestrateWorkflowStream(
       await recordAudit({
         userId: session.user.id,
         action: "workflow.stream",
-        resource: { kind: "workflow", id: runId ?? executor.runId },
+        resource: { kind: "workflow", id: activeRunId },
         decision: "allow",
         context: { auto: input.auto, mode: input.mode },
       });
@@ -428,7 +434,7 @@ export async function orchestrateWorkflowStream(
         }
 
         // Persist event
-        const persistResult = await persistEventSafe(runId, event);
+        const persistResult = await persistEventSafe(activeRunId, event);
         if (persistResult) {
           const { eventId, eventType, uiMessages } = persistResult;
 
@@ -438,7 +444,7 @@ export async function orchestrateWorkflowStream(
               conversationId: workflowConversationId,
               messages: uiMessages,
               persistedKeys: persistedMessageKeys,
-              runId: runId ?? executor.runId,
+              runId: activeRunId,
               baseId: eventId,
               eventType: event.type,
               eventId,
@@ -450,7 +456,7 @@ export async function orchestrateWorkflowStream(
 
           if (uiMessages && uiMessages.length > 0) {
             callbacks.emitUiMessages?.(uiMessages, {
-              runId: runId ?? executor.runId,
+              runId: activeRunId,
               eventId,
               eventType,
               originalEvent: event,

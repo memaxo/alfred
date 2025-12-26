@@ -1,51 +1,80 @@
-import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { requirePolicy } from "../gate";
 import { authedProcedure, router } from "../trpc";
 
 // Security: Only allow access within the project root
-const PROJECT_ROOT = path.resolve(process.cwd());
-const PROJECT_ROOT_REAL = realpathSync(PROJECT_ROOT);
+const PROJECT_ROOT = realpathSync.native(process.cwd());
 
-function isWithinProjectRoot(candidatePath: string): boolean {
-  const rel = path.relative(PROJECT_ROOT_REAL, candidatePath);
+function isWithinRoot(root: string, candidate: string): boolean {
+  const rel = path.relative(root, candidate);
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
-function validateResolvedPath(resolvedPath: string) {
-  if (!isWithinProjectRoot(resolvedPath)) {
+function resolveWithinRoot(requestedPath: string) {
+  const resolvedPath = path.resolve(PROJECT_ROOT, requestedPath);
+  if (!isWithinRoot(PROJECT_ROOT, resolvedPath)) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Access denied: Path is outside the project root.",
     });
   }
-}
-
-function validatePathForRead(requestedPath: string) {
-  const resolvedPath = path.resolve(PROJECT_ROOT_REAL, requestedPath);
-  validateResolvedPath(resolvedPath);
-
-  if (existsSync(resolvedPath)) {
-    const real = realpathSync(resolvedPath);
-    validateResolvedPath(real);
-  }
   return resolvedPath;
 }
 
-function validatePathForWrite(requestedPath: string) {
-  const resolvedPath = path.resolve(PROJECT_ROOT_REAL, requestedPath);
-  validateResolvedPath(resolvedPath);
+function validateExistingFilePath(requestedPath: string) {
+  const resolvedPath = resolveWithinRoot(requestedPath);
+  const realPath = realpathSync.native(resolvedPath);
+  if (!isWithinRoot(PROJECT_ROOT, realPath)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Access denied: Path resolves outside the project root.",
+    });
+  }
+  return realPath;
+}
 
-  const parent = path.dirname(resolvedPath);
-  if (existsSync(parent)) {
-    const parentReal = realpathSync(parent);
-    validateResolvedPath(parentReal);
+function validateWriteFilePath(requestedPath: string) {
+  const resolvedPath = resolveWithinRoot(requestedPath);
+  const parentDir = path.dirname(resolvedPath);
+
+  if (!existsSync(parentDir)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Parent directory does not exist",
+    });
   }
 
-  if (existsSync(resolvedPath)) {
-    const real = realpathSync(resolvedPath);
-    validateResolvedPath(real);
+  const parentStats = statSync(parentDir);
+  if (!parentStats.isDirectory()) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Parent path is not a directory",
+    });
+  }
+
+  const parentRealPath = realpathSync.native(parentDir);
+  if (!isWithinRoot(PROJECT_ROOT, parentRealPath)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Access denied: Parent directory resolves outside the project root.",
+    });
+  }
+
+  if (existsSync(resolvedPath) && lstatSync(resolvedPath).isSymbolicLink()) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Access denied: Refusing to write through a symlink.",
+    });
   }
 
   return resolvedPath;
@@ -53,18 +82,28 @@ function validatePathForWrite(requestedPath: string) {
 
 export const fsRouter = router({
   read: authedProcedure
+    .use(
+      requirePolicy("fs.read", (raw) => {
+        const input = raw as { path?: unknown };
+        return {
+          kind: "file",
+          id: typeof input.path === "string" ? input.path : "unknown",
+        };
+      })
+    )
     .input(z.object({ path: z.string() }))
     .query(({ input }) => {
       try {
-        const filePath = validatePathForRead(input.path);
+        const resolvedPath = resolveWithinRoot(input.path);
 
-        if (!existsSync(filePath)) {
+        if (!existsSync(resolvedPath)) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "File not found",
           });
         }
 
+        const filePath = validateExistingFilePath(input.path);
         const stats = statSync(filePath);
         if (!stats.isFile()) {
           throw new TRPCError({
@@ -87,10 +126,19 @@ export const fsRouter = router({
     }),
 
   write: authedProcedure
+    .use(
+      requirePolicy("fs.write", (raw) => {
+        const input = raw as { path?: unknown };
+        return {
+          kind: "file",
+          id: typeof input.path === "string" ? input.path : "unknown",
+        };
+      })
+    )
     .input(z.object({ path: z.string(), content: z.string() }))
     .mutation(({ input }) => {
       try {
-        const filePath = validatePathForWrite(input.path);
+        const filePath = validateWriteFilePath(input.path);
         writeFileSync(filePath, input.content, "utf-8");
         return { success: true };
       } catch (error) {

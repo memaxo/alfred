@@ -304,7 +304,7 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                   variant="ghost" 
                   className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
                   onClick={handleReject}
-                  disabled={rejectPlan.isLoading}
+                  disabled={rejectPlan.isPending}
                 >
                   <X className="w-3.5 h-3.5 mr-2" />
                   Discard
@@ -315,18 +315,18 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                   variant="ghost" 
                   className="text-biolum-dim hover:text-biolum hover:bg-biolum/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
                   onClick={handleRevise}
-                  disabled={generatePlan.isLoading}
+                  disabled={generatePlan.isPending}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-2 ${generatePlan.isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 mr-2 ${generatePlan.isPending ? 'animate-spin' : ''}`} />
                   Iterate
                 </Button>
                 <Button 
                   size="sm" 
                   className="bg-biolum hover:bg-biolum-bright text-void font-black h-9 px-6 rounded-lg text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--biolum-rgb),0.4)]"
                   onClick={handleApprove}
-                  disabled={approvePlan.isLoading}
+                  disabled={approvePlan.isPending}
                 >
-                  {approvePlan.isLoading ? (
+                  {approvePlan.isPending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Check className="w-3.5 h-3.5 mr-2" />
@@ -431,9 +431,9 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                   variant="outline"
                   type="button"
                   onClick={handleGenerate}
-                  disabled={generatePlan.isLoading}
+                  disabled={generatePlan.isPending}
                 >
-                  {generatePlan.isLoading ? (
+                  {generatePlan.isPending ? (
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                   ) : (
                     <LayoutGrid className="mr-2 h-3 w-3" />

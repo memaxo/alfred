@@ -86,13 +86,14 @@ export function initApiServices(): void {
       });
 
       // Resume interrupted plans from DB (background)
-      resumeInterruptedPlans(getAssistantAgentDefaults().tools).catch(
-        (error) => {
+      {
+        const tools = getAssistantAgentDefaults().tools ?? {};
+        resumeInterruptedPlans(tools).catch((error) => {
           logger.error("resume_interrupted_plans_error", {
             error: error instanceof Error ? error.message : String(error),
           });
-        }
-      );
+        });
+      }
 
       rehydrateSuspendedRuns().catch((error) => {
         logger.error("workflow_rehydrate_failed", {

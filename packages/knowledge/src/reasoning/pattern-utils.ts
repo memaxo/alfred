@@ -1,5 +1,5 @@
+import { embedMany } from "@alfred/embed";
 import { logger } from "@alfred/logger";
-import { embedMany } from "@alfred/rag";
 import { PATTERN_ANCHORS } from "../ontology";
 
 export type ReasoningPattern = "causal" | "decision" | "alternative";

@@ -40,11 +40,14 @@ export type StructuredPlan = {
     strategy: "sequential" | "parallel" | "topological" | "mixed";
     isolation: "container" | "worktree";
   };
-  evaluationCriteria: Array<{
-    name: string;
-    weight: number;
-    threshold: string;
-  }> | string[];
+  evaluationCriteria: Array<
+    | {
+        name: string;
+        weight: number;
+        threshold: string;
+      }
+    | string
+  >;
 };
 
 /**

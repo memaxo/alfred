@@ -1,24 +1,78 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "boundaries": {
+    "tags": {
+      "server-only": {
+        "dependents": {
+          "deny": ["client"]
+        }
+      },
+      "client": {
+        "dependencies": {
+          "deny": ["server-only"]
+        }
+      },
+      "core": {
+        "dependents": {
+          "allow": ["server-only", "core", "client", "app"]
+        }
+      },
+      "app": {
+        "dependencies": {
+          "allow": ["server-only", "core", "client", "app"]
+        }
+      }
+    }
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "!**/*.test.ts",
+        "!**/*.spec.ts",
+        "!**/test/**",
+        "!**/__tests__/**"
+      ],
+      "outputs": ["dist/**"],
+      "env": ["NODE_ENV"],
+      "passThroughEnv": ["NODE_OPTIONS"]
+    },
+    "//#lint": {
+      "inputs": ["**/*.{ts,tsx,js,jsx,json,jsonc}"],
+      "outputs": []
+    },
+    "//#lint:fix": {
+      "cache": false
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "inputs": ["$TURBO_DEFAULT$", "biome.json", "../../biome.json"],
+      "outputs": []
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
-      "outputs": ["dist/**", "*.tsbuildinfo", "**/*.tsbuildinfo"]
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json", "../../tsconfig.base.json"],
+      "outputs": ["*.tsbuildinfo", "dist/**/*.d.ts", "dist/**/*.d.ts.map"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/test/**",
+        "**/__tests__/**"
+      ],
+      "outputs": [],
+      "env": ["RUN_DB_TESTS", "NODE_ENV", "VITE_TEST_MODE"]
     },
     "test:postgres": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": [],
+      "env": ["RUN_DB_TESTS", "DATABASE_URL", "NODE_ENV"]
     },
     "setup": {
       "cache": false,
