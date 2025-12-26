@@ -85,7 +85,8 @@ export const privacyRouter = router({
 
       ensureObligations(ctx);
 
-      const removed = Number(await userRepo.deleteFact(input.id)) || 0;
+      const removed =
+        Number(await userRepo.deleteFact(session.user.id, input.id)) || 0;
       if (removed > 0) {
         recordMemoryForget(input.scope ?? "fact");
       }
