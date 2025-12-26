@@ -24,7 +24,8 @@
     "@alfred/knowledge": "workspace:*",
     "@alfred/rag": "workspace:*",
     "@alfred/type": "workspace:*",
-    "ai": "catalog:"
+    "ai": "catalog:",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@types/node": "*",

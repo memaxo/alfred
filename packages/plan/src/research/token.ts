@@ -1,4 +1,4 @@
-import { createTokenEstimator } from "@alfred/agent/orchestrator/util/token";
+import { createTokenEstimator } from "./token-utils.js";
 import type { ResearchSource } from "./types.js";
 
 const estimator = createTokenEstimator();

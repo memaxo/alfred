@@ -1,5 +1,3 @@
-import { gatherWebContext } from "@alfred/agent/orchestrator/flow/context";
-import { toolWeb } from "@alfred/agent/orchestrator/tool/web";
 import { logger } from "@alfred/logger";
 import type { WorkflowIntent } from "../intent/types.js";
 import { aggregateResearch } from "./aggregate.js";
@@ -11,6 +9,15 @@ import type {
   ResearchResult,
   ResearchSource,
 } from "./types.js";
+
+/**
+ * Lazy load agent tools to break circular dependency
+ */
+async function getAgentTools() {
+  const { gatherWebContext } = await import("@alfred/agent/orchestrator/flow/context");
+  const { toolWeb } = await import("@alfred/agent/orchestrator/tool/web");
+  return { gatherWebContext, toolWeb };
+}
 
 /**
  * Transform a search receipt item to a ResearchSource with all Exa fields
@@ -119,6 +126,7 @@ export async function gatherExternalResearch(
 
   if (options?.searchType === "deep" && hasExa) {
     try {
+      const { toolWeb } = await getAgentTools();
       const researchOutput = await toolWeb.execute({
         input: {
           action: "research",
@@ -151,6 +159,7 @@ Identify specific framework versions and compatibility constraints.`,
   }
 
   // 1. Gather web context using existing agent infrastructure
+  const { gatherWebContext } = await getAgentTools();
   const webReceipt = await gatherWebContext({
     requirement: intent.description,
     topK: maxResults * 2, // Fetch more to allow for filtering

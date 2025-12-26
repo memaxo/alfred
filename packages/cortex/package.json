@@ -46,6 +46,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@alfred/embed": "workspace:*",
     "@alfred/type": "workspace:*"
   },
   "devDependencies": {

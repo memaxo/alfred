@@ -1,6 +1,5 @@
 import { logger } from "@alfred/logger";
 import type { ContextBundle, SubTask, SubTaskId, DecomposeContext } from "@alfred/type/plan";
-import { decomposeSemantically } from "../reasoning/decompose-semantic";
 
 const MAX_SUBTASKS =
   Number.parseInt(process.env.MAX_SUBTASKS ?? "10", 10) || 10;
@@ -13,6 +12,17 @@ function getDecompositionTruncatedMetric() {
   } catch {
     return null;
   }
+}
+
+/**
+ * Stub for semantic decomposition to break circular dependency with @alfred/agent.
+ * In Phase 4, this logic should be moved to @alfred/plan or a shared reasoning package.
+ */
+export function decomposeSemantically(
+  _requirement: string,
+  _bundle: ContextBundle
+): SubTask[] {
+  return [];
 }
 
 type Bucket = "backend" | "frontend" | "test" | "misc";

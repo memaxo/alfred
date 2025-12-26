@@ -26,6 +26,7 @@
     "@better-auth/passkey": "1.4.7",
     "zod": "catalog:",
     "@alfred/db": "workspace:*",
+    "@alfred/policy": "workspace:*",
     "jose": "^5.2.1",
     "nanoid": "^5.0.7",
     "redis": "^4.7.0"

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getModelId, getOpenAI } from "@alfred/agent/v6";
+import { getModelId, getOpenAI } from "../ai.js";
 import { generateObject } from "ai";
 import { intentParserOutputSchema } from "./schema.js";
 import type {

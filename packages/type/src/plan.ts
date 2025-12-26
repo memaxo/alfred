@@ -343,6 +343,30 @@ export const codexPlanSchema = z.object({
 
 export type CodexPlanArtifact = z.infer<typeof codexPlanSchema>;
 
+export type SubTaskId = string;
+
+export type SubTask = {
+  id: SubTaskId;
+  title: string;
+  requirement: string;
+  deps: SubTaskId[];
+  priority: number;
+  acceptance: string[];
+  filesHint: string[];
+  metadata?: Record<string, unknown>;
+};
+
+export type DecomposeContext = {
+  requirement: string;
+  bundle: ContextBundle | null;
+};
+
+export type WavePlan = {
+  id: string;
+  tasks: SubTask[];
+  status: "pending" | "executing" | "completed" | "failed";
+};
+
 type WorkflowEventBase = {
   /** Optional stable identity for deduplication during replay */
   eventId?: string;

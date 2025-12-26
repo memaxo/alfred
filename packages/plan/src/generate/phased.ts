@@ -1,4 +1,4 @@
-import { decomposeTask } from "@alfred/agent/orchestrator/multi/decompose";
+import { decomposeTask } from "./decompose.js";
 import { logger } from "@alfred/logger";
 import type { WorkflowIntent } from "../intent/types.js";
 import type { ResearchResult } from "../research/types.js";
@@ -13,8 +13,8 @@ import type {
   SubTask,
 } from "./types.js";
 import { generateObject } from "ai";
-import { getOpenAI, getModelId } from "@alfred/agent/v6";
 import { z } from "zod";
+import { getOpenAI, getModelId } from "../ai.js";
 
 /**
  * Generate a phased plan from intent and research

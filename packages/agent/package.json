@@ -73,6 +73,7 @@
     "@alfred/protocol": "workspace:*",
     "@alfred/cognitive": "workspace:*",
     "@alfred/db": "workspace:*",
+    "@alfred/embed": "workspace:*",
     "@alfred/knowledge": "workspace:*",
     "@alfred/learning": "workspace:*",
     "@alfred/logger": "workspace:*",
@@ -87,7 +88,7 @@
     "p-retry": "6.2.0",
     "playwright": "catalog:",
     "prom-client": "^15.1.3",
-    "zod": "catalog:"
+    "zod": "^3.24.1"
   },
   "devDependencies": {},
   "peerDependencies": {

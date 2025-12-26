@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { getOpenAI, getModelId } from "@alfred/agent/v6";
+import { getOpenAI, getModelId } from "../ai.js";
 
 /**
  * Extract a short semantic trigger phrase from an intent string.

@@ -1,7 +1,7 @@
 import { projectRepo } from "@alfred/db";
 import { logger } from "@alfred/logger";
 import { generateObject, type LanguageModel } from "ai";
-import { getOpenAI, getModelId } from "@alfred/agent/v6";
+import { getOpenAI, getModelId } from "../ai.js";
 import { z } from "zod";
 import type { WorkflowRunLike } from "../pattern/extract.js";
 

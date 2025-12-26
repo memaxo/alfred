@@ -1,4 +1,3 @@
-import { gatherCodeContext } from "@alfred/agent/orchestrator/flow/context";
 import { logger } from "@alfred/logger";
 
 /**
@@ -11,6 +10,7 @@ export async function gatherCodebaseContext(options: {
   topK?: number;
 }): Promise<string[]> {
   try {
+    const { gatherCodeContext } = await import("@alfred/agent/orchestrator/flow/context");
     const receipt = await gatherCodeContext({
       requirement: options.requirement,
       cw: options.workspace ?? process.cwd(),

@@ -1,6 +1,4 @@
-import type { SubTask } from "@alfred/agent/orchestrator/multi/decompose";
-import type { WavePlan } from "@alfred/agent/orchestrator/multi/spawn";
-import type { NodeId } from "@alfred/knowledge/hypergraph";
+import type { SubTask, WavePlan, NodeId } from "@alfred/type/plan";
 
 /**
  * Pattern: A learned template for workflow execution
