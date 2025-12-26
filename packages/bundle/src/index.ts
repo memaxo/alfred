@@ -50,6 +50,6 @@ export function feature(name: string) {
 }
 
 export const Registry = {
-  features: Array.from(features),
+  features: Object.freeze(Array.from(features)),
 } as const;
 

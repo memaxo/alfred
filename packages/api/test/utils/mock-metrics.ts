@@ -75,7 +75,13 @@ const extraMetricSources = [
 ];
 
 for (const filePath of extraMetricSources) {
-  const src = readFileSync(filePath, "utf8");
+  let src: string;
+  try {
+    src = readFileSync(filePath, "utf8");
+  } catch {
+    // File may not exist in all workspace configurations; skip gracefully.
+    continue;
+  }
   for (const match of src.matchAll(exportConstRegex)) {
     const name = match[1];
     if (name && !metricsStub[name]) {

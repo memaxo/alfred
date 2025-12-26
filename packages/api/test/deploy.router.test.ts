@@ -8,6 +8,8 @@ import { dbModuleStub } from "./utils/mock-db-client";
 import { createTestCaller, createUnauthedCaller } from "./utils/trpc";
 import { toObservable } from "./utils/stream";
 import { TRPCError } from "@trpc/server";
+import { PolicyObligationError } from "../src/errors";
+import type { Obligation } from "@alfred/type";
 
 setupTestEnv();
 mockPolicyAudit();
@@ -485,6 +487,33 @@ describe("deploy router", () => {
           authz: "token",
         })
       ).rejects.toBeInstanceOf(TRPCError);
+    });
+
+    it("throws PolicyObligationError when obligations are returned", async () => {
+      const obligations: Obligation[] = [
+        {
+          type: "biometric_elevation",
+          reason: "deployment_promotion",
+        },
+      ];
+      evaluateMock.mockResolvedValueOnce({
+        allow: true,
+        obligations,
+      });
+
+      // Create a caller with obligations in context
+      const callerWithObligations = await createTestCaller({
+        scopes: ["deploy.read", "deploy.write"],
+        obligations,
+      });
+
+      await expect(
+        callerWithObligations.deploy.promote({
+          app: "app1",
+          upstream: "http://localhost:3000",
+          authz: "token",
+        })
+      ).rejects.toBeInstanceOf(PolicyObligationError);
     });
   });
 

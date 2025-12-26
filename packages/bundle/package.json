@@ -16,8 +16,8 @@
   },
   "devDependencies": {
     "@alfred/tsconfig": "workspace:*",
-    "@types/node": "*",
-    "typescript": "*"
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
   }
 }
 
