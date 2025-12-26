@@ -1,4 +1,9 @@
 {
   "extends": ["//"],
-  "tags": ["app"]
+  "tags": ["app"],
+  "tasks": {
+    "typecheck": {
+      "outputs": [".tsbuild/**"]
+    }
+  }
 }
