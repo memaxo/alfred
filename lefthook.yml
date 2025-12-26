@@ -22,12 +22,15 @@ pre-push:
     tests:
       run: |
         UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+        FILTER=""
         if [ -z "$UPSTREAM" ]; then
           # No upstream set, check changed files since last commit
-          bunx turbo test --filter='[HEAD~1]' --concurrency=4
+          FILTER="[HEAD~1]"
         else
-          bunx turbo test --filter="[${UPSTREAM}...HEAD]" --concurrency=4
+          FILTER="[${UPSTREAM}...HEAD]"
         fi
+        # Aggressively skip slow tests in pre-push using the fast test script
+        bun run test:fast --filter="$FILTER" --concurrency=4
       fail_text: "Tests failed - push blocked"
 
 pre-commit:
