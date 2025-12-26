@@ -84,7 +84,13 @@ export const terminalRouter = router({
                     }
                   }
                 },
-              } satisfies Bun.Spawn.SpawnOptions["terminal"],
+              },
+            } as Parameters<typeof Bun.spawn<"ignore", "pipe", "inherit">>[1] & {
+              terminal?: {
+                cols: number;
+                rows: number;
+                data: (terminal: Bun.Terminal, data: string | Uint8Array) => void;
+              };
             });
 
             const procWithTerminal = proc as Bun.Subprocess & {

@@ -52,6 +52,9 @@ function stripHtml(input: string): string {
   let i = 0;
   while (i < s.length) {
     const ch = s[i];
+    if (ch === undefined) {
+      break;
+    }
     if (ch !== "<") {
       out.push(ch);
       i += 1;
@@ -81,11 +84,10 @@ function stripHtml(input: string): string {
     const nameStart = j;
     while (j < s.length) {
       const c = lower[j];
-      if (c >= "a" && c <= "z") {
-        j += 1;
-        continue;
+      if (c === undefined || (c < "a" || c > "z")) {
+        break;
       }
-      break;
+      j += 1;
     }
     const tag = lower.slice(nameStart, j);
     const isClosing = lower.startsWith("</", i);
