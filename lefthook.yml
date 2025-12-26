@@ -1,0 +1,25 @@
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: bunx turbo typecheck --filter='[origin/main...HEAD]'
+      fail_text: "Type errors found - push blocked"
+    
+    lint:
+      glob: "*.{ts,tsx,js,jsx,json,jsonc}"
+      run: bun x ultracite check {push_files} || true
+      skip_empty: true
+      skip_fail: true
+      # Lint issues warn but don't block push
+      
+    tests:
+      run: bunx turbo test --filter='[origin/main...HEAD]' --concurrency=4
+      fail_text: "Tests failed - push blocked"
+
+pre-commit:
+  commands:
+    format:
+      glob: "*.{ts,tsx,js,jsx,json,jsonc,css,scss,md,mdx}"
+      run: bun x ultracite fix {staged_files}
+      stage_fixed: true
+      skip_empty: true

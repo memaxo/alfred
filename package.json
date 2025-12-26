@@ -67,7 +67,6 @@
     "db:watch": "turbo -F @alfred/db db:watch",
     "db:stop": "turbo -F @alfred/db db:stop",
     "db:down": "turbo -F @alfred/db db:down",
-    "install:poof": "bash scripts/install-poof.sh",
     "test:sqlite": "turbo run test --cache-dir .turbo/sqlite",
     "test:postgres": "turbo run test:postgres --cache-dir .turbo/postgres",
     "test:integration": "bun test packages/knowledge/test/hypergraph.integration.test.ts packages/agent/assistant/test/graphstore.integration.test.ts packages/api/test/graph.integration.test.ts packages/api/test/workflow.reasoning.integration.test.ts packages/api/test/workflow.capture.integration.test.ts packages/agent/test/multi/*.test.ts packages/agent/test/multi-agent.integration.test.ts",
@@ -84,7 +83,8 @@
     "test:integration:full": "bun test packages/api/test/integration/*.integration.test.ts",
     "test:vcr:record": "VCR_RECORD=1 bun run test:integration:full",
     "test:vcr:validate": "bun scripts/validate-cassettes.ts",
-    "workflow:cleanup": "bun packages/api/src/workers/workflow-suspension-cleanup.ts"
+    "workflow:cleanup": "bun packages/api/src/workers/workflow-suspension-cleanup.ts",
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.3.6",
@@ -99,8 +99,7 @@
     "@types/bun": "^1.3.4",
     "@types/node": "^22.13.11",
     "bun-types": "^1.3.4",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
+    "lefthook": "^1.11.1",
     "node-gyp": "12.1.0",
     "playwright": "^1.49.1",
     "sucrase": "^3.35.0",
@@ -109,11 +108,6 @@
     "typescript": "^5.7.2",
     "ultracite": "5.6.1",
     "ws": "^8.18.3"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
-      "bun x ultracite fix"
-    ]
   },
   "packageManager": "bun@1.3.5"
 }

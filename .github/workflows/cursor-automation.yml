@@ -1,0 +1,92 @@
+name: Cursor Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  code-review:
+    name: AI Code Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Cursor CLI
+        run: curl https://cursor.com/install -fsS | bash
+      - name: Run Code Review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          cursor agent \
+            --model gpt-5.2 \
+            --headless \
+            --print \
+            "Review the changes in this PR for code quality, bugs, and ALFRED conventions." \
+            > review.md
+      - name: Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## AI Code Review\n\n' + review
+            });
+
+  autofix-ci:
+    name: Auto-fix CI Failures
+    if: |
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+      - name: Install Cursor CLI
+        run: curl https://cursor.com/install -fsS | bash
+      - name: Attempt Auto-fix
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          cursor agent \
+            --model gpt-5.2 \
+            --headless \
+            --yolo \
+            "CI failed. Fix type errors and linting issues."
+      - name: Create Fix PR
+        if: success()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "fix: Auto-fix CI failures"
+          body: "Automated fixes from Cursor CLI (gpt-5.2)"
+          branch: autofix/${{ github.event.workflow_run.head_branch }}
+
+  update-docs:
+    name: Update Documentation
+    if: |
+      github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, 'docs:update')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Cursor CLI
+        run: curl https://cursor.com/install -fsS | bash
+      - name: Update Docs
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          cursor agent \
+            --model gpt-5.2 \
+            --headless \
+            --yolo \
+            "Update docs/ to reflect PR changes."

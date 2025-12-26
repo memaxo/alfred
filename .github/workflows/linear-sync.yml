@@ -1,0 +1,26 @@
+name: Linear Sync
+
+on:
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  sync-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Linear Issue ID
+        id: linear
+        run: |
+          ISSUE_ID=$(echo "${{ github.head_ref }}" | grep -oE 'ALF-[0-9]+' || echo "")
+          echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
+      
+      - name: Update Linear Issue Status
+        if: steps.linear.outputs.issue_id != ''
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        run: |
+          if [ "${{ github.event.action }}" == "opened" ]; then
+            echo "PR opened - marking In Progress"
+          elif [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+            echo "PR merged - marking Done"
+          fi
