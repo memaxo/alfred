@@ -28,7 +28,6 @@ function resolveWithinRoot(requestedPath: string) {
       message: "Access denied: Path is outside the project root.",
     });
   }
-
   return resolvedPath;
 }
 

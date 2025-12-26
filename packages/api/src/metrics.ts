@@ -45,6 +45,13 @@ export {
 export * from "@alfred/agent/workflow/metrics";
 export * from "@alfred/db";
 export {
+  graphContextDurationSeconds,
+  graphQueriesTotal,
+  graphQueryDurationSeconds,
+  graphRagEmptyTotal,
+  graphRagHitsTotal,
+} from "@alfred/db/metrics";
+export {
   historyContextTierDropsTotal,
   historyContextTokensTotal,
 } from "@alfred/history";
