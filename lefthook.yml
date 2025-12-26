@@ -3,8 +3,13 @@ pre-push:
   commands:
     typecheck:
       run: |
-        BASE=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/dev")
-        bunx turbo typecheck --filter="[${BASE}...HEAD]"
+        UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+        if [ -z "$UPSTREAM" ]; then
+          # No upstream set, check changed files since last commit
+          bunx turbo typecheck --filter='[HEAD~1]'
+        else
+          bunx turbo typecheck --filter="[${UPSTREAM}...HEAD]"
+        fi
       fail_text: "Type errors found - push blocked"
     
     lint:
@@ -16,8 +21,13 @@ pre-push:
       
     tests:
       run: |
-        BASE=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/dev")
-        bunx turbo test --filter="[${BASE}...HEAD]" --concurrency=4
+        UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+        if [ -z "$UPSTREAM" ]; then
+          # No upstream set, check changed files since last commit
+          bunx turbo test --filter='[HEAD~1]' --concurrency=4
+        else
+          bunx turbo test --filter="[${UPSTREAM}...HEAD]" --concurrency=4
+        fi
       fail_text: "Tests failed - push blocked"
 
 pre-commit:
