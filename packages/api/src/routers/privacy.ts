@@ -1,5 +1,10 @@
 import { recordMemoryForget } from "@alfred/agent";
-import { userRepo } from "@alfred/db";
+import {
+  deleteFact,
+  getEvents,
+  listFacts,
+  searchFacts,
+} from "@alfred/db/repo/user";
 import {
   privacyEventsQuerySchema,
   privacyFactDeleteSchema,
@@ -45,7 +50,7 @@ export const privacyRouter = router({
 
       const params = privacyFactQuerySchema.parse(input ?? {});
       if (params.embedding) {
-        const matches = await userRepo.searchFacts(
+        const matches = await searchFacts(
           session.user.id,
           params.embedding,
           params.limit,
@@ -54,16 +59,11 @@ export const privacyRouter = router({
         return Array.isArray(matches) ? matches : [];
       }
 
-      const repo = userRepo as unknown as {
-        listFacts?: (
-          userId: string,
-          limit?: number,
-          offset?: number
-        ) => Promise<unknown>;
-      };
-      const listed = repo.listFacts
-        ? await repo.listFacts(session.user.id, params.limit, params.offset)
-        : [];
+      const listed = await listFacts(
+        session.user.id,
+        params.limit,
+        params.offset
+      );
       return Array.isArray(listed) ? listed : [];
     }),
 
@@ -85,7 +85,7 @@ export const privacyRouter = router({
 
       ensureObligations(ctx);
 
-      const removed = Number(await userRepo.deleteFact(input.id)) || 0;
+      const removed = Number(await deleteFact(input.id)) || 0;
       if (removed > 0) {
         recordMemoryForget(input.scope ?? "fact");
       }
@@ -105,7 +105,7 @@ export const privacyRouter = router({
       }
 
       const params = privacyEventsQuerySchema.parse(input ?? {});
-      const events = await userRepo.getEvents(
+      const events = await getEvents(
         session.user.id,
         params.type,
         params.limit,

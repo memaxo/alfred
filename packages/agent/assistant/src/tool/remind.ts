@@ -1,14 +1,12 @@
-import { assistantRepo } from "@alfred/db";
-import { z } from "zod";
-import { recordAssistantToolCall } from "../../../src/metrics";
-
-const {
+import {
   createReminder,
   deleteReminder,
   getDueReminders,
   getReminders,
   markReminderFired,
-} = assistantRepo;
+} from "@alfred/db/repo/assistant";
+import { z } from "zod";
+import { recordAssistantToolCall } from "../../../src/metrics";
 
 const reminderInputSchema = z.object({
   userId: z.string().min(1),

@@ -5,7 +5,11 @@
  * Persists visual configurations using the existing preference system.
  */
 
-import { userRepo } from "@alfred/db";
+import {
+  deletePreference,
+  getPreferences,
+  setPreference,
+} from "@alfred/db/repo/user";
 import {
   type VisualConfig,
   type VisualPreset,
@@ -109,7 +113,7 @@ export const visualRouter = router({
     }
 
     // Load all visual preferences
-    const preferences = await userRepo.getPreferences(session.user.id);
+    const preferences = await getPreferences(session.user.id);
     const visualPrefs = (Array.isArray(preferences) ? preferences : []).filter(
       (p) => p.key.startsWith(VISUAL_PREFIX)
     );
@@ -165,7 +169,7 @@ export const visualRouter = router({
       // Save all preferences
       await Promise.all(
         pairs.map(({ key, value }) =>
-          userRepo.setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1.0, "user")
         )
       );
 
@@ -213,7 +217,7 @@ export const visualRouter = router({
       // Save updated preferences
       await Promise.all(
         pairs.map(({ key, value }) =>
-          userRepo.setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1.0, "user")
         )
       );
 
@@ -244,7 +248,7 @@ export const visualRouter = router({
       const pairs = flattenConfig(config);
       await Promise.all(
         pairs.map(({ key, value }) =>
-          userRepo.setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1.0, "user")
         )
       );
 
@@ -265,15 +269,13 @@ export const visualRouter = router({
       }
 
       // Delete all visual preferences
-      const preferences = await userRepo.getPreferences(session.user.id);
+      const preferences = await getPreferences(session.user.id);
       const visualPrefs = (
         Array.isArray(preferences) ? preferences : []
       ).filter((p) => p.key.startsWith(VISUAL_PREFIX));
 
       await Promise.all(
-        visualPrefs.map((p) =>
-          userRepo.deletePreference(session.user.id, p.key)
-        )
+        visualPrefs.map((p) => deletePreference(session.user.id, p.key))
       );
 
       return { reset: true };
@@ -300,7 +302,7 @@ export const visualRouter = router({
       }
 
       // Load all visual preferences
-      const preferences = await userRepo.getPreferences(session.user.id);
+      const preferences = await getPreferences(session.user.id);
       const visualPrefs = (
         Array.isArray(preferences) ? preferences : []
       ).filter((p) => p.key.startsWith(VISUAL_PREFIX));
@@ -354,7 +356,7 @@ export const visualRouter = router({
       const pairs = flattenConfig(input.config);
       await Promise.all(
         pairs.map(({ key, value }) =>
-          userRepo.setPreference(session.user.id, key, value, 1.0, "user")
+          setPreference(session.user.id, key, value, 1.0, "user")
         )
       );
 

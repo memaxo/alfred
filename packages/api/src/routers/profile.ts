@@ -1,5 +1,5 @@
 import { recordMemoryUpdate } from "@alfred/agent";
-import { userRepo } from "@alfred/db";
+import { getProfile, upsertProfile } from "@alfred/db/repo/user";
 import { profileUpdateSchema } from "@alfred/type";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "../context";
@@ -37,7 +37,7 @@ export const profileRouter = router({
       });
     }
 
-    return userRepo.getProfile(session.user.id);
+    return getProfile(session.user.id);
   }),
 
   update: authedProcedure
@@ -58,7 +58,7 @@ export const profileRouter = router({
 
       ensureObligations(ctx);
 
-      const profile = await userRepo.upsertProfile(session.user.id, {
+      const profile = await upsertProfile(session.user.id, {
         name: input.name ?? undefined,
         email: input.email ?? undefined,
         avatar: input.avatar ?? undefined,

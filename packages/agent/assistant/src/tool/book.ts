@@ -1,8 +1,10 @@
-import { assistantRepo } from "@alfred/db";
+import {
+  createBookmark,
+  deleteBookmark,
+  getBookmarks,
+} from "@alfred/db/repo/assistant";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
-
-const { createBookmark, deleteBookmark, getBookmarks } = assistantRepo;
 
 const bookmarkInputSchema = z.object({
   userId: z.string().min(1),

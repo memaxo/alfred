@@ -6,11 +6,11 @@
  * and conversation history.
  */
 
-export * from "./metrics";
 export { type ToolMemoryBoost, toolMemoryBoost } from "./boost";
 // Re-export embedding utilities
 export { embedQuery, embedTexts, normalizeEmbedding } from "./embed";
 export { type ToolMemoryHistory, toolMemoryHistory } from "./history";
+export * from "./metrics";
 export { type ToolMemoryRemove, toolMemoryRemove } from "./remove";
 export { type ToolMemoryRetrieve, toolMemoryRetrieve } from "./retrieve";
 export { type ToolMemorySearch, toolMemorySearch } from "./search";

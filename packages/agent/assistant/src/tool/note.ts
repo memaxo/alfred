@@ -1,8 +1,11 @@
-import { assistantRepo } from "@alfred/db";
+import {
+  createNote,
+  deleteNote,
+  getNotes,
+  updateNote,
+} from "@alfred/db/repo/assistant";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
-
-const { createNote, deleteNote, getNotes, updateNote } = assistantRepo;
 
 const noteInputSchema = z.object({
   userId: z.string().min(1),

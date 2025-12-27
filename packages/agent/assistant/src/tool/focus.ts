@@ -5,7 +5,8 @@ import {
   stopFocus,
   updateFocus,
 } from "@alfred/cognitive/state";
-import { assistantRepo, userRepo } from "@alfred/db";
+import { getTasks } from "@alfred/db/repo/assistant";
+import { addEvent, getPreferences, setPreference } from "@alfred/db/repo/user";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
 
@@ -97,7 +98,7 @@ function computeNextBreak(state: FocusState) {
 
 async function computeSuggestedTasks(userId: string) {
   try {
-    const tasks = await assistantRepo.getTasks(userId, "pending", 3);
+    const tasks = await getTasks(userId, "pending", 3);
     return tasks
       .map((task) =>
         typeof task.title === "string" && task.title.length > 0
@@ -112,15 +113,16 @@ async function computeSuggestedTasks(userId: string) {
 }
 
 async function loadFocusPreference(userId: string) {
-  const preferences = (await userRepo.getPreferences(
-    userId
-  )) as unknown as Array<{ key: string; value: unknown }>;
+  const preferences = (await getPreferences(userId)) as unknown as Array<{
+    key: string;
+    value: unknown;
+  }>;
   const entry = preferences.find((pref) => pref.key === "focus") ?? null;
   return parseFocusState(entry);
 }
 
 async function persistFocus(userId: string, state: FocusState) {
-  await userRepo.setPreference(userId, "focus", state, 1.0, "assistant");
+  await setPreference(userId, "focus", state, 1.0, "assistant");
 }
 
 export const toolFocus = {
@@ -181,7 +183,7 @@ export const toolFocus = {
 
     if (input.action !== "status") {
       await persistFocus(input.userId, updated);
-      await userRepo.addEvent(input.userId, "tool_use", {
+      await addEvent(input.userId, "tool_use", {
         tool: "focus",
         action: input.action,
         durationMin: input.durationMin,

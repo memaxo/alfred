@@ -1,4 +1,4 @@
-import { userRepo } from "@alfred/db";
+import { getPreferences, setPreference } from "@alfred/db/repo/user";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { authedProcedure, router } from "../trpc";
@@ -12,7 +12,7 @@ export const userRouter = router({
         message: "session_required",
       });
     }
-    const prefs = await userRepo.getPreferences(session.user.id);
+    const prefs = await getPreferences(session.user.id);
     return Array.isArray(prefs) ? prefs : [];
   }),
 
@@ -32,7 +32,7 @@ export const userRouter = router({
         });
       }
 
-      return await userRepo.setPreference(
+      return await setPreference(
         session.user.id,
         input.key,
         input.value,

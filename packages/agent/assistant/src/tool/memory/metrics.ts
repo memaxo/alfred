@@ -82,7 +82,10 @@ export function recordMemoryForget(scope: string) {
   memoryForgetsTotal.inc({ scope });
 }
 
-export function recordMemoryToolCall(tool: string, status: "success" | "error") {
+export function recordMemoryToolCall(
+  tool: string,
+  status: "success" | "error"
+) {
   memoryToolCallsTotal.inc({ tool, status });
 }
 

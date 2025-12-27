@@ -1,5 +1,5 @@
 import { requireToolScopesAndPolicy } from "@alfred/auth/token";
-import { userRepo } from "@alfred/db";
+import { getPreferences, setPreference } from "@alfred/db/repo/user";
 import {
   preferenceKeySchema,
   preferenceValueSchema,
@@ -66,7 +66,7 @@ export const toolPreferenceGet = {
       },
     });
 
-    const rows = await userRepo.getPreferences(input.userId);
+    const rows = await getPreferences(input.userId);
     const list = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 
     const filtered = list
@@ -132,14 +132,14 @@ export const toolPreferenceSet = {
       },
     });
 
-    const existing = await userRepo.getPreferences(input.userId);
+    const existing = await getPreferences(input.userId);
     const previous = Array.isArray(existing)
       ? (existing as Array<{ key?: unknown; value?: unknown }>).find(
           (row) => row.key === input.key
         )?.value
       : undefined;
 
-    await userRepo.setPreference(
+    await setPreference(
       input.userId,
       input.key,
       input.value,

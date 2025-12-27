@@ -1,9 +1,11 @@
-import { assistantRepo } from "@alfred/db";
+import {
+  cancelTimer,
+  createTimer,
+  getActiveTimers,
+  markTimerCompleted,
+} from "@alfred/db/repo/assistant";
 import { z } from "zod";
 import { recordAssistantToolCall } from "../../../src/metrics";
-
-const { cancelTimer, createTimer, getActiveTimers, markTimerCompleted } =
-  assistantRepo;
 
 const timerInputSchema = z.object({
   userId: z.string().min(1),
