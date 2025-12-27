@@ -61,7 +61,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       // Check that spawned window is focused
       const isFocused = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
         const state = store.getState();
         const noteWindow = state.windows.find((w: any) => w.type === "note");
@@ -73,13 +75,17 @@ test.describe("Desktop Deep Link Lifecycle", () => {
   });
 
   test.describe("resource parameters", () => {
-    test("?resourceType=note&resourceId=X finds existing window", async ({ page }) => {
+    test("?resourceType=note&resourceId=X finds existing window", async ({
+      page,
+    }) => {
       // First navigate and create a window with resourceRef
       await navigateToDesktop(page);
 
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "existing-note",
@@ -99,7 +105,7 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       await expect(getCanvas(page)).toBeVisible();
 
       // Should focus existing window, not create new
-      const windowCount = await countWindows(page, "note");
+      const _windowCount = await countWindows(page, "note");
       const focusedId = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
         return store?.getState().focusedWindowId;
@@ -108,7 +114,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       expect(focusedId).toBe("existing-note");
     });
 
-    test("?resourceType=note&resourceId=X spawns new if not found", async ({ page }) => {
+    test("?resourceType=note&resourceId=X spawns new if not found", async ({
+      page,
+    }) => {
       await page.goto("/?resourceType=note&resourceId=new-resource-456");
       await expect(getCanvas(page)).toBeVisible();
 
@@ -119,9 +127,13 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       // Verify it has the resourceRef
       const hasResourceRef = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
-        const noteWindows = store.getState().windows.filter((w: any) => w.type === "note");
+        const noteWindows = store
+          .getState()
+          .windows.filter((w: any) => w.type === "note");
         return noteWindows.some(
           (w: any) => w.data?.resourceRef?.id === "new-resource-456"
         );
@@ -138,12 +150,16 @@ test.describe("Desktop Deep Link Lifecycle", () => {
 
       const hasResourceRef = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
-        return store.getState().windows.some(
-          (w: any) =>
-            w.type === "note" && w.data?.resourceRef?.id === "combined-789"
-        );
+        return store
+          .getState()
+          .windows.some(
+            (w: any) =>
+              w.type === "note" && w.data?.resourceRef?.id === "combined-789"
+          );
       });
 
       expect(hasResourceRef).toBe(true);
@@ -157,7 +173,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       // Create a specific window
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "target-window-id",
@@ -194,7 +212,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
   });
 
   test.describe("double-spawn prevention", () => {
-    test("refresh with same spawn param doesn't create duplicate", async ({ page }) => {
+    test("refresh with same spawn param doesn't create duplicate", async ({
+      page,
+    }) => {
       await page.goto("/?spawn=note");
       await expect(getCanvas(page)).toBeVisible();
 
@@ -236,7 +256,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       // Create some state
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "history-test-window",
@@ -284,7 +306,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
   });
 
   test.describe("URL cleanup", () => {
-    test.skip("spawn params are cleared from URL after processing", async ({ page }) => {
+    test("spawn params are cleared from URL after processing", async ({
+      page,
+    }) => {
       // Skip: URL cleanup behavior depends on implementation choice
       await page.goto("/?spawn=note");
       await expect(getCanvas(page)).toBeVisible();
@@ -299,7 +323,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
   });
 
   test.describe("combined scenarios", () => {
-    test("spawn + existing singleton type focuses existing", async ({ page }) => {
+    test("spawn + existing singleton type focuses existing", async ({
+      page,
+    }) => {
       await page.goto("/?spawn=chat");
       await expect(getCanvas(page)).toBeVisible();
 
@@ -310,7 +336,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
       // Should be focused
       const isChatFocused = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
         const state = store.getState();
         const chatWindow = state.windows.find((w: any) => w.type === "chat");
@@ -321,7 +349,9 @@ test.describe("Desktop Deep Link Lifecycle", () => {
     });
 
     test("multiple params: spawn + resourceRef", async ({ page }) => {
-      await page.goto("/?spawn=workflow&resourceType=workflow_run&resourceId=run-999");
+      await page.goto(
+        "/?spawn=workflow&resourceType=workflow_run&resourceId=run-999"
+      );
       await expect(getCanvas(page)).toBeVisible();
 
       const workflowWindow = getWindow(page, "workflow");
@@ -329,12 +359,16 @@ test.describe("Desktop Deep Link Lifecycle", () => {
 
       const hasCorrectRef = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
-        return store.getState().windows.some(
-          (w: any) =>
-            w.type === "workflow" && w.data?.resourceRef?.id === "run-999"
-        );
+        return store
+          .getState()
+          .windows.some(
+            (w: any) =>
+              w.type === "workflow" && w.data?.resourceRef?.id === "run-999"
+          );
       });
 
       expect(hasCorrectRef).toBe(true);

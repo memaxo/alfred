@@ -14,6 +14,7 @@ async function withBudget<T>(
   const durationMs = performance.now() - start;
   return { result, durationMs, withinBudget: durationMs <= budgetMs };
 }
+
 import { createContextSlice } from "../context";
 import { createDockSlice } from "../dock";
 import { createKnowledgeSlice } from "../knowledge";
@@ -54,7 +55,7 @@ function createTestStore() {
   );
 }
 
-function createTestWindow(id: string, type: string = "note"): WindowInstance {
+function createTestWindow(id: string, type = "note"): WindowInstance {
   return {
     id,
     type,
@@ -212,9 +213,11 @@ describe("Desktop Persistence Integration", () => {
 
       store1.getState().addWindow(createTestWindow("note-1"));
       store1.getState().addWindow(createTestWindow("note-2"));
-      store1.getState().setEdges([
-        { id: "edge-1", source: "note-1", target: "note-2", type: "default" },
-      ]);
+      store1
+        .getState()
+        .setEdges([
+          { id: "edge-1", source: "note-1", target: "note-2", type: "default" },
+        ]);
       store1.getState().triggerEdgeActivity("edge-1", 5000);
 
       await new Promise((r) => setTimeout(r, 50));

@@ -57,7 +57,7 @@ describe("BookRoute", () => {
 
       const urlInput = view.getByLabelText(/url/i);
       fireEvent.change(urlInput, { target: { value: "https://example.com" } });
-      
+
       const submitButton = view.getByRole("button", { name: /add bookmark/i });
       fireEvent.click(submitButton);
 

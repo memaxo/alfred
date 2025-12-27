@@ -1,18 +1,9 @@
 import "@/test/dom";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  setSystemTime,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
 import {
   dispatchDesktopEvent,
   useDesktopActivations,
-  type DesktopActivationEvent,
 } from "@/hooks/use-desktop-activations";
 import { useDesktopStore } from "@/store/desktop";
 
@@ -28,7 +19,7 @@ async function withBudget<T>(
   return { result, durationMs, withinBudget: durationMs <= budgetMs };
 }
 
-function createTestWindow(id: string, type: string = "note") {
+function createTestWindow(id: string, type = "note") {
   return {
     id,
     type,
@@ -72,8 +63,12 @@ describe("Desktop Activation Events Integration", () => {
     it("pulses specific edge when sourceId and targetId match", async () => {
       // Setup: Two windows connected by an edge
       act(() => {
-        useDesktopStore.getState().addWindow(createTestWindow("chat-1", "chat"));
-        useDesktopStore.getState().addWindow(createTestWindow("note-1", "note"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("chat-1", "chat"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note"));
         useDesktopStore.getState().setEdges([
           {
             id: "edge-chat-note",
@@ -105,9 +100,11 @@ describe("Desktop Activation Events Integration", () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("a", "note"));
         useDesktopStore.getState().addWindow(createTestWindow("b", "note"));
-        useDesktopStore.getState().setEdges([
-          { id: "edge-ab", source: "a", target: "b", type: "default" },
-        ]);
+        useDesktopStore
+          .getState()
+          .setEdges([
+            { id: "edge-ab", source: "a", target: "b", type: "default" },
+          ]);
       });
 
       renderHook(() => useDesktopActivations());
@@ -127,9 +124,15 @@ describe("Desktop Activation Events Integration", () => {
     it("pulses all connected edges when only sourceId provided", async () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("hub", "chat"));
-        useDesktopStore.getState().addWindow(createTestWindow("spoke-1", "note"));
-        useDesktopStore.getState().addWindow(createTestWindow("spoke-2", "note"));
-        useDesktopStore.getState().addWindow(createTestWindow("unconnected", "note"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("spoke-1", "note"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("spoke-2", "note"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("unconnected", "note"));
         useDesktopStore.getState().setEdges([
           { id: "edge-1", source: "hub", target: "spoke-1", type: "default" },
           { id: "edge-2", source: "hub", target: "spoke-2", type: "default" },
@@ -152,12 +155,28 @@ describe("Desktop Activation Events Integration", () => {
 
     it("pulses all connected edges when only targetId provided", async () => {
       act(() => {
-        useDesktopStore.getState().addWindow(createTestWindow("target", "note"));
-        useDesktopStore.getState().addWindow(createTestWindow("source-1", "chat"));
-        useDesktopStore.getState().addWindow(createTestWindow("source-2", "chat"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("target", "note"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("source-1", "chat"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("source-2", "chat"));
         useDesktopStore.getState().setEdges([
-          { id: "edge-1", source: "source-1", target: "target", type: "default" },
-          { id: "edge-2", source: "source-2", target: "target", type: "default" },
+          {
+            id: "edge-1",
+            source: "source-1",
+            target: "target",
+            type: "default",
+          },
+          {
+            id: "edge-2",
+            source: "source-2",
+            target: "target",
+            type: "default",
+          },
         ]);
       });
 
@@ -181,9 +200,11 @@ describe("Desktop Activation Events Integration", () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("a", "note"));
         useDesktopStore.getState().addWindow(createTestWindow("b", "note"));
-        useDesktopStore.getState().setEdges([
-          { id: "edge-ab", source: "a", target: "b", type: "default" },
-        ]);
+        useDesktopStore
+          .getState()
+          .setEdges([
+            { id: "edge-ab", source: "a", target: "b", type: "default" },
+          ]);
       });
 
       // Trigger with short duration
@@ -232,7 +253,9 @@ describe("Desktop Activation Events Integration", () => {
     beforeEach(() => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("user", "chat"));
-        useDesktopStore.getState().addWindow(createTestWindow("voice", "terminal"));
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("voice", "terminal"));
         useDesktopStore.getState().addWindow(createTestWindow("tool", "droid"));
         useDesktopStore.getState().setEdges([
           { id: "e1", source: "user", target: "voice", type: "default" },
@@ -358,8 +381,8 @@ describe("Desktop Activation Events Integration", () => {
       act(() => {
         dispatchDesktopEvent({
           type: "tool-call",
-          sourceId: "nonexistent",
-          targetId: "also-nonexistent",
+          sourceId: "missing-source",
+          targetId: "missing-target",
         });
       });
 
@@ -374,9 +397,11 @@ describe("Desktop Activation Events Integration", () => {
       act(() => {
         useDesktopStore.getState().addWindow(createTestWindow("a", "note"));
         useDesktopStore.getState().addWindow(createTestWindow("b", "note"));
-        useDesktopStore.getState().setEdges([
-          { id: "edge-ab", source: "a", target: "b", type: "default" },
-        ]);
+        useDesktopStore
+          .getState()
+          .setEdges([
+            { id: "edge-ab", source: "a", target: "b", type: "default" },
+          ]);
       });
 
       // Verify hook was listening before unmount
@@ -416,7 +441,9 @@ describe("Desktop Activation Events Integration", () => {
       act(() => {
         // Create a connected graph
         for (let i = 0; i < 10; i++) {
-          useDesktopStore.getState().addWindow(createTestWindow(`node-${i}`, "note"));
+          useDesktopStore
+            .getState()
+            .addWindow(createTestWindow(`node-${i}`, "note"));
         }
         const edges = [];
         for (let i = 0; i < 9; i++) {

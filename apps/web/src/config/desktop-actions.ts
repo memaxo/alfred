@@ -226,9 +226,7 @@ export const DESKTOP_ACTIONS: DesktopAction[] = [
   },
 ];
 
-export function getActionsForWindow(
-  type: WindowType | null
-): DesktopAction[] {
+export function getActionsForWindow(type: WindowType | null): DesktopAction[] {
   return DESKTOP_ACTIONS.filter((action) => {
     if (action.validWindowTypes === "none") {
       return true; // Spawn actions always available

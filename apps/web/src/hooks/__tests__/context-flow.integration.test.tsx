@@ -1,5 +1,5 @@
 import "@/test/dom";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -143,7 +143,9 @@ describe("Desktop Context Flow Integration", () => {
       const { result } = renderHook(() => useFocusedContext(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.content).toContain("Summary: Study of subatomic particles");
+        expect(result.current.content).toContain(
+          "Summary: Study of subatomic particles"
+        );
       });
     });
 
@@ -163,7 +165,9 @@ describe("Desktop Context Flow Integration", () => {
       const { result } = renderHook(() => useFocusedContext(), { wrapper });
 
       await waitFor(() => {
-        expect(result.current.content).toContain("Description: Einstein's theory");
+        expect(result.current.content).toContain(
+          "Description: Einstein's theory"
+        );
       });
     });
   });
@@ -174,9 +178,9 @@ describe("Desktop Context Flow Integration", () => {
 
       // Add chat and knowledge windows with edge
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("chat-1", "chat", { label: "Chat" })
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("chat-1", "chat", { label: "Chat" }));
         useDesktopStore.getState().addWindow(
           createTestWindow("knowledge-1", "knowledge", {
             label: "Topic",
@@ -210,9 +214,9 @@ describe("Desktop Context Flow Integration", () => {
       const wrapper = createWrapper();
 
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("note-1", "note", { label: "Test" })
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note", { label: "Test" }));
         useDesktopStore.getState().focusWindow("note-1");
       });
 
@@ -234,9 +238,9 @@ describe("Desktop Context Flow Integration", () => {
 
     it("clears context cache on window removal", async () => {
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("note-1", "note", { label: "Test" })
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note", { label: "Test" }));
         useDesktopStore.getState().recordContextReceipt("note-1", {
           focusedGraphNodeId: "graph-123",
           ragDocIds: ["doc-1"],
@@ -258,9 +262,9 @@ describe("Desktop Context Flow Integration", () => {
   describe("feedback recording", () => {
     it("records positive feedback for window", () => {
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("note-1", "note")
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note"));
         useDesktopStore.getState().recordFeedback("note-1", "positive");
       });
 
@@ -272,9 +276,9 @@ describe("Desktop Context Flow Integration", () => {
 
     it("records negative feedback for window", () => {
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("note-1", "note")
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note"));
         useDesktopStore.getState().recordFeedback("note-1", "negative");
       });
 
@@ -374,9 +378,9 @@ describe("Desktop Context Flow Integration", () => {
       const wrapper = createWrapper();
 
       act(() => {
-        useDesktopStore.getState().addWindow(
-          createTestWindow("note-1", "note", { label: "Test" })
-        );
+        useDesktopStore
+          .getState()
+          .addWindow(createTestWindow("note-1", "note", { label: "Test" }));
         useDesktopStore.getState().focusWindow("note-1");
       });
 

@@ -11,13 +11,13 @@ import {
   sseConnectionsCurrent,
   sseFirstChunkLatencySeconds,
 } from "@alfred/api/metrics";
+import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import {
   createConnection,
   getConnectionCount,
   removeConnection,
   updateConnectionActivity,
 } from "@alfred/api/utils/sse-connections";
-import { triggerPreferenceRefresh } from "@alfred/api/preference/refresh";
 import { auth } from "@alfred/auth";
 import * as conversationRepo from "@alfred/db/repo/conversation";
 import { buildHistoryContext, getHistoryBudgetDefaults } from "@alfred/history";
@@ -88,7 +88,9 @@ export async function handleStreamRequest(
     if (userId) {
       const connectionResult = createConnection(userId, errorPrefix);
       if (!connectionResult.allowed) {
-        sseConnectionRateLimitHitsTotal.labels(errorPrefix, connectionResult.reason ?? "unknown").inc();
+        sseConnectionRateLimitHitsTotal
+          .labels(errorPrefix, connectionResult.reason ?? "unknown")
+          .inc();
         return new Response(
           JSON.stringify({
             error: "rate_limit_exceeded",
@@ -131,7 +133,7 @@ export async function handleStreamRequest(
       // This handles cases like message editing or regeneration where the client
       // might have removed some messages from the end of the history.
       if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1];
+        const lastMessage = messages.at(-1);
         if (lastMessage?.id) {
           await conversationRepo.deleteMessagesAfter(
             userId,
@@ -261,10 +263,17 @@ export async function handleStreamRequest(
       consumeSseStream: consumeStream,
       messageMetadata: ({ part }) => {
         // Track first chunk latency
-        if (!firstChunkSent && (part.type === ("text" as any) || part.type === "text-delta") && (part as any).text) {
+        if (
+          !firstChunkSent &&
+          (part.type === ("text" as any) || part.type === "text-delta") &&
+          (part as any).text
+        ) {
           firstChunkSent = true;
-          const firstChunkLatency = (performance.now() - requestStartTime) / 1000;
-          sseFirstChunkLatencySeconds.labels(errorPrefix).observe(firstChunkLatency);
+          const firstChunkLatency =
+            (performance.now() - requestStartTime) / 1000;
+          sseFirstChunkLatencySeconds
+            .labels(errorPrefix)
+            .observe(firstChunkLatency);
           if (connectionId) {
             updateConnectionActivity(connectionId);
           }

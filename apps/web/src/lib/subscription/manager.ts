@@ -135,9 +135,6 @@ class SubscriptionManager {
       // Global errors (without streamId) are silently logged
       return;
     }
-
-    // Unknown message type - log for debugging but don't crash
-    console.warn("Unknown message type received:", message);
   }
 
   private sendSubscribe(streamId: string, cursor: string | null): void {

@@ -1,13 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
-import {
-  countWindows,
-  focusWindow,
-  getCanvas,
-  getWindow,
-  navigateToDesktop,
-} from "./helpers/desktop";
-import { openCommandPalette, spawnNode } from "./helpers/mindscape";
+import { countWindows, getWindow, navigateToDesktop } from "./helpers/desktop";
+import { openCommandPalette } from "./helpers/mindscape";
 
 test.describe("Desktop Knowledge Pipeline", () => {
   test.beforeEach(async ({ page }) => {
@@ -16,7 +10,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
   });
 
   test.describe("knowledge window spawning", () => {
-    test("can spawn knowledge window from command palette", async ({ page }) => {
+    test("can spawn knowledge window from command palette", async ({
+      page,
+    }) => {
       await openCommandPalette(page);
 
       const dialog = page.getByRole("dialog");
@@ -35,7 +31,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
       // Inject a knowledge window directly via store
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "test-knowledge-1",
@@ -55,13 +53,17 @@ test.describe("Desktop Knowledge Pipeline", () => {
       await expect(knowledgeWindow).toBeVisible();
 
       // Should display the label
-      await expect(knowledgeWindow.getByText("Test Knowledge Node")).toBeVisible();
+      await expect(
+        knowledgeWindow.getByText("Test Knowledge Node")
+      ).toBeVisible();
     });
 
     test("knowledge window shows confidence badge", async ({ page }) => {
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "test-knowledge-1",
@@ -92,7 +94,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
       // Spawn knowledge graph via store action
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         const nodes = [
           { id: "node-1", label: "Concept A", entityType: "concept" },
@@ -101,7 +105,12 @@ test.describe("Desktop Knowledge Pipeline", () => {
         ];
 
         const edges = [
-          { id: "edge-1", fromId: "node-1", toId: "node-2", kind: "relates_to" },
+          {
+            id: "edge-1",
+            fromId: "node-1",
+            toId: "node-2",
+            kind: "relates_to",
+          },
           { id: "edge-2", fromId: "node-2", toId: "node-3", kind: "explains" },
         ];
 
@@ -115,10 +124,14 @@ test.describe("Desktop Knowledge Pipeline", () => {
       expect(newCount).toBeGreaterThanOrEqual(initialCount + 3);
     });
 
-    test("spawned knowledge windows are positioned in radial layout", async ({ page }) => {
+    test("spawned knowledge windows are positioned in radial layout", async ({
+      page,
+    }) => {
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         const nodes = [
           { id: "node-1", label: "Center" },
@@ -135,7 +148,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
       // Get positions of spawned windows
       const positions = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return [];
+        if (!store) {
+          return [];
+        }
 
         return store
           .getState()
@@ -147,7 +162,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
 
       // Verify windows are spread out (not all at same position)
       const uniquePositions = new Set(
-        positions.map((p: any) => `${Math.round(p.x / 50)}-${Math.round(p.y / 50)}`)
+        positions.map(
+          (p: any) => `${Math.round(p.x / 50)}-${Math.round(p.y / 50)}`
+        )
       );
       expect(uniquePositions.size).toBeGreaterThan(1);
     });
@@ -155,7 +172,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
     test("knowledge graph edges connect correct windows", async ({ page }) => {
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         const nodes = [
           { id: "node-a", label: "Node A" },
@@ -163,7 +182,12 @@ test.describe("Desktop Knowledge Pipeline", () => {
         ];
 
         const edges = [
-          { id: "edge-ab", fromId: "node-a", toId: "node-b", kind: "relates_to" },
+          {
+            id: "edge-ab",
+            fromId: "node-a",
+            toId: "node-b",
+            kind: "relates_to",
+          },
         ];
 
         store.getState().spawnKnowledgeGraph(nodes, edges);
@@ -182,11 +206,15 @@ test.describe("Desktop Knowledge Pipeline", () => {
   });
 
   test.describe("visualize action from focused window", () => {
-    test.skip("visualize action available for knowledge windows", async ({ page }) => {
+    test("visualize action available for knowledge windows", async ({
+      page,
+    }) => {
       // Skip: requires knowledge.visualize API endpoint setup
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
         store.getState().addWindow({
           id: "knowledge-1",
@@ -216,7 +244,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
     test("handles empty knowledge graph gracefully", async ({ page }) => {
       const result = await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return { success: false };
+        if (!store) {
+          return { success: false };
+        }
 
         const initialCount = store.getState().windows.length;
         const windowIds = store.getState().spawnKnowledgeGraph([], []);
@@ -233,16 +263,22 @@ test.describe("Desktop Knowledge Pipeline", () => {
       expect(result.windowCountChange).toBe(0);
     });
 
-    test("handles duplicate hgHash by reusing existing window", async ({ page }) => {
+    test("handles duplicate hgHash by reusing existing window", async ({
+      page,
+    }) => {
       // First spawn
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
-        store.getState().spawnKnowledgeGraph(
-          [{ id: "node-1", label: "Unique Node", hgHash: "hash-123" }],
-          []
-        );
+        store
+          .getState()
+          .spawnKnowledgeGraph(
+            [{ id: "node-1", label: "Unique Node", hgHash: "hash-123" }],
+            []
+          );
       });
 
       await page.waitForTimeout(200);
@@ -252,12 +288,16 @@ test.describe("Desktop Knowledge Pipeline", () => {
       // Second spawn with same hgHash
       await page.evaluate(() => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return;
+        if (!store) {
+          return;
+        }
 
-        store.getState().spawnKnowledgeGraph(
-          [{ id: "node-2", label: "Same Node", hgHash: "hash-123" }],
-          []
-        );
+        store
+          .getState()
+          .spawnKnowledgeGraph(
+            [{ id: "node-2", label: "Same Node", hgHash: "hash-123" }],
+            []
+          );
       });
 
       await page.waitForTimeout(200);
@@ -274,7 +314,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
       // Track if autoLayout was called
       const layoutCalled = await page.evaluate(async () => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return false;
+        if (!store) {
+          return false;
+        }
 
         let layoutCalled = false;
         const originalAutoLayout = store.getState().autoLayout;
@@ -304,10 +346,14 @@ test.describe("Desktop Knowledge Pipeline", () => {
   });
 
   test.describe("performance", () => {
-    test("spawns 20 knowledge nodes within performance budget", async ({ page }) => {
+    test("spawns 20 knowledge nodes within performance budget", async ({
+      page,
+    }) => {
       const result = await page.evaluate(async () => {
         const store = (window as any).__DESKTOP_STORE__;
-        if (!store) return { success: false };
+        if (!store) {
+          return { success: false };
+        }
 
         const nodes = Array.from({ length: 20 }, (_, i) => ({
           id: `perf-node-${i}`,
@@ -329,9 +375,9 @@ test.describe("Desktop Knowledge Pipeline", () => {
         // Wait for render
         await new Promise((r) => setTimeout(r, 500));
 
-        const windowCount = store.getState().windows.filter(
-          (w: any) => w.type === "knowledge"
-        ).length;
+        const windowCount = store
+          .getState()
+          .windows.filter((w: any) => w.type === "knowledge").length;
 
         return {
           success: true,

@@ -6,10 +6,7 @@
  */
 
 import type { CortexEngine } from "@alfred/cortex";
-import {
-  getDefaultPreset,
-  getPreset,
-} from "@alfred/cortex/presets";
+import { getDefaultPreset, getPreset } from "@alfred/cortex/presets";
 import type {
   VisualConfig,
   VisualConfigUpdate,

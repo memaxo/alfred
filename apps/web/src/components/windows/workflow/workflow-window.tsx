@@ -1,6 +1,16 @@
 import type { AssistantUIMessage } from "@alfred/agent";
+import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
 import type { NodeProps } from "@xyflow/react";
-import { CheckCircle, Loader2, Workflow, LayoutGrid, List, Check, X, RefreshCw } from "lucide-react";
+import {
+  Check,
+  CheckCircle,
+  LayoutGrid,
+  List,
+  Loader2,
+  RefreshCw,
+  Workflow,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -21,12 +31,10 @@ import {
   WindowFrame,
 } from "@/components/windows/shared";
 import { deriveActions } from "@/hooks/use-assistant-stream";
-import { useDesktopStore } from "@/store/desktop";
-import { WorkflowCanvas } from "./workflow-canvas";
-import { type StructuredPlan, structuredPlanSchema } from "@alfred/plan";
-
 import { authClient } from "@/lib/auth-client";
+import { useDesktopStore } from "@/store/desktop";
 import { trpc } from "@/utils/trpc";
+import { WorkflowCanvas } from "./workflow-canvas";
 
 type AutoLevel = "read" | "low" | "medium" | "high";
 
@@ -164,12 +172,16 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   });
 
   const handleApprove = () => {
-    if (!plan) return;
+    if (!plan) {
+      return;
+    }
     approvePlan.mutate({ planId: plan.id });
   };
 
   const handleReject = () => {
-    if (!plan) return;
+    if (!plan) {
+      return;
+    }
     rejectPlan.mutate({ planId: plan.id });
   };
 
@@ -263,11 +275,11 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
     <div className="flex items-center gap-1">
       {plan && (
         <Button
-          variant="ghost"
-          size="icon"
           className="h-6 w-6 text-biolum-dim hover:text-biolum"
           onClick={toggleView}
+          size="icon"
           title={activeView === "list" ? "Switch to Canvas" : "Switch to List"}
+          variant="ghost"
         >
           {activeView === "list" ? (
             <LayoutGrid className="h-3.5 w-3.5" />
@@ -285,51 +297,53 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
   return (
     <WindowFrame
       actions={headerIcon}
+      height={activeView === "canvas" ? 600 : undefined}
       id={id}
       selected={selected}
       title={windowData.label ?? "Workflow"}
       width={activeView === "canvas" ? 800 : 480}
-      height={activeView === "canvas" ? 600 : undefined}
       windowType="workflow"
     >
-      <div className="flex flex-col h-full overflow-hidden relative">
+      <div className="relative flex h-full flex-col overflow-hidden">
         {activeView === "canvas" && plan ? (
-          <div className="flex-1 min-h-0">
-            <WorkflowCanvas plan={plan} onPlanChange={handlePlanChange} />
-            
+          <div className="min-h-0 flex-1">
+            <WorkflowCanvas onPlanChange={handlePlanChange} plan={plan} />
+
             {!hasRun && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-void-surface/80 backdrop-blur-xl border border-white/10 p-2 rounded-xl flex items-center gap-2 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
-                  onClick={handleReject}
+              <div className="-translate-x-1/2 fade-in slide-in-from-bottom-4 absolute bottom-4 left-1/2 flex animate-in items-center gap-2 rounded-xl border border-white/10 bg-void-surface/80 p-2 shadow-2xl backdrop-blur-xl duration-300">
+                <Button
+                  className="h-9 px-4 font-bold text-red-400 text-xs uppercase tracking-widest hover:bg-red-400/10 hover:text-red-300"
                   disabled={rejectPlan.isPending}
+                  onClick={handleReject}
+                  size="sm"
+                  variant="ghost"
                 >
-                  <X className="w-3.5 h-3.5 mr-2" />
+                  <X className="mr-2 h-3.5 w-3.5" />
                   Discard
                 </Button>
-                <div className="w-px h-4 bg-white/10" />
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="text-biolum-dim hover:text-biolum hover:bg-biolum/10 h-9 px-4 font-bold text-xs uppercase tracking-widest"
-                  onClick={handleRevise}
+                <div className="h-4 w-px bg-white/10" />
+                <Button
+                  className="h-9 px-4 font-bold text-biolum-dim text-xs uppercase tracking-widest hover:bg-biolum/10 hover:text-biolum"
                   disabled={generatePlan.isPending}
+                  onClick={handleRevise}
+                  size="sm"
+                  variant="ghost"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-2 ${generatePlan.isPending ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`mr-2 h-3.5 w-3.5 ${generatePlan.isPending ? "animate-spin" : ""}`}
+                  />
                   Iterate
                 </Button>
-                <Button 
-                  size="sm" 
-                  className="bg-biolum hover:bg-biolum-bright text-void font-black h-9 px-6 rounded-lg text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--biolum-rgb),0.4)]"
-                  onClick={handleApprove}
+                <Button
+                  className="h-9 rounded-lg bg-biolum px-6 font-black text-void text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--biolum-rgb),0.4)] hover:bg-biolum-bright"
                   disabled={approvePlan.isPending}
+                  onClick={handleApprove}
+                  size="sm"
                 >
                   {approvePlan.isPending ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Check className="w-3.5 h-3.5 mr-2" />
+                    <Check className="mr-2 h-3.5 w-3.5" />
                   )}
                   Approve Plan
                 </Button>
@@ -413,7 +427,9 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                     </SelectContent>
                   </Select>
                   <Select
-                    onValueChange={(v) => setMode(v as "sequential" | "parallel")}
+                    onValueChange={(v) =>
+                      setMode(v as "sequential" | "parallel")
+                    }
                     value={mode}
                   >
                     <SelectTrigger className="w-[110px]">
@@ -424,30 +440,30 @@ export function WorkflowWindow({ id, data, selected }: NodeProps) {
                       <SelectItem value="parallel">Parallel</SelectItem>
                     </SelectContent>
                   </Select>
-              <div className="flex-1" />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={generatePlan.isPending}
-                >
-                  {generatePlan.isPending ? (
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  ) : (
-                    <LayoutGrid className="mr-2 h-3 w-3" />
-                  )}
-                  Generate Plan
-                </Button>
-                <Button size="sm" type="submit">
-                  Start
-                </Button>
-              </div>
-            </div>
-          </form>
-        )}
-      </div>
+                  <div className="flex-1" />
+                  <div className="flex gap-2">
+                    <Button
+                      disabled={generatePlan.isPending}
+                      onClick={handleGenerate}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {generatePlan.isPending ? (
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      ) : (
+                        <LayoutGrid className="mr-2 h-3 w-3" />
+                      )}
+                      Generate Plan
+                    </Button>
+                    <Button size="sm" type="submit">
+                      Start
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
         )}
       </div>
     </WindowFrame>

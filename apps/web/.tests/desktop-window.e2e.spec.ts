@@ -29,7 +29,7 @@ test.describe("Desktop window lifecycle", () => {
     await expect(noteWindow).toBeVisible();
   });
 
-  test.skip("can spawn multiple windows", async ({ page }) => {
+  test("can spawn multiple windows", async ({ page }) => {
     // Skip: sidebar collapses after first spawn in test environment
     await spawnNode(page, "Note");
     await spawnNode(page, "Note");
@@ -67,7 +67,7 @@ test.describe("Desktop window lifecycle", () => {
     }
   });
 
-  test.skip("window position persists after page reload", async ({ page }) => {
+  test("window position persists after page reload", async ({ page }) => {
     // Skip: localStorage not persisted across reloads in test environment
     await spawnNode(page, "Note");
 

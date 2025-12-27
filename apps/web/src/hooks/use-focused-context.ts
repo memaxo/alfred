@@ -94,7 +94,9 @@ export function useFocusedContext(): FocusedContext {
 
   const focusedWindow = windows.find((w) => w.id === effectiveWindowId);
   const focusedGraphNodeId = useMemo(() => {
-    const data = focusedWindow?.data as (WindowData & { graph?: { dbId?: string } }) | undefined;
+    const data = focusedWindow?.data as
+      | (WindowData & { graph?: { dbId?: string } })
+      | undefined;
     const dbId = data?.graph?.dbId;
     return typeof dbId === "string" && dbId.length > 0 ? dbId : null;
   }, [focusedWindow]);
@@ -131,7 +133,11 @@ export function useFocusedContext(): FocusedContext {
 
     if ("messages" in data && Array.isArray(data.messages)) {
       // Extract text from last 3 messages using AI SDK v6 parts structure
-      const recent = (data.messages as Array<{ parts?: Array<{ type: string; text?: string }> }>)
+      const recent = (
+        data.messages as Array<{
+          parts?: Array<{ type: string; text?: string }>;
+        }>
+      )
         .slice(-3)
         .map((m) => {
           // Handle AI SDK v6 parts array
@@ -167,7 +173,9 @@ export function useFocusedContext(): FocusedContext {
   }, [focusedWindow]);
 
   // 2. "Active RAG" - Fetch related context for complex windows
-  const focusedData = focusedWindow?.data as (WindowData & Record<string, unknown>) | undefined;
+  const focusedData = focusedWindow?.data as
+    | (WindowData & Record<string, unknown>)
+    | undefined;
   const focusedLabel = coerceString(focusedData?.label);
   const focusedSummary =
     focusedData && "summary" in focusedData

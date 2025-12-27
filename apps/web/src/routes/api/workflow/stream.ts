@@ -241,7 +241,7 @@ export async function handleWorkflowStreamRequest(
       // waiting for orchestrator/tool imports and the first executor emission.
       send(encoder.encode(": workflow-stream\n\n"));
       sendWorkflowEvent({
-        type: "notice",
+        _: "notice",
         message: "workflow_stream_ready",
       } as WorkflowEvent);
 
@@ -322,10 +322,10 @@ export async function handleWorkflowStreamRequest(
             }) => {
               const { runId, obligations, resumeEvents } = payload;
               sendWorkflowEvent({
-                type: "obligation",
+                _: "obligation",
                 runId,
                 obligations,
-                resumeEvents,
+                resumeEvents: resumeEvents as any,
               } as WorkflowEvent);
             },
             policyCheck: async () => {

@@ -126,17 +126,17 @@ export type DockSlice = {
 };
 
 // Re-export slice types from their modules
-export type { CacheSlice, CachedRagDocEntry, RagDocCacheStats } from "./cache";
+export type { CachedRagDocEntry, CacheSlice, RagDocCacheStats } from "./cache";
 export type {
-  ContextSlice,
   ContextCacheEntry,
+  ContextSlice,
   FeedbackEntry,
   FeedbackIntent,
 } from "./context";
 export type {
-  KnowledgeSlice,
-  KnowledgeNode,
   KnowledgeEdge,
+  KnowledgeNode,
+  KnowledgeSlice,
 } from "./knowledge";
 
 // Import for DesktopState composition

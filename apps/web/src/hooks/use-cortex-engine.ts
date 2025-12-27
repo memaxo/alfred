@@ -4,10 +4,7 @@
  * Manages the lifecycle of the Cortex WebGPU rendering engine.
  */
 
-import type {
-  CortexConfig,
-  CortexEngine,
-} from "@alfred/cortex";
+import type { CortexConfig, CortexEngine } from "@alfred/cortex";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RenderingCapability = "webgpu" | "webgl" | "canvas2d";

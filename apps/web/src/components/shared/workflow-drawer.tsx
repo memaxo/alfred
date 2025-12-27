@@ -228,7 +228,10 @@ function WorkflowDrawerBody({
           | "mindscape"
           | "voice",
       });
-      setSubmittedFeedback({ intent: feedbackDraft.intent, updatedAt: Date.now() });
+      setSubmittedFeedback({
+        intent: feedbackDraft.intent,
+        updatedAt: Date.now(),
+      });
       toast.success("Workflow feedback recorded.");
       setFeedbackDraft(null);
       resetFeedback();

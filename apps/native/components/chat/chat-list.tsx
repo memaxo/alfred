@@ -1,6 +1,6 @@
 import type { UIMessage } from "@alfred/type/stream";
-import { useRef, useEffect } from "react";
-import { FlatList, View, Text } from "react-native";
+import { useEffect, useRef } from "react";
+import { FlatList, Text, View } from "react-native";
 import { MessageBubble } from "./message-bubble";
 
 export type ChatListProps = {
@@ -22,7 +22,7 @@ export function ChatList({ messages, isLoading }: ChatListProps) {
   if (messages.length === 0 && !isLoading) {
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <Text className="text-muted-foreground text-center text-lg">
+        <Text className="text-center text-lg text-muted-foreground">
           No messages yet. Ask Alfred anything!
         </Text>
       </View>
@@ -31,13 +31,15 @@ export function ChatList({ messages, isLoading }: ChatListProps) {
 
   return (
     <FlatList
-      ref={flatListRef}
+      className="flex-1"
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       data={messages}
       keyExtractor={(item, index) => item.id ?? `msg-${index}`}
+      onContentSizeChange={() =>
+        flatListRef.current?.scrollToEnd({ animated: true })
+      }
+      ref={flatListRef}
       renderItem={({ item }) => <MessageBubble message={item} />}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      className="flex-1"
-      onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
     />
   );
 }

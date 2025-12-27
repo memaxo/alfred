@@ -15,7 +15,11 @@ export function useKnowledgeVisualize() {
   const visualize = useCallback(
     async (
       text: string,
-      options?: { resource?: string; limit?: number; center?: { x: number; y: number } }
+      options?: {
+        resource?: string;
+        limit?: number;
+        center?: { x: number; y: number };
+      }
     ) => {
       setIsLoading(true);
       setError(null);

@@ -11,11 +11,11 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
+  type DesktopAction,
+  type DesktopActionId,
   getActionsForWindow,
   getSpawnActions,
   getWindowTypeFromSpawnAction,
-  type DesktopAction,
-  type DesktopActionId,
 } from "@/config/desktop-actions";
 import { useDesktopStore } from "@/store/desktop";
 
@@ -70,7 +70,7 @@ export function DesktopCommandPalette({
       }
 
       // Handle window-specific actions (require focused window)
-      if (!focusedWindowId || !focusedWindow) {
+      if (!(focusedWindowId && focusedWindow)) {
         return;
       }
 
@@ -117,12 +117,12 @@ export function DesktopCommandPalette({
   // Filter actions based on search and context
   const availableActions = getActionsForWindow(focusedWindowType);
   const spawnActions = getSpawnActions();
-  const contextActions = availableActions.filter(
-    (a) => a.category !== "spawn"
-  );
+  const contextActions = availableActions.filter((a) => a.category !== "spawn");
 
   const filterAction = (action: DesktopAction) => {
-    if (!search) return true;
+    if (!search) {
+      return true;
+    }
     const searchLower = search.toLowerCase();
     return (
       action.label.toLowerCase().includes(searchLower) ||

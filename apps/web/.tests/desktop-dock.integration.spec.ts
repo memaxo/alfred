@@ -33,7 +33,7 @@ test.describe("Desktop dock integration", () => {
     await expect(getWindow(page, "reminder")).toBeVisible();
   });
 
-  test.skip("singleton windows focus instead of spawning duplicates", async ({
+  test("singleton windows focus instead of spawning duplicates", async ({
     page,
   }) => {
     // Skip: command palette Enter doesn't select items reliably in test env
@@ -65,7 +65,7 @@ test.describe("Desktop dock integration", () => {
     }
   });
 
-  test.skip("multiple spawns offset windows to avoid overlap", async ({ page }) => {
+  test("multiple spawns offset windows to avoid overlap", async ({ page }) => {
     // Skip: second spawn via command palette doesn't work reliably in test env
     await spawnNode(page, "Note");
     const firstWindow = getWindow(page, "note").last();

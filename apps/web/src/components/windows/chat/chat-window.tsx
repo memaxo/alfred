@@ -16,7 +16,7 @@ import {
 import { MessageActions } from "@/components/chat/message-actions";
 import { renderPart } from "@/components/chat-render";
 import { Button } from "@/components/ui/button";
-import { ChatMessage, type AssistantPart } from "@/components/ui/chat-message";
+import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import {
   SmallCard,
@@ -96,7 +96,7 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
           disabled={status === "streaming"}
           onEdit={isUser ? () => startEditing(message) : undefined}
           onRegenerate={
-            isAssistant && messages[messages.length - 1]?.id === message.id
+            isAssistant && messages.at(-1)?.id === message.id
               ? handleRegenerate
               : undefined
           }
@@ -201,12 +201,12 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
                 if (isEditing) {
                   return (
                     <div
-                      className="flex flex-col gap-2 p-3 border border-white/10 rounded-lg bg-white/5 mb-4"
+                      className="mb-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3"
                       key={message.id}
                     >
                       <Textarea
                         autoFocus
-                        className="min-h-[80px] bg-transparent border-white/10 text-sm"
+                        className="min-h-[80px] border-white/10 bg-transparent text-sm"
                         onChange={(e) => setEditText(e.target.value)}
                         placeholder="Edit your message..."
                         value={editText}
@@ -233,7 +233,9 @@ export function ChatWindow({ id, data, selected }: NodeProps) {
 
                 return (
                   <ChatMessage
-                    actions={renderMessageActions(message as AssistantUIMessage)}
+                    actions={renderMessageActions(
+                      message as AssistantUIMessage
+                    )}
                     content={message.parts as AssistantPart[]}
                     key={message.id}
                     renderPart={renderPart}

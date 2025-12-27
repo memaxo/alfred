@@ -1,11 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { signUpTestUser } from "./helpers/auth";
-import {
-  countWindows,
-  getCanvas,
-  getWindow,
-  navigateToDesktop,
-} from "./helpers/desktop";
+import { countWindows, getWindow, navigateToDesktop } from "./helpers/desktop";
 
 test.describe("Desktop command palette", () => {
   test.beforeEach(async ({ page }) => {
@@ -82,7 +77,9 @@ test.describe("Desktop command palette", () => {
     expect(newCount).toBe(initialCount + 1);
   });
 
-  test("palette shows context actions when window focused", async ({ page }) => {
+  test("palette shows context actions when window focused", async ({
+    page,
+  }) => {
     // First spawn a note
     await page.keyboard.press("Meta+k");
     let dialog = page.getByRole("dialog");

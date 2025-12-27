@@ -14,7 +14,9 @@ test.describe("Desktop performance", () => {
     // Inject windows into store via browser console
     const result = await page.evaluate(async () => {
       const store = (window as any).__DESKTOP_STORE__;
-      if (!store) return { success: false, error: "Store not found" };
+      if (!store) {
+        return { success: false, error: "Store not found" };
+      }
 
       const start = performance.now();
       const windowCount = 50;
@@ -66,7 +68,9 @@ test.describe("Desktop performance", () => {
     // Inject 100 windows
     await page.evaluate(async () => {
       const store = (window as any).__DESKTOP_STORE__;
-      if (!store) return;
+      if (!store) {
+        return;
+      }
 
       const windows = Array.from({ length: 100 }, (_, i) => ({
         id: `perf-test-${i}`,
@@ -117,7 +121,9 @@ test.describe("Desktop performance", () => {
     // Add some windows
     await page.evaluate(async () => {
       const store = (window as any).__DESKTOP_STORE__;
-      if (!store) return;
+      if (!store) {
+        return;
+      }
 
       const windows = Array.from({ length: 30 }, (_, i) => ({
         id: `zoom-test-${i}`,
@@ -168,7 +174,9 @@ test.describe("Desktop performance", () => {
     // Add windows
     await page.evaluate(async () => {
       const store = (window as any).__DESKTOP_STORE__;
-      if (!store) return;
+      if (!store) {
+        return;
+      }
 
       const windows = Array.from({ length: 20 }, (_, i) => ({
         id: `lod-test-${i}`,
@@ -204,14 +212,16 @@ test.describe("Desktop performance", () => {
     await canvas.click();
   });
 
-  test.skip("stress test: 200 windows", async ({ page }) => {
+  test("stress test: 200 windows", async ({ page }) => {
     // Skip in CI - run manually for stress testing
     await navigateToDesktop(page);
     await expect(getCanvas(page)).toBeVisible();
 
     const result = await page.evaluate(async () => {
       const store = (window as any).__DESKTOP_STORE__;
-      if (!store) return { success: false };
+      if (!store) {
+        return { success: false };
+      }
 
       const start = performance.now();
 

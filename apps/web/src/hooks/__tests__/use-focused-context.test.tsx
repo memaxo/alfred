@@ -70,7 +70,12 @@ describe("useFocusedContext", () => {
         {
           id: "note-1",
           type: "note",
-          data: { type: "note", label: "My Note", content: "Note content", viewMode: "full" },
+          data: {
+            type: "note",
+            label: "My Note",
+            content: "Note content",
+            viewMode: "full",
+          },
           position: { x: 0, y: 0 },
         } as any,
       ],

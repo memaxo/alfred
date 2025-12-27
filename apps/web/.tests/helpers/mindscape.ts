@@ -47,7 +47,9 @@ export async function spawnNode(page: Page, label: string) {
   await page.waitForTimeout(300);
 
   // Click the first filtered result using aria-selected or data attribute
-  const selectedItem = dialog.locator('[aria-selected="true"], [data-selected="true"]').first();
+  const selectedItem = dialog
+    .locator('[aria-selected="true"], [data-selected="true"]')
+    .first();
   if ((await selectedItem.count()) > 0) {
     await selectedItem.click();
   } else {

@@ -22,7 +22,7 @@ import {
 } from "@/components/cognitive-feedback/dialog";
 import { ContextLens } from "@/components/shared/context-lens";
 import { Button } from "@/components/ui/button";
-import { ChatMessage, type AssistantPart } from "@/components/ui/chat-message";
+import { type AssistantPart, ChatMessage } from "@/components/ui/chat-message";
 import { Textarea } from "@/components/ui/textarea";
 import { useChatLogic } from "@/hooks/use-chat-logic";
 import type { FeedbackSurface } from "@/hooks/use-cognitive-feedback";
@@ -129,19 +129,31 @@ export function ChatContainer({
       return (
         <MessageActions
           disabled={status === "streaming" || feedbackStatus === "pending"}
-          onEdit={isUser ? () => startEditing(message as AssistantUIMessage) : undefined}
+          onEdit={
+            isUser
+              ? () => startEditing(message as AssistantUIMessage)
+              : undefined
+          }
           onNegative={
             isAssistant
-              ? () => handleFeedbackIntent(message as AssistantUIMessage, "negative")
+              ? () =>
+                  handleFeedbackIntent(
+                    message as AssistantUIMessage,
+                    "negative"
+                  )
               : undefined
           }
           onPositive={
             isAssistant
-              ? () => handleFeedbackIntent(message as AssistantUIMessage, "positive")
+              ? () =>
+                  handleFeedbackIntent(
+                    message as AssistantUIMessage,
+                    "positive"
+                  )
               : undefined
           }
           onRegenerate={
-            isAssistant && messages[messages.length - 1]?.id === message.id
+            isAssistant && messages.at(-1)?.id === message.id
               ? handleRegenerate
               : undefined
           }
@@ -203,27 +215,19 @@ export function ChatContainer({
 
       if (isEditing) {
         return (
-          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-secondary/20 mb-4 mx-4">
+          <div className="mx-4 mb-4 flex flex-col gap-2 rounded-lg border bg-secondary/20 p-4">
             <Textarea
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              className="min-h-[100px] bg-background"
-              placeholder="Edit your message..."
               autoFocus
+              className="min-h-[100px] bg-background"
+              onChange={(e) => setEditText(e.target.value)}
+              placeholder="Edit your message..."
+              value={editText}
             />
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={cancelEditing}
-              >
+              <Button onClick={cancelEditing} size="sm" variant="outline">
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={saveEdit}
-                disabled={!editText.trim()}
-              >
+              <Button disabled={!editText.trim()} onClick={saveEdit} size="sm">
                 Save & Regenerate
               </Button>
             </div>
@@ -234,10 +238,10 @@ export function ChatContainer({
       return (
         <div className="px-4">
           <ChatMessage
-            role={message.role as AssistantUIMessage["role"]}
+            actions={renderMessageActions(message)}
             content={message.parts as AssistantPart[]}
             renderPart={partRenderer}
-            actions={renderMessageActions(message)}
+            role={message.role as AssistantUIMessage["role"]}
           />
         </div>
       );
@@ -293,6 +297,7 @@ export function ChatContainer({
             <div className="flex-1 overflow-hidden">
               <Chat
                 disabled={currentAgent !== "assistant"}
+                itemContent={renderMessage}
                 ListComponent={Virtuoso}
                 messages={messages}
                 onSend={handleSend}
@@ -305,7 +310,6 @@ export function ChatContainer({
                       : "Ask Alfred how to help…"
                     : "Switch to the assistant agent to chat."
                 }
-                itemContent={renderMessage}
                 virtualized
                 voiceDisabled={currentAgent !== "assistant"}
                 voiceLabel={isRecording ? "Stop Recording" : "Voice"}
