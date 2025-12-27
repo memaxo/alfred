@@ -7,19 +7,19 @@ import type { auth } from "@alfred/auth";
 import { createTestSession } from "@alfred/test-kit/auth";
 
 // Mock the stream handler dependencies
-const mockStreamText = {
+const _mockStreamText = {
   toUIMessageStreamResponse: () =>
     new Response("", {
       headers: { "Content-Type": "text/event-stream" },
     }),
 };
 
-const mockGetDefaults = () => ({
+const _mockGetDefaults = () => ({
   model: "test-model",
   tools: {},
 });
 
-const mockAnalyzeContext = async () => ({
+const _mockAnalyzeContext = async () => ({
   system: "test system",
   activation: {},
 });
@@ -44,14 +44,14 @@ describe("SSE stream rate limiting", () => {
     const { handleStreamRequest } = await import(streamHandlerPkg);
 
     // Mock dependencies
-    const mockAuth = {
+    const _mockAuth = {
       api: {
         getSession: async () => session,
       },
     };
 
     // Create a request
-    const request = new Request("http://localhost/api/assistant", {
+    const _request = new Request("http://localhost/api/assistant", {
       method: "POST",
       headers: {
         cookie: "session=test",
@@ -68,7 +68,7 @@ describe("SSE stream rate limiting", () => {
     });
 
     // Mock auth module
-    const originalAuth = await import("@alfred/auth");
+    const _originalAuth = await import("@alfred/auth");
     // Note: This is a simplified test - in practice, we'd need to mock the auth module
     // For now, we'll test the connection utility directly
 
