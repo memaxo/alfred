@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { getRedis, getRedisAsync, isRedisHealthy, resetRedisState } from "../src/redis";
+import {
+  getRedis,
+  getRedisAsync,
+  isRedisHealthy,
+  resetRedisState,
+} from "../src/redis";
 
 describe("Redis Connection Management", () => {
   const originalRedisUrl = process.env.REDIS_URL;

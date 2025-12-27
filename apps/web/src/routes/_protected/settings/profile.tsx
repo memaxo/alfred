@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_protected/settings/profile")({
 export function ProfileSettingsPage() {
   const utils = trpc.useUtils();
   const { data: profile, isLoading } = trpc.profile.get.useQuery();
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,7 +35,8 @@ export function ProfileSettingsPage() {
         name: profile.name ?? "",
         email: profile.email ?? "",
         avatar: profile.avatar ?? "",
-        timezone: profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone:
+          profile.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
     }
   }, [profile]);
@@ -63,12 +64,12 @@ export function ProfileSettingsPage() {
     [formData, updateProfile]
   );
 
-  const isDirty = profile && (
-    formData.name !== (profile.name ?? "") ||
-    formData.email !== (profile.email ?? "") ||
-    formData.avatar !== (profile.avatar ?? "") ||
-    formData.timezone !== (profile.timezone ?? "")
-  );
+  const isDirty =
+    profile &&
+    (formData.name !== (profile.name ?? "") ||
+      formData.email !== (profile.email ?? "") ||
+      formData.avatar !== (profile.avatar ?? "") ||
+      formData.timezone !== (profile.timezone ?? ""));
 
   if (isLoading) {
     return (
@@ -104,7 +105,7 @@ export function ProfileSettingsPage() {
         <div className="flex items-center gap-6 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
           <Avatar className="h-20 w-20 border-2 border-biolum/20">
             <AvatarImage src={formData.avatar} />
-            <AvatarFallback className="bg-biolum/10 text-biolum text-2xl">
+            <AvatarFallback className="bg-biolum/10 text-2xl text-biolum">
               <User size={32} />
             </AvatarFallback>
           </Avatar>
@@ -112,7 +113,9 @@ export function ProfileSettingsPage() {
             <Label htmlFor="avatar-url">Avatar URL</Label>
             <Input
               id="avatar-url"
-              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, avatar: e.target.value })
+              }
               placeholder="https://example.com/avatar.png"
               value={formData.avatar}
             />
@@ -128,7 +131,9 @@ export function ProfileSettingsPage() {
             <Label htmlFor="profile-name">Full Name</Label>
             <Input
               id="profile-name"
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Your name"
               value={formData.name}
             />
@@ -137,7 +142,9 @@ export function ProfileSettingsPage() {
             <Label htmlFor="profile-email">Email Address</Label>
             <Input
               id="profile-email"
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               placeholder="name@example.com"
               type="email"
               value={formData.email}
@@ -147,7 +154,9 @@ export function ProfileSettingsPage() {
             <Label htmlFor="profile-timezone">Timezone</Label>
             <Input
               id="profile-timezone"
-              onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, timezone: e.target.value })
+              }
               placeholder="UTC, America/New_York, etc."
               value={formData.timezone}
             />

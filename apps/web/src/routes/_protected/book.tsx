@@ -5,6 +5,7 @@
  * Follows PaneLayout pattern with client-side filtering and tRPC integration.
  */
 
+import { BookmarkPane, type BookmarkPaneItem } from "@alfred/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { Globe, Loader2, Plus, Search, Tag } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -16,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/utils/trpc";
-import { BookmarkPane, type BookmarkPaneItem } from "@alfred/ui";
 
 export const Route = createFileRoute("/_protected/book")({
   component: BookRoute,
@@ -50,7 +50,7 @@ function BookmarkCreateForm() {
   const handleSubmit = useCallback(
     (event: React.FormEvent) => {
       event.preventDefault();
-      
+
       const trimmedUrl = url.trim();
       if (!trimmedUrl) {
         toast.error("URL is required");
@@ -59,26 +59,34 @@ function BookmarkCreateForm() {
 
       // Basic URL validation
       try {
-        if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
-           // If no protocol, try prepending https://
-           new URL(`https://${trimmedUrl}`);
+        if (
+          trimmedUrl.startsWith("http://") ||
+          trimmedUrl.startsWith("https://")
+        ) {
+          new URL(trimmedUrl);
         } else {
-           new URL(trimmedUrl);
+          // If no protocol, try prepending https://
+          new URL(`https://${trimmedUrl}`);
         }
       } catch {
         toast.error("Please enter a valid URL");
         return;
       }
 
-      const finalUrl = (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) 
-        ? `https://${trimmedUrl}` 
-        : trimmedUrl;
+      const finalUrl =
+        trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")
+          ? trimmedUrl
+          : `https://${trimmedUrl}`;
 
       createBookmark.mutate({
         url: finalUrl,
         title: title.trim() || undefined,
         description: description.trim() || undefined,
-        tags: tags.split(",").map(t => t.trim()).filter(Boolean) || undefined,
+        tags:
+          tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean) || undefined,
       });
     },
     [createBookmark, url, title, description, tags]
@@ -89,15 +97,15 @@ function BookmarkCreateForm() {
       <div className="space-y-2">
         <Label htmlFor="url">URL</Label>
         <div className="relative">
-          <Globe className="absolute left-3 top-3 h-4 w-4 text-biolum-faint" />
+          <Globe className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
           <Input
-            id="url"
             className="pl-9"
+            id="url"
             onChange={(e) => setUrl(e.target.value)}
             placeholder="example.com"
+            required
             type="text"
             value={url}
-            required
           />
         </div>
       </div>
@@ -115,10 +123,10 @@ function BookmarkCreateForm() {
         <div className="space-y-2">
           <Label htmlFor="tags">Tags (optional, comma-separated)</Label>
           <div className="relative">
-            <Tag className="absolute left-3 top-3 h-4 w-4 text-biolum-faint" />
+            <Tag className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
             <Input
-              id="tags"
               className="pl-9"
+              id="tags"
               onChange={(e) => setTags(e.target.value)}
               placeholder="research, ai, tech"
               value={tags}
@@ -130,8 +138,8 @@ function BookmarkCreateForm() {
       <div className="space-y-2">
         <Label htmlFor="description">Description (optional)</Label>
         <Textarea
-          id="description"
           className="min-h-[80px]"
+          id="description"
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What is this bookmark for?"
           value={description}
@@ -169,9 +177,9 @@ function BookPane() {
   const limit = 50;
 
   const utils = trpc.useUtils();
-  const bookmarksQuery = trpc.book.list.useQuery({ 
-    limit, 
-    offset: page * limit 
+  const bookmarksQuery = trpc.book.list.useQuery({
+    limit,
+    offset: page * limit,
   });
 
   const deleteBookmark = trpc.book.delete.useMutation({
@@ -195,23 +203,26 @@ function BookPane() {
 
   const filteredItems = useMemo<BookmarkPaneItem[]>(() => {
     let items = (bookmarksQuery.data ?? []) as BookmarkPaneItem[];
-    
+
     if (filterTag) {
       const ft = filterTag.toLowerCase();
-      items = items.filter(item => 
-        (item.tags as string[] | null)?.some(tag => tag.toLowerCase().includes(ft))
+      items = items.filter((item) =>
+        (item.tags as string[] | null)?.some((tag) =>
+          tag.toLowerCase().includes(ft)
+        )
       );
     }
-    
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      items = items.filter(item => 
-        item.title?.toLowerCase().includes(q) || 
-        item.url.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q)
+      items = items.filter(
+        (item) =>
+          item.title?.toLowerCase().includes(q) ||
+          item.url.toLowerCase().includes(q) ||
+          item.description?.toLowerCase().includes(q)
       );
     }
-    
+
     return items;
   }, [bookmarksQuery.data, filterTag, searchQuery]);
 
@@ -230,7 +241,7 @@ function BookPane() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-biolum-faint" />
+          <Search className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
           <Input
             className="pl-9"
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -239,7 +250,7 @@ function BookPane() {
           />
         </div>
         <div className="relative w-full sm:w-48">
-          <Tag className="absolute left-3 top-3 h-4 w-4 text-biolum-faint" />
+          <Tag className="absolute top-3 left-3 h-4 w-4 text-biolum-faint" />
           <Input
             className="pl-9"
             onChange={(e) => setFilterTag(e.target.value)}
@@ -249,26 +260,21 @@ function BookPane() {
         </div>
       </div>
 
-      <BookmarkPane 
-        items={filteredItems} 
-        onDelete={handleDelete}
-      />
+      <BookmarkPane items={filteredItems} onDelete={handleDelete} />
 
       {(page > 0 || hasMore) && (
         <div className="flex items-center justify-center gap-4 pt-4">
           <Button
             disabled={page === 0}
-            onClick={() => setPage(p => Math.max(0, p - 1))}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
             variant="outline"
           >
             Previous
           </Button>
-          <span className="text-biolum-dim text-sm">
-            Page {page + 1}
-          </span>
+          <span className="text-biolum-dim text-sm">Page {page + 1}</span>
           <Button
             disabled={!hasMore}
-            onClick={() => setPage(p => p + 1)}
+            onClick={() => setPage((p) => p + 1)}
             variant="outline"
           >
             Next

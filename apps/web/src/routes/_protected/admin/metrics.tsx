@@ -1,15 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Activity,
-  Brain,
-  Cpu,
-  Database,
-  Heart,
-  MessageSquare,
-  Zap,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import {
   AreaChart,
   Badge,
   Flex,
@@ -24,10 +14,20 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { trpc } from "@/utils/trpc";
+import {
+  Activity,
+  Brain,
+  Cpu,
+  Database,
+  Heart,
+  MessageSquare,
+  Zap,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { VoidCard } from "@/components/tremor/void-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { trpc } from "@/utils/trpc";
 
 const REFRESH_INTERVAL_MS = 5000;
 const MAX_HISTORY_POINTS = 20;
@@ -60,7 +60,12 @@ function MetricsDashboardRoute() {
 
 export function MetricsDashboardView() {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
-  const { data: stats, isLoading, refetch, isRefetching } = trpc.admin.getPerformanceStats.useQuery(undefined, {
+  const {
+    data: stats,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = trpc.admin.getPerformanceStats.useQuery(undefined, {
     refetchInterval: REFRESH_INTERVAL_MS,
   });
 
@@ -89,7 +94,11 @@ export function MetricsDashboardView() {
   }
 
   if (!stats) {
-    return <div className="p-10 text-center text-biolum-dim">No metrics data available.</div>;
+    return (
+      <div className="p-10 text-center text-biolum-dim">
+        No metrics data available.
+      </div>
+    );
   }
 
   return (
@@ -97,44 +106,42 @@ export function MetricsDashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-biolum-dim text-sm">System Performance</p>
-          <h1 className="font-semibold text-2xl text-biolum">Operational Dashboard</h1>
+          <h1 className="font-semibold text-2xl text-biolum">
+            Operational Dashboard
+          </h1>
         </div>
         <div className="flex items-center gap-4">
-          {isRefetching && (
-            <Badge color="emerald">
-              Live Sync
-            </Badge>
-          )}
-          <Button onClick={() => refetch()} variant="outline" size="sm">
+          {isRefetching && <Badge color="emerald">Live Sync</Badge>}
+          <Button onClick={() => refetch()} size="sm" variant="outline">
             Refresh
           </Button>
         </div>
       </div>
 
-      <Grid className="gap-6" numItemsSm={2} numItemsLg={4}>
+      <Grid className="gap-6" numItemsLg={4} numItemsSm={2}>
         <StatCard
-          title="Graph Queries"
-          metric={stats.graph.queriesTotal.toString()}
           icon={<Database className="h-5 w-5" />}
+          metric={stats.graph.queriesTotal.toString()}
           subtext="Total database traversals"
+          title="Graph Queries"
         />
         <StatCard
-          title="Assistant Requests"
-          metric={stats.assistant.requestsTotal.toString()}
           icon={<MessageSquare className="h-5 w-5" />}
+          metric={stats.assistant.requestsTotal.toString()}
           subtext="Total AI generations"
+          title="Assistant Requests"
         />
         <StatCard
-          title="Droid Executions"
-          metric={stats.tools.droidRunsTotal.toString()}
           icon={<Cpu className="h-5 w-5" />}
+          metric={stats.tools.droidRunsTotal.toString()}
           subtext="Autonomous agent tasks"
+          title="Droid Executions"
         />
         <StatCard
-          title="System Health"
-          metric={stats.system.healthChecksTotal.toString()}
           icon={<Heart className="h-5 w-5" />}
+          metric={stats.system.healthChecksTotal.toString()}
           subtext="Completed health checks"
+          title="System Health"
         />
       </Grid>
 
@@ -151,11 +158,15 @@ export function MetricsDashboardView() {
                 <Title>Activity Trends</Title>
                 <Text>Requests over the last {MAX_HISTORY_POINTS} samples</Text>
                 <AreaChart
+                  categories={[
+                    "graphQueries",
+                    "assistantRequests",
+                    "droidRuns",
+                  ]}
                   className="mt-4 h-72"
+                  colors={["emerald", "blue", "amber"]}
                   data={history}
                   index="time"
-                  categories={["graphQueries", "assistantRequests", "droidRuns"]}
-                  colors={["emerald", "blue", "amber"]}
                   showLegend={true}
                   yAxisWidth={40}
                 />
@@ -165,22 +176,40 @@ export function MetricsDashboardView() {
                 <Title>Throughput Distribution</Title>
                 <Flex className="mt-4 flex-col gap-4">
                   <ProgressBarValue
-                    label="Graph Queries"
-                    value={stats.graph.queriesTotal}
-                    max={Math.max(stats.graph.queriesTotal, stats.assistant.requestsTotal, stats.tools.droidRunsTotal) * 1.2}
                     color="emerald"
+                    label="Graph Queries"
+                    max={
+                      Math.max(
+                        stats.graph.queriesTotal,
+                        stats.assistant.requestsTotal,
+                        stats.tools.droidRunsTotal
+                      ) * 1.2
+                    }
+                    value={stats.graph.queriesTotal}
                   />
                   <ProgressBarValue
-                    label="Assistant Requests"
-                    value={stats.assistant.requestsTotal}
-                    max={Math.max(stats.graph.queriesTotal, stats.assistant.requestsTotal, stats.tools.droidRunsTotal) * 1.2}
                     color="blue"
+                    label="Assistant Requests"
+                    max={
+                      Math.max(
+                        stats.graph.queriesTotal,
+                        stats.assistant.requestsTotal,
+                        stats.tools.droidRunsTotal
+                      ) * 1.2
+                    }
+                    value={stats.assistant.requestsTotal}
                   />
                   <ProgressBarValue
-                    label="Droid Runs"
-                    value={stats.tools.droidRunsTotal}
-                    max={Math.max(stats.graph.queriesTotal, stats.assistant.requestsTotal, stats.tools.droidRunsTotal) * 1.2}
                     color="amber"
+                    label="Droid Runs"
+                    max={
+                      Math.max(
+                        stats.graph.queriesTotal,
+                        stats.assistant.requestsTotal,
+                        stats.tools.droidRunsTotal
+                      ) * 1.2
+                    }
+                    value={stats.tools.droidRunsTotal}
                   />
                 </Flex>
               </VoidCard>
@@ -194,19 +223,27 @@ export function MetricsDashboardView() {
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div className="rounded-2xl bg-white/5 p-4">
                     <Text>RAG Hits</Text>
-                    <Metric className="text-emerald-400">{stats.graph.ragHits}</Metric>
+                    <Metric className="text-emerald-400">
+                      {stats.graph.ragHits}
+                    </Metric>
                   </div>
                   <div className="rounded-2xl bg-white/5 p-4">
                     <Text>RAG Empty</Text>
-                    <Metric className="text-amber-400">{stats.graph.ragEmpty}</Metric>
+                    <Metric className="text-amber-400">
+                      {stats.graph.ragEmpty}
+                    </Metric>
                   </div>
                 </div>
                 <div className="mt-6">
                   <Text>Search Efficiency (Hits vs Empty)</Text>
                   <ProgressBar
                     className="mt-2"
-                    value={(stats.graph.ragHits / (stats.graph.ragHits + stats.graph.ragEmpty || 1)) * 100}
                     color="emerald"
+                    value={
+                      (stats.graph.ragHits /
+                        (stats.graph.ragHits + stats.graph.ragEmpty || 1)) *
+                      100
+                    }
                   />
                 </div>
               </VoidCard>
@@ -214,13 +251,13 @@ export function MetricsDashboardView() {
               <VoidCard>
                 <Title>Graph Latency (P50)</Title>
                 <AreaChart
+                  categories={["graphLatency"]}
                   className="mt-4 h-72"
+                  colors={["emerald"]}
                   data={history}
                   index="time"
-                  categories={["graphLatency"]}
-                  colors={["emerald"]}
-                  valueFormatter={(v) => `${v.toFixed(3)}s`}
                   showLegend={false}
+                  valueFormatter={(v) => `${v.toFixed(3)}s`}
                   yAxisWidth={60}
                 />
               </VoidCard>
@@ -228,12 +265,28 @@ export function MetricsDashboardView() {
           </TabPanel>
 
           <TabPanel>
-             <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                <LatencyCard title="Graph Query" summary={stats.graph.queryLatency} budget={0.001} />
-                <LatencyCard title="Graph Context" summary={stats.graph.contextLatency} budget={0.01} />
-                <LatencyCard title="Assistant Gen" summary={stats.assistant.generateLatency} budget={2.0} />
-                <LatencyCard title="Droid Exec" summary={stats.tools.droidDuration} budget={5.0} />
-             </div>
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <LatencyCard
+                budget={0.001}
+                summary={stats.graph.queryLatency}
+                title="Graph Query"
+              />
+              <LatencyCard
+                budget={0.01}
+                summary={stats.graph.contextLatency}
+                title="Graph Context"
+              />
+              <LatencyCard
+                budget={2.0}
+                summary={stats.assistant.generateLatency}
+                title="Assistant Gen"
+              />
+              <LatencyCard
+                budget={5.0}
+                summary={stats.tools.droidDuration}
+                title="Droid Exec"
+              />
+            </div>
           </TabPanel>
         </TabPanels>
       </TabGroup>
@@ -241,7 +294,17 @@ export function MetricsDashboardView() {
   );
 }
 
-function StatCard({ title, metric, icon, subtext }: { title: string; metric: string; icon: React.ReactNode; subtext: string }) {
+function StatCard({
+  title,
+  metric,
+  icon,
+  subtext,
+}: {
+  title: string;
+  metric: string;
+  icon: React.ReactNode;
+  subtext: string;
+}) {
   return (
     <VoidCard>
       <Flex alignItems="start">
@@ -249,38 +312,66 @@ function StatCard({ title, metric, icon, subtext }: { title: string; metric: str
           <Text className="text-biolum-dim">{title}</Text>
           <Metric className="text-biolum">{metric}</Metric>
         </div>
-        <div className="rounded-full bg-white/5 p-2 text-biolum">
-          {icon}
-        </div>
+        <div className="rounded-full bg-white/5 p-2 text-biolum">{icon}</div>
       </Flex>
-      <Text className="mt-2 text-xs text-biolum-dim">{subtext}</Text>
+      <Text className="mt-2 text-biolum-dim text-xs">{subtext}</Text>
     </VoidCard>
   );
 }
 
-function ProgressBarValue({ label, value, max, color }: { label: string; value: number; max: number; color: TremorColor }) {
+function ProgressBarValue({
+  label,
+  value,
+  max,
+  color,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  color: TremorColor;
+}) {
   return (
     <div className="w-full">
       <Flex>
         <Text>{label}</Text>
         <Text>{value}</Text>
       </Flex>
-      <ProgressBar value={(value / (max || 1)) * 100} color={color} className="mt-2" />
+      <ProgressBar
+        className="mt-2"
+        color={color}
+        value={(value / (max || 1)) * 100}
+      />
     </div>
   );
 }
 
-function LatencyCard({ title, summary, budget }: { title: string; summary: LatencySummary; budget?: number }) {
-  const formatValue = (v: number | null | undefined) => (v !== null && v !== undefined ? `${v.toFixed(3)}s` : "—");
-  const isOverBudget = budget !== undefined && summary.p50 !== null && summary.p50 !== undefined && summary.p50 > budget;
-  
+function LatencyCard({
+  title,
+  summary,
+  budget,
+}: {
+  title: string;
+  summary: LatencySummary;
+  budget?: number;
+}) {
+  const formatValue = (v: number | null | undefined) =>
+    v !== null && v !== undefined ? `${v.toFixed(3)}s` : "—";
+  const isOverBudget =
+    budget !== undefined &&
+    summary.p50 !== null &&
+    summary.p50 !== undefined &&
+    summary.p50 > budget;
+
   return (
     <VoidCard className={isOverBudget ? "ring-2 ring-red-500/50" : ""}>
       <Flex>
         <Title>{title} Latency</Title>
         {budget !== undefined && (
           <Badge color={isOverBudget ? "red" : "emerald"} size="xs">
-            Budget: {budget < 0.001 ? `${(budget * 1000000).toFixed(0)}µs` : `${(budget * 1000).toFixed(0)}ms`}
+            Budget:{" "}
+            {budget < 0.001
+              ? `${(budget * 1_000_000).toFixed(0)}µs`
+              : `${(budget * 1000).toFixed(0)}ms`}
           </Badge>
         )}
       </Flex>
@@ -313,9 +404,9 @@ function MetricsSkeleton() {
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-10 w-24" />
       </div>
-      <Grid className="gap-6" numItemsSm={2} numItemsLg={4}>
+      <Grid className="gap-6" numItemsLg={4} numItemsSm={2}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" key={i} />
         ))}
       </Grid>
       <Skeleton className="h-10 w-full" />

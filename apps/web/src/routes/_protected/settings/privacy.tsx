@@ -8,7 +8,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, Shield, Trash2 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { AutonomySlider, type AutonomyLevel } from "@/components/autonomy-slider";
+import {
+  type AutonomyLevel,
+  AutonomySlider,
+} from "@/components/autonomy-slider";
 import { PrivacyControls } from "@/components/privacy-controls";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,7 +30,8 @@ export function PrivacySettingsPage() {
     () => preferences?.find((p) => p.key === "autonomy"),
     [preferences]
   );
-  const currentAutonomy: AutonomyLevel = (autonomyPreference?.value as AutonomyLevel) ?? "low";
+  const currentAutonomy: AutonomyLevel =
+    (autonomyPreference?.value as AutonomyLevel) ?? "low";
 
   const setPreference = trpc.preference.set.useMutation({
     onSuccess: () => {
@@ -39,16 +43,21 @@ export function PrivacySettingsPage() {
     },
   });
 
-  const handleAutonomyChange = useCallback((level: AutonomyLevel) => {
-    setPreference.mutate({
-      key: "autonomy",
-      value: level,
-      confidence: 1,
-    });
-  }, [setPreference]);
+  const handleAutonomyChange = useCallback(
+    (level: AutonomyLevel) => {
+      setPreference.mutate({
+        key: "autonomy",
+        value: level,
+        confidence: 1,
+      });
+    },
+    [setPreference]
+  );
 
   // Privacy Facts
-  const { data: facts, isLoading: factsLoading } = trpc.privacy.facts.useQuery({ limit: 50 });
+  const { data: facts, isLoading: factsLoading } = trpc.privacy.facts.useQuery({
+    limit: 50,
+  });
   const deleteFact = trpc.privacy.deleteFact.useMutation({
     onSuccess: () => {
       toast.success("Fact deleted");
@@ -60,7 +69,8 @@ export function PrivacySettingsPage() {
   });
 
   // Privacy Events
-  const { data: events, isLoading: eventsLoading } = trpc.privacy.events.useQuery({ limit: 50 });
+  const { data: events, isLoading: eventsLoading } =
+    trpc.privacy.events.useQuery({ limit: 50 });
 
   const handleExport = useCallback(() => {
     const data = {
@@ -68,11 +78,13 @@ export function PrivacySettingsPage() {
       facts,
       events,
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `alfred-privacy-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `alfred-privacy-export-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Data export started");
@@ -83,15 +95,15 @@ export function PrivacySettingsPage() {
       toast.info("No facts to delete");
       return;
     }
-    
-    // In a real app, we'd have a bulk delete procedure. 
+
+    // In a real app, we'd have a bulk delete procedure.
     // For now, we delete facts one by one or explain why we can't.
     toast.promise(
-      Promise.all(facts.map(f => deleteFact.mutateAsync({ id: f.id }))),
+      Promise.all(facts.map((f) => deleteFact.mutateAsync({ id: f.id }))),
       {
-        loading: 'Deleting all facts...',
-        success: 'All facts deleted',
-        error: 'Failed to delete some facts',
+        loading: "Deleting all facts...",
+        success: "All facts deleted",
+        error: "Failed to delete some facts",
       }
     );
   }, [facts, deleteFact]);
@@ -120,33 +132,37 @@ export function PrivacySettingsPage() {
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-8">
           {/* Autonomy Section */}
-          <section className="rounded-2xl border border-white/10 bg-void-surface/40 p-6 space-y-4">
+          <section className="space-y-4 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-biolum" strokeWidth={1.5} />
-              <h2 className="font-semibold text-biolum text-lg">System Autonomy</h2>
+              <h2 className="font-semibold text-biolum text-lg">
+                System Autonomy
+              </h2>
             </div>
             <p className="text-biolum-dim text-sm">
               Define the level of independence Alfred has when executing tasks.
             </p>
             <AutonomySlider
-              value={currentAutonomy}
-              onChange={handleAutonomyChange}
               disabled={setPreference.isPending}
+              onChange={handleAutonomyChange}
+              value={currentAutonomy}
             />
           </section>
 
           {/* Privacy Controls (Bulk) */}
           <PrivacyControls
             className="border-white/10 bg-void-surface/40"
+            forgetDisabled={
+              deleteFact.isPending || !facts || facts.length === 0
+            }
             onExport={handleExport}
             onForget={handlePurge}
-            forgetDisabled={deleteFact.isPending || !facts || facts.length === 0}
           />
         </div>
 
         <div className="space-y-8">
           {/* Facts List */}
-          <section className="rounded-2xl border border-white/10 bg-void-surface/40 p-6 space-y-4 flex flex-col h-[400px]">
+          <section className="flex h-[400px] flex-col space-y-4 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
             <h2 className="font-semibold text-biolum text-lg">Stored Facts</h2>
             <p className="text-biolum-dim text-sm">
               Information Alfred has learned about you or your preferences.
@@ -160,23 +176,25 @@ export function PrivacySettingsPage() {
                 <div className="space-y-3">
                   {facts.map((fact: any) => (
                     <div
-                      key={fact.id}
                       className="group relative flex items-start justify-between gap-3 rounded-xl border border-white/5 bg-white/5 p-3 text-sm transition-colors hover:bg-white/10"
+                      key={fact.id}
                     >
                       <div className="space-y-1">
                         <p className="text-biolum">{fact.content}</p>
                         <div className="flex items-center gap-2 text-[10px] text-biolum-faint uppercase tracking-wider">
-                          <span>{fact.category || 'general'}</span>
+                          <span>{fact.category || "general"}</span>
                           <span>•</span>
-                          <span>{new Date(fact.created).toLocaleDateString()}</span>
+                          <span>
+                            {new Date(fact.created).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                       <Button
-                        variant="ghost"
-                        size="icon"
                         className="h-8 w-8 text-red-400 opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={() => deleteFact.mutate({ id: fact.id })}
                         disabled={deleteFact.isPending}
+                        onClick={() => deleteFact.mutate({ id: fact.id })}
+                        size="icon"
+                        variant="ghost"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -184,16 +202,20 @@ export function PrivacySettingsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-white/10">
-                  <p className="text-biolum-faint text-sm">No facts stored yet.</p>
+                <div className="flex h-32 items-center justify-center rounded-xl border border-white/10 border-dashed">
+                  <p className="text-biolum-faint text-sm">
+                    No facts stored yet.
+                  </p>
                 </div>
               )}
             </ScrollArea>
           </section>
 
           {/* Events List */}
-          <section className="rounded-2xl border border-white/10 bg-void-surface/40 p-6 space-y-4 flex flex-col h-[300px]">
-            <h2 className="font-semibold text-biolum text-lg">Privacy Events</h2>
+          <section className="flex h-[300px] flex-col space-y-4 rounded-2xl border border-white/10 bg-void-surface/40 p-6">
+            <h2 className="font-semibold text-biolum text-lg">
+              Privacy Events
+            </h2>
             <p className="text-biolum-dim text-sm">
               Recent security and privacy-related actions.
             </p>
@@ -206,10 +228,12 @@ export function PrivacySettingsPage() {
                 <div className="space-y-2">
                   {events.map((event: any) => (
                     <div
-                      key={event.id}
                       className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-xs"
+                      key={event.id}
                     >
-                      <span className="text-biolum font-medium">{event.type}</span>
+                      <span className="font-medium text-biolum">
+                        {event.type}
+                      </span>
                       <span className="text-biolum-faint">
                         {new Date(event.timestamp).toLocaleString()}
                       </span>
@@ -218,7 +242,9 @@ export function PrivacySettingsPage() {
                 </div>
               ) : (
                 <div className="flex h-20 items-center justify-center">
-                  <p className="text-biolum-faint text-sm">No events recorded.</p>
+                  <p className="text-biolum-faint text-sm">
+                    No events recorded.
+                  </p>
                 </div>
               )}
             </ScrollArea>
